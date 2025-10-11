@@ -4,14 +4,18 @@ import { TokenService } from "../application/services/token.service"
 import { LLMRequest } from "../types/whatsapp.types"
 import { CallingFunctionsService } from "./calling-functions.service"
 import { PromptProcessorService } from "./prompt-processor.service"
+import { PrismaClient } from "@prisma/client"
+import logger from "../utils/logger"
 
 export class LLMService {
   private callingFunctionsService: CallingFunctionsService
   private promptProcessorService: PromptProcessorService
+  private prisma: PrismaClient
 
   constructor() {
     this.callingFunctionsService = new CallingFunctionsService()
     this.promptProcessorService = new PromptProcessorService()
+    this.prisma = new PrismaClient()
   }
 
   async handleMessage(
@@ -115,17 +119,19 @@ export class LLMService {
         `📤 Sending WIP message in ${customerLanguage}: "${wipMessage}"`
       )
 
-      // Send WIP message via WhatsApp
-      const { WhatsAppService } = require("./whatsapp.service")
-      const whatsappService = new WhatsAppService()
-      await whatsappService.sendMessage(
-        llmRequest.phone,
-        wipMessage,
-        workspace.id
-      )
-
-      // Return special IGNORE to stop processing
-      return "IGNORE"
+      // ✅ CRITICAL FIX: Return WIP message as normal response so webhook sends it
+      // The webhook will handle sending via WhatsApp Business API
+      return {
+        success: true,
+        output: wipMessage,
+        debugInfo: {
+          stage: "workspace_disabled",
+          reason: "Workspace is not active",
+          wipMessageSent: true,
+          language: customerLanguage,
+          workspaceId: workspace.id,
+        },
+      }
     }
 
     // 2. New User Check

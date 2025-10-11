@@ -1,8 +1,14 @@
-- HOTEL RESTAURANT FUORI
+- WIP MESSAGE
+- Welcome Messages
 - FOTO DEI PRODOTTI
+- HOTEL RESTAURANT FUORI
+- testPRIAM DI MAX
+
+FASE 2
+
 - Clean DB
 - SWAGGER
 - estrella
 - heroku
 - whatsapp
-- testPRIAM DI MAX
+- 2AUTH

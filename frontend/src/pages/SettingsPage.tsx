@@ -31,13 +31,6 @@ import { Loader2, Save, Settings, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
-// Currency options
-const CURRENCY_OPTIONS = [
-  { value: "EUR", label: "Euro (€)" },
-  { value: "USD", label: "US Dollar ($)" },
-  { value: "GBP", label: "British Pound (£)" },
-]
-
 // Workspace data interface
 interface WorkspaceData {
   id: string
@@ -45,7 +38,6 @@ interface WorkspaceData {
   whatsappPhoneNumber: string
   whatsappApiKey: string
   adminEmail: string
-  currency: string
   url: string
   isActive: boolean
   debugMode: boolean
@@ -77,7 +69,6 @@ export default function SettingsPage() {
     whatsappPhoneNumber: "",
     whatsappApiKey: "",
     adminEmail: "",
-    currency: "EUR",
     url: "http://localhost:3000",
     isActive: true,
     debugMode: true,
@@ -164,7 +155,6 @@ export default function SettingsPage() {
         whatsappPhoneNumber: workspace.whatsappPhoneNumber || "",
         whatsappApiKey: workspace.whatsappApiKey || "",
         adminEmail: workspace.adminEmail || "",
-        currency: workspace.currency || "EUR",
         url: workspace.url || "http://localhost:3000",
         isActive: workspace.isActive ?? true,
         debugMode: workspace.debugMode ?? true,
@@ -266,12 +256,15 @@ export default function SettingsPage() {
       whatsappPhoneNumber: formData.whatsappPhoneNumber,
       whatsappApiKey: formData.whatsappApiKey,
       adminEmail: formData.adminEmail,
-      currency: formData.currency,
+      // currency rimosso - non serve più
       url: formData.url || "http://localhost:3000",
       isActive: formData.isActive,
       debugMode: formData.debugMode,
+      welcomeMessages: formData.welcomeMessages,
+      wipMessages: formData.wipMessages,
     }
 
+    logger.info("💾 Saving workspace settings:", updateData)
     saveSettingsMutation.mutate(updateData)
   }
 
@@ -397,26 +390,6 @@ export default function SettingsPage() {
               This email will receive notifications when users request operator
               assistance
             </p>
-          </div>
-
-          {/* Currency */}
-          <div className="space-y-2">
-            <Label htmlFor="currency">Currency</Label>
-            <Select
-              value={formData.currency}
-              onValueChange={(value) => handleFieldChange("currency", value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select currency" />
-              </SelectTrigger>
-              <SelectContent>
-                {CURRENCY_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           {/* Workspace URL */}

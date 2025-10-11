@@ -89,8 +89,10 @@ export const workspaceValidationMiddleware = async (
       return;
     }
 
-    if (workspace.isDelete || !workspace.isActive) {
-      logger.info('❌ Workspace is deleted or inactive');
+    // ✅ CRITICAL: Solo workspace.isDelete blocca l'accesso admin
+    // workspace.isActive blocca SOLO i messaggi WhatsApp (gestito in LLMService)
+    if (workspace.isDelete) {
+      logger.info('❌ Workspace is deleted - blocking access');
       
       const debugResponse = {
         message: "Workspace is not available",
@@ -98,12 +100,19 @@ export const workspaceValidationMiddleware = async (
           workspaceId,
           workspace,
           url: req.originalUrl,
-          method: req.method
+          method: req.method,
+          reason: "Workspace is deleted"
         }
       };
       
       res.status(403).json(debugResponse);
       return;
+    }
+
+    // ⚠️ Se workspace.isActive = false, permetti comunque accesso admin
+    // Il blocco dei messaggi WhatsApp è gestito in LLMService.handleMessage()
+    if (!workspace.isActive) {
+      logger.warn(`⚠️ Workspace ${workspaceId} is DISABLED - Admin access allowed, WhatsApp blocked`);
     }
 
     

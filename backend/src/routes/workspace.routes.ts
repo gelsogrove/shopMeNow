@@ -81,11 +81,13 @@ const getCurrentWorkspace: RequestHandler = async (req, res): Promise<void> => {
     // Get all workspaces using the service
     const workspaces = await workspaceService.getAll()
 
-    // Find the first active workspace
-    const workspace = workspaces.find((w) => w.isActive && !w.isDelete)
+    // ✅ CRITICAL: Admin può accedere anche a workspace disabilitati
+    // Solo workspace.isDelete blocca l'accesso (cancellati definitivamente)
+    // workspace.isActive blocca SOLO messaggi WhatsApp (gestito in LLMService)
+    const workspace = workspaces.find((w) => !w.isDelete)
 
     if (!workspace) {
-      res.status(404).json({ error: "No active workspace found" })
+      res.status(404).json({ error: "No workspace found (all deleted)" })
       return
     }
 
