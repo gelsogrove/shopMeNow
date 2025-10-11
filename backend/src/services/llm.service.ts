@@ -93,6 +93,29 @@ export class LLMService {
       `🔧 LLM: Workspace config - llmModel: ${agentConfig?.model || "default"}, temperature: ${agentConfig?.temperature || "default"} (type: ${typeof agentConfig?.temperature})`
     )
 
+    // 🔴 1. FIRST CHECK: Workspace disabled? Return WIP message
+    if (!workspace.isActive) {
+      console.log("🚫 LLM: Workspace is DISABLED - Sending WIP message")
+      
+      // Get customer language or default to Spanish
+      const customerLanguage = customer?.language || "es"
+      console.log(`🌍 Customer language: ${customerLanguage} (default: es if NULL)`)
+      
+      // Get WIP message in customer's language
+      const wipMessages = workspace.wipMessages as Record<string, string> || {}
+      const wipMessage = wipMessages[customerLanguage.toLowerCase()] || wipMessages["es"] || "Estamos en mantenimiento. Por favor, contacte más tarde."
+      
+      console.log(`📤 Sending WIP message in ${customerLanguage}: "${wipMessage}"`)
+      
+      // Send WIP message via WhatsApp
+      const { WhatsAppService } = require("./whatsapp.service")
+      const whatsappService = new WhatsAppService()
+      await whatsappService.sendMessage(llmRequest.phone, wipMessage, workspace.id)
+      
+      // Return special IGNORE to stop processing
+      return "IGNORE"
+    }
+
     // 2. New User Check
     if (!customer) {
       console.log("🆕 LLM: New user detected, calling NewUser method")
