@@ -1,7 +1,6 @@
-- Welcome Messages
 - FOTO DEI PRODOTTI
-- HOTEL RESTAURANT FUORI
 - testPRIAM DI MAX
+- link non vanno
 
 FASE 2
 

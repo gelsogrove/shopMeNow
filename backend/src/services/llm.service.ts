@@ -17,6 +17,40 @@ export class LLMService {
     this.prisma = new PrismaClient()
   }
 
+  /**
+   * Deduce language from phone number prefix
+   * @param phoneNumber - Phone number with country code (e.g., "+34612345678")
+   * @returns Language code (it, es, en, pt, de, fr)
+   */
+  private getLanguageFromPhonePrefix(phoneNumber: string): string {
+    if (!phoneNumber) return "es" // Default to Spanish
+
+    // Extract country code (first 2-3 digits after +)
+    const match = phoneNumber.match(/^\+?(\d{1,3})/)
+    if (!match) return "es"
+
+    const countryCode = match[1]
+
+    // Map country codes to languages
+    const languageMap: { [key: string]: string } = {
+      "39": "it", // Italy
+      "34": "es", // Spain
+      "33": "fr", // France
+      "49": "de", // Germany
+      "43": "de", // Austria
+      "41": "de", // Switzerland (German part)
+      "351": "pt", // Portugal
+      "55": "pt", // Brazil
+      "44": "en", // United Kingdom
+      "1": "en", // USA/Canada
+      "353": "en", // Ireland
+      "61": "en", // Australia
+      "64": "en", // New Zealand
+    }
+
+    return languageMap[countryCode] || "es" // Default to Spanish if not found
+  }
+
   async handleMessage(
     llmRequest: LLMRequest,
     customerData?: any
@@ -100,10 +134,11 @@ export class LLMService {
     if (!workspace.isActive) {
       console.log("🚫 LLM: Workspace is DISABLED - Sending WIP message")
 
-      // Get customer language or default to Spanish
-      const customerLanguage = customer?.language || "es"
+      // Get customer language: from customer DB, from phone prefix, or default to Spanish
+      const customerLanguage =
+        customer?.language || this.getLanguageFromPhonePrefix(llmRequest.phone)
       console.log(
-        `🌍 Customer language: ${customerLanguage} (default: es if NULL)`
+        `🌍 Customer language: ${customerLanguage} (from ${customer?.language ? "DB" : "phone prefix"})`
       )
 
       // Get WIP message in customer's language
@@ -845,8 +880,14 @@ export class LLMService {
       pt: "Bem-vindo! Você precisa se registrar primeiro para usar nossos serviços.",
     }
 
-    // Get user language or workspace default language or fallback to it
-    const language = workspace.language?.toLowerCase() || "it"
+    // Get user language: from customer DB, from phone prefix, workspace default, or fallback to it
+    const detectedLanguage = this.getLanguageFromPhonePrefix(llmRequest.phone)
+    const language =
+      workspace.language?.toLowerCase() || detectedLanguage || "it"
+
+    console.log(
+      `🌍 NewUser language detection: phone=${llmRequest.phone}, detected=${detectedLanguage}, workspace=${workspace.language}, final=${language}`
+    )
 
     // Get message in correct language or fallback
     let welcomeMessage =

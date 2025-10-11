@@ -1,5 +1,5 @@
-import axios from 'axios'
 import { useEffect, useState } from 'react'
+import { api } from '../services/api'
 import { logger } from '../lib/logger'
 
 interface TokenValidationResult {
@@ -66,7 +66,7 @@ export const useTokenValidation = ({
       if (workspaceId) requestBody.workspaceId = workspaceId
       // Explicitly don't send 'type' to allow any valid token type
       
-      const response = await axios.post('/api/internal/validate-secure-token', requestBody)
+      const response = await api.post('/internal/validate-secure-token', requestBody)
 
       if (response.data.valid) {
         setValid(true)
@@ -142,13 +142,13 @@ export const useCheckoutTokenValidation = (token: string | null) => {
     setExpiresAt(undefined)
 
     // 🎯 Always use checkout endpoint since cart-public is removed
-    const endpoint = `/api/checkout/token?token=${token}`
+    const endpoint = `/checkout/token?token=${token}`
 
     try {
         
       logger.info(`[CHECKOUT-TOKEN-VALIDATION] Validating token for CHECKOUT page`)
       
-      const response = await axios.get(endpoint)
+      const response = await api.get(endpoint)
 
       // 🎯 Check for valid response from checkout endpoint
       const isValidResponse = response.data.valid

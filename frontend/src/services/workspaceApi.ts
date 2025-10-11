@@ -26,10 +26,13 @@ export interface Workspace {
 
 export interface CreateWorkspaceData {
   name: string
+  whatsappPhoneNumber: string
+  language?: string
   description?: string
 }
 
 export interface UpdateWorkspaceData {
+  id?: string
   name?: string
   description?: string
   isActive?: boolean

@@ -625,16 +625,20 @@ async function main() {
         url: "http://localhost:3000",
 
         wipMessages: {
-          en: "Work in progress. Please contact us later.",
-          it: "Lavori in corso. Contattaci più tardi.",
-          es: "Trabajos en curso. Por favor, contáctenos más tarde.",
-          pt: "Em manutenção. Por favor, contacte-nos mais tarde.",
+          it: "🔧 Siamo in manutenzione. Il servizio tornerà disponibile a breve. Grazie per la pazienza! 🇮🇹",
+          en: "🔧 We're under maintenance. The service will be back shortly. Thank you for your patience! 🇬🇧",
+          es: "🔧 Estamos en mantenimiento. El servicio estará disponible pronto. ¡Gracias por tu paciencia! 🇪🇸",
+          pt: "🔧 Estamos em manutenção. O serviço voltará em breve. Obrigado pela paciência! 🇵🇹",
+          de: "🔧 Wir befinden uns in Wartung. Der Service wird in Kürze wieder verfügbar sein. Vielen Dank für Ihre Geduld! 🇩🇪",
+          fr: "🔧 Nous sommes en maintenance. Le service sera bientôt de retour. Merci pour votre patience! 🇫🇷",
         },
         welcomeMessages: {
-          it: "Benvenuto a L'Altra Italia! 👋 Sono il tuo assistente virtuale e sono qui per aiutarti con qualsiasi informazione sui nostri prodotti e servizi. Prima di iniziare, ti invitiamo a registrarti al nostro servizio: potrai consultare le nostre politiche sulla privacy e scoprire come tuteliamo i tuoi dati, che saranno custoditi in modo sicuro nel nostro database e non verranno mai condivisi con terzi.",
-          en: "Welcome to L'Altra Italia! 👋 I'm your virtual assistant and I'm here to help you with any information about our products and services. Before we begin, we invite you to register for our service: you can review our privacy policies and discover how we protect your data, which will be securely stored in our database and never shared with third parties.",
-          es: "¡Bienvenido a L'Altra Italia! 👋 Soy tu asistente virtual y estoy aquí para ayudarte con cualquier información sobre nuestros productos y servicios. Antes de comenzar, te invitamos a registrarte en nuestro servicio: podrás consultar nuestras políticas de privacidad y descubrir cómo protegemos tus datos, que serán custodiados de forma segura en nuestra base de datos y nunca serán compartidos con terceros.",
-          pt: "Bem-vindo à L'Altra Italia! 👋 Sou o seu assistente virtual e estou aqui para ajudá-lo com informações sobre os nossos produtos e serviços. Antes de começar, convidamo-lo a registar-se no nosso serviço: poderá consultar as nossas políticas de privacidade e descobrir como protegemos os seus dados, que serão guardados de forma segura na nossa base de dados e nunca serão partilhados com terceiros.",
+          it: "👋 Benvenuto a L'Altra Italia! Sono SofiA, il tuo assistente digitale. Sono qui per aiutarti con:\n\n• Esplorare i nostri prodotti italiani di alta qualità\n• Seguire i tuoi ordini\n• Rispondere a qualsiasi domanda\n\nPrima di iniziare, ti invito a registrarti per accedere a tutte le funzionalità. I tuoi dati saranno protetti e mai condivisi con terzi.\n\nCosa posso fare per te oggi? 🇮🇹",
+          en: "👋 Welcome to L'Altra Italia! I'm SofiA, your digital assistant. I'm here to help you with:\n\n• Exploring our high-quality Italian products\n• Tracking your orders\n• Answering any questions\n\nBefore we begin, please register to access all features. Your data will be protected and never shared with third parties.\n\nWhat can I do for you today? 🇬🇧",
+          es: "👋 ¡Bienvenido a L'Altra Italia! Soy SofiA, tu asistente digital. Estoy aquí para ayudarte con:\n\n• Explorar nuestros productos italianos de alta calidad\n• Seguir tus pedidos\n• Responder cualquier pregunta\n\nAntes de comenzar, te invito a registrarte para acceder a todas las funciones. Tus datos estarán protegidos y nunca se compartirán con terceros.\n\n¿Qué puedo hacer por ti hoy? 🇪🇸",
+          pt: "👋 Bem-vindo à L'Altra Italia! Sou a SofiA, a sua assistente digital. Estou aqui para ajudá-lo com:\n\n• Explorar os nossos produtos italianos de alta qualidade\n• Acompanhar os seus pedidos\n• Responder a qualquer pergunta\n\nAntes de começar, convido-o a registar-se para aceder a todas as funcionalidades. Os seus dados estarão protegidos e nunca serão partilhados com terceiros.\n\nO que posso fazer por si hoje? 🇵🇹",
+          de: "👋 Willkommen bei L'Altra Italia! Ich bin SofiA, Ihre digitale Assistentin. Ich helfe Ihnen gerne bei:\n\n• Erkunden Sie unsere hochwertigen italienischen Produkte\n• Verfolgen Sie Ihre Bestellungen\n• Beantworten Sie alle Fragen\n\nBitte registrieren Sie sich zunächst, um auf alle Funktionen zuzugreifen. Ihre Daten werden geschützt und niemals an Dritte weitergegeben.\n\nWas kann ich heute für Sie tun? 🇩🇪",
+          fr: "👋 Bienvenue chez L'Altra Italia! Je suis SofiA, votre assistante numérique. Je suis là pour vous aider avec:\n\n• Explorer nos produits italiens de haute qualité\n• Suivre vos commandes\n• Répondre à toutes vos questions\n\nAvant de commencer, veuillez vous inscrire pour accéder à toutes les fonctionnalités. Vos données seront protégées et ne seront jamais partagées avec des tiers.\n\nQue puis-je faire pour vous aujourd'hui? 🇫🇷",
         },
         afterRegistrationMessages: {
           it: "Ben tornato, {name}! 👋 Come posso aiutarti oggi?",

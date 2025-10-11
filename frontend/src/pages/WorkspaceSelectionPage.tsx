@@ -14,12 +14,12 @@ import {
 } from "../services/workspaceApi"
 
 // Definizione dei tipi di attività supportati
-type BusinessType = "Shop" | "Hotel" | "Restaurant"
+type BusinessType = "Shop"
 
 export function WorkspaceSelectionPage() {
   const navigate = useNavigate()
   const { setCurrentWorkspace } = useWorkspace()
-  const [selectedType, setSelectedType] = useState<BusinessType | null>(null)
+  const [selectedType] = useState<BusinessType>("Shop") // Always Shop by default
   const [newPhoneNumber, setNewPhoneNumber] = useState("")
   const [alias, setAlias] = useState("")
   const [justCreatedId, setJustCreatedId] = useState<string | null>(null)
@@ -119,7 +119,7 @@ export function WorkspaceSelectionPage() {
       // Reset form
       setNewPhoneNumber("")
       setAlias("")
-      setSelectedType(null)
+      // selectedType is always "Shop" by default, no need to reset
       setErrorMessage("")
 
       // Chiude il dialog se aperto
@@ -294,36 +294,7 @@ export function WorkspaceSelectionPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                <Button
-                  type="button"
-                  variant={selectedType === "Shop" ? "default" : "outline"}
-                  className={`h-24 text-lg ${
-                    selectedType === "Shop"
-                      ? "bg-green-600 hover:bg-green-700"
-                      : ""
-                  }`}
-                  onClick={() => setSelectedType("Shop")}
-                >
-                  Shop
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-24 text-lg opacity-50 cursor-not-allowed"
-                  disabled
-                >
-                  Hotel
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-24 text-lg opacity-50 cursor-not-allowed"
-                  disabled
-                >
-                  Restaurant
-                </Button>
-              </div>
+              {/* Channel Type is always "Shop" by default - no UI needed */}
 
               <div className="flex justify-end gap-4 mt-8">
                 <Button
