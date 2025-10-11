@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
-import { api } from '../services/api'
-import { logger } from '../lib/logger'
+import { useEffect, useState } from "react"
+import { logger } from "../lib/logger"
+import { api } from "../services/api"
 
 interface TokenValidationResult {
   valid: boolean
@@ -35,8 +35,10 @@ export const useTokenValidation = ({
   token,
   type,
   workspaceId,
-  autoValidate = true
-}: UseTokenValidationOptions): TokenValidationResult & { validateToken: () => Promise<void> } => {
+  autoValidate = true,
+}: UseTokenValidationOptions): TokenValidationResult & {
+  validateToken: () => Promise<void>
+} => {
   const [valid, setValid] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -47,7 +49,7 @@ export const useTokenValidation = ({
 
   const validateToken = async () => {
     if (!token) {
-      setError('Token mancante nel link')
+      setError("Token mancante nel link")
       setValid(false)
       setLoading(false)
       return
@@ -59,36 +61,44 @@ export const useTokenValidation = ({
     setExpiresAt(undefined)
 
     try {
-      logger.info(`[TOKEN-VALIDATION] Validating token for type: ${type || 'any'}`)
-      
+      logger.info(
+        `[TOKEN-VALIDATION] Validating token for type: ${type || "any"}`
+      )
+
       // TOKEN-ONLY system: Don't send type to allow universal token usage
       const requestBody: any = { token }
       if (workspaceId) requestBody.workspaceId = workspaceId
       // Explicitly don't send 'type' to allow any valid token type
-      
-      const response = await api.post('/internal/validate-secure-token', requestBody)
+
+      const response = await api.post(
+        "/internal/validate-secure-token",
+        requestBody
+      )
 
       if (response.data.valid) {
         setValid(true)
         setTokenData(response.data.data)
         setPayload(response.data.payload)
-        logger.info('[TOKEN-VALIDATION] ✅ Token validated successfully')
+        logger.info("[TOKEN-VALIDATION] ✅ Token validated successfully")
       } else {
         setValid(false)
-        setError(response.data.error || 'Token non valido')
+        setError(response.data.error || "Token non valido")
         setErrorType(response.data.errorType)
         setExpiresAt(response.data.expiresAt)
-        logger.warn('[TOKEN-VALIDATION] ❌ Token validation failed:', response.data.error)
+        logger.warn(
+          "[TOKEN-VALIDATION] ❌ Token validation failed:",
+          response.data.error
+        )
       }
     } catch (err: any) {
-      logger.error('[TOKEN-VALIDATION] Error validating token:', err)
-      
+      logger.error("[TOKEN-VALIDATION] Error validating token:", err)
+
       if (err.response?.status === 401) {
-        setError('Link expired or invalid')
+        setError("Link expired or invalid")
       } else if (err.response?.status === 403) {
-        setError('Link not authorized for this workspace')
+        setError("Link not authorized for this workspace")
       } else {
-        setError('Error during link validation')
+        setError("Error during link validation")
       }
       setValid(false)
     } finally {
@@ -111,7 +121,7 @@ export const useTokenValidation = ({
     expiresAt,
     tokenData,
     payload,
-    validateToken
+    validateToken,
   }
 }
 
@@ -130,7 +140,7 @@ export const useCheckoutTokenValidation = (token: string | null) => {
 
   const validateToken = async () => {
     if (!token) {
-      setError('Token missing in link')
+      setError("Token missing in link")
       setValid(false)
       setLoading(false)
       return
@@ -145,37 +155,43 @@ export const useCheckoutTokenValidation = (token: string | null) => {
     const endpoint = `/checkout/token?token=${token}`
 
     try {
-        
-      logger.info(`[CHECKOUT-TOKEN-VALIDATION] Validating token for CHECKOUT page`)
-      
+      logger.info(
+        `[CHECKOUT-TOKEN-VALIDATION] Validating token for CHECKOUT page`
+      )
+
       const response = await api.get(endpoint)
 
       // 🎯 Check for valid response from checkout endpoint
       const isValidResponse = response.data.valid
-      
+
       if (isValidResponse) {
         setValid(true)
         setTokenData(response.data)
         setPayload(response.data.prodotti)
-        logger.info(`[CHECKOUT-TOKEN-VALIDATION] ✅ Token validated successfully for CHECKOUT`)
+        logger.info(
+          `[CHECKOUT-TOKEN-VALIDATION] ✅ Token validated successfully for CHECKOUT`
+        )
       } else {
         setValid(false)
-        setError(response.data.error || 'Invalid token')
+        setError(response.data.error || "Invalid token")
         setErrorType(response.data.errorType)
         setExpiresAt(response.data.expiresAt)
-        logger.warn(`[CHECKOUT-TOKEN-VALIDATION] ❌ Token validation failed for CHECKOUT:`, response.data.error)
+        logger.warn(
+          `[CHECKOUT-TOKEN-VALIDATION] ❌ Token validation failed for CHECKOUT:`,
+          response.data.error
+        )
       }
     } catch (err: any) {
-      logger.error('[CHECKOUT-TOKEN-VALIDATION] Error validating token:', err)
-      
+      logger.error("[CHECKOUT-TOKEN-VALIDATION] Error validating token:", err)
+
       if (err.response?.status === 400) {
-        setError(err.response.data.error || 'Link expired or invalid')
+        setError(err.response.data.error || "Link expired or invalid")
         setErrorType(err.response.data.errorType)
         setExpiresAt(err.response.data.expiresAt)
       } else if (err.response?.status === 403) {
-        setError('Link not authorized for this workspace')
+        setError("Link not authorized for this workspace")
       } else {
-        setError('Error during link validation')
+        setError("Error during link validation")
       }
       setValid(false)
     } finally {
@@ -198,30 +214,36 @@ export const useCheckoutTokenValidation = (token: string | null) => {
     expiresAt,
     tokenData,
     payload,
-    validateToken
+    validateToken,
   }
 }
 
 /**
  * 🧾 Specialized hook for invoice token validation
  */
-export const useInvoiceTokenValidation = (token: string | null, workspaceId?: string) => {
+export const useInvoiceTokenValidation = (
+  token: string | null,
+  workspaceId?: string
+) => {
   return useTokenValidation({
     token,
-    type: 'invoice',
+    type: "invoice",
     workspaceId,
-    autoValidate: true
+    autoValidate: true,
   })
 }
 
 /**
  * 🛍️ Specialized hook for cart token validation
  */
-export const useCartTokenValidation = (token: string | null, workspaceId?: string) => {
+export const useCartTokenValidation = (
+  token: string | null,
+  workspaceId?: string
+) => {
   return useTokenValidation({
     token,
-    type: 'cart',
+    type: "cart",
     workspaceId,
-    autoValidate: true
+    autoValidate: true,
   })
 }
