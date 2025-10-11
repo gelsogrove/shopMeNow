@@ -2,13 +2,14 @@
 
 **Data Implementazione**: 11 Ottobre 2025  
 **Feature**: Messaggio automatico multilingua quando workspace è disabilitato  
-**Priority**: CRITICAL - Primo check nel flusso LLM  
+**Priority**: CRITICAL - Primo check nel flusso LLM
 
 ---
 
 ## 📋 **REQUISITO**
 
 Quando un workspace è **disabilitato** (`isActive = false`), il sistema deve:
+
 1. ❌ **NON** processare messaggi con LLM
 2. ❌ **NON** creare ordini o eseguire azioni
 3. ✅ **Inviare immediatamente** messaggio WIP in lingua cliente
@@ -20,6 +21,7 @@ Quando un workspace è **disabilitato** (`isActive = false`), il sistema deve:
 ## 🎯 **FLUSSO IMPLEMENTATO**
 
 ### **Priorità Check** (ordine corretto):
+
 ```
 1. 🔴 workspace.isActive? → Se NO → WIP message + STOP
 2. 🟡 customer === null? → Se SI → NewUser flow
@@ -29,26 +31,30 @@ Quando un workspace è **disabilitato** (`isActive = false`), il sistema deve:
 ```
 
 ### **Codice Implementato** (`llm.service.ts` linea 96-120):
+
 ```typescript
 // 🔴 1. FIRST CHECK: Workspace disabled? Return WIP message
 if (!workspace.isActive) {
   console.log("🚫 LLM: Workspace is DISABLED - Sending WIP message")
-  
+
   // Get customer language or default to Spanish
   const customerLanguage = customer?.language || "es"
   console.log(`🌍 Customer language: ${customerLanguage} (default: es if NULL)`)
-  
+
   // Get WIP message in customer's language
-  const wipMessages = workspace.wipMessages as Record<string, string> || {}
-  const wipMessage = wipMessages[customerLanguage.toLowerCase()] || wipMessages["es"] || "Estamos en mantenimiento. Por favor, contacte más tarde."
-  
+  const wipMessages = (workspace.wipMessages as Record<string, string>) || {}
+  const wipMessage =
+    wipMessages[customerLanguage.toLowerCase()] ||
+    wipMessages["es"] ||
+    "Estamos en mantenimiento. Por favor, contacte más tarde."
+
   console.log(`📤 Sending WIP message in ${customerLanguage}: "${wipMessage}"`)
-  
+
   // Send WIP message via WhatsApp
   const { WhatsAppService } = require("./whatsapp.service")
   const whatsappService = new WhatsAppService()
   await whatsappService.sendMessage(llmRequest.phone, wipMessage, workspace.id)
-  
+
   // Return special IGNORE to stop processing
   return "IGNORE"
 }
@@ -59,6 +65,7 @@ if (!workspace.isActive) {
 ## 💾 **DATABASE**
 
 ### **Workspace Schema** (già esistente):
+
 ```prisma
 model Workspace {
   // ... altri campi
@@ -73,6 +80,7 @@ model Workspace {
 ```
 
 ### **Customer Schema** (già esistente):
+
 ```prisma
 model Customers {
   // ... altri campi
@@ -81,6 +89,7 @@ model Customers {
 ```
 
 **Note**:
+
 - `wipMessages` è JSON con chiavi lingua: `{ "en": "...", "es": "...", "it": "...", "pt": "..." }`
 - `customer.language` può essere NULL → **default: "es" (SPAGNOLO)**
 
@@ -89,33 +98,36 @@ model Customers {
 ## 🌍 **REGOLA LINGUA**
 
 ### **Logica Implementata**:
+
 ```typescript
 const customerLanguage = customer?.language || "es"
 ```
 
 ### **Casistiche**:
+
 1. **Customer esiste + language valorizzato**: Usa `customer.language`
 2. **Customer esiste + language NULL**: Usa **"es"** (SPAGNOLO)
 3. **Customer NON esiste** (new user): Usa **"es"** (SPAGNOLO)
 
 ### **Fallback Chain**:
+
 ```typescript
-const wipMessage = 
-  wipMessages[customerLanguage.toLowerCase()] ||  // 1. Lingua cliente
-  wipMessages["es"] ||                            // 2. Default spagnolo
-  "Estamos en mantenimiento. Por favor, contacte más tarde."  // 3. Hardcoded fallback
+const wipMessage =
+  wipMessages[customerLanguage.toLowerCase()] || // 1. Lingua cliente
+  wipMessages["es"] || // 2. Default spagnolo
+  "Estamos en mantenimiento. Por favor, contacte más tarde." // 3. Hardcoded fallback
 ```
 
 ---
 
 ## 📊 **LINGUE SUPPORTATE**
 
-| Codice | Lingua | Messaggio Default |
-|--------|--------|-------------------|
-| **es** | Spagnolo | "Trabajos en curso. Por favor, contáctenos más tarde." |
-| **en** | Inglese | "Work in progress. Please contact us later." |
-| **it** | Italiano | "Lavori in corso. Contattaci più tardi." |
-| **pt** | Portoghese | "Em manutenção. Por favor, contacte-nos mais tarde." |
+| Codice | Lingua     | Messaggio Default                                      |
+| ------ | ---------- | ------------------------------------------------------ |
+| **es** | Spagnolo   | "Trabajos en curso. Por favor, contáctenos más tarde." |
+| **en** | Inglese    | "Work in progress. Please contact us later."           |
+| **it** | Italiano   | "Lavori in corso. Contattaci più tardi."               |
+| **pt** | Portoghese | "Em manutenção. Por favor, contacte-nos mais tarde."   |
 
 **Default Lingua**: **SPAGNOLO (es)** se `customer.language` è NULL
 
@@ -124,7 +136,9 @@ const wipMessage =
 ## 🧪 **TESTING**
 
 ### **Test 1: Workspace Disabilitato + Customer con Lingua**
+
 **Setup**:
+
 ```sql
 UPDATE "Workspace" SET "isActive" = false WHERE id = 'xxx';
 UPDATE "Customers" SET language = 'it' WHERE phone = '+39123456789';
@@ -133,6 +147,7 @@ UPDATE "Customers" SET language = 'it' WHERE phone = '+39123456789';
 **Azione**: Cliente invia messaggio WhatsApp "Ciao"
 
 **Risultato Atteso**:
+
 - ✅ Log: "🚫 LLM: Workspace is DISABLED - Sending WIP message"
 - ✅ Log: "🌍 Customer language: it (default: es if NULL)"
 - ✅ Log: "📤 Sending WIP message in it: 'Lavori in corso...'"
@@ -142,7 +157,9 @@ UPDATE "Customers" SET language = 'it' WHERE phone = '+39123456789';
 ---
 
 ### **Test 2: Workspace Disabilitato + Customer SENZA Lingua (NULL)**
+
 **Setup**:
+
 ```sql
 UPDATE "Workspace" SET "isActive" = false WHERE id = 'xxx';
 UPDATE "Customers" SET language = NULL WHERE phone = '+34123456789';
@@ -151,6 +168,7 @@ UPDATE "Customers" SET language = NULL WHERE phone = '+34123456789';
 **Azione**: Cliente invia messaggio WhatsApp "Hola"
 
 **Risultato Atteso**:
+
 - ✅ Log: "🚫 LLM: Workspace is DISABLED - Sending WIP message"
 - ✅ Log: "🌍 Customer language: es (default: es if NULL)"
 - ✅ Log: "📤 Sending WIP message in es: 'Trabajos en curso...'"
@@ -160,7 +178,9 @@ UPDATE "Customers" SET language = NULL WHERE phone = '+34123456789';
 ---
 
 ### **Test 3: Workspace Disabilitato + New Customer (non esiste)**
+
 **Setup**:
+
 ```sql
 UPDATE "Workspace" SET "isActive" = false WHERE id = 'xxx';
 -- Customer con phone '+1234567890' NON esiste nel DB
@@ -169,6 +189,7 @@ UPDATE "Workspace" SET "isActive" = false WHERE id = 'xxx';
 **Azione**: Nuovo cliente invia messaggio WhatsApp "Hello"
 
 **Risultato Atteso**:
+
 - ✅ Log: "🚫 LLM: Workspace is DISABLED - Sending WIP message"
 - ✅ Log: "🌍 Customer language: es (default: es if NULL)"
 - ✅ Log: "📤 Sending WIP message in es: 'Trabajos en curso...'"
@@ -178,7 +199,9 @@ UPDATE "Workspace" SET "isActive" = false WHERE id = 'xxx';
 ---
 
 ### **Test 4: Workspace ATTIVO (normal flow)**
+
 **Setup**:
+
 ```sql
 UPDATE "Workspace" SET "isActive" = true WHERE id = 'xxx';
 ```
@@ -186,6 +209,7 @@ UPDATE "Workspace" SET "isActive" = true WHERE id = 'xxx';
 **Azione**: Cliente invia messaggio WhatsApp "Ciao"
 
 **Risultato Atteso**:
+
 - ✅ Log: **SKIP** check isActive (perché true)
 - ✅ Procede con normal flow: NewUser o LLM processing
 - ✅ Nessun messaggio WIP inviato
@@ -195,6 +219,7 @@ UPDATE "Workspace" SET "isActive" = true WHERE id = 'xxx';
 ## 🔍 **LOGGING**
 
 ### **Console Logs Aggiunti**:
+
 ```typescript
 🚫 LLM: Workspace is DISABLED - Sending WIP message
 🌍 Customer language: {lang} (default: es if NULL)
@@ -202,6 +227,7 @@ UPDATE "Workspace" SET "isActive" = true WHERE id = 'xxx';
 ```
 
 ### **Debug Info**:
+
 - Workspace ID
 - Customer phone
 - Customer language (o default)
@@ -215,6 +241,7 @@ UPDATE "Workspace" SET "isActive" = true WHERE id = 'xxx';
 ### **Workspace Settings** - Sezione WIP Message
 
 **Campi UI**:
+
 - ✅ **Toggle**: "Enable Workspace" (isActive true/false)
 - ✅ **WIP Message - Spagnolo (es)**: Textarea multiline
 - ✅ **WIP Message - Inglese (en)**: Textarea multiline
@@ -222,6 +249,7 @@ UPDATE "Workspace" SET "isActive" = true WHERE id = 'xxx';
 - ✅ **WIP Message - Portoghese (pt)**: Textarea multiline
 
 **Default Values** (da schema Prisma):
+
 ```json
 {
   "en": "Work in progress. Please contact us later.",
@@ -232,6 +260,7 @@ UPDATE "Workspace" SET "isActive" = true WHERE id = 'xxx';
 ```
 
 **Note**:
+
 - Admin può personalizzare ogni messaggio WIP per lingua
 - Se admin lascia vuoto → usa default da schema
 - Lingua default è SPAGNOLO se customer.language è NULL
@@ -255,6 +284,7 @@ UPDATE "Workspace" SET "isActive" = true WHERE id = 'xxx';
 ## 📚 **FILES MODIFICATI**
 
 ### **Backend**:
+
 1. ✅ `backend/src/services/llm.service.ts` (linea 96-120)
    - Aggiunto check `workspace.isActive` come PRIMO
    - Logica lingua: `customer?.language || "es"`
@@ -263,9 +293,11 @@ UPDATE "Workspace" SET "isActive" = true WHERE id = 'xxx';
    - Return "IGNORE"
 
 ### **Database** (nessuna modifica):
+
 - ✅ Schema già completo con `wipMessages` e `isActive`
 
 ### **Frontend** (TODO - opzionale):
+
 - [ ] UI Workspace Settings per configurare WIP messages per lingua
 - [ ] Toggle "Enable Workspace" per attivare/disattivare
 
@@ -274,11 +306,13 @@ UPDATE "Workspace" SET "isActive" = true WHERE id = 'xxx';
 ## 🚀 **DEPLOYMENT**
 
 ### **Backend**:
+
 - ✅ **READY** - Codice implementato e funzionante
 - ✅ Nessuna migration necessaria (schema già completo)
 - ✅ Backward compatible (workspace esistenti hanno default WIP messages)
 
 ### **Testing Pre-Production**:
+
 1. Disabilita workspace di test (`isActive = false`)
 2. Invia messaggio WhatsApp da cliente con lingua IT
 3. Verifica ricezione messaggio "Lavori in corso..."
@@ -290,6 +324,7 @@ UPDATE "Workspace" SET "isActive" = true WHERE id = 'xxx';
 ## 🎯 **BUSINESS IMPACT**
 
 ### **Vantaggi**:
+
 - ✅ Admin può disabilitare workspace senza eliminarlo
 - ✅ Clienti ricevono messaggio chiaro in loro lingua
 - ✅ Sistema non spreca chiamate LLM quando workspace disabilitato
@@ -297,6 +332,7 @@ UPDATE "Workspace" SET "isActive" = true WHERE id = 'xxx';
 - ✅ Supporto multilingua automatico
 
 ### **Use Cases**:
+
 1. **Manutenzione Pianificata**: Disabilita workspace durante update database
 2. **Chiusura Temporanea**: Vacanze, festività, chiusura attività
 3. **Debug/Testing**: Disabilita workspace production per test isolati
@@ -316,6 +352,7 @@ UPDATE "Workspace" SET "isActive" = true WHERE id = 'xxx';
 ## 📈 **METRICHE**
 
 ### **Monitoraggio Raccomandato**:
+
 - [ ] Contatore messaggi WIP inviati per workspace
 - [ ] Lingua più usata dai clienti (da `customer.language`)
 - [ ] Durata disabilitazione workspace (isActive=false time)
@@ -328,7 +365,7 @@ UPDATE "Workspace" SET "isActive" = true WHERE id = 'xxx';
 **Data**: 11 Ottobre 2025  
 **Engineer**: Andrea (con supporto GitHub Copilot Agent)  
 **Status**: IMPLEMENTED & TESTED  
-**Backward Compatible**: ✅ YES  
+**Backward Compatible**: ✅ YES
 
 ---
 

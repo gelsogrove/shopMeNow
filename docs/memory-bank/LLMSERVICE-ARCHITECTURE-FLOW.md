@@ -3,7 +3,7 @@
 **File Sorgente**: `backend/src/services/llm.service.ts`  
 **Responsabilità**: Core engine per elaborazione messaggi WhatsApp con AI  
 **Data Documentazione**: 11 Ottobre 2025  
-**Versione**: 2.0 (con WIP Message + Security checks)  
+**Versione**: 2.0 (con WIP Message + Security checks)
 
 ---
 
@@ -42,89 +42,89 @@
 ```mermaid
 flowchart TD
     Start([📱 Messaggio WhatsApp Arriva]) --> HandleMessage[🚀 LLMService.handleMessage]
-    
+
     HandleMessage --> FindCustomer{🔍 findCustomerByPhone}
     FindCustomer --> GetWorkspace[🏢 getById workspace]
-    
+
     GetWorkspace --> CheckWorkspaceActive{🔴 1. workspace.isActive?}
-    
+
     CheckWorkspaceActive -->|❌ NO - DISABLED| GetCustomerLang[🌍 customer.language || 'es']
     GetCustomerLang --> GetWipMessage[📝 workspace.wipMessages[lang]]
     GetWipMessage --> SendWipWhatsApp[📤 WhatsApp: Invia WIP message]
     SendWipWhatsApp --> ReturnIgnore1[🛑 return 'IGNORE']
     ReturnIgnore1 --> End1([❌ STOP - No LLM])
-    
+
     CheckWorkspaceActive -->|✅ YES - ACTIVE| CheckNewCustomer{🟡 2. customer === null?}
-    
+
     CheckNewCustomer -->|✅ YES - NEW USER| NewUserFlow[🆕 NewUser flow]
     NewUserFlow --> SendWelcome[📤 Invia Welcome message]
     SendWelcome --> ReturnSuccess1[✅ return success]
     ReturnSuccess1 --> End2([✅ Fine])
-    
+
     CheckNewCustomer -->|❌ NO - EXISTS| CheckBlacklist{🟠 3. isBlacklisted?}
-    
+
     CheckBlacklist -->|✅ YES - BLOCKED| ReturnIgnore2[🛑 return 'IGNORE']
     ReturnIgnore2 --> End3([❌ STOP - Customer blocked])
-    
+
     CheckBlacklist -->|❌ NO - OK| CheckChatbotActive{🟢 4. activeChatbot?}
-    
+
     CheckChatbotActive -->|❌ NO - DISABLED| ReturnIgnore3[🛑 return 'IGNORE']
     ReturnIgnore3 --> End4([❌ STOP - Chatbot disabled])
-    
+
     CheckChatbotActive -->|✅ YES - ACTIVE| GetPrompt[📄 getActivePromptByWorkspaceId]
-    
+
     GetPrompt --> CheckPromptExists{Prompt exists?}
     CheckPromptExists -->|❌ NO| ReturnError[❌ return error 'Servizio non disponibile']
     ReturnError --> End5([❌ Fine con errore])
-    
+
     CheckPromptExists -->|✅ YES| PreProcessing[⚙️ PRE-PROCESSING]
-    
+
     PreProcessing --> GetFaqs[📚 getActiveFaqs]
     GetFaqs --> GetServices[🛠️ getActiveServices]
     GetServices --> GetCategories[📂 getActiveCategories]
     GetCategories --> GetOffers[🎁 getActiveOffers]
     GetOffers --> GetProducts[🛍️ getActiveProducts]
     GetProducts --> BuildUserInfo[👤 Build userInfo object]
-    
+
     BuildUserInfo --> PreProcessPrompt[🔧 preProcessPrompt]
     PreProcessPrompt --> SavePromptFile[💾 Save prompt.txt debug]
-    
+
     SavePromptFile --> GenerateLLM[🤖 generateLLMResponse]
-    
+
     GenerateLLM --> CallOpenRouter[🌐 OpenRouter API]
     CallOpenRouter --> CheckFunctionCall{Function call?}
-    
+
     CheckFunctionCall -->|✅ YES| ExecuteFunction[⚡ CallingFunctionsService]
     ExecuteFunction --> GetFunctionResult[📦 Function result]
     GetFunctionResult --> PostProcessing[🔄 POST-PROCESSING]
-    
+
     CheckFunctionCall -->|❌ NO| PostProcessing
-    
+
     PostProcessing --> ReplaceLinkTokens[🔗 replaceLinkTokens]
     ReplaceLinkTokens --> CheckCheckoutToken{[LINK_CHECKOUT_WITH_TOKEN]?}
-    
+
     CheckCheckoutToken -->|✅ YES| GetCartLink[🛒 getCartLink]
     GetCartLink --> ReplaceCheckoutToken[🔀 Replace token con URL]
     ReplaceCheckoutToken --> CheckProfileToken{[LINK_PROFILE_WITH_TOKEN]?}
-    
+
     CheckCheckoutToken -->|❌ NO| CheckProfileToken
-    
+
     CheckProfileToken -->|✅ YES| GetProfileLink[👤 getProfileLink]
     GetProfileLink --> ReplaceProfileToken[🔀 Replace token con URL]
     ReplaceProfileToken --> CheckOrdersToken{[LINK_ORDERS_WITH_TOKEN]?}
-    
+
     CheckProfileToken -->|❌ NO| CheckOrdersToken
-    
+
     CheckOrdersToken -->|✅ YES| GetOrdersLink[📋 getOrdersListLink]
     GetOrdersLink --> ReplaceOrdersToken[🔀 Replace token con URL]
     ReplaceOrdersToken --> FinalResponse[✅ Final response ready]
-    
+
     CheckOrdersToken -->|❌ NO| FinalResponse
-    
+
     FinalResponse --> ReturnSuccess2[✅ return { success, output, debugInfo }]
     ReturnSuccess2 --> SendWhatsApp[📤 WhatsApp: Invia risposta finale]
     SendWhatsApp --> End6([✅ Fine successo])
-    
+
     style CheckWorkspaceActive fill:#ff6b6b,stroke:#c92a2a,color:#fff
     style CheckNewCustomer fill:#ffd93d,stroke:#f59f00,color:#000
     style CheckBlacklist fill:#ff922b,stroke:#e8590c,color:#fff
@@ -148,12 +148,14 @@ async handleMessage(llmRequest: LLMRequest, customerData?: any): Promise<any>
 ```
 
 **Input**:
+
 - `llmRequest.phone`: Numero WhatsApp cliente (es. "+393331234567")
 - `llmRequest.chatInput`: Messaggio testo del cliente (es. "Voglio ordinare pizza")
 - `llmRequest.workspaceId`: ID workspace (fallback se customer non trovato)
 - `customerData` (opzionale): Dati aggiuntivi (lastordercode, ecc.)
 
 **Actions**:
+
 1. Log: `"🚀 LLM: handleMessage chiamato per telefono: +39..."`
 2. Inizializza repositories: `MessageRepository`
 3. Carica utility: `replaceAllVariables`, `workspaceService`
@@ -177,6 +179,7 @@ const agentConfig = workspace.agentConfigs?.[0]
 ```
 
 **Log Output**:
+
 ```
 🔍 CUSTOMER TROVATO: { id: 'xxx', workspaceId: 'yyy', phone: '+39...' }
 🏢 WORKSPACE ID SCELTO: yyy - Source: customer.workspaceId
@@ -186,6 +189,7 @@ const agentConfig = workspace.agentConfigs?.[0]
 ```
 
 **Dati Caricati**:
+
 - `customer`: Oggetto Customer completo (id, name, email, phone, language, discount, ...)
 - `workspace`: Oggetto Workspace completo (id, name, isActive, wipMessages, ...)
 - `agentConfig`: Configurazione LLM (model, temperature, maxTokens, ...)
@@ -200,17 +204,18 @@ const agentConfig = workspace.agentConfigs?.[0]
 if (!workspace.isActive) {
   // Get customer language or default to Spanish
   const customerLanguage = customer?.language || "es"
-  
+
   // Get WIP message in customer's language
-  const wipMessages = workspace.wipMessages as Record<string, string> || {}
-  const wipMessage = wipMessages[customerLanguage.toLowerCase()] || 
-                     wipMessages["es"] || 
-                     "Estamos en mantenimiento. Por favor, contacte más tarde."
-  
+  const wipMessages = (workspace.wipMessages as Record<string, string>) || {}
+  const wipMessage =
+    wipMessages[customerLanguage.toLowerCase()] ||
+    wipMessages["es"] ||
+    "Estamos en mantenimiento. Por favor, contacte más tarde."
+
   // Send WIP message via WhatsApp
   const whatsappService = new WhatsAppService()
   await whatsappService.sendMessage(llmRequest.phone, wipMessage, workspace.id)
-  
+
   // STOP processing
   return "IGNORE"
 }
@@ -235,6 +240,7 @@ if (!customer) {
 **Trigger**: `customer === null` (customer non esiste nel DB)  
 **Action**: Chiama `NewUser()` flow  
 **NewUser Flow**:
+
 1. Crea nuovo customer nel DB
 2. Invia welcome message da `workspace.welcomeMessages[lingua]`
 3. Return success
@@ -246,7 +252,10 @@ if (!customer) {
 #### **🟠 CHECK 3: Customer Blacklisted?**
 
 ```typescript
-const isBlocked = await messageRepo.isCustomerBlacklisted(customer.phone, workspace.id)
+const isBlocked = await messageRepo.isCustomerBlacklisted(
+  customer.phone,
+  workspace.id
+)
 
 if (isBlocked || customer.isBlacklisted || isChatbotInactive) {
   console.log(`🚫 LLM: Customer blocked - isBlocked: ${isBlocked}, ...`)
@@ -255,6 +264,7 @@ if (isBlocked || customer.isBlacklisted || isChatbotInactive) {
 ```
 
 **Trigger**:
+
 - `customer.isBlacklisted === true`
 - OR `messageRepo.isCustomerBlacklisted()` returns true
 - OR `customer.activeChatbot === false`
@@ -294,7 +304,7 @@ if (!prompt) {
   return {
     success: false,
     output: "❌ Servizio temporaneamente non disponibile.",
-    debugInfo: { stage: "no_prompt" }
+    debugInfo: { stage: "no_prompt" },
   }
 }
 ```
@@ -311,12 +321,19 @@ const userLanguage = customer.language || workspace.language || "it"
 
 const faqs = await messageRepo.getActiveFaqs(workspace.id)
 const services = await messageRepo.getActiveServices(workspace.id)
-const categories = await messageRepo.getActiveCategories(workspace.id, userLanguage)
+const categories = await messageRepo.getActiveCategories(
+  workspace.id,
+  userLanguage
+)
 const offers = await messageRepo.getActiveOffers(workspace.id, userLanguage)
-const products = await messageRepo.getActiveProducts(workspace.id, customerDiscount)
+const products = await messageRepo.getActiveProducts(
+  workspace.id,
+  customerDiscount
+)
 ```
 
 **Dati Recuperati**:
+
 - `faqs`: Lista FAQ attive (domande frequenti)
 - `services`: Lista servizi offerti
 - `categories`: Categorie prodotti (tradotte in lingua utente)
@@ -324,6 +341,7 @@ const products = await messageRepo.getActiveProducts(workspace.id, customerDisco
 - `products`: Prodotti attivi (con prezzo scontato se customer ha discount)
 
 **Formato Products** (esempio):
+
 ```
 [ID: 123] Pizza Margherita - €8.00 (sconto 10% applicato: €7.20)
 [ID: 456] Pizza Diavola - €9.00 (sconto 10% applicato: €8.10)
@@ -339,11 +357,12 @@ const userInfo = {
   discountUser: customer.discount || 0,
   companyName: customer.company || "",
   lastordercode: customerData?.lastordercode || customer.lastOrderCode || "",
-  languageUser: this.getLanguageDisplayName(userLanguage)
+  languageUser: this.getLanguageDisplayName(userLanguage),
 }
 ```
 
 **User Info Object**:
+
 - `nameUser`: "Mario Rossi"
 - `discountUser`: 10 (percentuale sconto)
 - `companyName`: "Acme Corp"
@@ -364,12 +383,14 @@ const promptWithVars = await this.promptProcessorService.preProcessPrompt(
 ```
 
 **Process**:
+
 1. Sostituisce variabili utente: `{{nome}}` → "Mario Rossi"
 2. Sostituisce variabili workspace: `{{prodotti}}` → lista completa prodotti
 3. Sostituisce variabili dinamiche: `{{faqs}}` → lista FAQ
 4. Genera prompt finale completo pronto per LLM
 
 **Prompt Finale** (esempio):
+
 ```
 Sei un assistente virtuale per la pizzeria "Da Mario".
 
@@ -395,7 +416,8 @@ Rispondi in modo professionale e aiuta l'utente.
 ```typescript
 try {
   const promptPath = path.join(process.cwd(), "prompt.txt")
-  fs.writeFileSync(promptPath, 
+  fs.writeFileSync(
+    promptPath,
     `=== PROMPT GENERATO ${new Date().toISOString()} ===\n\n${promptWithVars}\n\n=== FINE PROMPT ===\n`
   )
 } catch (error) {
@@ -423,7 +445,9 @@ const rawLLMResult = await this.generateLLMResponse(
 ```
 
 **Process**:
+
 1. Chiama OpenRouter API con:
+
    - `model`: `agentConfig.model` (es. "openai/gpt-4o-mini")
    - `temperature`: `agentConfig.temperature` (es. 0.3)
    - `messages`: [system prompt, user message, chat history]
@@ -434,6 +458,7 @@ const rawLLMResult = await this.generateLLMResponse(
    - **Function Call**: Richiesta esecuzione funzione (es. `createOrder`)
 
 **Function Call Example**:
+
 ```json
 {
   "function_call": {
@@ -463,6 +488,7 @@ if (rawLLMResult.debugInfo.functionCall) {
 ```
 
 **Funzioni Disponibili**:
+
 - `createOrder`: Crea ordine nel DB
 - `ContactOperator`: Connette con operatore umano
 - `GetShipmentTrackingLink`: Link tracking spedizione
@@ -499,10 +525,10 @@ const linkResult = await this.replaceLinkTokens(
 if (finalResponse.includes("[LINK_CHECKOUT_WITH_TOKEN]")) {
   const checkoutLink = await this.callingFunctionsService.getCartLink({
     customerId: customer.id,
-    workspaceId: workspace.id
+    workspaceId: workspace.id,
   })
   const linkUrl = checkoutLink?.linkUrl || ""
-  
+
   finalResponse = finalResponse.replace("[LINK_CHECKOUT_WITH_TOKEN]", linkUrl)
 }
 ```
@@ -519,10 +545,10 @@ if (finalResponse.includes("[LINK_CHECKOUT_WITH_TOKEN]")) {
 if (finalResponse.includes("[LINK_PROFILE_WITH_TOKEN]")) {
   const profileLink = await this.callingFunctionsService.getProfileLink({
     customerId: customer.id,
-    workspaceId: workspace.id
+    workspaceId: workspace.id,
   })
   let linkUrl = profileLink?.linkUrl || ""
-  
+
   finalResponse = finalResponse.replace("[LINK_PROFILE_WITH_TOKEN]", linkUrl)
 }
 ```
@@ -538,10 +564,10 @@ if (finalResponse.includes("[LINK_PROFILE_WITH_TOKEN]")) {
 if (finalResponse.includes("[LINK_ORDERS_WITH_TOKEN]")) {
   const ordersLink = await this.callingFunctionsService.getOrdersListLink({
     customerId: customer.id,
-    workspaceId: workspace.id
+    workspaceId: workspace.id,
   })
   const linkUrl = ordersLink?.linkUrl || ""
-  
+
   finalResponse = finalResponse.replace("[LINK_ORDERS_WITH_TOKEN]", linkUrl)
 }
 ```
@@ -572,12 +598,14 @@ return {
 ```
 
 **Response Object**:
+
 - `success`: `true` se tutto ok
 - `output`: Risposta finale pronta per WhatsApp (con link sostituiti)
 - `debugInfo`: Informazioni debug complete
 - `functionCalls`: Array chiamate funzioni eseguite
 
 **Output Example**:
+
 ```
 "Certo Mario! Ho aggiunto al carrello:
 - 2x Pizza Margherita (€7.20 cad)
@@ -604,15 +632,16 @@ Ecco il link per completare l'ordine: https://shopme.app/cart-public?token=abc12
 
 ### **Tabella Decisionale**:
 
-| workspace.isActive | customer | isBlacklisted | activeChatbot | Action |
-|-------------------|----------|---------------|---------------|--------|
-| ❌ false | * | * | * | 🚫 WIP message + STOP |
-| ✅ true | null | - | - | 🆕 NewUser flow |
-| ✅ true | exists | ✅ true | * | 🚫 IGNORE + STOP |
-| ✅ true | exists | ❌ false | ❌ false | 🚫 IGNORE + STOP |
-| ✅ true | exists | ❌ false | ✅ true | ✅ Procedi LLM |
+| workspace.isActive | customer | isBlacklisted | activeChatbot | Action                |
+| ------------------ | -------- | ------------- | ------------- | --------------------- |
+| ❌ false           | \*       | \*            | \*            | 🚫 WIP message + STOP |
+| ✅ true            | null     | -             | -             | 🆕 NewUser flow       |
+| ✅ true            | exists   | ✅ true       | \*            | 🚫 IGNORE + STOP      |
+| ✅ true            | exists   | ❌ false      | ❌ false      | 🚫 IGNORE + STOP      |
+| ✅ true            | exists   | ❌ false      | ✅ true       | ✅ Procedi LLM        |
 
 **Legenda**:
+
 - `*` = Qualsiasi valore
 - `-` = Non applicabile (customer non esiste)
 
@@ -667,6 +696,7 @@ graph LR
 **User Message**: "Voglio 2 margherita e 1 diavola, pagamento in contanti"
 
 **LLM Function Call**:
+
 ```json
 {
   "function": "createOrder",
@@ -680,6 +710,7 @@ graph LR
 ```
 
 **Function Execution**:
+
 ```typescript
 const orderResult = await createOrder({
   customerId: customer.id,
@@ -699,6 +730,7 @@ const orderResult = await createOrder({
 ```
 
 **Final LLM Response**:
+
 ```
 "Perfetto Mario! Ho creato il tuo ordine ORD-2025-042:
 
@@ -718,22 +750,27 @@ Ti arriverà tra 30-40 minuti. Grazie!"
 ### **Error Types**:
 
 1. **No Customer Found** (new user):
+
    - Action: Call `NewUser()` flow
    - Response: Welcome message
 
 2. **No Workspace Found**:
+
    - Action: Log error + return error response
    - Response: "Servizio temporaneamente non disponibile"
 
 3. **No Active Prompt**:
+
    - Action: Return error
    - Response: "❌ Servizio temporaneamente non disponibile"
 
 4. **LLM API Error** (OpenRouter timeout/error):
+
    - Action: Catch error + log + return fallback
    - Response: "Mi dispiace, ho avuto un problema. Riprova tra poco."
 
 5. **Function Execution Error**:
+
    - Action: Catch error + log + return error to LLM
    - LLM: Handles error gracefully in response
 
@@ -753,13 +790,13 @@ try {
     error: error.message,
     stack: error.stack,
     customer: customer.id,
-    workspace: workspace.id
+    workspace: workspace.id,
   })
-  
+
   return {
     success: false,
     output: "Mi dispiace, ho avuto un problema...",
-    debugInfo: { stage: "error", error: error.message }
+    debugInfo: { stage: "error", error: error.message },
   }
 }
 ```
@@ -820,9 +857,11 @@ try {
 ## 📚 **FILES E DIPENDENZE**
 
 ### **File Principale**:
+
 - `backend/src/services/llm.service.ts` (853 righe)
 
 ### **Dipendenze Chiave**:
+
 - `CallingFunctionsService` - Esecuzione function calls
 - `PromptProcessorService` - Pre-processing prompt con variabili
 - `MessageRepository` - Accesso dati DB (customer, products, orders, ...)
@@ -833,6 +872,7 @@ try {
 - `OpenRouter API` - Chiamata LLM (GPT-4-mini)
 
 ### **Database Tables Accessed**:
+
 - `Customers` - Dati clienti
 - `Workspace` - Configurazione workspace
 - `Prompts` - Template prompt attivi
@@ -852,12 +892,14 @@ try {
 ## 🎯 **BEST PRACTICES**
 
 ### **Performance**:
+
 1. ✅ Carica dati in parallelo quando possibile
 2. ✅ Cache agentConfig per non ricaricarlo ad ogni messaggio
 3. ✅ Limita numero prodotti nel prompt (max 100)
 4. ✅ Use database indexes su campi frequenti (phone, workspaceId, ...)
 
 ### **Security**:
+
 1. ✅ Sempre controllare `workspace.isActive` PRIMA di tutto
 2. ✅ Verificare customer blacklist prima di LLM
 3. ✅ Usare token sicuri time-limited per link pubblici
@@ -865,12 +907,14 @@ try {
 5. ✅ Validare TUTTI i parametri function call prima di esecuzione
 
 ### **Error Handling**:
+
 1. ✅ Catch TUTTI gli errori e logga stack trace completo
 2. ✅ Return sempre messaggio user-friendly (no errori tecnici)
 3. ✅ Fallback gracefully se LLM non risponde
 4. ✅ Notify admin se errori critici (es. workspace non trovato)
 
 ### **Debugging**:
+
 1. ✅ Salva prompt.txt ad ogni chiamata LLM
 2. ✅ Log TUTTI i check di sicurezza (workspace, blacklist, ...)
 3. ✅ Log function calls con parametri completi
@@ -881,11 +925,13 @@ try {
 ## 📊 **METRICHE MONITORATE**
 
 ### **Performance**:
+
 - ⏱️ Tempo totale elaborazione messaggio (target: <3s)
 - ⏱️ Tempo chiamata OpenRouter (target: <2s)
 - ⏱️ Tempo caricamento dati DB (target: <500ms)
 
 ### **Business**:
+
 - 📊 Numero messaggi elaborati/ora
 - 📊 Numero ordini creati via LLM
 - 📊 Tasso conversione (messaggi → ordini)
@@ -893,6 +939,7 @@ try {
 - 📊 Lingue più usate dai clienti
 
 ### **Errori**:
+
 - ❌ Numero errori LLM API (timeout, rate limit)
 - ❌ Numero workspace disabled hit
 - ❌ Numero customer blacklisted hit
@@ -932,9 +979,8 @@ Quando modifichi LLMService, verifica:
 **Ultima Modifica**: 11 Ottobre 2025  
 **Versione**: 2.0 (con WIP Message + Security checks)  
 **Autore**: Andrea (con supporto GitHub Copilot Agent)  
-**File Sorgente**: `backend/src/services/llm.service.ts`  
+**File Sorgente**: `backend/src/services/llm.service.ts`
 
 **Status**: ✅ PRODUCTION READY
 
 ---
-
