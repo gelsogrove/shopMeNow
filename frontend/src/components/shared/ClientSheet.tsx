@@ -24,6 +24,7 @@ import { salesApi } from "@/services/salesApi"
 import { Loader2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "../../lib/toast"
+import { api } from "@/services/api"
 
 // Invoice address interface
 interface InvoiceAddress {
@@ -300,14 +301,10 @@ export function ClientSheet({
         return
       }
 
-      fetch(`/api/workspaces/${workspaceId}/customers/${clientId}`)
+      api.get(`/workspaces/${workspaceId}/customers/${clientId}`)
         .then((res) => {
-          if (!res.ok) throw new Error("Failed to fetch client")
-          return res.json()
-        })
-        .then((data) => {
-          if (!data || !data.id) throw new Error("Client not found")
-          setFetchedClient(data)
+          if (!res.data || !res.data.id) throw new Error("Client not found")
+          setFetchedClient(res.data)
           setLoadingClient(false)
         })
         .catch((err) => {
