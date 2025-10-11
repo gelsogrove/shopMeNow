@@ -3,10 +3,10 @@ import logger from "../../../utils/logger"
 
 /**
  * Rate limiter per endpoint di login
- * 
+ *
  * OWASP A07:2021 - Identification and Authentication Failures
  * Protezione contro attacchi brute force
- * 
+ *
  * POLICY:
  * - Max 5 tentativi per IP ogni 15 minuti
  * - Dopo 5 tentativi: blocco temporaneo di 15 minuti
@@ -18,22 +18,24 @@ export const loginRateLimiter = rateLimit({
   max: 5, // Max 5 richieste per IP
   message: {
     error: "Too many login attempts",
-    message: "Too many login attempts from this IP, please try again after 15 minutes",
-    retryAfter: "15 minutes"
+    message:
+      "Too many login attempts from this IP, please try again after 15 minutes",
+    retryAfter: "15 minutes",
   },
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  
+
   // Handler custom per logging
   handler: (req, res) => {
     logger.warn(`🚨 Rate limit exceeded for IP ${req.ip} on ${req.path}`)
     res.status(429).json({
       error: "Too many login attempts",
-      message: "Too many login attempts from this IP, please try again after 15 minutes",
-      retryAfter: "15 minutes"
+      message:
+        "Too many login attempts from this IP, please try again after 15 minutes",
+      retryAfter: "15 minutes",
     })
   },
-  
+
   // Skip successful requests (only count failed attempts would be better, but requires custom logic)
   skip: (req) => {
     // Non contare richieste da IP localhost in development
@@ -41,7 +43,7 @@ export const loginRateLimiter = rateLimit({
       return false // Count anche in dev per testare
     }
     return false
-  }
+  },
 })
 
 /**
@@ -53,16 +55,16 @@ export const apiRateLimiter = rateLimit({
   max: 100, // Max 100 richieste per IP
   message: {
     error: "Too many requests",
-    message: "Too many requests from this IP, please try again later"
+    message: "Too many requests from this IP, please try again later",
   },
   standardHeaders: true,
   legacyHeaders: false,
-  
+
   handler: (req, res) => {
     logger.warn(`🚨 API rate limit exceeded for IP ${req.ip} on ${req.path}`)
     res.status(429).json({
       error: "Too many requests",
-      message: "Too many requests from this IP, please try again later"
+      message: "Too many requests from this IP, please try again later",
     })
-  }
+  },
 })

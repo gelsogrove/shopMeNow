@@ -3,7 +3,10 @@ import rateLimit from "express-rate-limit"
 import { AuthController } from "../controllers/auth.controller"
 import { asyncHandler } from "../middlewares/async.middleware"
 import { authMiddleware } from "../middlewares/auth.middleware"
-import { validateForgotPassword, validateResetPassword } from "../middlewares/validation.middleware"
+import {
+  validateForgotPassword,
+  validateResetPassword,
+} from "../middlewares/validation.middleware"
 
 // Rate limiters
 // 🆕 LOGIN RATE LIMITER (OWASP A07:2021 - Protection against brute force attacks)
@@ -12,8 +15,9 @@ const loginLimiter = rateLimit({
   max: 5, // Max 5 login attempts per IP per 15 minutes
   message: {
     error: "Too many login attempts",
-    message: "Too many login attempts from this IP, please try again after 15 minutes",
-    retryAfter: "15 minutes"
+    message:
+      "Too many login attempts from this IP, please try again after 15 minutes",
+    retryAfter: "15 minutes",
   },
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
@@ -40,7 +44,9 @@ const registerLimiter = rateLimit({
 const passwordResetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 3, // limit each IP to 3 password reset requests per windowMs
-  message: { error: "Too many password reset attempts, please try again later" },
+  message: {
+    error: "Too many password reset attempts, please try again later",
+  },
   standardHeaders: true,
   legacyHeaders: false,
 })
@@ -50,11 +56,23 @@ export const createAuthRouter = (authController: AuthController): Router => {
 
   // Routes
   // 🔒 OWASP A07: Brute force protection on login endpoint (max 5 attempts per IP per 15 min)
-  router.post("/login", loginLimiter, asyncHandler(authController.login.bind(authController)))
+  router.post(
+    "/login",
+    loginLimiter,
+    asyncHandler(authController.login.bind(authController))
+  )
 
-  router.get("/me", authMiddleware, asyncHandler(authController.me.bind(authController)))
+  router.get(
+    "/me",
+    authMiddleware,
+    asyncHandler(authController.me.bind(authController))
+  )
 
-  router.post("/logout", authMiddleware, asyncHandler(authController.logout.bind(authController)))
+  router.post(
+    "/logout",
+    authMiddleware,
+    asyncHandler(authController.logout.bind(authController))
+  )
 
   router.post(
     "/register",
