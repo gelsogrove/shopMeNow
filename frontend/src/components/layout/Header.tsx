@@ -141,6 +141,7 @@ export function Header() {
 
       // Clear all localStorage and sessionStorage data
       localStorage.removeItem("user")
+      sessionStorage.removeItem("sessionId") // 🔒 CRITICAL: Clear sessionId (now in sessionStorage - OWASP compliant)
       sessionStorage.removeItem("currentWorkspace")
       sessionStorage.removeItem("currentWorkspaceName")
       sessionStorage.removeItem("currentWorkspaceType")

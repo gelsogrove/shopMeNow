@@ -6,6 +6,19 @@ import { authMiddleware } from "../middlewares/auth.middleware"
 import { validateForgotPassword, validateResetPassword } from "../middlewares/validation.middleware"
 
 // Rate limiters
+// 🆕 LOGIN RATE LIMITER (OWASP A07:2021 - Protection against brute force attacks)
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Max 5 login attempts per IP per 15 minutes
+  message: {
+    error: "Too many login attempts",
+    message: "Too many login attempts from this IP, please try again after 15 minutes",
+    retryAfter: "15 minutes"
+  },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+})
+
 const twoFactorLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 3, // limit each IP to 3 requests per windowMs
@@ -36,7 +49,8 @@ export const createAuthRouter = (authController: AuthController): Router => {
   const router = Router()
 
   // Routes
-  router.post("/login", asyncHandler(authController.login.bind(authController)))
+  // 🔒 OWASP A07: Brute force protection on login endpoint (max 5 attempts per IP per 15 min)
+  router.post("/login", loginLimiter, asyncHandler(authController.login.bind(authController)))
 
   router.get("/me", authMiddleware, asyncHandler(authController.me.bind(authController)))
 

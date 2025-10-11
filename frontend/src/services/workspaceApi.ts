@@ -37,8 +37,8 @@ export interface UpdateWorkspaceData {
 
 const workspaceApi = {
   async getAll(): Promise<Workspace[]> {
-    // 🆕 FORCE sessionId in headers
-    const sessionId = localStorage.getItem("sessionId")
+    // 🆕 FORCE sessionId in headers (from sessionStorage - OWASP compliant)
+    const sessionId = sessionStorage.getItem("sessionId")
     console.log(
       "🔍 [workspaceApi.getAll] Forcing X-Session-Id header:",
       sessionId ? sessionId.substring(0, 8) + "..." : "NULL"
