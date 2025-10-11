@@ -1,11 +1,10 @@
+import { PrismaClient } from "@prisma/client"
 import * as fs from "fs"
 import * as path from "path"
 import { TokenService } from "../application/services/token.service"
 import { LLMRequest } from "../types/whatsapp.types"
 import { CallingFunctionsService } from "./calling-functions.service"
 import { PromptProcessorService } from "./prompt-processor.service"
-import { PrismaClient } from "@prisma/client"
-import logger from "../utils/logger"
 
 export class LLMService {
   private callingFunctionsService: CallingFunctionsService

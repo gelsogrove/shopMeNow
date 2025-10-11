@@ -286,14 +286,20 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       }
 
       // Handle JSON fields - ensure they are properly formatted
-      if (dbData.welcomeMessages && typeof dbData.welcomeMessages === 'object') {
+      if (
+        dbData.welcomeMessages &&
+        typeof dbData.welcomeMessages === "object"
+      ) {
         dbData.welcomeMessages = dbData.welcomeMessages
       }
-      if (dbData.wipMessages && typeof dbData.wipMessages === 'object') {
+      if (dbData.wipMessages && typeof dbData.wipMessages === "object") {
         dbData.wipMessages = dbData.wipMessages
       }
 
-      logger.debug(`Update data for workspace ${id}:`, JSON.stringify(dbData, null, 2))
+      logger.debug(
+        `Update data for workspace ${id}:`,
+        JSON.stringify(dbData, null, 2)
+      )
 
       const updatedWorkspace = await this.prisma.workspace.update({
         where: { id },
