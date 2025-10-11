@@ -9,7 +9,8 @@ import {
 } from "../middlewares/validation.middleware"
 
 // Rate limiters
-// 🆕 LOGIN RATE LIMITER (OWASP A07:2021 - Protection against brute force attacks)
+// 🔒 LOGIN RATE LIMITER (OWASP A07:2021 - Protection against brute force attacks)
+// PRODUCTION SETTINGS: 15 minutes window, max 5 attempts
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // Max 5 login attempts per IP per 15 minutes
@@ -21,6 +22,15 @@ const loginLimiter = rateLimit({
   },
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  handler: (req, res) => {
+    console.log(`🚨 RATE LIMIT EXCEEDED for IP ${req.ip} on ${req.path}`)
+    res.status(429).json({
+      error: "Too many login attempts",
+      message:
+        "Too many login attempts from this IP, please try again after 15 minutes",
+      retryAfter: "15 minutes",
+    })
+  },
 })
 
 const twoFactorLimiter = rateLimit({
