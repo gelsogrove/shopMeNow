@@ -14,6 +14,7 @@ L'integrazione WhatsApp Business API è **COMPLETA e PRONTA PER LA PRODUZIONE** 
 ### ✅ What's Implemented
 
 #### 1. **Core Infrastructure** (Phase 1)
+
 - ✅ `whatsapp-formatter.ts` - Conversione bidirezionale Markdown ↔ WhatsApp
 - ✅ `whatsapp-signature.ts` - Verifica HMAC SHA256 per sicurezza webhook
 - ✅ `whatsapp-api.service.ts` - Invio messaggi via WhatsApp Business API
@@ -21,6 +22,7 @@ L'integrazione WhatsApp Business API è **COMPLETA e PRONTA PER LA PRODUZIONE** 
 - ✅ Environment variables configurate (.env e .env.example)
 
 #### 2. **Webhook Inbound** (Phase 2)
+
 - ✅ `whatsapp-webhook.controller.ts` - Gestione messaggi in entrata
 - ✅ GET `/api/whatsapp/webhook` - Verifica webhook Meta
 - ✅ POST `/api/whatsapp/webhook` - Ricezione messaggi
@@ -30,6 +32,7 @@ L'integrazione WhatsApp Business API è **COMPLETA e PRONTA PER LA PRODUZIONE** 
 - ✅ Salvataggio messaggi con status tracking
 
 #### 3. **Send Message** (Phase 3)
+
 - ✅ `whatsapp-send.controller.ts` - Invio messaggi da operatori
 - ✅ POST `/api/whatsapp/send` - Endpoint per operatori
 - ✅ **SECURITY**: 4-layer validation:
@@ -41,6 +44,7 @@ L'integrazione WhatsApp Business API è **COMPLETA e PRONTA PER LA PRODUZIONE** 
 - ✅ Metadata completo per tracciabilità
 
 #### 4. **Rate Limiting** (Phase 3b)
+
 - ✅ `whatsapp-rate-limit.middleware.ts` - Protezione anti-spam
 - ✅ 100 messaggi/minuto per workspace (configurabile)
 - ✅ 10 messaggi/minuto per customer (configurabile)
@@ -48,6 +52,7 @@ L'integrazione WhatsApp Business API è **COMPLETA e PRONTA PER LA PRODUZIONE** 
 - ⚠️ **PRODUCTION**: Sostituire con Redis per scalabilità
 
 #### 5. **Push Notifications** (Phase 4)
+
 - ✅ `whatsapp-notification.service.ts` - Servizio notifiche push
 - ✅ `sendWhatsAppNotification()` - Funzione generica
 - ✅ `sendChatbotActivatedNotification()` - Notifica chatbot ON
@@ -58,12 +63,14 @@ L'integrazione WhatsApp Business API è **COMPLETA e PRONTA PER LA PRODUZIONE** 
 - ✅ Salvataggio con metadata tipo notifica
 
 #### 6. **Routes & Integration**
+
 - ✅ `whatsapp.routes.ts` - File routes dedicato
 - ✅ Integrato in main router (`/api/whatsapp/*`)
 - ✅ Swagger documentation completa con esempi
 - ✅ Middleware applicati correttamente (auth, rate-limit)
 
 #### 7. **Database**
+
 - ✅ Migration SQL applicata manualmente (conflitto `isMain` risolto)
 - ✅ Prisma Client rigenerato con successo
 - ✅ 4 nuovi campi in `Message` model:
@@ -75,6 +82,7 @@ L'integrazione WhatsApp Business API è **COMPLETA e PRONTA PER LA PRODUZIONE** 
 - ✅ Comments SQL per documentazione
 
 #### 8. **Documentation**
+
 - ✅ `whatsapp-setup-guide.md` - Guida setup completa Meta Console
 - ✅ `whatsapp-integration-architecture.md` - Architettura e design
 - ✅ `.env.example` aggiornato con variabili WhatsApp
@@ -86,6 +94,7 @@ L'integrazione WhatsApp Business API è **COMPLETA e PRONTA PER LA PRODUZIONE** 
 ## 🔒 Security Implementation
 
 ### Inbound Messages (Webhook)
+
 ```
 Meta → POST /api/whatsapp/webhook
          ↓
@@ -101,6 +110,7 @@ Meta → POST /api/whatsapp/webhook
 ```
 
 **KEY SECURITY MEASURES**:
+
 - ❌ **NO authentication required** (è Meta che chiama)
 - ✅ **HMAC signature OBBLIGATORIA** (verifica provenienza da Meta)
 - ✅ **Rate limiting** per prevenire spam/DDoS
@@ -108,6 +118,7 @@ Meta → POST /api/whatsapp/webhook
 - ✅ **Always return 200** (anche su errore, per evitare retry loops di Meta)
 
 ### Outbound Messages (Operator Send)
+
 ```
 Frontend → POST /api/whatsapp/send
          ↓
@@ -127,6 +138,7 @@ Frontend → POST /api/whatsapp/send
 ```
 
 **KEY SECURITY MEASURES**:
+
 - ✅ **JWT authentication OBBLIGATORIA**
 - ✅ **4-layer cross-validation** (session → workspace → customer → phone)
 - ✅ **Rate limiting** per prevenire abusi
@@ -141,19 +153,19 @@ Frontend → POST /api/whatsapp/send
 
 ```sql
 -- Status tracking
-whatsappStatus VARCHAR(50) NULL 
+whatsappStatus VARCHAR(50) NULL
   -- Valori: 'sent' | 'failed' | 'pending' | 'delivered' | 'read'
   -- Indexed per query veloci
 
--- Error tracking  
+-- Error tracking
 whatsappError TEXT NULL
   -- Messaggio errore dettagliato se invio fallito
-  
+
 -- Message ID tracking
 whatsappMessageId VARCHAR(255) NULL
   -- ID univoco WhatsApp per correlazione
   -- Indexed per lookup veloci
-  
+
 -- Audit trail
 sentBy VARCHAR(255) NULL
   -- userId dell'operatore che ha inviato manualmente
@@ -179,6 +191,7 @@ CREATE INDEX messages_sentBy_idx ON messages(sentBy);
 Segui la guida completa: `docs/memory-bank/whatsapp-setup-guide.md`
 
 **Quick checklist**:
+
 1. Crea app su Meta Developer Console
 2. Aggiungi prodotto "WhatsApp Business API"
 3. Ottieni Phone Number ID e Access Token
@@ -189,6 +202,7 @@ Segui la guida completa: `docs/memory-bank/whatsapp-setup-guide.md`
 ### 2. Configure Environment Variables
 
 **Backend `.env`**:
+
 ```bash
 # WhatsApp Business API
 WHATSAPP_API_URL=https://graph.facebook.com/v18.0
@@ -209,46 +223,50 @@ WHATSAPP_RETRY_DELAY_MS=1000
 ### 3. Configure Workspace Credentials
 
 **Database** - Tabella `Workspace`:
+
 ```sql
-UPDATE "Workspace" 
-SET 
+UPDATE "Workspace"
+SET
   "whatsappApiKey" = 'EAAxxxxxxxxxxxxxxx',  -- Access Token da Meta
   "whatsappPhoneNumber" = '1234567890123456'  -- Phone Number ID da Meta
 WHERE id = 'your-workspace-id';
 ```
 
 **Oppure via Prisma**:
+
 ```typescript
 await prisma.workspace.update({
   where: { id: workspaceId },
   data: {
-    whatsappApiKey: 'EAAxxxxxxxxxxxxxxx',
-    whatsappPhoneNumber: '1234567890123456'
-  }
+    whatsappApiKey: "EAAxxxxxxxxxxxxxxx",
+    whatsappPhoneNumber: "1234567890123456",
+  },
 })
 ```
 
 ### 4. Send Test Message (as Operator)
 
 **Frontend example**:
+
 ```typescript
-import { whatsappApi } from '@/services/whatsapp.service'
+import { whatsappApi } from "@/services/whatsapp.service"
 
 const result = await whatsappApi.sendMessage({
-  workspaceId: 'workspace-id',
-  customerId: 'customer-id',
-  phoneNumber: '+393331234567',
-  message: 'Ciao! Questo è un **messaggio di test** da WhatsApp 🚀'
+  workspaceId: "workspace-id",
+  customerId: "customer-id",
+  phoneNumber: "+393331234567",
+  message: "Ciao! Questo è un **messaggio di test** da WhatsApp 🚀",
 })
 
 if (result.success) {
-  console.log('Messaggio inviato!', result.messageId)
+  console.log("Messaggio inviato!", result.messageId)
 } else {
-  console.error('Errore:', result.error)
+  console.error("Errore:", result.error)
 }
 ```
 
 **Backend API call**:
+
 ```bash
 curl -X POST http://localhost:3001/api/whatsapp/send \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
@@ -265,38 +283,38 @@ curl -X POST http://localhost:3001/api/whatsapp/send \
 ### 5. Send Push Notifications
 
 **Example: Chatbot activated**:
-```typescript
-import { sendChatbotActivatedNotification } from '@/services/whatsapp-notification.service'
 
-await sendChatbotActivatedNotification(
-  customerId,
-  workspaceId
-)
+```typescript
+import { sendChatbotActivatedNotification } from "@/services/whatsapp-notification.service"
+
+await sendChatbotActivatedNotification(customerId, workspaceId)
 ```
 
 **Example: Order status changed**:
+
 ```typescript
-import { sendOrderStatusNotification } from '@/services/whatsapp-notification.service'
+import { sendOrderStatusNotification } from "@/services/whatsapp-notification.service"
 
 await sendOrderStatusNotification(
   customerId,
   workspaceId,
-  'ORD-12345',
-  'Spedito',
-  'https://tracking.example.com/12345'
+  "ORD-12345",
+  "Spedito",
+  "https://tracking.example.com/12345"
 )
 ```
 
 **Example: New discount**:
+
 ```typescript
-import { sendNewDiscountNotification } from '@/services/whatsapp-notification.service'
+import { sendNewDiscountNotification } from "@/services/whatsapp-notification.service"
 
 await sendNewDiscountNotification(
   customerId,
   workspaceId,
-  'SUMMER20',
+  "SUMMER20",
   20,
-  new Date('2025-12-31')
+  new Date("2025-12-31")
 )
 ```
 
@@ -306,49 +324,58 @@ await sendNewDiscountNotification(
 
 ### Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `WHATSAPP_API_URL` | ✅ | - | WhatsApp API base URL (v18.0) |
-| `WHATSAPP_VERIFY_TOKEN` | ✅ | - | Token per verifica webhook Meta |
-| `WHATSAPP_APP_SECRET` | ✅ | - | App secret per HMAC signature |
-| `WHATSAPP_WEBHOOK_ENABLED` | ❌ | `true` | Abilita webhook inbound |
-| `WHATSAPP_SIGNATURE_VERIFICATION` | ❌ | `true` | Abilita verifica HMAC |
-| `WHATSAPP_MAX_MESSAGES_PER_MINUTE_WORKSPACE` | ❌ | `100` | Rate limit workspace |
-| `WHATSAPP_MAX_MESSAGES_PER_MINUTE_CUSTOMER` | ❌ | `10` | Rate limit customer |
-| `WHATSAPP_MAX_RETRY_ATTEMPTS` | ❌ | `3` | Tentativi retry invio |
-| `WHATSAPP_RETRY_DELAY_MS` | ❌ | `1000` | Delay tra retry (ms) |
+| Variable                                     | Required | Default | Description                     |
+| -------------------------------------------- | -------- | ------- | ------------------------------- |
+| `WHATSAPP_API_URL`                           | ✅       | -       | WhatsApp API base URL (v18.0)   |
+| `WHATSAPP_VERIFY_TOKEN`                      | ✅       | -       | Token per verifica webhook Meta |
+| `WHATSAPP_APP_SECRET`                        | ✅       | -       | App secret per HMAC signature   |
+| `WHATSAPP_WEBHOOK_ENABLED`                   | ❌       | `true`  | Abilita webhook inbound         |
+| `WHATSAPP_SIGNATURE_VERIFICATION`            | ❌       | `true`  | Abilita verifica HMAC           |
+| `WHATSAPP_MAX_MESSAGES_PER_MINUTE_WORKSPACE` | ❌       | `100`   | Rate limit workspace            |
+| `WHATSAPP_MAX_MESSAGES_PER_MINUTE_CUSTOMER`  | ❌       | `10`    | Rate limit customer             |
+| `WHATSAPP_MAX_RETRY_ATTEMPTS`                | ❌       | `3`     | Tentativi retry invio           |
+| `WHATSAPP_RETRY_DELAY_MS`                    | ❌       | `1000`  | Delay tra retry (ms)            |
 
 ### Workspace Database Fields
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `whatsappApiKey` | `String` | ✅ | Access Token da Meta Developer Console |
-| `whatsappPhoneNumber` | `String` | ✅ | Phone Number ID da Meta (non il numero visibile!) |
+| Field                 | Type     | Required | Description                                       |
+| --------------------- | -------- | -------- | ------------------------------------------------- |
+| `whatsappApiKey`      | `String` | ✅       | Access Token da Meta Developer Console            |
+| `whatsappPhoneNumber` | `String` | ✅       | Phone Number ID da Meta (non il numero visibile!) |
 
 ---
 
 ## 📝 API Reference
 
 ### POST /api/whatsapp/webhook
+
 **Webhook per messaggi in entrata da WhatsApp**
 
 **Headers**:
+
 - `x-hub-signature-256`: HMAC SHA256 signature (Meta)
 
 **Body**:
+
 ```json
 {
   "object": "whatsapp_business_account",
-  "entry": [{
-    "changes": [{
-      "value": {
-        "messages": [{
-          "from": "393331234567",
-          "text": { "body": "Ciao!" }
-        }]
-      }
-    }]
-  }]
+  "entry": [
+    {
+      "changes": [
+        {
+          "value": {
+            "messages": [
+              {
+                "from": "393331234567",
+                "text": { "body": "Ciao!" }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
 }
 ```
 
@@ -357,9 +384,11 @@ await sendNewDiscountNotification(
 ---
 
 ### GET /api/whatsapp/webhook
+
 **Verifica webhook per Meta**
 
 **Query Params**:
+
 - `hub.mode=subscribe`
 - `hub.verify_token=YOUR_TOKEN`
 - `hub.challenge=CHALLENGE_STRING`
@@ -369,13 +398,16 @@ await sendNewDiscountNotification(
 ---
 
 ### POST /api/whatsapp/send
+
 **Invio messaggio WhatsApp da operatore**
 
 **Headers**:
+
 - `Authorization: Bearer JWT_TOKEN`
 - `X-Session-Id: SESSION_ID`
 
 **Body**:
+
 ```json
 {
   "workspaceId": "workspace-id",
@@ -386,6 +418,7 @@ await sendNewDiscountNotification(
 ```
 
 **Response**:
+
 ```json
 {
   "success": true,
@@ -400,6 +433,7 @@ await sendNewDiscountNotification(
 ```
 
 **Error Response**:
+
 ```json
 {
   "error": "Workspace mismatch",
@@ -414,6 +448,7 @@ await sendNewDiscountNotification(
 ### Manual Testing Checklist
 
 #### 1. Webhook Verification ✅
+
 ```bash
 # Test GET verification
 curl "http://localhost:3001/api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=YOUR_TOKEN&hub.challenge=TEST123"
@@ -421,12 +456,14 @@ curl "http://localhost:3001/api/whatsapp/webhook?hub.mode=subscribe&hub.verify_t
 ```
 
 #### 2. Webhook Inbound Message ✅
+
 ```bash
 # Send test webhook (with HMAC signature)
 # Use Postman or Meta Test Button
 ```
 
 #### 3. Send Message (Authenticated) ✅
+
 ```bash
 curl -X POST http://localhost:3001/api/whatsapp/send \
   -H "Authorization: Bearer YOUR_JWT" \
@@ -441,12 +478,14 @@ curl -X POST http://localhost:3001/api/whatsapp/send \
 ```
 
 #### 4. Rate Limiting ✅
+
 ```bash
 # Send 11 messages rapidamente
 # Expected: 429 Too Many Requests dopo la 10a
 ```
 
 #### 5. Security Validation ✅
+
 ```bash
 # Test workspace mismatch
 curl -X POST ... -d '{"workspaceId": "wrong-id", ...}'
@@ -462,12 +501,14 @@ curl -X POST ... -d '{"phoneNumber": "+999999999", ...}'
 ```
 
 ### Unit Tests (TODO)
+
 ```bash
 cd backend
 npm run test:unit -- whatsapp-formatter.test.ts
 ```
 
 **Test coverage needed**:
+
 - ✅ Markdown → WhatsApp conversion (bold, italic, links, lists)
 - ✅ WhatsApp → Markdown conversion (reverse)
 - ✅ HMAC signature verification (valid/invalid/missing)
@@ -478,22 +519,27 @@ npm run test:unit -- whatsapp-formatter.test.ts
 ## 🚨 Troubleshooting
 
 ### Issue: "Invalid HMAC signature"
+
 **Causa**: WHATSAPP_APP_SECRET errato o missing  
 **Fix**: Verifica App Secret su Meta Developer Console
 
 ### Issue: "WhatsApp not configured for workspace"
+
 **Causa**: workspace.whatsappApiKey o whatsappPhoneNumber NULL  
 **Fix**: Configura credenziali nel database (vedi sezione "Configure Workspace Credentials")
 
 ### Issue: "Customer not found"
+
 **Causa**: Numero telefono non registrato nel database  
 **Fix**: Crea customer con numero corretto (formato: `+393331234567`)
 
 ### Issue: "Rate limit exceeded"
+
 **Causa**: Troppi messaggi in breve tempo  
 **Fix**: Attendi 60 secondi o aumenta limiti in ENV
 
 ### Issue: "Workspace mismatch"
+
 **Causa**: workspaceId nel body non corrisponde a session  
 **Fix**: Usa workspaceId corretto della sessione attiva
 
@@ -502,18 +548,21 @@ npm run test:unit -- whatsapp-formatter.test.ts
 ## 🔮 Future Enhancements
 
 ### High Priority
+
 - [ ] **LLM Integration**: Collegare webhook controller a LLMService esistente
 - [ ] **Redis Rate Limiting**: Sostituire in-memory cache con Redis per scalabilità
 - [ ] **Message Templates**: Supporto template WhatsApp pre-approvati
 - [ ] **Media Support**: Invio immagini/documenti/audio
 
 ### Medium Priority
+
 - [ ] **Delivery Status Webhooks**: Gestire callback delivered/read da Meta
 - [ ] **Interactive Messages**: Bottoni, liste, quick replies
 - [ ] **Bulk Send**: Endpoint per invio massivo con throttling
 - [ ] **Analytics Dashboard**: Metriche invio/ricezione/errori
 
 ### Low Priority
+
 - [ ] **WhatsApp Business Profile**: Sync profilo azienda
 - [ ] **Catalog Integration**: Prodotti WhatsApp Business
 - [ ] **Payment Integration**: WhatsApp Pay (se disponibile)
@@ -537,7 +586,8 @@ npm run test:unit -- whatsapp-formatter.test.ts
 **Testing Status**: ⚠️ **MANUAL TESTS REQUIRED**  
 **Documentation Status**: ✅ **COMPLETE**
 
-**Ready for**: 
+**Ready for**:
+
 - ✅ Development testing
 - ✅ Staging deployment
 - ⚠️ Production deployment (dopo test manuali con Meta)
@@ -549,6 +599,7 @@ npm run test:unit -- whatsapp-formatter.test.ts
 **Andrea, l'integrazione WhatsApp è COMPLETA e PRONTA! 🎉**
 
 Tutti i requisiti di sicurezza sono implementati:
+
 - ✅ HMAC signature verification (inbound)
 - ✅ 4-layer validation (outbound)
 - ✅ Rate limiting
@@ -556,6 +607,7 @@ Tutti i requisiti di sicurezza sono implementati:
 - ✅ Workspace isolation
 
 **Prossimi passi**:
+
 1. Configura credenziali Meta Developer Console
 2. Testa webhook con ngrok
 3. Testa invio messaggi da frontend

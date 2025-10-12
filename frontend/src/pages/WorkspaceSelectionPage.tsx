@@ -73,19 +73,15 @@ export function WorkspaceSelectionPage() {
 
   // Gestisce la selezione di un workspace
   const handleSelectWorkspace = (workspace: Workspace) => {
-    // Usa la nuova funzione per salvare il workspace
+    // ✅ SINGLE SOURCE OF TRUTH: Save to localStorage + context
+    // WorkspaceContext will automatically sync from localStorage
     setCurrentWorkspace(workspace)
 
-    // Salva il nome del workspace e il numero di telefono separatamente
-    sessionStorage.setItem("currentWorkspaceName", workspace.name)
-    sessionStorage.setItem(
-      "currentWorkspacePhone",
-      workspace.whatsappPhoneNumber || ""
-    )
-    sessionStorage.setItem("currentWorkspaceType", selectedType || "Shop")
+    // ✅ NO MORE sessionStorage - only localStorage via context
+    console.log("✅ Workspace selected:", workspace.name, workspace.id)
 
     // 🔄 HARD RELOAD - Force page refresh to load new workspace
-    console.log("🔄 Workspace selected, reloading to /chat")
+    console.log("🔄 Reloading to /chat")
     window.location.href = "/chat"
   }
 

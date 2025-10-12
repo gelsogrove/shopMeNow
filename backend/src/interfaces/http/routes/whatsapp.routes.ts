@@ -1,18 +1,18 @@
-import { Router } from 'express'
-import { WhatsAppWebhookController } from '../controllers/whatsapp-webhook.controller'
-import { WhatsAppSendController } from '../controllers/whatsapp-send.controller'
-import { authMiddleware } from '../middlewares/auth.middleware'
-import { workspaceValidationMiddleware } from '../middlewares/workspace-validation.middleware'
-import { whatsappRateLimitMiddleware } from '../middlewares/whatsapp-rate-limit.middleware'
+import { Router } from "express"
+import { WhatsAppSendController } from "../controllers/whatsapp-send.controller"
+import { WhatsAppWebhookController } from "../controllers/whatsapp-webhook.controller"
+import { authMiddleware } from "../middlewares/auth.middleware"
+import { whatsappRateLimitMiddleware } from "../middlewares/whatsapp-rate-limit.middleware"
+import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
 
 /**
  * WhatsApp Routes
- * 
+ *
  * Endpoints:
  * - GET  /api/whatsapp/webhook       → Meta verification (no auth)
  * - POST /api/whatsapp/webhook       → Receive messages (no auth, HMAC signature)
  * - POST /api/whatsapp/send          → Send messages (auth required)
- * 
+ *
  * Security:
  * - Webhook endpoints: HMAC signature verification + rate limiting
  * - Send endpoint: JWT auth + workspace validation + rate limiting
@@ -56,10 +56,7 @@ const sendController = new WhatsAppSendController()
  *       403:
  *         description: Invalid verification token
  */
-router.get(
-  '/webhook',
-  webhookController.verifyWebhook.bind(webhookController)
-)
+router.get("/webhook", webhookController.verifyWebhook.bind(webhookController))
 
 /**
  * @swagger
@@ -92,7 +89,7 @@ router.get(
  *         description: Processing error
  */
 router.post(
-  '/webhook',
+  "/webhook",
   whatsappRateLimitMiddleware,
   webhookController.receiveMessage.bind(webhookController)
 )
@@ -156,7 +153,7 @@ router.post(
  *         description: Server error
  */
 router.post(
-  '/send',
+  "/send",
   authMiddleware,
   workspaceValidationMiddleware,
   whatsappRateLimitMiddleware,

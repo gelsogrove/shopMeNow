@@ -9,6 +9,7 @@
 ## 🎯 OBIETTIVO
 
 Integrare completamente WhatsApp Business API con il sistema ShopME per:
+
 1. Ricevere messaggi dai clienti via webhook
 2. Inviare messaggi ai clienti (operatore o sistema)
 3. Gestire push notifications (sconti, chatbot attivato, ordini)
@@ -92,11 +93,13 @@ Integrare completamente WhatsApp Business API con il sistema ShopME per:
 ## 📡 API 1: WEBHOOK INBOUND
 
 ### **Endpoint**
+
 ```
 POST /api/whatsapp/webhook
 ```
 
 ### **Scopo**
+
 Ricevere messaggi dai clienti WhatsApp e processarli automaticamente con LLM.
 
 ### **Flusso Completo**
@@ -183,30 +186,32 @@ await prisma.messages.create({
 })
 
 // 10. WEBHOOK RESPONSE (200 OK sempre!)
-return res.status(200).json({ 
+return res.status(200).json({
   status: 'processed',
-  messageId: messageId 
+  messageId: messageId
 })
 ```
 
 ### **Sicurezza**
 
 1. **Verifica Firma WhatsApp** (OBBLIGATORIO):
+
    ```typescript
-   import crypto from 'crypto'
-   
+   import crypto from "crypto"
+
    function verifyWhatsAppSignature(
-     payload: any, 
-     signature: string, 
+     payload: any,
+     signature: string,
      appSecret: string
    ): boolean {
-     const hmac = crypto.createHmac('sha256', appSecret)
-     const digest = hmac.update(JSON.stringify(payload)).digest('hex')
+     const hmac = crypto.createHmac("sha256", appSecret)
+     const digest = hmac.update(JSON.stringify(payload)).digest("hex")
      return `sha256=${digest}` === signature
    }
    ```
 
 2. **Verifica Numero nel DB**:
+
    - Se numero NON esiste → ignora o invia "Registrati prima"
    - Se numero esiste → processa normalmente
 
@@ -216,23 +221,25 @@ return res.status(200).json({
 
 ### **Gestione Errori**
 
-| Caso | Azione |
-|------|--------|
-| Customer non trovato | Risposta 200 + ignora messaggio |
-| LLM fallisce | Salva messaggio + risposta di default |
-| WhatsApp API fallisce | Salva con `whatsappStatus: "failed"` |
-| Firma invalida | Risposta 403 Forbidden |
+| Caso                  | Azione                                |
+| --------------------- | ------------------------------------- |
+| Customer non trovato  | Risposta 200 + ignora messaggio       |
+| LLM fallisce          | Salva messaggio + risposta di default |
+| WhatsApp API fallisce | Salva con `whatsappStatus: "failed"`  |
+| Firma invalida        | Risposta 403 Forbidden                |
 
 ---
 
 ## 📤 API 2: SEND MESSAGE
 
 ### **Endpoint**
+
 ```
 POST /api/whatsapp/send
 ```
 
 ### **Scopo**
+
 Permettere agli operatori di inviare messaggi manuali ai clienti.
 
 ### **Request**
@@ -257,11 +264,11 @@ Permettere agli operatori di inviare messaggi manuali ai clienti.
 
 ```typescript
 // 1. VALIDAZIONE SESSIONE
-const sessionId = req.headers['x-session-id']
+const sessionId = req.headers["x-session-id"]
 const session = await adminSessionService.validateSession(sessionId)
 
 if (!session.valid) {
-  return res.status(401).json({ error: 'Invalid session' })
+  return res.status(401).json({ error: "Invalid session" })
 }
 
 // 2. ESTRAZIONE PARAMETRI
@@ -269,23 +276,25 @@ const { workspaceId, customerId, phoneNumber, message } = req.body
 
 // 3. VALIDAZIONE WORKSPACE
 if (session.session.workspaceId !== workspaceId) {
-  return res.status(403).json({ 
-    error: 'Workspace mismatch',
-    message: 'Session does not belong to this workspace'
+  return res.status(403).json({
+    error: "Workspace mismatch",
+    message: "Session does not belong to this workspace",
   })
 }
 
 // 4. VALIDAZIONE CUSTOMER
 const customer = await prisma.customers.findUnique({
-  where: { id: customerId }
+  where: { id: customerId },
 })
 
 if (!customer || customer.workspaceId !== workspaceId) {
-  return res.status(404).json({ error: 'Customer not found or workspace mismatch' })
+  return res
+    .status(404)
+    .json({ error: "Customer not found or workspace mismatch" })
 }
 
 if (customer.phone !== phoneNumber) {
-  return res.status(400).json({ error: 'Phone number mismatch' })
+  return res.status(400).json({ error: "Phone number mismatch" })
 }
 
 // 5. CONVERSIONE: Markdown → WhatsApp
@@ -304,15 +313,15 @@ const savedMessage = await prisma.messages.create({
     workspaceId,
     customerId,
     phoneNumber,
-    message: "",                     // Nessun messaggio in ingresso
-    response: message,               // Messaggio operatore
+    message: "", // Nessun messaggio in ingresso
+    response: message, // Messaggio operatore
     direction: "OUTBOUND",
-    agentSelected: "OPERATOR",       // Operatore manuale
+    agentSelected: "OPERATOR", // Operatore manuale
     whatsappStatus: success ? "sent" : "failed",
     whatsappError: error || null,
     whatsappMessageId: messageId || null,
-    sentBy: session.session.userId   // Chi ha inviato
-  }
+    sentBy: session.session.userId, // Chi ha inviato
+  },
 })
 
 // 8. RISPOSTA
@@ -320,7 +329,7 @@ return res.status(200).json({
   success,
   messageId,
   savedMessageId: savedMessage.id,
-  error: error || null
+  error: error || null,
 })
 ```
 
@@ -334,14 +343,14 @@ return res.status(200).json({
 
 ### **Response Codes**
 
-| Code | Significato |
-|------|-------------|
-| 200 | Messaggio inviato con successo |
-| 400 | Parametri invalidi |
-| 401 | Sessione invalida/scaduta |
-| 403 | Workspace mismatch |
-| 404 | Customer non trovato |
-| 500 | Errore WhatsApp API o DB |
+| Code | Significato                    |
+| ---- | ------------------------------ |
+| 200  | Messaggio inviato con successo |
+| 400  | Parametri invalidi             |
+| 401  | Sessione invalida/scaduta      |
+| 403  | Workspace mismatch             |
+| 404  | Customer non trovato           |
+| 500  | Errore WhatsApp API o DB       |
 
 ---
 
@@ -350,14 +359,17 @@ return res.status(200).json({
 ### **Casi d'Uso**
 
 1. **Chatbot Attivato/Disattivato**
+
    - Quando operatore abilita/disabilita chatbot per un cliente
    - Messaggio: "✅ Chatbot attivato! Da ora risponderò automaticamente"
 
 2. **Nuovo Sconto Disponibile**
+
    - Quando viene creato un nuovo offer
    - Messaggio: "🎉 Nuovo sconto del 20% su tutti i prodotti!"
 
 3. **Ordine Aggiornato**
+
    - Quando cambia stato ordine
    - Messaggio: "📦 Il tuo ordine #1234 è stato spedito!"
 
@@ -371,7 +383,6 @@ return res.status(200).json({
 // backend/src/services/whatsapp-notification.service.ts
 
 export class WhatsAppNotificationService {
-  
   /**
    * Invia push notification a cliente
    */
@@ -379,30 +390,32 @@ export class WhatsAppNotificationService {
     customerId: string,
     workspaceId: string,
     message: string,
-    notificationType: 'CHATBOT' | 'OFFER' | 'ORDER' | 'PRODUCT'
+    notificationType: "CHATBOT" | "OFFER" | "ORDER" | "PRODUCT"
   ): Promise<{ success: boolean; error?: string }> {
-    
     try {
       // 1. Get customer data
       const customer = await prisma.customers.findUnique({
         where: { id: customerId },
-        select: { phone: true, workspaceId: true }
+        select: { phone: true, workspaceId: true },
       })
-      
+
       if (!customer || customer.workspaceId !== workspaceId) {
-        return { success: false, error: 'Customer not found or workspace mismatch' }
+        return {
+          success: false,
+          error: "Customer not found or workspace mismatch",
+        }
       }
-      
+
       // 2. Converti messaggio → WhatsApp format
       const whatsappMessage = markdownToWhatsApp(message)
-      
+
       // 3. Invia a WhatsApp
       const { success, error, messageId } = await sendToWhatsApp(
         customer.phone,
         whatsappMessage,
         workspaceId
       )
-      
+
       // 4. Salva nello storico
       await prisma.messages.create({
         data: {
@@ -418,15 +431,17 @@ export class WhatsAppNotificationService {
           whatsappMessageId: messageId || null,
           metadata: {
             notificationType,
-            timestamp: new Date().toISOString()
-          }
-        }
+            timestamp: new Date().toISOString(),
+          },
+        },
       })
-      
+
       return { success, error }
-      
     } catch (error) {
-      logger.error(`Push notification failed for customer ${customerId}:`, error)
+      logger.error(
+        `Push notification failed for customer ${customerId}:`,
+        error
+      )
       return { success: false, error: error.message }
     }
   }
@@ -444,19 +459,19 @@ async toggleChatbot(req: Request, res: Response) {
   const { customerId } = req.params
   const { activeChatbot, shouldNotify } = req.body
   const workspaceId = (req as any).workspaceId
-  
+
   // Update customer
   await prisma.customers.update({
     where: { id: customerId },
     data: { activeChatbot }
   })
-  
+
   // 🆕 SEND PUSH NOTIFICATION
   if (shouldNotify) {
     const message = activeChatbot
       ? "✅ Chatbot attivato! Da ora risponderò automaticamente ai tuoi messaggi."
       : "⏸️ Chatbot disattivato. Un operatore ti risponderà presto."
-    
+
     await whatsappNotificationService.sendPushNotification(
       customerId,
       workspaceId,
@@ -464,7 +479,7 @@ async toggleChatbot(req: Request, res: Response) {
       'CHATBOT'
     )
   }
-  
+
   return res.json({ success: true })
 }
 ```
@@ -477,22 +492,22 @@ async toggleChatbot(req: Request, res: Response) {
 async createOffer(req: Request, res: Response) {
   const { title, discount, categoryId } = req.body
   const workspaceId = (req as any).workspaceId
-  
+
   // Create offer
   const offer = await prisma.offers.create({
     data: { title, discount, categoryId, workspaceId }
   })
-  
+
   // 🆕 SEND PUSH TO ALL CUSTOMERS INTERESTED IN THIS CATEGORY
   const customers = await prisma.customers.findMany({
-    where: { 
+    where: {
       workspaceId,
       activeChatbot: true // Solo clienti con chatbot attivo
     }
   })
-  
+
   const message = `🎉 Nuovo sconto del ${discount}% su ${title}! Dai un'occhiata!`
-  
+
   // Invia in background (non bloccare la response)
   Promise.all(
     customers.map(customer =>
@@ -504,7 +519,7 @@ async createOffer(req: Request, res: Response) {
       )
     )
   ).catch(err => logger.error('Push notifications failed:', err))
-  
+
   return res.json({ success: true, offer })
 }
 ```
@@ -527,21 +542,21 @@ model Messages {
   agentSelected     String?  // "CHATBOT" | "OPERATOR" | "SYSTEM"
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
-  
+
   // 🆕 WHATSAPP STATUS TRACKING
   whatsappStatus    String?  // "sent" | "failed" | "pending" | "delivered" | "read"
   whatsappError     String?  @db.Text // Error message se fallito
   whatsappMessageId String?  // ID messaggio WhatsApp (per tracking)
-  
+
   // 🆕 AUDIT TRAIL
   sentBy            String?  // userId dell'operatore (se OPERATOR)
-  
+
   // 🆕 METADATA
   metadata          Json?    // Extra info (notificationType, etc.)
-  
+
   workspace         Workspace @relation(fields: [workspaceId], references: [id])
   customer          Customers? @relation(fields: [customerId], references: [id])
-  
+
   @@index([workspaceId])
   @@index([customerId])
   @@index([phoneNumber])
@@ -555,7 +570,7 @@ model Messages {
 
 ```sql
 -- Add new columns to messages table
-ALTER TABLE messages 
+ALTER TABLE messages
 ADD COLUMN "whatsappStatus" VARCHAR(50),
 ADD COLUMN "whatsappError" TEXT,
 ADD COLUMN "whatsappMessageId" VARCHAR(255),
@@ -574,82 +589,85 @@ CREATE INDEX idx_messages_sent_by ON messages("sentBy");
 
 ### **Markdown → WhatsApp Format**
 
-```typescript
+````typescript
 // backend/src/utils/whatsapp-formatter.ts
 
 export function markdownToWhatsApp(text: string): string {
   let formatted = text
-  
+
   // 1. Bold: **text** → *text*
-  formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '*$1*')
-  
+  formatted = formatted.replace(/\*\*([^*]+)\*\*/g, "*$1*")
+
   // 2. Italic: *text* → _text_
-  formatted = formatted.replace(/(?<!\*)\*(?!\*)([^*]+)\*(?!\*)/g, '_$1_')
-  
+  formatted = formatted.replace(/(?<!\*)\*(?!\*)([^*]+)\*(?!\*)/g, "_$1_")
+
   // 3. Strikethrough: ~~text~~ → ~text~
-  formatted = formatted.replace(/~~([^~]+)~~/g, '~$1~')
-  
+  formatted = formatted.replace(/~~([^~]+)~~/g, "~$1~")
+
   // 4. Code: `code` → ```code```
-  formatted = formatted.replace(/`([^`]+)`/g, '```$1```')
-  
+  formatted = formatted.replace(/`([^`]+)`/g, "```$1```")
+
   // 5. Links: [text](url) → text: url
-  formatted = formatted.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1: $2')
-  
+  formatted = formatted.replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1: $2")
+
   // 6. Lists: - item → • item
-  formatted = formatted.replace(/^[\s]*-[\s]+/gm, '• ')
-  
+  formatted = formatted.replace(/^[\s]*-[\s]+/gm, "• ")
+
   // 7. Headings: # Title → *Title*
-  formatted = formatted.replace(/^#{1,6}\s+(.+)$/gm, '*$1*')
-  
+  formatted = formatted.replace(/^#{1,6}\s+(.+)$/gm, "*$1*")
+
   // 8. Emoji conversions (already work in WhatsApp)
   // No need to convert, WhatsApp supports Unicode emoji
-  
+
   return formatted.trim()
 }
-```
+````
 
 ### **WhatsApp → Markdown Format**
 
-```typescript
+````typescript
 export function whatsAppToMarkdown(text: string): string {
   let formatted = text
-  
+
   // 1. Bold: *text* → **text**
-  formatted = formatted.replace(/\*([^*]+)\*/g, '**$1**')
-  
+  formatted = formatted.replace(/\*([^*]+)\*/g, "**$1**")
+
   // 2. Italic: _text_ → *text*
-  formatted = formatted.replace(/_([^_]+)_/g, '*$1*')
-  
+  formatted = formatted.replace(/_([^_]+)_/g, "*$1*")
+
   // 3. Strikethrough: ~text~ → ~~text~~
-  formatted = formatted.replace(/~([^~]+)~/g, '~~$1~~')
-  
+  formatted = formatted.replace(/~([^~]+)~/g, "~~$1~~")
+
   // 4. Code: ```code``` → `code`
-  formatted = formatted.replace(/```([^`]+)```/g, '`$1`')
-  
+  formatted = formatted.replace(/```([^`]+)```/g, "`$1`")
+
   // 5. Lists: • item → - item
-  formatted = formatted.replace(/^[\s]*•[\s]+/gm, '- ')
-  
+  formatted = formatted.replace(/^[\s]*•[\s]+/gm, "- ")
+
   return formatted.trim()
 }
-```
+````
 
 ### **Test Cases**
 
-```typescript
-describe('WhatsApp Formatter', () => {
-  it('converts markdown to whatsapp format', () => {
-    const input = '**Bold** *italic* ~~strike~~ `code` [link](https://example.com)'
+````typescript
+describe("WhatsApp Formatter", () => {
+  it("converts markdown to whatsapp format", () => {
+    const input =
+      "**Bold** *italic* ~~strike~~ `code` [link](https://example.com)"
     const output = markdownToWhatsApp(input)
-    expect(output).toBe('*Bold* _italic_ ~strike~ ```code``` link: https://example.com')
+    expect(output).toBe(
+      "*Bold* _italic_ ~strike~ ```code``` link: https://example.com"
+    )
   })
-  
-  it('converts whatsapp to markdown format', () => {
-    const input = '*Bold* _italic_ ~strike~ ```code```'
+
+  it("converts whatsapp to markdown format", () => {
+    const input = "*Bold* _italic_ ~strike~ ```code```"
     const output = whatsAppToMarkdown(input)
-    expect(output).toBe('**Bold** *italic* ~~strike~~ `code`')
+    expect(output).toBe("**Bold** *italic* ~~strike~~ `code`")
   })
 })
-```
+````
 
 ---
 
@@ -671,71 +689,69 @@ export async function sendToWhatsApp(
   message: string,
   workspaceId: string
 ): Promise<WhatsAppSendResult> {
-  
   try {
     // 1. Get workspace WhatsApp settings
     const workspace = await prisma.workspace.findUnique({
       where: { id: workspaceId },
       select: {
         whatsappApiKey: true,
-        whatsappPhoneNumber: true
-      }
+        whatsappPhoneNumber: true,
+      },
     })
-    
+
     if (!workspace?.whatsappApiKey || !workspace?.whatsappPhoneNumber) {
       return {
         success: false,
-        error: 'WhatsApp not configured for this workspace'
+        error: "WhatsApp not configured for this workspace",
       }
     }
-    
+
     // 2. Prepare API request
     const apiUrl = `${process.env.WHATSAPP_API_URL}/${workspace.whatsappPhoneNumber}/messages`
-    
+
     const payload = {
       messaging_product: "whatsapp",
-      to: phoneNumber.replace('+', ''),
+      to: phoneNumber.replace("+", ""),
       type: "text",
       text: {
-        body: message
-      }
+        body: message,
+      },
     }
-    
+
     // 3. Send to WhatsApp
     const response = await fetch(apiUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${workspace.whatsappApiKey}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${workspace.whatsappApiKey}`,
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     })
-    
+
     // 4. Handle response
     if (!response.ok) {
       const errorData = await response.text()
       logger.error(`WhatsApp API error: ${response.status} ${errorData}`)
       return {
         success: false,
-        error: `WhatsApp API error: ${response.status}`
+        error: `WhatsApp API error: ${response.status}`,
       }
     }
-    
+
     const data = await response.json()
     const messageId = data.messages?.[0]?.id
-    
+
     logger.info(`WhatsApp message sent: ${messageId}`)
-    
+
     return {
       success: true,
-      messageId
+      messageId,
     }
-    
   } catch (error) {
-    logger.error('Failed to send WhatsApp message:', error)
+    logger.error("Failed to send WhatsApp message:", error)
     return {
       success: false,
-      error: error.message
+      error: error.message,
     }
   }
 }
@@ -745,16 +761,16 @@ export async function sendToWhatsApp(
 
 ```typescript
 // GET /api/whatsapp/webhook (one-time verification)
-app.get('/api/whatsapp/webhook', (req, res) => {
-  const mode = req.query['hub.mode']
-  const token = req.query['hub.verify_token']
-  const challenge = req.query['hub.challenge']
-  
-  if (mode === 'subscribe' && token === process.env.WHATSAPP_VERIFY_TOKEN) {
-    logger.info('WhatsApp webhook verified successfully')
+app.get("/api/whatsapp/webhook", (req, res) => {
+  const mode = req.query["hub.mode"]
+  const token = req.query["hub.verify_token"]
+  const challenge = req.query["hub.challenge"]
+
+  if (mode === "subscribe" && token === process.env.WHATSAPP_VERIFY_TOKEN) {
+    logger.info("WhatsApp webhook verified successfully")
     res.status(200).send(challenge)
   } else {
-    res.status(403).send('Verification failed')
+    res.status(403).send("Verification failed")
   }
 })
 ```
@@ -802,11 +818,13 @@ WHATSAPP_RETRY_DELAY_MS=1000
 ### **Metriche da Tracciare**
 
 1. **Messaggi Inbound**
+
    - Totale messaggi ricevuti/giorno
    - Tempo medio risposta LLM
    - Tasso successo invio risposta
 
 2. **Messaggi Outbound**
+
    - Totale messaggi inviati operatore
    - Totale push notifications
    - Tasso delivery (sent vs failed)
@@ -820,13 +838,13 @@ WHATSAPP_RETRY_DELAY_MS=1000
 
 ```sql
 -- Messaggi falliti oggi
-SELECT COUNT(*) 
-FROM messages 
-WHERE whatsappStatus = 'failed' 
+SELECT COUNT(*)
+FROM messages
+WHERE whatsappStatus = 'failed'
 AND createdAt >= CURRENT_DATE;
 
 -- Tasso successo per workspace
-SELECT 
+SELECT
   workspaceId,
   COUNT(*) as total,
   SUM(CASE WHEN whatsappStatus = 'sent' THEN 1 ELSE 0 END) as sent,
@@ -836,7 +854,7 @@ WHERE direction = 'OUTBOUND'
 GROUP BY workspaceId;
 
 -- Errori più comuni
-SELECT 
+SELECT
   whatsappError,
   COUNT(*) as occurrences
 FROM messages
@@ -868,41 +886,41 @@ describe('WhatsApp API Service', () => {
 ### **Integration Tests**
 
 ```typescript
-describe('Webhook Inbound', () => {
-  test('processes valid message', async () => {
+describe("Webhook Inbound", () => {
+  test("processes valid message", async () => {
     const response = await request(app)
-      .post('/api/whatsapp/webhook')
-      .set('x-hub-signature-256', validSignature)
+      .post("/api/whatsapp/webhook")
+      .set("x-hub-signature-256", validSignature)
       .send(validWhatsAppPayload)
-    
+
     expect(response.status).toBe(200)
     // Verify message saved in DB
     // Verify LLM was called
     // Verify response sent to WhatsApp
   })
-  
-  test('rejects invalid signature', async () => {
+
+  test("rejects invalid signature", async () => {
     const response = await request(app)
-      .post('/api/whatsapp/webhook')
-      .set('x-hub-signature-256', 'invalid')
+      .post("/api/whatsapp/webhook")
+      .set("x-hub-signature-256", "invalid")
       .send(validWhatsAppPayload)
-    
+
     expect(response.status).toBe(403)
   })
 })
 
-describe('Send Message API', () => {
-  test('sends message with valid session', async () => {
+describe("Send Message API", () => {
+  test("sends message with valid session", async () => {
     const response = await request(app)
-      .post('/api/whatsapp/send')
-      .set('X-Session-Id', validSessionId)
+      .post("/api/whatsapp/send")
+      .set("X-Session-Id", validSessionId)
       .send({
         workspaceId,
         customerId,
         phoneNumber,
-        message: 'Test message'
+        message: "Test message",
       })
-    
+
     expect(response.status).toBe(200)
     expect(response.body.success).toBe(true)
   })
@@ -912,10 +930,11 @@ describe('Send Message API', () => {
 ### **Manual Testing**
 
 1. **Webhook Setup**
+
    ```bash
    # Use ngrok to expose local server
    ngrok http 3001
-   
+
    # Configure webhook URL in Facebook/Meta dashboard
    https://xxxx.ngrok.io/api/whatsapp/webhook
    ```
@@ -1036,4 +1055,3 @@ describe('Send Message API', () => {
 **Document Version**: 1.0  
 **Last Updated**: 12 Ottobre 2025  
 **Status**: 🔴 Ready for Implementation
-

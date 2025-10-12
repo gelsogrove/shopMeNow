@@ -200,6 +200,34 @@ api.interceptors.response.use(
       }
     }
 
+    // 🔥 HANDLE SESSION VALIDATION ERRORS (500)
+    if (error.response && error.response.status === 500) {
+      const errorMessage = error.response?.data?.error || ""
+      const isSessionError = 
+        errorMessage.toLowerCase().includes("session") ||
+        errorMessage.toLowerCase().includes("validation failed")
+
+      if (isSessionError) {
+        logger.error(
+          "❌ Session validation failed (500) - clearing and redirecting to login"
+        )
+
+        // Clear all auth data IMMEDIATELY to stop the loop
+        localStorage.removeItem("currentWorkspace")
+        sessionStorage.removeItem("currentWorkspace")
+        localStorage.removeItem("token")
+        localStorage.removeItem("user")
+        clearSessionId()
+
+        toast.error("Sessione non valida. Effettua nuovamente il login.")
+        
+        // IMMEDIATE redirect to stop retry loop
+        window.location.href = "/auth/login"
+
+        throw new Error("Session validation failed")
+      }
+    }
+
     return Promise.reject(error)
   }
 )

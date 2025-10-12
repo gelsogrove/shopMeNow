@@ -35,9 +35,16 @@ export function ProtectedRoute() {
     try {
       const sessionId = getSessionId()
 
-      // If no sessionId in localStorage, redirect immediately
+      // If no sessionId in localStorage, clear everything and redirect
       if (!sessionId) {
-        logger.warn("🔓 No sessionId found - redirecting to login")
+        logger.warn("🔓 No sessionId found - cleaning up and redirecting to login")
+        
+        // Clear all auth data
+        localStorage.removeItem("currentWorkspace")
+        localStorage.removeItem("token")
+        localStorage.removeItem("user")
+        sessionStorage.clear()
+        
         setIsValid(false)
         setIsValidating(false)
         return
@@ -60,6 +67,18 @@ export function ProtectedRoute() {
       }
     } catch (error: any) {
       logger.error("❌ Session validation failed:", error)
+
+      // 🔥 ANDREA'S FIX: Se /session/validate fallisce, cancella SUBITO la session
+      logger.warn("🗑️ Clearing session storage due to validation failure")
+      
+      // Clear localStorage
+      localStorage.removeItem("sessionId")
+      localStorage.removeItem("currentWorkspace")
+      localStorage.removeItem("token")
+      localStorage.removeItem("user")
+      
+      // Clear sessionStorage
+      sessionStorage.clear()
 
       // Check if it's a 401 (expired/invalid session)
       if (error.response?.status === 401) {

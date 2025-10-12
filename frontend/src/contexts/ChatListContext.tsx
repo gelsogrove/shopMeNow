@@ -94,6 +94,7 @@ export function ChatListProvider({ children }: { children: ReactNode }) {
       }
     },
     // 🚀 REMOVED: refetchInterval - WebSocket handles real-time updates
+    retry: false, // 🔥 FIX: Don't retry on session errors (axios interceptor handles redirect)
     staleTime: 60000, // Consider data fresh for 1 minute
     gcTime: 300000, // Keep in cache for 5 minutes
   })

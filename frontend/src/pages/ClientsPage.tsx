@@ -174,6 +174,7 @@ export default function ClientsPage(): JSX.Element {
       })
     },
     enabled: !!workspace?.id,
+    retry: false, // 🔥 FIX: Don't retry on session errors
   })
 
   // Controlla se c'è un parametro edit nell'URL per aprire automaticamente il form di modifica

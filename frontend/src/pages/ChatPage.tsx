@@ -343,6 +343,7 @@ export function ChatPage() {
     queryKey: ["languages", workspaceId],
     queryFn: async () => getLanguages(),
     enabled: !!workspaceId,
+    retry: false, // 🔥 FIX: Don't retry on session errors
   })
 
   // Sync polled messages with local state

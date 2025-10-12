@@ -8,6 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
@@ -26,29 +27,18 @@ import { useNavigate } from "react-router-dom"
 
 export function Header() {
   const navigate = useNavigate()
-  // Get workspace from sessionStorage instead of API call
-  const [workspace, setWorkspace] = useState<any>(null)
-  const [phoneNumber, setPhoneNumber] = useState<string>("")
-  const [workspaceType, setWorkspaceType] = useState<string>("")
-  const [channelName, setChannelName] = useState<string>("")
+  
+  // ✅ FIX: Use WorkspaceContext (single source of truth)
+  const { workspace } = useWorkspace()
+  
   const [userName, setUserName] = useState<string>("")
   const [userEmail, setUserEmail] = useState<string>("")
   const [userInitials, setUserInitials] = useState<string>("")
   // Get user data from localStorage instead of API call
   const [userData, setUserData] = useState<any>(null)
 
-  // Load workspace and user data from storage
+  // Load user data from storage
   useEffect(() => {
-    // Load workspace
-    const cachedWorkspace = localStorage.getItem("currentWorkspace")
-    if (cachedWorkspace) {
-      try {
-        setWorkspace(JSON.parse(cachedWorkspace))
-      } catch (error) {
-        logger.error("Error parsing workspace from localStorage:", error)
-      }
-    }
-
     // Load user data
     const cachedUser = localStorage.getItem("user")
     if (cachedUser) {
@@ -86,20 +76,11 @@ export function Header() {
     }
   }
 
-  const planInfo = getPlanDisplayInfo(workspace?.plan)
+  // ✅ FIX: Get data directly from workspace context
+  const phoneNumber = workspace?.whatsappPhoneNumber || "No phone configured"
+  const channelName = workspace?.name || "Shop"
 
   useEffect(() => {
-    // Recupera le informazioni del workspace dai sessionStorage
-    const currentPhone =
-      sessionStorage.getItem("currentWorkspacePhone") || "No phone configured"
-    const currentType = sessionStorage.getItem("currentWorkspaceType") || "Shop"
-    const currentChannel =
-      sessionStorage.getItem("currentWorkspaceName") || "Shop"
-
-    setPhoneNumber(currentPhone)
-    setWorkspaceType(currentType)
-    setChannelName(currentChannel)
-
     // Carica i dati dell'utente
     loadUserProfile()
   }, [])

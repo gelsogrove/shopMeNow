@@ -9,6 +9,7 @@
 ## 🎯 ARCHITETTURA CREDENZIALI
 
 ### ✅ NEL DATABASE (per workspace)
+
 Ogni workspace ha le SUE credenziali WhatsApp salvate nel database:
 
 ```sql
@@ -20,6 +21,7 @@ whatsappPhoneNumber     String?    -- Numero WhatsApp Business del workspace
 **Dove inserirle**: Tramite interfaccia **Workspace Settings** nel frontend
 
 ### ✅ NELLE ENV (globali)
+
 File: `backend/.env` (NON committare!)
 
 ```bash
@@ -64,6 +66,7 @@ WHATSAPP_RETRY_DELAY_MS=1000
 ### **Step 3: Ottieni Credenziali**
 
 #### A) **API Token** (per ogni workspace)
+
 1. Vai in **WhatsApp** → **API Setup**
 2. Copia il **Temporary Access Token** (24h)
 3. Per token permanente:
@@ -74,12 +77,14 @@ WHATSAPP_RETRY_DELAY_MS=1000
 4. **Salva questo token nel database** tramite Workspace Settings!
 
 #### B) **Phone Number ID**
+
 1. In **WhatsApp** → **API Setup**
 2. Trovi **"Phone Number ID"** sotto il numero
 3. Esempio: `106073215675309`
 4. **Salva questo come `whatsappPhoneNumber`** nel database!
 
 #### C) **App Secret** (globale)
+
 1. Vai in **Settings** → **Basic**
 2. Clicca **"Show"** accanto a **"App Secret"**
 3. Copia il valore
@@ -141,8 +146,8 @@ await prisma.workspace.update({
   where: { id: workspaceId },
   data: {
     whatsappApiKey: "EAABxxx...your_permanent_token",
-    whatsappPhoneNumber: "106073215675309"
-  }
+    whatsappPhoneNumber: "106073215675309",
+  },
 })
 ```
 
@@ -203,6 +208,7 @@ Prima di andare in produzione:
 ### ⚠️ MAI COMMITTARE `.env`!
 
 Già configurato in `.gitignore`:
+
 ```
 backend/.env
 backend/.env.local
@@ -218,10 +224,14 @@ I **Temporary Tokens** scadono dopo 24h! Usa **System User Tokens** per produzio
 Nel webhook, SEMPRE verificare la firma WhatsApp:
 
 ```typescript
-const signature = req.headers['x-hub-signature-256']
-const isValid = verifyWhatsAppSignature(req.body, signature, WHATSAPP_APP_SECRET)
+const signature = req.headers["x-hub-signature-256"]
+const isValid = verifyWhatsAppSignature(
+  req.body,
+  signature,
+  WHATSAPP_APP_SECRET
+)
 if (!isValid) {
-  return res.status(403).json({ error: 'Invalid signature' })
+  return res.status(403).json({ error: "Invalid signature" })
 }
 ```
 
@@ -232,19 +242,25 @@ Questo è già implementato nel codice! 🎉
 ## 📞 DOMANDE FREQUENTI
 
 ### Q: Dove trovo il Phone Number ID?
+
 **A**: Meta Developer Console → WhatsApp → API Setup → sotto il numero trovi "Phone Number ID"
 
 ### Q: Il token scade?
+
 **A**: Temporary token = 24h. System User token = permanente (usa questo!)
 
 ### Q: Posso usare un numero personale?
+
 **A**: NO! Serve un numero WhatsApp Business verificato.
 
 ### Q: Come aggiungo più workspace?
+
 **A**: Ogni workspace ha le sue credenziali nel database. Basta configurare `whatsappApiKey` e `whatsappPhoneNumber` per ogni workspace.
 
 ### Q: Webhook non riceve messaggi?
+
 **A**: Controlla:
+
 1. URL webhook corretto in Meta Console
 2. Server raggiungibile (usa ngrok per test)
 3. Verify token corretto

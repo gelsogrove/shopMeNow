@@ -16,10 +16,10 @@ import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
 import {
   deleteWorkspace,
-  getCurrentWorkspace,
   updateWorkspace,
 } from "@/services/workspaceApi"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useWorkspace } from "@/contexts/WorkspaceContext"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Loader2, Save, Settings, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
@@ -83,18 +83,49 @@ export default function SettingsPage() {
   const [selectedWelcomeLang, setSelectedWelcomeLang] = useState("en")
   const [selectedWipLang, setSelectedWipLang] = useState("en")
 
-  // Use React Query per gestire il workspace loading
-  const {
-    data: workspace,
-    isLoading: isPageLoading,
-    error: workspaceError,
-    isError,
-  } = useQuery({
-    queryKey: ["currentWorkspace"],
-    queryFn: getCurrentWorkspace,
-    retry: 1,
-    staleTime: 5 * 60 * 1000, // 5 minuti
-  })
+  // ✅ FIXED: Use WorkspaceContext to get workspaceId (single source of truth)
+  const { workspace: contextWorkspace, loading: contextLoading } = useWorkspace()
+  
+  // Then fetch full workspace details with all fields
+  const [workspace, setWorkspace] = useState<any>(null)
+  const [isPageLoading, setIsPageLoading] = useState(true)
+  const [workspaceError, setWorkspaceError] = useState<any>(null)
+  const isError = !!workspaceError
+
+  // Fetch full workspace data when contextWorkspace is available
+  useEffect(() => {
+    const fetchWorkspaceDetails = async () => {
+      if (!contextWorkspace?.id) {
+        setIsPageLoading(false)
+        return
+      }
+
+      try {
+        setIsPageLoading(true)
+        const response = await fetch(`/api/workspaces/${contextWorkspace.id}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'X-Session-Id': sessionStorage.getItem('sessionId') || '',
+          },
+        })
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch workspace details')
+        }
+        
+        const data = await response.json()
+        setWorkspace(data)
+        setWorkspaceError(null)
+      } catch (error) {
+        logger.error('Error fetching workspace details:', error)
+        setWorkspaceError(error)
+      } finally {
+        setIsPageLoading(false)
+      }
+    }
+
+    fetchWorkspaceDetails()
+  }, [contextWorkspace?.id])
 
   // Popola il form quando i dati del workspace sono disponibili
   useEffect(() => {
@@ -171,24 +202,18 @@ export default function SettingsPage() {
       return updateWorkspace(formData.id, updateData)
     },
     onSuccess: (updatedWorkspace) => {
-      logger.info("Workspace updated:", updatedWorkspace)
+      logger.info("✅ Workspace updated:", updatedWorkspace)
 
-      // Update cached workspace data
-      sessionStorage.setItem(
-        "currentWorkspace",
-        JSON.stringify(updatedWorkspace)
-      )
+      // ✅ Update localStorage (single source of truth)
+      localStorage.setItem("currentWorkspace", JSON.stringify(updatedWorkspace))
 
-      // Invalida e aggiorna la cache di React Query
-      queryClient.setQueryData(["currentWorkspace"], updatedWorkspace)
-
-      // Refetch fresh data from server to ensure consistency
-      queryClient.invalidateQueries({ queryKey: ["currentWorkspace"] })
+      // Update local state
+      setWorkspace(updatedWorkspace)
 
       toast.success("Settings saved successfully")
     },
     onError: (error) => {
-      logger.error("Error saving settings:", error)
+      logger.error("❌ Error saving settings:", error)
       toast.error("Failed to save settings")
     },
   })
@@ -266,8 +291,8 @@ export default function SettingsPage() {
     setIsLoading(true)
     try {
       await deleteWorkspace(formData.id)
-      sessionStorage.removeItem("currentWorkspace")
-      queryClient.removeQueries({ queryKey: ["currentWorkspace"] })
+      // ✅ Clear from localStorage (single source of truth)
+      localStorage.removeItem("currentWorkspace")
       toast.success("Workspace deleted successfully")
       navigate("/workspace-selection")
     } catch (error) {
