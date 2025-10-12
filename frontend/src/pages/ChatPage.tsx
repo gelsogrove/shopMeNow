@@ -116,6 +116,7 @@ export function ChatPage() {
   const [messageInput, setMessageInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [loadingChat, setLoadingChat] = useState(false)
+  const [isWorkspaceChanging, setIsWorkspaceChanging] = useState(false) // 🆕 Loading per workspace change
   const [searchParams, setSearchParams] = useSearchParams()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const sessionId = searchParams.get("sessionId")
@@ -129,8 +130,11 @@ export function ChatPage() {
       workspace.id !== prevWorkspaceIdRef.current
     ) {
       logger.info(
-        `[ChatPage] Workspace changed from ${prevWorkspaceIdRef.current} to ${workspace.id} - clearing selectedChat`
+        `[ChatPage] 🔄 Workspace changing from ${prevWorkspaceIdRef.current} to ${workspace.id}`
       )
+
+      // 🔄 Show loading overlay
+      setIsWorkspaceChanging(true)
 
       // Clear selected chat
       setSelectedChat(null)
@@ -140,6 +144,12 @@ export function ChatPage() {
 
       // Clear messages
       setMessages([])
+
+      // Wait for queries to invalidate and reload, then hide loading
+      setTimeout(() => {
+        setIsWorkspaceChanging(false)
+        logger.info("[ChatPage] ✅ Workspace change completed")
+      }, 500) // 500ms delay per dare tempo alle query di invalidarsi
     }
 
     // Update ref for next comparison
