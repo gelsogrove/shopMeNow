@@ -328,6 +328,8 @@ import analyticsRoutes from "../interfaces/http/routes/analytics.routes"
 import publicOrdersRoutes from "../interfaces/http/routes/public-orders.routes"
 // Import session routes (for sessionId management)
 import { sessionRoutes } from "../interfaces/http/routes/session.routes"
+// Import WhatsApp routes
+import whatsappRoutes from "../interfaces/http/routes/whatsapp.routes"
 
 // Simple logging middleware
 const loggingMiddleware = (req: Request, res: Response, next: NextFunction) => {
@@ -1523,6 +1525,10 @@ logger.info("Registered public orders routes with JWT authentication")
 // Mount analytics routes
 router.use("/analytics", analyticsRoutes)
 logger.info("Registered analytics routes for dashboard metrics")
+
+// Mount WhatsApp routes
+router.use("/whatsapp", whatsappRoutes)
+logger.info("Registered WhatsApp routes for webhook and send message")
 
 // Mount public orders routes (for secure token validation and public access)
 router.use("/internal", publicOrdersRoutes)

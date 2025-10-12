@@ -364,9 +364,19 @@ model Message {
   translatedQuery    String?
   processedPrompt    String?
   debugInfo          String? // 🔧 NEW: Debug information as JSON string
+  
+  // 🆕 WHATSAPP INTEGRATION FIELDS
+  whatsappStatus     String?          // "sent" | "failed" | "pending" | "delivered" | "read"
+  whatsappError      String?          // Error message if failed
+  whatsappMessageId  String?          // WhatsApp message ID for tracking
+  sentBy             String?          // userId of operator who sent (if manual)
+  
   chatSession        ChatSession      @relation(fields: [chatSessionId], references: [id])
   prompt             Prompts?         @relation(fields: [promptId], references: [id])
 
+  @@index([whatsappStatus])
+  @@index([whatsappMessageId])
+  @@index([sentBy])
   @@map("messages")
 }
 
