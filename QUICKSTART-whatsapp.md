@@ -15,18 +15,21 @@
 ### 2️⃣ Ottieni Credenziali
 
 **Access Token** (Temporary - per test):
+
 ```
 WhatsApp → Getting Started → Temporary Access Token
 Copia: EAAxxxxxxxxxxxxxx
 ```
 
 **Phone Number ID**:
+
 ```
 WhatsApp → Getting Started → Phone Number ID
 Copia: 1234567890123456
 ```
 
 **App Secret**:
+
 ```
 App Settings → Basic → App Secret → Show
 Copia: abcdef1234567890
@@ -35,6 +38,7 @@ Copia: abcdef1234567890
 ### 3️⃣ Configura Backend
 
 **`.env`**:
+
 ```bash
 WHATSAPP_API_URL=https://graph.facebook.com/v18.0
 WHATSAPP_VERIFY_TOKEN=shopme_secure_token_2025  # Inventalo tu
@@ -42,9 +46,10 @@ WHATSAPP_APP_SECRET=abcdef1234567890  # Da Meta
 ```
 
 **Database**:
+
 ```sql
-UPDATE "Workspace" 
-SET 
+UPDATE "Workspace"
+SET
   "whatsappApiKey" = 'EAAxxxxxxxxxxxxxx',
   "whatsappPhoneNumber" = '1234567890123456'
 WHERE id = 'your-workspace-id';
@@ -53,6 +58,7 @@ WHERE id = 'your-workspace-id';
 ### 4️⃣ Configura Webhook (Dev con ngrok)
 
 **Terminal 1** - Avvia ngrok:
+
 ```bash
 ngrok http 3001
 # Copia URL: https://abc123.ngrok.io
@@ -61,6 +67,7 @@ ngrok http 3001
 **Terminal 2** - Backend già running (ts-node-dev)
 
 **Meta Console**:
+
 ```
 WhatsApp → Configuration → Webhook
 Callback URL: https://abc123.ngrok.io/api/whatsapp/webhook
@@ -70,6 +77,7 @@ Verify Token: shopme_secure_token_2025  # Stesso di .env
 **Verifica** → Dovrebbe diventare verde ✅
 
 **Subscribe to**:
+
 - ✅ messages
 
 **Save**
@@ -77,6 +85,7 @@ Verify Token: shopme_secure_token_2025  # Stesso di .env
 ### 5️⃣ Test Ricezione
 
 **Dal tuo WhatsApp personale**:
+
 - Invia messaggio al numero di test Meta
 - Controlla logs backend: `[WEBHOOK] ✅ Message processed`
 - Dovresti ricevere risposta echo
@@ -86,6 +95,7 @@ Verify Token: shopme_secure_token_2025  # Stesso di .env
 **Prerequisito**: Customer registrato con numero WhatsApp
 
 **API Call**:
+
 ```bash
 curl -X POST http://localhost:3001/api/whatsapp/send \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
@@ -106,18 +116,23 @@ curl -X POST http://localhost:3001/api/whatsapp/send \
 ## 🔧 Troubleshooting Rapido
 
 ### ❌ Webhook verification failed
+
 **Fix**: Controlla che `WHATSAPP_VERIFY_TOKEN` in `.env` corrisponda a quello in Meta Console
 
 ### ❌ Invalid signature
+
 **Fix**: Controlla `WHATSAPP_APP_SECRET` in `.env` (deve essere App Secret da Meta Settings)
 
 ### ❌ WhatsApp not configured
+
 **Fix**: Controlla che workspace abbia `whatsappApiKey` e `whatsappPhoneNumber` nel database
 
 ### ❌ Customer not found
+
 **Fix**: Customer deve esistere in database con campo `phone` popolato (formato: `+393331234567`)
 
 ### ❌ Workspace mismatch
+
 **Fix**: `workspaceId` nel body deve corrispondere al workspace della tua sessione
 
 ---
@@ -125,6 +140,7 @@ curl -X POST http://localhost:3001/api/whatsapp/send \
 ## 📱 Numeri di Test Meta
 
 **IMPORTANTE**: I numeri di test Meta hanno limitazioni:
+
 - ✅ Puoi inviare/ricevere da max 5 numeri
 - ✅ Devi aggiungere numeri in "Phone numbers" → "Add phone number"
 - ✅ Ogni numero deve confermare con codice OTP
@@ -159,6 +175,7 @@ curl -X POST http://localhost:3001/api/whatsapp/send \
 ## 🆘 Support
 
 Se qualcosa non funziona:
+
 1. Controlla logs backend (cerca `[WEBHOOK]` o `[WHATSAPP-SEND]`)
 2. Verifica ENV variables
 3. Verifica database workspace credentials

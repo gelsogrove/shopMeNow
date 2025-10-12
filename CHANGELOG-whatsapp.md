@@ -14,7 +14,9 @@
 ### ✨ Features Added
 
 #### Core Infrastructure
+
 - **whatsapp-formatter.ts**: Bidirectional Markdown ↔ WhatsApp format conversion
+
   - Bold: `**text**` ↔ `*text*`
   - Italic: `*text*` ↔ `_text_`
   - Strikethrough: `~~text~~` ↔ `~text~`
@@ -24,6 +26,7 @@
   - Headings: `# Title` ↔ `*Title*`
 
 - **whatsapp-signature.ts**: HMAC SHA256 signature verification
+
   - `crypto.timingSafeEqual` for constant-time comparison (security)
   - Prevents fake webhook calls from unauthorized sources
 
@@ -33,6 +36,7 @@
   - Handles API errors gracefully with logging
 
 #### Webhook Inbound (Phase 2)
+
 - **whatsapp-webhook.controller.ts**: Handle incoming messages from WhatsApp
   - `GET /api/whatsapp/webhook` - Meta webhook verification
   - `POST /api/whatsapp/webhook` - Receive messages
@@ -46,6 +50,7 @@
   - Always returns 200 to prevent WhatsApp retry loops
 
 #### Send Message (Phase 3)
+
 - **whatsapp-send.controller.ts**: Send messages from operators
   - `POST /api/whatsapp/send` - Authenticated endpoint
   - **4-layer security validation**:
@@ -59,6 +64,7 @@
   - Auto-creates chat session if doesn't exist
 
 #### Rate Limiting (Phase 3b)
+
 - **whatsapp-rate-limit.middleware.ts**: Anti-spam protection
   - 100 messages/minute per workspace (configurable via ENV)
   - 10 messages/minute per customer (configurable via ENV)
@@ -67,6 +73,7 @@
   - ⚠️ **Production**: Replace with Redis for scalability
 
 #### Push Notifications (Phase 4)
+
 - **whatsapp-notification.service.ts**: Push notification service
   - `sendWhatsAppNotification()` - Generic notification sender
   - `sendChatbotActivatedNotification()` - Chatbot ON message
@@ -77,6 +84,7 @@
   - Stores all notifications with metadata
 
 #### Routes & Integration
+
 - **whatsapp.routes.ts**: Dedicated routes file
   - Integrated into main router at `/api/whatsapp/*`
   - Swagger documentation complete with examples
@@ -87,6 +95,7 @@
 ### 🗄️ Database Changes
 
 #### New Fields in `messages` Table
+
 ```sql
 ALTER TABLE messages ADD COLUMN whatsappStatus TEXT;        -- 'sent' | 'failed' | 'pending' | 'delivered' | 'read'
 ALTER TABLE messages ADD COLUMN whatsappError TEXT;         -- Error message if send failed
@@ -95,6 +104,7 @@ ALTER TABLE messages ADD COLUMN sentBy TEXT;                -- userId of operato
 ```
 
 #### New Indexes
+
 ```sql
 CREATE INDEX messages_whatsappStatus_idx ON messages(whatsappStatus);
 CREATE INDEX messages_whatsappMessageId_idx ON messages(whatsappMessageId);
@@ -102,6 +112,7 @@ CREATE INDEX messages_sentBy_idx ON messages(sentBy);
 ```
 
 #### Fixed Schema Conflicts
+
 - Dropped `isMain` column from `Workspace` table (manual migration)
 - Resolved Prisma migration conflicts
 
@@ -110,6 +121,7 @@ CREATE INDEX messages_sentBy_idx ON messages(sentBy);
 ### 🔧 Configuration
 
 #### New Environment Variables
+
 ```bash
 WHATSAPP_API_URL=https://graph.facebook.com/v18.0
 WHATSAPP_VERIFY_TOKEN=shopme_whatsapp_verify_token_2025
@@ -123,6 +135,7 @@ WHATSAPP_RETRY_DELAY_MS=1000
 ```
 
 #### New Workspace Fields
+
 - `whatsappApiKey` (String) - Access Token from Meta Developer Console
 - `whatsappPhoneNumber` (String) - Phone Number ID from Meta
 
@@ -131,12 +144,14 @@ WHATSAPP_RETRY_DELAY_MS=1000
 ### 📚 Documentation
 
 #### New Files
+
 - `docs/memory-bank/whatsapp-setup-guide.md` - Complete setup guide for Meta Developer Console
 - `docs/memory-bank/whatsapp-integration-architecture.md` - Architecture design and decisions
 - `docs/memory-bank/whatsapp-implementation-complete.md` - Final implementation summary
 - `backend/.env.example` - Updated with WhatsApp variables and detailed comments
 
 #### Updated Files
+
 - `backend/prisma/schema.prisma` - Added WhatsApp fields to Message model
 - `backend/src/routes/index.ts` - Integrated WhatsApp routes
 
@@ -145,6 +160,7 @@ WHATSAPP_RETRY_DELAY_MS=1000
 ### 🔒 Security Improvements
 
 #### Inbound Security
+
 1. **HMAC SHA256 Signature Verification** - Prevents fake webhook calls
 2. **Rate Limiting** - 100 msg/min workspace, 10 msg/min customer
 3. **Customer Validation** - Only registered phone numbers accepted
@@ -152,6 +168,7 @@ WHATSAPP_RETRY_DELAY_MS=1000
 5. **Always Return 200** - Prevents WhatsApp retry storms
 
 #### Outbound Security
+
 1. **JWT Authentication** - Required for all send requests
 2. **Session Validation** - X-Session-Id header required
 3. **4-Layer Cross-Validation**:
@@ -183,6 +200,7 @@ WHATSAPP_RETRY_DELAY_MS=1000
 ### 📝 Migration Notes
 
 **Manual SQL Migration Applied**:
+
 ```sql
 -- File: backend/prisma/migrations/20251012_whatsapp_integration/migration.sql
 -- Dropped: isMain column from Workspace
@@ -191,12 +209,14 @@ WHATSAPP_RETRY_DELAY_MS=1000
 ```
 
 **Prisma Client Regenerated**:
+
 ```bash
 npx prisma generate
 # ✔ Generated Prisma Client (v6.14.0)
 ```
 
 **TypeScript Compilation**:
+
 ```bash
 npx tsc --noEmit
 # ✓ No errors
@@ -225,18 +245,21 @@ Before deploying to production:
 ### 🔮 Future Enhancements
 
 #### High Priority
+
 - [ ] Integrate LLMService into webhook controller (replace echo logic)
 - [ ] Replace in-memory rate limiting with Redis
 - [ ] Add delivery status webhook handling (delivered/read)
 - [ ] Support WhatsApp media messages (images/documents/audio)
 
 #### Medium Priority
+
 - [ ] Interactive messages (buttons, lists, quick replies)
 - [ ] Bulk send endpoint with throttling
 - [ ] Analytics dashboard for message metrics
 - [ ] Unit tests for formatter and signature verification
 
 #### Low Priority
+
 - [ ] WhatsApp Business Profile sync
 - [ ] Product catalog integration
 - [ ] Payment integration (if available)
