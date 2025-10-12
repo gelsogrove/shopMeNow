@@ -7,8 +7,8 @@ import { PublicPageLayout } from "../components/layout/PublicPageLayout"
 import { ProfileForm } from "../components/profile/ProfileForm"
 import { TokenError } from "../components/ui/TokenError"
 import UnifiedLoading from "../components/ui/UnifiedLoading"
-import { tokenApi } from "../services/tokenApi"
 import { useTokenValidation } from "../hooks/useTokenValidation"
+import { tokenApi } from "../services/tokenApi"
 import { getPublicPageTexts } from "../utils/publicPageTranslations"
 
 interface CustomerProfile {

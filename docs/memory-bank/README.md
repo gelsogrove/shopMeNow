@@ -11,7 +11,9 @@ Documentazione tecnica completa del progetto ShopME.
 ### 🔐 Autenticazione & Sicurezza
 
 #### [TOKEN-VS-SESSIONID-ARCHITECTURE.md](./TOKEN-VS-SESSIONID-ARCHITECTURE.md)
+
 **Documentazione completa** dell'architettura di autenticazione doppia:
+
 - Token-based per pagine pubbliche (`/api/token/*`)
 - SessionID-based per backoffice admin
 - Struttura backend e frontend
@@ -21,7 +23,9 @@ Documentazione tecnica completa del progetto ShopME.
 **Quando leggere**: Prima di lavorare su autenticazione, routing, o nuove API
 
 #### [QUICK-REFERENCE-TOKEN-SESSION.md](./QUICK-REFERENCE-TOKEN-SESSION.md)
+
 **Riferimento rapido** per sviluppo quotidiano:
+
 - Quale client usare (tokenApi vs api)
 - Dove montare le route
 - Errori comuni e soluzioni veloci
@@ -32,54 +36,67 @@ Documentazione tecnica completa del progetto ShopME.
 ### 🤖 AI & LLM
 
 #### [LLMSERVICE-ARCHITECTURE-FLOW.md](./LLMSERVICE-ARCHITECTURE-FLOW.md)
+
 Architettura e flusso del servizio LLM (OpenRouter integration)
 
 ### � Security & OWASP
 
 #### [OWASP-SECURITY-COMPLIANCE-REPORT.md](./OWASP-SECURITY-COMPLIANCE-REPORT.md)
+
 Report compliance OWASP e vulnerabilità risolte
 
 #### [SECURITY-FIXES-SUMMARY-2025-10-11.md](./SECURITY-FIXES-SUMMARY-2025-10-11.md)
+
 Riepilogo fix di sicurezza 11 Ottobre 2025
 
 #### [TEST-RATE-LIMITER-GUIDE.md](./TEST-RATE-LIMITER-GUIDE.md)
+
 Guida testing rate limiter e protezione API
 
 ### 💰 Billing & Scheduler
 
 #### [billing-system.md](./billing-system.md)
+
 Sistema di fatturazione e usage tracking
 
 #### [scheduler-service.md](./scheduler-service.md)
+
 Servizio scheduler per task automatici
 
 ### 🔗 Features & Services
 
 #### [short-links.md](./short-links.md)
+
 Sistema short links per URL pubblici
 
 #### [sessionid-admin-panel.md](./sessionid-admin-panel.md)
+
 Gestione sessioni admin panel
 
 #### [WIP-MESSAGE-FEATURE.md](./WIP-MESSAGE-FEATURE.md)
+
 Feature messaggi WhatsApp (Work In Progress)
 
 ### 📐 Design & Style
 
 #### [style-guide.md](./style-guide.md)
+
 Guida stile UI/UX del progetto
 
 #### [projectbrief.md](./projectbrief.md)
+
 Brief generale del progetto ShopME
 
 ### 📡 API Reference
 
 #### [endpoints.md](./endpoints.md)
+
 Lista completa endpoint API disponibili
 
 ### 🗂️ Note Sviluppo
 
 #### [check.md](./check.md)
+
 Note temporanee di sviluppo e testing
 
 ---

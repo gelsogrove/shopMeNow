@@ -993,7 +993,7 @@ router.post("/get-all-products", async (req: Request, res: Response) => {
 // Note: GET /orders-public is already added above after GET /public/orders handler
 
 /**
- * Alias: GET /orders-public/:orderCode  
+ * Alias: GET /orders-public/:orderCode
  * Same handler as GET /public/orders/:orderCode
  */
 router.get("/orders-public/:orderCode", async (req: Request, res: Response) => {
@@ -1159,6 +1159,8 @@ router.get("/orders-public/:orderCode", async (req: Request, res: Response) => {
   }
 })
 
-logger.info("✅ Added /orders-public/:orderCode route alias for frontend compatibility")
+logger.info(
+  "✅ Added /orders-public/:orderCode route alias for frontend compatibility"
+)
 
 export default router

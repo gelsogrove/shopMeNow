@@ -1,9 +1,9 @@
 import { Router } from "express"
-import logger from "../../utils/logger"
-import createRegistrationRouter from "../../interfaces/http/routes/registration.routes"
+import { cartRouter } from "../../interfaces/http/routes/cart.routes"
 import { checkoutRouter } from "../../interfaces/http/routes/checkout.routes"
 import publicOrdersRouter from "../../interfaces/http/routes/public-orders.routes"
-import { cartRouter } from "../../interfaces/http/routes/cart.routes"
+import createRegistrationRouter from "../../interfaces/http/routes/registration.routes"
+import logger from "../../utils/logger"
 
 // ========================================
 // 🎫 TOKEN ROUTES

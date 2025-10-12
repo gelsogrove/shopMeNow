@@ -11,7 +11,7 @@ import axios from "axios"
 
 /**
  * Token API Client - For token-based public pages
- * 
+ *
  * Features:
  * - NO sessionId header (uses token in URL)
  * - NO authentication cookies
@@ -45,7 +45,9 @@ tokenApi.interceptors.request.use(
 tokenApi.interceptors.response.use(
   (response) => {
     logger.info(
-      `📥 [TOKEN API] Response: ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`,
+      `📥 [TOKEN API] Response: ${
+        response.status
+      } ${response.config.method?.toUpperCase()} ${response.config.url}`,
       {
         status: response.status,
       }
@@ -55,7 +57,9 @@ tokenApi.interceptors.response.use(
   (error) => {
     if (error.response) {
       logger.error(
-        `❌ [TOKEN API] Response Error: ${error.response.status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`,
+        `❌ [TOKEN API] Response Error: ${
+          error.response.status
+        } ${error.config?.method?.toUpperCase()} ${error.config?.url}`,
         {
           status: error.response.status,
           data: error.response.data,

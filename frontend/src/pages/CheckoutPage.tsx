@@ -6,9 +6,9 @@ import { SearchBar, useProductSearch } from "../components/ui/SearchBar"
 import { TokenError } from "../components/ui/TokenError"
 import UnifiedLoading from "../components/ui/UnifiedLoading"
 import { useCheckoutTokenValidation } from "../hooks/useTokenValidation"
+import { tokenApi } from "../services/tokenApi"
 import { getProductIcon, getServiceIcon } from "../utils/productIcons"
 import { getPublicPageTexts } from "../utils/publicPageTranslations"
-import { tokenApi } from "../services/tokenApi"
 
 interface Product {
   id: string // Cart item ID

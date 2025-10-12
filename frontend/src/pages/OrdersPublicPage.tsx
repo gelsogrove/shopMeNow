@@ -4,8 +4,8 @@ import { PublicPageLayout } from "../components/layout/PublicPageLayout"
 import { TokenError } from "../components/ui/TokenError"
 import { UnifiedLoading } from "../components/ui/UnifiedLoading"
 import { useTokenValidation } from "../hooks/useTokenValidation"
-import { getPublicPageTexts } from "../utils/publicPageTranslations"
 import { tokenApi } from "../services/tokenApi"
+import { getPublicPageTexts } from "../utils/publicPageTranslations"
 
 interface OrderListItem {
   id: string

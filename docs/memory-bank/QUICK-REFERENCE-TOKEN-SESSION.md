@@ -30,11 +30,11 @@ await api.get(`/workspaces/${workspaceId}/products`)
 ```typescript
 // ✅ Route PUBBLICHE con token
 // File: /backend/src/routes/token/index.ts
-router.use("/cart", cartRouter)  // Diventa /api/token/cart/*
+router.use("/cart", cartRouter) // Diventa /api/token/cart/*
 
 // ✅ Route BACKOFFICE con sessionId
 // File: /backend/src/routes/index.ts
-router.use("/workspaces", workspaceRouter)  // Diventa /api/workspaces/*
+router.use("/workspaces", workspaceRouter) // Diventa /api/workspaces/*
 ```
 
 ---
@@ -44,7 +44,7 @@ router.use("/workspaces", workspaceRouter)  // Diventa /api/workspaces/*
 ```typescript
 // File: /backend/src/routes/index.ts
 const SESSION_EXEMPT_ROUTES = [
-  "/token/",  // ⭐ Esclude TUTTO /api/token/*
+  "/token/", // ⭐ Esclude TUTTO /api/token/*
 ]
 ```
 
@@ -56,10 +56,10 @@ const SESSION_EXEMPT_ROUTES = [
 
 ```typescript
 // ❌ SBAGLIATO
-fetch(`/api/cart/${token}`)  // Manca /token/ nel path!
+fetch(`/api/cart/${token}`) // Manca /token/ nel path!
 
 // ✅ CORRETTO
-tokenApi.get(`/cart/${token}`)  // baseURL già include /api/token
+tokenApi.get(`/cart/${token}`) // baseURL già include /api/token
 ```
 
 ### ❌ Backend usa router sbagliato
@@ -88,11 +88,11 @@ api → solo X-Session-Id header
 
 ## 📊 Tabella Endpoint
 
-| Frontend | Backend | Auth |
-|----------|---------|------|
-| `tokenApi.get('/cart/:token')` | `GET /api/token/cart/:token` | Token in path |
-| `tokenApi.post('/checkout/submit')` | `POST /api/token/checkout/submit` | Token in body |
-| `api.get('/workspaces/:id/products')` | `GET /api/workspaces/:id/products` | X-Session-Id |
+| Frontend                              | Backend                            | Auth          |
+| ------------------------------------- | ---------------------------------- | ------------- |
+| `tokenApi.get('/cart/:token')`        | `GET /api/token/cart/:token`       | Token in path |
+| `tokenApi.post('/checkout/submit')`   | `POST /api/token/checkout/submit`  | Token in body |
+| `api.get('/workspaces/:id/products')` | `GET /api/workspaces/:id/products` | X-Session-Id  |
 
 ---
 
@@ -118,14 +118,14 @@ Route backoffice non funziona?
 
 ## 💾 Storage
 
-| Dato | Dove | Chiave |
-|------|------|--------|
-| sessionId | localStorage | `"sessionId"` |
-| JWT admin | localStorage | `"token"` |
-| Token pubblico | URL | `?token=xxx` |
+| Dato           | Dove         | Chiave        |
+| -------------- | ------------ | ------------- |
+| sessionId      | localStorage | `"sessionId"` |
+| JWT admin      | localStorage | `"token"`     |
+| Token pubblico | URL          | `?token=xxx`  |
 
 ---
 
 **Fine Quick Reference** ⚡
 
-*Per dettagli completi vedi: `TOKEN-VS-SESSIONID-ARCHITECTURE.md`*
+_Per dettagli completi vedi: `TOKEN-VS-SESSIONID-ARCHITECTURE.md`_

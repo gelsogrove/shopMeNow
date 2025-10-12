@@ -20,14 +20,15 @@
 
 ShopME utilizza **DUE sistemi di autenticazione separati**:
 
-| Sistema | Uso | Storage | Header | Percorso API |
-|---------|-----|---------|--------|--------------|
-| **SessionID** | Backoffice (Admin) | localStorage | `X-Session-Id` | `/api/*` (escluso `/token/`) |
-| **Token** | Pagine pubbliche | URL Query Params | Nessuno | `/api/token/*` |
+| Sistema       | Uso                | Storage          | Header         | Percorso API                 |
+| ------------- | ------------------ | ---------------- | -------------- | ---------------------------- |
+| **SessionID** | Backoffice (Admin) | localStorage     | `X-Session-Id` | `/api/*` (escluso `/token/`) |
+| **Token**     | Pagine pubbliche   | URL Query Params | Nessuno        | `/api/token/*`               |
 
 ### Regola Fondamentale
 
-> **"Il token si usa SOLO per API di token folder!"**  
+> **"Il token si usa SOLO per API di token folder!"**
+>
 > - Le chiamate sotto `/api/token/*` controllano il **token** (NON sessionId)
 > - Tutte le altre chiamate in backoffice usano **sessionId**
 
@@ -60,13 +61,13 @@ export function createTokenRouter(): Router {
 
   // Registration routes (/api/token/registration/*)
   router.use("/registration", createRegistrationRouter())
-  
+
   // Checkout routes (/api/token/checkout/*)
   router.use("/checkout", checkoutRouter)
-  
+
   // Public orders routes (/api/token/orders-public/*, /api/token/customer-profile/*)
   router.use("/", publicOrdersRouter)
-  
+
   // Cart routes (/api/token/cart/*)
   router.use("/cart", cartRouter)
 
@@ -77,18 +78,18 @@ export function createTokenRouter(): Router {
 
 ### 2. Route Registrate sotto `/api/token/*`
 
-| Endpoint | Descrizione | Autenticazione |
-|----------|-------------|----------------|
-| `/api/token/registration/*` | Registrazione nuovi clienti | Token in URL |
-| `/api/token/checkout/*` | Processo checkout | Token in URL |
-| `/api/token/checkout/submit` | Submit ordine finale | Token in body |
-| `/api/token/orders-public` | Lista ordini cliente | Token in URL |
-| `/api/token/orders-public/:code` | Dettaglio ordine | Token in URL |
-| `/api/token/customer-profile/*` | Profilo cliente pubblico | Token in URL |
-| `/api/token/cart/:token` | GET carrello | Token in path |
-| `/api/token/cart/:token/items` | POST aggiungi item | Token in path |
-| `/api/token/cart/:token/items/:id` | PUT aggiorna quantità | Token in path |
-| `/api/token/cart/:token/items/:id` | DELETE rimuovi item | Token in path |
+| Endpoint                           | Descrizione                 | Autenticazione |
+| ---------------------------------- | --------------------------- | -------------- |
+| `/api/token/registration/*`        | Registrazione nuovi clienti | Token in URL   |
+| `/api/token/checkout/*`            | Processo checkout           | Token in URL   |
+| `/api/token/checkout/submit`       | Submit ordine finale        | Token in body  |
+| `/api/token/orders-public`         | Lista ordini cliente        | Token in URL   |
+| `/api/token/orders-public/:code`   | Dettaglio ordine            | Token in URL   |
+| `/api/token/customer-profile/*`    | Profilo cliente pubblico    | Token in URL   |
+| `/api/token/cart/:token`           | GET carrello                | Token in path  |
+| `/api/token/cart/:token/items`     | POST aggiungi item          | Token in path  |
+| `/api/token/cart/:token/items/:id` | PUT aggiorna quantità       | Token in path  |
+| `/api/token/cart/:token/items/:id` | DELETE rimuovi item         | Token in path  |
 
 ### 3. Session Exempt Routes
 
@@ -105,7 +106,7 @@ const SESSION_EXEMPT_ROUTES = [
   "/whatsapp/webhook",
   "/chat",
   "/cart-tokens",
-  "/token/",  // ⭐ CRITICO: Esclude TUTTO sotto /api/token/*
+  "/token/", // ⭐ CRITICO: Esclude TUTTO sotto /api/token/*
 ]
 ```
 
@@ -117,7 +118,7 @@ app.use((req, res, next) => {
   const path = req.path
 
   // Skip sessionId check for exempt routes
-  if (SESSION_EXEMPT_ROUTES.some(route => path.includes(route))) {
+  if (SESSION_EXEMPT_ROUTES.some((route) => path.includes(route))) {
     logger.debug(`🔓 SessionID check SKIPPED for exempt route: ${path}`)
     return next()
   }
@@ -140,6 +141,7 @@ app.use((req, res, next) => {
 **File**: `/backend/src/interfaces/http/routes/cart.routes.ts`
 
 Endpoints disponibili:
+
 - `GET /:token` - Ottieni carrello
 - `POST /:token/items` - Aggiungi prodotto/servizio
 - `DELETE /:token/items/:productId` - Rimuovi item
@@ -160,18 +162,24 @@ import axios from "axios"
 
 export const tokenApi = axios.create({
   baseURL: "/api/token",
-  withCredentials: false,  // NO cookies
+  withCredentials: false, // NO cookies
 })
 
 // NO sessionId interceptor!
 ```
 
 **Uso**:
+
 ```typescript
 // ✅ Corretto
 const response = await tokenApi.get(`/cart/${token}`)
-const response = await tokenApi.post(`/cart/${token}/items`, { productId, quantity })
-const response = await tokenApi.put(`/cart/${token}/items/${itemId}`, { quantity })
+const response = await tokenApi.post(`/cart/${token}/items`, {
+  productId,
+  quantity,
+})
+const response = await tokenApi.put(`/cart/${token}/items/${itemId}`, {
+  quantity,
+})
 const response = await tokenApi.delete(`/cart/${token}/items/${itemId}`)
 
 // ❌ Sbagliato - NON usare fetch() direttamente
@@ -201,6 +209,7 @@ api.interceptors.request.use((config) => {
 ```
 
 **Uso**:
+
 ```typescript
 // ✅ Corretto per backoffice
 const response = await api.get(`/workspaces/${workspaceId}/products`)
@@ -209,11 +218,11 @@ const response = await api.post(`/workspaces/${workspaceId}/orders`, orderData)
 
 ### 2. Pagine Token-Based
 
-| Pagina | File | API Client | Token Source |
-|--------|------|-----------|--------------|
-| Checkout | `CheckoutPage.tsx` | `tokenApi` | URL query `?token=xxx` |
-| Registrazione | `register.tsx` | `tokenApi` | URL query `?token=xxx` |
-| Ordini Pubblici | `OrdersPublicPage.tsx` | `tokenApi` | URL query `?token=xxx` |
+| Pagina          | File                            | API Client | Token Source           |
+| --------------- | ------------------------------- | ---------- | ---------------------- |
+| Checkout        | `CheckoutPage.tsx`              | `tokenApi` | URL query `?token=xxx` |
+| Registrazione   | `register.tsx`                  | `tokenApi` | URL query `?token=xxx` |
+| Ordini Pubblici | `OrdersPublicPage.tsx`          | `tokenApi` | URL query `?token=xxx` |
 | Profilo Cliente | `CustomerProfilePublicPage.tsx` | `tokenApi` | URL query `?token=xxx` |
 
 ### 3. Hook Validazione Token
@@ -223,7 +232,7 @@ const response = await api.post(`/workspaces/${workspaceId}/orders`, orderData)
 ```typescript
 export const useCheckoutTokenValidation = () => {
   // ... existing code
-  
+
   const validateToken = async (tokenValue: string) => {
     try {
       const response = await tokenApi.get(`/checkout/token?token=${tokenValue}`)
@@ -232,7 +241,7 @@ export const useCheckoutTokenValidation = () => {
       // ... handle error
     }
   }
-  
+
   return { tokenData, customer, isLoading, error }
 }
 ```
@@ -274,7 +283,7 @@ Session Validation Middleware
 // Public pages (token-based)
 if (isPublicPage) {
   import { tokenApi } from "../services/tokenApi"
-  
+
   const token = new URLSearchParams(location.search).get("token")
   const response = await tokenApi.get(`/cart/${token}`)
 }
@@ -282,7 +291,7 @@ if (isPublicPage) {
 // Backoffice pages (session-based)
 if (isBackofficePage) {
   import { api } from "../services/api"
-  
+
   // sessionId automatically added by interceptor
   const response = await api.get(`/workspaces/${workspaceId}/products`)
 }
@@ -295,46 +304,52 @@ if (isBackofficePage) {
 ### ✅ DO (Fare)
 
 1. **Usa tokenApi per pagine pubbliche**
+
    ```typescript
    await tokenApi.get(`/cart/${token}`)
    ```
 
 2. **Usa api per backoffice**
+
    ```typescript
    await api.get(`/workspaces/${workspaceId}/products`)
    ```
 
 3. **Filtra SEMPRE per workspaceId nel database**
+
    ```typescript
    const products = await prisma.product.findMany({
-     where: { workspaceId, ...otherFilters }
+     where: { workspaceId, ...otherFilters },
    })
    ```
 
-4. **Monta route token sotto /api/token/***
+4. **Monta route token sotto /api/token/\***
+
    ```typescript
-   router.use("/cart", cartRouter)  // Diventa /api/token/cart/*
+   router.use("/cart", cartRouter) // Diventa /api/token/cart/*
    ```
 
 5. **Aggiungi path a SESSION_EXEMPT_ROUTES se non usa sessionId**
    ```typescript
    const SESSION_EXEMPT_ROUTES = [
-     "/token/",  // Esclude tutto /api/token/*
+     "/token/", // Esclude tutto /api/token/*
    ]
    ```
 
 ### ❌ DON'T (NON fare)
 
 1. **NON usare fetch() diretto su endpoint token**
+
    ```typescript
    // ❌ Sbagliato
-   fetch(`/api/cart/${token}`)  // Manca /token/ nel path!
-   
+   fetch(`/api/cart/${token}`) // Manca /token/ nel path!
+
    // ✅ Corretto
-   tokenApi.get(`/cart/${token}`)  // baseURL già include /api/token
+   tokenApi.get(`/cart/${token}`) // baseURL già include /api/token
    ```
 
 2. **NON mixare token e sessionId**
+
    ```typescript
    // ❌ Sbagliato
    tokenApi con header X-Session-Id
@@ -342,19 +357,21 @@ if (isBackofficePage) {
    ```
 
 3. **NON hardcodare baseURL completo**
+
    ```typescript
    // ❌ Sbagliato
    fetch("http://localhost:3001/api/token/checkout/submit")
-   
+
    // ✅ Corretto
    tokenApi.post("/checkout/submit", data)
    ```
 
 4. **NON usare createCartTokenRouter() per cart operations**
+
    ```typescript
    // ❌ Sbagliato (solo validate token support)
    router.use("/cart", createCartTokenRouter())
-   
+
    // ✅ Corretto (CRUD operations)
    router.use("/cart", cartRouter)
    ```
@@ -374,10 +391,11 @@ if (isBackofficePage) {
 **Causa**: Path non in SESSION_EXEMPT_ROUTES
 
 **Soluzione**:
+
 ```typescript
 // backend/src/routes/index.ts
 const SESSION_EXEMPT_ROUTES = [
-  "/token/",  // Assicurati che questo sia presente!
+  "/token/", // Assicurati che questo sia presente!
 ]
 ```
 
@@ -388,12 +406,14 @@ const SESSION_EXEMPT_ROUTES = [
 **Causa**: Route non montata o router sbagliato
 
 **Soluzione**:
+
 ```typescript
 // backend/src/routes/token/index.ts
-router.use("/cart", cartRouter)  // Usa cartRouter NON createCartTokenRouter()
+router.use("/cart", cartRouter) // Usa cartRouter NON createCartTokenRouter()
 ```
 
 **Verifica log**:
+
 ```
 ✅ Registered /token/cart/* routes (shopping cart)
 ```
@@ -405,12 +425,13 @@ router.use("/cart", cartRouter)  // Usa cartRouter NON createCartTokenRouter()
 **Causa**: Uso di `fetch()` invece di `tokenApi`
 
 **Soluzione**:
+
 ```typescript
 // ❌ Prima (sbagliato)
 fetch(`/api/cart/${token}`)
 
 // ✅ Dopo (corretto)
-tokenApi.get(`/cart/${token}`)  // baseURL = "/api/token"
+tokenApi.get(`/cart/${token}`) // baseURL = "/api/token"
 ```
 
 ### Problema: Token non validato
@@ -420,6 +441,7 @@ tokenApi.get(`/cart/${token}`)  // baseURL = "/api/token"
 **Causa**: Token middleware non applicato
 
 **Soluzione**: Verifica che controller usi `SecureTokenService`:
+
 ```typescript
 import { SecureTokenService } from "../../../services/secureToken.service"
 
@@ -433,25 +455,25 @@ const decoded = tokenService.validateToken(token)
 
 ### Endpoint Mapping
 
-| Frontend Call | Backend Route | Middleware | Auth Method |
-|--------------|---------------|------------|-------------|
-| `tokenApi.get('/cart/:token')` | `GET /api/token/cart/:token` | NESSUNO | Token in path |
-| `tokenApi.post('/cart/:token/items')` | `POST /api/token/cart/:token/items` | NESSUNO | Token in path |
-| `tokenApi.post('/checkout/submit')` | `POST /api/token/checkout/submit` | NESSUNO | Token in body |
-| `api.get('/workspaces/:id/products')` | `GET /api/workspaces/:id/products` | sessionValidation | X-Session-Id header |
-| `api.post('/workspaces/:id/orders')` | `POST /api/workspaces/:id/orders` | sessionValidation + workspace | X-Session-Id header |
+| Frontend Call                         | Backend Route                       | Middleware                    | Auth Method         |
+| ------------------------------------- | ----------------------------------- | ----------------------------- | ------------------- |
+| `tokenApi.get('/cart/:token')`        | `GET /api/token/cart/:token`        | NESSUNO                       | Token in path       |
+| `tokenApi.post('/cart/:token/items')` | `POST /api/token/cart/:token/items` | NESSUNO                       | Token in path       |
+| `tokenApi.post('/checkout/submit')`   | `POST /api/token/checkout/submit`   | NESSUNO                       | Token in body       |
+| `api.get('/workspaces/:id/products')` | `GET /api/workspaces/:id/products`  | sessionValidation             | X-Session-Id header |
+| `api.post('/workspaces/:id/orders')`  | `POST /api/workspaces/:id/orders`   | sessionValidation + workspace | X-Session-Id header |
 
 ### File Modificati (12 Ottobre 2025)
 
-| File | Modifica | Motivo |
-|------|----------|--------|
-| `/backend/src/routes/token/index.ts` | Cambiato da `createCartTokenRouter()` a `cartRouter` | Usa cart CRUD operations, non support tokens |
-| `/backend/src/routes/index.ts` | Aggiunto `"/token/"` a SESSION_EXEMPT_ROUTES | Esclude validazione sessionId |
-| `/frontend/src/services/tokenApi.ts` | Creato nuovo file | Client HTTP per pagine pubbliche |
-| `/frontend/src/pages/CheckoutPage.tsx` | Convertito da `fetch()` a `tokenApi` | Usa baseURL corretto `/api/token` |
-| `/frontend/src/pages/CheckoutPage.tsx` | Rimossi tutti i `toast` messages | Richiesta Andrea |
-| `/frontend/src/hooks/useTokenValidation.ts` | Cambiato da `api` a `tokenApi` | Valida token con endpoint corretto |
-| `/backend/src/interfaces/http/routes/public-orders.routes.ts` | Aggiunti route aliases | Supporto `/orders-public` e `/public/orders` |
+| File                                                          | Modifica                                             | Motivo                                       |
+| ------------------------------------------------------------- | ---------------------------------------------------- | -------------------------------------------- |
+| `/backend/src/routes/token/index.ts`                          | Cambiato da `createCartTokenRouter()` a `cartRouter` | Usa cart CRUD operations, non support tokens |
+| `/backend/src/routes/index.ts`                                | Aggiunto `"/token/"` a SESSION_EXEMPT_ROUTES         | Esclude validazione sessionId                |
+| `/frontend/src/services/tokenApi.ts`                          | Creato nuovo file                                    | Client HTTP per pagine pubbliche             |
+| `/frontend/src/pages/CheckoutPage.tsx`                        | Convertito da `fetch()` a `tokenApi`                 | Usa baseURL corretto `/api/token`            |
+| `/frontend/src/pages/CheckoutPage.tsx`                        | Rimossi tutti i `toast` messages                     | Richiesta Andrea                             |
+| `/frontend/src/hooks/useTokenValidation.ts`                   | Cambiato da `api` a `tokenApi`                       | Valida token con endpoint corretto           |
+| `/backend/src/interfaces/http/routes/public-orders.routes.ts` | Aggiunti route aliases                               | Supporto `/orders-public` e `/public/orders` |
 
 ---
 
@@ -484,20 +506,20 @@ Quando aggiungi nuova funzionalità:
 
 ### Storage Locations
 
-| Dato | Storage | Chiave |
-|------|---------|--------|
-| sessionId | localStorage | `"sessionId"` |
-| JWT token | localStorage | `"token"` |
-| currentWorkspace | localStorage | `"currentWorkspace"` |
-| Token pubblico | URL query param | `?token=xxx` |
+| Dato             | Storage         | Chiave               |
+| ---------------- | --------------- | -------------------- |
+| sessionId        | localStorage    | `"sessionId"`        |
+| JWT token        | localStorage    | `"token"`            |
+| currentWorkspace | localStorage    | `"currentWorkspace"` |
+| Token pubblico   | URL query param | `?token=xxx`         |
 
 ### Porte e URL
 
-| Servizio | Porta | URL |
-|----------|-------|-----|
-| Backend | 3001 | `http://localhost:3001` |
-| Frontend | 3000 | `http://localhost:3000` |
-| PostgreSQL | 5432 | `localhost:5432` |
+| Servizio   | Porta | URL                     |
+| ---------- | ----- | ----------------------- |
+| Backend    | 3001  | `http://localhost:3001` |
+| Frontend   | 3000  | `http://localhost:3000` |
+| PostgreSQL | 5432  | `localhost:5432`        |
 
 ### Comandi Utili
 
@@ -507,7 +529,7 @@ cd backend && npm run dev           # Avvia backend (port 3001)
 cd backend && npm run seed          # Seed database
 cd backend && npx prisma migrate dev # Create migration
 
-# Frontend  
+# Frontend
 cd frontend && npm run dev          # Avvia frontend (port 3000)
 
 # Database
@@ -518,5 +540,5 @@ docker-compose up -d                # Avvia PostgreSQL
 
 **Fine Documentazione** 🎉
 
-*Ultima modifica: 12 Ottobre 2025*  
-*Versione: 1.0*
+_Ultima modifica: 12 Ottobre 2025_  
+_Versione: 1.0_
