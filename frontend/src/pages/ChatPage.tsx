@@ -552,7 +552,9 @@ export function ChatPage() {
         updateActiveChatbot(selectedChat.id, status)
 
         // Invalidate queries to refresh chat list
-        await queryClient.invalidateQueries({ queryKey: ["chats", userSessionId] })
+        await queryClient.invalidateQueries({
+          queryKey: ["chats", userSessionId],
+        })
 
         // If enabling chatbot and notification is requested
         if (status && shouldNotify) {
@@ -627,7 +629,9 @@ export function ChatPage() {
         .then((response) => {
           if (response.data.success) {
             // Invalidate chat queries to refresh unread counts
-            queryClient.invalidateQueries({ queryKey: ["chats", userSessionId] })
+            queryClient.invalidateQueries({
+              queryKey: ["chats", userSessionId],
+            })
           } else {
             logger.error("Failed to mark messages as read")
           }
