@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { Workspace } from "@/hooks/use-workspace"
 import { useWorkspace } from "@/hooks/use-workspace"
-import { PlusCircle } from "lucide-react"
+import { LogOut, PlusCircle } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
@@ -12,6 +12,8 @@ import {
   getWorkspaces,
   updateWorkspace,
 } from "../services/workspaceApi"
+import { clearSessionId } from "../services/api"
+import { toast } from "@/lib/toast"
 
 // Definizione dei tipi di attività supportati
 type BusinessType = "Shop"
@@ -82,8 +84,9 @@ export function WorkspaceSelectionPage() {
     )
     sessionStorage.setItem("currentWorkspaceType", selectedType || "Shop")
 
-    // Reindirizza alla chat history dopo la selezione
-    navigate("/chat")
+    // 🔄 HARD RELOAD - Force page refresh to load new workspace
+    console.log("🔄 Workspace selected, reloading to /chat")
+    window.location.href = "/chat"
   }
 
   // Gestisce la creazione di un nuovo workspace
@@ -155,9 +158,44 @@ export function WorkspaceSelectionPage() {
     }
   }
 
+  // 🆕 LOGOUT HANDLER
+  const handleLogout = () => {
+    console.log("🚪 [WorkspaceSelectionPage] Logout requested")
+    
+    // Clear sessionId from localStorage
+    clearSessionId()
+    
+    // Clear workspace data
+    localStorage.removeItem("currentWorkspace")
+    sessionStorage.removeItem("currentWorkspace")
+    sessionStorage.removeItem("currentWorkspaceName")
+    sessionStorage.removeItem("currentWorkspacePhone")
+    sessionStorage.removeItem("currentWorkspaceType")
+    
+    // Clear token
+    localStorage.removeItem("token")
+    
+    toast.success("Logged out successfully")
+    
+    // Redirect to login
+    navigate("/auth/login")
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
+        {/* 🆕 LOGOUT BUTTON - Top Right */}
+        <div className="flex justify-end mb-4">
+          <Button
+            onClick={handleLogout}
+            variant="outline"
+            className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            <LogOut className="h-4 w-4" />
+            Logout
+          </Button>
+        </div>
+
         <h1 className="text-xl font-bold text-center mb-2">Your Channels</h1>
         <p className="text-center text-gray-600 mb-8">
           Select a channel to manage its conversations or create a new one

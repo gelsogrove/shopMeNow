@@ -284,18 +284,11 @@ export default function ClientsPage(): JSX.Element {
   // Handle view chat history
   const handleViewChatHistory = async (client: Client) => {
     try {
-      // Cerca di trovare la chat esistente per questo cliente usando il suo numero di telefono
-      const existingChat = allChats.find(
-        (chat: any) => chat.customerPhone === client.phone
-      )
-
-      if (existingChat) {
-        // Se la chat esiste, vai direttamente alla chat con il sessionId corretto
-        navigate(`/chat?sessionId=${existingChat.sessionId}`)
-        return
-      }
-
-      // If no existing chat is found, navigate to the chat page with client name as search filter
+      // 🚨 REMOVED: No longer using sessionId in URL
+      // Chat selection now managed purely via React context
+      
+      // Navigate to chat page with client name as search filter
+      // The ChatPage will auto-select the matching chat from context
       navigate(`/chat?client=${encodeURIComponent(client.name)}`)
     } catch (error) {
       logger.error("Error finding chat for client:", error)

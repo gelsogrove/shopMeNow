@@ -131,7 +131,9 @@ export function Header() {
 
   // Gestisce il ritorno alla selezione dei workspace
   const handleBackToWorkspaces = () => {
-    navigate("/workspace-selection")
+    // 🔄 HARD RELOAD - Force page refresh when changing workspace
+    console.log("🔄 Navigating to workspace selection with reload")
+    window.location.href = "/workspace-selection"
   }
 
   // Handle logout

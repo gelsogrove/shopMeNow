@@ -122,9 +122,9 @@ export function ChatPage() {
   const [isWorkspaceChanging, setIsWorkspaceChanging] = useState(false) // 🆕 Loading per workspace change
   const [searchParams, setSearchParams] = useSearchParams()
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const sessionId = searchParams.get("sessionId")
+  // 🚨 REMOVED: sessionId from URL - chat selection now managed via React context only
 
-  // 🚨 FIX: Clear selectedChat and URL params when workspace changes
+  // 🚨 FIX: RELOAD page when workspace changes (hard refresh)
   const prevWorkspaceIdRef = useRef<string | undefined>(workspace?.id)
   useEffect(() => {
     if (
@@ -133,31 +133,16 @@ export function ChatPage() {
       workspace.id !== prevWorkspaceIdRef.current
     ) {
       logger.info(
-        `[ChatPage] 🔄 Workspace changing from ${prevWorkspaceIdRef.current} to ${workspace.id}`
+        `[ChatPage] 🔄 Workspace changed from ${prevWorkspaceIdRef.current} to ${workspace.id} - RELOADING PAGE`
       )
 
-      // 🔄 Show loading overlay
-      setIsWorkspaceChanging(true)
-
-      // Clear selected chat
-      setSelectedChat(null)
-
-      // Clear URL params
-      setSearchParams({})
-
-      // Clear messages
-      setMessages([])
-
-      // Wait for queries to invalidate and reload, then hide loading
-      setTimeout(() => {
-        setIsWorkspaceChanging(false)
-        logger.info("[ChatPage] ✅ Workspace change completed")
-      }, 500) // 500ms delay per dare tempo alle query di invalidarsi
+      // 🔄 HARD RELOAD - Force page refresh to clear all state
+      window.location.href = "/chat"
     }
 
     // Update ref for next comparison
     prevWorkspaceIdRef.current = workspace?.id
-  }, [workspace?.id, setSelectedChat, setSearchParams])
+  }, [workspace?.id])
   const [clientSearchTerm, setClientSearchTerm] = useState(
     searchParams.get("client") || ""
   )
@@ -324,41 +309,31 @@ export function ChatPage() {
       return
     }
 
-    // If we have a sessionId in URL, find that specific chat
-    if (chats.length > 0 && !selectedChat) {
-      if (sessionId) {
-        const chatWithSessionId = chats.find(
-          (chat) => chat.sessionId === sessionId
-        )
-        if (chatWithSessionId) {
-          selectChat(chatWithSessionId)
-          return
-        }
-      }
+    // 🚨 REMOVED: No longer reading sessionId from URL
+    // Chat selection now managed purely via React context
 
-      // If we have a client search term, find chats for that client
-      if (clientSearchTerm) {
-        const clientChats = chats.filter(
-          (chat) =>
-            chat.customerName
-              ?.toLowerCase()
-              .includes(clientSearchTerm.toLowerCase()) ||
-            chat.customerPhone
-              ?.toLowerCase()
-              .includes(clientSearchTerm.toLowerCase()) ||
-            chat.companyName
-              ?.toLowerCase()
-              .includes(clientSearchTerm.toLowerCase())
-        )
+    // If we have a client search term, find chats for that client
+    if (chats.length > 0 && !selectedChat && clientSearchTerm) {
+      const clientChats = chats.filter(
+        (chat) =>
+          chat.customerName
+            ?.toLowerCase()
+            .includes(clientSearchTerm.toLowerCase()) ||
+          chat.customerPhone
+            ?.toLowerCase()
+            .includes(clientSearchTerm.toLowerCase()) ||
+          chat.companyName
+            ?.toLowerCase()
+            .includes(clientSearchTerm.toLowerCase())
+      )
 
-        if (clientChats.length > 0) {
-          // Select the most recent chat for this client
-          selectChat(clientChats[0])
-          return
-        }
+      if (clientChats.length > 0) {
+        // Select the most recent chat for this client
+        selectChat(clientChats[0])
+        return
       }
     }
-  }, [chats, sessionId, clientSearchTerm])
+  }, [chats, clientSearchTerm])
 
   // Get workspaceId from workspace hook
   const workspaceId = workspace?.id
@@ -606,11 +581,9 @@ export function ChatPage() {
   // Function to select a chat
   const selectChat = (chat: Chat) => {
     setSelectedChat(chat)
-    // Update URL to include sessionId - use sessionId or fallback to id
-    const sessionIdToUse = chat.sessionId || chat.id
-    const newParams = new URLSearchParams(searchParams)
-    newParams.set("sessionId", sessionIdToUse)
+    // 🚨 REMOVED: No longer setting sessionId in URL - chat managed via context only
     // Preserve client search term if present
+    const newParams = new URLSearchParams(searchParams)
     if (clientSearchTerm) {
       newParams.set("client", clientSearchTerm)
     } else {
@@ -623,9 +596,11 @@ export function ChatPage() {
 
     // Reset unread count when selecting a chat
     if (chat.unreadCount > 0) {
+      // Get chat sessionId for API call
+      const chatSessionId = chat.sessionId || chat.id
       // Call API to mark messages as read
       api
-        .post(`/chat/${sessionIdToUse}/read`)
+        .post(`/chat/${chatSessionId}/read`)
         .then((response) => {
           if (response.data.success) {
             // Invalidate chat queries to refresh unread counts
@@ -670,10 +645,7 @@ export function ChatPage() {
         // Invalidate chat queries to refresh the list
         queryClient.invalidateQueries({ queryKey: ["chats", userSessionId] })
         setSelectedChat(null)
-        // Remove sessionId from URL
-        const newParams = new URLSearchParams(searchParams)
-        newParams.delete("sessionId")
-        setSearchParams(newParams)
+        // 🚨 REMOVED: No longer using sessionId in URL
       } else {
         toast.error(
           "Failed to delete chat: " + (response.data.error || "Unknown error"),
@@ -1002,10 +974,7 @@ export function ChatPage() {
                 } else {
                   newParams.delete("client")
                 }
-                // Keep sessionId if present
-                if (sessionId) {
-                  newParams.set("sessionId", sessionId)
-                }
+                // 🚨 REMOVED: No longer using sessionId in URL
                 setSearchParams(newParams)
                 setClientSearchTerm(e.target.value)
               }}
