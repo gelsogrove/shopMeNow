@@ -30,25 +30,26 @@ export function ChatListProvider({ children }: { children: ReactNode }) {
   const [isChatbotActive, setIsChatbotActive] = useState<boolean>(true)
   const queryClient = useQueryClient()
 
+  // Get current workspace ID from local storage (shared across tabs)
+  const workspaceData = localStorage.getItem("currentWorkspace")
+  let workspaceId = null
+
+  if (workspaceData) {
+    try {
+      const workspace = JSON.parse(workspaceData)
+      workspaceId = workspace.id
+    } catch (e) {
+      logger.error("Error parsing workspace data:", e)
+    }
+  }
+
   // Use React Query to handle chat list fetching
   // 🚀 WEBSOCKET: No polling - updates via WebSocket events
+  // 🔑 KEY FIX: Include workspaceId in query key to isolate cache per workspace!
   const { data: chats = [], isLoading } = useQuery({
-    queryKey: ["chats"],
+    queryKey: ["chats", workspaceId], // 🚨 FIX: workspaceId nella key!
     queryFn: async () => {
       try {
-        // Get current workspace ID from local storage (shared across tabs)
-        const workspaceData = localStorage.getItem("currentWorkspace")
-        let workspaceId = null
-
-        if (workspaceData) {
-          try {
-            const workspace = JSON.parse(workspaceData)
-            workspaceId = workspace.id
-          } catch (e) {
-            logger.error("Error parsing workspace data:", e)
-          }
-        }
-
         if (!workspaceId) {
           throw new Error("No workspace ID available")
         }

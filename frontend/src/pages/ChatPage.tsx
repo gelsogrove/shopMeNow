@@ -398,9 +398,11 @@ export function ChatPage() {
 
   // Fetch selected chat details
   useEffect(() => {
-    // 🚨 SAFETY: Skip if no chat selected or no workspace
-    if (!selectedChat || !workspace?.id) {
-      logger.info("[ChatPage] Skipping fetch - no selectedChat or workspace")
+    // 🚨 SAFETY: Skip if no chat selected, no workspace, or workspace is changing
+    if (!selectedChat || !workspace?.id || isWorkspaceChanging) {
+      logger.info(
+        `[ChatPage] Skipping fetch - selectedChat: ${!!selectedChat}, workspace: ${!!workspace?.id}, changing: ${isWorkspaceChanging}`
+      )
       return
     }
 
@@ -411,11 +413,17 @@ export function ChatPage() {
     if (selectedChat.customerId) {
       fetchCustomerDetails(selectedChat.customerId)
     }
-  }, [selectedChat, workspace?.id])
+  }, [selectedChat, workspace?.id, isWorkspaceChanging])
 
   // Function to load messages for a chat
   const fetchMessagesForChat = async (chat: Chat) => {
-    if (!workspaceId) return
+    // 🚨 SAFETY: Don't fetch during workspace change
+    if (!workspaceId || isWorkspaceChanging) {
+      logger.warn(
+        "[fetchMessagesForChat] Skipping - workspace changing or no ID"
+      )
+      return
+    }
 
     try {
       setLoadingChat(true)
@@ -447,7 +455,13 @@ export function ChatPage() {
 
   // Function to fetch customer details
   const fetchCustomerDetails = async (customerId: string) => {
-    if (!workspaceId || !selectedChat) return
+    // 🚨 SAFETY: Don't fetch during workspace change or if no workspace/chat
+    if (!workspaceId || !selectedChat || isWorkspaceChanging) {
+      logger.warn(
+        "[fetchCustomerDetails] Skipping - workspace changing or invalid state"
+      )
+      return
+    }
 
     try {
       // 🚨 SAFETY CHECK: Verify workspace match before API call
@@ -955,6 +969,17 @@ export function ChatPage() {
 
   return (
     <PageLayout selectedChat={selectedChat}>
+      {/* 🔄 Loading Overlay durante cambio workspace */}
+      {isWorkspaceChanging && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-8 flex flex-col items-center gap-4">
+            <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
+            <div className="text-lg font-semibold">Switching workspace...</div>
+            <div className="text-sm text-gray-500">Loading fresh data</div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-12 gap-6 h-[calc(100vh-12rem)]">
         {/* Chat List */}
         <Card className="col-span-4 p-4 overflow-hidden flex flex-col">
