@@ -35,9 +35,9 @@ export function WorkspaceSelectionPage() {
   const loadWorkspaces = async () => {
     try {
       // 🆕 CRITICAL: Verify sessionId exists before making API call
-      const sessionId = sessionStorage.getItem("sessionId")
+      const sessionId = localStorage.getItem("sessionId") // 🔧 FIX: Changed from sessionStorage to localStorage
       console.log(
-        "🔍 [WorkspaceSelectionPage] SessionId in sessionStorage:",
+        "🔍 [WorkspaceSelectionPage] SessionId in localStorage:",
         sessionId ? sessionId.substring(0, 8) + "..." : "NULL"
       )
 

@@ -8,25 +8,22 @@ export const api = axios.create({
   withCredentials: true, // Importante: invia i cookie con le richieste
 })
 
-// 🆕 SESSION ID HELPERS (sessionStorage management - OWASP A05 compliant)
-// NOTE: Using sessionStorage instead of localStorage for security:
-// - Auto-clears on tab/browser close
-// - More secure for temporary session tokens
-// - OWASP recommendation for session data
+// 🆕 SESSION ID HELPERS (localStorage management)
+// NOTE: Using localStorage to persist session across page reloads
 export const getSessionId = (): string | null => {
-  return sessionStorage.getItem("sessionId")
+  return localStorage.getItem("sessionId")
 }
 
 export const setSessionId = (sessionId: string): void => {
-  sessionStorage.setItem("sessionId", sessionId)
+  localStorage.setItem("sessionId", sessionId)
   logger.info(
-    `✅ SessionID saved to sessionStorage: ${sessionId.substring(0, 8)}...`
+    `✅ SessionID saved to localStorage: ${sessionId.substring(0, 8)}...`
   )
 }
 
 export const clearSessionId = (): void => {
-  sessionStorage.removeItem("sessionId")
-  logger.info("🗑️ SessionID cleared from sessionStorage")
+  localStorage.removeItem("sessionId")
+  logger.info("🗑️ SessionID cleared from localStorage")
 }
 
 // Helper function to get current workspace ID from local storage

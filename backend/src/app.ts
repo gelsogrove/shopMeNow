@@ -47,7 +47,12 @@ app.use(
           ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization", "x-workspace-id"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "x-workspace-id",
+      "X-Session-Id",
+    ],
     exposedHeaders: ["set-cookie"],
   })
 )

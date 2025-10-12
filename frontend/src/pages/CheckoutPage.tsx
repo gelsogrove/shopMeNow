@@ -1,7 +1,6 @@
 import { logger } from "@/lib/logger"
 import React, { useEffect, useState } from "react"
 import { useLocation, useSearchParams } from "react-router-dom"
-import { toast } from "sonner"
 import { PublicPageLayout } from "../components/layout/PublicPageLayout"
 import { SearchBar, useProductSearch } from "../components/ui/SearchBar"
 import { TokenError } from "../components/ui/TokenError"
@@ -9,6 +8,7 @@ import UnifiedLoading from "../components/ui/UnifiedLoading"
 import { useCheckoutTokenValidation } from "../hooks/useTokenValidation"
 import { getProductIcon, getServiceIcon } from "../utils/productIcons"
 import { getPublicPageTexts } from "../utils/publicPageTranslations"
+import { tokenApi } from "../services/tokenApi"
 
 interface Product {
   id: string // Cart item ID
@@ -257,14 +257,14 @@ const CheckoutPage: React.FC = () => {
   const handleQuantityChange = async (index: number, newQuantity: number) => {
     if (newQuantity < 1) return
     if (!token) {
-      toast.error("Token non valido per aggiornare la quantità")
+      // toast.error("Token non valido per aggiornare la quantità")
       return
     }
 
     try {
       const product = prodotti[index]
       if (!product.productId) {
-        toast.error("ID prodotto non valido")
+        // toast.error("ID prodotto non valido")
         return
       }
 
@@ -277,30 +277,12 @@ const CheckoutPage: React.FC = () => {
       )
 
       // 🚀 Call backend API to update quantity
-      const response = await fetch(
-        `/api/cart/${token}/items/${product.productId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            quantity: newQuantity,
-          }),
-        }
+      const response = await tokenApi.put(
+        `/cart/${token}/items/${product.productId}`,
+        { quantity: newQuantity }
       )
 
-      if (!response.ok) {
-        // 🔄 Revert on error
-        setProdotti((prevProdotti) =>
-          prevProdotti.map((p, i) =>
-            i === index ? { ...p, qty: oldQuantity, quantita: oldQuantity } : p
-          )
-        )
-        throw new Error("Failed to update quantity")
-      }
-
-      const result = await response.json()
+      const result = response.data
 
       if (!result.success) {
         // 🔄 Revert on error
@@ -315,7 +297,7 @@ const CheckoutPage: React.FC = () => {
       // ✅ Success - UI is already updated, no need to refresh
     } catch (error) {
       logger.error("Error updating quantity:", error)
-      toast.error("Errore nell'aggiornare la quantità")
+      // toast.error("Errore nell'aggiornare la quantità")
     }
   }
 
@@ -334,7 +316,7 @@ const CheckoutPage: React.FC = () => {
   const removeProduct = async () => {
     if (!productToDelete) return
     if (!token) {
-      toast.error("Token non valido per rimuovere l'elemento")
+      // toast.error("Token non valido per rimuovere l'elemento")
       return
     }
 
@@ -342,32 +324,22 @@ const CheckoutPage: React.FC = () => {
       const { itemId, itemType, name } = productToDelete
 
       if (!itemId) {
-        toast.error("ID elemento non valido")
+        // toast.error("ID elemento non valido")
         return
       }
 
       logger.info(`🗑️ Removing ${itemType}: ${itemId}`)
 
       // 🚀 Call backend API to remove item (product or service)
-      const response = await fetch(`/api/cart/${token}/items/${itemId}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const response = await tokenApi.delete(`/cart/${token}/items/${itemId}`, {
+        data: {
           itemType: itemType, // 🎯 CRITICAL: Send itemType to backend
-        }),
+        },
       })
 
-      if (!response.ok) {
-        throw new Error(`Failed to remove ${itemType.toLowerCase()}`)
-      }
-
-      const result = await response.json()
-
-      if (!result.success) {
+      if (!response.data.success) {
         throw new Error(
-          result.error || `Failed to remove ${itemType.toLowerCase()}`
+          response.data.error || `Failed to remove ${itemType.toLowerCase()}`
         )
       }
 
@@ -381,10 +353,10 @@ const CheckoutPage: React.FC = () => {
       setProductToDelete(null)
 
       // Show success message
-      toast.success(`${name} rimosso dal carrello`)
+      // toast.success(`${name} rimosso dal carrello`)
     } catch (error) {
       logger.error("Error removing item:", error)
-      toast.error("Errore nel rimuovere l'elemento")
+      // toast.error("Errore nel rimuovere l'elemento")
     }
   }
 
@@ -399,13 +371,8 @@ const CheckoutPage: React.FC = () => {
     if (!token) return
 
     try {
-      const response = await fetch(`/api/cart/${token}`)
-
-      if (!response.ok) {
-        throw new Error("Failed to refresh cart")
-      }
-
-      const result = await response.json()
+      const response = await tokenApi.get(`/cart/${token}`)
+      const result = response.data
 
       logger.info("🔍 Backend response:", result)
       logger.info("🔍 result.data:", result.data)
@@ -517,7 +484,7 @@ const CheckoutPage: React.FC = () => {
 
     if (!workspaceId) {
       logger.error("❌ No workspaceId found in tokenData:", tokenData)
-      toast.error("Workspace ID non trovato")
+      // toast.error("Workspace ID non trovato")
       return
     }
 
@@ -550,14 +517,14 @@ const CheckoutPage: React.FC = () => {
           cleanedServices
         )
         setAvailableServices(cleanedServices)
-        toast.success(`${cleanedServices.length} servizi caricati`)
+        // toast.success(`${cleanedServices.length} servizi caricati`)
       } else {
         logger.error("❌ API returned success: false", result)
-        toast.error("Errore nel caricamento dei servizi")
+        // toast.error("Errore nel caricamento dei servizi")
       }
     } catch (error) {
       logger.error("❌ Error loading services:", error)
-      toast.error("Errore di rete nel caricamento servizi")
+      // toast.error("Errore di rete nel caricamento servizi")
     } finally {
       setLoadingServices(false)
     }
@@ -590,7 +557,7 @@ const CheckoutPage: React.FC = () => {
   // Add product to cart
   const addProductToCart = async (product: any) => {
     if (!token) {
-      toast.error("Token non valido per aggiungere prodotti al carrello")
+      // toast.error("Token non valido per aggiungere prodotti al carrello")
       return
     }
 
@@ -598,26 +565,14 @@ const CheckoutPage: React.FC = () => {
       // 🔍 DEBUG: Log product data to understand the structure
 
       // 🚀 Call backend API to add product to cart
-      const response = await fetch(`/api/cart/${token}/items`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          productId: product.id,
-          quantity: 1,
-          notes: `Added from checkout page - ${product.name}`,
-        }),
+      const response = await tokenApi.post(`/cart/${token}/items`, {
+        productId: product.id,
+        quantity: 1,
+        notes: `Added from checkout page - ${product.name}`,
       })
 
-      if (!response.ok) {
-        throw new Error("Failed to add product to cart")
-      }
-
-      const result = await response.json()
-
-      if (!result.success) {
-        throw new Error(result.error || "Failed to add product to cart")
+      if (!response.data.success) {
+        throw new Error(response.data.error || "Failed to add product to cart")
       }
 
       // 🔄 Refresh cart data from backend
@@ -627,17 +582,17 @@ const CheckoutPage: React.FC = () => {
       setShowAddProducts(false)
 
       // Show success message
-      toast.success(`${product.name || "Prodotto"} aggiunto al carrello!`)
+      // toast.success(`${product.name || "Prodotto"} aggiunto al carrello!`)
     } catch (error) {
       logger.error("❌ Error adding product to cart:", error)
-      toast.error("Errore nell'aggiungere il prodotto al carrello")
+      // toast.error("Errore nell'aggiungere il prodotto al carrello")
     }
   }
 
   // Add service to cart (treated as a special product)
   const addServiceToCart = async (service: any) => {
     if (!token) {
-      toast.error("Token non valido per aggiungere servizi al carrello")
+      // toast.error("Token non valido per aggiungere servizi al carrello")
       return
     }
 
@@ -645,27 +600,15 @@ const CheckoutPage: React.FC = () => {
       logger.info("🛒 Adding service to cart:", service)
 
       // 🚀 Call backend API to add service to cart
-      const response = await fetch(`/api/cart/${token}/items`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          serviceId: service.id,
-          itemType: "SERVICE",
-          quantity: 1,
-          notes: service.description || null,
-        }),
+      const response = await tokenApi.post(`/cart/${token}/items`, {
+        serviceId: service.id,
+        itemType: "SERVICE",
+        quantity: 1,
+        notes: service.description || null,
       })
 
-      if (!response.ok) {
-        throw new Error("Failed to add service to cart")
-      }
-
-      const result = await response.json()
-
-      if (!result.success) {
-        throw new Error(result.error || "Failed to add service")
+      if (!response.data.success) {
+        throw new Error(response.data.error || "Failed to add service")
       }
 
       logger.info("✅ Service added successfully")
@@ -677,10 +620,10 @@ const CheckoutPage: React.FC = () => {
       setShowAddServices(false)
 
       // Show success message
-      toast.success(`${service.name || "Servizio"} aggiunto al carrello!`)
+      // toast.success(`${service.name || "Servizio"} aggiunto al carrello!`)
     } catch (error) {
       logger.error("❌ Error adding service to cart:", error)
-      toast.error("Errore nell'aggiungere il servizio al carrello")
+      // toast.error("Errore nell'aggiungere il servizio al carrello")
     }
   }
 
@@ -788,8 +731,8 @@ const CheckoutPage: React.FC = () => {
     if (currentStep === 2) {
       const validation = validateStep2()
       if (!validation.valid) {
-        toast.error("Compila tutti i campi obbligatori:")
-        validation.errors.forEach((error) => toast.error(`• ${error}`))
+        // toast.error("Compila tutti i campi obbligatori:")
+        // validation.errors.forEach((error) => toast.error(`• ${error}`))
         return
       }
     }
@@ -806,30 +749,23 @@ const CheckoutPage: React.FC = () => {
     // Final validation before submit
     const validation = validateStep2()
     if (!validation.valid) {
-      toast.error("Errore nella validazione dei dati:")
-      validation.errors.forEach((error) => toast.error(`• ${error}`))
+      // toast.error("Errore nella validazione dei dati:")
+      // validation.errors.forEach((error) => toast.error(`• ${error}`))
       return
     }
 
     setSubmitStatus({ loading: true, success: false, error: "" })
 
     try {
-      const response = await fetch(
-        "http://localhost:3001/api/checkout/submit",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            token,
-            prodotti,
-            shippingAddress: formData.shippingAddress,
-            billingAddress: formData.billingAddress,
-            notes: formData.notes,
-          }),
-        }
-      )
+      const response = await tokenApi.post("/checkout/submit", {
+        token,
+        prodotti,
+        shippingAddress: formData.shippingAddress,
+        billingAddress: formData.billingAddress,
+        notes: formData.notes,
+      })
 
-      const result = await response.json()
+      const result = response.data
 
       if (result.success) {
         setSubmitStatus({ loading: false, success: true, error: "" })

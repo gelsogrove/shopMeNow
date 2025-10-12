@@ -1,10 +1,10 @@
 import { GDPRDialog } from "@/components/ui/gdpr-dialog"
 import { logger } from "@/lib/logger"
 import { getPublicPageTexts } from "@/utils/publicPageTranslations"
-import axios from "axios"
 import { useEffect, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { useTokenValidation } from "../hooks/useTokenValidation"
+import { tokenApi } from "../services/tokenApi"
 
 const RegisterPage = () => {
   const [searchParams] = useSearchParams()
@@ -108,8 +108,9 @@ const RegisterPage = () => {
           logger.info(
             `[Register] Fetching workspace info for id: ${workspaceId}`
           )
-          const workspaceResponse = await axios.get(
-            `/api/workspaces/${workspaceId}`
+          // TODO: This should be a token-based endpoint, not backoffice
+          const workspaceResponse = await tokenApi.get(
+            `/workspaces/${workspaceId}`
           )
           logger.info(
             "[Register] Workspace API response:",
@@ -236,7 +237,7 @@ const RegisterPage = () => {
     })
 
     try {
-      const response = await axios.post("/api/registration/register", {
+      const response = await tokenApi.post("/registration/register", {
         token,
         first_name: formData.firstName,
         last_name: formData.lastName,

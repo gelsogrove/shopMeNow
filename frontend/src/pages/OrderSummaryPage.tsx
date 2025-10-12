@@ -45,7 +45,7 @@ const OrderSummaryPage: React.FC = () => {
       try {
         setLoading(true)
 
-        const response = await fetch(`/api/internal/checkout/${token}`, {
+        const response = await fetch(`/api/token/checkout/${token}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",

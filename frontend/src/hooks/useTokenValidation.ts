@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { logger } from "../lib/logger"
-import { api } from "../services/api"
+import { tokenApi } from "../services/tokenApi"
 
 interface TokenValidationResult {
   valid: boolean
@@ -70,8 +70,8 @@ export const useTokenValidation = ({
       if (workspaceId) requestBody.workspaceId = workspaceId
       // Explicitly don't send 'type' to allow any valid token type
 
-      const response = await api.post(
-        "/internal/validate-secure-token",
+      const response = await tokenApi.post(
+        "/validate-secure-token",
         requestBody
       )
 
@@ -159,7 +159,7 @@ export const useCheckoutTokenValidation = (token: string | null) => {
         `[CHECKOUT-TOKEN-VALIDATION] Validating token for CHECKOUT page`
       )
 
-      const response = await api.get(endpoint)
+      const response = await tokenApi.get(endpoint)
 
       // 🎯 Check for valid response from checkout endpoint
       const isValidResponse = response.data.valid

@@ -6,6 +6,147 @@ import logger from "../../../utils/logger"
 const router = Router()
 const secureTokenService = new SecureTokenService()
 
+// ========================================
+// 🔧 HELPER: Get Orders List Handler
+// ========================================
+async function getOrdersListHandler(req: Request, res: Response) {
+  try {
+    const { token, status, payment, from, to } = req.query
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        error: "Token is required",
+      })
+    }
+
+    // Validate token
+    const validation = await secureTokenService.validateToken(token as string)
+    if (!validation.valid) {
+      return res.status(401).json({
+        success: false,
+        error: "Invalid or expired token",
+      })
+    }
+
+    const tokenData = validation.data
+    const payload = validation.payload as any
+
+    let customerId =
+      payload?.customerId || tokenData?.customerId || tokenData?.userId
+    const workspaceId = tokenData?.workspaceId
+
+    if (!customerId && tokenData?.phoneNumber && workspaceId) {
+      const customer = await prisma.customers.findFirst({
+        where: {
+          phone: tokenData.phoneNumber,
+          workspaceId: workspaceId,
+        },
+      })
+      if (customer) {
+        customerId = customer.id
+        logger.info(
+          `[PUBLIC-ORDERS] Found customer by phone fallback: ${customerId}`
+        )
+      }
+    }
+
+    if (!customerId || !workspaceId) {
+      return res.status(401).json({
+        success: false,
+        error: "Token does not contain valid customer information",
+      })
+    }
+
+    logger.info(
+      `[PUBLIC-ORDERS] Getting orders list for customer: ${customerId}`
+    )
+
+    const whereClause: any = {
+      customerId: customerId,
+      workspaceId: workspaceId,
+    }
+
+    if (status && status !== "ALL") {
+      whereClause.status = status
+    }
+
+    if (payment && payment !== "ALL") {
+      whereClause.paymentMethod = payment
+    }
+
+    if (from || to) {
+      whereClause.createdAt = {}
+      if (from) whereClause.createdAt.gte = new Date(from as string)
+      if (to) whereClause.createdAt.lte = new Date(to as string)
+    }
+
+    const customer = await prisma.customers.findUnique({
+      where: { id: customerId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        language: true,
+      },
+    })
+
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        error: "Customer not found",
+      })
+    }
+
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { id: true, name: true },
+    })
+
+    const orders = await prisma.orders.findMany({
+      where: whereClause,
+      include: {
+        items: {
+          select: {
+            quantity: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    })
+
+    const formattedOrders = orders.map((order) => ({
+      id: order.id,
+      orderCode: order.orderCode,
+      date: order.createdAt.toISOString(),
+      status: order.status,
+      paymentStatus: order.paymentMethod,
+      totalAmount: order.totalAmount,
+      taxAmount: order.taxAmount,
+      shippingAmount: order.shippingAmount,
+      itemsCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
+      invoiceUrl: "",
+      ddtUrl: "",
+    }))
+
+    return res.json({
+      success: true,
+      data: {
+        customer,
+        workspace,
+        orders: formattedOrders,
+      },
+    })
+  } catch (error) {
+    logger.error("[PUBLIC-ORDERS] Error getting orders list:", error)
+    return res.status(500).json({
+      success: false,
+      error: "Error retrieving orders",
+    })
+  }
+}
+
 /**
  * @swagger
  * /api/internal/validate-secure-token:
@@ -140,150 +281,10 @@ router.post("/validate-secure-token", async (req: Request, res: Response) => {
  *       401:
  *         description: Invalid or expired token
  */
-router.get("/public/orders", async (req: Request, res: Response) => {
-  try {
-    const { token, status, payment, from, to } = req.query
+router.get("/public/orders", getOrdersListHandler)
 
-    if (!token) {
-      return res.status(400).json({
-        success: false,
-        error: "Token is required",
-      })
-    }
-
-    // Validate token
-    const validation = await secureTokenService.validateToken(token as string)
-    if (!validation.valid) {
-      return res.status(401).json({
-        success: false,
-        error: "Invalid or expired token",
-      })
-    }
-
-    const tokenData = validation.data
-    const payload = validation.payload as any
-
-    // 🔧 CRITICAL FIX: Get customerId from payload first (like checkout), then fallback to tokenData
-    let customerId =
-      payload?.customerId || tokenData?.customerId || tokenData?.userId
-    const workspaceId = tokenData?.workspaceId
-
-    // 🔧 ULTIMATE FALLBACK: If no customerId, try to find customer by phone number
-    if (!customerId && tokenData?.phoneNumber && workspaceId) {
-      const customer = await prisma.customers.findFirst({
-        where: {
-          phone: tokenData.phoneNumber,
-          workspaceId: workspaceId,
-        },
-      })
-      if (customer) {
-        customerId = customer.id
-        logger.info(
-          `[PUBLIC-ORDERS] Found customer by phone fallback: ${customerId}`
-        )
-      }
-    }
-
-    if (!customerId || !workspaceId) {
-      return res.status(401).json({
-        success: false,
-        error: "Token does not contain valid customer information",
-      })
-    }
-
-    logger.info(
-      `[PUBLIC-ORDERS] Getting orders list for customer: ${customerId}`
-    )
-
-    // Build filters
-    const whereClause: any = {
-      customerId: customerId,
-      workspaceId: workspaceId,
-    }
-
-    if (status && status !== "ALL") {
-      whereClause.status = status
-    }
-
-    if (payment && payment !== "ALL") {
-      whereClause.paymentMethod = payment
-    }
-
-    if (from || to) {
-      whereClause.createdAt = {}
-      if (from) whereClause.createdAt.gte = new Date(from as string)
-      if (to) whereClause.createdAt.lte = new Date(to as string)
-    }
-
-    // Get customer info
-    const customer = await prisma.customers.findUnique({
-      where: { id: customerId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        language: true,
-      },
-    })
-
-    if (!customer) {
-      return res.status(404).json({
-        success: false,
-        error: "Customer not found",
-      })
-    }
-
-    // Get workspace info
-    const workspace = await prisma.workspace.findUnique({
-      where: { id: workspaceId },
-      select: { id: true, name: true },
-    })
-
-    // Get orders with items count
-    const orders = await prisma.orders.findMany({
-      where: whereClause,
-      include: {
-        items: {
-          select: {
-            quantity: true,
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    })
-
-    // Format orders for response
-    const formattedOrders = orders.map((order) => ({
-      id: order.id,
-      orderCode: order.orderCode,
-      date: order.createdAt.toISOString(),
-      status: order.status,
-      paymentStatus: order.paymentMethod,
-      totalAmount: order.totalAmount,
-      taxAmount: order.taxAmount,
-      shippingAmount: order.shippingAmount,
-      itemsCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
-      invoiceUrl: "",
-      ddtUrl: "",
-    }))
-
-    return res.json({
-      success: true,
-      data: {
-        customer,
-        workspace,
-        orders: formattedOrders,
-      },
-    })
-  } catch (error) {
-    logger.error("[PUBLIC-ORDERS] Error getting orders list:", error)
-    return res.status(500).json({
-      success: false,
-      error: "Error retrieving orders",
-    })
-  }
-})
+// ✅ ALIAS: Frontend compatibility route
+router.get("/orders-public", getOrdersListHandler)
 
 /**
  * @swagger
@@ -985,5 +986,179 @@ router.post("/get-all-products", async (req: Request, res: Response) => {
     })
   }
 })
+
+// ========================================
+// 🔄 ADDITIONAL ROUTE ALIAS for GET /:orderCode
+// ========================================
+// Note: GET /orders-public is already added above after GET /public/orders handler
+
+/**
+ * Alias: GET /orders-public/:orderCode  
+ * Same handler as GET /public/orders/:orderCode
+ */
+router.get("/orders-public/:orderCode", async (req: Request, res: Response) => {
+  try {
+    const { orderCode } = req.params
+    const { token } = req.query
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        error: "Token is required",
+      })
+    }
+
+    const validation = await secureTokenService.validateToken(token as string)
+    if (!validation.valid) {
+      return res.status(401).json({
+        success: false,
+        error: "Invalid or expired token",
+      })
+    }
+
+    const tokenData = validation.data
+    const payload = validation.payload as any
+
+    let customerId =
+      payload?.customerId || tokenData?.customerId || tokenData?.userId
+    const workspaceId = tokenData?.workspaceId
+
+    if (!customerId && tokenData?.phoneNumber && workspaceId) {
+      const customer = await prisma.customers.findFirst({
+        where: {
+          phone: tokenData.phoneNumber,
+          workspaceId: workspaceId,
+        },
+      })
+      if (customer) {
+        customerId = customer.id
+      }
+    }
+
+    if (!customerId || !workspaceId) {
+      return res.status(401).json({
+        success: false,
+        error: "Token does not contain valid customer information",
+      })
+    }
+
+    logger.info(`[PUBLIC-ORDERS] Getting order details for: ${orderCode}`)
+
+    const order = await prisma.orders.findFirst({
+      where: {
+        orderCode,
+        customerId: customerId,
+        workspaceId: workspaceId,
+      },
+      include: {
+        items: {
+          include: {
+            product: {
+              select: {
+                name: true,
+                ProductCode: true,
+              },
+            },
+            service: {
+              select: {
+                name: true,
+                code: true,
+              },
+            },
+          },
+        },
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            language: true,
+            address: true,
+            invoiceAddress: true,
+          },
+        },
+        workspace: {
+          select: { id: true, name: true },
+        },
+      },
+    })
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        error: "Order not found",
+      })
+    }
+
+    let parsedCustomer = { ...order.customer }
+
+    if (
+      parsedCustomer.invoiceAddress &&
+      typeof parsedCustomer.invoiceAddress === "string"
+    ) {
+      try {
+        parsedCustomer.invoiceAddress = JSON.parse(
+          parsedCustomer.invoiceAddress
+        )
+      } catch (error) {
+        parsedCustomer.invoiceAddress = null
+      }
+    }
+
+    if (parsedCustomer.address && typeof parsedCustomer.address === "string") {
+      try {
+        parsedCustomer.address = JSON.parse(parsedCustomer.address)
+      } catch (error) {
+        parsedCustomer.address = null
+      }
+    }
+
+    const formattedItems = order.items.map((item) => ({
+      id: item.id,
+      itemType: item.itemType,
+      name: item.product?.name || item.service?.name || "Unknown Item",
+      code: item.product?.ProductCode || item.service?.code || null,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      totalPrice: item.totalPrice,
+    }))
+
+    const formattedOrder = {
+      id: order.id,
+      orderCode: order.orderCode,
+      date: order.createdAt.toISOString(),
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      paymentMethod: order.paymentMethod,
+      paymentProvider: null,
+      shippingAmount: order.shippingAmount,
+      taxAmount: order.taxAmount,
+      shippingAddress: order.shippingAddress,
+      trackingNumber: order.trackingNumber,
+      totalAmount: order.totalAmount,
+      items: formattedItems,
+      invoiceUrl: "",
+      ddtUrl: "",
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        customer: parsedCustomer,
+        workspace: order.workspace,
+        order: formattedOrder,
+      },
+    })
+  } catch (error) {
+    logger.error("[PUBLIC-ORDERS] Error getting order details:", error)
+    return res.status(500).json({
+      success: false,
+      error: "Error retrieving order",
+    })
+  }
+})
+
+logger.info("✅ Added /orders-public/:orderCode route alias for frontend compatibility")
 
 export default router

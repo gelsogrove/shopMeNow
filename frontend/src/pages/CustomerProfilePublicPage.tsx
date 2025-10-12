@@ -1,5 +1,4 @@
 import { logger } from "@/lib/logger"
-import axios from "axios"
 import { User } from "lucide-react"
 import React, { useEffect, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
@@ -8,6 +7,7 @@ import { PublicPageLayout } from "../components/layout/PublicPageLayout"
 import { ProfileForm } from "../components/profile/ProfileForm"
 import { TokenError } from "../components/ui/TokenError"
 import UnifiedLoading from "../components/ui/UnifiedLoading"
+import { tokenApi } from "../services/tokenApi"
 import { useTokenValidation } from "../hooks/useTokenValidation"
 import { getPublicPageTexts } from "../utils/publicPageTranslations"
 
@@ -68,9 +68,7 @@ const CustomerProfilePublicPage: React.FC = () => {
           )}...`
         )
 
-        const response = await axios.get(
-          `/api/internal/customer-profile/${token}`
-        )
+        const response = await tokenApi.get(`/customer-profile/${token}`)
 
         if (response.data.success) {
           const profileData = response.data.data
@@ -168,8 +166,8 @@ const CustomerProfilePublicPage: React.FC = () => {
     try {
       logger.info(`[PROFILE] 💾 Saving profile updates...`)
 
-      const response = await axios.put(
-        `/api/internal/customer-profile/${token}`,
+      const response = await tokenApi.put(
+        `/customer-profile/${token}`,
         updatedData
       )
 

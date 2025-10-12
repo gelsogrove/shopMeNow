@@ -1,7 +1,7 @@
 import { logger } from "@/lib/logger"
-import axios from "axios"
 import { useEffect, useState } from "react"
 import { useSearchParams } from "react-router-dom"
+import { tokenApi } from "../services/tokenApi"
 
 const DataProtectionPage = () => {
   const [searchParams] = useSearchParams()
@@ -14,8 +14,8 @@ const DataProtectionPage = () => {
     const fetchContent = async () => {
       try {
         setLoading(true)
-        const response = await axios.get(
-          `/api/registration/data-protection?lang=${lang}`
+        const response = await tokenApi.get(
+          `/registration/data-protection?lang=${lang}`
         )
         setContent(response.data)
         setError(null)

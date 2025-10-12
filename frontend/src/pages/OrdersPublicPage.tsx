@@ -1,4 +1,3 @@
-import axios from "axios"
 import React, { useEffect, useState } from "react"
 import { useParams, useSearchParams } from "react-router-dom"
 import { PublicPageLayout } from "../components/layout/PublicPageLayout"
@@ -6,6 +5,7 @@ import { TokenError } from "../components/ui/TokenError"
 import { UnifiedLoading } from "../components/ui/UnifiedLoading"
 import { useTokenValidation } from "../hooks/useTokenValidation"
 import { getPublicPageTexts } from "../utils/publicPageTranslations"
+import { tokenApi } from "../services/tokenApi"
 
 interface OrderListItem {
   id: string
@@ -170,17 +170,16 @@ const OrdersPublicPage: React.FC = () => {
       setError(null)
       try {
         if (orderCode) {
-          const res = await axios.get(
-            `/api/internal/public/orders/${orderCode}`,
-            { params: { token } }
-          )
+          const res = await tokenApi.get(`/orders-public/${orderCode}`, {
+            params: { token },
+          })
           if (res.data.success) {
             setDetailData(res.data.data)
           } else {
             setError(res.data.error || "Error loading order")
           }
         } else {
-          const res = await axios.get(`/api/internal/public/orders`, {
+          const res = await tokenApi.get(`/orders-public`, {
             params: { token },
           })
           if (res.data.success) {
