@@ -120,6 +120,9 @@ export function useWebSocket(options: UseWebSocketOptions) {
     socket.on("new-message", (message: WebSocketMessage) => {
       console.log("[WebSocket] New message:", message)
 
+      // Get sessionId from localStorage
+      const sessionId = localStorage.getItem("sessionId")
+
       // Invalidate messages for this chat
       queryClient.invalidateQueries({
         queryKey: ["chat-messages", message.sessionId],
@@ -127,12 +130,12 @@ export function useWebSocket(options: UseWebSocketOptions) {
 
       // Invalidate chat list (to update last message preview)
       queryClient.invalidateQueries({
-        queryKey: ["chats", workspaceId],
+        queryKey: ["chats", sessionId],
       })
 
       // Also invalidate recent chats
       queryClient.invalidateQueries({
-        queryKey: ["recent-chats", workspaceId],
+        queryKey: ["recent-chats", sessionId],
       })
     })
 
@@ -140,14 +143,17 @@ export function useWebSocket(options: UseWebSocketOptions) {
     socket.on("chat-updated", (chat: WebSocketChat) => {
       console.log("[WebSocket] Chat updated:", chat)
 
+      // Get sessionId from localStorage
+      const sessionId = localStorage.getItem("sessionId")
+
       // Invalidate chat list
       queryClient.invalidateQueries({
-        queryKey: ["chats", workspaceId],
+        queryKey: ["chats", sessionId],
       })
 
       // Invalidate recent chats
       queryClient.invalidateQueries({
-        queryKey: ["recent-chats", workspaceId],
+        queryKey: ["recent-chats", sessionId],
       })
     })
 

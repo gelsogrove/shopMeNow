@@ -92,6 +92,9 @@ export function ChatPage() {
   // ChatPage loaded
   const { workspace, loading: isWorkspaceLoading } = useWorkspace()
 
+  // Get sessionId from localStorage (unique per login session)
+  const userSessionId = localStorage.getItem("sessionId")
+
   // Clean any stale locks on mount
   useEffect(() => {
     const lockKey = "chat-tab-lock"
@@ -247,7 +250,7 @@ export function ChatPage() {
     setSearchParams({})
 
     // 4. Invalida TUTTE le query per ricaricare dati freschi
-    queryClient.invalidateQueries({ queryKey: ["chats"] })
+    queryClient.invalidateQueries({ queryKey: ["chats", userSessionId] })
     queryClient.invalidateQueries({ queryKey: ["chat-messages"] })
     queryClient.invalidateQueries({ queryKey: ["recent-chats"] })
 
@@ -289,7 +292,7 @@ export function ChatPage() {
   const handleClosePlayground = () => {
     setShowPlaygroundDialog(false)
     // Invalidate queries to refresh chat list
-    queryClient.invalidateQueries({ queryKey: ["chats"] })
+    queryClient.invalidateQueries({ queryKey: ["chats", userSessionId] })
     // Notify other tabs about the update
     notifyOtherTabs()
   }
@@ -484,7 +487,7 @@ export function ChatPage() {
       setIsChatbotActive(chatbotStatus) // Update local state immediately
 
       // 🔧 FIX: Invalidate chats to refresh the list
-      queryClient.invalidateQueries({ queryKey: ["chats"] })
+      queryClient.invalidateQueries({ queryKey: ["chats", userSessionId] })
     } catch (error) {
       logger.error("Error fetching customer details:", error)
     }
@@ -549,7 +552,7 @@ export function ChatPage() {
         updateActiveChatbot(selectedChat.id, status)
 
         // Invalidate queries to refresh chat list
-        await queryClient.invalidateQueries({ queryKey: ["chats"] })
+        await queryClient.invalidateQueries({ queryKey: ["chats", userSessionId] })
 
         // If enabling chatbot and notification is requested
         if (status && shouldNotify) {
@@ -624,7 +627,7 @@ export function ChatPage() {
         .then((response) => {
           if (response.data.success) {
             // Invalidate chat queries to refresh unread counts
-            queryClient.invalidateQueries({ queryKey: ["chats"] })
+            queryClient.invalidateQueries({ queryKey: ["chats", userSessionId] })
           } else {
             logger.error("Failed to mark messages as read")
           }
@@ -661,7 +664,7 @@ export function ChatPage() {
       if (response.data.success) {
         toast.success("Chat deleted successfully", { duration: 1000 })
         // Invalidate chat queries to refresh the list
-        queryClient.invalidateQueries({ queryKey: ["chats"] })
+        queryClient.invalidateQueries({ queryKey: ["chats", userSessionId] })
         setSelectedChat(null)
         // Remove sessionId from URL
         const newParams = new URLSearchParams(searchParams)
@@ -721,7 +724,7 @@ export function ChatPage() {
           })
         }
         // Refresh chat list
-        queryClient.invalidateQueries({ queryKey: ["chats"] })
+        queryClient.invalidateQueries({ queryKey: ["chats", userSessionId] })
       } else {
         toast.error(
           "Failed to update customer: " +
@@ -877,7 +880,7 @@ export function ChatPage() {
         }
 
         // Update chat list to reflect new message
-        queryClient.invalidateQueries({ queryKey: ["chats"] })
+        queryClient.invalidateQueries({ queryKey: ["chats", userSessionId] })
 
         // Notify other tabs about the update
         notifyOtherTabs()
@@ -918,7 +921,7 @@ export function ChatPage() {
 
       if (response.status === 200) {
         // Update the chat in the context and invalidate queries
-        queryClient.invalidateQueries({ queryKey: ["chats"] })
+        queryClient.invalidateQueries({ queryKey: ["chats", userSessionId] })
         if (!selectedChat) return
         setSelectedChat({ ...selectedChat, isBlacklisted: !isCurrentlyBlocked })
 

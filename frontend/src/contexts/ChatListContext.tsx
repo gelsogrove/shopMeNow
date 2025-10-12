@@ -43,11 +43,14 @@ export function ChatListProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // Get sessionId from localStorage (unique per login session)
+  const sessionId = localStorage.getItem("sessionId")
+
   // Use React Query to handle chat list fetching
   // 🚀 WEBSOCKET: No polling - updates via WebSocket events
-  // 🔑 KEY FIX: Include workspaceId in query key to isolate cache per workspace!
+  // 🔑 KEY FIX: Include sessionId in query key to isolate cache per login session!
   const { data: chats = [], isLoading } = useQuery({
-    queryKey: ["chats", workspaceId], // 🚨 FIX: workspaceId nella key!
+    queryKey: ["chats", sessionId], // 🚨 FIX: sessionId nella key!
     queryFn: async () => {
       try {
         if (!workspaceId) {
