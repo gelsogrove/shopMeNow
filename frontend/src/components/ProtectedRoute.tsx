@@ -37,14 +37,16 @@ export function ProtectedRoute() {
 
       // If no sessionId in localStorage, clear everything and redirect
       if (!sessionId) {
-        logger.warn("🔓 No sessionId found - cleaning up and redirecting to login")
-        
+        logger.warn(
+          "🔓 No sessionId found - cleaning up and redirecting to login"
+        )
+
         // Clear all auth data
         localStorage.removeItem("currentWorkspace")
         localStorage.removeItem("token")
         localStorage.removeItem("user")
         sessionStorage.clear()
-        
+
         setIsValid(false)
         setIsValidating(false)
         return
@@ -70,13 +72,13 @@ export function ProtectedRoute() {
 
       // 🔥 ANDREA'S FIX: Se /session/validate fallisce, cancella SUBITO la session
       logger.warn("🗑️ Clearing session storage due to validation failure")
-      
+
       // Clear localStorage
       localStorage.removeItem("sessionId")
       localStorage.removeItem("currentWorkspace")
       localStorage.removeItem("token")
       localStorage.removeItem("user")
-      
+
       // Clear sessionStorage
       sessionStorage.clear()
 

@@ -3,8 +3,6 @@ import cors from "cors"
 import express from "express"
 import helmet from "helmet"
 import path from "path"
-import swaggerUi from "swagger-ui-express"
-import { swaggerSpec } from "./config/swagger"
 
 import { errorMiddleware } from "./interfaces/http/middlewares/error.middleware"
 import { jsonFixMiddleware } from "./interfaces/http/middlewares/json-fix.middleware"
@@ -118,28 +116,6 @@ app.post("/api/test/json-parser", (req, res) => {
     rawBodyExists: !!req.rawBody,
   })
 })
-
-// Swagger JSON endpoint (must be before Swagger UI)
-app.get("/api/docs/swagger.json", (req, res) => {
-  try {
-    res.setHeader("Content-Type", "application/json")
-    res.json(swaggerSpec)
-  } catch (error) {
-    logger.error("Error serving swagger.json:", error)
-    res.status(500).json({ error: "Failed to load swagger documentation" })
-  }
-})
-
-// Swagger documentation
-app.use(
-  "/api/docs",
-  swaggerUi.serve,
-  swaggerUi.setup(swaggerSpec, {
-    explorer: true,
-    customCss: ".swagger-ui .topbar { display: none }",
-    customSiteTitle: "ShopMe API Documentation",
-  })
-)
 
 // Endpoint di catch-all specifico per bloccare clienti
 app.post("/api/workspaces/:workspaceId/customers/:id/block", (req, res) => {

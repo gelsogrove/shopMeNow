@@ -3,14 +3,17 @@
 ## 🔥 CRITICAL BUG: Infinite Retry Loop on Session Expiry
 
 ### Problem Identified
+
 Andrea, hai segnalato che quando la sessione scade, il frontend fa un **LOOP ESAGERATO** di richieste invece di fermarsi e fare logout.
 
 **Screenshot Analysis**:
+
 - `GET /chat/recent` → 500 (Internal Server Error)
 - Request failed with status code 500
 - Loop infinito di richieste
 
 ### Root Cause
+
 1. **Axios interceptor NON gestiva 500 errors**: Solo 401 e 400 erano gestiti
 2. **React Query retry**: Default retry=3, continuava a riprovare anche dopo session error
 3. **Session validation failure**: Quando sessione scade, backend ritorna 500 ma frontend non puliva localStorage
@@ -22,11 +25,12 @@ Andrea, hai segnalato che quando la sessione scade, il frontend fa un **LOOP ESA
 **Location**: `frontend/src/services/api.ts`
 
 **NEW CODE**:
+
 ```typescript
 // 🔥 HANDLE SESSION VALIDATION ERRORS (500)
 if (error.response && error.response.status === 500) {
   const errorMessage = error.response?.data?.error || ""
-  const isSessionError = 
+  const isSessionError =
     errorMessage.toLowerCase().includes("session") ||
     errorMessage.toLowerCase().includes("validation failed")
 
@@ -43,7 +47,7 @@ if (error.response && error.response.status === 500) {
     clearSessionId()
 
     toast.error("Sessione non valida. Effettua nuovamente il login.")
-    
+
     // IMMEDIATE redirect to stop retry loop
     window.location.href = "/auth/login"
 
@@ -53,6 +57,7 @@ if (error.response && error.response.status === 500) {
 ```
 
 **What it does**:
+
 - ✅ Detects 500 errors related to session validation
 - ✅ **IMMEDIATELY** clears all localStorage/sessionStorage
 - ✅ Shows toast message to user
@@ -64,10 +69,13 @@ if (error.response && error.response.status === 500) {
 **Location**: `frontend/src/contexts/ChatListContext.tsx`
 
 **BEFORE**:
+
 ```typescript
 const { data: chats = [], isLoading } = useQuery({
   queryKey: ["chats", sessionId],
-  queryFn: async () => { /* ... */ },
+  queryFn: async () => {
+    /* ... */
+  },
   staleTime: 60000,
   gcTime: 300000,
   // ❌ NO retry setting - default retry=3
@@ -75,10 +83,13 @@ const { data: chats = [], isLoading } = useQuery({
 ```
 
 **AFTER**:
+
 ```typescript
 const { data: chats = [], isLoading } = useQuery({
   queryKey: ["chats", sessionId],
-  queryFn: async () => { /* ... */ },
+  queryFn: async () => {
+    /* ... */
+  },
   retry: false, // 🔥 FIX: Don't retry on session errors
   staleTime: 60000,
   gcTime: 300000,
@@ -86,6 +97,7 @@ const { data: chats = [], isLoading } = useQuery({
 ```
 
 **What it does**:
+
 - ✅ Disables React Query automatic retry
 - ✅ Axios interceptor handles the error and redirects
 - ✅ No more infinite loop
@@ -95,6 +107,7 @@ const { data: chats = [], isLoading } = useQuery({
 **Location**: `frontend/src/pages/ChatPage.tsx`
 
 **BEFORE**:
+
 ```typescript
 const { data: availableLanguages = [] } = useQuery<Language[]>({
   queryKey: ["languages", workspaceId],
@@ -105,6 +118,7 @@ const { data: availableLanguages = [] } = useQuery<Language[]>({
 ```
 
 **AFTER**:
+
 ```typescript
 const { data: availableLanguages = [] } = useQuery<Language[]>({
   queryKey: ["languages", workspaceId],
@@ -119,6 +133,7 @@ const { data: availableLanguages = [] } = useQuery<Language[]>({
 **Location**: `frontend/src/pages/ClientsPage.tsx`
 
 **BEFORE**:
+
 ```typescript
 const { data: clients = [], ... } = useQuery({
   queryKey: ["clients", workspace?.id],
@@ -129,6 +144,7 @@ const { data: clients = [], ... } = useQuery({
 ```
 
 **AFTER**:
+
 ```typescript
 const { data: clients = [], ... } = useQuery({
   queryKey: ["clients", workspace?.id],
@@ -141,6 +157,7 @@ const { data: clients = [], ... } = useQuery({
 ## 🎯 EXPECTED BEHAVIOR AFTER FIX
 
 ### Session Expiry Flow (CORRECTED)
+
 1. User session expires
 2. Frontend makes request → Backend returns 500 with session error
 3. **Axios interceptor detects 500 + session keyword**
@@ -154,6 +171,7 @@ const { data: clients = [], ... } = useQuery({
 ### Before vs After
 
 **BEFORE (WRONG)**:
+
 ```
 Request 1 → 500 error
 Request 2 → 500 error (retry)
@@ -163,6 +181,7 @@ Request 4 → 500 error (retry)
 ```
 
 **AFTER (CORRECT)**:
+
 ```
 Request 1 → 500 error
 ↓
@@ -180,6 +199,7 @@ STOP ✅
 ## 🧪 TESTING PLAN
 
 ### Manual Test
+
 1. **Login** to application
 2. **Wait for session to expire** (or delete sessionId from localStorage manually)
 3. **Navigate to Chat page** or any page
@@ -190,6 +210,7 @@ STOP ✅
    - [ ] localStorage cleared (check DevTools)
 
 ### Simulate Session Expiry
+
 ```javascript
 // In DevTools Console:
 localStorage.removeItem("sessionId")
@@ -197,6 +218,7 @@ localStorage.removeItem("sessionId")
 ```
 
 ### Check Network Tab
+
 - [ ] Should see 1 request with 500 error
 - [ ] NO subsequent retry requests
 - [ ] Immediate redirect to login
@@ -204,14 +226,17 @@ localStorage.removeItem("sessionId")
 ## 📊 IMPACT ASSESSMENT
 
 ### Performance: **HIGH** ✅
+
 - **FIXED**: Infinite retry loop consuming CPU/network
 - **IMPROVED**: Immediate error handling and redirect
 
 ### Security: **HIGH** ✅
+
 - **IMPROVED**: All auth data cleared immediately on session error
 - **IMPROVED**: User forced to re-authenticate
 
 ### User Experience: **HIGH** ✅
+
 - **FIXED**: No more hanging/frozen UI during session expiry
 - **IMPROVED**: Clear toast message explaining what happened
 - **IMPROVED**: Immediate redirect to login (no delay)
@@ -228,15 +253,18 @@ localStorage.removeItem("sessionId")
 ## 📝 DEPLOYMENT NOTES
 
 ### No Backend Changes
+
 - ✅ Backend behavior unchanged
 - ✅ Still returns 500 on session validation failure
 
 ### Frontend Only
+
 - ✅ Hot-reload will pick up changes
 - ✅ No dependencies added
 - ✅ No breaking changes
 
 ### Backward Compatibility
+
 - ✅ Existing error handling still works (401, 400)
 - ✅ Only adds NEW 500 handling
 - ✅ React Query retry: false doesn't break anything
@@ -244,19 +272,24 @@ localStorage.removeItem("sessionId")
 ## 🎓 KEY PRINCIPLES
 
 ### Error Handling Best Practices
+
 1. **Immediate Cleanup**: Clear auth data IMMEDIATELY on session error
 2. **Immediate Redirect**: Don't wait for user action
 3. **Disable Retry**: Let interceptor handle, don't retry automatically
 4. **Clear Feedback**: Show toast message explaining what happened
 
 ### Andrea's Requirements Met
+
 ✅ **"se c'e' un problema cancella subito la session storage no?"**
+
 - FIXED: Now clears localStorage + sessionStorage IMMEDIATELY on 500 session error
 - FIXED: Immediate redirect to login
 - FIXED: No more retry loop
 
 ### Key Takeaway
+
 **ALWAYS HANDLE SESSION ERRORS AT MULTIPLE LEVELS**:
+
 1. Axios interceptor → Detect and clean
 2. React Query → Disable retry
 3. localStorage → Clear immediately

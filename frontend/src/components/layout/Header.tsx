@@ -27,10 +27,10 @@ import { useNavigate } from "react-router-dom"
 
 export function Header() {
   const navigate = useNavigate()
-  
+
   // ✅ FIX: Use WorkspaceContext (single source of truth)
   const { workspace } = useWorkspace()
-  
+
   const [userName, setUserName] = useState<string>("")
   const [userEmail, setUserEmail] = useState<string>("")
   const [userInitials, setUserInitials] = useState<string>("")

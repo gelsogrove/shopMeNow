@@ -203,7 +203,7 @@ api.interceptors.response.use(
     // 🔥 HANDLE SESSION VALIDATION ERRORS (500)
     if (error.response && error.response.status === 500) {
       const errorMessage = error.response?.data?.error || ""
-      const isSessionError = 
+      const isSessionError =
         errorMessage.toLowerCase().includes("session") ||
         errorMessage.toLowerCase().includes("validation failed")
 
@@ -220,7 +220,7 @@ api.interceptors.response.use(
         clearSessionId()
 
         toast.error("Sessione non valida. Effettua nuovamente il login.")
-        
+
         // IMMEDIATE redirect to stop retry loop
         window.location.href = "/auth/login"
 

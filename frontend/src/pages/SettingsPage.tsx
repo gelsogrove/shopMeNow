@@ -12,13 +12,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
+import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
-import {
-  deleteWorkspace,
-  updateWorkspace,
-} from "@/services/workspaceApi"
-import { useWorkspace } from "@/contexts/WorkspaceContext"
+import { deleteWorkspace, updateWorkspace } from "@/services/workspaceApi"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Loader2, Save, Settings, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -84,8 +81,9 @@ export default function SettingsPage() {
   const [selectedWipLang, setSelectedWipLang] = useState("en")
 
   // ✅ FIXED: Use WorkspaceContext to get workspaceId (single source of truth)
-  const { workspace: contextWorkspace, loading: contextLoading } = useWorkspace()
-  
+  const { workspace: contextWorkspace, loading: contextLoading } =
+    useWorkspace()
+
   // Then fetch full workspace details with all fields
   const [workspace, setWorkspace] = useState<any>(null)
   const [isPageLoading, setIsPageLoading] = useState(true)
@@ -104,20 +102,20 @@ export default function SettingsPage() {
         setIsPageLoading(true)
         const response = await fetch(`/api/workspaces/${contextWorkspace.id}`, {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'X-Session-Id': sessionStorage.getItem('sessionId') || '',
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "X-Session-Id": sessionStorage.getItem("sessionId") || "",
           },
         })
-        
+
         if (!response.ok) {
-          throw new Error('Failed to fetch workspace details')
+          throw new Error("Failed to fetch workspace details")
         }
-        
+
         const data = await response.json()
         setWorkspace(data)
         setWorkspaceError(null)
       } catch (error) {
-        logger.error('Error fetching workspace details:', error)
+        logger.error("Error fetching workspace details:", error)
         setWorkspaceError(error)
       } finally {
         setIsPageLoading(false)
