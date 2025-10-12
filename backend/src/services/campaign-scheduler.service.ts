@@ -1,7 +1,7 @@
-import { PrismaClient, CampaignFrequency } from "@prisma/client"
+import { CampaignFrequency, PrismaClient } from "@prisma/client"
 import * as cron from "node-cron"
-import { CampaignService } from "../application/services/campaign.service"
 import { CampaignTokenService } from "../application/services/campaign-token.service"
+import { CampaignService } from "../application/services/campaign.service"
 import logger from "../utils/logger"
 
 /**
@@ -216,7 +216,10 @@ export class CampaignScheduler {
   /**
    * Send campaign message to customer
    */
-  private async sendCampaignMessage(campaign: any, customer: any): Promise<void> {
+  private async sendCampaignMessage(
+    campaign: any,
+    customer: any
+  ): Promise<void> {
     logger.info(
       `[CAMPAIGN SCHEDULER] Sending campaign ${campaign.name} to customer ${customer.id}`
     )

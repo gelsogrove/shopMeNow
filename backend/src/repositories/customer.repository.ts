@@ -211,9 +211,7 @@ export class CustomerRepository implements ICustomerRepository {
         logger.error(
           "CustomerRepository.create: CRITICAL - Customer not found after P2002 error"
         )
-        throw new Error(
-          "Numero di telefono o email già registrati nel sistema"
-        )
+        throw new Error("Numero di telefono o email già registrati nel sistema")
       }
 
       // Different error, rethrow

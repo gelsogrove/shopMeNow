@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client"
-import { SecureTokenService } from "./secure-token.service"
 import logger from "../../utils/logger"
+import { SecureTokenService } from "./secure-token.service"
 
 /**
  * Service for replacing campaign tokens with secure URLs
@@ -15,13 +15,13 @@ export class CampaignTokenService {
 
   /**
    * Replace all tokens in message with actual URLs
-   * 
+   *
    * Supported tokens:
    * - [FEEDBACK] → https://shop.com/feedback?token=xxx
    * - [ORDER_REVIEW] → https://shop.com/order-review?token=xxx
    * - {{nome}} → Customer name
    * - {{email}} → Customer email
-   * 
+   *
    * @param message Original message with tokens
    * @param customerId Customer ID for token generation
    * @param workspaceId Workspace ID
@@ -53,9 +53,18 @@ export class CampaignTokenService {
       }
 
       // Replace customer variables
-      processedMessage = processedMessage.replace(/\{\{nome\}\}/gi, customer.name || "Cliente")
-      processedMessage = processedMessage.replace(/\{\{email\}\}/gi, customer.email || "")
-      processedMessage = processedMessage.replace(/\{\{telefono\}\}/gi, customer.phone || "")
+      processedMessage = processedMessage.replace(
+        /\{\{nome\}\}/gi,
+        customer.name || "Cliente"
+      )
+      processedMessage = processedMessage.replace(
+        /\{\{email\}\}/gi,
+        customer.email || ""
+      )
+      processedMessage = processedMessage.replace(
+        /\{\{telefono\}\}/gi,
+        customer.phone || ""
+      )
 
       // Replace [FEEDBACK] token
       if (processedMessage.includes("[FEEDBACK]")) {
@@ -71,10 +80,15 @@ export class CampaignTokenService {
         )
 
         const feedbackUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/feedback?token=${feedbackToken}`
-        processedMessage = processedMessage.replace(/\[FEEDBACK\]/g, feedbackUrl)
+        processedMessage = processedMessage.replace(
+          /\[FEEDBACK\]/g,
+          feedbackUrl
+        )
         tokensUsed.push("FEEDBACK")
 
-        logger.info(`Generated FEEDBACK token for customer ${customerId}, campaign ${campaignId}`)
+        logger.info(
+          `Generated FEEDBACK token for customer ${customerId}, campaign ${campaignId}`
+        )
       }
 
       // Replace [ORDER_REVIEW] token
@@ -91,7 +105,10 @@ export class CampaignTokenService {
         )
 
         const reviewUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/order-review?token=${reviewToken}`
-        processedMessage = processedMessage.replace(/\[ORDER_REVIEW\]/g, reviewUrl)
+        processedMessage = processedMessage.replace(
+          /\[ORDER_REVIEW\]/g,
+          reviewUrl
+        )
         tokensUsed.push("ORDER_REVIEW")
 
         logger.info(`Generated ORDER_REVIEW token for customer ${customerId}`)
@@ -111,7 +128,10 @@ export class CampaignTokenService {
         )
 
         const campaignUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/campaign?token=${campaignToken}`
-        processedMessage = processedMessage.replace(/\[CAMPAIGN_LINK\]/g, campaignUrl)
+        processedMessage = processedMessage.replace(
+          /\[CAMPAIGN_LINK\]/g,
+          campaignUrl
+        )
         tokensUsed.push("CAMPAIGN_LINK")
       }
 

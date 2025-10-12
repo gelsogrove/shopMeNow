@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from "express"
 import { PrismaClient } from "@prisma/client"
+import { NextFunction, Request, Response } from "express"
 import { CampaignService } from "../../../application/services/campaign.service"
 import logger from "../../../utils/logger"
 
@@ -22,7 +22,8 @@ export class CampaignController {
     try {
       const { workspaceId } = req.params
 
-      const campaigns = await this.campaignService.findAllByWorkspace(workspaceId)
+      const campaigns =
+        await this.campaignService.findAllByWorkspace(workspaceId)
 
       res.json({ data: campaigns })
     } catch (error) {
@@ -72,12 +73,16 @@ export class CampaignController {
       if (!name || !messagePreview || !frequency || !targetType) {
         return res.status(400).json({
           error: "Campi obbligatori mancanti",
-          message: "Nome, messaggio, frequenza e tipo destinatari sono obbligatori",
+          message:
+            "Nome, messaggio, frequenza e tipo destinatari sono obbligatori",
         })
       }
 
       // If targetType is SELECTED, customerIds must be provided
-      if (targetType === "SELECTED" && (!customerIds || customerIds.length === 0)) {
+      if (
+        targetType === "SELECTED" &&
+        (!customerIds || customerIds.length === 0)
+      ) {
         return res.status(400).json({
           error: "Destinatari mancanti",
           message:
@@ -177,7 +182,9 @@ export class CampaignController {
       }
 
       res.json({
-        message: campaign.isActive ? "Campagna attivata" : "Campagna disattivata",
+        message: campaign.isActive
+          ? "Campagna attivata"
+          : "Campagna disattivata",
         campaign,
       })
     } catch (error) {

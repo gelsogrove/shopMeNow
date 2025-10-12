@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from "express"
 import { PrismaClient } from "@prisma/client"
+import { NextFunction, Request, Response } from "express"
 import { SecureTokenService } from "../../../application/services/secure-token.service"
 import logger from "../../../utils/logger"
 

@@ -9,7 +9,10 @@ export const campaignRoutes = (controller: CampaignController): Router => {
   router.use(authMiddleware)
 
   // Get all campaigns for workspace
-  router.get("/:workspaceId/campaigns", controller.getCampaigns.bind(controller))
+  router.get(
+    "/:workspaceId/campaigns",
+    controller.getCampaigns.bind(controller)
+  )
 
   // Get specific campaign
   router.get(
@@ -18,7 +21,10 @@ export const campaignRoutes = (controller: CampaignController): Router => {
   )
 
   // Create new campaign
-  router.post("/:workspaceId/campaigns", controller.createCampaign.bind(controller))
+  router.post(
+    "/:workspaceId/campaigns",
+    controller.createCampaign.bind(controller)
+  )
 
   // Update campaign
   router.put(

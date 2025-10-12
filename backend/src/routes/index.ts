@@ -1446,12 +1446,16 @@ router.use("/workspaces", workspaceRoutes)
 // Mount campaign routes
 import { campaignRoutes } from "../interfaces/http/routes/campaign.routes"
 router.use("/workspaces", campaignRoutes(campaignController))
-logger.info("✅ Registered campaign routes: /api/workspaces/:workspaceId/campaigns")
+logger.info(
+  "✅ Registered campaign routes: /api/workspaces/:workspaceId/campaigns"
+)
 
 // Mount feedback routes (public + admin)
 import { feedbackRoutes } from "../interfaces/http/routes/feedback.routes"
 router.use(feedbackRoutes(feedbackController))
-logger.info("✅ Registered feedback routes: /api/feedback (public), /api/workspaces/:workspaceId/feedbacks (admin)")
+logger.info(
+  "✅ Registered feedback routes: /api/feedback (public), /api/workspaces/:workspaceId/feedbacks (admin)"
+)
 
 // Mount agent routes with workspace parameter properly configured
 router.use(

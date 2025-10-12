@@ -1,4 +1,9 @@
-import { PrismaClient, Campaign, CampaignFrequency, CampaignTargetType } from "@prisma/client"
+import {
+  Campaign,
+  CampaignFrequency,
+  CampaignTargetType,
+  PrismaClient,
+} from "@prisma/client"
 import logger from "../../utils/logger"
 
 export interface CreateCampaignData {
@@ -51,7 +56,10 @@ export class CampaignService {
 
       return campaigns
     } catch (error) {
-      logger.error(`Error fetching campaigns for workspace ${workspaceId}:`, error)
+      logger.error(
+        `Error fetching campaigns for workspace ${workspaceId}:`,
+        error
+      )
       throw new Error("Failed to fetch campaigns")
     }
   }
@@ -102,7 +110,9 @@ export class CampaignService {
         },
       })
 
-      logger.info(`Created campaign ${campaign.id} for workspace ${data.workspaceId}`)
+      logger.info(
+        `Created campaign ${campaign.id} for workspace ${data.workspaceId}`
+      )
       return campaign
     } catch (error) {
       logger.error("Error creating campaign:", error)
@@ -129,12 +139,20 @@ export class CampaignService {
         where: { id },
         data: {
           ...(data.name !== undefined && { name: data.name }),
-          ...(data.messagePreview !== undefined && { messagePreview: data.messagePreview }),
+          ...(data.messagePreview !== undefined && {
+            messagePreview: data.messagePreview,
+          }),
           ...(data.frequency !== undefined && { frequency: data.frequency }),
           ...(data.targetType !== undefined && { targetType: data.targetType }),
-          ...(data.customerIds !== undefined && { customerIds: data.customerIds }),
-          ...(data.templateName !== undefined && { templateName: data.templateName }),
-          ...(data.templateParams !== undefined && { templateParams: data.templateParams }),
+          ...(data.customerIds !== undefined && {
+            customerIds: data.customerIds,
+          }),
+          ...(data.templateName !== undefined && {
+            templateName: data.templateName,
+          }),
+          ...(data.templateParams !== undefined && {
+            templateParams: data.templateParams,
+          }),
           ...(data.isActive !== undefined && { isActive: data.isActive }),
         },
       })
@@ -173,7 +191,10 @@ export class CampaignService {
   /**
    * Toggle campaign active status
    */
-  async toggleActive(id: string, workspaceId: string): Promise<Campaign | null> {
+  async toggleActive(
+    id: string,
+    workspaceId: string
+  ): Promise<Campaign | null> {
     try {
       const campaign = await this.findById(id, workspaceId)
       if (!campaign) {

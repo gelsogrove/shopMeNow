@@ -13,6 +13,8 @@ import ClientsPage from "./pages/ClientsPage"
 
 import DataProtectionPage from "./pages/data-protection"
 
+import CampaignsPage from "./pages/campaigns"
+import CampaignFormPage from "./pages/campaigns/form"
 import CheckoutSuccessPage from "./pages/checkout-success"
 import CheckoutPage from "./pages/CheckoutPage"
 import ExpiredPage from "./pages/expired"
@@ -23,8 +25,6 @@ import NotFoundPage from "./pages/not-found"
 import { OffersPage } from "./pages/OffersPage"
 import OrdersPage from "./pages/OrdersPage"
 import OrderSummaryPage from "./pages/OrderSummaryPage"
-import CampaignsPage from "./pages/campaigns"
-import CampaignFormPage from "./pages/campaigns/form"
 
 import CategoriesPage from "./pages/products/CategoriesPage"
 import { ProductsPage } from "./pages/ProductsPage"
@@ -249,7 +249,7 @@ export function App() {
                 path="/registration-success"
                 element={<RegistrationSuccess />}
               />
-              
+
               {/* Public Feedback page via secure token */}
               <Route
                 path="/feedback"
@@ -265,7 +265,7 @@ export function App() {
                   </Suspense>
                 }
               />
-              
+
               {/* Public Checkout page via secure token (external, no platform layout) */}
               <Route
                 path="/checkout"

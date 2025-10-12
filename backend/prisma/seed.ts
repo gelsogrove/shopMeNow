@@ -3463,7 +3463,8 @@ Team L'Altra Italia`,
       data: {
         customerId: testCustomer.id,
         rating: 5,
-        comment: "Prodotti eccellenti! La burrata è fantastica, la migliore che abbia mai assaggiato. Consegna veloce e packaging perfetto. Complimenti! 🎉",
+        comment:
+          "Prodotti eccellenti! La burrata è fantastica, la migliore che abbia mai assaggiato. Consegna veloce e packaging perfetto. Complimenti! 🎉",
         workspaceId: mainWorkspaceId,
       },
     })
@@ -3474,7 +3475,8 @@ Team L'Altra Italia`,
       data: {
         customerId: testCustomer2.id,
         rating: 4,
-        comment: "Very good quality products. Fast delivery. Just a bit expensive but worth it!",
+        comment:
+          "Very good quality products. Fast delivery. Just a bit expensive but worth it!",
         workspaceId: mainWorkspaceId,
       },
     })
@@ -3485,7 +3487,8 @@ Team L'Altra Italia`,
       data: {
         customerId: testCustomerMCP.id,
         rating: 3,
-        comment: "Buena calidad pero el tiempo de entrega fue más largo de lo esperado.",
+        comment:
+          "Buena calidad pero el tiempo de entrega fue más largo de lo esperado.",
         workspaceId: mainWorkspaceId,
       },
     })
