@@ -388,16 +388,20 @@ export function ChatPage() {
 
   // Fetch selected chat details
   useEffect(() => {
-    if (selectedChat) {
-      // Load messages for the selected chat (initial load)
-      fetchMessagesForChat(selectedChat)
-
-      // Check for stored activeChatbot value and update the state
-      if (selectedChat.customerId) {
-        fetchCustomerDetails(selectedChat.customerId)
-      }
+    // 🚨 SAFETY: Skip if no chat selected or no workspace
+    if (!selectedChat || !workspace?.id) {
+      logger.info("[ChatPage] Skipping fetch - no selectedChat or workspace")
+      return
     }
-  }, [selectedChat])
+
+    // Load messages for the selected chat (initial load)
+    fetchMessagesForChat(selectedChat)
+
+    // Check for stored activeChatbot value and update the state
+    if (selectedChat.customerId) {
+      fetchCustomerDetails(selectedChat.customerId)
+    }
+  }, [selectedChat, workspace?.id])
 
   // Function to load messages for a chat
   const fetchMessagesForChat = async (chat: Chat) => {
