@@ -10,6 +10,7 @@ import { useChatList } from "@/contexts/ChatListContext"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { useChatSync } from "@/hooks/useChatSync"
 import { useCurrentChatMessages } from "@/hooks/useCurrentChatMessages"
+import { useWebSocket } from "@/hooks/useWebSocket"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
@@ -102,6 +103,14 @@ export function ChatPage() {
   const isTabBlocked = false // Never block
   const hasLock = true // Always has lock
 
+  // 🚀 WEBSOCKET: Real-time updates instead of polling
+  const { isConnected: isWebSocketConnected } = useWebSocket({
+    workspaceId: workspace?.id || null,
+    onConnect: () => logger.info("[ChatPage] WebSocket connected"),
+    onDisconnect: () => logger.warn("[ChatPage] WebSocket disconnected"),
+    onError: (error) => logger.error("[ChatPage] WebSocket error:", error),
+  })
+
   const { selectedChat, setSelectedChat } = useChat()
   const [messages, setMessages] = useState<Message[]>([])
   const [messageInput, setMessageInput] = useState("")
@@ -110,6 +119,26 @@ export function ChatPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const sessionId = searchParams.get("sessionId")
+  
+  // 🚨 FIX: Clear selectedChat and URL params when workspace changes
+  const prevWorkspaceIdRef = useRef<string | undefined>(workspace?.id)
+  useEffect(() => {
+    if (workspace?.id && prevWorkspaceIdRef.current && workspace.id !== prevWorkspaceIdRef.current) {
+      logger.info(`[ChatPage] Workspace changed from ${prevWorkspaceIdRef.current} to ${workspace.id} - clearing selectedChat`)
+      
+      // Clear selected chat
+      setSelectedChat(null)
+      
+      // Clear URL params
+      setSearchParams({})
+      
+      // Clear messages
+      setMessages([])
+    }
+    
+    // Update ref for next comparison
+    prevWorkspaceIdRef.current = workspace?.id
+  }, [workspace?.id, setSelectedChat, setSearchParams])
   const [clientSearchTerm, setClientSearchTerm] = useState(
     searchParams.get("client") || ""
   )
@@ -187,6 +216,27 @@ export function ChatPage() {
   const navigate = useNavigate()
   const [showPlaygroundDialog, setShowPlaygroundDialog] = useState(false)
   const queryClient = useQueryClient()
+
+  // 🚨 RESET COMPLETO: Pulisce tutto quando si entra in ChatPage
+  useEffect(() => {
+    logger.info("[ChatPage] 🔄 RESET: Cleaning all data on mount")
+    
+    // 1. Pulisci selected chat
+    setSelectedChat(null)
+    
+    // 2. Pulisci messaggi
+    setMessages([])
+    
+    // 3. Pulisci URL params
+    setSearchParams({})
+    
+    // 4. Invalida TUTTE le query per ricaricare dati freschi
+    queryClient.invalidateQueries({ queryKey: ["chats"] })
+    queryClient.invalidateQueries({ queryKey: ["chat-messages"] })
+    queryClient.invalidateQueries({ queryKey: ["recent-chats"] })
+    
+    logger.info("[ChatPage] ✅ RESET completed - ready for fresh data")
+  }, []) // Solo al mount - no dependencies!
 
   // Redirect to workspace selection if user has no workspace
   useEffect(() => {
@@ -380,6 +430,12 @@ export function ChatPage() {
     if (!workspaceId || !selectedChat) return
 
     try {
+      // 🚨 SAFETY CHECK: Verify workspace match before API call
+      if (!workspace?.id) {
+        logger.warn("[fetchCustomerDetails] No workspace ID available, skipping")
+        return
+      }
+
       const response = await api.get(
         `/workspaces/${workspaceId}/customers/${customerId}`
       )
@@ -880,7 +936,7 @@ export function ChatPage() {
       <div className="grid grid-cols-12 gap-6 h-[calc(100vh-12rem)]">
         {/* Chat List */}
         <Card className="col-span-4 p-4 overflow-hidden flex flex-col">
-          <div className="mb-4">
+          <div className="mb-4 space-y-2">
             <Input
               type="search"
               placeholder="Search chats..."
@@ -901,6 +957,17 @@ export function ChatPage() {
               }}
               className="w-full"
             />
+            {/* 🚀 WebSocket Status Indicator */}
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  isWebSocketConnected ? "bg-green-500" : "bg-red-500"
+                } ${isWebSocketConnected ? "animate-pulse" : ""}`}
+              />
+              <span>
+                {isWebSocketConnected ? "Real-time updates" : "Connecting..."}
+              </span>
+            </div>
           </div>
 
           <div

@@ -806,7 +806,7 @@ export class MessageRepository {
             `🚨 DUPLICATE DETECTED: Message "${userMessage.substring(0, 50)}..." already exists from ${existingHourMinute} (${existingMessage.createdAt.toISOString()}). Current time: ${currentHourMinute}. Skipping insert.`
           )
         } else {
-          await this.prisma.message.create({
+          const userMessageObj = await this.prisma.message.create({
             data: {
               chatSessionId: session.id,
               content: userMessage,
@@ -818,6 +818,26 @@ export class MessageRepository {
           logger.info(
             `✅ SAVED USER MESSAGE: "${userMessage.substring(0, 50)}..." for session ${session.id}`
           )
+
+          // 🚀 WEBSOCKET: Notify real-time about new customer message
+          try {
+            const { websocketService } = await import(
+              "../services/websocket.service"
+            )
+            websocketService.notifyNewMessage(workspaceId, {
+              id: userMessageObj.id,
+              sessionId: session.id,
+              content: userMessage,
+              sender: "customer",
+              timestamp: userMessageObj.createdAt.toISOString(),
+              workspaceId,
+            })
+          } catch (wsError) {
+            logger.warn(
+              "[WebSocket] Failed to notify new customer message:",
+              wsError.message
+            )
+          }
         }
       }
 
@@ -953,6 +973,26 @@ export class MessageRepository {
           logger.info(
             `✅ SAVED BOT RESPONSE: "${botMessageStr.substring(0, 50)}..." for session ${session.id}`
           )
+
+          // 🚀 WEBSOCKET: Notify real-time about new message
+          try {
+            const { websocketService } = await import(
+              "../services/websocket.service"
+            )
+            websocketService.notifyNewMessage(workspaceId, {
+              id: botResponse.id,
+              sessionId: session.id,
+              content: botMessageStr,
+              sender: "agent",
+              timestamp: botResponse.createdAt.toISOString(),
+              workspaceId,
+            })
+          } catch (wsError) {
+            logger.warn(
+              "[WebSocket] Failed to notify new message:",
+              wsError.message
+            )
+          }
         }
       }
 

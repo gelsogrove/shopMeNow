@@ -31,6 +31,7 @@ export function ChatListProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
 
   // Use React Query to handle chat list fetching
+  // 🚀 WEBSOCKET: No polling - updates via WebSocket events
   const { data: chats = [], isLoading } = useQuery({
     queryKey: ["chats"],
     queryFn: async () => {
@@ -88,9 +89,9 @@ export function ChatListProvider({ children }: { children: ReactNode }) {
         throw error
       }
     },
-    refetchInterval: 15000, // Poll every 15 seconds
-    // Enable or disable polling based on window focus
-    refetchIntervalInBackground: false,
+    // 🚀 REMOVED: refetchInterval - WebSocket handles real-time updates
+    staleTime: 60000, // Consider data fresh for 1 minute
+    gcTime: 300000, // Keep in cache for 5 minutes
   })
 
   const updateChat = useCallback(

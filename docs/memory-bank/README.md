@@ -33,6 +33,31 @@ Documentazione tecnica completa del progetto ShopME.
 
 **Quando leggere**: Durante sviluppo di nuove feature
 
+### 🚀 Real-Time & WebSocket
+
+#### [WEBSOCKET-IMPLEMENTATION.md](./WEBSOCKET-IMPLEMENTATION.md) **NEW**
+
+**Implementazione completa WebSocket** per ChatPage:
+
+- Socket.io server backend
+- Sistema eventi real-time
+- Hook frontend `useWebSocket`
+- Trigger eventi backend
+- Confronto performance (10-15s → <100ms)
+- Guida testing
+
+**Quando leggere**: Prima di lavorare su real-time features, debugging WebSocket
+
+#### [CHATPAGE-ANALYSIS-WEBSOCKET-PROPOSAL.md](./CHATPAGE-ANALYSIS-WEBSOCKET-PROPOSAL.md)
+
+**Analisi problemi ChatPage** e proposta soluzione:
+
+- Problemi polling (10s delays, 404 errors)
+- Architettura attuale vs proposta
+- Piano implementazione WebSocket
+
+**Quando leggere**: Per capire l'evoluzione da polling a WebSocket
+
 ### 🤖 AI & LLM
 
 #### [LLMSERVICE-ARCHITECTURE-FLOW.md](./LLMSERVICE-ARCHITECTURE-FLOW.md)

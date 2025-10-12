@@ -1,28 +1,38 @@
-console.log(`🚨🚨🚨 SERVER INDEX.TS STARTED - MODIFIED VERSION 🚨🚨🚨`)
-console.log(`🔧 DEBUG: Server is using modified code - FIRST LINE`)
-
 import { PrismaClient } from "@prisma/client";
+import { createServer } from "http";
 import 'dotenv/config';
 import app from "./app";
 import logger from "./utils/logger";
+import { websocketService } from "./services/websocket.service";
 
 const PORT = process.env.PORT || 3001
 const prisma = new PrismaClient()
 
-// Start the server
+// Start the server with WebSocket support
 async function startServer() {
   try {
-    console.log("🚀🚀🚀 SERVER STARTING - MODIFIED VERSION 🚀🚀🚀")
-    console.log("🔧 DEBUG: Server is using modified code with console.log")
-    console.log("🔧 DEBUG: FORCE RELOAD - SERVER SHOULD RESTART NOW")
-    console.log("🔧 DEBUG: SERVER IS USING MODIFIED CODE - CONSOLE.LOG ADDED")
-    console.log("🔧 DEBUG: FINAL TEST - SERVER MUST RESTART NOW")
-    
     await prisma.$connect()
     logger.info("Connected to database")
 
-    app.listen(PORT, () => {
+    // Create HTTP server from Express app
+    const httpServer = createServer(app)
+
+    // Initialize WebSocket service
+    websocketService.initialize(httpServer)
+    logger.info("WebSocket service initialized")
+
+    // Start listening
+    httpServer.listen(PORT, () => {
       logger.info(`Server is running on port ${PORT}`)
+      logger.info(`WebSocket server ready on ws://localhost:${PORT}`)
+    })
+
+    // Graceful shutdown
+    process.on("SIGTERM", async () => {
+      logger.info("SIGTERM received, shutting down gracefully")
+      await websocketService.shutdown()
+      await prisma.$disconnect()
+      process.exit(0)
     })
   } catch (error) {
     logger.error("Failed to start server:", error)
@@ -31,7 +41,3 @@ async function startServer() {
 }
 
 startServer()
-// Force reload
-// Force reload 2
-// Force reload 3
-// Force reload 4

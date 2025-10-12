@@ -49,6 +49,7 @@ export function useCurrentChatMessages(
     return () => window.removeEventListener("storage", handleStorageChange)
   }, [queryClient, sessionId])
 
+  // 🚀 WEBSOCKET: No polling - updates via WebSocket events
   return useQuery({
     queryKey: ["chat-messages", sessionId],
     queryFn: async () => {
@@ -85,11 +86,10 @@ export function useCurrentChatMessages(
         return []
       }
     },
-    enabled: !!sessionId, // Always enabled when sessionId exists - polling controlled by refetchInterval
-    refetchInterval: hasPollingLock ? 10000 : false, // Poll every 10 seconds if we have the lock
-    refetchIntervalInBackground: true, // Allow background polling
-    staleTime: 2000, // Data is fresh for 2 seconds
-    gcTime: 2 * 60 * 1000, // Keep in cache for 2 minutes
-    refetchOnWindowFocus: hasPollingLock, // Refetch on focus if we have lock
+    enabled: !!sessionId,
+    // 🚀 REMOVED: refetchInterval - WebSocket handles real-time updates
+    staleTime: 60000, // Consider data fresh for 1 minute
+    gcTime: 300000, // Keep in cache for 5 minutes
+    refetchOnWindowFocus: false, // Don't refetch on focus - WebSocket keeps data fresh
   })
 }

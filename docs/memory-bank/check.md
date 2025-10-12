@@ -14,6 +14,24 @@ FASE 2
 - whatsapp
 - 2AUTH
 
-la pagina di chathistory non va motlo bene ...io non userei un timeput ma usere un websocket
-poi quando cambio di workspace non va piu poi ho bisogno di aspettare 10 secondi per evedere il refresh poi ho un sacco di errori , ti chiedo prima di capire cosa deve fare questa pagina
-poi capire come migioranrla a livello di user frendly aituarmi a cpire come farla funzionare
+ora dobbiamo fare due api per whatasapp
+uno e' il webhook dove rivedremo il post da media
+automaticamete dovremmo passarlo all LLM service che risponde e salva dentro lo storico guysti?
+e l'alto sare per inviare il messaggio a whatsapp
+
+sicurezza
+per inviare un messaggio
+dobbiamo inviare il sessionID worksapceID cusomerID numero di telefno del cliente
+e messaggio
+
+invece il webhook che riceve il messagigo
+dovremmo essere sicuri che arriva da Whagtsapp number dobbiamo avere il numero di telefono
+nel DB e da li prendiamo cusomerUID e WorkspaceID
+cosi poi chiamiamo LLM con tutti i parametri necesario
+e qui dentro in questo punto facciamo una conversione da mark down a whataspp messagge API con giuste icone
+
+quindi vogio 2 api
+vogli ole variabili dentro env.local
+voglio le conversioni qui e voglio che qui venga chiamato llm service con tutti i parametri nececssari. per far entrare il messaggio da whataspp dentro il nostro sistema
+
+fai un file whatasapp dentro memory bank
