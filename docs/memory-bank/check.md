@@ -1,8 +1,6 @@
 FASE 1
 
--
 - MAIN
-- SWAGGER
 - testPRIAM DI MAX
 
 FASE 2
@@ -13,4 +11,4 @@ FASE 2
 - schedule (push)
 - debug and recharge
 - add calendareio come CF
--
+  -- MAIN workspace

@@ -1542,18 +1542,6 @@ router.get(
 )
 logger.info("Registered /gdpr/default route for backward compatibility")
 
-// Mount Swagger documentation
-router.get("/docs/swagger.json", (req, res) => {
-  try {
-    const { swaggerSpec } = require("../config/swagger")
-    res.setHeader("Content-Type", "application/json")
-    res.json(swaggerSpec)
-  } catch (error) {
-    logger.error("Error serving swagger.json:", error)
-    res.status(500).json({ error: "Failed to load swagger documentation" })
-  }
-})
-
 // Health check
 router.get("/health", (req, res) => {
   res.status(200).json({
