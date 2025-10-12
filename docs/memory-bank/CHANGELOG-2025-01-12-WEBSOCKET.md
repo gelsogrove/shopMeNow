@@ -18,11 +18,13 @@
 ## 📦 Pacchetti Installati
 
 ### Backend
+
 ```bash
 npm install socket.io@4.8.1
 ```
 
 ### Frontend
+
 ```bash
 npm install socket.io-client
 # + 10 dependencies
@@ -54,6 +56,7 @@ npm install socket.io-client
 ### Documentazione (2 files)
 
 3. **`/docs/memory-bank/WEBSOCKET-IMPLEMENTATION.md`** (348 lines)
+
    - Documentazione completa implementazione
    - Performance comparison tables
    - Event flow diagrams
@@ -69,6 +72,7 @@ npm install socket.io-client
 ### Backend (2 files)
 
 1. **`/backend/src/index.ts`** (37 lines → 38 lines)
+
    - Import `createServer` from `http`
    - Import `websocketService`
    - Create HTTP server: `createServer(app)`
@@ -84,18 +88,21 @@ npm install socket.io-client
 ### Frontend (4 files)
 
 3. **`/frontend/src/pages/ChatPage.tsx`** (1489 lines → 1498 lines)
+
    - Import `useWebSocket` hook
    - Add WebSocket connection init (line ~106)
    - Add connection status indicator in UI (line ~907)
    - Green pulse = connected, Red = connecting
 
 4. **`/frontend/src/contexts/ChatListContext.tsx`** (148 lines)
+
    - **REMOVED**: `refetchInterval: 15000`
    - **REMOVED**: `refetchIntervalInBackground: false`
    - **ADDED**: `staleTime: 60000` (1 minute)
    - **ADDED**: `gcTime: 300000` (5 minutes)
 
 5. **`/frontend/src/hooks/useCurrentChatMessages.ts`** (100 lines)
+
    - **REMOVED**: `refetchInterval: hasPollingLock ? 10000 : false`
    - **REMOVED**: `refetchIntervalInBackground: true`
    - **REMOVED**: `refetchOnWindowFocus: hasPollingLock`
@@ -116,6 +123,7 @@ npm install socket.io-client
 **Path**: `/backend/src/services/websocket.service.ts`
 
 **Funzionalità**:
+
 ```typescript
 class WebSocketService {
   initialize(httpServer: HTTPServer): void
@@ -129,17 +137,20 @@ class WebSocketService {
 ```
 
 **Config**:
+
 - **CORS**: `process.env.FRONTEND_URL` (default: localhost:3000)
 - **Ping Interval**: 25 seconds
 - **Ping Timeout**: 20 seconds
 
 **Events Handled**:
+
 - `connection` → Log client connected
 - `join-workspace` → Join client to workspace room
 - `disconnect` → Clean up client metadata
 - `ping` → Respond with `pong`
 
 **Events Emitted**:
+
 - `workspace-joined` → Confirm room join
 - `new-message` → Broadcast new chat message
 - `chat-updated` → Broadcast chat list update
@@ -152,6 +163,7 @@ class WebSocketService {
 **File**: `/backend/src/index.ts`
 
 **Before**:
+
 ```typescript
 app.listen(PORT, () => {
   logger.info(`Server is running on port ${PORT}`)
@@ -159,6 +171,7 @@ app.listen(PORT, () => {
 ```
 
 **After**:
+
 ```typescript
 import { createServer } from "http"
 import { websocketService } from "./services/websocket.service"
@@ -186,6 +199,7 @@ process.on("SIGTERM", async () => {
 **File**: `/frontend/src/hooks/useWebSocket.ts`
 
 **Hook Signature**:
+
 ```typescript
 interface UseWebSocketOptions {
   workspaceId: string | null
@@ -203,15 +217,19 @@ function useWebSocket(options: UseWebSocketOptions): {
 ```
 
 **Behavior**:
+
 - **Auto-connect** when `workspaceId` changes
 - **Auto-disconnect** when `workspaceId` becomes null or component unmounts
 - **Auto-reconnect** on connection loss (5 attempts, 1s delay)
 - **React Query integration**: Invalidates queries on events
 
 **Event Handlers**:
+
 ```typescript
 socket.on("new-message", (message) => {
-  queryClient.invalidateQueries({ queryKey: ["chat-messages", message.sessionId] })
+  queryClient.invalidateQueries({
+    queryKey: ["chat-messages", message.sessionId],
+  })
   queryClient.invalidateQueries({ queryKey: ["chats", workspaceId] })
 })
 
@@ -232,6 +250,7 @@ socket.on("workspace-changed", (data) => {
 **File**: `/backend/src/repositories/message.repository.ts`
 
 **Trigger 1 - INBOUND Message** (Line ~809):
+
 ```typescript
 const userMessageObj = await this.prisma.message.create({ ... })
 
@@ -252,6 +271,7 @@ try {
 ```
 
 **Trigger 2 - OUTBOUND Message** (Line ~935):
+
 ```typescript
 botResponse = await this.prisma.message.create({ ... })
 
@@ -278,6 +298,7 @@ try {
 ### 5. Polling Removal
 
 **Chat List** (`ChatListContext.tsx`):
+
 ```diff
 - refetchInterval: 15000, // Poll every 15 seconds
 - refetchIntervalInBackground: false,
@@ -287,6 +308,7 @@ try {
 ```
 
 **Messages** (`useCurrentChatMessages.ts`):
+
 ```diff
 - refetchInterval: hasPollingLock ? 10000 : false, // Poll every 10s
 - refetchIntervalInBackground: true,
@@ -304,20 +326,21 @@ try {
 **File**: `/frontend/src/pages/ChatPage.tsx` (Line ~907)
 
 ```tsx
-{/* 🚀 WebSocket Status Indicator */}
-<div className="flex items-center gap-2 text-xs text-gray-500">
+{
+  /* 🚀 WebSocket Status Indicator */
+}
+;<div className="flex items-center gap-2 text-xs text-gray-500">
   <div
     className={`w-2 h-2 rounded-full ${
       isWebSocketConnected ? "bg-green-500" : "bg-red-500"
     } ${isWebSocketConnected ? "animate-pulse" : ""}`}
   />
-  <span>
-    {isWebSocketConnected ? "Real-time updates" : "Connecting..."}
-  </span>
+  <span>{isWebSocketConnected ? "Real-time updates" : "Connecting..."}</span>
 </div>
 ```
 
 **Behavior**:
+
 - 🟢 Green pulse: Connected, real-time active
 - 🔴 Red: Disconnected or connecting
 
@@ -325,13 +348,13 @@ try {
 
 ## 📊 Impatto Performance
 
-| Metrica | Prima (Polling) | Dopo (WebSocket) | Miglioramento |
-|---------|-----------------|------------------|---------------|
-| **Latenza Messaggi** | 10-15 secondi | <100ms | **99%+ più veloce** |
-| **HTTP Requests (idle)** | 12 req/min | 0 req/min | **100% riduzione** |
-| **Cambio Workspace** | 404 errors, 10s wait | Instant invalidation | **Risolto** |
-| **Cross-tab Sync** | Buggy localStorage | Native WebSocket | **Affidabile** |
-| **Battery Drain** | Alto (polling continuo) | Basso (event-driven) | **Significativo** |
+| Metrica                  | Prima (Polling)         | Dopo (WebSocket)     | Miglioramento       |
+| ------------------------ | ----------------------- | -------------------- | ------------------- |
+| **Latenza Messaggi**     | 10-15 secondi           | <100ms               | **99%+ più veloce** |
+| **HTTP Requests (idle)** | 12 req/min              | 0 req/min            | **100% riduzione**  |
+| **Cambio Workspace**     | 404 errors, 10s wait    | Instant invalidation | **Risolto**         |
+| **Cross-tab Sync**       | Buggy localStorage      | Native WebSocket     | **Affidabile**      |
+| **Battery Drain**        | Alto (polling continuo) | Basso (event-driven) | **Significativo**   |
 
 ---
 
@@ -390,14 +413,17 @@ cd frontend && npm test
 ## 📁 File Summary
 
 **Backend**:
+
 - ✅ 1 file nuovo: `websocket.service.ts`
 - ✅ 2 file modificati: `index.ts`, `message.repository.ts`
 
 **Frontend**:
+
 - ✅ 1 file nuovo: `useWebSocket.ts`
 - ✅ 4 file modificati: `ChatPage.tsx`, `ChatListContext.tsx`, `useCurrentChatMessages.ts`
 
 **Docs**:
+
 - ✅ 2 file nuovi: `WEBSOCKET-IMPLEMENTATION.md`, `CHANGELOG-2025-01-12-WEBSOCKET.md`
 - ✅ 1 file modificato: `README.md`
 
@@ -447,6 +473,7 @@ cd frontend && npm test
 Andrea, tutto il codice WebSocket è pronto e funzionante! Appena riavvii il backend vedrai gli aggiornamenti real-time istantanei in ChatPage. Niente più attesa di 10 secondi! 🚀✨
 
 **Comandi Utili**:
+
 ```bash
 # Backend restart
 cd /Users/gelso/workspace/AI/shop/backend && npm run dev

@@ -119,23 +119,29 @@ export function ChatPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const sessionId = searchParams.get("sessionId")
-  
+
   // 🚨 FIX: Clear selectedChat and URL params when workspace changes
   const prevWorkspaceIdRef = useRef<string | undefined>(workspace?.id)
   useEffect(() => {
-    if (workspace?.id && prevWorkspaceIdRef.current && workspace.id !== prevWorkspaceIdRef.current) {
-      logger.info(`[ChatPage] Workspace changed from ${prevWorkspaceIdRef.current} to ${workspace.id} - clearing selectedChat`)
-      
+    if (
+      workspace?.id &&
+      prevWorkspaceIdRef.current &&
+      workspace.id !== prevWorkspaceIdRef.current
+    ) {
+      logger.info(
+        `[ChatPage] Workspace changed from ${prevWorkspaceIdRef.current} to ${workspace.id} - clearing selectedChat`
+      )
+
       // Clear selected chat
       setSelectedChat(null)
-      
+
       // Clear URL params
       setSearchParams({})
-      
+
       // Clear messages
       setMessages([])
     }
-    
+
     // Update ref for next comparison
     prevWorkspaceIdRef.current = workspace?.id
   }, [workspace?.id, setSelectedChat, setSearchParams])
@@ -220,21 +226,21 @@ export function ChatPage() {
   // 🚨 RESET COMPLETO: Pulisce tutto quando si entra in ChatPage
   useEffect(() => {
     logger.info("[ChatPage] 🔄 RESET: Cleaning all data on mount")
-    
+
     // 1. Pulisci selected chat
     setSelectedChat(null)
-    
+
     // 2. Pulisci messaggi
     setMessages([])
-    
+
     // 3. Pulisci URL params
     setSearchParams({})
-    
+
     // 4. Invalida TUTTE le query per ricaricare dati freschi
     queryClient.invalidateQueries({ queryKey: ["chats"] })
     queryClient.invalidateQueries({ queryKey: ["chat-messages"] })
     queryClient.invalidateQueries({ queryKey: ["recent-chats"] })
-    
+
     logger.info("[ChatPage] ✅ RESET completed - ready for fresh data")
   }, []) // Solo al mount - no dependencies!
 
@@ -432,7 +438,9 @@ export function ChatPage() {
     try {
       // 🚨 SAFETY CHECK: Verify workspace match before API call
       if (!workspace?.id) {
-        logger.warn("[fetchCustomerDetails] No workspace ID available, skipping")
+        logger.warn(
+          "[fetchCustomerDetails] No workspace ID available, skipping"
+        )
         return
       }
 

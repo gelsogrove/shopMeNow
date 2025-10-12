@@ -11,6 +11,7 @@
 Replaced ChatPage's 10-15 second polling architecture with **Socket.io WebSocket** for instant real-time updates.
 
 **Problem Solved**:
+
 - ❌ **Before**: 10-15 second delays, 404 errors on workspace change, 12 HTTP requests/min idle load
 - ✅ **After**: <100ms latency, instant updates, 0 polling overhead, proper workspace switching
 
@@ -31,9 +32,10 @@ Replaced ChatPage's 10-15 second polling architecture with **Socket.io WebSocket
   - `workspace-changed`: Notify workspace switch (triggers query invalidation)
 
 **Key Methods**:
+
 ```typescript
-notifyNewMessage(workspaceId, message)    // Broadcast new message
-notifyChatUpdated(workspaceId, chat)      // Broadcast chat update
+notifyNewMessage(workspaceId, message) // Broadcast new message
+notifyChatUpdated(workspaceId, chat) // Broadcast chat update
 notifyWorkspaceChanged(socketId, workspaceId) // Notify workspace change
 ```
 
@@ -44,6 +46,7 @@ notifyWorkspaceChanged(socketId, workspaceId) // Notify workspace change
 **File**: `/backend/src/index.ts` (MODIFIED)
 
 **Changes**:
+
 - Import `createServer` from `http` module
 - Create HTTP server from Express app: `createServer(app)`
 - Initialize WebSocket service: `websocketService.initialize(httpServer)`
@@ -58,6 +61,7 @@ notifyWorkspaceChanged(socketId, workspaceId) // Notify workspace change
 **File**: `/frontend/src/hooks/useWebSocket.ts` (NEW)
 
 **Features**:
+
 - **Auto-connect** when workspace ID changes
 - **Auto-reconnect** on connection loss (5 attempts, 1s delay)
 - **React Query Integration**: Automatically invalidates queries on events
@@ -67,6 +71,7 @@ notifyWorkspaceChanged(socketId, workspaceId) // Notify workspace change
 - **Connection Management**: Disconnects on unmount or workspace change
 
 **Usage**:
+
 ```typescript
 const { isConnected } = useWebSocket({
   workspaceId: workspace?.id || null,
@@ -83,6 +88,7 @@ const { isConnected } = useWebSocket({
 **File**: `/frontend/src/pages/ChatPage.tsx` (MODIFIED)
 
 **Changes**:
+
 - **Import**: Added `useWebSocket` hook
 - **Hook Call**: Initialize WebSocket connection with current workspace
 - **UI Indicator**: Added connection status dot in chat list header
@@ -90,6 +96,7 @@ const { isConnected } = useWebSocket({
   - 🔴 Red: Connecting...
 
 **Code**:
+
 ```typescript
 // Line ~106
 const { isConnected: isWebSocketConnected } = useWebSocket({
@@ -112,12 +119,14 @@ const { isConnected: isWebSocketConnected } = useWebSocket({
 **File**: `/frontend/src/contexts/ChatListContext.tsx` (MODIFIED)
 
 **Removed**:
+
 ```typescript
 refetchInterval: 15000, // ❌ DELETED
 refetchIntervalInBackground: false, // ❌ DELETED
 ```
 
 **Added**:
+
 ```typescript
 staleTime: 60000,  // Data fresh for 1 minute
 gcTime: 300000,    // Cache for 5 minutes
@@ -128,6 +137,7 @@ gcTime: 300000,    // Cache for 5 minutes
 **File**: `/frontend/src/hooks/useCurrentChatMessages.ts` (MODIFIED)
 
 **Removed**:
+
 ```typescript
 refetchInterval: hasPollingLock ? 10000 : false, // ❌ DELETED
 refetchIntervalInBackground: true, // ❌ DELETED
@@ -135,6 +145,7 @@ refetchOnWindowFocus: hasPollingLock, // ❌ DELETED
 ```
 
 **Added**:
+
 ```typescript
 staleTime: 60000,  // Data fresh for 1 minute
 gcTime: 300000,    // Cache for 5 minutes
@@ -150,6 +161,7 @@ refetchOnWindowFocus: false, // WebSocket keeps data fresh
 **Added WebSocket Triggers After Message Creation**:
 
 **User Message (INBOUND)** - Line ~809:
+
 ```typescript
 const userMessageObj = await this.prisma.message.create({ ... })
 
@@ -166,6 +178,7 @@ websocketService.notifyNewMessage(workspaceId, {
 ```
 
 **Bot Response (OUTBOUND)** - Line ~935:
+
 ```typescript
 botResponse = await this.prisma.message.create({ ... })
 
@@ -185,13 +198,13 @@ websocketService.notifyNewMessage(workspaceId, {
 
 ## 📊 Performance Comparison
 
-| Metric | Before (Polling) | After (WebSocket) | Improvement |
-|--------|------------------|-------------------|-------------|
-| **Message Latency** | 10-15 seconds | <100ms | **99%+ faster** |
-| **HTTP Requests (idle)** | 12 req/min | 0 req/min | **100% reduction** |
-| **Workspace Switch** | 404 errors, 10s wait | Instant invalidation | **Fixed** |
-| **Cross-tab Sync** | Buggy localStorage | Native WebSocket | **Reliable** |
-| **Battery Impact** | High (constant polling) | Low (event-driven) | **Significant** |
+| Metric                   | Before (Polling)        | After (WebSocket)    | Improvement        |
+| ------------------------ | ----------------------- | -------------------- | ------------------ |
+| **Message Latency**      | 10-15 seconds           | <100ms               | **99%+ faster**    |
+| **HTTP Requests (idle)** | 12 req/min              | 0 req/min            | **100% reduction** |
+| **Workspace Switch**     | 404 errors, 10s wait    | Instant invalidation | **Fixed**          |
+| **Cross-tab Sync**       | Buggy localStorage      | Native WebSocket     | **Reliable**       |
+| **Battery Impact**       | High (constant polling) | Low (event-driven)   | **Significant**    |
 
 ---
 
@@ -200,6 +213,7 @@ websocketService.notifyNewMessage(workspaceId, {
 ### Socket.io Configuration
 
 **Backend** (`websocket.service.ts`):
+
 ```typescript
 cors: {
   origin: process.env.FRONTEND_URL || "http://localhost:3000",
@@ -211,6 +225,7 @@ pingTimeout: 20000,   // Timeout after 20s
 ```
 
 **Frontend** (`useWebSocket.ts`):
+
 ```typescript
 transports: ["websocket", "polling"],  // Fallback to polling if needed
 reconnection: true,
@@ -223,6 +238,7 @@ reconnectionAttempts: 5,
 ### Event Flow
 
 1. **New Message Arrives**:
+
    ```
    WhatsApp → Backend → MessageRepository.saveMessage()
    → websocketService.notifyNewMessage()

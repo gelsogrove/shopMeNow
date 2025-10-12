@@ -1,11 +1,7 @@
 import { useChat } from "@/contexts/ChatContext"
-import { logger } from "@/lib/logger"
-import { api } from "@/services/api"
 import { useQuery } from "@tanstack/react-query"
 import { useRef } from "react"
 import { useNavigate } from "react-router-dom"
-import { toast as sonnerToast } from "sonner"
-import { pollingCoordinator } from "./usePollingCoordinator"
 
 /**
  * Global hook that runs in the background on every page

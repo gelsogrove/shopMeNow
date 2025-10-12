@@ -1,9 +1,9 @@
-import { PrismaClient } from "@prisma/client";
-import { createServer } from "http";
-import 'dotenv/config';
-import app from "./app";
-import logger from "./utils/logger";
-import { websocketService } from "./services/websocket.service";
+import { PrismaClient } from "@prisma/client"
+import "dotenv/config"
+import { createServer } from "http"
+import app from "./app"
+import { websocketService } from "./services/websocket.service"
+import logger from "./utils/logger"
 
 const PORT = process.env.PORT || 3001
 const prisma = new PrismaClient()

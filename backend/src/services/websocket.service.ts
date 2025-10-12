@@ -1,29 +1,29 @@
-import { Server as SocketIOServer } from "socket.io";
-import { Server as HTTPServer } from "http";
-import logger from "../utils/logger";
+import { Server as HTTPServer } from "http"
+import { Server as SocketIOServer } from "socket.io"
+import logger from "../utils/logger"
 
 interface ClientMetadata {
-  workspaceId: string;
-  userId?: string;
-  sessionId?: string;
+  workspaceId: string
+  userId?: string
+  sessionId?: string
 }
 
 /**
  * WebSocketService - Real-time communication for chat updates
- * 
+ *
  * Replaces polling with instant push notifications for:
  * - New messages in chats
  * - Chat list updates (new chats, status changes)
  * - Workspace switches (invalidates old data)
- * 
+ *
  * Architecture:
  * - Each workspace gets its own Socket.io room
  * - Clients join rooms on workspace selection
  * - Events broadcast only to users in same workspace
  */
 export class WebSocketService {
-  private io: SocketIOServer | null = null;
-  private clientMetadata = new Map<string, ClientMetadata>();
+  private io: SocketIOServer | null = null
+  private clientMetadata = new Map<string, ClientMetadata>()
 
   /**
    * Initialize Socket.io server attached to Express HTTP server
@@ -38,43 +38,48 @@ export class WebSocketService {
       // Ping every 25s, timeout after 20s
       pingInterval: 25000,
       pingTimeout: 20000,
-    });
+    })
 
     this.io.on("connection", (socket) => {
-      logger.info(`[WebSocket] Client connected: ${socket.id}`);
+      logger.info(`[WebSocket] Client connected: ${socket.id}`)
 
       // Client joins workspace room
-      socket.on("join-workspace", (data: { workspaceId: string; userId?: string }) => {
-        const { workspaceId, userId } = data;
+      socket.on(
+        "join-workspace",
+        (data: { workspaceId: string; userId?: string }) => {
+          const { workspaceId, userId } = data
 
-        // Leave previous rooms
-        const rooms = Array.from(socket.rooms).filter((room) => room !== socket.id);
-        rooms.forEach((room) => socket.leave(room));
+          // Leave previous rooms
+          const rooms = Array.from(socket.rooms).filter(
+            (room) => room !== socket.id
+          )
+          rooms.forEach((room) => socket.leave(room))
 
-        // Join new workspace room
-        const roomName = `workspace:${workspaceId}`;
-        socket.join(roomName);
+          // Join new workspace room
+          const roomName = `workspace:${workspaceId}`
+          socket.join(roomName)
 
-        // Store metadata
-        this.clientMetadata.set(socket.id, { workspaceId, userId });
+          // Store metadata
+          this.clientMetadata.set(socket.id, { workspaceId, userId })
 
-        logger.info(`[WebSocket] Client ${socket.id} joined ${roomName}`);
-        socket.emit("workspace-joined", { workspaceId });
-      });
+          logger.info(`[WebSocket] Client ${socket.id} joined ${roomName}`)
+          socket.emit("workspace-joined", { workspaceId })
+        }
+      )
 
       // Client disconnects
       socket.on("disconnect", () => {
-        this.clientMetadata.delete(socket.id);
-        logger.info(`[WebSocket] Client disconnected: ${socket.id}`);
-      });
+        this.clientMetadata.delete(socket.id)
+        logger.info(`[WebSocket] Client disconnected: ${socket.id}`)
+      })
 
       // Ping/pong for connection health
       socket.on("ping", () => {
-        socket.emit("pong");
-      });
-    });
+        socket.emit("pong")
+      })
+    })
 
-    logger.info("[WebSocket] Server initialized");
+    logger.info("[WebSocket] Server initialized")
   }
 
   /**
@@ -82,17 +87,17 @@ export class WebSocketService {
    */
   notifyNewMessage(workspaceId: string, message: any): void {
     if (!this.io) {
-      logger.warn("[WebSocket] Cannot notify, server not initialized");
-      return;
+      logger.warn("[WebSocket] Cannot notify, server not initialized")
+      return
     }
 
-    const roomName = `workspace:${workspaceId}`;
-    this.io.to(roomName).emit("new-message", message);
+    const roomName = `workspace:${workspaceId}`
+    this.io.to(roomName).emit("new-message", message)
 
     logger.info(`[WebSocket] Broadcasted new-message to ${roomName}`, {
       sessionId: message.sessionId,
       messageId: message.id,
-    });
+    })
   }
 
   /**
@@ -100,16 +105,16 @@ export class WebSocketService {
    */
   notifyChatUpdated(workspaceId: string, chat: any): void {
     if (!this.io) {
-      logger.warn("[WebSocket] Cannot notify, server not initialized");
-      return;
+      logger.warn("[WebSocket] Cannot notify, server not initialized")
+      return
     }
 
-    const roomName = `workspace:${workspaceId}`;
-    this.io.to(roomName).emit("chat-updated", chat);
+    const roomName = `workspace:${workspaceId}`
+    this.io.to(roomName).emit("chat-updated", chat)
 
     logger.info(`[WebSocket] Broadcasted chat-updated to ${roomName}`, {
       sessionId: chat.sessionId,
-    });
+    })
   }
 
   /**
@@ -118,47 +123,49 @@ export class WebSocketService {
    */
   notifyWorkspaceChanged(socketId: string, workspaceId: string): void {
     if (!this.io) {
-      logger.warn("[WebSocket] Cannot notify, server not initialized");
-      return;
+      logger.warn("[WebSocket] Cannot notify, server not initialized")
+      return
     }
 
-    this.io.to(socketId).emit("workspace-changed", { workspaceId });
+    this.io.to(socketId).emit("workspace-changed", { workspaceId })
 
-    logger.info(`[WebSocket] Notified ${socketId} of workspace change to ${workspaceId}`);
+    logger.info(
+      `[WebSocket] Notified ${socketId} of workspace change to ${workspaceId}`
+    )
   }
 
   /**
    * Get connected clients count for workspace
    */
   getWorkspaceClientsCount(workspaceId: string): number {
-    if (!this.io) return 0;
+    if (!this.io) return 0
 
-    const roomName = `workspace:${workspaceId}`;
-    const room = this.io.sockets.adapter.rooms.get(roomName);
-    return room ? room.size : 0;
+    const roomName = `workspace:${workspaceId}`
+    const room = this.io.sockets.adapter.rooms.get(roomName)
+    return room ? room.size : 0
   }
 
   /**
    * Get all connected clients metadata
    */
   getConnectedClients(): ClientMetadata[] {
-    return Array.from(this.clientMetadata.values());
+    return Array.from(this.clientMetadata.values())
   }
 
   /**
    * Shutdown WebSocket server gracefully
    */
   async shutdown(): Promise<void> {
-    if (!this.io) return;
+    if (!this.io) return
 
     return new Promise((resolve) => {
       this.io!.close(() => {
-        logger.info("[WebSocket] Server closed");
-        resolve();
-      });
-    });
+        logger.info("[WebSocket] Server closed")
+        resolve()
+      })
+    })
   }
 }
 
 // Singleton instance
-export const websocketService = new WebSocketService();
+export const websocketService = new WebSocketService()
