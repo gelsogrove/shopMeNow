@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react"
+import { ArrowLeft, Save } from "lucide-react"
+import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import { Save, ArrowLeft } from "lucide-react"
 import { toast } from "sonner"
-import { api } from "../../services/api"
 import { useWorkspace } from "../../contexts/WorkspaceContext"
+import { api } from "../../services/api"
 
 interface Customer {
   id: string
@@ -113,9 +113,7 @@ export default function CampaignFormPage() {
 
       navigate("/campaigns")
     } catch (error: any) {
-      toast.error(
-        error.response?.data?.message || "Error saving campaign"
-      )
+      toast.error(error.response?.data?.message || "Error saving campaign")
     } finally {
       setSaving(false)
     }
@@ -181,9 +179,7 @@ export default function CampaignFormPage() {
           <input
             type="text"
             value={formData.name}
-            onChange={(e) =>
-              setFormData({ ...formData, name: e.target.value })
-            }
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             placeholder="e.g., Semi-annual Feedback Request"
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
             required
@@ -196,8 +192,11 @@ export default function CampaignFormPage() {
             Message *
           </label>
           <p className="text-xs text-gray-500 mb-3">
-            Use <code className="bg-gray-100 px-1 py-0.5 rounded">{"{{nome}}"}</code> for customer name.
-            Click buttons to insert links with secure tokens.
+            Use{" "}
+            <code className="bg-gray-100 px-1 py-0.5 rounded">
+              {"{{nome}}"}
+            </code>{" "}
+            for customer name. Click buttons to insert links with secure tokens.
           </p>
 
           <textarea
@@ -329,10 +328,7 @@ export default function CampaignFormPage() {
                         if (e.target.checked) {
                           setFormData({
                             ...formData,
-                            customerIds: [
-                              ...formData.customerIds,
-                              customer.id,
-                            ],
+                            customerIds: [...formData.customerIds, customer.id],
                           })
                         } else {
                           setFormData({

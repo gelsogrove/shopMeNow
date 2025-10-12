@@ -1,16 +1,24 @@
-import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
-import { Calendar, Users, Edit, Trash2, Power, PowerOff, Megaphone } from "lucide-react"
-import { toast } from "sonner"
-import { api } from "../../services/api"
-import { useWorkspace } from "../../contexts/WorkspaceContext"
 import { PageLayout } from "@/components/layout/PageLayout"
-import { CrudPageContent } from "@/components/shared/CrudPageContent"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
+import { CrudPageContent } from "@/components/shared/CrudPageContent"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ColumnDef } from "@tanstack/react-table"
 import { commonStyles } from "@/styles/common"
+import { ColumnDef } from "@tanstack/react-table"
+import {
+  Calendar,
+  Edit,
+  Megaphone,
+  Power,
+  PowerOff,
+  Trash2,
+  Users,
+} from "lucide-react"
+import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
+import { toast } from "sonner"
+import { useWorkspace } from "../../contexts/WorkspaceContext"
+import { api } from "../../services/api"
 
 interface Campaign {
   id: string
@@ -45,7 +53,9 @@ export default function CampaignsPage() {
   const [loading, setLoading] = useState(true)
   const [searchValue, setSearchValue] = useState("")
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(null)
+  const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(
+    null
+  )
 
   useEffect(() => {
     if (workspace?.id) {
@@ -87,7 +97,9 @@ export default function CampaignsPage() {
     if (!campaignToDelete) return
 
     try {
-      await api.delete(`/workspaces/${workspace?.id}/campaigns/${campaignToDelete.id}`)
+      await api.delete(
+        `/workspaces/${workspace?.id}/campaigns/${campaignToDelete.id}`
+      )
       toast.success("Campaign deleted successfully")
       loadCampaigns()
       setShowDeleteDialog(false)
@@ -142,9 +154,7 @@ export default function CampaignsPage() {
       accessorKey: "sends",
       header: "Sent",
       cell: ({ row }) => (
-        <div className="text-sm text-gray-600">
-          {row.original._count.sends}
-        </div>
+        <div className="text-sm text-gray-600">{row.original._count.sends}</div>
       ),
     },
     {
@@ -185,7 +195,7 @@ export default function CampaignsPage() {
       >
         <Edit className="h-4 w-4" />
       </Button>
-      
+
       <Button
         variant="ghost"
         size="sm"
@@ -223,7 +233,8 @@ export default function CampaignsPage() {
         No campaigns yet
       </h3>
       <p className="text-gray-600 mb-6">
-        Create your first automated WhatsApp campaign to engage with your customers
+        Create your first automated WhatsApp campaign to engage with your
+        customers
       </p>
     </div>
   )
@@ -231,11 +242,7 @@ export default function CampaignsPage() {
   return (
     <PageLayout>
       <CrudPageContent
-        title={
-          <span className={commonStyles.primary}>
-            WhatsApp Campaigns
-          </span>
-        }
+        title={<span className={commonStyles.primary}>WhatsApp Campaigns</span>}
         titleIcon={<Megaphone className={commonStyles.headerIcon} />}
         searchValue={searchValue}
         onSearch={setSearchValue}
