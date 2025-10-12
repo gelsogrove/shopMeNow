@@ -286,7 +286,7 @@ export default function ClientsPage(): JSX.Element {
     try {
       // 🚨 REMOVED: No longer using sessionId in URL
       // Chat selection now managed purely via React context
-      
+
       // Navigate to chat page with client name as search filter
       // The ChatPage will auto-select the matching chat from context
       navigate(`/chat?client=${encodeURIComponent(client.name)}`)

@@ -4,16 +4,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { Workspace } from "@/hooks/use-workspace"
 import { useWorkspace } from "@/hooks/use-workspace"
+import { toast } from "@/lib/toast"
 import { LogOut, PlusCircle } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { clearSessionId } from "../services/api"
 import {
   createWorkspace,
   getWorkspaces,
   updateWorkspace,
 } from "../services/workspaceApi"
-import { clearSessionId } from "../services/api"
-import { toast } from "@/lib/toast"
 
 // Definizione dei tipi di attività supportati
 type BusinessType = "Shop"
@@ -161,22 +161,22 @@ export function WorkspaceSelectionPage() {
   // 🆕 LOGOUT HANDLER
   const handleLogout = () => {
     console.log("🚪 [WorkspaceSelectionPage] Logout requested")
-    
+
     // Clear sessionId from localStorage
     clearSessionId()
-    
+
     // Clear workspace data
     localStorage.removeItem("currentWorkspace")
     sessionStorage.removeItem("currentWorkspace")
     sessionStorage.removeItem("currentWorkspaceName")
     sessionStorage.removeItem("currentWorkspacePhone")
     sessionStorage.removeItem("currentWorkspaceType")
-    
+
     // Clear token
     localStorage.removeItem("token")
-    
+
     toast.success("Logged out successfully")
-    
+
     // Redirect to login
     navigate("/auth/login")
   }
