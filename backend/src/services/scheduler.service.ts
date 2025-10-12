@@ -2,9 +2,12 @@ import { BillingType, PrismaClient } from "@prisma/client"
 import { BillingService } from "../application/services/billing.service"
 import logger from "../utils/logger"
 
+import { CampaignScheduler } from "./campaign-scheduler.service"
+
 export class SchedulerService {
   private prisma: PrismaClient
   private billingService: BillingService
+  private campaignScheduler: CampaignScheduler
   private readonly CHECK_INTERVAL = 5 * 60 * 1000 // 5 minuti
   private readonly URL_CLEANUP_INTERVAL = 60 * 60 * 1000 // 1 ora
   private readonly CHAT_CLEANUP_INTERVAL = 12 * 60 * 60 * 1000 // 12 ore
@@ -14,6 +17,7 @@ export class SchedulerService {
   constructor() {
     this.prisma = new PrismaClient()
     this.billingService = new BillingService(this.prisma)
+    this.campaignScheduler = new CampaignScheduler(this.prisma)
   }
 
   /**
@@ -208,8 +212,11 @@ export class SchedulerService {
     //   this.cleanupChatHistory()
     // }, this.CHAT_CLEANUP_INTERVAL)
 
+    // Start campaign scheduler (runs daily at 10:00 AM)
+    this.campaignScheduler.start()
+
     logger.info(
-      "Scheduler service started - managing offers, URLs cleanup, and monthly billing (chat history cleanup disabled for billing)"
+      "Scheduler service started - managing offers, URLs cleanup, monthly billing, and campaign scheduler (chat history cleanup disabled for billing)"
     )
   }
 }

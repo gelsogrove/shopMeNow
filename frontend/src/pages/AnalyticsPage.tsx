@@ -4,7 +4,6 @@ import DateRangeSelector, {
 } from "@/components/analytics/DateRangeSelector"
 import { HistoricalChart } from "@/components/analytics/HistoricalChart"
 import { MetricsOverview } from "@/components/analytics/MetricsOverview"
-import { PricingList } from "@/components/analytics/PricingList"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -285,10 +284,10 @@ export function AnalyticsPage() {
             </Card>
           </div>
 
-          {/* Pricing List - Moved to top */}
-          <PricingList />
+          {/* Pricing List - Moved to top 
+          <PricingList />*/}
 
-          {/* System Logs - Full Width */}
+          {/* System Logs - Full Width 
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -516,6 +515,7 @@ export function AnalyticsPage() {
               )}
             </CardContent>
           </Card>
+          */}
         </div>
       ) : (
         // No Data State

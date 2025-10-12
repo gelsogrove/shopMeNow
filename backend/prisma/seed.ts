@@ -58,7 +58,7 @@ const defaultAgent = {
 
 // Andrea's Two-LLM Architecture - LLM 1 RAG Processor Prompt (Agent Settings)
 const SOFIA_PROMPT = fs.readFileSync(
-  path.join(__dirname, "../../docs/other/prompt_agent.md"),
+  path.join(__dirname, "../../docs/prompt_agent.md"),
   "utf8"
 )
 
@@ -3417,6 +3417,86 @@ async function main() {
     "✅ Test customers with active chats and welcome messages created successfully!"
   )
 
+  // Create default feedback campaign
+  console.log("🔄 Creating default feedback campaign...")
+  try {
+    const existingCampaign = await prisma.campaign.findFirst({
+      where: {
+        workspaceId: mainWorkspaceId,
+        name: "Richiesta Feedback Semestrale",
+      },
+    })
+
+    if (!existingCampaign) {
+      await prisma.campaign.create({
+        data: {
+          workspaceId: mainWorkspaceId,
+          name: "Richiesta Feedback Semestrale",
+          messagePreview: `Ciao {{nome}},
+
+ti è piaciuto il nostro servizio?
+Lasciaci una recensione qui: [FEEDBACK]
+
+Grazie per il tuo tempo! 🙏
+Team L'Altra Italia`,
+          frequency: "SEMIANNUAL",
+          targetType: "ALL",
+          isActive: true,
+        },
+      })
+      console.log("✅ Default feedback campaign created")
+    } else {
+      console.log("✅ Feedback campaign already exists")
+    }
+  } catch (error) {
+    console.log(
+      "⚠️ Could not create feedback campaign (migration not run yet):",
+      (error as any).message
+    )
+  }
+
+  // Create sample feedback for test customers
+  console.log("🔄 Creating sample customer feedback...")
+  try {
+    // Feedback per Mario Rossi - 5 stelle
+    await prisma.customerFeedback.create({
+      data: {
+        customerId: testCustomer.id,
+        rating: 5,
+        comment: "Prodotti eccellenti! La burrata è fantastica, la migliore che abbia mai assaggiato. Consegna veloce e packaging perfetto. Complimenti! 🎉",
+        workspaceId: mainWorkspaceId,
+      },
+    })
+    console.log("✅ Feedback created for Mario Rossi (5 stars)")
+
+    // Feedback per John Smith - 4 stelle
+    await prisma.customerFeedback.create({
+      data: {
+        customerId: testCustomer2.id,
+        rating: 4,
+        comment: "Very good quality products. Fast delivery. Just a bit expensive but worth it!",
+        workspaceId: mainWorkspaceId,
+      },
+    })
+    console.log("✅ Feedback created for John Smith (4 stars)")
+
+    // Feedback per Maria Garcia - 3 stelle
+    await prisma.customerFeedback.create({
+      data: {
+        customerId: testCustomerMCP.id,
+        rating: 3,
+        comment: "Buena calidad pero el tiempo de entrega fue más largo de lo esperado.",
+        workspaceId: mainWorkspaceId,
+      },
+    })
+    console.log("✅ Feedback created for Maria Garcia (3 stars)")
+  } catch (error) {
+    console.log(
+      "⚠️ Could not create customer feedback (tables not ready):",
+      (error as any).message
+    )
+  }
+
   // Create sample orders for test customers
   console.log("🔄 Creating sample orders for test customers...")
 
@@ -3662,6 +3742,8 @@ async function main() {
   console.log("   ✅ FAQs loaded")
   console.log("   ✅ Test customers created")
   console.log("   ✅ Sample orders created")
+  console.log("   ✅ Customer feedback examples created")
+  console.log("   ✅ Default feedback campaign configured")
   console.log("   ✅ System ready for WhatsApp")
 
   console.log(`Seed completato con successo!`)

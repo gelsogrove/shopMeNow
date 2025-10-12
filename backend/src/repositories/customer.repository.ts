@@ -35,6 +35,7 @@ export class CustomerRepository implements ICustomerRepository {
       activeChatbot: customerData.activeChatbot,
       invoiceAddress: customerData.invoiceAddress,
       salesId: customerData.salesId,
+      feedbacks: customerData.feedbacks || [],
     })
   }
 
@@ -68,6 +69,12 @@ export class CustomerRepository implements ICustomerRepository {
           isActive: true,
         },
         orderBy: { createdAt: "desc" },
+        include: {
+          feedbacks: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+          },
+        },
       })
 
       return customers
@@ -175,7 +182,41 @@ export class CustomerRepository implements ICustomerRepository {
       })
 
       return this.toDomainEntity(customer)
-    } catch (error) {
+    } catch (error: any) {
+      // P2002: Unique constraint violation (phone or email already exists)
+      if (error.code === "P2002") {
+        logger.error(
+          `CustomerRepository.create: Unique constraint violation for phone ${data.phone} or email ${data.email}`,
+          error
+        )
+
+        // Fetch the existing customer
+        const existingCustomer = await prisma.customers.findFirst({
+          where: {
+            OR: [
+              { phone: data.phone, workspaceId: data.workspaceId },
+              { email: data.email, workspaceId: data.workspaceId },
+            ],
+          },
+        })
+
+        if (existingCustomer) {
+          logger.info(
+            `CustomerRepository.create: ✅ Returning existing customer ${existingCustomer.id}`
+          )
+          return this.toDomainEntity(existingCustomer)
+        }
+
+        // Should never reach here
+        logger.error(
+          "CustomerRepository.create: CRITICAL - Customer not found after P2002 error"
+        )
+        throw new Error(
+          "Numero di telefono o email già registrati nel sistema"
+        )
+      }
+
+      // Different error, rethrow
       logger.error("Error creating customer:", error)
       throw error
     }

@@ -3,6 +3,7 @@ import {
   BarChart3,
   HelpCircle,
   LucideIcon,
+  Megaphone,
   MessageSquare,
   Package2,
   Percent,
@@ -69,6 +70,11 @@ export function Sidebar() {
       href: "/clients",
       label: "Clients",
       icon: Users,
+    },
+    {
+      href: "/campaigns",
+      label: "Campaigns",
+      icon: Megaphone,
     },
     // Catalog removed, add its children as top-level links
     {

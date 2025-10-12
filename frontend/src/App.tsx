@@ -23,6 +23,8 @@ import NotFoundPage from "./pages/not-found"
 import { OffersPage } from "./pages/OffersPage"
 import OrdersPage from "./pages/OrdersPage"
 import OrderSummaryPage from "./pages/OrderSummaryPage"
+import CampaignsPage from "./pages/campaigns"
+import CampaignFormPage from "./pages/campaigns/form"
 
 import CategoriesPage from "./pages/products/CategoriesPage"
 import { ProductsPage } from "./pages/ProductsPage"
@@ -49,6 +51,7 @@ const OrdersPublicPage = lazy(() => import("./pages/OrdersPublicPage"))
 const CustomerProfilePublicPage = lazy(
   () => import("./pages/CustomerProfilePublicPage")
 )
+const FeedbackPage = lazy(() => import("./pages/feedback"))
 
 export function App() {
   return (
@@ -141,6 +144,17 @@ export function App() {
                 {/* Modifico la route per offers per usare Layout e OffersPage */}
                 <Route path="/offers" element={<Layout />}>
                   <Route index element={<OffersPage />} />
+                </Route>
+
+                {/* Campaign routes */}
+                <Route path="/campaigns" element={<Layout />}>
+                  <Route index element={<CampaignsPage />} />
+                </Route>
+                <Route path="/campaigns/new" element={<Layout />}>
+                  <Route index element={<CampaignFormPage />} />
+                </Route>
+                <Route path="/campaigns/edit/:id" element={<Layout />}>
+                  <Route index element={<CampaignFormPage />} />
                 </Route>
               </Route>
 
@@ -235,6 +249,23 @@ export function App() {
                 path="/registration-success"
                 element={<RegistrationSuccess />}
               />
+              
+              {/* Public Feedback page via secure token */}
+              <Route
+                path="/feedback"
+                element={
+                  <Suspense
+                    fallback={
+                      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+                        <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+                      </div>
+                    }
+                  >
+                    <FeedbackPage />
+                  </Suspense>
+                }
+              />
+              
               {/* Public Checkout page via secure token (external, no platform layout) */}
               <Route
                 path="/checkout"

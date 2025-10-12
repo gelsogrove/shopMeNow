@@ -11,10 +11,12 @@ import { UserService } from "../application/services/user.service"
 import { config } from "../config"
 // BillingPrices import removed - billing handled by message.repository.ts
 import { AuthController } from "../interfaces/http/controllers/auth.controller"
+import { CampaignController } from "../interfaces/http/controllers/campaign.controller"
 import { CartTokenController } from "../interfaces/http/controllers/cart-token.controller"
 import { CategoryController } from "../interfaces/http/controllers/category.controller"
 import { ChatController } from "../interfaces/http/controllers/chat.controller"
 import { CustomersController } from "../interfaces/http/controllers/customers.controller"
+import { FeedbackController } from "../interfaces/http/controllers/feedback.controller"
 import { MessageRepository } from "../repositories/message.repository"
 // usageService import removed - usage tracking handled by message.repository.ts
 import logger from "../utils/logger"
@@ -1377,6 +1379,8 @@ const passwordResetService = new PasswordResetService(prisma)
 const cartTokenController = new CartTokenController()
 const customersController = new CustomersController()
 const servicesController = new ServicesController()
+const campaignController = new CampaignController()
+const feedbackController = new FeedbackController()
 
 const categoryController = new CategoryController()
 
@@ -1438,6 +1442,17 @@ router.use("/workspaces", workspaceCustomersRouter(customersController))
 // Mount workspace routes (includes the /current endpoint) with authentication FIRST
 router.use("/workspaces", authMiddleware, workspaceRoutesLegacy)
 router.use("/workspaces", workspaceRoutes)
+
+// Mount campaign routes
+import { campaignRoutes } from "../interfaces/http/routes/campaign.routes"
+router.use("/workspaces", campaignRoutes(campaignController))
+logger.info("✅ Registered campaign routes: /api/workspaces/:workspaceId/campaigns")
+
+// Mount feedback routes (public + admin)
+import { feedbackRoutes } from "../interfaces/http/routes/feedback.routes"
+router.use(feedbackRoutes(feedbackController))
+logger.info("✅ Registered feedback routes: /api/feedback (public), /api/workspaces/:workspaceId/feedbacks (admin)")
+
 // Mount agent routes with workspace parameter properly configured
 router.use(
   "/workspaces/:workspaceId/agent",

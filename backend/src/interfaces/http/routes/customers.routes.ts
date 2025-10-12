@@ -63,6 +63,16 @@ export const customersRouter = (controller: CustomersController): Router => {
     controller.updateChatbotControl.bind(controller)
   )
 
+  // Validation endpoints for frontend real-time validation
+  router.get(
+    "/:workspaceId/customers/check-phone",
+    controller.checkPhoneExists.bind(controller)
+  )
+  router.get(
+    "/:workspaceId/customers/check-email",
+    controller.checkEmailExists.bind(controller)
+  )
+
   // Route for counting unknown customers - explicitly defined with extra logging
   router.get("/:workspaceId/unknown-customers/count", (req, res, next) => {
     logger.info(

@@ -44,6 +44,7 @@ export interface CustomerProps {
   activeChatbot?: boolean
   invoiceAddress?: InvoiceAddress
   salesId?: string
+  feedbacks?: any[]
 }
 
 /**
@@ -74,6 +75,7 @@ export class Customer {
   readonly activeChatbot: boolean
   readonly invoiceAddress?: InvoiceAddress
   readonly salesId?: string
+  readonly feedbacks?: any[]
 
   constructor(props: CustomerProps) {
     this.id = props.id || uuidv4()
@@ -100,6 +102,7 @@ export class Customer {
       props.activeChatbot !== undefined ? props.activeChatbot : true
     this.invoiceAddress = props.invoiceAddress
     this.salesId = props.salesId
+    this.feedbacks = props.feedbacks || []
   }
 
   /**

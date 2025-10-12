@@ -617,4 +617,74 @@ export class CustomersController {
       next(error)
     }
   }
+
+  /**
+   * Check if phone number already exists in workspace
+   * Used for frontend real-time validation
+   */
+  async checkPhoneExists(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { workspaceId } = req.params
+      const { phone } = req.query
+
+      if (!phone || typeof phone !== "string") {
+        return res.status(400).json({ error: "Phone number is required" })
+      }
+
+      const existingCustomer = await prisma.customers.findFirst({
+        where: {
+          phone: phone as string,
+          workspaceId,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      })
+
+      res.json({
+        exists: !!existingCustomer,
+        customer: existingCustomer || null,
+      })
+    } catch (error) {
+      logger.error("Error checking phone existence:", error)
+      next(error)
+    }
+  }
+
+  /**
+   * Check if email already exists in workspace
+   * Used for frontend real-time validation
+   */
+  async checkEmailExists(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { workspaceId } = req.params
+      const { email } = req.query
+
+      if (!email || typeof email !== "string") {
+        return res.status(400).json({ error: "Email is required" })
+      }
+
+      const existingCustomer = await prisma.customers.findFirst({
+        where: {
+          email: email as string,
+          workspaceId,
+        },
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+        },
+      })
+
+      res.json({
+        exists: !!existingCustomer,
+        customer: existingCustomer || null,
+      })
+    } catch (error) {
+      logger.error("Error checking email existence:", error)
+      next(error)
+    }
+  }
 }

@@ -151,8 +151,10 @@ export class RegistrationController {
 
       if (existingEmailCustomer) {
         return res.status(409).json({
-          error: "Email already registered",
-          message: "This email address is already registered in our system",
+          error: "Email già registrata",
+          message:
+            "Questo indirizzo email è già registrato nel sistema. Utilizza un'altra email o contatta il supporto.",
+          field: "email",
         })
       }
 
@@ -183,26 +185,83 @@ export class RegistrationController {
         })
       } else {
         // Create new customer with provided email
-        customer = await prisma.customers.create({
-          data: {
-            name: `${first_name} ${last_name}`,
-            email: email, // Use the email provided by the user
-            phone,
-            company,
-            workspaceId: workspace_id,
-            language: language || "ENG",
-            currency: currency || "EUR",
-            last_privacy_version_accepted: "1.0.0", // Current privacy policy version
-            privacy_accepted_at: new Date(),
-            push_notifications_consent: push_notifications_consent || false,
-            push_notifications_consent_at: push_notifications_consent
-              ? new Date()
-              : null,
-            isActive: true,
-            isBlacklisted: false, // New users are NOT blocked - they can use chatbot immediately
-            activeChatbot: true, // New users have chatbot enabled by default
-          },
-        })
+        try {
+          customer = await prisma.customers.create({
+            data: {
+              name: `${first_name} ${last_name}`,
+              email: email, // Use the email provided by the user
+              phone,
+              company,
+              workspaceId: workspace_id,
+              language: language || "ENG",
+              currency: currency || "EUR",
+              last_privacy_version_accepted: "1.0.0", // Current privacy policy version
+              privacy_accepted_at: new Date(),
+              push_notifications_consent: push_notifications_consent || false,
+              push_notifications_consent_at: push_notifications_consent
+                ? new Date()
+                : null,
+              isActive: true,
+              isBlacklisted: false, // New users are NOT blocked - they can use chatbot immediately
+              activeChatbot: true, // New users have chatbot enabled by default
+            },
+          })
+        } catch (createError: any) {
+          // P2002: Unique constraint violation (phone or email already exists)
+          if (createError.code === "P2002") {
+            logger.error(
+              `[REGISTRATION] Unique constraint violation during customer creation. Phone: ${phone}, Email: ${email}`,
+              createError
+            )
+
+            // Fetch the existing customer (race condition: another request created it)
+            customer = await prisma.customers.findFirst({
+              where: {
+                phone,
+                workspaceId: workspace_id,
+              },
+            })
+
+            if (!customer) {
+              // This should never happen, but handle it gracefully
+              return res.status(409).json({
+                error: "Numero di telefono o email già registrati",
+                message:
+                  "Questo numero di telefono o email è già presente nel sistema.",
+              })
+            }
+
+            // Update the existing customer found
+            customer = await prisma.customers.update({
+              where: {
+                id: customer.id,
+              },
+              data: {
+                name: `${first_name} ${last_name}`,
+                email: email,
+                company,
+                language: language || "ENG",
+                currency: currency || "EUR",
+                last_privacy_version_accepted: "1.0.0",
+                privacy_accepted_at: new Date(),
+                push_notifications_consent: push_notifications_consent || false,
+                push_notifications_consent_at: push_notifications_consent
+                  ? new Date()
+                  : null,
+                isActive: true,
+                isBlacklisted: false,
+                activeChatbot: true,
+              },
+            })
+
+            logger.info(
+              `[REGISTRATION] ✅ Race condition handled - updated existing customer ${customer.id}`
+            )
+          } else {
+            // Different error, rethrow
+            throw createError
+          }
+        }
       }
 
       // 🔧 CRITICAL FIX: Update token with customerId for TOKEN-ONLY system

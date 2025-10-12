@@ -25,6 +25,7 @@ import {
   Pencil,
   Plus,
   ShoppingCart,
+  Star,
   Trash2,
   Users,
 } from "lucide-react"
@@ -70,6 +71,11 @@ export interface Client {
   activeChatbot?: boolean
   invoiceAddress?: InvoiceAddress
   isBlacklisted?: boolean
+  feedback?: {
+    rating: number
+    comment?: string
+    createdAt: string
+  }
 }
 
 const availableLanguages = ["Español", "English", "Italiano", "Português"]
@@ -163,6 +169,14 @@ export default function ClientsPage(): JSX.Element {
           customer.activeChatbot !== undefined ? customer.activeChatbot : true,
         invoiceAddress: customer.invoiceAddress || undefined,
         isBlacklisted: customer.isBlacklisted || false,
+        feedback:
+          customer.feedbacks && customer.feedbacks.length > 0
+            ? {
+                rating: customer.feedbacks[0].rating,
+                comment: customer.feedbacks[0].comment,
+                createdAt: customer.feedbacks[0].createdAt,
+              }
+            : undefined,
       }))
 
       // Sort clients by ID in descending order (newer clients at the top)
@@ -477,6 +491,49 @@ export default function ClientsPage(): JSX.Element {
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
+          {/* Feedback icon (if customer has feedback) */}
+          {row.original.feedback && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="h-8 w-8 p-0 flex items-center justify-center"
+                  >
+                    <span className="sr-only">Feedback</span>
+                    <Star
+                      className={`${commonStyles.actionIcon} text-yellow-500 fill-yellow-500`}
+                    />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`w-3 h-3 ${
+                            i < row.original.feedback.rating
+                              ? "text-yellow-500 fill-yellow-500"
+                              : "text-gray-300"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    {row.original.feedback.comment && (
+                      <p className="text-sm">{row.original.feedback.comment}</p>
+                    )}
+                    <p className="text-xs text-gray-500">
+                      {new Date(
+                        row.original.feedback.createdAt
+                      ).toLocaleDateString("it-IT")}
+                    </p>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+
           {/* Edit button */}
           <TooltipProvider>
             <Tooltip>

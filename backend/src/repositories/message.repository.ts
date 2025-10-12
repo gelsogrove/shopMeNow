@@ -716,21 +716,58 @@ export class MessageRepository {
         }
 
         // Create a temporary customer for new users
-        customer = await this.prisma.customers.create({
-          data: {
-            name: `Unknown User-${randomNumber}`,
-            email: `${data.phoneNumber.replace(/[^0-9]/g, "")}@temp.com`,
-            phone: data.phoneNumber,
-            workspaceId: workspaceId,
-            isActive: false, // Mark as inactive until they register
-            language: detectedLanguage,
-            currency: "EUR",
-          },
-        })
+        try {
+          customer = await this.prisma.customers.create({
+            data: {
+              name: `Unknown User-${randomNumber}`,
+              email: `${data.phoneNumber.replace(/[^0-9]/g, "")}@temp.com`,
+              phone: data.phoneNumber,
+              workspaceId: workspaceId,
+              isActive: false, // Mark as inactive until they register
+              language: detectedLanguage,
+              currency: "EUR",
+            },
+          })
 
-        logger.info(
-          `saveMessage: Created temporary customer ${customer.id} (Unknown User-${randomNumber}) for new user ${data.phoneNumber} with detected language: ${detectedLanguage}`
-        )
+          logger.info(
+            `saveMessage: Created temporary customer ${customer.id} (Unknown User-${randomNumber}) for new user ${data.phoneNumber} with detected language: ${detectedLanguage}`
+          )
+        } catch (createError: any) {
+          // P2002: Unique constraint violation (phone already exists)
+          if (createError.code === "P2002") {
+            logger.warn(
+              `saveMessage: Race condition - customer with phone ${data.phoneNumber} already created. Fetching existing customer.`
+            )
+
+            // Fetch the existing customer (race condition: another webhook created it)
+            customer = await this.prisma.customers.findFirst({
+              where: {
+                phone: data.phoneNumber,
+                workspaceId: workspaceId,
+              },
+            })
+
+            if (!customer) {
+              logger.error(
+                `saveMessage: CRITICAL - Customer not found after P2002 error for phone ${data.phoneNumber}`
+              )
+              throw new Error(
+                "Customer not found after unique constraint violation"
+              )
+            }
+
+            logger.info(
+              `saveMessage: ✅ Race condition handled - using existing customer ${customer.id}`
+            )
+          } else {
+            // Different error, rethrow
+            logger.error(
+              `saveMessage: Error creating customer for phone ${data.phoneNumber}:`,
+              createError
+            )
+            throw createError
+          }
+        }
       }
 
       // Update customer's lastContact field
@@ -1654,7 +1691,51 @@ export class MessageRepository {
       })
       logger.info(`Created customer: ${customer.id}`)
       return customer
-    } catch (error) {
+    } catch (error: any) {
+      // P2002: Unique constraint violation (phone or email already exists)
+      if (error.code === "P2002") {
+        logger.warn(
+          `createCustomer: Unique constraint violation for phone ${phone} or email ${email}. Fetching existing customer.`
+        )
+
+        // Fetch the existing customer
+        const existingCustomer = await this.prisma.customers.findFirst({
+          where: {
+            phone,
+            workspaceId,
+          },
+        })
+
+        if (existingCustomer) {
+          logger.info(
+            `createCustomer: ✅ Returning existing customer ${existingCustomer.id}`
+          )
+          return existingCustomer
+        }
+
+        // If not found by phone, might be email duplicate
+        const existingByEmail = await this.prisma.customers.findFirst({
+          where: {
+            email,
+            workspaceId,
+          },
+        })
+
+        if (existingByEmail) {
+          logger.info(
+            `createCustomer: ✅ Returning existing customer by email ${existingByEmail.id}`
+          )
+          return existingByEmail
+        }
+
+        // Should never reach here, but handle gracefully
+        logger.error(
+          "createCustomer: CRITICAL - Customer not found after P2002 error"
+        )
+        throw new Error("Customer not found after unique constraint violation")
+      }
+
+      // Different error, rethrow
       logger.error("Error creating customer:", error)
       throw new Error("Failed to create customer")
     }

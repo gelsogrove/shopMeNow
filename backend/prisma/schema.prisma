@@ -53,6 +53,7 @@ model Workspace {
   usage                     Usage[]
   whatsappSettings          WhatsappSettings?
   adminSessions             AdminSession[]
+  campaigns                 Campaign[]
 }
 
 model Categories {
@@ -159,6 +160,8 @@ model Customers {
   orders                        Orders[]
   usage                         Usage[]
   billings                      Billing[]
+  campaignSends                 CampaignSent[]
+  feedbacks                     CustomerFeedback[]
 
   @@map("customers")
 }
@@ -779,6 +782,93 @@ enum BillingType {
   PUSH_MESSAGE
   NEW_FAQ
   ACTIVE_OFFER
+  FEEDBACK
+  ORDER_REVIEW
+  CAMPAIGN_LINK
+}
+
+enum CampaignFrequency {
+  WEEKLY      // Ogni 7 giorni
+  BIWEEKLY    // Ogni 14 giorni
+  MONTHLY     // Ogni 30 giorni
+  BIMONTHLY   // Ogni 60 giorni
+  QUARTERLY   // Ogni 90 giorni
+  SEMIANNUAL  // Ogni 180 giorni (6 mesi)
+  ANNUAL      // Ogni 365 giorni
+}
+
+enum CampaignTargetType {
+  ALL       // Tutti i customer attivi del workspace
+  SELECTED  // Solo customer IDs specificati
+}
+
+model Campaign {
+  id              String              @id @default(cuid())
+  workspaceId     String
+  name            String              // "Richiesta Feedback Semestrale"
+  messagePreview  String              @db.Text // Markdown per visualizzazione admin (con token [FEEDBACK], {{nome}}, ecc)
+  frequency       CampaignFrequency
+  isActive        Boolean             @default(true)
+  
+  // Destinatari
+  targetType      CampaignTargetType  @default(ALL)
+  customerIds     String[]            @default([]) // Array di customer IDs se targetType = SELECTED
+  
+  // Template WhatsApp (opzionale, per uso futuro con Meta Business API)
+  templateName    String?             // Nome template Meta (es: "feedback_request_v1")
+  templateParams  Json?               // Parametri template WhatsApp come JSON
+  
+  // Metadata
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  lastRunAt       DateTime?           // Ultima esecuzione cron
+  
+  // Relations
+  workspace       Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sends           CampaignSent[]
+  feedbacks       CustomerFeedback[]
+  
+  @@index([workspaceId])
+  @@index([isActive])
+  @@index([frequency])
+}
+
+model CampaignSent {
+  id          String    @id @default(cuid())
+  campaignId  String
+  customerId  String
+  workspaceId String
+  sentAt      DateTime  @default(now())
+  tokenUsed   String?   // Token generato per tracking click
+  clickedAt   DateTime? // Se customer ha cliccato sul link
+  
+  // Relations
+  campaign    Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  customer    Customers @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  @@index([campaignId])
+  @@index([customerId])
+  @@index([workspaceId])
+  @@index([sentAt])
+}
+
+model CustomerFeedback {
+  id          String    @id @default(cuid())
+  customerId  String
+  workspaceId String
+  campaignId  String?   // Opzionale: da quale campagna arriva
+  rating      Int       // 1-5 stelline
+  comment     String?   @db.Text
+  createdAt   DateTime  @default(now())
+  
+  // Relations
+  customer    Customers @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  campaign    Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  
+  @@index([customerId])
+  @@index([workspaceId])
+  @@index([campaignId])
+  @@index([createdAt])
 }
 
 model AdminSession {
