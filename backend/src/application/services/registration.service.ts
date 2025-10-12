@@ -15,6 +15,77 @@ export class RegistrationService {
   }
 
   /**
+   * Send a WhatsApp message using workspace settings
+   */
+  private async sendWhatsAppMessage(
+    phoneNumber: string,
+    message: string,
+    workspaceId: string
+  ): Promise<boolean> {
+    try {
+      logger.info(
+        `[REGISTRATION-WA] 📱 Sending after-registration message to ${phoneNumber}`
+      )
+
+      // Get workspace WhatsApp settings
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: {
+          whatsappApiKey: true,
+          whatsappPhoneNumber: true,
+        },
+      })
+
+      if (!workspace || !workspace.whatsappApiKey) {
+        logger.error(
+          `[REGISTRATION-WA] WhatsApp settings not found for workspace ${workspaceId}`
+        )
+        return false
+      }
+
+      // Send message via WhatsApp Business API
+      const whatsappApiUrl = `https://graph.facebook.com/v18.0/${workspace.whatsappPhoneNumber}/messages`
+
+      const whatsappPayload = {
+        messaging_product: "whatsapp",
+        to: phoneNumber.replace("+", ""),
+        type: "text",
+        text: {
+          body: message,
+        },
+      }
+
+      const response = await fetch(whatsappApiUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${workspace.whatsappApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(whatsappPayload),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.text()
+        logger.error(
+          `[REGISTRATION-WA] WhatsApp API error: ${response.status} ${response.statusText} - ${errorData}`
+        )
+        return false
+      }
+
+      const responseData = await response.json()
+      logger.info(
+        `[REGISTRATION-WA] ✅ Message sent successfully:`,
+        responseData
+      )
+
+      return true
+    } catch (error) {
+      logger.error(`[REGISTRATION-WA] Error sending WhatsApp message:`, error)
+      return false
+    }
+  }
+
+  /**
    * Send an after-registration message to a newly registered customer
    *
    * @param customerId The customer ID
@@ -83,7 +154,20 @@ export class RegistrationService {
       // Send the message
       if (customer.phone) {
         try {
-          // Use the message repository to save the outgoing message
+          // 1. Send via WhatsApp API
+          const whatsappSent = await this.sendWhatsAppMessage(
+            customer.phone,
+            afterRegistrationMessage,
+            customer.workspaceId
+          )
+
+          if (!whatsappSent) {
+            logger.warn(
+              `Failed to send after-registration message via WhatsApp to ${customer.phone}`
+            )
+          }
+
+          // 2. Save the outgoing message to history (even if WhatsApp failed)
           await this.messageRepository.saveMessage({
             workspaceId: customer.workspaceId,
             phoneNumber: customer.phone,
@@ -94,11 +178,11 @@ export class RegistrationService {
           })
 
           logger.info(
-            `After-registration message sent to customer ${customerId}`
+            `After-registration message ${whatsappSent ? "sent" : "saved"} for customer ${customerId}`
           )
-          return true
+          return whatsappSent
         } catch (error) {
-          logger.error("Error saving after-registration message:", error)
+          logger.error("Error sending after-registration message:", error)
           return false
         }
       } else {
