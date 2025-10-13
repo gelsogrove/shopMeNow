@@ -285,10 +285,6 @@ export class LLMService {
   ): Promise<string> {
     let finalResponse = response
 
-    console.log(`\n🔗 ====== REPLACE LINK TOKENS START ======`)
-    console.log(`📝 Original response length: ${response.length}`)
-    console.log(`🔎 Response preview: ${response.substring(0, 200)}...`)
-
     // 🔗 Lista completa dei token supportati
     const SUPPORTED_TOKENS = [
       "[LINK_CHECKOUT_WITH_TOKEN]",
@@ -302,8 +298,6 @@ export class LLMService {
     for (const token of SUPPORTED_TOKENS) {
       if (!finalResponse.includes(token)) continue
 
-      console.log(`🔍 [TOKEN-CHECK] Found token: ${token}`)
-
       try {
         switch (token) {
           case "[LINK_CHECKOUT_WITH_TOKEN]": {
@@ -314,10 +308,6 @@ export class LLMService {
               }
             )
             const linkUrl = checkoutLink?.linkUrl || ""
-
-            console.log(
-              `📎 [TOKEN-REPLACE] Replacing ${token} with: ${linkUrl}`
-            )
 
             linkReplacements.push({
               token,
@@ -342,10 +332,6 @@ export class LLMService {
             const profileUrl =
               profileResult?.message?.match(/https?:\/\/[^\s)]+/)?.[0] || ""
 
-            console.log(
-              `📎 [TOKEN-REPLACE] Replacing ${token} with: ${profileUrl}`
-            )
-
             linkReplacements.push({
               token,
               replacedWith: profileUrl,
@@ -365,10 +351,6 @@ export class LLMService {
                 workspaceId: workspace.id,
               })
             const linkUrl = ordersLink?.linkUrl || ""
-
-            console.log(
-              `📎 [TOKEN-REPLACE] Replacing ${token} with: ${linkUrl}`
-            )
 
             linkReplacements.push({
               token,
@@ -393,10 +375,6 @@ export class LLMService {
             if (catalogResult?.success && catalogResult?.message) {
               const catalogUrl =
                 catalogResult.message.match(/https?:\/\/[^\s)]+/)?.[0] || ""
-
-              console.log(
-                `📎 [TOKEN-REPLACE] Replacing ${token} with: ${catalogUrl}`
-              )
 
               linkReplacements.push({
                 token,
@@ -430,25 +408,13 @@ export class LLMService {
     // 🚨 AUTO-FIX: Replace hardcoded links with proper tokens (LAST STEP)
     const workspaceUrl = workspace.url || "http://localhost:3000"
 
-    console.log(`\n🚨 ====== AUTO-FIX CHECK START ======`)
-    console.log(`🌐 Workspace URL: ${workspaceUrl}`)
-    console.log(`📝 Response to check: ${finalResponse}`)
-
     // Pattern 1: /orders (without token) -> generate proper link with token
     const ordersPattern = new RegExp(
       `${workspaceUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/orders(?![\\-/])`,
       "g"
     )
-    console.log(`🔍 Orders pattern: ${ordersPattern}`)
-    console.log(
-      `🔍 Orders pattern test result: ${ordersPattern.test(finalResponse)}`
-    )
-
-    // Reset lastIndex because test() moves it
-    ordersPattern.lastIndex = 0
 
     if (ordersPattern.test(finalResponse)) {
-      console.log(`⚠️ AUTO-FIX: Found hardcoded /orders link!`)
       logger.warn(
         `⚠️ AUTO-FIX: LLM generated hardcoded /orders link, replacing with token-based link`
       )
@@ -509,11 +475,6 @@ export class LLMService {
         `✅ AUTO-FIX: Replaced hardcoded /checkout link with: ${properCheckoutLink}`
       )
     }
-
-    console.log(`\n✅ ====== REPLACE LINK TOKENS END ======`)
-    console.log(`📊 Total replacements: ${linkReplacements.length}`)
-    console.log(`📝 Final response length: ${finalResponse.length}`)
-    console.log(`📋 Replacements:`, JSON.stringify(linkReplacements, null, 2))
 
     return finalResponse
   }

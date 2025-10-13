@@ -268,28 +268,5 @@ describe("📊 Calling Functions - Summary Report", () => {
     expect(
       fs.existsSync(path.join(callingFunctionsDir, "GetLinkOrderByCode.ts"))
     ).toBe(true)
-
-    console.log(`
-    ✅ CALLING FUNCTIONS VERIFICATION COMPLETE - CLEAN ARCHITECTURE
-    ================================================================
-    
-    📁 Architecture: Clean Architecture / DDD Pattern
-    
-    📂 Domain Layer (domain/calling-functions/):
-       🔧 LLM-Callable Functions (Business Logic):
-          1. ✅ ContactOperator.ts - Escalation a operatore umano
-          2. ✅ GetShipmentTrackingLink.ts - Tracking spedizione DHL
-          3. ✅ GetLinkOrderByCode.ts - Link dettagli ordine
-    
-    � Application Layer (application/services/):
-       🛠️ Support Services:
-          - ✅ LinkReplacementService - Token replacement utility
-    
-    📋 Total Calling Functions: 3 (domain layer)
-    📋 Support Services: 1 (application layer)
-    ✅ All functions properly exported and importable
-    ✅ All functions aligned with docs/prompt_agent.md
-    ✅ Clean Architecture principles respected
-    `)
   })
 })

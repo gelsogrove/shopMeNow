@@ -1,18 +1,8 @@
 FASE 1
 
-<<<<<<< HEAD
-
 - security test name!!!
 
-=======
-
-> > > > > > > aa713fb6dfa45fec21f25286aaf1f3633aa22624
-
-- SKIP_TRANSLATION_TESTS non serve
-
 - top product top cusomer solo i primi 3
-
-<<<<<<< HEAD
 
 - altro gusto non altra italia con prodotti nostri e foto nostre
 

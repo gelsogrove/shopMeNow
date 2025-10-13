@@ -2,9 +2,13 @@
 // This file runs before each test file
 // You can add global setup code here
 
-// Example: Setting up console mocks to avoid noise in tests
-// const originalConsoleLog = console.log;
-// console.log = jest.fn();
+// 🔇 Silence console.log, console.warn, console.error in tests
+global.console = {
+  ...console,
+  log: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+}
 
 // Solo per i test unitari, mocka PrismaClient
 // Per i test di integrazione, usiamo il vero PrismaClient

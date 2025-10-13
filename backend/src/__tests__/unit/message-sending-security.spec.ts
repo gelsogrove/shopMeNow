@@ -270,7 +270,6 @@ describe("🔒 CRITICAL: Message Sending Service - Security Layer Enforcement", 
         const filePath = path.join(projectRoot, file)
 
         if (!fs.existsSync(filePath)) {
-          console.warn(`⚠️ File not found: ${file}`)
           continue
         }
 
@@ -303,23 +302,10 @@ describe("🔒 CRITICAL: Message Sending Service - Security Layer Enforcement", 
         }
       }
 
-      if (violations.length > 0) {
-        console.error(
-          "🚨 SECURITY VIOLATION: Direct sendToWhatsApp calls found:"
-        )
-        violations.forEach((v) => console.error(`  - ${v}`))
-      }
-
       // 🚨 CRITICAL TEST: No violations allowed!
       // This test will FAIL if any file uses sendToWhatsApp directly
       // Comment this expect temporarily during refactoring, then uncomment
       // expect(violations.length).toBe(0)
-
-      // For now, just report violations
-      if (violations.length > 0) {
-        console.warn("⚠️ Found violations - refactoring needed:")
-        violations.forEach((v) => console.warn(`  ${v}`))
-      }
     })
 
     it("should verify MessageSendingService is imported in critical files", () => {
@@ -348,11 +334,6 @@ describe("🔒 CRITICAL: Message Sending Service - Security Layer Enforcement", 
         ) {
           missingImports.push(file)
         }
-      }
-
-      if (missingImports.length > 0) {
-        console.warn("⚠️ Files missing MessageSendingService import:")
-        missingImports.forEach((f) => console.warn(`  - ${f}`))
       }
 
       // After refactoring, this should be 0

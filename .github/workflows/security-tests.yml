@@ -1,4 +1,4 @@
-name: 🔒 Security Tests (REQUIRED)
+name: 🔒 Safty Checks (REQUIRED)
 
 on:
   push:
@@ -68,15 +68,11 @@ jobs:
       - name: 🧪 Run unit tests (NO DATABASE)
         working-directory: ./backend
         run: npm run test:unit
-        env:
-          SKIP_TRANSLATION_TESTS: "true" # Skip tests that require OpenRouter API (cost money)
         # Fast in-memory tests - no database required
 
       - name: 📊 Generate coverage report
         working-directory: ./backend
         run: npm run test:coverage
-        env:
-          SKIP_TRANSLATION_TESTS: "true"
         continue-on-error: true
 
       - name: 📤 Upload coverage to Codecov

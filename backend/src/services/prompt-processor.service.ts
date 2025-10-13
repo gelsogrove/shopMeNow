@@ -1,6 +1,7 @@
 import fs from "fs"
 import path from "path"
 import { MessageRepository } from "../repositories/message.repository"
+import logger from "../utils/logger"
 
 export class PromptProcessorService {
   private messageRepository: MessageRepository
@@ -168,9 +169,9 @@ ${prompt}
 `
 
       fs.writeFileSync(filepath, debugContent, "utf8")
-      console.log(`[DEBUG] Prompt salvato in: ${filepath}`)
+      logger.info(`[DEBUG] Prompt salvato in: ${filepath}`)
     } catch (error) {
-      console.error("[DEBUG] Errore nel salvare il prompt:", error)
+      logger.error("[DEBUG] Errore nel salvare il prompt:", error)
     }
   }
 }
