@@ -85,6 +85,7 @@ backend/src/
 ```
 
 **Problemi risolti**:
+
 - ❌ Mix di domain logic e utility functions
 - ❌ Cartella `chatbot/` senza chiaro scopo architetturale
 - ❌ Violazione Separation of Concerns
@@ -100,12 +101,14 @@ backend/src/
 **Scopo**: Escalation a operatore umano quando il cliente richiede assistenza personale.
 
 **Trigger LLM** (da `docs/prompt_agent.md` line 177):
+
 - "voglio parlare con operatore"
 - "assistenza umana"
 - "customer service"
 - Trigger di frustrazione: "stufo", "problema", "danneggiata"
 
 **Signature**:
+
 ```typescript
 export async function ContactOperator(
   request: ContactOperatorRequest
@@ -120,6 +123,7 @@ interface ContactOperatorRequest {
 ```
 
 **Responsabilità**:
+
 - ✅ Registra richiesta di escalation
 - ✅ Crea ticket/record nel database
 - ✅ Ritorna messaggio di conferma per il cliente
@@ -134,12 +138,14 @@ interface ContactOperatorRequest {
 **Scopo**: Genera link DHL per tracciare la spedizione di un ordine.
 
 **Trigger LLM** (da `docs/prompt_agent.md` line 210):
+
 - "dov'è il mio ordine?"
 - "tracking spedizione"
 - "quando arriva il pacco?"
 - "dove si trova il mio ordine?"
 
 **Signature**:
+
 ```typescript
 export async function GetShipmentTrackingLink(
   request: GetShipmentTrackingLinkRequest
@@ -153,6 +159,7 @@ interface GetShipmentTrackingLinkRequest {
 ```
 
 **Responsabilità**:
+
 - ✅ Recupera ordine da database con tracking number
 - ✅ Genera URL DHL: `https://www.dhl.com/.../tracking-id=XXX`
 - ✅ Crea short URL tramite URLShortenerService
@@ -168,12 +175,14 @@ interface GetShipmentTrackingLinkRequest {
 **Scopo**: Genera link sicuro per visualizzare dettagli di un ordine specifico.
 
 **Trigger LLM** (da `docs/prompt_agent.md` line 247):
+
 - "dammi ordine"
 - "mostrami ultimo ordine"
 - "fattura ordine XXX"
 - "dettagli ordine"
 
 **Signature**:
+
 ```typescript
 export async function GetLinkOrderByCode(
   request: GetLinkOrderByCodeRequest
@@ -189,6 +198,7 @@ interface GetLinkOrderByCodeRequest {
 ```
 
 **Responsabilità**:
+
 - ✅ Usa `CallingFunctionsService.getOrdersListLink()`
 - ✅ Genera token sicuro con SecureTokenService
 - ✅ Crea link pubblico `/orders-public?token=xxx`
@@ -208,6 +218,7 @@ interface GetLinkOrderByCodeRequest {
 **NON è una Calling Function LLM!** È un servizio di supporto.
 
 **Tokens supportati**:
+
 - `[LINK_CHECKOUT_WITH_TOKEN]` → Link carrello/checkout
 - `[LINK_PROFILE_WITH_TOKEN]` → Link profilo cliente
 - `[LINK_ORDERS_WITH_TOKEN]` → Link lista ordini
@@ -218,6 +229,7 @@ interface GetLinkOrderByCodeRequest {
 - `[LIST_CATEGORIES]` → Lista categorie
 
 **Signature**:
+
 ```typescript
 export class LinkReplacementService {
   async replaceTokens(
@@ -232,6 +244,7 @@ export async function ReplaceLinkWithToken(...)
 ```
 
 **Usato da**:
+
 - `LLMService` - Sostituisce token in risposte AI
 - `FormatterService` - Formatta risposte prima dell'invio
 - `PromptProcessorService` - Processa prompt template
@@ -308,6 +321,7 @@ External APIs → Services → Application → Domain
 ✅ **Estendibile senza modifiche**
 
 Aggiungere nuova calling function:
+
 1. Crea file in `domain/calling-functions/`
 2. Registra in `CallingFunctionsService`
 3. Aggiungi al system prompt LLM
@@ -331,6 +345,7 @@ Aggiungere nuova calling function:
 **File**: `src/__tests__/unit/calling-functions.spec.ts`
 
 **Verifica**:
+
 1. ✅ File structure (3 file in `domain/calling-functions/`)
 2. ✅ Export/import corretto
 3. ✅ Signature functions corretta
@@ -338,6 +353,7 @@ Aggiungere nuova calling function:
 5. ✅ Allineamento con `docs/prompt_agent.md`
 
 **Test Coverage**:
+
 - File existence verification
 - Import/export validation
 - Function signature checks
@@ -347,6 +363,7 @@ Aggiungere nuova calling function:
 ### Integration Tests
 
 **Scenario**:
+
 1. Mock database con ordini test
 2. Call `GetShipmentTrackingLink({ customerId, workspaceId })`
 3. Verify: link DHL generato, short URL creato, 1h expiry
@@ -375,7 +392,7 @@ export async function NewFunction(
     // Business logic pura
     // NO dependencies da services esterni
     // NO side effects globali
-    
+
     return {
       success: true,
       // ... risultato
@@ -383,7 +400,7 @@ export async function NewFunction(
   } catch (error) {
     return {
       success: false,
-      error: error.message
+      error: error.message,
     }
   }
 }
@@ -417,10 +434,12 @@ public async newFunction(
 **QUANDO USARE**: [descrizione trigger]
 
 **TRIGGER SEMANTICI**:
+
 - "frase trigger 1"
 - "frase trigger 2"
 
 **LOGICA**:
+
 - [descrizione comportamento]
 ```
 
@@ -445,6 +464,7 @@ it("should export NewFunction function", async () => {
 **Causa**: Vecchio import path non aggiornato
 
 **Soluzione**:
+
 ```bash
 # Cerca vecchi import
 grep -r "chatbot/calling-functions" backend/src/
@@ -457,6 +477,7 @@ grep -r "chatbot/calling-functions" backend/src/
 ### Problema: "Calling function non viene chiamata dall'LLM"
 
 **Checklist**:
+
 1. ✅ Function definita in `docs/prompt_agent.md`?
 2. ✅ Trigger semantici chiari e specifici?
 3. ✅ Function registrata in `CallingFunctionsService`?
@@ -466,6 +487,7 @@ grep -r "chatbot/calling-functions" backend/src/
 ### Problema: "Function ritorna sempre error"
 
 **Debug**:
+
 ```typescript
 // Aggiungi console.log nella function
 console.log("📞 NewFunction called with:", request)
