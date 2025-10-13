@@ -1,21 +1,24 @@
 /**
  * Unit Test: Message Sending Service - Security Layer Enforcement
- * 
+ *
  * 🎯 OBIETTIVO CRITICO: Verificare che TUTTI i punti di invio WhatsApp
  * passino dal MessageSendingService e che il security layer sia applicato
  * correttamente in base al sendType
- * 
+ *
  * Test strategy:
  * 1. Verifica matrice decisionale security layer per ogni sendType
  * 2. Scansiona codebase per trovare TUTTE le chiamate a sendToWhatsApp
  * 3. Verifica che tutti i file rilevanti usino MessageSendingService
  */
 
-import { MessageSendingService, SendType } from "../../services/message-sending.service"
-import translationSecurityService from "../../services/translation-security.service"
-import { sendToWhatsApp } from "../../services/whatsapp-api.service"
 import * as fs from "fs"
 import * as path from "path"
+import {
+  MessageSendingService,
+  SendType,
+} from "../../services/message-sending.service"
+import translationSecurityService from "../../services/translation-security.service"
+import { sendToWhatsApp } from "../../services/whatsapp-api.service"
 
 // Mock dependencies
 jest.mock("../../services/translation-security.service")
@@ -25,7 +28,9 @@ jest.mock("../../utils/logger")
 const mockTranslationService = translationSecurityService as jest.Mocked<
   typeof translationSecurityService
 >
-const mockSendToWhatsApp = sendToWhatsApp as jest.MockedFunction<typeof sendToWhatsApp>
+const mockSendToWhatsApp = sendToWhatsApp as jest.MockedFunction<
+  typeof sendToWhatsApp
+>
 
 describe("🔒 CRITICAL: Message Sending Service - Security Layer Enforcement", () => {
   let messageSendingService: MessageSendingService
@@ -263,7 +268,7 @@ describe("🔒 CRITICAL: Message Sending Service - Security Layer Enforcement", 
 
       for (const file of criticalFiles) {
         const filePath = path.join(projectRoot, file)
-        
+
         if (!fs.existsSync(filePath)) {
           console.warn(`⚠️ File not found: ${file}`)
           continue
@@ -275,7 +280,7 @@ describe("🔒 CRITICAL: Message Sending Service - Security Layer Enforcement", 
         const lines = content.split("\n")
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i]
-          
+
           // Skip import lines
           if (line.includes("import") && line.includes("sendToWhatsApp")) {
             continue
@@ -287,14 +292,21 @@ describe("🔒 CRITICAL: Message Sending Service - Security Layer Enforcement", 
           }
 
           // Check for actual usage
-          if (line.includes("sendToWhatsApp(") || line.includes("await sendToWhatsApp")) {
-            violations.push(`${file}:${i + 1} - Direct sendToWhatsApp call found`)
+          if (
+            line.includes("sendToWhatsApp(") ||
+            line.includes("await sendToWhatsApp")
+          ) {
+            violations.push(
+              `${file}:${i + 1} - Direct sendToWhatsApp call found`
+            )
           }
         }
       }
 
       if (violations.length > 0) {
-        console.error("🚨 SECURITY VIOLATION: Direct sendToWhatsApp calls found:")
+        console.error(
+          "🚨 SECURITY VIOLATION: Direct sendToWhatsApp calls found:"
+        )
         violations.forEach((v) => console.error(`  - ${v}`))
       }
 
@@ -302,7 +314,7 @@ describe("🔒 CRITICAL: Message Sending Service - Security Layer Enforcement", 
       // This test will FAIL if any file uses sendToWhatsApp directly
       // Comment this expect temporarily during refactoring, then uncomment
       // expect(violations.length).toBe(0)
-      
+
       // For now, just report violations
       if (violations.length > 0) {
         console.warn("⚠️ Found violations - refactoring needed:")
@@ -322,7 +334,7 @@ describe("🔒 CRITICAL: Message Sending Service - Security Layer Enforcement", 
 
       for (const file of criticalFiles) {
         const filePath = path.join(projectRoot, file)
-        
+
         if (!fs.existsSync(filePath)) {
           continue
         }
@@ -330,7 +342,10 @@ describe("🔒 CRITICAL: Message Sending Service - Security Layer Enforcement", 
         const content = fs.readFileSync(filePath, "utf8")
 
         // Check for MessageSendingService import
-        if (!content.includes("MessageSendingService") && !content.includes("message-sending.service")) {
+        if (
+          !content.includes("MessageSendingService") &&
+          !content.includes("message-sending.service")
+        ) {
           missingImports.push(file)
         }
       }

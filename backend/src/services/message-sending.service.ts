@@ -1,28 +1,28 @@
 /**
  * Message Sending Service - CENTRAL HUB for all WhatsApp messages
- * 
+ *
  * 🎯 OBIETTIVO: TUTTI i messaggi WhatsApp DEVONO passare da questo service
- * 
+ *
  * ✅ Garantisce che security layer sia applicato quando necessario
  * ✅ Log uniforme per audit trail
  * ✅ Gestione errori centralizzata
  * ✅ Salvataggio automatico in database
- * 
+ *
  * 🚨 REGOLA CRITICA: sendToWhatsApp NON deve essere chiamato direttamente!
  */
 
 import { PrismaClient } from "@prisma/client"
+import logger from "../utils/logger"
 import translationSecurityService from "./translation-security.service"
 import { sendToWhatsApp } from "./whatsapp-api.service"
-import logger from "../utils/logger"
 
 // Tipi di invio messaggi
-export type SendType = 
-  | "CHATBOT"          // LLM risponde al cliente
-  | "ADMIN_MANUAL"     // Admin invia manualmente dalla UI
-  | "CAMPAIGN"         // Campagna schedulata con token replacement
-  | "SCHEDULER"        // Scheduler automatico (future use)
-  | "SYSTEM"           // Notifica di sistema
+export type SendType =
+  | "CHATBOT" // LLM risponde al cliente
+  | "ADMIN_MANUAL" // Admin invia manualmente dalla UI
+  | "CAMPAIGN" // Campagna schedulata con token replacement
+  | "SCHEDULER" // Scheduler automatico (future use)
+  | "SYSTEM" // Notifica di sistema
 
 export interface SendMessageOptions {
   phoneNumber: string
@@ -55,13 +55,13 @@ export class MessageSendingService {
 
   /**
    * Invia un messaggio WhatsApp con security layer automatico
-   * 
+   *
    * @param options Opzioni di invio
    * @returns Risultato dell'invio
    */
   async sendMessage(options: SendMessageOptions): Promise<SendMessageResult> {
     const startTime = Date.now()
-    
+
     logger.info("📤 [MESSAGE-SEND] Starting message send", {
       sendType: options.sendType,
       phoneNumber: options.phoneNumber,
@@ -198,7 +198,7 @@ export class MessageSendingService {
 
   /**
    * Determina se il security layer è necessario
-   * 
+   *
    * @param sendType Tipo di invio
    * @param skipExplicit Flag esplicito per saltare security
    * @returns true se security layer necessario
@@ -236,9 +236,12 @@ export class MessageSendingService {
 
       default:
         // 🚨 Safe default: in caso di dubbio, applica security
-        logger.warn("⚠️ [MESSAGE-SEND] Unknown sendType, applying security by default", {
-          sendType,
-        })
+        logger.warn(
+          "⚠️ [MESSAGE-SEND] Unknown sendType, applying security by default",
+          {
+            sendType,
+          }
+        )
         return true
     }
   }
@@ -296,7 +299,8 @@ export class MessageSendingService {
           metadata: {
             sendType: options.sendType,
             securityChecked,
-            originalMessage: options.message !== finalMessage ? options.message : undefined,
+            originalMessage:
+              options.message !== finalMessage ? options.message : undefined,
             ...options.metadata,
           },
         },
@@ -322,10 +326,10 @@ export class MessageSendingService {
     try {
       // Check database connection
       await this.prisma.$queryRaw`SELECT 1`
-      
+
       // Check translation service
       const isHealthy = await translationSecurityService.healthCheck()
-      
+
       return isHealthy
     } catch (error) {
       logger.error("❌ [MESSAGE-SEND] Health check failed", error)

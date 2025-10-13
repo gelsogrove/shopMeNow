@@ -307,7 +307,8 @@ export class CampaignScheduler {
       workspaceId: campaign.workspaceId, // Use validated workspaceId
       customerId: validCustomer.id,
       sendType: "CAMPAIGN", // 🔒 Security layer will be applied automatically
-      userLanguage: (validCustomer.language as "it" | "es" | "pt" | "en") || "it",
+      userLanguage:
+        (validCustomer.language as "it" | "es" | "pt" | "en") || "it",
       metadata: {
         campaignId: campaign.id,
         campaignName: campaign.name,
@@ -322,11 +323,13 @@ export class CampaignScheduler {
         blocked: sendResult.blocked,
         blockReason: sendResult.blockReason,
       })
-      
+
       if (sendResult.blocked) {
-        throw new Error(`Message blocked by security: ${sendResult.blockReason}`)
+        throw new Error(
+          `Message blocked by security: ${sendResult.blockReason}`
+        )
       }
-      
+
       throw new Error(`WhatsApp send failed: ${sendResult.error}`)
     }
 

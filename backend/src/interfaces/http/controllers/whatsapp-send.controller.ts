@@ -1,9 +1,7 @@
 import { PrismaClient } from "@prisma/client"
 import { Request, Response } from "express"
-import { sendToWhatsApp } from "../../../services/whatsapp-api.service"
 import messageSendingService from "../../../services/message-sending.service"
 import logger from "../../../utils/logger"
-import { markdownToWhatsApp } from "../../../utils/whatsapp-formatter"
 
 /**
  * WhatsApp Send Controller

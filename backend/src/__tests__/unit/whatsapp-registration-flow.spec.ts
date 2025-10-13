@@ -1,19 +1,19 @@
 /**
  * UNIT TEST: WhatsApp Registration Flow
- * 
+ *
  * Test suite per verificare:
  * 1. Messaggio "Please register" per utenti non registrati
  * 2. Response status quando utente non esiste
  * 3. Conferma registrazione con variabili pubbliche (messageWasSent, registrationConfirmed)
- * 
+ *
  * Date: 13 Ottobre 2025
  * Branch: 01-layer-security
  */
 
 import { Request, Response } from "express"
 import { WhatsAppWebhookController } from "../../../src/interfaces/http/controllers/whatsapp-webhook.controller"
-import messageSendingService from "../../../src/services/message-sending.service"
 import { prisma } from "../../../src/lib/prisma"
+import messageSendingService from "../../../src/services/message-sending.service"
 
 // Mock dependencies
 jest.mock("../../../src/services/message-sending.service")
@@ -267,9 +267,7 @@ describe("WhatsApp Registration Flow", () => {
           whatsappPhoneNumber: "+1234567890",
         },
       }
-      ;(prisma.customers.findFirst as jest.Mock).mockResolvedValue(
-        mockCustomer
-      )
+      ;(prisma.customers.findFirst as jest.Mock).mockResolvedValue(mockCustomer)
       ;(prisma.chatSession.findFirst as jest.Mock).mockResolvedValue(null)
       ;(prisma.chatSession.create as jest.Mock).mockResolvedValue({
         id: "test-chat-session-id",
@@ -459,33 +457,33 @@ describe("WhatsApp Registration Flow", () => {
 
 /**
  * ESEMPIO OUTPUT ATTESO:
- * 
+ *
  * ✓ TEST 1: Utente NON registrato
  *   ✓ should send 'Please register' message when customer not found
  *   ✓ should return status 'customer_not_found' when customer does not exist
  *   ✓ should NOT proceed to LLM when customer not found
- * 
+ *
  * ✓ TEST 2: Response per utente NON registrato
  *   ✓ should return HTTP 200 even when customer not found
  *   ✓ should return specific error object structure
  *   ✓ should log warning when customer not found
- * 
+ *
  * ✓ TEST 3: Conferma dopo registrazione
  *   ✓ should set registrationConfirmed=true when welcome message sent
  *   ✓ should have messageWasSent=true after sending any message
  *   ✓ should have registrationConfirmed=false for 'Please register' message
  *   ✓ should store lastMessageSent correctly
- * 
+ *
  * ✓ TEST 4: Integrazione MessageSendingService
  *   ✓ should call messageSendingService with correct parameters for unregistered user
  *   ✓ should NOT include customerId for unregistered users
  *   ✓ should use SYSTEM sendType for registration messages
- * 
+ *
  * ✓ TEST 5: Edge Cases
  *   ✓ should handle empty phone number gracefully
  *   ✓ should handle null customer from database
  *   ✓ should reset test variables correctly between tests
- * 
+ *
  * Test Suites: 1 passed, 1 total
  * Tests: 17 passed, 17 total
  */

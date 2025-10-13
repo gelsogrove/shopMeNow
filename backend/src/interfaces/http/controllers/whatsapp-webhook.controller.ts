@@ -1,13 +1,9 @@
 import { Request, Response } from "express"
-import { sendToWhatsApp } from "../../../services/whatsapp-api.service"
+import { prisma } from "../../../lib/prisma"
 import messageSendingService from "../../../services/message-sending.service"
 import logger from "../../../utils/logger"
-import {
-  markdownToWhatsApp,
-  whatsAppToMarkdown,
-} from "../../../utils/whatsapp-formatter"
+import { whatsAppToMarkdown } from "../../../utils/whatsapp-formatter"
 import { verifyWhatsAppSignature } from "../../../utils/whatsapp-signature"
-import { prisma } from "../../../lib/prisma"
 
 /**
  * WhatsApp Webhook Controller
@@ -134,7 +130,7 @@ export class WhatsAppWebhookController {
         // Send "please register" message via MessageSendingService
         const registerMessage =
           "Hello! Please register first to use our service. Visit our website or contact support."
-        
+
         await messageSendingService.sendMessage({
           phoneNumber,
           message: registerMessage,
@@ -184,7 +180,7 @@ export class WhatsAppWebhookController {
         // Security layer will be automatically applied
       })
 
-      const { success, error, messageId } = sendResult.success 
+      const { success, error, messageId } = sendResult.success
         ? { success: true, error: undefined, messageId: sendResult.messageId }
         : { success: false, error: sendResult.error, messageId: undefined }
 
