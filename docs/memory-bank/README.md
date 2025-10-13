@@ -1,23 +1,80 @@
-# 📚 Memory Bank - ShopME Documentation
+# ShopME Memory Bank
 
-**Ultimo aggiornamento**: 12 Ottobre 2025
-
-Documentazione tecnica completa del progetto ShopME.
+> **Organized technical documentation for the ShopME platform**
+>
+> This memory bank contains all technical documentation, organized by category for easy navigation and reference.
 
 ---
 
-## 📖 Documenti Disponibili
+## 📚 Quick Start
 
-### 🔐 Autenticazione & Sicurezza
+**Start here**: [INDEX.md](INDEX.md) - Complete documentation index with navigation
 
-#### [TOKEN-VS-SESSIONID-ARCHITECTURE.md](./TOKEN-VS-SESSIONID-ARCHITECTURE.md)
+---
 
-**Documentazione completa** dell'architettura di autenticazione doppia:
+## 📂 Documentation Structure
 
-- Token-based per pagine pubbliche (`/api/token/*`)
-- SessionID-based per backoffice admin
-- Struttura backend e frontend
-- Routing e middleware
+```
+memory-bank/
+├── INDEX.md                    # Main documentation index (START HERE)
+├── 01-SECURITY/                # Security documentation
+│   ├── owasp.md
+│   ├── translation-security-summary.md
+│   ├── sessionid-admin-panel.md
+│   ├── sessionid-sessionstorage-migration.md
+│   └── sessionid-storage-fix.md
+├── 02-FEATURES/                # Feature documentation
+│   ├── short-links.md
+│   ├── scheduler-service.md
+│   ├── whatsapp-implementation-complete.md
+│   ├── billing-system.md
+│   ├── message-sending-implementation.md
+│   └── WIP-MESSAGE-FEATURE.md
+├── 03-ARCHITECTURE/            # Architecture & design
+│   ├── LLMSERVICE-ARCHITECTURE-FLOW.md
+│   ├── WEBSOCKET-IMPLEMENTATION.md
+│   ├── endpoints.md
+│   └── style-guide.md
+├── 04-BEST-PRACTICES/          # Coding standards
+│   ├── backend-best-practices.md
+│   └── frontend-best-practices.md
+└── 05-GUIDES/                  # How-to guides
+    ├── whatsapp-setup-guide.md
+    ├── whatsapp-integration-architecture.md
+    ├── scripts-guide.md
+    ├── unit-test-guide.md
+    └── projectbrief.md
+```
+
+---
+
+## 🎯 Find What You Need
+
+### 🔒 Security & Authentication
+
+Looking for auth, sessions, rate limiting, or security features?  
+→ **[01-SECURITY/](01-SECURITY/)**
+
+### ⚡ Features & Integrations
+
+Need info about WhatsApp, short links, scheduler, or billing?  
+→ **[02-FEATURES/](02-FEATURES/)**
+
+### 🏗️ System Architecture
+
+Understanding LLM flow, WebSockets, API structure, or design system?  
+→ **[03-ARCHITECTURE/](03-ARCHITECTURE/)**
+
+### ✨ Coding Standards
+
+Backend or frontend best practices, patterns, conventions?  
+→ **[04-BEST-PRACTICES/](04-BEST-PRACTICES/)**
+
+### 📖 Setup & How-To
+
+WhatsApp setup, testing, scripts, or getting started?  
+→ **[05-GUIDES/](05-GUIDES/)**
+
 - Best practices e troubleshooting
 
 **Quando leggere**: Prima di lavorare su autenticazione, routing, o nuove API
