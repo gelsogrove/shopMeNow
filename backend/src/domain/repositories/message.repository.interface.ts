@@ -82,11 +82,6 @@ export interface MessageRepositoryInterface {
   getResponseFromAgent?(agent: any, message: string): Promise<any>;
 
   /**
-   * Get response from RAG system
-   */
-  getResponseFromRag?(agent: any, message: string, products: any[], services: any[], chatHistory: any[], customer: any): Promise<string>;
-
-  /**
    * Get conversation response from LLM
    */
   getConversationResponse?(chatHistory: any[], message: string, systemPrompt: string): Promise<string>;

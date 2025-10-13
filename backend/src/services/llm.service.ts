@@ -32,7 +32,6 @@ export class LLMService {
 
     const messageRepo =
       new (require("../repositories/message.repository").MessageRepository)()
-    const { replaceAllVariables } = require("../services/formatter")
     const { workspaceService } = require("../services/workspace.service")
 
     // 🔧 DEBUG: Start collecting debug information
@@ -144,7 +143,11 @@ export class LLMService {
       .replace("{{PRODUCTS}}", products)
       .replace("{{CATEGORIES}}", categories)
       .replace("{{OFFERS}}", offers)
-    promptWithVars = replaceAllVariables(promptWithVars, userInfo)
+      .replace("{{nameUser}}", userInfo.nameUser)
+      .replace("{{discountUser}}", String(userInfo.discountUser))
+      .replace("{{companyName}}", userInfo.companyName)
+      .replace("{{lastordercode}}", userInfo.lastordercode)
+      .replace("{{languageUser}}", userInfo.languageUser)
 
     // 🔧 SALVA IL PROMPT FINALE PER DEBUG
     try {

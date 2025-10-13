@@ -335,59 +335,5 @@ export const servicesRouter = (controller: ServicesController): Router => {
     }
   )
 
-  /**
-   * @swagger
-   * /api/workspaces/{workspaceId}/services/generate-embeddings:
-   *   post:
-   *     summary: Generate embeddings for all active services in a workspace
-   *     tags: [Services]
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: workspaceId
-   *         schema:
-   *           type: string
-   *         required: true
-   *         description: ID of the workspace
-   *     responses:
-   *       200:
-   *         description: Service embedding generation completed
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 success:
-   *                   type: boolean
-   *                 message:
-   *                   type: string
-   *                 data:
-   *                   type: object
-   *                   properties:
-   *                     workspaceId:
-   *                       type: string
-   *                     processed:
-   *                       type: number
-   *                     errors:
-   *                       type: array
-   *                       items:
-   *                         type: string
-   *                     hasErrors:
-   *                       type: boolean
-   *       400:
-   *         description: Workspace ID is required
-   *       500:
-   *         description: Failed to generate service embeddings
-   */
-  // @ts-ignore
-  router.post(
-    "/generate-embeddings",
-    workspaceContextMiddleware,
-    (req: WorkspaceRequest, res: Response, next: NextFunction): void => {
-      controller.generateEmbeddings(req, res).catch(next)
-    }
-  )
-
   return router
 }

@@ -8,9 +8,8 @@ export const loggingMiddleware = (
 ): void => {
   const startTime = Date.now()
 
-  // Log request
+    // Log request
   logger.info("Incoming request", {
-    requestId: req.requestId,
     method: req.method,
     url: req.url,
     query: req.query,
@@ -26,9 +25,10 @@ export const loggingMiddleware = (
   res.send = function (body) {
     const responseTime = Date.now() - startTime
 
-    // Log response
+        // Log response
     logger.info("Outgoing response", {
-      requestId: req.requestId,
+      method: req.method,
+      url: req.url,
       statusCode: res.statusCode,
       responseTime,
       size: Buffer.byteLength(body),

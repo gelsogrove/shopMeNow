@@ -489,43 +489,5 @@ export default function setupProductRoutes(): Router {
   // @ts-ignore
   router.get('/products-with-discounts', productController.getProductsWithDiscounts);
 
-  /**
-   * @swagger
-   * /api/workspaces/{workspaceId}/products/generate-embeddings:
-   *   post:
-   *     summary: Generate embeddings for all active products in a workspace
-   *     tags: [Products]
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: workspaceId
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The workspace ID
-   *     responses:
-   *       200:
-   *         description: Product embedding generation completed
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 message:
-   *                   type: string
-   *                 processed:
-   *                   type: number
-   *                 errors:
-   *                   type: array
-   *                   items:
-   *                     type: string
-   *       400:
-   *         description: Bad request
-   *       500:
-   *         description: Failed to generate product embeddings
-   */
-  router.post("/generate-embeddings", productController.generateEmbeddings.bind(productController));
-
   return router;
 } 

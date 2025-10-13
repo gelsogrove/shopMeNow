@@ -337,16 +337,7 @@ if (process.env.NODE_ENV === 'test' && !process.env.INTEGRATION_TEST) {
   });
 }
 
-// Mock @xenova/transformers for all tests to avoid ESM import errors
-jest.mock('@xenova/transformers', () => ({
-  pipeline: jest.fn().mockResolvedValue(async () => ({
-    data: [0.1, 0.2, 0.3],
-    // Simulate the structure expected by embeddingService
-    // For mean pooling, just return a dummy array
-    // For .data, return an array-like object
-    // This is enough for tests to pass
-  }))
-}));
+// @xenova/transformers mock removed - embedding system no longer in use
 
 // Mock logger to avoid console output in tests
 jest.mock('./src/utils/logger', () => ({

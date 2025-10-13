@@ -1055,16 +1055,6 @@ export class MessageRepository {
         `saveMessage: Saved conversation pair for phone number: ${data.phoneNumber}`
       )
 
-      // Invalidate cache for this phone number since new messages were added
-      try {
-        const { messageCache } = await import("../utils/message-cache")
-        // Invalidate only entries for this specific phone number
-        messageCache.invalidateByPhoneNumber(data.phoneNumber)
-        logger.info(`[CACHE] Invalidated message cache for ${data.phoneNumber}`)
-      } catch (cacheError) {
-        logger.warn("Failed to invalidate message cache:", cacheError)
-      }
-
       return botResponse
     } catch (error) {
       logger.error("Error saving message pair:", error)
@@ -2091,66 +2081,33 @@ export class MessageRepository {
     workspaceId?: string
   ) {
     try {
-      // Import cache
-      const { messageCache } = await import("../utils/message-cache")
+      logger.info(`[DB] Fetching messages from database for ${phoneNumber}`)
 
-      // Check cache first
-      const cached = messageCache.get(phoneNumber, limit, workspaceId)
-      if (cached) {
-        logger.info(
-          `[CACHE] Retrieved ${cached.length} messages from cache for ${phoneNumber}`
-        )
-        return cached
-      }
+      // Find customer by phone
+      const customer = await this.findCustomerByPhone(phoneNumber)
+      if (!customer) return []
 
-      // Create cache key for debouncing
-      const cacheKey = `${phoneNumber}:${limit}:${workspaceId || "no-workspace"}`
+      // Find active chat session
+      const session = await this.prisma.chatSession.findFirst({
+        where: {
+          customerId: customer.id,
+          status: "active",
+          ...(workspaceId ? { workspaceId } : {}),
+        },
+      })
 
-      // Use debouncing for concurrent queries
-      const messages = await messageCache.getOrSetPending(
-        cacheKey,
-        async () => {
-          logger.info(`[DB] Fetching messages from database for ${phoneNumber}`)
+      if (!session) return []
 
-          // Find customer by phone - use workspaceId if provided, otherwise use empty string
-          const customer = await this.findCustomerByPhone(phoneNumber)
-
-          if (!customer) return []
-
-          // Find active chat session
-          const session = await this.prisma.chatSession.findFirst({
-            where: {
-              customerId: customer.id,
-              status: "active",
-              ...(workspaceId ? { workspaceId } : {}),
-            },
-          })
-
-          if (!session) {
-            return []
-          }
-
-          // Find messages for this session
-          return await this.prisma.message.findMany({
-            where: {
-              chatSessionId: session.id,
-            },
-            orderBy: {
-              createdAt: "desc",
-            },
-            take: limit,
-          })
-        }
-      )
-
-      // Cache the result for 30 seconds
-      messageCache.set(phoneNumber, limit, messages, workspaceId, 30000)
-
-      logger.info(
-        `[CACHE] Stored ${messages.length} messages in cache for ${phoneNumber}`
-      )
-
-      return messages
+      // Find messages for this session
+      return await this.prisma.message.findMany({
+        where: {
+          chatSessionId: session.id,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        take: limit,
+      })
     } catch (error) {
       logger.error("Error getting latest messages:", error)
       return []
@@ -2728,249 +2685,7 @@ export class MessageRepository {
     }
   }
 
-  /**
-   * Get RAG response with dynamic configuration - NO HARDCODE
-   * @param customer Customer object
-   * @param message User message
-   * @param prompt Agent prompt from database
-   * @param model Model from database
-   * @param temperature Temperature from database
-   * @param maxTokens Max tokens from database
-   * @param workspaceId Workspace ID
-   * @returns RAG response
-   */
-  async getResponseFromRag(
-    customer: any,
-    message: string,
-    prompt: string,
-    model: string,
-    temperature: number,
-    maxTokens: number,
-    workspaceId: string,
-    welcomeBackContext?: string
-  ): Promise<string | null> {
-    try {
-      // Import embedding service for semantic search
-      const { embeddingService } = await import("../services/embeddingService")
 
-      // STEP 1: SEMANTIC SEARCH ACROSS ALL CHUNKS
-      logger.info(`[RAG] Searching all content types for: "${message}"`)
-
-      // Search all content types in parallel using semantic search
-      // Use embedding service default search limit to allow higher recall
-      const { EmbeddingService } = await import("../services/embeddingService")
-      const defaultLimit = EmbeddingService.DEFAULT_SEARCH_LIMIT
-
-      const [productResults, faqResults, serviceResults, documentResults] =
-        await Promise.all([
-          embeddingService.searchProducts(message, workspaceId, defaultLimit),
-          embeddingService.searchFAQs(message, workspaceId, defaultLimit),
-          embeddingService.searchServices(message, workspaceId, defaultLimit),
-          Promise.resolve([]), // Documents search not implemented yet
-        ])
-
-      logger.info(
-        `[RAG] Found: ${productResults.length} products, ${faqResults.length} FAQs, ${serviceResults.length} services, ${documentResults.length} documents`
-      )
-
-      // STEP 2: GET FULL PRODUCT DETAILS WITH STOCK VERIFICATION
-      const productIds = productResults.map((r) => r.id)
-      const fullProducts =
-        productIds.length > 0
-          ? await this.prisma.products.findMany({
-              where: {
-                id: { in: productIds },
-                workspaceId: workspaceId,
-                isActive: true,
-                stock: { gt: 0 }, // VERIFY AVAILABILITY
-              },
-              include: {
-                category: true,
-              },
-            })
-          : []
-
-      // STEP 3: GET FULL FAQ DETAILS
-      const faqIds = faqResults.map((r) => r.id)
-      const fullFAQs =
-        faqIds.length > 0
-          ? await this.prisma.fAQ.findMany({
-              where: {
-                id: { in: faqIds },
-                workspaceId: workspaceId,
-                isActive: true,
-              },
-            })
-          : []
-
-      // STEP 4: GET FULL SERVICE DETAILS
-      const serviceIds = serviceResults.map((r) => r.id)
-      const fullServices =
-        serviceIds.length > 0
-          ? await this.prisma.services.findMany({
-              where: {
-                id: { in: serviceIds },
-                workspaceId: workspaceId,
-                isActive: true,
-              },
-            })
-          : []
-
-      // STEP 5: GET CHAT HISTORY
-      const chatHistory = await this.getLatesttMessages(
-        customer.phone,
-        5,
-        workspaceId
-      )
-
-      // STEP 6: BUILD UNIFIED CONTEXT FOR LLM FORMATTER
-      const unifiedContext = {
-        customer: {
-          name: customer.name,
-          language: customer.language,
-          discount: customer.discount,
-        },
-        welcomeBack: welcomeBackContext || null,
-        searchResults: {
-          products: productResults
-            .map((r) => ({
-              similarity: r.similarity,
-              content: r.content,
-              product: fullProducts.find((p) => p.id === r.id),
-            }))
-            .filter((r) => r.product), // Only include available products
-          faqs: faqResults
-            .map((r) => ({
-              similarity: r.similarity,
-              content: r.content,
-              faq: fullFAQs.find((f) => f.id === r.id),
-            }))
-            .filter((r) => r.faq),
-          services: serviceResults
-            .map((r) => ({
-              similarity: r.similarity,
-              content: r.content,
-              service: fullServices.find((s) => s.id === r.id),
-            }))
-            .filter((r) => r.service),
-          documents: documentResults,
-        },
-        chatHistory: chatHistory.slice(0, 8),
-      }
-
-      // STEP 7: BUILD COMPREHENSIVE PROMPT FOR LLM FORMATTER
-      const finalPrompt = `${prompt}
-
-CUSTOMER CONTEXT:
-- Name: ${unifiedContext.customer.name}
-- Language: ${unifiedContext.customer.language}
-- Discount: ${unifiedContext.customer.discount}%
-
-${unifiedContext.welcomeBack ? `WELCOME BACK MESSAGE: ${unifiedContext.welcomeBack}` : ""}
-
-SEMANTIC SEARCH RESULTS:
-
-PRODUCTS FOUND (with availability):
-${unifiedContext.searchResults.products
-  .map(
-    (r) =>
-      `- ${r.product?.name} (Similarity: ${r.similarity.toFixed(3)})
-    Price: €${r.product?.price}
-    Stock: ${r.product?.stock} units available
-    Category: ${r.product?.category?.name || "General"}
-    Match: ${r.content}`
-  )
-  .join("\n\n")}
-
-FAQS FOUND:
-${unifiedContext.searchResults.faqs
-  .map(
-    (r) =>
-      `- ${r.faq?.question} (Similarity: ${r.similarity.toFixed(3)})
-    Answer: ${r.faq?.answer}
-    Match: ${r.content}`
-  )
-  .join("\n\n")}
-
-SERVICES FOUND:
-${unifiedContext.searchResults.services
-  .map(
-    (r) =>
-      `- ${r.service?.name} (Similarity: ${r.similarity.toFixed(3)})
-    Description: ${r.service?.description}
-    Price: €${r.service?.price}
-    Duration: ${r.service?.duration || "N/A"}
-    Match: ${r.content}`
-  )
-  .join("\n\n")}
-
-DOCUMENTS FOUND:
-${unifiedContext.searchResults.documents
-  .map(
-    (r) =>
-      `- Document: ${r.sourceName} (Similarity: ${r.similarity.toFixed(3)})
-    Content: ${r.content}`
-  )
-  .join("\n\n")}
-
-RECENT CHAT HISTORY:
-${unifiedContext.chatHistory.map((h) => `${h.direction === MessageDirection.INBOUND ? "Customer" : "Bot"}: ${h.content}`).join("\n")}
-
-CUSTOMER MESSAGE: ${message}
-
-INSTRUCTIONS FOR LLM FORMATTER:
-- Combine ALL relevant information into a single, coherent response
-- Include welcome back message if provided
-- Show product availability and prices
-- Include FAQ answers if relevant
-- Mention services if applicable
-- Reference document information if found
-- Respond in ${unifiedContext.customer.language}
-- Be helpful and comprehensive but concise`
-
-      logger.info(`[RAG] Sending unified context to LLM formatter (${model})`)
-
-      // STEP 8: CALL LLM FORMATTER WITH UNIFIED CONTEXT
-      const response = await fetch(
-        "https://openrouter.ai/api/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: model,
-            messages: [
-              {
-                role: "user",
-                content: finalPrompt,
-              },
-            ],
-            temperature: temperature,
-            max_tokens: maxTokens,
-          }),
-        }
-      )
-
-      if (!response.ok) {
-        throw new Error(`OpenRouter API error: ${response.status}`)
-      }
-
-      const data = await response.json()
-      const formattedResponse = data.choices?.[0]?.message?.content || null
-
-      logger.info(`[RAG] LLM formatter response generated successfully`)
-
-      // 💰 USAGE TRACKING: Now handled in saveMessage (Andrea's Logic)
-      // No need to track here - tracking happens when external systems save final conversation
-
-      return formattedResponse
-    } catch (error) {
-      logger.error("Error in getResponseFromRag:", error)
-      return null
-    }
-  }
 
   /**
    * Get Prisma client for direct database access (public method for services)
