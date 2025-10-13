@@ -3,7 +3,10 @@ import * as path from "path"
 import { TokenService } from "../application/services/token.service"
 import { urlShortenerService } from "../application/services/url-shortener.service"
 import { LLMRequest } from "../types/whatsapp.types"
-import { calculateLLMTokenUsage, calculateLLMCost } from "../utils/token-calculator"
+import {
+  calculateLLMCost,
+  calculateLLMTokenUsage,
+} from "../utils/token-calculator"
 import { CallingFunctionsService } from "./calling-functions.service"
 import { PromptProcessorService } from "./prompt-processor.service"
 
@@ -47,13 +50,15 @@ export class LLMService {
     // 🔧 DEBUG: Add customer and workspace info
     debugInfo.workspaceId = workspaceId
     debugInfo.customerId = customer?.id || null
-    debugInfo.customer = customer ? {
-      name: customer.name,
-      language: customer.language,
-      discount: customer.discount,
-      company: customer.company,
-      lastOrderCode: customer.lastOrderCode || customerData?.lastordercode,
-    } : null
+    debugInfo.customer = customer
+      ? {
+          name: customer.name,
+          language: customer.language,
+          discount: customer.discount,
+          company: customer.company,
+          lastOrderCode: customer.lastOrderCode || customerData?.lastordercode,
+        }
+      : null
 
     // 2. New User Check
     if (!customer) {
@@ -415,14 +420,14 @@ export class LLMService {
       // 🔧 DEBUG: Calculate token usage and cost
       let tokenUsage: any = null
       let costInfo: any = null
-      
+
       if (data.usage) {
         tokenUsage = {
           promptTokens: data.usage.prompt_tokens,
           completionTokens: data.usage.completion_tokens,
           totalTokens: data.usage.total_tokens,
         }
-        
+
         costInfo = calculateLLMCost(
           data.usage.prompt_tokens,
           data.usage.completion_tokens,
@@ -541,7 +546,8 @@ export class LLMService {
             }
           }
           return {
-            response: functionResult.message ||
+            response:
+              functionResult.message ||
               functionResult.error ||
               i18n.errors.generic[language],
             tokenUsage,
@@ -577,7 +583,8 @@ export class LLMService {
         }
 
         return {
-          response: functionResult.message ||
+          response:
+            functionResult.message ||
             functionResult.output ||
             functionResult.linkUrl ||
             `${i18n.success.default[language]} ${functionResult.linkUrl}`,
