@@ -12,9 +12,9 @@
  * @date 2025-10-13
  */
 
+import axios from "axios"
 import dotenv from "dotenv"
 import path from "path"
-import axios from "axios"
 
 // Load environment variables BEFORE importing service
 dotenv.config({ path: path.resolve(__dirname, "../../../.env") })
@@ -27,7 +27,10 @@ import translationSecurityService from "../../services/translation-security.serv
 
 // SKIP IN CI - These tests require OpenRouter API (cost money!)
 // Run locally with: npm run test:unit -- translation-security
-const describeOrSkip = process.env.CI || process.env.SKIP_TRANSLATION_TESTS ? describe.skip : describe
+const describeOrSkip =
+  process.env.CI || process.env.SKIP_TRANSLATION_TESTS
+    ? describe.skip
+    : describe
 
 describeOrSkip("🔒 Translation & Security Service", () => {
   // Setup: verify service is initialized
@@ -48,7 +51,11 @@ describeOrSkip("🔒 Translation & Security Service", () => {
   })
 
   // HELPER: Mock API response to avoid real costs
-  const mockLLMResponse = (translatedText: string, blocked: boolean, reason: string | null) => {
+  const mockLLMResponse = (
+    translatedText: string,
+    blocked: boolean,
+    reason: string | null
+  ) => {
     mockedAxios.post.mockResolvedValueOnce({
       data: {
         choices: [
@@ -101,7 +108,8 @@ describeOrSkip("🔒 Translation & Security Service", () => {
             {
               message: {
                 content: JSON.stringify({
-                  translatedText: "Mi dispiace, non posso aiutarti con questo. Come posso aiutarti con i nostri prodotti?",
+                  translatedText:
+                    "Mi dispiace, non posso aiutarti con questo. Come posso aiutarti con i nostri prodotti?",
                   blocked: true,
                   reason: "profanity",
                 }),
