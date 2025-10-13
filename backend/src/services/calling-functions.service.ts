@@ -1,6 +1,5 @@
-import axios from "axios"
-import { SecureTokenService } from "../application/services/secure-token.service"
 import { ReplaceLinkWithToken } from "../application/services/link-replacement.service"
+import { SecureTokenService } from "../application/services/secure-token.service"
 import {
   ErrorResponse,
   GetCartLinkRequest,

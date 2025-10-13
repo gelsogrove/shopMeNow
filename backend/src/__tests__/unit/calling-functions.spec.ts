@@ -1,9 +1,9 @@
 /**
  * Test per le 3 Calling Functions LLM
- * 
+ *
  * Verifica che le 3 calling functions esistano come file separati
  * e che siano correttamente importabili e funzionanti.
- * 
+ *
  * Le 3 calling functions definite in docs/prompt_agent.md:
  * 1. ContactOperator() - Line 177
  * 2. GetShipmentTrackingLink() - Line 210
@@ -55,7 +55,9 @@ describe("🔧 Calling Functions - File Existence & Architecture", () => {
 
   describe("📦 Import & Export Verification", () => {
     it("should export ContactOperator function", async () => {
-      const { ContactOperator } = require("../../domain/calling-functions/ContactOperator")
+      const {
+        ContactOperator,
+      } = require("../../domain/calling-functions/ContactOperator")
       expect(ContactOperator).toBeDefined()
       expect(typeof ContactOperator).toBe("function")
     })
@@ -79,7 +81,9 @@ describe("🔧 Calling Functions - File Existence & Architecture", () => {
 
   describe("🔍 Function Signature Verification", () => {
     it("ContactOperator should accept request parameter", async () => {
-      const { ContactOperator } = require("../../domain/calling-functions/ContactOperator")
+      const {
+        ContactOperator,
+      } = require("../../domain/calling-functions/ContactOperator")
       const functionString = ContactOperator.toString()
       // Function should have 'request' parameter
       expect(functionString).toContain("request")
@@ -131,7 +135,7 @@ describe("🔧 Calling Functions - File Existence & Architecture", () => {
         "utf-8"
       )
       expect(serviceContent).toContain(
-        'application/services/link-replacement.service'
+        "application/services/link-replacement.service"
       )
     })
   })
@@ -160,7 +164,9 @@ describe("🔧 Calling Functions - File Existence & Architecture", () => {
 describe("🧪 Calling Functions - Basic Functionality", () => {
   describe("ContactOperator", () => {
     it("should return success=false for missing phoneNumber", async () => {
-      const { ContactOperator } = require("../../domain/calling-functions/ContactOperator")
+      const {
+        ContactOperator,
+      } = require("../../domain/calling-functions/ContactOperator")
 
       const result = await ContactOperator({
         phoneNumber: "",
@@ -174,7 +180,9 @@ describe("🧪 Calling Functions - Basic Functionality", () => {
     })
 
     it("should return proper structure with valid request", async () => {
-      const { ContactOperator } = require("../../domain/calling-functions/ContactOperator")
+      const {
+        ContactOperator,
+      } = require("../../domain/calling-functions/ContactOperator")
 
       const result = await ContactOperator({
         phoneNumber: "+1234567890",
@@ -233,7 +241,9 @@ describe("📊 Calling Functions - Summary Report", () => {
       "../../domain/calling-functions"
     )
 
-    const { ContactOperator } = require("../../domain/calling-functions/ContactOperator")
+    const {
+      ContactOperator,
+    } = require("../../domain/calling-functions/ContactOperator")
     const {
       GetShipmentTrackingLink,
     } = require("../../domain/calling-functions/GetShipmentTrackingLink")
