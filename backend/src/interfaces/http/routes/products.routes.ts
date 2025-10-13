@@ -1,8 +1,8 @@
-import { Router } from 'express';
-import logger from '../../../utils/logger';
-import { ProductController } from '../controllers/product.controller';
-import { authMiddleware } from '../middlewares/auth.middleware';
-import { workspaceValidationMiddleware } from '../middlewares/workspace-validation.middleware';
+import { Router } from "express"
+import logger from "../../../utils/logger"
+import { ProductController } from "../controllers/product.controller"
+import { authMiddleware } from "../middlewares/auth.middleware"
+import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
 
 /**
  * @swagger
@@ -77,16 +77,16 @@ import { workspaceValidationMiddleware } from '../middlewares/workspace-validati
  */
 
 export default function setupProductRoutes(): Router {
-  const router = Router({ mergeParams: true });  // Enable mergeParams to inherit workspaceId
-  const productController = new ProductController();
-  
-  logger.info('Setting up product routes');
+  const router = Router({ mergeParams: true }) // Enable mergeParams to inherit workspaceId
+  const productController = new ProductController()
+
+  logger.info("Setting up product routes")
 
   // All routes require authentication
-  router.use(authMiddleware);
-  
+  router.use(authMiddleware)
+
   // All routes require workspace validation
-  router.use(workspaceValidationMiddleware);
+  router.use(workspaceValidationMiddleware)
 
   /**
    * @swagger
@@ -162,7 +162,7 @@ export default function setupProductRoutes(): Router {
    *         description: Unauthorized
    */
   // @ts-ignore
-  router.get('/', productController.getAllProducts);
+  router.get("/", productController.getAllProducts)
 
   /**
    * @swagger
@@ -200,7 +200,7 @@ export default function setupProductRoutes(): Router {
    *         description: Product not found
    */
   // @ts-ignore
-  router.get('/:id', productController.getProductById);
+  router.get("/:id", productController.getProductById)
 
   /**
    * @swagger
@@ -238,7 +238,10 @@ export default function setupProductRoutes(): Router {
    *         description: Unauthorized
    */
   // @ts-ignore
-  router.get('/categories/:categoryId/products', productController.getProductsByCategory);
+  router.get(
+    "/categories/:categoryId/products",
+    productController.getProductsByCategory
+  )
 
   /**
    * @swagger
@@ -274,7 +277,7 @@ export default function setupProductRoutes(): Router {
    *         description: Unauthorized
    */
   // @ts-ignore
-  router.post('/', productController.createProduct);
+  router.post("/", productController.createProduct)
 
   /**
    * @swagger
@@ -318,7 +321,7 @@ export default function setupProductRoutes(): Router {
    *         description: Product not found
    */
   // @ts-ignore
-  router.put('/:id', productController.updateProduct);
+  router.put("/:id", productController.updateProduct)
 
   /**
    * @swagger
@@ -350,7 +353,7 @@ export default function setupProductRoutes(): Router {
    *         description: Unauthorized
    */
   // @ts-ignore
-  router.delete('/:id', productController.deleteProduct);
+  router.delete("/:id", productController.deleteProduct)
 
   /**
    * @swagger
@@ -399,7 +402,7 @@ export default function setupProductRoutes(): Router {
    *         description: Unauthorized
    */
   // @ts-ignore
-  router.patch('/:id/stock', productController.updateProductStock);
+  router.patch("/:id/stock", productController.updateProductStock)
 
   /**
    * @swagger
@@ -450,7 +453,7 @@ export default function setupProductRoutes(): Router {
    *         description: Product not found
    */
   // @ts-ignore
-  router.patch('/:id/status', productController.updateProductStatus);
+  router.patch("/:id/status", productController.updateProductStatus)
 
   /**
    * @swagger
@@ -487,45 +490,10 @@ export default function setupProductRoutes(): Router {
    *         description: Unauthorized
    */
   // @ts-ignore
-  router.get('/products-with-discounts', productController.getProductsWithDiscounts);
+  router.get(
+    "/products-with-discounts",
+    productController.getProductsWithDiscounts
+  )
 
-  /**
-   * @swagger
-   * /api/workspaces/{workspaceId}/products/generate-embeddings:
-   *   post:
-   *     summary: Generate embeddings for all active products in a workspace
-   *     tags: [Products]
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: workspaceId
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The workspace ID
-   *     responses:
-   *       200:
-   *         description: Product embedding generation completed
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 message:
-   *                   type: string
-   *                 processed:
-   *                   type: number
-   *                 errors:
-   *                   type: array
-   *                   items:
-   *                     type: string
-   *       400:
-   *         description: Bad request
-   *       500:
-   *         description: Failed to generate product embeddings
-   */
-  router.post("/generate-embeddings", productController.generateEmbeddings.bind(productController));
-
-  return router;
-} 
+  return router
+}

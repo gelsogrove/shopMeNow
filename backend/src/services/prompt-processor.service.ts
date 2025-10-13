@@ -99,7 +99,7 @@ export class PromptProcessorService {
     // Sostituzione link con token
     if (customerId && workspaceId) {
       const { ReplaceLinkWithToken } = await import(
-        "../chatbot/calling-functions/ReplaceLinkWithToken"
+        "../application/services/link-replacement.service"
       )
       const linkResult = await ReplaceLinkWithToken(
         { response: processedResponse },

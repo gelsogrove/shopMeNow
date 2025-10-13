@@ -1,7 +1,6 @@
 import { Response } from "express"
 import ServiceService from "../../../application/services/service.service"
 import { prisma } from "../../../lib/prisma"
-import { embeddingService } from "../../../services/embeddingService"
 import logger from "../../../utils/logger"
 
 import { WorkspaceRequest } from "../types/workspace-request"
@@ -148,13 +147,6 @@ export class ServicesController {
       logger.info(`Creating service for workspace: ${workspaceId}`)
       const service = await this.serviceService.create(serviceData)
 
-      // Fire-and-forget: trigger embedding regeneration for Services
-      embeddingService
-        .generateServiceEmbeddings(workspaceId)
-        .catch((err) =>
-          logger.error("Embedding generation error (create):", err)
-        )
-
       return res.status(201).json(service)
     } catch (error: any) {
       logger.error("Error creating service:", error)
@@ -239,31 +231,11 @@ export class ServicesController {
           .json({ error: "No valid fields provided for update" })
       }
 
-      const service = await this.serviceService.update(id, workspaceId, updateData)
-
-      // Fire-and-forget: trigger embedding regeneration for Services
-      logger.info(
-        `🔄 Service updated, triggering embedding regeneration for workspace: ${workspaceId}, Service ID: ${id}`
+      const service = await this.serviceService.update(
+        id,
+        workspaceId,
+        updateData
       )
-      embeddingService
-        .generateServiceEmbeddings(workspaceId)
-        .then((result) => {
-          logger.info(
-            `✅ Service embedding regeneration completed for workspace ${workspaceId}: processed ${result.processed} services, errors: ${result.errors.length}`
-          )
-          if (result.errors.length > 0) {
-            logger.warn(
-              `⚠️ Service embedding regeneration warnings:`,
-              result.errors
-            )
-          }
-        })
-        .catch((err) => {
-          logger.error(
-            `❌ Service embedding regeneration failed for workspace ${workspaceId}:`,
-            err
-          )
-        })
 
       return res.json(service)
     } catch (error: any) {
@@ -299,13 +271,6 @@ export class ServicesController {
 
       await this.serviceService.delete(id, workspaceId)
 
-      // Fire-and-forget: trigger embedding regeneration for Services
-      embeddingService
-        .generateServiceEmbeddings(workspaceId)
-        .catch((err) =>
-          logger.error("Embedding generation error (delete):", err)
-        )
-
       return res.status(204).send()
     } catch (error: any) {
       logger.error(`Error deleting service ${req.params.id}:`, error)
@@ -315,91 +280,6 @@ export class ServicesController {
       }
 
       return res.status(500).json({ error: "Failed to delete service" })
-    }
-  }
-
-  /**
-   * Generate embeddings for all active services in a workspace
-   * @swagger
-   * /api/workspaces/{workspaceId}/services/generate-embeddings:
-   *   post:
-   *     summary: Generate embeddings for all active services in a workspace
-   *     tags: [Services]
-   *     parameters:
-   *       - in: path
-   *         name: workspaceId
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: ID of the workspace
-   *     responses:
-   *       200:
-   *         description: Service embedding generation completed
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 success:
-   *                   type: boolean
-   *                 message:
-   *                   type: string
-   *                 data:
-   *                   type: object
-   *                   properties:
-   *                     workspaceId:
-   *                       type: string
-   *                     processed:
-   *                       type: number
-   *                     errors:
-   *                       type: array
-   *                       items:
-   *                         type: string
-   *                     hasErrors:
-   *                       type: boolean
-   *       400:
-   *         description: Workspace ID is required
-   *       500:
-   *         description: Failed to generate service embeddings
-   */
-  async generateEmbeddings(
-    req: WorkspaceRequest,
-    res: Response
-  ): Promise<Response> {
-    try {
-      const { workspaceId } = req.workspaceContext
-
-      if (!workspaceId) {
-        return res.status(400).json({
-          success: false,
-          message: "Workspace ID is required",
-        })
-      }
-
-      logger.info(
-        `Starting service embedding generation for workspace: ${workspaceId}`
-      )
-
-      const result =
-        await embeddingService.generateServiceEmbeddings(workspaceId)
-
-      return res.status(200).json({
-        success: true,
-        message: "Service embedding generation completed",
-        data: {
-          workspaceId: workspaceId,
-          processed: result.processed,
-          errors: result.errors,
-          hasErrors: result.errors.length > 0,
-        },
-      })
-    } catch (error) {
-      logger.error("Error generating service embeddings:", error)
-      return res.status(500).json({
-        success: false,
-        message: "Failed to generate service embeddings",
-        error: error instanceof Error ? error.message : "Unknown error",
-      })
     }
   }
 }

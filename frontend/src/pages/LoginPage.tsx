@@ -97,7 +97,7 @@ export function LoginPage() {
         if (response.data.sessionId) {
           setSessionId(response.data.sessionId)
           logger.info(
-            `✅ SessionID saved to localStorage: ${response.data.sessionId.substring(
+            `✅ SessionID saved to sessionStorage: ${response.data.sessionId.substring(
               0,
               8
             )}...`
