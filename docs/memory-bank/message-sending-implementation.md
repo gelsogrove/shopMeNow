@@ -14,11 +14,12 @@ Centralizzare TUTTI gli invii WhatsApp in un unico service che applica **automat
 
 ## ✅ Implementazione Completata
 
-### 1. **MessageSendingService Created** 
+### 1. **MessageSendingService Created**
 
 **File**: `/backend/src/services/message-sending.service.ts`
 
 **Caratteristiche**:
+
 - ✅ Unico punto di ingresso per TUTTI gli invii WhatsApp
 - ✅ Security layer automatico basato su `sendType`
 - ✅ Log uniforme per audit trail
@@ -27,17 +28,18 @@ Centralizzare TUTTI gli invii WhatsApp in un unico service che applica **automat
 - ✅ Health check per monitoraggio
 
 **Signature**:
+
 ```typescript
 await messageSendingService.sendMessage({
   phoneNumber: string,
   message: string,
   workspaceId: string,
-  customerId?: string,
-  sendType: 'CHATBOT' | 'ADMIN_MANUAL' | 'CAMPAIGN' | 'SCHEDULER' | 'SYSTEM',
-  skipSecurityLayer?: boolean,
-  userLanguage?: 'it' | 'es' | 'pt' | 'en',
-  metadata?: Record<string, any>,
-  chatSessionId?: string
+  customerId: string,
+  sendType: "CHATBOT" | "ADMIN_MANUAL" | "CAMPAIGN" | "SCHEDULER" | "SYSTEM",
+  skipSecurityLayer: boolean,
+  userLanguage: "it" | "es" | "pt" | "en",
+  metadata: Record<string, any>,
+  chatSessionId: string,
 })
 ```
 
@@ -45,13 +47,13 @@ await messageSendingService.sendMessage({
 
 ### 2. **Security Layer Decision Matrix**
 
-| SendType       | Security Applied | Ragione                                      |
-| -------------- | ---------------- | -------------------------------------------- |
-| **CHATBOT**    | ✅ SI            | LLM può generare contenuto inappropriato     |
-| **CAMPAIGN**   | ✅ SI            | Token DB possono contenere dati malevoli     |
-| **SCHEDULER**  | ✅ SI            | Contenuto automatico richiede controllo      |
-| **ADMIN_MANUAL** | ❌ NO          | Admin è fidato (ma centralizzato per audit)  |
-| **SYSTEM**     | ❌ NO            | Notifiche hardcoded sicure                   |
+| SendType         | Security Applied | Ragione                                     |
+| ---------------- | ---------------- | ------------------------------------------- |
+| **CHATBOT**      | ✅ SI            | LLM può generare contenuto inappropriato    |
+| **CAMPAIGN**     | ✅ SI            | Token DB possono contenere dati malevoli    |
+| **SCHEDULER**    | ✅ SI            | Contenuto automatico richiede controllo     |
+| **ADMIN_MANUAL** | ❌ NO            | Admin è fidato (ma centralizzato per audit) |
+| **SYSTEM**       | ❌ NO            | Notifiche hardcoded sicure                  |
 
 ---
 
@@ -62,6 +64,7 @@ await messageSendingService.sendMessage({
 **File**: `/backend/src/interfaces/http/controllers/whatsapp-webhook.controller.ts`
 
 **Changes**:
+
 ```typescript
 // PRIMA
 await sendToWhatsApp(phoneNumber, message, workspaceId)
@@ -72,8 +75,8 @@ await messageSendingService.sendMessage({
   message,
   workspaceId,
   customerId,
-  sendType: 'CHATBOT', // Security layer ATTIVO
-  userLanguage: customer.language
+  sendType: "CHATBOT", // Security layer ATTIVO
+  userLanguage: customer.language,
 })
 ```
 
@@ -86,6 +89,7 @@ await messageSendingService.sendMessage({
 **File**: `/backend/src/services/campaign-scheduler.service.ts`
 
 **Changes**:
+
 ```typescript
 // PRIMA
 const { sendToWhatsApp } = await import("./whatsapp-api.service")
@@ -97,9 +101,9 @@ await messageSendingService.sendMessage({
   message: processedMessage,
   workspaceId,
   customerId,
-  sendType: 'CAMPAIGN', // 🚨 CRITICO: Security per token DB
+  sendType: "CAMPAIGN", // 🚨 CRITICO: Security per token DB
   userLanguage: customer.language,
-  metadata: { campaignId, tokensUsed }
+  metadata: { campaignId, tokensUsed },
 })
 ```
 
@@ -112,6 +116,7 @@ await messageSendingService.sendMessage({
 **File**: `/backend/src/interfaces/http/controllers/whatsapp-send.controller.ts`
 
 **Changes**:
+
 ```typescript
 // PRIMA
 const whatsappMessage = markdownToWhatsApp(message)
@@ -123,9 +128,9 @@ await messageSendingService.sendMessage({
   message,
   workspaceId,
   customerId,
-  sendType: 'ADMIN_MANUAL',
+  sendType: "ADMIN_MANUAL",
   skipSecurityLayer: true, // Admin è fidato
-  metadata: { sentBy: userId, sentByEmail }
+  metadata: { sentBy: userId, sentByEmail },
 })
 ```
 
@@ -144,6 +149,7 @@ await messageSendingService.sendMessage({
 #### Test Categories:
 
 1. **✅ Security Layer Decision Matrix** (5 tests)
+
    - Verifica che security sia applicato correttamente per ogni `sendType`
    - ✓ CHATBOT → Security SI
    - ✓ CAMPAIGN → Security SI
@@ -152,24 +158,29 @@ await messageSendingService.sendMessage({
    - ✓ SYSTEM → Security NO
 
 2. **🚨 Explicit skipSecurityLayer Flag** (2 tests)
+
    - Verifica che flag `skipSecurityLayer` sia rispettato
    - ✓ skipSecurityLayer=true → Security saltato anche per CHATBOT
    - ✓ skipSecurityLayer=false → Logic di default applicata
 
 3. **🔒 Security Blocks Inappropriate Content** (2 tests)
+
    - ✓ Message bloccato se security rileva spam
    - ✓ Message inviato se security approva
 
 4. **📊 Result Metadata** (3 tests)
+
    - ✓ securityChecked=true quando security applicato
    - ✓ securityChecked=false quando skippato
    - ✓ translatedText ritornato quando modificato
 
 5. **🔍 CRITICAL: Codebase Scan** (2 tests)
+
    - ✓ NESSUNA chiamata diretta a sendToWhatsApp rilevata!
    - ✓ MessageSendingService importato in tutti i file critici
 
 6. **💾 Database Saving** (2 tests)
+
    - ✓ Message salvato se chatSessionId presente
    - ✓ Message NON salvato se chatSessionId mancante
 
@@ -304,18 +315,18 @@ retryDelayMs: 1000
 ### 🎉 Risultato Finale:
 
 > **Andrea, ora TUTTI i messaggi WhatsApp passano dal MessageSendingService e il security layer è SEMPRE presente dove serve!**
-> 
+>
 > ✅ **Chatbot**: Protetto da contenuto AI inappropriato  
 > ✅ **Campagne**: Protetto da SQL injection e phishing nei dati DB  
 > ✅ **Admin**: NO security (come volevi) ma centralizzato per audit  
-> ✅ **System**: NO security per notifiche hardcoded  
+> ✅ **System**: NO security per notifiche hardcoded
 
 ---
 
 **Status**: ✅ PRODUCTION READY  
 **Test Status**: 18/18 PASSED  
 **Violations**: 0  
-**Coverage**: 100%  
+**Coverage**: 100%
 
 **Approved by**: Andrea  
 **Implemented by**: AI Assistant  

@@ -66,8 +66,8 @@ await messageSendingService.sendMessage({
   phoneNumber: phone,
   message: text,
   workspaceId: workspace,
-  sendType: 'CHATBOT' | 'ADMIN_MANUAL' | 'CAMPAIGN' | 'SCHEDULER',
-  skipSecurityLayer?: boolean // Default: false
+  sendType: "CHATBOT" | "ADMIN_MANUAL" | "CAMPAIGN" | "SCHEDULER",
+  skipSecurityLayer: boolean, // Default: false
 })
 ```
 
@@ -88,13 +88,13 @@ needsSecurityCheck(sendType) {
 
 ## 🎯 Matrice Decisionale Finale
 
-| Scenario            | Security Layer | Perché                                  |
-| ------------------- | -------------- | --------------------------------------- |
-| Chatbot (LLM)       | ✅ SI          | AI può generare contenuto inappropriato |
-| Admin manuale       | ❌ NO          | Admin è fidato (solo link validation)   |
-| Campagna con token  | ✅ SI          | Dati DB possono essere malevoli         |
-| Scheduler + LLM     | ✅ SI          | AI + automation = serve protezione      |
-| Notifica hardcoded  | ❌ NO          | Template sicuro, nessun input esterno   |
+| Scenario           | Security Layer | Perché                                  |
+| ------------------ | -------------- | --------------------------------------- |
+| Chatbot (LLM)      | ✅ SI          | AI può generare contenuto inappropriato |
+| Admin manuale      | ❌ NO          | Admin è fidato (solo link validation)   |
+| Campagna con token | ✅ SI          | Dati DB possono essere malevoli         |
+| Scheduler + LLM    | ✅ SI          | AI + automation = serve protezione      |
+| Notifica hardcoded | ❌ NO          | Template sicuro, nessun input esterno   |
 
 ---
 

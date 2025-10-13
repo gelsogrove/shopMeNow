@@ -105,10 +105,10 @@ try {
 ```typescript
 async sendMessage(req: Request, res: Response) {
   // ... validazioni security ...
-  
+
   // 🔄 Convert Markdown → WhatsApp format
   const whatsappMessage = markdownToWhatsApp(message)
-  
+
   // 📤 Send to WhatsApp - NO SECURITY LAYER!
   const { success, error, messageId } = await sendToWhatsApp(
     phoneNumber,
@@ -141,7 +141,7 @@ async sendMessage(req: Request, res: Response) {
 ```typescript
 private async sendCampaignMessage(campaign: any, customer: any) {
   // ... validazioni security workspaceId, phone, etc ...
-  
+
   // Replace tokens in message
   const { message: processedMessage } = await this.tokenService.replaceTokens(
     campaign.messagePreview,
@@ -149,7 +149,7 @@ private async sendCampaignMessage(campaign: any, customer: any) {
     campaign.workspaceId,
     campaign.id
   )
-  
+
   // 📤 Send WhatsApp - NO SECURITY LAYER!
   const sendResult = await sendToWhatsApp(
     validCustomer.phone,
@@ -282,7 +282,7 @@ interface SendMessageOptions {
   message: string
   workspaceId: string
   customerId?: string
-  sendType: 'CHATBOT' | 'ADMIN_MANUAL' | 'CAMPAIGN' | 'SCHEDULER'
+  sendType: "CHATBOT" | "ADMIN_MANUAL" | "CAMPAIGN" | "SCHEDULER"
   skipSecurityLayer?: boolean // Default: false
   metadata?: any
 }
@@ -291,9 +291,9 @@ class MessageSendingService {
   async sendMessage(options: SendMessageOptions): Promise<SendMessageResult> {
     // 1. Determine if security layer needed
     const needsSecurity = this.needsSecurityCheck(options.sendType)
-    
+
     let finalMessage = options.message
-    
+
     // 2. Apply security layer if needed
     if (needsSecurity && !options.skipSecurityLayer) {
       const securityResult = await translationSecurityService.processResponse(
@@ -301,44 +301,44 @@ class MessageSendingService {
         this.detectLanguage(options.customerId), // Auto-detect or get from customer
         this.getAllowedLinks(options.workspaceId)
       )
-      
+
       if (securityResult.blocked) {
-        logger.warn('🚨 Security layer blocked message', {
+        logger.warn("🚨 Security layer blocked message", {
           sendType: options.sendType,
-          reason: securityResult.reason
+          reason: securityResult.reason,
         })
         throw new Error(`Message blocked: ${securityResult.reason}`)
       }
-      
+
       finalMessage = securityResult.translatedText
     }
-    
+
     // 3. Send via WhatsApp
     const result = await sendToWhatsApp(
       options.phoneNumber,
       finalMessage,
       options.workspaceId
     )
-    
+
     // 4. Save to database with audit trail
     await this.saveMessage({
       ...options,
       finalMessage,
-      whatsappResult: result
+      whatsappResult: result,
     })
-    
+
     return result
   }
-  
+
   private needsSecurityCheck(sendType: string): boolean {
     switch (sendType) {
-      case 'CHATBOT':
+      case "CHATBOT":
         return true // LLM-generated content
-      case 'CAMPAIGN':
+      case "CAMPAIGN":
         return true // Token replacement from DB
-      case 'SCHEDULER':
+      case "SCHEDULER":
         return true // Automated content
-      case 'ADMIN_MANUAL':
+      case "ADMIN_MANUAL":
         return false // Trusted admin
       default:
         return true // Safe default: check everything
@@ -369,8 +369,8 @@ const result = await messageSendingService.sendMessage({
   message: llmResponse,
   workspaceId,
   customerId: customer.id,
-  sendType: 'CHATBOT',
-  metadata: { llmTokens: tokenUsage }
+  sendType: "CHATBOT",
+  metadata: { llmTokens: tokenUsage },
 })
 ```
 
@@ -386,9 +386,9 @@ await messageSendingService.sendMessage({
   message: whatsappMessage,
   workspaceId,
   customerId,
-  sendType: 'ADMIN_MANUAL',
+  sendType: "ADMIN_MANUAL",
   skipSecurityLayer: true, // Admin è fidato
-  metadata: { sentBy: session.userId }
+  metadata: { sentBy: session.userId },
 })
 ```
 
@@ -396,7 +396,11 @@ await messageSendingService.sendMessage({
 
 ```typescript
 // PRIMA
-await sendToWhatsApp(validCustomer.phone, processedMessage, campaign.workspaceId)
+await sendToWhatsApp(
+  validCustomer.phone,
+  processedMessage,
+  campaign.workspaceId
+)
 
 // DOPO
 await messageSendingService.sendMessage({
@@ -404,9 +408,9 @@ await messageSendingService.sendMessage({
   message: processedMessage,
   workspaceId: campaign.workspaceId,
   customerId: customer.id,
-  sendType: 'CAMPAIGN',
+  sendType: "CAMPAIGN",
   // Security layer ATTIVO per token replacement
-  metadata: { campaignId: campaign.id, tokensUsed }
+  metadata: { campaignId: campaign.id, tokensUsed },
 })
 ```
 
@@ -491,17 +495,20 @@ for (const customer of customers) {
 ### ✅ Strategia Finale:
 
 1. **Creare `MessageSendingService` centralizzato**
+
    - Single point of control per TUTTI gli invii
    - Security layer applicato automaticamente dove serve
    - Log e audit trail unificati
 
 2. **Security Layer OBBLIGATORIO per**:
+
    - ✅ Risposte chatbot (LLM)
    - ✅ Campagne con token replacement
    - ✅ Scheduler automatico
    - ✅ Qualsiasi contenuto generato/processato da AI
 
 3. **Security Layer OPZIONALE per**:
+
    - ❌ Admin manual send (skip con flag)
    - ❌ Notifiche sistema hardcoded
    - ❌ Messaggi già verificati (cache)
