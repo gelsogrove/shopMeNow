@@ -2170,7 +2170,9 @@ export class MessageRepository {
     workspaceId?: string
   ) {
     try {
-      logger.info(`[HISTORY] Fetching messages from last ${minutesAgo} minutes for ${phoneNumber}`)
+      logger.info(
+        `[HISTORY] Fetching messages from last ${minutesAgo} minutes for ${phoneNumber}`
+      )
 
       // Find customer by phone
       const customer = await this.findCustomerByPhone(phoneNumber)

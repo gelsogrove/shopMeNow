@@ -1278,7 +1278,9 @@ export function WhatsAppChatModal({
                                         typeof message.debugInfo === "string"
                                           ? JSON.parse(message.debugInfo)
                                           : message.debugInfo
-                                      return debugData.linkReplacements?.length || 0
+                                      return (
+                                        debugData.linkReplacements?.length || 0
+                                      )
                                     })()}
                                     ):
                                   </div>
@@ -1310,7 +1312,9 @@ export function WhatsAppChatModal({
                                                     URL:
                                                   </span>
                                                   <a
-                                                    href={replacement.replacedWith}
+                                                    href={
+                                                      replacement.replacedWith
+                                                    }
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="text-blue-600 hover:underline text-[10px] break-all"
