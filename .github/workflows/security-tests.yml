@@ -1,16 +1,3 @@
-# 🔒 ShopME Security CI/CD Pipeline
-#
-# Andrea: "voglio metterlo poi dentro il test prima di fare il merge a main"
-#
-# Questo workflow BLOCCA il merge se:
-# - ❌ Anche UN SOLO test di security fallisce
-# - ❌ Test di rate limiting fallisce
-# - ❌ Test di API key/signature fallisce
-# - ❌ Lint errors presenti
-# - ❌ TypeScript compilation errors
-#
-# Solo se TUTTO passa → ✅ Merge permesso
-
 name: 🔒 Security Tests (REQUIRED)
 
 on:
