@@ -67,90 +67,7 @@ let createdWorkspaces: any[] = []
 // Define a fixed ID for our unique workspace
 const mainWorkspaceId = "cm9hjgq9v00014qk8fsdy4ujv"
 
-// Function to automatically generate ALL embeddings like clicking buttons in frontend
-async function generateEmbeddingsAfterSeed() {
-  console.log("\n🤖 AUTO-GENERATING ALL EMBEDDINGS (like clicking FE buttons)")
-  console.log("============================================================")
-
-  try {
-    // Import the embedding services
-    const { EmbeddingService } = require("../src/services/embeddingService")
-    // const { DocumentService } = require("../src/services/documentService") // REMOVED - documents no longer exist
-
-    const embeddingService = new EmbeddingService()
-    // const documentService = new DocumentService() // REMOVED - documents no longer exist
-
-    console.log("🔄 1. Generating FAQ embeddings...")
-    try {
-      const faqResult =
-        await embeddingService.generateFAQEmbeddings(mainWorkspaceId)
-      console.log(
-        `✅ FAQ embeddings: ${faqResult.processed} processed, ${faqResult.errors.length} errors`
-      )
-      if (faqResult.errors.length > 0) {
-        console.log("⚠️ FAQ errors:", faqResult.errors)
-      }
-    } catch (error) {
-      console.log("❌ FAQ embeddings failed:", (error as any).message)
-    }
-
-    console.log("🔄 2. Generating Service embeddings...")
-    try {
-      const serviceResult =
-        await embeddingService.generateServiceEmbeddings(mainWorkspaceId)
-      console.log(
-        `✅ Service embeddings: ${serviceResult.processed} processed, ${serviceResult.errors.length} errors`
-      )
-      if (serviceResult.errors.length > 0) {
-        console.log("⚠️ Service errors:", serviceResult.errors)
-      }
-    } catch (error) {
-      console.log("❌ Service embeddings failed:", (error as any).message)
-    }
-
-    console.log("🔄 3. Generating Product embeddings...")
-    try {
-      const productResult =
-        await embeddingService.generateProductEmbeddings(mainWorkspaceId)
-      console.log(
-        `✅ Product embeddings: ${productResult.processed} processed, ${productResult.errors.length} errors`
-      )
-      if (productResult.errors.length > 0) {
-        console.log("⚠️ Product errors:", productResult.errors)
-      }
-    } catch (error) {
-      console.log("❌ Product embeddings failed:", (error as any).message)
-    }
-
-    // console.log("🔄 4. Generating Document embeddings...")
-    // try {
-    //   const documentResult =
-    //     await documentService.generateEmbeddingsForActiveDocuments(
-    //       mainWorkspaceId
-    //     )
-    //   console.log(
-    //     `✅ Document embeddings: ${documentResult.processed} processed, ${documentResult.errors.length} errors`
-    //   )
-    //   if (documentResult.errors.length > 0) {
-    //     console.log("⚠️ Document errors:", documentResult.errors)
-    //   }
-    // } catch (error) {
-    //   console.log("❌ Document embeddings failed:", error.message)
-    // }
-    console.log(
-      "🔄 4. Document embeddings: SKIPPED (documents no longer exist in system)"
-    )
-
-    console.log("🎉 EMBEDDING GENERATION COMPLETED!")
-    console.log("=================================")
-    console.log("✅ All embeddings generated automatically")
-    console.log("✅ RAG search should now work correctly")
-    console.log("✅ Chatbot will use ONLY database data")
-  } catch (error) {
-    console.log("❌ Error during embedding generation:", (error as any).message)
-    console.log("⚠️ You may need to generate embeddings manually via frontend")
-  }
-}
+// Embedding generation removed - RAG system no longer in use
 
 async function main() {
   console.log("🚀 STARTING COMPLETE DATABASE SEED")
@@ -821,67 +738,67 @@ async function main() {
     // We don't delete them for safety, but we don't include them in subsequent operations
   }
 
-  // L'Altra Italia Categories - Based on catalog structure
+  // L'Altra Italia Categories - Based on catalog structure (IN ENGLISH - master language)
   const foodCategories = [
     {
       name: "Cheeses & Dairy",
       slug: "cheeses-dairy",
       description:
-        "🧀 Premium Italian cheeses and dairy, mozzarella, burrata, and high-quality dairy products.",
+        "🧀 Premium Italian cheeses and dairy products, including mozzarella, burrata, and high-quality dairy items.",
     },
     {
       name: "Cured Meats",
       slug: "cured-meats",
       description:
-        "🥓 Traditional Italian cured meats and high-quality artisanal sausages.",
+        "🥓 Traditional Italian cured meats and artisanal sausages of premium quality.",
     },
     {
       name: "Salami & Cold Cuts",
       slug: "salami-cold-cuts",
       description:
-        "🍖 Artisanal salami, prosciutto, and the best traditional Italian cold cuts.",
+        "🍖 Artisanal salami, prosciutto, and the finest traditional Italian cold cuts.",
     },
     {
       name: "Pasta & Rice",
       slug: "pasta-rice",
       description:
-        "🍝 Premium Italian pasta and rice, traditional and high-quality artisanal varieties.",
+        "🍝 Premium Italian pasta and rice, traditional and artisanal varieties of top quality.",
     },
     {
       name: "Tomato Products",
       slug: "tomato-products",
       description:
-        "🍅 Italian tomato sauces, passata, and superior quality tomato-based products.",
+        "🍅 Italian tomato sauces, passata, and tomato-based products of superior quality.",
     },
     {
       name: "Flour & Baking",
       slug: "flour-baking",
       description:
-        "🌾 Italian flours and ingredients for artisanal baking and pastry.",
+        "🌾 Italian flours and ingredients for artisanal baking and pastry making.",
     },
     {
       name: "Sauces & Preserves",
       slug: "sauces-preserves",
       description:
-        "🫙 Gourmet sauces, preserves, and high-quality Italian condiments to enrich every dish.",
+        "🫙 Gourmet sauces, preserves, and Italian condiments to enrich every dish.",
     },
     {
       name: "Water & Beverages",
       slug: "water-beverages",
       description:
-        "💧 Premium Italian mineral waters and high-quality traditional beverages.",
+        "💧 Premium Italian mineral waters and traditional beverages of high quality.",
     },
     {
       name: "Frozen Products",
       slug: "frozen-products",
       description:
-        "🧊 Italian frozen desserts, pastries, and high-quality frozen specialties.",
+        "🧊 Italian frozen desserts, pastries, and premium frozen specialties.",
     },
     {
       name: "Various & Spices",
       slug: "various-spices",
       description:
-        "🌶️ Italian spices, condiments, and various gourmet products for traditional cuisine.",
+        "🌶️ Italian spices, condiments, and various gourmet products for traditional cooking.",
     },
   ]
 
@@ -2444,6 +2361,7 @@ async function main() {
             price: product.price,
             stock: product.stock,
             status: "ACTIVE" as any, // Casting to any per evitare errori di tipo
+            isActive: true, // ✅ CRITICAL: Set isActive to true for products to appear in prompt
             slug: `${product.slug}-${Date.now()}`, // Generiamo slug unici
             workspaceId: mainWorkspaceId,
             categoryId: category.id,
@@ -2462,6 +2380,7 @@ async function main() {
             formato: product.formato,
             price: product.price,
             stock: product.stock,
+            isActive: true, // ✅ CRITICAL: Ensure existing products are active
             categoryId: category.id,
           },
         })
@@ -2615,7 +2534,7 @@ async function main() {
     }
   }
 
-  // Create FAQ data - RESTORED ORIGINAL FAQs
+  // Create FAQ data - CLEANED (no duplicates, no Italian)
   const faqsData = [
     {
       question: "What are your business hours?",
@@ -2699,28 +2618,7 @@ async function main() {
         "You can download our complete product catalog here: [LINK_CATALOG]",
     },
     {
-      question: "What discount do I have on products?",
-      answer:
-        "Hello! Your current discount on products is [USER_DISCOUNT], and the following offers are also active: [LIST_OFFERS]",
-    },
-    {
-      question: "What discount do I have on products?",
-      answer:
-        "Hello! Your current discount on products is [USER_DISCOUNT], and the following offers are also active: [LIST_OFFERS]",
-    },
-    /* Rimosse FAQ con token non supportati - LIST_SERVICES e LIST_ALL_PRODUCTS sono gestiti dal prompt */
-    {
       question: "How can I see my orders?",
-      answer:
-        "Hello! You can view your orders by clicking this link: [LINK_ORDERS_WITH_TOKEN]",
-    },
-    {
-      question: "Show me my orders",
-      answer:
-        "Hello! You can view your orders by clicking this link: [LINK_ORDERS_WITH_TOKEN]",
-    },
-    {
-      question: "Give me my orders",
       answer:
         "Hello! You can view your orders by clicking this link: [LINK_ORDERS_WITH_TOKEN]",
     },
@@ -2734,92 +2632,18 @@ async function main() {
       answer:
         "Hello! I am SofIA, the digital assistant of L'Altra Italia. I'm here to help you with information about our Italian products, orders, and services. How can I assist you today?",
     },
-    /* Rimosse FAQ con token non supportati - LIST_SERVICES sono gestiti dal prompt */
-    {
-      question: "I want to change my email",
-      answer:
-        "Hello! You can change your email through this secure link: [LINK_PROFILE_WITH_TOKEN]",
-    },
-    {
-      question: "I want to change my shipping address",
-      answer:
-        "Hello! You can change your shipping address through this secure link: [LINK_PROFILE_WITH_TOKEN]",
-    },
-    {
-      question: "Give me the list of orders",
-      answer:
-        "Hello! You can view your orders by clicking this link: [LINK_ORDERS_WITH_TOKEN]",
-    },
-    {
-      question: "Give me the list of orders",
-      answer:
-        "Ciao! Per visualizzare i tuoi ordini, clicca su questo link: [LINK_ORDERS_WITH_TOKEN]",
-    },
-    {
-      question: "I want to modify my profile",
-      answer:
-        "Hello! You can modify your profile through this secure link: [LINK_PROFILE_WITH_TOKEN]",
-    },
-    {
-      question: "Show my orders",
-      answer:
-        "Hello! You can view your orders by clicking this link: [LINK_ORDERS_WITH_TOKEN]",
-    },
-    {
-      question: "I want to see my orders",
-      answer:
-        "Hello! You can view your orders by clicking this link: [LINK_ORDERS_WITH_TOKEN]",
-    },
-    {
-      question: "Can I speak with an operator?",
-      answer:
-        "Hello! To speak with a human operator, contact our customer service: info@laltrait.com or call (+34) 93 15 91 221. We are available Monday to Friday from 9:00 AM to 6:00 PM.",
-    },
     {
       question: "Show cart",
       answer: "Here is your cart! 🛒 [LINK_CHECKOUT_WITH_TOKEN]",
     },
     {
-      question: "Show me cart",
-      answer: "Here is your cart! 🛒 [LINK_CHECKOUT_WITH_TOKEN]",
-    },
-    {
-      question: "show cart",
-      answer: "Here is your cart! 🛒 [LINK_CHECKOUT_WITH_TOKEN]",
-    },
-    {
-      question: "show my cart",
-      answer: "Here is your cart! 🛒 [LINK_CHECKOUT_WITH_TOKEN]",
-    },
-    // New FAQ: activate cart / new order
-    {
-      question: "new order",
+      question: "New order",
       answer: "Click here to activate your cart 🛒 [LINK_CHECKOUT_WITH_TOKEN]",
     },
     {
-      question: "show cart",
-      answer: "Here is your cart! 🛒 [LINK_CHECKOUT_WITH_TOKEN]",
-    },
-    {
-      question: "show my cart",
-      answer: "Here is your cart! 🛒 [LINK_CHECKOUT_WITH_TOKEN]",
-    },
-    {
-      question: "What offers do you have?",
-      answer: "Hello! Here are our active offers: [LIST_OFFERS]",
-    },
-    /* Rimosse FAQ con token LIST_ALL_PRODUCTS - sono gestiti dal prompt */
-    {
-      question: "what offers do you have?",
-      answer: "Hello! Here are our active offers: [LIST_OFFERS]",
-    },
-    {
-      question: "Offers",
-      answer: "Here are our active offers: [LIST_OFFERS]",
-    },
-    {
-      question: "Discounts",
-      answer: "Here are our active offers and discounts: [LIST_OFFERS]",
+      question: "Can I speak with an operator?",
+      answer:
+        "Hello! To speak with a human operator, contact our customer service: info@laltrait.com or call (+34) 93 15 91 221. We are available Monday to Friday from 9:00 AM to 6:00 PM.",
     },
     {
       question: "Defective products",

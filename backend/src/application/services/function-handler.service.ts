@@ -425,7 +425,7 @@ export class FunctionHandlerService {
       // Import the GetLinkOrderByCode function
       const {
         GetLinkOrderByCode,
-      } = require("../../chatbot/calling-functions/GetLinkOrderByCode")
+      } = require("../../domain/calling-functions/GetLinkOrderByCode")
 
       // Call the GetLinkOrderByCode function
       const result = await GetLinkOrderByCode({

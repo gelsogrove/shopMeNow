@@ -1,8 +1,7 @@
 import { PrismaClient } from "@prisma/client"
 import { Request, Response } from "express"
-import { sendToWhatsApp } from "../../../services/whatsapp-api.service"
+import messageSendingService from "../../../services/message-sending.service"
 import logger from "../../../utils/logger"
-import { markdownToWhatsApp } from "../../../utils/whatsapp-formatter"
 
 /**
  * WhatsApp Send Controller
@@ -141,15 +140,27 @@ export class WhatsAppSendController {
         userId: session.userId,
       })
 
-      // 🔄 Convert Markdown → WhatsApp format
-      const whatsappMessage = markdownToWhatsApp(message)
-
-      // 📤 Send to WhatsApp
-      const { success, error, messageId } = await sendToWhatsApp(
+      // � Send via MessageSendingService
+      // Admin manual send: NO security layer (admin è fidato)
+      // Ma passa comunque dal service per centralizzazione e audit
+      const sendResult = await messageSendingService.sendMessage({
         phoneNumber,
-        whatsappMessage,
-        workspaceId
-      )
+        message, // Already in markdown format
+        workspaceId,
+        customerId,
+        sendType: "ADMIN_MANUAL",
+        skipSecurityLayer: true, // Admin è fidato, no security check
+        userLanguage: (customer.language as "it" | "es" | "pt" | "en") || "it",
+        metadata: {
+          sentBy: session.userId,
+          sentByEmail: session.user?.email,
+          operatorName: session.user?.name || "Unknown",
+        },
+      })
+
+      const { success, error, messageId } = sendResult.success
+        ? { success: true, error: undefined, messageId: sendResult.messageId }
+        : { success: false, error: sendResult.error, messageId: undefined }
 
       // 💾 Get or create active chat session
       let chatSession = await prisma.chatSession.findFirst({

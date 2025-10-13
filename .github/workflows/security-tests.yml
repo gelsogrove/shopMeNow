@@ -7,6 +7,8 @@ on:
     branches: [main]
   # Block merge if tests fail
   merge_group:
+  # Allow manual execution from GitHub UI
+  workflow_dispatch:
 
 # Cancel in-progress runs when new commit pushed
 concurrency:
@@ -14,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Job 1: Lint & Type Check
+  # Job 1: Lint & Type Check (NO DATABASE)
   lint-and-typecheck:
     name: 🔍 Lint & Type Check
     runs-on: ubuntu-latest
@@ -42,11 +44,53 @@ jobs:
         working-directory: ./backend
         run: npx tsc --noEmit
 
-  # Job 2: Security Tests (CRITICAL - BLOCCA MERGE)
+  # Job 2: Unit Tests (NO DATABASE - Fast in-memory tests)
+  unit-tests:
+    name: 🧪 Unit Tests (Fast)
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck # Run only if lint passes
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: backend/package-lock.json
+
+      - name: 📦 Install dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: 🧪 Run unit tests (NO DATABASE)
+        working-directory: ./backend
+        run: npm run test:unit
+        env:
+          SKIP_TRANSLATION_TESTS: "true" # Skip tests that require OpenRouter API (cost money)
+        # Fast in-memory tests - no database required
+
+      - name: 📊 Generate coverage report
+        working-directory: ./backend
+        run: npm run test:coverage
+        env:
+          SKIP_TRANSLATION_TESTS: "true"
+        continue-on-error: true
+
+      - name: 📤 Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./backend/coverage/lcov.info
+          flags: unit-tests
+          fail_ci_if_error: false
+
+  # Job 3: Security Tests (CRITICAL - BLOCCA MERGE - Requires DB)
   security-tests:
     name: 🔒 Security Tests (REQUIRED)
     runs-on: ubuntu-latest
-    needs: lint-and-typecheck # Run only if lint passes
+    needs: [lint-and-typecheck, unit-tests] # Run only if lint and unit tests pass
 
     services:
       # PostgreSQL for tests
@@ -120,9 +164,9 @@ jobs:
           flags: security-tests
           fail_ci_if_error: false
 
-  # Job 3: Integration Tests
+  # Job 4: Integration Tests (separate, non-blocking)
   integration-tests:
-    name: 🔗 Integration Tests
+    name: 🔗 Integration Tests (Optional)
     runs-on: ubuntu-latest
     needs: security-tests # Run only if security tests pass
 
@@ -174,11 +218,11 @@ jobs:
         run: npm run test:integration || true
         # Continue even if integration tests fail (not blocking)
 
-  # Job 4: Security Summary
+  # Job 5: Security Summary
   security-summary:
     name: 📊 Security Summary
     runs-on: ubuntu-latest
-    needs: [security-tests, integration-tests]
+    needs: [lint-and-typecheck, unit-tests, security-tests, integration-tests]
     if: always() # Run even if tests fail
 
     steps:
@@ -201,6 +245,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Test Jobs Status" >> $GITHUB_STEP_SUMMARY
           echo "- Lint & TypeCheck: ${{ needs.lint-and-typecheck.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Unit Tests: ${{ needs.unit-tests.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Security Tests: ${{ needs.security-tests.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Integration Tests: ${{ needs.integration-tests.result }}" >> $GITHUB_STEP_SUMMARY
 

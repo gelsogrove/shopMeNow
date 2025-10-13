@@ -170,24 +170,10 @@ export const deleteFAQ = async (
   }
 }
 
-/**
- * Generate embeddings for all active FAQs in a workspace
- */
-export const generateEmbeddings = async (workspaceId: string): Promise<{ processed: number; errors: string[]; hasErrors: boolean }> => {
-  try {
-    const response = await api.post(`/workspaces/${workspaceId}/faqs/generate-embeddings`)
-    return response.data.data || response.data
-  } catch (error) {
-    logger.error("Error generating FAQ embeddings:", error)
-    throw error
-  }
-}
-
 export const faqApi = {
   getFAQs,
   getFAQById,
   createFAQ,
   updateFAQ,
   deleteFAQ,
-  generateEmbeddings,
 }

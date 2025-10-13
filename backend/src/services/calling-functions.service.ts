@@ -1,12 +1,8 @@
-import axios from "axios"
+import { ReplaceLinkWithToken } from "../application/services/link-replacement.service"
 import { SecureTokenService } from "../application/services/secure-token.service"
-import { ReplaceLinkWithToken } from "../chatbot/calling-functions/ReplaceLinkWithToken"
 import {
   ErrorResponse,
   GetCartLinkRequest,
-  ProductsResponse,
-  RagSearchRequest,
-  RagSearchResponse,
   ServicesResponse,
   StandardResponse,
   SuccessResponse,
@@ -16,15 +12,6 @@ import {
 export interface GetAllProductsRequest {
   workspaceId: string
   customerId: string
-}
-
-export interface SearchSpecificProductRequest {
-  workspaceId: string
-  customerId?: string
-  productName: string
-  phoneNumber?: string
-  message?: string
-  language?: string
 }
 
 export interface GetOrdersListLinkRequest {
@@ -305,71 +292,6 @@ export class CallingFunctionsService {
     }
   }
 
-  public async SearchRag(
-    request: RagSearchRequest
-  ): Promise<RagSearchResponse> {
-    try {
-      console.log("🔧 Calling SearchRag with:", request)
-
-      // Use the query directly without translation to preserve Italian product names
-      // The TranslationService in LLMService already handles translation correctly
-      const translatedQuery = request.query
-      console.log("🌐 Using original query (no translation):", translatedQuery)
-
-      // Prepare payload with optional tuning params
-      const payload: any = {
-        query: translatedQuery, // Use query as-is (could be Italian or English)
-        workspaceId: request.workspaceId,
-        customerId: request.customerId,
-        businessType: "ECOMMERCE", // Default business type
-        customerLanguage: "auto", // Let the system detect language automatically
-      }
-
-      // Pass tuning params if provided (top_k, similarityThreshold)
-      const reqAny: any = request as any
-      if (typeof reqAny.top_k === "number") payload.top_k = reqAny.top_k
-      if (typeof reqAny.similarityThreshold === "number")
-        payload.similarityThreshold = reqAny.similarityThreshold
-
-      const response = await axios.post(`${this.baseUrl}/rag-search`, payload, {
-        timeout: 15000,
-      })
-
-      console.log("✅ SearchRag response received:", {
-        hasResults: !!response.data.results,
-        originalQuery: request.query,
-        translatedQuery: translatedQuery,
-        resultsCount: response.data.results
-          ? Object.keys(response.data.results).length
-          : 0,
-      })
-
-      // 🔧 FIX: Check if we have real results before marking as success
-      const hasRealResults =
-        response.data &&
-        response.data.results &&
-        response.data.results.total > 0
-
-      console.log(
-        "🔧 SearchRag: hasRealResults =",
-        hasRealResults,
-        "total =",
-        response.data?.results?.total
-      )
-
-      return {
-        success: hasRealResults, // ✅ TRUE only if we have actual results
-        results: response.data?.results || {},
-        query: request.query,
-        translatedQuery: translatedQuery,
-        timestamp: new Date().toISOString(),
-      }
-    } catch (error) {
-      console.error("❌ Error in SearchRag:", error)
-      return this.createErrorResponse(error, "SearchRag") as RagSearchResponse
-    }
-  }
-
   public async contactOperator(request: {
     customerId: string
     workspaceId: string
@@ -381,7 +303,7 @@ export class CallingFunctionsService {
       // Import the ContactOperator function
       const {
         ContactOperator,
-      } = require("../chatbot/calling-functions/ContactOperator")
+      } = require("../domain/calling-functions/ContactOperator")
 
       const result = await ContactOperator({
         phoneNumber: request.phoneNumber, // 🎯 CORRETTO: phoneNumber invece di phone
@@ -415,172 +337,27 @@ export class CallingFunctionsService {
     try {
       console.log("🔧 Calling getShipmentTrackingLink with:", request)
 
-      // Validate that orderCode exists in database and get trackingNumber
-      let order
-      try {
-        console.log(
-          "🔍 Checking if order exists in database for tracking:",
-          request.orderCode
-        )
+      // Import the GetShipmentTrackingLink function
+      const {
+        GetShipmentTrackingLink,
+      } = require("../domain/calling-functions/GetShipmentTrackingLink")
 
-        // Import Prisma client
-        const { PrismaClient } = require("@prisma/client")
-        const prisma = new PrismaClient()
+      // Call the GetShipmentTrackingLink function
+      const result = await GetShipmentTrackingLink({
+        customerId: request.customerId,
+        workspaceId: request.workspaceId,
+        orderCode: request.orderCode || undefined,
+      })
 
-        // Query the database for the order with trackingNumber
-        // If no orderCode provided, get the last order for the customer
-        const whereClause = request.orderCode
-          ? { orderCode: request.orderCode, workspaceId: request.workspaceId }
-          : { customerId: request.customerId, workspaceId: request.workspaceId }
+      console.log("✅ GetShipmentTrackingLink result:", result)
 
-        order = await prisma.orders.findFirst({
-          where: whereClause,
-          orderBy: { createdAt: "desc" }, // Get the most recent order if no specific orderCode
-          select: {
-            orderCode: true,
-            trackingNumber: true,
-          },
-        })
-
-        await prisma.$disconnect()
-
-        if (!order) {
-          console.log(
-            "❌ Order not found in database for tracking:",
-            request.orderCode
-          )
-          return {
-            success: false,
-            error: `Ordine non trovato`,
-            message: `Ordine non trovato`,
-            timestamp: new Date().toISOString(),
-          } as TokenResponse
-        }
-
-        if (!order.trackingNumber) {
-          console.log(
-            "❌ No tracking number found for order:",
-            request.orderCode
-          )
-          return {
-            success: false,
-            error: `Non c'è il tracking-id nell'ordine`,
-            message: `Non c'è il tracking-id nell'ordine`,
-            timestamp: new Date().toISOString(),
-          } as TokenResponse
-        }
-
-        console.log(
-          "✅ Order found with tracking number:",
-          order.trackingNumber
-        )
-      } catch (dbError) {
-        console.log(
-          "❌ Database error while checking order for tracking:",
-          dbError
-        )
-        return {
-          success: false,
-          error: `Ordine non trovato`,
-          message: `Ordine non trovato`,
-          timestamp: new Date().toISOString(),
-        } as TokenResponse
-      }
-
-      // Generate direct DHL tracking link
-      const dhlTrackingUrl = `https://www.dhl.com/global-en/home/tracking/tracking-express.html?tracking-id=${encodeURIComponent(
-        order.trackingNumber
-      )}`
-
-      console.log(
-        `🔗 Generated DHL tracking URL: ${dhlTrackingUrl} for tracking number: ${order.trackingNumber}`
-      )
-
-      // Create short URL that redirects to DHL directly
-      try {
-        const {
-          urlShortenerService,
-        } = require("../application/services/url-shortener.service")
-
-        const shortResult = await urlShortenerService.createShortUrl(
-          dhlTrackingUrl,
-          request.workspaceId
-        )
-        // shortResult.shortUrl already contains the full URL from workspace.url
-        const shortTrackingUrl = shortResult.shortUrl
-
-        console.log(
-          `📎 Created short tracking link: ${shortTrackingUrl} → ${dhlTrackingUrl}`
-        )
-
-        return {
-          success: true,
-          linkUrl: shortTrackingUrl, // Short URL that redirects to DHL
-          trackingNumber: order.trackingNumber,
-          orderCode: order.orderCode,
-          expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          action: "tracking",
-          timestamp: new Date().toISOString(),
-        }
-      } catch (shortError) {
-        console.warn(
-          "⚠️ Failed to create short URL for DHL tracking, using direct DHL link:",
-          shortError
-        )
-
-        return {
-          success: true,
-          linkUrl: dhlTrackingUrl, // Fallback to direct DHL link
-          trackingNumber: order.trackingNumber,
-          orderCode: order.orderCode,
-          expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          action: "tracking",
-          timestamp: new Date().toISOString(),
-        }
-      }
+      return result
     } catch (error) {
+      console.error("❌ Error in getShipmentTrackingLink:", error)
       return this.createErrorResponse(
         error,
         "getShipmentTrackingLink"
       ) as TokenResponse
-    }
-  }
-
-  public async searchSpecificProduct(
-    request: SearchSpecificProductRequest
-  ): Promise<ProductsResponse> {
-    try {
-      console.log("🔧 Calling searchSpecificProduct with:", request)
-
-      // Import the SearchSpecificProduct function
-      const {
-        SearchSpecificProduct,
-      } = require("../chatbot/calling-functions/SearchSpecificProduct")
-
-      const result = await SearchSpecificProduct({
-        phoneNumber: request.phoneNumber || "unknown",
-        workspaceId: request.workspaceId,
-        customerId: request.customerId,
-        message: request.message || "Search specific product",
-        productName: request.productName,
-        language: request.language || "it",
-      })
-
-      return this.createSuccessResponse(
-        {
-          products: result.products,
-          totalProducts: result.totalProducts,
-          message: result.response,
-          found: result.found,
-        },
-        "searchSpecificProduct"
-      ) as ProductsResponse
-    } catch (error) {
-      console.error("❌ Error in searchSpecificProduct:", error)
-      return this.createErrorResponse(
-        error,
-        "searchSpecificProduct"
-      ) as ProductsResponse
     }
   }
 

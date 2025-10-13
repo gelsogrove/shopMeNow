@@ -10,7 +10,6 @@ export const loggingMiddleware = (
 
   // Log request
   logger.info("Incoming request", {
-    requestId: req.requestId,
     method: req.method,
     url: req.url,
     query: req.query,
@@ -28,7 +27,8 @@ export const loggingMiddleware = (
 
     // Log response
     logger.info("Outgoing response", {
-      requestId: req.requestId,
+      method: req.method,
+      url: req.url,
       statusCode: res.statusCode,
       responseTime,
       size: Buffer.byteLength(body),
@@ -40,21 +40,27 @@ export const loggingMiddleware = (
   next()
 }
 
-export const requestLoggingMiddleware = (req: Request, res: Response, next: NextFunction) => {
+export const requestLoggingMiddleware = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Log the request
-  logger.info(`Request: ${req.method} ${req.originalUrl}`);
-  
+  logger.info(`Request: ${req.method} ${req.originalUrl}`)
+
   // Store the original end function
-  const originalEnd = res.end;
-  
+  const originalEnd = res.end
+
   // Override the end function to log the response
   // @ts-ignore
-  res.end = function(chunk?: any, encoding?: BufferEncoding, cb?: () => void) {
-    logger.info(`Response for ${req.method} ${req.originalUrl} - Status: ${res.statusCode}`);
-    
+  res.end = function (chunk?: any, encoding?: BufferEncoding, cb?: () => void) {
+    logger.info(
+      `Response for ${req.method} ${req.originalUrl} - Status: ${res.statusCode}`
+    )
+
     // Call the original end function
-    return originalEnd.call(this, chunk, encoding, cb);
-  };
-  
-  next();
-};
+    return originalEnd.call(this, chunk, encoding, cb)
+  }
+
+  next()
+}

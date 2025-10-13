@@ -1,5 +1,5 @@
-import { api } from './api'
 import { logger } from "@/lib/logger"
+import { api } from "./api"
 
 export interface Service {
   id: string
@@ -44,45 +44,48 @@ export interface UpdateServiceData {
 // Mock data for services when API fails
 const mockServices: Service[] = [
   {
-    id: 'mock-service-1',
-    name: 'Base Website Design',
-    description: 'Professional website design with responsive layout, optimized for mobile and desktop. Includes up to 5 pages and basic SEO optimization.',
-    code: 'WEB001',
+    id: "mock-service-1",
+    name: "Base Website Design",
+    description:
+      "Professional website design with responsive layout, optimized for mobile and desktop. Includes up to 5 pages and basic SEO optimization.",
+    code: "WEB001",
     price: 999,
-    currency: '€',
+    currency: "€",
     duration: 0,
     isActive: true,
-    workspaceId: 'mock-workspace',
+    workspaceId: "mock-workspace",
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   },
   {
-    id: 'mock-service-2',
-    name: 'E-commerce Setup',
-    description: 'Complete e-commerce solution with product catalog, shopping cart, and payment gateway integration. Includes product setup for up to 20 items.',
-    code: 'ECM001',
+    id: "mock-service-2",
+    name: "E-commerce Setup",
+    description:
+      "Complete e-commerce solution with product catalog, shopping cart, and payment gateway integration. Includes product setup for up to 20 items.",
+    code: "ECM001",
     price: 1499,
-    currency: '€',
+    currency: "€",
     duration: 0,
     isActive: true,
-    workspaceId: 'mock-workspace',
+    workspaceId: "mock-workspace",
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   },
   {
-    id: 'mock-service-3',
-    name: 'SEO Optimization',
-    description: 'Comprehensive SEO service to improve search engine rankings. Includes keyword research, on-page optimization, and monthly reporting.',
-    code: 'SEO001',
+    id: "mock-service-3",
+    name: "SEO Optimization",
+    description:
+      "Comprehensive SEO service to improve search engine rankings. Includes keyword research, on-page optimization, and monthly reporting.",
+    code: "SEO001",
     price: 699,
-    currency: '€',
+    currency: "€",
     duration: 0,
     isActive: true,
-    workspaceId: 'mock-workspace',
+    workspaceId: "mock-workspace",
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
-];
+    updatedAt: new Date().toISOString(),
+  },
+]
 
 /**
  * Get all services for a workspace
@@ -92,7 +95,7 @@ export const getServices = async (workspaceId: string): Promise<Service[]> => {
     const response = await api.get(`/workspaces/${workspaceId}/services`)
     return response.data
   } catch (error) {
-    logger.error('Error getting services:', error)
+    logger.error("Error getting services:", error)
     throw error
   }
 }
@@ -100,12 +103,15 @@ export const getServices = async (workspaceId: string): Promise<Service[]> => {
 /**
  * Get a specific service by ID
  */
-export const getServiceById = async (workspaceId: string, id: string): Promise<Service> => {
+export const getServiceById = async (
+  workspaceId: string,
+  id: string
+): Promise<Service> => {
   try {
     const response = await api.get(`/workspaces/${workspaceId}/services/${id}`)
     return response.data
   } catch (error) {
-    logger.error('Error getting service:', error)
+    logger.error("Error getting service:", error)
     throw error
   }
 }
@@ -113,12 +119,15 @@ export const getServiceById = async (workspaceId: string, id: string): Promise<S
 /**
  * Create a new service
  */
-export const createService = async (workspaceId: string, data: CreateServiceData): Promise<Service> => {
+export const createService = async (
+  workspaceId: string,
+  data: CreateServiceData
+): Promise<Service> => {
   try {
     const response = await api.post(`/workspaces/${workspaceId}/services`, data)
     return response.data
   } catch (error) {
-    logger.error('Error creating service:', error)
+    logger.error("Error creating service:", error)
     throw error
   }
 }
@@ -132,10 +141,13 @@ export const updateService = async (
   data: UpdateServiceData
 ): Promise<Service> => {
   try {
-    const response = await api.put(`/workspaces/${workspaceId}/services/${id}`, data)
+    const response = await api.put(
+      `/workspaces/${workspaceId}/services/${id}`,
+      data
+    )
     return response.data
   } catch (error) {
-    logger.error('Error updating service:', error)
+    logger.error("Error updating service:", error)
     throw error
   }
 }
@@ -143,11 +155,14 @@ export const updateService = async (
 /**
  * Delete a service
  */
-export const deleteService = async (workspaceId: string, id: string): Promise<void> => {
+export const deleteService = async (
+  workspaceId: string,
+  id: string
+): Promise<void> => {
   try {
     await api.delete(`/workspaces/${workspaceId}/services/${id}`)
   } catch (error) {
-    logger.error('Error deleting service:', error)
+    logger.error("Error deleting service:", error)
     throw error
   }
 }
@@ -155,19 +170,18 @@ export const deleteService = async (workspaceId: string, id: string): Promise<vo
 /**
  * Search services using semantic search
  */
-export const search = async (workspaceId: string, query: string): Promise<SearchResult[]> => {
-  const response = await api.post(`/workspaces/${workspaceId}/services/search`, {
-    query,
-    workspaceId,
-  })
+export const search = async (
+  workspaceId: string,
+  query: string
+): Promise<SearchResult[]> => {
+  const response = await api.post(
+    `/workspaces/${workspaceId}/services/search`,
+    {
+      query,
+      workspaceId,
+    }
+  )
   return response.data.data?.results || response.data
-}
-
-/**
- * Generate embeddings for all active services in a workspace
- */
-export const generateEmbeddings = async (workspaceId: string): Promise<void> => {
-  await api.post(`/workspaces/${workspaceId}/services/generate-embeddings`)
 }
 
 export const servicesApi = {
@@ -177,5 +191,4 @@ export const servicesApi = {
   updateService,
   deleteService,
   search,
-  generateEmbeddings
-} 
+}

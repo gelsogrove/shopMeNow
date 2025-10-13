@@ -92,8 +92,8 @@ export function ChatPage() {
   // ChatPage loaded
   const { workspace, loading: isWorkspaceLoading } = useWorkspace()
 
-  // Get sessionId from localStorage (unique per login session)
-  const userSessionId = localStorage.getItem("sessionId")
+  // Get sessionId from sessionStorage (unique per browser session)
+  const userSessionId = sessionStorage.getItem("sessionId")
 
   // Clean any stale locks on mount
   useEffect(() => {

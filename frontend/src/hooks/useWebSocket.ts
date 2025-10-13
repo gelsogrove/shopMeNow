@@ -120,8 +120,8 @@ export function useWebSocket(options: UseWebSocketOptions) {
     socket.on("new-message", (message: WebSocketMessage) => {
       console.log("[WebSocket] New message:", message)
 
-      // Get sessionId from localStorage
-      const sessionId = localStorage.getItem("sessionId")
+      // Get sessionId from sessionStorage
+      const sessionId = sessionStorage.getItem("sessionId")
 
       // Invalidate messages for this chat
       queryClient.invalidateQueries({
@@ -143,8 +143,8 @@ export function useWebSocket(options: UseWebSocketOptions) {
     socket.on("chat-updated", (chat: WebSocketChat) => {
       console.log("[WebSocket] Chat updated:", chat)
 
-      // Get sessionId from localStorage
-      const sessionId = localStorage.getItem("sessionId")
+      // Get sessionId from sessionStorage
+      const sessionId = sessionStorage.getItem("sessionId")
 
       // Invalidate chat list
       queryClient.invalidateQueries({
