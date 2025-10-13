@@ -46,7 +46,10 @@ export function MessageRenderer({
       const formatted = part
         .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
         .replace(/\*(.*?)\*/g, "<em>$1</em>")
-        .replace(/~~(.*?)~~/g, "<s style='text-decoration: line-through;'>$1</s>") // Markdown strikethrough (double tilde)
+        .replace(
+          /~~(.*?)~~/g,
+          "<s style='text-decoration: line-through;'>$1</s>"
+        ) // Markdown strikethrough (double tilde)
         .replace(/~(.*?)~/g, "<s style='text-decoration: line-through;'>$1</s>") // WhatsApp strikethrough (single tilde)
         .replace(/→\s*(€[\d.,]+)/g, "→ <strong>$1</strong>")
 

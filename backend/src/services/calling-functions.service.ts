@@ -4,7 +4,6 @@ import { ReplaceLinkWithToken } from "../chatbot/calling-functions/ReplaceLinkWi
 import {
   ErrorResponse,
   GetCartLinkRequest,
-  ProductsResponse,
   RagSearchRequest,
   RagSearchResponse,
   ServicesResponse,

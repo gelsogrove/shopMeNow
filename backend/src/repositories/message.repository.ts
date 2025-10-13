@@ -14,7 +14,10 @@ import logger from "../utils/logger"
  * Uses combining long stroke overlay (U+0336)
  */
 function applyStrikethrough(text: string): string {
-  return text.split('').map(char => char + '\u0336').join('')
+  return text
+    .split("")
+    .map((char) => char + "\u0336")
+    .join("")
 }
 
 // Load environment variables
