@@ -26,14 +26,14 @@ Critical security documentation covering authentication, authorization, and thre
 
 ### 📄 Security Documents
 
-| File                                                                                                           | Description                                       | Key Topics                                          |
-| -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | --------------------------------------------------- |
-| **[owasp.md](01-SECURITY/owasp.md)**                                                                           | OWASP Top 10 compliance and security measures     | SQL Injection, XSS, CSRF, Auth, Rate Limiting       |
-| **[translation-security-summary.md](01-SECURITY/translation-security-summary.md)**                             | Multi-language content filtering system           | Profanity Detection, Spam Filtering, LLM Responses  |
-| **[prompt-spam-translation-security.md](01-SECURITY/prompt-spam-translation-security.md)**                     | Prompt spam detection and translation security    | Content Filtering, Multi-language Safety            |
-| **[sessionid-admin-panel.md](01-SECURITY/sessionid-admin-panel.md)**                                           | Admin panel session management implementation     | SessionID Creation, Storage, Validation             |
-| **[sessionid-sessionstorage-migration.md](01-SECURITY/sessionid-sessionstorage-migration.md)**                 | Migration from localStorage to sessionStorage     | Tab Isolation, Security Improvements                |
-| **[sessionid-storage-fix.md](01-SECURITY/sessionid-storage-fix.md)**                                           | Session storage implementation and bugfixes       | SessionID Lifecycle, Frontend/Backend Coordination  |
+| File                                                                                           | Description                                    | Key Topics                                         |
+| ---------------------------------------------------------------------------------------------- | ---------------------------------------------- | -------------------------------------------------- |
+| **[owasp.md](01-SECURITY/owasp.md)**                                                           | OWASP Top 10 compliance and security measures  | SQL Injection, XSS, CSRF, Auth, Rate Limiting      |
+| **[translation-security-summary.md](01-SECURITY/translation-security-summary.md)**             | Multi-language content filtering system        | Profanity Detection, Spam Filtering, LLM Responses |
+| **[prompt-spam-translation-security.md](01-SECURITY/prompt-spam-translation-security.md)**     | Prompt spam detection and translation security | Content Filtering, Multi-language Safety           |
+| **[sessionid-admin-panel.md](01-SECURITY/sessionid-admin-panel.md)**                           | Admin panel session management implementation  | SessionID Creation, Storage, Validation            |
+| **[sessionid-sessionstorage-migration.md](01-SECURITY/sessionid-sessionstorage-migration.md)** | Migration from localStorage to sessionStorage  | Tab Isolation, Security Improvements               |
+| **[sessionid-storage-fix.md](01-SECURITY/sessionid-storage-fix.md)**                           | Session storage implementation and bugfixes    | SessionID Lifecycle, Frontend/Backend Coordination |
 
 ### 🎯 Security Features
 
@@ -365,12 +365,12 @@ Step-by-step guides for setup, testing, and common tasks.
 
 ### 📄 Documents
 
-| File                                                             | Description                         | Key Topics                       |
-| ---------------------------------------------------------------- | ----------------------------------- | -------------------------------- |
-| **[whatsapp-setup-guide.md](05-GUIDES/whatsapp-setup-guide.md)** | Complete WhatsApp setup walkthrough | Meta App, Webhook, Phone Numbers |
+| File                                                             | Description                         | Key Topics                         |
+| ---------------------------------------------------------------- | ----------------------------------- | ---------------------------------- |
+| **[whatsapp-setup-guide.md](05-GUIDES/whatsapp-setup-guide.md)** | Complete WhatsApp setup walkthrough | Meta App, Webhook, Phone Numbers   |
 | **[MCP.md](05-GUIDES/MCP.md)**                                   | Model Context Protocol integration  | Testing Tools, Cursor Setup, Debug |
-| **[unit-test-guide.md](05-GUIDES/unit-test-guide.md)**           | Unit testing guidelines             | Jest, Test Structure, Mocking    |
-| **[scripts-guide.md](05-GUIDES/scripts-guide.md)**               | Available npm scripts and usage     | Build, Test, Seed, Deploy        |
+| **[unit-test-guide.md](05-GUIDES/unit-test-guide.md)**           | Unit testing guidelines             | Jest, Test Structure, Mocking      |
+| **[scripts-guide.md](05-GUIDES/scripts-guide.md)**               | Available npm scripts and usage     | Build, Test, Seed, Deploy          |
 
 ### 🎯 Common Tasks
 

@@ -224,9 +224,14 @@ describe("🔐 API Endpoint Security Audit", () => {
     test("should generate complete security report", () => {
       // Security report validation
       const protectedRoutes = routeFiles.filter(
-        (f) => !["public-orders.routes.ts", "whatsapp.routes.ts", "auth.routes.ts"].includes(f)
+        (f) =>
+          ![
+            "public-orders.routes.ts",
+            "whatsapp.routes.ts",
+            "auth.routes.ts",
+          ].includes(f)
       )
-      
+
       expect(protectedRoutes.length).toBeGreaterThan(0)
       expect(routeFiles).toContain("auth.routes.ts")
     })

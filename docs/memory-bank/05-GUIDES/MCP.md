@@ -42,12 +42,12 @@ The ShopME project includes a **Model Context Protocol (MCP) server** that enabl
 
 ### Key Concepts
 
-| Concept | Description |
-|---------|-------------|
-| **MCP Server** | Background service exposing tools via stdio |
-| **MCP Client** | IDE or tool consuming MCP servers (Cursor, Claude) |
-| **Tool** | Individual function exposed by MCP server |
-| **Stdio Transport** | Communication via standard input/output |
+| Concept             | Description                                        |
+| ------------------- | -------------------------------------------------- |
+| **MCP Server**      | Background service exposing tools via stdio        |
+| **MCP Client**      | IDE or tool consuming MCP servers (Cursor, Claude) |
+| **Tool**            | Individual function exposed by MCP server          |
+| **Stdio Transport** | Communication via standard input/output            |
 
 ---
 
@@ -60,6 +60,7 @@ The ShopME MCP server provides 4 main tools:
 Simulates WhatsApp chat interactions without sending real messages.
 
 **Use Cases**:
+
 - Test product catalog queries
 - Validate cart operations (add, remove, confirm)
 - Debug LLM response generation
@@ -70,6 +71,7 @@ Simulates WhatsApp chat interactions without sending real messages.
 Runs the Prisma seed script to create test data.
 
 **Use Cases**:
+
 - Reset database to known state
 - Create test workspace, products, customers
 - Prepare for integration tests
@@ -79,6 +81,7 @@ Runs the Prisma seed script to create test data.
 Verifies backend services are running.
 
 **Use Cases**:
+
 - Pre-flight checks before testing
 - Monitor service availability
 - Validate database connectivity
@@ -88,6 +91,7 @@ Verifies backend services are running.
 Debug individual chatbot functions in isolation.
 
 **Use Cases**:
+
 - Test `ragSearch` with specific queries
 - Debug `add_to_cart` logic
 - Isolate function failures
@@ -99,11 +103,13 @@ Debug individual chatbot functions in isolation.
 ### Prerequisites
 
 1. **Backend running** on port 3001
+
    ```bash
    cd backend && npm run dev
    ```
 
 2. **Database accessible** (PostgreSQL via Docker)
+
    ```bash
    docker-compose up -d
    ```
@@ -118,22 +124,26 @@ npm install
 ```
 
 **Dependencies**:
+
 - `@modelcontextprotocol/sdk` - MCP protocol implementation
 - `axios` - HTTP client for backend communication
 
 ### Step 2: Start MCP Server
 
 **Option A: Automatic (Recommended)**
+
 ```bash
 ./start-shopme-mcp-for-cursor.sh
 ```
 
 **Option B: Manual**
+
 ```bash
 node mcp-server.js &
 ```
 
 **Option C: Foreground (for debugging)**
+
 ```bash
 node mcp-server.js
 ```
@@ -158,14 +168,15 @@ node mcp-test-client.js
 
 **Parameters**:
 
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `user` | string | ✅ Yes | - | User name (e.g., "Mario Rossi") |
-| `message` | string | ✅ Yes | - | Message to send to chatbot |
-| `log` | boolean | No | `true` | Enable detailed logging |
-| `exitFirstMessage` | boolean | No | `true` | Stop after first response |
+| Parameter          | Type    | Required | Default | Description                     |
+| ------------------ | ------- | -------- | ------- | ------------------------------- |
+| `user`             | string  | ✅ Yes   | -       | User name (e.g., "Mario Rossi") |
+| `message`          | string  | ✅ Yes   | -       | Message to send to chatbot      |
+| `log`              | boolean | No       | `true`  | Enable detailed logging         |
+| `exitFirstMessage` | boolean | No       | `true`  | Stop after first response       |
 
 **Example**:
+
 ```json
 {
   "user": "Mario Rossi",
@@ -176,6 +187,7 @@ node mcp-test-client.js
 ```
 
 **Response Format**:
+
 ```json
 {
   "success": true,
@@ -196,11 +208,12 @@ node mcp-test-client.js
 
 **Parameters**:
 
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `log` | boolean | No | `true` | Enable seed script output |
+| Parameter | Type    | Required | Default | Description               |
+| --------- | ------- | -------- | ------- | ------------------------- |
+| `log`     | boolean | No       | `true`  | Enable seed script output |
 
 **Example**:
+
 ```json
 {
   "log": true
@@ -208,6 +221,7 @@ node mcp-test-client.js
 ```
 
 **What Gets Created**:
+
 - ✅ Test workspace ("ShopMe Test")
 - ✅ Admin user (admin@shopme.com)
 - ✅ 10+ products (mozzarella, prosecco, etc.)
@@ -223,11 +237,13 @@ node mcp-test-client.js
 **Parameters**: None
 
 **Example**:
+
 ```json
 {}
 ```
 
 **Response Format**:
+
 ```json
 {
   "status": "healthy",
@@ -246,12 +262,13 @@ node mcp-test-client.js
 
 **Parameters**:
 
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `functionName` | string | ✅ Yes | - | Function name (e.g., "ragSearch", "add_to_cart") |
-| `testData` | object | No | `{}` | Function-specific test data |
+| Parameter      | Type   | Required | Default | Description                                      |
+| -------------- | ------ | -------- | ------- | ------------------------------------------------ |
+| `functionName` | string | ✅ Yes   | -       | Function name (e.g., "ragSearch", "add_to_cart") |
+| `testData`     | object | No       | `{}`    | Function-specific test data                      |
 
 **Example**:
+
 ```json
 {
   "functionName": "ragSearch",
@@ -263,6 +280,7 @@ node mcp-test-client.js
 ```
 
 **Supported Functions**:
+
 - `ragSearch` - Search FAQs/products/services
 - `add_to_cart` - Add product to cart
 - `remove_from_cart` - Remove product from cart
@@ -279,11 +297,12 @@ node mcp-test-client.js
 // In Cursor with MCP enabled:
 mcp_shopme_test_chat({
   user: "Mario Rossi",
-  message: "che prodotti avete?"
+  message: "che prodotti avete?",
 })
 ```
 
 **Expected Response**:
+
 ```
 📦 Ecco il nostro catalogo:
 1. Mozzarella di Bufala - €8.50
@@ -300,19 +319,19 @@ mcp_shopme_test_chat({
 // Step 1: Add product
 mcp_shopme_test_chat({
   user: "Mario Rossi",
-  message: "aggiungi una mozzarella"
+  message: "aggiungi una mozzarella",
 })
 
 // Step 2: Add another product
 mcp_shopme_test_chat({
   user: "Mario Rossi",
-  message: "aggiungi anche un prosecco"
+  message: "aggiungi anche un prosecco",
 })
 
 // Step 3: Confirm order
 mcp_shopme_test_chat({
   user: "Mario Rossi",
-  message: "CONFERMA"
+  message: "CONFERMA",
 })
 ```
 
@@ -325,12 +344,13 @@ mcp_shopme_debug_function({
   functionName: "ragSearch",
   testData: {
     query: "orari di consegna",
-    workspaceId: "cm9hjgq9v00014qk8fsdy4ujv"
-  }
+    workspaceId: "cm9hjgq9v00014qk8fsdy4ujv",
+  },
 })
 ```
 
 **Expected Response**:
+
 ```json
 {
   "results": [
@@ -351,11 +371,12 @@ mcp_shopme_debug_function({
 ```javascript
 // Seed database with fresh test data
 mcp_shopme_seed_database({
-  log: true
+  log: true,
 })
 ```
 
 **Output**:
+
 ```
 🌱 Seeding database...
 ✅ Created workspace: ShopMe Test
@@ -373,12 +394,14 @@ mcp_shopme_seed_database({
 
 Edit your Cursor MCP configuration file:
 
-**Location**: 
+**Location**:
+
 - **macOS**: `~/.cursor/mcp_config.json`
 - **Windows**: `%APPDATA%\Cursor\mcp_config.json`
 - **Linux**: `~/.config/cursor/mcp_config.json`
 
 **Configuration**:
+
 ```json
 {
   "mcpServers": {
@@ -407,6 +430,7 @@ Completely quit and reopen Cursor to load the MCP server.
 ### Step 4: Verify Tools are Available
 
 In Cursor chat, you should see:
+
 - `mcp_shopme_test_chat`
 - `mcp_shopme_seed_database`
 - `mcp_shopme_check_health`
@@ -417,7 +441,7 @@ In Cursor chat, you should see:
 Simply reference tools in your prompt:
 
 ```
-Please test the chatbot with user "Andrea" 
+Please test the chatbot with user "Andrea"
 asking to add 2 mozzarellas to cart.
 ```
 
@@ -430,6 +454,7 @@ Cursor will automatically call `mcp_shopme_test_chat` tool.
 ### Issue 1: MCP Server Won't Start
 
 **Symptoms**:
+
 - Server process not found
 - "Cannot find module" errors
 - Port conflicts
@@ -455,6 +480,7 @@ node mcp-server.js
 ### Issue 2: Tools Not Available in Cursor
 
 **Symptoms**:
+
 - Cursor doesn't show `mcp_shopme_*` tools
 - Tools fail silently
 
@@ -479,6 +505,7 @@ ps aux | grep mcp-server
 ### Issue 3: Backend Connection Fails
 
 **Symptoms**:
+
 - "ECONNREFUSED" errors
 - Health check fails
 - Timeout errors
@@ -504,6 +531,7 @@ docker-compose restart
 ### Issue 4: Test Chat Returns Empty Response
 
 **Symptoms**:
+
 - `test_chat` succeeds but returns no chatbot response
 - LLM doesn't reply
 
@@ -561,7 +589,7 @@ await mcp_shopme_test_chat({ user: "Mario", message: "aggiungi mozzarella" })
 // Good: Test function in isolation
 await mcp_shopme_debug_function({
   functionName: "add_to_cart",
-  testData: { product_name: "mozzarella", quantity: 2 }
+  testData: { product_name: "mozzarella", quantity: 2 },
 })
 
 // Bad: Test through full chat flow every time
@@ -577,14 +605,14 @@ await mcp_shopme_test_chat({ user: "Test", message: "add mozzarella" })
 await mcp_shopme_test_chat({
   user: "Andrea",
   message: "test",
-  log: true  // <-- Always true when debugging
+  log: true, // <-- Always true when debugging
 })
 
 // Bad: No logs when something fails
 await mcp_shopme_test_chat({
   user: "Andrea",
   message: "test",
-  log: false
+  log: false,
 })
 ```
 
@@ -652,30 +680,30 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       inputSchema: {
         type: "object",
         properties: {
-          param1: { type: "string", description: "Parameter 1" }
+          param1: { type: "string", description: "Parameter 1" },
         },
-        required: ["param1"]
-      }
-    }
-  ]
-}));
+        required: ["param1"],
+      },
+    },
+  ],
+}))
 ```
 
 2. **Add tool handler**:
 
 ```javascript
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
-  
+  const { name, arguments: args } = request.params
+
   if (name === "custom_tool") {
     // Your tool logic here
     return {
-      content: [{ type: "text", text: "Tool result" }]
-    };
+      content: [{ type: "text", text: "Tool result" }],
+    }
   }
-  
+
   // ... existing tool handlers
-});
+})
 ```
 
 3. **Restart MCP server**:
