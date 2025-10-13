@@ -100,13 +100,13 @@ jobs:
 
       - name: 🔒 Run Hard Rate Limit Tests (CRITICAL)
         working-directory: ./backend
-        run: npm run test -- hard-rate-limit.test.ts
+        run: npm run test:security -- hard-rate-limit-unit.test.ts
         # Test che 101° messaggio viene bloccato
 
       - name: 🔑 Run API Key Signature Tests
         working-directory: ./backend
-        run: npm run test -- api-key-signature.test.ts || true
-        # TODO: Create test file
+        run: npm run test:security -- api-security-audit.test.ts
+        # API security audit tests
 
       - name: 📊 Generate coverage report
         working-directory: ./backend

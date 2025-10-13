@@ -3468,4 +3468,64 @@ INSTRUCTIONS FOR LLM FORMATTER:
       return "" // In caso di errore, restituisce una stringa vuota
     }
   }
+
+  // 🔧 NEW: Debug function to count active and expired links
+  async getLinkCounts(workspaceId: string) {
+    try {
+      const now = new Date()
+
+      // Count active links (not expired)
+      const activeLinksCount = await this.prisma.shortUrls.count({
+        where: {
+          workspaceId,
+          isActive: true,
+          OR: [
+            { expiresAt: null }, // Never expires
+            { expiresAt: { gt: now } }, // Not yet expired
+          ],
+        },
+      })
+
+      // Count expired links
+      const expiredLinksCount = await this.prisma.shortUrls.count({
+        where: {
+          workspaceId,
+          expiresAt: { lt: now }, // Expired
+        },
+      })
+
+      // Count secure tokens active
+      const activeTokensCount = await this.prisma.secureToken.count({
+        where: {
+          workspaceId,
+          expiresAt: { gt: now }, // Not yet expired
+        },
+      })
+
+      // Count secure tokens expired
+      const expiredTokensCount = await this.prisma.secureToken.count({
+        where: {
+          workspaceId,
+          expiresAt: { lt: now }, // Expired
+        },
+      })
+
+      return {
+        shortUrls: {
+          active: activeLinksCount,
+          expired: expiredLinksCount,
+        },
+        secureTokens: {
+          active: activeTokensCount,
+          expired: expiredTokensCount,
+        },
+      }
+    } catch (error) {
+      logger.error("Error getting link counts:", error)
+      return {
+        shortUrls: { active: 0, expired: 0 },
+        secureTokens: { active: 0, expired: 0 },
+      }
+    }
+  }
 }

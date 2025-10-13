@@ -1,18 +1,20 @@
 FASE 1
 
 - npm runt test e ragionare a branch name
-- secrets
+- pwd dentro il codice di github=?
+- dependabot?a
 - later di traduzione
 - pulire il memory bank
 - new mail
 - new user
-- 2FA obbligatorio per admin
-- pwd dentro il codice di github=?
-- cursror disiscriversi
-- sciurezza di whatapp se arriva da Whataspp e faremo llm service testing
 - FOTO DA METTERE
+
 - sessione di admin Feature Flag
 - scadenza token 1 hora mettiaolo dentro env.local e env.eample?
+- heroku
+- secrets
+- 2FA obbligatorio per admin
+- sciurezza di whatapp se arriva da Whataspp e faremo llm service testing
 
 - layer di sicurazza e traduzione con parolacce, fuck, god, pussy, subscribe,bitch,dick,shit,cock, blowjob, anal,sex,porn dildo,suck, suck me, lick me, jerk off,f\*\*\*
   puta, cabrón, cabrona, mierda, coño, culo, polla, verga, pendejo, pendeja, maricón, maricona, chupame, mamada, follar, sexo, porno, follame, cojones, joder, putita, zorra, gilipollas, chupamela
@@ -29,3 +31,8 @@ FASE 2
 - whatsapp connect
 - pagameno
 - IP whitelisting
+
+COSTI
+4 $ di GITHUB
+**_ 30 EURO DI CURSOR _** 15 ottobre
+80 $ COPILOT

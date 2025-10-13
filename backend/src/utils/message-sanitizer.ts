@@ -14,7 +14,7 @@
  * @date 2025-01-13
  */
 
-import logger from "../../utils/logger"
+import logger from "./logger"
 
 // Configuration
 const MAX_MESSAGE_LENGTH = 4096 // WhatsApp limit
