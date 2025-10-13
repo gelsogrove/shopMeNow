@@ -19,13 +19,9 @@ module.exports = {
   },
   testEnvironment: "node",
   coveragePathIgnorePatterns: ["/node_modules/", "/dist/", "/src/utils/"],
-  testMatch: ["**/src/__tests__/unit/**/*.spec.ts"],
-  testPathIgnorePatterns: [
-    "/node_modules/",
-    "/dist/",
-    "/src/__tests__/security/",
-  ],
-  setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
+  testMatch: ["**/src/__tests__/security/**/*.test.ts"],
+  testPathIgnorePatterns: ["/node_modules/", "/dist/"],
+  // NO setupFilesAfterEnv - security tests use real DB, no mocks
   verbose: true,
   transformIgnorePatterns: ["node_modules/"],
   extensionsToTreatAsEsm: [".ts"],

@@ -215,6 +215,8 @@ export class CampaignScheduler {
 
   /**
    * Send campaign message to customer
+   *
+   * 🔒 SECURITY: Multi-factor validation (workspaceId + customerId + phoneNumber)
    */
   private async sendCampaignMessage(
     campaign: any,
@@ -222,6 +224,67 @@ export class CampaignScheduler {
   ): Promise<void> {
     logger.info(
       `[CAMPAIGN SCHEDULER] Sending campaign ${campaign.name} to customer ${customer.id}`
+    )
+
+    // 🔒 SECURITY VALIDATION 1: Customer exists and workspace matches
+    const validCustomer = await this.prisma.customers.findUnique({
+      where: { id: customer.id },
+      select: {
+        id: true,
+        workspaceId: true,
+        phone: true,
+        name: true,
+        isActive: true,
+        isBlacklisted: true,
+      },
+    })
+
+    if (!validCustomer) {
+      logger.error(`[CAMPAIGN SCHEDULER] ❌ Customer ${customer.id} not found`)
+      throw new Error(`Customer ${customer.id} not found`)
+    }
+
+    // 🔒 SECURITY VALIDATION 2: Workspace ID match (prevent cross-workspace attacks)
+    if (validCustomer.workspaceId !== campaign.workspaceId) {
+      logger.error(
+        `[CAMPAIGN SCHEDULER] 🚨 SECURITY ALERT: Workspace mismatch!`,
+        {
+          customerId: customer.id,
+          customerWorkspace: validCustomer.workspaceId,
+          campaignWorkspace: campaign.workspaceId,
+          campaignId: campaign.id,
+        }
+      )
+      throw new Error(
+        `Security violation: Customer ${customer.id} does not belong to workspace ${campaign.workspaceId}`
+      )
+    }
+
+    // 🔒 SECURITY VALIDATION 3: Phone number match (prevent spoofing)
+    if (validCustomer.phone !== customer.phone) {
+      logger.error(
+        `[CAMPAIGN SCHEDULER] 🚨 SECURITY ALERT: Phone number mismatch!`,
+        {
+          customerId: customer.id,
+          customerPhone: validCustomer.phone,
+          providedPhone: customer.phone,
+        }
+      )
+      throw new Error(
+        `Security violation: Phone number mismatch for customer ${customer.id}`
+      )
+    }
+
+    // 🔒 SECURITY VALIDATION 4: Customer status check
+    if (!validCustomer.isActive || validCustomer.isBlacklisted) {
+      logger.warn(
+        `[CAMPAIGN SCHEDULER] Skipping customer ${customer.id}: ${!validCustomer.isActive ? "inactive" : "blacklisted"}`
+      )
+      return
+    }
+
+    logger.info(
+      `[CAMPAIGN SCHEDULER] ✅ Security validations passed for customer ${customer.id}`
     )
 
     // Replace tokens in message
@@ -233,13 +296,29 @@ export class CampaignScheduler {
         campaign.id
       )
 
-    // Send WhatsApp message
-    // TODO: Integrate with WhatsApp service
-    logger.info(
-      `[CAMPAIGN SCHEDULER] 📱 WhatsApp message (${tokensUsed.join(", ")}):\n${processedMessage.substring(0, 100)}...`
+    // 📤 Send WhatsApp message with SECURE API call
+    const { sendToWhatsApp } = await import("./whatsapp-api.service")
+
+    const sendResult = await sendToWhatsApp(
+      validCustomer.phone, // Use validated phone
+      processedMessage,
+      campaign.workspaceId // Use validated workspaceId
     )
 
-    // Track sent message
+    if (!sendResult.success) {
+      logger.error(`[CAMPAIGN SCHEDULER] ❌ Failed to send WhatsApp message`, {
+        customerId: customer.id,
+        error: sendResult.error,
+      })
+      throw new Error(`WhatsApp send failed: ${sendResult.error}`)
+    }
+
+    logger.info(`[CAMPAIGN SCHEDULER] 📱 WhatsApp message sent successfully`, {
+      messageId: sendResult.messageId,
+      tokensUsed: tokensUsed.join(", "),
+    })
+
+    // 💾 Track sent message with audit trail
     await this.prisma.campaignSent.create({
       data: {
         campaignId: campaign.id,

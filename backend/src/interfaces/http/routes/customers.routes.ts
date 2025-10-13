@@ -73,33 +73,13 @@ export const customersRouter = (controller: CustomersController): Router => {
     controller.checkEmailExists.bind(controller)
   )
 
-  // Route for counting unknown customers - explicitly defined with extra logging
+  // Route for counting unknown customers
   router.get("/:workspaceId/unknown-customers/count", (req, res, next) => {
     logger.info(
       `💡 Processing request for unknown-customers count with workspace: ${req.params.workspaceId}`
     )
-
-    // Call the controller method
     return controller.countUnknownCustomers(req, res, next)
   })
-
-  // Additional debugging endpoint that returns hardcoded count
-  // @ts-ignore
-  router.get("/:workspaceId/unknown-customers/count-debug", (req, res) => {
-    logger.info(
-      `🔍 Debug count endpoint accessed for workspace: ${req.params.workspaceId}`
-    )
-    return res.json({ count: 42, debug: true })
-  })
-
-  logger.info("Registered route: GET /:workspaceId/unknown-customers/count")
-  logger.info(
-    "Registered route: GET /:workspaceId/unknown-customers/count-debug"
-  )
-  logger.info(
-    "Registered route: GET /:workspaceId/unknown-customers/debug-no-auth (no auth required)"
-  )
-  logger.info("Registered route: POST /:workspaceId/customers/:id/block")
 
   logger.info("Customers routes setup complete")
   return router

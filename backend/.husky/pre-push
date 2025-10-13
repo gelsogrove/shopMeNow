@@ -1,0 +1,53 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# 🔒 PRE-PUSH HOOK - BLOCCA PUSH SE SECURITY TESTS FALLISCONO
+#
+# Andrea: "voglio metterlo poi dentro il test prima di fare il merge a main"
+#
+# Questo hook BLOCCA il push se:
+# - ❌ Security tests falliscono (TUTTI i test di sicurezza devono passare)
+# - ❌ Hard rate limit tests falliscono (101° messaggio deve essere bloccato)
+# - ❌ API key signature tests falliscono
+#
+# Solo se TUTTI i security tests passano → ✅ Push permesso
+
+echo "🔒 Running pre-push security checks..."
+echo ""
+
+# Run ALL security tests
+echo "📋 Running security test suite..."
+npm run test:security
+
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "❌ PRE-PUSH FAILED!"
+  echo "🚨 Security tests must pass before pushing"
+  echo ""
+  echo "Andrea: 'mi potrebbe aver inviato 100 messaggi e questo non può succedere'"
+  echo "→ Verifica che il test del 101° messaggio blocchi correttamente"
+  echo ""
+  exit 1
+fi
+
+# Run hard rate limit tests specifically (critical!)
+echo ""
+echo "📋 Running CRITICAL hard rate limit tests..."
+npm run test -- hard-rate-limit.test.ts --silent
+
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "❌ PRE-PUSH FAILED!"
+  echo "🚨 CRITICAL: Hard rate limit tests failed"
+  echo ""
+  echo "Il test del 101° messaggio DEVE bloccare correttamente!"
+  echo ""
+  exit 1
+fi
+
+echo ""
+echo "✅ All security checks passed!"
+echo "✅ Push allowed"
+echo ""
+
+exit 0

@@ -283,31 +283,34 @@ export const faqsRouter = (): Router => {
     controller.generateEmbeddings.bind(controller)
   )
 
-  /**
-   * @swagger
-   * /api/workspaces/{workspaceId}/faqs/test-embedding-regeneration:
-   *   post:
-   *     summary: Test FAQ embedding regeneration (debugging endpoint)
-   *     tags: [FAQs]
-   *     parameters:
-   *       - in: path
-   *         name: workspaceId
-   *         schema:
-   *           type: string
-   *         required: true
-   *         description: Workspace ID
-   *     responses:
-   *       200:
-   *         description: FAQ embedding regeneration test completed
-   *       400:
-   *         description: Workspace ID is required
-   *       500:
-   *         description: Failed to test FAQ embedding regeneration
-   */
-  router.post(
-    "/test-embedding-regeneration",
-    controller.testEmbeddingRegeneration.bind(controller)
-  )
+  // 🔒 SECURITY: Test endpoint only in development
+  if (process.env.NODE_ENV !== "production") {
+    /**
+     * @swagger
+     * /api/workspaces/{workspaceId}/faqs/test-embedding-regeneration:
+     *   post:
+     *     summary: Test FAQ embedding regeneration (DEVELOPMENT ONLY)
+     *     tags: [FAQs]
+     *     parameters:
+     *       - in: path
+     *         name: workspaceId
+     *         schema:
+     *           type: string
+     *         required: true
+     *         description: Workspace ID
+     *     responses:
+     *       200:
+     *         description: FAQ embedding regeneration test completed
+     *       400:
+     *         description: Workspace ID is required
+     *       500:
+     *         description: Failed to test FAQ embedding regeneration
+     */
+    router.post(
+      "/test-embedding-regeneration",
+      controller.testEmbeddingRegeneration.bind(controller)
+    )
+  }
 
   return router
 }

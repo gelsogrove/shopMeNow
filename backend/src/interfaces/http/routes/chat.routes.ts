@@ -61,33 +61,36 @@ import { workspaceValidationMiddleware } from "../middlewares/workspace-validati
 export const chatRouter = (chatController: ChatController): express.Router => {
   const router = express.Router()
 
-  /**
-   * @swagger
-   * /api/chat/debug/{sessionId}:
-   *   get:
-   *     summary: Debug endpoint to get chat session details without auth (for testing only)
-   *     tags: [Chat]
-   *     parameters:
-   *       - in: path
-   *         name: sessionId
-   *         schema:
-   *           type: string
-   *         required: true
-   *         description: ID of the chat session
-   *     responses:
-   *       200:
-   *         description: Chat session details
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ChatSession'
-   *       500:
-   *         description: Server error
-   */
-  router.get(
-    "/debug/:sessionId",
-    asyncHandler(chatController.getChatSession.bind(chatController))
-  )
+  // 🔒 SECURITY: Debug endpoint only in development
+  if (process.env.NODE_ENV !== "production") {
+    /**
+     * @swagger
+     * /api/chat/debug/{sessionId}:
+     *   get:
+     *     summary: Debug endpoint to get chat session details without auth (DEVELOPMENT ONLY)
+     *     tags: [Chat]
+     *     parameters:
+     *       - in: path
+     *         name: sessionId
+     *         schema:
+     *           type: string
+     *         required: true
+     *         description: ID of the chat session
+     *     responses:
+     *       200:
+     *         description: Chat session details
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ChatSession'
+     *       500:
+     *         description: Server error
+     */
+    router.get(
+      "/debug/:sessionId",
+      asyncHandler(chatController.getChatSession.bind(chatController))
+    )
+  }
 
   // Apply auth middleware to all remaining chat routes
   router.use(authMiddleware)
