@@ -15,7 +15,7 @@ async function updatePrompt() {
     
     // Get workspace
     const workspace = await prisma.workspace.findFirst({
-      where: { name: 'L\'Altra Italia' }
+      where: { name: 'L\'Altra Italia(ESP)' }
     });
     
     if (!workspace) {
@@ -32,7 +32,7 @@ async function updatePrompt() {
         isActive: true
       },
       data: {
-        systemPrompt: promptContent,
+        prompt: promptContent,
         updatedAt: new Date()
       }
     });
@@ -47,7 +47,7 @@ async function updatePrompt() {
       }
     });
     
-    if (config && config.systemPrompt.includes('🚨 **REGOLA CRITICA - LINK PROIBITI**')) {
+    if (config && config.prompt.includes('🚨 **REGOLA CRITICA - LINK PROIBITI**')) {
       console.log('✅ Verification passed: New rules are in the database!');
     } else {
       console.log('⚠️ Warning: Could not verify new rules in database');

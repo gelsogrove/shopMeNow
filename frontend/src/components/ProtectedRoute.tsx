@@ -74,12 +74,11 @@ export function ProtectedRoute() {
       logger.warn("🗑️ Clearing session storage due to validation failure")
 
       // Clear localStorage
-      localStorage.removeItem("sessionId")
       localStorage.removeItem("currentWorkspace")
       localStorage.removeItem("token")
       localStorage.removeItem("user")
 
-      // Clear sessionStorage
+      // Clear sessionStorage (including sessionId)
       sessionStorage.clear()
 
       // Check if it's a 401 (expired/invalid session)

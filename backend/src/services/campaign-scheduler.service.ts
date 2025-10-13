@@ -3,6 +3,7 @@ import * as cron from "node-cron"
 import { CampaignTokenService } from "../application/services/campaign-token.service"
 import { CampaignService } from "../application/services/campaign.service"
 import logger from "../utils/logger"
+import messageSendingService from "./message-sending.service"
 
 /**
  * Campaign Scheduler Service
@@ -236,6 +237,7 @@ export class CampaignScheduler {
         name: true,
         isActive: true,
         isBlacklisted: true,
+        language: true,
       },
     })
 
@@ -296,26 +298,42 @@ export class CampaignScheduler {
         campaign.id
       )
 
-    // 📤 Send WhatsApp message with SECURE API call
-    const { sendToWhatsApp } = await import("./whatsapp-api.service")
-
-    const sendResult = await sendToWhatsApp(
-      validCustomer.phone, // Use validated phone
-      processedMessage,
-      campaign.workspaceId // Use validated workspaceId
-    )
+    // 📤 Send WhatsApp message via MessageSendingService (with security layer)
+    // 🚨 CRITICAL: Token replacement da DB può contenere dati malevoli!
+    // Security layer protegge da SQL injection, XSS, phishing links
+    const sendResult = await messageSendingService.sendMessage({
+      phoneNumber: validCustomer.phone, // Use validated phone
+      message: processedMessage,
+      workspaceId: campaign.workspaceId, // Use validated workspaceId
+      customerId: validCustomer.id,
+      sendType: "CAMPAIGN", // 🔒 Security layer will be applied automatically
+      userLanguage: (validCustomer.language as "it" | "es" | "pt" | "en") || "it",
+      metadata: {
+        campaignId: campaign.id,
+        campaignName: campaign.name,
+        tokensUsed: tokensUsed.join(", "),
+      },
+    })
 
     if (!sendResult.success) {
       logger.error(`[CAMPAIGN SCHEDULER] ❌ Failed to send WhatsApp message`, {
         customerId: customer.id,
         error: sendResult.error,
+        blocked: sendResult.blocked,
+        blockReason: sendResult.blockReason,
       })
+      
+      if (sendResult.blocked) {
+        throw new Error(`Message blocked by security: ${sendResult.blockReason}`)
+      }
+      
       throw new Error(`WhatsApp send failed: ${sendResult.error}`)
     }
 
     logger.info(`[CAMPAIGN SCHEDULER] 📱 WhatsApp message sent successfully`, {
       messageId: sendResult.messageId,
       tokensUsed: tokensUsed.join(", "),
+      securityChecked: sendResult.securityChecked,
     })
 
     // 💾 Track sent message with audit trail

@@ -10,6 +10,7 @@ import {
 import { CallingFunctionsService } from "./calling-functions.service"
 import { PromptProcessorService } from "./prompt-processor.service"
 import translationSecurityService from "./translation-security.service"
+import messageSendingService from "./message-sending.service"
 
 //todo non va il singoloo ordine
 export class LLMService {

@@ -1,13 +1,5 @@
 FASE 1
 
-layer di sicurezza...
-non so niu sicuro di quello che abbiamo fatto io voglio eviare che venga spedito cosa strane all'utente quindi abbiamo creato questo livello di transaltionserver + security
-ma dubito che LLM mi ritorni quaclosa di strano o di spam
-non so ..chido ho u dubbio forse non lo abbiamo messo nel punto giusto ?
-forse dibbiamo metterlo quando l'utente ha isCahtbot false ? oppure lo dobbiamo mettere sempre quando inviamo un mesasggio all'utente e questa soluzione mi potrebbe anche piacere ma deve essere dentralizzata e deve essere anche nello schedulere penso ....o melgio lo scheduler see chiama llm service non c'e' probelema insomma voglio chiarire se questo transaltions serve e security e' sempre
-utilizzato di certo quando un utente admin sxrive nn abbiamo bisogno di fare il tranlation server
-per esempio ecco farei un bel check su questa cosa poi fare anche un documento di transaltion server lyaer mark down
-
 - FOTO DA METTERE
 - altro gusto non altra italia con prodotti nostri e foto nostr
 - cf da cancellare?
@@ -15,10 +7,14 @@ per esempio ecco farei un bel check su questa cosa poi fare anche un documento d
 - new mail
 - new user
 
+sarebbe bello fare altre CF tipo ripeti ultimo ordine o aggiungi questo al carrello
+cancella questo dal carrello
+
 DOC
 
 - SECURITY
 - SHORT LINK
+- ENDPOINTS SPLIETTED BY TOKEN WHATASPP BACKOFFICE
 - LLM SERVICE FLOW
 - WHATAPP FEATURE
 - SCHEDULER
@@ -26,6 +22,9 @@ DOC
 - BE DESIGN PATTERN E STRUCTURE
 - FE WEBSOCKET
 - UNIT TEST
+- scripts
+- whatsapp-setup-guide.md
+- whatsapp-integration-architecture.md
 - SECURITY
   OWASP
   WHATASPP
@@ -33,6 +32,8 @@ DOC
   BACKOFFICE
   2AUTH
   PROMPT_SPAM_TRANSLATE quando viene usato
+
+  e nel PR fare un indice di tutte queste documetnazioni
 
 FASE 2
 

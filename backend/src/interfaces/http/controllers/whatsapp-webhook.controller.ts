@@ -1,12 +1,13 @@
-import { PrismaClient } from "@prisma/client"
 import { Request, Response } from "express"
 import { sendToWhatsApp } from "../../../services/whatsapp-api.service"
+import messageSendingService from "../../../services/message-sending.service"
 import logger from "../../../utils/logger"
 import {
   markdownToWhatsApp,
   whatsAppToMarkdown,
 } from "../../../utils/whatsapp-formatter"
 import { verifyWhatsAppSignature } from "../../../utils/whatsapp-signature"
+import { prisma } from "../../../lib/prisma"
 
 /**
  * WhatsApp Webhook Controller
@@ -29,8 +30,6 @@ import { verifyWhatsAppSignature } from "../../../utils/whatsapp-signature"
  * 7. Send response via WhatsApp API
  * 8. Save to database with status tracking
  */
-
-const prisma = new PrismaClient()
 
 export class WhatsAppWebhookController {
   /**
@@ -132,10 +131,17 @@ export class WhatsAppWebhookController {
           phoneNumber,
         })
 
-        // Send "please register" message
+        // Send "please register" message via MessageSendingService
         const registerMessage =
           "Hello! Please register first to use our service. Visit our website or contact support."
-        await sendToWhatsApp(phoneNumber, registerMessage, "system")
+        
+        await messageSendingService.sendMessage({
+          phoneNumber,
+          message: registerMessage,
+          workspaceId: "system", // System message, no specific workspace
+          sendType: "SYSTEM",
+          skipSecurityLayer: true, // Hardcoded message, no need for security
+        })
 
         res.status(200).json({ status: "customer_not_found" })
         return
@@ -167,15 +173,20 @@ export class WhatsAppWebhookController {
       // For now, simple echo response
       const llmResponse = `Echo: ${messageMarkdown}` // PLACEHOLDER
 
-      // 🔄 Convert Markdown → WhatsApp format (for sending)
-      const whatsappResponse = markdownToWhatsApp(llmResponse)
-
-      // 📤 Send response to WhatsApp
-      const { success, error, messageId } = await sendToWhatsApp(
+      // � Send response via MessageSendingService (with security layer for CHATBOT)
+      const sendResult = await messageSendingService.sendMessage({
         phoneNumber,
-        whatsappResponse,
-        customer.workspaceId
-      )
+        message: llmResponse,
+        workspaceId: customer.workspaceId,
+        customerId: customer.id,
+        sendType: "CHATBOT", // LLM-generated content (even if placeholder now)
+        userLanguage: (customer.language as "it" | "es" | "pt" | "en") || "it",
+        // Security layer will be automatically applied
+      })
+
+      const { success, error, messageId } = sendResult.success 
+        ? { success: true, error: undefined, messageId: sendResult.messageId }
+        : { success: false, error: sendResult.error, messageId: undefined }
 
       // 💾 Get or create active chat session
       let chatSession = await prisma.chatSession.findFirst({
