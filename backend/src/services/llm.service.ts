@@ -3,12 +3,14 @@ import * as path from "path"
 import { TokenService } from "../application/services/token.service"
 import { urlShortenerService } from "../application/services/url-shortener.service"
 import { LLMRequest } from "../types/whatsapp.types"
+import logger from "../utils/logger"
 import {
   calculateLLMCost,
   calculateLLMTokenUsage,
 } from "../utils/token-calculator"
 import { CallingFunctionsService } from "./calling-functions.service"
 import { PromptProcessorService } from "./prompt-processor.service"
+import translationSecurityService from "./translation-security.service"
 
 //todo non va il singoloo ordine
 export class LLMService {
@@ -175,11 +177,53 @@ export class LLMService {
     )
 
     // 7. Post-processing: Replace link tokens
-    const finalResponse = await this.replaceLinkTokens(
+    let finalResponse = await this.replaceLinkTokens(
       llmResult.response,
       customer,
       workspace
     )
+
+    // 8. 🔒 TRANSLATION & SECURITY LAYER - Final filter before sending to customer
+    try {
+      logger.info("🔒 Applying Translation & Security Layer", {
+        customerId: customer.id,
+        language: userLanguage,
+      })
+
+      // Build list of allowed system links (all other links will be blocked)
+      const workspaceUrl = workspace.url || "http://localhost:3000"
+      const allowedLinks = [
+        workspaceUrl, // Base workspace URL
+        `${workspaceUrl}/checkout`,
+        `${workspaceUrl}/orders`,
+        `${workspaceUrl}/orders-public`,
+        `${workspaceUrl}/register`,
+        `${workspaceUrl}/api/`,
+        "https://wa.me/", // WhatsApp official links
+      ]
+
+      const translationResult =
+        await translationSecurityService.processResponse(
+          finalResponse,
+          userLanguage,
+          allowedLinks
+        )
+
+      if (translationResult.blocked) {
+        logger.warn("⚠️ SECURITY: Blocked inappropriate content", {
+          customerId: customer.id,
+          reason: translationResult.reason,
+          originalLength: finalResponse.length,
+        })
+      }
+
+      finalResponse = translationResult.translatedText
+      debugInfo.translationBlocked = translationResult.blocked
+      debugInfo.translationReason = translationResult.reason
+    } catch (error) {
+      logger.error("❌ Translation & Security Layer failed", error)
+      // Continue with original response if translation fails
+    }
 
     // 🔧 DEBUG: Complete debug information
     debugInfo.stage = "completed"
@@ -557,16 +601,9 @@ export class LLMService {
         }
 
         if (functionName === "GetLinkOrderByCode") {
+          // Always return in Italian - Translation Layer will translate
           return {
-            response: `${i18n.success.orderLink[language]} ${functionResult.linkUrl || functionResult.output || functionResult.message} - ${
-              language === "it"
-                ? "valido per 1 ora"
-                : language === "es"
-                  ? "válido por 1 hora"
-                  : language === "pt"
-                    ? "válido por 1 hora"
-                    : "valid for 1 hour"
-            }`,
+            response: `${i18n.success.orderLink.it} ${functionResult.linkUrl || functionResult.output || functionResult.message} - valido per 1 ora`,
             tokenUsage,
             costInfo,
             functionCalls,

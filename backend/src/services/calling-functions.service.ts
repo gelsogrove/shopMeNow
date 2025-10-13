@@ -18,15 +18,6 @@ export interface GetAllProductsRequest {
   customerId: string
 }
 
-export interface SearchSpecificProductRequest {
-  workspaceId: string
-  customerId?: string
-  productName: string
-  phoneNumber?: string
-  message?: string
-  language?: string
-}
-
 export interface GetOrdersListLinkRequest {
   customerId: string
   workspaceId: string
@@ -543,44 +534,6 @@ export class CallingFunctionsService {
         error,
         "getShipmentTrackingLink"
       ) as TokenResponse
-    }
-  }
-
-  public async searchSpecificProduct(
-    request: SearchSpecificProductRequest
-  ): Promise<ProductsResponse> {
-    try {
-      console.log("🔧 Calling searchSpecificProduct with:", request)
-
-      // Import the SearchSpecificProduct function
-      const {
-        SearchSpecificProduct,
-      } = require("../chatbot/calling-functions/SearchSpecificProduct")
-
-      const result = await SearchSpecificProduct({
-        phoneNumber: request.phoneNumber || "unknown",
-        workspaceId: request.workspaceId,
-        customerId: request.customerId,
-        message: request.message || "Search specific product",
-        productName: request.productName,
-        language: request.language || "it",
-      })
-
-      return this.createSuccessResponse(
-        {
-          products: result.products,
-          totalProducts: result.totalProducts,
-          message: result.response,
-          found: result.found,
-        },
-        "searchSpecificProduct"
-      ) as ProductsResponse
-    } catch (error) {
-      console.error("❌ Error in searchSpecificProduct:", error)
-      return this.createErrorResponse(
-        error,
-        "searchSpecificProduct"
-      ) as ProductsResponse
     }
   }
 

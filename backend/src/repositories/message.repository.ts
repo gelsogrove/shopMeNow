@@ -8,6 +8,15 @@ import * as dotenv from "dotenv"
 import OpenAI from "openai"
 import logger from "../utils/logger"
 
+/**
+ * Apply Unicode strikethrough to text
+ * Example: "€6.80" → "€̶6̶.̶8̶0̶"
+ * Uses combining long stroke overlay (U+0336)
+ */
+function applyStrikethrough(text: string): string {
+  return text.split('').map(char => char + '\u0336').join('')
+}
+
 // Load environment variables
 dotenv.config()
 
@@ -1217,8 +1226,8 @@ export class MessageRepository {
           const finalPrice = Number(p.finalPrice).toFixed(2)
           const description = p.description ? ` - ${p.description}` : ""
 
-          // Mostra SEMPRE il formato scontato, anche se lo sconto è 0%, con descrizione
-          formattedProducts += `• ${p.name} ~~€${originalPrice}~~ → €${finalPrice}${description}\n`
+          // WhatsApp strikethrough: ~text~ (single tilde at start and end)
+          formattedProducts += `• ${p.name} ~€${originalPrice}~ → €${finalPrice}${description}\n`
         })
         formattedProducts += "\n"
       }
