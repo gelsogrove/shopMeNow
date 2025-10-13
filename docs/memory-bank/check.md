@@ -1,22 +1,33 @@
 FASE 1
 
+- SKIP_TRANSLATION_TESTS non serve
+
+- top product top cusomer solo i primi 3
+
 - FOTO DA METTERE
+
 - altro gusto non altra italia con prodotti nostri e foto nostre
-- cf da cancellare?
+
 - new mail
+
 - new user
 
-sarebbe bello fare altre CF tipo ripeti ultimo ordine o aggiungi questo al carrello
-cancella questo dal carrello
+- mcp sarebbe da sistemare un po
+
+- scadenza token 1 hora mettiaolo dentro env.local e env.eample?
+
+- gdpr deve essere in lingua
+  sarebbe bello fare altre CF tipo ripeti ultimo ordine o aggiungi questo al carrello
+  cancella questo dal carrello
+
+- testPRIAM DI MAX
 
 FASE 2
 
-- testPRIAM DI MAX
-- scadenza token 1 hora mettiaolo dentro env.local e env.eample?
 - heroku
+- heroku MA LO STOFAGE?
 - 2FA obbligatorio per admin
 - dependabot?
-- heroku MA LO STOFAGE?
 - whatsapp connect
 - pagameno
 - IP whitelisting

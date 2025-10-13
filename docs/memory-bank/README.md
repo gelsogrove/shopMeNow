@@ -20,6 +20,8 @@ memory-bank/
 ├── 01-SECURITY/                # Security documentation
 │   ├── owasp.md
 │   ├── translation-security-summary.md
+│   ├── translation-security-layer-strategy.md  # ⭐ NEW - Complete strategy
+│   ├── prompt-spam-translation-security.md
 │   ├── sessionid-admin-panel.md
 │   ├── sessionid-sessionstorage-migration.md
 │   └── sessionid-storage-fix.md
@@ -29,10 +31,12 @@ memory-bank/
 │   ├── whatsapp-implementation-complete.md
 │   ├── billing-system.md
 │   ├── message-sending-implementation.md
+│   ├── debug-system-implementation.md          # ⭐ NEW - Debug popup feature
 │   └── WIP-MESSAGE-FEATURE.md
 ├── 03-ARCHITECTURE/            # Architecture & design
 │   ├── LLMSERVICE-ARCHITECTURE-FLOW.md
 │   ├── WEBSOCKET-IMPLEMENTATION.md
+│   ├── calling-functions-architecture.md  # ⭐ NEW - Clean Architecture pattern
 │   ├── endpoints.md
 │   └── style-guide.md
 ├── 04-BEST-PRACTICES/          # Coding standards

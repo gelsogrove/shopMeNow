@@ -1,25 +1,26 @@
 /**
- * ReplaceLinkWithToken Calling Function
+ * Link Replacement Service
  *
- * Handles replacement of [LINK_WITH_TOKEN] placeholders with actual generated links
- * Supports cart, profile, orders, tracking, and checkout links with URL shortening
+ * Application Service Layer - Clean Architecture
+ * 
+ * Handles replacement of token placeholders with actual generated links.
+ * Supports cart, profile, orders, tracking, and checkout links with URL shortening.
+ * 
+ * This is a utility service, NOT a calling function for LLM.
  */
 
 import { config } from "../../config"
+import { SecureTokenService } from "./secure-token.service"
+import { linkGeneratorService } from "./link-generator.service"
 
-// Import URL shortener service for consistent link generation
-const {
-  linkGeneratorService,
-} = require("../../application/services/link-generator.service")
-
-interface ReplaceLinkWithTokenParams {
+export interface ReplaceLinkWithTokenParams {
   response: string
   linkType?: "cart" | "profile" | "orders" | "tracking" | "checkout" | "auto"
   context?: "offers" | "services" | "auto"
   orderCode?: string
 }
 
-interface ReplaceLinkWithTokenResult {
+export interface ReplaceLinkWithTokenResult {
   success: boolean
   response?: string
   error?: string
@@ -27,11 +28,29 @@ interface ReplaceLinkWithTokenResult {
   generatedLink?: string
 }
 
-export async function ReplaceLinkWithToken(
-  params: ReplaceLinkWithTokenParams,
-  customerId: string,
-  workspaceId: string
-): Promise<ReplaceLinkWithTokenResult> {
+/**
+ * Service for replacing token placeholders in text with actual secure links
+ */
+export class LinkReplacementService {
+  private secureTokenService: SecureTokenService
+
+  constructor() {
+    this.secureTokenService = new SecureTokenService()
+  }
+
+  /**
+   * Replace token placeholders in response text with actual links
+   * 
+   * @param params - Parameters including response text and optional link type
+   * @param customerId - Customer ID for token generation
+   * @param workspaceId - Workspace ID for token generation
+   * @returns Result with replaced response text
+   */
+  async replaceTokens(
+    params: ReplaceLinkWithTokenParams,
+    customerId: string,
+    workspaceId: string
+  ): Promise<ReplaceLinkWithTokenResult> {
   try {
     console.log("🔧 ReplaceLinkWithToken: Called with params:", {
       response: params.response.substring(0, 100),
@@ -527,10 +546,23 @@ export async function ReplaceLinkWithToken(
       linkType: linkType,
     }
   } catch (error) {
-    console.error("❌ ReplaceLinkWithToken error:", error)
+    console.error("❌ LinkReplacementService error:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
     }
   }
+  }
+}
+
+// Export singleton instance for backward compatibility
+export const linkReplacementService = new LinkReplacementService()
+
+// Export legacy function name for gradual migration
+export async function ReplaceLinkWithToken(
+  params: ReplaceLinkWithTokenParams,
+  customerId: string,
+  workspaceId: string
+): Promise<ReplaceLinkWithTokenResult> {
+  return linkReplacementService.replaceTokens(params, customerId, workspaceId)
 }

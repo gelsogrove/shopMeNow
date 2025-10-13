@@ -175,7 +175,7 @@ export class FormatterService {
       try {
         const {
           ReplaceLinkWithToken,
-        } = require("../chatbot/calling-functions/ReplaceLinkWithToken")
+        } = require("../application/services/link-replacement.service")
 
         let detectedOrderCode: string | undefined = undefined
         try {
