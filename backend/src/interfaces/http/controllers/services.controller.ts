@@ -231,7 +231,11 @@ export class ServicesController {
           .json({ error: "No valid fields provided for update" })
       }
 
-      const service = await this.serviceService.update(id, workspaceId, updateData)
+      const service = await this.serviceService.update(
+        id,
+        workspaceId,
+        updateData
+      )
 
       return res.json(service)
     } catch (error: any) {

@@ -4,7 +4,6 @@ import { ProductService } from "../../../application/services/product.service"
 import { prisma } from "../../../lib/prisma"
 import logger from "../../../utils/logger"
 
-
 export class ProductController {
   private productService: ProductService
 
@@ -46,9 +45,9 @@ export class ProductController {
       )
 
       // Map backend 'ProductCode' field to frontend 'code' field for all products
-      const productsWithCode = result.products.map(product => ({
+      const productsWithCode = result.products.map((product) => ({
         ...product,
-        code: product.ProductCode
+        code: product.ProductCode,
       }))
 
       return res.json({
@@ -86,13 +85,13 @@ export class ProductController {
       if (!product) {
         return res.status(404).json({ message: "Product not found" })
       }
-      
+
       // Map backend 'ProductCode' field to frontend 'code' field
       const responseProduct = {
         ...product,
-        code: product.ProductCode
+        code: product.ProductCode,
       }
-      
+
       return res.json(responseProduct)
     } catch (error) {
       logger.error(`Error getting product by ID:`, error)
@@ -177,7 +176,7 @@ export class ProductController {
       // Map backend 'ProductCode' field to frontend 'code' field
       const responseProduct = {
         ...product,
-        code: product.ProductCode
+        code: product.ProductCode,
       }
 
       return res.status(201).json(responseProduct)
@@ -244,7 +243,7 @@ export class ProductController {
       // Map backend 'ProductCode' field to frontend 'code' field
       const responseProduct = {
         ...updatedProduct,
-        code: updatedProduct.ProductCode
+        code: updatedProduct.ProductCode,
       }
 
       return res.json(responseProduct)

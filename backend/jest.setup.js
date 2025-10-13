@@ -8,13 +8,13 @@
 
 // Solo per i test unitari, mocka PrismaClient
 // Per i test di integrazione, usiamo il vero PrismaClient
-if (process.env.NODE_ENV === 'test' && !process.env.INTEGRATION_TEST) {
-  jest.mock('@prisma/client', () => {
+if (process.env.NODE_ENV === "test" && !process.env.INTEGRATION_TEST) {
+  jest.mock("@prisma/client", () => {
     const mockPrismaClient = {
       constructor: jest.fn(),
       $connect: jest.fn(),
       $disconnect: jest.fn(),
-      
+
       // Mock all Prisma models with proper methods
       users: {
         findMany: jest.fn(),
@@ -302,50 +302,50 @@ if (process.env.NODE_ENV === 'test' && !process.env.INTEGRATION_TEST) {
         deleteMany: jest.fn(),
         count: jest.fn(),
       },
-    };
-    
+    }
+
     // Aggiungiamo le enumerazioni usate nei test
     const ProductStatus = {
-      ACTIVE: 'ACTIVE',
-      DRAFT: 'DRAFT',
-      ARCHIVED: 'ARCHIVED',
-      OUT_OF_STOCK: 'OUT_OF_STOCK'
-    };
-    
+      ACTIVE: "ACTIVE",
+      DRAFT: "DRAFT",
+      ARCHIVED: "ARCHIVED",
+      OUT_OF_STOCK: "OUT_OF_STOCK",
+    }
+
     const OrderStatus = {
-      PENDING: 'PENDING',
-      CONFIRMED: 'CONFIRMED',
-      PROCESSING: 'PROCESSING',
-      SHIPPED: 'SHIPPED',
-      DELIVERED: 'DELIVERED',
-      CANCELLED: 'CANCELLED'
-    };
-    
+      PENDING: "PENDING",
+      CONFIRMED: "CONFIRMED",
+      PROCESSING: "PROCESSING",
+      SHIPPED: "SHIPPED",
+      DELIVERED: "DELIVERED",
+      CANCELLED: "CANCELLED",
+    }
+
     const PaymentStatus = {
-      PENDING: 'PENDING',
-      PAID: 'PAID',
-      FAILED: 'FAILED',
-      REFUNDED: 'REFUNDED'
-    };
-    
+      PENDING: "PENDING",
+      PAID: "PAID",
+      FAILED: "FAILED",
+      REFUNDED: "REFUNDED",
+    }
+
     return {
       PrismaClient: jest.fn(() => mockPrismaClient),
       ProductStatus,
       OrderStatus,
-      PaymentStatus
-    };
-  });
+      PaymentStatus,
+    }
+  })
 }
 
 // @xenova/transformers mock removed - embedding system no longer in use
 
 // Mock logger to avoid console output in tests
-jest.mock('./src/utils/logger', () => ({
+jest.mock("./src/utils/logger", () => ({
   info: jest.fn(),
   error: jest.fn(),
   warn: jest.fn(),
   debug: jest.fn(),
-}));
+}))
 
 // Increase timeout for all tests
-jest.setTimeout(10000); // 10 seconds 
+jest.setTimeout(10000) // 10 seconds

@@ -2685,8 +2685,6 @@ export class MessageRepository {
     }
   }
 
-
-
   /**
    * Get Prisma client for direct database access (public method for services)
    */
