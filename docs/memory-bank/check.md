@@ -25,6 +25,8 @@ DOC
 - scripts
 - whatsapp-setup-guide.md
 - whatsapp-integration-architecture.md
+- BE BEST PRACTISE (usa quelle attuale)
+- FE BEST PRACTISE (usa quelle attuale)
 - SECURITY
   OWASP
   WHATASPP

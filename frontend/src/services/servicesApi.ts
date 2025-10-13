@@ -163,13 +163,6 @@ export const search = async (workspaceId: string, query: string): Promise<Search
   return response.data.data?.results || response.data
 }
 
-/**
- * Generate embeddings for all active services in a workspace
- */
-export const generateEmbeddings = async (workspaceId: string): Promise<void> => {
-  await api.post(`/workspaces/${workspaceId}/services/generate-embeddings`)
-}
-
 export const servicesApi = {
   getServices,
   getServiceById,
@@ -177,5 +170,4 @@ export const servicesApi = {
   updateService,
   deleteService,
   search,
-  generateEmbeddings
 } 
