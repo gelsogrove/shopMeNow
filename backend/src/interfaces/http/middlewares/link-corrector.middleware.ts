@@ -13,8 +13,9 @@ const LINK_CORRECTIONS = {
   // Profile management links
   '/profile-management': '/customer-profile',
   
-  // Orders links - devono essere /orders-public
-  '/orders/': '/orders-public/',
+  // ❌ REMOVED: '/orders/' -> '/orders-public/' 
+  // This was dangerous because it creates links without tokens!
+  // The LLM MUST use [LINK_ORDERS_WITH_TOKEN] token instead
   
   // Altri link comuni sbagliati
   'https://laltrait.com/profile-management': '/customer-profile'

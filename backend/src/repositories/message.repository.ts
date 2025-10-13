@@ -2158,6 +2158,70 @@ export class MessageRepository {
   }
 
   /**
+   * Get recent messages within a time window (for LLM context)
+   * @param phoneNumber The phone number
+   * @param minutesAgo How many minutes back to look
+   * @param workspaceId Workspace ID to filter by
+   * @returns Recent chat messages within time window
+   */
+  async getRecentMessagesByTime(
+    phoneNumber: string,
+    minutesAgo = 5,
+    workspaceId?: string
+  ) {
+    try {
+      logger.info(`[HISTORY] Fetching messages from last ${minutesAgo} minutes for ${phoneNumber}`)
+
+      // Find customer by phone
+      const customer = await this.findCustomerByPhone(phoneNumber)
+      if (!customer) {
+        logger.warn(`[HISTORY] Customer not found for phone: ${phoneNumber}`)
+        return []
+      }
+
+      // Find active chat session
+      const session = await this.prisma.chatSession.findFirst({
+        where: {
+          customerId: customer.id,
+          status: "active",
+          ...(workspaceId ? { workspaceId } : {}),
+        },
+      })
+
+      if (!session) {
+        logger.warn(`[HISTORY] No active session for customer: ${customer.id}`)
+        return []
+      }
+
+      // Calculate time threshold
+      const timeThreshold = new Date(Date.now() - minutesAgo * 60 * 1000)
+
+      // Find messages for this session within time window
+      const messages = await this.prisma.message.findMany({
+        where: {
+          chatSessionId: session.id,
+          createdAt: {
+            gte: timeThreshold, // Greater than or equal to threshold
+          },
+        },
+        orderBy: {
+          createdAt: "desc", // Most recent first
+        },
+        take: 20, // Max 20 messages even if more exist in time window
+      })
+
+      logger.info(
+        `[HISTORY] Found ${messages.length} messages from last ${minutesAgo} minutes`
+      )
+
+      return messages
+    } catch (error) {
+      logger.error("[HISTORY] Error getting recent messages by time:", error)
+      return []
+    }
+  }
+
+  /**
    * Get agent by workspace ID
    * @param workspaceId Workspace ID
    * @returns Agent for the workspace

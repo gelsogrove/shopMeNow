@@ -2701,11 +2701,6 @@ async function main() {
         "You can download our complete product catalog here: [LINK_CATALOG]",
     },
     {
-      question: "What discount do I have on products?",
-      answer:
-        "Hello! Your current discount on products is [USER_DISCOUNT], and the following offers are also active: [LIST_OFFERS]",
-    },
-    {
       question: "How can I see my orders?",
       answer:
         "Hello! You can view your orders by clicking this link: [LINK_ORDERS_WITH_TOKEN]",
@@ -2727,10 +2722,6 @@ async function main() {
     {
       question: "New order",
       answer: "Click here to activate your cart 🛒 [LINK_CHECKOUT_WITH_TOKEN]",
-    },
-    {
-      question: "What offers do you have?",
-      answer: "Hello! Here are our active offers: [LIST_OFFERS]",
     },
     {
       question: "Can I speak with an operator?",

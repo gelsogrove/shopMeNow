@@ -1169,118 +1169,6 @@ export function WhatsAppChatModal({
                               </div>
                             )}
 
-                            {/* 🔧 NEW: Quick Debug Summary Panel */}
-                            {showFunctionCalls &&
-                              message.sender === "bot" &&
-                              message.debugInfo && (
-                                <div className="bg-blue-50 border border-blue-200 rounded p-2">
-                                  <div className="text-xs font-semibold text-blue-800 mb-1">
-                                    📊 Quick Debug Summary:
-                                  </div>
-                                  <div className="text-xs text-blue-700 space-y-1">
-                                    {(() => {
-                                      try {
-                                        const debugData =
-                                          typeof message.debugInfo === "string"
-                                            ? JSON.parse(message.debugInfo)
-                                            : message.debugInfo
-
-                                        return (
-                                          <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                              <span className="font-semibold">
-                                                💰 Cost:
-                                              </span>
-                                              <br />
-                                              <span className="font-mono">
-                                                $
-                                                {debugData.costInfo
-                                                  ?.totalCost || "N/A"}
-                                              </span>
-                                            </div>
-                                            <div>
-                                              <span className="font-semibold">
-                                                🎯 Tokens:
-                                              </span>
-                                              <br />
-                                              <span className="font-mono">
-                                                {debugData.tokenUsage
-                                                  ?.totalTokens || "N/A"}
-                                              </span>
-                                            </div>
-                                            <div>
-                                              <span className="font-semibold">
-                                                🔗 Active Links:
-                                              </span>
-                                              <br />
-                                              <span className="font-mono">
-                                                {debugData.linkCounts?.shortUrls
-                                                  ?.active || 0}
-                                              </span>
-                                            </div>
-                                            <div>
-                                              <span className="font-semibold">
-                                                🗑️ Expired Links:
-                                              </span>
-                                              <br />
-                                              <span className="font-mono">
-                                                {debugData.linkCounts?.shortUrls
-                                                  ?.expired || 0}
-                                              </span>
-                                            </div>
-                                            <div className="col-span-2">
-                                              <span className="font-semibold">
-                                                🔧 Function Called:
-                                              </span>
-                                              <br />
-                                              <span className="font-mono">
-                                                {debugData.functionCalls &&
-                                                debugData.functionCalls.length >
-                                                  0
-                                                  ? debugData.functionCalls[0]
-                                                      .functionName
-                                                  : "None"}
-                                              </span>
-                                            </div>
-                                            <div>
-                                              <span className="font-semibold">
-                                                🌐 Language:
-                                              </span>
-                                              <br />
-                                              <span className="font-mono">
-                                                {debugData.userInfo?.language ||
-                                                  debugData.customer
-                                                    ?.language ||
-                                                  "N/A"}
-                                              </span>
-                                            </div>
-                                            <div>
-                                              <span className="font-semibold">
-                                                💳 Discount:
-                                              </span>
-                                              <br />
-                                              <span className="font-mono">
-                                                {debugData.userInfo?.discount ||
-                                                  debugData.customer
-                                                    ?.discount ||
-                                                  0}
-                                                %
-                                              </span>
-                                            </div>
-                                          </div>
-                                        )
-                                      } catch (error) {
-                                        return (
-                                          <span className="text-red-600">
-                                            Debug data parsing error
-                                          </span>
-                                        )
-                                      }
-                                    })()}
-                                  </div>
-                                </div>
-                              )}
-
                             {showFunctionCalls &&
                               message.functionCalls &&
                               message.functionCalls.length > 0 && (
@@ -1360,6 +1248,121 @@ export function WhatsAppChatModal({
                                         </div>
                                       )
                                     )}
+                                  </div>
+                                </div>
+                              )}
+
+                            {/* 🔗 Link Replacements Debug Panel */}
+                            {showFunctionCalls &&
+                              message.sender === "bot" &&
+                              message.debugInfo &&
+                              (() => {
+                                try {
+                                  const debugData =
+                                    typeof message.debugInfo === "string"
+                                      ? JSON.parse(message.debugInfo)
+                                      : message.debugInfo
+                                  return (
+                                    debugData.linkReplacements &&
+                                    debugData.linkReplacements.length > 0
+                                  )
+                                } catch {
+                                  return false
+                                }
+                              })() && (
+                                <div className="bg-blue-50 border border-blue-200 rounded p-2 mt-2">
+                                  <div className="text-xs font-semibold text-blue-800 mb-2">
+                                    🔗 Link Replacements (
+                                    {(() => {
+                                      const debugData =
+                                        typeof message.debugInfo === "string"
+                                          ? JSON.parse(message.debugInfo)
+                                          : message.debugInfo
+                                      return debugData.linkReplacements?.length || 0
+                                    })()}
+                                    ):
+                                  </div>
+                                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                                    {(() => {
+                                      try {
+                                        const debugData =
+                                          typeof message.debugInfo === "string"
+                                            ? JSON.parse(message.debugInfo)
+                                            : message.debugInfo
+
+                                        return debugData.linkReplacements?.map(
+                                          (replacement: any, index: number) => (
+                                            <div
+                                              key={index}
+                                              className="bg-white border border-blue-100 rounded p-2"
+                                            >
+                                              <div className="text-xs">
+                                                <div className="flex items-start gap-2 mb-1">
+                                                  <span className="font-semibold text-blue-700 whitespace-nowrap">
+                                                    Token:
+                                                  </span>
+                                                  <code className="bg-gray-100 px-1 rounded text-[10px] break-all">
+                                                    {replacement.token}
+                                                  </code>
+                                                </div>
+                                                <div className="flex items-start gap-2 mb-1">
+                                                  <span className="font-semibold text-green-700 whitespace-nowrap">
+                                                    URL:
+                                                  </span>
+                                                  <a
+                                                    href={replacement.replacedWith}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-blue-600 hover:underline text-[10px] break-all"
+                                                  >
+                                                    {replacement.replacedWith}
+                                                  </a>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2 text-[10px] text-gray-600 mt-1">
+                                                  <div>
+                                                    <span className="font-semibold">
+                                                      Short URL:
+                                                    </span>{" "}
+                                                    {replacement.shortUrlCreated ? (
+                                                      <span className="text-green-600">
+                                                        ✓ Yes
+                                                      </span>
+                                                    ) : (
+                                                      <span className="text-orange-600">
+                                                        ✗ No
+                                                      </span>
+                                                    )}
+                                                  </div>
+                                                  <div>
+                                                    <span className="font-semibold">
+                                                      Token:
+                                                    </span>{" "}
+                                                    <code className="bg-gray-100 px-1 rounded">
+                                                      {replacement.tokenGenerated?.substring(
+                                                        0,
+                                                        8
+                                                      ) || "N/A"}
+                                                      ...
+                                                    </code>
+                                                  </div>
+                                                </div>
+                                                <div className="text-[9px] text-gray-500 mt-1">
+                                                  {new Date(
+                                                    replacement.timestamp
+                                                  ).toLocaleString()}
+                                                </div>
+                                              </div>
+                                            </div>
+                                          )
+                                        )
+                                      } catch (error) {
+                                        return (
+                                          <span className="text-red-600 text-xs">
+                                            Error displaying link replacements
+                                          </span>
+                                        )
+                                      }
+                                    })()}
                                   </div>
                                 </div>
                               )}
