@@ -29,10 +29,8 @@ interface Message {
   agentName?: string
   translatedQuery?: string
   processedPrompt?: string
-  debugInfo?: string | any // 🔧 Debug information
-  processingSource?: string // 🔧 Source of the response (LLM/function name)
-  messageCost?: number // 💰 Cost of this message from Billing table
-  billingType?: string // 💰 Type of billing (MESSAGE, PUSH_MESSAGE, HUMAN_SUPPORT, etc.)
+  debugInfo?: string | any // 🔧 NEW: Debug information
+  processingSource?: string // 🔧 NEW: Source of the response (LLM/function name)
   functionCalls?: Array<{
     functionName: string
     toolCall?: {
@@ -104,7 +102,19 @@ export function WhatsAppChatModal({
   const currentWorkspaceId = getWorkspaceId(workspaceId)
   const hasValidWorkspace = currentWorkspaceId !== null
 
-  // Track workspace validity
+  logger.info("WhatsAppChatModal props:", {
+    isOpen,
+    channelName,
+    phoneNumber,
+    workspaceId,
+    selectedChat,
+  })
+
+  logger.info("Workspace check:", {
+    currentWorkspaceId,
+    hasValidWorkspace,
+    providedWorkspaceId: workspaceId,
+  })
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -165,7 +175,7 @@ export function WhatsAppChatModal({
       setChatStarted(true)
       fetchMessagesForSelectedChat(localSelectedChat)
     }
-  }, [isOpen, localSelectedChat, currentWorkspaceId])
+  }, [isOpen, localSelectedChat])
 
   // Reset state when modal closes
   useEffect(() => {
@@ -231,33 +241,17 @@ export function WhatsAppChatModal({
           translatedQuery: message.translatedQuery,
           processedPrompt: message.processedPrompt,
           processingSource: message.processingSource, // 🔧 NEW: Source information
-          messageCost: message.messageCost, // 💰 NEW: Message cost from billing
-          billingType: message.billingType, // 💰 NEW: Billing type (MESSAGE, PUSH_MESSAGE, etc.)
           functionCalls: message.functionCallsDebug
             ? (() => {
-                try {
-                  // Check if it's already an object or a string that needs parsing
-                  return typeof message.functionCallsDebug === "string"
-                    ? JSON.parse(message.functionCallsDebug)
-                    : message.functionCallsDebug
-                } catch (error) {
-                  return []
-                }
+                console.log(
+                  "🔧 Raw functionCallsDebug:",
+                  message.functionCallsDebug
+                )
+                const parsed = JSON.parse(message.functionCallsDebug)
+                console.log("🔧 Parsed functionCalls:", parsed)
+                return parsed
               })()
             : [],
-          // 🔧 NEW: Add debugInfo from database
-          debugInfo: message.debugInfo
-            ? (() => {
-                try {
-                  // Check if it's already an object or a string that needs parsing
-                  return typeof message.debugInfo === "string"
-                    ? JSON.parse(message.debugInfo)
-                    : message.debugInfo
-                } catch (error) {
-                  return {}
-                }
-              })()
-            : {},
           metadata: {
             isOperatorMessage: message.metadata?.isOperatorMessage || false,
             isOperatorControl: message.metadata?.isOperatorControl || false,
@@ -318,9 +312,6 @@ export function WhatsAppChatModal({
     return formattedText
   }
 
-  // 💰 NEW: Fetch current billing totals
-  // Rimosso fetchBillingTotals - ora gestito dal sistema Analytics
-
   const startChat = async () => {
     if (!isValidPhoneNumber(userPhoneNumber)) return
     if (!initialMessage.trim()) return
@@ -368,15 +359,6 @@ export function WhatsAppChatModal({
         isNewConversation: true, // Add flag to indicate new conversation
       })
 
-      // Check if response is just "OK" (customer blocked - no action needed)
-      if (response.data === "OK") {
-        logger.info(
-          "🚫 Customer blocked - received OK response, showing no bot message"
-        )
-        setIsLoading(false)
-        return
-      }
-
       if (response.data.success) {
         // Save sessionId if provided in the response
         if (response.data.data.sessionId) {
@@ -404,33 +386,24 @@ export function WhatsAppChatModal({
           localStorage.setItem("selectedChat", JSON.stringify(newChat))
         }
 
-        // Check if we have a valid bot response before creating message
-        const botResponse = response.data.data.message
-
-        if (botResponse && botResponse.trim() !== "") {
-          // Create the bot message from the API response
-          const botMessage: Message = {
-            id: (Date.now() + 200).toString(),
-            content: botResponse,
-            sender: "bot",
-            timestamp: new Date(),
-            agentName: "AI Assistant",
-            metadata: {
-              isOperatorMessage: false,
-              isOperatorControl: false,
-              agentSelected: "CHATBOT",
-              sentBy: "AI",
-            },
-          }
-
-          // Add ONLY the bot response to chat history, not the user's message again
-          // This prevents the duplicate "Ciao" message
-          setMessages((prev) => [...prev, botMessage]) // Add only bot response - user message already added
-        } else {
-          logger.info(
-            "Empty response from initial message, customer waiting for operator"
-          )
+        // Create the bot message from the API response
+        const botMessage: Message = {
+          id: (Date.now() + 200).toString(),
+          content: response.data.data.message,
+          sender: "bot",
+          timestamp: new Date(),
+          agentName: "AI Assistant",
+          metadata: {
+            isOperatorMessage: false,
+            isOperatorControl: false,
+            agentSelected: "CHATBOT",
+            sentBy: "AI",
+          },
         }
+
+        // Add ONLY the bot response to chat history, not the user's message again
+        // This prevents the duplicate "Ciao" message
+        setMessages((prev) => [...prev, botMessage]) // Add only bot response - user message already added
       } else {
         // Handle API error response
         logger.error("API Error:", response.data.error)
@@ -568,15 +541,6 @@ export function WhatsAppChatModal({
         response.data.success
       )
 
-      // Check if response is just "OK" (customer blocked - no action needed)
-      if (response.data === "OK") {
-        logger.info(
-          "🚫 Customer blocked - received OK response, showing no bot message"
-        )
-        setIsLoading(false)
-        return
-      }
-
       if (response.data.success) {
         // DUAL LLM SYSTEM response format
         const botResponse = response.data.data.message
@@ -588,8 +552,6 @@ export function WhatsAppChatModal({
         }
 
         if (botResponse && botResponse.trim() !== "") {
-          // La logica di billing è ora gestita dal backend e visualizzata in Analytics
-
           // Create the bot message from the API response
           const botMessage: Message = {
             id: (Date.now() + 1).toString(),
@@ -602,8 +564,21 @@ export function WhatsAppChatModal({
             processedPrompt: response.data.debug?.processedPrompt,
             processingSource: response.data.debug?.processingSource || "LLM", // 🔧 NEW: Source info
             functionCalls: response.data.debug?.functionCalls || [],
-            // 💰 Complete debug info (now all properties are directly in debug)
-            debugInfo: response.data.debug || {},
+            // 💰 Cost tracking info
+            debugInfo: response.data.debug?.costInfo
+              ? JSON.stringify(
+                  {
+                    currentCallCost:
+                      response.data.debug.costInfo.currentCallCost,
+                    previousTotalUsage:
+                      response.data.debug.costInfo.previousTotalUsage,
+                    newTotalUsage: response.data.debug.costInfo.newTotalUsage,
+                    costTimestamp: response.data.debug.costInfo.costTimestamp,
+                  },
+                  null,
+                  2
+                )
+              : undefined,
             metadata: {
               isOperatorMessage: false,
               isOperatorControl: false,
@@ -738,9 +713,9 @@ export function WhatsAppChatModal({
               onClick={() => setShowProcessedPrompt(!showProcessedPrompt)}
               className={`text-white hover:bg-green-600 rounded-full p-2 transition ${
                 showProcessedPrompt ? "bg-green-600" : ""
-              } hidden`}
-              aria-label="Toggle Processed Prompt Debug"
-              title="Show/Hide Processed Prompt Debug"
+              }`}
+              aria-label="Toggle Complete Debug Info"
+              title="Show/Hide Complete Debug Information"
             >
               <Settings className="h-5 w-5" />
             </button>
@@ -943,16 +918,80 @@ export function WhatsAppChatModal({
                             {showProcessedPrompt && message.debugInfo && (
                               <div className="bg-green-50 border border-green-200 rounded p-2">
                                 <div className="text-xs font-semibold text-green-800 mb-1">
-                                  🔧 Debug Flow:
+                                  🔧 Complete Debug Information:
                                 </div>
-                                <div className="text-xs text-green-700 font-mono whitespace-pre-wrap max-h-32 overflow-y-auto">
-                                  {typeof message.debugInfo === "string"
-                                    ? message.debugInfo
-                                    : JSON.stringify(
-                                        message.debugInfo,
-                                        null,
-                                        2
-                                      )}
+                                <div className="text-xs text-green-700 font-mono whitespace-pre-wrap max-h-64 overflow-y-auto">
+                                  {(() => {
+                                    try {
+                                      const debugData = typeof message.debugInfo === "string" 
+                                        ? JSON.parse(message.debugInfo) 
+                                        : message.debugInfo
+
+                                      // Format the debug information for better readability
+                                      const formattedDebug = {
+                                        "🕐 Timestamp": debugData.timestamp || "N/A",
+                                        "📞 Phone": debugData.requestPhone || "N/A",
+                                        "🏢 Workspace ID": debugData.workspaceId || "N/A",
+                                        "👤 Customer ID": debugData.customerId || "N/A",
+                                        "📊 Stage": debugData.stage || "N/A",
+                                        
+                                        // Customer Information
+                                        "👤 Customer Info": debugData.customer ? {
+                                          "Name": debugData.customer.name || "N/A",
+                                          "Language": debugData.customer.language || "N/A",
+                                          "Discount": `${debugData.customer.discount || 0}%`,
+                                          "Company": debugData.customer.company || "N/A",
+                                          "Last Order": debugData.customer.lastOrderCode || "N/A"
+                                        } : "New User",
+
+                                        // User Interface Info
+                                        "🌐 User Context": debugData.userInfo || "N/A",
+
+                                        // Link Counts
+                                        "🔗 Links Status": debugData.linkCounts ? {
+                                          "Short URLs Active": debugData.linkCounts.shortUrls?.active || 0,
+                                          "Short URLs Expired": debugData.linkCounts.shortUrls?.expired || 0,
+                                          "Secure Tokens Active": debugData.linkCounts.secureTokens?.active || 0,
+                                          "Secure Tokens Expired": debugData.linkCounts.secureTokens?.expired || 0
+                                        } : "N/A",
+
+                                        // Token Usage
+                                        "🎯 Token Usage": debugData.tokenUsage ? {
+                                          "Prompt Tokens": debugData.tokenUsage.promptTokens || 0,
+                                          "Completion Tokens": debugData.tokenUsage.completionTokens || 0,
+                                          "Total Tokens": debugData.tokenUsage.totalTokens || 0
+                                        } : "N/A",
+
+                                        // Cost Information
+                                        "💰 Cost Info": debugData.costInfo ? {
+                                          "Prompt Cost": `$${debugData.costInfo.promptCost || 0}`,
+                                          "Completion Cost": `$${debugData.costInfo.completionCost || 0}`,
+                                          "Total Cost": `$${debugData.costInfo.totalCost || 0}`,
+                                          "Currency": debugData.costInfo.currency || "USD"
+                                        } : "N/A",
+
+                                        // Function Calls
+                                        "🔧 Function Calls": debugData.functionCalls && debugData.functionCalls.length > 0 ? 
+                                          debugData.functionCalls.map((call: any, index: number) => ({
+                                            [`Function ${index + 1}`]: call.functionName || "Unknown",
+                                            [`Arguments ${index + 1}`]: call.functionArgs || {},
+                                            [`Result ${index + 1}`]: call.result || "N/A"
+                                          })) : "None",
+
+                                        // Prompt Information
+                                        "📝 Prompt Info": debugData.promptInfo || "N/A",
+                                        
+                                        // Final Response Info
+                                        "📤 Response Length": debugData.finalResponseLength || "N/A"
+                                      }
+
+                                      return JSON.stringify(formattedDebug, null, 2)
+                                    } catch (error) {
+                                      return typeof message.debugInfo === "string"
+                                        ? message.debugInfo
+                                        : JSON.stringify(message.debugInfo, null, 2)
+                                    }
+                                  })()}
                                 </div>
                               </div>
                             )}
@@ -986,272 +1025,41 @@ export function WhatsAppChatModal({
                                           .join(", ")
 
                                       return (
-                                        <div className="space-y-1">
-                                          <div className="font-mono">
-                                            <span className="font-semibold text-blue-600">
-                                              📝 SOURCE:
-                                            </span>{" "}
-                                            LLM
-                                            {message.debugInfo?.model && (
-                                              <span className="text-gray-500 text-xs ml-2">
-                                                ({message.debugInfo.model})
-                                              </span>
-                                            )}
-                                          </div>
-                                          <div className="font-mono">
-                                            <span className="font-semibold text-purple-600">
-                                              🔧 FUNCTION:
-                                            </span>{" "}
-                                            {functionNames}
-                                            {message.functionCalls.length > 3 &&
-                                              ` (+${
-                                                message.functionCalls.length - 3
-                                              } more)`}
-                                          </div>
-                                          {message.debugInfo?.temperature !==
-                                            undefined &&
-                                            message.debugInfo?.temperature !==
-                                              null && (
-                                              <div className="font-mono text-xs">
-                                                <span className="font-semibold text-orange-600">
-                                                  🌡️ TEMPERATURE:
-                                                </span>{" "}
-                                                {message.debugInfo.temperature}
-                                              </div>
-                                            )}
-                                          {message.functionCalls[0]?.toolCall
-                                            ?.function?.arguments && (
-                                            <div className="font-mono text-xs">
-                                              <span className="font-semibold text-orange-600">
-                                                📋 PARAMS:
-                                              </span>{" "}
-                                              {
-                                                message.functionCalls[0]
-                                                  .toolCall.function.arguments
-                                              }
-                                            </div>
-                                          )}
-                                          {message.debugInfo
-                                            ?.effectiveParams && (
-                                            <div className="font-mono text-xs">
-                                              <span className="font-semibold text-green-600">
-                                                ✅ EFFECTIVE:
-                                              </span>{" "}
-                                              {JSON.stringify(
-                                                message.debugInfo
-                                                  .effectiveParams
-                                              )}
-                                            </div>
-                                          )}
-                                          {message.debugInfo
-                                            ?.tokenReplacements &&
-                                            message.debugInfo.tokenReplacements
-                                              .length > 0 && (
-                                              <div className="font-mono text-xs">
-                                                <span className="font-semibold text-pink-600">
-                                                  🔗 TOKENS:
-                                                </span>{" "}
-                                                {message.debugInfo.tokenReplacements.map(
-                                                  (
-                                                    token: string,
-                                                    idx: number
-                                                  ) => (
-                                                    <div
-                                                      key={idx}
-                                                      className="ml-2"
-                                                    >
-                                                      {token}
-                                                    </div>
-                                                  )
-                                                )}
-                                              </div>
-                                            )}
-                                        </div>
+                                        <span className="font-mono">
+                                          <span className="font-semibold text-purple-600">
+                                            🔧 FUNCTION:
+                                          </span>{" "}
+                                          {functionNames}
+                                          {message.functionCalls.length > 3 &&
+                                            ` (+${
+                                              message.functionCalls.length - 3
+                                            } more)`}
+                                        </span>
                                       )
                                     } else if (
                                       message.processingSource &&
                                       message.processingSource !== "unknown"
                                     ) {
-                                      // 🔧 ENHANCED: Show full debug info if available, even with processingSource
-                                      if (
-                                        message.debugInfo ||
-                                        (message.functionCalls &&
-                                          message.functionCalls.length > 0)
-                                      ) {
-                                        const functionNames =
-                                          message.functionCalls
-                                            ? message.functionCalls
-                                                .map(
-                                                  (call) =>
-                                                    call.functionName ||
-                                                    call.type ||
-                                                    "Unknown"
-                                                )
-                                                .filter(
-                                                  (name, index, arr) =>
-                                                    arr.indexOf(name) === index
-                                                )
-                                                .slice(0, 3)
-                                                .join(", ")
-                                            : null
-
-                                        return (
-                                          <div className="space-y-1">
-                                            <div className="font-mono">
-                                              <span className="font-semibold text-blue-600">
-                                                📝 SOURCE:
-                                              </span>{" "}
-                                              LLM
-                                              {message.debugInfo?.model && (
-                                                <span className="text-gray-500 text-xs ml-2">
-                                                  ({message.debugInfo.model})
-                                                </span>
-                                              )}
-                                            </div>
-                                            {functionNames && (
-                                              <div className="font-mono">
-                                                <span className="font-semibold text-purple-600">
-                                                  🔧 FUNCTION:
-                                                </span>{" "}
-                                                {functionNames}
-                                                {message.functionCalls &&
-                                                  message.functionCalls.length >
-                                                    3 &&
-                                                  ` (+${
-                                                    message.functionCalls
-                                                      .length - 3
-                                                  } more)`}
-                                              </div>
-                                            )}
-                                            {message.debugInfo?.temperature !==
-                                              undefined &&
-                                              message.debugInfo?.temperature !==
-                                                null && (
-                                                <div className="font-mono text-xs">
-                                                  <span className="font-semibold text-orange-600">
-                                                    🌡️ TEMPERATURE:
-                                                  </span>{" "}
-                                                  {
-                                                    message.debugInfo
-                                                      .temperature
-                                                  }
-                                                </div>
-                                              )}
-                                            {message.functionCalls &&
-                                              message.functionCalls[0]?.toolCall
-                                                ?.function?.arguments && (
-                                                <div className="font-mono text-xs">
-                                                  <span className="font-semibold text-orange-600">
-                                                    � PARAMS:
-                                                  </span>{" "}
-                                                  {
-                                                    message.functionCalls[0]
-                                                      .toolCall.function
-                                                      .arguments
-                                                  }
-                                                </div>
-                                              )}
-                                            {message.debugInfo
-                                              ?.effectiveParams && (
-                                              <div className="font-mono text-xs">
-                                                <span className="font-semibold text-green-600">
-                                                  ✅ EFFECTIVE:
-                                                </span>{" "}
-                                                {JSON.stringify(
-                                                  message.debugInfo
-                                                    .effectiveParams
-                                                )}
-                                              </div>
-                                            )}
-                                            {message.debugInfo
-                                              ?.tokenReplacements &&
-                                              message.debugInfo
-                                                .tokenReplacements.length >
-                                                0 && (
-                                                <div className="font-mono text-xs">
-                                                  <span className="font-semibold text-pink-600">
-                                                    🔗 TOKENS:
-                                                  </span>{" "}
-                                                  {message.debugInfo.tokenReplacements.map(
-                                                    (
-                                                      token: string,
-                                                      idx: number
-                                                    ) => (
-                                                      <div
-                                                        key={idx}
-                                                        className="ml-2"
-                                                      >
-                                                        {token}
-                                                      </div>
-                                                    )
-                                                  )}
-                                                </div>
-                                              )}
-                                          </div>
-                                        )
-                                      } else {
-                                        return (
-                                          <span className="font-mono">
-                                            <span className="font-semibold text-blue-600">
-                                              �🔧 SOURCE:
-                                            </span>{" "}
-                                            {message.processingSource}
-                                          </span>
-                                        )
-                                      }
+                                      return (
+                                        <span className="font-mono">
+                                          <span className="font-semibold text-blue-600">
+                                            🔧 SOURCE:
+                                          </span>{" "}
+                                          {message.processingSource}
+                                        </span>
+                                      )
                                     } else if (
                                       message.metadata?.agentSelected?.includes(
                                         "CHATBOT"
                                       )
                                     ) {
                                       return (
-                                        <div className="space-y-1">
-                                          <div className="font-mono">
-                                            <span className="font-semibold text-blue-600">
-                                              📝 SOURCE:
-                                            </span>{" "}
-                                            LLM
-                                            {message.debugInfo?.model && (
-                                              <span className="text-gray-500 text-xs ml-2">
-                                                ({message.debugInfo.model})
-                                              </span>
-                                            )}
-                                          </div>
-                                          {message.debugInfo?.temperature !==
-                                            undefined &&
-                                            message.debugInfo?.temperature !==
-                                              null && (
-                                              <div className="font-mono text-xs">
-                                                <span className="font-semibold text-orange-600">
-                                                  🌡️ TEMPERATURE:
-                                                </span>{" "}
-                                                {message.debugInfo.temperature}
-                                              </div>
-                                            )}
-                                          {message.debugInfo
-                                            ?.tokenReplacements &&
-                                            message.debugInfo.tokenReplacements
-                                              .length > 0 && (
-                                              <div className="font-mono text-xs">
-                                                <span className="font-semibold text-pink-600">
-                                                  🔗 TOKENS:
-                                                </span>{" "}
-                                                {message.debugInfo.tokenReplacements.map(
-                                                  (
-                                                    token: string,
-                                                    idx: number
-                                                  ) => (
-                                                    <div
-                                                      key={idx}
-                                                      className="ml-2"
-                                                    >
-                                                      {token}
-                                                    </div>
-                                                  )
-                                                )}
-                                              </div>
-                                            )}
-                                        </div>
+                                        <span className="font-mono">
+                                          <span className="font-semibold text-green-600">
+                                            🤖 LLM:
+                                          </span>{" "}
+                                          AI Generated Response
+                                        </span>
                                       )
                                     } else {
                                       return (
@@ -1291,41 +1099,157 @@ export function WhatsAppChatModal({
                               </div>
                             )}
 
-                            {/* 💰 NEW: Billing Cost in DEBUG */}
+                            {/* 🔧 NEW: Quick Debug Summary Panel */}
+                            {showFunctionCalls && message.sender === "bot" && message.debugInfo && (
+                              <div className="bg-blue-50 border border-blue-200 rounded p-2">
+                                <div className="text-xs font-semibold text-blue-800 mb-1">
+                                  📊 Quick Debug Summary:
+                                </div>
+                                <div className="text-xs text-blue-700 space-y-1">
+                                  {(() => {
+                                    try {
+                                      const debugData = typeof message.debugInfo === "string" 
+                                        ? JSON.parse(message.debugInfo) 
+                                        : message.debugInfo
+
+                                      return (
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div>
+                                            <span className="font-semibold">💰 Cost:</span><br />
+                                            <span className="font-mono">
+                                              ${debugData.costInfo?.totalCost || "N/A"}
+                                            </span>
+                                          </div>
+                                          <div>
+                                            <span className="font-semibold">🎯 Tokens:</span><br />
+                                            <span className="font-mono">
+                                              {debugData.tokenUsage?.totalTokens || "N/A"}
+                                            </span>
+                                          </div>
+                                          <div>
+                                            <span className="font-semibold">🔗 Active Links:</span><br />
+                                            <span className="font-mono">
+                                              {debugData.linkCounts?.shortUrls?.active || 0}
+                                            </span>
+                                          </div>
+                                          <div>
+                                            <span className="font-semibold">🗑️ Expired Links:</span><br />
+                                            <span className="font-mono">
+                                              {debugData.linkCounts?.shortUrls?.expired || 0}
+                                            </span>
+                                          </div>
+                                          <div className="col-span-2">
+                                            <span className="font-semibold">🔧 Function Called:</span><br />
+                                            <span className="font-mono">
+                                              {debugData.functionCalls && debugData.functionCalls.length > 0 
+                                                ? debugData.functionCalls[0].functionName 
+                                                : "None"}
+                                            </span>
+                                          </div>
+                                          <div>
+                                            <span className="font-semibold">🌐 Language:</span><br />
+                                            <span className="font-mono">
+                                              {debugData.userInfo?.language || debugData.customer?.language || "N/A"}
+                                            </span>
+                                          </div>
+                                          <div>
+                                            <span className="font-semibold">💳 Discount:</span><br />
+                                            <span className="font-mono">
+                                              {debugData.userInfo?.discount || debugData.customer?.discount || 0}%
+                                            </span>
+                                          </div>
+                                        </div>
+                                      )
+                                    } catch (error) {
+                                      return <span className="text-red-600">Debug data parsing error</span>
+                                    }
+                                  })()}
+                                </div>
+                              </div>
+                            )}
+
                             {showFunctionCalls &&
-                              message.messageCost !== undefined &&
-                              message.messageCost > 0 && (
-                                <div className="bg-green-50 border border-green-200 rounded p-2">
-                                  <div className="text-xs font-semibold text-green-800 mb-1">
-                                    {(() => {
-                                      switch (message.billingType) {
-                                        case "MESSAGE":
-                                          return "� Message Cost:"
-                                        case "PUSH_MESSAGE":
-                                          return "📱 Push Notification Cost:"
-                                        case "HUMAN_SUPPORT":
-                                          return "🤝 Human Support Cost:"
-                                        case "NEW_CUSTOMER":
-                                          return "👤 New Customer Cost:"
-                                        case "NEW_ORDER":
-                                          return "📦 New Order Cost:"
-                                        default:
-                                          return "💰 Billing Cost:"
-                                      }
-                                    })()}
+                              message.functionCalls &&
+                              message.functionCalls.length > 0 && (
+                                <div className="bg-purple-50 border border-purple-200 rounded p-2">
+                                  <div className="text-xs font-semibold text-purple-800 mb-1">
+                                    {message.functionCalls.some(
+                                      (call) => call.type === "searchrag_result"
+                                    )
+                                      ? `🔍 SearchRag Results (${message.functionCalls.length}):`
+                                      : `⚡ Function Calls (${message.functionCalls.length}):`}
                                   </div>
-                                  <div className="text-xs text-green-700 font-mono font-bold">
-                                    €{message.messageCost.toFixed(2)}
-                                    {message.billingType && (
-                                      <span className="ml-2 text-gray-500 font-normal">
-                                        ({message.billingType})
-                                      </span>
+
+                                  {/* Show translation if available */}
+                                  {message.translatedQuery && (
+                                    <div className="bg-pink-50 border border-pink-200 rounded p-2 mb-2">
+                                      <div className="text-xs font-medium text-pink-700">
+                                        🌐 Translated: {message.translatedQuery}
+                                      </div>
+                                    </div>
+                                  )}
+                                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                                    {message.functionCalls.map(
+                                      (call, index) => (
+                                        <div
+                                          key={index}
+                                          className="bg-white border border-purple-100 rounded p-2"
+                                        >
+                                          <div className="text-xs font-medium text-purple-700 mb-1">
+                                            {call.type === "searchrag_result"
+                                              ? "🔍"
+                                              : "🔧"}{" "}
+                                            {call.functionName ||
+                                              call.type ||
+                                              "Unknown"}
+                                          </div>
+                                          {call.type === "searchrag_result" &&
+                                            call.data && (
+                                              <div className="text-xs text-green-600">
+                                                <strong>Source:</strong>{" "}
+                                                {call.data.sourceName ||
+                                                  "Unknown"}
+                                                <br />
+                                                <strong>Type:</strong>{" "}
+                                                {call.data.sourceType ||
+                                                  "Unknown"}
+                                                <br />
+                                                <strong>
+                                                  Similarity:
+                                                </strong>{" "}
+                                                {(
+                                                  call.data.similarity * 100
+                                                ).toFixed(1)}
+                                                %<br />
+                                                <strong>Content:</strong>{" "}
+                                                {call.data.content?.substring(
+                                                  0,
+                                                  200
+                                                )}
+                                                ...
+                                              </div>
+                                            )}
+                                          {call.result &&
+                                            call.type !==
+                                              "searchrag_result" && (
+                                              <div className="text-xs text-green-600 mt-1">
+                                                <strong>Result:</strong>{" "}
+                                                {JSON.stringify(call.result)}
+                                              </div>
+                                            )}
+                                          {call.toolCall?.function
+                                            ?.arguments && (
+                                            <div className="text-xs text-blue-600 mt-1">
+                                              <strong>Arguments:</strong>{" "}
+                                              {call.toolCall.function.arguments}
+                                            </div>
+                                          )}
+                                        </div>
+                                      )
                                     )}
                                   </div>
                                 </div>
                               )}
-
-                            {/* Rimossa sezione pricing information in debug */}
                           </div>
                         )}
 
