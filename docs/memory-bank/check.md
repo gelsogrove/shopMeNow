@@ -1,7 +1,7 @@
 FASE 1
 
 - FOTO DA METTERE
-- altro gusto non altra italia con prodotti nostri e foto nostr
+- altro gusto non altra italia con prodotti nostri e foto nostre
 - cf da cancellare?
 - new mail
 - new user

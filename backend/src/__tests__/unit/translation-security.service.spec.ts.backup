@@ -25,11 +25,7 @@ const mockedAxios = axios as jest.Mocked<typeof axios>
 
 import translationSecurityService from "../../services/translation-security.service"
 
-// SKIP IN CI - These tests require OpenRouter API (cost money!)
-// Run locally with: npm run test:unit -- translation-security
-const describeOrSkip = process.env.CI || process.env.SKIP_TRANSLATION_TESTS ? describe.skip : describe
-
-describeOrSkip("🔒 Translation & Security Service", () => {
+describe("🔒 Translation & Security Service", () => {
   // Setup: verify service is initialized
   const allowedLinks = [
     "http://localhost:3000",
