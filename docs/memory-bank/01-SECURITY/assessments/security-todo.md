@@ -817,7 +817,7 @@ SecureToken attuale usa solo AES-256-CBC:
 - Possibili replay attacks
 - Token potrebbe essere modificato (se IV/key leaked)
 
-**Documentato in**: `docs/memory-bank/06-SECURITY/authentication-tokens.md:337`
+**Documentato in**: `docs/memory-bank/01-SECURITY/authentication/authentication-tokens.md:337`
 
 #### Fix Richiesto
 
@@ -1077,10 +1077,10 @@ Implementare refresh token per rinnovare JWT senza re-login:
 
 ## 🔗 Riferimenti
 
-- **Security Assessment**: `docs/memory-bank/06-SECURITY/security-assessment.md`
-- **Authentication Tokens**: `docs/memory-bank/06-SECURITY/authentication-tokens.md`
-- **OWASP Compliance**: `docs/memory-bank/06-SECURITY/owasp-compliance.md`
-- **Rate Limiting Tests**: `docs/memory-bank/06-SECURITY/rate-limiting-tests.md`
+- **Security Assessment**: `docs/memory-bank/01-SECURITY/assessments/security-assessment.md`
+- **Authentication Tokens**: `docs/memory-bank/01-SECURITY/authentication/authentication-tokens.md`
+- **OWASP Compliance**: `docs/memory-bank/01-SECURITY/assessments/owasp-compliance.md`
+- **Rate Limiting Tests**: `docs/memory-bank/01-SECURITY/assessments/rate-limiting-tests.md`
 
 ---
 

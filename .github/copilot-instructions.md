@@ -354,3 +354,6 @@ const userId = (req as any).user.id // Set by authMiddleware
 
 IMPORTANTE !!!
 NON DEVI FARE COMMIT CI PENSa L'UTENTE !!!!
+
+USA SEMPRE COME CONTESTO 
+docs/memory-bank/PRD.md
