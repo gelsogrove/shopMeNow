@@ -144,7 +144,10 @@ describe("LLMService - Variable Replacement", () => {
       // Test with 2 hours
       process.env.TOKEN_EXPIRATION = "2h"
       const tokenDuration2h = (llmService as any).formatTokenDuration("2h")
-      const processed2h = mockPrompt.replace("{{TOKEN_DURATION}}", tokenDuration2h)
+      const processed2h = mockPrompt.replace(
+        "{{TOKEN_DURATION}}",
+        tokenDuration2h
+      )
 
       expect(processed2h).not.toContain("{{TOKEN_DURATION}}")
       expect(processed2h).toBe("Link valido per 2 ore")
@@ -152,7 +155,10 @@ describe("LLMService - Variable Replacement", () => {
       // Test with 30 minutes
       process.env.TOKEN_EXPIRATION = "30m"
       const tokenDuration30m = (llmService as any).formatTokenDuration("30m")
-      const processed30m = mockPrompt.replace("{{TOKEN_DURATION}}", tokenDuration30m)
+      const processed30m = mockPrompt.replace(
+        "{{TOKEN_DURATION}}",
+        tokenDuration30m
+      )
 
       expect(processed30m).not.toContain("{{TOKEN_DURATION}}")
       expect(processed30m).toBe("Link valido per 30 minuti")

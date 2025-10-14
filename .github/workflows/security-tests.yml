@@ -108,6 +108,9 @@ jobs:
       # Test database connection
       DATABASE_URL: postgresql://shopme_test:test_password@localhost:5432/shopme_test
       JWT_SECRET: test-jwt-secret-for-ci
+      TOKEN_ENCRYPTION_KEY: test-encryption-key-32-characters-long-for-ci-testing
+      TOKEN_HMAC_KEY: test-hmac-key-32-characters-long-for-ci-environment-test
+      TOKEN_EXPIRATION: 15m
       NODE_ENV: test
 
     steps:
@@ -184,6 +187,9 @@ jobs:
     env:
       DATABASE_URL: postgresql://shopme_test:test_password@localhost:5432/shopme_test
       JWT_SECRET: test-jwt-secret-for-ci
+      TOKEN_ENCRYPTION_KEY: test-encryption-key-32-characters-long-for-ci-testing
+      TOKEN_HMAC_KEY: test-hmac-key-32-characters-long-for-ci-environment-test
+      TOKEN_EXPIRATION: 15m
       NODE_ENV: test
 
     steps:
