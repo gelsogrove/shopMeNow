@@ -161,7 +161,8 @@ export class SecureTokenService {
       // Genera nuovo token
       const token = this.generateSecureToken()
       const expiresAt = new Date()
-      const effectiveExpiresIn = expiresIn || config.token.expiration
+      // Use env variable directly to allow runtime changes (important for testing)
+      const effectiveExpiresIn = expiresIn || process.env.TOKEN_EXPIRATION || "1h"
       const hours = parseInt(effectiveExpiresIn.replace("h", "")) || 1
       expiresAt.setHours(expiresAt.getHours() + hours)
 

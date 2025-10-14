@@ -36,7 +36,9 @@ export class AdminSessionService {
 
       // 3. Calcola scadenza: durata configurabile da TOKEN_EXPIRATION env
       const now = new Date()
-      const hours = parseInt(config.token.expiration.replace("h", "")) || 1
+      // Use env variable directly to allow runtime changes (important for testing)
+      const tokenExpiration = process.env.TOKEN_EXPIRATION || "1h"
+      const hours = parseInt(tokenExpiration.replace("h", "")) || 1
       const expiresAt = new Date(now.getTime() + hours * 60 * 60 * 1000)
 
       // 4. Crea nuova sessione
