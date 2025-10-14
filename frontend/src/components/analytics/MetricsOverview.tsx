@@ -2,7 +2,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DashboardAnalytics } from "@/services/analyticsApi"
 import {
   Euro,
-  MessageCircle,
   Minus,
   ShoppingCart,
   TrendingDown,
@@ -155,17 +154,17 @@ export const MetricsOverview: React.FC<MetricsOverviewProps> = ({
       description: t.activeClientsDesc,
     },
     {
-      title: t.messages,
-      value: analytics.overview.totalMessages,
-      icon: <MessageCircle className="h-4 w-4 text-muted-foreground" />,
-      formatter: formatNumber,
+      title: t.totalRevenue,
+      value: analytics.overview.totalRevenue,
+      icon: <Euro className="h-4 w-4 text-green-600" />,
+      formatter: formatCurrency,
       trend: previousPeriodAnalytics
         ? calculateTrend(
-            analytics.overview.totalMessages,
-            previousPeriodAnalytics.overview.totalMessages
+            analytics.overview.totalRevenue,
+            previousPeriodAnalytics.overview.totalRevenue
           )
         : undefined,
-      description: t.messagesDesc,
+      description: undefined,
     },
     {
       title: "Costo LLM",
@@ -178,7 +177,7 @@ export const MetricsOverview: React.FC<MetricsOverviewProps> = ({
             previousPeriodAnalytics.overview.usageCost
           )
         : undefined,
-      description: undefined, // RIMOSSA LA DESCRIZIONE
+      description: undefined,
     },
   ]
 
