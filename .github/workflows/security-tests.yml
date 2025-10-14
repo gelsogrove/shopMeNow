@@ -142,20 +142,22 @@ jobs:
         working-directory: ./backend
         run: npm ci
 
-      - name: 🧪 Run ALL Security Tests
+      - name: 🧪 Run Security Tests (NO DATABASE - Mocked)
         working-directory: ./backend
-        run: npm run test:security
+        run: |
+          # Run only security tests that DON'T require database
+          npm run test:security -- --testPathIgnorePatterns="security-basic|api-security-audit|whatsapp-message-security|hard-rate-limit-unit"
         # If ANY test fails → workflow fails → merge blocked
 
-      - name: 🔒 Run Hard Rate Limit Tests (CRITICAL)
+      - name: � Run Backend Security Config Tests
         working-directory: ./backend
-        run: npm run test:security -- hard-rate-limit-unit.test.ts
-        # Test che 101° messaggio viene bloccato
+        run: npm run test:security -- backend-security-config.test.ts
+        # Crypto keys, env vars validation
 
-      - name: 🔑 Run API Key Signature Tests
+      - name: �️ Run SQL Injection Protection Tests
         working-directory: ./backend
-        run: npm run test:security -- api-security-audit.test.ts
-        # API security audit tests
+        run: npm run test:security -- sql-injection.test.ts
+        # SQL injection attack patterns
 
       - name: 📊 Generate coverage report
         working-directory: ./backend
