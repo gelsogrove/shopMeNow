@@ -614,6 +614,152 @@ describe("🔐 SECURE TOKEN SERVICE - UNIT TESTS (Andrea's Security)", () => {
     })
   })
 
+  describe("🔧 TOKEN_EXPIRATION Configuration", () => {
+    test("should use TOKEN_EXPIRATION from environment when expiresIn not provided", async () => {
+      console.log(
+        "\n🧪 UNIT TEST: TOKEN_EXPIRATION from environment is respected"
+      )
+
+      // Set TOKEN_EXPIRATION in environment
+      const originalExpiration = process.env.TOKEN_EXPIRATION
+      process.env.TOKEN_EXPIRATION = "2h"
+
+      try {
+        const now = new Date()
+        const expectedExpiry = new Date(now.getTime() + 2 * 60 * 60 * 1000) // +2 hours
+
+        // Mock: No existing token
+        mockPrismaFindFirst.mockResolvedValue(null)
+        mockPrismaDeleteMany.mockResolvedValue({ count: 0 })
+
+        let capturedExpiresAt: Date | undefined
+
+        // Capture the expiresAt value passed to prisma.create
+        mockPrismaCreate.mockImplementation((args: any) => {
+          capturedExpiresAt = args.data.expiresAt
+          return Promise.resolve({
+            id: "1",
+            token: "test-token",
+            type: "orders",
+            workspaceId: MOCK_WORKSPACE_ID,
+            customerId: MOCK_CUSTOMER_ID,
+            expiresAt: capturedExpiresAt,
+            createdAt: now,
+          })
+        })
+
+        // Create token WITHOUT specifying expiresIn (should use env variable)
+        await tokenService.createToken(
+          "orders",
+          MOCK_WORKSPACE_ID,
+          { orderId: "123" },
+          undefined, // No expiresIn provided - should use TOKEN_EXPIRATION
+          MOCK_USER_ID,
+          undefined,
+          undefined,
+          MOCK_CUSTOMER_ID
+        )
+
+        console.log(`  📝 TOKEN_EXPIRATION set to: 2h`)
+        console.log(`  📝 Token created at: ${now.toISOString()}`)
+        console.log(`  📝 Token should expire at: ~${expectedExpiry.toISOString()}`)
+        console.log(`  📝 Actual expiry: ${capturedExpiresAt?.toISOString()}`)
+
+        // ASSERT: Token should expire in 2 hours (with 1 minute tolerance)
+        expect(capturedExpiresAt).toBeDefined()
+        if (capturedExpiresAt) {
+          const timeDiffMs = Math.abs(
+            capturedExpiresAt.getTime() - expectedExpiry.getTime()
+          )
+          const timeDiffMinutes = timeDiffMs / (1000 * 60)
+
+          expect(timeDiffMinutes).toBeLessThan(1) // Within 1 minute tolerance
+          console.log(`  ✅ Token expiration is correctly set to 2 hours`)
+          console.log(`  ✅ TOKEN_EXPIRATION environment variable is respected`)
+        }
+      } finally {
+        // Restore original value
+        if (originalExpiration) {
+          process.env.TOKEN_EXPIRATION = originalExpiration
+        } else {
+          delete process.env.TOKEN_EXPIRATION
+        }
+      }
+    })
+
+    test("should allow explicit expiresIn to override TOKEN_EXPIRATION", async () => {
+      console.log(
+        "\n🧪 UNIT TEST: Explicit expiresIn overrides TOKEN_EXPIRATION"
+      )
+
+      // Set TOKEN_EXPIRATION in environment
+      const originalExpiration = process.env.TOKEN_EXPIRATION
+      process.env.TOKEN_EXPIRATION = "2h"
+
+      try {
+        const now = new Date()
+        const expectedExpiry = new Date(now.getTime() + 3 * 60 * 60 * 1000) // +3 hours
+
+        // Mock: No existing token
+        mockPrismaFindFirst.mockResolvedValue(null)
+        mockPrismaDeleteMany.mockResolvedValue({ count: 0 })
+
+        let capturedExpiresAt: Date | undefined
+
+        // Capture the expiresAt value passed to prisma.create
+        mockPrismaCreate.mockImplementation((args: any) => {
+          capturedExpiresAt = args.data.expiresAt
+          return Promise.resolve({
+            id: "1",
+            token: "test-token",
+            type: "orders",
+            workspaceId: MOCK_WORKSPACE_ID,
+            customerId: MOCK_CUSTOMER_ID,
+            expiresAt: capturedExpiresAt,
+            createdAt: now,
+          })
+        })
+
+        // Create token WITH explicit expiresIn (should override env variable)
+        await tokenService.createToken(
+          "orders",
+          MOCK_WORKSPACE_ID,
+          { orderId: "123" },
+          "3h", // Explicit value overrides TOKEN_EXPIRATION
+          MOCK_USER_ID,
+          undefined,
+          undefined,
+          MOCK_CUSTOMER_ID
+        )
+
+        console.log(`  📝 TOKEN_EXPIRATION env set to: 2h`)
+        console.log(`  📝 Explicit expiresIn: 3h`)
+        console.log(`  📝 Token should expire in 3 hours (not 2)`)
+        console.log(`  📝 Actual expiry: ${capturedExpiresAt?.toISOString()}`)
+
+        // ASSERT: Token should expire in 3 hours (with 1 minute tolerance)
+        expect(capturedExpiresAt).toBeDefined()
+        if (capturedExpiresAt) {
+          const timeDiffMs = Math.abs(
+            capturedExpiresAt.getTime() - expectedExpiry.getTime()
+          )
+          const timeDiffMinutes = timeDiffMs / (1000 * 60)
+
+          expect(timeDiffMinutes).toBeLessThan(1) // Within 1 minute tolerance
+          console.log(`  ✅ Token expiration is correctly set to 3 hours`)
+          console.log(`  ✅ Explicit expiresIn overrides TOKEN_EXPIRATION`)
+        }
+      } finally {
+        // Restore original value
+        if (originalExpiration) {
+          process.env.TOKEN_EXPIRATION = originalExpiration
+        } else {
+          delete process.env.TOKEN_EXPIRATION
+        }
+      }
+    })
+  })
+
   describe("✅ Security Validation Summary", () => {
     test("should document all security checks", () => {
       console.log("\n🔒 SECURE TOKEN SECURITY CHECKLIST:")
@@ -632,6 +778,8 @@ describe("🔐 SECURE TOKEN SERVICE - UNIT TESTS (Andrea's Security)", () => {
         "✅ Token VALID immediately after creation",
         "✅ Token INVALID after 1 hour (time-based expiry)",
         "✅ Token VALID at 59 minutes (before expiry)",
+        "✅ TOKEN_EXPIRATION env variable is respected",
+        "✅ Explicit expiresIn overrides TOKEN_EXPIRATION",
         "✅ UNIT TESTS - No database writes",
         "✅ Fast execution (< 1 second)",
       ]
@@ -640,7 +788,7 @@ describe("🔐 SECURE TOKEN SERVICE - UNIT TESTS (Andrea's Security)", () => {
         console.log(`    ${check}`)
       })
 
-      expect(securityChecks.length).toBe(15)
+      expect(securityChecks.length).toBe(17)
     })
   })
 })

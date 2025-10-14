@@ -1,4 +1,0 @@
-COSTI
-4 $ di GITHUB
-**_ 30 EURO DI CURSOR _** 15 ottobre
-80 $ COPILOT

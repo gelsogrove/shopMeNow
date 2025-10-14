@@ -9,6 +9,7 @@ import { SecureTokenService } from "../application/services/secure-token.service
 import { SpamDetectionService } from "../application/services/spam-detection.service"
 import { UserService } from "../application/services/user.service"
 import { config } from "../config"
+import { webhookLimiter } from "../config/rate-limiters"
 // BillingPrices import removed - billing handled by message.repository.ts
 import { AuthController } from "../interfaces/http/controllers/auth.controller"
 import { CampaignController } from "../interfaces/http/controllers/campaign.controller"
@@ -216,10 +217,10 @@ async function handleNewUserWelcomeFlow(
       "registration",
       workspaceId,
       { phone: phoneNumber, language: detectedLanguage },
-      "1h",
+      undefined, // Uses TOKEN_EXPIRATION from env
       undefined,
       phoneNumber
-    ) // 1 hour expiry
+    )
 
     // Create short registration URL using LinkGeneratorService
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000"
@@ -632,7 +633,8 @@ router.post("/chat", async (req, res) => {
 })
 
 // Public WhatsApp webhook routes (NO AUTHENTICATION)
-router.post("/whatsapp/webhook", async (req, res) => {
+// 🔒 SECURITY: Rate limited to 10 requests per minute per IP
+router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
   console.log("🔥 WEBHOOK POST RECEIVED", new Date().toISOString()) // 🔧 FIRST LOG
   console.log("📨 Request body:", JSON.stringify(req.body, null, 2)) // 🔧 DEBUG BODY
   console.log("📨 Request headers:", JSON.stringify(req.headers, null, 2)) // 🔧 DEBUG HEADERS

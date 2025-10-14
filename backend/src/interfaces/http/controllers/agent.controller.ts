@@ -31,9 +31,6 @@ export class AgentController {
       // Try to get workspaceId from multiple sources
       let workspaceId = paramId || customId || headerId
 
-      // Always include SQL query for debugging
-      const sqlQuery = `SELECT "id" FROM "Workspace" WHERE "id" = '${workspaceId}' LIMIT 1;`
-
       logger.info("Agent controller - workspaceId:", workspaceId)
       logger.info("Agent controller - sources:", {
         paramId,
@@ -46,18 +43,16 @@ export class AgentController {
         return res.status(400).json({
           message: "Workspace ID is required",
           debug: { paramId, customId, headerId, userId, final: workspaceId },
-          sqlQuery,
         })
       }
 
-      // Check if workspace exists using WorkspaceService
+      // Check if workspace exists using WorkspaceService (secure Prisma query)
       const workspaceService = new WorkspaceService(prisma)
       const workspace = await workspaceService.getById(workspaceId)
       if (!workspace) {
         return res.status(404).json({
           message: "Workspace not found",
           workspaceId,
-          sqlQuery,
         })
       }
 

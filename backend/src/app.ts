@@ -32,6 +32,21 @@ schedulerService.startScheduledTasks()
 // Logging middleware should be first
 app.use(loggingMiddleware)
 
+// 🔒 SECURITY: Force HTTPS in production (trust proxy for Heroku/nginx)
+if (process.env.NODE_ENV === "production") {
+  app.enable("trust proxy") // Trust X-Forwarded-* headers
+  app.use((req, res, next) => {
+    // Check if request is HTTP (not HTTPS)
+    if (!req.secure && req.get("x-forwarded-proto") !== "https") {
+      logger.warn(`HTTP request redirected to HTTPS: ${req.url}`, {
+        ip: req.ip,
+      })
+      return res.redirect(301, `https://${req.hostname}${req.url}`)
+    }
+    next()
+  })
+}
+
 // Other middleware
 app.use(
   cors({
@@ -58,9 +73,41 @@ app.use(
 // Enable pre-flight requests for all routes
 app.options("*", cors())
 
+// 🔒 SECURITY: Helmet with strict security headers
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
+    // HSTS: Force HTTPS for 1 year (only in production)
+    hsts:
+      process.env.NODE_ENV === "production"
+        ? {
+            maxAge: 31536000, // 1 year in seconds
+            includeSubDomains: true,
+            preload: true,
+          }
+        : false,
+    // Content Security Policy
+    contentSecurityPolicy:
+      process.env.NODE_ENV === "production"
+        ? {
+            directives: {
+              defaultSrc: ["'self'"],
+              scriptSrc: ["'self'", "'unsafe-inline'"],
+              styleSrc: ["'self'", "'unsafe-inline'"],
+              imgSrc: ["'self'", "data:", "https:"],
+              connectSrc: ["'self'", "https://api.openrouter.ai"],
+              fontSrc: ["'self'"],
+              objectSrc: ["'none'"],
+              upgradeInsecureRequests: [],
+            },
+          }
+        : false,
+    // X-Frame-Options: prevent clickjacking
+    frameguard: { action: "deny" },
+    // X-Content-Type-Options: prevent MIME sniffing
+    noSniff: true,
+    // X-XSS-Protection: enable browser XSS filter
+    xssFilter: true,
   })
 )
 

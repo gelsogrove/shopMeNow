@@ -21,6 +21,9 @@ export interface Config {
   pushMessaging: {
     price: number
   }
+  token: {
+    expiration: string
+  }
 }
 
 export const config: Config = {
@@ -47,6 +50,9 @@ export const config: Config = {
   },
   pushMessaging: {
     price: parseFloat(process.env.PUSH_MESSAGE_PRICE || "0.50"),
+  },
+  token: {
+    expiration: process.env.TOKEN_EXPIRATION || "1h",
   },
 }
 

@@ -116,7 +116,7 @@ export class LinkReplacementService {
             "cart",
             workspaceId,
             { customerId, workspaceId },
-            "1h",
+            undefined, // Uses TOKEN_EXPIRATION from env
             undefined,
             undefined,
             undefined,
@@ -154,7 +154,7 @@ export class LinkReplacementService {
             "profile",
             workspaceId,
             { customerId, workspaceId },
-            "1h",
+            undefined, // Uses TOKEN_EXPIRATION from env
             undefined,
             undefined,
             undefined,
@@ -193,7 +193,7 @@ export class LinkReplacementService {
             "orders",
             workspaceId,
             { customerId, workspaceId },
-            "1h",
+            undefined, // Uses TOKEN_EXPIRATION from env
             undefined,
             undefined,
             undefined,
@@ -246,7 +246,7 @@ export class LinkReplacementService {
             "orders",
             workspaceId,
             { customerId, workspaceId },
-            "1h",
+            undefined, // Uses TOKEN_EXPIRATION from env
             undefined,
             undefined,
             undefined,
@@ -285,7 +285,7 @@ export class LinkReplacementService {
             "checkout",
             workspaceId,
             { customerId, workspaceId },
-            "1h",
+            undefined, // Uses TOKEN_EXPIRATION from env
             undefined,
             undefined,
             undefined,

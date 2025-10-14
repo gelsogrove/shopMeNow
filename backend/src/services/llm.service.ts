@@ -137,6 +137,11 @@ export class LLMService {
       }
     }
 
+    // Get token duration from env and format it for display
+    const tokenDuration = this.formatTokenDuration(
+      process.env.TOKEN_EXPIRATION || "1h"
+    )
+
     let promptWithVars = prompt
       .replace("{{FAQ}}", faqs)
       .replace("{{SERVICES}}", services)
@@ -148,6 +153,7 @@ export class LLMService {
       .replace("{{companyName}}", userInfo.companyName)
       .replace("{{lastordercode}}", userInfo.lastordercode)
       .replace("{{languageUser}}", userInfo.languageUser)
+      .replace("{{TOKEN_DURATION}}", tokenDuration)
 
     // 🔧 SALVA IL PROMPT FINALE PER DEBUG
     try {
@@ -272,6 +278,28 @@ export class LLMService {
       pt: "Português",
     }
     return languageMap[languageCode] || languageCode.toUpperCase()
+  }
+
+  /**
+   * Converte il formato durata token (es. "1h", "30m", "2h") in formato leggibile
+   * @param duration Durata in formato "1h", "30m", etc.
+   * @returns Durata formattata per il prompt (es. "1 ora", "30 minuti", "2 ore")
+   */
+  private formatTokenDuration(duration: string): string {
+    // Estrai numero e unità (es. "1h" -> numero=1, unità=h)
+    const match = duration.match(/^(\d+)([hm])$/)
+    if (!match) return "1 ora" // Fallback
+
+    const value = parseInt(match[1], 10)
+    const unit = match[2]
+
+    if (unit === "h") {
+      return value === 1 ? "1 ora" : `${value} ore`
+    } else if (unit === "m") {
+      return value === 1 ? "1 minuto" : `${value} minuti`
+    }
+
+    return "1 ora" // Fallback
   }
 
   /**

@@ -1,9 +1,13 @@
 import { Router } from "express"
+import { cartLimiter } from "../../../config/rate-limiters"
 import { asyncMiddleware } from "../../../middlewares/async.middleware"
 import { CartController } from "../controllers/cart.controller"
 
 const router = Router()
 const cartController = new CartController()
+
+// 🔒 SECURITY: Apply rate limiting to all cart operations (30 req/min per IP)
+router.use(cartLimiter)
 
 /**
  * @swagger
