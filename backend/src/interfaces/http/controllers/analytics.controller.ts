@@ -418,6 +418,10 @@ export class AnalyticsController {
  *           type: array
  *           items:
  *             $ref: '#/components/schemas/CustomerAnalytics'
+ *         topSellers:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/SellerAnalytics'
  *
  *     MonthlyData:
  *       type: object
@@ -484,6 +488,34 @@ export class AnalyticsController {
  *         averageOrderValue:
  *           type: number
  *           description: Average order value
+ *
+ *     SellerAnalytics:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           description: Seller ID
+ *         firstName:
+ *           type: string
+ *           description: Seller first name
+ *         lastName:
+ *           type: string
+ *           description: Seller last name
+ *         email:
+ *           type: string
+ *           description: Seller email
+ *         phone:
+ *           type: string
+ *           description: Seller phone
+ *         totalCustomers:
+ *           type: number
+ *           description: Total number of customers assigned
+ *         totalOrders:
+ *           type: number
+ *           description: Total number of orders from assigned customers
+ *         totalRevenue:
+ *           type: number
+ *           description: Total revenue generated from assigned customers
  *
  * tags:
  *   - name: Analytics
