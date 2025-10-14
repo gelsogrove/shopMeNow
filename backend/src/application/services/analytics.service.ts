@@ -19,6 +19,7 @@ export interface DashboardAnalytics {
   }
   topProducts: ProductAnalytics[]
   topCustomers: CustomerAnalytics[]
+  topSellers: SellerAnalytics[]
   logs: LogEntry[] // System logs with all billing details
 }
 
@@ -48,6 +49,17 @@ export interface CustomerAnalytics {
   totalSpent: number
   lastOrderDate?: string
   averageOrderValue: number
+}
+
+export interface SellerAnalytics {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  phone?: string
+  totalCustomers: number
+  totalOrders: number
+  totalRevenue: number
 }
 
 export interface LogEntry {
@@ -121,10 +133,11 @@ export class AnalyticsService {
         this.generateUsageCostTrends(workspaceId, startDate, endDate),
       ])
 
-      // Get top products, top customers, and system logs
-      const [topProducts, topCustomers, logs] = await Promise.all([
+      // Get top products, top customers, top sellers and system logs
+      const [topProducts, topCustomers, topSellers, logs] = await Promise.all([
         this.getTopProducts(workspaceId, startDate, endDate),
         this.getTopCustomers(workspaceId, startDate, endDate),
+        this.getTopSellers(workspaceId, startDate, endDate),
         this.getSystemLogs(workspaceId, startDate, endDate),
       ])
 
@@ -146,6 +159,7 @@ export class AnalyticsService {
         },
         topProducts,
         topCustomers,
+        topSellers,
         logs,
       }
     } catch (error) {
@@ -378,6 +392,60 @@ export class AnalyticsService {
       }))
     } catch (error) {
       logger.error("Error getting top customers:", error)
+      return []
+    }
+  }
+
+  // Get top sellers by total revenue and customers
+  private async getTopSellers(
+    workspaceId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<SellerAnalytics[]> {
+    try {
+      const topSellers = (await this.prisma.$queryRaw`
+        SELECT 
+          s.id,
+          s."firstName",
+          s."lastName",
+          s.email,
+          s.phone,
+          COUNT(DISTINCT c.id) as total_customers,
+          COUNT(DISTINCT o.id) as total_orders,
+          COALESCE(SUM(o."totalAmount"), 0) as total_revenue
+        FROM "sales" s
+        LEFT JOIN "customers" c ON s.id = c."salesId"
+        LEFT JOIN "orders" o ON c.id = o."customerId" 
+          AND o."createdAt" >= ${startDate} 
+          AND o."createdAt" <= ${endDate}
+        WHERE s."workspaceId" = ${workspaceId}
+          AND s."isActive" = true
+        GROUP BY s.id, s."firstName", s."lastName", s.email, s.phone
+        ORDER BY total_revenue DESC, total_orders DESC, total_customers DESC
+        LIMIT 3
+      `) as {
+        id: string
+        firstName: string
+        lastName: string
+        email: string
+        phone: string | null
+        total_customers: bigint
+        total_orders: bigint
+        total_revenue: number
+      }[]
+
+      return topSellers.map((seller) => ({
+        id: seller.id,
+        firstName: seller.firstName,
+        lastName: seller.lastName,
+        email: seller.email,
+        phone: seller.phone || undefined,
+        totalCustomers: Number(seller.total_customers) || 0,
+        totalOrders: Number(seller.total_orders) || 0,
+        totalRevenue: Number(seller.total_revenue) || 0,
+      }))
+    } catch (error) {
+      logger.error("Error getting top sellers:", error)
       return []
     }
   }

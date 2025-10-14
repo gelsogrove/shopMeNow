@@ -13,8 +13,10 @@ export interface AdminPageTexts {
   dataError: string
   topProducts: string
   topCustomers: string
+  topSellers: string
   noProductData: string
   noCustomerData: string
+  noSellerData: string
   noAnalyticsData: string
   stock: string
   sold: string
@@ -88,8 +90,10 @@ export const adminPageTranslations: Record<SupportedLanguage, AdminPageTexts> =
       dataError: "Errore nel caricamento dei dati analytics",
       topProducts: "Prodotti Top",
       topCustomers: "Clienti Top",
+      topSellers: "Venditori Top",
       noProductData: "Nessun dato di vendita prodotti disponibile",
       noCustomerData: "Nessun dato cliente disponibile",
+      noSellerData: "Nessun dato venditore disponibile",
       noAnalyticsData: "Nessun dato analytics disponibile",
       stock: "Scorte",
       sold: "venduti",
@@ -160,8 +164,10 @@ export const adminPageTranslations: Record<SupportedLanguage, AdminPageTexts> =
       dataError: "Error loading analytics data",
       topProducts: "Top Products",
       topCustomers: "Top Customers",
+      topSellers: "Top Sellers",
       noProductData: "No product sales data available",
       noCustomerData: "No customer data available",
+      noSellerData: "No seller data available",
       noAnalyticsData: "No analytics data available",
       stock: "Stock",
       sold: "sold",
@@ -233,8 +239,10 @@ export const adminPageTranslations: Record<SupportedLanguage, AdminPageTexts> =
       dataError: "Error al cargar los datos de análisis",
       topProducts: "Productos Top",
       topCustomers: "Clientes Top",
+      topSellers: "Vendedores Top",
       noProductData: "No hay datos de ventas de productos disponibles",
       noCustomerData: "No hay datos de clientes disponibles",
+      noSellerData: "No hay datos de vendedores disponibles",
       noAnalyticsData: "No hay datos de análisis disponibles",
       stock: "Stock",
       sold: "vendidos",
@@ -307,8 +315,10 @@ export const adminPageTranslations: Record<SupportedLanguage, AdminPageTexts> =
       dataError: "Erro ao carregar dados de análise",
       topProducts: "Produtos Top",
       topCustomers: "Clientes Top",
+      topSellers: "Vendedores Top",
       noProductData: "Nenhum dado de vendas de produtos disponível",
       noCustomerData: "Nenhum dado de cliente disponível",
+      noSellerData: "Nenhum dado de vendedor disponível",
       noAnalyticsData: "Nenhum dado de análise disponível",
       stock: "Estoque",
       sold: "vendidos",

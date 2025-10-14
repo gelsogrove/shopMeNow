@@ -43,6 +43,7 @@ export interface DashboardAnalytics {
     lastOrderDate?: string
     averageOrderValue: number
   }[]
+  topSellers: SellerAnalytics[]
   logs: LogEntry[] // System logs with all billing details
 }
 
@@ -60,6 +61,17 @@ export interface ProductAnalytics {
   totalSold: number
   revenue: number
   stock: number
+}
+
+export interface SellerAnalytics {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  phone?: string
+  totalCustomers: number
+  totalOrders: number
+  totalRevenue: number
 }
 
 export interface AnalyticsResponse {

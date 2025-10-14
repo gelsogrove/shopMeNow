@@ -60,7 +60,7 @@ describe.skip("🔒 Translation & Security Service - UNIT TESTS (MOCKED)", () =>
   beforeEach(() => {
     // Clear all mocks before each test
     jest.clearAllMocks()
-    
+
     // Reset to default mock response
     mockedAxios.post.mockResolvedValue({
       data: {

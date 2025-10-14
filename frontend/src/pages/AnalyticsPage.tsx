@@ -16,7 +16,13 @@ import {
   getDashboardAnalytics,
 } from "@/services/analyticsApi"
 import { getAdminPageTexts } from "@/utils/adminPageTranslations"
-import { Activity, AlertCircle, BarChart3, TrendingUp } from "lucide-react"
+import {
+  Activity,
+  AlertCircle,
+  BarChart3,
+  TrendingUp,
+  Users,
+} from "lucide-react"
 import { useEffect, useState } from "react"
 
 export function AnalyticsPage() {
@@ -155,8 +161,8 @@ export function AnalyticsPage() {
           {/* Historical Chart */}
           <HistoricalChart analytics={analytics} />
 
-          {/* Additional Analytics Cards */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Additional Analytics Cards - All in one row (3 columns) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Top Products */}
             <Card>
               <CardHeader>
@@ -168,7 +174,7 @@ export function AnalyticsPage() {
               <CardContent>
                 {analytics.topProducts && analytics.topProducts.length > 0 ? (
                   <div className="space-y-3">
-                    {analytics.topProducts.slice(0, 5).map((product, index) => (
+                    {analytics.topProducts.slice(0, 3).map((product, index) => (
                       <div
                         key={product.id}
                         className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
@@ -227,7 +233,7 @@ export function AnalyticsPage() {
                 {analytics.topCustomers && analytics.topCustomers.length > 0 ? (
                   <div className="space-y-3">
                     {analytics.topCustomers
-                      .slice(0, 5)
+                      .slice(0, 3)
                       .map((customer, index) => (
                         <div
                           key={customer.id}
@@ -278,6 +284,67 @@ export function AnalyticsPage() {
                   <div className="text-center py-8">
                     <Activity className="h-8 w-8 text-gray-400 mx-auto mb-2" />
                     <p className="text-gray-500">{t.noCustomerData}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Top Sellers */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-purple-600" />
+                  {t.topSellers}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {analytics.topSellers && analytics.topSellers.length > 0 ? (
+                  <div className="space-y-3">
+                    {analytics.topSellers.map((seller, index) => (
+                      <div
+                        key={seller.id}
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-xs font-bold text-purple-700">
+                            {index + 1}
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">
+                              {seller.firstName} {seller.lastName}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              {seller.email}
+                            </p>
+                            {seller.phone && (
+                              <p className="text-xs text-gray-400">
+                                {seller.phone}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-purple-600">
+                            {new Intl.NumberFormat("en-US", {
+                              style: "currency",
+                              currency: "EUR",
+                              minimumFractionDigits: 0,
+                            }).format(seller.totalRevenue)}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {seller.totalOrders} {t.orders}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {seller.totalCustomers} {t.clients}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Users className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-500">{t.noSellerData}</p>
                   </div>
                 )}
               </CardContent>
