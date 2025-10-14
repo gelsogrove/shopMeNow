@@ -14,7 +14,7 @@
 | ---------------------------------------------------------------------------- | -------------------------------------------------------- | ----------- |
 | [`authentication-tokens.md`](./authentication-tokens.md)                     | **GUIDA PRINCIPALE** - JWT Token, SecureToken, SessionID | 13 Ott 2025 |
 | [`security-assessment.md`](./security-assessment.md)                         | Valutazione sicurezza completa (68/100)                  | 13 Ott 2025 |
-| [`SECURITY-TODO.md`](./SECURITY-TODO.md) ⭐ **NEW**                          | **TODO PRIORITIZZATO** - 10 vulnerabilità da fixare     | 14 Ott 2025 |
+| [`SECURITY-TODO.md`](./SECURITY-TODO.md) ⭐ **NEW**                          | **TODO PRIORITIZZATO** - 10 vulnerabilità da fixare      | 14 Ott 2025 |
 | [`token-vs-sessionid-architecture.md`](./token-vs-sessionid-architecture.md) | Architettura routing backend/frontend                    | 12 Ott 2025 |
 
 ### 🛡️ Compliance & Standards
