@@ -311,28 +311,33 @@ async validateToken(token: string): Promise<{ valid: boolean, data?: any }> {
 
 - ✅ **Stateful**: Salvato in database, revocabile
 - ✅ **Criptato**: Payload cifrato con AES-256-CBC
-- ✅ **Time-limited**: Expiry configurabile (default 1h)
+- ✅ **Time-limited**: Expiry configurabile tramite `TOKEN_EXPIRATION` env (default: 1h)
 - ✅ **Revocabile**: Flag `isActive` in database
 - ✅ **Audit trail**: Timestamps creazione/utilizzo
 
 ### Chiave Usata
 
 ```bash
-# .env
+# .env / .env.local
 TOKEN_ENCRYPTION_KEY="f055440ed8b641bfc3e7467653f8eea0c2ee45b4ac8adaf349162ba8fb8c3137"
 
 # ↑ 64 caratteri hex (256 bit)
 # Generato con: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+# Durata token (configurabile)
+TOKEN_EXPIRATION="1h"  # Formato: "1h", "30m", "2h", etc.
 ```
 
 ### Dove Viene Usato
 
-| Endpoint                   | Tipo Token     | Scadenza Default |
-| -------------------------- | -------------- | ---------------- |
-| `/api/token/orders-public` | `orders`       | 7 giorni         |
-| `/api/token/cart/:token`   | `cart`         | 1 ora            |
-| `/api/token/checkout`      | `checkout`     | 1 ora            |
-| `/api/token/registration`  | `registration` | 24 ore           |
+| Endpoint                   | Tipo Token     | Scadenza Default                 |
+| -------------------------- | -------------- | -------------------------------- |
+| `/api/token/orders-public` | `orders`       | `TOKEN_EXPIRATION` (default: 1h) |
+| `/api/token/cart/:token`   | `cart`         | `TOKEN_EXPIRATION` (default: 1h) |
+| `/api/token/checkout`      | `checkout`     | `TOKEN_EXPIRATION` (default: 1h) |
+| `/api/token/registration`  | `registration` | `TOKEN_EXPIRATION` (default: 1h) |
+
+**Nota**: La durata di tutti i token è ora configurabile tramite la variabile ambiente `TOKEN_EXPIRATION` in `.env.local`.
 
 ### Security Score: 90/100 ⭐
 
@@ -474,7 +479,7 @@ async validateSession(sessionId: string) {
 - ✅ **UUID v4**: Formato standard (impossibile predire)
 - ✅ **Database-backed**: Audit trail completo
 - ✅ **Revocabile**: Logout remoto possibile
-- ✅ **Time-limited**: Expiry 1 ora FISSA
+- ✅ **Time-limited**: Expiry configurabile tramite `TOKEN_EXPIRATION` (default: 1h)
 - ✅ **Activity tracking**: `lastActivityAt` aggiornato
 
 ### Dove Viene Salvato
@@ -495,7 +500,8 @@ async validateSession(sessionId: string) {
 
 **Punti di Miglioramento**:
 
-- ⚠️ Expiry fisso 1h (considerare sliding expiry)
+- ✅ **RISOLTO**: Expiry ora configurabile tramite `TOKEN_EXPIRATION` env variable
+- ⚠️ Considerare sliding expiry (estensione automatica su attività)
 - ⚠️ Aggiungere 2FA per operazioni critiche
 
 ---
@@ -531,7 +537,7 @@ TOKEN_ENCRYPTION_KEY="f055440ed8b641bfc3e7467653f8eea0c2ee45b4ac8adaf349162ba8fb
 | **Reversibile**     | ❌ No (solo verifica) | ✅ Sì (decrypt)       |
 | **Storage token**   | Cookie (stateless)    | Database (stateful)   |
 | **Revocabile**      | ❌ No                 | ✅ Sì                 |
-| **Expiry**          | 7 giorni              | 1h-7d (configurabile) |
+| **Expiry**          | 7 giorni              | Configurabile via `TOKEN_EXPIRATION` (default: 1h) |
 
 ### Perché Due Chiavi Separate?
 
@@ -708,7 +714,7 @@ npm run dev
 - [x] UUID v4 format
 - [x] Database audit trail
 - [x] IP + User Agent tracking
-- [x] Expiry 1 ora
+- [x] Expiry configurabile (TOKEN_EXPIRATION env variable)
 - [x] Revocable
 - [ ] Sliding expiry (TODO)
 - [ ] 2FA for critical ops (TODO)
