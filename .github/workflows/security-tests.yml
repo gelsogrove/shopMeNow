@@ -107,10 +107,10 @@ jobs:
     env:
       # Test database connection
       DATABASE_URL: postgresql://shopme_test:test_password@localhost:5432/shopme_test
-      JWT_SECRET: a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
+      JWT_SECRET: 7f3a8b2e9c1d4f6e8a7b3c9d2e5f1a4b6c8e3d7f9a2b5c8e1d4f7a3b6c9e2d5f8a1b4c7e3d6f9a2b5c8e1d4f7a3b6c9e2d5f8a1b4c7e3d6f9a2b5c8e1d4f7a3b6c9e2d5f8a1b4c7e3d6f9
       JWT_EXPIRES_IN: 24h
-      TOKEN_ENCRYPTION_KEY: abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789
-      TOKEN_HMAC_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      TOKEN_ENCRYPTION_KEY: 3f7e2a9d8c1b5e4f6a2d8b3c9e7f1a5d4b8c2e6f3a9d7b1e5c8f4a2d6b9e3c7f1
+      TOKEN_HMAC_KEY: 9e4f2b7a3c8d1e6f5a9b2c7e4d8f3a1b6c9e5d2f7a4b8c3e1d6f9a5b2c7e4d8f3
       TOKEN_EXPIRATION: 15m
       NODE_ENV: test
       INTEGRATION_TEST: true
