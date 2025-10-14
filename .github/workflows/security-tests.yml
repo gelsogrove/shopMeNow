@@ -107,10 +107,10 @@ jobs:
     env:
       # Test database connection
       DATABASE_URL: postgresql://shopme_test:test_password@localhost:5432/shopme_test
-      JWT_SECRET: 7f3a8b2e9c1d4f6e8a7b3c9d2e5f1a4b6c8e3d7f9a2b5c8e1d4f7a3b6c9e2d5f8a1b4c7e3d6f9a2b5c8e1d4f7a3b6c9e2d5f8a1b4c7e3d6f9a2b5c8e1d4f7a3b6c9e2d5f8a1b4c7e3d6f9
+      JWT_SECRET: ${{ secrets.CI_JWT_SECRET }}
       JWT_EXPIRES_IN: 24h
-      TOKEN_ENCRYPTION_KEY: 3f7e2a9d8c1b5e4f6a2d8b3c9e7f1a5d4b8c2e6f3a9d7b1e5c8f4a2d6b9e3c7f1
-      TOKEN_HMAC_KEY: 9e4f2b7a3c8d1e6f5a9b2c7e4d8f3a1b6c9e5d2f7a4b8c3e1d6f9a5b2c7e4d8f3
+      TOKEN_ENCRYPTION_KEY: ${{ secrets.CI_TOKEN_ENCRYPTION_KEY }}
+      TOKEN_HMAC_KEY: ${{ secrets.CI_TOKEN_HMAC_KEY }}
       TOKEN_EXPIRATION: 15m
       NODE_ENV: test
       INTEGRATION_TEST: true
@@ -128,7 +128,7 @@ jobs:
       SMTP_PASS: test-password
       SMTP_FROM: noreply@shopme.com
       # OpenRouter
-      OPENROUTER_API_KEY: sk-or-v1-test-key-for-ci-integration-testing-purposes-only
+      OPENROUTER_API_KEY: ${{ secrets.CI_OPENROUTER_API_KEY }}
       # WhatsApp
       WHATSAPP_API_URL: https://graph.facebook.com/v18.0
       WHATSAPP_VERIFY_TOKEN: test-verify-token-for-ci-min-20-chars
