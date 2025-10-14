@@ -108,10 +108,37 @@ jobs:
       # Test database connection
       DATABASE_URL: postgresql://shopme_test:test_password@localhost:5432/shopme_test
       JWT_SECRET: test-jwt-secret-for-ci
+      JWT_EXPIRES_IN: 24h
       TOKEN_ENCRYPTION_KEY: test-encryption-key-32-characters-long-for-ci-testing
       TOKEN_HMAC_KEY: test-hmac-key-32-characters-long-for-ci-environment-test
       TOKEN_EXPIRATION: 15m
       NODE_ENV: test
+      # Admin credentials
+      ADMIN_EMAIL: admin@shopme.com
+      ADMIN_PASSWORD: test-venezia44
+      # Frontend
+      FRONTEND_URL: http://localhost:3000
+      # SMTP (test mode)
+      SMTP_HOST: smtp.ethereal.email
+      SMTP_PORT: 587
+      SMTP_SECURE: false
+      SMTP_USER: test@ethereal.email
+      SMTP_PASS: test-password
+      SMTP_FROM: noreply@shopme.com
+      # OpenRouter
+      OPENROUTER_API_KEY: test-key-for-ci
+      # WhatsApp
+      WHATSAPP_API_URL: https://graph.facebook.com/v18.0
+      WHATSAPP_VERIFY_TOKEN: test-verify-token-for-ci-min-20-chars
+      WHATSAPP_APP_SECRET: test-app-secret-for-ci
+      WHATSAPP_WEBHOOK_ENABLED: false
+      WHATSAPP_SIGNATURE_VERIFICATION: false
+      WHATSAPP_MAX_MESSAGES_PER_MINUTE_WORKSPACE: 100
+      WHATSAPP_MAX_MESSAGES_PER_MINUTE_CUSTOMER: 10
+      WHATSAPP_MAX_RETRY_ATTEMPTS: 3
+      WHATSAPP_RETRY_DELAY_MS: 1000
+      # Server
+      PORT: 3001
 
     steps:
       - name: 📥 Checkout code
@@ -187,10 +214,37 @@ jobs:
     env:
       DATABASE_URL: postgresql://shopme_test:test_password@localhost:5432/shopme_test
       JWT_SECRET: test-jwt-secret-for-ci
+      JWT_EXPIRES_IN: 24h
       TOKEN_ENCRYPTION_KEY: test-encryption-key-32-characters-long-for-ci-testing
       TOKEN_HMAC_KEY: test-hmac-key-32-characters-long-for-ci-environment-test
       TOKEN_EXPIRATION: 15m
       NODE_ENV: test
+      # Admin credentials
+      ADMIN_EMAIL: admin@shopme.com
+      ADMIN_PASSWORD: test-venezia44
+      # Frontend
+      FRONTEND_URL: http://localhost:3000
+      # SMTP (test mode)
+      SMTP_HOST: smtp.ethereal.email
+      SMTP_PORT: 587
+      SMTP_SECURE: false
+      SMTP_USER: test@ethereal.email
+      SMTP_PASS: test-password
+      SMTP_FROM: noreply@shopme.com
+      # OpenRouter
+      OPENROUTER_API_KEY: test-key-for-ci
+      # WhatsApp
+      WHATSAPP_API_URL: https://graph.facebook.com/v18.0
+      WHATSAPP_VERIFY_TOKEN: test-verify-token-for-ci-min-20-chars
+      WHATSAPP_APP_SECRET: test-app-secret-for-ci
+      WHATSAPP_WEBHOOK_ENABLED: false
+      WHATSAPP_SIGNATURE_VERIFICATION: false
+      WHATSAPP_MAX_MESSAGES_PER_MINUTE_WORKSPACE: 100
+      WHATSAPP_MAX_MESSAGES_PER_MINUTE_CUSTOMER: 10
+      WHATSAPP_MAX_RETRY_ATTEMPTS: 3
+      WHATSAPP_RETRY_DELAY_MS: 1000
+      # Server
+      PORT: 3001
 
     steps:
       - name: 📥 Checkout code
