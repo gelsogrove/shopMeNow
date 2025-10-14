@@ -1,8 +1,8 @@
 import { Request, Response, Router } from "express"
 import { SecureTokenService } from "../../../application/services/secure-token.service"
+import { publicOrdersLimiter } from "../../../config/rate-limiters"
 import { prisma } from "../../../lib/prisma"
 import logger from "../../../utils/logger"
-import { publicOrdersLimiter } from "../../../config/rate-limiters"
 
 const router = Router()
 const secureTokenService = new SecureTokenService()
@@ -1000,168 +1000,175 @@ router.post("/get-all-products", async (req: Request, res: Response) => {
  * Same handler as GET /public/orders/:orderCode
  * 🔒 SECURITY: Rate limited to 30 requests per 15 minutes per IP
  */
-router.get("/orders-public/:orderCode", publicOrdersLimiter, async (req: Request, res: Response) => {
-  try {
-    const { orderCode } = req.params
-    const { token } = req.query
+router.get(
+  "/orders-public/:orderCode",
+  publicOrdersLimiter,
+  async (req: Request, res: Response) => {
+    try {
+      const { orderCode } = req.params
+      const { token } = req.query
 
-    if (!token) {
-      return res.status(400).json({
-        success: false,
-        error: "Token is required",
-      })
-    }
+      if (!token) {
+        return res.status(400).json({
+          success: false,
+          error: "Token is required",
+        })
+      }
 
-    const validation = await secureTokenService.validateToken(token as string)
-    if (!validation.valid) {
-      return res.status(401).json({
-        success: false,
-        error: "Invalid or expired token",
-      })
-    }
+      const validation = await secureTokenService.validateToken(token as string)
+      if (!validation.valid) {
+        return res.status(401).json({
+          success: false,
+          error: "Invalid or expired token",
+        })
+      }
 
-    const tokenData = validation.data
-    const payload = validation.payload as any
+      const tokenData = validation.data
+      const payload = validation.payload as any
 
-    let customerId =
-      payload?.customerId || tokenData?.customerId || tokenData?.userId
-    const workspaceId = tokenData?.workspaceId
+      let customerId =
+        payload?.customerId || tokenData?.customerId || tokenData?.userId
+      const workspaceId = tokenData?.workspaceId
 
-    if (!customerId && tokenData?.phoneNumber && workspaceId) {
-      const customer = await prisma.customers.findFirst({
+      if (!customerId && tokenData?.phoneNumber && workspaceId) {
+        const customer = await prisma.customers.findFirst({
+          where: {
+            phone: tokenData.phoneNumber,
+            workspaceId: workspaceId,
+          },
+        })
+        if (customer) {
+          customerId = customer.id
+        }
+      }
+
+      if (!customerId || !workspaceId) {
+        return res.status(401).json({
+          success: false,
+          error: "Token does not contain valid customer information",
+        })
+      }
+
+      logger.info(`[PUBLIC-ORDERS] Getting order details for: ${orderCode}`)
+
+      const order = await prisma.orders.findFirst({
         where: {
-          phone: tokenData.phoneNumber,
+          orderCode,
+          customerId: customerId,
           workspaceId: workspaceId,
         },
-      })
-      if (customer) {
-        customerId = customer.id
-      }
-    }
-
-    if (!customerId || !workspaceId) {
-      return res.status(401).json({
-        success: false,
-        error: "Token does not contain valid customer information",
-      })
-    }
-
-    logger.info(`[PUBLIC-ORDERS] Getting order details for: ${orderCode}`)
-
-    const order = await prisma.orders.findFirst({
-      where: {
-        orderCode,
-        customerId: customerId,
-        workspaceId: workspaceId,
-      },
-      include: {
-        items: {
-          include: {
-            product: {
-              select: {
-                name: true,
-                ProductCode: true,
+        include: {
+          items: {
+            include: {
+              product: {
+                select: {
+                  name: true,
+                  ProductCode: true,
+                },
               },
-            },
-            service: {
-              select: {
-                name: true,
-                code: true,
+              service: {
+                select: {
+                  name: true,
+                  code: true,
+                },
               },
             },
           },
-        },
-        customer: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            language: true,
-            address: true,
-            invoiceAddress: true,
+          customer: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              language: true,
+              address: true,
+              invoiceAddress: true,
+            },
+          },
+          workspace: {
+            select: { id: true, name: true },
           },
         },
-        workspace: {
-          select: { id: true, name: true },
-        },
-      },
-    })
+      })
 
-    if (!order) {
-      return res.status(404).json({
+      if (!order) {
+        return res.status(404).json({
+          success: false,
+          error: "Order not found",
+        })
+      }
+
+      let parsedCustomer = { ...order.customer }
+
+      if (
+        parsedCustomer.invoiceAddress &&
+        typeof parsedCustomer.invoiceAddress === "string"
+      ) {
+        try {
+          parsedCustomer.invoiceAddress = JSON.parse(
+            parsedCustomer.invoiceAddress
+          )
+        } catch (error) {
+          parsedCustomer.invoiceAddress = null
+        }
+      }
+
+      if (
+        parsedCustomer.address &&
+        typeof parsedCustomer.address === "string"
+      ) {
+        try {
+          parsedCustomer.address = JSON.parse(parsedCustomer.address)
+        } catch (error) {
+          parsedCustomer.address = null
+        }
+      }
+
+      const formattedItems = order.items.map((item) => ({
+        id: item.id,
+        itemType: item.itemType,
+        name: item.product?.name || item.service?.name || "Unknown Item",
+        code: item.product?.ProductCode || item.service?.code || null,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.totalPrice,
+      }))
+
+      const formattedOrder = {
+        id: order.id,
+        orderCode: order.orderCode,
+        date: order.createdAt.toISOString(),
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+        paymentMethod: order.paymentMethod,
+        paymentProvider: null,
+        shippingAmount: order.shippingAmount,
+        taxAmount: order.taxAmount,
+        shippingAddress: order.shippingAddress,
+        trackingNumber: order.trackingNumber,
+        totalAmount: order.totalAmount,
+        items: formattedItems,
+        invoiceUrl: "",
+        ddtUrl: "",
+      }
+
+      return res.json({
+        success: true,
+        data: {
+          customer: parsedCustomer,
+          workspace: order.workspace,
+          order: formattedOrder,
+        },
+      })
+    } catch (error) {
+      logger.error("[PUBLIC-ORDERS] Error getting order details:", error)
+      return res.status(500).json({
         success: false,
-        error: "Order not found",
+        error: "Error retrieving order",
       })
     }
-
-    let parsedCustomer = { ...order.customer }
-
-    if (
-      parsedCustomer.invoiceAddress &&
-      typeof parsedCustomer.invoiceAddress === "string"
-    ) {
-      try {
-        parsedCustomer.invoiceAddress = JSON.parse(
-          parsedCustomer.invoiceAddress
-        )
-      } catch (error) {
-        parsedCustomer.invoiceAddress = null
-      }
-    }
-
-    if (parsedCustomer.address && typeof parsedCustomer.address === "string") {
-      try {
-        parsedCustomer.address = JSON.parse(parsedCustomer.address)
-      } catch (error) {
-        parsedCustomer.address = null
-      }
-    }
-
-    const formattedItems = order.items.map((item) => ({
-      id: item.id,
-      itemType: item.itemType,
-      name: item.product?.name || item.service?.name || "Unknown Item",
-      code: item.product?.ProductCode || item.service?.code || null,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      totalPrice: item.totalPrice,
-    }))
-
-    const formattedOrder = {
-      id: order.id,
-      orderCode: order.orderCode,
-      date: order.createdAt.toISOString(),
-      status: order.status,
-      paymentStatus: order.paymentStatus,
-      paymentMethod: order.paymentMethod,
-      paymentProvider: null,
-      shippingAmount: order.shippingAmount,
-      taxAmount: order.taxAmount,
-      shippingAddress: order.shippingAddress,
-      trackingNumber: order.trackingNumber,
-      totalAmount: order.totalAmount,
-      items: formattedItems,
-      invoiceUrl: "",
-      ddtUrl: "",
-    }
-
-    return res.json({
-      success: true,
-      data: {
-        customer: parsedCustomer,
-        workspace: order.workspace,
-        order: formattedOrder,
-      },
-    })
-  } catch (error) {
-    logger.error("[PUBLIC-ORDERS] Error getting order details:", error)
-    return res.status(500).json({
-      success: false,
-      error: "Error retrieving order",
-    })
   }
-})
+)
 
 logger.info(
   "✅ Added /orders-public/:orderCode route alias for frontend compatibility"

@@ -38,7 +38,9 @@ if (process.env.NODE_ENV === "production") {
   app.use((req, res, next) => {
     // Check if request is HTTP (not HTTPS)
     if (!req.secure && req.get("x-forwarded-proto") !== "https") {
-      logger.warn(`HTTP request redirected to HTTPS: ${req.url}`, { ip: req.ip })
+      logger.warn(`HTTP request redirected to HTTPS: ${req.url}`, {
+        ip: req.ip,
+      })
       return res.redirect(301, `https://${req.hostname}${req.url}`)
     }
     next()
@@ -76,24 +78,30 @@ app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
     // HSTS: Force HTTPS for 1 year (only in production)
-    hsts: process.env.NODE_ENV === "production" ? {
-      maxAge: 31536000, // 1 year in seconds
-      includeSubDomains: true,
-      preload: true,
-    } : false,
+    hsts:
+      process.env.NODE_ENV === "production"
+        ? {
+            maxAge: 31536000, // 1 year in seconds
+            includeSubDomains: true,
+            preload: true,
+          }
+        : false,
     // Content Security Policy
-    contentSecurityPolicy: process.env.NODE_ENV === "production" ? {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", "data:", "https:"],
-        connectSrc: ["'self'", "https://api.openrouter.ai"],
-        fontSrc: ["'self'"],
-        objectSrc: ["'none'"],
-        upgradeInsecureRequests: [],
-      },
-    } : false,
+    contentSecurityPolicy:
+      process.env.NODE_ENV === "production"
+        ? {
+            directives: {
+              defaultSrc: ["'self'"],
+              scriptSrc: ["'self'", "'unsafe-inline'"],
+              styleSrc: ["'self'", "'unsafe-inline'"],
+              imgSrc: ["'self'", "data:", "https:"],
+              connectSrc: ["'self'", "https://api.openrouter.ai"],
+              fontSrc: ["'self'"],
+              objectSrc: ["'none'"],
+              upgradeInsecureRequests: [],
+            },
+          }
+        : false,
     // X-Frame-Options: prevent clickjacking
     frameguard: { action: "deny" },
     // X-Content-Type-Options: prevent MIME sniffing

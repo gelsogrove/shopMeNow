@@ -1,7 +1,7 @@
 import { Router } from "express"
+import { checkoutLimiter } from "../../../config/rate-limiters"
 import { asyncMiddleware } from "../../../middlewares/async.middleware"
 import { CheckoutController } from "../controllers/checkout.controller"
-import { checkoutLimiter } from "../../../config/rate-limiters"
 
 const router = Router()
 const checkoutController = new CheckoutController()

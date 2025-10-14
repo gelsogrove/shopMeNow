@@ -1,7 +1,7 @@
 import { Router } from "express"
+import { cartLimiter } from "../../../config/rate-limiters"
 import { asyncMiddleware } from "../../../middlewares/async.middleware"
 import { CartController } from "../controllers/cart.controller"
-import { cartLimiter } from "../../../config/rate-limiters"
 
 const router = Router()
 const cartController = new CartController()

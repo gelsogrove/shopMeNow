@@ -9,7 +9,7 @@ import { SecureTokenService } from "../application/services/secure-token.service
 import { SpamDetectionService } from "../application/services/spam-detection.service"
 import { UserService } from "../application/services/user.service"
 import { config } from "../config"
-import { webhookLimiter, cartLimiter } from "../config/rate-limiters"
+import { webhookLimiter } from "../config/rate-limiters"
 // BillingPrices import removed - billing handled by message.repository.ts
 import { AuthController } from "../interfaces/http/controllers/auth.controller"
 import { CampaignController } from "../interfaces/http/controllers/campaign.controller"

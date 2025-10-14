@@ -1,6 +1,6 @@
+import DOMPurify from "dompurify"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
-import DOMPurify from "dompurify"
 
 interface MessageRendererProps {
   content: string
