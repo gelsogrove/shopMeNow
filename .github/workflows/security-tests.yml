@@ -234,7 +234,6 @@ jobs:
 # ✅ Require status checks to pass before merging
 #   - 🔍 Lint & Type Check
 #   - 🔒 Security Tests (REQUIRED)
-#   - 🔗 Integration Tests
 #
 # ✅ Require branches to be up to date before merging
 # ✅ Require conversation resolution before merging
