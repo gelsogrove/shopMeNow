@@ -87,6 +87,7 @@ jobs:
     name: 🔒 Security Tests (REQUIRED)
     runs-on: ubuntu-latest
     needs: [lint-and-typecheck, unit-tests] # Run only if lint and unit tests pass
+    environment: main
 
     env:
       # Database not needed - tests use mocks
