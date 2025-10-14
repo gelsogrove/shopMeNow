@@ -113,11 +113,13 @@ jobs:
       TOKEN_HMAC_KEY: test-hmac-key-32-characters-long-for-ci-environment-test
       TOKEN_EXPIRATION: 15m
       NODE_ENV: test
+      INTEGRATION_TEST: true
       # Admin credentials
       ADMIN_EMAIL: admin@shopme.com
       ADMIN_PASSWORD: test-venezia44
       # Frontend
       FRONTEND_URL: http://localhost:3000
+      CORS_ORIGIN: http://localhost:3000
       # SMTP (test mode)
       SMTP_HOST: smtp.ethereal.email
       SMTP_PORT: 587
@@ -219,11 +221,13 @@ jobs:
       TOKEN_HMAC_KEY: test-hmac-key-32-characters-long-for-ci-environment-test
       TOKEN_EXPIRATION: 15m
       NODE_ENV: test
+      INTEGRATION_TEST: true
       # Admin credentials
       ADMIN_EMAIL: admin@shopme.com
       ADMIN_PASSWORD: test-venezia44
       # Frontend
       FRONTEND_URL: http://localhost:3000
+      CORS_ORIGIN: http://localhost:3000
       # SMTP (test mode)
       SMTP_HOST: smtp.ethereal.email
       SMTP_PORT: 587
