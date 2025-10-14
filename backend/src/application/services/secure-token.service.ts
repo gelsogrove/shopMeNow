@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client"
 import crypto from "crypto"
 import logger from "../../utils/logger"
+import { config } from "../../config"
 
 /**
  * Service for managing all types of secure tokens
@@ -66,7 +67,7 @@ export class SecureTokenService {
       | "universal",
     workspaceId: string,
     payload?: any,
-    expiresIn: string = "1h",
+    expiresIn?: string,
     userId?: string,
     phoneNumber?: string,
     ipAddress?: string,
@@ -160,7 +161,8 @@ export class SecureTokenService {
       // Genera nuovo token
       const token = this.generateSecureToken()
       const expiresAt = new Date()
-      const hours = parseInt(expiresIn.replace("h", "")) || 1
+      const effectiveExpiresIn = expiresIn || config.token.expiration
+      const hours = parseInt(effectiveExpiresIn.replace("h", "")) || 1
       expiresAt.setHours(expiresAt.getHours() + hours)
 
       // Crea token del tipo specificato

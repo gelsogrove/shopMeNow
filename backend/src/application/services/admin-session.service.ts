@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client"
 import { randomUUID } from "crypto"
 import logger from "../../utils/logger"
+import { config } from "../../config"
 
 const prisma = new PrismaClient()
 
@@ -33,9 +34,10 @@ export class AdminSessionService {
       // 2. Genera nuovo sessionId univoco
       const sessionId = randomUUID()
 
-      // 3. Calcola scadenza: +1 ora FISSA dalla creazione
+      // 3. Calcola scadenza: durata configurabile da TOKEN_EXPIRATION env
       const now = new Date()
-      const expiresAt = new Date(now.getTime() + 60 * 60 * 1000) // +1h
+      const hours = parseInt(config.token.expiration.replace("h", "")) || 1
+      const expiresAt = new Date(now.getTime() + hours * 60 * 60 * 1000)
 
       // 4. Crea nuova sessione
       await prisma.adminSession.create({

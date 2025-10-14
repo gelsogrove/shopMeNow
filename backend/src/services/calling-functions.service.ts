@@ -173,7 +173,7 @@ export class CallingFunctionsService {
         "orders",
         request.workspaceId,
         { customerId: request.customerId },
-        "1h",
+        undefined, // Uses TOKEN_EXPIRATION from env
         undefined,
         undefined,
         undefined,
@@ -219,7 +219,7 @@ export class CallingFunctionsService {
         "cart",
         request.workspaceId,
         { customerId: request.customerId },
-        "1h",
+        undefined, // Uses TOKEN_EXPIRATION from env
         undefined,
         undefined,
         undefined,
@@ -261,7 +261,7 @@ export class CallingFunctionsService {
         "profile",
         request.workspaceId,
         { customerId: request.customerId },
-        "1h",
+        undefined, // Uses TOKEN_EXPIRATION from env
         undefined,
         undefined,
         undefined,

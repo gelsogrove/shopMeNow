@@ -104,7 +104,7 @@ export class FormatterService {
           "orders",
           workspaceId,
           { customerId, workspaceId },
-          "1h",
+          undefined, // Uses TOKEN_EXPIRATION from env
           undefined,
           undefined,
           undefined,

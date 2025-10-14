@@ -216,10 +216,10 @@ async function handleNewUserWelcomeFlow(
       "registration",
       workspaceId,
       { phone: phoneNumber, language: detectedLanguage },
-      "1h",
+      undefined, // Uses TOKEN_EXPIRATION from env
       undefined,
       phoneNumber
-    ) // 1 hour expiry
+    )
 
     // Create short registration URL using LinkGeneratorService
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000"
