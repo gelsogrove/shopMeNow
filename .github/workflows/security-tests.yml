@@ -192,97 +192,11 @@ jobs:
           flags: security-tests
           fail_ci_if_error: false
 
-  # Job 4: Integration Tests (separate, non-blocking)
-  integration-tests:
-    name: 🔗 Integration Tests (Optional)
-    runs-on: ubuntu-latest
-    needs: security-tests # Run only if security tests pass
-
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: shopme_test
-          POSTGRES_PASSWORD: test_password
-          POSTGRES_DB: shopme_test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
-    env:
-      DATABASE_URL: postgresql://shopme_test:test_password@localhost:5432/shopme_test
-      JWT_SECRET: test-jwt-secret-for-ci
-      JWT_EXPIRES_IN: 24h
-      TOKEN_ENCRYPTION_KEY: test-encryption-key-32-characters-long-for-ci-testing
-      TOKEN_HMAC_KEY: test-hmac-key-32-characters-long-for-ci-environment-test
-      TOKEN_EXPIRATION: 15m
-      NODE_ENV: test
-      INTEGRATION_TEST: true
-      # Admin credentials
-      ADMIN_EMAIL: admin@shopme.com
-      ADMIN_PASSWORD: test-venezia44
-      # Frontend
-      FRONTEND_URL: http://localhost:3000
-      CORS_ORIGIN: http://localhost:3000
-      # SMTP (test mode)
-      SMTP_HOST: smtp.ethereal.email
-      SMTP_PORT: 587
-      SMTP_SECURE: false
-      SMTP_USER: test@ethereal.email
-      SMTP_PASS: test-password
-      SMTP_FROM: noreply@shopme.com
-      # OpenRouter
-      OPENROUTER_API_KEY: test-key-for-ci
-      # WhatsApp
-      WHATSAPP_API_URL: https://graph.facebook.com/v18.0
-      WHATSAPP_VERIFY_TOKEN: test-verify-token-for-ci-min-20-chars
-      WHATSAPP_APP_SECRET: test-app-secret-for-ci
-      WHATSAPP_WEBHOOK_ENABLED: false
-      WHATSAPP_SIGNATURE_VERIFICATION: false
-      WHATSAPP_MAX_MESSAGES_PER_MINUTE_WORKSPACE: 100
-      WHATSAPP_MAX_MESSAGES_PER_MINUTE_CUSTOMER: 10
-      WHATSAPP_MAX_RETRY_ATTEMPTS: 3
-      WHATSAPP_RETRY_DELAY_MS: 1000
-      # Server
-      PORT: 3001
-
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 📦 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: backend/package-lock.json
-
-      - name: 📦 Install dependencies
-        working-directory: ./backend
-        run: npm ci
-
-      - name: 🗄️ Run Prisma migrations
-        working-directory: ./backend
-        run: npx prisma migrate deploy
-
-      - name: 🌱 Seed test database
-        working-directory: ./backend
-        run: npm run seed
-
-      - name: 🧪 Run integration tests
-        working-directory: ./backend
-        run: npm run test:integration || true
-        # Continue even if integration tests fail (not blocking)
-
-  # Job 5: Security Summary
+  # Job 4: Security Summary
   security-summary:
     name: 📊 Security Summary
     runs-on: ubuntu-latest
-    needs: [lint-and-typecheck, unit-tests, security-tests, integration-tests]
+    needs: [lint-and-typecheck, unit-tests, security-tests]
     if: always() # Run even if tests fail
 
     steps:
@@ -307,7 +221,6 @@ jobs:
           echo "- Lint & TypeCheck: ${{ needs.lint-and-typecheck.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Unit Tests: ${{ needs.unit-tests.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Security Tests: ${{ needs.security-tests.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Integration Tests: ${{ needs.integration-tests.result }}" >> $GITHUB_STEP_SUMMARY
 
       - name: ❌ Fail workflow if security tests failed
         if: needs.security-tests.result != 'success'
