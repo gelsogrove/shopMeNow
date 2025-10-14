@@ -96,7 +96,7 @@ jobs:
       JWT_EXPIRES_IN: 24h
       TOKEN_ENCRYPTION_KEY: ${{ secrets.CI_TOKEN_ENCRYPTION_KEY }}
       TOKEN_HMAC_KEY: ${{ secrets.CI_TOKEN_HMAC_KEY }}
-      TOKEN_EXPIRATION: 15m
+      TOKEN_EXPIRATION: 1h
       NODE_ENV: test
       INTEGRATION_TEST: true
       # Admin credentials
