@@ -15,7 +15,7 @@
  *
  * MAIN WORKSPACE:
  * - ID: cm9hjgq9v00014qk8fsdy4ujv
- * - Name: L'Altra Italia(ESP)
+ * - Name: Altro Gusto
  * - Admin associated as OWNER
  *
  * ⚠️ DO NOT MODIFY CREDENTIALS WITHOUT UPDATING .env
@@ -26,6 +26,11 @@ import * as bcrypt from "bcrypt"
 import * as dotenv from "dotenv"
 import * as fs from "fs"
 import * as path from "path"
+
+// Import external data files
+import { foodCategories } from "./data/categories"
+import { products } from "./data/products"
+import { faqsData } from "./data/faqs"
 
 // Load environment variables
 dotenv.config()
@@ -354,7 +359,7 @@ async function main() {
     const updatedWorkspace = await prisma.workspace.update({
       where: { id: mainWorkspaceId },
       data: {
-        name: "L'Altra Italia(ESP)",
+        name: "Altro Gusto",
         whatsappPhoneNumber: "+34654728753",
         whatsappApiKey: "placeholder_whatsapp_api_key_for_testing",
 
@@ -550,12 +555,12 @@ async function main() {
           fr: "🔧 Nous sommes en maintenance. Le service sera bientôt de retour. Merci pour votre patience! 🇫🇷",
         },
         welcomeMessages: {
-          it: "👋 Benvenuto a L'Altra Italia! Sono SofiA, il tuo assistente digitale. Sono qui per aiutarti con:\n\n• Esplorare i nostri prodotti italiani di alta qualità\n• Seguire i tuoi ordini\n• Rispondere a qualsiasi domanda\n\nPrima di iniziare, ti invito a registrarti per accedere a tutte le funzionalità. I tuoi dati saranno protetti e mai condivisi con terzi.\n\nCosa posso fare per te oggi? 🇮🇹",
-          en: "👋 Welcome to L'Altra Italia! I'm SofiA, your digital assistant. I'm here to help you with:\n\n• Exploring our high-quality Italian products\n• Tracking your orders\n• Answering any questions\n\nBefore we begin, please register to access all features. Your data will be protected and never shared with third parties.\n\nWhat can I do for you today? 🇬🇧",
-          es: "👋 ¡Bienvenido a L'Altra Italia! Soy SofiA, tu asistente digital. Estoy aquí para ayudarte con:\n\n• Explorar nuestros productos italianos de alta calidad\n• Seguir tus pedidos\n• Responder cualquier pregunta\n\nAntes de comenzar, te invito a registrarte para acceder a todas las funciones. Tus datos estarán protegidos y nunca se compartirán con terceros.\n\n¿Qué puedo hacer por ti hoy? 🇪🇸",
-          pt: "👋 Bem-vindo à L'Altra Italia! Sou a SofiA, a sua assistente digital. Estou aqui para ajudá-lo com:\n\n• Explorar os nossos produtos italianos de alta qualidade\n• Acompanhar os seus pedidos\n• Responder a qualquer pergunta\n\nAntes de começar, convido-o a registar-se para aceder a todas as funcionalidades. Os seus dados estarão protegidos e nunca serão partilhados com terceiros.\n\nO que posso fazer por si hoje? 🇵🇹",
-          de: "👋 Willkommen bei L'Altra Italia! Ich bin SofiA, Ihre digitale Assistentin. Ich helfe Ihnen gerne bei:\n\n• Erkunden Sie unsere hochwertigen italienischen Produkte\n• Verfolgen Sie Ihre Bestellungen\n• Beantworten Sie alle Fragen\n\nBitte registrieren Sie sich zunächst, um auf alle Funktionen zuzugreifen. Ihre Daten werden geschützt und niemals an Dritte weitergegeben.\n\nWas kann ich heute für Sie tun? 🇩🇪",
-          fr: "👋 Bienvenue chez L'Altra Italia! Je suis SofiA, votre assistante numérique. Je suis là pour vous aider avec:\n\n• Explorer nos produits italiens de haute qualité\n• Suivre vos commandes\n• Répondre à toutes vos questions\n\nAvant de commencer, veuillez vous inscrire pour accéder à toutes les fonctionnalités. Vos données seront protégées et ne seront jamais partagées avec des tiers.\n\nQue puis-je faire pour vous aujourd'hui? 🇫🇷",
+          it: "👋 Benvenuto da Altro Gusto! Sono SofiA, il tuo assistente digitale. Sono qui per aiutarti con:\n\n• Esplorare i nostri prodotti italiani di alta qualità\n• Seguire i tuoi ordini\n• Rispondere a qualsiasi domanda\n\nPrima di iniziare, ti invito a registrarti per accedere a tutte le funzionalità. I tuoi dati saranno protetti e mai condivisi con terzi.\n\nCosa posso fare per te oggi? 🇮🇹",
+          en: "👋 Welcome to Altro Gusto! I'm SofiA, your digital assistant. I'm here to help you with:\n\n• Exploring our high-quality Italian products\n• Tracking your orders\n• Answering any questions\n\nBefore we begin, please register to access all features. Your data will be protected and never shared with third parties.\n\nWhat can I do for you today? 🇬🇧",
+          es: "👋 ¡Bienvenido a Altro Gusto! Soy SofiA, tu asistente digital. Estoy aquí para ayudarte con:\n\n• Explorar nuestros productos italianos de alta calidad\n• Seguir tus pedidos\n• Responder cualquier pregunta\n\nAntes de comenzar, te invito a registrarte para acceder a todas las funciones. Tus datos estarán protegidos y nunca se compartirán con terceros.\n\n¿Qué puedo hacer por ti hoy? 🇪🇸",
+          pt: "👋 Bem-vindo ao Altro Gusto! Sou a SofiA, a sua assistente digital. Estou aqui para ajudá-lo com:\n\n• Explorar os nossos produtos italianos de alta qualidade\n• Acompanhar os seus pedidos\n• Responder a qualquer pergunta\n\nAntes de começar, convido-o a registar-se para aceder a todas as funcionalidades. Os seus dados estarão protegidos e nunca serão partilhados com terceiros.\n\nO que posso fazer por si hoje? 🇵🇹",
+          de: "👋 Willkommen bei Altro Gusto! Ich bin SofiA, Ihre digitale Assistentin. Ich helfe Ihnen gerne bei:\n\n• Erkunden Sie unsere hochwertigen italienischen Produkte\n• Verfolgen Sie Ihre Bestellungen\n• Beantworten Sie alle Fragen\n\nBitte registrieren Sie sich zunächst, um auf alle Funktionen zuzugreifen. Ihre Daten werden geschützt und niemals an Dritte weitergegeben.\n\nWas kann ich heute für Sie tun? 🇩🇪",
+          fr: "👋 Bienvenue chez Altro Gusto! Je suis SofiA, votre assistante numérique. Je suis là pour vous aider avec:\n\n• Explorer nos produits italiens de haute qualité\n• Suivre vos commandes\n• Répondre à toutes vos questions\n\nAvant de commencer, veuillez vous inscrire pour accéder à toutes les fonctionnalités. Vos données seront protégées et ne seront jamais partagées avec des tiers.\n\nQue puis-je faire pour vous aujourd'hui? 🇫🇷",
         },
         afterRegistrationMessages: {
           it: "Ben tornato, {name}! 👋 Come posso aiutarti oggi?",
@@ -738,70 +743,7 @@ async function main() {
     // We don't delete them for safety, but we don't include them in subsequent operations
   }
 
-  // L'Altra Italia Categories - Based on catalog structure (IN ENGLISH - master language)
-  const foodCategories = [
-    {
-      name: "Cheeses & Dairy",
-      slug: "cheeses-dairy",
-      description:
-        "🧀 Premium Italian cheeses and dairy products, including mozzarella, burrata, and high-quality dairy items.",
-    },
-    {
-      name: "Cured Meats",
-      slug: "cured-meats",
-      description:
-        "🥓 Traditional Italian cured meats and artisanal sausages of premium quality.",
-    },
-    {
-      name: "Salami & Cold Cuts",
-      slug: "salami-cold-cuts",
-      description:
-        "🍖 Artisanal salami, prosciutto, and the finest traditional Italian cold cuts.",
-    },
-    {
-      name: "Pasta & Rice",
-      slug: "pasta-rice",
-      description:
-        "🍝 Premium Italian pasta and rice, traditional and artisanal varieties of top quality.",
-    },
-    {
-      name: "Tomato Products",
-      slug: "tomato-products",
-      description:
-        "🍅 Italian tomato sauces, passata, and tomato-based products of superior quality.",
-    },
-    {
-      name: "Flour & Baking",
-      slug: "flour-baking",
-      description:
-        "🌾 Italian flours and ingredients for artisanal baking and pastry making.",
-    },
-    {
-      name: "Sauces & Preserves",
-      slug: "sauces-preserves",
-      description:
-        "🫙 Gourmet sauces, preserves, and Italian condiments to enrich every dish.",
-    },
-    {
-      name: "Water & Beverages",
-      slug: "water-beverages",
-      description:
-        "💧 Premium Italian mineral waters and traditional beverages of high quality.",
-    },
-    {
-      name: "Frozen Products",
-      slug: "frozen-products",
-      description:
-        "🧊 Italian frozen desserts, pastries, and premium frozen specialties.",
-    },
-    {
-      name: "Various & Spices",
-      slug: "various-spices",
-      description:
-        "🌶️ Italian spices, condiments, and various gourmet products for traditional cooking.",
-    },
-  ]
-
+  // Categories loaded from external file (backend/prisma/data/categories.ts)
   // Create categories for the main workspace
   console.log(`Creating categories for workspace: ${createdWorkspaces[0].name}`)
   for (const category of foodCategories) {
@@ -1318,7 +1260,11 @@ async function main() {
     }
   }
 
-  // L'Altra Italia Products - COMPLETE CATALOG (66 products)
+  // Products loaded from external file (backend/prisma/data/products.ts)
+  // Original array moved to external file for better maintainability
+  
+  /*
+  REMOVED: Massive products array (1000+ lines) now in backend/prisma/data/products.ts
   const products = [
     // BURRATA CATEGORY (18 products)
     {
@@ -2320,6 +2266,7 @@ async function main() {
       categoryName: "Various & Spices",
     },
   ]
+  */
 
   // Create or update products with their categories
   for (const product of products) {
@@ -2534,7 +2481,9 @@ async function main() {
     }
   }
 
-  // Create FAQ data - CLEANED (no duplicates, no Italian)
+  // FAQs loaded from external file (backend/prisma/data/faqs.ts)
+  /*
+  REMOVED: FAQs array now in backend/prisma/data/faqs.ts
   const faqsData = [
     {
       question: "What are your business hours?",
@@ -2630,7 +2579,7 @@ async function main() {
     {
       question: "What is your name?",
       answer:
-        "Hello! I am SofIA, the digital assistant of L'Altra Italia. I'm here to help you with information about our Italian products, orders, and services. How can I assist you today?",
+        "Hello! I am SofIA, the digital assistant of Altro Gusto. I'm here to help you with information about our Italian products, orders, and services. How can I assist you today?",
     },
     {
       question: "Show cart",
@@ -2651,6 +2600,7 @@ async function main() {
         "I'm sorry about the defective product! 😔\n\nTo resolve:\n✅ **Contact us immediately** at (+34) 93 15 91 221 or info@laltrait.com\n✅ **Free return** with free pickup\n✅ **Full refund** or immediate replacement\n\nQuality is our priority. We'll help you resolve it right away!",
     },
   ]
+  */
 
   // Create new FAQs
   for (const faq of faqsData) {
@@ -3262,7 +3212,7 @@ ti è piaciuto il nostro servizio?
 Lasciaci una recensione qui: [FEEDBACK]
 
 Grazie per il tuo tempo! 🙏
-Team L'Altra Italia`,
+Team Altro Gusto`,
           frequency: "SEMIANNUAL",
           targetType: "ALL",
           isActive: true,
@@ -4236,7 +4186,7 @@ Team L'Altra Italia`,
   console.log("   ✅ Database cleaned and reseeded")
   console.log("   ✅ Admin user ready")
   console.log("   ✅ Workspace configured")
-  console.log("   ✅ L'Altra Italia categories and products loaded")
+  console.log("   ✅ Altro Gusto categories and products loaded")
   console.log("   ✅ Services configured")
   console.log("   ✅ FAQs loaded")
   console.log("   ✅ Test customers created")
