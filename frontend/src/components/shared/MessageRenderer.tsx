@@ -1,5 +1,6 @@
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import DOMPurify from "dompurify"
 
 interface MessageRendererProps {
   content: string
@@ -53,8 +54,15 @@ export function MessageRenderer({
         .replace(/~(.*?)~/g, "<s style='text-decoration: line-through;'>$1</s>") // WhatsApp strikethrough (single tilde)
         .replace(/→\s*(€[\d.,]+)/g, "→ <strong>$1</strong>")
 
+      // ✅ SECURITY: Sanitize HTML to prevent XSS attacks
+      const sanitized = DOMPurify.sanitize(formatted, {
+        ALLOWED_TAGS: ["strong", "em", "s", "br"],
+        ALLOWED_ATTR: ["style"],
+        KEEP_CONTENT: true,
+      })
+
       return (
-        <span key={index} dangerouslySetInnerHTML={{ __html: formatted }} />
+        <span key={index} dangerouslySetInnerHTML={{ __html: sanitized }} />
       )
     })
   }

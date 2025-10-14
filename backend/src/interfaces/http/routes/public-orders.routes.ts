@@ -2,6 +2,7 @@ import { Request, Response, Router } from "express"
 import { SecureTokenService } from "../../../application/services/secure-token.service"
 import { prisma } from "../../../lib/prisma"
 import logger from "../../../utils/logger"
+import { publicOrdersLimiter } from "../../../config/rate-limiters"
 
 const router = Router()
 const secureTokenService = new SecureTokenService()
@@ -281,10 +282,12 @@ router.post("/validate-secure-token", async (req: Request, res: Response) => {
  *       401:
  *         description: Invalid or expired token
  */
-router.get("/public/orders", getOrdersListHandler)
+// 🔒 SECURITY: Rate limited to 30 requests per 15 minutes per IP
+router.get("/public/orders", publicOrdersLimiter, getOrdersListHandler)
 
 // ✅ ALIAS: Frontend compatibility route
-router.get("/orders-public", getOrdersListHandler)
+// 🔒 SECURITY: Rate limited to 30 requests per 15 minutes per IP
+router.get("/orders-public", publicOrdersLimiter, getOrdersListHandler)
 
 /**
  * @swagger
@@ -995,8 +998,9 @@ router.post("/get-all-products", async (req: Request, res: Response) => {
 /**
  * Alias: GET /orders-public/:orderCode
  * Same handler as GET /public/orders/:orderCode
+ * 🔒 SECURITY: Rate limited to 30 requests per 15 minutes per IP
  */
-router.get("/orders-public/:orderCode", async (req: Request, res: Response) => {
+router.get("/orders-public/:orderCode", publicOrdersLimiter, async (req: Request, res: Response) => {
   try {
     const { orderCode } = req.params
     const { token } = req.query

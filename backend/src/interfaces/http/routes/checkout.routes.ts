@@ -1,6 +1,7 @@
 import { Router } from "express"
 import { asyncMiddleware } from "../../../middlewares/async.middleware"
 import { CheckoutController } from "../controllers/checkout.controller"
+import { checkoutLimiter } from "../../../config/rate-limiters"
 
 const router = Router()
 const checkoutController = new CheckoutController()
@@ -111,8 +112,10 @@ router.get(
  *       500:
  *         description: Server error
  */
+// 🔒 SECURITY: Rate limited to 20 orders per hour per IP
 router.post(
   "/submit",
+  checkoutLimiter,
   asyncMiddleware(checkoutController.submitOrder.bind(checkoutController))
 )
 
