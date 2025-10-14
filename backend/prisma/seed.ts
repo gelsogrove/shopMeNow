@@ -3542,11 +3542,683 @@ Team L'Altra Italia`,
       },
     })
 
+    // 📊 HISTORICAL ORDERS - Distribuiti su 6 mesi per Analytics
+    console.log("📊 Creating historical orders for analytics...")
+
+    // Month -6 (Aprile 2025) - 3 ordini
+    const order8 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-008-APR",
+        customerId: testCustomer.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 45.0,
+        createdAt: new Date("2025-04-15"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order8.id,
+        productId: sampleProducts[0].id,
+        quantity: 3,
+        unitPrice: sampleProducts[0].price,
+        totalPrice: sampleProducts[0].price * 3,
+      },
+    })
+
+    const order9 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-009-APR",
+        customerId: testCustomer2.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 38.5,
+        createdAt: new Date("2025-04-20"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order9.id,
+        productId: sampleProducts[1].id,
+        quantity: 2,
+        unitPrice: sampleProducts[1].price,
+        totalPrice: sampleProducts[1].price * 2,
+      },
+    })
+
+    const order10 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-010-APR",
+        customerId: testCustomerMCP.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 52.0,
+        createdAt: new Date("2025-04-25"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order10.id,
+        productId: sampleProducts[2].id,
+        quantity: 4,
+        unitPrice: sampleProducts[2].price,
+        totalPrice: sampleProducts[2].price * 4,
+      },
+    })
+
+    // Month -5 (Maggio 2025) - 4 ordini
+    const order11 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-011-MAY",
+        customerId: testCustomer.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 67.5,
+        createdAt: new Date("2025-05-05"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order11.id,
+        productId: sampleProducts[3].id,
+        quantity: 5,
+        unitPrice: sampleProducts[3].price,
+        totalPrice: sampleProducts[3].price * 5,
+      },
+    })
+
+    const order12 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-012-MAY",
+        customerId: testCustomer2.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 43.0,
+        createdAt: new Date("2025-05-12"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order12.id,
+        productId: sampleProducts[4].id,
+        quantity: 3,
+        unitPrice: sampleProducts[4].price,
+        totalPrice: sampleProducts[4].price * 3,
+      },
+    })
+
+    const order13 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-013-MAY",
+        customerId: testCustomerMCP.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 55.8,
+        createdAt: new Date("2025-05-18"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order13.id,
+        productId: sampleProducts[0].id,
+        quantity: 4,
+        unitPrice: sampleProducts[0].price,
+        totalPrice: sampleProducts[0].price * 4,
+      },
+    })
+
+    const order14 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-014-MAY",
+        customerId: testCustomer4.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 72.0,
+        createdAt: new Date("2025-05-28"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order14.id,
+        productId: sampleProducts[1].id,
+        quantity: 6,
+        unitPrice: sampleProducts[1].price,
+        totalPrice: sampleProducts[1].price * 6,
+      },
+    })
+
+    // Month -4 (Giugno 2025) - 5 ordini
+    const order15 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-015-JUN",
+        customerId: testCustomer.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 88.5,
+        createdAt: new Date("2025-06-03"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order15.id,
+        productId: sampleProducts[2].id,
+        quantity: 7,
+        unitPrice: sampleProducts[2].price,
+        totalPrice: sampleProducts[2].price * 7,
+      },
+    })
+
+    const order16 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-016-JUN",
+        customerId: testCustomer2.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 64.0,
+        createdAt: new Date("2025-06-10"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order16.id,
+        productId: sampleProducts[3].id,
+        quantity: 5,
+        unitPrice: sampleProducts[3].price,
+        totalPrice: sampleProducts[3].price * 5,
+      },
+    })
+
+    const order17 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-017-JUN",
+        customerId: testCustomerMCP.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 79.0,
+        createdAt: new Date("2025-06-15"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order17.id,
+        productId: sampleProducts[4].id,
+        quantity: 6,
+        unitPrice: sampleProducts[4].price,
+        totalPrice: sampleProducts[4].price * 6,
+      },
+    })
+
+    const order18 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-018-JUN",
+        customerId: testCustomer4.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 92.5,
+        createdAt: new Date("2025-06-22"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order18.id,
+        productId: sampleProducts[0].id,
+        quantity: 8,
+        unitPrice: sampleProducts[0].price,
+        totalPrice: sampleProducts[0].price * 8,
+      },
+    })
+
+    const order19 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-019-JUN",
+        customerId: testCustomer.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 48.0,
+        createdAt: new Date("2025-06-28"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order19.id,
+        productId: sampleProducts[1].id,
+        quantity: 4,
+        unitPrice: sampleProducts[1].price,
+        totalPrice: sampleProducts[1].price * 4,
+      },
+    })
+
+    // Month -3 (Luglio 2025) - 6 ordini
+    const order20 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-020-JUL",
+        customerId: testCustomer2.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 105.0,
+        createdAt: new Date("2025-07-05"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order20.id,
+        productId: sampleProducts[2].id,
+        quantity: 9,
+        unitPrice: sampleProducts[2].price,
+        totalPrice: sampleProducts[2].price * 9,
+      },
+    })
+
+    const order21 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-021-JUL",
+        customerId: testCustomerMCP.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 76.5,
+        createdAt: new Date("2025-07-10"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order21.id,
+        productId: sampleProducts[3].id,
+        quantity: 6,
+        unitPrice: sampleProducts[3].price,
+        totalPrice: sampleProducts[3].price * 6,
+      },
+    })
+
+    const order22 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-022-JUL",
+        customerId: testCustomer4.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 58.0,
+        createdAt: new Date("2025-07-15"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order22.id,
+        productId: sampleProducts[4].id,
+        quantity: 5,
+        unitPrice: sampleProducts[4].price,
+        totalPrice: sampleProducts[4].price * 5,
+      },
+    })
+
+    const order23 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-023-JUL",
+        customerId: testCustomer.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 94.0,
+        createdAt: new Date("2025-07-20"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order23.id,
+        productId: sampleProducts[0].id,
+        quantity: 8,
+        unitPrice: sampleProducts[0].price,
+        totalPrice: sampleProducts[0].price * 8,
+      },
+    })
+
+    const order24 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-024-JUL",
+        customerId: testCustomer2.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 67.5,
+        createdAt: new Date("2025-07-25"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order24.id,
+        productId: sampleProducts[1].id,
+        quantity: 5,
+        unitPrice: sampleProducts[1].price,
+        totalPrice: sampleProducts[1].price * 5,
+      },
+    })
+
+    const order25 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-025-JUL",
+        customerId: testCustomerMCP.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 112.0,
+        createdAt: new Date("2025-07-30"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order25.id,
+        productId: sampleProducts[2].id,
+        quantity: 10,
+        unitPrice: sampleProducts[2].price,
+        totalPrice: sampleProducts[2].price * 10,
+      },
+    })
+
+    // Month -2 (Agosto 2025) - 7 ordini
+    const order26 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-026-AUG",
+        customerId: testCustomer4.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 89.0,
+        createdAt: new Date("2025-08-02"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order26.id,
+        productId: sampleProducts[3].id,
+        quantity: 7,
+        unitPrice: sampleProducts[3].price,
+        totalPrice: sampleProducts[3].price * 7,
+      },
+    })
+
+    const order27 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-027-AUG",
+        customerId: testCustomer.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 73.5,
+        createdAt: new Date("2025-08-08"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order27.id,
+        productId: sampleProducts[4].id,
+        quantity: 6,
+        unitPrice: sampleProducts[4].price,
+        totalPrice: sampleProducts[4].price * 6,
+      },
+    })
+
+    const order28 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-028-AUG",
+        customerId: testCustomer2.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 125.0,
+        createdAt: new Date("2025-08-12"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order28.id,
+        productId: sampleProducts[0].id,
+        quantity: 11,
+        unitPrice: sampleProducts[0].price,
+        totalPrice: sampleProducts[0].price * 11,
+      },
+    })
+
+    const order29 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-029-AUG",
+        customerId: testCustomerMCP.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 98.0,
+        createdAt: new Date("2025-08-18"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order29.id,
+        productId: sampleProducts[1].id,
+        quantity: 8,
+        unitPrice: sampleProducts[1].price,
+        totalPrice: sampleProducts[1].price * 8,
+      },
+    })
+
+    const order30 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-030-AUG",
+        customerId: testCustomer4.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 84.5,
+        createdAt: new Date("2025-08-22"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order30.id,
+        productId: sampleProducts[2].id,
+        quantity: 7,
+        unitPrice: sampleProducts[2].price,
+        totalPrice: sampleProducts[2].price * 7,
+      },
+    })
+
+    const order31 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-031-AUG",
+        customerId: testCustomer.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 67.0,
+        createdAt: new Date("2025-08-26"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order31.id,
+        productId: sampleProducts[3].id,
+        quantity: 5,
+        unitPrice: sampleProducts[3].price,
+        totalPrice: sampleProducts[3].price * 5,
+      },
+    })
+
+    const order32 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-032-AUG",
+        customerId: testCustomer2.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 118.0,
+        createdAt: new Date("2025-08-30"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order32.id,
+        productId: sampleProducts[4].id,
+        quantity: 10,
+        unitPrice: sampleProducts[4].price,
+        totalPrice: sampleProducts[4].price * 10,
+      },
+    })
+
+    // Month -1 (Settembre 2025) - 8 ordini
+    const order33 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-033-SEP",
+        customerId: testCustomerMCP.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 142.0,
+        createdAt: new Date("2025-09-03"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order33.id,
+        productId: sampleProducts[0].id,
+        quantity: 12,
+        unitPrice: sampleProducts[0].price,
+        totalPrice: sampleProducts[0].price * 12,
+      },
+    })
+
+    const order34 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-034-SEP",
+        customerId: testCustomer4.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 95.5,
+        createdAt: new Date("2025-09-07"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order34.id,
+        productId: sampleProducts[1].id,
+        quantity: 8,
+        unitPrice: sampleProducts[1].price,
+        totalPrice: sampleProducts[1].price * 8,
+      },
+    })
+
+    const order35 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-035-SEP",
+        customerId: testCustomer.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 78.0,
+        createdAt: new Date("2025-09-11"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order35.id,
+        productId: sampleProducts[2].id,
+        quantity: 6,
+        unitPrice: sampleProducts[2].price,
+        totalPrice: sampleProducts[2].price * 6,
+      },
+    })
+
+    const order36 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-036-SEP",
+        customerId: testCustomer2.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 135.0,
+        createdAt: new Date("2025-09-15"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order36.id,
+        productId: sampleProducts[3].id,
+        quantity: 11,
+        unitPrice: sampleProducts[3].price,
+        totalPrice: sampleProducts[3].price * 11,
+      },
+    })
+
+    const order37 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-037-SEP",
+        customerId: testCustomerMCP.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 102.5,
+        createdAt: new Date("2025-09-19"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order37.id,
+        productId: sampleProducts[4].id,
+        quantity: 9,
+        unitPrice: sampleProducts[4].price,
+        totalPrice: sampleProducts[4].price * 9,
+      },
+    })
+
+    const order38 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-038-SEP",
+        customerId: testCustomer4.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 86.0,
+        createdAt: new Date("2025-09-23"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order38.id,
+        productId: sampleProducts[0].id,
+        quantity: 7,
+        unitPrice: sampleProducts[0].price,
+        totalPrice: sampleProducts[0].price * 7,
+      },
+    })
+
+    const order39 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-039-SEP",
+        customerId: testCustomer.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 154.0,
+        createdAt: new Date("2025-09-27"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order39.id,
+        productId: sampleProducts[1].id,
+        quantity: 13,
+        unitPrice: sampleProducts[1].price,
+        totalPrice: sampleProducts[1].price * 13,
+      },
+    })
+
+    const order40 = await prisma.orders.create({
+      data: {
+        orderCode: "ORD-040-SEP",
+        customerId: testCustomer2.id,
+        workspaceId: mainWorkspaceId,
+        status: "DELIVERED",
+        totalAmount: 118.5,
+        createdAt: new Date("2025-09-30"),
+      },
+    })
+    await prisma.orderItems.create({
+      data: {
+        orderId: order40.id,
+        productId: sampleProducts[2].id,
+        quantity: 10,
+        unitPrice: sampleProducts[2].price,
+        totalPrice: sampleProducts[2].price * 10,
+      },
+    })
+
     console.log("✅ Sample orders created successfully!")
     console.log(`   📦 Order ORD-001-2024 for Mario Rossi (CONFIRMED) - €25.50`)
     console.log(`   📦 Order ORD-002-2024 for John Smith (PENDING) - €18.90`)
     console.log(
       `   📦 Order ORD-003-2024 for Maria Garcia (DELIVERED) - €32.80`
+    )
+    console.log(
+      "   📊 + 33 historical orders (Apr-Sep 2025) for analytics trends"
     )
     console.log(`   📦 Order ORD-004-2024 for Mario Rossi (DELIVERED) - €45.20`)
     console.log(`   📦 Order ORD-005-2024 for Mario Rossi (CONFIRMED) - €67.80`)
