@@ -1,6 +1,6 @@
 FASE 1
 
-- security test name!!!
+- security TODO
 
 - top product top cusomer solo i primi 3
 
@@ -12,18 +12,6 @@ FASE 1
 
   sarebbe bello fare altre CF tipo ripeti ultimo ordine o aggiungi questo al carrello
   cancella questo dal carrello
-
-=======
-
-- FOTO DA METTERE
-
-- altro gusto non altra italia con prodotti nostri e foto nostre
-
-> > > > > > > aa713fb6dfa45fec21f25286aaf1f3633aa22624
-
-- new mail
-
-- new user
 
 - mcp sarebbe da sistemare un po
 
@@ -37,16 +25,22 @@ FASE 1
 
 FASE 2
 
-- gdpr deve essere in lingua
 - heroku
 - heroku MA LO STOFAGE?
-- 2FA obbligatorio per admin
-- dependabot?
+- prompt sarebbe da sistemare?
 - whatsapp connect
-- pagameno
 - IP whitelisting
 - sessione di admin Feature Flag
-- secrets
+
+FASE 3
+
+- gdpr deve essere in lingua
+- new mail
+- new user
+- 2FA obbligatorio per admin
+- dependabot?
+- pagameno
+- https
 
 COSTI
 4 $ di GITHUB
