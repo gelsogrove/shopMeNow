@@ -34,7 +34,7 @@ jobs:
 
       - name: 📦 Install dependencies
         working-directory: ./backend
-        run: npm ci
+        run: npm i
 
       - name: 🔍 Run ESLint
         working-directory: ./backend
@@ -63,7 +63,7 @@ jobs:
 
       - name: 📦 Install dependencies
         working-directory: ./backend
-        run: npm ci
+        run: npm i
 
       - name: 🧪 Run unit tests (NO DATABASE)
         working-directory: ./backend
@@ -153,7 +153,7 @@ jobs:
 
       - name: 📦 Install dependencies
         working-directory: ./backend
-        run: npm ci
+        run: npm i
 
       - name: 🗄️ Run Prisma migrations
         working-directory: ./backend
@@ -259,7 +259,7 @@ jobs:
 
       - name: 📦 Install dependencies
         working-directory: ./backend
-        run: npm ci
+        run: npm i
 
       - name: 🗄️ Run Prisma migrations
         working-directory: ./backend
