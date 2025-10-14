@@ -1,7 +1,7 @@
 /**
  * Food Categories Data - Altro Gusto
  * Exported for use in seed script
- * 
+ *
  * Italian titles with English descriptions (as per requirements)
  */
 

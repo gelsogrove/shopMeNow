@@ -29,8 +29,8 @@ import * as path from "path"
 
 // Import external data files
 import { foodCategories } from "./data/categories"
-import { products } from "./data/products"
 import { faqsData } from "./data/faqs"
+import { products } from "./data/products"
 
 // Load environment variables
 dotenv.config()
@@ -1262,7 +1262,7 @@ async function main() {
 
   // Products loaded from external file (backend/prisma/data/products.ts)
   // Original array moved to external file for better maintainability
-  
+
   /*
   REMOVED: Massive products array (1000+ lines) now in backend/prisma/data/products.ts
   const products = [

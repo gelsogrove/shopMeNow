@@ -1,7 +1,7 @@
 /**
  * Product Data - Altro Gusto Catalog
  * Exported for use in seed script
- * 
+ *
  * Italian product names with English descriptions (as per requirements)
  */
 
