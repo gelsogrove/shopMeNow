@@ -216,7 +216,7 @@ const OrdersPublicPage: React.FC = () => {
 
   // 🔐 Show token validation loading
   const customerLanguage =
-    listData?.customer?.language || detailData?.customer?.language
+    (listData?.customer as any)?.language || (detailData?.customer as any)?.language
   const texts = getPublicPageTexts(customerLanguage)
 
   if (tokenLoading || initialLoading) {
@@ -358,7 +358,13 @@ const OrdersPublicPage: React.FC = () => {
             {/* Billing and Shipping Addresses */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
               {/* Bill To - Show only if we have invoice data */}
-              {(detailData.customer as any).invoiceAddress && (
+              {(() => {
+                const invoiceAddr = (detailData.customer as any).invoiceAddress
+                // Check if it's an array with items or an object with data
+                const hasInvoiceData = invoiceAddr && 
+                  ((Array.isArray(invoiceAddr) && invoiceAddr.length > 0 && invoiceAddr[0]?.firstName) ||
+                   (!Array.isArray(invoiceAddr) && invoiceAddr.firstName))
+                return hasInvoiceData && (
                 <div className="bg-white p-3 rounded-xl shadow-sm">
                   <div className="flex items-center mb-4">
                     <div className="bg-green-100 p-2 rounded-lg mr-3">
@@ -381,34 +387,46 @@ const OrdersPublicPage: React.FC = () => {
                     </h3>
                   </div>
                   <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-1.5">
-                    <div className="font-semibold text-gray-900 text-lg">
-                      {(detailData.customer as any).invoiceAddress.firstName}{" "}
-                      {(detailData.customer as any).invoiceAddress.lastName}
-                    </div>
-                    {(detailData.customer as any).invoiceAddress.company && (
-                      <div className="text-sm text-gray-600">
-                        {(detailData.customer as any).invoiceAddress.company}
-                      </div>
-                    )}
-                    <div className="text-sm text-gray-700">
-                      {(detailData.customer as any).invoiceAddress.address}
-                      <br />
-                      {(detailData.customer as any).invoiceAddress.city}{" "}
-                      {(detailData.customer as any).invoiceAddress.postalCode}
-                      <br />
-                      {(detailData.customer as any).invoiceAddress.country}
-                    </div>
-                    {(detailData.customer as any).invoiceAddress.vatNumber && (
-                      <div className="text-sm text-gray-600">
-                        VAT:{" "}
-                        {(detailData.customer as any).invoiceAddress.vatNumber}
-                      </div>
-                    )}
+                    {(() => {
+                      // Get first invoice address if it's an array
+                      const addr = Array.isArray(invoiceAddr) ? invoiceAddr[0] : invoiceAddr
+                      return (
+                        <>
+                          <div className="font-semibold text-gray-900 text-lg">
+                            {addr.firstName} {addr.lastName}
+                          </div>
+                          {addr.company && (
+                            <div className="text-sm text-gray-600">
+                              {addr.company}
+                            </div>
+                          )}
+                          <div className="text-sm text-gray-700">
+                            {addr.address}
+                            <br />
+                            {addr.city} {addr.postalCode}
+                            <br />
+                            {addr.country}
+                          </div>
+                          {addr.vatNumber && (
+                            <div className="text-sm text-gray-600">
+                              VAT: {addr.vatNumber}
+                            </div>
+                          )}
+                        </>
+                      )
+                    })()}
                   </div>
                 </div>
-              )}
+                )
+              })()}
               {/* Ship To - Show only if we have shipping data */}
-              {(o.shippingAddress || (detailData.customer as any).address) && (
+              {(() => {
+                const shippingAddr = o.shippingAddress || (detailData.customer as any).address
+                // Check if shipping address has valid data
+                const hasShippingData = shippingAddr &&
+                  ((Array.isArray(shippingAddr) && shippingAddr.length > 0 && (shippingAddr[0]?.street || shippingAddr[0]?.city)) ||
+                   (!Array.isArray(shippingAddr) && (shippingAddr.street || shippingAddr.city)))
+                return hasShippingData && (
                 <div className="bg-white p-3 rounded-xl shadow-sm">
                   <div className="flex items-center mb-3">
                     <div className="bg-blue-100 p-2 rounded-lg mr-3">
@@ -432,16 +450,16 @@ const OrdersPublicPage: React.FC = () => {
                   </div>
                   <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-1.5">
                     {(() => {
-                      const shippingAddr =
-                        o.shippingAddress || detailData.customer.address
+                      // Get first address if it's an array
+                      const addr = Array.isArray(shippingAddr) ? shippingAddr[0] : shippingAddr
                       return (
                         <>
-                          {shippingAddr.name && (
+                          {addr.name && (
                             <div className="font-semibold text-gray-900 text-lg">
-                              {shippingAddr.name}
+                              {addr.name}
                             </div>
                           )}
-                          {shippingAddr.street && (
+                          {addr.street && (
                             <div className="text-gray-700 flex items-start">
                               <svg
                                 className="w-4 h-4 mr-2 mt-0.5 text-gray-400"
@@ -462,24 +480,24 @@ const OrdersPublicPage: React.FC = () => {
                                   d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                                 />
                               </svg>
-                              {shippingAddr.street}
+                              {addr.street}
                             </div>
                           )}
                           <div className="text-gray-700">
-                            {shippingAddr.postalCode
-                              ? `${shippingAddr.postalCode} `
+                            {addr.postalCode
+                              ? `${addr.postalCode} `
                               : ""}
-                            {shippingAddr.city || ""}
-                            {shippingAddr.province
-                              ? ` (${shippingAddr.province})`
+                            {addr.city || ""}
+                            {addr.province
+                              ? ` (${addr.province})`
                               : ""}
                           </div>
-                          {shippingAddr.country && (
+                          {addr.country && (
                             <div className="text-gray-700 font-medium">
-                              {shippingAddr.country}
+                              {addr.country}
                             </div>
                           )}
-                          {shippingAddr.phone && (
+                          {addr.phone && (
                             <div className="text-gray-600 flex items-center">
                               <svg
                                 className="w-4 h-4 mr-2 text-gray-400"
@@ -494,7 +512,7 @@ const OrdersPublicPage: React.FC = () => {
                                   d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
                                 />
                               </svg>
-                              Phone: {shippingAddr.phone}
+                              Phone: {addr.phone}
                             </div>
                           )}
                         </>
@@ -502,7 +520,8 @@ const OrdersPublicPage: React.FC = () => {
                     })()}
                   </div>
                 </div>
-              )}
+                )
+              })()}
             </div>
 
             {/* Order Summary */}
@@ -553,59 +572,63 @@ const OrdersPublicPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Payment Method Card */}
-                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                  <div className="flex items-center mb-2">
-                    <svg
-                      className="w-4 h-4 mr-2 text-gray-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                      />
-                    </svg>
-                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                      Payment Method
-                    </span>
+                {/* Payment Method Card - Show only if we have payment method */}
+                {o.paymentMethod && (
+                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                    <div className="flex items-center mb-2">
+                      <svg
+                        className="w-4 h-4 mr-2 text-gray-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                        />
+                      </svg>
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                        Payment Method
+                      </span>
+                    </div>
+                    <div className="text-gray-900 font-medium">
+                      {o.paymentMethod}
+                    </div>
                   </div>
-                  <div className="text-gray-900 font-medium">
-                    {o.paymentMethod || "N/A"}
-                  </div>
-                </div>
+                )}
 
-                {/* Payment Status Card */}
-                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                  <div className="flex items-center mb-2">
-                    <svg
-                      className="w-4 h-4 mr-2 text-gray-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+                {/* Payment Status Card - Show only if we have payment status */}
+                {o.paymentStatus && (
+                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                    <div className="flex items-center mb-2">
+                      <svg
+                        className="w-4 h-4 mr-2 text-gray-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
+                        />
+                      </svg>
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                        Payment Status
+                      </span>
+                    </div>
+                    <div
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${paymentColor(
+                        o.paymentStatus
+                      )}`}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
-                      />
-                    </svg>
-                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                      Payment Status
-                    </span>
+                      {o.paymentStatus}
+                    </div>
                   </div>
-                  <div
-                    className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${paymentColor(
-                      o.paymentStatus
-                    )}`}
-                  >
-                    {o.paymentStatus || "PENDING"}
-                  </div>
-                </div>
+                )}
 
                 {/* Tracking Card */}
                 {o.trackingNumber && (

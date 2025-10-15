@@ -119,6 +119,7 @@ export interface PublicPageTexts {
     products: string
     addresses: string
     confirm: string
+    payment: string
   }
 
   // Checkout Success specific
@@ -321,6 +322,7 @@ export const publicPageTranslations: Record<
       products: "Prodotti",
       addresses: "Indirizzi",
       confirm: "Conferma",
+      payment: "Pagamento",
     },
 
     // Checkout Success specific
@@ -522,6 +524,7 @@ export const publicPageTranslations: Record<
       products: "Products",
       addresses: "Addresses",
       confirm: "Confirm",
+      payment: "Payment",
     },
 
     // Checkout Success specific
@@ -723,6 +726,7 @@ export const publicPageTranslations: Record<
       products: "Productos",
       addresses: "Direcciones",
       confirm: "Confirmar",
+      payment: "Pago",
     },
 
     // Checkout Success specific
@@ -893,6 +897,7 @@ export const publicPageTranslations: Record<
       products: "Produtos",
       addresses: "Endereços",
       confirm: "Confirmar",
+      payment: "Pagamento",
     },
 
     // Checkout Success specific

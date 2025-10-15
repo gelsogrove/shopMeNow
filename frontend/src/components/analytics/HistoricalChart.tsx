@@ -33,6 +33,12 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
   analytics.trends.customers.forEach((d) => allMonths.add(d.month))
   analytics.trends.usageCost.forEach((d) => allMonths.add(d.month))
 
+  console.log("📊 [HistoricalChart] Raw trends data:", {
+    orders: analytics.trends.orders,
+    customers: analytics.trends.customers,
+    usageCost: analytics.trends.usageCost,
+  })
+
   const chartData = Array.from(allMonths).map((month) => {
     const orderData = analytics.trends.orders.find((d) => d.month === month)
     const customerData = analytics.trends.customers.find(
@@ -49,6 +55,8 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
       usageCost: usageCostData?.value || 0,
     }
   })
+
+  console.log("📊 [HistoricalChart] Chart data merged:", chartData)
 
   // Custom tooltip formatter
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -104,115 +112,133 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
     )
   }
 
-  const renderChart = () => {
-    const commonProps = {
-      data: chartData,
-      margin: { top: 20, right: 30, left: 20, bottom: 5 },
-    }
-
-    if (chartType === "bar") {
-      return (
-        <BarChart {...commonProps}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-          <XAxis
-            dataKey="month"
-            tick={{ fontSize: 12, fill: "#666" }}
-            tickLine={{ stroke: "#e0e0e0" }}
-          />
-          <YAxis
-            tick={{ fontSize: 12, fill: "#666" }}
-            tickLine={{ stroke: "#e0e0e0" }}
-          />
-          <Tooltip content={<CustomTooltip />} />
-          <Legend wrapperStyle={{ fontSize: "14px", fontWeight: "500" }} />
-          <Bar
-            dataKey="orders"
-            name={t.ordersLabel}
-            fill="#22c55e"
-            radius={[4, 4, 0, 0]}
-          />
-          <Bar
-            dataKey="customers"
-            name="Clienti"
-            fill="#3b82f6"
-            radius={[4, 4, 0, 0]}
-          />
-        </BarChart>
-      )
-    }
-
-    return (
-      <LineChart {...commonProps}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-        <XAxis
-          dataKey="month"
-          tick={{ fontSize: 12, fill: "#666" }}
-          tickLine={{ stroke: "#e0e0e0" }}
-        />
-        <YAxis
-          yAxisId="left"
-          tick={{ fontSize: 12, fill: "#666" }}
-          tickLine={{ stroke: "#e0e0e0" }}
-        />
-        <YAxis
-          yAxisId="right"
-          orientation="right"
-          tick={{ fontSize: 12, fill: "#666" }}
-          tickLine={{ stroke: "#e0e0e0" }}
-        />
-        <Tooltip content={<CustomTooltip />} />
-        <Legend wrapperStyle={{ fontSize: "14px", fontWeight: "500" }} />
-        <Line
-          yAxisId="left"
-          type="monotone"
-          dataKey="orders"
-          name={t.ordersLabel}
-          stroke="#22c55e"
-          strokeWidth={3}
-          dot={{ fill: "#22c55e", strokeWidth: 2, r: 6 }}
-          activeDot={{ r: 8, stroke: "#22c55e", strokeWidth: 2 }}
-        />
-        <Line
-          yAxisId="left"
-          type="monotone"
-          dataKey="customers"
-          name="Clienti"
-          stroke="#3b82f6"
-          strokeWidth={3}
-          dot={{ fill: "#3b82f6", strokeWidth: 2, r: 6 }}
-          activeDot={{ r: 8, stroke: "#3b82f6", strokeWidth: 2 }}
-        />
-        <Line
-          yAxisId="right"
-          type="monotone"
-          dataKey="usageCost"
-          name="Costi LLM (€)"
-          stroke="#f97316"
-          strokeWidth={2}
-          strokeDasharray="5 5"
-          dot={{ fill: "#f97316", strokeWidth: 2, r: 4 }}
-          activeDot={{ r: 6, stroke: "#f97316", strokeWidth: 2 }}
-        />
-      </LineChart>
-    )
-  }
-
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <TrendingUp className="h-5 w-5 text-green-600" />
-          {t.historicalTrends}
-        </CardTitle>
-        <p className="text-sm text-gray-500 mt-1">{t.historicalTrendsDesc}</p>
-      </CardHeader>
-      <CardContent>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            {renderChart()}
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Grafico 1: Orders e Customers */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-green-600" />
+            {t.historicalTrends}
+          </CardTitle>
+          <p className="text-sm text-gray-500 mt-1">{t.historicalTrendsDesc}</p>
+        </CardHeader>
+        <CardContent>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              {chartType === "bar" ? (
+                <BarChart
+                  data={chartData}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fontSize: 12, fill: "#666" }}
+                    tickLine={{ stroke: "#e0e0e0" }}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 12, fill: "#666" }}
+                    tickLine={{ stroke: "#e0e0e0" }}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: "14px", fontWeight: "500" }} />
+                  <Bar
+                    dataKey="orders"
+                    name={t.ordersLabel}
+                    fill="#22c55e"
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="customers"
+                    name="Clienti"
+                    fill="#3b82f6"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              ) : (
+                <LineChart
+                  data={chartData}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fontSize: 12, fill: "#666" }}
+                    tickLine={{ stroke: "#e0e0e0" }}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 12, fill: "#666" }}
+                    tickLine={{ stroke: "#e0e0e0" }}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: "14px", fontWeight: "500" }} />
+                  <Line
+                    type="monotone"
+                    dataKey="orders"
+                    name={t.ordersLabel}
+                    stroke="#22c55e"
+                    strokeWidth={3}
+                    dot={{ fill: "#22c55e", strokeWidth: 2, r: 6 }}
+                    activeDot={{ r: 8, stroke: "#22c55e", strokeWidth: 2 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="customers"
+                    name="Clienti"
+                    stroke="#3b82f6"
+                    strokeWidth={3}
+                    dot={{ fill: "#3b82f6", strokeWidth: 2, r: 6 }}
+                    activeDot={{ r: 8, stroke: "#3b82f6", strokeWidth: 2 }}
+                  />
+                </LineChart>
+              )}
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Grafico 2: Costi LLM - SEMPRE A BARRE */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-orange-600" />
+            Costi LLM nel Tempo
+          </CardTitle>
+          <p className="text-sm text-gray-500 mt-1">
+            Andamento dei costi di utilizzo del sistema LLM
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis
+                  dataKey="month"
+                  tick={{ fontSize: 12, fill: "#666" }}
+                  tickLine={{ stroke: "#e0e0e0" }}
+                />
+                <YAxis
+                  tick={{ fontSize: 12, fill: "#666" }}
+                  tickLine={{ stroke: "#e0e0e0" }}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend wrapperStyle={{ fontSize: "14px", fontWeight: "500" }} />
+                <Bar
+                  dataKey="usageCost"
+                  name="Costi LLM (€)"
+                  fill="#f97316"
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

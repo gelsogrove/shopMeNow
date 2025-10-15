@@ -46,7 +46,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
   // Menu items configuration
   const menuItems: MenuItem[] = [
     {
-      icon: "�",
+      icon: "🛒",
       label: t.cart,
       path: `/checkout?token=${token}`,
       page: "cart",

@@ -870,7 +870,7 @@ const CheckoutPage: React.FC = () => {
     { num: 1, label: texts.steps.products },
     { num: 2, label: texts.steps.addresses },
     { num: 3, label: texts.steps.confirm },
-    { num: 4, label: "Pagamento" },
+    { num: 4, label: texts.steps.payment },
   ]
 
   return (
