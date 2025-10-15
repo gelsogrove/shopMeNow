@@ -358,7 +358,7 @@ const OrdersPublicPage: React.FC = () => {
             {/* Billing and Shipping Addresses */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
               {/* Bill To - Show only if we have invoice data */}
-              {detailData.customer.invoiceAddress && (
+              {(detailData.customer as any).invoiceAddress && (
                 <div className="bg-white p-3 rounded-xl shadow-sm">
                   <div className="flex items-center mb-4">
                     <div className="bg-green-100 p-2 rounded-lg mr-3">
@@ -381,57 +381,34 @@ const OrdersPublicPage: React.FC = () => {
                     </h3>
                   </div>
                   <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-1.5">
-                  {detailData.customer.invoiceAddress ? (
-                    <>
-                      <div className="font-semibold text-gray-900 text-lg">
-                        {detailData.customer.invoiceAddress.firstName}{" "}
-                        {detailData.customer.invoiceAddress.lastName}
+                    <div className="font-semibold text-gray-900 text-lg">
+                      {(detailData.customer as any).invoiceAddress.firstName}{" "}
+                      {(detailData.customer as any).invoiceAddress.lastName}
+                    </div>
+                    {(detailData.customer as any).invoiceAddress.company && (
+                      <div className="text-sm text-gray-600">
+                        {(detailData.customer as any).invoiceAddress.company}
                       </div>
-                      {detailData.customer.invoiceAddress.company && (
-                        <div className="text-sm text-gray-600">
-                          {detailData.customer.invoiceAddress.company}
-                        </div>
-                      )}
-                      <div className="text-sm text-gray-700">
-                        {detailData.customer.invoiceAddress.address}
-                        <br />
-                        {detailData.customer.invoiceAddress.city}{" "}
-                        {detailData.customer.invoiceAddress.postalCode}
-                        <br />
-                        {detailData.customer.invoiceAddress.country}
+                    )}
+                    <div className="text-sm text-gray-700">
+                      {(detailData.customer as any).invoiceAddress.address}
+                      <br />
+                      {(detailData.customer as any).invoiceAddress.city}{" "}
+                      {(detailData.customer as any).invoiceAddress.postalCode}
+                      <br />
+                      {(detailData.customer as any).invoiceAddress.country}
+                    </div>
+                    {(detailData.customer as any).invoiceAddress.vatNumber && (
+                      <div className="text-sm text-gray-600">
+                        VAT:{" "}
+                        {(detailData.customer as any).invoiceAddress.vatNumber}
                       </div>
-                      {detailData.customer.invoiceAddress.vatNumber && (
-                        <div className="text-sm text-gray-600">
-                          VAT: {detailData.customer.invoiceAddress.vatNumber}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <div className="font-semibold text-gray-900 text-lg">
-                        {detailData.customer.name}
-                      </div>
-                      <div className="text-sm text-gray-600 flex items-center">
-                        <svg
-                          className="w-4 h-4 mr-2 text-gray-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-4 0a2 2 0 104 0"
-                          />
-                        </svg>
-                        Customer ID: {detailData.customer.id}
-                      </div>
-                    </>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
-              {(o.shippingAddress || detailData.customer.address) && (
+              )}
+              {/* Ship To - Show only if we have shipping data */}
+              {(o.shippingAddress || (detailData.customer as any).address) && (
                 <div className="bg-white p-3 rounded-xl shadow-sm">
                   <div className="flex items-center mb-3">
                     <div className="bg-blue-100 p-2 rounded-lg mr-3">
