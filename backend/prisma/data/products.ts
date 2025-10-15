@@ -97,7 +97,7 @@ export const products: ProductData[] = [
     stock: 40,
     status: "ACTIVE",
     slug: "prosciutto-parma-dop",
-    categoryName: "Salumi",
+    categoryName: "Cured Meats",
   },
   {
     name: "Salame Milano",
@@ -109,7 +109,7 @@ export const products: ProductData[] = [
     stock: 50,
     status: "ACTIVE",
     slug: "salame-milano",
-    categoryName: "Salumi",
+    categoryName: "Cured Meats",
   },
   {
     name: "Mortadella Bologna IGP",
@@ -121,7 +121,7 @@ export const products: ProductData[] = [
     stock: 45,
     status: "ACTIVE",
     slug: "mortadella-bologna-igp",
-    categoryName: "Salumi",
+    categoryName: "Cured Meats",
   },
   {
     name: "Speck Alto Adige IGP",
@@ -133,7 +133,7 @@ export const products: ProductData[] = [
     stock: 35,
     status: "ACTIVE",
     slug: "speck-alto-adige-igp",
-    categoryName: "Salumi",
+    categoryName: "Cured Meats",
   },
   {
     name: "Bresaola della Valtellina IGP",
@@ -145,7 +145,7 @@ export const products: ProductData[] = [
     stock: 30,
     status: "ACTIVE",
     slug: "bresaola-valtellina-igp",
-    categoryName: "Salumi",
+    categoryName: "Cured Meats",
   },
   {
     name: "Coppa di Parma",
@@ -157,7 +157,7 @@ export const products: ProductData[] = [
     stock: 38,
     status: "ACTIVE",
     slug: "coppa-parma",
-    categoryName: "Salumi",
+    categoryName: "Cured Meats",
   },
 
   // FORMAGGI CATEGORY
@@ -171,7 +171,7 @@ export const products: ProductData[] = [
     stock: 60,
     status: "ACTIVE",
     slug: "parmigiano-reggiano-24-mesi",
-    categoryName: "Formaggi",
+    categoryName: "Cheeses",
   },
   {
     name: "Gorgonzola Dolce DOP",
@@ -183,7 +183,7 @@ export const products: ProductData[] = [
     stock: 40,
     status: "ACTIVE",
     slug: "gorgonzola-dolce-dop",
-    categoryName: "Formaggi",
+    categoryName: "Cheeses",
   },
   {
     name: "Mozzarella di Bufala Campana DOP",
@@ -195,7 +195,7 @@ export const products: ProductData[] = [
     stock: 35,
     status: "ACTIVE",
     slug: "mozzarella-bufala-campana-dop",
-    categoryName: "Formaggi",
+    categoryName: "Cheeses",
   },
   {
     name: "Pecorino Romano DOP",
@@ -207,7 +207,7 @@ export const products: ProductData[] = [
     stock: 55,
     status: "ACTIVE",
     slug: "pecorino-romano-dop",
-    categoryName: "Formaggi",
+    categoryName: "Cheeses",
   },
   {
     name: "Taleggio DOP",
@@ -219,7 +219,7 @@ export const products: ProductData[] = [
     stock: 30,
     status: "ACTIVE",
     slug: "taleggio-dop",
-    categoryName: "Formaggi",
+    categoryName: "Cheeses",
   },
   {
     name: "Burrata Pugliese",
@@ -231,7 +231,7 @@ export const products: ProductData[] = [
     stock: 25,
     status: "ACTIVE",
     slug: "burrata-pugliese",
-    categoryName: "Formaggi",
+    categoryName: "Cheeses",
   },
   {
     name: "Provolone Piccante",
@@ -243,7 +243,7 @@ export const products: ProductData[] = [
     stock: 45,
     status: "ACTIVE",
     slug: "provolone-piccante",
-    categoryName: "Formaggi",
+    categoryName: "Cheeses",
   },
 
   // CONDIMENTI CATEGORY
@@ -257,7 +257,7 @@ export const products: ProductData[] = [
     stock: 50,
     status: "ACTIVE",
     slug: "olio-evo-toscano-igp",
-    categoryName: "Condimenti",
+    categoryName: "Condiments",
   },
   {
     name: "Aceto Balsamico di Modena IGP",
@@ -269,7 +269,7 @@ export const products: ProductData[] = [
     stock: 40,
     status: "ACTIVE",
     slug: "aceto-balsamico-modena-igp",
-    categoryName: "Condimenti",
+    categoryName: "Condiments",
   },
   {
     name: "Pesto Genovese DOP",
@@ -281,7 +281,7 @@ export const products: ProductData[] = [
     stock: 60,
     status: "ACTIVE",
     slug: "pesto-genovese-dop",
-    categoryName: "Condimenti",
+    categoryName: "Condiments",
   },
   {
     name: "Passata di Pomodoro San Marzano DOP",
@@ -293,7 +293,7 @@ export const products: ProductData[] = [
     stock: 80,
     status: "ACTIVE",
     slug: "passata-pomodoro-san-marzano-dop",
-    categoryName: "Condimenti",
+    categoryName: "Condiments",
   },
   {
     name: "Tartufo Nero Estivo",
@@ -305,7 +305,7 @@ export const products: ProductData[] = [
     stock: 20,
     status: "ACTIVE",
     slug: "tartufo-nero-estivo",
-    categoryName: "Condimenti",
+    categoryName: "Condiments",
   },
   {
     name: "Crema di Pistacchio di Bronte",
@@ -317,7 +317,7 @@ export const products: ProductData[] = [
     stock: 35,
     status: "ACTIVE",
     slug: "crema-pistacchio-bronte",
-    categoryName: "Condimenti",
+    categoryName: "Condiments",
   },
 
   // DOLCI CATEGORY
@@ -331,7 +331,7 @@ export const products: ProductData[] = [
     stock: 25,
     status: "ACTIVE",
     slug: "panettone-classico",
-    categoryName: "Dolci",
+    categoryName: "Desserts",
   },
   {
     name: "Amaretti di Saronno",
@@ -343,7 +343,7 @@ export const products: ProductData[] = [
     stock: 50,
     status: "ACTIVE",
     slug: "amaretti-saronno",
-    categoryName: "Dolci",
+    categoryName: "Desserts",
   },
   {
     name: "Cantuccini Toscani",
@@ -355,7 +355,7 @@ export const products: ProductData[] = [
     stock: 40,
     status: "ACTIVE",
     slug: "cantuccini-toscani",
-    categoryName: "Dolci",
+    categoryName: "Desserts",
   },
   {
     name: "Torrone di Cremona IGP",
@@ -367,7 +367,7 @@ export const products: ProductData[] = [
     stock: 30,
     status: "ACTIVE",
     slug: "torrone-cremona-igp",
-    categoryName: "Dolci",
+    categoryName: "Desserts",
   },
   {
     name: "Pandoro Veronese",
@@ -379,7 +379,7 @@ export const products: ProductData[] = [
     stock: 28,
     status: "ACTIVE",
     slug: "pandoro-veronese",
-    categoryName: "Dolci",
+    categoryName: "Desserts",
   },
 
   // BEVANDE CATEGORY
@@ -393,7 +393,7 @@ export const products: ProductData[] = [
     stock: 35,
     status: "ACTIVE",
     slug: "limoncello-sorrento-igp",
-    categoryName: "Bevande",
+    categoryName: "Beverages",
   },
   {
     name: "Chianti Classico DOCG",
@@ -405,7 +405,7 @@ export const products: ProductData[] = [
     stock: 40,
     status: "ACTIVE",
     slug: "chianti-classico-docg",
-    categoryName: "Bevande",
+    categoryName: "Beverages",
   },
   {
     name: "Prosecco Valdobbiadene DOCG",
@@ -417,7 +417,7 @@ export const products: ProductData[] = [
     stock: 45,
     status: "ACTIVE",
     slug: "prosecco-valdobbiadene-docg",
-    categoryName: "Bevande",
+    categoryName: "Beverages",
   },
   {
     name: "Caffè Espresso Napoletano",
@@ -429,7 +429,7 @@ export const products: ProductData[] = [
     stock: 60,
     status: "ACTIVE",
     slug: "caffe-espresso-napoletano",
-    categoryName: "Bevande",
+    categoryName: "Beverages",
   },
   {
     name: "Amaretto di Saronno",
@@ -441,7 +441,7 @@ export const products: ProductData[] = [
     stock: 25,
     status: "ACTIVE",
     slug: "amaretto-saronno",
-    categoryName: "Bevande",
+    categoryName: "Beverages",
   },
 
   // SPECIALITÀ CATEGORY
@@ -455,7 +455,7 @@ export const products: ProductData[] = [
     stock: 30,
     status: "ACTIVE",
     slug: "nduja-calabrese",
-    categoryName: "Specialità",
+    categoryName: "Specialties",
   },
   {
     name: "Colatura di Alici di Cetara",
@@ -467,7 +467,7 @@ export const products: ProductData[] = [
     stock: 20,
     status: "ACTIVE",
     slug: "colatura-alici-cetara",
-    categoryName: "Specialità",
+    categoryName: "Specialties",
   },
   {
     name: "Bottarga di Muggine Sarda",
@@ -479,7 +479,7 @@ export const products: ProductData[] = [
     stock: 15,
     status: "ACTIVE",
     slug: "bottarga-muggine-sarda",
-    categoryName: "Specialità",
+    categoryName: "Specialties",
   },
   {
     name: "Miele di Acacia Italiano",
@@ -491,7 +491,7 @@ export const products: ProductData[] = [
     stock: 35,
     status: "ACTIVE",
     slug: "miele-acacia-italiano",
-    categoryName: "Specialità",
+    categoryName: "Specialties",
   },
   {
     name: "Farro Perlato dell'Umbria",
@@ -503,7 +503,7 @@ export const products: ProductData[] = [
     stock: 45,
     status: "ACTIVE",
     slug: "farro-perlato-umbria",
-    categoryName: "Specialità",
+    categoryName: "Specialties",
   },
 
   // SOTTOLIO E CONSERVE CATEGORY
@@ -517,7 +517,7 @@ export const products: ProductData[] = [
     stock: 40,
     status: "ACTIVE",
     slug: "carciofi-sottolio",
-    categoryName: "Sottolio e Conserve",
+    categoryName: "Preserves",
   },
   {
     name: "Pomodori Secchi Sottolio",
@@ -529,7 +529,7 @@ export const products: ProductData[] = [
     stock: 50,
     status: "ACTIVE",
     slug: "pomodori-secchi-sottolio",
-    categoryName: "Sottolio e Conserve",
+    categoryName: "Preserves",
   },
   {
     name: "Olive Taggiasche",
@@ -541,7 +541,7 @@ export const products: ProductData[] = [
     stock: 45,
     status: "ACTIVE",
     slug: "olive-taggiasche",
-    categoryName: "Sottolio e Conserve",
+    categoryName: "Preserves",
   },
   {
     name: "Peperoni Arrostiti",
@@ -553,7 +553,7 @@ export const products: ProductData[] = [
     stock: 38,
     status: "ACTIVE",
     slug: "peperoni-arrostiti",
-    categoryName: "Sottolio e Conserve",
+    categoryName: "Preserves",
   },
   {
     name: "Funghi Porcini Sottolio",
@@ -565,7 +565,7 @@ export const products: ProductData[] = [
     stock: 30,
     status: "ACTIVE",
     slug: "funghi-porcini-sottolio",
-    categoryName: "Sottolio e Conserve",
+    categoryName: "Preserves",
   },
   {
     name: "Giardiniera all'Aceto",
@@ -577,6 +577,6 @@ export const products: ProductData[] = [
     stock: 42,
     status: "ACTIVE",
     slug: "giardiniera-aceto",
-    categoryName: "Sottolio e Conserve",
+    categoryName: "Preserves",
   },
 ]
