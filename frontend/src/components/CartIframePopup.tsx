@@ -1,4 +1,4 @@
-import { X, RotateCw } from "lucide-react"
+import { RotateCw, X } from "lucide-react"
 import React, { useState } from "react"
 
 interface CartIframePopupProps {
@@ -70,7 +70,8 @@ export const CartIframePopup: React.FC<CartIframePopupProps> = ({
           style={{
             width: size.width,
             height: size.height,
-            borderRadius: viewMode === "desktop" ? "16px" : "clamp(32px, 5vw, 48px)",
+            borderRadius:
+              viewMode === "desktop" ? "16px" : "clamp(32px, 5vw, 48px)",
             padding: viewMode === "desktop" ? "4px" : "10px",
             boxShadow:
               "0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 2px 4px rgba(255, 255, 255, 0.1)",

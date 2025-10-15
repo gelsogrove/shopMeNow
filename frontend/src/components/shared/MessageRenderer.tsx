@@ -120,8 +120,8 @@ export function MessageRenderer({
             return (
               <a
                 {...props}
-                href={href}
-                target={isCartLink ? "_self" : "_blank"}
+                href={isCartLink ? "#" : href}
+                target={isCartLink ? undefined : "_blank"}
                 rel="noopener noreferrer"
                 className="text-blue-600 hover:underline"
                 onClick={handleClick}

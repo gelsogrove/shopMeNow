@@ -36,18 +36,28 @@ import { products } from "./data/products"
 // 🛡️ VALIDAZIONE: Verifica che i dati non siano vuoti
 if (!categories || categories.length === 0) {
   console.error("\n❌ ERRORE CRITICO: Il file categories.ts è VUOTO!")
-  console.error("   Recupera i dati da backup: backend/prisma/data-backup-YYYYMMDD/")
-  console.error("   Oppure usa: git checkout <commit> -- backend/prisma/data/\n")
+  console.error(
+    "   Recupera i dati da backup: backend/prisma/data-backup-YYYYMMDD/"
+  )
+  console.error(
+    "   Oppure usa: git checkout <commit> -- backend/prisma/data/\n"
+  )
   process.exit(1)
 }
 if (!products || products.length === 0) {
   console.error("\n❌ ERRORE CRITICO: Il file products.ts è VUOTO!")
-  console.error("   Recupera i dati da backup: backend/prisma/data-backup-YYYYMMDD/")
-  console.error("   Oppure usa: git checkout <commit> -- backend/prisma/data/\n")
+  console.error(
+    "   Recupera i dati da backup: backend/prisma/data-backup-YYYYMMDD/"
+  )
+  console.error(
+    "   Oppure usa: git checkout <commit> -- backend/prisma/data/\n"
+  )
   process.exit(1)
 }
 
-console.log(`✅ Data validation passed: ${categories.length} categories, ${products.length} products`)
+console.log(
+  `✅ Data validation passed: ${categories.length} categories, ${products.length} products`
+)
 
 // Load environment variables
 dotenv.config()

@@ -151,7 +151,12 @@ export function ProductsPage() {
     // Filter by category
     if (filterCategory !== "all") {
       filtered = filtered.filter((p) => p.categoryId === filterCategory)
-      console.log("🔍 After category filter:", filtered.length, "categoryId:", filterCategory)
+      console.log(
+        "🔍 After category filter:",
+        filtered.length,
+        "categoryId:",
+        filterCategory
+      )
     }
 
     // Sort products

@@ -98,7 +98,9 @@ export const Step4Payment: React.FC<Step4PaymentProps> = ({
           <div>
             <p className="text-xs opacity-70 mb-1">{texts.cardholderName}</p>
             <p className="font-semibold uppercase">
-              {cardholderName || texts.cardholderName?.toUpperCase() || "FULL NAME"}
+              {cardholderName ||
+                texts.cardholderName?.toUpperCase() ||
+                "FULL NAME"}
             </p>
           </div>
           <div className="text-right">

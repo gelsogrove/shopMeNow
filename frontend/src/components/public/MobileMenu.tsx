@@ -41,8 +41,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
   // Get translations based on customer language
   const langCode = (customerLanguage?.toUpperCase() ||
     "IT") as SupportedLanguage
-  const t =
-    publicPageTranslations[langCode] || publicPageTranslations.IT
+  const t = publicPageTranslations[langCode] || publicPageTranslations.IT
 
   // Menu items configuration
   const menuItems: MenuItem[] = [
