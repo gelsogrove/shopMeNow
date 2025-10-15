@@ -82,7 +82,9 @@ export function ProductsPage() {
         const response = await productsApi.getAllForWorkspace(workspace.id)
 
         if (response && Array.isArray(response.products)) {
-          console.log(`🔍 Products received from API: ${response.products.length}`)
+          console.log(
+            `🔍 Products received from API: ${response.products.length}`
+          )
           setProducts(response.products)
         } else {
           logger.error("Invalid API response format:", response)
