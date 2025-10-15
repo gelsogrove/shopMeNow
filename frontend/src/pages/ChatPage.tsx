@@ -198,16 +198,6 @@ export function ChatPage() {
     }
   }
 
-  // Handle cart link click from messages
-  const handleCartLinkClick = (url: string) => {
-    // Extract token from URL
-    const tokenMatch = url.match(/token=([^&\s]+)/)
-    if (tokenMatch && tokenMatch[1]) {
-      setCartToken(tokenMatch[1])
-      setShowCartPopup(true)
-    }
-  }
-
   const {
     chats,
     isLoading: isLoadingChats,
@@ -1358,7 +1348,6 @@ export function ChatPage() {
                             <MessageRenderer
                               content={message.content}
                               variant="chat"
-                              onCartLinkClick={handleCartLinkClick}
                             />
                           </div>
 
@@ -1583,7 +1572,6 @@ export function ChatPage() {
           isOpen={showCartPopup}
           onClose={() => setShowCartPopup(false)}
           iframeSrc={`http://localhost:3000/checkout?token=${cartToken}`}
-          customerName={selectedChat.customerName}
         />
       )}
     </PageLayout>

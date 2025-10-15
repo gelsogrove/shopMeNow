@@ -3,6 +3,8 @@ import { SecureTokenService } from "../../../application/services/secure-token.s
 import { publicOrdersLimiter } from "../../../config/rate-limiters"
 import { prisma } from "../../../lib/prisma"
 import logger from "../../../utils/logger"
+import { tokenValidationMiddleware } from "../middlewares/token-validation.middleware"
+import { parseCustomerAddresses } from "../../../utils/address-parser"
 
 const router = Router()
 const secureTokenService = new SecureTokenService()
@@ -12,52 +14,10 @@ const secureTokenService = new SecureTokenService()
 // ========================================
 async function getOrdersListHandler(req: Request, res: Response) {
   try {
-    const { token, status, payment, from, to } = req.query
-
-    if (!token) {
-      return res.status(400).json({
-        success: false,
-        error: "Token is required",
-      })
-    }
-
-    // Validate token
-    const validation = await secureTokenService.validateToken(token as string)
-    if (!validation.valid) {
-      return res.status(401).json({
-        success: false,
-        error: "Invalid or expired token",
-      })
-    }
-
-    const tokenData = validation.data
-    const payload = validation.payload as any
-
-    let customerId =
-      payload?.customerId || tokenData?.customerId || tokenData?.userId
-    const workspaceId = tokenData?.workspaceId
-
-    if (!customerId && tokenData?.phoneNumber && workspaceId) {
-      const customer = await prisma.customers.findFirst({
-        where: {
-          phone: tokenData.phoneNumber,
-          workspaceId: workspaceId,
-        },
-      })
-      if (customer) {
-        customerId = customer.id
-        logger.info(
-          `[PUBLIC-ORDERS] Found customer by phone fallback: ${customerId}`
-        )
-      }
-    }
-
-    if (!customerId || !workspaceId) {
-      return res.status(401).json({
-        success: false,
-        error: "Token does not contain valid customer information",
-      })
-    }
+    // 🔐 customerId and workspaceId are set by tokenValidationMiddleware
+    const customerId = (req as any).customerId
+    const workspaceId = (req as any).workspaceId
+    const { status, payment, from, to } = req.query
 
     logger.info(
       `[PUBLIC-ORDERS] Getting orders list for customer: ${customerId}`
@@ -283,11 +243,11 @@ router.post("/validate-secure-token", async (req: Request, res: Response) => {
  *         description: Invalid or expired token
  */
 // 🔒 SECURITY: Rate limited to 30 requests per 15 minutes per IP
-router.get("/public/orders", publicOrdersLimiter, getOrdersListHandler)
+router.get("/public/orders", publicOrdersLimiter, tokenValidationMiddleware, getOrdersListHandler)
 
 // ✅ ALIAS: Frontend compatibility route
 // 🔒 SECURITY: Rate limited to 30 requests per 15 minutes per IP
-router.get("/orders-public", publicOrdersLimiter, getOrdersListHandler)
+router.get("/orders-public", publicOrdersLimiter, tokenValidationMiddleware, getOrdersListHandler)
 
 /**
  * @swagger
@@ -318,57 +278,12 @@ router.get("/orders-public", publicOrdersLimiter, getOrdersListHandler)
  *       404:
  *         description: Order not found
  */
-router.get("/public/orders/:orderCode", async (req: Request, res: Response) => {
+router.get("/public/orders/:orderCode", tokenValidationMiddleware, async (req: Request, res: Response) => {
   try {
+    // 🔐 customerId and workspaceId are set by tokenValidationMiddleware
+    const customerId = (req as any).customerId
+    const workspaceId = (req as any).workspaceId
     const { orderCode } = req.params
-    const { token } = req.query
-
-    if (!token) {
-      return res.status(400).json({
-        success: false,
-        error: "Token is required",
-      })
-    }
-
-    // Validate token
-    const validation = await secureTokenService.validateToken(token as string)
-    if (!validation.valid) {
-      return res.status(401).json({
-        success: false,
-        error: "Invalid or expired token",
-      })
-    }
-
-    const tokenData = validation.data
-    const payload = validation.payload as any
-
-    // 🔧 CRITICAL FIX: Get customerId from payload first (like checkout), then fallback to tokenData
-    let customerId =
-      payload?.customerId || tokenData?.customerId || tokenData?.userId
-    const workspaceId = tokenData?.workspaceId
-
-    // 🔧 ULTIMATE FALLBACK: If no customerId, try to find customer by phone number
-    if (!customerId && tokenData?.phoneNumber && workspaceId) {
-      const customer = await prisma.customers.findFirst({
-        where: {
-          phone: tokenData.phoneNumber,
-          workspaceId: workspaceId,
-        },
-      })
-      if (customer) {
-        customerId = customer.id
-        logger.info(
-          `[PUBLIC-ORDERS] Found customer by phone fallback: ${customerId}`
-        )
-      }
-    }
-
-    if (!customerId || !workspaceId) {
-      return res.status(401).json({
-        success: false,
-        error: "Token does not contain valid customer information",
-      })
-    }
 
     logger.info(`[PUBLIC-ORDERS] Getting order details for: ${orderCode}`)
 
@@ -410,36 +325,14 @@ router.get("/public/orders/:orderCode", async (req: Request, res: Response) => {
       })
     }
 
-    // Parse customer addresses if they're JSON strings
+    // Parse customer addresses using utility
     let parsedCustomer = { ...(order as any).customer }
 
-    // Parse invoiceAddress if it's a JSON string
-    if (
-      parsedCustomer.invoiceAddress &&
-      typeof parsedCustomer.invoiceAddress === "string"
-    ) {
-      try {
-        parsedCustomer.invoiceAddress = JSON.parse(
-          parsedCustomer.invoiceAddress
-        )
-      } catch (error) {
-        logger.warn(
-          "[PUBLIC-ORDERS] Failed to parse invoiceAddress JSON:",
-          error
-        )
-        parsedCustomer.invoiceAddress = null
-      }
-    }
+    const invoiceResult = parseCustomerAddresses(parsedCustomer.invoiceAddress)
+    parsedCustomer.invoiceAddress = invoiceResult.success ? invoiceResult.addresses : null
 
-    // Parse address if it's a JSON string
-    if (parsedCustomer.address && typeof parsedCustomer.address === "string") {
-      try {
-        parsedCustomer.address = JSON.parse(parsedCustomer.address)
-      } catch (error) {
-        logger.warn("[PUBLIC-ORDERS] Failed to parse address JSON:", error)
-        parsedCustomer.address = null
-      }
-    }
+    const addressResult = parseCustomerAddresses(parsedCustomer.address)
+    parsedCustomer.address = addressResult.success ? addressResult.addresses : null
 
     // Format order items with imageUrl
     const formattedItems = (order as any).items.map((item: any) => ({
@@ -511,56 +404,11 @@ router.get("/public/orders/:orderCode", async (req: Request, res: Response) => {
  *       404:
  *         description: Customer not found
  */
-router.get("/customer-profile/:token", async (req: Request, res: Response) => {
+router.get("/customer-profile/:token", tokenValidationMiddleware, async (req: Request, res: Response) => {
   try {
-    const { token } = req.params
-
-    if (!token) {
-      return res.status(400).json({
-        success: false,
-        error: "Token is required",
-      })
-    }
-
-    // Validate token
-    const validation = await secureTokenService.validateToken(token)
-    if (!validation.valid) {
-      return res.status(401).json({
-        success: false,
-        error: "Invalid or expired token",
-      })
-    }
-
-    const tokenData = validation.data
-    const payloadData = validation.payload
-
-    // 🔧 CRITICAL FIX: Get customerId from payload first (like checkout), then fallback to tokenData
-    let customerId =
-      payloadData?.customerId || tokenData?.customerId || tokenData?.userId
-    const workspaceId = tokenData?.workspaceId
-
-    // 🔧 ULTIMATE FALLBACK: If no customerId, try to find customer by phone number
-    if (!customerId && tokenData?.phoneNumber && workspaceId) {
-      const customer = await prisma.customers.findFirst({
-        where: {
-          phone: tokenData.phoneNumber,
-          workspaceId: workspaceId,
-        },
-      })
-      if (customer) {
-        customerId = customer.id
-        logger.info(
-          `[PUBLIC-PROFILE] Found customer by phone fallback: ${customerId}`
-        )
-      }
-    }
-
-    if (!customerId || !workspaceId) {
-      return res.status(401).json({
-        success: false,
-        error: "Token does not contain valid customer information",
-      })
-    }
+    // 🔐 customerId and workspaceId are set by tokenValidationMiddleware
+    const customerId = (req as any).customerId
+    const workspaceId = (req as any).workspaceId
 
     logger.info(`[PUBLIC-PROFILE] Getting profile for customer: ${customerId}`)
 
@@ -600,36 +448,14 @@ router.get("/customer-profile/:token", async (req: Request, res: Response) => {
       select: { id: true, name: true },
     })
 
-    // Parse invoiceAddress and address if they're JSON strings
-    let parsedCustomer = { ...customer }
+    // Parse customer addresses using utility
+    let parsedCustomer: any = { ...customer }
 
-    // Parse invoiceAddress if it's a JSON string
-    if (
-      parsedCustomer.invoiceAddress &&
-      typeof parsedCustomer.invoiceAddress === "string"
-    ) {
-      try {
-        parsedCustomer.invoiceAddress = JSON.parse(
-          parsedCustomer.invoiceAddress
-        )
-      } catch (error) {
-        logger.warn(
-          "[PUBLIC-PROFILE] Failed to parse invoiceAddress JSON:",
-          error
-        )
-        parsedCustomer.invoiceAddress = null
-      }
-    }
+    const invoiceResult = parseCustomerAddresses(parsedCustomer.invoiceAddress)
+    parsedCustomer.invoiceAddress = invoiceResult.success ? invoiceResult.addresses : null
 
-    // Parse address if it's a JSON string
-    if (parsedCustomer.address && typeof parsedCustomer.address === "string") {
-      try {
-        parsedCustomer.address = JSON.parse(parsedCustomer.address)
-      } catch (error) {
-        logger.warn("[PUBLIC-PROFILE] Failed to parse address JSON:", error)
-        parsedCustomer.address = null
-      }
-    }
+    const addressResult = parseCustomerAddresses(parsedCustomer.address)
+    parsedCustomer.address = addressResult.success ? addressResult.addresses : null
 
     return res.json({
       success: true,
@@ -685,40 +511,12 @@ router.get("/customer-profile/:token", async (req: Request, res: Response) => {
  *       404:
  *         description: Customer not found
  */
-router.put("/customer-profile/:token", async (req: Request, res: Response) => {
+router.put("/customer-profile/:token", tokenValidationMiddleware, async (req: Request, res: Response) => {
   try {
-    const { token } = req.params
+    // 🔐 customerId and workspaceId are set by tokenValidationMiddleware
+    const customerId = (req as any).customerId
+    const workspaceId = (req as any).workspaceId
     const updateData = req.body
-
-    if (!token) {
-      return res.status(400).json({
-        success: false,
-        error: "Token is required",
-      })
-    }
-
-    // Validate token
-    const validation = await secureTokenService.validateToken(token)
-    if (!validation.valid) {
-      return res.status(401).json({
-        success: false,
-        error: "Invalid or expired token",
-      })
-    }
-
-    const tokenData = validation.data
-    const payloadData = validation.payload
-
-    // Get customer ID from either data or payload
-    const customerId = tokenData?.customerId || payloadData?.customerId
-    const workspaceId = tokenData?.workspaceId || payloadData?.workspaceId
-
-    if (!customerId || !workspaceId) {
-      return res.status(401).json({
-        success: false,
-        error: "Token does not contain valid customer information",
-      })
-    }
 
     logger.info(`[PUBLIC-PROFILE] Updating profile for customer: ${customerId}`)
 
@@ -757,39 +555,14 @@ router.put("/customer-profile/:token", async (req: Request, res: Response) => {
       },
     })
 
-    // Parse invoiceAddress and address if they're JSON strings
-    let parsedCustomer = { ...updatedCustomer }
+    // Parse customer addresses using utility
+    let parsedCustomer: any = { ...updatedCustomer }
 
-    // Parse invoiceAddress if it's a JSON string
-    if (
-      parsedCustomer.invoiceAddress &&
-      typeof parsedCustomer.invoiceAddress === "string"
-    ) {
-      try {
-        parsedCustomer.invoiceAddress = JSON.parse(
-          parsedCustomer.invoiceAddress
-        )
-      } catch (error) {
-        logger.warn(
-          "[PUBLIC-PROFILE] Failed to parse invoiceAddress JSON after update:",
-          error
-        )
-        parsedCustomer.invoiceAddress = null
-      }
-    }
+    const invoiceResult = parseCustomerAddresses(parsedCustomer.invoiceAddress)
+    parsedCustomer.invoiceAddress = invoiceResult.success ? invoiceResult.addresses : null
 
-    // Parse address if it's a JSON string
-    if (parsedCustomer.address && typeof parsedCustomer.address === "string") {
-      try {
-        parsedCustomer.address = JSON.parse(parsedCustomer.address)
-      } catch (error) {
-        logger.warn(
-          "[PUBLIC-PROFILE] Failed to parse address JSON after update:",
-          error
-        )
-        parsedCustomer.address = null
-      }
-    }
+    const addressResult = parseCustomerAddresses(parsedCustomer.address)
+    parsedCustomer.address = addressResult.success ? addressResult.addresses : null
 
     return res.json({
       success: true,
@@ -811,8 +584,8 @@ router.put("/customer-profile/:token", async (req: Request, res: Response) => {
  *   post:
  *     tags:
  *       - Public Access
- *     summary: Get all products with discounts applied for a customer
- *     description: Returns all active products with customer-specific discounts applied
+ *     summary: Get all products with discounts applied for a customer (TOKEN REQUIRED)
+ *     description: Returns all active products with customer-specific discounts applied using secure token validation
  *     requestBody:
  *       required: true
  *       content:
@@ -820,15 +593,11 @@ router.put("/customer-profile/:token", async (req: Request, res: Response) => {
  *           schema:
  *             type: object
  *             properties:
- *               workspaceId:
+ *               token:
  *                 type: string
- *                 description: Workspace ID
- *               customerId:
- *                 type: string
- *                 description: Customer ID
+ *                 description: Security token containing workspaceId and customerId
  *             required:
- *               - workspaceId
- *               - customerId
+ *               - token
  *     responses:
  *       200:
  *         description: List of products with discounts applied
@@ -839,50 +608,35 @@ router.put("/customer-profile/:token", async (req: Request, res: Response) => {
  *               properties:
  *                 success:
  *                   type: boolean
- *                 products:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       id:
- *                         type: string
- *                       name:
- *                         type: string
- *                       ProductCode:
- *                         type: string
- *                       price:
- *                         type: number
- *                       originalPrice:
- *                         type: number
- *                       finalPrice:
- *                         type: number
- *                       discount:
- *                         type: number
- *                       description:
- *                         type: string
- *                       category:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     products:
+ *                       type: array
+ *                       items:
  *                         type: object
+ *                     customerDiscount:
+ *                       type: number
+ *                     totalProducts:
+ *                       type: number
  *       400:
- *         description: Missing required parameters
+ *         description: Missing token
+ *       401:
+ *         description: Invalid or expired token
  *       404:
- *         description: Customer or workspace not found
+ *         description: Customer not found
  *       500:
  *         description: Internal server error
  */
-router.post("/get-all-products", async (req: Request, res: Response) => {
+router.post("/get-all-products", publicOrdersLimiter, tokenValidationMiddleware, async (req: Request, res: Response) => {
   try {
-    const { workspaceId, customerId } = req.body
+    // � customerId and workspaceId are set by tokenValidationMiddleware
+    const customerId = (req as any).customerId
+    const workspaceId = (req as any).workspaceId
 
-    if (!workspaceId) {
-      return res.status(400).json({
-        success: false,
-        error: "workspaceId is required",
-      })
-    }
-
-    logger.info("[GET-ALL-PRODUCTS] Request received:", {
+    logger.info("[GET-ALL-PRODUCTS] Request with validated token:", {
       workspaceId,
-      customerId: customerId || "not-provided",
+      customerId,
     })
 
     // Get customer to fetch their discount
@@ -995,44 +749,13 @@ router.post("/get-all-products", async (req: Request, res: Response) => {
 router.get(
   "/orders-public/:orderCode",
   publicOrdersLimiter,
+  tokenValidationMiddleware,
   async (req: Request, res: Response) => {
     try {
+      // 🔐 customerId and workspaceId are set by tokenValidationMiddleware
+      const customerId = (req as any).customerId
+      const workspaceId = (req as any).workspaceId
       const { orderCode } = req.params
-      const { token } = req.query
-
-      if (!token) {
-        return res.status(400).json({
-          success: false,
-          error: "Token is required",
-        })
-      }
-
-      const validation = await secureTokenService.validateToken(token as string)
-      if (!validation.valid) {
-        return res.status(401).json({
-          success: false,
-          error: "Invalid or expired token",
-        })
-      }
-
-      const tokenData = validation.data
-      const payload = validation.payload as any
-
-      let customerId =
-        payload?.customerId || tokenData?.customerId || tokenData?.userId
-      const workspaceId = tokenData?.workspaceId
-
-      if (!customerId && tokenData?.phoneNumber && workspaceId) {
-        const customer = await prisma.customers.findFirst({
-          where: {
-            phone: tokenData.phoneNumber,
-            workspaceId: workspaceId,
-          },
-        })
-        if (customer) {
-          customerId = customer.id
-        }
-      }
 
       if (!customerId || !workspaceId) {
         return res.status(401).json({
@@ -1090,31 +813,13 @@ router.get(
         })
       }
 
-      let parsedCustomer = { ...order.customer }
+      let parsedCustomer: any = { ...order.customer }
 
-      if (
-        parsedCustomer.invoiceAddress &&
-        typeof parsedCustomer.invoiceAddress === "string"
-      ) {
-        try {
-          parsedCustomer.invoiceAddress = JSON.parse(
-            parsedCustomer.invoiceAddress
-          )
-        } catch (error) {
-          parsedCustomer.invoiceAddress = null
-        }
-      }
+      const invoiceResult = parseCustomerAddresses(parsedCustomer.invoiceAddress)
+      parsedCustomer.invoiceAddress = invoiceResult.success ? invoiceResult.addresses : null
 
-      if (
-        parsedCustomer.address &&
-        typeof parsedCustomer.address === "string"
-      ) {
-        try {
-          parsedCustomer.address = JSON.parse(parsedCustomer.address)
-        } catch (error) {
-          parsedCustomer.address = null
-        }
-      }
+      const addressResult = parseCustomerAddresses(parsedCustomer.address)
+      parsedCustomer.address = addressResult.success ? addressResult.addresses : null
 
       const formattedItems = order.items.map((item) => ({
         id: item.id,

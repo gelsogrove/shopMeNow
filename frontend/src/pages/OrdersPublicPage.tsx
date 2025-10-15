@@ -357,26 +357,30 @@ const OrdersPublicPage: React.FC = () => {
 
             {/* Billing and Shipping Addresses */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-              <div className="bg-white p-3 rounded-xl shadow-sm">
-                <div className="flex items-center mb-4">
-                  <div className="bg-green-100 p-2 rounded-lg mr-3">
-                    <svg
-                      className="w-5 h-5 text-green-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                      />
-                    </svg>
+              {/* Bill To - Show only if we have invoice data */}
+              {detailData.customer.invoiceAddress && (
+                <div className="bg-white p-3 rounded-xl shadow-sm">
+                  <div className="flex items-center mb-4">
+                    <div className="bg-green-100 p-2 rounded-lg mr-3">
+                      <svg
+                        className="w-5 h-5 text-green-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                        />
+                      </svg>
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-base">
+                      Bill To
+                    </h3>
                   </div>
-                  <h3 className="font-bold text-gray-900 text-base">Bill To</h3>
-                </div>
-                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-1.5">
+                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-1.5">
                   {detailData.customer.invoiceAddress ? (
                     <>
                       <div className="font-semibold text-gray-900 text-lg">

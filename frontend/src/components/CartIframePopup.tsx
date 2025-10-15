@@ -5,7 +5,6 @@ interface CartIframePopupProps {
   isOpen: boolean
   onClose: () => void
   iframeSrc: string
-  customerName?: string
 }
 
 type ViewMode = "mobile" | "tablet" | "desktop"
@@ -14,7 +13,6 @@ export const CartIframePopup: React.FC<CartIframePopupProps> = ({
   isOpen,
   onClose,
   iframeSrc,
-  customerName,
 }) => {
   const [viewMode, setViewMode] = useState<ViewMode>("mobile")
 
@@ -22,12 +20,6 @@ export const CartIframePopup: React.FC<CartIframePopupProps> = ({
     if (viewMode === "mobile") setViewMode("tablet")
     else if (viewMode === "tablet") setViewMode("desktop")
     else setViewMode("mobile")
-  }
-
-  const getViewModeLabel = () => {
-    if (viewMode === "mobile") return "📱 Mobile"
-    if (viewMode === "tablet") return "📱 Tablet"
-    return "💻 Desktop"
   }
 
   const getViewModeSize = () => {
@@ -98,13 +90,10 @@ export const CartIframePopup: React.FC<CartIframePopupProps> = ({
           {/* Rotate Button - Cycle through Mobile/Tablet/Desktop */}
           <button
             onClick={cycleViewMode}
-            className="absolute -top-3 -right-14 flex flex-col items-center justify-center gap-0.5 px-2 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-xl border-2 border-white z-[10000]"
+            className="absolute -top-3 -right-14 flex items-center justify-center w-9 h-9 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-xl border-2 border-white z-[10000]"
             title="Cycle view mode"
           >
             <RotateCw className="h-4 w-4" />
-            <span className="text-[9px] font-medium whitespace-nowrap">
-              {getViewModeLabel()}
-            </span>
           </button>
 
           {/* Close Button - Right next to phone */}

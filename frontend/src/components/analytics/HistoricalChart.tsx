@@ -27,16 +27,20 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
 }) => {
   const t = getAdminPageTexts()
 
-  // Format data for charts
-  const chartData = analytics.trends.orders.map((orderData, index) => {
-    const revenueData = analytics.trends.revenue[index]
-    const customerData = analytics.trends.customers[index]
-    const usageCostData = analytics.trends.usageCost[index]
+  // Format data for charts - Merge all trends by month name
+  const allMonths = new Set<string>()
+  analytics.trends.orders.forEach((d) => allMonths.add(d.month))
+  analytics.trends.customers.forEach((d) => allMonths.add(d.month))
+  analytics.trends.usageCost.forEach((d) => allMonths.add(d.month))
+
+  const chartData = Array.from(allMonths).map((month) => {
+    const orderData = analytics.trends.orders.find((d) => d.month === month)
+    const customerData = analytics.trends.customers.find((d) => d.month === month)
+    const usageCostData = analytics.trends.usageCost.find((d) => d.month === month)
 
     return {
-      month: orderData.month,
-      orders: orderData.value,
-      revenue: revenueData?.value || 0,
+      month,
+      orders: orderData?.value || 0,
       customers: customerData?.value || 0,
       usageCost: usageCostData?.value || 0,
     }
@@ -56,12 +60,11 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
               />
               <span className="text-gray-600">{entry.name}:</span>
               <span className="font-medium text-gray-900">
-                {entry.dataKey === "revenue" || entry.dataKey === "usageCost"
+                {entry.dataKey === "usageCost"
                   ? new Intl.NumberFormat("en-US", {
                       style: "currency",
                       currency: "EUR",
-                      minimumFractionDigits:
-                        entry.dataKey === "usageCost" ? 3 : 0,
+                      minimumFractionDigits: 3,
                     }).format(entry.value)
                   : entry.value.toLocaleString("en-US")}
               </span>
@@ -174,16 +177,6 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
           strokeWidth={3}
           dot={{ fill: "#3b82f6", strokeWidth: 2, r: 6 }}
           activeDot={{ r: 8, stroke: "#3b82f6", strokeWidth: 2 }}
-        />
-        <Line
-          yAxisId="right"
-          type="monotone"
-          dataKey="revenue"
-          name="Ricavi (€)"
-          stroke="#f59e0b"
-          strokeWidth={3}
-          dot={{ fill: "#f59e0b", strokeWidth: 2, r: 6 }}
-          activeDot={{ r: 8, stroke: "#f59e0b", strokeWidth: 2 }}
         />
         <Line
           yAxisId="right"

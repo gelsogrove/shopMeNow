@@ -6,14 +6,12 @@ interface MessageRendererProps {
   content: string
   className?: string
   variant?: "chat" | "compact"
-  onCartLinkClick?: (url: string) => void
 }
 
 export function MessageRenderer({
   content,
   className = "",
   variant = "chat",
-  onCartLinkClick,
 }: MessageRendererProps) {
   // Base classes for consistent formatting
   const baseClasses = "break-words text-sm text-left"
@@ -33,27 +31,13 @@ export function MessageRenderer({
     return parts.map((part, index) => {
       // Se inizia con http:// o https:// è un link
       if (part.match(/^https?:\/\//)) {
-        // Check if it's a cart link (checkout or orders-public with token)
-        const isCartLink =
-          part.includes("/checkout?token=") ||
-          part.includes("/orders-public?token=") ||
-          part.includes("/customer-profile?token=")
-
-        const handleClick = (e: React.MouseEvent) => {
-          if (isCartLink && onCartLinkClick) {
-            e.preventDefault()
-            onCartLinkClick(part)
-          }
-        }
-
         return (
           <a
             key={index}
-            href={isCartLink ? "#" : part}
-            target={isCartLink ? undefined : "_blank"}
+            href={part}
+            target="_blank"
             rel="noopener noreferrer"
             className="text-blue-600 hover:underline cursor-pointer"
-            onClick={handleClick}
           >
             {part}
           </a>
@@ -103,31 +87,15 @@ export function MessageRenderer({
         skipHtml={false}
         components={{
           // Consistent link styling
-          a: ({ node, href, ...props }) => {
-            const isCartLink =
-              href &&
-              (href.includes("/checkout?token=") ||
-                href.includes("/orders-public?token=") ||
-                href.includes("/customer-profile?token="))
-
-            const handleClick = (e: React.MouseEvent) => {
-              if (isCartLink && onCartLinkClick && href) {
-                e.preventDefault()
-                onCartLinkClick(href)
-              }
-            }
-
-            return (
-              <a
-                {...props}
-                href={isCartLink ? "#" : href}
-                target={isCartLink ? undefined : "_blank"}
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline"
-                onClick={handleClick}
-              />
-            )
-          },
+          a: ({ node, href, ...props }) => (
+            <a
+              {...props}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline"
+            />
+          ),
           // Clean paragraph rendering
           p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
           // Text formatting

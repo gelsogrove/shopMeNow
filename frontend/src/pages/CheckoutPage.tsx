@@ -461,21 +461,19 @@ const CheckoutPage: React.FC = () => {
 
   // Load available products
   const loadAvailableProducts = async () => {
-    // 🔧 FIX: Get workspaceId from tokenData.data (correct path)
-    const workspaceId = tokenData?.data?.workspaceId || tokenData?.workspaceId
-    if (!workspaceId) {
-      logger.error("No workspaceId found in tokenData:", tokenData)
+    if (!token) {
+      logger.error("No token available")
       return
     }
 
     setLoadingProducts(true)
     try {
+      // 🔒 SECURITY: Pass token instead of workspaceId and customerId
       const response = await fetch("/api/internal/get-all-products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          workspaceId: workspaceId,
-          customerId: customer?.id,
+          token: token, // ✅ Only token is passed
         }),
       })
 
