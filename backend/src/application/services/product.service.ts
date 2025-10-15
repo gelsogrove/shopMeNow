@@ -36,7 +36,24 @@ export class ProductService {
         workspaceId,
         filters,
       })
-      return await this.productRepository.findAll(workspaceId, filters)
+      
+      // Get products
+      const result = await this.productRepository.findAll(workspaceId, filters)
+      
+      // Get sales performance for all products
+      const salesPerformance = await (this.productRepository as ProductRepository).calculateSalesPerformance(workspaceId)
+      
+      // Enrich products with sales data
+      const enrichedProducts = result.products.map(product => ({
+        ...product,
+        salesScore: salesPerformance.get(product.id)?.score || 0,
+        salesCount: salesPerformance.get(product.id)?.count || 0
+      }))
+      
+      return {
+        ...result,
+        products: enrichedProducts
+      }
     } catch (error) {
       logger.error("Error in product service getAllProducts:", error)
       throw new Error(`Failed to get products: ${(error as Error).message}`)

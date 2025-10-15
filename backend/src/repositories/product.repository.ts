@@ -395,4 +395,58 @@ export class ProductRepository implements IProductRepository {
       category: data.category,
     })
   }
+
+  /**
+   * Calculate sales performance for products in a workspace
+   * Returns salesScore (0-100) and salesCount for last 30 days
+   */
+  async calculateSalesPerformance(workspaceId: string): Promise<Map<string, { score: number; count: number }>> {
+    try {
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+      // Get all order items for this workspace in last 30 days
+      const orderItems = await this.prisma.orderItems.findMany({
+        where: {
+          productId: { not: null },
+          order: {
+            workspaceId: workspaceId,
+            createdAt: { gte: thirtyDaysAgo },
+            status: { not: 'CANCELLED' } // Exclude cancelled orders
+          }
+        },
+        select: {
+          productId: true,
+          quantity: true
+        }
+      })
+
+      // Aggregate sales by product
+      const salesByProduct = new Map<string, number>()
+      orderItems.forEach(item => {
+        if (item.productId) {
+          const currentCount = salesByProduct.get(item.productId) || 0
+          salesByProduct.set(item.productId, currentCount + item.quantity)
+        }
+      })
+
+      // Find max sales to normalize scores
+      const maxSales = Math.max(...Array.from(salesByProduct.values()), 0)
+
+      // Create map with normalized scores
+      const performanceMap = new Map<string, { score: number; count: number }>()
+      
+      salesByProduct.forEach((count, productId) => {
+        // Normalize to 0-100 scale
+        const score = maxSales > 0 ? Math.round((count / maxSales) * 100) : 0
+        performanceMap.set(productId, { score, count })
+      })
+
+      logger.info(`Calculated sales performance for ${performanceMap.size} products in workspace ${workspaceId}`)
+      return performanceMap
+    } catch (error) {
+      logger.error('Error calculating sales performance:', error)
+      return new Map()
+    }
+  }
 }

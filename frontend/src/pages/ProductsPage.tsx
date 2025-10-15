@@ -1,6 +1,5 @@
 import { PageLayout } from "@/components/layout/PageLayout"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
-import { CrudPageContent } from "@/components/shared/CrudPageContent"
 import { FormSheet } from "@/components/shared/FormSheet"
 import { MultiImageCropUpload } from "@/components/shared/MultiImageCropUpload"
 import { ProductImage } from "@/components/shared/ProductImage"
@@ -24,7 +23,7 @@ import { categoriesApi } from "@/services/categoriesApi"
 import { productsApi, type Product } from "@/services/productsApi"
 import { commonStyles } from "@/styles/common"
 import { getCurrencySymbol } from "@/utils/format"
-import { Grid3x3, Package, Pencil, Table2, Trash2 } from "lucide-react"
+import { Package, Pencil, Trash2 } from "lucide-react"
 import React, { useEffect, useState } from "react"
 
 export function ProductsPage() {
@@ -47,10 +46,26 @@ export function ProductsPage() {
   const [reorderedImageUrls, setReorderedImageUrls] = useState<string[] | null>(
     null
   )
-  const [viewMode, setViewMode] = useState<"table" | "grid">("grid") // default to grid view
+  
+  // Load filters from localStorage or use defaults
+  const [filterCategory, setFilterCategory] = useState<string>(() => {
+    return localStorage.getItem("products_filter_category") || "all"
+  })
+  const [sortBy, setSortBy] = useState<"name" | "sales" | "stock">(() => {
+    return (localStorage.getItem("products_sort_by") as "name" | "sales" | "stock") || "name"
+  })
 
   // Get currency symbol based on workspace settings
   const currencySymbol = getCurrencySymbol(workspace?.currency as string)
+  
+  // Save filters to localStorage when they change
+  useEffect(() => {
+    localStorage.setItem("products_filter_category", filterCategory)
+  }, [filterCategory])
+  
+  useEffect(() => {
+    localStorage.setItem("products_sort_by", sortBy)
+  }, [sortBy])
 
   // Fetch products when workspace changes
   useEffect(() => {
@@ -105,90 +120,37 @@ export function ProductsPage() {
     // Rimuovo il reset del productCode da qui per evitare conflitti
   }, [selectedProduct])
 
-  // Filter products based on search value
-  const filteredProducts = products.filter(
-    (product) =>
-      product.name.toLowerCase().includes(searchValue.toLowerCase()) ||
-      product.code?.toLowerCase().includes(searchValue.toLowerCase()) ||
-      product.description?.toLowerCase().includes(searchValue.toLowerCase()) ||
-      product.category?.name.toLowerCase().includes(searchValue.toLowerCase())
-  )
-
-  const columns = [
-    {
-      header: "Image",
-      id: "image",
-      size: 100,
-      cell: ({ row }: { row: { original: Product } }) => (
-        <ProductImage
-          imageUrl={row.original.imageUrl}
-          alt={row.original.name}
-          size="md"
-        />
-      ),
-    },
-    { header: "Name", accessorKey: "name" as keyof Product, size: 200 },
-    { header: "Code", accessorKey: "code" as keyof Product, size: 100 },
-    {
-      header: "Format",
-      accessorKey: "formato" as keyof Product,
-      size: 120,
-      cell: ({ row }: { row: { original: Product } }) => (
-        <span className="text-sm text-blue-600">
-          {row.original.formato || "-"}
-        </span>
-      ),
-    },
-    {
-      header: `Price (${currencySymbol})`,
-      accessorKey: "price" as keyof Product,
-      size: 120,
-      cell: ({ row }: { row: { original: Product } }) => (
-        <span className="font-medium">
-          {currencySymbol}
-          {row.original.price.toFixed(2)}
-        </span>
-      ),
-    },
-    {
-      header: "Category",
-      accessorKey: "category" as keyof Product,
-      size: 150,
-      cell: ({ row }: { row: { original: Product } }) => (
-        <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
-          {row.original.category?.name || "No Category"}
-        </span>
-      ),
-    },
-
-    {
-      header: "Status",
-      accessorKey: "isActive" as keyof Product,
-      size: 100,
-      cell: ({ row }: { row: { original: Product } }) => {
-        const product = row.original
-        let status = "Active"
-        let className = "bg-green-100 text-green-800"
-
-        if (!product.isActive) {
-          status = "Inactive"
-          className = "bg-gray-100 text-gray-800"
-        } else if (product.stock === 0) {
-          status = "Out of Stock"
-          className = "bg-red-100 text-red-800"
-        } else if (product.stock < 10) {
-          status = "Low Stock"
-          className = "bg-orange-100 text-orange-800"
-        }
-
-        return (
-          <span className={`px-2 py-1 rounded-full text-xs ${className}`}>
-            {status}
-          </span>
-        )
-      },
-    },
-  ]
+  // Filter and sort products
+  const filteredProducts = React.useMemo(() => {
+    // Filter by search
+    let filtered = products.filter(
+      (product) =>
+        product.name.toLowerCase().includes(searchValue.toLowerCase()) ||
+        product.code?.toLowerCase().includes(searchValue.toLowerCase()) ||
+        product.description?.toLowerCase().includes(searchValue.toLowerCase()) ||
+        product.category?.name.toLowerCase().includes(searchValue.toLowerCase())
+    )
+    
+    // Filter by category
+    if (filterCategory !== "all") {
+      filtered = filtered.filter(p => p.categoryId === filterCategory)
+    }
+    
+    // Sort products
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case "sales":
+          return (b.salesScore || 0) - (a.salesScore || 0)
+        case "stock":
+          return (b.stock || 0) - (a.stock || 0)
+        case "name":
+        default:
+          return a.name.localeCompare(b.name)
+      }
+    })
+    
+    return filtered
+  }, [products, searchValue, filterCategory, sortBy])
 
   const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -581,74 +543,27 @@ export function ProductsPage() {
 
   return (
     <PageLayout>
-      {viewMode === "table" ? (
-        <div className="space-y-4">
-          <div className="flex justify-end">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setViewMode("grid")}
-            >
-              <Grid3x3 className="h-4 w-4 mr-2" />
-              Grid View
-            </Button>
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Package className={commonStyles.headerIcon} />
+            <h1 className="text-2xl font-bold">Products</h1>
           </div>
-          <CrudPageContent
-            title="Products"
-            titleIcon={<Package className={commonStyles.headerIcon} />}
-            searchValue={searchValue}
-            onSearch={setSearchValue}
-            searchPlaceholder="Search products..."
-            onAdd={() => {
+          <Button
+            onClick={() => {
               setSelectedCategoryId("none")
               setProductIsActive(true)
               setProductCode("")
               setShowAddSheet(true)
             }}
-            addButtonText="Add"
-            data={filteredProducts}
-            columns={columns}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            isLoading={isLoading}
-            getRowClassName={(product: Product) => {
-              if (product.stock === 0)
-                return "bg-red-50 border-l-4 border-red-500"
-              if (!product.isActive)
-                return "bg-gray-50 border-l-4 border-gray-400 opacity-60"
-              return ""
-            }}
-          />
+          >
+            Add Product
+          </Button>
         </div>
-      ) : (
-        <div className="space-y-4">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Package className={commonStyles.headerIcon} />
-              <h1 className="text-2xl font-bold">Products</h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setViewMode("table")}
-              >
-                <Table2 className="h-4 w-4" />
-              </Button>
-              <Button
-                onClick={() => {
-                  setSelectedCategoryId("none")
-                  setProductIsActive(true)
-                  setProductCode("")
-                  setShowAddSheet(true)
-                }}
-              >
-                Add Product
-              </Button>
-            </div>
-          </div>
 
+        {/* Filters Row */}
+        <div className="flex flex-wrap gap-4 items-center">
           {/* Search */}
           <Input
             placeholder="Search products..."
@@ -656,6 +571,34 @@ export function ProductsPage() {
             onChange={(e) => setSearchValue(e.target.value)}
             className="max-w-sm"
           />
+          
+          {/* Category Filter */}
+          <Select value={filterCategory} onValueChange={setFilterCategory}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  {cat.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          {/* Sort By */}
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as "name" | "sales" | "stock")}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Sort By" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name">Sort by Name</SelectItem>
+              <SelectItem value="sales">Sort by Sales</SelectItem>
+              <SelectItem value="stock">Sort by Stock</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
           {/* Grid View */}
           {isLoading ? (
@@ -681,8 +624,75 @@ export function ProductsPage() {
                 >
                   <CardContent className="p-4">
                     <div className="flex flex-col gap-3">
+                      {/* Sales Performance Bar - Enhanced UI */}
+                      {(() => {
+                        // Use real sales data from backend (defaults to 0 if not available)
+                        const salesScore = product.salesScore || 0
+                        const salesCount = product.salesCount || 0
+                        
+                        const getGradientColor = (score: number) => {
+                          if (score < 50) {
+                            const r = 239
+                            const g = Math.round(68 + (score / 50) * (234 - 68))
+                            const b = 68
+                            return `rgb(${r}, ${g}, ${b})`
+                          } else {
+                            const r = Math.round(234 - ((score - 50) / 50) * (234 - 34))
+                            const g = Math.round(234 - ((score - 50) / 50) * (234 - 197))
+                            const b = Math.round(68 + ((score - 50) / 50) * (94 - 68))
+                            return `rgb(${r}, ${g}, ${b})`
+                          }
+                        }
+                        
+                        const getEmoji = (score: number) => {
+                          if (score < 30) return "🔴"
+                          if (score < 70) return "🟡"
+                          return "🔥"
+                        }
+                        
+                        const getLabel = (score: number) => {
+                          if (score < 30) return "Slow Mover"
+                          if (score < 70) return "Steady Sales"
+                          return "Hot Seller!"
+                        }
+                        
+                        const getTrendArrow = (score: number) => {
+                          if (score < 40) return "↘"
+                          if (score < 60) return "→"
+                          return "↗"
+                        }
+                        
+                        return (
+                          <div className="w-full">
+                            {/* Progress Bar */}
+                            <div className="relative w-full h-1.5 bg-gray-200 rounded-t-md overflow-hidden">
+                              <div
+                                className="h-full transition-all duration-500 ease-out"
+                                style={{
+                                  width: `${salesScore}%`,
+                                  backgroundColor: getGradientColor(salesScore),
+                                }}
+                              />
+                            </div>
+                            {/* Label Bar */}
+                            <div className="w-full bg-gradient-to-r from-gray-50 to-white px-2 py-1 flex items-center justify-between border-b border-gray-100">
+                              <span className="flex items-center gap-1 text-xs font-medium">
+                                <span className="text-base">{getEmoji(salesScore)}</span>
+                                <span className="text-gray-700">{getLabel(salesScore)}</span>
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <span className="text-xs font-bold" style={{ color: getGradientColor(salesScore) }}>
+                                  {salesScore}%
+                                </span>
+                                <span className="text-sm">{getTrendArrow(salesScore)}</span>
+                              </span>
+                            </div>
+                          </div>
+                        )
+                      })()}
+                      
                       {/* Image */}
-                      <div className="w-full h-32 flex items-center justify-center bg-gray-50 rounded-md overflow-hidden relative">
+                      <div className="w-full h-32 flex items-center justify-center bg-gray-50 overflow-hidden relative">
                         <ProductImage
                           imageUrl={product.imageUrl}
                           alt={product.name}
@@ -757,8 +767,7 @@ export function ProductsPage() {
               ))}
             </div>
           )}
-        </div>
-      )}
+      </div>
 
       <FormSheet
         open={showAddSheet}
