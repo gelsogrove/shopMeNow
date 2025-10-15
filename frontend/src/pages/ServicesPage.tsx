@@ -28,7 +28,9 @@ export function ServicesPage() {
   const [selectedService, setSelectedService] = useState<Service | null>(null)
   const [imageFiles, setImageFiles] = useState<File[]>([])
   const [currentImageUrls, setCurrentImageUrls] = useState<string[]>([])
-  const [reorderedImageUrls, setReorderedImageUrls] = useState<string[] | null>(null)
+  const [reorderedImageUrls, setReorderedImageUrls] = useState<string[] | null>(
+    null
+  )
 
   const loadServices = async () => {
     if (!workspace?.id) return
@@ -69,10 +71,13 @@ export function ServicesPage() {
       const newService = await servicesApi.createService(workspace.id, formData)
       setServices([newService, ...services])
       setShowAddSheet(false)
-      toast.success("Service created successfully. Edit it to add details and images.")
+      toast.success(
+        "Service created successfully. Edit it to add details and images."
+      )
     } catch (error: any) {
       logger.error("Error creating service:", error)
-      const errorMessage = error.response?.data?.message || "Failed to create service"
+      const errorMessage =
+        error.response?.data?.message || "Failed to create service"
       toast.error(errorMessage)
     }
   }
@@ -101,7 +106,8 @@ export function ServicesPage() {
 
     // Always send existing image URLs (even if empty array) to handle deletions
     // Use reorderedImageUrls if it has been modified (not null), otherwise use currentImageUrls
-    const imagesToSend = reorderedImageUrls !== null ? reorderedImageUrls : currentImageUrls
+    const imagesToSend =
+      reorderedImageUrls !== null ? reorderedImageUrls : currentImageUrls
 
     formData.append("existingImageUrls", JSON.stringify(imagesToSend))
 
@@ -169,7 +175,8 @@ export function ServicesPage() {
           autoFocus
         />
         <p className="text-xs text-gray-500">
-          Enter the service name. You can add details, pricing, and images later by editing.
+          Enter the service name. You can add details, pricing, and images later
+          by editing.
         </p>
       </div>
     </div>
@@ -301,9 +308,7 @@ export function ServicesPage() {
               <Card
                 key={service.id}
                 className={`hover:shadow-lg transition-shadow ${
-                  !service.isActive
-                    ? "opacity-60 border-gray-400 border-2"
-                    : ""
+                  !service.isActive ? "opacity-60 border-gray-400 border-2" : ""
                 }`}
               >
                 <CardContent className="p-4">

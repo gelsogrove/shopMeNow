@@ -58,7 +58,11 @@ export class Service {
     }
 
     // Code is optional during creation (will be added during edit)
-    if (this.code === undefined || this.code === null || this.code.trim() === "") {
+    if (
+      this.code === undefined ||
+      this.code === null ||
+      this.code.trim() === ""
+    ) {
       this.code = `SRV${Date.now().toString().slice(-6)}` // Generate temporary code
     }
 

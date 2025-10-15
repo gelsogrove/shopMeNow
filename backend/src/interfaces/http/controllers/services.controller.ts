@@ -100,14 +100,14 @@ export class ServicesController {
         if (typeof price === "string") {
           numericPrice = parseFloat(price)
           if (isNaN(numericPrice)) {
-            return res.status(400).json({ error: "Price must be a valid number" })
+            return res
+              .status(400)
+              .json({ error: "Price must be a valid number" })
           }
         } else if (typeof price === "number") {
           numericPrice = price
         } else {
-          return res
-            .status(400)
-            .json({ error: "Price must be a valid number" })
+          return res.status(400).json({ error: "Price must be a valid number" })
         }
       }
 
@@ -222,7 +222,7 @@ export class ServicesController {
       if (code !== undefined) updateData.code = code
       if (description !== undefined) updateData.description = description
       if (currency !== undefined) updateData.currency = currency
-      
+
       // Convert isActive from string "on"/"off" or boolean to proper boolean
       if (isActive !== undefined) {
         if (typeof isActive === "string") {

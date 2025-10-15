@@ -45,6 +45,8 @@ export class ProductController {
         }
       )
 
+      logger.info(`🔍 Products found in database: ${result.products.length} (total: ${result.total})`)
+
       // Map backend 'ProductCode' field to frontend 'code' field for all products
       const productsWithCode = result.products.map((product) => ({
         ...product,
