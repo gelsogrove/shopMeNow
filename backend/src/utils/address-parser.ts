@@ -23,16 +23,16 @@ export interface AddressParseResult {
 
 /**
  * Parse customer addresses from JSON string or array
- * 
+ *
  * Handles multiple formats:
  * - JSON string containing array of address objects
  * - Direct array of address objects
  * - Single address object (converted to array)
  * - null/undefined (returns empty array)
- * 
+ *
  * @param addressData - Address data in JSON string or object format
  * @returns Parsed addresses array with success flag
- * 
+ *
  * @example
  * ```typescript
  * // From JSON string
@@ -40,7 +40,7 @@ export interface AddressParseResult {
  * if (result.success) {
  *   console.log(result.addresses) // [{ street: "Via Roma", ... }]
  * }
- * 
+ *
  * // From object
  * const result2 = parseCustomerAddresses([{ street: "Via Roma" }])
  * ```
@@ -116,10 +116,10 @@ export function parseCustomerAddresses(
 
 /**
  * Format address object to human-readable string
- * 
+ *
  * @param address - Parsed address object
  * @returns Formatted address string
- * 
+ *
  * @example
  * ```typescript
  * const address = { street: "Via Roma 1", city: "Milano", postalCode: "20121", country: "IT" }

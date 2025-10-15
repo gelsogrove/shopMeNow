@@ -7,18 +7,18 @@ const secureTokenService = new SecureTokenService()
 
 /**
  * Middleware for validating secure tokens in public endpoints
- * 
+ *
  * Extracts token from request (body, query, or params), validates it,
  * and attaches customerId, workspaceId, and tokenData to request object.
- * 
+ *
  * @middleware
  * @security Validates token expiry and signature
  * @security Implements workspace isolation
  * @security Falls back to phone number lookup if customerId missing
- * 
+ *
  * @example
  * ```typescript
- * router.post("/endpoint", 
+ * router.post("/endpoint",
  *   publicOrdersLimiter,
  *   tokenValidationMiddleware,
  *   async (req, res) => {
@@ -27,7 +27,7 @@ const secureTokenService = new SecureTokenService()
  *   }
  * )
  * ```
- * 
+ *
  * @throws {400} If token is missing from request
  * @throws {401} If token is invalid or expired
  * @throws {401} If token doesn't contain valid customer information
@@ -39,8 +39,7 @@ export const tokenValidationMiddleware = async (
 ) => {
   try {
     // 1. Extract token from multiple possible locations
-    const token =
-      req.body.token || req.query.token || req.params.token || null
+    const token = req.body.token || req.query.token || req.params.token || null
 
     // 🔒 SECURITY: Token is required
     if (!token) {
@@ -115,10 +114,13 @@ export const tokenValidationMiddleware = async (
     ;(req as any).tokenData = tokenData
     ;(req as any).tokenPayload = payload
 
-    logger.info("[TOKEN-VALIDATION-MIDDLEWARE] ✅ Token validated successfully", {
-      customerId,
-      workspaceId,
-    })
+    logger.info(
+      "[TOKEN-VALIDATION-MIDDLEWARE] ✅ Token validated successfully",
+      {
+        customerId,
+        workspaceId,
+      }
+    )
 
     next()
   } catch (error) {

@@ -2,9 +2,9 @@ import { Request, Response, Router } from "express"
 import { SecureTokenService } from "../../../application/services/secure-token.service"
 import { publicOrdersLimiter } from "../../../config/rate-limiters"
 import { prisma } from "../../../lib/prisma"
+import { parseCustomerAddresses } from "../../../utils/address-parser"
 import logger from "../../../utils/logger"
 import { tokenValidationMiddleware } from "../middlewares/token-validation.middleware"
-import { parseCustomerAddresses } from "../../../utils/address-parser"
 
 const router = Router()
 const secureTokenService = new SecureTokenService()
@@ -243,11 +243,21 @@ router.post("/validate-secure-token", async (req: Request, res: Response) => {
  *         description: Invalid or expired token
  */
 // 🔒 SECURITY: Rate limited to 30 requests per 15 minutes per IP
-router.get("/public/orders", publicOrdersLimiter, tokenValidationMiddleware, getOrdersListHandler)
+router.get(
+  "/public/orders",
+  publicOrdersLimiter,
+  tokenValidationMiddleware,
+  getOrdersListHandler
+)
 
 // ✅ ALIAS: Frontend compatibility route
 // 🔒 SECURITY: Rate limited to 30 requests per 15 minutes per IP
-router.get("/orders-public", publicOrdersLimiter, tokenValidationMiddleware, getOrdersListHandler)
+router.get(
+  "/orders-public",
+  publicOrdersLimiter,
+  tokenValidationMiddleware,
+  getOrdersListHandler
+)
 
 /**
  * @swagger
@@ -278,108 +288,118 @@ router.get("/orders-public", publicOrdersLimiter, tokenValidationMiddleware, get
  *       404:
  *         description: Order not found
  */
-router.get("/public/orders/:orderCode", tokenValidationMiddleware, async (req: Request, res: Response) => {
-  try {
-    // 🔐 customerId and workspaceId are set by tokenValidationMiddleware
-    const customerId = (req as any).customerId
-    const workspaceId = (req as any).workspaceId
-    const { orderCode } = req.params
+router.get(
+  "/public/orders/:orderCode",
+  tokenValidationMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      // 🔐 customerId and workspaceId are set by tokenValidationMiddleware
+      const customerId = (req as any).customerId
+      const workspaceId = (req as any).workspaceId
+      const { orderCode } = req.params
 
-    logger.info(`[PUBLIC-ORDERS] Getting order details for: ${orderCode}`)
+      logger.info(`[PUBLIC-ORDERS] Getting order details for: ${orderCode}`)
 
-    // Get order with full details
-    const order = await prisma.orders.findFirst({
-      where: {
-        orderCode,
-        customerId: customerId,
-        workspaceId: workspaceId,
-      },
-      include: {
-        items: {
-          include: {
-            product: true,
-            service: true,
+      // Get order with full details
+      const order = await prisma.orders.findFirst({
+        where: {
+          orderCode,
+          customerId: customerId,
+          workspaceId: workspaceId,
+        },
+        include: {
+          items: {
+            include: {
+              product: true,
+              service: true,
+            },
+          },
+          customer: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              language: true,
+              address: true,
+              invoiceAddress: true,
+            },
+          },
+          workspace: {
+            select: { id: true, name: true },
           },
         },
-        customer: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            language: true,
-            address: true,
-            invoiceAddress: true,
-          },
-        },
-        workspace: {
-          select: { id: true, name: true },
-        },
-      },
-    })
+      })
 
-    if (!order) {
-      return res.status(404).json({
+      if (!order) {
+        return res.status(404).json({
+          success: false,
+          error: "Order not found",
+        })
+      }
+
+      // Parse customer addresses using utility
+      let parsedCustomer = { ...(order as any).customer }
+
+      const invoiceResult = parseCustomerAddresses(
+        parsedCustomer.invoiceAddress
+      )
+      parsedCustomer.invoiceAddress = invoiceResult.success
+        ? invoiceResult.addresses
+        : null
+
+      const addressResult = parseCustomerAddresses(parsedCustomer.address)
+      parsedCustomer.address = addressResult.success
+        ? addressResult.addresses
+        : null
+
+      // Format order items with imageUrl
+      const formattedItems = (order as any).items.map((item: any) => ({
+        id: item.id,
+        itemType: item.itemType,
+        name: item.product?.name || item.service?.name || "Unknown Item",
+        code: item.product?.ProductCode || item.service?.code || null,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.totalPrice,
+        imageUrl: item.product?.imageUrl || item.service?.imageUrl || [],
+      }))
+
+      const formattedOrder = {
+        id: order.id,
+        orderCode: order.orderCode,
+        date: order.createdAt.toISOString(),
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+        paymentMethod: order.paymentMethod,
+        paymentProvider: null,
+        shippingAmount: order.shippingAmount,
+        taxAmount: order.taxAmount,
+        shippingAddress: order.shippingAddress,
+        trackingNumber: order.trackingNumber,
+        totalAmount: order.totalAmount,
+        items: formattedItems,
+        invoiceUrl: "",
+        ddtUrl: "",
+      }
+
+      return res.json({
+        success: true,
+        data: {
+          order: formattedOrder,
+          customer: parsedCustomer,
+          workspace: (order as any).workspace,
+        },
+      })
+    } catch (error) {
+      logger.error("[PUBLIC-ORDERS] Error getting order details:", error)
+      return res.status(500).json({
         success: false,
-        error: "Order not found",
+        error: "Error retrieving order details",
       })
     }
-
-    // Parse customer addresses using utility
-    let parsedCustomer = { ...(order as any).customer }
-
-    const invoiceResult = parseCustomerAddresses(parsedCustomer.invoiceAddress)
-    parsedCustomer.invoiceAddress = invoiceResult.success ? invoiceResult.addresses : null
-
-    const addressResult = parseCustomerAddresses(parsedCustomer.address)
-    parsedCustomer.address = addressResult.success ? addressResult.addresses : null
-
-    // Format order items with imageUrl
-    const formattedItems = (order as any).items.map((item: any) => ({
-      id: item.id,
-      itemType: item.itemType,
-      name: item.product?.name || item.service?.name || "Unknown Item",
-      code: item.product?.ProductCode || item.service?.code || null,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      totalPrice: item.totalPrice,
-      imageUrl: item.product?.imageUrl || item.service?.imageUrl || [],
-    }))
-
-    const formattedOrder = {
-      id: order.id,
-      orderCode: order.orderCode,
-      date: order.createdAt.toISOString(),
-      status: order.status,
-      paymentStatus: order.paymentStatus,
-      paymentMethod: order.paymentMethod,
-      paymentProvider: null,
-      shippingAmount: order.shippingAmount,
-      taxAmount: order.taxAmount,
-      shippingAddress: order.shippingAddress,
-      trackingNumber: order.trackingNumber,
-      totalAmount: order.totalAmount,
-      items: formattedItems,
-      invoiceUrl: "",
-      ddtUrl: "",
-    }
-
-    return res.json({
-      success: true,
-      data: {
-        order: formattedOrder,
-        customer: parsedCustomer,
-        workspace: (order as any).workspace,
-      },
-    })
-  } catch (error) {
-    logger.error("[PUBLIC-ORDERS] Error getting order details:", error)
-    return res.status(500).json({
-      success: false,
-      error: "Error retrieving order details",
-    })
   }
-})
+)
 
 /**
  * @swagger
@@ -404,74 +424,86 @@ router.get("/public/orders/:orderCode", tokenValidationMiddleware, async (req: R
  *       404:
  *         description: Customer not found
  */
-router.get("/customer-profile/:token", tokenValidationMiddleware, async (req: Request, res: Response) => {
-  try {
-    // 🔐 customerId and workspaceId are set by tokenValidationMiddleware
-    const customerId = (req as any).customerId
-    const workspaceId = (req as any).workspaceId
+router.get(
+  "/customer-profile/:token",
+  tokenValidationMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      // 🔐 customerId and workspaceId are set by tokenValidationMiddleware
+      const customerId = (req as any).customerId
+      const workspaceId = (req as any).workspaceId
 
-    logger.info(`[PUBLIC-PROFILE] Getting profile for customer: ${customerId}`)
+      logger.info(
+        `[PUBLIC-PROFILE] Getting profile for customer: ${customerId}`
+      )
 
-    // Get customer profile
-    const customer = await prisma.customers.findFirst({
-      where: {
-        id: customerId,
-        workspaceId: workspaceId,
-        isActive: true,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        address: true,
-        company: true,
-        language: true,
-        currency: true,
-        discount: true,
-        invoiceAddress: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    })
+      // Get customer profile
+      const customer = await prisma.customers.findFirst({
+        where: {
+          id: customerId,
+          workspaceId: workspaceId,
+          isActive: true,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          address: true,
+          company: true,
+          language: true,
+          currency: true,
+          discount: true,
+          invoiceAddress: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      })
 
-    if (!customer) {
-      return res.status(404).json({
+      if (!customer) {
+        return res.status(404).json({
+          success: false,
+          error: "Customer not found",
+        })
+      }
+
+      // Get workspace info
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { id: true, name: true },
+      })
+
+      // Parse customer addresses using utility
+      let parsedCustomer: any = { ...customer }
+
+      const invoiceResult = parseCustomerAddresses(
+        parsedCustomer.invoiceAddress
+      )
+      parsedCustomer.invoiceAddress = invoiceResult.success
+        ? invoiceResult.addresses
+        : null
+
+      const addressResult = parseCustomerAddresses(parsedCustomer.address)
+      parsedCustomer.address = addressResult.success
+        ? addressResult.addresses
+        : null
+
+      return res.json({
+        success: true,
+        data: {
+          ...parsedCustomer,
+          workspace,
+        },
+      })
+    } catch (error) {
+      logger.error("[PUBLIC-PROFILE] Error getting customer profile:", error)
+      return res.status(500).json({
         success: false,
-        error: "Customer not found",
+        error: "Error retrieving profile",
       })
     }
-
-    // Get workspace info
-    const workspace = await prisma.workspace.findUnique({
-      where: { id: workspaceId },
-      select: { id: true, name: true },
-    })
-
-    // Parse customer addresses using utility
-    let parsedCustomer: any = { ...customer }
-
-    const invoiceResult = parseCustomerAddresses(parsedCustomer.invoiceAddress)
-    parsedCustomer.invoiceAddress = invoiceResult.success ? invoiceResult.addresses : null
-
-    const addressResult = parseCustomerAddresses(parsedCustomer.address)
-    parsedCustomer.address = addressResult.success ? addressResult.addresses : null
-
-    return res.json({
-      success: true,
-      data: {
-        ...parsedCustomer,
-        workspace,
-      },
-    })
-  } catch (error) {
-    logger.error("[PUBLIC-PROFILE] Error getting customer profile:", error)
-    return res.status(500).json({
-      success: false,
-      error: "Error retrieving profile",
-    })
   }
-})
+)
 
 /**
  * @swagger
@@ -511,72 +543,84 @@ router.get("/customer-profile/:token", tokenValidationMiddleware, async (req: Re
  *       404:
  *         description: Customer not found
  */
-router.put("/customer-profile/:token", tokenValidationMiddleware, async (req: Request, res: Response) => {
-  try {
-    // 🔐 customerId and workspaceId are set by tokenValidationMiddleware
-    const customerId = (req as any).customerId
-    const workspaceId = (req as any).workspaceId
-    const updateData = req.body
+router.put(
+  "/customer-profile/:token",
+  tokenValidationMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      // 🔐 customerId and workspaceId are set by tokenValidationMiddleware
+      const customerId = (req as any).customerId
+      const workspaceId = (req as any).workspaceId
+      const updateData = req.body
 
-    logger.info(`[PUBLIC-PROFILE] Updating profile for customer: ${customerId}`)
+      logger.info(
+        `[PUBLIC-PROFILE] Updating profile for customer: ${customerId}`
+      )
 
-    // Update customer profile
-    const updatedCustomer = await prisma.customers.update({
-      where: {
-        id: customerId,
-        workspaceId: workspaceId,
-      },
-      data: {
-        ...(updateData.name && { name: updateData.name }),
-        ...(updateData.email && { email: updateData.email }),
-        ...(updateData.phone && { phone: updateData.phone }),
-        ...(updateData.address && { address: updateData.address }),
-        ...(updateData.company && { company: updateData.company }),
-        ...(updateData.language && { language: updateData.language }),
-        ...(updateData.currency && { currency: updateData.currency }),
-        ...(updateData.invoiceAddress && {
-          invoiceAddress: updateData.invoiceAddress,
-        }),
-        updatedAt: new Date(),
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        address: true,
-        company: true,
-        language: true,
-        currency: true,
-        discount: true,
-        invoiceAddress: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    })
+      // Update customer profile
+      const updatedCustomer = await prisma.customers.update({
+        where: {
+          id: customerId,
+          workspaceId: workspaceId,
+        },
+        data: {
+          ...(updateData.name && { name: updateData.name }),
+          ...(updateData.email && { email: updateData.email }),
+          ...(updateData.phone && { phone: updateData.phone }),
+          ...(updateData.address && { address: updateData.address }),
+          ...(updateData.company && { company: updateData.company }),
+          ...(updateData.language && { language: updateData.language }),
+          ...(updateData.currency && { currency: updateData.currency }),
+          ...(updateData.invoiceAddress && {
+            invoiceAddress: updateData.invoiceAddress,
+          }),
+          updatedAt: new Date(),
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          address: true,
+          company: true,
+          language: true,
+          currency: true,
+          discount: true,
+          invoiceAddress: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      })
 
-    // Parse customer addresses using utility
-    let parsedCustomer: any = { ...updatedCustomer }
+      // Parse customer addresses using utility
+      let parsedCustomer: any = { ...updatedCustomer }
 
-    const invoiceResult = parseCustomerAddresses(parsedCustomer.invoiceAddress)
-    parsedCustomer.invoiceAddress = invoiceResult.success ? invoiceResult.addresses : null
+      const invoiceResult = parseCustomerAddresses(
+        parsedCustomer.invoiceAddress
+      )
+      parsedCustomer.invoiceAddress = invoiceResult.success
+        ? invoiceResult.addresses
+        : null
 
-    const addressResult = parseCustomerAddresses(parsedCustomer.address)
-    parsedCustomer.address = addressResult.success ? addressResult.addresses : null
+      const addressResult = parseCustomerAddresses(parsedCustomer.address)
+      parsedCustomer.address = addressResult.success
+        ? addressResult.addresses
+        : null
 
-    return res.json({
-      success: true,
-      data: parsedCustomer,
-      message: "Profile updated successfully",
-    })
-  } catch (error) {
-    logger.error("[PUBLIC-PROFILE] Error updating customer profile:", error)
-    return res.status(500).json({
-      success: false,
-      error: "Error updating profile",
-    })
+      return res.json({
+        success: true,
+        data: parsedCustomer,
+        message: "Profile updated successfully",
+      })
+    } catch (error) {
+      logger.error("[PUBLIC-PROFILE] Error updating customer profile:", error)
+      return res.status(500).json({
+        success: false,
+        error: "Error updating profile",
+      })
+    }
   }
-})
+)
 
 /**
  * @swagger
@@ -628,113 +672,118 @@ router.put("/customer-profile/:token", tokenValidationMiddleware, async (req: Re
  *       500:
  *         description: Internal server error
  */
-router.post("/get-all-products", publicOrdersLimiter, tokenValidationMiddleware, async (req: Request, res: Response) => {
-  try {
-    // � customerId and workspaceId are set by tokenValidationMiddleware
-    const customerId = (req as any).customerId
-    const workspaceId = (req as any).workspaceId
+router.post(
+  "/get-all-products",
+  publicOrdersLimiter,
+  tokenValidationMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      // � customerId and workspaceId are set by tokenValidationMiddleware
+      const customerId = (req as any).customerId
+      const workspaceId = (req as any).workspaceId
 
-    logger.info("[GET-ALL-PRODUCTS] Request with validated token:", {
-      workspaceId,
-      customerId,
-    })
-
-    // Get customer to fetch their discount
-    const customer = await prisma.customers.findFirst({
-      where: {
-        id: customerId,
-        workspaceId: workspaceId,
-        isActive: true,
-      },
-    })
-
-    if (!customer) {
-      return res.status(404).json({
-        success: false,
-        error: "Customer not found",
+      logger.info("[GET-ALL-PRODUCTS] Request with validated token:", {
+        workspaceId,
+        customerId,
       })
-    }
 
-    const customerDiscount = customer.discount || 0
-    logger.info("[GET-ALL-PRODUCTS] Customer discount:", customerDiscount)
+      // Get customer to fetch their discount
+      const customer = await prisma.customers.findFirst({
+        where: {
+          id: customerId,
+          workspaceId: workspaceId,
+          isActive: true,
+        },
+      })
 
-    // Get all active products for the workspace
-    const products = await prisma.products.findMany({
-      where: {
-        workspaceId: workspaceId,
-        isActive: true,
-        status: "ACTIVE",
-      },
-      include: {
-        category: {
-          select: {
-            id: true,
-            name: true,
+      if (!customer) {
+        return res.status(404).json({
+          success: false,
+          error: "Customer not found",
+        })
+      }
+
+      const customerDiscount = customer.discount || 0
+      logger.info("[GET-ALL-PRODUCTS] Customer discount:", customerDiscount)
+
+      // Get all active products for the workspace
+      const products = await prisma.products.findMany({
+        where: {
+          workspaceId: workspaceId,
+          isActive: true,
+          status: "ACTIVE",
+        },
+        include: {
+          category: {
+            select: {
+              id: true,
+              name: true,
+            },
           },
         },
-      },
-      orderBy: [
-        {
-          category: {
+        orderBy: [
+          {
+            category: {
+              name: "asc",
+            },
+          },
+          {
             name: "asc",
           },
+        ],
+      })
+
+      // Apply customer discount to all products
+      const productsWithDiscounts = products.map((product) => {
+        const originalPrice = product.price
+        const discountAmount = originalPrice * (customerDiscount / 100)
+        const finalPrice = originalPrice - discountAmount
+
+        return {
+          id: product.id,
+          name: product.name,
+          ProductCode: product.ProductCode,
+          description: product.description,
+          price: originalPrice,
+          originalPrice: originalPrice,
+          finalPrice: finalPrice,
+          discount: customerDiscount,
+          stock: product.stock,
+          isActive: product.isActive,
+          imageUrl: (product as any).imageUrl || [], // 🖼️ Include product images
+          category: product.category
+            ? {
+                id: product.category.id,
+                name: product.category.name,
+              }
+            : null,
+          createdAt: product.createdAt,
+          updatedAt: product.updatedAt,
+        }
+      })
+
+      logger.info("[GET-ALL-PRODUCTS] Returning products:", {
+        count: productsWithDiscounts.length,
+        customerDiscount,
+      })
+
+      return res.json({
+        success: true,
+        data: {
+          products: productsWithDiscounts,
+          customerDiscount: customerDiscount,
+          totalProducts: productsWithDiscounts.length,
         },
-        {
-          name: "asc",
-        },
-      ],
-    })
-
-    // Apply customer discount to all products
-    const productsWithDiscounts = products.map((product) => {
-      const originalPrice = product.price
-      const discountAmount = originalPrice * (customerDiscount / 100)
-      const finalPrice = originalPrice - discountAmount
-
-      return {
-        id: product.id,
-        name: product.name,
-        ProductCode: product.ProductCode,
-        description: product.description,
-        price: originalPrice,
-        originalPrice: originalPrice,
-        finalPrice: finalPrice,
-        discount: customerDiscount,
-        stock: product.stock,
-        isActive: product.isActive,
-        imageUrl: (product as any).imageUrl || [], // 🖼️ Include product images
-        category: product.category
-          ? {
-              id: product.category.id,
-              name: product.category.name,
-            }
-          : null,
-        createdAt: product.createdAt,
-        updatedAt: product.updatedAt,
-      }
-    })
-
-    logger.info("[GET-ALL-PRODUCTS] Returning products:", {
-      count: productsWithDiscounts.length,
-      customerDiscount,
-    })
-
-    return res.json({
-      success: true,
-      data: {
-        products: productsWithDiscounts,
-        customerDiscount: customerDiscount,
-        totalProducts: productsWithDiscounts.length,
-      },
-    })
-  } catch (error) {
-    logger.error("[GET-ALL-PRODUCTS] Error fetching products:", error)
-    return res.status(500).json({
-      success: false,
-      error: "Internal server error while fetching products",
-    })
+      })
+    } catch (error) {
+      logger.error("[GET-ALL-PRODUCTS] Error fetching products:", error)
+      return res.status(500).json({
+        success: false,
+        error: "Internal server error while fetching products",
+      })
+    }
   }
-})
+)
 
 // ========================================
 // 🔄 ADDITIONAL ROUTE ALIAS for GET /:orderCode
@@ -815,11 +864,17 @@ router.get(
 
       let parsedCustomer: any = { ...order.customer }
 
-      const invoiceResult = parseCustomerAddresses(parsedCustomer.invoiceAddress)
-      parsedCustomer.invoiceAddress = invoiceResult.success ? invoiceResult.addresses : null
+      const invoiceResult = parseCustomerAddresses(
+        parsedCustomer.invoiceAddress
+      )
+      parsedCustomer.invoiceAddress = invoiceResult.success
+        ? invoiceResult.addresses
+        : null
 
       const addressResult = parseCustomerAddresses(parsedCustomer.address)
-      parsedCustomer.address = addressResult.success ? addressResult.addresses : null
+      parsedCustomer.address = addressResult.success
+        ? addressResult.addresses
+        : null
 
       const formattedItems = order.items.map((item) => ({
         id: item.id,

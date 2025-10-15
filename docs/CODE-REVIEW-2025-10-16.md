@@ -1,4 +1,5 @@
 # 🔍 CODE REVIEW REPORT - ShopME Security Fix
+
 **Data**: 16 Ottobre 2025  
 **Reviewer**: AI Assistant (per Andrea)  
 **Scope**: File modificati durante security fix endpoint `/get-all-products`
@@ -22,11 +23,13 @@
 ### ✅ **Single Responsibility Principle (SRP)** - BUONO
 
 **MessageRenderer.tsx**:
+
 - ✅ Responsabilità singola: renderizzare messaggi con formattazione
 - ✅ Non gestisce routing, state management, o business logic
 - ⚠️ **ISSUE MINORE**: Contiene logica di parsing URL e formattazione testo (2 responsabilità)
 
 **Raccomandazione**:
+
 ```typescript
 // Separare in 2 utility functions
 export const parseUrls = (text: string) => { ... }
@@ -36,19 +39,22 @@ export const formatTextMarkdown = (text: string) => { ... }
 ```
 
 **CartIframePopup.tsx**:
+
 - ✅ Responsabilità singola: mostrare popup iframe con simulatore device
 - ✅ Non gestisce chiamate API o business logic
 - ✅ State management limitato a UI (viewMode)
 
 **CheckoutPage.tsx**:
+
 - ⚠️ **VIOLAZIONE SRP**: Pagina fa troppe cose (700+ righe)
   - Gestisce 4 step del checkout
   - Valida form
   - Chiama API
   - Gestisce carrello
   - Processa pagamenti
-  
+
 **Raccomandazione**: Spezzare in componenti più piccoli
+
 ```typescript
 // Separare in:
 - CheckoutStepManager.tsx (orchestrazione step)
@@ -63,14 +69,16 @@ export const formatTextMarkdown = (text: string) => { ... }
 ### ✅ **Open/Closed Principle (OCP)** - BUONO
 
 **CartIframePopup.tsx**:
+
 - ✅ Facilmente estendibile per nuovi viewMode senza modificare logica esistente
 - ✅ `getViewModeSize()` usa pattern strategy
 - ⚠️ **ISSUE**: `cycleViewMode()` hardcoded - difficile aggiungere nuove modalità
 
 **Raccomandazione**:
+
 ```typescript
 // Usare array di modalità invece di if/else
-const VIEW_MODES: ViewMode[] = ['mobile', 'tablet', 'desktop']
+const VIEW_MODES: ViewMode[] = ["mobile", "tablet", "desktop"]
 const cycleViewMode = () => {
   const currentIndex = VIEW_MODES.indexOf(viewMode)
   const nextIndex = (currentIndex + 1) % VIEW_MODES.length
@@ -79,6 +87,7 @@ const cycleViewMode = () => {
 ```
 
 **MessageRenderer.tsx**:
+
 - ✅ `variant` prop permette estensione senza modifica
 - ✅ ReactMarkdown components configurabili
 - ✅ DOMPurify ALLOWED_TAGS facilmente estendibile
@@ -95,11 +104,12 @@ const cycleViewMode = () => {
 ### ✅ **Interface Segregation Principle (ISP)** - BUONO
 
 **CartIframePopupProps**:
+
 ```typescript
 interface CartIframePopupProps {
-  isOpen: boolean      // ✅ Necessario
-  onClose: () => void  // ✅ Necessario
-  iframeSrc: string    // ✅ Necessario
+  isOpen: boolean // ✅ Necessario
+  onClose: () => void // ✅ Necessario
+  iframeSrc: string // ✅ Necessario
   customerName?: string // ⚠️ NON USATO NEL COMPONENTE!
 }
 ```
@@ -107,13 +117,15 @@ interface CartIframePopupProps {
 **🔴 PROBLEMA**: `customerName` definito ma mai usato nel render!
 
 **MessageRendererProps**:
+
 ```typescript
 interface MessageRendererProps {
-  content: string         // ✅ Usato
-  className?: string      // ✅ Usato
-  variant?: "chat" | "compact"  // ✅ Usato
+  content: string // ✅ Usato
+  className?: string // ✅ Usato
+  variant?: "chat" | "compact" // ✅ Usato
 }
 ```
+
 ✅ Perfetto - tutte le props sono utilizzate
 
 ---
@@ -121,11 +133,13 @@ interface MessageRendererProps {
 ### ✅ **Dependency Inversion Principle (DIP)** - BUONO
 
 **Backend `public-orders.routes.ts`**:
+
 - ✅ Dipende da `SecureTokenService` (astrazione) non da implementazione concreta
 - ✅ Usa `prisma` client (astrazione) non query SQL dirette
 - ✅ `logger` iniettato invece di `console.log`
 
 **Frontend**:
+
 - ✅ Componenti non dipendono da implementazione fetch specifica
 - ✅ Usano prop injection invece di import diretti
 
@@ -136,24 +150,30 @@ interface MessageRendererProps {
 ### 🔴 **CODICE MORTO TROVATO**
 
 #### 1. **CartIframePopup.tsx** - Prop inutilizzata
+
 ```typescript
 customerName?: string // ❌ DEFINITA MA MAI USATA
 ```
+
 **Impatto**: Confusione, interfaccia inquinata  
 **Action**: Rimuovere da interface e da tutti i chiamanti
 
 #### 2. **CartIframePopup.tsx** - Funzione inutilizzata
+
 ```typescript
-const getViewModeIcon = () => {  // ❌ DEFINITA MA MAI CHIAMATA
+const getViewModeIcon = () => {
+  // ❌ DEFINITA MA MAI CHIAMATA
   if (viewMode === "mobile") return "📱"
   if (viewMode === "tablet") return "📱"
   return "💻"
 }
 ```
+
 **Impatto**: Dead code, confusione  
 **Action**: Rimuovere completamente
 
 #### 3. **CheckoutPage.tsx** - Variabili non usate
+
 ```typescript
 // Line 463: workspaceId non più usato dopo security fix
 // Era: const workspaceId = tokenData?.data?.workspaceId
@@ -161,6 +181,7 @@ const getViewModeIcon = () => {  // ❌ DEFINITA MA MAI CHIAMATA
 ```
 
 #### 4. **public-orders.routes.ts** - Commenti obsoleti
+
 ```typescript
 // Line 342: "🔧 CRITICAL FIX: Get customerId from payload first"
 // Ripetuto in 5 endpoint diversi - codice duplicato
@@ -189,7 +210,8 @@ if (!validation.valid) {
 const tokenData = validation.data
 const payload = validation.payload as any
 
-let customerId = payload?.customerId || tokenData?.customerId || tokenData?.userId
+let customerId =
+  payload?.customerId || tokenData?.customerId || tokenData?.userId
 const workspaceId = tokenData?.workspaceId
 
 // Phone fallback logic
@@ -232,7 +254,8 @@ export const tokenValidationMiddleware = async (
     const tokenData = validation.data
     const payload = validation.payload as any
 
-    let customerId = payload?.customerId || tokenData?.customerId || tokenData?.userId
+    let customerId =
+      payload?.customerId || tokenData?.customerId || tokenData?.userId
     const workspaceId = tokenData?.workspaceId
 
     // Phone fallback
@@ -267,11 +290,13 @@ export const tokenValidationMiddleware = async (
 ```
 
 **Utilizzo**:
+
 ```typescript
 // Invece di duplicare logica in ogni endpoint:
-router.post("/get-all-products", 
-  publicOrdersLimiter, 
-  tokenValidationMiddleware,  // ✅ Riutilizzabile
+router.post(
+  "/get-all-products",
+  publicOrdersLimiter,
+  tokenValidationMiddleware, // ✅ Riutilizzabile
   async (req, res) => {
     const { customerId, workspaceId } = req as any
     // ... business logic
@@ -280,6 +305,7 @@ router.post("/get-all-products",
 ```
 
 **Benefici**:
+
 - ✅ Elimina ~200 righe di codice duplicato
 - ✅ Unico punto di modifica per logica token
 - ✅ Più facile testare
@@ -295,7 +321,10 @@ router.post("/get-all-products",
 // ❌ DUPLICATO in ogni endpoint che restituisce customer
 let parsedCustomer = { ...customer }
 
-if (parsedCustomer.invoiceAddress && typeof parsedCustomer.invoiceAddress === "string") {
+if (
+  parsedCustomer.invoiceAddress &&
+  typeof parsedCustomer.invoiceAddress === "string"
+) {
   try {
     parsedCustomer.invoiceAddress = JSON.parse(parsedCustomer.invoiceAddress)
   } catch (error) {
@@ -346,6 +375,7 @@ export const parseCustomerAddresses = (customer: any): any => {
 ```
 
 **Utilizzo**:
+
 ```typescript
 // Invece di duplicare:
 const parsedCustomer = parseCustomerAddresses(customer) // ✅ Una riga!
@@ -394,26 +424,31 @@ const getViewModeSize = () => VIEW_MODE_SIZES[viewMode] // ✅ Più pulito
 ### ✅ **SECURITY CHECKS PASSED**
 
 #### 1. **Token Validation** ✅
+
 - `public-orders.routes.ts`: Tutti gli endpoint ora validano token
 - SecureTokenService utilizzato correttamente
 - Expiry time verificato automaticamente
 - Workspace isolation rispettato
 
 #### 2. **XSS Protection** ✅
+
 - `MessageRenderer.tsx`: DOMPurify sanitizza HTML
 - ALLOWED_TAGS limitato a `['strong', 'em', 's', 'br']`
 - `dangerouslySetInnerHTML` usato solo dopo sanitizzazione
 
 #### 3. **Rate Limiting** ✅
+
 - `publicOrdersLimiter` applicato a endpoint pubblici
 - 30 richieste / 15 minuti per IP
 
 #### 4. **Input Validation** ✅
+
 - Token verificato prima di accedere al database
 - customerId e workspaceId estratti da token validato (non dal body)
 - Nessun SQL injection possibile (Prisma ORM)
 
 #### 5. **Error Handling** ✅
+
 - Errori loggati con dettagli completi
 - Risposte client non espongono stack trace
 - Catch block in tutti gli async handlers
@@ -429,20 +464,22 @@ const getViewModeSize = () => VIEW_MODE_SIZES[viewMode] // ✅ Più pulito
 ```typescript
 <iframe
   src={iframeSrc}
-  sandbox="allow-scripts allow-same-origin allow-forms"  // ⚠️ PERMISSIVO
+  sandbox="allow-scripts allow-same-origin allow-forms" // ⚠️ PERMISSIVO
   scrolling="auto"
 />
 ```
 
-**Problema**: 
+**Problema**:
+
 - `allow-same-origin` + `allow-scripts` = potenziale XSS se iframeSrc compromesso
 - Permette al contenuto iframe di accedere al DOM parent
 
 **Raccomandazione**:
+
 ```typescript
 <iframe
   src={iframeSrc}
-  sandbox="allow-scripts allow-forms allow-popups"  // ✅ Rimuovi allow-same-origin
+  sandbox="allow-scripts allow-forms allow-popups" // ✅ Rimuovi allow-same-origin
   scrolling="auto"
 />
 ```
@@ -468,6 +505,7 @@ catch (error) {
 **Problema**: Logger potrebbe scrivere informazioni sensibili in file log
 
 **Raccomandazione**: Verificare che logger sia configurato per:
+
 - Non loggare dati sensibili (password, token completi)
 - Log file protetti (permessi 600)
 - Log rotation attivo
@@ -479,13 +517,16 @@ catch (error) {
 **Location**: Non visibile nei file modificati
 
 **Raccomandazione**: Verificare che CORS sia configurato correttamente:
+
 ```typescript
 // backend/src/server.ts o simile
-app.use(cors({
-  origin: process.env.FRONTEND_URL,  // ✅ Non '*'
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-}))
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL, // ✅ Non '*'
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE"],
+  })
+)
 ```
 
 ---
@@ -495,12 +536,14 @@ app.use(cors({
 ### ✅ **DOCUMENTATION GOOD**
 
 #### 1. **Swagger/OpenAPI** ✅
+
 - Tutti gli endpoint hanno `@swagger` JSDoc comments
 - Request/Response schema definiti
 - Tag organizzati (Public Access, Public Orders, Public Profile)
 - Status codes documentati (200, 400, 401, 404, 500)
 
 #### 2. **Inline Comments** ✅
+
 - Security comments presenti: `// 🔒 SECURITY: Token is required`
 - Fix comments presenti: `// 🔧 CRITICAL FIX: Get customerId from payload`
 - Fallback logic spiegata: `// 🔧 ULTIMATE FALLBACK: If no customerId...`
@@ -521,11 +564,12 @@ const getViewModeSize = () => { ... }
 ```
 
 **Raccomandazione**:
+
 ```typescript
 /**
  * Parses text and converts URLs to clickable links
  * Also applies markdown-style formatting (bold, italic, strikethrough)
- * 
+ *
  * @param text - Plain text that may contain URLs
  * @returns Array of React elements with links and formatted text
  * @security HTML is sanitized with DOMPurify before rendering
@@ -541,7 +585,7 @@ const cycleViewMode = (): void => { ... }
 /**
  * Returns responsive size constraints for current view mode
  * Uses CSS calc() to ensure iframe fits within viewport on all screens
- * 
+ *
  * @returns Object with width and height CSS values
  */
 const getViewModeSize = (): { width: string; height: string } => { ... }
@@ -557,22 +601,27 @@ const getViewModeSize = (): { width: string; height: string } => { ... }
 # Security Fix: /api/internal/get-all-products Endpoint
 
 ## Problem
+
 Endpoint accepted `workspaceId` and `customerId` directly from request body without token validation.
 Anyone could access any workspace's products by sending arbitrary IDs.
 
 ## Solution
-- Added `tokenValidationMiddleware` 
+
+- Added `tokenValidationMiddleware`
 - Extract IDs from validated token instead of request body
 - Added rate limiting (30 req/15min)
 
 ## Files Modified
+
 - `backend/src/interfaces/http/routes/public-orders.routes.ts`
 - `frontend/src/pages/CheckoutPage.tsx`
 
 ## Testing
+
 See SECURITY-AUDIT-2025-10-16.md for test scenarios
 
 ## Impact
+
 - Breaking change for frontend (now requires token in body)
 - No impact on users (frontend already updated)
 ```
@@ -589,6 +638,7 @@ type ViewMode = "mobile" | "tablet" | "desktop"
 ```
 
 **Raccomandazione**:
+
 ```typescript
 /**
  * Device simulation mode for cart iframe preview
@@ -605,14 +655,15 @@ type ViewMode = "mobile" | "tablet" | "desktop"
 
 ### 📊 **COMPLEXITY ANALYSIS**
 
-| File | Lines | Functions | Cyclomatic Complexity | Score |
-|------|-------|-----------|----------------------|-------|
-| `MessageRenderer.tsx` | 149 | 3 | 8 | ⚠️ Media |
-| `CartIframePopup.tsx` | 144 | 3 | 6 | ✅ Bassa |
-| `CheckoutPage.tsx` | 1284 | ~25 | 45+ | 🔴 ALTA |
-| `public-orders.routes.ts` | 1196 | 8 | 35+ | 🔴 ALTA |
+| File                      | Lines | Functions | Cyclomatic Complexity | Score    |
+| ------------------------- | ----- | --------- | --------------------- | -------- |
+| `MessageRenderer.tsx`     | 149   | 3         | 8                     | ⚠️ Media |
+| `CartIframePopup.tsx`     | 144   | 3         | 6                     | ✅ Bassa |
+| `CheckoutPage.tsx`        | 1284  | ~25       | 45+                   | 🔴 ALTA  |
+| `public-orders.routes.ts` | 1196  | 8         | 35+                   | 🔴 ALTA  |
 
 **Azioni**:
+
 - 🔴 **CheckoutPage.tsx**: URGENTE - Spezzare in componenti più piccoli
 - 🔴 **public-orders.routes.ts**: Estrarre middleware e utility functions
 - ⚠️ **MessageRenderer.tsx**: Separare parsing logic da rendering
@@ -621,12 +672,12 @@ type ViewMode = "mobile" | "tablet" | "desktop"
 
 ### 📊 **DRY (Don't Repeat Yourself) VIOLATIONS**
 
-| Pattern | Occorrenze | Risparmio Potenziale |
-|---------|------------|---------------------|
-| Token validation logic | 6x | ~180 righe |
-| JSON address parsing | 4x | ~60 righe |
-| Customer query fallback | 6x | ~90 righe |
-| Error handling try/catch | 8x | ~120 righe |
+| Pattern                  | Occorrenze | Risparmio Potenziale |
+| ------------------------ | ---------- | -------------------- |
+| Token validation logic   | 6x         | ~180 righe           |
+| JSON address parsing     | 4x         | ~60 righe            |
+| Customer query fallback  | 6x         | ~90 righe            |
+| Error handling try/catch | 8x         | ~120 righe           |
 
 **Totale risparmio potenziale**: **~450 righe di codice** con refactoring
 
@@ -651,6 +702,7 @@ const products = await prisma.products.findMany({ ... })
 **Non è un N+1 vero (non è in loop)**, ma potrebbe essere ottimizzato
 
 **Raccomandazione**: Usare transaction se serve consistenza
+
 ```typescript
 const [customer, products] = await prisma.$transaction([
   prisma.customers.findFirst({ ... }),
@@ -670,6 +722,7 @@ const products = await prisma.products.findMany({ ... })
 ```
 
 **Raccomandazione**: Aggiungere Redis cache
+
 ```typescript
 const cacheKey = `products:${workspaceId}`
 let products = await redis.get(cacheKey)
@@ -687,20 +740,24 @@ if (!products) {
 ### 🔴 **MISSING TESTS**
 
 #### 1. **Unit Tests**
+
 - ❌ `MessageRenderer.tsx` - Nessun test per renderWithLinks()
 - ❌ `CartIframePopup.tsx` - Nessun test per cycleViewMode()
 - ❌ `public-orders.routes.ts` - Nessun test per token validation
 
 #### 2. **Integration Tests**
+
 - ❌ `/get-all-products` endpoint - Nessun test E2E
 - ❌ Token validation flow - Nessun test con token reale
 
 #### 3. **Security Tests**
+
 - ❌ XSS injection test in MessageRenderer
 - ❌ Token expiry test
 - ❌ Rate limiting test
 
 **Raccomandazione**: Creare test suite minima
+
 ```typescript
 // backend/__tests__/routes/public-orders.test.ts
 describe('POST /api/internal/get-all-products', () => {
@@ -734,8 +791,9 @@ describe('POST /api/internal/get-all-products', () => {
 ```
 
 **Raccomandazione**:
+
 ```typescript
-<button 
+<button
   onClick={cycleViewMode}
   aria-label="Cycle through device view modes"
   title="Cycle view mode"
@@ -743,7 +801,7 @@ describe('POST /api/internal/get-all-products', () => {
   <RotateCw className="h-4 w-4" aria-hidden="true" />
 </button>
 
-<button 
+<button
   onClick={onClose}
   aria-label="Close cart preview"
   title="Close"
@@ -762,14 +820,15 @@ describe('POST /api/internal/get-all-products', () => {
 ```
 
 **Raccomandazione**: Aggiungere handler Escape key
+
 ```typescript
 useEffect(() => {
   const handleEscape = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') onClose()
+    if (e.key === "Escape") onClose()
   }
   if (isOpen) {
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
+    document.addEventListener("keydown", handleEscape)
+    return () => document.removeEventListener("keydown", handleEscape)
   }
 }, [isOpen, onClose])
 ```
@@ -818,16 +877,16 @@ useEffect(() => {
 
 ## 📊 FINAL SCORE
 
-| Categoria | Score | Note |
-|-----------|-------|------|
-| **SOLID Principles** | 7/10 | SRP violato in CheckoutPage, resto buono |
-| **Dead Code** | 5/10 | 2 elementi inutilizzati trovati |
-| **Code Reusability** | 4/10 | ~450 righe di codice duplicato |
-| **Security** | 9/10 | Eccellente dopo fix, issue minori iframe sandbox |
-| **Documentation** | 6/10 | Swagger buono, mancano JSDoc e README |
-| **Performance** | 7/10 | Nessun problema grave, manca caching |
-| **Testing** | 2/10 | Nessun test per nuovo codice |
-| **Accessibility** | 4/10 | Mancano ARIA labels e keyboard nav |
+| Categoria            | Score | Note                                             |
+| -------------------- | ----- | ------------------------------------------------ |
+| **SOLID Principles** | 7/10  | SRP violato in CheckoutPage, resto buono         |
+| **Dead Code**        | 5/10  | 2 elementi inutilizzati trovati                  |
+| **Code Reusability** | 4/10  | ~450 righe di codice duplicato                   |
+| **Security**         | 9/10  | Eccellente dopo fix, issue minori iframe sandbox |
+| **Documentation**    | 6/10  | Swagger buono, mancano JSDoc e README            |
+| **Performance**      | 7/10  | Nessun problema grave, manca caching             |
+| **Testing**          | 2/10  | Nessun test per nuovo codice                     |
+| **Accessibility**    | 4/10  | Mancano ARIA labels e keyboard nav               |
 
 ### **OVERALL SCORE: 6.5/10** 🟡
 
@@ -836,6 +895,7 @@ useEffect(() => {
 ## ✅ CONCLUSIONE
 
 **Punti di Forza**:
+
 - ✅ Security fix implementato correttamente
 - ✅ Token validation robusta
 - ✅ XSS protection con DOMPurify
@@ -844,6 +904,7 @@ useEffect(() => {
 - ✅ Swagger documentation buona
 
 **Aree di Miglioramento**:
+
 - 🔴 Codice duplicato (token validation, JSON parsing)
 - 🔴 CheckoutPage troppo grande (1284 righe)
 - 🔴 Mancano test
@@ -851,10 +912,10 @@ useEffect(() => {
 - ⚠️ Documentation gaps (JSDoc, README)
 
 **Next Steps**:
+
 1. Implementare `tokenValidationMiddleware` (elimina ~180 righe duplicate)
 2. Rimuovere codice morto identificato
 3. Aggiungere test suite minima
 4. Refactor CheckoutPage in componenti più piccoli
 
 **Andrea, il codice è BUONO ma può essere OTTIMO con questi fix! 🚀**
-

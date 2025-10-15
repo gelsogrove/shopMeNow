@@ -35,8 +35,12 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
 
   const chartData = Array.from(allMonths).map((month) => {
     const orderData = analytics.trends.orders.find((d) => d.month === month)
-    const customerData = analytics.trends.customers.find((d) => d.month === month)
-    const usageCostData = analytics.trends.usageCost.find((d) => d.month === month)
+    const customerData = analytics.trends.customers.find(
+      (d) => d.month === month
+    )
+    const usageCostData = analytics.trends.usageCost.find(
+      (d) => d.month === month
+    )
 
     return {
       month,
