@@ -15,6 +15,7 @@ export interface ProductData {
   status: string
   slug: string
   categoryName: string
+  imageUrl?: string[]
   currentCharge?: number
   newTotal?: number
   createdAt?: Date
@@ -34,6 +35,7 @@ export const products: ProductData[] = [
     status: "ACTIVE",
     slug: "spaghetti-gragnano-igp",
     categoryName: "Pasta",
+    imageUrl: ["/uploads/products/PASTA001.jpg"],
   },
   {
     name: "Penne Rigate",

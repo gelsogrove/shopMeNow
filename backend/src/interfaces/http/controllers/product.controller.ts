@@ -2,6 +2,7 @@ import { ProductStatus } from "@prisma/client"
 import { Request, Response } from "express"
 import { ProductService } from "../../../application/services/product.service"
 import { prisma } from "../../../lib/prisma"
+import { cleanupRemovedImages } from "../../../utils/fileManager"
 import logger from "../../../utils/logger"
 
 export class ProductController {
@@ -165,11 +166,70 @@ export class ProductController {
         productData.workspaceId = workspaceId
       }
 
+      // Validate ProductCode uniqueness within workspace
+      const productCode = productData.code || productData.ProductCode
+      if (productCode) {
+        const existingProduct = await prisma.products.findFirst({
+          where: {
+            ProductCode: productCode,
+            workspaceId: workspaceId,
+          },
+        })
+
+        if (existingProduct) {
+          logger.warn(`Duplicate ProductCode attempt: ${productCode} in workspace ${workspaceId}`)
+          return res.status(400).json({
+            message: "Product code already exists",
+            error: `A product with code "${productCode}" already exists in this workspace`,
+          })
+        }
+      }
+
+      // Convert string fields to proper types (FormData sends everything as strings)
+      if (typeof productData.price === "string") {
+        productData.price = parseFloat(productData.price)
+      }
+      if (typeof productData.stock === "string") {
+        productData.stock = parseInt(productData.stock, 10)
+      }
+      if (typeof productData.isActive === "string") {
+        productData.isActive = productData.isActive === "true"
+      }
+
       // Map frontend 'code' field to backend 'ProductCode' field
       if (productData.code && !productData.ProductCode) {
         productData.ProductCode = productData.code
         delete productData.code
       }
+
+      // Handle multiple image uploads and existing images
+      let allImageUrls: string[] = []
+
+      // Add existing images first (if reordered)
+      if (req.body.existingImageUrls) {
+        try {
+          const existingUrls = JSON.parse(req.body.existingImageUrls)
+          if (Array.isArray(existingUrls) && existingUrls.length > 0) {
+            allImageUrls = [...existingUrls]
+            logger.info(`Existing images:`, existingUrls)
+          }
+        } catch (error) {
+          logger.error("Error parsing existingImageUrls JSON", error)
+        }
+      }
+
+      // Add new uploaded images
+      if (req.files && Array.isArray(req.files) && req.files.length > 0) {
+        const newImagePaths = (req.files as Express.Multer.File[]).map(
+          (file) => `/uploads/products/${file.filename}`
+        )
+        allImageUrls = [...allImageUrls, ...newImagePaths]
+        logger.info(`New images uploaded:`, newImagePaths)
+      }
+
+      // Always set imageUrl (even if empty array)
+      productData.imageUrl = allImageUrls
+      logger.info(`Total images for product:`, allImageUrls)
 
       const product = await this.productService.createProduct(productData)
 
@@ -225,10 +285,83 @@ export class ProductController {
         })
       }
 
+      // Convert string fields to proper types (FormData sends everything as strings)
+      if (typeof productData.price === "string") {
+        productData.price = parseFloat(productData.price)
+      }
+      if (typeof productData.stock === "string") {
+        productData.stock = parseInt(productData.stock, 10)
+      }
+      if (typeof productData.isActive === "string") {
+        productData.isActive = productData.isActive === "true"
+      }
+
       // Map frontend 'code' field to backend 'ProductCode' field
       if (productData.code && !productData.ProductCode) {
         productData.ProductCode = productData.code
         delete productData.code
+      }
+
+      // Get current product to compare image changes
+      const currentProduct = await this.productService.getProductById(
+        id,
+        workspaceId
+      )
+      if (!currentProduct) {
+        return res.status(404).json({ message: "Product not found" })
+      }
+
+      const oldImageUrls = Array.isArray(currentProduct.imageUrl)
+        ? currentProduct.imageUrl
+        : []
+
+      // Handle multiple image uploads and existing images for update
+      let allImageUrls: string[] = []
+
+      // Add existing images first (if provided)
+      if (req.body.existingImageUrls) {
+        try {
+          const existingUrls = JSON.parse(req.body.existingImageUrls)
+          if (Array.isArray(existingUrls) && existingUrls.length > 0) {
+            allImageUrls = [...existingUrls]
+            logger.info(`Existing images for update:`, existingUrls)
+          }
+        } catch (error) {
+          logger.error("Error parsing existingImageUrls JSON", error)
+        }
+      }
+
+      // Add new uploaded images
+      if (req.files && Array.isArray(req.files) && req.files.length > 0) {
+        logger.info(`Received ${req.files.length} files from multer:`)
+        req.files.forEach((file, index) => {
+          logger.info(`File ${index}:`, {
+            filename: file.filename,
+            originalname: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size,
+            path: file.path
+          })
+        })
+        
+        const newImagePaths = (req.files as Express.Multer.File[]).map(
+          (file) => `/uploads/products/${file.filename}`
+        )
+        allImageUrls = [...allImageUrls, ...newImagePaths]
+        logger.info(`New images uploaded for update:`, JSON.stringify(newImagePaths))
+      }
+
+      // Always set imageUrl to reflect current state (even if empty)
+      productData.imageUrl = allImageUrls
+      logger.info(`Total images for product update:`, JSON.stringify(allImageUrls))
+      logger.info(`imageUrl type check: isArray=${Array.isArray(productData.imageUrl)}, length=${productData.imageUrl.length}`)
+
+      // Clean up removed images from filesystem
+      const deletedCount = cleanupRemovedImages(oldImageUrls, allImageUrls)
+      if (deletedCount > 0) {
+        logger.info(
+          `Cleaned up ${deletedCount} removed image(s) from filesystem`
+        )
       }
 
       const updatedProduct = await this.productService.updateProduct(
@@ -277,6 +410,18 @@ export class ProductController {
       )
       if (!existingProduct) {
         return res.status(404).json({ message: "Product not found" })
+      }
+
+      // Clean up all product images from filesystem before deleting
+      if (
+        existingProduct.imageUrl &&
+        Array.isArray(existingProduct.imageUrl) &&
+        existingProduct.imageUrl.length > 0
+      ) {
+        const deletedCount = cleanupRemovedImages(existingProduct.imageUrl, [])
+        logger.info(
+          `Cleaned up ${deletedCount} image(s) from deleted product ${id}`
+        )
       }
 
       await this.productService.deleteProduct(id, workspaceId)

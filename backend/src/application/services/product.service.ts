@@ -61,7 +61,8 @@ export class ProductService {
         throw new Error('Product name is required');
       }
 
-      if (productData.price === undefined || productData.price < 0) {
+      // Price is optional during creation, but must be non-negative if provided
+      if (productData.price !== undefined && productData.price < 0) {
         throw new Error('Product price must be a non-negative number');
       }
 
@@ -81,6 +82,7 @@ export class ProductService {
       productData.status = productData.status || ProductStatus.ACTIVE;
       productData.isActive = productData.isActive ?? true;
       productData.stock = productData.stock ?? 0;
+      productData.price = productData.price ?? 0; // Default to 0 if not provided
 
       // Create a proper domain entity
       const product = new Product(productData);

@@ -14,6 +14,7 @@ export class Product {
   slug: string
   categoryId: string | null
   workspaceId: string
+  imageUrl: string[]
   createdAt: Date
   updatedAt: Date
   category?: Category
@@ -35,6 +36,7 @@ export class Product {
     this.slug = data.slug || ""
     this.categoryId = data.categoryId || null
     this.workspaceId = data.workspaceId || ""
+    this.imageUrl = data.imageUrl || []
     this.createdAt = data.createdAt || new Date()
     this.updatedAt = data.updatedAt || new Date()
     this.category = data.category

@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DashboardAnalytics } from "@/services/analyticsApi"
-import { Euro, ShoppingCart, TrendingUp, Users } from "lucide-react"
+import { TrendingUp } from "lucide-react"
 import React from "react"
 import {
   Bar,
@@ -214,55 +214,6 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
           <ResponsiveContainer width="100%" height="100%">
             {renderChart()}
           </ResponsiveContainer>
-        </div>
-
-        {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-200">
-          <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-            <div className="p-2 bg-green-100 rounded-full">
-              <ShoppingCart className="h-4 w-4 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-green-800 font-medium">
-                {t.totalOrdersLabel}
-              </p>
-              <p className="text-lg font-bold text-green-900">
-                {analytics.overview.totalOrders.toLocaleString("en-US")}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-            <div className="p-2 bg-blue-100 rounded-full">
-              <Users className="h-4 w-4 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-blue-800 font-medium">
-                {t.activeClients}
-              </p>
-              <p className="text-lg font-bold text-blue-900">
-                {analytics.overview.totalCustomers.toLocaleString("en-US")}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg">
-            <div className="p-2 bg-orange-100 rounded-full">
-              <Euro className="h-4 w-4 text-orange-600" />
-            </div>
-            <div>
-              <p className="text-sm text-orange-800 font-medium">
-                {t.totalRevenue}
-              </p>
-              <p className="text-lg font-bold text-orange-900">
-                {new Intl.NumberFormat("en-US", {
-                  style: "currency",
-                  currency: "EUR",
-                  minimumFractionDigits: 0,
-                }).format(analytics.overview.totalRevenue)}
-              </p>
-            </div>
-          </div>
         </div>
       </CardContent>
     </Card>

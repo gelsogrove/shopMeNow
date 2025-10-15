@@ -1,18 +1,20 @@
 import { PageLayout } from "@/components/layout/PageLayout"
-import { logger } from "@/lib/logger"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
 import { CrudPageContent } from "@/components/shared/CrudPageContent"
 import { FormSheet } from "@/components/shared/FormSheet"
+import { MultiImageCropUpload } from "@/components/shared/MultiImageCropUpload"
+import { ProductImage } from "@/components/shared/ProductImage"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import {
-    Tooltip,
+  Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useWorkspace } from "@/hooks/use-workspace"
+import { logger } from "@/lib/logger"
 import { Service, servicesApi } from "@/services/servicesApi"
 import { commonStyles } from "@/styles/common"
 import { formatPrice, getCurrencySymbol } from "@/utils/format"
@@ -29,6 +31,9 @@ export function ServicesPage() {
   const [showEditSheet, setShowEditSheet] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [selectedService, setSelectedService] = useState<Service | null>(null)
+  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [currentImageUrls, setCurrentImageUrls] = useState<string[]>([])
+  const [reorderedImageUrls, setReorderedImageUrls] = useState<string[]>([])
 
   const loadServices = async () => {
     if (!workspace?.id) return
@@ -56,6 +61,18 @@ export function ServicesPage() {
   )
 
   const columns = [
+    {
+      header: "Image",
+      id: "image",
+      size: 80,
+      cell: ({ row }: { row: { original: Service } }) => (
+        <ProductImage
+          imageUrl={row.original.imageUrl}
+          alt={row.original.name}
+          size="sm"
+        />
+      ),
+    },
     { header: "Name", accessorKey: "name" as keyof Service, size: 200 },
     {
       header: "Description",
@@ -121,25 +138,20 @@ export function ServicesPage() {
     const form = e.target as HTMLFormElement
     const formData = new FormData(form)
 
-    const price = parseFloat(formData.get("price") as string)
-    if (isNaN(price)) {
-      toast.error("Invalid price")
-      return
-    }
-
-    const data = {
-      name: formData.get("name") as string,
-      code: formData.get("code") as string,
-      description: formData.get("description") as string,
-      price,
-      currency: workspace.currency || "EUR",
-      isActive: formData.get("isActive") === "on",
+    // Add multiple image files if selected
+    if (imageFiles.length > 0) {
+      imageFiles.forEach((file) => {
+        formData.append("images", file)
+      })
     }
 
     try {
-      const newService = await servicesApi.createService(workspace.id, data)
+      const newService = await servicesApi.createService(workspace.id, formData)
       setServices([...services, newService])
       setShowAddSheet(false)
+      setImageFiles([])
+      setCurrentImageUrls([])
+      setReorderedImageUrls([])
       toast.success("Service created successfully")
     } catch (error) {
       logger.error("Error creating service:", error)
@@ -149,6 +161,9 @@ export function ServicesPage() {
 
   const handleEdit = (service: Service) => {
     setSelectedService(service)
+    setCurrentImageUrls(service.imageUrl || [])
+    setImageFiles([])
+    setReorderedImageUrls([])
     setShowEditSheet(true)
   }
 
@@ -159,32 +174,34 @@ export function ServicesPage() {
     const form = e.target as HTMLFormElement
     const formData = new FormData(form)
 
-    const price = parseFloat(formData.get("price") as string)
-    if (isNaN(price)) {
-      toast.error("Invalid price")
-      return
+    // Add multiple image files if selected
+    if (imageFiles.length > 0) {
+      imageFiles.forEach((file) => {
+        formData.append("images", file)
+      })
     }
 
-    const data = {
-      name: formData.get("name") as string,
-      code: formData.get("code") as string,
-      description: formData.get("description") as string,
-      price,
-      currency: workspace.currency || "EUR",
-      isActive: formData.get("isActive") === "on",
-    }
+    // Always send existing image URLs (even if empty array) to handle deletions
+    const imagesToSend = reorderedImageUrls.length > 0 
+      ? reorderedImageUrls 
+      : currentImageUrls
+    
+    formData.append("existingImageUrls", JSON.stringify(imagesToSend))
 
     try {
       const updatedService = await servicesApi.updateService(
         workspace.id,
         selectedService.id,
-        data
+        formData
       )
       setServices(
         services.map((s) => (s.id === selectedService.id ? updatedService : s))
       )
       setShowEditSheet(false)
       setSelectedService(null)
+      setImageFiles([])
+      setCurrentImageUrls([])
+      setReorderedImageUrls([])
       toast.success("Service updated successfully")
     } catch (error) {
       logger.error("Error updating service:", error)
@@ -225,6 +242,17 @@ export function ServicesPage() {
   const renderFormFields = (service: Service | null) => (
     <div className="space-y-6">
       <div className="space-y-2">
+        <MultiImageCropUpload
+          onImagesSelected={setImageFiles}
+          onImagesReordered={setReorderedImageUrls}
+          currentImageUrls={currentImageUrls}
+          label="Service Images"
+          required={false}
+          maxImages={10}
+        />
+      </div>
+
+      <div className="space-y-2">
         <Label htmlFor="name">Name</Label>
         <Input
           id="name"
@@ -246,7 +274,8 @@ export function ServicesPage() {
           title="Code must be 3 uppercase letters followed by 3 numbers (e.g., SHP001)"
         />
         <p className="text-xs text-gray-500">
-          Unique service code. Format: 3 uppercase letters + 3 numbers (e.g., SHP001 for Shipping, GFT001 for Gift Package)
+          Unique service code. Format: 3 uppercase letters + 3 numbers (e.g.,
+          SHP001 for Shipping, GFT001 for Gift Package)
         </p>
       </div>
       <div className="space-y-2">
@@ -299,7 +328,12 @@ export function ServicesPage() {
         searchValue={searchValue}
         onSearch={setSearchValue}
         searchPlaceholder="Search services..."
-        onAdd={() => setShowAddSheet(true)}
+        onAdd={() => {
+          setImageFiles([])
+          setCurrentImageUrls([])
+          setReorderedImageUrls([])
+          setShowAddSheet(true)
+        }}
         addButtonText="Add"
         data={filteredServices}
         columns={columns}

@@ -1,6 +1,7 @@
 import { NextFunction, Response, Router } from "express"
 import { ServicesController } from "../controllers/services.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"
+import { handleUploadError, uploadImage } from "../middlewares/uploadMiddleware"
 import { workspaceContextMiddleware } from "../middlewares/workspace-context.middleware"
 import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
 import { WorkspaceRequest } from "../types/workspace-request"
@@ -188,6 +189,8 @@ export const servicesRouter = (controller: ServicesController): Router => {
   // @ts-ignore
   router.post(
     "/",
+    uploadImage.array("images", 10), // Support up to 10 images
+    handleUploadError,
     workspaceContextMiddleware,
     (req: WorkspaceRequest, res: Response, next: NextFunction): void => {
       controller.createService(req, res).catch(next)
@@ -293,6 +296,8 @@ export const servicesRouter = (controller: ServicesController): Router => {
   // @ts-ignore
   router.put(
     "/:id",
+    uploadImage.array("images", 10), // Support up to 10 images
+    handleUploadError,
     workspaceContextMiddleware,
     (req: WorkspaceRequest, res: Response, next: NextFunction): void => {
       controller.updateService(req, res).catch(next)

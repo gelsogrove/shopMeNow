@@ -1,6 +1,7 @@
 import { Minus, Plus, Trash2 } from "lucide-react"
 import React from "react"
 import { componentVariants } from "../../styles/theme"
+import { ProductImage } from "../shared/ProductImage"
 
 interface ProductCardProps {
   id: string
@@ -10,6 +11,7 @@ interface ProductCardProps {
   price: number
   originalPrice?: number
   quantity?: number
+  imageUrl?: string[]
   discount?: {
     amount: number
     source?: string
@@ -30,6 +32,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   price,
   originalPrice,
   quantity = 1,
+  imageUrl,
   discount,
   onQuantityChange,
   onRemove,
@@ -59,8 +62,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         isLoading ? "opacity-50" : ""
       }`}
     >
-      {/* Product Header */}
-      <div className="flex justify-between items-start">
+      {/* Product Header with Image */}
+      <div className="flex justify-between items-start gap-3">
+        {/* Product Image */}
+        <ProductImage
+          imageUrl={imageUrl}
+          alt={name}
+          size="md"
+          className="flex-shrink-0"
+        />
+
         <div className="flex-1 min-w-0 pr-3">
           <h3 className="font-medium text-neutral-900 text-sm leading-tight line-clamp-2">
             {name}
