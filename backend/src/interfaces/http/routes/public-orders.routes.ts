@@ -382,18 +382,8 @@ router.get("/public/orders/:orderCode", async (req: Request, res: Response) => {
       include: {
         items: {
           include: {
-            product: {
-              select: {
-                name: true,
-                ProductCode: true,
-              },
-            },
-            service: {
-              select: {
-                name: true,
-                code: true,
-              },
-            },
+            product: true,
+            service: true,
           },
         },
         customer: {
@@ -421,7 +411,7 @@ router.get("/public/orders/:orderCode", async (req: Request, res: Response) => {
     }
 
     // Parse customer addresses if they're JSON strings
-    let parsedCustomer = { ...order.customer }
+    let parsedCustomer = { ...(order as any).customer }
 
     // Parse invoiceAddress if it's a JSON string
     if (
@@ -451,8 +441,8 @@ router.get("/public/orders/:orderCode", async (req: Request, res: Response) => {
       }
     }
 
-    // Format order items
-    const formattedItems = order.items.map((item) => ({
+    // Format order items with imageUrl
+    const formattedItems = (order as any).items.map((item: any) => ({
       id: item.id,
       itemType: item.itemType,
       name: item.product?.name || item.service?.name || "Unknown Item",
@@ -460,6 +450,7 @@ router.get("/public/orders/:orderCode", async (req: Request, res: Response) => {
       quantity: item.quantity,
       unitPrice: item.unitPrice,
       totalPrice: item.totalPrice,
+      imageUrl: item.product?.imageUrl || item.service?.imageUrl || [],
     }))
 
     const formattedOrder = {
@@ -485,7 +476,7 @@ router.get("/public/orders/:orderCode", async (req: Request, res: Response) => {
       data: {
         order: formattedOrder,
         customer: parsedCustomer,
-        workspace: order.workspace,
+        workspace: (order as any).workspace,
       },
     })
   } catch (error) {
@@ -882,16 +873,16 @@ router.post("/get-all-products", async (req: Request, res: Response) => {
   try {
     const { workspaceId, customerId } = req.body
 
-    if (!workspaceId || !customerId) {
+    if (!workspaceId) {
       return res.status(400).json({
         success: false,
-        error: "workspaceId and customerId are required",
+        error: "workspaceId is required",
       })
     }
 
     logger.info("[GET-ALL-PRODUCTS] Request received:", {
       workspaceId,
-      customerId,
+      customerId: customerId || "not-provided",
     })
 
     // Get customer to fetch their discount
@@ -957,6 +948,7 @@ router.post("/get-all-products", async (req: Request, res: Response) => {
         discount: customerDiscount,
         stock: product.stock,
         isActive: product.isActive,
+        imageUrl: (product as any).imageUrl || [], // 🖼️ Include product images
         category: product.category
           ? {
               id: product.category.id,

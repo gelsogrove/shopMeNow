@@ -29,4 +29,7 @@ yarn-error.log*
 
 # Logs
 logs/
-*.log 
+*.log
+
+# Uploads backup (created by npm run db:export)
+prisma/uploads-backup/ 

@@ -1,8 +1,7 @@
 import { logger } from "@/lib/logger"
 import React, { useEffect, useState } from "react"
 import { useLocation, useSearchParams } from "react-router-dom"
-import { StickyHeader } from "../components/public/StickyHeader"
-import { MobileMenu } from "../components/public/MobileMenu"
+import { PublicPageLayout } from "../components/layout/PublicPageLayout"
 import { SearchBar, useProductSearch } from "../components/ui/SearchBar"
 import { TokenError } from "../components/ui/TokenError"
 import UnifiedLoading from "../components/ui/UnifiedLoading"
@@ -17,17 +16,6 @@ import {
   Step3Confirm,
   Step4Payment,
 } from "../components/checkout"
-
-// 🖼️ Helper to get full image URL
-const getImageUrl = (imageUrl: string | string[] | undefined): string | null => {
-  if (!imageUrl) return null
-  const url = Array.isArray(imageUrl) ? imageUrl[0] : imageUrl
-  if (!url) return null
-  // If URL already starts with http, return as-is
-  if (url.startsWith('http')) return url
-  // Otherwise, prepend backend URL
-  return `http://localhost:3001${url}`
-}
 
 interface Product {
   id: string // Cart item ID
@@ -47,7 +35,6 @@ interface Product {
   nomeSconto?: string
   duration?: number // Service duration in minutes
   notes?: string // Service notes
-  imageUrl?: string[] // 🖼️ Product/Service images
 }
 
 interface Customer {
@@ -421,7 +408,6 @@ const CheckoutPage: React.FC = () => {
               quantita: 1,
               duration: item.duration || null,
               notes: item.notes || null,
-              imageUrl: item.imageUrl || [], // 🖼️ Service images
             }
           } else {
             return {
@@ -439,7 +425,6 @@ const CheckoutPage: React.FC = () => {
               nomeSconto: null,
               qty: item.quantity,
               quantita: item.quantity,
-              imageUrl: item.imageUrl || [], // 🖼️ Product images
             }
           }
         })
@@ -876,100 +861,733 @@ const CheckoutPage: React.FC = () => {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Sticky Header with integrated menu */}
-      <StickyHeader
-        title={texts.finalizeOrder}
-        subtitle={texts.greeting.replace("{name}", customer?.name || "")}
-        icon={checkoutIcon}
-        showMenu={true}
-        token={token}
-        currentPage="cart"
-        customerLanguage={customer?.language}
-      />
+    <PublicPageLayout
+      title={texts.finalizeOrder}
+      subtitle={texts.greeting.replace("{name}", customer?.name || "")}
+      customerLanguage={customer?.language}
+      token={token}
+      currentPage="cart"
+      icon={checkoutIcon}
+    >
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-3xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4">
+          {/* Progress Steps - New Modular Component */}
+          <ProgressSteps currentStep={currentStep} steps={stepsArray} />
 
-      {/* Main Content */}
-      <div className="pt-[60px] -mt-10"> {/* Exact header height: 60px - PULL UP with negative margin */}
-        <div className="max-w-3xl mx-auto px-3 sm:px-4">
-          {/* Progress Steps - New Modular Component - NO top margin */}
-          <div className="mb-3">
-            <ProgressSteps 
-              currentStep={currentStep} 
-              steps={stepsArray}
-              onStepClick={(stepNum) => setCurrentStep(stepNum)}
-            />
-          </div>
-
-          {/* Step 1: Products - New Modular Component */}
+          {/* Step 1: Products */}
           {currentStep === 1 && (
-            <div className="mb-3">
-              <Step1Products
-                products={prodotti}
-                texts={texts}
-                onAddProducts={() => {
-                  setShowAddProducts(true)
-                  loadAvailableProducts()
-                }}
-                onAddServices={() => {
-                  setShowAddServices(true)
-                  loadAvailableServices()
-                }}
-                onQuantityChange={handleQuantityChange}
-                onDeleteProduct={(index, name, itemType, itemId) =>
-                  showDeleteConfirmation(index, name, itemType, itemId)
-                }
-                onNext={() => setCurrentStep(2)}
-              />
+            <Step1Products
+              products={prodotti}
+              texts={texts}
+              onAddProducts={() => {
+                setShowAddProducts(true)
+                loadAvailableProducts()
+              }}
+              onAddServices={() => {
+                setShowAddServices(true)
+                loadAvailableServices()
+              }}
+              onQuantityChange={handleQuantityChange}
+              onDelete={(index, name, itemType, itemId) =>
+                showDeleteConfirmation(index, name, itemType, itemId)
+              }
+              onNext={() => setCurrentStep(2)}
+              total={calculateTotal()}
+            />
+          )}
+
+              {/* Products and Services List */}
+              <div className="space-y-4 mb-6">
+                {prodotti.map((prodotto, index) => {
+                  const isService = prodotto.itemType === "SERVICE"
+                  const icon = isService
+                    ? getServiceIcon(prodotto.descrizione)
+                    : getProductIcon(
+                        prodotto.descrizione,
+                        prodotto.formato || ""
+                      )
+
+                  return (
+                    <div key={index} className="border rounded-lg p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          {/* Icon and Type Badge */}
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-2xl">{icon}</span>
+                            <span
+                              className={`text-xs px-2 py-1 rounded-full font-medium ${
+                                isService
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-green-100 text-green-700"
+                              }`}
+                            >
+                              {isService
+                                ? texts.serviceBadge
+                                : texts.productBadge}
+                            </span>
+                          </div>
+
+                          {/* Code */}
+                          <div className="text-sm font-mono text-gray-500 mb-1">
+                            {prodotto.codice !== "N/A"
+                              ? prodotto.codice
+                              : "Non disponibile"}
+                          </div>
+
+                          {/* Name */}
+                          <div className="text-lg font-semibold text-gray-900 mb-1">
+                            {prodotto.descrizione}
+                          </div>
+
+                          {/* Format (only for products) */}
+                          {prodotto.formato && !isService && (
+                            <div className="text-sm text-blue-600 mb-2 font-medium">
+                              {texts.format}: {prodotto.formato}
+                            </div>
+                          )}
+
+                          {/* Quantity and Price */}
+                          <div className="flex items-center space-x-4">
+                            {/* Quantity controls - only for products */}
+                            {!isService && (
+                              <div className="flex items-center space-x-2">
+                                <button
+                                  onClick={() =>
+                                    handleQuantityChange(
+                                      index,
+                                      prodotto.qty - 1
+                                    )
+                                  }
+                                  className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300"
+                                  disabled={prodotto.qty <= 1}
+                                >
+                                  -
+                                </button>
+                                <span className="w-8 text-center font-semibold">
+                                  {prodotto.qty}
+                                </span>
+                                <button
+                                  onClick={() =>
+                                    handleQuantityChange(
+                                      index,
+                                      prodotto.qty + 1
+                                    )
+                                  }
+                                  className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            )}
+
+                            {/* Price per unit - only for products */}
+                            {!isService && (
+                              <div className="flex items-center space-x-2">
+                                {prodotto.prezzoOriginale &&
+                                prodotto.prezzoOriginale > prodotto.prezzo ? (
+                                  <>
+                                    <span className="text-sm text-gray-600">
+                                      a €{prodotto.prezzo.toFixed(2)} cad.
+                                    </span>
+                                    <span className="text-sm text-gray-500 line-through">
+                                      (era €
+                                      {prodotto.prezzoOriginale.toFixed(2)})
+                                    </span>
+                                    {prodotto.scontoApplicato &&
+                                      prodotto.scontoApplicato > 0 && (
+                                        <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">
+                                          -{prodotto.scontoApplicato}%
+                                        </span>
+                                      )}
+                                  </>
+                                ) : (
+                                  <span className="text-sm text-gray-600">
+                                    a €{prodotto.prezzo.toFixed(2)} cad.
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center space-x-4">
+                          <div className="text-right">
+                            <p className="font-bold text-lg text-green-600">
+                              €
+                              {(
+                                (isService
+                                  ? prodotto.prezzo
+                                  : prodotto.prezzoScontato ||
+                                    prodotto.prezzo) *
+                                (prodotto.qty || prodotto.quantita || 1)
+                              ).toFixed(2)}
+                            </p>
+                          </div>
+
+                          <button
+                            onClick={() =>
+                              showDeleteConfirmation(
+                                index,
+                                prodotto.descrizione,
+                                isService ? "SERVICE" : "PRODUCT",
+                                isService
+                                  ? prodotto.serviceId!
+                                  : prodotto.productId!
+                              )
+                            }
+                            className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50"
+                            title={
+                              isService
+                                ? "Rimuovi servizio"
+                                : "Rimuovi prodotto"
+                            }
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Empty cart message */}
+              {prodotti.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="text-lg">{texts.emptyCart}</p>
+                  <p className="text-sm">{texts.addProductsToContinue}</p>
+                </div>
+              )}
+
+              {/* Total */}
+              <div className="border-t pt-4">
+                <div className="flex justify-between items-center text-xl font-bold">
+                  <span>{texts.total}</span>
+                  <span className="text-green-600 font-bold">
+                    €{calculateTotal().toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Continue Button */}
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => setCurrentStep(2)}
+                  disabled={prodotti.length === 0}
+                  className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                >
+                  {texts.continue}
+                </button>
+              </div>
             </div>
           )}
 
-          {/* Step 2: Addresses - New Modular Component */}
           {currentStep === 2 && (
-            <div className="mb-3">
-              <Step2Addresses
-                shippingAddress={formData.shippingAddress}
-                billingAddress={formData.billingAddress}
-                sameAsBilling={formData.sameAsBilling}
-                texts={texts}
-                onShippingChange={(field, value) =>
-                  handleInputChange("shippingAddress", field, value)
-                }
-                onBillingChange={(field, value) =>
-                  handleInputChange("billingAddress", field, value)
-                }
-                onSameAsBillingChange={handleSameAsBillingChange}
-                onNext={handleNextStep}
-              />
+            <div>
+              {/* Shipping Address */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold mb-4">
+                  🚚 {texts.shippingAddress}
+                </h3>
+
+                {/* Hidden fields for Nome completo, Telefono, Azienda */}
+                <input
+                  type="hidden"
+                  value={formData.shippingAddress.name}
+                  onChange={(e) =>
+                    handleInputChange("shippingAddress", "name", e.target.value)
+                  }
+                />
+                <input
+                  type="hidden"
+                  value={formData.shippingAddress.phone}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "shippingAddress",
+                      "phone",
+                      e.target.value
+                    )
+                  }
+                />
+                <input
+                  type="hidden"
+                  value={formData.shippingAddress.company}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "shippingAddress",
+                      "company",
+                      e.target.value
+                    )
+                  }
+                />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {texts.streetLabel}
+                    </label>
+                    <input
+                      type="text"
+                      placeholder={texts.streetPlaceholder}
+                      value={formData.shippingAddress.street}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "shippingAddress",
+                          "street",
+                          e.target.value
+                        )
+                      }
+                      className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {texts.cityLabel}
+                    </label>
+                    <input
+                      type="text"
+                      placeholder={texts.cityPlaceholder}
+                      value={formData.shippingAddress.city}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "shippingAddress",
+                          "city",
+                          e.target.value
+                        )
+                      }
+                      className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {texts.postalCodeLabel}
+                    </label>
+                    <input
+                      type="text"
+                      placeholder={texts.postalCodePlaceholder}
+                      value={formData.shippingAddress.postalCode}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "shippingAddress",
+                          "postalCode",
+                          e.target.value
+                        )
+                      }
+                      className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {texts.provinceLabel}
+                    </label>
+                    <input
+                      type="text"
+                      placeholder={texts.provincePlaceholder}
+                      value={formData.shippingAddress.province}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "shippingAddress",
+                          "province",
+                          e.target.value
+                        )
+                      }
+                      className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {texts.countryLabel}
+                    </label>
+                    <input
+                      type="text"
+                      placeholder={texts.countryPlaceholder}
+                      value={formData.shippingAddress.country}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "shippingAddress",
+                          "country",
+                          e.target.value
+                        )
+                      }
+                      className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Billing Address */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold mb-4">
+                  🧾 {texts.billingAddress}
+                </h3>
+
+                {/* Same as shipping checkbox */}
+                <div className="mb-4">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.sameAsBilling}
+                      onChange={(e) =>
+                        handleSameAsBillingChange(e.target.checked)
+                      }
+                      className="mr-2"
+                    />
+                    <span className="text-sm text-gray-700">
+                      {texts.sameAsShippingLabel}
+                    </span>
+                  </label>
+                </div>
+
+                {/* Billing address fields - only show if not same as shipping */}
+                {!formData.sameAsBilling && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {texts.name}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={texts.namePlaceholder}
+                        value={formData.billingAddress.name}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "billingAddress",
+                            "name",
+                            e.target.value
+                          )
+                        }
+                        className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {texts.phone}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={texts.phonePlaceholder}
+                        value={formData.billingAddress.phone}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "billingAddress",
+                            "phone",
+                            e.target.value
+                          )
+                        }
+                        className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {texts.company}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={texts.companyPlaceholder}
+                        value={formData.billingAddress.company}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "billingAddress",
+                            "company",
+                            e.target.value
+                          )
+                        }
+                        className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {texts.streetLabel}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={texts.streetPlaceholder}
+                        value={formData.billingAddress.street}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "billingAddress",
+                            "street",
+                            e.target.value
+                          )
+                        }
+                        className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {texts.cityLabel}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={texts.cityPlaceholder}
+                        value={formData.billingAddress.city}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "billingAddress",
+                            "city",
+                            e.target.value
+                          )
+                        }
+                        className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {texts.postalCodeLabel}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={texts.postalCodePlaceholder}
+                        value={formData.billingAddress.postalCode}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "billingAddress",
+                            "postalCode",
+                            e.target.value
+                          )
+                        }
+                        className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {texts.provinceLabel}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={texts.provincePlaceholder}
+                        value={formData.billingAddress.province}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "billingAddress",
+                            "province",
+                            e.target.value
+                          )
+                        }
+                        className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {texts.countryLabel}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={texts.countryPlaceholder}
+                        value={formData.billingAddress.country}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "billingAddress",
+                            "country",
+                            e.target.value
+                          )
+                        }
+                        className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Navigation */}
+              <div className="flex justify-between">
+                <button
+                  onClick={() => setCurrentStep(1)}
+                  className="bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 transition-colors"
+                >
+                  {texts.goBack}
+                </button>
+                <button
+                  onClick={handleNextStep}
+                  className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  {texts.continue}
+                </button>
+              </div>
             </div>
           )}
 
-          {/* Step 3: Confirmation - New Modular Component */}
           {currentStep === 3 && (
-            <div className="mb-3">
-              <Step3Confirm
-                products={prodotti}
-                shippingAddress={formData.shippingAddress}
-                billingAddress={formData.billingAddress}
-                sameAsBilling={formData.sameAsBilling}
-                notes={formData.notes}
-                texts={texts}
-                onNotesChange={(value) =>
-                  setFormData((prev) => ({ ...prev, notes: value }))
-                }
-                onNext={() => setCurrentStep(4)}
-              />
-            </div>
-          )}
+            <div>
+              <h2 className="text-lg font-bold mb-6">
+                📝 {texts.confirmOrder}
+              </h2>
 
-          {/* Step 4: Payment - New Modular Component */}
-          {currentStep === 4 && (
-            <div className="mb-3">
-              <Step4Payment
-                total={calculateTotal()}
-                texts={texts}
-                onConfirm={handleSubmit}
-                loading={submitStatus.loading}
-              />
+              {/* Order Summary */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold mb-4">
+                  {texts.productSummary}
+                </h3>
+                {prodotti.map((prodotto, index) => {
+                  const isService = prodotto.itemType === "SERVICE"
+                  return (
+                    <div
+                      key={index}
+                      className="flex justify-between py-2 border-b"
+                    >
+                      <div className="flex-1">
+                        <div>
+                          <span>
+                            {prodotto.qty || prodotto.quantita || 1}x{" "}
+                            {prodotto.descrizione}
+                          </span>
+                          {prodotto.formato && (
+                            <div className="text-sm text-blue-600">
+                              Format: {prodotto.formato}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <span>
+                        €
+                        {(
+                          (isService
+                            ? prodotto.prezzo
+                            : prodotto.prezzoScontato || prodotto.prezzo) *
+                          (prodotto.qty || prodotto.quantita || 1)
+                        ).toFixed(2)}
+                      </span>
+                    </div>
+                  )
+                })}
+                <div className="flex justify-between py-2 text-xl font-bold border-t-2 mt-2">
+                  <span>Totale:</span>
+                  <span className="text-green-600">
+                    €{calculateTotal().toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Address Summary - Side by Side */}
+              <div className="mb-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Shipping Address */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">
+                      🚚 {texts.shippingAddress}
+                    </h3>
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <p>
+                        <strong>
+                          {formData.shippingAddress.name || texts.notSpecified}
+                        </strong>
+                      </p>
+                      <p>
+                        {formData.shippingAddress.street || texts.notSpecified}
+                      </p>
+                      <p>
+                        {formData.shippingAddress.city || texts.notSpecified}{" "}
+                        {formData.shippingAddress.postalCode || ""}
+                      </p>
+                      {formData.shippingAddress.province && (
+                        <p>{formData.shippingAddress.province}</p>
+                      )}
+                      {formData.shippingAddress.country && (
+                        <p>{formData.shippingAddress.country}</p>
+                      )}
+                      {formData.shippingAddress.phone && (
+                        <p>📞 {formData.shippingAddress.phone}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Billing Address */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">
+                      🧾 {texts.billingAddress}
+                    </h3>
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      {formData.sameAsBilling ? (
+                        <p className="text-gray-600 italic">
+                          {texts.sameAsShippingLabel}
+                        </p>
+                      ) : (
+                        <>
+                          <p>
+                            <strong>
+                              {formData.billingAddress.name ||
+                                texts.notSpecified}
+                            </strong>
+                          </p>
+                          <p>
+                            {formData.billingAddress.street ||
+                              texts.notSpecified}
+                          </p>
+                          <p>
+                            {formData.billingAddress.city || texts.notSpecified}{" "}
+                            {formData.billingAddress.postalCode || ""}
+                          </p>
+                          {formData.billingAddress.province && (
+                            <p>{formData.billingAddress.province}</p>
+                          )}
+                          {formData.billingAddress.country && (
+                            <p>{formData.billingAddress.country}</p>
+                          )}
+                          {formData.billingAddress.phone && (
+                            <p>📞 {formData.billingAddress.phone}</p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium mb-2">
+                  {texts.additionalNotesLabel}
+                </label>
+                <textarea
+                  value={formData.notes}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, notes: e.target.value }))
+                  }
+                  placeholder={texts.notesPlaceholder}
+                  rows={3}
+                  className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Submit Status */}
+              {submitStatus.error && (
+                <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
+                  {submitStatus.error}
+                </div>
+              )}
+
+              {submitStatus.success && (
+                <div className="mb-4 p-4 bg-green-100 text-green-700 rounded-lg">
+                  {texts.orderSuccessMessage}
+                </div>
+              )}
+
+              {/* Navigation */}
+              <div className="flex justify-between">
+                <button
+                  onClick={() => setCurrentStep(2)}
+                  className="bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 transition-colors"
+                  disabled={submitStatus.loading}
+                >
+                  {texts.goBack}
+                </button>
+                {!submitStatus.success && (
+                  <button
+                    onClick={handleSubmit}
+                    disabled={submitStatus.loading}
+                    className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-400 transition-colors"
+                  >
+                    {submitStatus.loading ? (
+                      <span className="flex items-center">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        {texts.creatingOrder}
+                      </span>
+                    ) : (
+                      `✅ ${texts.confirmOrder}`
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -1051,27 +1669,16 @@ const CheckoutPage: React.FC = () => {
                               {categoryProducts.map((product) => (
                                 <div
                                   key={product.id}
-                                  className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow bg-white"
+                                  className="border rounded-lg p-3 hover:shadow-md transition-shadow"
                                 >
-                                  {/* 🖼️ Product Image - ALWAYS SHOW */}
-                                  <div className="w-full h-40 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
-                                    {getImageUrl(product.imageUrl) ? (
-                                      <img
-                                        src={getImageUrl(product.imageUrl)!}
-                                        alt={product.name}
-                                        className="w-full h-full object-cover"
-                                      />
-                                    ) : (
-                                      <div className="w-full h-full bg-gradient-to-br from-blue-100 via-purple-50 to-pink-100 flex items-center justify-center">
-                                        <span className="text-6xl opacity-30">📦</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                  
-                                  {/* Product Info */}
-                                  <div className="p-3">
-                                  <h5 className="font-semibold text-sm mb-1">
-                                    {product.name}
+                                  <h5 className="font-semibold text-sm mb-1 flex items-center gap-2">
+                                    <span className="text-2xl">
+                                      {getProductIcon(
+                                        product.name,
+                                        product.categoria
+                                      )}
+                                    </span>
+                                    <span>{product.name}</span>
                                   </h5>
                                   {product.formato && (
                                     <div className="text-xs text-blue-600 mb-1 font-medium">
@@ -1119,7 +1726,6 @@ const CheckoutPage: React.FC = () => {
                                       </span>
                                       {texts.addToCart}
                                     </button>
-                                  </div>
                                   </div>
                                 </div>
                               ))}
@@ -1177,27 +1783,13 @@ const CheckoutPage: React.FC = () => {
                     {availableServices.map((service) => (
                       <div
                         key={service.id}
-                        className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow bg-white"
+                        className="border rounded-lg p-4 hover:shadow-md transition-shadow"
                       >
-                        {/* 🖼️ Service Image */}
-                        <div className="w-full h-40 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
-                          {getImageUrl(service.imageUrl) ? (
-                            <img
-                              src={getImageUrl(service.imageUrl)!}
-                              alt={service.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-blue-100 via-indigo-50 to-purple-100 flex items-center justify-center">
-                              <span className="text-6xl opacity-30">🛠️</span>
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Service Info */}
-                        <div className="p-4">
-                        <h5 className="font-semibold text-sm mb-3">
-                          {service.name}
+                        <h5 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                          <span className="text-2xl">
+                            {getServiceIcon(service.name)}
+                          </span>
+                          <span>{service.name}</span>
                         </h5>
                         <div className="flex items-center justify-between">
                           <p className="text-lg font-bold text-blue-600">
@@ -1209,7 +1801,6 @@ const CheckoutPage: React.FC = () => {
                           >
                             {texts.addToCart}
                           </button>
-                        </div>
                         </div>
                       </div>
                     ))}
@@ -1273,7 +1864,7 @@ const CheckoutPage: React.FC = () => {
           </div>
         )}
       </div>
-    </div>
+    </PublicPageLayout>
   )
 }
 

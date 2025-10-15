@@ -25,11 +25,12 @@ import { PrismaClient } from "@prisma/client"
 import * as bcrypt from "bcrypt"
 import * as dotenv from "dotenv"
 import * as fs from "fs"
+import * as fse from "fs-extra"
 import * as path from "path"
 
 // Import external data files
-import { foodCategories } from "./data/categories"
-import { faqsData } from "./data/faqs"
+import { categories } from "./data/categories"
+import { faqs } from "./data/faqs"
 import { products } from "./data/products"
 
 // Load environment variables
@@ -78,10 +79,45 @@ async function main() {
   console.log("🚀 STARTING COMPLETE DATABASE SEED")
   console.log("=".repeat(50))
 
-  // 🔥 COMPLETE DATABASE CLEANUP
-  console.log(
-    "🧹 COMPLETE DATABASE CLEANUP - Removing all data from all tables..."
-  )
+  // � RESTORE IMAGES FROM BACKUP
+  console.log("\n📷 RESTORING IMAGES FROM BACKUP...")
+  try {
+    const backupDir = path.join(__dirname, "uploads-backup")
+    const uploadsDir = path.join(__dirname, "..", "uploads")
+    
+    if (fs.existsSync(backupDir)) {
+      // Cancella uploads attuali
+      if (fs.existsSync(uploadsDir)) {
+        await fse.remove(uploadsDir)
+        console.log("   🗑️  Removed old uploads")
+      }
+      
+      // Copia backup → uploads
+      await fse.copy(backupDir, uploadsDir)
+      console.log("   ✅ Restored images from prisma/uploads-backup/")
+      
+      // Conta files
+      const productImages = fs.existsSync(path.join(uploadsDir, "products"))
+        ? fs.readdirSync(path.join(uploadsDir, "products")).length
+        : 0
+      const serviceImages = fs.existsSync(path.join(uploadsDir, "services"))
+        ? fs.readdirSync(path.join(uploadsDir, "services")).length
+        : 0
+      
+      console.log(`   📷 Product images restored: ${productImages}`)
+      console.log(`   📷 Service images restored: ${serviceImages}`)
+    } else {
+      console.log("   ⚠️  No backup found at prisma/uploads-backup/")
+      console.log("   💡 Run 'npm run db:export' first to create backup")
+    }
+  } catch (error) {
+    console.error("   ❌ Failed to restore images:", error)
+    console.log("   ⚠️  Continuing without images...")
+  }
+
+  // �🔥 COMPLETE DATABASE CLEANUP
+  console.log("\n🧹 COMPLETE DATABASE CLEANUP - Removing all data from all tables...")
+  console.log("=".repeat(50))
 
   try {
     // Delete all chunks first (foreign keys)
@@ -102,7 +138,7 @@ async function main() {
     await prisma.carts.deleteMany({})
     console.log("✅ Deleted all orders and carts")
 
-    // Delete chats and messages
+    // 🗑️ DELETE CHAT HISTORY - Clean slate for each seed
     await prisma.message.deleteMany({})
     await prisma.chatSession.deleteMany({})
     console.log("✅ Deleted all chat sessions and messages")
@@ -120,13 +156,16 @@ async function main() {
     await prisma.usage.deleteMany({})
     console.log("✅ Deleted all usage records")
 
-    // Delete customers and configurations
+    // 🗑️ DELETE ALL CUSTOMERS - Clean slate, will recreate only 4 (1 per language)
     await prisma.customers.deleteMany({})
+    console.log("✅ Deleted all customers (will recreate 4: IT, EN, ES, PT)")
+    
+    // Delete configurations (can be recreated)
     await prisma.agentConfig.deleteMany({})
     await prisma.prompts.deleteMany({})
     await prisma.languages.deleteMany({})
     await prisma.whatsappSettings.deleteMany({})
-    console.log("✅ Deleted all customers and configurations")
+    console.log("✅ Deleted configurations (will be recreated)")
 
     // Delete user-workspace associations
     await prisma.userWorkspace.deleteMany({})
@@ -144,10 +183,11 @@ async function main() {
     await prisma.sales.deleteMany({})
     console.log("✅ Deleted all sales records")
 
-    // Delete workspaces and users
-    await prisma.workspace.deleteMany({})
-    await prisma.user.deleteMany({})
-    console.log("✅ Deleted all workspaces and users")
+    // ⚠️ WORKSPACES AND USERS NOT DELETED - Must be preserved for customers!
+    // Customers have foreign key to workspace
+    // await prisma.workspace.deleteMany({})
+    // await prisma.user.deleteMany({})
+    console.log("⚠️  Workspaces and users PRESERVED (not deleted)")
 
     console.log("🎉 COMPLETE DATABASE CLEANUP FINISHED!")
     console.log("=".repeat(50))
@@ -156,30 +196,27 @@ async function main() {
     throw error
   }
 
-  // Check if the admin user already exists (should be empty after cleanup)
-  const existingAdmin = await prisma.user.findUnique({
+  // Upsert admin user (create or update if exists)
+  const hashedPassword = await bcrypt.hash(adminPassword, 10)
+  const adminUser = await prisma.user.upsert({
     where: { email: adminEmail },
+    update: {
+      passwordHash: hashedPassword,
+      firstName: "Admin",
+      lastName: "User",
+      status: "ACTIVE",
+    },
+    create: {
+      email: adminEmail,
+      passwordHash: hashedPassword,
+      firstName: "Admin",
+      lastName: "User",
+      status: "ACTIVE",
+    },
   })
-
-  let adminUser
-  if (!existingAdmin) {
-    const hashedPassword = await bcrypt.hash(adminPassword, 10)
-    adminUser = await prisma.user.create({
-      data: {
-        email: adminEmail,
-        passwordHash: hashedPassword,
-        firstName: "Admin",
-        lastName: "User",
-        status: "ACTIVE",
-      },
-    })
-    console.log(
-      `✅ Admin user created: ${adminUser.email} (ID: ${adminUser.id})`
-    )
-  } else {
-    adminUser = existingAdmin
-    console.log("ℹ️ Admin user already exists.")
-  }
+  console.log(
+    `✅ Admin user upserted: ${adminUser.email} (ID: ${adminUser.id})`
+  )
 
   // Check if the main workspace exists
   const existingMainWorkspace = await prisma.workspace.findUnique({
@@ -270,19 +307,10 @@ async function main() {
       },
     })
 
-    // Delete all chats and messages
-    await prisma.message.deleteMany({
-      where: {
-        chatSession: {
-          workspaceId: mainWorkspaceId,
-        },
-      },
-    })
-    await prisma.chatSession.deleteMany({
-      where: {
-        workspaceId: mainWorkspaceId,
-      },
-    })
+    // ⚠️ CHATS AND MESSAGES NOT DELETED - Must be preserved!
+    // await prisma.message.deleteMany({...})
+    // await prisma.chatSession.deleteMany({...})
+    console.log("⚠️  Chat sessions and messages PRESERVED (not deleted from workspace)")
 
     // 2. Then, delete the main entities
     console.log("🗑️ Deleting main entities...")
@@ -311,13 +339,9 @@ async function main() {
     })
     console.log("Deleted all products from the main workspace")
 
-    // Delete all customers
-    await prisma.customers.deleteMany({
-      where: {
-        workspaceId: mainWorkspaceId,
-      },
-    })
-    console.log("Deleted all customers from the main workspace")
+    // ⚠️ CUSTOMERS NOT DELETED - Must be preserved for chat history!
+    // await prisma.customers.deleteMany({...})
+    console.log("⚠️  Customers PRESERVED (not deleted from workspace)")
 
     // Delete all categories
     await prisma.categories.deleteMany({
@@ -746,7 +770,7 @@ async function main() {
   // Categories loaded from external file (backend/prisma/data/categories.ts)
   // Create categories for the main workspace
   console.log(`Creating categories for workspace: ${createdWorkspaces[0].name}`)
-  for (const category of foodCategories) {
+  for (const category of categories) {
     const existingCategory = await prisma.categories.findFirst({
       where: {
         slug: category.slug,
@@ -2312,7 +2336,8 @@ async function main() {
             slug: `${product.slug}-${Date.now()}`, // Generiamo slug unici
             workspaceId: mainWorkspaceId,
             categoryId: category.id,
-          },
+            imageUrl: (product as any).imageUrl || [], // ✅ CRITICAL: Import images from backup!
+          } as any,
         })
         console.log(
           `Product created: ${product.name} for workspace ${createdWorkspaces[0].name}`
@@ -2329,7 +2354,8 @@ async function main() {
             stock: product.stock,
             isActive: true, // ✅ CRITICAL: Ensure existing products are active
             categoryId: category.id,
-          },
+            imageUrl: (product as any).imageUrl || [], // ✅ CRITICAL: Update images from backup!
+          } as any,
         })
         console.log(
           `Product updated: ${product.name} for workspace ${createdWorkspaces[0].name}`
@@ -2603,7 +2629,7 @@ async function main() {
   */
 
   // Create new FAQs
-  for (const faq of faqsData) {
+  for (const faq of faqs) {
     try {
       await prisma.fAQ.create({
         data: {
@@ -2650,29 +2676,29 @@ async function main() {
     },
   ]
 
-  // Delete existing test customers first
-  await prisma.customers.deleteMany({
-    where: {
-      workspaceId: mainWorkspaceId,
-      email: {
-        in: [
-          "mario.rossi@rossilimited.it",
-          "john.smith@shopme.com",
-          "maria.garcia@shopme.com",
-          "joao.silva@shopme.com",
-        ],
-      },
-    },
-  })
-  console.log("Deleted existing test customers")
+  // ⚠️ DO NOT DELETE EXISTING CUSTOMERS - Preserve chat history!
+  // await prisma.customers.deleteMany({
+  //   where: {
+  //     workspaceId: mainWorkspaceId,
+  //     email: {
+  //       in: [
+  //         "mario.rossi@rossilimited.it",
+  //         "john.smith@shopme.com",
+  //         "maria.garcia@shopme.com",
+  //         "joao.silva@shopme.com",
+  //       ],
+  //     },
+  //   },
+  // })
+  console.log("✅ Creating 4 test customers (1 per language: IT, EN, ES, PT)")
 
-  // Create Italian customer - Mario Rossi with complete real data
+  // Create Italian customer - Mario Rossi
   const testCustomer = await prisma.customers.create({
     data: {
-      id: "3c9fce96-5397-5c9f-9f8e-3d4f5a6b7890", // ID fisso per MCP test client
+      id: "3c9fce96-5397-5c9f-9f8e-3d4f5a6b7890",
       name: "Mario Rossi",
       email: "mario.rossi@rossilimited.it",
-      phone: "+390212345678", // Real Italian phone number
+      phone: "+390212345678",
       address: JSON.stringify({
         name: "Mario Rossi",
         street: "Via Garibaldi 45",
@@ -2686,7 +2712,7 @@ async function main() {
       currency: "EUR",
       notes: "Cliente premium - Preferisce prodotti DOP",
       workspaceId: mainWorkspaceId,
-      salesId: marcoRossi.id, // Assigned to Marco Rossi
+      salesId: marcoRossi.id,
       invoiceAddress: {
         firstName: "Mario",
         lastName: "Rossi",
@@ -2700,45 +2726,43 @@ async function main() {
       },
     },
   })
-
   console.log(
     `✅ Italian customer created: ${testCustomer.name} (${testCustomer.email})`
   )
 
-  // Create English customer - John Smith (with 10% discount)
+  // Create English customer - John Smith
   const testCustomer2 = await prisma.customers.create({
-    data: {
-      name: "John Smith",
-      email: "john.smith@shopme.com",
-      phone: "+44123456789",
-      address: JSON.stringify({
+      data: {
         name: "John Smith",
-        street: "456 Regent Street",
-        city: "London",
-        postalCode: "W1B 5AH",
-        country: "United Kingdom",
-      }),
-      company: "Smith & Co Ltd",
-      discount: 10, // 10% discount
-      language: "en",
-      currency: "EUR",
-      notes: "VIP customer - Prefers organic products",
-      workspaceId: mainWorkspaceId,
-      salesId: giuliaBianchi.id, // Assigned to Giulia Bianchi
-      invoiceAddress: {
-        firstName: "John",
-        lastName: "Smith",
-        company: "Smith & Co Ltd",
-        address: "123 Oxford Street",
-        city: "London",
-        postalCode: "W1D 2HG",
-        country: "United Kingdom",
-        vatNumber: "GB123456789",
+        email: "john.smith@shopme.com",
         phone: "+44123456789",
+        address: JSON.stringify({
+          name: "John Smith",
+          street: "456 Regent Street",
+          city: "London",
+          postalCode: "W1B 5AH",
+          country: "United Kingdom",
+        }),
+        company: "Smith & Co Ltd",
+        discount: 10,
+        language: "en",
+        currency: "EUR",
+        notes: "VIP customer - Prefers organic products",
+        workspaceId: mainWorkspaceId,
+        salesId: giuliaBianchi.id,
+        invoiceAddress: {
+          firstName: "John",
+          lastName: "Smith",
+          company: "Smith & Co Ltd",
+          address: "123 Oxford Street",
+          city: "London",
+          postalCode: "W1D 2HG",
+          country: "United Kingdom",
+          vatNumber: "GB123456789",
+          phone: "+44123456789",
+        },
       },
-    },
-  })
-
+    })
   console.log(
     `✅ English customer created: ${testCustomer2.name} (${testCustomer2.email})`
   )
@@ -2746,7 +2770,7 @@ async function main() {
   // Create Spanish customer - Maria Garcia
   const testCustomerMCP = await prisma.customers.create({
     data: {
-      id: "test-customer-123", // Fixed ID for MCP testing
+      id: "test-customer-123",
       name: "Maria Garcia",
       email: "maria.garcia@shopme.com",
       phone: "+34666777888",
@@ -2758,12 +2782,12 @@ async function main() {
         country: "España",
       }),
       company: "Garcia Imports S.L.",
-      discount: 5, // 5% discount
+      discount: 5,
       language: "es",
       currency: "EUR",
       notes: "Cliente frecuente - Le gustan los productos artesanales",
       workspaceId: mainWorkspaceId,
-      salesId: alessandroFerrari.id, // Assigned to Alessandro Ferrari
+      salesId: alessandroFerrari.id,
       invoiceAddress: {
         firstName: "Maria",
         lastName: "Garcia",
@@ -2784,38 +2808,37 @@ async function main() {
 
   // Create Portuguese customer - João Silva
   const testCustomer4 = await prisma.customers.create({
-    data: {
-      name: "João Silva",
-      email: "joao.silva@shopme.com",
-      phone: "+351123456789",
-      address: JSON.stringify({
+      data: {
         name: "João Silva",
-        street: "Rua da Liberdade 200",
-        city: "Lisboa",
-        postalCode: "1250-096",
-        country: "Portugal",
-      }),
-      company: "Silva & Filhos Lda",
-      discount: 0,
-      language: "pt",
-      currency: "EUR",
-      notes: "Novo cliente - Interessado em produtos gourmet",
-      workspaceId: mainWorkspaceId,
-      salesId: francescaRomano.id, // Assigned to Francesca Romano
-      invoiceAddress: {
-        firstName: "João",
-        lastName: "Silva",
-        company: "Silva & Filhos Lda",
-        address: "Rua Augusta 100",
-        city: "Lisboa",
-        postalCode: "1100-053",
-        country: "Portugal",
-        vatNumber: "PT123456789",
+        email: "joao.silva@shopme.com",
         phone: "+351123456789",
+        address: JSON.stringify({
+          name: "João Silva",
+          street: "Rua da Liberdade 200",
+          city: "Lisboa",
+          postalCode: "1250-096",
+          country: "Portugal",
+        }),
+        company: "Silva & Filhos Lda",
+        discount: 0,
+        language: "pt",
+        currency: "EUR",
+        notes: "Novo cliente - Interessado em produtos gourmet",
+        workspaceId: mainWorkspaceId,
+        salesId: francescaRomano.id,
+        invoiceAddress: {
+          firstName: "João",
+          lastName: "Silva",
+          company: "Silva & Filhos Lda",
+          address: "Rua Augusta 100",
+          city: "Lisboa",
+          postalCode: "1100-053",
+          country: "Portugal",
+          vatNumber: "PT123456789",
+          phone: "+351123456789",
+        },
       },
-    },
-  })
-
+    })
   console.log(
     `✅ Portuguese customer created: ${testCustomer4.name} (${testCustomer4.email})`
   )
@@ -4198,10 +4221,10 @@ Team Altro Gusto`,
   console.log(`Seed completato con successo!`)
   console.log(`- Admin user creato: ${adminEmail}`)
   console.log(`- Workspace creato/aggiornato: ${createdWorkspaces[0].name}`)
-  console.log(`- Categorie create/esistenti: ${foodCategories.length}`)
+  console.log(`- Categorie create/esistenti: ${categories.length}`)
   console.log(`- Prodotti creati/aggiornati: ${products.length}`)
   console.log(`- Services creati/aggiornati: ${services.length}`)
-  console.log(`- FAQs create: ${faqsData.length}`)
+  console.log(`- FAQs create: ${faqs.length}`)
   console.log(
     `- 4 test customers with active chats and conversation history created: Mario Rossi (🇮🇹), John Smith (🇬🇧), Maria Garcia (🇪🇸), João Silva (🇵🇹)`
   )

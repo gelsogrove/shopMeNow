@@ -146,6 +146,36 @@ export interface PublicPageTexts {
   registrationErrorTitle: string
   tryAgain: string
   validatingLink: string
+
+  // Payment page (Mock Stripe)
+  paymentTitle: string
+  paymentSubtitle: string
+  paymentCardNumber: string
+  paymentCardName: string
+  paymentExpiry: string
+  paymentCvv: string
+  paymentPayNow: string
+  paymentProcessing: string
+  paymentSecure: string
+  paymentMockNotice: string
+  paymentTestCards: string
+  paymentSuccess: string
+  paymentAnyExpiry: string
+  paymentAnyCvv: string
+  paymentCardNameRequired: string
+  paymentCardNumberInvalid: string
+  paymentExpiryInvalid: string
+  paymentCvvInvalid: string
+
+  // Order confirmation page
+  orderConfirmedTitle: string
+  orderConfirmedMessage: string
+  orderConfirmedThankYou: string
+  orderConfirmedNumber: string
+  orderConfirmedTotal: string
+  orderConfirmedDownload: string
+  orderConfirmedEmail: string
+  orderConfirmedBackToOrders: string
 }
 
 export const publicPageTranslations: Record<
@@ -229,8 +259,8 @@ export const publicPageTranslations: Record<
 
     // Checkout specific
     yourProducts: "I Tuoi Prodotti",
-    addProducts: "Aggiungi Prodotti",
-    addServices: "Aggiungi Servizi",
+    addProducts: "Prodotti",
+    addServices: "Servizi",
     emptyCart: "Il tuo carrello è vuoto",
     addProductsToContinue: "Aggiungi prodotti per continuare",
     confirmOrder: "Conferma Ordine",
@@ -298,6 +328,37 @@ export const publicPageTranslations: Record<
     registrationErrorTitle: "Errore di Registrazione",
     tryAgain: "Riprova",
     validatingLink: "Validazione link di registrazione...",
+
+    // Payment page (Mock Stripe)
+    paymentTitle: "Pagamento Sicuro",
+    paymentSubtitle: "Completa il tuo acquisto in sicurezza",
+    paymentCardNumber: "Numero Carta",
+    paymentCardName: "Titolare della Carta",
+    paymentExpiry: "Scadenza",
+    paymentCvv: "CVV",
+    paymentPayNow: "Paga Ora",
+    paymentProcessing: "Elaborazione Pagamento...",
+    paymentSecure: "Il tuo pagamento è protetto",
+    paymentMockNotice:
+      "Questa è un'interfaccia di pagamento simulata. Non verrà effettuato nessun addebito reale.",
+    paymentTestCards: "Carte di Test (Mock)",
+    paymentSuccess: "Successo",
+    paymentAnyExpiry: "Qualsiasi data futura",
+    paymentAnyCvv: "Qualsiasi CVV a 3 cifre",
+    paymentCardNameRequired: "Nome richiesto",
+    paymentCardNumberInvalid: "Numero carta non valido",
+    paymentExpiryInvalid: "Data di scadenza non valida",
+    paymentCvvInvalid: "CVV non valido",
+
+    // Order confirmation page
+    orderConfirmedTitle: "Ordine Confermato!",
+    orderConfirmedMessage: "Il tuo ordine è stato ricevuto con successo",
+    orderConfirmedThankYou: "Grazie per il tuo acquisto!",
+    orderConfirmedNumber: "Numero Ordine",
+    orderConfirmedTotal: "Totale Pagato",
+    orderConfirmedDownload: "Scarica Ricevuta",
+    orderConfirmedEmail: "Ti abbiamo inviato una email di conferma",
+    orderConfirmedBackToOrders: "Torna agli Ordini",
   },
 
   EN: {
@@ -377,8 +438,8 @@ export const publicPageTranslations: Record<
 
     // Checkout specific
     yourProducts: "Your Products",
-    addProducts: "Add Products",
-    addServices: "Add Services",
+    addProducts: "Products",
+    addServices: "Services",
     emptyCart: "Your cart is empty",
     addProductsToContinue: "Add products to continue",
     confirmOrder: "Confirm Order",
@@ -446,6 +507,37 @@ export const publicPageTranslations: Record<
     registrationErrorTitle: "Registration Error",
     tryAgain: "Try Again",
     validatingLink: "Validating registration link...",
+
+    // Payment page (Mock Stripe)
+    paymentTitle: "Secure Payment",
+    paymentSubtitle: "Complete your purchase securely",
+    paymentCardNumber: "Card Number",
+    paymentCardName: "Cardholder Name",
+    paymentExpiry: "Expiry Date",
+    paymentCvv: "CVV",
+    paymentPayNow: "Pay Now",
+    paymentProcessing: "Processing Payment...",
+    paymentSecure: "Your payment information is secure",
+    paymentMockNotice:
+      "This is a mock payment interface. No actual charges will be made.",
+    paymentTestCards: "Test Cards (Mock)",
+    paymentSuccess: "Success",
+    paymentAnyExpiry: "Any future expiry date",
+    paymentAnyCvv: "Any 3-digit CVV",
+    paymentCardNameRequired: "Name required",
+    paymentCardNumberInvalid: "Invalid card number",
+    paymentExpiryInvalid: "Invalid expiry date",
+    paymentCvvInvalid: "Invalid CVV",
+
+    // Order confirmation page
+    orderConfirmedTitle: "Order Confirmed!",
+    orderConfirmedMessage: "Your order has been successfully received",
+    orderConfirmedThankYou: "Thank you for your purchase!",
+    orderConfirmedNumber: "Order Number",
+    orderConfirmedTotal: "Total Paid",
+    orderConfirmedDownload: "Download Receipt",
+    orderConfirmedEmail: "We've sent you a confirmation email",
+    orderConfirmedBackToOrders: "Back to Orders",
   },
 
   ES: {
@@ -525,8 +617,8 @@ export const publicPageTranslations: Record<
 
     // Checkout specific
     yourProducts: "Tus Productos",
-    addProducts: "Agregar Productos",
-    addServices: "Agregar Servicios",
+    addProducts: "Productos",
+    addServices: "Servicios",
     emptyCart: "Tu carrito está vacío",
     addProductsToContinue: "Agrega productos para continuar",
     confirmOrder: "Confirmar Pedido",
@@ -673,8 +765,8 @@ export const publicPageTranslations: Record<
 
     // Checkout specific
     yourProducts: "Seus Produtos",
-    addProducts: "Adicionar Produtos",
-    addServices: "Adicionar Serviços",
+    addProducts: "Produtos",
+    addServices: "Serviços",
     emptyCart: "Seu carrinho está vazio",
     addProductsToContinue: "Adicione produtos para continuar",
     confirmOrder: "Confirmar Pedido",

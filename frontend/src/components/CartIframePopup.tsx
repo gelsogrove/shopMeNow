@@ -24,38 +24,57 @@ export const CartIframePopup: React.FC<CartIframePopupProps> = ({
         onClick={onClose}
       />
 
-      {/* Popup Container */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Popup Container - Mobile Phone Frame */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
+        {/* Phone Device Frame */}
         <div
-          className="bg-white rounded-lg shadow-2xl w-full flex flex-col relative"
+          className="relative flex flex-col bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 shadow-2xl"
           style={{
-            maxWidth: "calc(56rem - 40px)",
-            height: "calc(80vh + 20px)",
+            width: "min(440px, calc(100vw - 16px))",
+            height: "min(840px, calc(100vh - 16px))",
+            borderRadius: "clamp(32px, 5vw, 48px)",
+            padding: "10px",
+            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 2px 4px rgba(255, 255, 255, 0.1)",
           }}
         >
-          {/* Close Button - Half outside, half inside */}
+          {/* Phone Notch (Top) - Hidden on small screens */}
+          <div className="hidden sm:block absolute top-0 left-1/2 -translate-x-1/2 w-28 h-5 bg-black rounded-b-3xl z-10"
+            style={{
+              boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)"
+            }}
+          />
+
+          {/* Camera and Sensors in Notch */}
+          <div className="hidden sm:flex absolute top-1.5 left-1/2 -translate-x-1/2 items-center gap-2 z-20">
+            <div className="w-1.5 h-1.5 bg-gray-800 rounded-full" />
+            <div className="w-10 h-1 bg-gray-900 rounded-full" />
+          </div>
+
+          {/* Close Button - Right next to phone */}
           <button
             onClick={onClose}
-            className="absolute -top-5 -right-5 flex items-center justify-center w-10 h-10 bg-gray-800 text-white rounded-full hover:bg-gray-900 transition-colors shadow-xl border-2 border-white"
-            style={{ zIndex: 10000 }}
+            className="absolute -top-3 -right-3 flex items-center justify-center w-9 h-9 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors shadow-xl border-2 border-white z-[10000]"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
 
-          {/* Iframe Container */}
-          <div className="flex-1 p-4 overflow-auto rounded-lg">
+          {/* Phone Screen */}
+          <div className="flex-1 bg-white overflow-hidden" 
+            style={{
+              borderRadius: "clamp(28px, 4.5vw, 36px)",
+            }}
+          >
             <iframe
               src={iframeSrc}
-              className="w-full h-full border border-gray-200 rounded-md"
-              style={{
-                minHeight: "600px",
-                aspectRatio: "3/4", // Height longer than width
-              }}
+              className="w-full h-full"
               title="Customer Cart"
               sandbox="allow-scripts allow-same-origin allow-forms"
               scrolling="auto"
             />
           </div>
+
+          {/* Phone Bottom Bar (Home Indicator) */}
+          <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-24 h-1 bg-white/30 rounded-full" />
         </div>
       </div>
     </>

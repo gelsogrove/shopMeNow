@@ -5,14 +5,16 @@ const HomePage = () => {
     <div className="min-h-screen bg-gray-100">
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <h1 className="text-xl font-bold text-gray-900">ShopMe</h1>
+          <h1 className="text-xl font-bold text-gray-900">ShopMeNow</h1>
         </div>
       </header>
       <main>
         <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <div className="px-4 py-6 sm:px-0">
             <div className="border-4 border-dashed border-gray-200 rounded-lg p-4 h-96 flex flex-col items-center justify-center">
-              <h2 className="text-lg font-semibold mb-4">Welcome to ShopMe</h2>
+              <h2 className="text-lg font-semibold mb-4">
+                Welcome to ShopMeNow
+              </h2>
               <p className="text-gray-600 text-center max-w-md mb-8">
                 This is a WhatsApp-based e-commerce platform. Please use the
                 link sent to your WhatsApp to register or access your account.

@@ -308,19 +308,20 @@ export class CartController {
               `⚠️ Cart item ${item.id} has missing product (productId: ${item.productId})`
             )
             items.push({
-              id: item.id,
-              type: "product",
-              itemType: "PRODUCT",
-              productId: item.productId,
-              productCode: "N/A",
-              name: `Product ${item.productId} (Not Found)`,
-              originalPrice: 0,
-              finalPrice: 0,
-              discountAmount: 0,
-              appliedDiscount: 0,
-              quantity: item.quantity,
-              total: 0,
-            })
+            id: item.id,
+            type: "product",
+            itemType: "PRODUCT",
+            productId: item.productId,
+            productCode: "N/A",
+            name: `Product ${item.productId} (Not Found)`,
+            originalPrice: 0,
+            finalPrice: 0,
+            discountAmount: 0,
+            appliedDiscount: 0,
+            quantity: item.quantity,
+            total: 0,
+            imageUrl: [], // No image for missing product
+          })
             continue
           }
 
@@ -354,6 +355,7 @@ export class CartController {
             appliedDiscount: appliedDiscount,
             quantity: item.quantity,
             total: itemTotal,
+            imageUrl: item.product.imageUrl || [], // Add product images
           })
         }
 
@@ -377,6 +379,7 @@ export class CartController {
               quantity: item.quantity,
               notes: item.notes || null,
               total: 0,
+              imageUrl: [], // No image for missing service
             })
             continue
           }
@@ -405,6 +408,7 @@ export class CartController {
             quantity: item.quantity,
             notes: item.notes || null,
             total: itemTotal,
+            imageUrl: item.service.imageUrl || [], // Add service images
           })
         }
       }
