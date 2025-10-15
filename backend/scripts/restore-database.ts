@@ -1,8 +1,8 @@
 /**
  * DATABASE RESTORE - Restore database from backup file
- * 
+ *
  * Restores a backup created with npm run db:backup
- * 
+ *
  * Usage: npm run db:restore backup-2025-10-15.sql
  */
 
@@ -51,7 +51,7 @@ async function restoreDatabase() {
   }
 
   console.log("🔄 DATABASE RESTORE STARTING...")
-  console.log("=" .repeat(50))
+  console.log("=".repeat(50))
   console.log(`📁 Restoring from: ${backupFile}`)
   console.log("\n⚠️  WARNING: This will OVERWRITE the current database!")
   console.log("   Press Ctrl+C to cancel, or wait 5 seconds to continue...")

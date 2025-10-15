@@ -1,6 +1,6 @@
+import designSystem from "@/styles/designSystem"
 import React from "react"
 import { useNavigate } from "react-router-dom"
-import designSystem from "@/styles/designSystem"
 
 interface MobileMenuProps {
   isOpen: boolean
@@ -38,19 +38,34 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
   const menuItems: MenuItem[] = [
     {
       icon: "🛒",
-      label: customerLanguage === "it" ? "Carrello" : customerLanguage === "en" ? "Cart" : "Warenkorb",
+      label:
+        customerLanguage === "it"
+          ? "Carrello"
+          : customerLanguage === "en"
+          ? "Cart"
+          : "Warenkorb",
       path: `/checkout?token=${token}`,
       page: "cart",
     },
     {
       icon: "📦",
-      label: customerLanguage === "it" ? "I Miei Ordini" : customerLanguage === "en" ? "My Orders" : "Meine Bestellungen",
+      label:
+        customerLanguage === "it"
+          ? "I Miei Ordini"
+          : customerLanguage === "en"
+          ? "My Orders"
+          : "Meine Bestellungen",
       path: `/orders-public?token=${token}`,
       page: "orders",
     },
     {
       icon: "👤",
-      label: customerLanguage === "it" ? "Profilo" : customerLanguage === "en" ? "Profile" : "Profil",
+      label:
+        customerLanguage === "it"
+          ? "Profilo"
+          : customerLanguage === "en"
+          ? "Profile"
+          : "Profil",
       path: `/customer-profile?token=${token}`,
       page: "profile",
     },

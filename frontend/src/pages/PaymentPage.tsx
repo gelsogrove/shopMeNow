@@ -1,31 +1,31 @@
-import { useState } from "react"
-import { useNavigate, useSearchParams } from "react-router-dom"
-import { Card, CardContent } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle, CreditCard, Lock, Loader2 } from "lucide-react"
 import { getPublicPageTexts } from "@/utils/publicPageTranslations"
+import { CheckCircle, CreditCard, Loader2, Lock } from "lucide-react"
+import { useState } from "react"
+import { useNavigate, useSearchParams } from "react-router-dom"
 
 /**
  * Payment Page - Stripe-style Mock
- * 
+ *
  * This is a MOCK payment interface that simulates Stripe's payment flow.
  * NO ACTUAL PAYMENT PROCESSING OCCURS.
- * 
+ *
  * Flow:
  * 1. User fills in card details (mock validation only)
  * 2. Clicks "Pay Now" button
  * 3. Shows processing animation for 2 seconds
  * 4. Redirects to order confirmation page
- * 
+ *
  * In production, replace with actual Stripe integration.
  */
 export default function PaymentPage() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  
+
   // Extract data from URL params
   const orderId = searchParams.get("orderId") || ""
   const total = parseFloat(searchParams.get("total") || "0")
@@ -66,7 +66,8 @@ export default function PaymentPage() {
 
     const cleanedCardNumber = cardNumber.replace(/\s/g, "")
     if (cleanedCardNumber.length !== 16) {
-      newErrors.cardNumber = texts.paymentCardNumberInvalid || "Invalid card number"
+      newErrors.cardNumber =
+        texts.paymentCardNumberInvalid || "Invalid card number"
     }
 
     if (!expiry.match(/^\d{2}\/\d{2}$/)) {
@@ -90,9 +91,7 @@ export default function PaymentPage() {
     // Simulate payment processing delay
     setTimeout(() => {
       // Redirect to order confirmation page
-      navigate(
-        `/order-confirmed?orderId=${orderId}&lang=${customerLanguage}`
-      )
+      navigate(`/order-confirmed?orderId=${orderId}&lang=${customerLanguage}`)
     }, 2000)
   }
 
@@ -130,7 +129,9 @@ export default function PaymentPage() {
             {/* Mock Notice */}
             <Alert className="mb-6 bg-yellow-50 border-yellow-200">
               <AlertDescription className="text-sm text-yellow-800">
-                ⚠️ {texts.paymentMockNotice || "This is a mock payment interface. No actual charges will be made."}
+                ⚠️{" "}
+                {texts.paymentMockNotice ||
+                  "This is a mock payment interface. No actual charges will be made."}
               </AlertDescription>
             </Alert>
 
@@ -150,11 +151,15 @@ export default function PaymentPage() {
                     setCardNumber(formatCardNumber(e.target.value))
                   }
                   maxLength={19}
-                  className={`mt-1 font-mono text-lg ${errors.cardNumber ? "border-red-500" : ""}`}
+                  className={`mt-1 font-mono text-lg ${
+                    errors.cardNumber ? "border-red-500" : ""
+                  }`}
                   disabled={isProcessing}
                 />
                 {errors.cardNumber && (
-                  <p className="text-sm text-red-600 mt-1">{errors.cardNumber}</p>
+                  <p className="text-sm text-red-600 mt-1">
+                    {errors.cardNumber}
+                  </p>
                 )}
               </div>
 
@@ -168,7 +173,9 @@ export default function PaymentPage() {
                   placeholder="John Doe"
                   value={cardName}
                   onChange={(e) => setCardName(e.target.value.toUpperCase())}
-                  className={`mt-1 uppercase ${errors.cardName ? "border-red-500" : ""}`}
+                  className={`mt-1 uppercase ${
+                    errors.cardName ? "border-red-500" : ""
+                  }`}
                   disabled={isProcessing}
                 />
                 {errors.cardName && (
@@ -188,7 +195,9 @@ export default function PaymentPage() {
                     value={expiry}
                     onChange={(e) => setExpiry(formatExpiry(e.target.value))}
                     maxLength={5}
-                    className={`mt-1 font-mono ${errors.expiry ? "border-red-500" : ""}`}
+                    className={`mt-1 font-mono ${
+                      errors.expiry ? "border-red-500" : ""
+                    }`}
                     disabled={isProcessing}
                   />
                   {errors.expiry && (
@@ -196,9 +205,7 @@ export default function PaymentPage() {
                   )}
                 </div>
                 <div>
-                  <Label htmlFor="cvv">
-                    {texts.paymentCvv || "CVV"}
-                  </Label>
+                  <Label htmlFor="cvv">{texts.paymentCvv || "CVV"}</Label>
                   <Input
                     id="cvv"
                     placeholder="123"
@@ -207,7 +214,9 @@ export default function PaymentPage() {
                       setCvv(e.target.value.replace(/\D/g, "").substring(0, 4))
                     }
                     maxLength={4}
-                    className={`mt-1 font-mono ${errors.cvv ? "border-red-500" : ""}`}
+                    className={`mt-1 font-mono ${
+                      errors.cvv ? "border-red-500" : ""
+                    }`}
                     disabled={isProcessing}
                     type="password"
                   />
@@ -240,7 +249,9 @@ export default function PaymentPage() {
             {/* Security Notice */}
             <div className="mt-4 flex items-center justify-center gap-2 text-sm text-gray-600">
               <Lock className="w-4 h-4" />
-              <span>{texts.paymentSecure || "Your payment information is secure"}</span>
+              <span>
+                {texts.paymentSecure || "Your payment information is secure"}
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -252,7 +263,9 @@ export default function PaymentPage() {
               {texts.paymentTestCards || "Test Cards (Mock)"}:
             </h3>
             <ul className="text-xs text-gray-600 space-y-1">
-              <li>• 4242 4242 4242 4242 - {texts.paymentSuccess || "Success"}</li>
+              <li>
+                • 4242 4242 4242 4242 - {texts.paymentSuccess || "Success"}
+              </li>
               <li>• {texts.paymentAnyExpiry || "Any future expiry date"}</li>
               <li>• {texts.paymentAnyCvv || "Any 3-digit CVV"}</li>
             </ul>

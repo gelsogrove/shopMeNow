@@ -141,7 +141,10 @@ export const Step2Addresses: React.FC<Step2AddressesProps> = ({
           onChange={(e) => onSameAsBillingChange(e.target.checked)}
           className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-2 focus:ring-green-500"
         />
-        <label htmlFor="sameAsBilling" className="text-sm text-gray-700 font-medium cursor-pointer">
+        <label
+          htmlFor="sameAsBilling"
+          className="text-sm text-gray-700 font-medium cursor-pointer"
+        >
           {texts.sameAsBilling || "Usa lo stesso indirizzo per la fatturazione"}
         </label>
       </div>

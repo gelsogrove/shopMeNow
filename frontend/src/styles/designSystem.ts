@@ -293,7 +293,7 @@ export const designSystem = {
       padding: "1rem", // 16px
       border: "none", // NO border - solo shadow
     },
-    
+
     // Card interna (se proprio necessaria - ma evitare nesting)
     cardInner: {
       background: "#f9fafb",

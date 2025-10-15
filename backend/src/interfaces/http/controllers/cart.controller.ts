@@ -308,20 +308,20 @@ export class CartController {
               `⚠️ Cart item ${item.id} has missing product (productId: ${item.productId})`
             )
             items.push({
-            id: item.id,
-            type: "product",
-            itemType: "PRODUCT",
-            productId: item.productId,
-            productCode: "N/A",
-            name: `Product ${item.productId} (Not Found)`,
-            originalPrice: 0,
-            finalPrice: 0,
-            discountAmount: 0,
-            appliedDiscount: 0,
-            quantity: item.quantity,
-            total: 0,
-            imageUrl: [], // No image for missing product
-          })
+              id: item.id,
+              type: "product",
+              itemType: "PRODUCT",
+              productId: item.productId,
+              productCode: "N/A",
+              name: `Product ${item.productId} (Not Found)`,
+              originalPrice: 0,
+              finalPrice: 0,
+              discountAmount: 0,
+              appliedDiscount: 0,
+              quantity: item.quantity,
+              total: 0,
+              imageUrl: [], // No image for missing product
+            })
             continue
           }
 

@@ -1,13 +1,13 @@
 /**
  * DATABASE BACKUP SCRIPT
- * 
+ *
  * Questo script:
  * 1. LEGGE il database PostgreSQL attuale
  * 2. ESPORTA tutti i dati in file JSON nella cartella backups/
  * 3. NON modifica il database
- * 
+ *
  * Uso: npm run db:backup
- * 
+ *
  * Output:
  * - backups/YYYY-MM-DD_HH-mm-ss/categories.json
  * - backups/YYYY-MM-DD_HH-mm-ss/products.json
@@ -172,7 +172,9 @@ async function backupDatabase() {
 
     console.log(`\n✅ BACKUP COMPLETED!`)
     console.log(`📁 Location: ${backupDir}`)
-    console.log(`\n💡 To restore this backup, use: npm run db:restore ${timestamp}`)
+    console.log(
+      `\n💡 To restore this backup, use: npm run db:restore ${timestamp}`
+    )
   } catch (error) {
     console.error("❌ Backup failed:", error)
     process.exit(1)

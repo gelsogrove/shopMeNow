@@ -1,12 +1,12 @@
 /**
  * INCREMENTAL SEED - Updates database without destroying existing data
- * 
+ *
  * This script:
  * - DOES NOT delete existing data
  * - Updates only if changes detected
  * - Preserves user-created content (products, categories, etc.)
  * - Safe to run multiple times
- * 
+ *
  * Usage: npm run seed:update
  */
 
@@ -18,7 +18,7 @@ const prisma = new PrismaClient()
 
 async function incrementalSeed() {
   console.log("🔄 INCREMENTAL SEED - Updating database safely...")
-  console.log("=" .repeat(50))
+  console.log("=".repeat(50))
 
   try {
     // 1. Get main workspace
@@ -49,8 +49,7 @@ async function incrementalSeed() {
       if (existing) {
         // Update only if changed
         const hasChanges =
-          existing.name !== cat.name ||
-          existing.description !== cat.description
+          existing.name !== cat.name || existing.description !== cat.description
 
         if (hasChanges) {
           await prisma.categories.update({

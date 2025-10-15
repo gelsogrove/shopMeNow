@@ -84,18 +84,18 @@ async function main() {
   try {
     const backupDir = path.join(__dirname, "uploads-backup")
     const uploadsDir = path.join(__dirname, "..", "uploads")
-    
+
     if (fs.existsSync(backupDir)) {
       // Cancella uploads attuali
       if (fs.existsSync(uploadsDir)) {
         await fse.remove(uploadsDir)
         console.log("   🗑️  Removed old uploads")
       }
-      
+
       // Copia backup → uploads
       await fse.copy(backupDir, uploadsDir)
       console.log("   ✅ Restored images from prisma/uploads-backup/")
-      
+
       // Conta files
       const productImages = fs.existsSync(path.join(uploadsDir, "products"))
         ? fs.readdirSync(path.join(uploadsDir, "products")).length
@@ -103,7 +103,7 @@ async function main() {
       const serviceImages = fs.existsSync(path.join(uploadsDir, "services"))
         ? fs.readdirSync(path.join(uploadsDir, "services")).length
         : 0
-      
+
       console.log(`   📷 Product images restored: ${productImages}`)
       console.log(`   📷 Service images restored: ${serviceImages}`)
     } else {
@@ -116,7 +116,9 @@ async function main() {
   }
 
   // �🔥 COMPLETE DATABASE CLEANUP
-  console.log("\n🧹 COMPLETE DATABASE CLEANUP - Removing all data from all tables...")
+  console.log(
+    "\n🧹 COMPLETE DATABASE CLEANUP - Removing all data from all tables..."
+  )
   console.log("=".repeat(50))
 
   try {
@@ -159,7 +161,7 @@ async function main() {
     // 🗑️ DELETE ALL CUSTOMERS - Clean slate, will recreate only 4 (1 per language)
     await prisma.customers.deleteMany({})
     console.log("✅ Deleted all customers (will recreate 4: IT, EN, ES, PT)")
-    
+
     // Delete configurations (can be recreated)
     await prisma.agentConfig.deleteMany({})
     await prisma.prompts.deleteMany({})
@@ -310,7 +312,9 @@ async function main() {
     // ⚠️ CHATS AND MESSAGES NOT DELETED - Must be preserved!
     // await prisma.message.deleteMany({...})
     // await prisma.chatSession.deleteMany({...})
-    console.log("⚠️  Chat sessions and messages PRESERVED (not deleted from workspace)")
+    console.log(
+      "⚠️  Chat sessions and messages PRESERVED (not deleted from workspace)"
+    )
 
     // 2. Then, delete the main entities
     console.log("🗑️ Deleting main entities...")
@@ -2732,37 +2736,37 @@ async function main() {
 
   // Create English customer - John Smith
   const testCustomer2 = await prisma.customers.create({
-      data: {
+    data: {
+      name: "John Smith",
+      email: "john.smith@shopme.com",
+      phone: "+44123456789",
+      address: JSON.stringify({
         name: "John Smith",
-        email: "john.smith@shopme.com",
-        phone: "+44123456789",
-        address: JSON.stringify({
-          name: "John Smith",
-          street: "456 Regent Street",
-          city: "London",
-          postalCode: "W1B 5AH",
-          country: "United Kingdom",
-        }),
+        street: "456 Regent Street",
+        city: "London",
+        postalCode: "W1B 5AH",
+        country: "United Kingdom",
+      }),
+      company: "Smith & Co Ltd",
+      discount: 10,
+      language: "en",
+      currency: "EUR",
+      notes: "VIP customer - Prefers organic products",
+      workspaceId: mainWorkspaceId,
+      salesId: giuliaBianchi.id,
+      invoiceAddress: {
+        firstName: "John",
+        lastName: "Smith",
         company: "Smith & Co Ltd",
-        discount: 10,
-        language: "en",
-        currency: "EUR",
-        notes: "VIP customer - Prefers organic products",
-        workspaceId: mainWorkspaceId,
-        salesId: giuliaBianchi.id,
-        invoiceAddress: {
-          firstName: "John",
-          lastName: "Smith",
-          company: "Smith & Co Ltd",
-          address: "123 Oxford Street",
-          city: "London",
-          postalCode: "W1D 2HG",
-          country: "United Kingdom",
-          vatNumber: "GB123456789",
-          phone: "+44123456789",
-        },
+        address: "123 Oxford Street",
+        city: "London",
+        postalCode: "W1D 2HG",
+        country: "United Kingdom",
+        vatNumber: "GB123456789",
+        phone: "+44123456789",
       },
-    })
+    },
+  })
   console.log(
     `✅ English customer created: ${testCustomer2.name} (${testCustomer2.email})`
   )
@@ -2808,37 +2812,37 @@ async function main() {
 
   // Create Portuguese customer - João Silva
   const testCustomer4 = await prisma.customers.create({
-      data: {
+    data: {
+      name: "João Silva",
+      email: "joao.silva@shopme.com",
+      phone: "+351123456789",
+      address: JSON.stringify({
         name: "João Silva",
-        email: "joao.silva@shopme.com",
-        phone: "+351123456789",
-        address: JSON.stringify({
-          name: "João Silva",
-          street: "Rua da Liberdade 200",
-          city: "Lisboa",
-          postalCode: "1250-096",
-          country: "Portugal",
-        }),
+        street: "Rua da Liberdade 200",
+        city: "Lisboa",
+        postalCode: "1250-096",
+        country: "Portugal",
+      }),
+      company: "Silva & Filhos Lda",
+      discount: 0,
+      language: "pt",
+      currency: "EUR",
+      notes: "Novo cliente - Interessado em produtos gourmet",
+      workspaceId: mainWorkspaceId,
+      salesId: francescaRomano.id,
+      invoiceAddress: {
+        firstName: "João",
+        lastName: "Silva",
         company: "Silva & Filhos Lda",
-        discount: 0,
-        language: "pt",
-        currency: "EUR",
-        notes: "Novo cliente - Interessado em produtos gourmet",
-        workspaceId: mainWorkspaceId,
-        salesId: francescaRomano.id,
-        invoiceAddress: {
-          firstName: "João",
-          lastName: "Silva",
-          company: "Silva & Filhos Lda",
-          address: "Rua Augusta 100",
-          city: "Lisboa",
-          postalCode: "1100-053",
-          country: "Portugal",
-          vatNumber: "PT123456789",
-          phone: "+351123456789",
-        },
+        address: "Rua Augusta 100",
+        city: "Lisboa",
+        postalCode: "1100-053",
+        country: "Portugal",
+        vatNumber: "PT123456789",
+        phone: "+351123456789",
       },
-    })
+    },
+  })
   console.log(
     `✅ Portuguese customer created: ${testCustomer4.name} (${testCustomer4.email})`
   )

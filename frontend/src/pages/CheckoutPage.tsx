@@ -1,15 +1,6 @@
 import { logger } from "@/lib/logger"
 import React, { useEffect, useState } from "react"
 import { useLocation, useSearchParams } from "react-router-dom"
-import { StickyHeader } from "../components/public/StickyHeader"
-import { MobileMenu } from "../components/public/MobileMenu"
-import { SearchBar, useProductSearch } from "../components/ui/SearchBar"
-import { TokenError } from "../components/ui/TokenError"
-import UnifiedLoading from "../components/ui/UnifiedLoading"
-import { useCheckoutTokenValidation } from "../hooks/useTokenValidation"
-import { tokenApi } from "../services/tokenApi"
-import { getProductIcon, getServiceIcon } from "../utils/productIcons"
-import { getPublicPageTexts } from "../utils/publicPageTranslations"
 import {
   ProgressSteps,
   Step1Products,
@@ -17,14 +8,23 @@ import {
   Step3Confirm,
   Step4Payment,
 } from "../components/checkout"
+import { StickyHeader } from "../components/public/StickyHeader"
+import { SearchBar, useProductSearch } from "../components/ui/SearchBar"
+import { TokenError } from "../components/ui/TokenError"
+import UnifiedLoading from "../components/ui/UnifiedLoading"
+import { useCheckoutTokenValidation } from "../hooks/useTokenValidation"
+import { tokenApi } from "../services/tokenApi"
+import { getPublicPageTexts } from "../utils/publicPageTranslations"
 
 // 🖼️ Helper to get full image URL
-const getImageUrl = (imageUrl: string | string[] | undefined): string | null => {
+const getImageUrl = (
+  imageUrl: string | string[] | undefined
+): string | null => {
   if (!imageUrl) return null
   const url = Array.isArray(imageUrl) ? imageUrl[0] : imageUrl
   if (!url) return null
   // If URL already starts with http, return as-is
-  if (url.startsWith('http')) return url
+  if (url.startsWith("http")) return url
   // Otherwise, prepend backend URL
   return `http://localhost:3001${url}`
 }
@@ -889,12 +889,14 @@ const CheckoutPage: React.FC = () => {
       />
 
       {/* Main Content */}
-      <div className="pt-[60px] -mt-10"> {/* Exact header height: 60px - PULL UP with negative margin */}
+      <div className="pt-[60px] -mt-10">
+        {" "}
+        {/* Exact header height: 60px - PULL UP with negative margin */}
         <div className="max-w-3xl mx-auto px-3 sm:px-4">
           {/* Progress Steps - New Modular Component - NO top margin */}
           <div className="mb-3">
-            <ProgressSteps 
-              currentStep={currentStep} 
+            <ProgressSteps
+              currentStep={currentStep}
               steps={stepsArray}
               onStepClick={(stepNum) => setCurrentStep(stepNum)}
             />
@@ -973,7 +975,6 @@ const CheckoutPage: React.FC = () => {
             </div>
           )}
         </div>
-
         {/* Add Products Modal */}
         {showAddProducts && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1063,63 +1064,67 @@ const CheckoutPage: React.FC = () => {
                                       />
                                     ) : (
                                       <div className="w-full h-full bg-gradient-to-br from-blue-100 via-purple-50 to-pink-100 flex items-center justify-center">
-                                        <span className="text-6xl opacity-30">📦</span>
+                                        <span className="text-6xl opacity-30">
+                                          📦
+                                        </span>
                                       </div>
                                     )}
                                   </div>
-                                  
+
                                   {/* Product Info */}
                                   <div className="p-3">
-                                  <h5 className="font-semibold text-sm mb-1">
-                                    {product.name}
-                                  </h5>
-                                  {product.formato && (
-                                    <div className="text-xs text-blue-600 mb-1 font-medium">
-                                      Formato: {product.formato}
-                                    </div>
-                                  )}
-                                  <p className="text-xs text-gray-600 mb-2">
-                                    Codice:{" "}
-                                    {product.ProductCode ||
-                                      product.sku ||
-                                      "Non disponibile"}
-                                  </p>
-                                  <div className="mb-2">
-                                    {product.finalPrice &&
-                                    product.finalPrice < product.price ? (
-                                      <div className="flex flex-col">
-                                        <p className="text-lg font-bold text-green-600">
-                                          €{product.finalPrice.toFixed(2)}
-                                        </p>
-                                        <div className="flex items-center space-x-2">
-                                          <p className="text-sm text-gray-500 line-through">
-                                            €{product.price.toFixed(2)}
-                                          </p>
-                                          {product.appliedDiscount &&
-                                            product.appliedDiscount > 0 && (
-                                              <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">
-                                                -{product.appliedDiscount}%
-                                              </span>
-                                            )}
-                                        </div>
+                                    <h5 className="font-semibold text-sm mb-1">
+                                      {product.name}
+                                    </h5>
+                                    {product.formato && (
+                                      <div className="text-xs text-blue-600 mb-1 font-medium">
+                                        Formato: {product.formato}
                                       </div>
-                                    ) : (
-                                      <p className="text-lg font-bold text-green-600">
-                                        €{product.price.toFixed(2)}
-                                      </p>
                                     )}
-                                  </div>
-                                  <div className="flex justify-center">
-                                    <button
-                                      onClick={() => addProductToCart(product)}
-                                      className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded text-sm transition-colors flex items-center gap-2 min-w-[120px] justify-center"
-                                    >
-                                      <span className="text-xl font-bold">
-                                        +
-                                      </span>
-                                      {texts.addToCart}
-                                    </button>
-                                  </div>
+                                    <p className="text-xs text-gray-600 mb-2">
+                                      Codice:{" "}
+                                      {product.ProductCode ||
+                                        product.sku ||
+                                        "Non disponibile"}
+                                    </p>
+                                    <div className="mb-2">
+                                      {product.finalPrice &&
+                                      product.finalPrice < product.price ? (
+                                        <div className="flex flex-col">
+                                          <p className="text-lg font-bold text-green-600">
+                                            €{product.finalPrice.toFixed(2)}
+                                          </p>
+                                          <div className="flex items-center space-x-2">
+                                            <p className="text-sm text-gray-500 line-through">
+                                              €{product.price.toFixed(2)}
+                                            </p>
+                                            {product.appliedDiscount &&
+                                              product.appliedDiscount > 0 && (
+                                                <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">
+                                                  -{product.appliedDiscount}%
+                                                </span>
+                                              )}
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <p className="text-lg font-bold text-green-600">
+                                          €{product.price.toFixed(2)}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <div className="flex justify-center">
+                                      <button
+                                        onClick={() =>
+                                          addProductToCart(product)
+                                        }
+                                        className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded text-sm transition-colors flex items-center gap-2 min-w-[120px] justify-center"
+                                      >
+                                        <span className="text-xl font-bold">
+                                          +
+                                        </span>
+                                        {texts.addToCart}
+                                      </button>
+                                    </div>
                                   </div>
                                 </div>
                               ))}
@@ -1151,7 +1156,6 @@ const CheckoutPage: React.FC = () => {
             </div>
           </div>
         )}
-
         {/* Add Services Popup */}
         {showAddServices && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -1193,23 +1197,23 @@ const CheckoutPage: React.FC = () => {
                             </div>
                           )}
                         </div>
-                        
+
                         {/* Service Info */}
                         <div className="p-4">
-                        <h5 className="font-semibold text-sm mb-3">
-                          {service.name}
-                        </h5>
-                        <div className="flex items-center justify-between">
-                          <p className="text-lg font-bold text-blue-600">
-                            €{(service.price || 0).toFixed(2)}
-                          </p>
-                          <button
-                            onClick={() => addServiceToCart(service)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                          >
-                            {texts.addToCart}
-                          </button>
-                        </div>
+                          <h5 className="font-semibold text-sm mb-3">
+                            {service.name}
+                          </h5>
+                          <div className="flex items-center justify-between">
+                            <p className="text-lg font-bold text-blue-600">
+                              €{(service.price || 0).toFixed(2)}
+                            </p>
+                            <button
+                              onClick={() => addServiceToCart(service)}
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                            >
+                              {texts.addToCart}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -1232,7 +1236,6 @@ const CheckoutPage: React.FC = () => {
             </div>
           </div>
         )}
-
         {/* Delete Confirmation Modal */}
         {showDeleteConfirm && productToDelete && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

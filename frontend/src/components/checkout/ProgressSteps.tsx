@@ -27,9 +27,11 @@ export const ProgressSteps: React.FC<ProgressStepsProps> = ({
       <div className="relative">
         {/* Connecting Line - Behind everything */}
         <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200">
-          <div 
+          <div
             className="h-full bg-green-500 transition-all duration-300"
-            style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
+            style={{
+              width: `${((currentStep - 1) / (steps.length - 1)) * 100}%`,
+            }}
           />
         </div>
 
@@ -38,11 +40,11 @@ export const ProgressSteps: React.FC<ProgressStepsProps> = ({
           {steps.map((step) => {
             const isCompleted = step.num < currentStep
             const isClickable = isCompleted && onStepClick
-            
+
             return (
-              <div 
-                key={step.num} 
-                className="flex flex-col items-center" 
+              <div
+                key={step.num}
+                className="flex flex-col items-center"
                 style={{ flex: 1 }}
                 onClick={() => isClickable && onStepClick(step.num)}
               >
@@ -57,14 +59,24 @@ export const ProgressSteps: React.FC<ProgressStepsProps> = ({
                   }`}
                 >
                   {isCompleted ? (
-                    <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    <svg
+                      className="w-5 h-5 sm:w-6 sm:h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      strokeWidth={3}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
                   ) : (
                     step.num
                   )}
                 </div>
-                
+
                 {/* Label below */}
                 <span
                   className={`mt-1.5 text-xs sm:text-sm font-medium text-center px-1 ${

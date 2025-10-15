@@ -1,5 +1,5 @@
-import { X } from "lucide-react"
-import React from "react"
+import { X, RotateCw } from "lucide-react"
+import React, { useState } from "react"
 
 interface CartIframePopupProps {
   isOpen: boolean
@@ -14,6 +14,8 @@ export const CartIframePopup: React.FC<CartIframePopupProps> = ({
   iframeSrc,
   customerName,
 }) => {
+  const [isTabletMode, setIsTabletMode] = useState(false)
+
   if (!isOpen) return null
 
   return (
@@ -34,13 +36,15 @@ export const CartIframePopup: React.FC<CartIframePopupProps> = ({
             height: "min(840px, calc(100vh - 16px))",
             borderRadius: "clamp(32px, 5vw, 48px)",
             padding: "10px",
-            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 2px 4px rgba(255, 255, 255, 0.1)",
+            boxShadow:
+              "0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 2px 4px rgba(255, 255, 255, 0.1)",
           }}
         >
           {/* Phone Notch (Top) - Hidden on small screens */}
-          <div className="hidden sm:block absolute top-0 left-1/2 -translate-x-1/2 w-28 h-5 bg-black rounded-b-3xl z-10"
+          <div
+            className="hidden sm:block absolute top-0 left-1/2 -translate-x-1/2 w-28 h-5 bg-black rounded-b-3xl z-10"
             style={{
-              boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)"
+              boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
             }}
           />
 
@@ -59,7 +63,8 @@ export const CartIframePopup: React.FC<CartIframePopupProps> = ({
           </button>
 
           {/* Phone Screen */}
-          <div className="flex-1 bg-white overflow-hidden" 
+          <div
+            className="flex-1 bg-white overflow-hidden"
             style={{
               borderRadius: "clamp(28px, 4.5vw, 36px)",
             }}

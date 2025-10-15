@@ -198,7 +198,9 @@ export const Step3Confirm: React.FC<Step3ConfirmProps> = ({
           value={notes}
           onChange={(e) => onNotesChange(e.target.value)}
           rows={4}
-          placeholder={texts.notesPlaceholder || "Aggiungi note per il tuo ordine..."}
+          placeholder={
+            texts.notesPlaceholder || "Aggiungi note per il tuo ordine..."
+          }
           className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all outline-none resize-none"
         />
       </div>

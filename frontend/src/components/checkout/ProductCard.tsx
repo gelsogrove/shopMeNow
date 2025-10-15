@@ -1,12 +1,14 @@
 import React from "react"
 
 // 🖼️ Helper to get full image URL
-const getImageUrl = (imageUrl: string | string[] | undefined): string | null => {
+const getImageUrl = (
+  imageUrl: string | string[] | undefined
+): string | null => {
   if (!imageUrl) return null
   const url = Array.isArray(imageUrl) ? imageUrl[0] : imageUrl
   if (!url) return null
   // If URL already starts with http, return as-is
-  if (url.startsWith('http')) return url
+  if (url.startsWith("http")) return url
   // Otherwise, prepend backend URL
   return `http://localhost:3001${url}`
 }
@@ -90,7 +92,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 </svg>
               </div>
             )}
-            
+
             {/* Discount Badge - Overlay on Image */}
             {hasDiscount && (
               <span className="absolute top-1 left-1 px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded shadow-sm">

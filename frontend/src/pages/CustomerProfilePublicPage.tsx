@@ -3,8 +3,8 @@ import { User } from "lucide-react"
 import React, { useEffect, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
-import { StickyHeader } from "../components/public/StickyHeader"
 import { ProfileForm } from "../components/profile/ProfileForm"
+import { StickyHeader } from "../components/public/StickyHeader"
 import { TokenError } from "../components/ui/TokenError"
 import UnifiedLoading from "../components/ui/UnifiedLoading"
 import { useTokenValidation } from "../hooks/useTokenValidation"
@@ -285,19 +285,19 @@ const CustomerProfilePublicPage: React.FC = () => {
         currentPage="profile"
         icon={profileIcon}
       />
-      
+
       <div className="pt-16">
         <div className="max-w-3xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
-      {/* Profile Form */}
-      {profileData && (
-        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
-          <ProfileForm
-            profileData={profileData}
-            onSave={handleSaveProfile}
-            saving={saving}
-          />
-        </div>
-      )}
+          {/* Profile Form */}
+          {profileData && (
+            <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+              <ProfileForm
+                profileData={profileData}
+                onSave={handleSaveProfile}
+                saving={saving}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

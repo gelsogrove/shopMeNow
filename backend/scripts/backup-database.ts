@@ -1,9 +1,9 @@
 /**
  * DATABASE BACKUP - Export current database to SQL file
- * 
+ *
  * Creates a timestamped backup in backend/backups/
  * Can be restored using: npm run db:restore backup-YYYY-MM-DD.sql
- * 
+ *
  * Usage: npm run db:backup
  */
 
@@ -19,7 +19,7 @@ const DB_PORT = process.env.POSTGRES_PORT || "5434"
 
 async function backupDatabase() {
   console.log("💾 DATABASE BACKUP STARTING...")
-  console.log("=" .repeat(50))
+  console.log("=".repeat(50))
 
   // Create backups directory if not exists
   if (!fs.existsSync(BACKUP_DIR)) {

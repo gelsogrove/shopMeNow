@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react"
 import designSystem from "@/styles/designSystem"
+import React, { useEffect, useState } from "react"
 import { MobileMenu } from "./MobileMenu"
 
 interface StickyHeaderProps {
@@ -79,7 +79,15 @@ export const StickyHeader: React.FC<StickyHeaderProps> = ({
           }}
         >
           {/* Left: Icon + Title */}
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              flex: 1,
+              minWidth: 0,
+            }}
+          >
             {icon && (
               <div
                 style={{

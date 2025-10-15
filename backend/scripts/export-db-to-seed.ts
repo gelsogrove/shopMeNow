@@ -1,14 +1,14 @@
 /**
  * EXPORT DATABASE TO SEED FILES
- * 
+ *
  * Questo script:
  * 1. LEGGE il database attuale (prodotti, categorie, servizi, etc.)
  * 2. SOVRASCRIVE i file .ts in prisma/data/
  * 3. COPIA le immagini in prisma/uploads-backup/
  * 4. Il prossimo npm run seed userà questi dati aggiornati
- * 
+ *
  * Uso: npm run db:export
- * 
+ *
  * ATTENZIONE: Questo SOVRASCRIVE i file TypeScript e le immagini!
  */
 
@@ -44,7 +44,7 @@ function formatValue(value: any): string {
 
 async function exportToSeed() {
   console.log("🔄 EXPORTING DATABASE TO SEED FILES")
-  console.log("=" .repeat(50))
+  console.log("=".repeat(50))
 
   try {
     // Get main workspace
@@ -277,29 +277,29 @@ ${offers
     // 6. BACKUP IMMAGINI
     // ========================================
     console.log("\n6️⃣ BACKUP UPLOADS...")
-    
+
     const uploadsDir = path.join(__dirname, "..", "uploads")
     const backupDir = path.join(__dirname, "..", "prisma", "uploads-backup")
-    
+
     // Cancella vecchio backup e crea nuovo
     if (fs.existsSync(backupDir)) {
       await fse.remove(backupDir)
       console.log("   🗑️  Removed old backup")
     }
-    
+
     // Copia uploads → uploads-backup
     if (fs.existsSync(uploadsDir)) {
       await fse.copy(uploadsDir, backupDir)
       console.log(`   ✅ Backed up uploads to prisma/uploads-backup/`)
-      
+
       // Conta files
-      const productImages = fs.existsSync(path.join(backupDir, "products")) 
-        ? fs.readdirSync(path.join(backupDir, "products")).length 
+      const productImages = fs.existsSync(path.join(backupDir, "products"))
+        ? fs.readdirSync(path.join(backupDir, "products")).length
         : 0
       const serviceImages = fs.existsSync(path.join(backupDir, "services"))
         ? fs.readdirSync(path.join(backupDir, "services")).length
         : 0
-      
+
       console.log(`   📷 Product images: ${productImages}`)
       console.log(`   📷 Service images: ${serviceImages}`)
     } else {
