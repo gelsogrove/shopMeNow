@@ -14,6 +14,12 @@ export interface PublicPageTexts {
   viewProfile: string
   finalizeOrder: string
 
+  // Menu labels
+  menuTitle: string
+  cart: string
+  myOrders: string
+  profile: string
+
   // Common actions
   save: string
   cancel: string
@@ -50,6 +56,7 @@ export interface PublicPageTexts {
   originalPrice: string
   finalPrice: string
   format: string
+  formatLabel: string
   duration: string
   notes: string
 
@@ -59,6 +66,7 @@ export interface PublicPageTexts {
   orderStatus: string
   paymentStatus: string
   items: string
+  orderSummary: string
 
   // Profile labels
   personalData: string
@@ -66,6 +74,19 @@ export interface PublicPageTexts {
   billingAddress: string
   shippingAddress: string
   preferences: string
+
+  // Payment labels (Step 4)
+  cardNumber: string
+  cardholderName: string
+  expiry: string
+  cvcTooltip: string
+  securePayment: string
+  totalToPay: string
+  includesVAT: string
+  confirmPayment: string
+  processing: string
+  paymentDisclaimer: string
+  proceedToPayment: string
 
   // Messages
   noData: string
@@ -194,6 +215,12 @@ export const publicPageTranslations: Record<
     viewProfile: "Profilo",
     finalizeOrder: "Finalizza Ordine",
 
+    // Menu labels
+    menuTitle: "Menu",
+    cart: "Carrello",
+    myOrders: "I Miei Ordini",
+    profile: "Profilo",
+
     // Common actions
     save: "Salva",
     cancel: "Annulla",
@@ -230,6 +257,7 @@ export const publicPageTranslations: Record<
     originalPrice: "Prezzo Originale",
     finalPrice: "Prezzo Finale",
     format: "Formato",
+    formatLabel: "Formato:",
     duration: "Durata",
     notes: "Note",
 
@@ -239,6 +267,7 @@ export const publicPageTranslations: Record<
     orderStatus: "Stato Ordine",
     paymentStatus: "Stato Pagamento",
     items: "Articoli",
+    orderSummary: "Riepilogo Ordine",
 
     // Profile labels
     personalData: "Dati Personali",
@@ -246,6 +275,20 @@ export const publicPageTranslations: Record<
     billingAddress: "Indirizzo di Fatturazione",
     shippingAddress: "Indirizzo di Spedizione",
     preferences: "Preferenze",
+
+    // Payment labels (Step 4)
+    cardNumber: "Numero Carta",
+    cardholderName: "Nome Titolare",
+    expiry: "Scadenza",
+    cvcTooltip: "Codice di 3 cifre sul retro della carta",
+    securePayment: "Pagamento sicuro crittografato SSL",
+    totalToPay: "Totale da Pagare",
+    includesVAT: "IVA inclusa",
+    confirmPayment: "Conferma Pagamento",
+    processing: "Elaborazione...",
+    paymentDisclaimer:
+      "Cliccando su 'Conferma Pagamento' accetti i nostri Termini e Condizioni",
+    proceedToPayment: "Procedi al Pagamento",
 
     // Messages
     noData: "Nessun dato disponibile",
@@ -373,6 +416,12 @@ export const publicPageTranslations: Record<
     viewProfile: "Profile",
     finalizeOrder: "Finalize Order",
 
+    // Menu labels
+    menuTitle: "Menu",
+    cart: "Cart",
+    myOrders: "My Orders",
+    profile: "Profile",
+
     // Common actions
     save: "Save",
     cancel: "Cancel",
@@ -409,6 +458,7 @@ export const publicPageTranslations: Record<
     originalPrice: "Original Price",
     finalPrice: "Final Price",
     format: "Format",
+    formatLabel: "Format:",
     duration: "Duration",
     notes: "Notes",
 
@@ -418,6 +468,7 @@ export const publicPageTranslations: Record<
     orderStatus: "Order Status",
     paymentStatus: "Payment Status",
     items: "Items",
+    orderSummary: "Order Summary",
 
     // Profile labels
     personalData: "Personal Data",
@@ -425,6 +476,20 @@ export const publicPageTranslations: Record<
     billingAddress: "Billing Address",
     shippingAddress: "Shipping Address",
     preferences: "Preferences",
+
+    // Payment labels (Step 4)
+    cardNumber: "Card Number",
+    cardholderName: "Cardholder Name",
+    expiry: "Expiry",
+    cvcTooltip: "3-digit code on the back of the card",
+    securePayment: "Secure SSL encrypted payment",
+    totalToPay: "Total to Pay",
+    includesVAT: "VAT included",
+    confirmPayment: "Confirm Payment",
+    processing: "Processing...",
+    paymentDisclaimer:
+      "By clicking 'Confirm Payment' you accept our Terms and Conditions",
+    proceedToPayment: "Proceed to Payment",
 
     // Messages
     noData: "No data available",
@@ -552,6 +617,12 @@ export const publicPageTranslations: Record<
     viewProfile: "Perfil",
     finalizeOrder: "Finalizar Pedido",
 
+    // Menu labels
+    menuTitle: "Menú",
+    cart: "Carrito",
+    myOrders: "Mis Pedidos",
+    profile: "Perfil",
+
     // Common actions
     save: "Guardar",
     cancel: "Cancelar",
@@ -588,6 +659,7 @@ export const publicPageTranslations: Record<
     originalPrice: "Precio Original",
     finalPrice: "Precio Final",
     format: "Formato",
+    formatLabel: "Formato:",
     duration: "Duración",
     notes: "Notas",
 
@@ -597,6 +669,7 @@ export const publicPageTranslations: Record<
     orderStatus: "Estado del Pedido",
     paymentStatus: "Estado del Pago",
     items: "Artículos",
+    orderSummary: "Resumen del Pedido",
 
     // Profile labels
     personalData: "Datos Personales",
@@ -604,6 +677,20 @@ export const publicPageTranslations: Record<
     billingAddress: "Dirección de Facturación",
     shippingAddress: "Dirección de Envío",
     preferences: "Preferencias",
+
+    // Payment labels (Step 4)
+    cardNumber: "Número de Tarjeta",
+    cardholderName: "Nombre del Titular",
+    expiry: "Vencimiento",
+    cvcTooltip: "Código de 3 dígitos en el reverso de la tarjeta",
+    securePayment: "Pago seguro encriptado SSL",
+    totalToPay: "Total a Pagar",
+    includesVAT: "IVA incluido",
+    confirmPayment: "Confirmar Pago",
+    processing: "Procesando...",
+    paymentDisclaimer:
+      "Al hacer clic en 'Confirmar Pago' aceptas nuestros Términos y Condiciones",
+    proceedToPayment: "Proceder al Pago",
 
     // Messages
     noData: "No hay datos disponibles",
@@ -700,6 +787,12 @@ export const publicPageTranslations: Record<
     viewProfile: "Perfil",
     finalizeOrder: "Finalizar Pedido",
 
+    // Menu labels
+    menuTitle: "Menu",
+    cart: "Carrinho",
+    myOrders: "Meus Pedidos",
+    profile: "Perfil",
+
     // Common actions
     save: "Salvar",
     cancel: "Cancelar",
@@ -736,6 +829,7 @@ export const publicPageTranslations: Record<
     originalPrice: "Preço Original",
     finalPrice: "Preço Final",
     format: "Formato",
+    formatLabel: "Formato:",
     duration: "Duração",
     notes: "Notas",
 
@@ -745,6 +839,7 @@ export const publicPageTranslations: Record<
     orderStatus: "Status do Pedido",
     paymentStatus: "Status do Pagamento",
     items: "Itens",
+    orderSummary: "Resumo do Pedido",
 
     // Profile labels
     personalData: "Dados Pessoais",
@@ -752,6 +847,20 @@ export const publicPageTranslations: Record<
     billingAddress: "Endereço de Cobrança",
     shippingAddress: "Endereço de Entrega",
     preferences: "Preferências",
+
+    // Payment labels (Step 4)
+    cardNumber: "Número do Cartão",
+    cardholderName: "Nome do Titular",
+    expiry: "Validade",
+    cvcTooltip: "Código de 3 dígitos no verso do cartão",
+    securePayment: "Pagamento seguro criptografado SSL",
+    totalToPay: "Total a Pagar",
+    includesVAT: "IVA incluído",
+    confirmPayment: "Confirmar Pagamento",
+    processing: "Processando...",
+    paymentDisclaimer:
+      "Ao clicar em 'Confirmar Pagamento' você aceita nossos Termos e Condições",
+    proceedToPayment: "Prosseguir para Pagamento",
 
     // Messages
     noData: "Nenhum dado disponível",

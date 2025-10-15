@@ -7,6 +7,7 @@ interface Product {
   prezzo: number
   prezzoScontato?: number
   itemType?: "PRODUCT" | "SERVICE"
+  formato?: string
 }
 
 interface Address {
@@ -118,6 +119,11 @@ export const Step3Confirm: React.FC<Step3ConfirmProps> = ({
                   <p className="font-medium text-gray-900">
                     {product.descrizione}
                   </p>
+                  {product.formato && (
+                    <p className="text-xs text-blue-600 font-medium">
+                      {texts.formatLabel || "Formato:"} {product.formato}
+                    </p>
+                  )}
                   <p className="text-sm text-gray-500">
                     {texts.quantity || "Quantità"}: {product.qty} x €
                     {finalPrice.toFixed(2)}

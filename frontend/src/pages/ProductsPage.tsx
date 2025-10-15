@@ -48,38 +48,35 @@ export function ProductsPage() {
   )
 
   // Load filters from localStorage or use defaults
-  const [filterCategory, setFilterCategory] = useState<string>(() => {
-    return localStorage.getItem("products_filter_category") || "all"
-  })
-  const [sortBy, setSortBy] = useState<"name" | "sales" | "stock">(() => {
-    return (
-      (localStorage.getItem("products_sort_by") as
-        | "name"
-        | "sales"
-        | "stock") || "name"
-    )
-  })
+  const [filterCategory, setFilterCategory] = useState<string>("all")
+  const [sortBy, setSortBy] = useState<"name" | "sales" | "stock">("name")
 
   // Get currency symbol based on workspace settings
   const currencySymbol = getCurrencySymbol(workspace?.currency as string)
 
-  // Save filters to localStorage when they change
-  useEffect(() => {
-    localStorage.setItem("products_filter_category", filterCategory)
-  }, [filterCategory])
+  // Don't save filters to localStorage to avoid issues after seed
+  // useEffect(() => {
+  //   localStorage.setItem("products_filter_category", filterCategory)
+  // }, [filterCategory])
 
-  useEffect(() => {
-    localStorage.setItem("products_sort_by", sortBy)
-  }, [sortBy])
+  // useEffect(() => {
+  //   localStorage.setItem("products_sort_by", sortBy)
+  // }, [sortBy])
 
   // Fetch products when workspace changes
   useEffect(() => {
     const loadProducts = async () => {
-      if (!workspace?.id) return
+      if (!workspace?.id) {
+        console.log("❌ No workspace ID, skipping products load")
+        return
+      }
 
+      console.log("🔄 Loading products for workspace:", workspace.id)
       setIsLoading(true)
       try {
         const response = await productsApi.getAllForWorkspace(workspace.id)
+
+        console.log("✅ API Response:", response)
 
         if (response && Array.isArray(response.products)) {
           console.log(
@@ -93,6 +90,7 @@ export function ProductsPage() {
         }
       } catch (error) {
         logger.error("Failed to load products:", error)
+        console.error("❌ Products load error:", error)
         setProducts([])
         toast.error("Failed to load products")
       } finally {
@@ -130,6 +128,13 @@ export function ProductsPage() {
 
   // Filter and sort products
   const filteredProducts = React.useMemo(() => {
+    console.log("🔍 Filter Debug:", {
+      totalProducts: products.length,
+      filterCategory,
+      searchValue,
+      sortBy,
+    })
+
     // Filter by search
     let filtered = products.filter(
       (product) =>
@@ -141,9 +146,12 @@ export function ProductsPage() {
         product.category?.name.toLowerCase().includes(searchValue.toLowerCase())
     )
 
+    console.log("🔍 After search filter:", filtered.length)
+
     // Filter by category
     if (filterCategory !== "all") {
       filtered = filtered.filter((p) => p.categoryId === filterCategory)
+      console.log("🔍 After category filter:", filtered.length, "categoryId:", filterCategory)
     }
 
     // Sort products
@@ -159,6 +167,7 @@ export function ProductsPage() {
       }
     })
 
+    console.log("🔍 Final filtered products:", filtered.length)
     return filtered
   }, [products, searchValue, filterCategory, sortBy])
 

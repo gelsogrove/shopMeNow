@@ -23,7 +23,7 @@ import {
   Lock,
   Pencil,
   Send,
-  ShoppingCart,
+  Smartphone,
   Trash2,
 } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
@@ -197,6 +197,17 @@ export function ChatPage() {
       // Error already handled in getCartToken
     }
   }
+
+  // Handle cart link click from messages
+  const handleCartLinkClick = (url: string) => {
+    // Extract token from URL
+    const tokenMatch = url.match(/token=([^&\s]+)/)
+    if (tokenMatch && tokenMatch[1]) {
+      setCartToken(tokenMatch[1])
+      setShowCartPopup(true)
+    }
+  }
+
   const {
     chats,
     isLoading: isLoadingChats,
@@ -1204,7 +1215,7 @@ export function ChatPage() {
                     {isLoadingCartToken ? (
                       <Loader2 className="h-5 w-5 text-green-600 animate-spin" />
                     ) : (
-                      <ShoppingCart className="h-5 w-5 text-green-600" />
+                      <Smartphone className="h-5 w-5 text-green-600" />
                     )}
                   </Button>
                   <Button
@@ -1347,6 +1358,7 @@ export function ChatPage() {
                             <MessageRenderer
                               content={message.content}
                               variant="chat"
+                              onCartLinkClick={handleCartLinkClick}
                             />
                           </div>
 

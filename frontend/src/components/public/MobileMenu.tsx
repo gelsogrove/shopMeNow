@@ -1,4 +1,8 @@
 import designSystem from "@/styles/designSystem"
+import {
+  publicPageTranslations,
+  type SupportedLanguage,
+} from "@/utils/publicPageTranslations"
 import React from "react"
 import { useNavigate } from "react-router-dom"
 
@@ -34,38 +38,29 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
 }) => {
   const navigate = useNavigate()
 
+  // Get translations based on customer language
+  const langCode = (customerLanguage?.toUpperCase() ||
+    "IT") as SupportedLanguage
+  const t =
+    publicPageTranslations[langCode] || publicPageTranslations.IT
+
   // Menu items configuration
   const menuItems: MenuItem[] = [
     {
-      icon: "🛒",
-      label:
-        customerLanguage === "it"
-          ? "Carrello"
-          : customerLanguage === "en"
-          ? "Cart"
-          : "Warenkorb",
+      icon: "�",
+      label: t.cart,
       path: `/checkout?token=${token}`,
       page: "cart",
     },
     {
       icon: "📦",
-      label:
-        customerLanguage === "it"
-          ? "I Miei Ordini"
-          : customerLanguage === "en"
-          ? "My Orders"
-          : "Meine Bestellungen",
+      label: t.myOrders,
       path: `/orders-public?token=${token}`,
       page: "orders",
     },
     {
       icon: "👤",
-      label:
-        customerLanguage === "it"
-          ? "Profilo"
-          : customerLanguage === "en"
-          ? "Profile"
-          : "Profil",
+      label: t.profile,
       path: `/customer-profile?token=${token}`,
       page: "profile",
     },
@@ -129,7 +124,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
               margin: 0,
             }}
           >
-            Menu
+            {t.menuTitle}
           </h2>
           <button
             onClick={onClose}

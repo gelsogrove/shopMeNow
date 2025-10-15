@@ -7,300 +7,692 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Workspace {
-  id                        String            @id @default(cuid())
-  name                      String
-  slug                      String            @unique
-  whatsappPhoneNumber       String?
-  whatsappApiKey           String?
-  notificationEmail         String?
-  webhookUrl                String?
-  isActive                  Boolean           @default(true)
-  language                  String            @default("ENG")
-  createdAt                 DateTime          @default(now())
-  updatedAt                 DateTime          @updatedAt
-  isDelete                  Boolean           @default(false)
-  currency                  String            @default("EUR")
-  challengeStatus           Boolean           @default(false)
-  description               String?
-  messageLimit              Int               @default(50)
-  blocklist                 String?           @default("")
-  url                       String?
-  businessType              BusinessType      @default(ECOMMERCE)
-  welcomeMessages           Json?             @default("{\"en\": \"Welcome!\", \"es\": \"¡Bienvenido!\", \"it\": \"Benvenuto!\"}")
-  wipMessages               Json?             @default("{\"en\": \"Work in progress. Please contact us later.\", \"es\": \"Trabajos en curso. Por favor, contáctenos más tarde.\", \"it\": \"Lavori in corso. Contattaci più tardi.\", \"pt\": \"Em manutenção. Por favor, contacte-nos mais tarde.\"}")
-  afterRegistrationMessages Json?             @default("{\"de\": \"Danke für Ihre Registrierung, [nome]! Wie kann ich Ihnen heute helfen? Möchten Sie Ihre Bestellungen sehen? Die Angebote? Oder benötigen Sie andere Informationen?\", \"en\": \"Thank you for registering, [nome]! How can I help you today? Would you like to see your orders? The offers? Or do you need other information?\", \"es\": \"¡Gracias por registrarte, [nome]! ¿Cómo puedo ayudarte hoy? ¿Quieres ver tus pedidos? ¿Las ofertas? ¿O necesitas otra información?\", \"fr\": \"Merci de vous être inscrit, [nome] ! Comment puis-je vous aider aujourd'hui ? Voulez-vous voir vos commandes ? Les offres ? Ou avez-vous besoin d'autres informations ?\", \"it\": \"Grazie per esserti registrato, [nome]! Come ti posso aiutare oggi? Vuoi vedere i tuoi ordini? Le offerte? O hai bisogno di altre informazioni?\", \"pt\": \"Obrigado por se registrar, [nome]! Como posso ajudá-lo hoje? Quer ver seus pedidos? As ofertas? Ou precisa de outras informações?\"}")
-  debugMode                 Boolean           @default(true)
-  apiKey                    String?
-  apiSecret                 String?
-  metadata                  Json?
-  prompts                   Prompts[]
-  users                     UserWorkspace[]
-  agentConfigs              AgentConfig[]
-  carts                     Carts[]
-  categories                Categories[]
-  chatSessions              ChatSession[]
-  customers                 Customers[]
-  documents                 Documents[]
-  faqs                      FAQ[]
-  gdprContent               GdprContent?
-  languages                 Languages[]
-  offers                    Offers[]
-  orders                    Orders[]
-  products                  Products[]
-  sales                     Sales[]
-  secureTokens              SecureToken[]
-  services                  Services[]
-  billings                  Billing[]
-  shortUrls                 ShortUrls[]
-  usage                     Usage[]
-  whatsappSettings          WhatsappSettings?
-  adminSessions             AdminSession[]
-  campaigns                 Campaign[]
+model Billing {
+  id            String      @id
+  workspaceId   String
+  customerId    String?
+  amount        Float
+  type          BillingType
+  description   String
+  userQuery     String?
+  previousTotal Float       @default(0)
+  currentCharge Float       @default(0)
+  newTotal      Float       @default(0)
+  createdAt     DateTime    @default(now())
+  customers     customers?  @relation(fields: [customerId], references: [id])
+  Workspace     Workspace   @relation(fields: [workspaceId], references: [id])
+
+  @@index([createdAt])
+  @@index([customerId])
+  @@index([type])
+  @@index([workspaceId])
 }
 
-model Categories {
-  id              String     @id @default(uuid())
-  name            String
-  description     String?
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-  isActive        Boolean    @default(true)
-  workspaceId     String
-  slug            String
-  workspace       Workspace  @relation(fields: [workspaceId], references: [id])
-  offers          Offers[]   @relation("OfferCategory")
-  products        Products[]
-  offerCategories Offers[]   @relation("OfferCategories")
+model Campaign {
+  id               String             @id
+  workspaceId      String
+  name             String
+  messagePreview   String
+  frequency        CampaignFrequency
+  isActive         Boolean            @default(true)
+  targetType       CampaignTargetType @default(ALL)
+  customerIds      String[]           @default([])
+  templateName     String?
+  templateParams   Json?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime
+  lastRunAt        DateTime?
+  Workspace        Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  CampaignSent     CampaignSent[]
+  CustomerFeedback CustomerFeedback[]
 
-  @@unique([slug, workspaceId])
-  @@map("categories")
+  @@index([frequency])
+  @@index([isActive])
+  @@index([workspaceId])
 }
 
-model Sales {
-  id          String      @id @default(uuid())
-  firstName   String
-  lastName    String
-  email       String
-  phone       String?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  isActive    Boolean     @default(true)
+model CampaignSent {
+  id          String    @id
+  campaignId  String
+  customerId  String
   workspaceId String
-  customers   Customers[]
-  workspace   Workspace   @relation(fields: [workspaceId], references: [id])
+  sentAt      DateTime  @default(now())
+  tokenUsed   String?
+  clickedAt   DateTime?
+  Campaign    Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  customers   customers @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
-  @@map("sales")
+  @@index([campaignId])
+  @@index([customerId])
+  @@index([sentAt])
+  @@index([workspaceId])
 }
 
-model Languages {
-  id          String    @id @default(uuid())
-  name        String
-  code        String
-  isDefault   Boolean   @default(false)
+model CustomerFeedback {
+  id          String    @id
+  customerId  String
+  workspaceId String
+  campaignId  String?
+  rating      Int
+  comment     String?
   createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  isActive    Boolean   @default(true)
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  Campaign    Campaign? @relation(fields: [campaignId], references: [id])
+  customers   customers @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
-  @@map("languages")
+  @@index([campaignId])
+  @@index([createdAt])
+  @@index([customerId])
+  @@index([workspaceId])
 }
 
-model Products {
-  id          String          @id @default(uuid())
-  name        String
-  ProductCode String?
-  description String?
-  formato     String?
-  price       Float
-  stock       Int             @default(0)
-  sku         String?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  isActive    Boolean         @default(true)
-  workspaceId String
-  categoryId  String?
-  slug        String          @unique
-  status      ProductStatus   @default(ACTIVE)
-  imageUrl    String[]        @default([])
-  cartItems   CartItems[]
-  orderItems  OrderItems[]
-  chunks      ProductChunks[]
-  category    Categories?     @relation(fields: [categoryId], references: [id])
-  workspace   Workspace       @relation(fields: [workspaceId], references: [id])
-
-  @@map("products")
-}
-
-model Customers {
-  id                            String        @id @default(uuid())
-  name                          String
-  email                         String
-  phone                         String?
-  address                       String?
-  company                       String?
-  discount                      Float?        @default(0)
-  language                      String?       @default("ENG")
-  currency                      String?       @default("EUR")
-  notes                         String?
-  serviceIds                    String[]      @default([])
-  isBlacklisted                 Boolean       @default(false)
-  createdAt                     DateTime      @default(now())
-  updatedAt                     DateTime      @updatedAt
-  isActive                      Boolean       @default(true)
-  workspaceId                   String
-  last_privacy_version_accepted String?
-  privacy_accepted_at           DateTime?
-  push_notifications_consent    Boolean       @default(false)
-  push_notifications_consent_at DateTime?
-  activeChatbot                 Boolean       @default(true)
-  invoiceAddress                Json?
-  salesId                       String?
-  cart                          Carts?
-  chatSessions                  ChatSession[]
-  sales                         Sales?        @relation(fields: [salesId], references: [id])
-  workspace                     Workspace     @relation(fields: [workspaceId], references: [id])
-  orders                        Orders[]
-  usage                         Usage[]
-  billings                      Billing[]
-  campaignSends                 CampaignSent[]
-  feedbacks                     CustomerFeedback[]
-
-  @@map("customers")
-}
-
-model Orders {
-  id              String          @id @default(uuid())
-  orderCode       String          @unique
-  status          OrderStatus     @default(PENDING)
-  paymentMethod   PaymentMethod?
-  paymentStatus   PaymentStatus?  @default(PENDING)
-  totalAmount     Float
-  shippingAmount  Float?          @default(0)
-  taxAmount       Float?          @default(0)
-  shippingAddress Json?
-  billingAddress  Json?
-  notes           String?
-  discountCode    String?
-  discountAmount  Float?          @default(0)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  customerId      String
-  workspaceId     String
-  trackingNumber  String?
-  items           OrderItems[]
-  customer        Customers       @relation(fields: [customerId], references: [id])
-  workspace       Workspace       @relation(fields: [workspaceId], references: [id])
-  paymentDetails  PaymentDetails?
-
-  @@map("orders")
-}
-
-model OrderItems {
-  id             String    @id @default(uuid())
-  itemType       ItemType  @default(PRODUCT)
-  quantity       Int       @default(1)
-  unitPrice      Float
-  totalPrice     Float
-  productVariant Json?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  orderId        String
-  productId      String?
-  serviceId      String?
-  order          Orders    @relation(fields: [orderId], references: [id])
-  product        Products? @relation(fields: [productId], references: [id])
-  service        Services? @relation(fields: [serviceId], references: [id])
-
-  @@map("order_items")
-}
-
-model Carts {
-  id          String      @id @default(uuid())
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  customerId  String      @unique
-  workspaceId String
-  items       CartItems[]
-  customer    Customers   @relation(fields: [customerId], references: [id])
-  workspace   Workspace   @relation(fields: [workspaceId], references: [id])
-
-  @@map("carts")
-}
-
-model CartItems {
-  id        String    @id @default(uuid())
-  itemType  ItemType  @default(PRODUCT)
-  quantity  Int
-  notes     String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  cartId    String
-  productId String?
-  serviceId String?
-  cart      Carts     @relation(fields: [cartId], references: [id])
-  product   Products? @relation(fields: [productId], references: [id])
-  service   Services? @relation(fields: [serviceId], references: [id])
-
-  @@map("cart_items")
+model Language {
+  id        String   @id
+  code      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
 }
 
 model Prompts {
-  id          String    @id @default(uuid())
+  id          String     @id
   name        String
   content     String
   workspaceId String
-  isRouter    Boolean   @default(false)
+  isRouter    Boolean    @default(false)
   department  String?
-  temperature Float?    @default(0.7)
-  top_p       Float?    @default(0.9)
-  top_k       Int?      @default(40)
-  model       String?   @default("GPT-4.1-mini")
-  max_tokens  Int?      @default(1000)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  isActive    Boolean   @default(true)
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  messages    Message[]
+  temperature Float?     @default(0.7)
+  top_p       Float?     @default(0.9)
+  top_k       Int?       @default(40)
+  model       String?    @default("GPT-4.1-mini")
+  max_tokens  Int?       @default(1000)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime
+  isActive    Boolean    @default(true)
+  Workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  messages    messages[]
 
   @@index([workspaceId])
 }
 
-model User {
-  id              String          @id @default(uuid())
-  email           String          @unique
-  passwordHash    String
-  firstName       String?
-  lastName        String?
-  status          UserStatus      @default(ACTIVE)
-  lastLogin       DateTime?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  role            UserRole        @default(MEMBER)
-  twoFactorSecret String?
-  gdprAccepted    DateTime?
-  phoneNumber     String?
-  workspaces      UserWorkspace[]
-  otpTokens       OtpToken[]
-  passwordResets  PasswordReset[]
-  adminSessions   AdminSession[]
+model ShortUrls {
+  id             String    @id
+  shortCode      String    @unique @db.VarChar(10)
+  originalUrl    String
+  workspaceId    String
+  clicks         Int       @default(0)
+  isActive       Boolean   @default(true)
+  expiresAt      DateTime?
+  lastAccessedAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime
+  Workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  @@map("users")
+  @@index([expiresAt])
+  @@index([shortCode])
+  @@index([workspaceId])
 }
 
 model UserWorkspace {
   userId      String
   workspaceId String
   role        String
-  user        User      @relation(fields: [userId], references: [id])
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  users       users     @relation(fields: [userId], references: [id])
+  Workspace   Workspace @relation(fields: [workspaceId], references: [id])
 
   @@id([userId, workspaceId])
 }
 
-model WhatsappSettings {
-  id          String    @id @default(uuid())
+model Workspace {
+  id                        String             @id
+  name                      String
+  slug                      String             @unique
+  whatsappPhoneNumber       String?
+  whatsappApiKey            String?
+  notificationEmail         String?
+  webhookUrl                String?
+  isActive                  Boolean            @default(true)
+  language                  String             @default("ENG")
+  createdAt                 DateTime           @default(now())
+  updatedAt                 DateTime
+  isDelete                  Boolean            @default(false)
+  currency                  String             @default("EUR")
+  challengeStatus           Boolean            @default(false)
+  description               String?
+  messageLimit              Int                @default(50)
+  blocklist                 String?            @default("")
+  url                       String?
+  businessType              BusinessType       @default(ECOMMERCE)
+  welcomeMessages           Json?              @default("{\"en\": \"Welcome!\", \"es\": \"¡Bienvenido!\", \"it\": \"Benvenuto!\"}")
+  wipMessages               Json?              @default("{\"en\": \"Work in progress. Please contact us later.\", \"es\": \"Trabajos en curso. Por favor, contáctenos más tarde.\", \"it\": \"Lavori in corso. Contattaci più tardi.\", \"pt\": \"Em manutenção. Por favor, contacte-nos mais tarde.\"}")
+  afterRegistrationMessages Json?              @default("{\"de\": \"Danke für Ihre Registrierung, [nome]! Wie kann ich Ihnen heute helfen? Möchten Sie Ihre Bestellungen sehen? Die Angebote? Oder benötigen Sie andere Informationen?\", \"en\": \"Thank you for registering, [nome]! How can I help you today? Would you like to see your orders? The offers? Or do you need other information?\", \"es\": \"¡Gracias por registrarte, [nome]! ¿Cómo puedo ayudarte hoy? ¿Quieres ver tus pedidos? ¿Las ofertas? ¿O necesitas otra información?\", \"fr\": \"Merci de vous être inscrit, [nome] ! Comment puis-je vous aider aujourd'hui ? Voulez-vous voir vos commandes ? Les offres ? Ou avez-vous besoin d'autres informations ?\", \"it\": \"Grazie per esserti registrato, [nome]! Come ti posso aiutare oggi? Vuoi vedere i tuoi ordini? Le offerte? O hai bisogno di altre informazioni?\", \"pt\": \"Obrigado por se registrar, [nome]! Como posso ajudá-lo hoje? Quer ver seus pedidos? As ofertas? Ou precisa de outras informações?\"}")
+  debugMode                 Boolean            @default(true)
+  apiKey                    String?
+  apiSecret                 String?
+  metadata                  Json?
+  Billing                   Billing[]
+  Campaign                  Campaign[]
+  Prompts                   Prompts[]
+  ShortUrls                 ShortUrls[]
+  UserWorkspace             UserWorkspace[]
+  admin_sessions            admin_sessions[]
+  agent_configs             agent_configs[]
+  carts                     carts[]
+  categories                categories[]
+  chat_sessions             chat_sessions[]
+  customers                 customers[]
+  documents                 documents[]
+  faqs                      faqs[]
+  gdpr_content              gdpr_content?
+  languages                 languages[]
+  offers                    offers[]
+  orders                    orders[]
+  products                  products[]
+  sales                     sales[]
+  secure_tokens             secure_tokens[]
+  services                  services[]
+  usage                     usage[]
+  whatsapp_settings         whatsapp_settings?
+}
+
+model admin_sessions {
+  id             String     @id
+  sessionId      String     @unique @db.VarChar(64)
+  userId         String
+  workspaceId    String?
+  createdAt      DateTime   @default(now())
+  expiresAt      DateTime
+  lastActivityAt DateTime   @default(now())
+  ipAddress      String?    @db.VarChar(45)
+  userAgent      String?
+  isActive       Boolean    @default(true)
+  users          users      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Workspace      Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([isActive])
+  @@index([sessionId])
+  @@index([userId])
+}
+
+model agent_configs {
+  id          String    @id
+  workspaceId String
+  prompt      String    @default("You are a helpful assistant.")
+  model       String    @default("openai/gpt-4o-mini")
+  temperature Float     @default(0.7)
+  maxTokens   Int       @default(1000)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime
+  Workspace   Workspace @relation(fields: [workspaceId], references: [id])
+}
+
+model cart_items {
+  id        String    @id
+  itemType  ItemType  @default(PRODUCT)
+  quantity  Int
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime
+  cartId    String
+  productId String?
+  serviceId String?
+  carts     carts     @relation(fields: [cartId], references: [id])
+  products  products? @relation(fields: [productId], references: [id])
+  services  services? @relation(fields: [serviceId], references: [id])
+}
+
+model carts {
+  id          String       @id
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime
+  customerId  String       @unique
+  workspaceId String
+  cart_items  cart_items[]
+  customers   customers    @relation(fields: [customerId], references: [id])
+  Workspace   Workspace    @relation(fields: [workspaceId], references: [id])
+}
+
+model categories {
+  id                                   String     @id
+  name                                 String
+  description                          String?
+  createdAt                            DateTime   @default(now())
+  updatedAt                            DateTime
+  isActive                             Boolean    @default(true)
+  workspaceId                          String
+  slug                                 String
+  Workspace                            Workspace  @relation(fields: [workspaceId], references: [id])
+  offers_offers_categoryIdTocategories offers[]   @relation("offers_categoryIdTocategories")
+  products                             products[]
+  offers_OfferCategories               offers[]   @relation("OfferCategories")
+
+  @@unique([slug, workspaceId])
+}
+
+model chat_sessions {
+  id          String     @id
+  status      String     @default("active")
+  context     Json?      @default("{}")
+  startedAt   DateTime   @default(now())
+  endedAt     DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime
+  workspaceId String
+  customerId  String
+  customers   customers  @relation(fields: [customerId], references: [id])
+  Workspace   Workspace  @relation(fields: [workspaceId], references: [id])
+  messages    messages[]
+}
+
+model customers {
+  id                            String             @id
+  name                          String
+  email                         String
+  phone                         String?
+  address                       String?
+  company                       String?
+  discount                      Float?             @default(0)
+  language                      String?            @default("ENG")
+  currency                      String?            @default("EUR")
+  notes                         String?
+  serviceIds                    String[]           @default([])
+  isBlacklisted                 Boolean            @default(false)
+  createdAt                     DateTime           @default(now())
+  updatedAt                     DateTime
+  isActive                      Boolean            @default(true)
+  workspaceId                   String
+  last_privacy_version_accepted String?
+  privacy_accepted_at           DateTime?
+  push_notifications_consent    Boolean            @default(false)
+  push_notifications_consent_at DateTime?
+  activeChatbot                 Boolean            @default(true)
+  invoiceAddress                Json?
+  salesId                       String?
+  Billing                       Billing[]
+  CampaignSent                  CampaignSent[]
+  CustomerFeedback              CustomerFeedback[]
+  carts                         carts?
+  chat_sessions                 chat_sessions[]
+  sales                         sales?             @relation(fields: [salesId], references: [id])
+  Workspace                     Workspace          @relation(fields: [workspaceId], references: [id])
+  orders                        orders[]
+  usage                         usage[]
+}
+
+model document_chunks {
+  id         String    @id
+  documentId String
+  content    String
+  chunkIndex Int
+  embedding  Json?
+  createdAt  DateTime  @default(now())
+  documents  documents @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([chunkIndex])
+  @@index([documentId])
+}
+
+model documents {
+  id              String            @id
+  filename        String
+  originalName    String
+  filePath        String
+  fileSize        Int
+  mimeType        String
+  status          DocumentStatus    @default(UPLOADED)
+  workspaceId     String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime
+  isActive        Boolean           @default(true)
+  document_chunks document_chunks[]
+  Workspace       Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([isActive])
+  @@index([status])
+  @@index([workspaceId])
+}
+
+model faq_chunks {
+  id         String   @id
+  faqId      String
+  content    String
+  chunkIndex Int
+  embedding  Json?
+  createdAt  DateTime @default(now())
+  faqs       faqs     @relation(fields: [faqId], references: [id], onDelete: Cascade)
+
+  @@index([chunkIndex])
+  @@index([faqId])
+}
+
+model faqs {
+  id          String       @id
+  question    String
+  answer      String
+  isActive    Boolean      @default(true)
+  workspaceId String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime
+  faq_chunks  faq_chunks[]
+  Workspace   Workspace    @relation(fields: [workspaceId], references: [id])
+}
+
+model gdpr_content {
+  id          String    @id
+  workspaceId String    @unique
+  content     String
+  version     String    @default("1.0")
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime
+  Workspace   Workspace @relation(fields: [workspaceId], references: [id])
+}
+
+model languages {
+  id          String    @id
+  name        String
+  code        String
+  isDefault   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime
+  isActive    Boolean   @default(true)
+  workspaceId String
+  Workspace   Workspace @relation(fields: [workspaceId], references: [id])
+}
+
+model messages {
+  id                 String           @id
+  direction          MessageDirection
+  content            String
+  type               MessageType      @default(TEXT)
+  status             String           @default("sent")
+  aiGenerated        Boolean          @default(false)
+  metadata           Json?            @default("{}")
+  read               Boolean          @default(false)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime
+  chatSessionId      String
+  promptId           String?
+  functionCallsDebug String?
+  processingSource   String?
+  translatedQuery    String?
+  processedPrompt    String?
+  debugInfo          String?
+  whatsappStatus     String?
+  whatsappError      String?
+  whatsappMessageId  String?
+  sentBy             String?
+  chat_sessions      chat_sessions    @relation(fields: [chatSessionId], references: [id])
+  Prompts            Prompts?         @relation(fields: [promptId], references: [id])
+
+  @@index([sentBy])
+  @@index([whatsappMessageId])
+  @@index([whatsappStatus])
+}
+
+model offers {
+  id                                       String       @id
+  name                                     String
+  description                              String?
+  discountPercent                          Float
+  startDate                                DateTime
+  endDate                                  DateTime
+  isActive                                 Boolean      @default(true)
+  categoryId                               String?
+  workspaceId                              String
+  createdAt                                DateTime     @default(now())
+  updatedAt                                DateTime
+  categories_offers_categoryIdTocategories categories?  @relation("offers_categoryIdTocategories", fields: [categoryId], references: [id])
+  Workspace                                Workspace    @relation(fields: [workspaceId], references: [id])
+  categories_OfferCategories               categories[] @relation("OfferCategories")
+}
+
+model order_items {
+  id             String    @id
+  itemType       ItemType  @default(PRODUCT)
+  quantity       Int       @default(1)
+  unitPrice      Float
+  totalPrice     Float
+  productVariant Json?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime
+  orderId        String
+  productId      String?
+  serviceId      String?
+  orders         orders    @relation(fields: [orderId], references: [id])
+  products       products? @relation(fields: [productId], references: [id])
+  services       services? @relation(fields: [serviceId], references: [id])
+}
+
+model orders {
+  id              String           @id
+  orderCode       String           @unique
+  status          OrderStatus      @default(PENDING)
+  paymentMethod   PaymentMethod?
+  paymentStatus   PaymentStatus?   @default(PENDING)
+  totalAmount     Float
+  shippingAmount  Float?           @default(0)
+  taxAmount       Float?           @default(0)
+  shippingAddress Json?
+  billingAddress  Json?
+  notes           String?
+  discountCode    String?
+  discountAmount  Float?           @default(0)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime
+  customerId      String
+  workspaceId     String
+  trackingNumber  String?
+  order_items     order_items[]
+  customers       customers        @relation(fields: [customerId], references: [id])
+  Workspace       Workspace        @relation(fields: [workspaceId], references: [id])
+  payment_details payment_details?
+}
+
+model otp_tokens {
+  id        String    @id
+  userId    String
+  otpHash   String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  users     users     @relation(fields: [userId], references: [id])
+}
+
+model password_resets {
+  id        String    @id
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  users     users     @relation(fields: [userId], references: [id])
+}
+
+model payment_details {
+  id               String   @id
+  provider         String
+  status           String   @default("PENDING")
+  amount           Float
+  currency         String   @default("EUR")
+  providerResponse Json?    @default("{}")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime
+  orderId          String   @unique
+  orders           orders   @relation(fields: [orderId], references: [id])
+}
+
+model product_chunks {
+  id          String   @id
+  productId   String
+  content     String
+  chunkIndex  Int
+  embedding   Json?
+  workspaceId String
+  language    String   @default("en")
+  createdAt   DateTime @default(now())
+  products    products @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([chunkIndex])
+  @@index([language])
+  @@index([productId])
+  @@index([workspaceId])
+}
+
+model products {
+  id             String           @id
+  name           String
+  ProductCode    String?
+  description    String?
+  formato        String?
+  price          Float
+  stock          Int              @default(0)
+  sku            String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime
+  isActive       Boolean          @default(true)
+  workspaceId    String
+  categoryId     String?
+  slug           String           @unique
+  status         ProductStatus    @default(ACTIVE)
+  imageUrl       String[]         @default([])
+  cart_items     cart_items[]
+  order_items    order_items[]
+  product_chunks product_chunks[]
+  categories     categories?      @relation(fields: [categoryId], references: [id])
+  Workspace      Workspace        @relation(fields: [workspaceId], references: [id])
+}
+
+model registration_attempts {
+  id            String   @id
+  phoneNumber   String
+  workspaceId   String
+  attemptCount  Int      @default(0)
+  lastAttemptAt DateTime @default(now())
+  isBlocked     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime
+
+  @@unique([phoneNumber, workspaceId])
+}
+
+model registration_tokens {
+  id          String    @id
+  token       String    @unique
+  phoneNumber String
+  workspaceId String
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime
+}
+
+model sales {
+  id          String      @id
+  firstName   String
+  lastName    String
+  email       String
+  phone       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime
+  isActive    Boolean     @default(true)
+  workspaceId String
+  customers   customers[]
+  Workspace   Workspace   @relation(fields: [workspaceId], references: [id])
+}
+
+model secure_tokens {
+  id          String    @id
+  token       String    @unique
+  type        String
+  workspaceId String
+  userId      String?
+  phoneNumber String?
+  payload     Json?
+  expiresAt   DateTime
+  usedAt      DateTime?
+  ipAddress   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime
+  customerId  String?
+  Workspace   Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@unique([customerId, type, workspaceId], map: "unique_customer_token_non_null")
+  @@index([customerId])
+  @@index([expiresAt])
+  @@index([token])
+  @@index([workspaceId])
+}
+
+model service_chunks {
+  id         String   @id
+  serviceId  String
+  content    String
+  chunkIndex Int
+  embedding  Json?
+  createdAt  DateTime @default(now())
+  services   services @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([chunkIndex])
+  @@index([serviceId])
+}
+
+model services {
+  id             String           @id
+  code           String           @unique
+  name           String
+  description    String
+  price          Float
+  currency       String           @default("EUR")
+  isActive       Boolean          @default(true)
+  workspaceId    String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime
+  duration       Int              @default(60)
+  imageUrl       String[]         @default([])
+  cart_items     cart_items[]
+  order_items    order_items[]
+  service_chunks service_chunks[]
+  Workspace      Workspace        @relation(fields: [workspaceId], references: [id])
+}
+
+model usage {
+  id          String    @id
+  workspaceId String
+  clientId    String
+  price       Float     @default(0.005)
+  createdAt   DateTime  @default(now())
+  customers   customers @relation(fields: [clientId], references: [id])
+  Workspace   Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@index([clientId])
+  @@index([createdAt])
+  @@index([workspaceId])
+}
+
+model users {
+  id              String            @id
+  email           String            @unique
+  passwordHash    String
+  firstName       String?
+  lastName        String?
+  status          UserStatus        @default(ACTIVE)
+  lastLogin       DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime
+  role            UserRole          @default(MEMBER)
+  twoFactorSecret String?
+  gdprAccepted    DateTime?
+  phoneNumber     String?
+  UserWorkspace   UserWorkspace[]
+  admin_sessions  admin_sessions[]
+  otp_tokens      otp_tokens[]
+  password_resets password_resets[]
+}
+
+model whatsapp_settings {
+  id          String    @id
   phoneNumber String    @unique
   apiKey      String
   webhookUrl  String?
@@ -313,343 +705,55 @@ model WhatsappSettings {
   smtpPass    String?
   smtpFrom    String?
   createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  updatedAt   DateTime
   workspaceId String    @unique
   gdpr        String?
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
-
-  @@map("whatsapp_settings")
+  Workspace   Workspace @relation(fields: [workspaceId], references: [id])
 }
 
-model PaymentDetails {
-  id               String   @id @default(uuid())
-  provider         String
-  status           String   @default("PENDING")
-  amount           Float
-  currency         String   @default("EUR")
-  providerResponse Json?    @default("{}")
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  orderId          String   @unique
-  order            Orders   @relation(fields: [orderId], references: [id])
-
-  @@map("payment_details")
+enum BillingType {
+  MONTHLY_CHANNEL
+  MESSAGE
+  NEW_CUSTOMER
+  NEW_ORDER
+  HUMAN_SUPPORT
+  PUSH_MESSAGE
+  NEW_FAQ
+  ACTIVE_OFFER
+  FEEDBACK
+  ORDER_REVIEW
+  CAMPAIGN_LINK
 }
 
-model ChatSession {
-  id          String    @id @default(uuid())
-  status      String    @default("active")
-  context     Json?     @default("{}")
-  startedAt   DateTime  @default(now())
-  endedAt     DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  workspaceId String
-  customerId  String
-  customer    Customers @relation(fields: [customerId], references: [id])
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
-  messages    Message[]
-
-  @@map("chat_sessions")
+enum BusinessType {
+  ECOMMERCE
+  RESTAURANT
+  CLINIC
+  RETAIL
+  SERVICES
+  GENERIC
 }
 
-model Message {
-  id                 String           @id @default(uuid())
-  direction          MessageDirection
-  content            String
-  type               MessageType      @default(TEXT)
-  status             String           @default("sent")
-  aiGenerated        Boolean          @default(false)
-  metadata           Json?            @default("{}")
-  read               Boolean          @default(false)
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
-  chatSessionId      String
-  promptId           String?
-  functionCallsDebug String?
-  processingSource   String?
-  translatedQuery    String?
-  processedPrompt    String?
-  debugInfo          String? // 🔧 NEW: Debug information as JSON string
-  
-  // 🆕 WHATSAPP INTEGRATION FIELDS
-  whatsappStatus     String?          // "sent" | "failed" | "pending" | "delivered" | "read"
-  whatsappError      String?          // Error message if failed
-  whatsappMessageId  String?          // WhatsApp message ID for tracking
-  sentBy             String?          // userId of operator who sent (if manual)
-  
-  chatSession        ChatSession      @relation(fields: [chatSessionId], references: [id])
-  prompt             Prompts?         @relation(fields: [promptId], references: [id])
-
-  @@index([whatsappStatus])
-  @@index([whatsappMessageId])
-  @@index([sentBy])
-  @@map("messages")
+enum CampaignFrequency {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  BIMONTHLY
+  QUARTERLY
+  SEMIANNUAL
+  ANNUAL
 }
 
-model PasswordReset {
-  id        String    @id @default(uuid())
-  userId    String
-  token     String    @unique
-  expiresAt DateTime
-  usedAt    DateTime?
-  createdAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id])
-
-  @@map("password_resets")
+enum CampaignTargetType {
+  ALL
+  SELECTED
 }
 
-model OtpToken {
-  id        String    @id @default(uuid())
-  userId    String
-  otpHash   String
-  expiresAt DateTime
-  usedAt    DateTime?
-  createdAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id])
-
-  @@map("otp_tokens")
-}
-
-model RegistrationToken {
-  id          String    @id @default(uuid())
-  token       String    @unique
-  phoneNumber String
-  workspaceId String
-  expiresAt   DateTime
-  usedAt      DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@map("registration_tokens")
-}
-
-model SecureToken {
-  id          String    @id @default(uuid())
-  token       String    @unique
-  type        String
-  workspaceId String
-  userId      String?
-  phoneNumber String?
-  payload     Json?
-  expiresAt   DateTime
-  usedAt      DateTime?
-  ipAddress   String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  customerId  String?
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
-
-  @@unique([customerId, type, workspaceId], name: "unique_customer_token", map: "unique_customer_token_non_null")
-  @@index([token])
-  @@index([expiresAt])
-  @@index([workspaceId])
-  @@index([customerId])
-  @@map("secure_tokens")
-}
-
-model Language {
-  id        String   @id @default(cuid())
-  code      String   @unique
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Services {
-  id          String          @id @default(cuid())
-  code        String          @unique
-  name        String
-  description String
-  price       Float
-  currency    String          @default("EUR")
-  isActive    Boolean         @default(true)
-  workspaceId String
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  duration    Int             @default(60)
-  imageUrl    String[]        @default([])
-  cartItems   CartItems[]
-  orderItems  OrderItems[]
-  chunks      ServiceChunks[]
-  workspace   Workspace       @relation(fields: [workspaceId], references: [id])
-
-  @@map("services")
-}
-
-model FAQ {
-  id          String      @id @default(cuid())
-  question    String
-  answer      String
-  isActive    Boolean     @default(true)
-  workspaceId String
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  chunks      FAQChunks[]
-  workspace   Workspace   @relation(fields: [workspaceId], references: [id])
-
-  @@map("faqs")
-}
-
-model Offers {
-  id              String       @id @default(cuid())
-  name            String
-  description     String?
-  discountPercent Float
-  startDate       DateTime
-  endDate         DateTime
-  isActive        Boolean      @default(true)
-  categoryId      String?
-  workspaceId     String
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  category        Categories?  @relation("OfferCategory", fields: [categoryId], references: [id])
-  workspace       Workspace    @relation(fields: [workspaceId], references: [id])
-  categories      Categories[] @relation("OfferCategories")
-
-  @@map("offers")
-}
-
-model Documents {
-  id           String           @id @default(uuid())
-  filename     String
-  originalName String
-  filePath     String
-  fileSize     Int
-  mimeType     String
-  status       DocumentStatus   @default(UPLOADED)
-  workspaceId  String
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  isActive     Boolean          @default(true)
-  chunks       DocumentChunks[]
-  workspace    Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  @@index([workspaceId])
-  @@index([status])
-  @@index([isActive])
-  @@map("documents")
-}
-
-model DocumentChunks {
-  id         String    @id @default(uuid())
-  documentId String
-  content    String
-  chunkIndex Int
-  embedding  Json?
-  createdAt  DateTime  @default(now())
-  document   Documents @relation(fields: [documentId], references: [id], onDelete: Cascade)
-
-  @@index([documentId])
-  @@index([chunkIndex])
-  @@map("document_chunks")
-}
-
-model FAQChunks {
-  id         String   @id @default(uuid())
-  faqId      String
-  content    String
-  chunkIndex Int
-  embedding  Json?
-  createdAt  DateTime @default(now())
-  faq        FAQ      @relation(fields: [faqId], references: [id], onDelete: Cascade)
-
-  @@index([faqId])
-  @@index([chunkIndex])
-  @@map("faq_chunks")
-}
-
-model ServiceChunks {
-  id         String   @id @default(uuid())
-  serviceId  String
-  content    String
-  chunkIndex Int
-  embedding  Json?
-  createdAt  DateTime @default(now())
-  service    Services @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-
-  @@index([serviceId])
-  @@index([chunkIndex])
-  @@map("service_chunks")
-}
-
-model ProductChunks {
-  id          String   @id @default(uuid())
-  productId   String
-  content     String
-  chunkIndex  Int
-  embedding   Json?
-  workspaceId String
-  language    String   @default("en")
-  createdAt   DateTime @default(now())
-  product     Products @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@index([productId])
-  @@index([chunkIndex])
-  @@index([workspaceId])
-  @@index([language])
-  @@map("product_chunks")
-}
-
-model AgentConfig {
-  id          String    @id @default(uuid())
-  workspaceId String
-  prompt      String    @default("You are a helpful assistant.")
-  model       String    @default("openai/gpt-4o-mini")
-  temperature Float     @default(0.7)
-  maxTokens   Int       @default(1000)
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
-
-  @@map("agent_configs")
-}
-
-model GdprContent {
-  id          String    @id @default(uuid())
-  workspaceId String    @unique
-  content     String
-  version     String    @default("1.0")
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
-
-  @@map("gdpr_content")
-}
-
-model Usage {
-  id          String    @id @default(uuid())
-  workspaceId String
-  clientId    String
-  price       Float     @default(0.005)
-  createdAt   DateTime  @default(now())
-  customer    Customers @relation(fields: [clientId], references: [id])
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
-
-  @@index([workspaceId])
-  @@index([clientId])
-  @@index([createdAt])
-  @@map("usage")
-}
-
-enum UserStatus {
-  ACTIVE
-  INACTIVE
-}
-
-enum WorkspaceStatus {
-  ACTIVE
-  INACTIVE
-  SUSPENDED
-}
-
-enum ProductStatus {
-  ACTIVE
-  INACTIVE
-  DRAFT
-  OUT_OF_STOCK
+enum ChannelType {
+  WHATSAPP
+  TELEGRAM
+  MESSENGER
+  LINE
 }
 
 enum DocumentStatus {
@@ -657,6 +761,24 @@ enum DocumentStatus {
   PROCESSING
   PROCESSED
   ERROR
+}
+
+enum ItemType {
+  PRODUCT
+  SERVICE
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  DOCUMENT
+  LOCATION
+  CONTACT
 }
 
 enum OrderStatus {
@@ -685,38 +807,11 @@ enum PaymentStatus {
   PARTIALLY_PAID
 }
 
-enum MessageDirection {
-  INBOUND
-  OUTBOUND
-}
-
-model RegistrationAttempts {
-  id           String   @id @default(cuid())
-  phoneNumber  String
-  workspaceId  String
-  attemptCount Int      @default(0)
-  lastAttemptAt DateTime @default(now())
-  isBlocked    Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@unique([phoneNumber, workspaceId])
-  @@map("registration_attempts")
-}
-
-enum MessageType {
-  TEXT
-  IMAGE
-  DOCUMENT
-  LOCATION
-  CONTACT
-}
-
-enum ChannelType {
-  WHATSAPP
-  TELEGRAM
-  MESSENGER
-  LINE
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  DRAFT
+  OUT_OF_STOCK
 }
 
 enum UserRole {
@@ -725,174 +820,13 @@ enum UserRole {
   MEMBER
 }
 
-model ShortUrls {
-  id             String    @id @default(cuid())
-  shortCode      String    @unique @db.VarChar(10)
-  originalUrl    String    @db.Text
-  workspaceId    String
-  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  clicks         Int       @default(0)
-  isActive       Boolean   @default(true)
-  expiresAt      DateTime?
-  lastAccessedAt DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  @@index([shortCode])
-  @@index([workspaceId])
-  @@index([expiresAt])
+enum UserStatus {
+  ACTIVE
+  INACTIVE
 }
 
-enum BusinessType {
-  ECOMMERCE
-  RESTAURANT
-  CLINIC
-  RETAIL
-  SERVICES
-  GENERIC
-}
-
-enum ItemType {
-  PRODUCT
-  SERVICE
-}
-
-model Billing {
-  id            String      @id @default(cuid())
-  workspaceId   String
-  customerId    String?
-  amount        Float       // Current charge amount (e.g., €0.15 or €1.50)
-  type          BillingType
-  description   String
-  userQuery     String?     // User's original question/message
-  previousTotal Float       @default(0) // Total before this charge
-  currentCharge Float       @default(0) // Same as amount (for clarity in formula)
-  newTotal      Float       @default(0) // previousTotal + currentCharge = newTotal
-  createdAt     DateTime    @default(now())
-  workspace     Workspace   @relation(fields: [workspaceId], references: [id])
-  customer      Customers?  @relation(fields: [customerId], references: [id])
-
-  @@index([workspaceId])
-  @@index([customerId])
-  @@index([type])
-  @@index([createdAt])
-}
-
-enum BillingType {
-  MONTHLY_CHANNEL
-  MESSAGE           // Simplified: ogni messaggio costa €0.15
-  NEW_CUSTOMER
-  NEW_ORDER
-  HUMAN_SUPPORT
-  PUSH_MESSAGE
-  NEW_FAQ
-  ACTIVE_OFFER
-  FEEDBACK
-  ORDER_REVIEW
-  CAMPAIGN_LINK
-}
-
-enum CampaignFrequency {
-  WEEKLY      // Ogni 7 giorni
-  BIWEEKLY    // Ogni 14 giorni
-  MONTHLY     // Ogni 30 giorni
-  BIMONTHLY   // Ogni 60 giorni
-  QUARTERLY   // Ogni 90 giorni
-  SEMIANNUAL  // Ogni 180 giorni (6 mesi)
-  ANNUAL      // Ogni 365 giorni
-}
-
-enum CampaignTargetType {
-  ALL       // Tutti i customer attivi del workspace
-  SELECTED  // Solo customer IDs specificati
-}
-
-model Campaign {
-  id              String              @id @default(cuid())
-  workspaceId     String
-  name            String              // "Richiesta Feedback Semestrale"
-  messagePreview  String              @db.Text // Markdown per visualizzazione admin (con token [FEEDBACK], {{nome}}, ecc)
-  frequency       CampaignFrequency
-  isActive        Boolean             @default(true)
-  
-  // Destinatari
-  targetType      CampaignTargetType  @default(ALL)
-  customerIds     String[]            @default([]) // Array di customer IDs se targetType = SELECTED
-  
-  // Template WhatsApp (opzionale, per uso futuro con Meta Business API)
-  templateName    String?             // Nome template Meta (es: "feedback_request_v1")
-  templateParams  Json?               // Parametri template WhatsApp come JSON
-  
-  // Metadata
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  lastRunAt       DateTime?           // Ultima esecuzione cron
-  
-  // Relations
-  workspace       Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  sends           CampaignSent[]
-  feedbacks       CustomerFeedback[]
-  
-  @@index([workspaceId])
-  @@index([isActive])
-  @@index([frequency])
-}
-
-model CampaignSent {
-  id          String    @id @default(cuid())
-  campaignId  String
-  customerId  String
-  workspaceId String
-  sentAt      DateTime  @default(now())
-  tokenUsed   String?   // Token generato per tracking click
-  clickedAt   DateTime? // Se customer ha cliccato sul link
-  
-  // Relations
-  campaign    Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  customer    Customers @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  
-  @@index([campaignId])
-  @@index([customerId])
-  @@index([workspaceId])
-  @@index([sentAt])
-}
-
-model CustomerFeedback {
-  id          String    @id @default(cuid())
-  customerId  String
-  workspaceId String
-  campaignId  String?   // Opzionale: da quale campagna arriva
-  rating      Int       // 1-5 stelline
-  comment     String?   @db.Text
-  createdAt   DateTime  @default(now())
-  
-  // Relations
-  customer    Customers @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  campaign    Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-  
-  @@index([customerId])
-  @@index([workspaceId])
-  @@index([campaignId])
-  @@index([createdAt])
-}
-
-model AdminSession {
-  id             String     @id @default(cuid())
-  sessionId      String     @unique @db.VarChar(64)
-  userId         String
-  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspaceId    String?
-  workspace      Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdAt      DateTime   @default(now())
-  expiresAt      DateTime
-  lastActivityAt DateTime   @default(now())
-  ipAddress      String?    @db.VarChar(45)
-  userAgent      String?    @db.Text
-  isActive       Boolean    @default(true)
-
-  @@index([sessionId])
-  @@index([userId])
-  @@index([expiresAt])
-  @@index([isActive])
-  @@map("admin_sessions")
+enum WorkspaceStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
 }

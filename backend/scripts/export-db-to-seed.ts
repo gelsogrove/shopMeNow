@@ -46,6 +46,18 @@ async function exportToSeed() {
   console.log("🔄 EXPORTING DATABASE TO SEED FILES")
   console.log("=".repeat(50))
 
+  // 🛡️ BACKUP AUTOMATICO DEI FILE DATA ESISTENTI
+  const dataDir = path.join(__dirname, "../prisma/data")
+  const backupDir = path.join(__dirname, "../prisma/data-backup")
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-").split("T")[0]
+  const backupDirWithDate = `${backupDir}-${timestamp}`
+
+  if (fs.existsSync(dataDir)) {
+    console.log(`\n🛡️ CREATING BACKUP OF EXISTING DATA FILES...`)
+    await fse.copy(dataDir, backupDirWithDate)
+    console.log(`   ✅ Backup created: ${backupDirWithDate}`)
+  }
+
   try {
     // Get main workspace
     const mainWorkspace = await prisma.workspace.findFirst({

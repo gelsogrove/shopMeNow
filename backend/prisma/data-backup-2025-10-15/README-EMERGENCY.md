@@ -3,14 +3,12 @@
 ## Se i file data sono vuoti o danneggiati:
 
 ### Opzione 1: Usa il backup automatico
-
 ```bash
 cd backend/prisma
 cp -r data-backup-YYYYMMDD/* data/
 ```
 
 ### Opzione 2: Recupera da git
-
 ```bash
 # Lista i commit con le modifiche ai data files
 git log --oneline -- backend/prisma/data/
@@ -20,9 +18,7 @@ git checkout <commit-hash> -- backend/prisma/data/
 ```
 
 ### Opzione 3: Backup manuale più recente
-
 Cerca la cartella più recente:
-
 ```bash
 ls -la backend/prisma/ | grep data-backup
 ```

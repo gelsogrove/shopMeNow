@@ -33,6 +33,22 @@ import { categories } from "./data/categories"
 import { faqs } from "./data/faqs"
 import { products } from "./data/products"
 
+// 🛡️ VALIDAZIONE: Verifica che i dati non siano vuoti
+if (!categories || categories.length === 0) {
+  console.error("\n❌ ERRORE CRITICO: Il file categories.ts è VUOTO!")
+  console.error("   Recupera i dati da backup: backend/prisma/data-backup-YYYYMMDD/")
+  console.error("   Oppure usa: git checkout <commit> -- backend/prisma/data/\n")
+  process.exit(1)
+}
+if (!products || products.length === 0) {
+  console.error("\n❌ ERRORE CRITICO: Il file products.ts è VUOTO!")
+  console.error("   Recupera i dati da backup: backend/prisma/data-backup-YYYYMMDD/")
+  console.error("   Oppure usa: git checkout <commit> -- backend/prisma/data/\n")
+  process.exit(1)
+}
+
+console.log(`✅ Data validation passed: ${categories.length} categories, ${products.length} products`)
+
 // Load environment variables
 dotenv.config()
 
@@ -2465,6 +2481,7 @@ async function main() {
         "Standard shipping service for orders within Italy. Delivery within 3-5 business days.",
       price: 5.0,
       currency: "EUR",
+      imageUrl: ["/uploads/services/SHP001_1760565437670_4yuoes.jpg"],
     },
     {
       code: "GFT001",
@@ -2473,6 +2490,7 @@ async function main() {
         "Luxury gift wrapping service with personalized message and premium packaging materials.",
       price: 30.0,
       currency: "EUR",
+      imageUrl: ["/uploads/services/GFT001_1760563067773_otbvy8.webp"],
     },
   ]
 

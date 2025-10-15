@@ -87,7 +87,7 @@ export const Step4Payment: React.FC<Step4PaymentProps> = ({
 
         {/* Card Number Display */}
         <div className="mb-6">
-          <p className="text-sm opacity-70 mb-2">Card Number</p>
+          <p className="text-sm opacity-70 mb-2">{texts.cardNumber}</p>
           <p className="text-2xl font-mono tracking-wider">
             {cardNumber || "•••• •••• •••• ••••"}
           </p>
@@ -96,13 +96,13 @@ export const Step4Payment: React.FC<Step4PaymentProps> = ({
         {/* Cardholder & Expiry */}
         <div className="flex justify-between items-end">
           <div>
-            <p className="text-xs opacity-70 mb-1">Cardholder</p>
+            <p className="text-xs opacity-70 mb-1">{texts.cardholderName}</p>
             <p className="font-semibold uppercase">
-              {cardholderName || "FULL NAME"}
+              {cardholderName || texts.cardholderName?.toUpperCase() || "FULL NAME"}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-xs opacity-70 mb-1">Expires</p>
+            <p className="text-xs opacity-70 mb-1">{texts.expiry}</p>
             <p className="font-mono font-semibold">{expiry || "MM/YY"}</p>
           </div>
         </div>
@@ -231,7 +231,7 @@ export const Step4Payment: React.FC<Step4PaymentProps> = ({
                     />
                   </svg>
                   <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block w-48 p-2 bg-gray-900 text-white text-xs rounded shadow-lg">
-                    Codice di 3 cifre sul retro della carta
+                    {texts.cvcTooltip}
                   </div>
                 </div>
               </div>

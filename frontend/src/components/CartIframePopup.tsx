@@ -8,15 +8,51 @@ interface CartIframePopupProps {
   customerName?: string
 }
 
+type ViewMode = "mobile" | "tablet" | "desktop"
+
 export const CartIframePopup: React.FC<CartIframePopupProps> = ({
   isOpen,
   onClose,
   iframeSrc,
   customerName,
 }) => {
-  const [isTabletMode, setIsTabletMode] = useState(false)
+  const [viewMode, setViewMode] = useState<ViewMode>("mobile")
+
+  const cycleViewMode = () => {
+    if (viewMode === "mobile") setViewMode("tablet")
+    else if (viewMode === "tablet") setViewMode("desktop")
+    else setViewMode("mobile")
+  }
+
+  const getViewModeLabel = () => {
+    if (viewMode === "mobile") return "📱 Mobile"
+    if (viewMode === "tablet") return "📱 Tablet"
+    return "💻 Desktop"
+  }
+
+  const getViewModeSize = () => {
+    if (viewMode === "mobile") {
+      return {
+        width: "min(440px, calc(100vw - 16px))",
+        height: "min(840px, calc(100vh - 16px))",
+      }
+    }
+    if (viewMode === "tablet") {
+      return {
+        width: "min(1024px, calc(100vw - 16px))",
+        height: "min(768px, calc(100vh - 16px))",
+      }
+    }
+    // Desktop
+    return {
+      width: "min(1440px, calc(100vw - 16px))",
+      height: "min(900px, calc(100vh - 16px))",
+    }
+  }
 
   if (!isOpen) return null
+
+  const size = getViewModeSize()
 
   return (
     <>
@@ -26,33 +62,49 @@ export const CartIframePopup: React.FC<CartIframePopupProps> = ({
         onClick={onClose}
       />
 
-      {/* Popup Container - Mobile Phone Frame */}
+      {/* Popup Container - Mobile Phone or Tablet Frame */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
-        {/* Phone Device Frame */}
+        {/* Device Frame */}
         <div
-          className="relative flex flex-col bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 shadow-2xl"
+          className="relative flex flex-col bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 shadow-2xl transition-all duration-500"
           style={{
-            width: "min(440px, calc(100vw - 16px))",
-            height: "min(840px, calc(100vh - 16px))",
-            borderRadius: "clamp(32px, 5vw, 48px)",
-            padding: "10px",
+            width: size.width,
+            height: size.height,
+            borderRadius: viewMode === "desktop" ? "16px" : "clamp(32px, 5vw, 48px)",
+            padding: viewMode === "desktop" ? "4px" : "10px",
             boxShadow:
               "0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 2px 4px rgba(255, 255, 255, 0.1)",
           }}
         >
-          {/* Phone Notch (Top) - Hidden on small screens */}
-          <div
-            className="hidden sm:block absolute top-0 left-1/2 -translate-x-1/2 w-28 h-5 bg-black rounded-b-3xl z-10"
-            style={{
-              boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
-            }}
-          />
+          {/* Phone Notch (Top) - Hidden on small screens and desktop mode */}
+          {viewMode !== "desktop" && (
+            <>
+              <div
+                className="hidden sm:block absolute top-0 left-1/2 -translate-x-1/2 w-28 h-5 bg-black rounded-b-3xl z-10"
+                style={{
+                  boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
+                }}
+              />
 
-          {/* Camera and Sensors in Notch */}
-          <div className="hidden sm:flex absolute top-1.5 left-1/2 -translate-x-1/2 items-center gap-2 z-20">
-            <div className="w-1.5 h-1.5 bg-gray-800 rounded-full" />
-            <div className="w-10 h-1 bg-gray-900 rounded-full" />
-          </div>
+              {/* Camera and Sensors in Notch */}
+              <div className="hidden sm:flex absolute top-1.5 left-1/2 -translate-x-1/2 items-center gap-2 z-20">
+                <div className="w-1.5 h-1.5 bg-gray-800 rounded-full" />
+                <div className="w-10 h-1 bg-gray-900 rounded-full" />
+              </div>
+            </>
+          )}
+
+          {/* Rotate Button - Cycle through Mobile/Tablet/Desktop */}
+          <button
+            onClick={cycleViewMode}
+            className="absolute -top-3 -right-14 flex flex-col items-center justify-center gap-0.5 px-2 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-xl border-2 border-white z-[10000]"
+            title="Cycle view mode"
+          >
+            <RotateCw className="h-4 w-4" />
+            <span className="text-[9px] font-medium whitespace-nowrap">
+              {getViewModeLabel()}
+            </span>
+          </button>
 
           {/* Close Button - Right next to phone */}
           <button
@@ -66,7 +118,8 @@ export const CartIframePopup: React.FC<CartIframePopupProps> = ({
           <div
             className="flex-1 bg-white overflow-hidden"
             style={{
-              borderRadius: "clamp(28px, 4.5vw, 36px)",
+              borderRadius:
+                viewMode === "desktop" ? "12px" : "clamp(28px, 4.5vw, 36px)",
             }}
           >
             <iframe
@@ -78,8 +131,10 @@ export const CartIframePopup: React.FC<CartIframePopupProps> = ({
             />
           </div>
 
-          {/* Phone Bottom Bar (Home Indicator) */}
-          <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-24 h-1 bg-white/30 rounded-full" />
+          {/* Phone Bottom Bar (Home Indicator) - Hidden in desktop mode */}
+          {viewMode !== "desktop" && (
+            <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-24 h-1 bg-white/30 rounded-full" />
+          )}
         </div>
       </div>
     </>

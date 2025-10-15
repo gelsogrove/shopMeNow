@@ -1078,7 +1078,7 @@ const CheckoutPage: React.FC = () => {
                                     </h5>
                                     {product.formato && (
                                       <div className="text-xs text-blue-600 mb-1 font-medium">
-                                        Formato: {product.formato}
+                                        {texts.formatLabel} {product.formato}
                                       </div>
                                     )}
                                     <p className="text-xs text-gray-600 mb-2">
