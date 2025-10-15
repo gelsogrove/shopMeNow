@@ -182,10 +182,9 @@ export function ServicesPage() {
     }
 
     // Always send existing image URLs (even if empty array) to handle deletions
-    const imagesToSend = reorderedImageUrls.length > 0 
-      ? reorderedImageUrls 
-      : currentImageUrls
-    
+    const imagesToSend =
+      reorderedImageUrls.length > 0 ? reorderedImageUrls : currentImageUrls
+
     formData.append("existingImageUrls", JSON.stringify(imagesToSend))
 
     try {

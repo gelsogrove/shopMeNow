@@ -88,25 +88,26 @@ export function MultiImageCropUpload({
   useEffect(() => {
     // Reset new files when loading existing images
     setNewFiles([])
-    
+
     console.log("=== MultiImageCropUpload useEffect ===")
     console.log("currentImageUrls:", currentImageUrls)
     console.log("IMG_BASE_URL:", IMG_BASE_URL)
-    
+
     if (currentImageUrls && currentImageUrls.length > 0) {
-      const existingImages: ImageItem[] = currentImageUrls.map(
-        (url, index) => {
-          const finalUrl = url.startsWith("http") ? url : `${IMG_BASE_URL}${url}`
-          console.log(`Image ${index}: original="${url}", final="${finalUrl}"`)
-          return {
-            id: `existing-${index}-${url}`,
-            url: finalUrl,
-            isExisting: true,
-          }
+      const existingImages: ImageItem[] = currentImageUrls.map((url, index) => {
+        const finalUrl = url.startsWith("http") ? url : `${IMG_BASE_URL}${url}`
+        console.log(`Image ${index}: original="${url}", final="${finalUrl}"`)
+        return {
+          id: `existing-${index}-${url}`,
+          url: finalUrl,
+          isExisting: true,
         }
-      )
+      })
       setImages(existingImages)
-      console.log("MultiImageCropUpload: Loaded existing images", existingImages)
+      console.log(
+        "MultiImageCropUpload: Loaded existing images",
+        existingImages
+      )
     } else {
       setImages([])
       console.log("MultiImageCropUpload: No existing images to load")

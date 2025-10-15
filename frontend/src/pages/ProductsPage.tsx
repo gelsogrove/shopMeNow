@@ -44,7 +44,9 @@ export function ProductsPage() {
   const [productCode, setProductCode] = useState("")
   const [imageFiles, setImageFiles] = useState<File[]>([])
   const [currentImageUrls, setCurrentImageUrls] = useState<string[]>([])
-  const [reorderedImageUrls, setReorderedImageUrls] = useState<string[] | null>(null)
+  const [reorderedImageUrls, setReorderedImageUrls] = useState<string[] | null>(
+    null
+  )
   const [viewMode, setViewMode] = useState<"table" | "grid">("grid") // default to grid view
 
   // Get currency symbol based on workspace settings
@@ -106,14 +108,10 @@ export function ProductsPage() {
   // Filter products based on search value
   const filteredProducts = products.filter(
     (product) =>
-      (product.name.toLowerCase().includes(searchValue.toLowerCase()) ||
-        product.code?.toLowerCase().includes(searchValue.toLowerCase()) ||
-        product.description
-          ?.toLowerCase()
-          .includes(searchValue.toLowerCase()) ||
-        product.category?.name
-          .toLowerCase()
-          .includes(searchValue.toLowerCase()))
+      product.name.toLowerCase().includes(searchValue.toLowerCase()) ||
+      product.code?.toLowerCase().includes(searchValue.toLowerCase()) ||
+      product.description?.toLowerCase().includes(searchValue.toLowerCase()) ||
+      product.category?.name.toLowerCase().includes(searchValue.toLowerCase())
   )
 
   const columns = [
@@ -201,7 +199,7 @@ export function ProductsPage() {
 
     // Force isActive = false for new products (will be activated later during edit)
     formData.set("isActive", "false")
-    
+
     // Set product code from state
     formData.set("code", productCode)
 
@@ -210,15 +208,18 @@ export function ProductsPage() {
       logger.info("Product created successfully (inactive):", newProduct)
       setProducts((prev) => [newProduct, ...prev])
       setShowAddSheet(false)
-      
+
       // Reset form state
       setProductCode("")
       setSelectedCategoryId("none")
-      
-      toast.success("Product created successfully. Edit it to add details and images.")
+
+      toast.success(
+        "Product created successfully. Edit it to add details and images."
+      )
     } catch (error: any) {
       logger.error("Failed to add product:", error)
-      const errorMessage = error.response?.data?.message || "Failed to create product"
+      const errorMessage =
+        error.response?.data?.message || "Failed to create product"
       toast.error(errorMessage)
     }
   }
@@ -229,28 +230,28 @@ export function ProductsPage() {
     console.log("product.imageUrl:", product.imageUrl)
     console.log("product.imageUrl type:", typeof product.imageUrl)
     console.log("Is Array?:", Array.isArray(product.imageUrl))
-    
+
     setSelectedProduct(product)
     setSelectedCategoryId(product.categoryId || "none")
     setProductIsActive(product.isActive ?? true)
     setProductCode(product.code || "")
-    
+
     const imageUrls = Array.isArray(product.imageUrl)
       ? product.imageUrl
       : product.imageUrl
       ? [product.imageUrl]
       : []
-    
+
     console.log("Computed imageUrls:", imageUrls)
     console.log("imageUrls length:", imageUrls.length)
-    
+
     logger.info("ProductsPage: Opening edit for product", {
       productId: product.id,
       productName: product.name,
       imageUrls: imageUrls,
-      imageCount: imageUrls.length
+      imageCount: imageUrls.length,
     })
-    
+
     setCurrentImageUrls(imageUrls)
     setImageFiles([])
     setReorderedImageUrls(null) // null = no interaction yet
@@ -268,14 +269,14 @@ export function ProductsPage() {
     console.log("=== FORM SUBMIT DEBUG ===")
     console.log("imageFiles:", imageFiles)
     console.log("imageFiles length:", imageFiles?.length)
-    
+
     if (imageFiles && imageFiles.length > 0) {
       console.log("Adding images to FormData:")
       imageFiles.forEach((file, index) => {
         console.log(`  File ${index}:`, {
           name: file.name,
           size: file.size,
-          type: file.type
+          type: file.type,
         })
         formData.append(`images`, file)
         logger.info(`Adding image file ${index + 1} to form data for edit`, {
@@ -290,8 +291,9 @@ export function ProductsPage() {
     // Always send existing image URLs (even if empty array) to handle deletions
     // Use reorderedImageUrls if user interacted with images (not null)
     // Otherwise use currentImageUrls (no interaction)
-    const imagesToSend = reorderedImageUrls !== null ? reorderedImageUrls : currentImageUrls
-    
+    const imagesToSend =
+      reorderedImageUrls !== null ? reorderedImageUrls : currentImageUrls
+
     formData.append("existingImageUrls", JSON.stringify(imagesToSend))
     console.log("=== IMAGE SEND DEBUG ===")
     console.log("currentImageUrls:", currentImageUrls)
@@ -300,7 +302,7 @@ export function ProductsPage() {
     console.log("Sending existingImageUrls:", imagesToSend)
     logger.info("Adding existing images for edit", {
       urls: imagesToSend,
-      userInteracted: reorderedImageUrls !== null
+      userInteracted: reorderedImageUrls !== null,
     })
 
     // Override form fields with state values (not append, to avoid duplicates)
@@ -429,7 +431,8 @@ export function ProductsPage() {
 
         <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
           <p className="text-sm text-blue-800">
-            ℹ️ The product will be created as <strong>inactive</strong>. You can add images, price, and other details by editing it after creation.
+            ℹ️ The product will be created as <strong>inactive</strong>. You can
+            add images, price, and other details by editing it after creation.
           </p>
         </div>
       </div>
@@ -591,29 +594,31 @@ export function ProductsPage() {
             </Button>
           </div>
           <CrudPageContent
-          title="Products"
-          titleIcon={<Package className={commonStyles.headerIcon} />}
-          searchValue={searchValue}
-          onSearch={setSearchValue}
-          searchPlaceholder="Search products..."
-          onAdd={() => {
-            setSelectedCategoryId("none")
-            setProductIsActive(true)
-            setProductCode("")
-            setShowAddSheet(true)
-          }}
-          addButtonText="Add"
-          data={filteredProducts}
-          columns={columns}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          isLoading={isLoading}
-          getRowClassName={(product: Product) => {
-            if (product.stock === 0) return "bg-red-50 border-l-4 border-red-500"
-            if (!product.isActive) return "bg-gray-50 border-l-4 border-gray-400 opacity-60"
-            return ""
-          }}
-        />
+            title="Products"
+            titleIcon={<Package className={commonStyles.headerIcon} />}
+            searchValue={searchValue}
+            onSearch={setSearchValue}
+            searchPlaceholder="Search products..."
+            onAdd={() => {
+              setSelectedCategoryId("none")
+              setProductIsActive(true)
+              setProductCode("")
+              setShowAddSheet(true)
+            }}
+            addButtonText="Add"
+            data={filteredProducts}
+            columns={columns}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            isLoading={isLoading}
+            getRowClassName={(product: Product) => {
+              if (product.stock === 0)
+                return "bg-red-50 border-l-4 border-red-500"
+              if (!product.isActive)
+                return "bg-gray-50 border-l-4 border-gray-400 opacity-60"
+              return ""
+            }}
+          />
         </div>
       ) : (
         <div className="space-y-4">
@@ -668,7 +673,11 @@ export function ProductsPage() {
                   key={product.id}
                   className={`hover:shadow-lg transition-shadow ${
                     product.stock === 0 ? "border-red-500 border-2" : ""
-                  } ${!product.isActive ? "opacity-60 border-gray-400 border-2" : ""}`}
+                  } ${
+                    !product.isActive
+                      ? "opacity-60 border-gray-400 border-2"
+                      : ""
+                  }`}
                 >
                   <CardContent className="p-4">
                     <div className="flex flex-col gap-3">
@@ -727,7 +736,9 @@ export function ProductsPage() {
                           onClick={() => handleEdit(product)}
                           className="h-8 w-8 p-0 flex items-center justify-center"
                         >
-                          <Pencil className={`${commonStyles.actionIcon} ${commonStyles.primary}`} />
+                          <Pencil
+                            className={`${commonStyles.actionIcon} ${commonStyles.primary}`}
+                          />
                         </Button>
                         <Button
                           variant="ghost"
@@ -735,7 +746,9 @@ export function ProductsPage() {
                           onClick={() => handleDelete(product)}
                           className="h-8 w-8 p-0 flex items-center justify-center hover:bg-red-50"
                         >
-                          <Trash2 className={`${commonStyles.actionIcon} text-red-600`} />
+                          <Trash2
+                            className={`${commonStyles.actionIcon} text-red-600`}
+                          />
                         </Button>
                       </div>
                     </div>

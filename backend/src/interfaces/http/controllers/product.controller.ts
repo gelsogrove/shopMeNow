@@ -177,7 +177,9 @@ export class ProductController {
         })
 
         if (existingProduct) {
-          logger.warn(`Duplicate ProductCode attempt: ${productCode} in workspace ${workspaceId}`)
+          logger.warn(
+            `Duplicate ProductCode attempt: ${productCode} in workspace ${workspaceId}`
+          )
           return res.status(400).json({
             message: "Product code already exists",
             error: `A product with code "${productCode}" already exists in this workspace`,
@@ -340,21 +342,29 @@ export class ProductController {
             originalname: file.originalname,
             mimetype: file.mimetype,
             size: file.size,
-            path: file.path
+            path: file.path,
           })
         })
-        
+
         const newImagePaths = (req.files as Express.Multer.File[]).map(
           (file) => `/uploads/products/${file.filename}`
         )
         allImageUrls = [...allImageUrls, ...newImagePaths]
-        logger.info(`New images uploaded for update:`, JSON.stringify(newImagePaths))
+        logger.info(
+          `New images uploaded for update:`,
+          JSON.stringify(newImagePaths)
+        )
       }
 
       // Always set imageUrl to reflect current state (even if empty)
       productData.imageUrl = allImageUrls
-      logger.info(`Total images for product update:`, JSON.stringify(allImageUrls))
-      logger.info(`imageUrl type check: isArray=${Array.isArray(productData.imageUrl)}, length=${productData.imageUrl.length}`)
+      logger.info(
+        `Total images for product update:`,
+        JSON.stringify(allImageUrls)
+      )
+      logger.info(
+        `imageUrl type check: isArray=${Array.isArray(productData.imageUrl)}, length=${productData.imageUrl.length}`
+      )
 
       // Clean up removed images from filesystem
       const deletedCount = cleanupRemovedImages(oldImageUrls, allImageUrls)

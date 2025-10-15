@@ -236,11 +236,19 @@ export class ProductRepository implements IProductRepository {
       // Add imageUrl if provided
       if (product.imageUrl !== undefined) {
         updateData.imageUrl = product.imageUrl
-        logger.info(`Repository - Setting imageUrl in updateData:`, JSON.stringify(product.imageUrl))
-        logger.info(`Repository - imageUrl type: isArray=${Array.isArray(product.imageUrl)}, length=${product.imageUrl.length}`)
+        logger.info(
+          `Repository - Setting imageUrl in updateData:`,
+          JSON.stringify(product.imageUrl)
+        )
+        logger.info(
+          `Repository - imageUrl type: isArray=${Array.isArray(product.imageUrl)}, length=${product.imageUrl.length}`
+        )
       }
 
-      logger.info(`Repository - Full updateData before Prisma:`, JSON.stringify(updateData))
+      logger.info(
+        `Repository - Full updateData before Prisma:`,
+        JSON.stringify(updateData)
+      )
 
       const updatedProduct = await this.prisma.products.update({
         where: {
@@ -253,8 +261,13 @@ export class ProductRepository implements IProductRepository {
         },
       })
 
-      logger.info(`Repository - After Prisma update, imageUrl:`, JSON.stringify((updatedProduct as any).imageUrl))
-      logger.info(`Repository - imageUrl type from DB: isArray=${Array.isArray((updatedProduct as any).imageUrl)}, length=${(updatedProduct as any).imageUrl?.length}`)
+      logger.info(
+        `Repository - After Prisma update, imageUrl:`,
+        JSON.stringify((updatedProduct as any).imageUrl)
+      )
+      logger.info(
+        `Repository - imageUrl type from DB: isArray=${Array.isArray((updatedProduct as any).imageUrl)}, length=${(updatedProduct as any).imageUrl?.length}`
+      )
 
       return this.mapToDomainEntity(updatedProduct)
     } catch (error) {
