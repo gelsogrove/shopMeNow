@@ -89,14 +89,9 @@ export function MultiImageCropUpload({
     // Reset new files when loading existing images
     setNewFiles([])
 
-    console.log("=== MultiImageCropUpload useEffect ===")
-    console.log("currentImageUrls:", currentImageUrls)
-    console.log("IMG_BASE_URL:", IMG_BASE_URL)
-
     if (currentImageUrls && currentImageUrls.length > 0) {
       const existingImages: ImageItem[] = currentImageUrls.map((url, index) => {
         const finalUrl = url.startsWith("http") ? url : `${IMG_BASE_URL}${url}`
-        console.log(`Image ${index}: original="${url}", final="${finalUrl}"`)
         return {
           id: `existing-${index}-${url}`,
           url: finalUrl,
@@ -104,13 +99,8 @@ export function MultiImageCropUpload({
         }
       })
       setImages(existingImages)
-      console.log(
-        "MultiImageCropUpload: Loaded existing images",
-        existingImages
-      )
     } else {
       setImages([])
-      console.log("MultiImageCropUpload: No existing images to load")
     }
   }, [JSON.stringify(currentImageUrls)]) // Use JSON.stringify to ensure deep comparison
 
@@ -270,12 +260,12 @@ export function MultiImageCropUpload({
   const handleRemoveImage = (index: number) => {
     const imageToRemove = images[index]
 
-    if (imageToRemove.isExisting) {
-      // Remove existing image
-      const newImages = images.filter((_, i) => i !== index)
-      setImages(newImages)
+    // Remove image from array
+    const newImages = images.filter((_, i) => i !== index)
+    setImages(newImages)
 
-      // Notify parent about reordering
+    if (imageToRemove.isExisting) {
+      // Notify parent about reordering (even if array is empty)
       if (onImagesReordered) {
         const updatedUrls = newImages
           .filter((img) => img.isExisting)
@@ -287,10 +277,6 @@ export function MultiImageCropUpload({
         onImagesReordered(updatedUrls)
       }
     } else {
-      // Remove new image
-      const newImages = images.filter((_, i) => i !== index)
-      setImages(newImages)
-
       // Remove from files array
       const updatedFiles = newFiles.filter(
         (file) => file !== imageToRemove.file

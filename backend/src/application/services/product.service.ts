@@ -36,23 +36,25 @@ export class ProductService {
         workspaceId,
         filters,
       })
-      
+
       // Get products
       const result = await this.productRepository.findAll(workspaceId, filters)
-      
+
       // Get sales performance for all products
-      const salesPerformance = await (this.productRepository as ProductRepository).calculateSalesPerformance(workspaceId)
-      
+      const salesPerformance = await (
+        this.productRepository as ProductRepository
+      ).calculateSalesPerformance(workspaceId)
+
       // Enrich products with sales data
-      const enrichedProducts = result.products.map(product => ({
+      const enrichedProducts = result.products.map((product) => ({
         ...product,
         salesScore: salesPerformance.get(product.id)?.score || 0,
-        salesCount: salesPerformance.get(product.id)?.count || 0
+        salesCount: salesPerformance.get(product.id)?.count || 0,
       }))
-      
+
       return {
         ...result,
-        products: enrichedProducts
+        products: enrichedProducts,
       }
     } catch (error) {
       logger.error("Error in product service getAllProducts:", error)

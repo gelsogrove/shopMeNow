@@ -46,23 +46,28 @@ export function ProductsPage() {
   const [reorderedImageUrls, setReorderedImageUrls] = useState<string[] | null>(
     null
   )
-  
+
   // Load filters from localStorage or use defaults
   const [filterCategory, setFilterCategory] = useState<string>(() => {
     return localStorage.getItem("products_filter_category") || "all"
   })
   const [sortBy, setSortBy] = useState<"name" | "sales" | "stock">(() => {
-    return (localStorage.getItem("products_sort_by") as "name" | "sales" | "stock") || "name"
+    return (
+      (localStorage.getItem("products_sort_by") as
+        | "name"
+        | "sales"
+        | "stock") || "name"
+    )
   })
 
   // Get currency symbol based on workspace settings
   const currencySymbol = getCurrencySymbol(workspace?.currency as string)
-  
+
   // Save filters to localStorage when they change
   useEffect(() => {
     localStorage.setItem("products_filter_category", filterCategory)
   }, [filterCategory])
-  
+
   useEffect(() => {
     localStorage.setItem("products_sort_by", sortBy)
   }, [sortBy])
@@ -127,15 +132,17 @@ export function ProductsPage() {
       (product) =>
         product.name.toLowerCase().includes(searchValue.toLowerCase()) ||
         product.code?.toLowerCase().includes(searchValue.toLowerCase()) ||
-        product.description?.toLowerCase().includes(searchValue.toLowerCase()) ||
+        product.description
+          ?.toLowerCase()
+          .includes(searchValue.toLowerCase()) ||
         product.category?.name.toLowerCase().includes(searchValue.toLowerCase())
     )
-    
+
     // Filter by category
     if (filterCategory !== "all") {
-      filtered = filtered.filter(p => p.categoryId === filterCategory)
+      filtered = filtered.filter((p) => p.categoryId === filterCategory)
     }
-    
+
     // Sort products
     filtered.sort((a, b) => {
       switch (sortBy) {
@@ -148,7 +155,7 @@ export function ProductsPage() {
           return a.name.localeCompare(b.name)
       }
     })
-    
+
     return filtered
   }, [products, searchValue, filterCategory, sortBy])
 
@@ -187,12 +194,6 @@ export function ProductsPage() {
   }
 
   const handleEdit = (product: Product) => {
-    console.log("=== HANDLE EDIT DEBUG ===")
-    console.log("Full product object:", product)
-    console.log("product.imageUrl:", product.imageUrl)
-    console.log("product.imageUrl type:", typeof product.imageUrl)
-    console.log("Is Array?:", Array.isArray(product.imageUrl))
-
     setSelectedProduct(product)
     setSelectedCategoryId(product.categoryId || "none")
     setProductIsActive(product.isActive ?? true)
@@ -203,9 +204,6 @@ export function ProductsPage() {
       : product.imageUrl
       ? [product.imageUrl]
       : []
-
-    console.log("Computed imageUrls:", imageUrls)
-    console.log("imageUrls length:", imageUrls.length)
 
     logger.info("ProductsPage: Opening edit for product", {
       productId: product.id,
@@ -228,26 +226,10 @@ export function ProductsPage() {
     const formData = new FormData(form)
 
     // Add multiple image files if available
-    console.log("=== FORM SUBMIT DEBUG ===")
-    console.log("imageFiles:", imageFiles)
-    console.log("imageFiles length:", imageFiles?.length)
-
     if (imageFiles && imageFiles.length > 0) {
-      console.log("Adding images to FormData:")
-      imageFiles.forEach((file, index) => {
-        console.log(`  File ${index}:`, {
-          name: file.name,
-          size: file.size,
-          type: file.type,
-        })
+      imageFiles.forEach((file) => {
         formData.append(`images`, file)
-        logger.info(`Adding image file ${index + 1} to form data for edit`, {
-          fileName: file.name,
-          size: file.size,
-        })
       })
-    } else {
-      console.log("NO NEW IMAGE FILES TO UPLOAD")
     }
 
     // Always send existing image URLs (even if empty array) to handle deletions
@@ -257,15 +239,6 @@ export function ProductsPage() {
       reorderedImageUrls !== null ? reorderedImageUrls : currentImageUrls
 
     formData.append("existingImageUrls", JSON.stringify(imagesToSend))
-    console.log("=== IMAGE SEND DEBUG ===")
-    console.log("currentImageUrls:", currentImageUrls)
-    console.log("reorderedImageUrls:", reorderedImageUrls)
-    console.log("reorderedImageUrls is null?:", reorderedImageUrls === null)
-    console.log("Sending existingImageUrls:", imagesToSend)
-    logger.info("Adding existing images for edit", {
-      urls: imagesToSend,
-      userInteracted: reorderedImageUrls !== null,
-    })
 
     // Override form fields with state values (not append, to avoid duplicates)
     formData.set("code", productCode) // Use .set() instead of .append()
@@ -548,7 +521,7 @@ export function ProductsPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Package className={commonStyles.headerIcon} />
-            <h1 className="text-2xl font-bold">Products</h1>
+            <h1 className="text-2xl font-bold text-green-600">Products</h1>
           </div>
           <Button
             onClick={() => {
@@ -571,7 +544,7 @@ export function ProductsPage() {
             onChange={(e) => setSearchValue(e.target.value)}
             className="max-w-sm"
           />
-          
+
           {/* Category Filter */}
           <Select value={filterCategory} onValueChange={setFilterCategory}>
             <SelectTrigger className="w-[200px]">
@@ -586,9 +559,12 @@ export function ProductsPage() {
               ))}
             </SelectContent>
           </Select>
-          
+
           {/* Sort By */}
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as "name" | "sales" | "stock")}>
+          <Select
+            value={sortBy}
+            onValueChange={(v) => setSortBy(v as "name" | "sales" | "stock")}
+          >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Sort By" />
             </SelectTrigger>
@@ -600,173 +576,181 @@ export function ProductsPage() {
           </Select>
         </div>
 
-          {/* Grid View */}
-          {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Loading products...
-            </div>
-          ) : filteredProducts.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No products found
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredProducts.map((product) => (
-                <Card
-                  key={product.id}
-                  className={`hover:shadow-lg transition-shadow ${
-                    product.stock === 0 ? "border-red-500 border-2" : ""
-                  } ${
-                    !product.isActive
-                      ? "opacity-60 border-gray-400 border-2"
-                      : ""
-                  }`}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex flex-col gap-3">
-                      {/* Sales Performance Bar - Enhanced UI */}
-                      {(() => {
-                        // Use real sales data from backend (defaults to 0 if not available)
-                        const salesScore = product.salesScore || 0
-                        const salesCount = product.salesCount || 0
-                        
-                        const getGradientColor = (score: number) => {
-                          if (score < 50) {
-                            const r = 239
-                            const g = Math.round(68 + (score / 50) * (234 - 68))
-                            const b = 68
-                            return `rgb(${r}, ${g}, ${b})`
-                          } else {
-                            const r = Math.round(234 - ((score - 50) / 50) * (234 - 34))
-                            const g = Math.round(234 - ((score - 50) / 50) * (234 - 197))
-                            const b = Math.round(68 + ((score - 50) / 50) * (94 - 68))
-                            return `rgb(${r}, ${g}, ${b})`
-                          }
-                        }
-                        
-                        const getEmoji = (score: number) => {
-                          if (score < 30) return "🔴"
-                          if (score < 70) return "🟡"
-                          return "🔥"
-                        }
-                        
-                        const getLabel = (score: number) => {
-                          if (score < 30) return "Slow Mover"
-                          if (score < 70) return "Steady Sales"
-                          return "Hot Seller!"
-                        }
-                        
-                        const getTrendArrow = (score: number) => {
-                          if (score < 40) return "↘"
-                          if (score < 60) return "→"
-                          return "↗"
-                        }
-                        
-                        return (
-                          <div className="w-full">
-                            {/* Progress Bar */}
-                            <div className="relative w-full h-1.5 bg-gray-200 rounded-t-md overflow-hidden">
-                              <div
-                                className="h-full transition-all duration-500 ease-out"
-                                style={{
-                                  width: `${salesScore}%`,
-                                  backgroundColor: getGradientColor(salesScore),
-                                }}
-                              />
-                            </div>
-                            {/* Label Bar */}
-                            <div className="w-full bg-gradient-to-r from-gray-50 to-white px-2 py-1 flex items-center justify-between border-b border-gray-100">
-                              <span className="flex items-center gap-1 text-xs font-medium">
-                                <span className="text-base">{getEmoji(salesScore)}</span>
-                                <span className="text-gray-700">{getLabel(salesScore)}</span>
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <span className="text-xs font-bold" style={{ color: getGradientColor(salesScore) }}>
-                                  {salesScore}%
-                                </span>
-                                <span className="text-sm">{getTrendArrow(salesScore)}</span>
-                              </span>
-                            </div>
-                          </div>
-                        )
-                      })()}
-                      
-                      {/* Image */}
-                      <div className="w-full h-32 flex items-center justify-center bg-gray-50 overflow-hidden relative">
-                        <ProductImage
-                          imageUrl={product.imageUrl}
-                          alt={product.name}
-                          size="lg"
-                          className="w-full h-full"
-                        />
-                        {!product.isActive && (
-                          <div className="absolute top-2 right-2 bg-gray-700 text-white text-xs px-2 py-1 rounded">
-                            INACTIVE
-                          </div>
-                        )}
-                      </div>
+        {/* Grid View */}
+        {isLoading ? (
+          <div className="text-center py-8 text-muted-foreground">
+            Loading products...
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No products found
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredProducts.map((product) => (
+              <Card
+                key={product.id}
+                className={`hover:shadow-lg transition-shadow ${
+                  product.stock === 0 ? "border-red-500 border-2" : ""
+                } ${
+                  !product.isActive ? "opacity-60 border-gray-400 border-2" : ""
+                }`}
+              >
+                <CardContent className="p-4">
+                  <div className="flex flex-col gap-3">
+                    {/* Sales Performance Bar - Enhanced UI */}
+                    {(() => {
+                      // Use real sales data from backend (defaults to 0 if not available)
+                      const salesScore = product.salesScore || 0
+                      const salesCount = product.salesCount || 0
 
-                      {/* Info */}
-                      <div className="space-y-1">
-                        <h3 className="font-semibold text-lg line-clamp-2">
-                          {product.name}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          {product.code}
-                        </p>
-                        <p className="text-lg font-bold text-primary">
-                          {currencySymbol}
-                          {product.price.toFixed(2)}
-                        </p>
-                        <p className="text-sm">
-                          <span
-                            className={
-                              product.stock === 0
-                                ? "text-red-600 font-medium"
-                                : "text-green-600"
-                            }
-                          >
-                            {product.stock === 0
-                              ? "Out of stock"
-                              : `Stock: ${product.stock}`}
-                          </span>
-                        </p>
-                        {product.category && (
-                          <p className="text-xs text-muted-foreground">
-                            {product.category.name}
-                          </p>
-                        )}
-                      </div>
+                      const getGradientColor = (score: number) => {
+                        if (score < 50) {
+                          const r = 239
+                          const g = Math.round(68 + (score / 50) * (234 - 68))
+                          const b = 68
+                          return `rgb(${r}, ${g}, ${b})`
+                        } else {
+                          const r = Math.round(
+                            234 - ((score - 50) / 50) * (234 - 34)
+                          )
+                          const g = Math.round(
+                            234 - ((score - 50) / 50) * (234 - 197)
+                          )
+                          const b = Math.round(
+                            68 + ((score - 50) / 50) * (94 - 68)
+                          )
+                          return `rgb(${r}, ${g}, ${b})`
+                        }
+                      }
 
-                      {/* Actions */}
-                      <div className="flex gap-2 justify-end pt-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(product)}
-                          className="h-8 w-8 p-0 flex items-center justify-center"
-                        >
-                          <Pencil
-                            className={`${commonStyles.actionIcon} ${commonStyles.primary}`}
-                          />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(product)}
-                          className="h-8 w-8 p-0 flex items-center justify-center hover:bg-red-50"
-                        >
-                          <Trash2
-                            className={`${commonStyles.actionIcon} text-red-600`}
-                          />
-                        </Button>
-                      </div>
+                      const getEmoji = (score: number) => {
+                        if (score < 30) return "🔴"
+                        if (score < 70) return "🟡"
+                        return "🔥"
+                      }
+
+                      const getLabel = (score: number) => {
+                        if (score < 30) return "Slow Mover"
+                        if (score < 70) return "Steady Sales"
+                        return "Hot Seller!"
+                      }
+
+                      const getTrendArrow = (score: number) => {
+                        if (score < 40) return "↘"
+                        if (score < 60) return "→"
+                        return "↗"
+                      }
+
+                      return (
+                        <div className="w-full">
+                          {/* Progress Bar */}
+                          <div className="relative w-full h-1.5 bg-gray-200 rounded-t-md overflow-hidden">
+                            <div
+                              className="h-full transition-all duration-500 ease-out"
+                              style={{
+                                width: `${salesScore}%`,
+                                backgroundColor: getGradientColor(salesScore),
+                              }}
+                            />
+                          </div>
+                          {/* Label Bar */}
+                          <div className="w-full bg-gradient-to-r from-gray-50 to-white px-2 py-1 flex items-center justify-between border-b border-gray-100">
+                            <span className="flex items-center gap-1 text-xs font-medium">
+                              <span className="text-base">
+                                {getEmoji(salesScore)}
+                              </span>
+                              <span className="text-gray-700">
+                                {getLabel(salesScore)}
+                              </span>
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <span
+                                className="text-xs font-bold"
+                                style={{ color: getGradientColor(salesScore) }}
+                              >
+                                {salesScore}%
+                              </span>
+                              <span className="text-sm">
+                                {getTrendArrow(salesScore)}
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })()}
+
+                    {/* Image */}
+                    <div className="w-full h-32 flex items-center justify-center bg-gray-50 overflow-hidden relative">
+                      <ProductImage
+                        imageUrl={product.imageUrl}
+                        alt={product.name}
+                        size="lg"
+                        className="w-full h-full"
+                      />
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+
+                    {/* Info */}
+                    <div className="space-y-1">
+                      <h3 className="font-semibold text-lg line-clamp-2 min-h-[3.5rem]">
+                        {product.name}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {product.code}
+                      </p>
+                      <p className="text-lg font-bold text-green-600">
+                        {currencySymbol}
+                        {product.price.toFixed(2)}
+                      </p>
+                      <p className="text-sm">
+                        <span
+                          className={
+                            product.stock === 0
+                              ? "text-red-600 font-medium"
+                              : "text-blue-600"
+                          }
+                        >
+                          {product.stock === 0
+                            ? "Out of stock"
+                            : `Stock: ${product.stock}`}
+                        </span>
+                      </p>
+                      {product.category && (
+                        <p className="text-xs text-muted-foreground">
+                          {product.category.name}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2 justify-end pt-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(product)}
+                        className="h-8 w-8 p-0 flex items-center justify-center"
+                      >
+                        <Pencil
+                          className={`${commonStyles.actionIcon} ${commonStyles.primary}`}
+                        />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(product)}
+                        className="h-8 w-8 p-0 flex items-center justify-center hover:bg-red-50"
+                      >
+                        <Trash2
+                          className={`${commonStyles.actionIcon} text-red-600`}
+                        />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
       <FormSheet

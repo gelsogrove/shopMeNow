@@ -32,8 +32,13 @@ export class Service {
       return false
     }
 
-    if (typeof this.price !== "number" || this.price < 0) {
-      return false
+    // Price is optional during creation (can be set to 0 or will be added during edit)
+    if (this.price !== undefined && this.price !== null) {
+      if (typeof this.price !== "number" || this.price < 0) {
+        return false
+      }
+    } else {
+      this.price = 0 // Default to 0 if not provided
     }
 
     // Description is required in the schema but might be missing in partial updates
@@ -52,8 +57,9 @@ export class Service {
       return false
     }
 
-    if (!this.code || this.code.trim() === "") {
-      return false
+    // Code is optional during creation (will be added during edit)
+    if (this.code === undefined || this.code === null || this.code.trim() === "") {
+      this.code = `SRV${Date.now().toString().slice(-6)}` // Generate temporary code
     }
 
     if (!this.currency) {

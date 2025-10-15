@@ -36,8 +36,8 @@ export interface Product {
   createdAt: string
   updatedAt: string
   // Sales performance data (last 30 days)
-  salesScore?: number  // 0-100 normalized score
-  salesCount?: number  // Actual number of units sold
+  salesScore?: number // 0-100 normalized score
+  salesCount?: number // Actual number of units sold
 }
 
 export interface CreateProductData {

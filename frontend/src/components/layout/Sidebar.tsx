@@ -72,15 +72,14 @@ export function Sidebar() {
       icon: Users,
     },
     {
-      href: "/campaigns",
-      label: "Campaigns",
-      icon: Megaphone,
-    },
-    // Catalog removed, add its children as top-level links
-    {
       href: "/products",
       label: "Products",
       icon: Package2,
+    },
+    {
+      href: "/services",
+      label: "Services",
+      icon: Wrench,
     },
     {
       href: "/categories",
@@ -93,11 +92,6 @@ export function Sidebar() {
       icon: Percent,
     },
     {
-      href: "/services",
-      label: "Services",
-      icon: Wrench,
-    },
-    {
       href: "/faq",
       label: "FAQ",
       icon: HelpCircle,
@@ -106,6 +100,11 @@ export function Sidebar() {
       href: "/sales",
       label: "Sales",
       icon: UserCircle,
+    },
+    {
+      href: "/campaigns",
+      label: "Campaigns",
+      icon: Megaphone,
     },
     {
       href: "/admin/orders",

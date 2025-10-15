@@ -9,7 +9,7 @@ export const commonStyles = {
   primaryBorder: 'border-green-600',
   
   // Icon sizes
-  headerIcon: 'h-6 w-6',
+  headerIcon: 'h-6 w-6 text-green-600',
   actionIcon: 'h-5 w-5',
   
   // Button variants

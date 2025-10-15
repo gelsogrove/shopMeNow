@@ -1,24 +1,19 @@
 import { PageLayout } from "@/components/layout/PageLayout"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
-import { CrudPageContent } from "@/components/shared/CrudPageContent"
 import { FormSheet } from "@/components/shared/FormSheet"
 import { MultiImageCropUpload } from "@/components/shared/MultiImageCropUpload"
 import { ProductImage } from "@/components/shared/ProductImage"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { logger } from "@/lib/logger"
 import { Service, servicesApi } from "@/services/servicesApi"
 import { commonStyles } from "@/styles/common"
-import { formatPrice, getCurrencySymbol } from "@/utils/format"
-import { Wrench } from "lucide-react"
+import { getCurrencySymbol } from "@/utils/format"
+import { Pencil, Trash2, Wrench } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "../lib/toast"
 
@@ -33,7 +28,7 @@ export function ServicesPage() {
   const [selectedService, setSelectedService] = useState<Service | null>(null)
   const [imageFiles, setImageFiles] = useState<File[]>([])
   const [currentImageUrls, setCurrentImageUrls] = useState<string[]>([])
-  const [reorderedImageUrls, setReorderedImageUrls] = useState<string[]>([])
+  const [reorderedImageUrls, setReorderedImageUrls] = useState<string[] | null>(null)
 
   const loadServices = async () => {
     if (!workspace?.id) return
@@ -60,77 +55,6 @@ export function ServicesPage() {
     )
   )
 
-  const columns = [
-    {
-      header: "Image",
-      id: "image",
-      size: 80,
-      cell: ({ row }: { row: { original: Service } }) => (
-        <ProductImage
-          imageUrl={row.original.imageUrl}
-          alt={row.original.name}
-          size="sm"
-        />
-      ),
-    },
-    { header: "Name", accessorKey: "name" as keyof Service, size: 200 },
-    {
-      header: "Description",
-      accessorKey: "description" as keyof Service,
-      size: 400,
-      cell: ({ row }: { row: { original: Service } }) => {
-        const description = row.original.description
-        const maxLength = 80
-        const isTruncated = description.length > maxLength
-
-        return (
-          <div>
-            {isTruncated ? (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="cursor-help">
-                      {description.substring(0, maxLength)}...
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-md p-4 text-sm">
-                    <p>{description}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            ) : (
-              description
-            )}
-          </div>
-        )
-      },
-    },
-    {
-      header: "Price",
-      accessorKey: "price" as keyof Service,
-      size: 100,
-      cell: ({ row }: { row: { original: Service } }) => (
-        <span>{formatPrice(row.original.price, workspace?.currency)}</span>
-      ),
-    },
-    {
-      header: "Status",
-      accessorKey: "isActive" as keyof Service,
-      size: 100,
-      cell: ({ row }: { row: { original: Service } }) => (
-        <span
-          className={`px-2 py-1 rounded-full text-xs ${
-            row.original.isActive
-              ? "bg-green-100 text-green-800"
-              : "bg-gray-100 text-gray-800"
-          }`}
-        >
-          {row.original.isActive ? "Active" : "Inactive"}
-        </span>
-      ),
-    },
-  ]
-
   const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!workspace?.id) return
@@ -138,24 +62,18 @@ export function ServicesPage() {
     const form = e.target as HTMLFormElement
     const formData = new FormData(form)
 
-    // Add multiple image files if selected
-    if (imageFiles.length > 0) {
-      imageFiles.forEach((file) => {
-        formData.append("images", file)
-      })
-    }
+    // Force isActive = false for new services (will be activated later during edit)
+    formData.set("isActive", "false")
 
     try {
       const newService = await servicesApi.createService(workspace.id, formData)
-      setServices([...services, newService])
+      setServices([newService, ...services])
       setShowAddSheet(false)
-      setImageFiles([])
-      setCurrentImageUrls([])
-      setReorderedImageUrls([])
-      toast.success("Service created successfully")
-    } catch (error) {
+      toast.success("Service created successfully. Edit it to add details and images.")
+    } catch (error: any) {
       logger.error("Error creating service:", error)
-      toast.error("Failed to create service")
+      const errorMessage = error.response?.data?.message || "Failed to create service"
+      toast.error(errorMessage)
     }
   }
 
@@ -163,7 +81,7 @@ export function ServicesPage() {
     setSelectedService(service)
     setCurrentImageUrls(service.imageUrl || [])
     setImageFiles([])
-    setReorderedImageUrls([])
+    setReorderedImageUrls(null)
     setShowEditSheet(true)
   }
 
@@ -182,8 +100,8 @@ export function ServicesPage() {
     }
 
     // Always send existing image URLs (even if empty array) to handle deletions
-    const imagesToSend =
-      reorderedImageUrls.length > 0 ? reorderedImageUrls : currentImageUrls
+    // Use reorderedImageUrls if it has been modified (not null), otherwise use currentImageUrls
+    const imagesToSend = reorderedImageUrls !== null ? reorderedImageUrls : currentImageUrls
 
     formData.append("existingImageUrls", JSON.stringify(imagesToSend))
 
@@ -200,7 +118,7 @@ export function ServicesPage() {
       setSelectedService(null)
       setImageFiles([])
       setCurrentImageUrls([])
-      setReorderedImageUrls([])
+      setReorderedImageUrls(null)
       toast.success("Service updated successfully")
     } catch (error) {
       logger.error("Error updating service:", error)
@@ -238,6 +156,26 @@ export function ServicesPage() {
 
   const currencySymbol = getCurrencySymbol(workspace?.currency)
 
+  // Simplified form for creating new services (only name field)
+  const renderCreateForm = () => (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="name">Service Name</Label>
+        <Input
+          id="name"
+          name="name"
+          placeholder="Enter service name"
+          required
+          autoFocus
+        />
+        <p className="text-xs text-gray-500">
+          Enter the service name. You can add details, pricing, and images later by editing.
+        </p>
+      </div>
+    </div>
+  )
+
+  // Complete form for editing services (all fields)
   const renderFormFields = (service: Service | null) => (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -321,34 +259,127 @@ export function ServicesPage() {
 
   return (
     <PageLayout>
-      <CrudPageContent
-        title="Services"
-        titleIcon={<Wrench className={commonStyles.headerIcon} />}
-        searchValue={searchValue}
-        onSearch={setSearchValue}
-        searchPlaceholder="Search services..."
-        onAdd={() => {
-          setImageFiles([])
-          setCurrentImageUrls([])
-          setReorderedImageUrls([])
-          setShowAddSheet(true)
-        }}
-        addButtonText="Add"
-        data={filteredServices}
-        columns={columns}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        isLoading={isLoading}
-      />
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Wrench className={commonStyles.headerIcon} />
+            <h1 className="text-2xl font-bold text-green-600">Services</h1>
+          </div>
+          <Button
+            onClick={() => {
+              setImageFiles([])
+              setCurrentImageUrls([])
+              setReorderedImageUrls(null)
+              setShowAddSheet(true)
+            }}
+          >
+            Add Service
+          </Button>
+        </div>
+
+        {/* Search */}
+        <Input
+          placeholder="Search services..."
+          value={searchValue}
+          onChange={(e) => setSearchValue(e.target.value)}
+          className="max-w-sm"
+        />
+
+        {/* Grid View */}
+        {isLoading ? (
+          <div className="text-center py-8 text-muted-foreground">
+            Loading services...
+          </div>
+        ) : filteredServices.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No services found
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredServices.map((service) => (
+              <Card
+                key={service.id}
+                className={`hover:shadow-lg transition-shadow ${
+                  !service.isActive
+                    ? "opacity-60 border-gray-400 border-2"
+                    : ""
+                }`}
+              >
+                <CardContent className="p-4">
+                  <div className="flex flex-col gap-3">
+                    {/* Service Image */}
+                    <div className="w-full h-48 bg-gray-100 rounded-md overflow-hidden flex items-center justify-center">
+                      {service.imageUrl && service.imageUrl.length > 0 ? (
+                        <ProductImage
+                          imageUrl={service.imageUrl}
+                          alt={service.name}
+                          size="lg"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Wrench className="w-16 h-16 text-gray-400" />
+                      )}
+                    </div>
+
+                    {/* Service Info */}
+                    <div className="space-y-2 flex-1">
+                      <h3 className="font-semibold text-lg line-clamp-2 min-h-[3.5rem]">
+                        {service.name}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {service.code}
+                      </p>
+                      <p className="text-lg font-bold text-green-600">
+                        {currencySymbol}
+                        {service.price.toFixed(2)}
+                      </p>
+                      {service.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {service.description}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2 justify-end pt-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(service)}
+                        className="h-8 w-8 p-0 flex items-center justify-center"
+                      >
+                        <Pencil
+                          className={`${commonStyles.actionIcon} ${commonStyles.primary}`}
+                        />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(service)}
+                        className="h-8 w-8 p-0 flex items-center justify-center hover:bg-red-50"
+                      >
+                        <Trash2
+                          className={`${commonStyles.actionIcon} text-red-600`}
+                        />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
 
       <FormSheet
         open={showAddSheet}
         onOpenChange={setShowAddSheet}
-        title="Add Service"
-        description="Add a new service that you offer to your customers"
+        title="Quick Service Creation"
+        description="Create a new service with basic info. Add details and images later by editing."
         onSubmit={handleAdd}
       >
-        {renderFormFields(null)}
+        {renderCreateForm()}
       </FormSheet>
 
       <FormSheet

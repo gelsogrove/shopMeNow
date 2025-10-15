@@ -400,7 +400,9 @@ export class ProductRepository implements IProductRepository {
    * Calculate sales performance for products in a workspace
    * Returns salesScore (0-100) and salesCount for last 30 days
    */
-  async calculateSalesPerformance(workspaceId: string): Promise<Map<string, { score: number; count: number }>> {
+  async calculateSalesPerformance(
+    workspaceId: string
+  ): Promise<Map<string, { score: number; count: number }>> {
     try {
       const thirtyDaysAgo = new Date()
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
@@ -412,18 +414,18 @@ export class ProductRepository implements IProductRepository {
           order: {
             workspaceId: workspaceId,
             createdAt: { gte: thirtyDaysAgo },
-            status: { not: 'CANCELLED' } // Exclude cancelled orders
-          }
+            status: { not: "CANCELLED" }, // Exclude cancelled orders
+          },
         },
         select: {
           productId: true,
-          quantity: true
-        }
+          quantity: true,
+        },
       })
 
       // Aggregate sales by product
       const salesByProduct = new Map<string, number>()
-      orderItems.forEach(item => {
+      orderItems.forEach((item) => {
         if (item.productId) {
           const currentCount = salesByProduct.get(item.productId) || 0
           salesByProduct.set(item.productId, currentCount + item.quantity)
@@ -435,17 +437,19 @@ export class ProductRepository implements IProductRepository {
 
       // Create map with normalized scores
       const performanceMap = new Map<string, { score: number; count: number }>()
-      
+
       salesByProduct.forEach((count, productId) => {
         // Normalize to 0-100 scale
         const score = maxSales > 0 ? Math.round((count / maxSales) * 100) : 0
         performanceMap.set(productId, { score, count })
       })
 
-      logger.info(`Calculated sales performance for ${performanceMap.size} products in workspace ${workspaceId}`)
+      logger.info(
+        `Calculated sales performance for ${performanceMap.size} products in workspace ${workspaceId}`
+      )
       return performanceMap
     } catch (error) {
-      logger.error('Error calculating sales performance:', error)
+      logger.error("Error calculating sales performance:", error)
       return new Map()
     }
   }

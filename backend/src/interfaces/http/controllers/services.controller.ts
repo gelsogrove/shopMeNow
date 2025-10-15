@@ -82,10 +82,6 @@ export class ServicesController {
         return res.status(400).json({ error: "Name is required" })
       }
 
-      if (!code) {
-        return res.status(400).json({ error: "Code is required" })
-      }
-
       // Check workspace exists
       const workspace = await prisma.workspace.findUnique({
         where: { id: workspaceId },
@@ -98,21 +94,21 @@ export class ServicesController {
         })
       }
 
-      // Make sure price is a number
-      let numericPrice: number
-      if (price === undefined || price === null) {
-        return res.status(400).json({ error: "Price is required" })
-      } else if (typeof price === "string") {
-        numericPrice = parseFloat(price)
-        if (isNaN(numericPrice)) {
-          return res.status(400).json({ error: "Price must be a valid number" })
+      // Price is optional during creation (defaults to 0 if not provided)
+      let numericPrice: number = 0
+      if (price !== undefined && price !== null) {
+        if (typeof price === "string") {
+          numericPrice = parseFloat(price)
+          if (isNaN(numericPrice)) {
+            return res.status(400).json({ error: "Price must be a valid number" })
+          }
+        } else if (typeof price === "number") {
+          numericPrice = price
+        } else {
+          return res
+            .status(400)
+            .json({ error: "Price must be a valid number" })
         }
-      } else if (typeof price === "number") {
-        numericPrice = price
-      } else {
-        return res
-          .status(400)
-          .json({ error: "Price is required and must be a valid number" })
       }
 
       // Parse duration if provided, or use default
@@ -134,14 +130,24 @@ export class ServicesController {
         }
       }
 
+      // Convert isActive from string to boolean
+      let booleanIsActive = false // Default to false like products
+      if (isActive !== undefined) {
+        if (typeof isActive === "string") {
+          booleanIsActive = isActive === "on" || isActive === "true"
+        } else if (typeof isActive === "boolean") {
+          booleanIsActive = isActive
+        }
+      }
+
       const serviceData: any = {
         name,
-        code,
-        description,
+        code: code || `SRV${Date.now().toString().slice(-6)}`, // Auto-generate if not provided
+        description: description || "",
         price: numericPrice,
         duration: numericDuration,
         currency,
-        isActive: isActive !== undefined ? isActive : true,
+        isActive: booleanIsActive,
         workspaceId,
       }
 
@@ -216,7 +222,15 @@ export class ServicesController {
       if (code !== undefined) updateData.code = code
       if (description !== undefined) updateData.description = description
       if (currency !== undefined) updateData.currency = currency
-      if (isActive !== undefined) updateData.isActive = isActive
+      
+      // Convert isActive from string "on"/"off" or boolean to proper boolean
+      if (isActive !== undefined) {
+        if (typeof isActive === "string") {
+          updateData.isActive = isActive === "on" || isActive === "true"
+        } else if (typeof isActive === "boolean") {
+          updateData.isActive = isActive
+        }
+      }
 
       // Handle price conversion properly
       if (price !== undefined) {
