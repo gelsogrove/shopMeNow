@@ -691,7 +691,7 @@ export function WhatsAppChatModal({
       }}
     >
       <DialogContent
-        className="w-[1170px] max-w-[95vw] p-0 overflow-hidden [&>button]:hidden h-[90vh] flex flex-row"
+        className={`${showPreviewSplit ? 'w-[1170px]' : 'w-[600px]'} max-w-[95vw] p-0 overflow-hidden [&>button]:hidden h-[90vh] flex flex-row transition-all`}
         data-state={isOpen ? "open" : "closed"}
         style={{
           position: "fixed",
@@ -705,8 +705,17 @@ export function WhatsAppChatModal({
           WhatsApp conversation interface to chat with a contact
         </DialogDescription>
 
+        {/* Close Button - Positioned at top right of DialogContent */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 flex items-center justify-center w-8 h-8 bg-white text-gray-600 rounded-full hover:bg-gray-100 transition-colors z-50 shadow-lg"
+          aria-label="Close"
+        >
+          <X className="h-5 w-5" />
+        </button>
+
         {/* LEFT COLUMN - Chat */}
-        <div className="w-[50%] flex flex-col bg-transparent border-r border-gray-200 flex-shrink-0">
+        <div className={`${showPreviewSplit ? 'w-[50%]' : 'w-full'} flex flex-col bg-transparent border-r border-gray-200 flex-shrink-0 transition-all`}>
           {/* WhatsApp header with WhatsApp icon and X */}
           <div className="bg-gradient-to-r from-green-500 to-green-400 shadow-md p-4 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center">
@@ -740,13 +749,6 @@ export function WhatsAppChatModal({
                 title="Show/Hide Complete Debug Information"
               >
                 <Settings className="h-5 w-5" />
-              </button>
-              <button
-                onClick={onClose}
-                className="text-white hover:bg-green-600 rounded-full p-2 transition"
-                aria-label="Close"
-              >
-                <X className="h-6 w-6" />
               </button>
             </div>
           </div>
@@ -1576,9 +1578,9 @@ export function WhatsAppChatModal({
         </div>
 
         {/* RIGHT COLUMN - Device Preview Overlay */}
-        <div className="w-[40%] bg-transparent flex items-center justify-center relative h-full flex-shrink-0 p-2 ml-[60px]">
-          {/* Close Preview Button */}
-          {showPreviewSplit && (
+        {showPreviewSplit && (
+          <div className="w-[40%] bg-transparent flex items-center justify-center relative h-full flex-shrink-0 p-2 ml-[60px]">
+            {/* Close Preview Button */}
             <button
               onClick={() => {
                 setShowPreviewSplit(false)
@@ -1588,10 +1590,9 @@ export function WhatsAppChatModal({
             >
               <X className="h-4 w-4" />
             </button>
-          )}
 
-          {/* iPhone-like Device Frame */}
-          <div className="relative w-full h-full bg-black rounded-3xl shadow-2xl overflow-hidden border-8 border-gray-900">
+            {/* iPhone-like Device Frame */}
+            <div className="relative w-full h-full bg-black rounded-3xl shadow-2xl overflow-hidden border-8 border-gray-900">
             {/* Notch */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-10"></div>
 
@@ -1614,9 +1615,11 @@ export function WhatsAppChatModal({
 
             {/* Home Indicator */}
             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-28 h-1 bg-black rounded-full"></div>
+            </div>
           </div>
-        </div>
+        )}
       </DialogContent>
     </Dialog>
   )
 }
+
