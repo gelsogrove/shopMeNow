@@ -53,6 +53,7 @@ export class ProductController {
       const productsWithCode = result.products.map((product) => ({
         ...product,
         code: product.ProductCode,
+        formato: product.formato,
       }))
 
       return res.json({

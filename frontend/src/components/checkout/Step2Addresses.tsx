@@ -68,8 +68,8 @@ export const Step2Addresses: React.FC<Step2AddressesProps> = ({
   return (
     <div className="space-y-4">
       {/* Shipping Address */}
-      <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
-        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-4">
+      <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 lg:p-6">
+        <h3 className="text-lg lg:text-xl font-bold text-gray-900 flex items-center gap-2 mb-4 lg:mb-6">
           <svg
             className="w-5 h-5 text-green-600"
             fill="none"
@@ -151,8 +151,8 @@ export const Step2Addresses: React.FC<Step2AddressesProps> = ({
 
       {/* Billing Address (conditional) */}
       {!sameAsBilling && (
-        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
-          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-4">
+        <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 lg:p-6">
+          <h3 className="text-lg lg:text-xl font-bold text-gray-900 flex items-center gap-2 mb-4 lg:mb-6">
             <svg
               className="w-5 h-5 text-blue-600"
               fill="none"
@@ -220,7 +220,7 @@ export const Step2Addresses: React.FC<Step2AddressesProps> = ({
       <div>
         <button
           onClick={onNext}
-          className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 px-4 rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"
+          className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 sm:py-3 lg:py-4 px-4 rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2 text-base lg:text-lg"
         >
           <span>{texts.continue || "Continua"}</span>
           <svg

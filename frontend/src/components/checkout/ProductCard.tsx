@@ -92,13 +92,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 </svg>
               </div>
             )}
-
-            {/* Discount Badge - Overlay on Image */}
-            {hasDiscount && (
-              <span className="absolute top-1 left-1 px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded shadow-sm">
-                -{product.scontoApplicato}%
-              </span>
-            )}
           </div>
 
           {/* Product Info */}
@@ -113,9 +106,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 <p className="text-xs font-mono text-gray-500">
                   {product.codice}
                 </p>
-              )}
-              {product.formato && !isService && (
-                <p className="text-xs text-gray-600">{product.formato}</p>
               )}
             </div>
           </div>

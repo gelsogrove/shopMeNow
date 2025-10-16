@@ -123,7 +123,6 @@ model Products {
   categoryId  String?
   slug        String          @unique
   status      ProductStatus   @default(ACTIVE)
-  imageUrl    String[]        @default([])
   cartItems   CartItems[]
   orderItems  OrderItems[]
   chunks      ProductChunks[]
@@ -468,7 +467,6 @@ model Services {
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
   duration    Int             @default(60)
-  imageUrl    String[]        @default([])
   cartItems   CartItems[]
   orderItems  OrderItems[]
   chunks      ServiceChunks[]

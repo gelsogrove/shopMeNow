@@ -220,7 +220,17 @@ export class CartController {
           include: {
             items: {
               include: {
-                product: true,
+                product: {
+                  select: {
+                    id: true,
+                    name: true,
+                    ProductCode: true,
+                    price: true,
+                    description: true,
+                    formato: true,
+                    imageUrl: true,
+                  },
+                },
                 service: true,
               },
             },
@@ -237,7 +247,17 @@ export class CartController {
           include: {
             items: {
               include: {
-                product: true,
+                product: {
+                  select: {
+                    id: true,
+                    name: true,
+                    ProductCode: true,
+                    price: true,
+                    description: true,
+                    formato: true,
+                    imageUrl: true,
+                  },
+                },
                 service: true,
               },
             },
@@ -258,7 +278,17 @@ export class CartController {
             include: {
               items: {
                 include: {
-                  product: true,
+                  product: {
+                    select: {
+                      id: true,
+                      name: true,
+                      ProductCode: true,
+                      price: true,
+                      description: true,
+                      formato: true,
+                      imageUrl: true,
+                    },
+                  },
                   service: true,
                 },
               },
@@ -347,7 +377,9 @@ export class CartController {
             itemType: "PRODUCT",
             productId: item.productId,
             productCode: item.product.ProductCode || item.productId,
-            name: item.product.name || `Product ${item.productId}`,
+            name: item.product.formato 
+              ? `${item.product.name} ${item.product.formato}`
+              : item.product.name || `Product ${item.productId}`,
             formato: item.product.formato || null,
             originalPrice: originalPrice,
             finalPrice: finalPrice,

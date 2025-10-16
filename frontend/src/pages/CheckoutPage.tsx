@@ -890,9 +890,9 @@ const CheckoutPage: React.FC = () => {
       <div className="pt-[60px] -mt-10">
         {" "}
         {/* Exact header height: 60px - PULL UP with negative margin */}
-        <div className="max-w-3xl mx-auto px-3 sm:px-4">
+        <div className="max-w-md mx-auto px-3 sm:max-w-2xl sm:px-4 lg:max-w-5xl lg:px-8 xl:max-w-6xl">
           {/* Progress Steps - New Modular Component - NO top margin */}
-          <div className="mb-3">
+          <div className="mb-3 sm:mb-6 lg:mb-8">
             <ProgressSteps
               currentStep={currentStep}
               steps={stepsArray}
@@ -902,7 +902,7 @@ const CheckoutPage: React.FC = () => {
 
           {/* Step 1: Products - New Modular Component */}
           {currentStep === 1 && (
-            <div className="mb-3">
+            <div className="mb-3 sm:mb-6 lg:mb-8">
               <Step1Products
                 products={prodotti}
                 texts={texts}
@@ -925,7 +925,7 @@ const CheckoutPage: React.FC = () => {
 
           {/* Step 2: Addresses - New Modular Component */}
           {currentStep === 2 && (
-            <div className="mb-3">
+            <div className="mb-3 sm:mb-6 lg:mb-8">
               <Step2Addresses
                 shippingAddress={formData.shippingAddress}
                 billingAddress={formData.billingAddress}
@@ -945,7 +945,7 @@ const CheckoutPage: React.FC = () => {
 
           {/* Step 3: Confirmation - New Modular Component */}
           {currentStep === 3 && (
-            <div className="mb-3">
+            <div className="mb-3 sm:mb-6 lg:mb-8">
               <Step3Confirm
                 products={prodotti}
                 shippingAddress={formData.shippingAddress}
@@ -963,7 +963,7 @@ const CheckoutPage: React.FC = () => {
 
           {/* Step 4: Payment - New Modular Component */}
           {currentStep === 4 && (
-            <div className="mb-3">
+            <div className="mb-3 sm:mb-6 lg:mb-8">
               <Step4Payment
                 total={calculateTotal()}
                 texts={texts}
@@ -1053,7 +1053,7 @@ const CheckoutPage: React.FC = () => {
                                   className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow bg-white"
                                 >
                                   {/* 🖼️ Product Image - ALWAYS SHOW */}
-                                  <div className="w-full h-40 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
+                                  <div className="w-full h-40 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden relative">
                                     {getImageUrl(product.imageUrl) ? (
                                       <img
                                         src={getImageUrl(product.imageUrl)!}
@@ -1067,6 +1067,13 @@ const CheckoutPage: React.FC = () => {
                                         </span>
                                       </div>
                                     )}
+                                    {/* Discount Badge on Image */}
+                                    {product.appliedDiscount &&
+                                      product.appliedDiscount > 0 && (
+                                        <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold">
+                                          -{product.appliedDiscount}%
+                                        </div>
+                                      )}
                                   </div>
 
                                   {/* Product Info */}
@@ -1075,12 +1082,11 @@ const CheckoutPage: React.FC = () => {
                                       {product.name}
                                     </h5>
                                     {product.formato && (
-                                      <div className="text-xs text-blue-600 mb-1 font-medium">
-                                        {texts.formatLabel} {product.formato}
-                                      </div>
+                                      <p className="text-xs text-blue-600 font-medium mb-3">
+                                        {product.formato}
+                                      </p>
                                     )}
                                     <p className="text-xs text-gray-600 mb-2">
-                                      Codice:{" "}
                                       {product.ProductCode ||
                                         product.sku ||
                                         "Non disponibile"}
@@ -1089,20 +1095,12 @@ const CheckoutPage: React.FC = () => {
                                       {product.finalPrice &&
                                       product.finalPrice < product.price ? (
                                         <div className="flex flex-col">
+                                          <p className="text-sm text-gray-500 line-through mb-1">
+                                            €{product.price.toFixed(2)}
+                                          </p>
                                           <p className="text-lg font-bold text-green-600">
                                             €{product.finalPrice.toFixed(2)}
                                           </p>
-                                          <div className="flex items-center space-x-2">
-                                            <p className="text-sm text-gray-500 line-through">
-                                              €{product.price.toFixed(2)}
-                                            </p>
-                                            {product.appliedDiscount &&
-                                              product.appliedDiscount > 0 && (
-                                                <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">
-                                                  -{product.appliedDiscount}%
-                                                </span>
-                                              )}
-                                          </div>
                                         </div>
                                       ) : (
                                         <p className="text-lg font-bold text-green-600">

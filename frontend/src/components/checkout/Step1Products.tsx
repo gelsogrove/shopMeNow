@@ -59,7 +59,7 @@ export const Step1Products: React.FC<Step1ProductsProps> = ({
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden">
       {/* Header with Action Buttons */}
-      <div className="p-3 border-b border-gray-100">
+      <div className="p-3 sm:p-4 lg:p-6 border-b border-gray-100">
         <div className="flex items-center justify-end gap-2">
           <button
             onClick={onAddProducts}
@@ -104,9 +104,9 @@ export const Step1Products: React.FC<Step1ProductsProps> = ({
       </div>
 
       {/* Products List */}
-      <div className="p-3">
+      <div className="p-3 sm:p-4 lg:p-6">
         {products.length === 0 ? (
-          <div className="text-center py-6">
+          <div className="text-center py-6 lg:py-12">
             <svg
               className="w-12 h-12 mx-auto text-gray-300 mb-3"
               fill="none"
@@ -146,13 +146,13 @@ export const Step1Products: React.FC<Step1ProductsProps> = ({
 
       {/* Footer with Total and Next Button */}
       {products.length > 0 && (
-        <div className="p-4 border-t border-gray-100 bg-gray-50">
+        <div className="p-3 sm:p-4 lg:p-6 border-t border-gray-100 bg-gray-50">
           {/* Total */}
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-base font-semibold text-gray-700">
+          <div className="flex items-center justify-between mb-4 lg:mb-6">
+            <span className="text-base sm:text-lg lg:text-xl font-semibold text-gray-700">
               {texts.total || "Totale"}:
             </span>
-            <span className="text-xl font-bold text-gray-900">
+            <span className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
               €{calculateTotal().toFixed(2)}
             </span>
           </div>
@@ -160,7 +160,7 @@ export const Step1Products: React.FC<Step1ProductsProps> = ({
           {/* Next Button - DIMENSIONI NORMALI */}
           <button
             onClick={onNext}
-            className="w-full bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold py-2.5 px-4 rounded-lg transition-all flex items-center justify-center gap-2"
+            className="w-full bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold py-2.5 px-4 sm:py-3 lg:py-4 rounded-lg transition-all flex items-center justify-center gap-2 text-base lg:text-lg"
           >
             <span>{texts.continue || "Continua"}</span>
             <svg

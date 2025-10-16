@@ -713,13 +713,24 @@ router.post(
           isActive: true,
           status: "ACTIVE",
         },
-        include: {
+        select: {
+          id: true,
+          name: true,
+          ProductCode: true,
+          description: true,
+          price: true,
+          stock: true,
+          isActive: true,
+          imageUrl: true,
+          formato: true,
           category: {
             select: {
               id: true,
               name: true,
             },
           },
+          createdAt: true,
+          updatedAt: true,
         },
         orderBy: [
           {
@@ -738,15 +749,18 @@ router.post(
         const originalPrice = product.price
         const discountAmount = originalPrice * (customerDiscount / 100)
         const finalPrice = originalPrice - discountAmount
+        const appliedDiscount = customerDiscount > 0 ? customerDiscount : 0
 
         return {
           id: product.id,
           name: product.name,
           ProductCode: product.ProductCode,
           description: product.description,
+          formato: product.formato || null,
           price: originalPrice,
           originalPrice: originalPrice,
           finalPrice: finalPrice,
+          appliedDiscount: appliedDiscount,
           discount: customerDiscount,
           stock: product.stock,
           isActive: product.isActive,

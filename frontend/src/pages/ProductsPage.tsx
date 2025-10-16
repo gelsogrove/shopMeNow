@@ -708,14 +708,19 @@ export function ProductsPage() {
                     </div>
 
                     {/* Info */}
-                    <div className="space-y-1">
-                      <h3 className="font-semibold text-lg line-clamp-2 min-h-[3.5rem]">
+                    <div>
+                      <h3 className="font-semibold text-lg line-clamp-2 mb-1">
                         {product.name}
                       </h3>
-                      <p className="text-sm text-muted-foreground">
+                      {product.formato && (
+                        <p className="text-xs text-muted-foreground mb-3">
+                          {product.formato}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground mb-2">
                         {product.code}
                       </p>
-                      <p className="text-lg font-bold text-green-600">
+                      <p className="text-lg font-bold text-green-600 mb-2">
                         {currencySymbol}
                         {product.price.toFixed(2)}
                       </p>
