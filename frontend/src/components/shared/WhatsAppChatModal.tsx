@@ -671,13 +671,10 @@ export function WhatsAppChatModal({
     // We're intentionally NOT clearing the sessionId here
   }
 
-  // Handle link clicks to open preview
+  // Handle link clicks to open in new tab
   const handleLinkClick = (url: string, e: React.MouseEvent) => {
-    if (url.includes("localhost:3000") || url.includes("/checkout")) {
-      e.preventDefault()
-      setPreviewUrl(url)
-      setShowPreviewSplit(true)
-    }
+    e.preventDefault()
+    window.open(url, '_blank')
   }
 
   return (
@@ -691,7 +688,9 @@ export function WhatsAppChatModal({
       }}
     >
       <DialogContent
-        className={`${showPreviewSplit ? 'w-[1170px]' : 'w-[600px]'} max-w-[95vw] p-0 overflow-hidden [&>button]:hidden h-[90vh] flex flex-row transition-all`}
+        className={`${
+          showPreviewSplit ? "w-[1170px]" : "w-[600px]"
+        } max-w-[95vw] p-0 overflow-hidden [&>button]:hidden h-[90vh] flex flex-row transition-all`}
         data-state={isOpen ? "open" : "closed"}
         style={{
           position: "fixed",
@@ -715,7 +714,11 @@ export function WhatsAppChatModal({
         </button>
 
         {/* LEFT COLUMN - Chat */}
-        <div className={`${showPreviewSplit ? 'w-[50%]' : 'w-full'} flex flex-col bg-transparent border-r border-gray-200 flex-shrink-0 transition-all`}>
+        <div
+          className={`${
+            showPreviewSplit ? "w-[50%]" : "w-full"
+          } flex flex-col bg-transparent border-r border-gray-200 flex-shrink-0 transition-all`}
+        >
           {/* WhatsApp header with WhatsApp icon and X */}
           <div className="bg-gradient-to-r from-green-500 to-green-400 shadow-md p-4 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center">
@@ -1593,28 +1596,28 @@ export function WhatsAppChatModal({
 
             {/* iPhone-like Device Frame */}
             <div className="relative w-full h-full bg-black rounded-3xl shadow-2xl overflow-hidden border-8 border-gray-900">
-            {/* Notch */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-10"></div>
+              {/* Notch */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-10"></div>
 
-            {/* Screen */}
-            {previewUrl ? (
-              <iframe
-                key={iframeKey}
-                src={previewUrl}
-                className="w-full h-full"
-                title="Preview"
-                sandbox="allow-scripts allow-same-origin allow-forms"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                <span className="text-gray-500 text-sm">
-                  Click a link to preview
-                </span>
-              </div>
-            )}
+              {/* Screen */}
+              {previewUrl ? (
+                <iframe
+                  key={iframeKey}
+                  src={previewUrl}
+                  className="w-full h-full"
+                  title="Preview"
+                  sandbox="allow-scripts allow-same-origin allow-forms"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                  <span className="text-gray-500 text-sm">
+                    Click a link to preview
+                  </span>
+                </div>
+              )}
 
-            {/* Home Indicator */}
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-28 h-1 bg-black rounded-full"></div>
+              {/* Home Indicator */}
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-28 h-1 bg-black rounded-full"></div>
             </div>
           </div>
         )}
@@ -1622,4 +1625,3 @@ export function WhatsAppChatModal({
     </Dialog>
   )
 }
-
