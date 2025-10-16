@@ -30,6 +30,7 @@ export interface DashboardAnalytics {
     customers: MonthlyData[]
     messages: MonthlyData[]
     usageCost: MonthlyData[] // Add LLM usage cost trends
+    categories: CategoryTrendData[] // Categories sales over time
   }
   topProducts: ProductAnalytics[]
   topCustomers: {
@@ -52,6 +53,12 @@ export interface MonthlyData {
   year: number
   value: number
   label: string
+}
+
+export interface CategoryTrendData {
+  month: string
+  year: number
+  categories: { [categoryName: string]: number }
 }
 
 export interface ProductAnalytics {

@@ -6,9 +6,12 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   Legend,
   Line,
   LineChart,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -57,6 +60,35 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
   })
 
   console.log("📊 [HistoricalChart] Chart data merged:", chartData)
+
+  // Prepare category pie chart data - aggregate all months
+  const categoryTotals: { [categoryName: string]: number } = {}
+  analytics.trends.categories.forEach((monthData) => {
+    Object.entries(monthData.categories).forEach(([categoryName, count]) => {
+      categoryTotals[categoryName] = (categoryTotals[categoryName] || 0) + count
+    })
+  })
+
+  const categoryPieData = Object.entries(categoryTotals).map(
+    ([name, value]) => ({
+      name,
+      value,
+    })
+  )
+
+  // Define colors for pie chart
+  const PIE_COLORS = [
+    "#3b82f6", // blue
+    "#22c55e", // green
+    "#f97316", // orange
+    "#a855f7", // purple
+    "#ec4899", // pink
+    "#14b8a6", // teal
+    "#f59e0b", // amber
+    "#ef4444", // red
+  ]
+
+  console.log("📊 [HistoricalChart] Category pie data:", categoryPieData)
 
   // Custom tooltip formatter
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -142,7 +174,9 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
                     tickLine={{ stroke: "#e0e0e0" }}
                   />
                   <Tooltip content={<CustomTooltip />} />
-                  <Legend wrapperStyle={{ fontSize: "14px", fontWeight: "500" }} />
+                  <Legend
+                    wrapperStyle={{ fontSize: "14px", fontWeight: "500" }}
+                  />
                   <Bar
                     dataKey="orders"
                     name={t.ordersLabel}
@@ -172,7 +206,9 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
                     tickLine={{ stroke: "#e0e0e0" }}
                   />
                   <Tooltip content={<CustomTooltip />} />
-                  <Legend wrapperStyle={{ fontSize: "14px", fontWeight: "500" }} />
+                  <Legend
+                    wrapperStyle={{ fontSize: "14px", fontWeight: "500" }}
+                  />
                   <Line
                     type="monotone"
                     dataKey="orders"
@@ -227,7 +263,9 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
                   tickLine={{ stroke: "#e0e0e0" }}
                 />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend wrapperStyle={{ fontSize: "14px", fontWeight: "500" }} />
+                <Legend
+                  wrapperStyle={{ fontSize: "14px", fontWeight: "500" }}
+                />
                 <Bar
                   dataKey="usageCost"
                   name="Costi LLM (€)"

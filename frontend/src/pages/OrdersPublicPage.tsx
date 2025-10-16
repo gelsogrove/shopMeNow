@@ -216,7 +216,8 @@ const OrdersPublicPage: React.FC = () => {
 
   // 🔐 Show token validation loading
   const customerLanguage =
-    (listData?.customer as any)?.language || (detailData?.customer as any)?.language
+    (listData?.customer as any)?.language ||
+    (detailData?.customer as any)?.language
   const texts = getPublicPageTexts(customerLanguage)
 
   if (tokenLoading || initialLoading) {
@@ -361,165 +362,177 @@ const OrdersPublicPage: React.FC = () => {
               {(() => {
                 const invoiceAddr = (detailData.customer as any).invoiceAddress
                 // Check if it's an array with items or an object with data
-                const hasInvoiceData = invoiceAddr && 
-                  ((Array.isArray(invoiceAddr) && invoiceAddr.length > 0 && invoiceAddr[0]?.firstName) ||
-                   (!Array.isArray(invoiceAddr) && invoiceAddr.firstName))
-                return hasInvoiceData && (
-                <div className="bg-white p-3 rounded-xl shadow-sm">
-                  <div className="flex items-center mb-4">
-                    <div className="bg-green-100 p-2 rounded-lg mr-3">
-                      <svg
-                        className="w-5 h-5 text-green-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                        />
-                      </svg>
+                const hasInvoiceData =
+                  invoiceAddr &&
+                  ((Array.isArray(invoiceAddr) &&
+                    invoiceAddr.length > 0 &&
+                    invoiceAddr[0]?.firstName) ||
+                    (!Array.isArray(invoiceAddr) && invoiceAddr.firstName))
+                return (
+                  hasInvoiceData && (
+                    <div className="bg-white p-3 rounded-xl shadow-sm">
+                      <div className="flex items-center mb-4">
+                        <div className="bg-green-100 p-2 rounded-lg mr-3">
+                          <svg
+                            className="w-5 h-5 text-green-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                            />
+                          </svg>
+                        </div>
+                        <h3 className="font-bold text-gray-900 text-base">
+                          Bill To
+                        </h3>
+                      </div>
+                      <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-1.5">
+                        {(() => {
+                          // Get first invoice address if it's an array
+                          const addr = Array.isArray(invoiceAddr)
+                            ? invoiceAddr[0]
+                            : invoiceAddr
+                          return (
+                            <>
+                              <div className="font-semibold text-gray-900 text-lg">
+                                {addr.firstName} {addr.lastName}
+                              </div>
+                              {addr.company && (
+                                <div className="text-sm text-gray-600">
+                                  {addr.company}
+                                </div>
+                              )}
+                              <div className="text-sm text-gray-700">
+                                {addr.address}
+                                <br />
+                                {addr.city} {addr.postalCode}
+                                <br />
+                                {addr.country}
+                              </div>
+                              {addr.vatNumber && (
+                                <div className="text-sm text-gray-600">
+                                  VAT: {addr.vatNumber}
+                                </div>
+                              )}
+                            </>
+                          )
+                        })()}
+                      </div>
                     </div>
-                    <h3 className="font-bold text-gray-900 text-base">
-                      Bill To
-                    </h3>
-                  </div>
-                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-1.5">
-                    {(() => {
-                      // Get first invoice address if it's an array
-                      const addr = Array.isArray(invoiceAddr) ? invoiceAddr[0] : invoiceAddr
-                      return (
-                        <>
-                          <div className="font-semibold text-gray-900 text-lg">
-                            {addr.firstName} {addr.lastName}
-                          </div>
-                          {addr.company && (
-                            <div className="text-sm text-gray-600">
-                              {addr.company}
-                            </div>
-                          )}
-                          <div className="text-sm text-gray-700">
-                            {addr.address}
-                            <br />
-                            {addr.city} {addr.postalCode}
-                            <br />
-                            {addr.country}
-                          </div>
-                          {addr.vatNumber && (
-                            <div className="text-sm text-gray-600">
-                              VAT: {addr.vatNumber}
-                            </div>
-                          )}
-                        </>
-                      )
-                    })()}
-                  </div>
-                </div>
+                  )
                 )
               })()}
               {/* Ship To - Show only if we have shipping data */}
               {(() => {
-                const shippingAddr = o.shippingAddress || (detailData.customer as any).address
+                const shippingAddr =
+                  o.shippingAddress || (detailData.customer as any).address
                 // Check if shipping address has valid data
-                const hasShippingData = shippingAddr &&
-                  ((Array.isArray(shippingAddr) && shippingAddr.length > 0 && (shippingAddr[0]?.street || shippingAddr[0]?.city)) ||
-                   (!Array.isArray(shippingAddr) && (shippingAddr.street || shippingAddr.city)))
-                return hasShippingData && (
-                <div className="bg-white p-3 rounded-xl shadow-sm">
-                  <div className="flex items-center mb-3">
-                    <div className="bg-blue-100 p-2 rounded-lg mr-3">
-                      <svg
-                        className="w-5 h-5 text-blue-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l2.414 2.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"
-                        />
-                      </svg>
+                const hasShippingData =
+                  shippingAddr &&
+                  ((Array.isArray(shippingAddr) &&
+                    shippingAddr.length > 0 &&
+                    (shippingAddr[0]?.street || shippingAddr[0]?.city)) ||
+                    (!Array.isArray(shippingAddr) &&
+                      (shippingAddr.street || shippingAddr.city)))
+                return (
+                  hasShippingData && (
+                    <div className="bg-white p-3 rounded-xl shadow-sm">
+                      <div className="flex items-center mb-3">
+                        <div className="bg-blue-100 p-2 rounded-lg mr-3">
+                          <svg
+                            className="w-5 h-5 text-blue-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l2.414 2.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"
+                            />
+                          </svg>
+                        </div>
+                        <h3 className="font-bold text-gray-900 text-base">
+                          Ship To
+                        </h3>
+                      </div>
+                      <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-1.5">
+                        {(() => {
+                          // Get first address if it's an array
+                          const addr = Array.isArray(shippingAddr)
+                            ? shippingAddr[0]
+                            : shippingAddr
+                          return (
+                            <>
+                              {addr.name && (
+                                <div className="font-semibold text-gray-900 text-lg">
+                                  {addr.name}
+                                </div>
+                              )}
+                              {addr.street && (
+                                <div className="text-gray-700 flex items-start">
+                                  <svg
+                                    className="w-4 h-4 mr-2 mt-0.5 text-gray-400"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                                    />
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                                    />
+                                  </svg>
+                                  {addr.street}
+                                </div>
+                              )}
+                              <div className="text-gray-700">
+                                {addr.postalCode ? `${addr.postalCode} ` : ""}
+                                {addr.city || ""}
+                                {addr.province ? ` (${addr.province})` : ""}
+                              </div>
+                              {addr.country && (
+                                <div className="text-gray-700 font-medium">
+                                  {addr.country}
+                                </div>
+                              )}
+                              {addr.phone && (
+                                <div className="text-gray-600 flex items-center">
+                                  <svg
+                                    className="w-4 h-4 mr-2 text-gray-400"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                                    />
+                                  </svg>
+                                  Phone: {addr.phone}
+                                </div>
+                              )}
+                            </>
+                          )
+                        })()}
+                      </div>
                     </div>
-                    <h3 className="font-bold text-gray-900 text-base">
-                      Ship To
-                    </h3>
-                  </div>
-                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-1.5">
-                    {(() => {
-                      // Get first address if it's an array
-                      const addr = Array.isArray(shippingAddr) ? shippingAddr[0] : shippingAddr
-                      return (
-                        <>
-                          {addr.name && (
-                            <div className="font-semibold text-gray-900 text-lg">
-                              {addr.name}
-                            </div>
-                          )}
-                          {addr.street && (
-                            <div className="text-gray-700 flex items-start">
-                              <svg
-                                className="w-4 h-4 mr-2 mt-0.5 text-gray-400"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                                />
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                                />
-                              </svg>
-                              {addr.street}
-                            </div>
-                          )}
-                          <div className="text-gray-700">
-                            {addr.postalCode
-                              ? `${addr.postalCode} `
-                              : ""}
-                            {addr.city || ""}
-                            {addr.province
-                              ? ` (${addr.province})`
-                              : ""}
-                          </div>
-                          {addr.country && (
-                            <div className="text-gray-700 font-medium">
-                              {addr.country}
-                            </div>
-                          )}
-                          {addr.phone && (
-                            <div className="text-gray-600 flex items-center">
-                              <svg
-                                className="w-4 h-4 mr-2 text-gray-400"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                                />
-                              </svg>
-                              Phone: {addr.phone}
-                            </div>
-                          )}
-                        </>
-                      )
-                    })()}
-                  </div>
-                </div>
+                  )
                 )
               })()}
             </div>
