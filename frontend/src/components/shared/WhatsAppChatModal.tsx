@@ -682,16 +682,16 @@ export function WhatsAppChatModal({
     <Dialog
       open={isOpen}
       onOpenChange={(open) => {
-        // Only allow closing via the X button, not by clicking outside
-        if (!open && isOpen) {
-          // Do nothing, prevent closing
+        // Allow closing by clicking outside
+        if (!open) {
+          onClose()
         }
       }}
     >
       <DialogContent
         className={`${
           showPreviewSplit ? "w-[1170px]" : "w-[600px]"
-        } max-w-[95vw] p-0 overflow-hidden [&>button]:hidden h-[90vh] flex flex-row transition-all`}
+        } max-w-[95vw] p-0 overflow-visible [&>button]:hidden h-[90vh] flex flex-row transition-all relative`}
         data-state={isOpen ? "open" : "closed"}
         style={{
           position: "fixed",
@@ -708,10 +708,10 @@ export function WhatsAppChatModal({
         {/* Close Button - Positioned at top right of DialogContent */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 flex items-center justify-center w-8 h-8 bg-white text-gray-600 rounded-full hover:bg-gray-100 transition-colors z-50 shadow-lg"
+          className="fixed top-[calc(50%-45vh)] right-[calc(50%-585px)] flex items-center justify-center w-10 h-10 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors z-50 shadow-lg"
           aria-label="Close"
         >
-          <X className="h-5 w-5" />
+          <X className="h-6 w-6" />
         </button>
 
         {/* LEFT COLUMN - Chat */}
