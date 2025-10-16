@@ -220,7 +220,7 @@ export const Step2Addresses: React.FC<Step2AddressesProps> = ({
       <div>
         <button
           onClick={onNext}
-          className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 sm:py-3 lg:py-4 px-4 rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2 text-base lg:text-lg"
+          className="w-full lg:w-auto lg:px-8 bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 sm:py-3 lg:py-4 px-4 rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2 text-base lg:text-lg"
         >
           <span>{texts.continue || "Continua"}</span>
           <svg

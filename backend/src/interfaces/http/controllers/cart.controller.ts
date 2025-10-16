@@ -377,7 +377,7 @@ export class CartController {
             itemType: "PRODUCT",
             productId: item.productId,
             productCode: item.product.ProductCode || item.productId,
-            name: item.product.formato 
+            name: item.product.formato
               ? `${item.product.name} ${item.product.formato}`
               : item.product.name || `Product ${item.productId}`,
             formato: item.product.formato || null,

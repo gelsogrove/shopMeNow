@@ -86,8 +86,8 @@ export const Step3Confirm: React.FC<Step3ConfirmProps> = ({
   return (
     <div className="space-y-4">
       {/* Order Summary */}
-      <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
-        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-4">
+      <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 lg:p-6">
+        <h3 className="text-lg lg:text-xl font-bold text-gray-900 flex items-center gap-2 mb-4 lg:mb-6">
           <svg
             className="w-5 h-5 text-green-600"
             fill="none"
@@ -139,10 +139,10 @@ export const Step3Confirm: React.FC<Step3ConfirmProps> = ({
           {/* Total */}
           <div className="pt-4 border-t-2 border-gray-200">
             <div className="flex items-center justify-between">
-              <span className="text-lg font-bold text-gray-700">
+              <span className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-700">
                 {texts.total || "Totale"}:
               </span>
-              <span className="text-2xl font-bold text-green-600">
+              <span className="text-2xl sm:text-3xl lg:text-4xl font-bold text-green-600">
                 €{calculateTotal().toFixed(2)}
               </span>
             </div>
@@ -196,8 +196,8 @@ export const Step3Confirm: React.FC<Step3ConfirmProps> = ({
       </div>
 
       {/* Notes */}
-      <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 lg:p-6">
+        <label className="block text-sm lg:text-base font-medium text-gray-700 mb-3 lg:mb-4">
           {texts.notes || "Note"} ({texts.optional || "opzionale"})
         </label>
         <textarea
@@ -215,7 +215,7 @@ export const Step3Confirm: React.FC<Step3ConfirmProps> = ({
       <div>
         <button
           onClick={onNext}
-          className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 px-4 rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"
+          className="w-full lg:w-auto lg:px-8 bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 sm:py-3 lg:py-4 px-4 rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2 text-base lg:text-lg"
         >
           <span>{texts.proceedToPayment || "Procedi al Pagamento"}</span>
           <svg

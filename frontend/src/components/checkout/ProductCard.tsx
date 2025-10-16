@@ -63,87 +63,163 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     !isService && product.scontoApplicato && product.scontoApplicato > 0
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200">
-      <div className="p-4">
-        {/* Top Section: Image + Info + Delete */}
-        <div className="flex gap-3 mb-3">
-          {/* Product Image */}
-          <div className="w-20 h-20 flex-shrink-0 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg overflow-hidden border border-gray-100 relative">
-            {getImageUrl(product.imageUrl) ? (
-              <img
-                src={getImageUrl(product.imageUrl)!}
-                alt={product.descrizione}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <svg
-                  className="w-9 h-9 text-gray-300"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M20 7l-8-4-8 4m16 0l-8 4-8-4m16 0v10l-8 4-8-4V7"
-                  />
-                </svg>
-              </div>
-            )}
-          </div>
-
-          {/* Product Info */}
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-gray-900 text-base leading-tight mb-1.5 line-clamp-2">
-              {product.descrizione}
-            </h3>
-
-            {/* Meta Info */}
-            <div className="space-y-0.5 mb-2">
-              {product.codice !== "N/A" && (
-                <p className="text-xs font-mono text-gray-500">
-                  {product.codice}
-                </p>
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 lg:rounded-lg">
+      <div className="p-4 lg:p-4">
+        {/* DESKTOP ROW LAYOUT: Image + Info + Quantity + Price + Delete */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+          {/* LEFT: Image + Info */}
+          <div className="flex gap-3 lg:gap-4 mb-3 lg:mb-0 lg:flex-1 lg:min-w-0">
+            {/* Product Image */}
+            <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-32 lg:h-32 flex-shrink-0 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg overflow-hidden border border-gray-100 relative">
+              {getImageUrl(product.imageUrl) ? (
+                <img
+                  src={getImageUrl(product.imageUrl)!}
+                  alt={product.descrizione}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <svg
+                    className="w-9 h-9 text-gray-300"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M20 7l-8-4-8 4m16 0l-8 4-8-4m16 0v10l-8 4-8-4V7"
+                    />
+                  </svg>
+                </div>
               )}
+            </div>
+
+            {/* Product Info */}
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-gray-900 text-base sm:text-lg lg:text-base lg:leading-snug mb-1.5">
+                {product.descrizione}
+              </h3>
+
+              {/* Meta Info */}
+              <div className="space-y-0.5">
+                {product.codice !== "N/A" && (
+                  <p className="text-xs font-mono text-gray-500">
+                    {product.codice}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Delete Button */}
-          <button
-            onClick={() =>
-              onDelete(
-                index,
-                product.descrizione,
-                isService ? "SERVICE" : "PRODUCT",
-                isService ? product.serviceId! : product.productId!
-              )
-            }
-            className="text-gray-300 hover:text-red-500 transition-colors h-fit"
-            aria-label="Rimuovi"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          {/* CENTER: Quantity (hidden on mobile, shown on desktop) */}
+          <div className="hidden lg:flex lg:items-center lg:gap-2 lg:flex-shrink-0">
+            {!isService ? (
+              <div className="flex items-center bg-gray-50 rounded-lg p-0.5">
+                <button
+                  onClick={() => onQuantityChange(index, product.qty - 1)}
+                  disabled={product.qty <= 1}
+                  className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-white active:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  aria-label="Diminuisci quantità"
+                >
+                  <svg
+                    className="w-4 h-4 text-gray-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2.5}
+                      d="M20 12H4"
+                    />
+                  </svg>
+                </button>
+                <span className="w-10 text-center text-sm font-semibold text-gray-900">
+                  {product.qty}
+                </span>
+                <button
+                  onClick={() => onQuantityChange(index, product.qty + 1)}
+                  className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-white active:bg-gray-100 transition-all"
+                  aria-label="Aumenta quantità"
+                >
+                  <svg
+                    className="w-4 h-4 text-gray-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2.5}
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <div className="text-xs text-gray-500">1</div>
+            )}
+          </div>
+
+          {/* RIGHT: Price + Delete */}
+          <div className="flex items-center justify-between lg:gap-4 lg:flex-shrink-0">
+            {/* Price Display */}
+            <div className="text-right">
+              {hasDiscount ? (
+                <div className="flex flex-col items-end">
+                  <span className="text-xs text-gray-400 line-through">
+                    €{(product.prezzoOriginale! * product.qty).toFixed(2)}
+                  </span>
+                  <span className="text-xl font-bold text-green-600">
+                    €{totalPrice.toFixed(2)}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-xl font-bold text-gray-900">
+                  €{totalPrice.toFixed(2)}
+                </span>
+              )}
+            </div>
+
+            {/* Delete Button - RIGHT ALIGNED */}
+            <button
+              onClick={() =>
+                onDelete(
+                  index,
+                  product.descrizione,
+                  isService ? "SERVICE" : "PRODUCT",
+                  isService ? product.serviceId! : product.productId!
+                )
+              }
+              className="ml-4 text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
+              aria-label="Rimuovi"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-              />
-            </svg>
-          </button>
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
 
-        {/* Divider */}
-        <div className="border-t border-gray-100 mb-3" />
+        {/* MOBILE: Divider */}
+        <div className="border-t border-gray-100 mt-3 pt-3 lg:hidden" />
 
-        {/* Bottom Section: Quantity + Price */}
-        <div className="flex items-center justify-between">
+        {/* MOBILE: Bottom Section - Quantity Controls + Price (hidden on desktop) */}
+        <div className="flex items-center justify-between lg:hidden">
           {/* Quantity Controls - iOS Style */}
           {!isService ? (
             <div className="flex items-center bg-gray-50 rounded-lg p-0.5">
@@ -196,19 +272,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             </div>
           )}
 
-          {/* Price Display */}
+          {/* Price on mobile */}
           <div className="text-right">
             {hasDiscount ? (
               <div className="flex flex-col items-end">
                 <span className="text-xs text-gray-400 line-through">
                   €{(product.prezzoOriginale! * product.qty).toFixed(2)}
                 </span>
-                <span className="text-xl font-bold text-green-600">
+                <span className="text-lg font-bold text-green-600">
                   €{totalPrice.toFixed(2)}
                 </span>
               </div>
             ) : (
-              <span className="text-xl font-bold text-gray-900">
+              <span className="text-lg font-bold text-gray-900">
                 €{totalPrice.toFixed(2)}
               </span>
             )}

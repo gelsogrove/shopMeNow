@@ -129,7 +129,7 @@ export const Step1Products: React.FC<Step1ProductsProps> = ({
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-3 lg:space-y-0">
             {products.map((product, index) => (
               <ProductCard
                 key={product.id}
@@ -144,9 +144,9 @@ export const Step1Products: React.FC<Step1ProductsProps> = ({
         )}
       </div>
 
-      {/* Footer with Total and Next Button */}
+      {/* Footer with Total and Next Button - HIDDEN on desktop (sidebar shows it) */}
       {products.length > 0 && (
-        <div className="p-3 sm:p-4 lg:p-6 border-t border-gray-100 bg-gray-50">
+        <div className="p-3 sm:p-4 lg:p-6 border-t border-gray-100 bg-gray-50 lg:hidden">
           {/* Total */}
           <div className="flex items-center justify-between mb-4 lg:mb-6">
             <span className="text-base sm:text-lg lg:text-xl font-semibold text-gray-700">
@@ -160,7 +160,7 @@ export const Step1Products: React.FC<Step1ProductsProps> = ({
           {/* Next Button - DIMENSIONI NORMALI */}
           <button
             onClick={onNext}
-            className="w-full bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold py-2.5 px-4 sm:py-3 lg:py-4 rounded-lg transition-all flex items-center justify-center gap-2 text-base lg:text-lg"
+            className="w-full lg:w-auto lg:px-8 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold py-2.5 px-4 sm:py-3 lg:py-4 rounded-lg transition-all flex items-center justify-center gap-2 text-base lg:text-lg"
           >
             <span>{texts.continue || "Continua"}</span>
             <svg

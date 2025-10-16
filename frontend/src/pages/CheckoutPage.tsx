@@ -890,7 +890,7 @@ const CheckoutPage: React.FC = () => {
       <div className="pt-[60px] -mt-10">
         {" "}
         {/* Exact header height: 60px - PULL UP with negative margin */}
-        <div className="max-w-md mx-auto px-3 sm:max-w-2xl sm:px-4 lg:max-w-5xl lg:px-8 xl:max-w-6xl">
+        <div className="max-w-md mx-auto px-3 sm:max-w-2xl sm:px-4 lg:max-w-7xl lg:px-8 xl:max-w-full xl:px-12">
           {/* Progress Steps - New Modular Component - NO top margin */}
           <div className="mb-3 sm:mb-6 lg:mb-8">
             <ProgressSteps
@@ -899,6 +899,11 @@ const CheckoutPage: React.FC = () => {
               onStepClick={(stepNum) => setCurrentStep(stepNum)}
             />
           </div>
+
+          {/* DESKTOP TWO-COLUMN LAYOUT */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+            {/* LEFT COLUMN - Main Content (lg:col-span-2) */}
+            <div className="lg:col-span-2">
 
           {/* Step 1: Products - New Modular Component */}
           {currentStep === 1 && (
@@ -972,6 +977,155 @@ const CheckoutPage: React.FC = () => {
               />
             </div>
           )}
+            </div>
+            {/* RIGHT COLUMN - Order Summary (STICKY) - lg:col-span-1 */}
+            {currentStep > 0 && (
+              <div className="hidden lg:block">
+                <div className="sticky top-[80px] bg-white rounded-xl shadow-sm p-4 lg:p-6 border border-gray-100">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">
+                    {texts.orderSummary || "Riepilogo Ordine"}
+                  </h3>
+                  <div className="space-y-3 mb-6 pb-6 border-b border-gray-100">
+                    {prodotti.map((product, idx) => (
+                      <div key={idx} className="flex justify-between text-sm">
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900">{product.descrizione}</p>
+                          <p className="text-xs text-gray-500">x{product.qty || 1}</p>
+                        </div>
+                        <p className="font-semibold text-gray-900">
+                          €{((product.prezzoScontato || product.prezzo) * (product.qty || 1)).toFixed(2)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Subtotale:</span>
+                      <span className="font-semibold">€{calculateTotal().toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between pt-2 border-t border-gray-200">
+                      <span className="text-lg font-bold text-gray-900">Totale:</span>
+                      <span className="text-2xl font-bold text-green-600">€{calculateTotal().toFixed(2)}</span>
+                    </div>
+                  </div>
+                  {/* Next Button - Desktop Only */}
+                  {currentStep === 1 && prodotti.length > 0 && (
+                    <button
+                      onClick={() => setCurrentStep(2)}
+                      className="w-full mt-6 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 text-base"
+                    >
+                      <span>{texts.continue || "Continua"}</span>
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        strokeWidth={2.5}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </button>
+                  )}
+                  {currentStep === 2 && (
+                    <button
+                      onClick={handleNextStep}
+                      className="w-full mt-6 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 text-base"
+                    >
+                      <span>{texts.continue || "Continua"}</span>
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        strokeWidth={2.5}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </button>
+                  )}
+                  {currentStep === 3 && (
+                    <button
+                      onClick={() => setCurrentStep(4)}
+                      className="w-full mt-6 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 text-base"
+                    >
+                      <span>{texts.proceedToPayment || "Procedi al Pagamento"}</span>
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        strokeWidth={2.5}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </button>
+                  )}
+                  {currentStep === 4 && (
+                    <button
+                      onClick={handleSubmit}
+                      disabled={submitStatus.loading}
+                      className="w-full mt-6 bg-green-600 hover:bg-green-700 active:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 text-base"
+                    >
+                      {submitStatus.loading ? (
+                        <>
+                          <svg
+                            className="animate-spin h-4 w-4 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                          <span>{texts.processing || "Elaborazione..."}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>{texts.confirmPayment || "Conferma Pagamento"}</span>
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            strokeWidth={2}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                          </svg>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
         {/* Add Products Modal */}
         {showAddProducts && (

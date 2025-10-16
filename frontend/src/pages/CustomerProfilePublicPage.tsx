@@ -287,10 +287,10 @@ const CustomerProfilePublicPage: React.FC = () => {
       />
 
       <div className="pt-16">
-        <div className="max-w-3xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+        <div className="max-w-md mx-auto px-3 sm:max-w-2xl sm:px-4 lg:max-w-5xl lg:px-8 xl:max-w-6xl py-4 sm:py-6 lg:py-8">
           {/* Profile Form */}
           {profileData && (
-            <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+            <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 lg:p-6">
               <ProfileForm
                 profileData={profileData}
                 onSave={handleSaveProfile}

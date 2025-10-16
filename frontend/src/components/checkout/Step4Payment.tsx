@@ -65,7 +65,7 @@ export const Step4Payment: React.FC<Step4PaymentProps> = ({
   return (
     <div className="space-y-6">
       {/* Payment Card - Stripe Style */}
-      <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700 rounded-2xl shadow-2xl p-6 sm:p-8 text-white">
+      <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700 rounded-2xl shadow-2xl p-6 sm:p-8 lg:p-10 text-white">
         {/* Card Chip */}
         <div className="flex items-start justify-between mb-8">
           <div className="w-12 h-10 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-md shadow-md" />
@@ -111,9 +111,9 @@ export const Step4Payment: React.FC<Step4PaymentProps> = ({
       </div>
 
       {/* Payment Form */}
-      <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+      <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 lg:p-6">
+        <div className="flex items-center justify-between mb-4 lg:mb-6">
+          <h3 className="text-lg lg:text-xl font-bold text-gray-900 flex items-center gap-2">
             <svg
               className="w-5 h-5 text-green-600"
               fill="none"
@@ -263,14 +263,14 @@ export const Step4Payment: React.FC<Step4PaymentProps> = ({
       </div>
 
       {/* Total Summary */}
-      <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 text-white">
+      <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-4 sm:p-6 lg:p-8 text-white">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-lg opacity-90">
+          <span className="text-lg sm:text-xl lg:text-2xl opacity-90">
             {texts.totalToPay || "Totale da Pagare"}
           </span>
-          <span className="text-3xl font-bold">€{total.toFixed(2)}</span>
+          <span className="text-3xl sm:text-4xl lg:text-5xl font-bold">€{total.toFixed(2)}</span>
         </div>
-        <p className="text-sm opacity-70">
+        <p className="text-sm lg:text-base opacity-70">
           {texts.includesVAT || "IVA inclusa"}
         </p>
       </div>
@@ -287,7 +287,7 @@ export const Step4Payment: React.FC<Step4PaymentProps> = ({
             !cvc ||
             cardNumber.replace(/\s/g, "").length < 15
           }
-          className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 px-4 rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full lg:w-auto lg:px-12 bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 sm:py-3 lg:py-4 px-4 rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-base lg:text-lg"
         >
           {loading ? (
             <>
