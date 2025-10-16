@@ -674,7 +674,7 @@ export function WhatsAppChatModal({
   // Handle link clicks to open in new tab
   const handleLinkClick = (url: string, e: React.MouseEvent) => {
     e.preventDefault()
-    window.open(url, '_blank')
+    window.open(url, "_blank")
   }
 
   return (
