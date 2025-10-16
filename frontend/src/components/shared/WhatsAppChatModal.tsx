@@ -97,6 +97,16 @@ export function WhatsAppChatModal({
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [showFunctionCalls, setShowFunctionCalls] = useState(false)
   const [showProcessedPrompt, setShowProcessedPrompt] = useState(false)
+  const [showPreviewSplit, setShowPreviewSplit] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [iframeKey, setIframeKey] = useState(0)
+
+  // Reload iframe when URL changes
+  useEffect(() => {
+    if (previewUrl) {
+      setIframeKey((prev) => prev + 1)
+    }
+  }, [previewUrl])
 
   // Check if we have a valid workspace ID
   const currentWorkspaceId = getWorkspaceId(workspaceId)
@@ -661,6 +671,15 @@ export function WhatsAppChatModal({
     // We're intentionally NOT clearing the sessionId here
   }
 
+  // Handle link clicks to open preview
+  const handleLinkClick = (url: string, e: React.MouseEvent) => {
+    if (url.includes("localhost:3000") || url.includes("/checkout")) {
+      e.preventDefault()
+      setPreviewUrl(url)
+      setShowPreviewSplit(true)
+    }
+  }
+
   return (
     <Dialog
       open={isOpen}
@@ -672,7 +691,7 @@ export function WhatsAppChatModal({
       }}
     >
       <DialogContent
-        className="w-[600px] max-w-[90vw] p-0 overflow-hidden [&>button]:hidden h-[850px] flex flex-col"
+        className="w-[1170px] max-w-[95vw] p-0 overflow-hidden [&>button]:hidden h-[90vh] flex flex-row"
         data-state={isOpen ? "open" : "closed"}
         style={{
           position: "fixed",
@@ -685,64 +704,69 @@ export function WhatsAppChatModal({
         <DialogDescription id="whatsapp-dialog-description" className="sr-only">
           WhatsApp conversation interface to chat with a contact
         </DialogDescription>
-        {/* WhatsApp header with WhatsApp icon and X */}
-        <div className="bg-gradient-to-r from-green-500 to-green-400 shadow-md p-4 flex items-center justify-between">
-          <div className="flex items-center">
-            <div className="w-12 h-12 bg-white text-green-600 rounded-full flex items-center justify-center text-xl font-bold shadow mr-4">
-              {selectedChat?.customerName
-                ? getInitials(selectedChat.customerName)
-                : "WC"}
-            </div>
-            <span className="text-white text-lg font-bold flex items-center">
-              <MessageCircle className="h-6 w-6 mr-2 text-white opacity-80" />
-              {userPhoneNumber || channelName}
-            </span>
-          </div>
-          <div className="flex gap-2 items-center">
-            <button
-              onClick={() => setShowFunctionCalls(!showFunctionCalls)}
-              className={`text-white hover:bg-green-600 rounded-full p-2 transition ${
-                showFunctionCalls ? "bg-green-600" : ""
-              }`}
-              aria-label="Toggle Function Calls Debug"
-              title="Show/Hide Function Calls Debug"
-            >
-              <Code className="h-5 w-5" />
-            </button>
-            <button
-              onClick={() => setShowProcessedPrompt(!showProcessedPrompt)}
-              className={`text-white hover:bg-green-600 rounded-full p-2 transition ${
-                showProcessedPrompt ? "bg-green-600" : ""
-              }`}
-              aria-label="Toggle Complete Debug Info"
-              title="Show/Hide Complete Debug Information"
-            >
-              <Settings className="h-5 w-5" />
-            </button>
-            <button
-              onClick={onClose}
-              className="text-white hover:bg-green-600 rounded-full p-2 transition"
-              aria-label="Close"
-            >
-              <X className="h-6 w-6" />
-            </button>
-          </div>
-        </div>
 
-        {!chatStarted ? (
-          <div className="p-6 flex-1 overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-4">
-              Enter details to start a chat
-            </h3>
-
-            {!hasValidWorkspace && (
-              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                <p className="text-sm text-yellow-800">
-                  ⚠️ No workspace available. Please select a workspace first to
-                  send messages.
-                </p>
+        {/* LEFT COLUMN - Chat */}
+        <div className="w-[50%] flex flex-col bg-transparent border-r border-gray-200 flex-shrink-0">
+          {/* WhatsApp header with WhatsApp icon and X */}
+          <div className="bg-gradient-to-r from-green-500 to-green-400 shadow-md p-4 flex items-center justify-between flex-shrink-0">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-white text-green-600 rounded-full flex items-center justify-center text-xl font-bold shadow mr-4">
+                {selectedChat?.customerName
+                  ? getInitials(selectedChat.customerName)
+                  : "WC"}
               </div>
-            )}
+              <span className="text-white text-lg font-bold flex items-center">
+                <MessageCircle className="h-6 w-6 mr-2 text-white opacity-80" />
+                {userPhoneNumber || channelName}
+              </span>
+            </div>
+            <div className="flex gap-2 items-center">
+              <button
+                onClick={() => setShowFunctionCalls(!showFunctionCalls)}
+                className={`text-white hover:bg-green-600 rounded-full p-2 transition ${
+                  showFunctionCalls ? "bg-green-600" : ""
+                }`}
+                aria-label="Toggle Function Calls Debug"
+                title="Show/Hide Function Calls Debug"
+              >
+                <Code className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => setShowProcessedPrompt(!showProcessedPrompt)}
+                className={`text-white hover:bg-green-600 rounded-full p-2 transition ${
+                  showProcessedPrompt ? "bg-green-600" : ""
+                }`}
+                aria-label="Toggle Complete Debug Info"
+                title="Show/Hide Complete Debug Information"
+              >
+                <Settings className="h-5 w-5" />
+              </button>
+              <button
+                onClick={onClose}
+                className="text-white hover:bg-green-600 rounded-full p-2 transition"
+                aria-label="Close"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+          </div>
+
+          {/* Chat Content Area */}
+          <div className="flex-1 overflow-y-auto">
+            {!chatStarted ? (
+              <div className="p-6">
+                <h3 className="text-lg font-semibold mb-4">
+                  Enter details to start a chat
+                </h3>
+
+                {!hasValidWorkspace && (
+                  <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <p className="text-sm text-yellow-800">
+                      ⚠️ No workspace available. Please select a workspace first to
+                      send messages.
+                    </p>
+                  </div>
+                )}
 
             <div className="space-y-6">
               <div>
@@ -794,8 +818,8 @@ export function WhatsAppChatModal({
                   : "Start Chat"}
               </Button>
             </div>
-          </div>
-        ) : (
+              </div>
+            ) : (
           <>
             {/* Chat messages */}
             <ScrollArea className="flex-1 p-4 bg-gray-100">
@@ -887,6 +911,7 @@ export function WhatsAppChatModal({
                           <MessageRenderer
                             content={message.content}
                             variant="chat"
+                            onLinkClick={handleLinkClick}
                           />
                         </div>
 
@@ -1498,7 +1523,50 @@ export function WhatsAppChatModal({
             </div>
           </>
         )}
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN - Device Preview Overlay */}
+        <div className="w-[40%] bg-transparent flex items-center justify-center relative h-full flex-shrink-0 p-2 ml-[60px]">
+          {/* Close Preview Button */}
+          {showPreviewSplit && (
+            <button
+              onClick={() => {
+                setShowPreviewSplit(false)
+                setPreviewUrl(null)
+              }}
+              className="absolute top-4 right-4 flex items-center justify-center w-8 h-8 bg-red-600 text-white rounded hover:bg-red-700 transition-colors z-10"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+
+          {/* iPhone-like Device Frame */}
+          <div className="relative w-full h-full bg-black rounded-3xl shadow-2xl overflow-hidden border-8 border-gray-900">
+              {/* Notch */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-10"></div>
+              
+              {/* Screen */}
+              {previewUrl ? (
+                <iframe
+                  key={iframeKey}
+                  src={previewUrl}
+                  className="w-full h-full"
+                  title="Preview"
+                  sandbox="allow-scripts allow-same-origin allow-forms"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                  <span className="text-gray-500 text-sm">Click a link to preview</span>
+                </div>
+              )}
+              
+              {/* Home Indicator */}
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-28 h-1 bg-black rounded-full"></div>
+            </div>
+        </div>
       </DialogContent>
     </Dialog>
   )
 }
+
