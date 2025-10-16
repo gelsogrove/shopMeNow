@@ -138,7 +138,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 >
                   {isService ? texts.serviceBadge : texts.productBadge}
                 </span>
-                
+
                 {/* Discount Badge - Red with white text */}
                 {hasDiscount && (
                   <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-600 text-white border border-red-700">
@@ -158,7 +158,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                     {product.codice}
                   </p>
                 )}
-                
+
                 {/* Description for Desktop + Tablet - PROMINENT */}
                 {!isService && product.formato && (
                   <p className="text-sm text-gray-700 hidden md:block leading-snug font-medium">

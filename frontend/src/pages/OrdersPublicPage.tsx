@@ -965,34 +965,68 @@ const OrdersPublicPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {displayOrders.map((o) => (
                 <div
                   key={o.id}
                   id={`order-${o.orderCode}`}
-                  className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200"
+                  className="bg-white rounded-lg sm:rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200"
                 >
                   <a
                     href={`${window.location.origin}/orders-public/${o.orderCode}?token=${token}`}
-                    className="block p-3 hover:bg-gray-50/50 rounded-xl transition-colors cursor-pointer"
+                    className="block p-2.5 sm:p-3 hover:bg-gray-50/50 rounded-lg sm:rounded-xl transition-colors cursor-pointer"
                   >
-                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-                      {/* Left Section - Order Info */}
-                      <div className="flex-1 space-y-3">
-                        <div className="flex items-center space-x-3">
-                          <div className="text-xl font-bold text-gray-900">
-                            {o.orderCode}
-                          </div>
-                          <div className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
-                            {formatDate(o.date)}
-                          </div>
+                    <div className="flex flex-col gap-2 sm:gap-3">
+                      {/* Top Row - Order Code & Date */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="text-base sm:text-xl font-bold text-gray-900 truncate">
+                          {o.orderCode}
                         </div>
+                        <div className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 py-0.5 sm:py-1 rounded whitespace-nowrap flex-shrink-0">
+                          {formatDate(o.date)}
+                        </div>
+                      </div>
 
-                        {/* Price Breakdown */}
-                        <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
-                          <div className="flex items-center space-x-1">
+                      {/* Price Breakdown - Compact on mobile */}
+                      <div className="flex flex-wrap items-center gap-1.5 sm:gap-3 text-xs sm:text-sm text-gray-600">
+                        <div className="flex items-center space-x-1">
+                          <svg
+                            className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
+                            />
+                          </svg>
+                          <span className="line-clamp-1">
+                            €
+                            {(
+                              Math.max(
+                                0,
+                                (o.totalAmount || 0) - (o.taxAmount || 0)
+                              ) / 100
+                            ).toFixed(2)}
+                          </span>
+                        </div>
+                        {(o.taxAmount || 0) > 0 && (
+                          <div className="flex items-center space-x-0.5 sm:space-x-1">
+                            <span>•</span>
+                            <span className="line-clamp-1">
+                              VAT: €
+                              {((o.taxAmount || 0) / 100).toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                        {(o.shippingAmount || 0) > 0 && (
+                          <div className="flex items-center space-x-0.5 sm:space-x-1">
+                            <span>•</span>
                             <svg
-                              className="w-4 h-4 text-gray-400"
+                              className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400"
                               fill="none"
                               stroke="currentColor"
                               viewBox="0 0 24 24"
@@ -1001,59 +1035,24 @@ const OrdersPublicPage: React.FC = () => {
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                                 strokeWidth={2}
-                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
+                                d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l2.414 2.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"
                               />
                             </svg>
-                            <span>
-                              Subtotal:{" "}
-                              {formatCurrency(
-                                Math.max(
-                                  0,
-                                  (o.totalAmount || 0) - (o.taxAmount || 0)
-                                )
-                              )}
+                            <span className="line-clamp-1">
+                              €
+                              {((o.shippingAmount || 0) / 100).toFixed(2)}
                             </span>
                           </div>
-                          {(o.taxAmount || 0) > 0 && (
-                            <div className="flex items-center space-x-1">
-                              <span>•</span>
-                              <span>
-                                VAT: {formatCurrency(o.taxAmount || 0)}
-                              </span>
-                            </div>
-                          )}
-                          {(o.shippingAmount || 0) > 0 && (
-                            <div className="flex items-center space-x-1">
-                              <span>•</span>
-                              <svg
-                                className="w-4 h-4 text-gray-400"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l2.414 2.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"
-                                />
-                              </svg>
-                              <span>
-                                Shipping:{" "}
-                                {formatCurrency(o.shippingAmount || 0)}
-                              </span>
-                            </div>
-                          )}
-                        </div>
+                        )}
                       </div>
 
-                      {/* Right Section - Status & Total */}
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                        {/* Status Badges */}
-                        <div className="flex flex-col space-y-2">
-                          <div className="flex items-center space-x-2">
+                      {/* Bottom Row - Status Badges & Total */}
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        {/* Status Badges - Stacked on mobile */}
+                        <div className="flex flex-col gap-1 min-w-0">
+                          <div className="flex items-center space-x-1">
                             <svg
-                              className="w-4 h-4 text-gray-400"
+                              className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0"
                               fill="none"
                               stroke="currentColor"
                               viewBox="0 0 24 24"
@@ -1066,16 +1065,16 @@ const OrdersPublicPage: React.FC = () => {
                               />
                             </svg>
                             <span
-                              className={`text-xs px-3 py-1 rounded-full font-medium ${statusColor(
+                              className={`text-xs px-2 py-0.5 sm:px-3 sm:py-1 rounded-full font-medium truncate ${statusColor(
                                 o.status
                               )}`}
                             >
                               {o.status}
                             </span>
                           </div>
-                          <div className="flex items-center space-x-2">
+                          <div className="flex items-center space-x-1">
                             <svg
-                              className="w-4 h-4 text-gray-400"
+                              className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0"
                               fill="none"
                               stroke="currentColor"
                               viewBox="0 0 24 24"
@@ -1088,7 +1087,7 @@ const OrdersPublicPage: React.FC = () => {
                               />
                             </svg>
                             <span
-                              className={`text-xs px-3 py-1 rounded-full font-medium ${paymentColor(
+                              className={`text-xs px-2 py-0.5 sm:px-3 sm:py-1 rounded-full font-medium truncate ${paymentColor(
                                 o.paymentStatus
                               )}`}
                             >
@@ -1097,18 +1096,17 @@ const OrdersPublicPage: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Total Amount */}
-                        <div className="flex items-center space-x-3">
-                          <div className="text-right">
-                            <div className="text-lg font-bold text-gray-900">
-                              {formatCurrency(o.totalAmount)}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              Total Amount
-                            </div>
+                        {/* Total Amount - Right side */}
+                        <div className="text-right flex-shrink-0">
+                          <div className="text-base sm:text-lg font-bold text-gray-900 whitespace-nowrap">
+                            €
+                            {(o.totalAmount / 100).toFixed(2)}
+                          </div>
+                          <div className="text-xs text-gray-500 hidden sm:block">
+                            Total
                           </div>
                           <svg
-                            className="w-5 h-5 text-gray-400"
+                            className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 mx-auto mt-0.5"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"

@@ -69,7 +69,8 @@ export const CartIframePopup: React.FC<CartIframePopupProps> = ({
   if (!isOpen) return null
 
   // Use appropriate sizing based on layout type
-  const size = layoutType === "inline" ? getInlineViewModeSize() : getViewModeSize()
+  const size =
+    layoutType === "inline" ? getInlineViewModeSize() : getViewModeSize()
 
   // INLINE mode: render as split view on the right side (no backdrop)
   if (layoutType === "inline") {
