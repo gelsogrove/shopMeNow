@@ -277,6 +277,77 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
           </div>
         </CardContent>
       </Card>
+
+      {/* ROW 2: Pie Chart Categorie + Spazio Vuoto */}
+      <div className="lg:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        {/* Grafico 3: Pie Chart Categorie */}
+        {categoryPieData.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-purple-600" />
+                Distribuzione per Categoria
+              </CardTitle>
+              <p className="text-sm text-gray-500 mt-1">
+                Totale ordini per categoria prodotto
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={categoryPieData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) =>
+                        `${name}: ${(percent * 100).toFixed(0)}%`
+                      }
+                      outerRadius={120}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {categoryPieData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={PIE_COLORS[index % PIE_COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Spazio Vuoto per Future Implementazioni */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-gray-400" />
+              Spazio Disponibile
+            </CardTitle>
+            <p className="text-sm text-gray-500 mt-1">
+              In sviluppo - nuovo grafico in arrivo
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="h-80 flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+              <div className="text-center">
+                <TrendingUp className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-400 font-medium">Spazio Riservato</p>
+                <p className="text-sm text-gray-400 mt-2">
+                  Nuovo grafico analytics
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
