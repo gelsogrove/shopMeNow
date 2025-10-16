@@ -268,7 +268,9 @@ export const Step4Payment: React.FC<Step4PaymentProps> = ({
           <span className="text-lg sm:text-xl lg:text-2xl opacity-90">
             {texts.totalToPay || "Totale da Pagare"}
           </span>
-          <span className="text-3xl sm:text-4xl lg:text-5xl font-bold">€{total.toFixed(2)}</span>
+          <span className="text-3xl sm:text-4xl lg:text-5xl font-bold">
+            €{total.toFixed(2)}
+          </span>
         </div>
         <p className="text-sm lg:text-base opacity-70">
           {texts.includesVAT || "IVA inclusa"}

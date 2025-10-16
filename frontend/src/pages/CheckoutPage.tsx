@@ -904,79 +904,78 @@ const CheckoutPage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
             {/* LEFT COLUMN - Main Content (lg:col-span-2) */}
             <div className="lg:col-span-2">
+              {/* Step 1: Products - New Modular Component */}
+              {currentStep === 1 && (
+                <div className="mb-3 sm:mb-6 lg:mb-8">
+                  <Step1Products
+                    products={prodotti}
+                    texts={texts}
+                    onAddProducts={() => {
+                      setShowAddProducts(true)
+                      loadAvailableProducts()
+                    }}
+                    onAddServices={() => {
+                      setShowAddServices(true)
+                      loadAvailableServices()
+                    }}
+                    onQuantityChange={handleQuantityChange}
+                    onDeleteProduct={(index, name, itemType, itemId) =>
+                      showDeleteConfirmation(index, name, itemType, itemId)
+                    }
+                    onNext={() => setCurrentStep(2)}
+                  />
+                </div>
+              )}
 
-          {/* Step 1: Products - New Modular Component */}
-          {currentStep === 1 && (
-            <div className="mb-3 sm:mb-6 lg:mb-8">
-              <Step1Products
-                products={prodotti}
-                texts={texts}
-                onAddProducts={() => {
-                  setShowAddProducts(true)
-                  loadAvailableProducts()
-                }}
-                onAddServices={() => {
-                  setShowAddServices(true)
-                  loadAvailableServices()
-                }}
-                onQuantityChange={handleQuantityChange}
-                onDeleteProduct={(index, name, itemType, itemId) =>
-                  showDeleteConfirmation(index, name, itemType, itemId)
-                }
-                onNext={() => setCurrentStep(2)}
-              />
-            </div>
-          )}
+              {/* Step 2: Addresses - New Modular Component */}
+              {currentStep === 2 && (
+                <div className="mb-3 sm:mb-6 lg:mb-8">
+                  <Step2Addresses
+                    shippingAddress={formData.shippingAddress}
+                    billingAddress={formData.billingAddress}
+                    sameAsBilling={formData.sameAsBilling}
+                    texts={texts}
+                    onShippingChange={(field, value) =>
+                      handleInputChange("shippingAddress", field, value)
+                    }
+                    onBillingChange={(field, value) =>
+                      handleInputChange("billingAddress", field, value)
+                    }
+                    onSameAsBillingChange={handleSameAsBillingChange}
+                    onNext={handleNextStep}
+                  />
+                </div>
+              )}
 
-          {/* Step 2: Addresses - New Modular Component */}
-          {currentStep === 2 && (
-            <div className="mb-3 sm:mb-6 lg:mb-8">
-              <Step2Addresses
-                shippingAddress={formData.shippingAddress}
-                billingAddress={formData.billingAddress}
-                sameAsBilling={formData.sameAsBilling}
-                texts={texts}
-                onShippingChange={(field, value) =>
-                  handleInputChange("shippingAddress", field, value)
-                }
-                onBillingChange={(field, value) =>
-                  handleInputChange("billingAddress", field, value)
-                }
-                onSameAsBillingChange={handleSameAsBillingChange}
-                onNext={handleNextStep}
-              />
-            </div>
-          )}
+              {/* Step 3: Confirmation - New Modular Component */}
+              {currentStep === 3 && (
+                <div className="mb-3 sm:mb-6 lg:mb-8">
+                  <Step3Confirm
+                    products={prodotti}
+                    shippingAddress={formData.shippingAddress}
+                    billingAddress={formData.billingAddress}
+                    sameAsBilling={formData.sameAsBilling}
+                    notes={formData.notes}
+                    texts={texts}
+                    onNotesChange={(value) =>
+                      setFormData((prev) => ({ ...prev, notes: value }))
+                    }
+                    onNext={() => setCurrentStep(4)}
+                  />
+                </div>
+              )}
 
-          {/* Step 3: Confirmation - New Modular Component */}
-          {currentStep === 3 && (
-            <div className="mb-3 sm:mb-6 lg:mb-8">
-              <Step3Confirm
-                products={prodotti}
-                shippingAddress={formData.shippingAddress}
-                billingAddress={formData.billingAddress}
-                sameAsBilling={formData.sameAsBilling}
-                notes={formData.notes}
-                texts={texts}
-                onNotesChange={(value) =>
-                  setFormData((prev) => ({ ...prev, notes: value }))
-                }
-                onNext={() => setCurrentStep(4)}
-              />
-            </div>
-          )}
-
-          {/* Step 4: Payment - New Modular Component */}
-          {currentStep === 4 && (
-            <div className="mb-3 sm:mb-6 lg:mb-8">
-              <Step4Payment
-                total={calculateTotal()}
-                texts={texts}
-                onConfirm={handleSubmit}
-                loading={submitStatus.loading}
-              />
-            </div>
-          )}
+              {/* Step 4: Payment - New Modular Component */}
+              {currentStep === 4 && (
+                <div className="mb-3 sm:mb-6 lg:mb-8">
+                  <Step4Payment
+                    total={calculateTotal()}
+                    texts={texts}
+                    onConfirm={handleSubmit}
+                    loading={submitStatus.loading}
+                  />
+                </div>
+              )}
             </div>
             {/* RIGHT COLUMN - Order Summary (STICKY) - lg:col-span-1 */}
             {currentStep > 0 && (
@@ -989,11 +988,19 @@ const CheckoutPage: React.FC = () => {
                     {prodotti.map((product, idx) => (
                       <div key={idx} className="flex justify-between text-sm">
                         <div className="flex-1">
-                          <p className="font-medium text-gray-900">{product.descrizione}</p>
-                          <p className="text-xs text-gray-500">x{product.qty || 1}</p>
+                          <p className="font-medium text-gray-900">
+                            {product.descrizione}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            x{product.qty || 1}
+                          </p>
                         </div>
                         <p className="font-semibold text-gray-900">
-                          €{((product.prezzoScontato || product.prezzo) * (product.qty || 1)).toFixed(2)}
+                          €
+                          {(
+                            (product.prezzoScontato || product.prezzo) *
+                            (product.qty || 1)
+                          ).toFixed(2)}
                         </p>
                       </div>
                     ))}
@@ -1001,11 +1008,17 @@ const CheckoutPage: React.FC = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Subtotale:</span>
-                      <span className="font-semibold">€{calculateTotal().toFixed(2)}</span>
+                      <span className="font-semibold">
+                        €{calculateTotal().toFixed(2)}
+                      </span>
                     </div>
                     <div className="flex justify-between pt-2 border-t border-gray-200">
-                      <span className="text-lg font-bold text-gray-900">Totale:</span>
-                      <span className="text-2xl font-bold text-green-600">€{calculateTotal().toFixed(2)}</span>
+                      <span className="text-lg font-bold text-gray-900">
+                        Totale:
+                      </span>
+                      <span className="text-2xl font-bold text-green-600">
+                        €{calculateTotal().toFixed(2)}
+                      </span>
                     </div>
                   </div>
                   {/* Next Button - Desktop Only */}
@@ -1056,7 +1069,9 @@ const CheckoutPage: React.FC = () => {
                       onClick={() => setCurrentStep(4)}
                       className="w-full mt-6 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 text-base"
                     >
-                      <span>{texts.proceedToPayment || "Procedi al Pagamento"}</span>
+                      <span>
+                        {texts.proceedToPayment || "Procedi al Pagamento"}
+                      </span>
                       <svg
                         className="w-4 h-4"
                         fill="none"
@@ -1104,7 +1119,9 @@ const CheckoutPage: React.FC = () => {
                         </>
                       ) : (
                         <>
-                          <span>{texts.confirmPayment || "Conferma Pagamento"}</span>
+                          <span>
+                            {texts.confirmPayment || "Conferma Pagamento"}
+                          </span>
                           <svg
                             className="w-4 h-4"
                             fill="none"
