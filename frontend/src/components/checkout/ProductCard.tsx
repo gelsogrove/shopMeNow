@@ -27,6 +27,7 @@ interface Product {
   prezzoOriginale?: number
   prezzoScontato?: number
   scontoApplicato?: number
+  nomeSconto?: string // 💚 Customer discount name
   imageUrl?: string[]
 }
 
@@ -66,7 +67,35 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 lg:rounded-lg">
       <div className="p-4 lg:p-4">
         {/* DESKTOP ROW LAYOUT: Image + Info + Quantity + Price + Delete */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between lg:gap-4 relative">
+          {/* Delete Button - TOP RIGHT (only visible on md and up) */}
+          <button
+            onClick={() =>
+              onDelete(
+                index,
+                product.descrizione,
+                isService ? "SERVICE" : "PRODUCT",
+                isService ? product.serviceId! : product.productId!
+              )
+            }
+            className="hidden md:flex absolute top-0 right-0 text-gray-300 hover:text-red-500 transition-colors"
+            aria-label="Rimuovi"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
+            </svg>
+          </button>
+
           {/* LEFT: Image + Info */}
           <div className="flex gap-3 lg:gap-4 mb-3 lg:mb-0 lg:flex-1 lg:min-w-0">
             {/* Product Image */}
@@ -98,15 +127,42 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
             {/* Product Info */}
             <div className="flex-1 min-w-0">
+              {/* Type Badge + Discount Badge */}
+              <div className="mb-2 flex items-center gap-2">
+                <span
+                  className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                    isService
+                      ? "bg-blue-100 text-blue-800"
+                      : "bg-green-100 text-green-800"
+                  }`}
+                >
+                  {isService ? texts.serviceBadge : texts.productBadge}
+                </span>
+                
+                {/* Discount Badge - Red with white text */}
+                {hasDiscount && (
+                  <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-600 text-white border border-red-700">
+                    -{product.scontoApplicato}%
+                  </span>
+                )}
+              </div>
+
               <h3 className="font-semibold text-gray-900 text-base sm:text-lg lg:text-base lg:leading-snug mb-1.5">
                 {product.descrizione}
               </h3>
 
               {/* Meta Info */}
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 {product.codice !== "N/A" && (
                   <p className="text-xs font-mono text-gray-500">
                     {product.codice}
+                  </p>
+                )}
+                
+                {/* Description for Desktop + Tablet - PROMINENT */}
+                {!isService && product.formato && (
+                  <p className="text-sm text-gray-700 hidden md:block leading-snug font-medium">
+                    {product.formato}
                   </p>
                 )}
               </div>
@@ -167,59 +223,28 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
           {/* RIGHT: Price + Delete */}
           <div className="flex items-center justify-between lg:gap-4 lg:flex-shrink-0">
-            {/* Price Display */}
-            <div className="text-right">
+            {/* Price Display - DESKTOP ONLY */}
+            <div className="hidden lg:block text-right">
               {hasDiscount ? (
-                <div className="flex flex-col items-end">
+                <div className="flex flex-col items-end gap-0.5">
                   <span className="text-xs text-gray-400 line-through">
                     €{(product.prezzoOriginale! * product.qty).toFixed(2)}
                   </span>
-                  <span className="text-xl font-bold text-green-600">
+                  <span className="text-lg lg:text-xl font-bold text-green-600">
                     €{totalPrice.toFixed(2)}
                   </span>
                 </div>
               ) : (
-                <span className="text-xl font-bold text-gray-900">
+                <span className="text-lg lg:text-xl font-bold text-gray-900">
                   €{totalPrice.toFixed(2)}
                 </span>
               )}
             </div>
-
-            {/* Delete Button - RIGHT ALIGNED */}
-            <button
-              onClick={() =>
-                onDelete(
-                  index,
-                  product.descrizione,
-                  isService ? "SERVICE" : "PRODUCT",
-                  isService ? product.serviceId! : product.productId!
-                )
-              }
-              className="ml-4 text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
-              aria-label="Rimuovi"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-              </svg>
-            </button>
           </div>
         </div>
 
-        {/* MOBILE: Divider */}
-        <div className="border-t border-gray-100 mt-3 pt-3 lg:hidden" />
-
-        {/* MOBILE: Bottom Section - Quantity Controls + Price (hidden on desktop) */}
-        <div className="flex items-center justify-between lg:hidden">
+        {/* MOBILE: Bottom Section - Quantity Controls + Price + Delete (hidden on desktop) */}
+        <div className="flex items-center justify-between gap-2 lg:hidden mt-3">
           {/* Quantity Controls - iOS Style */}
           {!isService ? (
             <div className="flex items-center bg-gray-50 rounded-lg p-0.5">
@@ -273,22 +298,37 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           )}
 
           {/* Price on mobile */}
-          <div className="text-right">
-            {hasDiscount ? (
-              <div className="flex flex-col items-end">
-                <span className="text-xs text-gray-400 line-through">
-                  €{(product.prezzoOriginale! * product.qty).toFixed(2)}
-                </span>
-                <span className="text-lg font-bold text-green-600">
-                  €{totalPrice.toFixed(2)}
-                </span>
-              </div>
-            ) : (
-              <span className="text-lg font-bold text-gray-900">
-                €{totalPrice.toFixed(2)}
-              </span>
-            )}
-          </div>
+          <span className="text-base font-bold text-gray-900 flex-1 text-right">
+            €{totalPrice.toFixed(2)}
+          </span>
+
+          {/* Delete Button - MOBILE ONLY */}
+          <button
+            onClick={() =>
+              onDelete(
+                index,
+                product.descrizione,
+                isService ? "SERVICE" : "PRODUCT",
+                isService ? product.serviceId! : product.productId!
+              )
+            }
+            className="md:hidden text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
+            aria-label="Rimuovi"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
+            </svg>
+          </button>
         </div>
       </div>
     </div>

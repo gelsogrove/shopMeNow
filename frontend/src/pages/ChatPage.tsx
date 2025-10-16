@@ -124,7 +124,7 @@ export function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   // 🚨 REMOVED: sessionId from URL - chat selection now managed via React context only
 
-  // 🚨 FIX: RELOAD page when workspace changes (hard refresh)
+  // �🚨 FIX: RELOAD page when workspace changes (hard refresh)
   const prevWorkspaceIdRef = useRef<string | undefined>(workspace?.id)
   useEffect(() => {
     if (
@@ -151,7 +151,7 @@ export function ChatPage() {
   const [showBlockDialog, setShowBlockDialog] = useState(false)
   const [showEditSheet, setShowEditSheet] = useState(false)
   const [showCartPopup, setShowCartPopup] = useState(false)
-  const [cartToken, setCartToken] = useState<string>("")
+  const [cartPopupUrl, setCartPopupUrl] = useState<string>("") // URL to display in CartIframePopup
   const [isLoadingCartToken, setIsLoadingCartToken] = useState(false)
 
   // Function to get cart token for current customer
@@ -191,11 +191,19 @@ export function ChatPage() {
 
     try {
       const token = await getCartToken(selectedChat.customerId, workspace.id)
-      setCartToken(token)
+      const checkoutUrl = `http://localhost:3000/checkout?token=${token}`
+      setCartPopupUrl(checkoutUrl)
       setShowCartPopup(true)
     } catch (error) {
       // Error already handled in getCartToken
     }
+  }
+
+  // 📱 Handle link clicks in chat history - show device preview with CartPopup
+  const handleLinkClick = (url: string, e: React.MouseEvent) => {
+    // Use CartPopup for all links (same as cellulare button)
+    setCartPopupUrl(url) // Pass full URL directly
+    setShowCartPopup(true)
   }
 
   const {
@@ -1348,6 +1356,7 @@ export function ChatPage() {
                             <MessageRenderer
                               content={message.content}
                               variant="chat"
+                              onLinkClick={handleLinkClick}
                             />
                           </div>
 
@@ -1566,12 +1575,12 @@ export function ChatPage() {
         selectedChat={selectedChat as any}
       />
 
-      {/* Cart Iframe Popup */}
-      {selectedChat && cartToken && (
+      {/* 📱 Unified Device Preview with Controls - for both cart and chat links */}
+      {selectedChat && cartPopupUrl && (
         <CartIframePopup
           isOpen={showCartPopup}
           onClose={() => setShowCartPopup(false)}
-          iframeSrc={`http://localhost:3000/checkout?token=${cartToken}`}
+          iframeSrc={cartPopupUrl}
         />
       )}
     </PageLayout>

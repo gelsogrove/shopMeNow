@@ -777,6 +777,37 @@ export const publicPageTranslations: Record<
     registrationErrorTitle: "Error de Registro",
     tryAgain: "Intentar de Nuevo",
     validatingLink: "Validando enlace de registro...",
+
+    // Payment page (Mock Stripe)
+    paymentTitle: "Pago Seguro",
+    paymentSubtitle: "Completa tu compra de forma segura",
+    paymentCardNumber: "Número de Tarjeta",
+    paymentCardName: "Titular de la Tarjeta",
+    paymentExpiry: "Vencimiento",
+    paymentCvv: "CVV",
+    paymentPayNow: "Pagar Ahora",
+    paymentProcessing: "Procesando Pago...",
+    paymentSecure: "Tu pago está protegido",
+    paymentMockNotice:
+      "Esta es una interfaz de pago simulada. No se realizará ningún cargo real.",
+    paymentTestCards: "Tarjetas de Prueba (Mock)",
+    paymentSuccess: "Éxito",
+    paymentAnyExpiry: "Cualquier fecha futura",
+    paymentAnyCvv: "Cualquier CVV de 3 dígitos",
+    paymentCardNameRequired: "Se requiere nombre",
+    paymentCardNumberInvalid: "Número de tarjeta no válido",
+    paymentExpiryInvalid: "Fecha de vencimiento no válida",
+    paymentCvvInvalid: "CVV no válido",
+
+    // Order confirmation page
+    orderConfirmedTitle: "¡Pedido Confirmado!",
+    orderConfirmedMessage: "Tu pedido ha sido recibido con éxito",
+    orderConfirmedThankYou: "¡Gracias por tu compra!",
+    orderConfirmedNumber: "Número de Pedido",
+    orderConfirmedTotal: "Total Pagado",
+    orderConfirmedDownload: "Descargar Recibo",
+    orderConfirmedEmail: "Te hemos enviado un email de confirmación",
+    orderConfirmedBackToOrders: "Volver a los Pedidos",
   },
 
   PT: {
@@ -949,6 +980,37 @@ export const publicPageTranslations: Record<
     registrationErrorTitle: "Erro de Registro",
     tryAgain: "Tentar Novamente",
     validatingLink: "Validando link de registro...",
+
+    // Payment page (Mock Stripe)
+    paymentTitle: "Pagamento Seguro",
+    paymentSubtitle: "Complete sua compra com segurança",
+    paymentCardNumber: "Número do Cartão",
+    paymentCardName: "Titular do Cartão",
+    paymentExpiry: "Validade",
+    paymentCvv: "CVV",
+    paymentPayNow: "Pagar Agora",
+    paymentProcessing: "Processando Pagamento...",
+    paymentSecure: "Seu pagamento está protegido",
+    paymentMockNotice:
+      "Esta é uma interface de pagamento simulada. Nenhuma cobrança real será realizada.",
+    paymentTestCards: "Cartões de Teste (Mock)",
+    paymentSuccess: "Sucesso",
+    paymentAnyExpiry: "Qualquer data futura",
+    paymentAnyCvv: "Qualquer CVV de 3 dígitos",
+    paymentCardNameRequired: "Nome obrigatório",
+    paymentCardNumberInvalid: "Número de cartão inválido",
+    paymentExpiryInvalid: "Data de validade inválida",
+    paymentCvvInvalid: "CVV inválido",
+
+    // Order confirmation page
+    orderConfirmedTitle: "Pedido Confirmado!",
+    orderConfirmedMessage: "Seu pedido foi recebido com sucesso",
+    orderConfirmedThankYou: "Obrigado pela sua compra!",
+    orderConfirmedNumber: "Número do Pedido",
+    orderConfirmedTotal: "Total Pago",
+    orderConfirmedDownload: "Baixar Recibo",
+    orderConfirmedEmail: "Enviamos um email de confirmação para você",
+    orderConfirmedBackToOrders: "Voltar aos Pedidos",
   },
 }
 

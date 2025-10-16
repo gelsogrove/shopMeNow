@@ -15,6 +15,7 @@ interface Product {
   prezzoOriginale?: number
   prezzoScontato?: number
   scontoApplicato?: number
+  nomeSconto?: string // 💚 Customer discount name
   imageUrl?: string[]
 }
 

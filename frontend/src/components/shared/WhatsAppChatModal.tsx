@@ -1,3 +1,4 @@
+import { CartIframePopup } from "@/components/CartIframePopup"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -97,16 +98,12 @@ export function WhatsAppChatModal({
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [showFunctionCalls, setShowFunctionCalls] = useState(false)
   const [showProcessedPrompt, setShowProcessedPrompt] = useState(false)
-  const [showPreviewSplit, setShowPreviewSplit] = useState(false)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [iframeKey, setIframeKey] = useState(0)
 
-  // Reload iframe when URL changes
-  useEffect(() => {
-    if (previewUrl) {
-      setIframeKey((prev) => prev + 1)
-    }
-  }, [previewUrl])
+  // 📱 Device preview state - unified with CartIframePopup
+  const [showCartPopup, setShowCartPopup] = useState(false)
+  const [cartPopupUrl, setCartPopupUrl] = useState<string>("")
+
+  // Render component logic
 
   // Check if we have a valid workspace ID
   const currentWorkspaceId = getWorkspaceId(workspaceId)
@@ -673,9 +670,9 @@ export function WhatsAppChatModal({
 
   // Handle link clicks to open preview in device
   const handleLinkClick = (url: string, e: React.MouseEvent) => {
-    e.preventDefault()
-    setPreviewUrl(url)
-    setShowPreviewSplit(true)
+    console.log("🔗 Link clicked:", url)
+    setCartPopupUrl(url)
+    setShowCartPopup(true)
   }
 
   return (
@@ -689,9 +686,9 @@ export function WhatsAppChatModal({
       }}
     >
       <DialogContent
-        className={`${
-          showPreviewSplit ? "w-[1170px]" : "w-[600px]"
-        } max-w-[95vw] p-0 overflow-visible [&>button]:hidden h-[90vh] flex flex-row transition-all relative`}
+        className={`p-0 overflow-visible [&>button]:hidden h-[90vh] flex flex-row transition-all relative ${
+          showCartPopup ? "w-[calc(100vw-450px)]" : "w-[600px]"
+        } max-w-[95vw]`}
         data-state={isOpen ? "open" : "closed"}
         style={{
           position: "fixed",
@@ -714,12 +711,8 @@ export function WhatsAppChatModal({
           <X className="h-6 w-6" />
         </button>
 
-        {/* LEFT COLUMN - Chat */}
-        <div
-          className={`${
-            showPreviewSplit ? "w-[50%]" : "w-full"
-          } flex flex-col bg-transparent border-r border-gray-200 flex-shrink-0 transition-all`}
-        >
+        {/* Chat Column - Flexible width, left side */}
+        <div className="flex-1 flex flex-col bg-transparent border-r border-gray-200 flex-shrink-0 transition-all">
           {/* WhatsApp header with WhatsApp icon and X */}
           <div className="bg-gradient-to-r from-green-500 to-green-400 shadow-md p-4 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center">
@@ -757,8 +750,8 @@ export function WhatsAppChatModal({
             </div>
           </div>
 
-          {/* Chat Content Area */}
-          <div className="flex-1 overflow-y-auto">
+          {/* Chat Content Area - Flex layout: header top, messages flex-1, input bottom */}
+          <div className="flex-1 flex flex-col overflow-hidden">
             {!chatStarted ? (
               <div className="p-6">
                 <h3 className="text-lg font-semibold mb-4">
@@ -1534,8 +1527,8 @@ export function WhatsAppChatModal({
                   </div>
                 </ScrollArea>
 
-                {/* Input improved */}
-                <div className="flex items-center p-3 border-t bg-white">
+                {/* Input improved - Fixed at bottom */}
+                <div className="flex-shrink-0 flex items-center p-3 border-t bg-white">
                   {!hasValidWorkspace && (
                     <div className="flex-1 p-3 bg-yellow-50 border border-yellow-200 rounded-md mr-2">
                       <p className="text-sm text-yellow-800">
@@ -1580,46 +1573,15 @@ export function WhatsAppChatModal({
             )}
           </div>
         </div>
-
-        {/* RIGHT COLUMN - Device Preview Overlay */}
-        {showPreviewSplit && (
-          <div className="w-[40%] bg-transparent flex items-center justify-center relative h-full flex-shrink-0 p-2 ml-[60px]">
-            {/* Close Preview Button */}
-            <button
-              onClick={() => {
-                setShowPreviewSplit(false)
-                setPreviewUrl(null)
-              }}
-              className="absolute top-4 right-4 flex items-center justify-center w-8 h-8 bg-red-600 text-white rounded hover:bg-red-700 transition-colors z-10"
-            >
-              <X className="h-4 w-4" />
-            </button>
-
-            {/* iPhone-like Device Frame */}
-            <div className="relative w-full h-full bg-black rounded-3xl shadow-2xl overflow-hidden border-8 border-gray-900">
-              {/* Notch */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-10"></div>
-
-              {/* Screen */}
-              {previewUrl ? (
-                <iframe
-                  key={iframeKey}
-                  src={previewUrl}
-                  className="w-full h-full"
-                  title="Preview"
-                  sandbox="allow-scripts allow-same-origin allow-forms"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                  <span className="text-gray-500 text-sm">
-                    Click a link to preview
-                  </span>
-                </div>
-              )}
-
-              {/* Home Indicator */}
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-28 h-1 bg-black rounded-full"></div>
-            </div>
+        {/* 📱 Device Preview Column - Right side split view */}
+        {showCartPopup && (
+          <div className="flex-1 flex flex-col bg-white overflow-hidden border-l border-gray-200 transition-all relative">
+            <CartIframePopup
+              isOpen={showCartPopup}
+              onClose={() => setShowCartPopup(false)}
+              iframeSrc={cartPopupUrl}
+              layoutType="inline"
+            />
           </div>
         )}
       </DialogContent>
