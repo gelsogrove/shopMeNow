@@ -1153,6 +1153,7 @@ export class MessageRepository {
           ProductCode: true,
           price: true,
           description: true, // Aggiungi description per il prompt
+          formato: true, // Aggiungi formato per il prompt
           category: {
             select: {
               name: true,
@@ -1218,9 +1219,11 @@ export class MessageRepository {
           const originalPrice = Number(p.originalPrice).toFixed(2)
           const finalPrice = Number(p.finalPrice).toFixed(2)
           const description = p.description ? ` - ${p.description}` : ""
+          const formatoStr = p.formato ? ` ${p.formato}` : ""
 
           // WhatsApp strikethrough: ~text~ (single tilde at start and end)
-          formattedProducts += `• ${p.name} ~€${originalPrice}~ → €${finalPrice}${description}\n`
+          // Format: CODICE formato NOME ~€originalPrice~ → €finalPrice - description
+          formattedProducts += `• ${p.ProductCode}${formatoStr} ${p.name} ~€${originalPrice}~ → €${finalPrice}${description}\n`
         })
         formattedProducts += "\n"
       }

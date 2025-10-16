@@ -6,12 +6,14 @@ interface MessageRendererProps {
   content: string
   className?: string
   variant?: "chat" | "compact"
+  onLinkClick?: (url: string, e: React.MouseEvent) => void
 }
 
 export function MessageRenderer({
   content,
   className = "",
   variant = "chat",
+  onLinkClick,
 }: MessageRendererProps) {
   // Base classes for consistent formatting
   const baseClasses = "break-words text-sm text-left"
@@ -34,10 +36,14 @@ export function MessageRenderer({
         return (
           <a
             key={index}
-            href={part}
-            target="_blank"
-            rel="noopener noreferrer"
+            href="#"
             className="text-blue-600 hover:underline cursor-pointer"
+            onClick={(e) => {
+              e.preventDefault()
+              if (onLinkClick) {
+                onLinkClick(part, e)
+              }
+            }}
           >
             {part}
           </a>
@@ -87,12 +93,18 @@ export function MessageRenderer({
         skipHtml={false}
         components={{
           // Consistent link styling
-          a: ({ node, ...props }) => (
+          a: ({ node, href, ...props }) => (
             <a
               {...props}
+              href={href}
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-600 hover:underline"
+              onClick={(e) => {
+                if (onLinkClick && href) {
+                  onLinkClick(href, e)
+                }
+              }}
             />
           ),
           // Clean paragraph rendering

@@ -16,6 +16,7 @@ export interface Workspace {
   createdAt: string
   updatedAt: string
   whatsappPhoneNumber?: string
+  currency?: string
 }
 
 interface WorkspaceContextType {

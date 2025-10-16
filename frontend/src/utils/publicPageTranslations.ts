@@ -14,6 +14,12 @@ export interface PublicPageTexts {
   viewProfile: string
   finalizeOrder: string
 
+  // Menu labels
+  menuTitle: string
+  cart: string
+  myOrders: string
+  profile: string
+
   // Common actions
   save: string
   cancel: string
@@ -50,6 +56,7 @@ export interface PublicPageTexts {
   originalPrice: string
   finalPrice: string
   format: string
+  formatLabel: string
   duration: string
   notes: string
 
@@ -59,6 +66,7 @@ export interface PublicPageTexts {
   orderStatus: string
   paymentStatus: string
   items: string
+  orderSummary: string
 
   // Profile labels
   personalData: string
@@ -66,6 +74,19 @@ export interface PublicPageTexts {
   billingAddress: string
   shippingAddress: string
   preferences: string
+
+  // Payment labels (Step 4)
+  cardNumber: string
+  cardholderName: string
+  expiry: string
+  cvcTooltip: string
+  securePayment: string
+  totalToPay: string
+  includesVAT: string
+  confirmPayment: string
+  processing: string
+  paymentDisclaimer: string
+  proceedToPayment: string
 
   // Messages
   noData: string
@@ -98,6 +119,7 @@ export interface PublicPageTexts {
     products: string
     addresses: string
     confirm: string
+    payment: string
   }
 
   // Checkout Success specific
@@ -146,6 +168,36 @@ export interface PublicPageTexts {
   registrationErrorTitle: string
   tryAgain: string
   validatingLink: string
+
+  // Payment page (Mock Stripe)
+  paymentTitle: string
+  paymentSubtitle: string
+  paymentCardNumber: string
+  paymentCardName: string
+  paymentExpiry: string
+  paymentCvv: string
+  paymentPayNow: string
+  paymentProcessing: string
+  paymentSecure: string
+  paymentMockNotice: string
+  paymentTestCards: string
+  paymentSuccess: string
+  paymentAnyExpiry: string
+  paymentAnyCvv: string
+  paymentCardNameRequired: string
+  paymentCardNumberInvalid: string
+  paymentExpiryInvalid: string
+  paymentCvvInvalid: string
+
+  // Order confirmation page
+  orderConfirmedTitle: string
+  orderConfirmedMessage: string
+  orderConfirmedThankYou: string
+  orderConfirmedNumber: string
+  orderConfirmedTotal: string
+  orderConfirmedDownload: string
+  orderConfirmedEmail: string
+  orderConfirmedBackToOrders: string
 }
 
 export const publicPageTranslations: Record<
@@ -163,6 +215,12 @@ export const publicPageTranslations: Record<
     viewOrders: "Ordini",
     viewProfile: "Profilo",
     finalizeOrder: "Finalizza Ordine",
+
+    // Menu labels
+    menuTitle: "Menu",
+    cart: "Carrello",
+    myOrders: "I Miei Ordini",
+    profile: "Profilo",
 
     // Common actions
     save: "Salva",
@@ -200,6 +258,7 @@ export const publicPageTranslations: Record<
     originalPrice: "Prezzo Originale",
     finalPrice: "Prezzo Finale",
     format: "Formato",
+    formatLabel: "Formato:",
     duration: "Durata",
     notes: "Note",
 
@@ -209,6 +268,7 @@ export const publicPageTranslations: Record<
     orderStatus: "Stato Ordine",
     paymentStatus: "Stato Pagamento",
     items: "Articoli",
+    orderSummary: "Riepilogo Ordine",
 
     // Profile labels
     personalData: "Dati Personali",
@@ -216,6 +276,20 @@ export const publicPageTranslations: Record<
     billingAddress: "Indirizzo di Fatturazione",
     shippingAddress: "Indirizzo di Spedizione",
     preferences: "Preferenze",
+
+    // Payment labels (Step 4)
+    cardNumber: "Numero Carta",
+    cardholderName: "Nome Titolare",
+    expiry: "Scadenza",
+    cvcTooltip: "Codice di 3 cifre sul retro della carta",
+    securePayment: "Pagamento sicuro crittografato SSL",
+    totalToPay: "Totale da Pagare",
+    includesVAT: "IVA inclusa",
+    confirmPayment: "Conferma Pagamento",
+    processing: "Elaborazione...",
+    paymentDisclaimer:
+      "Cliccando su 'Conferma Pagamento' accetti i nostri Termini e Condizioni",
+    proceedToPayment: "Procedi al Pagamento",
 
     // Messages
     noData: "Nessun dato disponibile",
@@ -229,8 +303,8 @@ export const publicPageTranslations: Record<
 
     // Checkout specific
     yourProducts: "I Tuoi Prodotti",
-    addProducts: "Aggiungi Prodotti",
-    addServices: "Aggiungi Servizi",
+    addProducts: "Prodotti",
+    addServices: "Servizi",
     emptyCart: "Il tuo carrello è vuoto",
     addProductsToContinue: "Aggiungi prodotti per continuare",
     confirmOrder: "Conferma Ordine",
@@ -248,6 +322,7 @@ export const publicPageTranslations: Record<
       products: "Prodotti",
       addresses: "Indirizzi",
       confirm: "Conferma",
+      payment: "Pagamento",
     },
 
     // Checkout Success specific
@@ -298,6 +373,37 @@ export const publicPageTranslations: Record<
     registrationErrorTitle: "Errore di Registrazione",
     tryAgain: "Riprova",
     validatingLink: "Validazione link di registrazione...",
+
+    // Payment page (Mock Stripe)
+    paymentTitle: "Pagamento Sicuro",
+    paymentSubtitle: "Completa il tuo acquisto in sicurezza",
+    paymentCardNumber: "Numero Carta",
+    paymentCardName: "Titolare della Carta",
+    paymentExpiry: "Scadenza",
+    paymentCvv: "CVV",
+    paymentPayNow: "Paga Ora",
+    paymentProcessing: "Elaborazione Pagamento...",
+    paymentSecure: "Il tuo pagamento è protetto",
+    paymentMockNotice:
+      "Questa è un'interfaccia di pagamento simulata. Non verrà effettuato nessun addebito reale.",
+    paymentTestCards: "Carte di Test (Mock)",
+    paymentSuccess: "Successo",
+    paymentAnyExpiry: "Qualsiasi data futura",
+    paymentAnyCvv: "Qualsiasi CVV a 3 cifre",
+    paymentCardNameRequired: "Nome richiesto",
+    paymentCardNumberInvalid: "Numero carta non valido",
+    paymentExpiryInvalid: "Data di scadenza non valida",
+    paymentCvvInvalid: "CVV non valido",
+
+    // Order confirmation page
+    orderConfirmedTitle: "Ordine Confermato!",
+    orderConfirmedMessage: "Il tuo ordine è stato ricevuto con successo",
+    orderConfirmedThankYou: "Grazie per il tuo acquisto!",
+    orderConfirmedNumber: "Numero Ordine",
+    orderConfirmedTotal: "Totale Pagato",
+    orderConfirmedDownload: "Scarica Ricevuta",
+    orderConfirmedEmail: "Ti abbiamo inviato una email di conferma",
+    orderConfirmedBackToOrders: "Torna agli Ordini",
   },
 
   EN: {
@@ -311,6 +417,12 @@ export const publicPageTranslations: Record<
     viewOrders: "Orders",
     viewProfile: "Profile",
     finalizeOrder: "Finalize Order",
+
+    // Menu labels
+    menuTitle: "Menu",
+    cart: "Cart",
+    myOrders: "My Orders",
+    profile: "Profile",
 
     // Common actions
     save: "Save",
@@ -348,6 +460,7 @@ export const publicPageTranslations: Record<
     originalPrice: "Original Price",
     finalPrice: "Final Price",
     format: "Format",
+    formatLabel: "Format:",
     duration: "Duration",
     notes: "Notes",
 
@@ -357,6 +470,7 @@ export const publicPageTranslations: Record<
     orderStatus: "Order Status",
     paymentStatus: "Payment Status",
     items: "Items",
+    orderSummary: "Order Summary",
 
     // Profile labels
     personalData: "Personal Data",
@@ -364,6 +478,20 @@ export const publicPageTranslations: Record<
     billingAddress: "Billing Address",
     shippingAddress: "Shipping Address",
     preferences: "Preferences",
+
+    // Payment labels (Step 4)
+    cardNumber: "Card Number",
+    cardholderName: "Cardholder Name",
+    expiry: "Expiry",
+    cvcTooltip: "3-digit code on the back of the card",
+    securePayment: "Secure SSL encrypted payment",
+    totalToPay: "Total to Pay",
+    includesVAT: "VAT included",
+    confirmPayment: "Confirm Payment",
+    processing: "Processing...",
+    paymentDisclaimer:
+      "By clicking 'Confirm Payment' you accept our Terms and Conditions",
+    proceedToPayment: "Proceed to Payment",
 
     // Messages
     noData: "No data available",
@@ -377,8 +505,8 @@ export const publicPageTranslations: Record<
 
     // Checkout specific
     yourProducts: "Your Products",
-    addProducts: "Add Products",
-    addServices: "Add Services",
+    addProducts: "Products",
+    addServices: "Services",
     emptyCart: "Your cart is empty",
     addProductsToContinue: "Add products to continue",
     confirmOrder: "Confirm Order",
@@ -396,6 +524,7 @@ export const publicPageTranslations: Record<
       products: "Products",
       addresses: "Addresses",
       confirm: "Confirm",
+      payment: "Payment",
     },
 
     // Checkout Success specific
@@ -446,6 +575,37 @@ export const publicPageTranslations: Record<
     registrationErrorTitle: "Registration Error",
     tryAgain: "Try Again",
     validatingLink: "Validating registration link...",
+
+    // Payment page (Mock Stripe)
+    paymentTitle: "Secure Payment",
+    paymentSubtitle: "Complete your purchase securely",
+    paymentCardNumber: "Card Number",
+    paymentCardName: "Cardholder Name",
+    paymentExpiry: "Expiry Date",
+    paymentCvv: "CVV",
+    paymentPayNow: "Pay Now",
+    paymentProcessing: "Processing Payment...",
+    paymentSecure: "Your payment information is secure",
+    paymentMockNotice:
+      "This is a mock payment interface. No actual charges will be made.",
+    paymentTestCards: "Test Cards (Mock)",
+    paymentSuccess: "Success",
+    paymentAnyExpiry: "Any future expiry date",
+    paymentAnyCvv: "Any 3-digit CVV",
+    paymentCardNameRequired: "Name required",
+    paymentCardNumberInvalid: "Invalid card number",
+    paymentExpiryInvalid: "Invalid expiry date",
+    paymentCvvInvalid: "Invalid CVV",
+
+    // Order confirmation page
+    orderConfirmedTitle: "Order Confirmed!",
+    orderConfirmedMessage: "Your order has been successfully received",
+    orderConfirmedThankYou: "Thank you for your purchase!",
+    orderConfirmedNumber: "Order Number",
+    orderConfirmedTotal: "Total Paid",
+    orderConfirmedDownload: "Download Receipt",
+    orderConfirmedEmail: "We've sent you a confirmation email",
+    orderConfirmedBackToOrders: "Back to Orders",
   },
 
   ES: {
@@ -459,6 +619,12 @@ export const publicPageTranslations: Record<
     viewOrders: "Pedidos",
     viewProfile: "Perfil",
     finalizeOrder: "Finalizar Pedido",
+
+    // Menu labels
+    menuTitle: "Menú",
+    cart: "Carrito",
+    myOrders: "Mis Pedidos",
+    profile: "Perfil",
 
     // Common actions
     save: "Guardar",
@@ -496,6 +662,7 @@ export const publicPageTranslations: Record<
     originalPrice: "Precio Original",
     finalPrice: "Precio Final",
     format: "Formato",
+    formatLabel: "Formato:",
     duration: "Duración",
     notes: "Notas",
 
@@ -505,6 +672,7 @@ export const publicPageTranslations: Record<
     orderStatus: "Estado del Pedido",
     paymentStatus: "Estado del Pago",
     items: "Artículos",
+    orderSummary: "Resumen del Pedido",
 
     // Profile labels
     personalData: "Datos Personales",
@@ -512,6 +680,20 @@ export const publicPageTranslations: Record<
     billingAddress: "Dirección de Facturación",
     shippingAddress: "Dirección de Envío",
     preferences: "Preferencias",
+
+    // Payment labels (Step 4)
+    cardNumber: "Número de Tarjeta",
+    cardholderName: "Nombre del Titular",
+    expiry: "Vencimiento",
+    cvcTooltip: "Código de 3 dígitos en el reverso de la tarjeta",
+    securePayment: "Pago seguro encriptado SSL",
+    totalToPay: "Total a Pagar",
+    includesVAT: "IVA incluido",
+    confirmPayment: "Confirmar Pago",
+    processing: "Procesando...",
+    paymentDisclaimer:
+      "Al hacer clic en 'Confirmar Pago' aceptas nuestros Términos y Condiciones",
+    proceedToPayment: "Proceder al Pago",
 
     // Messages
     noData: "No hay datos disponibles",
@@ -525,8 +707,8 @@ export const publicPageTranslations: Record<
 
     // Checkout specific
     yourProducts: "Tus Productos",
-    addProducts: "Agregar Productos",
-    addServices: "Agregar Servicios",
+    addProducts: "Productos",
+    addServices: "Servicios",
     emptyCart: "Tu carrito está vacío",
     addProductsToContinue: "Agrega productos para continuar",
     confirmOrder: "Confirmar Pedido",
@@ -544,6 +726,7 @@ export const publicPageTranslations: Record<
       products: "Productos",
       addresses: "Direcciones",
       confirm: "Confirmar",
+      payment: "Pago",
     },
 
     // Checkout Success specific
@@ -594,6 +777,37 @@ export const publicPageTranslations: Record<
     registrationErrorTitle: "Error de Registro",
     tryAgain: "Intentar de Nuevo",
     validatingLink: "Validando enlace de registro...",
+
+    // Payment page (Mock Stripe)
+    paymentTitle: "Pago Seguro",
+    paymentSubtitle: "Completa tu compra de forma segura",
+    paymentCardNumber: "Número de Tarjeta",
+    paymentCardName: "Titular de la Tarjeta",
+    paymentExpiry: "Vencimiento",
+    paymentCvv: "CVV",
+    paymentPayNow: "Pagar Ahora",
+    paymentProcessing: "Procesando Pago...",
+    paymentSecure: "Tu pago está protegido",
+    paymentMockNotice:
+      "Esta es una interfaz de pago simulada. No se realizará ningún cargo real.",
+    paymentTestCards: "Tarjetas de Prueba (Mock)",
+    paymentSuccess: "Éxito",
+    paymentAnyExpiry: "Cualquier fecha futura",
+    paymentAnyCvv: "Cualquier CVV de 3 dígitos",
+    paymentCardNameRequired: "Se requiere nombre",
+    paymentCardNumberInvalid: "Número de tarjeta no válido",
+    paymentExpiryInvalid: "Fecha de vencimiento no válida",
+    paymentCvvInvalid: "CVV no válido",
+
+    // Order confirmation page
+    orderConfirmedTitle: "¡Pedido Confirmado!",
+    orderConfirmedMessage: "Tu pedido ha sido recibido con éxito",
+    orderConfirmedThankYou: "¡Gracias por tu compra!",
+    orderConfirmedNumber: "Número de Pedido",
+    orderConfirmedTotal: "Total Pagado",
+    orderConfirmedDownload: "Descargar Recibo",
+    orderConfirmedEmail: "Te hemos enviado un email de confirmación",
+    orderConfirmedBackToOrders: "Volver a los Pedidos",
   },
 
   PT: {
@@ -607,6 +821,12 @@ export const publicPageTranslations: Record<
     viewOrders: "Pedidos",
     viewProfile: "Perfil",
     finalizeOrder: "Finalizar Pedido",
+
+    // Menu labels
+    menuTitle: "Menu",
+    cart: "Carrinho",
+    myOrders: "Meus Pedidos",
+    profile: "Perfil",
 
     // Common actions
     save: "Salvar",
@@ -644,6 +864,7 @@ export const publicPageTranslations: Record<
     originalPrice: "Preço Original",
     finalPrice: "Preço Final",
     format: "Formato",
+    formatLabel: "Formato:",
     duration: "Duração",
     notes: "Notas",
 
@@ -653,6 +874,7 @@ export const publicPageTranslations: Record<
     orderStatus: "Status do Pedido",
     paymentStatus: "Status do Pagamento",
     items: "Itens",
+    orderSummary: "Resumo do Pedido",
 
     // Profile labels
     personalData: "Dados Pessoais",
@@ -660,6 +882,20 @@ export const publicPageTranslations: Record<
     billingAddress: "Endereço de Cobrança",
     shippingAddress: "Endereço de Entrega",
     preferences: "Preferências",
+
+    // Payment labels (Step 4)
+    cardNumber: "Número do Cartão",
+    cardholderName: "Nome do Titular",
+    expiry: "Validade",
+    cvcTooltip: "Código de 3 dígitos no verso do cartão",
+    securePayment: "Pagamento seguro criptografado SSL",
+    totalToPay: "Total a Pagar",
+    includesVAT: "IVA incluído",
+    confirmPayment: "Confirmar Pagamento",
+    processing: "Processando...",
+    paymentDisclaimer:
+      "Ao clicar em 'Confirmar Pagamento' você aceita nossos Termos e Condições",
+    proceedToPayment: "Prosseguir para Pagamento",
 
     // Messages
     noData: "Nenhum dado disponível",
@@ -673,8 +909,8 @@ export const publicPageTranslations: Record<
 
     // Checkout specific
     yourProducts: "Seus Produtos",
-    addProducts: "Adicionar Produtos",
-    addServices: "Adicionar Serviços",
+    addProducts: "Produtos",
+    addServices: "Serviços",
     emptyCart: "Seu carrinho está vazio",
     addProductsToContinue: "Adicione produtos para continuar",
     confirmOrder: "Confirmar Pedido",
@@ -692,6 +928,7 @@ export const publicPageTranslations: Record<
       products: "Produtos",
       addresses: "Endereços",
       confirm: "Confirmar",
+      payment: "Pagamento",
     },
 
     // Checkout Success specific
@@ -743,6 +980,37 @@ export const publicPageTranslations: Record<
     registrationErrorTitle: "Erro de Registro",
     tryAgain: "Tentar Novamente",
     validatingLink: "Validando link de registro...",
+
+    // Payment page (Mock Stripe)
+    paymentTitle: "Pagamento Seguro",
+    paymentSubtitle: "Complete sua compra com segurança",
+    paymentCardNumber: "Número do Cartão",
+    paymentCardName: "Titular do Cartão",
+    paymentExpiry: "Validade",
+    paymentCvv: "CVV",
+    paymentPayNow: "Pagar Agora",
+    paymentProcessing: "Processando Pagamento...",
+    paymentSecure: "Seu pagamento está protegido",
+    paymentMockNotice:
+      "Esta é uma interface de pagamento simulada. Nenhuma cobrança real será realizada.",
+    paymentTestCards: "Cartões de Teste (Mock)",
+    paymentSuccess: "Sucesso",
+    paymentAnyExpiry: "Qualquer data futura",
+    paymentAnyCvv: "Qualquer CVV de 3 dígitos",
+    paymentCardNameRequired: "Nome obrigatório",
+    paymentCardNumberInvalid: "Número de cartão inválido",
+    paymentExpiryInvalid: "Data de validade inválida",
+    paymentCvvInvalid: "CVV inválido",
+
+    // Order confirmation page
+    orderConfirmedTitle: "Pedido Confirmado!",
+    orderConfirmedMessage: "Seu pedido foi recebido com sucesso",
+    orderConfirmedThankYou: "Obrigado pela sua compra!",
+    orderConfirmedNumber: "Número do Pedido",
+    orderConfirmedTotal: "Total Pago",
+    orderConfirmedDownload: "Baixar Recibo",
+    orderConfirmedEmail: "Enviamos um email de confirmação para você",
+    orderConfirmedBackToOrders: "Voltar aos Pedidos",
   },
 }
 

@@ -3,8 +3,8 @@ import { User } from "lucide-react"
 import React, { useEffect, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
-import { PublicPageLayout } from "../components/layout/PublicPageLayout"
 import { ProfileForm } from "../components/profile/ProfileForm"
+import { StickyHeader } from "../components/public/StickyHeader"
 import { TokenError } from "../components/ui/TokenError"
 import UnifiedLoading from "../components/ui/UnifiedLoading"
 import { useTokenValidation } from "../hooks/useTokenValidation"
@@ -276,25 +276,31 @@ const CustomerProfilePublicPage: React.FC = () => {
   const profileIcon = <User className="h-8 w-8" />
 
   return (
-    <PublicPageLayout
-      title={texts.personalData}
-      subtitle={texts.contactInfo}
-      customerLanguage={customerLanguage}
-      token={token}
-      currentPage="profile"
-      icon={profileIcon}
-    >
-      {/* Profile Form */}
-      {profileData && (
-        <div className="p-6">
-          <ProfileForm
-            profileData={profileData}
-            onSave={handleSaveProfile}
-            saving={saving}
-          />
+    <div className="min-h-screen bg-gray-50">
+      <StickyHeader
+        title={texts.personalData}
+        subtitle={texts.contactInfo}
+        customerLanguage={customerLanguage}
+        token={token}
+        currentPage="profile"
+        icon={profileIcon}
+      />
+
+      <div className="pt-16">
+        <div className="max-w-md mx-auto px-3 sm:max-w-2xl sm:px-4 lg:max-w-5xl lg:px-8 xl:max-w-6xl py-4 sm:py-6 lg:py-8">
+          {/* Profile Form */}
+          {profileData && (
+            <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 lg:p-6">
+              <ProfileForm
+                profileData={profileData}
+                onSave={handleSaveProfile}
+                saving={saving}
+              />
+            </div>
+          )}
         </div>
-      )}
-    </PublicPageLayout>
+      </div>
+    </div>
   )
 }
 

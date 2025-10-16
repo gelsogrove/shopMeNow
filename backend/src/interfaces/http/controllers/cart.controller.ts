@@ -220,7 +220,17 @@ export class CartController {
           include: {
             items: {
               include: {
-                product: true,
+                product: {
+                  select: {
+                    id: true,
+                    name: true,
+                    ProductCode: true,
+                    price: true,
+                    description: true,
+                    formato: true,
+                    imageUrl: true,
+                  },
+                },
                 service: true,
               },
             },
@@ -237,7 +247,17 @@ export class CartController {
           include: {
             items: {
               include: {
-                product: true,
+                product: {
+                  select: {
+                    id: true,
+                    name: true,
+                    ProductCode: true,
+                    price: true,
+                    description: true,
+                    formato: true,
+                    imageUrl: true,
+                  },
+                },
                 service: true,
               },
             },
@@ -258,7 +278,17 @@ export class CartController {
             include: {
               items: {
                 include: {
-                  product: true,
+                  product: {
+                    select: {
+                      id: true,
+                      name: true,
+                      ProductCode: true,
+                      price: true,
+                      description: true,
+                      formato: true,
+                      imageUrl: true,
+                    },
+                  },
                   service: true,
                 },
               },
@@ -320,6 +350,7 @@ export class CartController {
               appliedDiscount: 0,
               quantity: item.quantity,
               total: 0,
+              imageUrl: [], // No image for missing product
             })
             continue
           }
@@ -346,7 +377,9 @@ export class CartController {
             itemType: "PRODUCT",
             productId: item.productId,
             productCode: item.product.ProductCode || item.productId,
-            name: item.product.name || `Product ${item.productId}`,
+            name: item.product.formato
+              ? `${item.product.name} ${item.product.formato}`
+              : item.product.name || `Product ${item.productId}`,
             formato: item.product.formato || null,
             originalPrice: originalPrice,
             finalPrice: finalPrice,
@@ -354,6 +387,7 @@ export class CartController {
             appliedDiscount: appliedDiscount,
             quantity: item.quantity,
             total: itemTotal,
+            imageUrl: item.product.imageUrl || [], // Add product images
           })
         }
 
@@ -377,6 +411,7 @@ export class CartController {
               quantity: item.quantity,
               notes: item.notes || null,
               total: 0,
+              imageUrl: [], // No image for missing service
             })
             continue
           }
@@ -405,6 +440,7 @@ export class CartController {
             quantity: item.quantity,
             notes: item.notes || null,
             total: itemTotal,
+            imageUrl: item.service.imageUrl || [], // Add service images
           })
         }
       }

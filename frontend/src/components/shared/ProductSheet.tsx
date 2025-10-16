@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { getCurrencySymbol } from "@/utils/format"
 import { useEffect, useState } from "react"
+import { MultiImageCropUpload } from "./MultiImageCropUpload"
 
 interface Product {
   id: string
@@ -28,6 +29,7 @@ interface Product {
   price: string
   stock: number
   categoryId?: string | null
+  imageUrl?: string[]
   [key: string]: any
 }
 
@@ -60,6 +62,8 @@ export function ProductSheet({
   const [price, setPrice] = useState("")
   const [stock, setStock] = useState("0")
   const [categoryId, setCategoryId] = useState("")
+  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [existingImageUrls, setExistingImageUrls] = useState<string[]>([])
 
   // Ottieni il simbolo della valuta dal workspace
   const currencySymbol = getCurrencySymbol(workspace?.currency)
@@ -72,6 +76,8 @@ export function ProductSheet({
       setPrice(product.price || "")
       setStock(product.stock?.toString() || "0")
       setCategoryId(product.categoryId || "")
+      setImageFiles([])
+      setExistingImageUrls(product.imageUrl || [])
     } else {
       // Reset form for new product
       setName("")
@@ -79,6 +85,8 @@ export function ProductSheet({
       setPrice("")
       setStock("0")
       setCategoryId("")
+      setImageFiles([])
+      setExistingImageUrls([])
     }
   }, [product, open])
 
@@ -94,6 +102,18 @@ export function ProductSheet({
 
     if (categoryId) {
       formData.append("categoryId", categoryId)
+    }
+
+    // Add multiple image files if selected
+    if (imageFiles.length > 0) {
+      imageFiles.forEach((file) => {
+        formData.append("images", file)
+      })
+    }
+
+    // Add existing image URLs for reordering
+    if (existingImageUrls.length > 0) {
+      formData.append("existingImageUrls", JSON.stringify(existingImageUrls))
     }
 
     onSubmit(formData)
@@ -200,6 +220,16 @@ export function ProductSheet({
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Product Images */}
+              <MultiImageCropUpload
+                onImagesSelected={setImageFiles}
+                onImagesReordered={setExistingImageUrls}
+                currentImageUrls={product?.imageUrl || []}
+                label="Product Images"
+                required={false}
+                maxImages={10}
+              />
             </div>
           </div>
 

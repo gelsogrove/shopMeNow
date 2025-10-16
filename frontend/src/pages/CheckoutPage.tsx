@@ -1,14 +1,33 @@
 import { logger } from "@/lib/logger"
 import React, { useEffect, useState } from "react"
 import { useLocation, useSearchParams } from "react-router-dom"
-import { PublicPageLayout } from "../components/layout/PublicPageLayout"
+import {
+  ProgressSteps,
+  Step1Products,
+  Step2Addresses,
+  Step3Confirm,
+  Step4Payment,
+} from "../components/checkout"
+import { StickyHeader } from "../components/public/StickyHeader"
 import { SearchBar, useProductSearch } from "../components/ui/SearchBar"
 import { TokenError } from "../components/ui/TokenError"
 import UnifiedLoading from "../components/ui/UnifiedLoading"
 import { useCheckoutTokenValidation } from "../hooks/useTokenValidation"
 import { tokenApi } from "../services/tokenApi"
-import { getProductIcon, getServiceIcon } from "../utils/productIcons"
 import { getPublicPageTexts } from "../utils/publicPageTranslations"
+
+// 🖼️ Helper to get full image URL
+const getImageUrl = (
+  imageUrl: string | string[] | undefined
+): string | null => {
+  if (!imageUrl) return null
+  const url = Array.isArray(imageUrl) ? imageUrl[0] : imageUrl
+  if (!url) return null
+  // If URL already starts with http, return as-is
+  if (url.startsWith("http")) return url
+  // Otherwise, prepend backend URL
+  return `http://localhost:3001${url}`
+}
 
 interface Product {
   id: string // Cart item ID
@@ -28,6 +47,7 @@ interface Product {
   nomeSconto?: string
   duration?: number // Service duration in minutes
   notes?: string // Service notes
+  imageUrl?: string[] // 🖼️ Product/Service images
 }
 
 interface Customer {
@@ -401,6 +421,7 @@ const CheckoutPage: React.FC = () => {
               quantita: 1,
               duration: item.duration || null,
               notes: item.notes || null,
+              imageUrl: item.imageUrl || [], // 🖼️ Service images
             }
           } else {
             return {
@@ -418,6 +439,7 @@ const CheckoutPage: React.FC = () => {
               nomeSconto: null,
               qty: item.quantity,
               quantita: item.quantity,
+              imageUrl: item.imageUrl || [], // 🖼️ Product images
             }
           }
         })
@@ -439,21 +461,19 @@ const CheckoutPage: React.FC = () => {
 
   // Load available products
   const loadAvailableProducts = async () => {
-    // 🔧 FIX: Get workspaceId from tokenData.data (correct path)
-    const workspaceId = tokenData?.data?.workspaceId || tokenData?.workspaceId
-    if (!workspaceId) {
-      logger.error("No workspaceId found in tokenData:", tokenData)
+    if (!token) {
+      logger.error("No token available")
       return
     }
 
     setLoadingProducts(true)
     try {
+      // 🔒 SECURITY: Pass token instead of workspaceId and customerId
       const response = await fetch("/api/internal/get-all-products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          workspaceId: workspaceId,
-          customerId: customer?.id,
+          token: token, // ✅ Only token is passed
         }),
       })
 
@@ -845,774 +865,285 @@ const CheckoutPage: React.FC = () => {
     </svg>
   )
 
-  return (
-    <PublicPageLayout
-      title={texts.finalizeOrder}
-      subtitle={texts.greeting.replace("{name}", customer?.name || "")}
-      customerLanguage={customer?.language}
-      token={token}
-      currentPage="cart"
-      icon={checkoutIcon}
-    >
-      <div className="p-6 space-y-6">
-        {/* Progress Steps */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            {[1, 2, 3].map((step) => (
-              <div key={step} className="flex flex-col items-center">
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                    step <= currentStep
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-200 text-gray-600"
-                  }`}
-                >
-                  {step}
-                </div>
-                <span
-                  className={`mt-2 text-sm ${
-                    currentStep >= step
-                      ? "text-gray-900 font-semibold"
-                      : "text-gray-500"
-                  }`}
-                >
-                  {step === 1
-                    ? texts.steps.products
-                    : step === 2
-                    ? texts.steps.addresses
-                    : texts.steps.confirm}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+  // Define steps array for ProgressSteps component
+  const stepsArray = [
+    { num: 1, label: texts.steps.products },
+    { num: 2, label: texts.steps.addresses },
+    { num: 3, label: texts.steps.confirm },
+    { num: 4, label: texts.steps.payment },
+  ]
 
-        {/* Step Content */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          {currentStep === 1 && (
-            <div>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-bold">{texts.yourProducts}</h2>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Sticky Header with integrated menu */}
+      <StickyHeader
+        title={texts.finalizeOrder}
+        subtitle={texts.greeting.replace("{name}", customer?.name || "")}
+        icon={checkoutIcon}
+        showMenu={true}
+        token={token}
+        currentPage="cart"
+        customerLanguage={customer?.language}
+      />
+
+      {/* Main Content */}
+      <div className="pt-[60px] -mt-10">
+        {" "}
+        {/* Exact header height: 60px - PULL UP with negative margin */}
+        <div className="max-w-md mx-auto px-3 sm:max-w-2xl sm:px-4 lg:max-w-7xl lg:px-8 xl:max-w-full xl:px-12">
+          {/* Progress Steps - New Modular Component - NO top margin */}
+          <div className="mb-3 sm:mb-6 lg:mb-8">
+            <ProgressSteps
+              currentStep={currentStep}
+              steps={stepsArray}
+              onStepClick={(stepNum) => setCurrentStep(stepNum)}
+            />
+          </div>
+
+          {/* DESKTOP TWO-COLUMN LAYOUT */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+            {/* LEFT COLUMN - Main Content (lg:col-span-2) */}
+            <div className="lg:col-span-2">
+              {/* Step 1: Products - New Modular Component */}
+              {currentStep === 1 && (
+                <div className="mb-3 sm:mb-6 lg:mb-8">
+                  <Step1Products
+                    products={prodotti}
+                    texts={texts}
+                    onAddProducts={() => {
                       setShowAddProducts(true)
                       loadAvailableProducts()
                     }}
-                    className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2"
-                  >
-                    <span className="text-xl font-bold">+</span>
-                    {texts.addProducts || "Aggiungi Prodotti"}
-                  </button>
-                  <button
-                    onClick={() => {
+                    onAddServices={() => {
                       setShowAddServices(true)
                       loadAvailableServices()
                     }}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2"
-                  >
-                    <span className="text-xl font-bold">+</span>
-                    {texts.addServices || "Aggiungi Servizi"}
-                  </button>
-                </div>
-              </div>
-
-              {/* Products and Services List */}
-              <div className="space-y-4 mb-6">
-                {prodotti.map((prodotto, index) => {
-                  const isService = prodotto.itemType === "SERVICE"
-                  const icon = isService
-                    ? getServiceIcon(prodotto.descrizione)
-                    : getProductIcon(
-                        prodotto.descrizione,
-                        prodotto.formato || ""
-                      )
-
-                  return (
-                    <div key={index} className="border rounded-lg p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          {/* Icon and Type Badge */}
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-2xl">{icon}</span>
-                            <span
-                              className={`text-xs px-2 py-1 rounded-full font-medium ${
-                                isService
-                                  ? "bg-blue-100 text-blue-700"
-                                  : "bg-green-100 text-green-700"
-                              }`}
-                            >
-                              {isService
-                                ? texts.serviceBadge
-                                : texts.productBadge}
-                            </span>
-                          </div>
-
-                          {/* Code */}
-                          <div className="text-sm font-mono text-gray-500 mb-1">
-                            {prodotto.codice !== "N/A"
-                              ? prodotto.codice
-                              : "Non disponibile"}
-                          </div>
-
-                          {/* Name */}
-                          <div className="text-lg font-semibold text-gray-900 mb-1">
-                            {prodotto.descrizione}
-                          </div>
-
-                          {/* Format (only for products) */}
-                          {prodotto.formato && !isService && (
-                            <div className="text-sm text-blue-600 mb-2 font-medium">
-                              {texts.format}: {prodotto.formato}
-                            </div>
-                          )}
-
-                          {/* Quantity and Price */}
-                          <div className="flex items-center space-x-4">
-                            {/* Quantity controls - only for products */}
-                            {!isService && (
-                              <div className="flex items-center space-x-2">
-                                <button
-                                  onClick={() =>
-                                    handleQuantityChange(
-                                      index,
-                                      prodotto.qty - 1
-                                    )
-                                  }
-                                  className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300"
-                                  disabled={prodotto.qty <= 1}
-                                >
-                                  -
-                                </button>
-                                <span className="w-8 text-center font-semibold">
-                                  {prodotto.qty}
-                                </span>
-                                <button
-                                  onClick={() =>
-                                    handleQuantityChange(
-                                      index,
-                                      prodotto.qty + 1
-                                    )
-                                  }
-                                  className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300"
-                                >
-                                  +
-                                </button>
-                              </div>
-                            )}
-
-                            {/* Price per unit - only for products */}
-                            {!isService && (
-                              <div className="flex items-center space-x-2">
-                                {prodotto.prezzoOriginale &&
-                                prodotto.prezzoOriginale > prodotto.prezzo ? (
-                                  <>
-                                    <span className="text-sm text-gray-600">
-                                      a €{prodotto.prezzo.toFixed(2)} cad.
-                                    </span>
-                                    <span className="text-sm text-gray-500 line-through">
-                                      (era €
-                                      {prodotto.prezzoOriginale.toFixed(2)})
-                                    </span>
-                                    {prodotto.scontoApplicato &&
-                                      prodotto.scontoApplicato > 0 && (
-                                        <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">
-                                          -{prodotto.scontoApplicato}%
-                                        </span>
-                                      )}
-                                  </>
-                                ) : (
-                                  <span className="text-sm text-gray-600">
-                                    a €{prodotto.prezzo.toFixed(2)} cad.
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center space-x-4">
-                          <div className="text-right">
-                            <p className="font-bold text-lg text-green-600">
-                              €
-                              {(
-                                (isService
-                                  ? prodotto.prezzo
-                                  : prodotto.prezzoScontato ||
-                                    prodotto.prezzo) *
-                                (prodotto.qty || prodotto.quantita || 1)
-                              ).toFixed(2)}
-                            </p>
-                          </div>
-
-                          <button
-                            onClick={() =>
-                              showDeleteConfirmation(
-                                index,
-                                prodotto.descrizione,
-                                isService ? "SERVICE" : "PRODUCT",
-                                isService
-                                  ? prodotto.serviceId!
-                                  : prodotto.productId!
-                              )
-                            }
-                            className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50"
-                            title={
-                              isService
-                                ? "Rimuovi servizio"
-                                : "Rimuovi prodotto"
-                            }
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Empty cart message */}
-              {prodotti.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  <p className="text-lg">{texts.emptyCart}</p>
-                  <p className="text-sm">{texts.addProductsToContinue}</p>
+                    onQuantityChange={handleQuantityChange}
+                    onDeleteProduct={(index, name, itemType, itemId) =>
+                      showDeleteConfirmation(index, name, itemType, itemId)
+                    }
+                    onNext={() => setCurrentStep(2)}
+                  />
                 </div>
               )}
 
-              {/* Total */}
-              <div className="border-t pt-4">
-                <div className="flex justify-between items-center text-xl font-bold">
-                  <span>{texts.total}</span>
-                  <span className="text-green-600 font-bold">
-                    €{calculateTotal().toFixed(2)}
-                  </span>
+              {/* Step 2: Addresses - New Modular Component */}
+              {currentStep === 2 && (
+                <div className="mb-3 sm:mb-6 lg:mb-8">
+                  <Step2Addresses
+                    shippingAddress={formData.shippingAddress}
+                    billingAddress={formData.billingAddress}
+                    sameAsBilling={formData.sameAsBilling}
+                    texts={texts}
+                    onShippingChange={(field, value) =>
+                      handleInputChange("shippingAddress", field, value)
+                    }
+                    onBillingChange={(field, value) =>
+                      handleInputChange("billingAddress", field, value)
+                    }
+                    onSameAsBillingChange={handleSameAsBillingChange}
+                    onNext={handleNextStep}
+                  />
                 </div>
-              </div>
+              )}
 
-              {/* Continue Button */}
-              <div className="mt-6 flex justify-end">
-                <button
-                  onClick={() => setCurrentStep(2)}
-                  disabled={prodotti.length === 0}
-                  className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                >
-                  {texts.continue}
-                </button>
-              </div>
+              {/* Step 3: Confirmation - New Modular Component */}
+              {currentStep === 3 && (
+                <div className="mb-3 sm:mb-6 lg:mb-8">
+                  <Step3Confirm
+                    products={prodotti}
+                    shippingAddress={formData.shippingAddress}
+                    billingAddress={formData.billingAddress}
+                    sameAsBilling={formData.sameAsBilling}
+                    notes={formData.notes}
+                    texts={texts}
+                    onNotesChange={(value) =>
+                      setFormData((prev) => ({ ...prev, notes: value }))
+                    }
+                    onNext={() => setCurrentStep(4)}
+                  />
+                </div>
+              )}
+
+              {/* Step 4: Payment - New Modular Component */}
+              {currentStep === 4 && (
+                <div className="mb-3 sm:mb-6 lg:mb-8">
+                  <Step4Payment
+                    total={calculateTotal()}
+                    texts={texts}
+                    onConfirm={handleSubmit}
+                    loading={submitStatus.loading}
+                  />
+                </div>
+              )}
             </div>
-          )}
-
-          {currentStep === 2 && (
-            <div>
-              {/* Shipping Address */}
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-4">
-                  🚚 {texts.shippingAddress}
-                </h3>
-
-                {/* Hidden fields for Nome completo, Telefono, Azienda */}
-                <input
-                  type="hidden"
-                  value={formData.shippingAddress.name}
-                  onChange={(e) =>
-                    handleInputChange("shippingAddress", "name", e.target.value)
-                  }
-                />
-                <input
-                  type="hidden"
-                  value={formData.shippingAddress.phone}
-                  onChange={(e) =>
-                    handleInputChange(
-                      "shippingAddress",
-                      "phone",
-                      e.target.value
-                    )
-                  }
-                />
-                <input
-                  type="hidden"
-                  value={formData.shippingAddress.company}
-                  onChange={(e) =>
-                    handleInputChange(
-                      "shippingAddress",
-                      "company",
-                      e.target.value
-                    )
-                  }
-                />
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {texts.streetLabel}
-                    </label>
-                    <input
-                      type="text"
-                      placeholder={texts.streetPlaceholder}
-                      value={formData.shippingAddress.street}
-                      onChange={(e) =>
-                        handleInputChange(
-                          "shippingAddress",
-                          "street",
-                          e.target.value
-                        )
-                      }
-                      className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {texts.cityLabel}
-                    </label>
-                    <input
-                      type="text"
-                      placeholder={texts.cityPlaceholder}
-                      value={formData.shippingAddress.city}
-                      onChange={(e) =>
-                        handleInputChange(
-                          "shippingAddress",
-                          "city",
-                          e.target.value
-                        )
-                      }
-                      className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {texts.postalCodeLabel}
-                    </label>
-                    <input
-                      type="text"
-                      placeholder={texts.postalCodePlaceholder}
-                      value={formData.shippingAddress.postalCode}
-                      onChange={(e) =>
-                        handleInputChange(
-                          "shippingAddress",
-                          "postalCode",
-                          e.target.value
-                        )
-                      }
-                      className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {texts.provinceLabel}
-                    </label>
-                    <input
-                      type="text"
-                      placeholder={texts.provincePlaceholder}
-                      value={formData.shippingAddress.province}
-                      onChange={(e) =>
-                        handleInputChange(
-                          "shippingAddress",
-                          "province",
-                          e.target.value
-                        )
-                      }
-                      className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {texts.countryLabel}
-                    </label>
-                    <input
-                      type="text"
-                      placeholder={texts.countryPlaceholder}
-                      value={formData.shippingAddress.country}
-                      onChange={(e) =>
-                        handleInputChange(
-                          "shippingAddress",
-                          "country",
-                          e.target.value
-                        )
-                      }
-                      className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Billing Address */}
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-4">
-                  🧾 {texts.billingAddress}
-                </h3>
-
-                {/* Same as shipping checkbox */}
-                <div className="mb-4">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={formData.sameAsBilling}
-                      onChange={(e) =>
-                        handleSameAsBillingChange(e.target.checked)
-                      }
-                      className="mr-2"
-                    />
-                    <span className="text-sm text-gray-700">
-                      {texts.sameAsShippingLabel}
-                    </span>
-                  </label>
-                </div>
-
-                {/* Billing address fields - only show if not same as shipping */}
-                {!formData.sameAsBilling && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {texts.name}
-                      </label>
-                      <input
-                        type="text"
-                        placeholder={texts.namePlaceholder}
-                        value={formData.billingAddress.name}
-                        onChange={(e) =>
-                          handleInputChange(
-                            "billingAddress",
-                            "name",
-                            e.target.value
-                          )
-                        }
-                        className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {texts.phone}
-                      </label>
-                      <input
-                        type="text"
-                        placeholder={texts.phonePlaceholder}
-                        value={formData.billingAddress.phone}
-                        onChange={(e) =>
-                          handleInputChange(
-                            "billingAddress",
-                            "phone",
-                            e.target.value
-                          )
-                        }
-                        className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {texts.company}
-                      </label>
-                      <input
-                        type="text"
-                        placeholder={texts.companyPlaceholder}
-                        value={formData.billingAddress.company}
-                        onChange={(e) =>
-                          handleInputChange(
-                            "billingAddress",
-                            "company",
-                            e.target.value
-                          )
-                        }
-                        className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {texts.streetLabel}
-                      </label>
-                      <input
-                        type="text"
-                        placeholder={texts.streetPlaceholder}
-                        value={formData.billingAddress.street}
-                        onChange={(e) =>
-                          handleInputChange(
-                            "billingAddress",
-                            "street",
-                            e.target.value
-                          )
-                        }
-                        className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {texts.cityLabel}
-                      </label>
-                      <input
-                        type="text"
-                        placeholder={texts.cityPlaceholder}
-                        value={formData.billingAddress.city}
-                        onChange={(e) =>
-                          handleInputChange(
-                            "billingAddress",
-                            "city",
-                            e.target.value
-                          )
-                        }
-                        className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {texts.postalCodeLabel}
-                      </label>
-                      <input
-                        type="text"
-                        placeholder={texts.postalCodePlaceholder}
-                        value={formData.billingAddress.postalCode}
-                        onChange={(e) =>
-                          handleInputChange(
-                            "billingAddress",
-                            "postalCode",
-                            e.target.value
-                          )
-                        }
-                        className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {texts.provinceLabel}
-                      </label>
-                      <input
-                        type="text"
-                        placeholder={texts.provincePlaceholder}
-                        value={formData.billingAddress.province}
-                        onChange={(e) =>
-                          handleInputChange(
-                            "billingAddress",
-                            "province",
-                            e.target.value
-                          )
-                        }
-                        className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {texts.countryLabel}
-                      </label>
-                      <input
-                        type="text"
-                        placeholder={texts.countryPlaceholder}
-                        value={formData.billingAddress.country}
-                        onChange={(e) =>
-                          handleInputChange(
-                            "billingAddress",
-                            "country",
-                            e.target.value
-                          )
-                        }
-                        className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Navigation */}
-              <div className="flex justify-between">
-                <button
-                  onClick={() => setCurrentStep(1)}
-                  className="bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 transition-colors"
-                >
-                  {texts.goBack}
-                </button>
-                <button
-                  onClick={handleNextStep}
-                  className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  {texts.continue}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {currentStep === 3 && (
-            <div>
-              <h2 className="text-lg font-bold mb-6">
-                📝 {texts.confirmOrder}
-              </h2>
-
-              {/* Order Summary */}
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-4">
-                  {texts.productSummary}
-                </h3>
-                {prodotti.map((prodotto, index) => {
-                  const isService = prodotto.itemType === "SERVICE"
-                  return (
-                    <div
-                      key={index}
-                      className="flex justify-between py-2 border-b"
-                    >
-                      <div className="flex-1">
-                        <div>
-                          <span>
-                            {prodotto.qty || prodotto.quantita || 1}x{" "}
-                            {prodotto.descrizione}
-                          </span>
-                          {prodotto.formato && (
-                            <div className="text-sm text-blue-600">
-                              Format: {prodotto.formato}
-                            </div>
-                          )}
+            {/* RIGHT COLUMN - Order Summary (STICKY) - lg:col-span-1 */}
+            {currentStep > 0 && (
+              <div className="hidden lg:block">
+                <div className="sticky top-[80px] bg-white rounded-xl shadow-sm p-4 lg:p-6 border border-gray-100">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">
+                    {texts.orderSummary || "Riepilogo Ordine"}
+                  </h3>
+                  <div className="space-y-3 mb-6 pb-6 border-b border-gray-100">
+                    {prodotti.map((product, idx) => (
+                      <div key={idx} className="flex justify-between text-sm">
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900">
+                            {product.descrizione}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            x{product.qty || 1}
+                          </p>
                         </div>
+                        <p className="font-semibold text-gray-900">
+                          €
+                          {(
+                            (product.prezzoScontato || product.prezzo) *
+                            (product.qty || 1)
+                          ).toFixed(2)}
+                        </p>
                       </div>
-                      <span>
-                        €
-                        {(
-                          (isService
-                            ? prodotto.prezzo
-                            : prodotto.prezzoScontato || prodotto.prezzo) *
-                          (prodotto.qty || prodotto.quantita || 1)
-                        ).toFixed(2)}
+                    ))}
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Subtotale:</span>
+                      <span className="font-semibold">
+                        €{calculateTotal().toFixed(2)}
                       </span>
                     </div>
-                  )
-                })}
-                <div className="flex justify-between py-2 text-xl font-bold border-t-2 mt-2">
-                  <span>Totale:</span>
-                  <span className="text-green-600">
-                    €{calculateTotal().toFixed(2)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Address Summary - Side by Side */}
-              <div className="mb-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Shipping Address */}
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">
-                      🚚 {texts.shippingAddress}
-                    </h3>
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <p>
-                        <strong>
-                          {formData.shippingAddress.name || texts.notSpecified}
-                        </strong>
-                      </p>
-                      <p>
-                        {formData.shippingAddress.street || texts.notSpecified}
-                      </p>
-                      <p>
-                        {formData.shippingAddress.city || texts.notSpecified}{" "}
-                        {formData.shippingAddress.postalCode || ""}
-                      </p>
-                      {formData.shippingAddress.province && (
-                        <p>{formData.shippingAddress.province}</p>
-                      )}
-                      {formData.shippingAddress.country && (
-                        <p>{formData.shippingAddress.country}</p>
-                      )}
-                      {formData.shippingAddress.phone && (
-                        <p>📞 {formData.shippingAddress.phone}</p>
-                      )}
+                    <div className="flex justify-between pt-2 border-t border-gray-200">
+                      <span className="text-lg font-bold text-gray-900">
+                        Totale:
+                      </span>
+                      <span className="text-2xl font-bold text-green-600">
+                        €{calculateTotal().toFixed(2)}
+                      </span>
                     </div>
                   </div>
-
-                  {/* Billing Address */}
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">
-                      🧾 {texts.billingAddress}
-                    </h3>
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      {formData.sameAsBilling ? (
-                        <p className="text-gray-600 italic">
-                          {texts.sameAsShippingLabel}
-                        </p>
+                  {/* Next Button - Desktop Only */}
+                  {currentStep === 1 && prodotti.length > 0 && (
+                    <button
+                      onClick={() => setCurrentStep(2)}
+                      className="w-full mt-6 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 text-base"
+                    >
+                      <span>{texts.continue || "Continua"}</span>
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        strokeWidth={2.5}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </button>
+                  )}
+                  {currentStep === 2 && (
+                    <button
+                      onClick={handleNextStep}
+                      className="w-full mt-6 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 text-base"
+                    >
+                      <span>{texts.continue || "Continua"}</span>
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        strokeWidth={2.5}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </button>
+                  )}
+                  {currentStep === 3 && (
+                    <button
+                      onClick={() => setCurrentStep(4)}
+                      className="w-full mt-6 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 text-base"
+                    >
+                      <span>
+                        {texts.proceedToPayment || "Procedi al Pagamento"}
+                      </span>
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        strokeWidth={2.5}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </button>
+                  )}
+                  {currentStep === 4 && (
+                    <button
+                      onClick={handleSubmit}
+                      disabled={submitStatus.loading}
+                      className="w-full mt-6 bg-green-600 hover:bg-green-700 active:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 text-base"
+                    >
+                      {submitStatus.loading ? (
+                        <>
+                          <svg
+                            className="animate-spin h-4 w-4 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                          <span>{texts.processing || "Elaborazione..."}</span>
+                        </>
                       ) : (
                         <>
-                          <p>
-                            <strong>
-                              {formData.billingAddress.name ||
-                                texts.notSpecified}
-                            </strong>
-                          </p>
-                          <p>
-                            {formData.billingAddress.street ||
-                              texts.notSpecified}
-                          </p>
-                          <p>
-                            {formData.billingAddress.city || texts.notSpecified}{" "}
-                            {formData.billingAddress.postalCode || ""}
-                          </p>
-                          {formData.billingAddress.province && (
-                            <p>{formData.billingAddress.province}</p>
-                          )}
-                          {formData.billingAddress.country && (
-                            <p>{formData.billingAddress.country}</p>
-                          )}
-                          {formData.billingAddress.phone && (
-                            <p>📞 {formData.billingAddress.phone}</p>
-                          )}
+                          <span>
+                            {texts.confirmPayment || "Conferma Pagamento"}
+                          </span>
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            strokeWidth={2}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                          </svg>
                         </>
                       )}
-                    </div>
-                  </div>
+                    </button>
+                  )}
                 </div>
               </div>
-
-              {/* Notes */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium mb-2">
-                  {texts.additionalNotesLabel}
-                </label>
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, notes: e.target.value }))
-                  }
-                  placeholder={texts.notesPlaceholder}
-                  rows={3}
-                  className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              {/* Submit Status */}
-              {submitStatus.error && (
-                <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
-                  {submitStatus.error}
-                </div>
-              )}
-
-              {submitStatus.success && (
-                <div className="mb-4 p-4 bg-green-100 text-green-700 rounded-lg">
-                  {texts.orderSuccessMessage}
-                </div>
-              )}
-
-              {/* Navigation */}
-              <div className="flex justify-between">
-                <button
-                  onClick={() => setCurrentStep(2)}
-                  className="bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 transition-colors"
-                  disabled={submitStatus.loading}
-                >
-                  {texts.goBack}
-                </button>
-                {!submitStatus.success && (
-                  <button
-                    onClick={handleSubmit}
-                    disabled={submitStatus.loading}
-                    className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-400 transition-colors"
-                  >
-                    {submitStatus.loading ? (
-                      <span className="flex items-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        {texts.creatingOrder}
-                      </span>
-                    ) : (
-                      `✅ ${texts.confirmOrder}`
-                    )}
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-
         {/* Add Products Modal */}
         {showAddProducts && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1690,63 +1221,77 @@ const CheckoutPage: React.FC = () => {
                               {categoryProducts.map((product) => (
                                 <div
                                   key={product.id}
-                                  className="border rounded-lg p-3 hover:shadow-md transition-shadow"
+                                  className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow bg-white"
                                 >
-                                  <h5 className="font-semibold text-sm mb-1 flex items-center gap-2">
-                                    <span className="text-2xl">
-                                      {getProductIcon(
-                                        product.name,
-                                        product.categoria
-                                      )}
-                                    </span>
-                                    <span>{product.name}</span>
-                                  </h5>
-                                  {product.formato && (
-                                    <div className="text-xs text-blue-600 mb-1 font-medium">
-                                      Formato: {product.formato}
-                                    </div>
-                                  )}
-                                  <p className="text-xs text-gray-600 mb-2">
-                                    Codice:{" "}
-                                    {product.ProductCode ||
-                                      product.sku ||
-                                      "Non disponibile"}
-                                  </p>
-                                  <div className="mb-2">
-                                    {product.finalPrice &&
-                                    product.finalPrice < product.price ? (
-                                      <div className="flex flex-col">
-                                        <p className="text-lg font-bold text-green-600">
-                                          €{product.finalPrice.toFixed(2)}
-                                        </p>
-                                        <div className="flex items-center space-x-2">
-                                          <p className="text-sm text-gray-500 line-through">
-                                            €{product.price.toFixed(2)}
-                                          </p>
-                                          {product.appliedDiscount &&
-                                            product.appliedDiscount > 0 && (
-                                              <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">
-                                                -{product.appliedDiscount}%
-                                              </span>
-                                            )}
-                                        </div>
-                                      </div>
+                                  {/* 🖼️ Product Image - ALWAYS SHOW */}
+                                  <div className="w-full h-40 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden relative">
+                                    {getImageUrl(product.imageUrl) ? (
+                                      <img
+                                        src={getImageUrl(product.imageUrl)!}
+                                        alt={product.name}
+                                        className="w-full h-full object-cover"
+                                      />
                                     ) : (
-                                      <p className="text-lg font-bold text-green-600">
-                                        €{product.price.toFixed(2)}
+                                      <div className="w-full h-full bg-gradient-to-br from-blue-100 via-purple-50 to-pink-100 flex items-center justify-center">
+                                        <span className="text-6xl opacity-30">
+                                          📦
+                                        </span>
+                                      </div>
+                                    )}
+                                    {/* Discount Badge on Image */}
+                                    {product.appliedDiscount &&
+                                      product.appliedDiscount > 0 && (
+                                        <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold">
+                                          -{product.appliedDiscount}%
+                                        </div>
+                                      )}
+                                  </div>
+
+                                  {/* Product Info */}
+                                  <div className="p-3">
+                                    <h5 className="font-semibold text-sm mb-1">
+                                      {product.name}
+                                    </h5>
+                                    {product.formato && (
+                                      <p className="text-xs text-blue-600 font-medium mb-3">
+                                        {product.formato}
                                       </p>
                                     )}
-                                  </div>
-                                  <div className="flex justify-center">
-                                    <button
-                                      onClick={() => addProductToCart(product)}
-                                      className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded text-sm transition-colors flex items-center gap-2 min-w-[120px] justify-center"
-                                    >
-                                      <span className="text-xl font-bold">
-                                        +
-                                      </span>
-                                      {texts.addToCart}
-                                    </button>
+                                    <p className="text-xs text-gray-600 mb-2">
+                                      {product.ProductCode ||
+                                        product.sku ||
+                                        "Non disponibile"}
+                                    </p>
+                                    <div className="mb-2">
+                                      {product.finalPrice &&
+                                      product.finalPrice < product.price ? (
+                                        <div className="flex flex-col">
+                                          <p className="text-sm text-gray-500 line-through mb-1">
+                                            €{product.price.toFixed(2)}
+                                          </p>
+                                          <p className="text-lg font-bold text-green-600">
+                                            €{product.finalPrice.toFixed(2)}
+                                          </p>
+                                        </div>
+                                      ) : (
+                                        <p className="text-lg font-bold text-green-600">
+                                          €{product.price.toFixed(2)}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <div className="flex justify-center">
+                                      <button
+                                        onClick={() =>
+                                          addProductToCart(product)
+                                        }
+                                        className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded text-sm transition-colors flex items-center gap-2 min-w-[120px] justify-center"
+                                      >
+                                        <span className="text-xl font-bold">
+                                          +
+                                        </span>
+                                        {texts.addToCart}
+                                      </button>
+                                    </div>
                                   </div>
                                 </div>
                               ))}
@@ -1778,7 +1323,6 @@ const CheckoutPage: React.FC = () => {
             </div>
           </div>
         )}
-
         {/* Add Services Popup */}
         {showAddServices && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -1804,24 +1348,39 @@ const CheckoutPage: React.FC = () => {
                     {availableServices.map((service) => (
                       <div
                         key={service.id}
-                        className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+                        className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow bg-white"
                       >
-                        <h5 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                          <span className="text-2xl">
-                            {getServiceIcon(service.name)}
-                          </span>
-                          <span>{service.name}</span>
-                        </h5>
-                        <div className="flex items-center justify-between">
-                          <p className="text-lg font-bold text-blue-600">
-                            €{(service.price || 0).toFixed(2)}
-                          </p>
-                          <button
-                            onClick={() => addServiceToCart(service)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                          >
-                            {texts.addToCart}
-                          </button>
+                        {/* 🖼️ Service Image */}
+                        <div className="w-full h-40 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
+                          {getImageUrl(service.imageUrl) ? (
+                            <img
+                              src={getImageUrl(service.imageUrl)!}
+                              alt={service.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-blue-100 via-indigo-50 to-purple-100 flex items-center justify-center">
+                              <span className="text-6xl opacity-30">🛠️</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Service Info */}
+                        <div className="p-4">
+                          <h5 className="font-semibold text-sm mb-3">
+                            {service.name}
+                          </h5>
+                          <div className="flex items-center justify-between">
+                            <p className="text-lg font-bold text-blue-600">
+                              €{(service.price || 0).toFixed(2)}
+                            </p>
+                            <button
+                              onClick={() => addServiceToCart(service)}
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                            >
+                              {texts.addToCart}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -1844,7 +1403,6 @@ const CheckoutPage: React.FC = () => {
             </div>
           </div>
         )}
-
         {/* Delete Confirmation Modal */}
         {showDeleteConfirm && productToDelete && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1885,7 +1443,7 @@ const CheckoutPage: React.FC = () => {
           </div>
         )}
       </div>
-    </PublicPageLayout>
+    </div>
   )
 }
 

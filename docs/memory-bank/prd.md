@@ -1,12 +1,270 @@
-# ShopMe Project -3. **Pulizia URL**
+# ShopMe Project Requirements Document (PRD)
 
-- Rimozione URL scaduti/vecchi
-- Pulizia oraria
-- Mantenimento database ottimizzato
+## Product & Service Image Management System (October 15, 2025) 🆕
 
-**Dettagli Tecnici**: Vedere `docs/memory-bank/scheduler-service.md`ct Requirements Document (PRD)
+### 📸 **Overview**
 
-## Scheduler Service (October 2025) 🆕
+Sistema completo di gestione immagini multiple per prodotti e servizi con upload, drag & drop reordering, crop quadrato, validazione, e visualizzazione con placeholder intelligente.
+
+### 🎯 **Features Implementate**
+
+#### **Backend**
+
+- **Database Schema**: Campo `imageUrl String[]` in Products e Services con supporto completo multi-immagine
+- **Upload Middleware**:
+  - Validazione file (4MB max per file, formati PNG/JPG/JPEG/GIF/WEBP/SVG/BMP)
+  - Supporto upload multiplo con `uploadImage.array("images", 10)` (massimo 10 immagini)
+  - Generazione filename unici: `{code}_{timestamp}_{random}.{ext}` per evitare conflitti
+- **Storage Organizzato**: `/uploads/products/` e `/uploads/services/` con file nominati univocamente
+- **Sanitizzazione Filename**: Protezione contro path traversal (`replace(/[^a-zA-Z0-9-_]/g, "_")`)
+- **Security**: Tutti endpoint protetti da `authMiddleware` + `workspaceValidationMiddleware`
+- **Domain Entities**: Product e Service con campo `imageUrl: string[]` completamente integrato
+- **API Endpoints**: POST e PUT gestiscono sia nuovi upload che riordinamento immagini esistenti
+
+#### **Frontend**
+
+- **MultiImageUpload Component**:
+  - Upload multiplo con preview di tutte le immagini
+  - Drag & drop per riordinare immagini con @hello-pangea/dnd
+  - Validazione client-side (4MB per file, tipo MIME)
+  - Gestione immagini esistenti con possibilità di rimozione e riordinamento
+  - Counter immagini (es: 3/10)
+  - Crop quadrato automatico per ogni immagine caricata
+- **ProductImage Component**: Visualizzazione prima immagine con fallback a icona placeholder (Package icon)
+- **Form Integration**: ProductSheet e ServiceSheet supportano upload multiplo con FormData
+- **API Services**: productsApi e servicesApi gestiscono multipart/form-data e riordinamento
+- **Environment Config**: `VITE_PATH_IMG` per costruzione URL immagini
+- **Workspace Context**: Aggiunto campo `currency` all'interfaccia Workspace per supporto prezzi
+
+### 🔒 **Security & Validation**
+
+#### **Validazione Multi-Livello**
+
+1. **Client-Side**:
+   - Max 4MB per file, MIME type check in MultiImageUpload
+   - Limite massimo 10 immagini per prodotto/servizio
+   - Validazione formati accettati prima dell'upload
+2. **Server-Side**:
+   - Multer fileFilter con MIME type validation
+   - Extension whitelist check
+   - File size limit enforcement (4MB)
+   - Filename sanitization contro path traversal con pattern unici per evitare sovrascritture
+3. **Workspace Isolation**: Ogni operazione filtra per `workspaceId`
+4. **Array Handling**: Gestione sicura di JSON.parse per existingImageUrls con try-catch
+
+#### **Protezioni Implementate**
+
+```typescript
+// Generazione filename unici per multi-immagine (uploadMiddleware.ts)
+const sanitizedCode = code.replace(/[^a-zA-Z0-9-_]/g, "_")
+const timestamp = Date.now()
+const randomString = Math.random().toString(36).substring(2, 8)
+const filename = `${sanitizedCode}_${timestamp}_${randomString}${ext}`
+
+// Validazione workspaceId (controller)
+if (!workspaceId) {
+  return res.status(400).json({ message: "WorkspaceId is required" })
+}
+
+// Gestione array immagini in POST/PUT
+if (req.files && Array.isArray(req.files) && req.files.length > 0) {
+  const imagePaths = (req.files as Express.Multer.File[]).map(
+    (file) => `/uploads/products/${file.filename}`
+  )
+  productData.imageUrl = imagePaths
+}
+
+// Gestione riordinamento immagini esistenti
+if (req.body.existingImageUrls) {
+  try {
+    const existingUrls = JSON.parse(req.body.existingImageUrls)
+    if (Array.isArray(existingUrls) && existingUrls.length > 0) {
+      productData.imageUrl = existingUrls
+    }
+  } catch (error) {
+    logger.error("Error parsing existingImageUrls JSON", error)
+  }
+}
+
+// Update con workspaceId filter (repository)
+where: {
+  id, workspaceId
+}
+```
+
+### 📁 **File Structure**
+
+#### **Backend Files Modified/Created**
+
+```
+backend/
+├── prisma/
+│   ├── schema.prisma (imageUrl field)
+│   ├── migrations/20251014225150_add_image_url_to_products_and_services/
+│   └── data/products.ts (imageUrl in ProductData interface)
+├── src/
+│   ├── domain/entities/
+│   │   ├── product.entity.ts (imageUrl: string[])
+│   │   └── service.entity.ts (imageUrl: string[])
+│   ├── repositories/
+│   │   ├── product.repository.ts (imageUrl in update data)
+│   │   └── service.repository.ts (imageUrl already handled via 'as any')
+│   ├── interfaces/http/
+│   │   ├── middlewares/uploadMiddleware.ts (NEW)
+│   │   ├── controllers/
+│   │   │   ├── product.controller.ts (req.file handling)
+│   │   │   └── services.controller.ts (req.file handling)
+│   │   └── routes/
+│   │       ├── products.routes.ts (upload middleware integration)
+│   │       └── services.routes.ts (upload middleware integration)
+└── uploads/
+    ├── products/ (8 placeholder files)
+    └── services/ (2 placeholder files)
+```
+
+#### **Frontend Files Modified/Created**
+
+```
+frontend/
+├── .env (VITE_PATH_IMG)
+├── src/
+│   ├── config.ts (IMG_BASE_URL export)
+│   ├── contexts/
+│   │   └── WorkspaceContext.tsx (added currency field)
+│   ├── components/
+│   │   ├── shared/
+│   │   │   ├── MultiImageUpload.tsx (NEW - multiple images with drag & drop)
+│   │   │   ├── ProductImage.tsx (displays first image from array)
+│   │   │   ├── ProductSheet.tsx (multi-upload integration)
+│   │   │   ├── ServiceSheet.tsx (multi-upload integration)
+│   │   │   └── FormSheet.tsx (generic form with multi-upload support)
+│   │   └── ui/
+│   │       └── ProductCard.tsx (displays first image)
+│   ├── pages/
+│   │   ├── ProductsPage.tsx (multi-image display in list)
+│   │   ├── ServicesPage.tsx (multi-image display in list)
+│   │   └── settings/ProductsPage.tsx (admin product management)
+│   └── services/
+│       ├── productsApi.ts (FormData + array support, processProductData fix)
+│       └── servicesApi.ts (FormData + array support, imageUrl array handling)
+```
+
+### 🔄 **Data Flow**
+
+#### **Multiple Images Upload Flow**
+
+```
+1. User selects multiple images → MultiImageUpload component
+2. Client validation (4MB per file, file type, max 10 images)
+3. User crops each image to square aspect ratio
+4. Canvas generates cropped JPEG blobs for each image
+5. Files added to FormData as "images" array field
+6. If reordering existing images: existingImageUrls sent as JSON string
+7. POST/PUT request with multipart/form-data
+8. authMiddleware validates JWT token
+9. workspaceValidationMiddleware extracts workspaceId
+10. uploadMiddleware.array("images", 10) validates & saves to /uploads/{type}/
+11. Controller receives req.files array with filenames
+12. Controller builds imagePaths array: ['/uploads/{type}/{filename1}', ...]
+13. If existingImageUrls present: JSON.parse and use for reordering
+14. Repository saves imageUrl array to database (preserving order)
+15. Response returns updated product/service with imageUrl array
+```
+
+#### **Display Flow**
+
+```
+1. API returns product/service with imageUrl: string[]
+2. ProductImage component receives imageUrl prop
+3. If imageUrl[0] exists: constructs ${IMG_BASE_URL}${imageUrl[0]}
+4. <img> tag displays image
+5. onError fallback: hides img, shows placeholder icon
+6. If no imageUrl: directly shows placeholder (Package icon)
+```
+
+### 🛡️ **Permission & Security Audit**
+
+#### **Filesystem Permissions**
+
+```bash
+uploads/              drwxr-xr-x  (755)
+uploads/products/     drwxr-xr-x  (755)
+uploads/services/     drwxr-xr-x  (755)
+*.jpg files           -rw-r--r--  (644)
+```
+
+#### **Security Checklist**
+
+- ✅ All upload endpoints protected by authMiddleware
+- ✅ All operations filter by workspaceId (no cross-workspace access)
+- ✅ Filename sanitization prevents path traversal
+- ✅ MIME type validation on client & server
+- ✅ File extension whitelist enforced
+- ✅ Max file size limit (4MB) enforced
+- ✅ Upload directories created with safe permissions
+- ✅ Database updates use workspaceId in WHERE clause
+- ✅ Static file serving limited to /uploads directory
+- ✅ No user-provided paths accepted (only sanitized codes)
+
+### 📊 **Technical Specifications**
+
+| Aspect            | Specification                                                     |
+| ----------------- | ----------------------------------------------------------------- |
+| Max File Size     | 4MB per file                                                      |
+| Max Images        | 10 images per product/service                                     |
+| Allowed Formats   | PNG, JPG, JPEG, GIF, WEBP, SVG, BMP                               |
+| Aspect Ratio      | 1:1 (Square)                                                      |
+| Min Dimensions    | 150x150 pixels                                                    |
+| Storage Path      | `/uploads/{products\|services}/{code}_{timestamp}_{random}.{ext}` |
+| Database Field    | `imageUrl String[] @default([])`                                  |
+| URL Construction  | `${VITE_PATH_IMG}${imageUrl[0]}`                                  |
+| Crop Library      | react-image-crop v11.0.7                                          |
+| Upload Library    | multer v1.4.5-lts.1                                               |
+| Drag & Drop       | @hello-pangea/dnd (successor of react-beautiful-dnd)              |
+| Upload Field Name | "images" (array) instead of "image" (single)                      |
+
+### 🧪 **Testing Checklist**
+
+- [x] Upload multiple images in product creation
+- [x] Upload multiple images in product update
+- [x] Upload multiple images in service creation
+- [x] Upload multiple images in service update
+- [x] Drag & drop reorder images (preserves order in database)
+- [x] Remove individual images from multi-upload
+- [x] Validate 4MB size limit per file (client & server)
+- [x] Validate file type restriction
+- [x] Validate max 10 images limit
+- [x] Test path traversal protection (filename sanitization)
+- [x] Test cross-workspace isolation (workspaceId filter)
+- [x] Test placeholder display when no image
+- [x] Test image load error fallback to placeholder
+- [x] Verify workspaceId filter in all database queries
+- [x] Test unique filename generation (no overwrites)
+- [x] Test existingImageUrls JSON parsing with error handling
+- [x] Verify first image displays in product list
+- [x] Test compilation without TypeScript errors
+
+### 📝 **Environment Variables**
+
+```env
+# Backend (.env)
+# None required - uses relative paths
+
+# Frontend (.env)
+VITE_PATH_IMG="http://localhost:3001"  # Backend URL for image serving
+```
+
+### 🚀 **Deployment Notes**
+
+1. **Database Migration**: Run `npx prisma migrate deploy` to apply imageUrl field
+2. **Upload Directories**: Ensure `/uploads/products` and `/uploads/services` exist with write permissions
+3. **Static File Serving**: Verify Express serves `/uploads` directory publicly
+4. **Environment Variable**: Set `VITE_PATH_IMG` to production backend URL
+5. **CORS**: Ensure backend allows image requests from frontend domain
+
+---
+
+## Scheduler Service (October 2025)
 
 Lo Scheduler Service è un sistema di manutenzione automatica che gestisce:
 

@@ -21,6 +21,7 @@ export interface Product {
   isActive: boolean
   workspaceId: string
   categoryId: string | null
+  imageUrl: string[] | null
   category?: {
     id: string
     name: string
@@ -30,17 +31,20 @@ export interface Product {
     createdAt: string
     updatedAt: string
   } | null
-
   slug: string
   status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK"
   createdAt: string
   updatedAt: string
+  // Sales performance data (last 30 days)
+  salesScore?: number // 0-100 normalized score
+  salesCount?: number // Actual number of units sold
 }
 
 export interface CreateProductData {
   name: string
   code?: string
   description?: string
+  formato?: string
   price: number
   stock?: number
   sku?: string
@@ -52,44 +56,57 @@ export interface UpdateProductData {
   name?: string
   code?: string
   description?: string
+  formato?: string
   price?: number
   stock?: number
   sku?: string
   categoryId?: string
   isActive?: boolean
-  status?: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK"
 }
 
 // Helper to process product data
 const processProductData = (product: any) => {
-  // Log per il debug
+  // Handle image data transformation to ensure compatibility with multiple images
   logger.info("Processing product data:", product)
 
-  // Remove any image-related properties that might come from the API
   if (product) {
+    // Cleanup any image fields that might come from the form
     delete product.image
-    delete product.imageUrl
+
+    // Handle backward compatibility: if we have images array but no imageUrl
+    if (
+      product.images &&
+      Array.isArray(product.images) &&
+      product.images.length > 0 &&
+      !product.imageUrl
+    ) {
+      product.imageUrl = product.images
+      delete product.images
+    }
+
+    // Ensure imageUrl is always an array
+    if (product.imageUrl && !Array.isArray(product.imageUrl)) {
+      product.imageUrl = [product.imageUrl]
+    }
   }
 
   return product
 }
 
-// Helper per processare array di prodotti
 const processProductsArray = (products: any[]) => {
-  return products.map((product) => processProductData(product))
+  return products.map(processProductData)
 }
 
 /**
- * Get all products for a workspace with optional filters and pagination
+ * Get all products for a workspace
  */
 export const getAllForWorkspace = async (
   workspaceId: string,
   options?: {
-    search?: string
-    categoryId?: string
-    status?: string
     page?: number
     limit?: number
+    search?: string
+    categoryId?: string
   }
 ): Promise<{
   products: Product[]
@@ -98,34 +115,9 @@ export const getAllForWorkspace = async (
   totalPages: number
 }> => {
   try {
-    logger.info("Chiamata getAllForWorkspace con workspaceId:", workspaceId)
-    if (!workspaceId) {
-      logger.error("WorkspaceId mancante in getAllForWorkspace")
-      return {
-        products: [],
-        total: 0,
-        page: 1,
-        totalPages: 0,
-      }
-    }
+    logger.info("Getting all products for workspace:", workspaceId, options)
 
-    // Construct query parameters
     const queryParams = new URLSearchParams()
-
-    // Rimuoviamo il workspaceId dalla query string, è già nell'URL
-    queryParams.append("workspaceId", workspaceId)
-
-    if (options?.search) {
-      queryParams.append("search", options.search)
-    }
-
-    if (options?.categoryId) {
-      queryParams.append("categoryId", options.categoryId)
-    }
-
-    if (options?.status) {
-      queryParams.append("status", options.status)
-    }
 
     if (options?.page) {
       queryParams.append("page", options.page.toString())
@@ -133,6 +125,14 @@ export const getAllForWorkspace = async (
 
     if (options?.limit) {
       queryParams.append("limit", options.limit.toString())
+    }
+
+    if (options?.search) {
+      queryParams.append("search", options.search)
+    }
+
+    if (options?.categoryId) {
+      queryParams.append("categoryId", options.categoryId)
     }
 
     const queryString = queryParams.toString()
@@ -146,7 +146,7 @@ export const getAllForWorkspace = async (
     logger.info("Products API response data:", response.data)
 
     if (!response.data) {
-      logger.error("Risposta API vuota")
+      logger.error("Empty API response")
       return {
         products: [],
         total: 0,
@@ -155,7 +155,7 @@ export const getAllForWorkspace = async (
       }
     }
 
-    // La risposta ora è direttamente l'array dei prodotti
+    // Response is directly the array of products
     if (Array.isArray(response.data)) {
       const products = response.data
       return {
@@ -166,16 +166,18 @@ export const getAllForWorkspace = async (
       }
     }
 
-    // Per retrocompatibilità, supportiamo ancora il formato vecchio
+    // Response is paginated object
     if (response.data.products) {
+      const { products, total, page, totalPages } = response.data
       return {
-        ...response.data,
-        products: processProductsArray(response.data.products),
+        products: processProductsArray(products),
+        total,
+        page,
+        totalPages,
       }
     }
 
-    // Se non è né un array né ha il nodo products, ritorniamo vuoto
-    logger.error("Formato risposta API non riconosciuto:", response.data)
+    logger.error("Invalid API response format:", response.data)
     return {
       products: [],
       total: 0,
@@ -183,29 +185,24 @@ export const getAllForWorkspace = async (
       totalPages: 0,
     }
   } catch (error) {
-    logger.error("Error getting products:", error)
-    // In caso di errore, ritorna un oggetto vuoto standard
-    return {
-      products: [],
-      total: 0,
-      page: 1,
-      totalPages: 0,
-    }
+    logger.error("Failed to get products:", error)
+    throw error
   }
 }
 
 /**
- * Get a specific product by ID
+ * Get a product by ID
  */
 export const getById = async (
   id: string,
   workspaceId: string
 ): Promise<Product> => {
   try {
+    logger.info(`Getting product by ID: ${id} in workspace ${workspaceId}`)
     const response = await api.get(`/workspaces/${workspaceId}/products/${id}`)
     return processProductData(response.data)
   } catch (error) {
-    logger.error("Error getting product:", error)
+    logger.error("Failed to get product by ID:", error)
     throw error
   }
 }
@@ -218,12 +215,15 @@ export const getByCategory = async (
   workspaceId: string
 ): Promise<Product[]> => {
   try {
-    const response = await api.get(
-      `/workspaces/${workspaceId}/categories/${categoryId}/products`
+    logger.info(
+      `Getting products by category ${categoryId} in workspace ${workspaceId}`
     )
-    return response.data
+    const response = await api.get(
+      `/workspaces/${workspaceId}/products/category/${categoryId}`
+    )
+    return processProductsArray(response.data)
   } catch (error) {
-    logger.error("Error getting products by category:", error)
+    logger.error("Failed to get products by category:", error)
     throw error
   }
 }
@@ -233,26 +233,29 @@ export const getByCategory = async (
  */
 export const create = async (
   workspaceId: string,
-  data: CreateProductData
+  data: CreateProductData | FormData
 ): Promise<Product> => {
   try {
-    // Log dei dati che stiamo inviando
-    logger.info("Marco - Creating product with data:", data)
-    logger.info("Marco - Workspace ID:", workspaceId)
-    logger.info(
-      "Marco - API URL will be:",
-      `/workspaces/${workspaceId}/products`
-    )
+    logger.info("Creating product with data:", data)
+    logger.info("Workspace ID:", workspaceId)
+    logger.info("API URL will be:", `/workspaces/${workspaceId}/products`)
 
-    const response = await api.post(`/workspaces/${workspaceId}/products`, data)
-    logger.info("Marco - API response:", response)
+    // Check if data is FormData (contains image)
+    const isFormData = data instanceof FormData
+    const headers = isFormData
+      ? { "Content-Type": "multipart/form-data" }
+      : undefined
+
+    const response = await api.post(
+      `/workspaces/${workspaceId}/products`,
+      data,
+      { headers }
+    )
+    logger.info("API response:", response)
     return processProductData(response.data)
   } catch (error) {
-    logger.error("Marco - Error creating product:", error)
-    logger.error(
-      "Marco - Error details:",
-      error.response?.data || error.message
-    )
+    logger.error("Error creating product:", error)
+    logger.error("Error details:", error.response?.data || error.message)
     throw error
   }
 }
@@ -263,19 +266,30 @@ export const create = async (
 export const update = async (
   id: string,
   workspaceId: string,
-  data: UpdateProductData
+  data: UpdateProductData | FormData
 ): Promise<Product> => {
   try {
-    // Log dei dati che stiamo inviando
-    logger.info("Updating product with data:", data)
+    // Check if data is FormData (contains image)
+    const isFormData = data instanceof FormData
+    const headers = isFormData
+      ? { "Content-Type": "multipart/form-data" }
+      : undefined
+
+    logger.info(
+      `Updating product at: /workspaces/${workspaceId}/products/${id}`
+    )
 
     const response = await api.put(
       `/workspaces/${workspaceId}/products/${id}`,
-      data
+      data,
+      { headers }
     )
+
+    logger.info("Product updated successfully:", response.data)
     return processProductData(response.data)
   } catch (error) {
     logger.error("Error updating product:", error)
+    logger.error("Error details:", error.response?.data || error.message)
     throw error
   }
 }
@@ -283,11 +297,14 @@ export const update = async (
 /**
  * Delete a product
  */
-export const delete_ = async (
+export const deleteProduct = async (
   id: string,
   workspaceId: string
 ): Promise<void> => {
   try {
+    logger.info(
+      `Deleting product at: /workspaces/${workspaceId}/products/${id}`
+    )
     await api.delete(`/workspaces/${workspaceId}/products/${id}`)
   } catch (error) {
     logger.error("Error deleting product:", error)
@@ -304,11 +321,16 @@ export const updateStock = async (
   stock: number
 ): Promise<Product> => {
   try {
+    logger.info(
+      `Updating product stock at: /workspaces/${workspaceId}/products/${id}/stock`
+    )
     const response = await api.patch(
       `/workspaces/${workspaceId}/products/${id}/stock`,
       { stock }
     )
-    return response.data
+
+    logger.info("Product stock updated successfully:", response.data)
+    return processProductData(response.data)
   } catch (error) {
     logger.error("Error updating product stock:", error)
     throw error
@@ -321,6 +343,6 @@ export const productsApi = {
   getByCategory,
   create,
   update,
-  delete: delete_,
+  delete: deleteProduct,
   updateStock,
 }

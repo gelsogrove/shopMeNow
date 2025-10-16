@@ -15,7 +15,7 @@
  *
  * MAIN WORKSPACE:
  * - ID: cm9hjgq9v00014qk8fsdy4ujv
- * - Name: L'Altra Italia(ESP)
+ * - Name: Altro Gusto
  * - Admin associated as OWNER
  *
  * ⚠️ DO NOT MODIFY CREDENTIALS WITHOUT UPDATING .env
@@ -25,7 +25,39 @@ import { PrismaClient } from "@prisma/client"
 import * as bcrypt from "bcrypt"
 import * as dotenv from "dotenv"
 import * as fs from "fs"
+import * as fse from "fs-extra"
 import * as path from "path"
+
+// Import external data files
+import { categories } from "./data/categories"
+import { faqs } from "./data/faqs"
+import { products } from "./data/products"
+
+// 🛡️ VALIDAZIONE: Verifica che i dati non siano vuoti
+if (!categories || categories.length === 0) {
+  console.error("\n❌ ERRORE CRITICO: Il file categories.ts è VUOTO!")
+  console.error(
+    "   Recupera i dati da backup: backend/prisma/data-backup-YYYYMMDD/"
+  )
+  console.error(
+    "   Oppure usa: git checkout <commit> -- backend/prisma/data/\n"
+  )
+  process.exit(1)
+}
+if (!products || products.length === 0) {
+  console.error("\n❌ ERRORE CRITICO: Il file products.ts è VUOTO!")
+  console.error(
+    "   Recupera i dati da backup: backend/prisma/data-backup-YYYYMMDD/"
+  )
+  console.error(
+    "   Oppure usa: git checkout <commit> -- backend/prisma/data/\n"
+  )
+  process.exit(1)
+}
+
+console.log(
+  `✅ Data validation passed: ${categories.length} categories, ${products.length} products`
+)
 
 // Load environment variables
 dotenv.config()
@@ -73,10 +105,47 @@ async function main() {
   console.log("🚀 STARTING COMPLETE DATABASE SEED")
   console.log("=".repeat(50))
 
-  // 🔥 COMPLETE DATABASE CLEANUP
+  // � RESTORE IMAGES FROM BACKUP
+  console.log("\n📷 RESTORING IMAGES FROM BACKUP...")
+  try {
+    const backupDir = path.join(__dirname, "uploads-backup")
+    const uploadsDir = path.join(__dirname, "..", "uploads")
+
+    if (fs.existsSync(backupDir)) {
+      // Cancella uploads attuali
+      if (fs.existsSync(uploadsDir)) {
+        await fse.remove(uploadsDir)
+        console.log("   🗑️  Removed old uploads")
+      }
+
+      // Copia backup → uploads
+      await fse.copy(backupDir, uploadsDir)
+      console.log("   ✅ Restored images from prisma/uploads-backup/")
+
+      // Conta files
+      const productImages = fs.existsSync(path.join(uploadsDir, "products"))
+        ? fs.readdirSync(path.join(uploadsDir, "products")).length
+        : 0
+      const serviceImages = fs.existsSync(path.join(uploadsDir, "services"))
+        ? fs.readdirSync(path.join(uploadsDir, "services")).length
+        : 0
+
+      console.log(`   📷 Product images restored: ${productImages}`)
+      console.log(`   📷 Service images restored: ${serviceImages}`)
+    } else {
+      console.log("   ⚠️  No backup found at prisma/uploads-backup/")
+      console.log("   💡 Run 'npm run db:export' first to create backup")
+    }
+  } catch (error) {
+    console.error("   ❌ Failed to restore images:", error)
+    console.log("   ⚠️  Continuing without images...")
+  }
+
+  // �🔥 COMPLETE DATABASE CLEANUP
   console.log(
-    "🧹 COMPLETE DATABASE CLEANUP - Removing all data from all tables..."
+    "\n🧹 COMPLETE DATABASE CLEANUP - Removing all data from all tables..."
   )
+  console.log("=".repeat(50))
 
   try {
     // Delete all chunks first (foreign keys)
@@ -97,7 +166,7 @@ async function main() {
     await prisma.carts.deleteMany({})
     console.log("✅ Deleted all orders and carts")
 
-    // Delete chats and messages
+    // 🗑️ DELETE CHAT HISTORY - Clean slate for each seed
     await prisma.message.deleteMany({})
     await prisma.chatSession.deleteMany({})
     console.log("✅ Deleted all chat sessions and messages")
@@ -115,13 +184,16 @@ async function main() {
     await prisma.usage.deleteMany({})
     console.log("✅ Deleted all usage records")
 
-    // Delete customers and configurations
+    // 🗑️ DELETE ALL CUSTOMERS - Clean slate, will recreate only 4 (1 per language)
     await prisma.customers.deleteMany({})
+    console.log("✅ Deleted all customers (will recreate 4: IT, EN, ES, PT)")
+
+    // Delete configurations (can be recreated)
     await prisma.agentConfig.deleteMany({})
     await prisma.prompts.deleteMany({})
     await prisma.languages.deleteMany({})
     await prisma.whatsappSettings.deleteMany({})
-    console.log("✅ Deleted all customers and configurations")
+    console.log("✅ Deleted configurations (will be recreated)")
 
     // Delete user-workspace associations
     await prisma.userWorkspace.deleteMany({})
@@ -139,10 +211,11 @@ async function main() {
     await prisma.sales.deleteMany({})
     console.log("✅ Deleted all sales records")
 
-    // Delete workspaces and users
-    await prisma.workspace.deleteMany({})
-    await prisma.user.deleteMany({})
-    console.log("✅ Deleted all workspaces and users")
+    // ⚠️ WORKSPACES AND USERS NOT DELETED - Must be preserved for customers!
+    // Customers have foreign key to workspace
+    // await prisma.workspace.deleteMany({})
+    // await prisma.user.deleteMany({})
+    console.log("⚠️  Workspaces and users PRESERVED (not deleted)")
 
     console.log("🎉 COMPLETE DATABASE CLEANUP FINISHED!")
     console.log("=".repeat(50))
@@ -151,30 +224,27 @@ async function main() {
     throw error
   }
 
-  // Check if the admin user already exists (should be empty after cleanup)
-  const existingAdmin = await prisma.user.findUnique({
+  // Upsert admin user (create or update if exists)
+  const hashedPassword = await bcrypt.hash(adminPassword, 10)
+  const adminUser = await prisma.user.upsert({
     where: { email: adminEmail },
+    update: {
+      passwordHash: hashedPassword,
+      firstName: "Admin",
+      lastName: "User",
+      status: "ACTIVE",
+    },
+    create: {
+      email: adminEmail,
+      passwordHash: hashedPassword,
+      firstName: "Admin",
+      lastName: "User",
+      status: "ACTIVE",
+    },
   })
-
-  let adminUser
-  if (!existingAdmin) {
-    const hashedPassword = await bcrypt.hash(adminPassword, 10)
-    adminUser = await prisma.user.create({
-      data: {
-        email: adminEmail,
-        passwordHash: hashedPassword,
-        firstName: "Admin",
-        lastName: "User",
-        status: "ACTIVE",
-      },
-    })
-    console.log(
-      `✅ Admin user created: ${adminUser.email} (ID: ${adminUser.id})`
-    )
-  } else {
-    adminUser = existingAdmin
-    console.log("ℹ️ Admin user already exists.")
-  }
+  console.log(
+    `✅ Admin user upserted: ${adminUser.email} (ID: ${adminUser.id})`
+  )
 
   // Check if the main workspace exists
   const existingMainWorkspace = await prisma.workspace.findUnique({
@@ -265,19 +335,12 @@ async function main() {
       },
     })
 
-    // Delete all chats and messages
-    await prisma.message.deleteMany({
-      where: {
-        chatSession: {
-          workspaceId: mainWorkspaceId,
-        },
-      },
-    })
-    await prisma.chatSession.deleteMany({
-      where: {
-        workspaceId: mainWorkspaceId,
-      },
-    })
+    // ⚠️ CHATS AND MESSAGES NOT DELETED - Must be preserved!
+    // await prisma.message.deleteMany({...})
+    // await prisma.chatSession.deleteMany({...})
+    console.log(
+      "⚠️  Chat sessions and messages PRESERVED (not deleted from workspace)"
+    )
 
     // 2. Then, delete the main entities
     console.log("🗑️ Deleting main entities...")
@@ -306,13 +369,9 @@ async function main() {
     })
     console.log("Deleted all products from the main workspace")
 
-    // Delete all customers
-    await prisma.customers.deleteMany({
-      where: {
-        workspaceId: mainWorkspaceId,
-      },
-    })
-    console.log("Deleted all customers from the main workspace")
+    // ⚠️ CUSTOMERS NOT DELETED - Must be preserved for chat history!
+    // await prisma.customers.deleteMany({...})
+    console.log("⚠️  Customers PRESERVED (not deleted from workspace)")
 
     // Delete all categories
     await prisma.categories.deleteMany({
@@ -354,7 +413,7 @@ async function main() {
     const updatedWorkspace = await prisma.workspace.update({
       where: { id: mainWorkspaceId },
       data: {
-        name: "L'Altra Italia(ESP)",
+        name: "Altro Gusto",
         whatsappPhoneNumber: "+34654728753",
         whatsappApiKey: "placeholder_whatsapp_api_key_for_testing",
 
@@ -550,12 +609,12 @@ async function main() {
           fr: "🔧 Nous sommes en maintenance. Le service sera bientôt de retour. Merci pour votre patience! 🇫🇷",
         },
         welcomeMessages: {
-          it: "👋 Benvenuto a L'Altra Italia! Sono SofiA, il tuo assistente digitale. Sono qui per aiutarti con:\n\n• Esplorare i nostri prodotti italiani di alta qualità\n• Seguire i tuoi ordini\n• Rispondere a qualsiasi domanda\n\nPrima di iniziare, ti invito a registrarti per accedere a tutte le funzionalità. I tuoi dati saranno protetti e mai condivisi con terzi.\n\nCosa posso fare per te oggi? 🇮🇹",
-          en: "👋 Welcome to L'Altra Italia! I'm SofiA, your digital assistant. I'm here to help you with:\n\n• Exploring our high-quality Italian products\n• Tracking your orders\n• Answering any questions\n\nBefore we begin, please register to access all features. Your data will be protected and never shared with third parties.\n\nWhat can I do for you today? 🇬🇧",
-          es: "👋 ¡Bienvenido a L'Altra Italia! Soy SofiA, tu asistente digital. Estoy aquí para ayudarte con:\n\n• Explorar nuestros productos italianos de alta calidad\n• Seguir tus pedidos\n• Responder cualquier pregunta\n\nAntes de comenzar, te invito a registrarte para acceder a todas las funciones. Tus datos estarán protegidos y nunca se compartirán con terceros.\n\n¿Qué puedo hacer por ti hoy? 🇪🇸",
-          pt: "👋 Bem-vindo à L'Altra Italia! Sou a SofiA, a sua assistente digital. Estou aqui para ajudá-lo com:\n\n• Explorar os nossos produtos italianos de alta qualidade\n• Acompanhar os seus pedidos\n• Responder a qualquer pergunta\n\nAntes de começar, convido-o a registar-se para aceder a todas as funcionalidades. Os seus dados estarão protegidos e nunca serão partilhados com terceiros.\n\nO que posso fazer por si hoje? 🇵🇹",
-          de: "👋 Willkommen bei L'Altra Italia! Ich bin SofiA, Ihre digitale Assistentin. Ich helfe Ihnen gerne bei:\n\n• Erkunden Sie unsere hochwertigen italienischen Produkte\n• Verfolgen Sie Ihre Bestellungen\n• Beantworten Sie alle Fragen\n\nBitte registrieren Sie sich zunächst, um auf alle Funktionen zuzugreifen. Ihre Daten werden geschützt und niemals an Dritte weitergegeben.\n\nWas kann ich heute für Sie tun? 🇩🇪",
-          fr: "👋 Bienvenue chez L'Altra Italia! Je suis SofiA, votre assistante numérique. Je suis là pour vous aider avec:\n\n• Explorer nos produits italiens de haute qualité\n• Suivre vos commandes\n• Répondre à toutes vos questions\n\nAvant de commencer, veuillez vous inscrire pour accéder à toutes les fonctionnalités. Vos données seront protégées et ne seront jamais partagées avec des tiers.\n\nQue puis-je faire pour vous aujourd'hui? 🇫🇷",
+          it: "👋 Benvenuto da Altro Gusto! Sono SofiA, il tuo assistente digitale. Sono qui per aiutarti con:\n\n• Esplorare i nostri prodotti italiani di alta qualità\n• Seguire i tuoi ordini\n• Rispondere a qualsiasi domanda\n\nPrima di iniziare, ti invito a registrarti per accedere a tutte le funzionalità. I tuoi dati saranno protetti e mai condivisi con terzi.\n\nCosa posso fare per te oggi? 🇮🇹",
+          en: "👋 Welcome to Altro Gusto! I'm SofiA, your digital assistant. I'm here to help you with:\n\n• Exploring our high-quality Italian products\n• Tracking your orders\n• Answering any questions\n\nBefore we begin, please register to access all features. Your data will be protected and never shared with third parties.\n\nWhat can I do for you today? 🇬🇧",
+          es: "👋 ¡Bienvenido a Altro Gusto! Soy SofiA, tu asistente digital. Estoy aquí para ayudarte con:\n\n• Explorar nuestros productos italianos de alta calidad\n• Seguir tus pedidos\n• Responder cualquier pregunta\n\nAntes de comenzar, te invito a registrarte para acceder a todas las funciones. Tus datos estarán protegidos y nunca se compartirán con terceros.\n\n¿Qué puedo hacer por ti hoy? 🇪🇸",
+          pt: "👋 Bem-vindo ao Altro Gusto! Sou a SofiA, a sua assistente digital. Estou aqui para ajudá-lo com:\n\n• Explorar os nossos produtos italianos de alta qualidade\n• Acompanhar os seus pedidos\n• Responder a qualquer pergunta\n\nAntes de começar, convido-o a registar-se para aceder a todas as funcionalidades. Os seus dados estarão protegidos e nunca serão partilhados com terceiros.\n\nO que posso fazer por si hoje? 🇵🇹",
+          de: "👋 Willkommen bei Altro Gusto! Ich bin SofiA, Ihre digitale Assistentin. Ich helfe Ihnen gerne bei:\n\n• Erkunden Sie unsere hochwertigen italienischen Produkte\n• Verfolgen Sie Ihre Bestellungen\n• Beantworten Sie alle Fragen\n\nBitte registrieren Sie sich zunächst, um auf alle Funktionen zuzugreifen. Ihre Daten werden geschützt und niemals an Dritte weitergegeben.\n\nWas kann ich heute für Sie tun? 🇩🇪",
+          fr: "👋 Bienvenue chez Altro Gusto! Je suis SofiA, votre assistante numérique. Je suis là pour vous aider avec:\n\n• Explorer nos produits italiens de haute qualité\n• Suivre vos commandes\n• Répondre à toutes vos questions\n\nAvant de commencer, veuillez vous inscrire pour accéder à toutes les fonctionnalités. Vos données seront protégées et ne seront jamais partagées avec des tiers.\n\nQue puis-je faire pour vous aujourd'hui? 🇫🇷",
         },
         afterRegistrationMessages: {
           it: "Ben tornato, {name}! 👋 Come posso aiutarti oggi?",
@@ -738,73 +797,10 @@ async function main() {
     // We don't delete them for safety, but we don't include them in subsequent operations
   }
 
-  // L'Altra Italia Categories - Based on catalog structure (IN ENGLISH - master language)
-  const foodCategories = [
-    {
-      name: "Cheeses & Dairy",
-      slug: "cheeses-dairy",
-      description:
-        "🧀 Premium Italian cheeses and dairy products, including mozzarella, burrata, and high-quality dairy items.",
-    },
-    {
-      name: "Cured Meats",
-      slug: "cured-meats",
-      description:
-        "🥓 Traditional Italian cured meats and artisanal sausages of premium quality.",
-    },
-    {
-      name: "Salami & Cold Cuts",
-      slug: "salami-cold-cuts",
-      description:
-        "🍖 Artisanal salami, prosciutto, and the finest traditional Italian cold cuts.",
-    },
-    {
-      name: "Pasta & Rice",
-      slug: "pasta-rice",
-      description:
-        "🍝 Premium Italian pasta and rice, traditional and artisanal varieties of top quality.",
-    },
-    {
-      name: "Tomato Products",
-      slug: "tomato-products",
-      description:
-        "🍅 Italian tomato sauces, passata, and tomato-based products of superior quality.",
-    },
-    {
-      name: "Flour & Baking",
-      slug: "flour-baking",
-      description:
-        "🌾 Italian flours and ingredients for artisanal baking and pastry making.",
-    },
-    {
-      name: "Sauces & Preserves",
-      slug: "sauces-preserves",
-      description:
-        "🫙 Gourmet sauces, preserves, and Italian condiments to enrich every dish.",
-    },
-    {
-      name: "Water & Beverages",
-      slug: "water-beverages",
-      description:
-        "💧 Premium Italian mineral waters and traditional beverages of high quality.",
-    },
-    {
-      name: "Frozen Products",
-      slug: "frozen-products",
-      description:
-        "🧊 Italian frozen desserts, pastries, and premium frozen specialties.",
-    },
-    {
-      name: "Various & Spices",
-      slug: "various-spices",
-      description:
-        "🌶️ Italian spices, condiments, and various gourmet products for traditional cooking.",
-    },
-  ]
-
+  // Categories loaded from external file (backend/prisma/data/categories.ts)
   // Create categories for the main workspace
   console.log(`Creating categories for workspace: ${createdWorkspaces[0].name}`)
-  for (const category of foodCategories) {
+  for (const category of categories) {
     const existingCategory = await prisma.categories.findFirst({
       where: {
         slug: category.slug,
@@ -1318,7 +1314,11 @@ async function main() {
     }
   }
 
-  // L'Altra Italia Products - COMPLETE CATALOG (66 products)
+  // Products loaded from external file (backend/prisma/data/products.ts)
+  // Original array moved to external file for better maintainability
+
+  /*
+  REMOVED: Massive products array (1000+ lines) now in backend/prisma/data/products.ts
   const products = [
     // BURRATA CATEGORY (18 products)
     {
@@ -2320,6 +2320,7 @@ async function main() {
       categoryName: "Various & Spices",
     },
   ]
+  */
 
   // Create or update products with their categories
   for (const product of products) {
@@ -2365,7 +2366,8 @@ async function main() {
             slug: `${product.slug}-${Date.now()}`, // Generiamo slug unici
             workspaceId: mainWorkspaceId,
             categoryId: category.id,
-          },
+            imageUrl: (product as any).imageUrl || [], // ✅ CRITICAL: Import images from backup!
+          } as any,
         })
         console.log(
           `Product created: ${product.name} for workspace ${createdWorkspaces[0].name}`
@@ -2382,7 +2384,8 @@ async function main() {
             stock: product.stock,
             isActive: true, // ✅ CRITICAL: Ensure existing products are active
             categoryId: category.id,
-          },
+            imageUrl: (product as any).imageUrl || [], // ✅ CRITICAL: Update images from backup!
+          } as any,
         })
         console.log(
           `Product updated: ${product.name} for workspace ${createdWorkspaces[0].name}`
@@ -2488,6 +2491,7 @@ async function main() {
         "Standard shipping service for orders within Italy. Delivery within 3-5 business days.",
       price: 5.0,
       currency: "EUR",
+      imageUrl: ["/uploads/services/SHP001_1760565437670_4yuoes.jpg"],
     },
     {
       code: "GFT001",
@@ -2496,6 +2500,7 @@ async function main() {
         "Luxury gift wrapping service with personalized message and premium packaging materials.",
       price: 30.0,
       currency: "EUR",
+      imageUrl: ["/uploads/services/GFT001_1760563067773_otbvy8.webp"],
     },
   ]
 
@@ -2534,7 +2539,9 @@ async function main() {
     }
   }
 
-  // Create FAQ data - CLEANED (no duplicates, no Italian)
+  // FAQs loaded from external file (backend/prisma/data/faqs.ts)
+  /*
+  REMOVED: FAQs array now in backend/prisma/data/faqs.ts
   const faqsData = [
     {
       question: "What are your business hours?",
@@ -2630,7 +2637,7 @@ async function main() {
     {
       question: "What is your name?",
       answer:
-        "Hello! I am SofIA, the digital assistant of L'Altra Italia. I'm here to help you with information about our Italian products, orders, and services. How can I assist you today?",
+        "Hello! I am SofIA, the digital assistant of Altro Gusto. I'm here to help you with information about our Italian products, orders, and services. How can I assist you today?",
     },
     {
       question: "Show cart",
@@ -2651,9 +2658,10 @@ async function main() {
         "I'm sorry about the defective product! 😔\n\nTo resolve:\n✅ **Contact us immediately** at (+34) 93 15 91 221 or info@laltrait.com\n✅ **Free return** with free pickup\n✅ **Full refund** or immediate replacement\n\nQuality is our priority. We'll help you resolve it right away!",
     },
   ]
+  */
 
   // Create new FAQs
-  for (const faq of faqsData) {
+  for (const faq of faqs) {
     try {
       await prisma.fAQ.create({
         data: {
@@ -2700,29 +2708,29 @@ async function main() {
     },
   ]
 
-  // Delete existing test customers first
-  await prisma.customers.deleteMany({
-    where: {
-      workspaceId: mainWorkspaceId,
-      email: {
-        in: [
-          "mario.rossi@rossilimited.it",
-          "john.smith@shopme.com",
-          "maria.garcia@shopme.com",
-          "joao.silva@shopme.com",
-        ],
-      },
-    },
-  })
-  console.log("Deleted existing test customers")
+  // ⚠️ DO NOT DELETE EXISTING CUSTOMERS - Preserve chat history!
+  // await prisma.customers.deleteMany({
+  //   where: {
+  //     workspaceId: mainWorkspaceId,
+  //     email: {
+  //       in: [
+  //         "mario.rossi@rossilimited.it",
+  //         "john.smith@shopme.com",
+  //         "maria.garcia@shopme.com",
+  //         "joao.silva@shopme.com",
+  //       ],
+  //     },
+  //   },
+  // })
+  console.log("✅ Creating 4 test customers (1 per language: IT, EN, ES, PT)")
 
-  // Create Italian customer - Mario Rossi with complete real data
+  // Create Italian customer - Mario Rossi
   const testCustomer = await prisma.customers.create({
     data: {
-      id: "3c9fce96-5397-5c9f-9f8e-3d4f5a6b7890", // ID fisso per MCP test client
+      id: "3c9fce96-5397-5c9f-9f8e-3d4f5a6b7890",
       name: "Mario Rossi",
       email: "mario.rossi@rossilimited.it",
-      phone: "+390212345678", // Real Italian phone number
+      phone: "+390212345678",
       address: JSON.stringify({
         name: "Mario Rossi",
         street: "Via Garibaldi 45",
@@ -2736,7 +2744,7 @@ async function main() {
       currency: "EUR",
       notes: "Cliente premium - Preferisce prodotti DOP",
       workspaceId: mainWorkspaceId,
-      salesId: marcoRossi.id, // Assigned to Marco Rossi
+      salesId: marcoRossi.id,
       invoiceAddress: {
         firstName: "Mario",
         lastName: "Rossi",
@@ -2750,12 +2758,11 @@ async function main() {
       },
     },
   })
-
   console.log(
     `✅ Italian customer created: ${testCustomer.name} (${testCustomer.email})`
   )
 
-  // Create English customer - John Smith (with 10% discount)
+  // Create English customer - John Smith
   const testCustomer2 = await prisma.customers.create({
     data: {
       name: "John Smith",
@@ -2769,12 +2776,12 @@ async function main() {
         country: "United Kingdom",
       }),
       company: "Smith & Co Ltd",
-      discount: 10, // 10% discount
+      discount: 10,
       language: "en",
       currency: "EUR",
       notes: "VIP customer - Prefers organic products",
       workspaceId: mainWorkspaceId,
-      salesId: giuliaBianchi.id, // Assigned to Giulia Bianchi
+      salesId: giuliaBianchi.id,
       invoiceAddress: {
         firstName: "John",
         lastName: "Smith",
@@ -2788,7 +2795,6 @@ async function main() {
       },
     },
   })
-
   console.log(
     `✅ English customer created: ${testCustomer2.name} (${testCustomer2.email})`
   )
@@ -2796,7 +2802,7 @@ async function main() {
   // Create Spanish customer - Maria Garcia
   const testCustomerMCP = await prisma.customers.create({
     data: {
-      id: "test-customer-123", // Fixed ID for MCP testing
+      id: "test-customer-123",
       name: "Maria Garcia",
       email: "maria.garcia@shopme.com",
       phone: "+34666777888",
@@ -2808,12 +2814,12 @@ async function main() {
         country: "España",
       }),
       company: "Garcia Imports S.L.",
-      discount: 5, // 5% discount
+      discount: 5,
       language: "es",
       currency: "EUR",
       notes: "Cliente frecuente - Le gustan los productos artesanales",
       workspaceId: mainWorkspaceId,
-      salesId: alessandroFerrari.id, // Assigned to Alessandro Ferrari
+      salesId: alessandroFerrari.id,
       invoiceAddress: {
         firstName: "Maria",
         lastName: "Garcia",
@@ -2851,7 +2857,7 @@ async function main() {
       currency: "EUR",
       notes: "Novo cliente - Interessado em produtos gourmet",
       workspaceId: mainWorkspaceId,
-      salesId: francescaRomano.id, // Assigned to Francesca Romano
+      salesId: francescaRomano.id,
       invoiceAddress: {
         firstName: "João",
         lastName: "Silva",
@@ -2865,7 +2871,6 @@ async function main() {
       },
     },
   })
-
   console.log(
     `✅ Portuguese customer created: ${testCustomer4.name} (${testCustomer4.email})`
   )
@@ -3262,7 +3267,7 @@ ti è piaciuto il nostro servizio?
 Lasciaci una recensione qui: [FEEDBACK]
 
 Grazie per il tuo tempo! 🙏
-Team L'Altra Italia`,
+Team Altro Gusto`,
           frequency: "SEMIANNUAL",
           targetType: "ALL",
           isActive: true,
@@ -4236,7 +4241,7 @@ Team L'Altra Italia`,
   console.log("   ✅ Database cleaned and reseeded")
   console.log("   ✅ Admin user ready")
   console.log("   ✅ Workspace configured")
-  console.log("   ✅ L'Altra Italia categories and products loaded")
+  console.log("   ✅ Altro Gusto categories and products loaded")
   console.log("   ✅ Services configured")
   console.log("   ✅ FAQs loaded")
   console.log("   ✅ Test customers created")
@@ -4248,10 +4253,10 @@ Team L'Altra Italia`,
   console.log(`Seed completato con successo!`)
   console.log(`- Admin user creato: ${adminEmail}`)
   console.log(`- Workspace creato/aggiornato: ${createdWorkspaces[0].name}`)
-  console.log(`- Categorie create/esistenti: ${foodCategories.length}`)
+  console.log(`- Categorie create/esistenti: ${categories.length}`)
   console.log(`- Prodotti creati/aggiornati: ${products.length}`)
   console.log(`- Services creati/aggiornati: ${services.length}`)
-  console.log(`- FAQs create: ${faqsData.length}`)
+  console.log(`- FAQs create: ${faqs.length}`)
   console.log(
     `- 4 test customers with active chats and conversation history created: Mario Rossi (🇮🇹), John Smith (🇬🇧), Maria Garcia (🇪🇸), João Silva (🇵🇹)`
   )

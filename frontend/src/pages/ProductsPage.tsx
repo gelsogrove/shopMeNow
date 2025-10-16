@@ -1,15 +1,18 @@
 import { PageLayout } from "@/components/layout/PageLayout"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
-import { CrudPageContent } from "@/components/shared/CrudPageContent"
 import { FormSheet } from "@/components/shared/FormSheet"
+import { MultiImageCropUpload } from "@/components/shared/MultiImageCropUpload"
+import { ProductImage } from "@/components/shared/ProductImage"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
@@ -20,7 +23,7 @@ import { categoriesApi } from "@/services/categoriesApi"
 import { productsApi, type Product } from "@/services/productsApi"
 import { commonStyles } from "@/styles/common"
 import { getCurrencySymbol } from "@/utils/format"
-import { Package } from "lucide-react"
+import { Package, Pencil, Trash2 } from "lucide-react"
 import React, { useEffect, useState } from "react"
 
 export function ProductsPage() {
@@ -38,20 +41,47 @@ export function ProductsPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("none")
   const [productIsActive, setProductIsActive] = useState(true)
   const [productCode, setProductCode] = useState("")
+  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [currentImageUrls, setCurrentImageUrls] = useState<string[]>([])
+  const [reorderedImageUrls, setReorderedImageUrls] = useState<string[] | null>(
+    null
+  )
+
+  // Load filters from localStorage or use defaults
+  const [filterCategory, setFilterCategory] = useState<string>("all")
+  const [sortBy, setSortBy] = useState<"name" | "sales" | "stock">("name")
 
   // Get currency symbol based on workspace settings
-  const currencySymbol = getCurrencySymbol(workspace?.currency)
+  const currencySymbol = getCurrencySymbol(workspace?.currency as string)
+
+  // Don't save filters to localStorage to avoid issues after seed
+  // useEffect(() => {
+  //   localStorage.setItem("products_filter_category", filterCategory)
+  // }, [filterCategory])
+
+  // useEffect(() => {
+  //   localStorage.setItem("products_sort_by", sortBy)
+  // }, [sortBy])
 
   // Fetch products when workspace changes
   useEffect(() => {
     const loadProducts = async () => {
-      if (!workspace?.id) return
+      if (!workspace?.id) {
+        console.log("❌ No workspace ID, skipping products load")
+        return
+      }
 
+      console.log("🔄 Loading products for workspace:", workspace.id)
       setIsLoading(true)
       try {
         const response = await productsApi.getAllForWorkspace(workspace.id)
 
+        console.log("✅ API Response:", response)
+
         if (response && Array.isArray(response.products)) {
+          console.log(
+            `🔍 Products received from API: ${response.products.length}`
+          )
           setProducts(response.products)
         } else {
           logger.error("Invalid API response format:", response)
@@ -60,6 +90,7 @@ export function ProductsPage() {
         }
       } catch (error) {
         logger.error("Failed to load products:", error)
+        console.error("❌ Products load error:", error)
         setProducts([])
         toast.error("Failed to load products")
       } finally {
@@ -95,119 +126,55 @@ export function ProductsPage() {
     // Rimuovo il reset del productCode da qui per evitare conflitti
   }, [selectedProduct])
 
-  // Filter products based on search value
-  const filteredProducts = products.filter(
-    (product) =>
-      product.isActive &&
-      (product.name.toLowerCase().includes(searchValue.toLowerCase()) ||
+  // Filter and sort products
+  const filteredProducts = React.useMemo(() => {
+    console.log("🔍 Filter Debug:", {
+      totalProducts: products.length,
+      filterCategory,
+      searchValue,
+      sortBy,
+    })
+
+    // Filter by search
+    let filtered = products.filter(
+      (product) =>
+        product.name.toLowerCase().includes(searchValue.toLowerCase()) ||
         product.code?.toLowerCase().includes(searchValue.toLowerCase()) ||
         product.description
           ?.toLowerCase()
           .includes(searchValue.toLowerCase()) ||
-        product.category?.name
-          .toLowerCase()
-          .includes(searchValue.toLowerCase()))
-  )
+        product.category?.name.toLowerCase().includes(searchValue.toLowerCase())
+    )
 
-  const columns = [
-    { header: "Name", accessorKey: "name" as keyof Product, size: 200 },
-    { header: "Code", accessorKey: "code" as keyof Product, size: 100 },
-    { 
-      header: "Format", 
-      accessorKey: "formato" as keyof Product, 
-      size: 120,
-      cell: ({ row }: { row: { original: Product } }) => (
-        <span className="text-sm text-blue-600">
-          {row.original.formato || '-'}
-        </span>
-      ),
-    },
-    {
-      header: "Description",
-      accessorKey: "description" as keyof Product,
-      size: 250,
-      cell: ({ row }: { row: { original: Product } }) => {
-        const description = row.original.description || "No description"
-        const maxLength = 60
-        const isTruncated = description.length > maxLength
+    console.log("🔍 After search filter:", filtered.length)
 
-        return (
-          <span title={isTruncated ? description : undefined}>
-            {isTruncated
-              ? `${description.substring(0, maxLength)}...`
-              : description}
-          </span>
-        )
-      },
-    },
-    {
-      header: `Price (${currencySymbol})`,
-      accessorKey: "price" as keyof Product,
-      size: 120,
-      cell: ({ row }: { row: { original: Product } }) => (
-        <span className="font-medium">
-          {currencySymbol}
-          {row.original.price.toFixed(2)}
-        </span>
-      ),
-    },
-    {
-      header: "Stock",
-      accessorKey: "stock" as keyof Product,
-      size: 80,
-      cell: ({ row }: { row: { original: Product } }) => (
-        <span
-          className={`font-medium ${
-            row.original.stock === 0
-              ? "text-red-600"
-              : row.original.stock < 10
-              ? "text-orange-600"
-              : "text-green-600"
-          }`}
-        >
-          {row.original.stock}
-        </span>
-      ),
-    },
-    {
-      header: "Category",
-      accessorKey: "category" as keyof Product,
-      size: 150,
-      cell: ({ row }: { row: { original: Product } }) => (
-        <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
-          {row.original.category?.name || "No Category"}
-        </span>
-      ),
-    },
+    // Filter by category
+    if (filterCategory !== "all") {
+      filtered = filtered.filter((p) => p.categoryId === filterCategory)
+      console.log(
+        "🔍 After category filter:",
+        filtered.length,
+        "categoryId:",
+        filterCategory
+      )
+    }
 
-    {
-      header: "Status",
-      accessorKey: "isActive" as keyof Product,
-      size: 100,
-      cell: ({ row }: { row: { original: Product } }) => {
-        const product = row.original
-        let status = "Active"
-        let className = "bg-green-100 text-green-800"
+    // Sort products
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case "sales":
+          return (b.salesScore || 0) - (a.salesScore || 0)
+        case "stock":
+          return (b.stock || 0) - (a.stock || 0)
+        case "name":
+        default:
+          return a.name.localeCompare(b.name)
+      }
+    })
 
-        if (!product.isActive) {
-          status = "Inactive"
-          className = "bg-gray-100 text-gray-800"
-        } else if (product.stock === 0) {
-          status = "Out of Stock"
-          className = "bg-red-100 text-red-800"
-        } else if (product.stock < 10) {
-          status = "Low Stock"
-          className = "bg-orange-100 text-orange-800"
-        }
-
-        return (
-          <span className={`px-2 py-1 rounded-full text-xs ${className}`}>
-            {status}
-          </span>
-        )
-      },
-    },
-  ]
+    console.log("🔍 Final filtered products:", filtered.length)
+    return filtered
+  }, [products, searchValue, filterCategory, sortBy])
 
   const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -216,31 +183,30 @@ export function ProductsPage() {
     const form = e.target as HTMLFormElement
     const formData = new FormData(form)
 
-    const productData = {
-      name: formData.get("name") as string,
-      code: productCode, // Usa lo state invece del FormData
-      description: formData.get("description") as string,
-      formato: formData.get("formato") as string,
-      price: parseFloat(formData.get("price") as string),
-      stock: parseInt(formData.get("stock") as string, 10),
-      categoryId: (formData.get("categoryId") as string) || null,
-      isActive: productIsActive,
-    }
+    // Force isActive = false for new products (will be activated later during edit)
+    formData.set("isActive", "false")
 
-    // Debug logging
-    logger.info("Marco - Form data being sent:", productData)
-    logger.info("Marco - Workspace ID:", workspace.id)
+    // Set product code from state
+    formData.set("code", productCode)
 
     try {
-      const newProduct = await productsApi.create(workspace.id, productData)
-      logger.info("Marco - Product created successfully:", newProduct)
+      const newProduct = await productsApi.create(workspace.id, formData)
+      logger.info("Product created successfully (inactive):", newProduct)
       setProducts((prev) => [newProduct, ...prev])
       setShowAddSheet(false)
-      setProductCode("") // Reset del productCode dopo il submit
-      toast.success("Product created successfully")
-    } catch (error) {
-      logger.error("Marco - Failed to add product:", error)
-      toast.error("Failed to create product")
+
+      // Reset form state
+      setProductCode("")
+      setSelectedCategoryId("none")
+
+      toast.success(
+        "Product created successfully. Edit it to add details and images."
+      )
+    } catch (error: any) {
+      logger.error("Failed to add product:", error)
+      const errorMessage =
+        error.response?.data?.message || "Failed to create product"
+      toast.error(errorMessage)
     }
   }
 
@@ -249,6 +215,23 @@ export function ProductsPage() {
     setSelectedCategoryId(product.categoryId || "none")
     setProductIsActive(product.isActive ?? true)
     setProductCode(product.code || "")
+
+    const imageUrls = Array.isArray(product.imageUrl)
+      ? product.imageUrl
+      : product.imageUrl
+      ? [product.imageUrl]
+      : []
+
+    logger.info("ProductsPage: Opening edit for product", {
+      productId: product.id,
+      productName: product.name,
+      imageUrls: imageUrls,
+      imageCount: imageUrls.length,
+    })
+
+    setCurrentImageUrls(imageUrls)
+    setImageFiles([])
+    setReorderedImageUrls(null) // null = no interaction yet
     setShowEditSheet(true)
   }
 
@@ -259,22 +242,40 @@ export function ProductsPage() {
     const form = e.target as HTMLFormElement
     const formData = new FormData(form)
 
-    const productData = {
-      name: formData.get("name") as string,
-      code: productCode, // Usa lo state invece del FormData
-      description: formData.get("description") as string,
-      formato: formData.get("formato") as string,
-      price: parseFloat(formData.get("price") as string),
-      stock: parseInt(formData.get("stock") as string, 10),
-      categoryId: (formData.get("categoryId") as string) || null,
-      isActive: productIsActive,
+    // Add multiple image files if available
+    if (imageFiles && imageFiles.length > 0) {
+      imageFiles.forEach((file) => {
+        formData.append(`images`, file)
+      })
     }
+
+    // Always send existing image URLs (even if empty array) to handle deletions
+    // Use reorderedImageUrls if user interacted with images (not null)
+    // Otherwise use currentImageUrls (no interaction)
+    const imagesToSend =
+      reorderedImageUrls !== null ? reorderedImageUrls : currentImageUrls
+
+    formData.append("existingImageUrls", JSON.stringify(imagesToSend))
+
+    // Override form fields with state values (not append, to avoid duplicates)
+    formData.set("code", productCode) // Use .set() instead of .append()
+    formData.set("isActive", productIsActive.toString())
+
+    // Make sure categoryId is set correctly if "none" is selected
+    const catId = formData.get("categoryId")
+    if (catId === "none") {
+      formData.delete("categoryId")
+      formData.append("categoryId", "")
+    }
+
+    // Debug logging
+    logger.info("Form data being sent for product update")
 
     try {
       const updatedProduct = await productsApi.update(
         selectedProduct.id,
         workspace.id,
-        productData
+        formData
       )
 
       setProducts((prev) =>
@@ -286,6 +287,9 @@ export function ProductsPage() {
       setShowEditSheet(false)
       setSelectedProduct(null)
       setProductCode("") // Reset del productCode dopo il submit
+      setImageFiles([]) // Reset image files
+      setCurrentImageUrls([]) // Reset current image URLs
+      setReorderedImageUrls(null) // Reset reordered image URLs
       toast.success("Product updated successfully")
     } catch (error) {
       logger.error("Failed to update product:", error)
@@ -323,9 +327,85 @@ export function ProductsPage() {
     return <div>No workspace selected</div>
   }
 
+  const renderCreateForm = () => {
+    return (
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">Product Name *</Label>
+          <Input
+            id="name"
+            name="name"
+            placeholder="Enter product name"
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="code">Product Code *</Label>
+          <Input
+            id="code"
+            name="code"
+            placeholder="e.g. PROD001"
+            value={productCode}
+            onChange={(e) => setProductCode(e.target.value.toUpperCase())}
+            maxLength={20}
+            required
+          />
+          <p className="text-xs text-muted-foreground">
+            Unique product identifier. Maximum 20 characters.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="categoryId">Category *</Label>
+          <Select
+            value={selectedCategoryId}
+            onValueChange={setSelectedCategoryId}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select a category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No Category</SelectItem>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.id}>
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <input
+            type="hidden"
+            name="categoryId"
+            value={selectedCategoryId === "none" ? "" : selectedCategoryId}
+          />
+        </div>
+
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p className="text-sm text-blue-800">
+            ℹ️ The product will be created as <strong>inactive</strong>. You can
+            add images, price, and other details by editing it after creation.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   const renderFormFields = (product: Product | null) => {
     return (
       <div className="space-y-6">
+        {/* Product Images */}
+        <div className="space-y-2">
+          <MultiImageCropUpload
+            onImagesSelected={setImageFiles}
+            onImagesReordered={setReorderedImageUrls}
+            currentImageUrls={currentImageUrls}
+            label="Product Images"
+            required={false}
+            maxImages={10}
+          />
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="name">Product Name</Label>
           <Input
@@ -373,7 +453,9 @@ export function ProductsPage() {
             placeholder="Enter product format (e.g., 100gr *12, 1 Kg)"
             defaultValue={product?.formato || ""}
           />
-          <p className="text-xs text-gray-500">Product packaging format or size</p>
+          <p className="text-xs text-gray-500">
+            Product packaging format or size
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -451,37 +533,256 @@ export function ProductsPage() {
 
   return (
     <PageLayout>
-      <CrudPageContent
-        title="Products"
-        titleIcon={<Package className={commonStyles.headerIcon} />}
-        searchValue={searchValue}
-        onSearch={setSearchValue}
-        searchPlaceholder="Search products..."
-        onAdd={() => {
-          setSelectedCategoryId("none")
-          setProductIsActive(true)
-          setProductCode("")
-          setShowAddSheet(true)
-        }}
-        addButtonText="Add"
-        data={filteredProducts}
-        columns={columns}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        isLoading={isLoading}
-        getRowClassName={(product: Product) =>
-          product.stock === 0 ? "bg-red-50 border-l-4 border-red-500" : ""
-        }
-      />
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Package className={commonStyles.headerIcon} />
+            <h1 className="text-2xl font-bold text-green-600">Products</h1>
+          </div>
+          <Button
+            onClick={() => {
+              setSelectedCategoryId("none")
+              setProductIsActive(true)
+              setProductCode("")
+              setShowAddSheet(true)
+            }}
+          >
+            Add Product
+          </Button>
+        </div>
+
+        {/* Filters Row */}
+        <div className="flex flex-wrap gap-4 items-center">
+          {/* Search */}
+          <Input
+            placeholder="Search products..."
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            className="max-w-sm"
+          />
+
+          {/* Category Filter */}
+          <Select value={filterCategory} onValueChange={setFilterCategory}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  {cat.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Sort By */}
+          <Select
+            value={sortBy}
+            onValueChange={(v) => setSortBy(v as "name" | "sales" | "stock")}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Sort By" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name">Sort by Name</SelectItem>
+              <SelectItem value="sales">Sort by Sales</SelectItem>
+              <SelectItem value="stock">Sort by Stock</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Grid View */}
+        {isLoading ? (
+          <div className="text-center py-8 text-muted-foreground">
+            Loading products...
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No products found
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredProducts.map((product) => (
+              <Card
+                key={product.id}
+                className={`hover:shadow-lg transition-shadow ${
+                  product.stock === 0 ? "border-red-500 border-2" : ""
+                } ${
+                  !product.isActive ? "opacity-60 border-gray-400 border-2" : ""
+                }`}
+              >
+                <CardContent className="p-4">
+                  <div className="flex flex-col gap-3">
+                    {/* Sales Performance Bar - Enhanced UI */}
+                    {(() => {
+                      // Use real sales data from backend (defaults to 0 if not available)
+                      const salesScore = product.salesScore || 0
+                      const salesCount = product.salesCount || 0
+
+                      const getGradientColor = (score: number) => {
+                        if (score < 50) {
+                          const r = 239
+                          const g = Math.round(68 + (score / 50) * (234 - 68))
+                          const b = 68
+                          return `rgb(${r}, ${g}, ${b})`
+                        } else {
+                          const r = Math.round(
+                            234 - ((score - 50) / 50) * (234 - 34)
+                          )
+                          const g = Math.round(
+                            234 - ((score - 50) / 50) * (234 - 197)
+                          )
+                          const b = Math.round(
+                            68 + ((score - 50) / 50) * (94 - 68)
+                          )
+                          return `rgb(${r}, ${g}, ${b})`
+                        }
+                      }
+
+                      const getEmoji = (score: number) => {
+                        if (score < 30) return "🔴"
+                        if (score < 70) return "🟡"
+                        return "🔥"
+                      }
+
+                      const getLabel = (score: number) => {
+                        if (score < 30) return "Slow Mover"
+                        if (score < 70) return "Steady Sales"
+                        return "Hot Seller!"
+                      }
+
+                      const getTrendArrow = (score: number) => {
+                        if (score < 40) return "↘"
+                        if (score < 60) return "→"
+                        return "↗"
+                      }
+
+                      return (
+                        <div className="w-full">
+                          {/* Progress Bar */}
+                          <div className="relative w-full h-1.5 bg-gray-200 rounded-t-md overflow-hidden">
+                            <div
+                              className="h-full transition-all duration-500 ease-out"
+                              style={{
+                                width: `${salesScore}%`,
+                                backgroundColor: getGradientColor(salesScore),
+                              }}
+                            />
+                          </div>
+                          {/* Label Bar */}
+                          <div className="w-full bg-gradient-to-r from-gray-50 to-white px-2 py-1 flex items-center justify-between border-b border-gray-100">
+                            <span className="flex items-center gap-1 text-xs font-medium">
+                              <span className="text-base">
+                                {getEmoji(salesScore)}
+                              </span>
+                              <span className="text-gray-700">
+                                {getLabel(salesScore)}
+                              </span>
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <span
+                                className="text-xs font-bold"
+                                style={{ color: getGradientColor(salesScore) }}
+                              >
+                                {salesScore}%
+                              </span>
+                              <span className="text-sm">
+                                {getTrendArrow(salesScore)}
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })()}
+
+                    {/* Image */}
+                    <div className="w-full h-32 flex items-center justify-center bg-gray-50 overflow-hidden relative">
+                      <ProductImage
+                        imageUrl={product.imageUrl}
+                        alt={product.name}
+                        size="lg"
+                        className="w-full h-full"
+                      />
+                    </div>
+
+                    {/* Info */}
+                    <div>
+                      <h3 className="font-semibold text-lg line-clamp-2 mb-1">
+                        {product.name}
+                      </h3>
+                      {product.formato && (
+                        <p className="text-xs text-muted-foreground mb-3">
+                          {product.formato}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground mb-2">
+                        {product.code}
+                      </p>
+                      <p className="text-lg font-bold text-green-600 mb-2">
+                        {currencySymbol}
+                        {product.price.toFixed(2)}
+                      </p>
+                      <p className="text-sm">
+                        <span
+                          className={
+                            product.stock === 0
+                              ? "text-red-600 font-medium"
+                              : "text-blue-600"
+                          }
+                        >
+                          {product.stock === 0
+                            ? "Out of stock"
+                            : `Stock: ${product.stock}`}
+                        </span>
+                      </p>
+                      {product.category && (
+                        <p className="text-xs text-muted-foreground">
+                          {product.category.name}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2 justify-end pt-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(product)}
+                        className="h-8 w-8 p-0 flex items-center justify-center"
+                      >
+                        <Pencil
+                          className={`${commonStyles.actionIcon} ${commonStyles.primary}`}
+                        />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(product)}
+                        className="h-8 w-8 p-0 flex items-center justify-center hover:bg-red-50"
+                      >
+                        <Trash2
+                          className={`${commonStyles.actionIcon} text-red-600`}
+                        />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
 
       <FormSheet
         open={showAddSheet}
         onOpenChange={setShowAddSheet}
-        title="Add Product"
-        description="Add a new product to your inventory"
+        title="Quick Product Creation"
+        description="Create a new product with basic info. Add details and images later by editing."
         onSubmit={handleAdd}
       >
-        {renderFormFields(null)}
+        {renderCreateForm()}
       </FormSheet>
 
       <FormSheet

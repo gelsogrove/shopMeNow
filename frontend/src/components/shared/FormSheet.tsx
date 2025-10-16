@@ -33,7 +33,10 @@ export function FormSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className={cn("w-[25%] overflow-y-auto", className)}
+        className={cn(
+          "w-[90%] sm:w-[500px] md:w-[600px] overflow-y-auto",
+          className
+        )}
       >
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>

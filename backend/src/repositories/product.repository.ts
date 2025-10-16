@@ -1,9 +1,9 @@
 import { Prisma, PrismaClient, ProductStatus } from "@prisma/client"
 import { Product } from "../domain/entities/product.entity"
 import {
-    IProductRepository,
-    PaginatedProducts,
-    ProductFilters,
+  IProductRepository,
+  PaginatedProducts,
+  ProductFilters,
 } from "../domain/repositories/product.repository.interface"
 import logger from "../utils/logger"
 
@@ -90,7 +90,7 @@ export class ProductRepository implements IProductRepository {
       }
 
       const page = filters?.page || 1
-      const limit = filters?.limit || 1000  // No limit - show all products
+      const limit = filters?.limit || 1000 // No limit - show all products
       const skip = (page - 1) * limit
 
       logger.info("Query Prisma products con:", { where, skip, take: limit })
@@ -220,27 +220,54 @@ export class ProductRepository implements IProductRepository {
     workspaceId: string
   ): Promise<Product | null> {
     try {
+      const updateData: any = {
+        name: product.name,
+        ProductCode: product.ProductCode,
+        description: product.description,
+        formato: product.formato,
+        price: product.price,
+        stock: product.stock,
+        status: product.status as ProductStatus,
+        isActive: product.isActive,
+        slug: product.slug,
+        categoryId: product.categoryId,
+      }
+
+      // Add imageUrl if provided
+      if (product.imageUrl !== undefined) {
+        updateData.imageUrl = product.imageUrl
+        logger.info(
+          `Repository - Setting imageUrl in updateData:`,
+          JSON.stringify(product.imageUrl)
+        )
+        logger.info(
+          `Repository - imageUrl type: isArray=${Array.isArray(product.imageUrl)}, length=${product.imageUrl.length}`
+        )
+      }
+
+      logger.info(
+        `Repository - Full updateData before Prisma:`,
+        JSON.stringify(updateData)
+      )
+
       const updatedProduct = await this.prisma.products.update({
         where: {
           id,
           workspaceId,
         },
-        data: {
-          name: product.name,
-          ProductCode: product.ProductCode,
-          description: product.description,
-          formato: product.formato,
-          price: product.price,
-          stock: product.stock,
-          status: product.status as ProductStatus,
-          isActive: product.isActive,
-          slug: product.slug,
-          categoryId: product.categoryId,
-        },
+        data: updateData,
         include: {
           category: true,
         },
       })
+
+      logger.info(
+        `Repository - After Prisma update, imageUrl:`,
+        JSON.stringify((updatedProduct as any).imageUrl)
+      )
+      logger.info(
+        `Repository - imageUrl type from DB: isArray=${Array.isArray((updatedProduct as any).imageUrl)}, length=${(updatedProduct as any).imageUrl?.length}`
+      )
 
       return this.mapToDomainEntity(updatedProduct)
     } catch (error) {
@@ -362,9 +389,68 @@ export class ProductRepository implements IProductRepository {
       slug: data.slug,
       categoryId: data.categoryId,
       workspaceId: data.workspaceId,
+      imageUrl: data.imageUrl || [],
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
       category: data.category,
     })
+  }
+
+  /**
+   * Calculate sales performance for products in a workspace
+   * Returns salesScore (0-100) and salesCount for last 30 days
+   */
+  async calculateSalesPerformance(
+    workspaceId: string
+  ): Promise<Map<string, { score: number; count: number }>> {
+    try {
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+      // Get all order items for this workspace in last 30 days
+      const orderItems = await this.prisma.orderItems.findMany({
+        where: {
+          productId: { not: null },
+          order: {
+            workspaceId: workspaceId,
+            createdAt: { gte: thirtyDaysAgo },
+            status: { not: "CANCELLED" }, // Exclude cancelled orders
+          },
+        },
+        select: {
+          productId: true,
+          quantity: true,
+        },
+      })
+
+      // Aggregate sales by product
+      const salesByProduct = new Map<string, number>()
+      orderItems.forEach((item) => {
+        if (item.productId) {
+          const currentCount = salesByProduct.get(item.productId) || 0
+          salesByProduct.set(item.productId, currentCount + item.quantity)
+        }
+      })
+
+      // Find max sales to normalize scores
+      const maxSales = Math.max(...Array.from(salesByProduct.values()), 0)
+
+      // Create map with normalized scores
+      const performanceMap = new Map<string, { score: number; count: number }>()
+
+      salesByProduct.forEach((count, productId) => {
+        // Normalize to 0-100 scale
+        const score = maxSales > 0 ? Math.round((count / maxSales) * 100) : 0
+        performanceMap.set(productId, { score, count })
+      })
+
+      logger.info(
+        `Calculated sales performance for ${performanceMap.size} products in workspace ${workspaceId}`
+      )
+      return performanceMap
+    } catch (error) {
+      logger.error("Error calculating sales performance:", error)
+      return new Map()
+    }
   }
 }

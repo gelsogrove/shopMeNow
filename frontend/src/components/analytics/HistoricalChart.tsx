@@ -1,14 +1,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DashboardAnalytics } from "@/services/analyticsApi"
-import { Euro, ShoppingCart, TrendingUp, Users } from "lucide-react"
+import { TrendingUp } from "lucide-react"
 import React from "react"
 import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   Legend,
   Line,
   LineChart,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -27,20 +30,65 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
 }) => {
   const t = getAdminPageTexts()
 
-  // Format data for charts
-  const chartData = analytics.trends.orders.map((orderData, index) => {
-    const revenueData = analytics.trends.revenue[index]
-    const customerData = analytics.trends.customers[index]
-    const usageCostData = analytics.trends.usageCost[index]
+  // Format data for charts - Merge all trends by month name
+  const allMonths = new Set<string>()
+  analytics.trends.orders.forEach((d) => allMonths.add(d.month))
+  analytics.trends.customers.forEach((d) => allMonths.add(d.month))
+  analytics.trends.usageCost.forEach((d) => allMonths.add(d.month))
+
+  console.log("📊 [HistoricalChart] Raw trends data:", {
+    orders: analytics.trends.orders,
+    customers: analytics.trends.customers,
+    usageCost: analytics.trends.usageCost,
+  })
+
+  const chartData = Array.from(allMonths).map((month) => {
+    const orderData = analytics.trends.orders.find((d) => d.month === month)
+    const customerData = analytics.trends.customers.find(
+      (d) => d.month === month
+    )
+    const usageCostData = analytics.trends.usageCost.find(
+      (d) => d.month === month
+    )
 
     return {
-      month: orderData.month,
-      orders: orderData.value,
-      revenue: revenueData?.value || 0,
+      month,
+      orders: orderData?.value || 0,
       customers: customerData?.value || 0,
       usageCost: usageCostData?.value || 0,
     }
   })
+
+  console.log("📊 [HistoricalChart] Chart data merged:", chartData)
+
+  // Prepare category pie chart data - aggregate all months
+  const categoryTotals: { [categoryName: string]: number } = {}
+  analytics.trends.categories.forEach((monthData) => {
+    Object.entries(monthData.categories).forEach(([categoryName, count]) => {
+      categoryTotals[categoryName] = (categoryTotals[categoryName] || 0) + count
+    })
+  })
+
+  const categoryPieData = Object.entries(categoryTotals).map(
+    ([name, value]) => ({
+      name,
+      value,
+    })
+  )
+
+  // Define colors for pie chart
+  const PIE_COLORS = [
+    "#3b82f6", // blue
+    "#22c55e", // green
+    "#f97316", // orange
+    "#a855f7", // purple
+    "#ec4899", // pink
+    "#14b8a6", // teal
+    "#f59e0b", // amber
+    "#ef4444", // red
+  ]
+
+  console.log("📊 [HistoricalChart] Category pie data:", categoryPieData)
 
   // Custom tooltip formatter
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -56,12 +104,11 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
               />
               <span className="text-gray-600">{entry.name}:</span>
               <span className="font-medium text-gray-900">
-                {entry.dataKey === "revenue" || entry.dataKey === "usageCost"
+                {entry.dataKey === "usageCost"
                   ? new Intl.NumberFormat("en-US", {
                       style: "currency",
                       currency: "EUR",
-                      minimumFractionDigits:
-                        entry.dataKey === "usageCost" ? 3 : 0,
+                      minimumFractionDigits: 3,
                     }).format(entry.value)
                   : entry.value.toLocaleString("en-US")}
               </span>
@@ -97,174 +144,210 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
     )
   }
 
-  const renderChart = () => {
-    const commonProps = {
-      data: chartData,
-      margin: { top: 20, right: 30, left: 20, bottom: 5 },
-    }
-
-    if (chartType === "bar") {
-      return (
-        <BarChart {...commonProps}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-          <XAxis
-            dataKey="month"
-            tick={{ fontSize: 12, fill: "#666" }}
-            tickLine={{ stroke: "#e0e0e0" }}
-          />
-          <YAxis
-            tick={{ fontSize: 12, fill: "#666" }}
-            tickLine={{ stroke: "#e0e0e0" }}
-          />
-          <Tooltip content={<CustomTooltip />} />
-          <Legend wrapperStyle={{ fontSize: "14px", fontWeight: "500" }} />
-          <Bar
-            dataKey="orders"
-            name={t.ordersLabel}
-            fill="#22c55e"
-            radius={[4, 4, 0, 0]}
-          />
-          <Bar
-            dataKey="customers"
-            name="Clienti"
-            fill="#3b82f6"
-            radius={[4, 4, 0, 0]}
-          />
-        </BarChart>
-      )
-    }
-
-    return (
-      <LineChart {...commonProps}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-        <XAxis
-          dataKey="month"
-          tick={{ fontSize: 12, fill: "#666" }}
-          tickLine={{ stroke: "#e0e0e0" }}
-        />
-        <YAxis
-          yAxisId="left"
-          tick={{ fontSize: 12, fill: "#666" }}
-          tickLine={{ stroke: "#e0e0e0" }}
-        />
-        <YAxis
-          yAxisId="right"
-          orientation="right"
-          tick={{ fontSize: 12, fill: "#666" }}
-          tickLine={{ stroke: "#e0e0e0" }}
-        />
-        <Tooltip content={<CustomTooltip />} />
-        <Legend wrapperStyle={{ fontSize: "14px", fontWeight: "500" }} />
-        <Line
-          yAxisId="left"
-          type="monotone"
-          dataKey="orders"
-          name={t.ordersLabel}
-          stroke="#22c55e"
-          strokeWidth={3}
-          dot={{ fill: "#22c55e", strokeWidth: 2, r: 6 }}
-          activeDot={{ r: 8, stroke: "#22c55e", strokeWidth: 2 }}
-        />
-        <Line
-          yAxisId="left"
-          type="monotone"
-          dataKey="customers"
-          name="Clienti"
-          stroke="#3b82f6"
-          strokeWidth={3}
-          dot={{ fill: "#3b82f6", strokeWidth: 2, r: 6 }}
-          activeDot={{ r: 8, stroke: "#3b82f6", strokeWidth: 2 }}
-        />
-        <Line
-          yAxisId="right"
-          type="monotone"
-          dataKey="revenue"
-          name="Ricavi (€)"
-          stroke="#f59e0b"
-          strokeWidth={3}
-          dot={{ fill: "#f59e0b", strokeWidth: 2, r: 6 }}
-          activeDot={{ r: 8, stroke: "#f59e0b", strokeWidth: 2 }}
-        />
-        <Line
-          yAxisId="right"
-          type="monotone"
-          dataKey="usageCost"
-          name="Costi LLM (€)"
-          stroke="#f97316"
-          strokeWidth={2}
-          strokeDasharray="5 5"
-          dot={{ fill: "#f97316", strokeWidth: 2, r: 4 }}
-          activeDot={{ r: 6, stroke: "#f97316", strokeWidth: 2 }}
-        />
-      </LineChart>
-    )
-  }
-
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <TrendingUp className="h-5 w-5 text-green-600" />
-          {t.historicalTrends}
-        </CardTitle>
-        <p className="text-sm text-gray-500 mt-1">{t.historicalTrendsDesc}</p>
-      </CardHeader>
-      <CardContent>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            {renderChart()}
-          </ResponsiveContainer>
-        </div>
-
-        {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-200">
-          <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-            <div className="p-2 bg-green-100 rounded-full">
-              <ShoppingCart className="h-4 w-4 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-green-800 font-medium">
-                {t.totalOrdersLabel}
-              </p>
-              <p className="text-lg font-bold text-green-900">
-                {analytics.overview.totalOrders.toLocaleString("en-US")}
-              </p>
-            </div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Grafico 1: Orders e Customers */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-green-600" />
+            {t.historicalTrends}
+          </CardTitle>
+          <p className="text-sm text-gray-500 mt-1">{t.historicalTrendsDesc}</p>
+        </CardHeader>
+        <CardContent>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              {chartType === "bar" ? (
+                <BarChart
+                  data={chartData}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fontSize: 12, fill: "#666" }}
+                    tickLine={{ stroke: "#e0e0e0" }}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 12, fill: "#666" }}
+                    tickLine={{ stroke: "#e0e0e0" }}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend
+                    wrapperStyle={{ fontSize: "14px", fontWeight: "500" }}
+                  />
+                  <Bar
+                    dataKey="orders"
+                    name={t.ordersLabel}
+                    fill="#22c55e"
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="customers"
+                    name="Clienti"
+                    fill="#3b82f6"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              ) : (
+                <LineChart
+                  data={chartData}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fontSize: 12, fill: "#666" }}
+                    tickLine={{ stroke: "#e0e0e0" }}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 12, fill: "#666" }}
+                    tickLine={{ stroke: "#e0e0e0" }}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend
+                    wrapperStyle={{ fontSize: "14px", fontWeight: "500" }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="orders"
+                    name={t.ordersLabel}
+                    stroke="#22c55e"
+                    strokeWidth={3}
+                    dot={{ fill: "#22c55e", strokeWidth: 2, r: 6 }}
+                    activeDot={{ r: 8, stroke: "#22c55e", strokeWidth: 2 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="customers"
+                    name="Clienti"
+                    stroke="#3b82f6"
+                    strokeWidth={3}
+                    dot={{ fill: "#3b82f6", strokeWidth: 2, r: 6 }}
+                    activeDot={{ r: 8, stroke: "#3b82f6", strokeWidth: 2 }}
+                  />
+                </LineChart>
+              )}
+            </ResponsiveContainer>
           </div>
+        </CardContent>
+      </Card>
 
-          <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-            <div className="p-2 bg-blue-100 rounded-full">
-              <Users className="h-4 w-4 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-blue-800 font-medium">
-                {t.activeClients}
-              </p>
-              <p className="text-lg font-bold text-blue-900">
-                {analytics.overview.totalCustomers.toLocaleString("en-US")}
-              </p>
-            </div>
+      {/* Grafico 2: Costi LLM - SEMPRE A BARRE */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-orange-600" />
+            Costi LLM nel Tempo
+          </CardTitle>
+          <p className="text-sm text-gray-500 mt-1">
+            Andamento dei costi di utilizzo del sistema LLM
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis
+                  dataKey="month"
+                  tick={{ fontSize: 12, fill: "#666" }}
+                  tickLine={{ stroke: "#e0e0e0" }}
+                />
+                <YAxis
+                  tick={{ fontSize: 12, fill: "#666" }}
+                  tickLine={{ stroke: "#e0e0e0" }}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend
+                  wrapperStyle={{ fontSize: "14px", fontWeight: "500" }}
+                />
+                <Bar
+                  dataKey="usageCost"
+                  name="Costi LLM (€)"
+                  fill="#f97316"
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
+        </CardContent>
+      </Card>
 
-          <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg">
-            <div className="p-2 bg-orange-100 rounded-full">
-              <Euro className="h-4 w-4 text-orange-600" />
-            </div>
-            <div>
-              <p className="text-sm text-orange-800 font-medium">
-                {t.totalRevenue}
+      {/* ROW 2: Pie Chart Categorie + Spazio Vuoto */}
+      <div className="lg:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        {/* Grafico 3: Pie Chart Categorie */}
+        {categoryPieData.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-purple-600" />
+                Distribuzione per Categoria
+              </CardTitle>
+              <p className="text-sm text-gray-500 mt-1">
+                Totale ordini per categoria prodotto
               </p>
-              <p className="text-lg font-bold text-orange-900">
-                {new Intl.NumberFormat("en-US", {
-                  style: "currency",
-                  currency: "EUR",
-                  minimumFractionDigits: 0,
-                }).format(analytics.overview.totalRevenue)}
-              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={categoryPieData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) =>
+                        `${name}: ${(percent * 100).toFixed(0)}%`
+                      }
+                      outerRadius={120}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {categoryPieData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={PIE_COLORS[index % PIE_COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Spazio Vuoto per Future Implementazioni */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-gray-400" />
+              Spazio Disponibile
+            </CardTitle>
+            <p className="text-sm text-gray-500 mt-1">
+              In sviluppo - nuovo grafico in arrivo
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="h-80 flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+              <div className="text-center">
+                <TrendingUp className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-400 font-medium">Spazio Riservato</p>
+                <p className="text-sm text-gray-400 mt-2">
+                  Nuovo grafico analytics
+                </p>
+              </div>
             </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   )
 }

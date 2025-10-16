@@ -11,7 +11,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { ReactNode } from "react"
+import { ReactNode, useState } from "react"
+import { MultiImageCropUpload } from "./MultiImageCropUpload"
 
 interface Service {
   id: string
@@ -20,7 +21,8 @@ interface Service {
   price: string
   isActive?: boolean
   status: "active" | "inactive"
-  [key: string]: string | ReactNode | boolean | undefined
+  imageUrl?: string[]
+  [key: string]: string | ReactNode | boolean | undefined | string[]
 }
 
 interface ServiceSheetProps {
@@ -40,6 +42,9 @@ export function ServiceSheet({
   title,
   currencySymbol,
 }: ServiceSheetProps) {
+  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [existingImageUrls, setExistingImageUrls] = useState<string[]>([])
+
   // If service is provided, ensure all required fields have default values
   const safeService = service
     ? {
@@ -54,8 +59,37 @@ export function ServiceSheet({
   // Custom submit handler that wraps the provided onSubmit
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    onSubmit(e)
-    // Manually trigger the drawer to close after submission
+
+    const form = e.currentTarget
+    const formData = new FormData(form)
+
+    // Add multiple image files if selected
+    if (imageFiles.length > 0) {
+      imageFiles.forEach((file) => {
+        formData.append("images", file)
+      })
+    }
+
+    // Add existing image URLs for reordering
+    if (existingImageUrls.length > 0) {
+      formData.append("existingImageUrls", JSON.stringify(existingImageUrls))
+    }
+
+    // Create a custom event with formData
+    const customEvent = {
+      ...e,
+      currentTarget: {
+        ...form,
+        elements: form.elements,
+      },
+      formData,
+    } as any
+
+    onSubmit(customEvent)
+
+    // Reset and close
+    setImageFiles([])
+    setExistingImageUrls([])
     onOpenChange(false)
   }
 
@@ -119,6 +153,16 @@ export function ServiceSheet({
                   value="true"
                 />
               </div>
+
+              {/* Service Images */}
+              <MultiImageCropUpload
+                onImagesSelected={setImageFiles}
+                onImagesReordered={setExistingImageUrls}
+                currentImageUrls={safeService?.imageUrl || []}
+                label="Service Images"
+                required={false}
+                maxImages={10}
+              />
             </div>
           </div>
           <DrawerFooter className="mt-2 p-6 border-t sticky bottom-0 bg-white z-10 shadow-md">

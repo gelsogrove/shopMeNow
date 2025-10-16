@@ -2,6 +2,7 @@ import { Router } from "express"
 import logger from "../../../utils/logger"
 import { ProductController } from "../controllers/product.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"
+import { handleUploadError, uploadImage } from "../middlewares/uploadMiddleware"
 import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
 
 /**
@@ -277,7 +278,14 @@ export default function setupProductRoutes(): Router {
    *         description: Unauthorized
    */
   // @ts-ignore
-  router.post("/", productController.createProduct)
+  router.post(
+    "/",
+    authMiddleware,
+    workspaceValidationMiddleware,
+    uploadImage.array("images", 10), // Supporto per massimo 10 immagini
+    handleUploadError,
+    productController.createProduct
+  )
 
   /**
    * @swagger
@@ -321,7 +329,14 @@ export default function setupProductRoutes(): Router {
    *         description: Product not found
    */
   // @ts-ignore
-  router.put("/:id", productController.updateProduct)
+  router.put(
+    "/:id",
+    authMiddleware,
+    workspaceValidationMiddleware,
+    uploadImage.array("images", 10), // Supporto per massimo 10 immagini
+    handleUploadError,
+    productController.updateProduct
+  )
 
   /**
    * @swagger

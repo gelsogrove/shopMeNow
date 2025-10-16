@@ -16,11 +16,18 @@ export interface DashboardAnalytics {
     customers: MonthlyData[]
     messages: MonthlyData[]
     usageCost: MonthlyData[] // Add LLM usage cost trends
+    categories: CategoryTrendData[] // Categories sales over time
   }
   topProducts: ProductAnalytics[]
   topCustomers: CustomerAnalytics[]
   topSellers: SellerAnalytics[]
   logs: LogEntry[] // System logs with all billing details
+}
+
+export interface CategoryTrendData {
+  month: string
+  year: number
+  categories: { [categoryName: string]: number } // { "Pasta": 5, "Olio": 3 }
 }
 
 export interface MonthlyData {
@@ -125,12 +132,14 @@ export class AnalyticsService {
         customerTrends,
         messageTrends,
         usageCostTrends,
+        categoryTrends,
       ] = await Promise.all([
         this.generateOrderTrends(workspaceId, startDate, endDate),
         this.generateRevenueTrends(workspaceId, startDate, endDate),
         this.generateCustomerTrends(workspaceId, startDate, endDate),
         this.generateMessageTrends(workspaceId, startDate, endDate),
         this.generateUsageCostTrends(workspaceId, startDate, endDate),
+        this.generateCategoryTrends(workspaceId, startDate, endDate),
       ])
 
       // Get top products, top customers, top sellers and system logs
@@ -156,6 +165,7 @@ export class AnalyticsService {
           customers: customerTrends,
           messages: messageTrends,
           usageCost: usageCostTrends,
+          categories: categoryTrends,
         },
         topProducts,
         topCustomers,
@@ -287,6 +297,73 @@ export class AnalyticsService {
       value: Number(item.total_cost) || 0,
       label: `${this.getMonthName(item.month)} ${item.year}`,
     }))
+  }
+
+  // Generate category sales trends over time
+  private async generateCategoryTrends(
+    workspaceId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<CategoryTrendData[]> {
+    const categoryData = (await this.prisma.$queryRaw`
+      SELECT 
+        EXTRACT(YEAR FROM o."createdAt") as year,
+        EXTRACT(MONTH FROM o."createdAt") as month,
+        COALESCE(c.name, 'Senza Categoria') as category_name,
+        COUNT(DISTINCT o.id) as order_count
+      FROM "orders" o
+      INNER JOIN "order_items" oi ON o.id = oi."orderId"
+      INNER JOIN "products" p ON oi."productId" = p.id
+      LEFT JOIN "categories" c ON p."categoryId" = c.id
+      WHERE o."workspaceId" = ${workspaceId}
+        AND o."createdAt" >= ${startDate}
+        AND o."createdAt" <= ${endDate}
+      GROUP BY EXTRACT(YEAR FROM o."createdAt"), EXTRACT(MONTH FROM o."createdAt"), c.name
+      ORDER BY year, month, order_count DESC
+    `) as {
+      year: number
+      month: number
+      category_name: string
+      order_count: bigint
+    }[]
+
+    // Group by month and aggregate categories
+    const monthMap = new Map<string, CategoryTrendData>()
+
+    categoryData.forEach((row) => {
+      const monthKey = `${row.year}-${row.month}`
+      const monthName = this.getMonthName(row.month)
+
+      if (!monthMap.has(monthKey)) {
+        monthMap.set(monthKey, {
+          month: monthName,
+          year: row.year,
+          categories: {},
+        })
+      }
+
+      const trendData = monthMap.get(monthKey)!
+      trendData.categories[row.category_name] = Number(row.order_count) || 0
+    })
+
+    return Array.from(monthMap.values()).sort((a, b) => {
+      if (a.year !== b.year) return a.year - b.year
+      const monthOrder = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ]
+      return monthOrder.indexOf(a.month) - monthOrder.indexOf(b.month)
+    })
   }
 
   // Get top selling products

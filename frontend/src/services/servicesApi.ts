@@ -11,6 +11,7 @@ export interface Service {
   duration: number
   isActive: boolean
   workspaceId: string
+  imageUrl: string[]
   createdAt: string
   updatedAt: string
 }
@@ -54,6 +55,7 @@ const mockServices: Service[] = [
     duration: 0,
     isActive: true,
     workspaceId: "mock-workspace",
+    imageUrl: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -68,6 +70,7 @@ const mockServices: Service[] = [
     duration: 0,
     isActive: true,
     workspaceId: "mock-workspace",
+    imageUrl: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -82,6 +85,7 @@ const mockServices: Service[] = [
     duration: 0,
     isActive: true,
     workspaceId: "mock-workspace",
+    imageUrl: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -92,6 +96,7 @@ const mockServices: Service[] = [
  */
 export const getServices = async (workspaceId: string): Promise<Service[]> => {
   try {
+    logger.info(`Fetching services from: /workspaces/${workspaceId}/services`)
     const response = await api.get(`/workspaces/${workspaceId}/services`)
     return response.data
   } catch (error) {
@@ -108,6 +113,9 @@ export const getServiceById = async (
   id: string
 ): Promise<Service> => {
   try {
+    logger.info(
+      `Fetching service from: /workspaces/${workspaceId}/services/${id}`
+    )
     const response = await api.get(`/workspaces/${workspaceId}/services/${id}`)
     return response.data
   } catch (error) {
@@ -121,10 +129,22 @@ export const getServiceById = async (
  */
 export const createService = async (
   workspaceId: string,
-  data: CreateServiceData
+  data: CreateServiceData | FormData
 ): Promise<Service> => {
   try {
-    const response = await api.post(`/workspaces/${workspaceId}/services`, data)
+    // Check if data is FormData (contains image)
+    const isFormData = data instanceof FormData
+    const headers = isFormData
+      ? { "Content-Type": "multipart/form-data" }
+      : undefined
+
+    logger.info(`Creating service at: /workspaces/${workspaceId}/services`)
+
+    const response = await api.post(
+      `/workspaces/${workspaceId}/services`,
+      data,
+      { headers }
+    )
     return response.data
   } catch (error) {
     logger.error("Error creating service:", error)
@@ -138,12 +158,24 @@ export const createService = async (
 export const updateService = async (
   workspaceId: string,
   id: string,
-  data: UpdateServiceData
+  data: UpdateServiceData | FormData
 ): Promise<Service> => {
   try {
+    // Check if data is FormData (contains image)
+    const isFormData = data instanceof FormData
+    const headers = isFormData
+      ? { "Content-Type": "multipart/form-data" }
+      : undefined
+
+    // Debug log per tracciare l'URL della richiesta
+    logger.info(
+      `Updating service at: /workspaces/${workspaceId}/services/${id}`
+    )
+
     const response = await api.put(
       `/workspaces/${workspaceId}/services/${id}`,
-      data
+      data,
+      { headers }
     )
     return response.data
   } catch (error) {
@@ -160,6 +192,9 @@ export const deleteService = async (
   id: string
 ): Promise<void> => {
   try {
+    logger.info(
+      `Deleting service at: /workspaces/${workspaceId}/services/${id}`
+    )
     await api.delete(`/workspaces/${workspaceId}/services/${id}`)
   } catch (error) {
     logger.error("Error deleting service:", error)
@@ -174,6 +209,9 @@ export const search = async (
   workspaceId: string,
   query: string
 ): Promise<SearchResult[]> => {
+  logger.info(
+    `Searching services at: /workspaces/${workspaceId}/services/search`
+  )
   const response = await api.post(
     `/workspaces/${workspaceId}/services/search`,
     {

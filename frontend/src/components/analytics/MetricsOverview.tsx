@@ -154,19 +154,6 @@ export const MetricsOverview: React.FC<MetricsOverviewProps> = ({
       description: t.activeClientsDesc,
     },
     {
-      title: t.totalRevenue,
-      value: analytics.overview.totalRevenue,
-      icon: <Euro className="h-4 w-4 text-green-600" />,
-      formatter: formatCurrency,
-      trend: previousPeriodAnalytics
-        ? calculateTrend(
-            analytics.overview.totalRevenue,
-            previousPeriodAnalytics.overview.totalRevenue
-          )
-        : undefined,
-      description: undefined,
-    },
-    {
       title: "Costo LLM",
       value: analytics.overview.usageCost,
       icon: <Euro className="h-4 w-4 text-orange-500" />,
@@ -188,7 +175,7 @@ export const MetricsOverview: React.FC<MetricsOverviewProps> = ({
       {/* Main Metrics */}
       <div>
         <h3 className="text-lg font-semibold mb-4">{t.mainMetrics}</h3>
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {metrics.map((metric) => (
             <MetricCard
               key={metric.title}
