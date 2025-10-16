@@ -671,10 +671,11 @@ export function WhatsAppChatModal({
     // We're intentionally NOT clearing the sessionId here
   }
 
-  // Handle link clicks to open in new tab
+  // Handle link clicks to open preview in device
   const handleLinkClick = (url: string, e: React.MouseEvent) => {
     e.preventDefault()
-    window.open(url, "_blank")
+    setPreviewUrl(url)
+    setShowPreviewSplit(true)
   }
 
   return (
