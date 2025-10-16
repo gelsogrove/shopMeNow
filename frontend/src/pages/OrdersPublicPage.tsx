@@ -1017,8 +1017,7 @@ const OrdersPublicPage: React.FC = () => {
                           <div className="flex items-center space-x-0.5 sm:space-x-1">
                             <span>•</span>
                             <span className="line-clamp-1">
-                              VAT: €
-                              {((o.taxAmount || 0) / 100).toFixed(2)}
+                              VAT: €{((o.taxAmount || 0) / 100).toFixed(2)}
                             </span>
                           </div>
                         )}
@@ -1039,8 +1038,7 @@ const OrdersPublicPage: React.FC = () => {
                               />
                             </svg>
                             <span className="line-clamp-1">
-                              €
-                              {((o.shippingAmount || 0) / 100).toFixed(2)}
+                              €{((o.shippingAmount || 0) / 100).toFixed(2)}
                             </span>
                           </div>
                         )}
@@ -1099,8 +1097,7 @@ const OrdersPublicPage: React.FC = () => {
                         {/* Total Amount - Right side */}
                         <div className="text-right flex-shrink-0">
                           <div className="text-base sm:text-lg font-bold text-gray-900 whitespace-nowrap">
-                            €
-                            {(o.totalAmount / 100).toFixed(2)}
+                            €{(o.totalAmount / 100).toFixed(2)}
                           </div>
                           <div className="text-xs text-gray-500 hidden sm:block">
                             Total
