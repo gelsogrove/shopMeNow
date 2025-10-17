@@ -2868,7 +2868,7 @@ export class MessageRepository {
         .map((category) => {
           const name = category.name || "Categoria"
           const description = category.description || ""
-          
+
           // Prendi una descrizione breve (prima frase o primi 80 caratteri)
           const shortDesc = description
             .split(/[.,;]/)[0]
