@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express"
+import { NextFunction, Request, Response } from "express"
 import jwt from "jsonwebtoken"
 import logger from "../../../utils/logger"
 
@@ -22,36 +22,38 @@ export const jwtAuthMiddleware = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const token = req.query.token as string || req.headers.authorization?.replace('Bearer ', '')
+    const token =
+      (req.query.token as string) ||
+      req.headers.authorization?.replace("Bearer ", "")
 
     if (!token) {
       res.status(401).json({
         success: false,
-        error: "Token is required"
+        error: "Token is required",
       })
       return
     }
 
     // Verify JWT token with proper signature validation
     const payload = await verifyJWTToken(token)
-    
+
     if (!payload) {
       res.status(401).json({
         success: false,
-        error: "Invalid or expired token"
+        error: "Invalid or expired token",
       })
       return
     }
 
     // Add payload to request for use in controllers
     ;(req as any).jwtPayload = payload
-    
+
     next()
   } catch (error) {
     logger.error("[JWT-AUTH] Middleware error:", error)
     res.status(500).json({
       success: false,
-      error: "Authentication error"
+      error: "Authentication error",
     })
   }
 }
@@ -59,14 +61,14 @@ export const jwtAuthMiddleware = async (
 /**
  * Verify JWT token with signature validation
  * Uses JWT_SECRET from environment for verification
- * 
+ *
  * @param token - JWT token string
  * @returns Decoded payload or null if invalid
  */
 async function verifyJWTToken(token: string): Promise<JWTPayload | null> {
   try {
     const secret = process.env.JWT_SECRET
-    
+
     if (!secret) {
       logger.error("[JWT-AUTH] JWT_SECRET not configured")
       return null
@@ -74,15 +76,14 @@ async function verifyJWTToken(token: string): Promise<JWTPayload | null> {
 
     // Verify JWT with signature validation
     const decoded = jwt.verify(token, secret) as JWTPayload
-    
+
     // Additional validation: ensure required fields exist
     if (!decoded.clientId || !decoded.workspaceId || !decoded.scope) {
       logger.error("[JWT-AUTH] Token missing required fields")
       return null
     }
-    
+
     return decoded
-    
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
       logger.warn("[JWT-AUTH] Token expired")

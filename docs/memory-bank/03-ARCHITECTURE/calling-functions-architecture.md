@@ -15,13 +15,13 @@ Questo documento descrive l'architettura delle **Calling Functions** nel sistema
 
 ## 📊 Priorità e Funzioni Registrate (5 Total)
 
-| Priorità | Function               | Tipo       | Descrizione                           |
-| -------- | ---------------------- | ---------- | ------------------------------------- |
-| 🚨 1     | ContactOperator        | Bloccante  | Assistenza umana, escalation          |
-| 🚨 2     | GetLinkOrderByCode     | Bloccante  | Visualizza ordine specifico           |
-| ⚙️ 3     | repeatOrder            | Bloccante  | Ripete ordine precedente (conferma)   |
-| ⚙️ 4     | addProduct             | Bloccante  | Aggiunge singolo prodotto (conferma)  |
-| 📊 5     | searchProduct          | Background | Registra ricerca prodotto (analytics) |
+| Priorità | Function           | Tipo       | Descrizione                           |
+| -------- | ------------------ | ---------- | ------------------------------------- |
+| 🚨 1     | ContactOperator    | Bloccante  | Assistenza umana, escalation          |
+| 🚨 2     | GetLinkOrderByCode | Bloccante  | Visualizza ordine specifico           |
+| ⚙️ 3     | repeatOrder        | Bloccante  | Ripete ordine precedente (conferma)   |
+| ⚙️ 4     | addProduct         | Bloccante  | Aggiunge singolo prodotto (conferma)  |
+| 📊 5     | searchProduct      | Background | Registra ricerca prodotto (analytics) |
 
 **Regole Disambiguazione**:
 
@@ -345,7 +345,7 @@ interface SearchProductResult {
 
 **Implementazione Background** (in llm.service.ts):
 
-```typescript
+````typescript
 // Funzioni BACKGROUND - Non bloccare il flusso conversazionale
 const BACKGROUND_FUNCTIONS = ["searchProduct"]
 
@@ -354,7 +354,7 @@ if (BACKGROUND_FUNCTIONS.includes(functionName)) {
   this.executeFunctionCall(...).catch(error => {
     console.error(`❌ [BACKGROUND] Error:`, error)
   })
-  
+
   // LLM continua a rispondere normalmente
   const followUpResponse = await fetch(...)
   return { response: naturalResponse }
@@ -410,7 +410,7 @@ interface RepeatOrderResult {
   timestamp: string
   error?: string
 }
-```
+````
 
 **Responsabilità**:
 

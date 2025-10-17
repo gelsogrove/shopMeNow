@@ -405,7 +405,7 @@ Tu: [CHIAMA ContactOperator()]
 
 ```typescript
 GetLinkOrderByCode({
-  orderCode: string // Codice ordine specifico (opzionale, default: ultimo ordine)
+  orderCode: string, // Codice ordine specifico (opzionale, default: ultimo ordine)
 })
 ```
 
@@ -484,7 +484,7 @@ Risultato: Ecco il link per scaricare la fattura:
 
 ```typescript
 repeatOrder({
-  orderCode: string // Codice ordine da ripetere (opzionale: se non specificato, usa l'ultimo)
+  orderCode: string, // Codice ordine da ripetere (opzionale: se non specificato, usa l'ultimo)
 })
 ```
 
@@ -601,8 +601,8 @@ Risultato: ✅ Ho aggiunto 2 prodotti al carrello (Tartufo saltato perché esaur
 ```typescript
 addProduct({
   productCode: string, // Codice esatto del prodotto (obbligatorio, es: "BUR-001")
-  quantity: number,    // Quantità (default: 1, intero positivo)
-  notes: string        // Note opzionali (es: "grande", "bio", "confezionato")
+  quantity: number, // Quantità (default: 1, intero positivo)
+  notes: string, // Note opzionali (es: "grande", "bio", "confezionato")
 })
 ```
 
@@ -719,7 +719,7 @@ Risultato: ✅ Ho aggiunto 3 x Mozzarella di Bufala al carrello!
 
 ```typescript
 searchProduct({
-  productName: string // Nome prodotto cercato (obbligatorio, max 255 caratteri)
+  productName: string, // Nome prodotto cercato (obbligatorio, max 255 caratteri)
 })
 ```
 

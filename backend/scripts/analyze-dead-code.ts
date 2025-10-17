@@ -2,7 +2,7 @@
 
 /**
  * 🔍 DEAD CODE ANALYZER
- * 
+ *
  * Analizza il codebase per trovare:
  * 1. File non importati da nessuno
  * 2. Export non utilizzati
@@ -11,8 +11,8 @@
  * 5. Funzioni non referenziate
  */
 
-import * as fs from 'fs'
-import * as path from 'path'
+import * as fs from "fs"
+import * as path from "path"
 
 interface AnalysisResult {
   unusedFiles: string[]
@@ -22,51 +22,61 @@ interface AnalysisResult {
   suspiciousFiles: Array<{ file: string; reason: string }>
 }
 
-const EXCLUDED_DIRS = ['node_modules', 'dist', 'build', '.git', 'logs', 'uploads', 'temp']
-const EXCLUDED_FILES = ['.test.ts', '.spec.ts', 'jest.config', 'jest.setup']
+const EXCLUDED_DIRS = [
+  "node_modules",
+  "dist",
+  "build",
+  ".git",
+  "logs",
+  "uploads",
+  "temp",
+]
+const EXCLUDED_FILES = [".test.ts", ".spec.ts", "jest.config", "jest.setup"]
 
 class DeadCodeAnalyzer {
   private allFiles: string[] = []
   private fileImports: Map<string, Set<string>> = new Map()
   private fileExports: Map<string, string[]> = new Map()
-  
+
   constructor(private rootDir: string) {}
 
   async analyze(): Promise<AnalysisResult> {
-    console.log('🔍 Starting dead code analysis...\n')
-    
+    console.log("🔍 Starting dead code analysis...\n")
+
     // Step 1: Scan all TypeScript files
-    console.log('📂 Step 1: Scanning TypeScript files...')
+    console.log("📂 Step 1: Scanning TypeScript files...")
     this.allFiles = this.scanFiles(this.rootDir)
     console.log(`   Found ${this.allFiles.length} TypeScript files\n`)
 
     // Step 2: Analyze imports
-    console.log('📥 Step 2: Analyzing imports...')
+    console.log("📥 Step 2: Analyzing imports...")
     this.analyzeImports()
     console.log(`   Analyzed imports in ${this.fileImports.size} files\n`)
 
     // Step 3: Find unused files
-    console.log('🗑️  Step 3: Finding unused files...')
+    console.log("🗑️  Step 3: Finding unused files...")
     const unusedFiles = this.findUnusedFiles()
     console.log(`   Found ${unusedFiles.length} potentially unused files\n`)
 
     // Step 4: Find unused exports
-    console.log('📤 Step 4: Finding unused exports...')
+    console.log("📤 Step 4: Finding unused exports...")
     const unusedExports = this.findUnusedExports()
     console.log(`   Found ${unusedExports.length} unused exports\n`)
 
     // Step 5: Find old TODOs
-    console.log('📝 Step 5: Finding old TODOs/FIXMEs...')
+    console.log("📝 Step 5: Finding old TODOs/FIXMEs...")
     const oldTodos = this.findOldTodos()
     console.log(`   Found ${oldTodos.length} TODO/FIXME comments\n`)
 
     // Step 6: Find duplicate imports
-    console.log('🔁 Step 6: Finding duplicate imports...')
+    console.log("🔁 Step 6: Finding duplicate imports...")
     const duplicateImports = this.findDuplicateImports()
-    console.log(`   Found ${duplicateImports.length} files with duplicate imports\n`)
+    console.log(
+      `   Found ${duplicateImports.length} files with duplicate imports\n`
+    )
 
     // Step 7: Find suspicious files
-    console.log('⚠️  Step 7: Finding suspicious files...')
+    console.log("⚠️  Step 7: Finding suspicious files...")
     const suspiciousFiles = this.findSuspiciousFiles()
     console.log(`   Found ${suspiciousFiles.length} suspicious files\n`)
 
@@ -97,9 +107,11 @@ class DeadCodeAnalyzer {
         }
 
         // Only TypeScript files
-        if (entry.isFile() && entry.name.endsWith('.ts')) {
+        if (entry.isFile() && entry.name.endsWith(".ts")) {
           // Skip test files and config
-          if (!EXCLUDED_FILES.some(excluded => entry.name.includes(excluded))) {
+          if (
+            !EXCLUDED_FILES.some((excluded) => entry.name.includes(excluded))
+          ) {
             files.push(fullPath)
           }
         }
@@ -112,11 +124,12 @@ class DeadCodeAnalyzer {
 
   private analyzeImports() {
     for (const file of this.allFiles) {
-      const content = fs.readFileSync(file, 'utf-8')
+      const content = fs.readFileSync(file, "utf-8")
       const imports = new Set<string>()
 
       // Match: import ... from './path' or "../path" or "@/path"
-      const importRegex = /import\s+.*?\s+from\s+['"](\.\.?\/[^'"]+|@\/[^'"]+)['"]/g
+      const importRegex =
+        /import\s+.*?\s+from\s+['"](\.\.?\/[^'"]+|@\/[^'"]+)['"]/g
       const matches = content.matchAll(importRegex)
 
       for (const match of matches) {
@@ -132,7 +145,8 @@ class DeadCodeAnalyzer {
 
       // Find exports
       const exports: string[] = []
-      const exportRegex = /export\s+(const|function|class|interface|type|enum)\s+(\w+)/g
+      const exportRegex =
+        /export\s+(const|function|class|interface|type|enum)\s+(\w+)/g
       const exportMatches = content.matchAll(exportRegex)
 
       for (const match of exportMatches) {
@@ -143,25 +157,28 @@ class DeadCodeAnalyzer {
     }
   }
 
-  private resolveImportPath(fromFile: string, importPath: string): string | null {
+  private resolveImportPath(
+    fromFile: string,
+    importPath: string
+  ): string | null {
     const fromDir = path.dirname(fromFile)
-    
+
     // Handle @/ alias
-    if (importPath.startsWith('@/')) {
-      const srcPath = importPath.replace('@/', 'src/')
+    if (importPath.startsWith("@/")) {
+      const srcPath = importPath.replace("@/", "src/")
       importPath = srcPath
     }
 
     let resolved = path.resolve(fromDir, importPath)
 
     // Try adding .ts extension
-    if (fs.existsSync(resolved + '.ts')) {
-      return resolved + '.ts'
+    if (fs.existsSync(resolved + ".ts")) {
+      return resolved + ".ts"
     }
 
     // Try index.ts
-    if (fs.existsSync(path.join(resolved, 'index.ts'))) {
-      return path.join(resolved, 'index.ts')
+    if (fs.existsSync(path.join(resolved, "index.ts"))) {
+      return path.join(resolved, "index.ts")
     }
 
     // Try as-is
@@ -186,11 +203,13 @@ class DeadCodeAnalyzer {
     // Find files never imported
     for (const file of this.allFiles) {
       // Skip entry points
-      if (file.includes('index.ts') || 
-          file.includes('server.ts') || 
-          file.includes('app.ts') ||
-          file.includes('main.ts') ||
-          file.includes('routes/index.ts')) {
+      if (
+        file.includes("index.ts") ||
+        file.includes("server.ts") ||
+        file.includes("app.ts") ||
+        file.includes("main.ts") ||
+        file.includes("routes/index.ts")
+      ) {
         continue
       }
 
@@ -213,8 +232,8 @@ class DeadCodeAnalyzer {
         for (const otherFile of this.allFiles) {
           if (otherFile === file) continue
 
-          const content = fs.readFileSync(otherFile, 'utf-8')
-          
+          const content = fs.readFileSync(otherFile, "utf-8")
+
           // Check for: import { ExportName } or import ExportName
           if (content.includes(exportName)) {
             isUsed = true
@@ -231,12 +250,16 @@ class DeadCodeAnalyzer {
     return unused
   }
 
-  private findOldTodos(): Array<{ file: string; line: number; comment: string }> {
+  private findOldTodos(): Array<{
+    file: string
+    line: number
+    comment: string
+  }> {
     const todos: Array<{ file: string; line: number; comment: string }> = []
 
     for (const file of this.allFiles) {
-      const content = fs.readFileSync(file, 'utf-8')
-      const lines = content.split('\n')
+      const content = fs.readFileSync(file, "utf-8")
+      const lines = content.split("\n")
 
       lines.forEach((line, index) => {
         const todoMatch = line.match(/\/\/\s*(TODO|FIXME|XXX|HACK)[\s:]+(.+)/i)
@@ -257,11 +280,12 @@ class DeadCodeAnalyzer {
     const duplicates: Array<{ file: string; imports: string[] }> = []
 
     for (const file of this.allFiles) {
-      const content = fs.readFileSync(file, 'utf-8')
+      const content = fs.readFileSync(file, "utf-8")
       const importMap = new Map<string, number>()
 
       // Find all imports
-      const importRegex = /import\s+.*?\s+from\s+['"](\.\.?\/[^'"]+|@\/[^'"]+|[^'"]+)['"]/g
+      const importRegex =
+        /import\s+.*?\s+from\s+['"](\.\.?\/[^'"]+|@\/[^'"]+|[^'"]+)['"]/g
       const matches = content.matchAll(importRegex)
 
       for (const match of matches) {
@@ -289,31 +313,39 @@ class DeadCodeAnalyzer {
     const suspicious: Array<{ file: string; reason: string }> = []
 
     for (const file of this.allFiles) {
-      const content = fs.readFileSync(file, 'utf-8')
+      const content = fs.readFileSync(file, "utf-8")
       const stats = fs.statSync(file)
 
       // Empty or very small files
       if (stats.size < 50) {
-        suspicious.push({ file, reason: 'File too small (< 50 bytes)' })
+        suspicious.push({ file, reason: "File too small (< 50 bytes)" })
         continue
       }
 
       // Files with only imports
-      const codeLines = content.split('\n').filter(line => {
+      const codeLines = content.split("\n").filter((line) => {
         const trimmed = line.trim()
-        return trimmed && !trimmed.startsWith('//') && !trimmed.startsWith('/*') && !trimmed.startsWith('*')
+        return (
+          trimmed &&
+          !trimmed.startsWith("//") &&
+          !trimmed.startsWith("/*") &&
+          !trimmed.startsWith("*")
+        )
       })
 
-      const importLines = codeLines.filter(line => line.includes('import'))
-      
+      const importLines = codeLines.filter((line) => line.includes("import"))
+
       if (importLines.length > 0 && importLines.length === codeLines.length) {
-        suspicious.push({ file, reason: 'Only contains imports' })
+        suspicious.push({ file, reason: "Only contains imports" })
         continue
       }
 
       // Files with "OLD" or "DEPRECATED" in name
-      if (file.toLowerCase().includes('old') || file.toLowerCase().includes('deprecated')) {
-        suspicious.push({ file, reason: 'Filename contains OLD/DEPRECATED' })
+      if (
+        file.toLowerCase().includes("old") ||
+        file.toLowerCase().includes("deprecated")
+      ) {
+        suspicious.push({ file, reason: "Filename contains OLD/DEPRECATED" })
       }
     }
 
@@ -321,13 +353,13 @@ class DeadCodeAnalyzer {
   }
 
   generateReport(result: AnalysisResult): string {
-    let report = '\n' + '='.repeat(80) + '\n'
-    report += '📊 DEAD CODE ANALYSIS REPORT\n'
-    report += '='.repeat(80) + '\n\n'
+    let report = "\n" + "=".repeat(80) + "\n"
+    report += "📊 DEAD CODE ANALYSIS REPORT\n"
+    report += "=".repeat(80) + "\n\n"
 
     // Summary
-    report += '📈 SUMMARY\n'
-    report += '─'.repeat(80) + '\n'
+    report += "📈 SUMMARY\n"
+    report += "─".repeat(80) + "\n"
     report += `Total Files Analyzed: ${this.allFiles.length}\n`
     report += `Unused Files: ${result.unusedFiles.length}\n`
     report += `Unused Exports: ${result.unusedExports.length}\n`
@@ -337,32 +369,32 @@ class DeadCodeAnalyzer {
 
     // Unused Files
     if (result.unusedFiles.length > 0) {
-      report += '🗑️  UNUSED FILES (not imported anywhere)\n'
-      report += '─'.repeat(80) + '\n'
-      result.unusedFiles.slice(0, 20).forEach(file => {
+      report += "🗑️  UNUSED FILES (not imported anywhere)\n"
+      report += "─".repeat(80) + "\n"
+      result.unusedFiles.slice(0, 20).forEach((file) => {
         report += `❌ ${this.relativePath(file)}\n`
       })
       if (result.unusedFiles.length > 20) {
         report += `... and ${result.unusedFiles.length - 20} more\n`
       }
-      report += '\n'
+      report += "\n"
     }
 
     // Suspicious Files
     if (result.suspiciousFiles.length > 0) {
-      report += '⚠️  SUSPICIOUS FILES\n'
-      report += '─'.repeat(80) + '\n'
+      report += "⚠️  SUSPICIOUS FILES\n"
+      report += "─".repeat(80) + "\n"
       result.suspiciousFiles.forEach(({ file, reason }) => {
         report += `⚠️  ${this.relativePath(file)}\n`
         report += `   Reason: ${reason}\n`
       })
-      report += '\n'
+      report += "\n"
     }
 
     // TODOs
     if (result.oldTodos.length > 0) {
-      report += '📝 TODO/FIXME COMMENTS\n'
-      report += '─'.repeat(80) + '\n'
+      report += "📝 TODO/FIXME COMMENTS\n"
+      report += "─".repeat(80) + "\n"
       result.oldTodos.slice(0, 15).forEach(({ file, line, comment }) => {
         report += `📝 ${this.relativePath(file)}:${line}\n`
         report += `   ${comment}\n`
@@ -370,23 +402,23 @@ class DeadCodeAnalyzer {
       if (result.oldTodos.length > 15) {
         report += `... and ${result.oldTodos.length - 15} more\n`
       }
-      report += '\n'
+      report += "\n"
     }
 
     // Duplicate Imports
     if (result.duplicateImports.length > 0) {
-      report += '🔁 DUPLICATE IMPORTS\n'
-      report += '─'.repeat(80) + '\n'
+      report += "🔁 DUPLICATE IMPORTS\n"
+      report += "─".repeat(80) + "\n"
       result.duplicateImports.forEach(({ file, imports }) => {
         report += `🔁 ${this.relativePath(file)}\n`
-        imports.forEach(imp => report += `   ${imp}\n`)
+        imports.forEach((imp) => (report += `   ${imp}\n`))
       })
-      report += '\n'
+      report += "\n"
     }
 
-    report += '='.repeat(80) + '\n'
-    report += '✅ Analysis Complete!\n'
-    report += '='.repeat(80) + '\n'
+    report += "=".repeat(80) + "\n"
+    report += "✅ Analysis Complete!\n"
+    report += "=".repeat(80) + "\n"
 
     return report
   }
@@ -398,7 +430,7 @@ class DeadCodeAnalyzer {
 
 // Run analysis
 async function main() {
-  const backendDir = path.join(__dirname, '..')
+  const backendDir = path.join(__dirname, "..")
   const analyzer = new DeadCodeAnalyzer(backendDir)
 
   try {
@@ -408,11 +440,11 @@ async function main() {
     console.log(report)
 
     // Save report
-    const reportPath = path.join(__dirname, '../docs/dead-code-analysis.txt')
+    const reportPath = path.join(__dirname, "../docs/dead-code-analysis.txt")
     fs.writeFileSync(reportPath, report)
     console.log(`\n📄 Report saved to: ${reportPath}`)
   } catch (error) {
-    console.error('❌ Analysis failed:', error)
+    console.error("❌ Analysis failed:", error)
     process.exit(1)
   }
 }

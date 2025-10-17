@@ -1058,7 +1058,10 @@ export class LLMService {
 
         case "searchProduct":
           // � PRIORITY 5 - BACKGROUND ONLY (non-blocking, analytics)
-          console.log("🔍 searchProduct called (PRIORITY 5 - BACKGROUND):", args)
+          console.log(
+            "🔍 searchProduct called (PRIORITY 5 - BACKGROUND):",
+            args
+          )
           return await this.callingFunctionsService.searchProduct({
             customerId: customer.id,
             workspaceId: workspace.id,
