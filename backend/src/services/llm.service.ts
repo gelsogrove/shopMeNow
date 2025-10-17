@@ -508,13 +508,20 @@ export class LLMService {
   }
 
   private getAvailableFunctions() {
+    // 🎯 PRIORITY ORDER (highest to lowest):
+    // 1. ContactOperator (🚨 PRIORITY 1 - Frustration, explicit operator request)
+    // 2. GetLinkOrderByCode (🚨 PRIORITY 2 - View specific order)
+    // 3. repeatOrder (⚙️ PRIORITY 3 - Repeat previous order, requires confirmation)
+    // 4. addProduct (⚙️ PRIORITY 4 - Add single product, requires confirmation)
+    // 5. searchProduct (📊 PRIORITY 5 - BACKGROUND ONLY, non-blocking)
+
     return [
       {
         type: "function",
         function: {
           name: "ContactOperator",
           description:
-            "Connette l'utente con un operatore umano per assistenza specializzata. Usare quando l'utente richiede esplicitamente di parlare con un operatore o assistenza umana.",
+            "🚨 PRIORITY 1 - HIGHEST. Connette l'utente con un operatore umano per assistenza specializzata. Usare quando: 1) Richiesta esplicita ('voglio parlare con operatore', 'assistenza umana'), 2) Frustrazione detected ('sono stufo', 'sempre danneggiato', 'problema', 'ogni volta'). PRIORITÀ ASSOLUTA: se trigger frustrazione → eseguire IMMEDIATAMENTE senza proporre. Cerca prima nelle FAQ, se non trovato → proponi operatore.",
           parameters: {
             type: "object",
             properties: {},
@@ -525,28 +532,9 @@ export class LLMService {
       {
         type: "function",
         function: {
-          name: "GetShipmentTrackingLink",
-          description:
-            "Fornisce il link per tracciare la spedizione dell'ordine dell'utente. Usare quando l'utente vuole sapere dove si trova fisicamente il pacco o lo stato di spedizione. Se specificato un numero d'ordine, usa quello; altrimenti usa l'ultimo ordine.",
-          parameters: {
-            type: "object",
-            properties: {
-              orderCode: {
-                type: "string",
-                description:
-                  "Il codice dell'ordine da tracciare. Se l'utente specifica un numero d'ordine (es. 'dove ordine ORD-123'), usa quello. Se dice 'ultimo ordine' usa lastordercode. Opzionale.",
-              },
-            },
-            required: [],
-          },
-        },
-      },
-      {
-        type: "function",
-        function: {
           name: "GetLinkOrderByCode",
           description:
-            "Fornisce il link per visualizzare un ordine specifico tramite codice ordine. Usare quando l'utente vuole vedere un ordine specifico, la fattura, o dice 'ultimo ordine'.",
+            "🚨 PRIORITY 2 - HIGH. Fornisce il link per visualizzare UN SINGOLO ordine specifico tramite codice ordine. Usare quando l'utente vuole: 'vedere ordine specifico', 'dettagli ordine', 'fattura ordine', 'ultimo ordine', 'ordine ORD-123'. Se orderCode non specificato → usa automaticamente lastordercode. IMPORTANTE: Ha PRIORITÀ sulle FAQ per 'ultimo ordine'. NON usare per 'lista tutti gli ordini' (usa [LINK_ORDERS_WITH_TOKEN] token). NON usare per tracking 'dov'è il mio ordine' (tracking fisico).",
           parameters: {
             type: "object",
             properties: {
@@ -557,6 +545,73 @@ export class LLMService {
               },
             },
             required: ["orderCode"],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "repeatOrder",
+          description:
+            "⚙️ PRIORITY 3 - MEDIUM. Ripete esattamente lo stesso ordine di una volta precedente, aggiungendo TUTTI i prodotti al carrello. Usare quando l'utente dice: 'ripeti ordine', 'ordina di nuovo come prima', 'voglio lo stesso di prima', 'ripeti ultimo ordine', 'voglio rifare l'ultimo ordine', 'rifare ordine', 'come l'ultima volta', 'stesso ordine', 'stessi prodotti', 'ordina stessa cosa'. FLOW OBBLIGATORIO: 1) Mostra contenuto ordine, 2) Chiedi SEMPRE conferma 'Ricreo il tuo ultimo ordine?', 3) Se conferma → chiama repeatOrder(). Svuota carrello esistente e ricomincia pulito. Se orderCode non specificato → usa automaticamente ultimo ordine. Verifica disponibilità e avvisa se prodotti non disponibili. Dopo aggiunta → mostra link carrello. DISAMBIGUAZIONE: 'ripeti ordine'/'rifare ordine' = repeatOrder | 'aggiungi burrata' = addProduct.",
+          parameters: {
+            type: "object",
+            properties: {
+              orderCode: {
+                type: "string",
+                description:
+                  "Codice ordine da ripetere (opzionale). Se non specificato, usa automaticamente l'ultimo ordine del cliente. Es: 'ORD-123'.",
+              },
+            },
+            required: [],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "addProduct",
+          description:
+            "⚙️ PRIORITY 4 - MEDIUM. Aggiunge UN SINGOLO PRODOTTO al carrello del cliente. Usare SOLO DOPO che il cliente ha CONFERMATO di voler aggiungere il prodotto. FLOW OBBLIGATORIO: 1) Mostra prodotto con prezzo e stock, 2) Chiedi 'Vuoi aggiungerlo al carrello? 🛒', 3) Se conferma ('sì', 'ok', 'perfetto', 'aggiungi') → chiama addProduct(), 4) Dopo aggiunta → mostra link carrello. NON chiamare se: cliente non ha confermato, stock insufficiente, productCode mancante, prodotto non trovato, utente sta solo chiedendo info. DISAMBIGUAZIONE: 'hai la burrata?' = searchProduct (BACKGROUND) | 'aggiungi burrata' (DOPO conferma) = addProduct | 'ripeti ordine' = repeatOrder.",
+          parameters: {
+            type: "object",
+            properties: {
+              productCode: {
+                type: "string",
+                description:
+                  "Codice esatto del prodotto da aggiungere (obbligatorio). Es: 'BUR-001', 'PAR-023', 'PRO-045'.",
+              },
+              quantity: {
+                type: "number",
+                description:
+                  "Quantità da aggiungere (default: 1, deve essere intero positivo). Min: 1.",
+              },
+              notes: {
+                type: "string",
+                description:
+                  "Note opzionali per il prodotto. Es: 'grande', 'bio', 'confezionato'.",
+              },
+            },
+            required: ["productCode"],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "searchProduct",
+          description:
+            "📊 PRIORITY 5 - BACKGROUND ONLY (non-blocking). Registra la ricerca di un prodotto da parte del cliente per analytics e trend analysis. Usare quando l'utente cerca/chiede di un prodotto alimentare: 'hai la burrata?', 'avete prosciutto?', 'mi serve parmigiano', 'vendete champagne?', 'non trovate tartufo?'. Viene chiamata SIA per prodotti trovati CHE per prodotti NON trovati. ⚠️ BACKGROUND FUNCTION: Il LLM continua a rispondere NORMALMENTE dopo la chiamata, l'utente NON deve sapere della registrazione. NON bloccare il flusso conversazionale con messaggi tecnici tipo 'sto registrando'. La funzione viene eseguita in parallelo alla risposta. NON usare per prodotti non alimentari (software, auto, abbigliamento). NON chiamare due volte per stesso prodotto nella stessa conversazione. DISAMBIGUAZIONE: 'hai burrata?' = searchProduct (BACKGROUND) | 'aggiungi burrata' (DOPO conferma) = addProduct.",
+          parameters: {
+            type: "object",
+            properties: {
+              productName: {
+                type: "string",
+                description:
+                  "Il nome del prodotto cercato dal cliente (obbligatorio, max 255 caratteri). Es: 'burrata', 'prosciutto di parma', 'vino rosso', 'champagne', 'tartufo', 'mozzarella'.",
+              },
+            },
+            required: ["productName"],
           },
         },
       },
@@ -587,16 +642,16 @@ export class LLMService {
 
       for (const msg of messagesToInclude) {
         // Skip current message to avoid duplication
-        if (msg.content === userQuery && msg.direction === "INCOMING") {
+        if (msg.content === userQuery && msg.direction === "INBOUND") {
           continue
         }
 
-        if (msg.direction === "INCOMING") {
+        if (msg.direction === "INBOUND") {
           conversationHistory.push({
             role: "user",
             content: msg.content,
           })
-        } else if (msg.direction === "OUTGOING" && msg.aiGenerated) {
+        } else if (msg.direction === "OUTBOUND" && msg.aiGenerated) {
           conversationHistory.push({
             role: "assistant",
             content: msg.content,
@@ -751,6 +806,102 @@ export class LLMService {
           timestamp: new Date().toISOString(),
         })
 
+        // 📊 BACKGROUND FUNCTIONS (PRIORITY 5) - Non bloccare il flusso conversazionale
+        // Queste funzioni vengono eseguite in parallelo senza aspettare il risultato
+        // L'utente NON è consapevole dell'esecuzione, il LLM risponde normalmente
+        const BACKGROUND_FUNCTIONS = ["searchProduct"]
+
+        if (BACKGROUND_FUNCTIONS.includes(functionName)) {
+          // Esegui la funzione in background (non aspettare il risultato)
+          console.log(
+            `🔍 [BACKGROUND] Executing ${functionName} in background...`
+          )
+          this.executeFunctionCall(
+            functionName,
+            functionArgs,
+            customer,
+            workspace,
+            customerData
+          ).catch((error) => {
+            console.error(`❌ [BACKGROUND] Error in ${functionName}:`, error)
+          })
+
+          // Chiedi all'LLM di generare una risposta naturale come se la funzione non fosse stata chiamata
+          console.log(
+            "💬 [BACKGROUND] Asking LLM for natural response (ignoring function call)..."
+          )
+
+          // Fai una seconda chiamata all'LLM dicendogli che la funzione è stata eseguita con successo
+          // ma chiedi una risposta naturale come se non ci fosse stata chiamata
+          const followUpMessages = [
+            {
+              role: "system",
+              content: processedPrompt,
+            },
+            ...conversationHistory,
+            {
+              role: "user",
+              content: userQuery,
+            },
+            {
+              role: "assistant",
+              content: null,
+              tool_calls: [toolCall],
+            },
+            {
+              role: "tool",
+              tool_call_id: toolCall.id,
+              name: functionName,
+              content: JSON.stringify({
+                success: true,
+                message: "Ricerca registrata con successo (background)",
+              }),
+            },
+          ]
+
+          const followUpResponse = await fetch(
+            "https://openrouter.ai/api/v1/chat/completions",
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                "Content-Type": "application/json",
+                "HTTP-Referer": "http://localhost:3001",
+                "X-Title": "ShopMe LLM Response",
+              },
+              body: JSON.stringify({
+                model: "openai/gpt-4o-mini",
+                messages: followUpMessages,
+                temperature: 0,
+                max_tokens: workspace.maxTokens || 5000,
+              }),
+            }
+          )
+
+          const followUpData = await followUpResponse.json()
+          console.log(
+            "🌐 [BACKGROUND] Follow-up response:",
+            JSON.stringify(followUpData, null, 2)
+          )
+
+          const naturalResponse =
+            followUpData.choices?.[0]?.message?.content ||
+            i18n.fallback[language]
+
+          console.log(
+            `✅ [BACKGROUND] Natural response generated:`,
+            naturalResponse
+          )
+
+          return {
+            response: naturalResponse,
+            tokenUsage,
+            costInfo,
+            functionCalls,
+          }
+        }
+
+        // Funzioni NORMALI (bloccanti) - comportamento originale
         const functionResult = await this.executeFunctionCall(
           functionName,
           functionArgs,
@@ -797,15 +948,6 @@ export class LLMService {
           // Always return in Italian - Translation Layer will translate
           return {
             response: `${i18n.success.orderLink.it} ${functionResult.linkUrl || functionResult.output || functionResult.message} - valido per 1 ora`,
-            tokenUsage,
-            costInfo,
-            functionCalls,
-          }
-        }
-
-        if (functionName === "GetShipmentTrackingLink") {
-          return {
-            response: `${i18n.success.trackingLink[language]} ${functionResult.linkUrl}`,
             tokenUsage,
             costInfo,
             functionCalls,
@@ -859,25 +1001,26 @@ export class LLMService {
     customerData?: any
   ): Promise<any> {
     try {
+      // 🎯 PRIORITY ORDER (reflected in switch statement order):
+      // 1. ContactOperator (🚨 PRIORITY 1 - Frustration, explicit operator request)
+      // 2. GetLinkOrderByCode (🚨 PRIORITY 2 - View specific order)
+      // 3. repeatOrder (⚙️ PRIORITY 3 - Repeat previous order)
+      // 4. addProduct (⚙️ PRIORITY 4 - Add single product)
+      // 5. searchProduct (📊 PRIORITY 5 - BACKGROUND ONLY)
+
       switch (functionName) {
         case "ContactOperator":
+          // 🚨 PRIORITY 1 - HIGHEST
+          console.log("📞 ContactOperator called (PRIORITY 1)")
           return await this.callingFunctionsService.contactOperator({
             customerId: customer.id,
             workspaceId: workspace.id,
             phoneNumber: customer.phone,
           })
 
-        case "GetShipmentTrackingLink":
-          return await this.callingFunctionsService.getShipmentTrackingLink({
-            customerId: customer.id,
-            workspaceId: workspace.id,
-            orderCode:
-              args.orderCode ||
-              customerData?.lastordercode ||
-              customer.lastOrderCode,
-          })
-
         case "GetLinkOrderByCode":
+          // 🚨 PRIORITY 2 - HIGH
+          console.log("📦 GetLinkOrderByCode called (PRIORITY 2):", args)
           return await this.callingFunctionsService.getOrdersListLink({
             customerId: customer.id,
             workspaceId: workspace.id,
@@ -887,7 +1030,43 @@ export class LLMService {
               customer.lastOrderCode,
           })
 
+        case "repeatOrder":
+          // ⚙️ PRIORITY 3 - MEDIUM (requires confirmation)
+          console.log("� repeatOrder called (PRIORITY 3):", args)
+          const {
+            RepeatOrder,
+          } = require("../domain/calling-functions/RepeatOrder")
+          return await RepeatOrder({
+            customerId: customer.id,
+            workspaceId: workspace.id,
+            orderCode: args.orderCode,
+          })
+
+        case "addProduct":
+          // ⚙️ PRIORITY 4 - MEDIUM (requires confirmation)
+          console.log("🛒 addProduct called (PRIORITY 4):", args)
+          const {
+            AddProduct,
+          } = require("../domain/calling-functions/AddProduct")
+          return await AddProduct({
+            customerId: customer.id,
+            workspaceId: workspace.id,
+            productCode: args.productCode,
+            quantity: args.quantity || 1,
+            notes: args.notes,
+          })
+
+        case "searchProduct":
+          // � PRIORITY 5 - BACKGROUND ONLY (non-blocking, analytics)
+          console.log("🔍 searchProduct called (PRIORITY 5 - BACKGROUND):", args)
+          return await this.callingFunctionsService.searchProduct({
+            customerId: customer.id,
+            workspaceId: workspace.id,
+            productName: args.productName,
+          })
+
         default:
+          console.error(`❌ Unknown function: ${functionName}`)
           return { error: "Funzione non riconosciuta" }
       }
     } catch (error) {

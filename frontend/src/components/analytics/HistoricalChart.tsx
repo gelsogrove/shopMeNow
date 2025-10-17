@@ -18,15 +18,21 @@ import {
   YAxis,
 } from "recharts"
 import { getAdminPageTexts } from "../../utils/adminPageTranslations"
+import type { PeriodPreset } from "./DateRangeSelector"
+import { TopSearchedProductsChart } from "./TopSearchedProductsChart"
 
 interface HistoricalChartProps {
   analytics: DashboardAnalytics
   chartType?: "line" | "bar"
+  period?: PeriodPreset
+  loading?: boolean
 }
 
 export const HistoricalChart: React.FC<HistoricalChartProps> = ({
   analytics,
   chartType = "line",
+  period,
+  loading,
 }) => {
   const t = getAdminPageTexts()
 
@@ -278,7 +284,7 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
         </CardContent>
       </Card>
 
-      {/* ROW 2: Pie Chart Categorie + Spazio Vuoto */}
+      {/* ROW 2: Pie Chart Categorie + Top Searched Products (50% + 50%) */}
       <div className="lg:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         {/* Grafico 3: Pie Chart Categorie */}
         {categoryPieData.length > 0 && (
@@ -324,29 +330,10 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
           </Card>
         )}
 
-        {/* Spazio Vuoto per Future Implementazioni */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-gray-400" />
-              Spazio Disponibile
-            </CardTitle>
-            <p className="text-sm text-gray-500 mt-1">
-              In sviluppo - nuovo grafico in arrivo
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80 flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-              <div className="text-center">
-                <TrendingUp className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-400 font-medium">Spazio Riservato</p>
-                <p className="text-sm text-gray-400 mt-2">
-                  Nuovo grafico analytics
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Top Searched Products Chart */}
+        {period && (
+          <TopSearchedProductsChart period={period} parentLoading={loading} />
+        )}
       </div>
     </div>
   )

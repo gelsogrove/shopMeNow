@@ -238,18 +238,7 @@ export class FunctionHandlerService {
 
         // 📦 PRODUCT OPERATIONS - GetAllProducts REMOVED (redundant with {{PRODUCTS}} in prompt)
 
-        // 🚚 SHIPMENT TRACKING
-        case "getShipmentTrackingLink":
-          return {
-            data: await this.handleGetShipmentTrackingLink(
-              params,
-              customer,
-              workspaceId
-            ),
-            functionName,
-          }
-
-        // 🛒 CART LINK
+        //  CART LINK
         case "GetCartLink":
           return {
             data: await this.handleGetCartLink(customer, workspaceId),
@@ -322,6 +311,27 @@ export class FunctionHandlerService {
             functionName,
           }
 
+        // 🛒 ADD PRODUCT TO CART
+        case "addProduct":
+          return {
+            data: await this.handleAddProduct(params, customer, workspaceId),
+            functionName,
+          }
+
+        // 🔄 REPEAT ORDER
+        case "repeatOrder":
+          return {
+            data: await this.handleRepeatOrder(params, customer, workspaceId),
+            functionName,
+          }
+
+        // 🔍 SEARCH PRODUCT (Background Analytics Tracking)
+        case "searchProduct":
+          return {
+            data: await this.handleSearchProduct(params, customer, workspaceId),
+            functionName,
+          }
+
         // 🎯 DEFAULT CASE
         default:
           logger.warn(`⚠️ Funzione non riconosciuta: ${functionName}`)
@@ -338,6 +348,9 @@ export class FunctionHandlerService {
                 "search_documents",
                 "get_faq_info",
                 "ContactOperator",
+                "addProduct",
+                "repeatOrder",
+                "searchProduct",
               ],
             },
             functionName,
@@ -462,55 +475,6 @@ export class FunctionHandlerService {
 
   /**
    * Gestisce la richiesta di tracking della spedizione
-   */
-  async handleGetShipmentTrackingLink(
-    params: any,
-    customer: any,
-    workspaceId: string
-  ): Promise<any> {
-    try {
-      console.log(
-        "🔧 FunctionHandlerService: handleGetShipmentTrackingLink called with:",
-        params
-      )
-
-      // Import the CallingFunctionsService
-      const {
-        CallingFunctionsService,
-      } = require("../../services/calling-functions.service")
-      const callingFunctionsService = new CallingFunctionsService()
-
-      // Call the getShipmentTrackingLink function
-      const result = await callingFunctionsService.getShipmentTrackingLink({
-        customerId: customer?.id || "",
-        workspaceId: workspaceId,
-        orderCode: params.order_code || undefined,
-      })
-
-      console.log(
-        "🔧 FunctionHandlerService: getShipmentTrackingLink result:",
-        result
-      )
-
-      return result
-    } catch (error) {
-      console.error(
-        "❌ FunctionHandlerService: Error in handleGetShipmentTrackingLink:",
-        error
-      )
-      return {
-        success: false,
-        error:
-          error instanceof Error ? error.message : "Errore interno del server",
-        errorType: "internal_error",
-      }
-    }
-  }
-
-  // =============================================================================
-  // 🛒 CART METHODS
-  // =============================================================================
-
   /**
    * Aggiunge un prodotto al carrello (versione semplice)
    */
@@ -713,5 +677,156 @@ export class FunctionHandlerService {
   getProductIcon(productType: any): string {
     // Implementazione base
     return "📦"
+  }
+
+  /**
+   * Aggiungi prodotto al carrello
+   */
+  async handleAddProduct(
+    params: any,
+    customer: any,
+    workspaceId: string
+  ): Promise<any> {
+    try {
+      console.log(
+        "🛒 FunctionHandlerService: handleAddProduct called with:",
+        params
+      )
+
+      // Validazione parametri
+      if (!params.productCode || !customer?.id) {
+        console.error("❌ Missing productCode or customerId")
+        return {
+          success: false,
+          error: "Parametri richiesti mancanti",
+          message: "Impossibile aggiungere il prodotto. Parametri incompleti.",
+        }
+      }
+
+      // Import the calling function
+      const {
+        AddProduct,
+      } = require("../../domain/calling-functions/AddProduct")
+
+      const result = await AddProduct({
+        customerId: customer.id,
+        workspaceId: workspaceId,
+        productCode: params.productCode,
+        quantity: params.quantity || 1,
+        notes: params.notes,
+      })
+
+      console.log("✅ AddProduct result:", result)
+      return result
+    } catch (error) {
+      console.error("❌ Error in handleAddProduct:", error)
+      return {
+        success: false,
+        error: error.message || "Error adding product",
+        message: "Impossibile aggiungere il prodotto al carrello.",
+      }
+    }
+  }
+
+  /**
+   * Ripeti l'ultimo ordine
+   */
+  async handleRepeatOrder(
+    params: any,
+    customer: any,
+    workspaceId: string
+  ): Promise<any> {
+    try {
+      console.log(
+        "🔄 FunctionHandlerService: handleRepeatOrder called with:",
+        params
+      )
+
+      if (!customer?.id) {
+        console.error("❌ Missing customerId")
+        return {
+          success: false,
+          error: "Cliente non trovato",
+          message: "Impossibile ripetere l'ordine. Cliente non identificato.",
+        }
+      }
+
+      // Import the calling function
+      const {
+        RepeatOrder,
+      } = require("../../domain/calling-functions/RepeatOrder")
+
+      const result = await RepeatOrder({
+        customerId: customer.id,
+        workspaceId: workspaceId,
+        orderCode: params.orderCode,
+      })
+
+      console.log("✅ RepeatOrder result:", result)
+      return result
+    } catch (error) {
+      console.error("❌ Error in handleRepeatOrder:", error)
+      return {
+        success: false,
+        error: error.message || "Error repeating order",
+        message: "Impossibile ripetere l'ordine.",
+      }
+    }
+  }
+
+  /**
+   * 🔍 Handle searchProduct - Background analytics tracking
+   * Registers product searches without interrupting LLM response
+   */
+  async handleSearchProduct(
+    params: any,
+    customer: any,
+    workspaceId: string
+  ): Promise<any> {
+    try {
+      console.log(
+        "🔍 FunctionHandlerService: handleSearchProduct called with:",
+        params
+      )
+
+      if (!customer?.id) {
+        console.error("❌ Missing customerId")
+        return {
+          success: false,
+          error: "Cliente non trovato",
+          message: "Impossibile registrare la ricerca.",
+        }
+      }
+
+      if (!params.productName) {
+        console.error("❌ Missing productName")
+        return {
+          success: false,
+          error: "Nome prodotto non fornito",
+          message: "Impossibile registrare la ricerca.",
+        }
+      }
+
+      // Import the calling function
+      const {
+        SearchProduct,
+      } = require("../../domain/calling-functions/SearchProduct")
+
+      const result = await SearchProduct({
+        customerId: customer.id,
+        workspaceId: workspaceId,
+        productName: params.productName,
+      })
+
+      console.log("✅ SearchProduct result:", result)
+      return result
+    } catch (error) {
+      console.error("❌ Error in handleSearchProduct:", error)
+      return {
+        success: false,
+        error: error.message || "Error registering search",
+        message: "Impossibile registrare la ricerca.",
+      }
+    }
   }
 }

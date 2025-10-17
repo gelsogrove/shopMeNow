@@ -241,3 +241,81 @@ export const getDateRangeDescription = (dateRange: DateRange): string => {
   const endFormatted = formatDateForDisplay(dateRange.endDate)
   return `${startFormatted} - ${endFormatted}`
 }
+
+/**
+ * Search Analytics Interfaces
+ */
+export interface TopSearchedProduct {
+  rank: number
+  productName: string
+  searchCount: number
+  percentage: number
+}
+
+export interface SearchTrend {
+  date: string
+  searchCount: number
+}
+
+/**
+ * Get top 10 searched products
+ */
+export const getTopSearchedProducts = async (
+  workspaceId: string,
+  period: "7days" | "30days" | "alltime" = "7days",
+  limit: number = 10
+): Promise<TopSearchedProduct[]> => {
+  try {
+    const response = await api.get<{
+      success: boolean
+      data: TopSearchedProduct[]
+      period: string
+      total: number
+      timestamp: string
+    }>(`/analytics/${workspaceId}/top-searched-products`, {
+      params: {
+        period,
+        limit,
+      },
+    })
+
+    if (!response.data.success) {
+      throw new Error("Failed to fetch top searched products")
+    }
+
+    return response.data.data || []
+  } catch (error) {
+    console.error("Error fetching top searched products:", error)
+    throw error
+  }
+}
+
+/**
+ * Get search trends over time
+ */
+export const getSearchTrends = async (
+  workspaceId: string,
+  period: "7days" | "30days" | "alltime" = "7days"
+): Promise<SearchTrend[]> => {
+  try {
+    const response = await api.get<{
+      success: boolean
+      data: SearchTrend[]
+      period: string
+      timestamp: string
+    }>(`/analytics/${workspaceId}/search-trends`, {
+      params: {
+        period,
+      },
+    })
+
+    if (!response.data.success) {
+      throw new Error("Failed to fetch search trends")
+    }
+
+    return response.data.data || []
+  } catch (error) {
+    console.error("Error fetching search trends:", error)
+    throw error
+  }
+}

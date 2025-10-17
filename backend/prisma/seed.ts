@@ -4236,6 +4236,82 @@ Team Altro Gusto`,
   // Seed Aviso Legal document - RIMOSSO (documenti non esistono più nel sistema)
   // await seedAvisoLegalDocument(mainWorkspaceId)
 
+  // 🔍 Seed ProductSearch records for analytics
+  console.log("\n🔍 Creating ProductSearch records for analytics...")
+  try {
+    const productSearches = [
+      // Search history for top 10 products (varied dates and frequencies)
+      { query: "Pasta Fresca", customerId: testCustomer?.id, daysAgo: 0 },
+      { query: "Pasta Fresca", customerId: testCustomer2?.id, daysAgo: 1 },
+      { query: "Pasta Fresca", customerId: testCustomerMCP?.id, daysAgo: 2 },
+      { query: "Pasta Fresca", customerId: testCustomer?.id, daysAgo: 3 },
+
+      { query: "Olio di Oliva", customerId: testCustomer2?.id, daysAgo: 0 },
+      { query: "Olio di Oliva", customerId: testCustomer?.id, daysAgo: 1 },
+      { query: "Olio di Oliva", customerId: testCustomerMCP?.id, daysAgo: 2 },
+
+      { query: "Mozzarella Fresca", customerId: testCustomer?.id, daysAgo: 0 },
+      { query: "Mozzarella Fresca", customerId: testCustomer2?.id, daysAgo: 1 },
+
+      {
+        query: "Parmigiano Reggiano",
+        customerId: testCustomerMCP?.id,
+        daysAgo: 0,
+      },
+      {
+        query: "Parmigiano Reggiano",
+        customerId: testCustomer?.id,
+        daysAgo: 2,
+      },
+
+      { query: "Burrata", customerId: testCustomer2?.id, daysAgo: 1 },
+      { query: "Burrata", customerId: testCustomer?.id, daysAgo: 3 },
+      { query: "Burrata", customerId: testCustomerMCP?.id, daysAgo: 4 },
+
+      {
+        query: "Prosciutto di Parma",
+        customerId: testCustomer?.id,
+        daysAgo: 1,
+      },
+      {
+        query: "Prosciutto di Parma",
+        customerId: testCustomer2?.id,
+        daysAgo: 2,
+      },
+
+      { query: "Pepe Nero", customerId: testCustomerMCP?.id, daysAgo: 0 },
+      { query: "Pepe Nero", customerId: testCustomer?.id, daysAgo: 1 },
+
+      { query: "Basilico", customerId: testCustomer2?.id, daysAgo: 0 },
+      { query: "Basilico", customerId: testCustomerMCP?.id, daysAgo: 1 },
+      { query: "Basilico", customerId: testCustomer?.id, daysAgo: 2 },
+
+      { query: "Aceto Balsamico", customerId: testCustomer?.id, daysAgo: 0 },
+    ]
+
+    for (const search of productSearches) {
+      const createdAt = new Date()
+      createdAt.setDate(createdAt.getDate() - search.daysAgo)
+
+      await prisma.productSearch.create({
+        data: {
+          query: search.query,
+          customerId: search.customerId || testCustomer?.id,
+          workspaceId: mainWorkspaceId,
+          createdAt,
+        },
+      })
+    }
+
+    console.log(`✅ ProductSearch records created successfully!`)
+    console.log(`   🔍 Total searches: ${productSearches.length}`)
+    console.log(
+      `   🔍 Top 3 searched: Pasta Fresca (4), Olio di Oliva (3), Burrata (3)`
+    )
+  } catch (error) {
+    console.error("❌ Error creating ProductSearch records:", error)
+  }
+
   console.log("🎉 SEED COMPLETED SUCCESSFULLY!")
   console.log("=".repeat(50))
   console.log("   ✅ Database cleaned and reseeded")

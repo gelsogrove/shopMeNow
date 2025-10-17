@@ -1,0 +1,96 @@
+
+================================================================================
+📊 DEAD CODE ANALYSIS REPORT
+================================================================================
+
+📈 SUMMARY
+────────────────────────────────────────────────────────────────────────────────
+Total Files Analyzed: 285
+Unused Files: 97
+Unused Exports: 148
+TODO/FIXME Comments: 13
+Duplicate Imports: 2
+Suspicious Files: 8
+
+🗑️  UNUSED FILES (not imported anywhere)
+────────────────────────────────────────────────────────────────────────────────
+❌ check-images.ts
+❌ prisma/data/offers.ts
+❌ prisma/data/services.ts
+❌ prisma/data-backup-2025-10-15/categories.ts
+❌ prisma/data-backup-2025-10-15/faqs.ts
+❌ prisma/data-backup-2025-10-15/offers.ts
+❌ prisma/data-backup-2025-10-15/products.ts
+❌ prisma/data-backup-2025-10-15/services.ts
+❌ prisma/data-backup-2025-10-16/categories.ts
+❌ prisma/data-backup-2025-10-16/faqs.ts
+❌ prisma/data-backup-2025-10-16/offers.ts
+❌ prisma/data-backup-2025-10-16/products.ts
+❌ prisma/data-backup-2025-10-16/services.ts
+❌ prisma/data-backup-20251015/categories.ts
+❌ prisma/data-backup-20251015/faqs.ts
+❌ prisma/data-backup-20251015/offers.ts
+❌ prisma/data-backup-20251015/products.ts
+❌ prisma/data-backup-20251015/services.ts
+❌ prisma/seed.ts
+❌ scripts/analyze-dead-code.ts
+... and 77 more
+
+⚠️  SUSPICIOUS FILES
+────────────────────────────────────────────────────────────────────────────────
+⚠️  src/application/services/cart.service.ts
+   Reason: File too small (< 50 bytes)
+⚠️  src/config/environments/development.ts
+   Reason: File too small (< 50 bytes)
+⚠️  src/config/environments/production.ts
+   Reason: File too small (< 50 bytes)
+⚠️  src/infrastructure/repositories/message.repository.ts
+   Reason: File too small (< 50 bytes)
+⚠️  src/lib/cors.ts
+   Reason: File too small (< 50 bytes)
+⚠️  src/server.ts
+   Reason: File too small (< 50 bytes)
+⚠️  src/services/faq.service.ts
+   Reason: File too small (< 50 bytes)
+⚠️  src/services/prompt-template.service.ts
+   Reason: File too small (< 50 bytes)
+
+📝 TODO/FIXME COMMENTS
+────────────────────────────────────────────────────────────────────────────────
+📝 src/application/services/api-limit.service.ts:188
+   // TODO: Implementare tabella audit_logs se necessario
+📝 src/application/services/api-limit.service.ts:216
+   // TODO: Implementare hourlyBreakdown se necessario per dashboard
+📝 src/application/services/stock.service.ts:362
+   // TODO: Implement proper stock log table if needed
+📝 src/interfaces/http/controllers/cart.controller.ts:458
+   // TODO: Calculate if needed
+📝 src/interfaces/http/controllers/registration.controller.ts:446
+   // TODO: Send message via WhatsApp API
+📝 src/interfaces/http/controllers/whatsapp-webhook.controller.ts:168
+   // TODO: Import and use LLMService here
+📝 src/interfaces/http/middlewares/jwt-auth.middleware.ts:29
+   // TODO: Implement actual JWT verification
+📝 src/interfaces/http/middlewares/jwt-auth.middleware.ts:60
+   // TODO: Replace with actual JWT verification
+📝 src/middlewares/auth.middleware.ts:91
+   // TODO: Implement workspace access verification if needed
+📝 src/routes/backoffice/index.ts:24
+   // TODO: Import and mount backoffice routes here
+📝 src/routes/index.ts:1314
+   // TODO: Send response back to WhatsApp
+📝 src/services/llm.service.ts:14
+   //todo non va il singoloo ordine
+📝 src/services/llm.service.ts:421
+   // TODO: Implementare la logica per il token di registrazione
+
+🔁 DUPLICATE IMPORTS
+────────────────────────────────────────────────────────────────────────────────
+🔁 src/interfaces/http/controllers/auth.controller.ts
+   jsonwebtoken (2 times)
+🔁 src/interfaces/http/routes/api.ts
+   express (2 times)
+
+================================================================================
+✅ Analysis Complete!
+================================================================================

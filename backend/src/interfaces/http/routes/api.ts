@@ -1,4 +1,3 @@
-import * as express from "express"
 import { Router } from "express"
 import { AuthController } from "../controllers/auth.controller"
 import { createAuthRouter } from "./auth.routes"
@@ -6,6 +5,8 @@ import { categoriesRouter } from "./categories.routes"
 import { chatRouter } from "./chat.routes"
 import { customersRouter } from "./customers.routes"
 
+import analyticsRouter from "./analytics.routes"
+import callingFunctionsRouter from "./calling-functions.routes"
 import { createCartTokenRouter } from "./cart-token.routes"
 import { faqsRouter } from "./faqs.routes"
 import { offersRouter } from "./offers.routes"
@@ -72,7 +73,7 @@ const offerController = new OfferController()
 const faqController = new FaqController()
 
 export const apiRouter = (): Router => {
-  const router = express.Router()
+  const router = Router()
 
   // Map routes
   router.use("/auth", createAuthRouter(authController))
@@ -98,6 +99,12 @@ export const apiRouter = (): Router => {
 
   // Mount products routes with workspace context
   router.use("/workspaces/:workspaceId/products", productsRouter())
+
+  // Calling functions routes (LLM-callable)
+  router.use("/workspaces", callingFunctionsRouter)
+
+  // Analytics routes
+  router.use("/analytics", analyticsRouter)
 
   return router
 }

@@ -32,6 +32,14 @@ export const workspaceValidationMiddleware = async (
           workspaceIdFromParams = urlMatch[1]
           // Also set it in params for downstream middleware
           req.params.workspaceId = workspaceIdFromParams
+        } else {
+          // Try to match /analytics/{workspaceId} pattern
+          urlMatch = req.originalUrl.match(/\/analytics\/([^\/\?]+)/)
+          if (urlMatch && urlMatch[1]) {
+            workspaceIdFromParams = urlMatch[1]
+            // Also set it in params for downstream middleware
+            req.params.workspaceId = workspaceIdFromParams
+          }
         }
       }
     }

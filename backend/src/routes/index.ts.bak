@@ -9,12 +9,15 @@ import { SecureTokenService } from "../application/services/secure-token.service
 import { SpamDetectionService } from "../application/services/spam-detection.service"
 import { UserService } from "../application/services/user.service"
 import { config } from "../config"
+import { webhookLimiter } from "../config/rate-limiters"
 // BillingPrices import removed - billing handled by message.repository.ts
 import { AuthController } from "../interfaces/http/controllers/auth.controller"
+import { CampaignController } from "../interfaces/http/controllers/campaign.controller"
 import { CartTokenController } from "../interfaces/http/controllers/cart-token.controller"
 import { CategoryController } from "../interfaces/http/controllers/category.controller"
 import { ChatController } from "../interfaces/http/controllers/chat.controller"
 import { CustomersController } from "../interfaces/http/controllers/customers.controller"
+import { FeedbackController } from "../interfaces/http/controllers/feedback.controller"
 import { MessageRepository } from "../repositories/message.repository"
 // usageService import removed - usage tracking handled by message.repository.ts
 import logger from "../utils/logger"
@@ -214,10 +217,10 @@ async function handleNewUserWelcomeFlow(
       "registration",
       workspaceId,
       { phone: phoneNumber, language: detectedLanguage },
-      "1h",
+      undefined, // Uses TOKEN_EXPIRATION from env
       undefined,
       phoneNumber
-    ) // 1 hour expiry
+    )
 
     // Create short registration URL using LinkGeneratorService
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000"
@@ -328,6 +331,8 @@ import analyticsRoutes from "../interfaces/http/routes/analytics.routes"
 import publicOrdersRoutes from "../interfaces/http/routes/public-orders.routes"
 // Import session routes (for sessionId management)
 import { sessionRoutes } from "../interfaces/http/routes/session.routes"
+// Import WhatsApp routes
+import whatsappRoutes from "../interfaces/http/routes/whatsapp.routes"
 
 // Simple logging middleware
 const loggingMiddleware = (req: Request, res: Response, next: NextFunction) => {
@@ -369,6 +374,7 @@ const SESSION_EXEMPT_ROUTES = [
   "/whatsapp/webhook",
   "/chat", // WhatsApp compatibility endpoint
   "/cart-tokens", // Support interface
+  "/token/", // TOKEN-BASED routes (NO sessionId required)
 ]
 
 router.use((req: Request, res: Response, next: NextFunction) => {
@@ -627,7 +633,8 @@ router.post("/chat", async (req, res) => {
 })
 
 // Public WhatsApp webhook routes (NO AUTHENTICATION)
-router.post("/whatsapp/webhook", async (req, res) => {
+// 🔒 SECURITY: Rate limited to 10 requests per minute per IP
+router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
   console.log("🔥 WEBHOOK POST RECEIVED", new Date().toISOString()) // 🔧 FIRST LOG
   console.log("📨 Request body:", JSON.stringify(req.body, null, 2)) // 🔧 DEBUG BODY
   console.log("📨 Request headers:", JSON.stringify(req.headers, null, 2)) // 🔧 DEBUG HEADERS
@@ -1374,6 +1381,8 @@ const passwordResetService = new PasswordResetService(prisma)
 const cartTokenController = new CartTokenController()
 const customersController = new CustomersController()
 const servicesController = new ServicesController()
+const campaignController = new CampaignController()
+const feedbackController = new FeedbackController()
 
 const categoryController = new CategoryController()
 
@@ -1435,6 +1444,21 @@ router.use("/workspaces", workspaceCustomersRouter(customersController))
 // Mount workspace routes (includes the /current endpoint) with authentication FIRST
 router.use("/workspaces", authMiddleware, workspaceRoutesLegacy)
 router.use("/workspaces", workspaceRoutes)
+
+// Mount campaign routes
+import { campaignRoutes } from "../interfaces/http/routes/campaign.routes"
+router.use("/workspaces", campaignRoutes(campaignController))
+logger.info(
+  "✅ Registered campaign routes: /api/workspaces/:workspaceId/campaigns"
+)
+
+// Mount feedback routes (public + admin)
+import { feedbackRoutes } from "../interfaces/http/routes/feedback.routes"
+router.use(feedbackRoutes(feedbackController))
+logger.info(
+  "✅ Registered feedback routes: /api/feedback (public), /api/workspaces/:workspaceId/feedbacks (admin)"
+)
+
 // Mount agent routes with workspace parameter properly configured
 router.use(
   "/workspaces/:workspaceId/agent",
@@ -1523,6 +1547,10 @@ logger.info("Registered public orders routes with JWT authentication")
 router.use("/analytics", analyticsRoutes)
 logger.info("Registered analytics routes for dashboard metrics")
 
+// Mount WhatsApp routes
+router.use("/whatsapp", whatsappRoutes)
+logger.info("Registered WhatsApp routes for webhook and send message")
+
 // Mount public orders routes (for secure token validation and public access)
 router.use("/internal", publicOrdersRoutes)
 logger.info("Registered public orders routes for secure token validation")
@@ -1534,18 +1562,6 @@ router.get(
   settingsController.getDefaultGdprContent.bind(settingsController)
 )
 logger.info("Registered /gdpr/default route for backward compatibility")
-
-// Mount Swagger documentation
-router.get("/docs/swagger.json", (req, res) => {
-  try {
-    const { swaggerSpec } = require("../config/swagger")
-    res.setHeader("Content-Type", "application/json")
-    res.json(swaggerSpec)
-  } catch (error) {
-    logger.error("Error serving swagger.json:", error)
-    res.status(500).json({ error: "Failed to load swagger documentation" })
-  }
-})
 
 // Health check
 router.get("/health", (req, res) => {

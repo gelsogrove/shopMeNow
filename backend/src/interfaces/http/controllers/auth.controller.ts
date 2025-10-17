@@ -33,7 +33,7 @@
 import { User } from "@prisma/client"
 import { Request, Response } from "express"
 import * as jwt from "jsonwebtoken"
-import { SignOptions } from "jsonwebtoken"
+import type { SignOptions } from "jsonwebtoken"
 import { adminSessionService } from "../../../application/services/admin-session.service"
 import { EmailService } from "../../../application/services/email.service"
 import { OtpService } from "../../../application/services/otp.service"

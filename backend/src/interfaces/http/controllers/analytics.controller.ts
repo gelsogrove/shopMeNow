@@ -364,6 +364,77 @@ export class AnalyticsController {
 
     return { startDate, endDate }
   }
+
+  /**
+   * Get top 10 searched products
+   */
+  async getTopSearchedProducts(req: Request, res: Response) {
+    try {
+      const workspaceId = req.params.workspaceId
+      const period = (req.query.period as string) || "7days"
+      const limit = Math.min(parseInt((req.query.limit as string) || "10"), 100)
+
+      logger.info("📊 getTopSearchedProducts called", {
+        workspaceId,
+        period,
+        limit,
+      })
+
+      const data = await this.analyticsService.getTopSearchedProducts(
+        workspaceId,
+        period,
+        limit
+      )
+
+      return res.json({
+        success: true,
+        data,
+        period,
+        timestamp: new Date().toISOString(),
+      })
+    } catch (error) {
+      logger.error("❌ Error in getTopSearchedProducts:", error)
+      return res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Internal server error",
+        message: "Failed to fetch top searched products",
+      })
+    }
+  }
+
+  /**
+   * Get search trends over time
+   */
+  async getSearchTrends(req: Request, res: Response) {
+    try {
+      const workspaceId = req.params.workspaceId
+      const period = (req.query.period as string) || "7days"
+
+      logger.info("📈 getSearchTrends called", {
+        workspaceId,
+        period,
+      })
+
+      const data = await this.analyticsService.getSearchTrends(
+        workspaceId,
+        period
+      )
+
+      return res.json({
+        success: true,
+        data,
+        period,
+        timestamp: new Date().toISOString(),
+      })
+    } catch (error) {
+      logger.error("❌ Error in getSearchTrends:", error)
+      return res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Internal server error",
+        message: "Failed to fetch search trends",
+      })
+    }
+  }
 }
 
 /**

@@ -1,13 +1,15 @@
 /**
- * Test per le 3 Calling Functions LLM
+ * Test per le 5 Calling Functions LLM
  *
- * Verifica che le 3 calling functions esistano come file separati
+ * Verifica che le 5 calling functions esistano come file separati
  * e che siano correttamente importabili e funzionanti.
  *
- * Le 3 calling functions definite in docs/prompt_agent.md:
+ * Le 5 calling functions definite in docs/prompt_agent.md:
  * 1. ContactOperator() - Line 177
- * 2. GetShipmentTrackingLink() - Line 210
- * 3. GetLinkOrderByCode() - Line 247
+ * 2. GetLinkOrderByCode() - Line 247
+ * 3. addProduct() - Line 290 (NEW)
+ * 4. repeatOrder() - Line 350 (NEW)
+ * 5. searchProduct() - Line 392 (NEW)
  */
 
 import * as fs from "fs"
@@ -24,14 +26,16 @@ describe("🔧 Calling Functions - File Existence & Architecture", () => {
       expect(fs.existsSync(callingFunctionsDir)).toBe(true)
     })
 
-    it("should have exactly 3 files (3 LLM-callable calling functions)", () => {
+    it("should have 5 calling functions files", () => {
       const files = fs.readdirSync(callingFunctionsDir)
       const tsFiles = files.filter((f) => f.endsWith(".ts"))
-      expect(tsFiles.length).toBe(3)
+      expect(tsFiles.length).toBe(5)
       expect(tsFiles).toContain("ContactOperator.ts")
-      expect(tsFiles).toContain("GetShipmentTrackingLink.ts")
       expect(tsFiles).toContain("GetLinkOrderByCode.ts")
-      // Note: ReplaceLinkWithToken moved to application/services/link-replacement.service.ts
+      expect(tsFiles).toContain("AddProduct.ts")
+      expect(tsFiles).toContain("RepeatOrder.ts")
+      expect(tsFiles).toContain("SearchProduct.ts")
+      // Note: GetShipmentTrackingLink REMOVED, ReplaceLinkWithToken moved to application/services/link-replacement.service.ts
     })
 
     it("should have ContactOperator.ts file", () => {
@@ -39,16 +43,23 @@ describe("🔧 Calling Functions - File Existence & Architecture", () => {
       expect(fs.existsSync(filePath)).toBe(true)
     })
 
-    it("should have GetShipmentTrackingLink.ts file", () => {
-      const filePath = path.join(
-        callingFunctionsDir,
-        "GetShipmentTrackingLink.ts"
-      )
+    it("should have GetLinkOrderByCode.ts file", () => {
+      const filePath = path.join(callingFunctionsDir, "GetLinkOrderByCode.ts")
       expect(fs.existsSync(filePath)).toBe(true)
     })
 
-    it("should have GetLinkOrderByCode.ts file", () => {
-      const filePath = path.join(callingFunctionsDir, "GetLinkOrderByCode.ts")
+    it("should have AddProduct.ts file", () => {
+      const filePath = path.join(callingFunctionsDir, "AddProduct.ts")
+      expect(fs.existsSync(filePath)).toBe(true)
+    })
+
+    it("should have RepeatOrder.ts file", () => {
+      const filePath = path.join(callingFunctionsDir, "RepeatOrder.ts")
+      expect(fs.existsSync(filePath)).toBe(true)
+    })
+
+    it("should have SearchProduct.ts file", () => {
+      const filePath = path.join(callingFunctionsDir, "SearchProduct.ts")
       expect(fs.existsSync(filePath)).toBe(true)
     })
   })
@@ -62,20 +73,36 @@ describe("🔧 Calling Functions - File Existence & Architecture", () => {
       expect(typeof ContactOperator).toBe("function")
     })
 
-    it("should export GetShipmentTrackingLink function", async () => {
-      const {
-        GetShipmentTrackingLink,
-      } = require("../../domain/calling-functions/GetShipmentTrackingLink")
-      expect(GetShipmentTrackingLink).toBeDefined()
-      expect(typeof GetShipmentTrackingLink).toBe("function")
-    })
-
     it("should export GetLinkOrderByCode function", async () => {
       const {
         GetLinkOrderByCode,
       } = require("../../domain/calling-functions/GetLinkOrderByCode")
       expect(GetLinkOrderByCode).toBeDefined()
       expect(typeof GetLinkOrderByCode).toBe("function")
+    })
+
+    it("should export AddProduct function", async () => {
+      const {
+        AddProduct,
+      } = require("../../domain/calling-functions/AddProduct")
+      expect(AddProduct).toBeDefined()
+      expect(typeof AddProduct).toBe("function")
+    })
+
+    it("should export RepeatOrder function", async () => {
+      const {
+        RepeatOrder,
+      } = require("../../domain/calling-functions/RepeatOrder")
+      expect(RepeatOrder).toBeDefined()
+      expect(typeof RepeatOrder).toBe("function")
+    })
+
+    it("should export SearchProduct function", async () => {
+      const {
+        SearchProduct,
+      } = require("../../domain/calling-functions/SearchProduct")
+      expect(SearchProduct).toBeDefined()
+      expect(typeof SearchProduct).toBe("function")
     })
   })
 
@@ -89,20 +116,38 @@ describe("🔧 Calling Functions - File Existence & Architecture", () => {
       expect(functionString).toContain("request")
     })
 
-    it("GetShipmentTrackingLink should accept request parameter", async () => {
-      const {
-        GetShipmentTrackingLink,
-      } = require("../../domain/calling-functions/GetShipmentTrackingLink")
-      const functionString = GetShipmentTrackingLink.toString()
-      // Function should have 'request' parameter
-      expect(functionString).toContain("request")
-    })
-
     it("GetLinkOrderByCode should accept request parameter", async () => {
       const {
         GetLinkOrderByCode,
       } = require("../../domain/calling-functions/GetLinkOrderByCode")
       const functionString = GetLinkOrderByCode.toString()
+      // Function should have 'request' parameter
+      expect(functionString).toContain("request")
+    })
+
+    it("AddProduct should accept request parameter", async () => {
+      const {
+        AddProduct,
+      } = require("../../domain/calling-functions/AddProduct")
+      const functionString = AddProduct.toString()
+      // Function should have 'request' parameter
+      expect(functionString).toContain("request")
+    })
+
+    it("RepeatOrder should accept request parameter", async () => {
+      const {
+        RepeatOrder,
+      } = require("../../domain/calling-functions/RepeatOrder")
+      const functionString = RepeatOrder.toString()
+      // Function should have 'request' parameter
+      expect(functionString).toContain("request")
+    })
+
+    it("SearchProduct should accept request parameter", async () => {
+      const {
+        SearchProduct,
+      } = require("../../domain/calling-functions/SearchProduct")
+      const functionString = SearchProduct.toString()
       // Function should have 'request' parameter
       expect(functionString).toContain("request")
     })
@@ -119,16 +164,6 @@ describe("🔧 Calling Functions - File Existence & Architecture", () => {
       )
     })
 
-    it("CallingFunctionsService should use GetShipmentTrackingLink from domain layer", () => {
-      const serviceContent = fs.readFileSync(
-        path.join(__dirname, "../../services/calling-functions.service.ts"),
-        "utf-8"
-      )
-      expect(serviceContent).toContain(
-        'require("../domain/calling-functions/GetShipmentTrackingLink")'
-      )
-    })
-
     it("CallingFunctionsService should use LinkReplacementService from application layer", () => {
       const serviceContent = fs.readFileSync(
         path.join(__dirname, "../../services/calling-functions.service.ts"),
@@ -141,22 +176,26 @@ describe("🔧 Calling Functions - File Existence & Architecture", () => {
   })
 
   describe("📋 Documentation Alignment", () => {
-    it("should have all 3 calling functions documented in prompt_agent.md", () => {
+    it("should have all 5 calling functions documented in prompt_agent.md", () => {
       const promptPath = path.join(
         __dirname,
         "../../../../docs/prompt_agent.md"
       )
       const promptContent = fs.readFileSync(promptPath, "utf-8")
 
-      // Verify all 3 calling functions are documented
+      // Verify all 5 calling functions are documented
       expect(promptContent).toContain("ContactOperator")
-      expect(promptContent).toContain("GetShipmentTrackingLink")
       expect(promptContent).toContain("GetLinkOrderByCode")
+      expect(promptContent).toContain("addProduct")
+      expect(promptContent).toContain("repeatOrder")
+      expect(promptContent).toContain("searchProduct")
 
       // Verify they have proper sections
       expect(promptContent).toContain("## 📞 ContactOperator")
-      expect(promptContent).toContain("## 📦 GetShipmentTrackingLink")
-      expect(promptContent).toContain("## 📄 GetLinkOrderByCode")
+      expect(promptContent).toContain("## � GetLinkOrderByCode")
+      expect(promptContent).toContain("## � addProduct")
+      expect(promptContent).toContain("## � repeatOrder")
+      expect(promptContent).toContain("## � searchProduct")
     })
   })
 })
@@ -197,24 +236,6 @@ describe("🧪 Calling Functions - Basic Functionality", () => {
     })
   })
 
-  describe("GetShipmentTrackingLink", () => {
-    it("should return error for non-existent order", async () => {
-      const {
-        GetShipmentTrackingLink,
-      } = require("../../domain/calling-functions/GetShipmentTrackingLink")
-
-      const result = await GetShipmentTrackingLink({
-        customerId: "non-existent-customer",
-        workspaceId: "non-existent-workspace",
-        orderCode: "NON-EXISTENT-ORDER",
-      })
-
-      expect(result.success).toBe(false)
-      expect(result).toHaveProperty("error")
-      expect(result).toHaveProperty("timestamp")
-    })
-  })
-
   describe("GetLinkOrderByCode", () => {
     it("should return error for non-existent order", async () => {
       const {
@@ -235,7 +256,7 @@ describe("🧪 Calling Functions - Basic Functionality", () => {
 })
 
 describe("📊 Calling Functions - Summary Report", () => {
-  it("should have all 3 LLM-callable functions properly implemented", () => {
+  it("should have all 5 LLM-callable functions properly implemented", () => {
     const callingFunctionsDir = path.join(
       __dirname,
       "../../domain/calling-functions"
@@ -250,11 +271,17 @@ describe("📊 Calling Functions - Summary Report", () => {
     const {
       GetLinkOrderByCode,
     } = require("../../domain/calling-functions/GetLinkOrderByCode")
+    const { AddProduct } = require("../../domain/calling-functions/AddProduct")
+    const {
+      RepeatOrder,
+    } = require("../../domain/calling-functions/RepeatOrder")
 
     // All functions exist and are callable
     expect(ContactOperator).toBeDefined()
     expect(GetShipmentTrackingLink).toBeDefined()
     expect(GetLinkOrderByCode).toBeDefined()
+    expect(AddProduct).toBeDefined()
+    expect(RepeatOrder).toBeDefined()
 
     // All files exist
     expect(
@@ -267,6 +294,12 @@ describe("📊 Calling Functions - Summary Report", () => {
     ).toBe(true)
     expect(
       fs.existsSync(path.join(callingFunctionsDir, "GetLinkOrderByCode.ts"))
+    ).toBe(true)
+    expect(fs.existsSync(path.join(callingFunctionsDir, "AddProduct.ts"))).toBe(
+      true
+    )
+    expect(
+      fs.existsSync(path.join(callingFunctionsDir, "RepeatOrder.ts"))
     ).toBe(true)
   })
 })

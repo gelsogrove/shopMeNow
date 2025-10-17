@@ -57,6 +57,7 @@ model Workspace {
   whatsappSettings          WhatsappSettings?
   adminSessions             AdminSession[]
   campaigns                 Campaign[]
+  productSearches           ProductSearch[]
 }
 
 model Categories {
@@ -166,6 +167,7 @@ model Customers {
   billings                      Billing[]
   campaignSends                 CampaignSent[]
   feedbacks                     CustomerFeedback[]
+  productSearches               ProductSearch[]
 
   @@map("customers")
 }
@@ -446,6 +448,23 @@ model SecureToken {
   @@index([workspaceId])
   @@index([customerId])
   @@map("secure_tokens")
+}
+
+model ProductSearch {
+  id          String    @id @default(uuid())
+  query       String    // Nome del prodotto ricercato (es: "Panettone italiano")
+  workspaceId String
+  customerId  String?   // Opzionale se ricerca anonima
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  customer    Customers? @relation(fields: [customerId], references: [id])
+
+  @@index([workspaceId])
+  @@index([customerId])
+  @@index([createdAt])
+  @@index([query])
+  @@map("product_searches")
 }
 
 model Language {

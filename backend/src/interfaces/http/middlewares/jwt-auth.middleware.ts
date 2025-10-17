@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express"
+import jwt from "jsonwebtoken"
 import logger from "../../../utils/logger"
 
 interface JWTPayload {
@@ -10,6 +11,11 @@ interface JWTPayload {
   exp?: number
 }
 
+/**
+ * JWT Authentication Middleware
+ * Verifies JWT tokens from query params or Authorization header
+ * Uses proper JWT signature verification with JWT_SECRET
+ */
 export const jwtAuthMiddleware = async (
   req: Request,
   res: Response,
@@ -26,8 +32,7 @@ export const jwtAuthMiddleware = async (
       return
     }
 
-    // TODO: Implement actual JWT verification
-    // For now, we'll use a mock verification for testing
+    // Verify JWT token with proper signature validation
     const payload = await verifyJWTToken(token)
     
     if (!payload) {
@@ -52,60 +57,40 @@ export const jwtAuthMiddleware = async (
 }
 
 /**
- * Verify JWT token and extract payload
- * TODO: Implement actual JWT verification with proper library
+ * Verify JWT token with signature validation
+ * Uses JWT_SECRET from environment for verification
+ * 
+ * @param token - JWT token string
+ * @returns Decoded payload or null if invalid
  */
 async function verifyJWTToken(token: string): Promise<JWTPayload | null> {
   try {
-    // TODO: Replace with actual JWT verification
-    // For now, handle base64 encoded payloads and mock tokens
+    const secret = process.env.JWT_SECRET
     
-    // Handle base64 encoded JWT payloads
-    try {
-      const decoded = Buffer.from(token, 'base64').toString('utf-8')
-      const payload = JSON.parse(decoded)
-      
-      // Check if token is expired
-      if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
-        return null
-      }
-      
-      return payload
-    } catch (error) {
-      // Not a base64 token, try mock tokens
+    if (!secret) {
+      logger.error("[JWT-AUTH] JWT_SECRET not configured")
+      return null
+    }
+
+    // Verify JWT with signature validation
+    const decoded = jwt.verify(token, secret) as JWTPayload
+    
+    // Additional validation: ensure required fields exist
+    if (!decoded.clientId || !decoded.workspaceId || !decoded.scope) {
+      logger.error("[JWT-AUTH] Token missing required fields")
+      return null
     }
     
-    // Mock tokens for testing
-    if (token === "mock-token") {
-      return {
-        clientId: "mock-customer-id",
-        workspaceId: "mock-workspace-id",
-        scope: "orders:list"
-      }
-    }
+    return decoded
     
-    // For testing with order detail scope
-    if (token === "mock-token-detail") {
-      return {
-        clientId: "mock-customer-id",
-        workspaceId: "mock-workspace-id",
-        scope: "orders:detail"
-      }
-    }
-    
-    // For testing with specific workspace
-    if (token.startsWith("mock-token-workspace-")) {
-      const workspaceId = token.replace("mock-token-workspace-", "")
-      return {
-        clientId: "mock-customer-id",
-        workspaceId: workspaceId,
-        scope: "orders:list"
-      }
-    }
-    
-    return null
   } catch (error) {
-    logger.error("[JWT-AUTH] Token verification error:", error)
+    if (error instanceof jwt.TokenExpiredError) {
+      logger.warn("[JWT-AUTH] Token expired")
+    } else if (error instanceof jwt.JsonWebTokenError) {
+      logger.warn("[JWT-AUTH] Invalid token signature")
+    } else {
+      logger.error("[JWT-AUTH] Token verification error:", error)
+    }
     return null
   }
 }

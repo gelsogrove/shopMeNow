@@ -375,6 +375,7 @@ const SESSION_EXEMPT_ROUTES = [
   "/chat", // WhatsApp compatibility endpoint
   "/cart-tokens", // Support interface
   "/token/", // TOKEN-BASED routes (NO sessionId required)
+  "/analytics", // Analytics routes (JWT-based authentication)
 ]
 
 router.use((req: Request, res: Response, next: NextFunction) => {

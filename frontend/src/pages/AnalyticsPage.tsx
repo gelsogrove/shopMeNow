@@ -158,8 +158,12 @@ export function AnalyticsPage() {
           {/* Metrics Overview */}
           <MetricsOverview analytics={analytics} />
 
-          {/* Historical Chart */}
-          <HistoricalChart analytics={analytics} />
+          {/* Historical Chart (include Top Searched Products affiancato a Distribuzione Categorie) */}
+          <HistoricalChart
+            analytics={analytics}
+            period={selectedPeriod}
+            loading={loading}
+          />
 
           {/* Additional Analytics Cards - All in one row (3 columns) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
