@@ -1,19 +1,19 @@
 /**
  * 🧪 Test addProduct Confirmation Flow - Standalone
- * 
+ *
  * Test standalone (senza Jest) per verificare il flow addProduct con conferma.
  * Simula una conversazione reale con history tra i messaggi.
- * 
+ *
  * Flow:
  * 1. Utente: "voglio aggiungere il panettone" → Sistema chiede conferma
  * 2. Utente: "si" → Sistema chiama addProduct()
- * 
+ *
  * ⚠️ ATTENZIONE: Chiama OpenRouter API reale (costo ~$0.02)
  */
 
 import { PrismaClient } from "@prisma/client"
-import { LLMService } from "../src/services/llm.service"
 import * as dotenv from "dotenv"
+import { LLMService } from "../src/services/llm.service"
 
 dotenv.config()
 
@@ -170,7 +170,10 @@ async function testAddProductConfirmationFlow() {
     console.log(`💬 Response: ${step1.response.substring(0, 250)}...\n`)
 
     // Verify STEP 1
-    if (step1.functionCalled === null || step1.functionCalled !== "addProduct") {
+    if (
+      step1.functionCalled === null ||
+      step1.functionCalled !== "addProduct"
+    ) {
       console.log("✅ STEP 1 CORRECT: Sistema NON ha chiamato addProduct")
 
       const responseText = step1.response.toLowerCase()
@@ -187,7 +190,9 @@ async function testAddProductConfirmationFlow() {
         )
       }
     } else {
-      console.log("❌ STEP 1 FAILED: Sistema ha chiamato addProduct senza conferma!")
+      console.log(
+        "❌ STEP 1 FAILED: Sistema ha chiamato addProduct senza conferma!"
+      )
       await prisma.$disconnect()
       process.exit(1)
     }
@@ -217,9 +222,16 @@ async function testAddProductConfirmationFlow() {
         "   1. Prima richiesta → Sistema chiede conferma (NO addProduct)"
       )
       console.log("   2. Utente 'si' → Sistema chiama addProduct()")
-      console.log("   3. productCode presente negli args:", step2.functionArgs?.productCode || "N/A")
-      console.log("\n✅ Il sistema mantiene correttamente il contesto conversazionale!")
-      console.log("✅ La history degli ultimi 5 minuti funziona correttamente!\n")
+      console.log(
+        "   3. productCode presente negli args:",
+        step2.functionArgs?.productCode || "N/A"
+      )
+      console.log(
+        "\n✅ Il sistema mantiene correttamente il contesto conversazionale!"
+      )
+      console.log(
+        "✅ La history degli ultimi 5 minuti funziona correttamente!\n"
+      )
 
       await prisma.$disconnect()
       process.exit(0)
@@ -240,11 +252,15 @@ async function testAddProductConfirmationFlow() {
       )
 
       console.log("🔍 DEBUGGING:")
-      console.log("   - Verifica che i messaggi vengano salvati con lo stesso sessionId")
+      console.log(
+        "   - Verifica che i messaggi vengano salvati con lo stesso sessionId"
+      )
       console.log(
         "   - Verifica che getRecentMessagesByTime() recuperi i messaggi"
       )
-      console.log("   - Verifica che la conversationHistory venga passata all'LLM\n")
+      console.log(
+        "   - Verifica che la conversationHistory venga passata all'LLM\n"
+      )
 
       await prisma.$disconnect()
       process.exit(1)

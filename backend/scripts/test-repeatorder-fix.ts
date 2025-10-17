@@ -1,12 +1,12 @@
 /**
  * 🧪 Quick Test - repeatOrder Fix Verification
- * 
+ *
  * Test rapido per verificare che repeatOrder venga chiamata correttamente
  */
 
 import { PrismaClient } from "@prisma/client"
-import { LLMService } from "../src/services/llm.service"
 import * as dotenv from "dotenv"
+import { LLMService } from "../src/services/llm.service"
 
 dotenv.config()
 

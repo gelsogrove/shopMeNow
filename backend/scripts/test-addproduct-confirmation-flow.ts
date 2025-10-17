@@ -1,6 +1,6 @@
 /**
  * 🧪 Test addProduct Confirmation Flow
- * 
+ *
  * Testa il flow completo di addProduct:
  * 1. Utente: "voglio aggiungere il panettone"
  * 2. Sistema: Chiede conferma
@@ -9,8 +9,8 @@
  */
 
 import { PrismaClient } from "@prisma/client"
-import { LLMService } from "../src/services/llm.service"
 import * as dotenv from "dotenv"
+import { LLMService } from "../src/services/llm.service"
 
 dotenv.config()
 
@@ -128,7 +128,9 @@ async function testAddProductFlow() {
       ) {
         console.log("✅ STEP 1 BONUS: Sistema chiede conferma (contiene '?')\n")
       } else {
-        console.log("⚠️  STEP 1 WARNING: Response potrebbe non chiedere conferma\n")
+        console.log(
+          "⚠️  STEP 1 WARNING: Response potrebbe non chiedere conferma\n"
+        )
       }
     } else {
       console.log(
@@ -192,7 +194,9 @@ async function testAddProductFlow() {
     console.log("─".repeat(80) + "\n")
 
     if (functionCalled2 === "addProduct") {
-      console.log("✅ STEP 2 PASSED: Sistema ha chiamato addProduct dopo conferma!")
+      console.log(
+        "✅ STEP 2 PASSED: Sistema ha chiamato addProduct dopo conferma!"
+      )
 
       // Check if productCode is present in args
       if (functionArgs2 && functionArgs2.productCode) {
@@ -219,9 +223,7 @@ async function testAddProductFlow() {
         `❌ STEP 2 FAILED: Sistema NON ha chiamato addProduct dopo conferma`
       )
       console.log(`   Got: ${functionCalled2 || "null"}`)
-      console.log(
-        `   Expected: addProduct con productCode del panettone\n`
-      )
+      console.log(`   Expected: addProduct con productCode del panettone\n`)
 
       console.log("⚠️  PROBLEMA POTENZIALE:")
       console.log(

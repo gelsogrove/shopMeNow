@@ -1,17 +1,17 @@
 /**
  * 🧪 Manual Integration Test - Calling Functions Routing
- * 
+ *
  * Script standalone per testare il routing delle calling functions
  * senza dipendenze da Jest. Esegue chiamate reali a OpenRouter API.
- * 
+ *
  * Uso: npx ts-node scripts/test-calling-functions-routing.ts
- * 
+ *
  * ⚠️ ATTENZIONE: Chiama OpenRouter API reale (costo ~$0.05-0.10)
  */
 
 import { PrismaClient } from "@prisma/client"
-import { LLMService } from "../src/services/llm.service"
 import * as dotenv from "dotenv"
+import { LLMService } from "../src/services/llm.service"
 
 // Load environment variables
 dotenv.config()
@@ -309,7 +309,9 @@ async function runTests() {
   console.log(`Total Tests: ${results.length}`)
   console.log(`✅ Passed: ${passed}`)
   console.log(`❌ Failed: ${failed}`)
-  console.log(`Success Rate: ${((passed / results.length) * 100).toFixed(1)}%\n`)
+  console.log(
+    `Success Rate: ${((passed / results.length) * 100).toFixed(1)}%\n`
+  )
 
   if (failed > 0) {
     console.log("❌ FAILED TESTS:\n")
@@ -359,7 +361,9 @@ async function runTests() {
     r.testCase.name.includes("Token Return")
   )
   const tokenTestsPassed = tokenTests.filter((r) => r.passed).length
-  console.log(`\n✅ Token Returns: ${tokenTestsPassed}/${tokenTests.length} working`)
+  console.log(
+    `\n✅ Token Returns: ${tokenTestsPassed}/${tokenTests.length} working`
+  )
 
   console.log("\n" + "=".repeat(80))
 
