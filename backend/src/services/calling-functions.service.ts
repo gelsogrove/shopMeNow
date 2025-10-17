@@ -514,7 +514,7 @@ export class CallingFunctionsService {
 
         return {
           success: true,
-          message: `✅ Ho aggiunto ${request.quantity} x "${product.name}" al carrello!`,
+          message: `✅ Ho aggiunto ${request.quantity} x "${product.name}" al carrello!\n\n🛒 [LINK_CHECKOUT_WITH_TOKEN]\n\n⏰ Link valido per {{TOKEN_DURATION}}`,
           productName: product.name,
           quantity: request.quantity,
           cartCode: cart.id,

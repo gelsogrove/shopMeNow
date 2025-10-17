@@ -567,7 +567,7 @@ export class LLMService {
         function: {
           name: "ContactOperator",
           description:
-            "🚨 PRIORITY 1 - HIGHEST. Connette l'utente con un operatore umano per assistenza specializzata. Usare quando: 1) Richiesta esplicita ('voglio parlare con operatore', 'assistenza umana'), 2) Frustrazione detected ('sono stufo', 'sempre danneggiato', 'problema', 'ogni volta'). PRIORITÀ ASSOLUTA: se trigger frustrazione → eseguire IMMEDIATAMENTE senza proporre. Cerca prima nelle FAQ, se non trovato → proponi operatore.",
+            "🚨 PRIORITY 1 - HIGHEST. CHIAMA SUBITO quando utente dice: 'operatore', 'parlare con operatore', 'posso parlare con', 'voglio parlare', 'assistenza umana', 'customer service', 'contattare', 'operator', 'human'. OBBLIGATORIO chiamare questa funzione se l'utente menziona operatore/assistenza. NON rispondere con testo, CHIAMA la funzione!",
           parameters: {
             type: "object",
             properties: {},
@@ -1000,12 +1000,33 @@ export class LLMService {
           }
         }
 
+        // Replace variables in function result message before returning
+        const rawResponse =
+          functionResult.message ||
+          functionResult.output ||
+          functionResult.linkUrl ||
+          `${i18n.success.default[language]} ${functionResult.linkUrl}`
+
+        const processedFunctionResponse = this.replaceVariablesInResponse(
+          rawResponse,
+          {
+            nameUser: customerData?.nameUser || customer.name || "Cliente",
+            discountUser: String(
+              customerData?.discountUser || customer.discount || 0
+            ),
+            companyName: customerData?.companyName || workspace.name || "Shop",
+            lastordercode:
+              customerData?.lastordercode || customer.lastOrderCode || "",
+            languageUser:
+              customerData?.languageUser || customer.language || language,
+            tokenDuration: this.getTokenDurationText(
+              process.env.TOKEN_EXPIRATION || "1h"
+            ),
+          }
+        )
+
         return {
-          response:
-            functionResult.message ||
-            functionResult.output ||
-            functionResult.linkUrl ||
-            `${i18n.success.default[language]} ${functionResult.linkUrl}`,
+          response: processedFunctionResponse,
           tokenUsage,
           costInfo,
           functionCalls,

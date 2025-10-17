@@ -672,14 +672,6 @@ export class FunctionHandlerService {
   }
 
   /**
-   * Ottiene l'icona del prodotto
-   */
-  getProductIcon(productType: any): string {
-    // Implementazione base
-    return "📦"
-  }
-
-  /**
    * Aggiungi prodotto al carrello
    */
   async handleAddProduct(

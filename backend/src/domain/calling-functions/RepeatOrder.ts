@@ -204,15 +204,22 @@ export async function RepeatOrder(
         request.customerId
       )
 
-      await prisma.$disconnect()
+      // Genera short URL del carrello (come addProductToCart)
+      const {
+        linkGeneratorService,
+      } = require("../../application/services/link-generator.service")
+      const cartUrl = await linkGeneratorService.generateCheckoutLink(
+        token,
+        request.workspaceId
+      )
 
-      const cartUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/cart?token=${token}`
+      await prisma.$disconnect()
 
       console.log("✅ RepeatOrder success: added", productsAdded, "products")
 
       return {
         success: true,
-        message: `Perfetto! Ho aggiunto ${productsAdded} prodotto/i dal tuo ultimo ordine al carrello.`,
+        message: `✅ Ho aggiunto ${productsAdded} prodotto/i dal tuo ultimo ordine al carrello!\n\n🛒 [LINK_CHECKOUT_WITH_TOKEN]\n\n⏰ Link valido per {{TOKEN_DURATION}}`,
         cartCode: cart.id,
         orderCode: order.orderCode,
         productsAdded,
