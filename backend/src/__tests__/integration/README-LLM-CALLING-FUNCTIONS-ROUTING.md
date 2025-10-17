@@ -25,18 +25,18 @@ Questo test effettua **chiamate reali all'API OpenRouter** (GPT-4o-mini).
 
 ### Test Matrix
 
-| #   | Test Case                                  | Query Esempio                               | Expected Result                      | Priority |
-| --- | ------------------------------------------ | ------------------------------------------- | ------------------------------------ | -------- |
-| 1   | searchProduct (BACKGROUND)                 | "avete la mozzarella di bufala?"           | searchProduct chiamata in background | 5        |
-| 2   | Token Return - Lista Ordini                | "dammi la lista degli ordini"               | [LINK_ORDERS_WITH_TOKEN]             | -        |
-| 3   | GetLinkOrderByCode                         | "dammi ultimo ordine"                       | GetLinkOrderByCode chiamata          | 2        |
-| 4   | ContactOperator                            | "voglio parlare con un operatore"           | ContactOperator chiamata             | 1        |
-| 5   | Token Return - Mostra Carrello             | "mostra carrello"                           | [LINK_CHECKOUT_WITH_TOKEN]           | -        |
-| 6   | Token Return - Cambia Indirizzo            | "voglio cambiare indirizzo di spedizione"   | [LINK_PROFILE_WITH_TOKEN]            | -        |
-| 7   | repeatOrder                                | "voglio rifare l'ultimo ordine"             | repeatOrder o richiesta conferma     | 3        |
-| 8   | addProduct                                 | "voglio aggiungere il panettone"            | Richiesta conferma (NO addProduct)   | 4        |
-| 9   | No Function Call                           | "chi sei?"                                  | Nessuna function chiamata            | -        |
-| 10  | Ambiguity Resolution (Priority 1 vince)    | "sono stufo, dammi ultimo ordine"           | ContactOperator (PRIORITY 1)         | 1        |
+| #   | Test Case                               | Query Esempio                             | Expected Result                      | Priority |
+| --- | --------------------------------------- | ----------------------------------------- | ------------------------------------ | -------- |
+| 1   | searchProduct (BACKGROUND)              | "avete la mozzarella di bufala?"          | searchProduct chiamata in background | 5        |
+| 2   | Token Return - Lista Ordini             | "dammi la lista degli ordini"             | [LINK_ORDERS_WITH_TOKEN]             | -        |
+| 3   | GetLinkOrderByCode                      | "dammi ultimo ordine"                     | GetLinkOrderByCode chiamata          | 2        |
+| 4   | ContactOperator                         | "voglio parlare con un operatore"         | ContactOperator chiamata             | 1        |
+| 5   | Token Return - Mostra Carrello          | "mostra carrello"                         | [LINK_CHECKOUT_WITH_TOKEN]           | -        |
+| 6   | Token Return - Cambia Indirizzo         | "voglio cambiare indirizzo di spedizione" | [LINK_PROFILE_WITH_TOKEN]            | -        |
+| 7   | repeatOrder                             | "voglio rifare l'ultimo ordine"           | repeatOrder o richiesta conferma     | 3        |
+| 8   | addProduct                              | "voglio aggiungere il panettone"          | Richiesta conferma (NO addProduct)   | 4        |
+| 9   | No Function Call                        | "chi sei?"                                | Nessuna function chiamata            | -        |
+| 10  | Ambiguity Resolution (Priority 1 vince) | "sono stufo, dammi ultimo ordine"         | ContactOperator (PRIORITY 1)         | 1        |
 
 ---
 
@@ -45,12 +45,14 @@ Questo test effettua **chiamate reali all'API OpenRouter** (GPT-4o-mini).
 ### Prerequisiti
 
 1. **Database seeded**:
+
    ```bash
    cd backend
    npm run seed
    ```
 
 2. **Environment variables** (`.env` o `.env.development`):
+
    ```bash
    OPENROUTER_API_KEY=sk-or-v1-xxxxx
    DATABASE_URL=postgresql://...
@@ -63,22 +65,26 @@ Questo test effettua **chiamate reali all'API OpenRouter** (GPT-4o-mini).
 ### Esecuzione
 
 **Singolo test file** (raccomandato):
+
 ```bash
 cd backend
 npm run test:integration -- llm-calling-functions-routing
 ```
 
 **Tutti gli integration tests**:
+
 ```bash
 npm run test:integration
 ```
 
 **Con verbose output**:
+
 ```bash
 npm run test:integration -- --verbose llm-calling-functions-routing
 ```
 
 ### Watch Mode (⚠️ SCONSIGLIATO - Costo elevato)
+
 ```bash
 npm run test:integration -- --watch llm-calling-functions-routing
 ```
@@ -137,9 +143,11 @@ Verified:
 ## 🔍 Cosa Verifica Ogni Test
 
 ### Test 1: searchProduct (BACKGROUND)
+
 **Query**: `"avete la mozzarella di bufala?"`
 
 **Verifica**:
+
 - ✅ `functionCalled === "searchProduct"`
 - ✅ `functionArgs.productName` contiene "mozzarella"
 - ✅ Response è naturale (non contiene "searchProduct" o "registrato")
@@ -149,9 +157,11 @@ Verified:
 ---
 
 ### Test 2: Token Return - Lista Ordini
+
 **Query**: `"dammi la lista degli ordini"`
 
 **Verifica**:
+
 - ✅ `functionCalled === null` (nessuna calling function)
 - ✅ Response contiene "orders" o "/o/" nel link
 
@@ -160,9 +170,11 @@ Verified:
 ---
 
 ### Test 3: GetLinkOrderByCode
+
 **Query**: `"dammi ultimo ordine"`
 
 **Verifica**:
+
 - ✅ `functionCalled === "GetLinkOrderByCode"`
 - ✅ Response contiene "ordine" o "order"
 
@@ -171,9 +183,11 @@ Verified:
 ---
 
 ### Test 4: ContactOperator
+
 **Query**: `"voglio parlare con un operatore"`
 
 **Verifica**:
+
 - ✅ `functionCalled === "ContactOperator"`
 - ✅ Response menziona "operatore" o "operator"
 
@@ -182,9 +196,11 @@ Verified:
 ---
 
 ### Test 5: Token Return - Mostra Carrello
+
 **Query**: `"mostra carrello"`
 
 **Verifica**:
+
 - ✅ `functionCalled === null`
 - ✅ Response contiene "checkout", "carrello" o "/c/"
 
@@ -193,9 +209,11 @@ Verified:
 ---
 
 ### Test 6: Token Return - Cambia Indirizzo
+
 **Query**: `"voglio cambiare indirizzo di spedizione"`
 
 **Verifica**:
+
 - ✅ `functionCalled === null`
 - ✅ Response contiene "profile", "profil" o "/p/"
 
@@ -204,9 +222,11 @@ Verified:
 ---
 
 ### Test 7: repeatOrder
+
 **Query**: `"voglio rifare l'ultimo ordine"`
 
 **Verifica**:
+
 - ✅ `functionCalled === "repeatOrder"` OR `response.includes("conferma")`
 - ✅ Se non chiama subito, chiede conferma ("Ricreo il tuo ultimo ordine?")
 
@@ -215,9 +235,11 @@ Verified:
 ---
 
 ### Test 8: addProduct
+
 **Query**: `"voglio aggiungere il panettone nel carrello"`
 
 **Verifica**:
+
 - ✅ `functionCalled !== "addProduct"` (NON deve chiamare ancora)
 - ✅ Response chiede conferma ("Vuoi aggiungerlo al carrello?")
 
@@ -226,9 +248,11 @@ Verified:
 ---
 
 ### Test 9: No Function Call
+
 **Query**: `"chi sei?"`
 
 **Verifica**:
+
 - ✅ `functionCalled === null`
 - ✅ Response parla dell'assistente/azienda
 
@@ -237,9 +261,11 @@ Verified:
 ---
 
 ### Test 10: Ambiguity Resolution
+
 **Query**: `"sono stufo, dammi ultimo ordine"`
 
 **Verifica**:
+
 - ✅ `functionCalled === "ContactOperator"` (NON GetLinkOrderByCode)
 - ✅ Response menziona "operatore" o "assistenza"
 
@@ -250,35 +276,45 @@ Verified:
 ## 🛠️ Troubleshooting
 
 ### Test fallisce: "Test workspace not found"
+
 **Soluzione**:
+
 ```bash
 cd backend
 npm run seed
 ```
 
 ### Test fallisce: "OPENROUTER_API_KEY not found"
+
 **Soluzione**: Verifica `.env` o `.env.development`:
+
 ```bash
 OPENROUTER_API_KEY=sk-or-v1-your-key-here
 ```
 
 ### Test timeout dopo 30s
+
 **Causa**: OpenRouter API lenta o rate limiting.  
-**Soluzione**: 
+**Soluzione**:
+
 - Aspetta qualche minuto
 - Verifica API key valida
 - Timeout configurabile in ogni test (`30000` ms)
 
 ### Function chiamata sbagliata
+
 **Causa**: Prompt agent non aggiornato o priorità non rispettate.  
 **Soluzione**:
+
 1. Verifica `docs/prompt_agent.md` sezione "CALLING FUNCTIONS"
 2. Verifica `backend/src/services/llm.service.ts::getAvailableFunctions()`
 3. Descriptions devono includere priorità esplicita
 
 ### Response non contiene link atteso
+
 **Causa**: Link replacement non funziona o token non sostituito.  
 **Soluzione**:
+
 1. Verifica `LinkReplacementService` in `application/services/link-replacement.service.ts`
 2. Check logs per errori token generation
 
@@ -287,6 +323,7 @@ OPENROUTER_API_KEY=sk-or-v1-your-key-here
 ## 📈 Metriche di Successo
 
 ### ✅ Test PASSA se:
+
 - Tutte le 10 test cases passano
 - Priorità rispettate (test 10 cruciale)
 - searchProduct eseguita in background
@@ -294,6 +331,7 @@ OPENROUTER_API_KEY=sk-or-v1-your-key-here
 - addProduct e repeatOrder chiedono conferma
 
 ### ❌ Test FALLISCE se:
+
 - Funzione sbagliata chiamata
 - Priorità non rispettate (es: test 10 chiama GetLinkOrderByCode invece di ContactOperator)
 - searchProduct blocca flusso conversazionale
@@ -347,6 +385,7 @@ Se aggiungi una nuova calling function:
 Per ridurre costi durante sviluppo:
 
 1. **Esegui solo test specifici**:
+
    ```bash
    npm run test:integration -- -t "Test Case 10"
    ```

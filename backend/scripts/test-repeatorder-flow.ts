@@ -1,18 +1,18 @@
 /**
  * 🧪 Test repeatOrder Confirmation Flow - Standalone
- * 
+ *
  * Test standalone per verificare il flow repeatOrder con conferma.
- * 
+ *
  * Flow:
  * 1. Utente: "voglio rifare l'ultimo ordine" → Sistema chiede conferma
  * 2. Utente: "si" → Sistema chiama repeatOrder()
- * 
+ *
  * ⚠️ ATTENZIONE: Chiama OpenRouter API reale (costo ~$0.02)
  */
 
 import { PrismaClient } from "@prisma/client"
-import { LLMService } from "../src/services/llm.service"
 import * as dotenv from "dotenv"
+import { LLMService } from "../src/services/llm.service"
 
 dotenv.config()
 
@@ -166,7 +166,10 @@ async function testRepeatOrderConfirmationFlow() {
     console.log(`💬 Response: ${step1.response}\n`)
 
     // Verify STEP 1
-    if (step1.functionCalled === null || step1.functionCalled !== "repeatOrder") {
+    if (
+      step1.functionCalled === null ||
+      step1.functionCalled !== "repeatOrder"
+    ) {
       console.log("✅ STEP 1 CORRECT: Sistema NON ha chiamato repeatOrder")
 
       const responseText = step1.response.toLowerCase()
@@ -223,7 +226,9 @@ async function testRepeatOrderConfirmationFlow() {
       console.log(
         "\n✅ Il sistema mantiene correttamente il contesto conversazionale!"
       )
-      console.log("✅ La history degli ultimi 5 minuti funziona correttamente!\n")
+      console.log(
+        "✅ La history degli ultimi 5 minuti funziona correttamente!\n"
+      )
 
       await prisma.$disconnect()
       process.exit(0)

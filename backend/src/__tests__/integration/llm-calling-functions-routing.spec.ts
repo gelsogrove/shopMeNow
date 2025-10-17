@@ -1,19 +1,19 @@
 /**
  * 🧪 LLM Calling Functions Routing - Integration Test
- * 
+ *
  * Verifica che il LLM OpenRouter chiami le calling functions corrette
  * in base al query dell'utente, rispettando le priorità definite.
- * 
+ *
  * ⚠️ ATTENZIONE: Questo test è COSTOSO perché chiama OpenRouter API reale.
  * Eseguire solo quando necessario per validare il routing delle calling functions.
- * 
+ *
  * Priorità Functions (docs/prompt_agent.md):
  * 🚨 1. ContactOperator - Assistenza umana, frustrazione
  * 🚨 2. GetLinkOrderByCode - Visualizza ordine specifico
  * ⚙️ 3. repeatOrder - Ripete ordine precedente (con conferma)
  * ⚙️ 4. addProduct - Aggiunge singolo prodotto (con conferma)
  * 📊 5. searchProduct - BACKGROUND, registra ricerca prodotto
- * 
+ *
  * Test Cases:
  * ✅ searchProduct: "avete la mozzarella di bufala?"
  * ✅ Token Return: "dammi la lista degli ordini" → [LINK_ORDERS_WITH_TOKEN]
@@ -25,7 +25,7 @@
  * ✅ addProduct: "voglio aggiungere il panettone" → Chiede conferma
  * ✅ No Function: "chi sei?" → Nessuna calling function
  * ✅ Ambiguity: "sono stufo, dammi ultimo ordine" → ContactOperator (PRIORITY 1)
- * 
+ *
  * Created: 17 October 2025
  * Branch: 84-design-implement-new-calling-functions-addproduct-repeatorder-full-befeprompt-integration
  */
