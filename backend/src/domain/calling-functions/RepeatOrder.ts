@@ -193,11 +193,16 @@ export async function RepeatOrder(
       } = require("../../application/services/secure-token.service")
       const secureTokenService = new SecureTokenService()
 
-      const token = secureTokenService.generateToken({
-        customerId: request.customerId,
-        workspaceId: request.workspaceId,
-        type: "cart",
-      })
+      const token = await secureTokenService.createToken(
+        "cart",
+        request.workspaceId,
+        { customerId: request.customerId },
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        request.customerId
+      )
 
       await prisma.$disconnect()
 

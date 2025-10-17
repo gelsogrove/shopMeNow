@@ -1,6 +1,6 @@
 /**
  * FAQs Data - Auto-generated from database
- * Last updated: 2025-10-15T21:58:07.667Z
+ * Last updated: 2025-10-17T15:45:07.366Z
  * DO NOT EDIT MANUALLY - Use npm run db:export-to-seed
  */
 
@@ -170,6 +170,13 @@ export const faqs: FAQData[] = [
   {
     question: "Defective products",
     answer: "I'm sorry about the defective product! 😔\n\nTo resolve:\n✅ **Contact us immediately** at (+34) 93 15 91 221 or info@laltrait.com\n✅ **Free return** with free pickup\n✅ **Full refund** or immediate replacement\n\nQuality is our priority. We'll help you resolve it right away!",
+    category: null,
+    language: null,
+    isActive: true,
+  },
+  {
+    question: "Is my personal data safe?",
+    answer: "Absolutely! Your personal data is completely secure. 🔒\n\n✅ **100% Platform Security**: All your data is processed and stored securely within our platform\n✅ **No WhatsApp Storage**: Sensitive information never remains on WhatsApp servers\n✅ **AI Protection**: Your personal data is NEVER sent to any AI model or external service\n✅ **Encrypted Links**: All secure links are protected with encrypted tokens valid for only 15 minutes\n✅ **GDPR Compliant**: We fully comply with European data protection regulations\n\nYour privacy is our top priority. Your data is safe with us!",
     category: null,
     language: null,
     isActive: true,

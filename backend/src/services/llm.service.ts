@@ -3,13 +3,51 @@ import * as path from "path"
 import { TokenService } from "../application/services/token.service"
 import { LLMRequest } from "../types/whatsapp.types"
 import logger from "../utils/logger"
-import {
-  calculateLLMCost,
-  calculateLLMTokenUsage,
-} from "../utils/token-calculator"
 import { CallingFunctionsService } from "./calling-functions.service"
 import { PromptProcessorService } from "./prompt-processor.service"
 import translationSecurityService from "./translation-security.service"
+
+/**
+ * Simple token usage calculator (approximation)
+ * OpenAI uses ~4 chars per token on average
+ */
+function calculateLLMTokenUsage(
+  prompt: string,
+  userQuery: string,
+  completion: string
+): { promptTokens: number; completionTokens: number; totalTokens: number } {
+  const promptTokens = Math.ceil((prompt.length + userQuery.length) / 4)
+  const completionTokens = Math.ceil(completion.length / 4)
+  return {
+    promptTokens,
+    completionTokens,
+    totalTokens: promptTokens + completionTokens,
+  }
+}
+
+/**
+ * Calculate LLM cost based on tokens and model
+ * Prices per 1M tokens for gpt-4o-mini:
+ * - Input: $0.15
+ * - Output: $0.60
+ */
+function calculateLLMCost(
+  promptTokens: number,
+  completionTokens: number,
+  model: string
+): { inputCost: number; outputCost: number; totalCost: number } {
+  const inputCostPer1M = 0.15
+  const outputCostPer1M = 0.6
+
+  const inputCost = (promptTokens / 1000000) * inputCostPer1M
+  const outputCost = (completionTokens / 1000000) * outputCostPer1M
+
+  return {
+    inputCost,
+    outputCost,
+    totalCost: inputCost + outputCost,
+  }
+}
 
 //todo non va il singoloo ordine
 export class LLMService {
@@ -969,9 +1007,26 @@ export class LLMService {
       const llmResponse =
         data.choices?.[0]?.message?.content || i18n.fallback[language]
 
-      console.log("🎯 LLM Final Response:", llmResponse)
+      // 🔧 POST-PROCESS: Replace variables in LLM response
+      // LLM might generate text with {{variables}} that need to be replaced
+      const processedResponse = this.replaceVariablesInResponse(llmResponse, {
+        nameUser: customerData?.nameUser || customer.name || "Cliente",
+        discountUser: String(
+          customerData?.discountUser || customer.discount || 0
+        ),
+        companyName: customerData?.companyName || workspace.name || "Shop",
+        lastordercode:
+          customerData?.lastordercode || customer.lastOrderCode || "",
+        languageUser:
+          customerData?.languageUser || customer.language || language,
+        tokenDuration: this.getTokenDurationText(
+          process.env.TOKEN_EXPIRATION || "1h"
+        ),
+      })
+
+      console.log("🎯 LLM Final Response:", processedResponse)
       return {
-        response: llmResponse,
+        response: processedResponse,
         tokenUsage,
         costInfo,
         functionCalls,
@@ -1162,5 +1217,53 @@ export class LLMService {
       output,
       debugInfo: JSON.stringify(debugInfo || { stage: "new_user" }),
     }
+  }
+
+  /**
+   * Replace variables in LLM response
+   * LLM might generate text with {{variables}} that need to be replaced with actual values
+   */
+  private replaceVariablesInResponse(
+    text: string,
+    variables: {
+      nameUser: string
+      discountUser: string
+      companyName: string
+      lastordercode: string
+      languageUser: string
+      tokenDuration: string
+    }
+  ): string {
+    let result = text
+
+    // Replace all known variables
+    result = result.replace(/\{\{nameUser\}\}/g, variables.nameUser)
+    result = result.replace(/\{\{discountUser\}\}/g, variables.discountUser)
+    result = result.replace(/\{\{companyName\}\}/g, variables.companyName)
+    result = result.replace(/\{\{lastordercode\}\}/g, variables.lastordercode)
+    result = result.replace(/\{\{languageUser\}\}/g, variables.languageUser)
+    result = result.replace(/\{\{TOKEN_DURATION\}\}/g, variables.tokenDuration)
+
+    return result
+  }
+
+  /**
+   * Convert token expiration time to human-readable text
+   */
+  private getTokenDurationText(expiration: string): string {
+    const hours = parseInt(expiration.replace(/[^0-9]/g, ""))
+
+    if (expiration.includes("h")) {
+      return hours === 1 ? "1 ora" : `${hours} ore`
+    } else if (expiration.includes("m")) {
+      const minutes = hours
+      return `${minutes} minuti`
+    } else if (expiration.includes("d")) {
+      const days = hours
+      return days === 1 ? "1 giorno" : `${days} giorni`
+    }
+
+    // Default fallback
+    return "1 ora"
   }
 }

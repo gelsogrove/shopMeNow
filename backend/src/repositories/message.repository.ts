@@ -1222,8 +1222,8 @@ export class MessageRepository {
           const formatoStr = p.formato ? ` ${p.formato}` : ""
 
           // WhatsApp strikethrough: ~text~ (single tilde at start and end)
-          // Format: CODICE formato NOME ~€originalPrice~ → €finalPrice - description
-          formattedProducts += `• ${p.ProductCode}${formatoStr} ${p.name} ~€${originalPrice}~ → €${finalPrice}${description}\n`
+          // Format: CODICE NOME formato ~€originalPrice~ → €finalPrice - description
+          formattedProducts += `• ${p.ProductCode} ${p.name}${formatoStr} ~€${originalPrice}~ → €${finalPrice}${description}\n`
         })
         formattedProducts += "\n"
       }

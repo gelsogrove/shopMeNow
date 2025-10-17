@@ -1,6 +1,6 @@
 /**
  * Services Data - Auto-generated from database
- * Last updated: 2025-10-15T21:19:11.534Z
+ * Last updated: 2025-10-17T15:45:07.361Z
  * DO NOT EDIT MANUALLY - Use npm run db:export-to-seed
  */
 
@@ -20,7 +20,7 @@ export const services: ServiceData[] = [
     description: "Standard shipping service for orders within Italy. Delivery within 3-5 business days.",
     price: 5,
     isActive: true,
-    imageUrl: ["/uploads/services/SHP001_1760563047778_c3ql7a.jpg"],
+    imageUrl: ["/uploads/services/SHP001_1760565437670_4yuoes.jpg"],
   },
   {
     name: "Gift Wrapping",

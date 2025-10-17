@@ -1,6 +1,6 @@
 /**
  * Categories Data - Auto-generated from database
- * Last updated: 2025-10-15T22:02:42.558Z
+ * Last updated: 2025-10-17T15:45:07.339Z
  * DO NOT EDIT MANUALLY - Use npm run db:export-to-seed
  */
 
