@@ -142,7 +142,7 @@ export class LLMService {
     const faqs = await messageRepo.getActiveFaqs(workspace.id)
     const services = await messageRepo.getActiveServices(workspace.id)
     const categories = await messageRepo.getActiveCategories(workspace.id)
-    const offers = await messageRepo.getActiveOffers(workspace.id, userLanguage)
+    const offers = await messageRepo.getActiveOffers(workspace.id)
     const customerDiscount = customer.discount || 0
     const products =
       (await messageRepo.getActiveProducts(workspace.id, customerDiscount)) ||
@@ -155,6 +155,11 @@ export class LLMService {
       lastordercode:
         customerData?.lastordercode || customer.lastOrderCode || "",
       languageUser: this.getLanguageDisplayName(userLanguage),
+      agentName: customer.sales
+        ? `${customer.sales.firstName} ${customer.sales.lastName}`.trim()
+        : "Non assegnato",
+      agentPhone: customer.sales?.phone || "N/A",
+      agentEmail: customer.sales?.email || "N/A",
     }
 
     // 🔧 DEBUG: Add user info to debug
@@ -191,6 +196,9 @@ export class LLMService {
       .replace("{{companyName}}", userInfo.companyName)
       .replace("{{lastordercode}}", userInfo.lastordercode)
       .replace("{{languageUser}}", userInfo.languageUser)
+      .replace("{{agentName}}", userInfo.agentName)
+      .replace("{{agentPhone}}", userInfo.agentPhone)
+      .replace("{{agentEmail}}", userInfo.agentEmail)
       .replace("{{TOKEN_DURATION}}", tokenDuration)
 
     // 🔧 SALVA IL PROMPT FINALE PER DEBUG

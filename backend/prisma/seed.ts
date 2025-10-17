@@ -2453,13 +2453,13 @@ async function main() {
         const frozenCategory = await prisma.categories.findFirst({
           where: {
             workspaceId: mainWorkspaceId,
-            name: "Frozen Products",
+            name: "Prodotti Surgelati",
           },
         })
         if (frozenCategory) {
           finalCategoryId = frozenCategory.id
           console.log(
-            `Assigning Offerta Frozen Products to Frozen Products category: ${frozenCategory.id}`
+            `Assigning Offerta Frozen Products to Prodotti Surgelati category: ${frozenCategory.id}`
           )
         }
       }
@@ -2739,7 +2739,7 @@ async function main() {
         country: "Italia",
       }),
       company: "Rossi Limited S.r.l.",
-      discount: 10,
+      discount: 20,
       language: "it",
       currency: "EUR",
       notes: "Cliente premium - Preferisce prodotti DOP",
@@ -2776,7 +2776,7 @@ async function main() {
         country: "United Kingdom",
       }),
       company: "Smith & Co Ltd",
-      discount: 10,
+      discount: 15,
       language: "en",
       currency: "EUR",
       notes: "VIP customer - Prefers organic products",
@@ -2814,7 +2814,7 @@ async function main() {
         country: "España",
       }),
       company: "Garcia Imports S.L.",
-      discount: 5,
+      discount: 10,
       language: "es",
       currency: "EUR",
       notes: "Cliente frecuente - Le gustan los productos artesanales",
@@ -2852,7 +2852,7 @@ async function main() {
         country: "Portugal",
       }),
       company: "Silva & Filhos Lda",
-      discount: 0,
+      discount: 5,
       language: "pt",
       currency: "EUR",
       notes: "Novo cliente - Interessado em produtos gourmet",
@@ -3080,6 +3080,83 @@ async function main() {
     "✅ Created 13 billing transactions (4 registrations + 6 messages + 1 human support + 1 FAQ + 1 offer)"
   )
   console.log("   💰 Total billing: €8.90")
+
+  // 📊 CREATE HISTORICAL LLM COST DATA (per tracking prezzi nel tempo)
+  console.log("\n📊 Creating historical LLM cost data...")
+
+  const daysAgo = (days: number) =>
+    new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
+
+  // Costi LLM ultimi 90 giorni (simulando variazioni di prezzo e volume)
+  const llmCosts = [
+    // Ultimi 7 giorni (alta attività)
+    { days: 1, messages: 45, cost: 0.025 },
+    { days: 2, messages: 38, cost: 0.025 },
+    { days: 3, messages: 52, cost: 0.025 },
+    { days: 4, messages: 41, cost: 0.025 },
+    { days: 5, messages: 36, cost: 0.025 },
+    { days: 6, messages: 29, cost: 0.025 },
+    { days: 7, messages: 44, cost: 0.025 },
+
+    // Settimane 2-3 (attività media)
+    { days: 10, messages: 35, cost: 0.024 },
+    { days: 12, messages: 42, cost: 0.024 },
+    { days: 14, messages: 38, cost: 0.024 },
+    { days: 16, messages: 31, cost: 0.024 },
+    { days: 18, messages: 27, cost: 0.024 },
+    { days: 20, messages: 33, cost: 0.024 },
+
+    // Mese scorso (costo più alto, volume medio)
+    { days: 25, messages: 40, cost: 0.028 },
+    { days: 28, messages: 45, cost: 0.028 },
+    { days: 31, messages: 38, cost: 0.028 },
+    { days: 34, messages: 42, cost: 0.028 },
+    { days: 37, messages: 36, cost: 0.028 },
+
+    // 2 mesi fa (costo standard, volume basso)
+    { days: 45, messages: 28, cost: 0.026 },
+    { days: 50, messages: 32, cost: 0.026 },
+    { days: 55, messages: 25, cost: 0.026 },
+    { days: 60, messages: 30, cost: 0.026 },
+
+    // 3 mesi fa (costo più basso, inizio attività)
+    { days: 70, messages: 20, cost: 0.023 },
+    { days: 75, messages: 22, cost: 0.023 },
+    { days: 80, messages: 18, cost: 0.023 },
+    { days: 85, messages: 15, cost: 0.023 },
+    { days: 90, messages: 12, cost: 0.023 },
+  ]
+
+  let cumulativeLLMTotal = 8.9 // Start from current total
+
+  for (const data of llmCosts) {
+    const totalCost = data.messages * data.cost
+
+    await prisma.billing.create({
+      data: {
+        workspaceId: mainWorkspaceId,
+        customerId: null,
+        type: "MESSAGE",
+        description: `${data.messages} messaggi LLM (${data.messages} × €${data.cost.toFixed(3)})`,
+        userQuery: null,
+        amount: totalCost,
+        previousTotal: cumulativeLLMTotal,
+        currentCharge: totalCost,
+        newTotal: cumulativeLLMTotal + totalCost,
+        createdAt: daysAgo(data.days),
+      },
+    })
+
+    cumulativeLLMTotal += totalCost
+  }
+
+  console.log(`✅ Created ${llmCosts.length} historical LLM cost records`)
+  console.log(`   📊 Period: Last 90 days`)
+  console.log(
+    `   💰 Total LLM costs: €${(cumulativeLLMTotal - 8.9).toFixed(2)}`
+  )
+  console.log(`   📈 Avg cost per message: €0.025`)
+  console.log(`   📉 Cost variation: €0.023 - €0.028`)
 
   // Create chat sessions and welcome messages for each customer
   console.log("🔄 Creating chat sessions and welcome messages...")
@@ -4240,18 +4317,27 @@ Team Altro Gusto`,
   console.log("\n🔍 Creating ProductSearch records for analytics...")
   try {
     const productSearches = [
-      // Search history for top 10 products (varied dates and frequencies)
+      // Search history for top products (varied dates and frequencies)
+      // Ultimi 7 giorni
       { query: "Pasta Fresca", customerId: testCustomer?.id, daysAgo: 0 },
       { query: "Pasta Fresca", customerId: testCustomer2?.id, daysAgo: 1 },
       { query: "Pasta Fresca", customerId: testCustomerMCP?.id, daysAgo: 2 },
       { query: "Pasta Fresca", customerId: testCustomer?.id, daysAgo: 3 },
+      { query: "Pasta Fresca", customerId: testCustomer4?.id, daysAgo: 5 },
 
       { query: "Olio di Oliva", customerId: testCustomer2?.id, daysAgo: 0 },
       { query: "Olio di Oliva", customerId: testCustomer?.id, daysAgo: 1 },
       { query: "Olio di Oliva", customerId: testCustomerMCP?.id, daysAgo: 2 },
+      { query: "Olio di Oliva", customerId: testCustomer4?.id, daysAgo: 4 },
 
       { query: "Mozzarella Fresca", customerId: testCustomer?.id, daysAgo: 0 },
       { query: "Mozzarella Fresca", customerId: testCustomer2?.id, daysAgo: 1 },
+      { query: "Mozzarella Fresca", customerId: testCustomer?.id, daysAgo: 3 },
+      {
+        query: "Mozzarella Fresca",
+        customerId: testCustomerMCP?.id,
+        daysAgo: 6,
+      },
 
       {
         query: "Parmigiano Reggiano",
@@ -4263,10 +4349,16 @@ Team Altro Gusto`,
         customerId: testCustomer?.id,
         daysAgo: 2,
       },
+      {
+        query: "Parmigiano Reggiano",
+        customerId: testCustomer2?.id,
+        daysAgo: 4,
+      },
 
       { query: "Burrata", customerId: testCustomer2?.id, daysAgo: 1 },
       { query: "Burrata", customerId: testCustomer?.id, daysAgo: 3 },
       { query: "Burrata", customerId: testCustomerMCP?.id, daysAgo: 4 },
+      { query: "Burrata", customerId: testCustomer4?.id, daysAgo: 7 },
 
       {
         query: "Prosciutto di Parma",
@@ -4278,6 +4370,27 @@ Team Altro Gusto`,
         customerId: testCustomer2?.id,
         daysAgo: 2,
       },
+      {
+        query: "Prosciutto di Parma",
+        customerId: testCustomerMCP?.id,
+        daysAgo: 5,
+      },
+
+      // Prodotti surgelati (con offerta 20%)
+      { query: "Gamberi Rossi", customerId: testCustomer?.id, daysAgo: 0 },
+      { query: "Gamberi Rossi", customerId: testCustomer2?.id, daysAgo: 1 },
+      {
+        query: "Lasagne Surgelate",
+        customerId: testCustomerMCP?.id,
+        daysAgo: 1,
+      },
+      { query: "Pizza Surgelata", customerId: testCustomer4?.id, daysAgo: 2 },
+      { query: "Branzino Surgelato", customerId: testCustomer?.id, daysAgo: 3 },
+      {
+        query: "Prodotti Surgelati",
+        customerId: testCustomer2?.id,
+        daysAgo: 4,
+      },
 
       { query: "Pepe Nero", customerId: testCustomerMCP?.id, daysAgo: 0 },
       { query: "Pepe Nero", customerId: testCustomer?.id, daysAgo: 1 },
@@ -4287,6 +4400,35 @@ Team Altro Gusto`,
       { query: "Basilico", customerId: testCustomer?.id, daysAgo: 2 },
 
       { query: "Aceto Balsamico", customerId: testCustomer?.id, daysAgo: 0 },
+      { query: "Aceto Balsamico", customerId: testCustomer4?.id, daysAgo: 3 },
+
+      { query: "Tartufo", customerId: testCustomer2?.id, daysAgo: 1 },
+      { query: "Tartufo", customerId: testCustomer?.id, daysAgo: 5 },
+
+      { query: "Nduja", customerId: testCustomerMCP?.id, daysAgo: 2 },
+      { query: "Nduja", customerId: testCustomer?.id, daysAgo: 4 },
+
+      { query: "Pecorino Romano", customerId: testCustomer4?.id, daysAgo: 1 },
+      { query: "Pecorino Romano", customerId: testCustomer2?.id, daysAgo: 3 },
+
+      { query: "Salsiccia", customerId: testCustomer?.id, daysAgo: 2 },
+      { query: "Salsiccia", customerId: testCustomerMCP?.id, daysAgo: 6 },
+
+      // Ricerche più vecchie (15-30 giorni fa)
+      { query: "Pasta Fresca", customerId: testCustomer?.id, daysAgo: 15 },
+      { query: "Pasta Fresca", customerId: testCustomer2?.id, daysAgo: 20 },
+      { query: "Olio di Oliva", customerId: testCustomerMCP?.id, daysAgo: 18 },
+      { query: "Burrata", customerId: testCustomer4?.id, daysAgo: 22 },
+      {
+        query: "Parmigiano Reggiano",
+        customerId: testCustomer?.id,
+        daysAgo: 25,
+      },
+      {
+        query: "Prosciutto di Parma",
+        customerId: testCustomer2?.id,
+        daysAgo: 28,
+      },
     ]
 
     for (const search of productSearches) {
@@ -4306,7 +4448,10 @@ Team Altro Gusto`,
     console.log(`✅ ProductSearch records created successfully!`)
     console.log(`   🔍 Total searches: ${productSearches.length}`)
     console.log(
-      `   🔍 Top 3 searched: Pasta Fresca (4), Olio di Oliva (3), Burrata (3)`
+      `   🔍 Top 5 searched: Pasta Fresca (5), Mozzarella (4), Burrata (4), Olio di Oliva (4), Parmigiano (3)`
+    )
+    console.log(
+      `   🔥 Prodotti Surgelati (con 20% sconto): 6 ricerche negli ultimi 4 giorni`
     )
   } catch (error) {
     console.error("❌ Error creating ProductSearch records:", error)
