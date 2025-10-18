@@ -87,9 +87,9 @@ export const CartIframePopup: React.FC<CartIframePopupProps> = ({
           <h3 className="font-semibold text-gray-900">Preview</h3>
           <div className="flex gap-2">
             <button
-              onClick={cycleViewMode}
+              onClick={refreshIframe}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Cycle view mode"
+              title="Refresh content"
             >
               <RotateCw className="h-4 w-4 text-gray-600" />
             </button>
@@ -145,6 +145,7 @@ export const CartIframePopup: React.FC<CartIframePopupProps> = ({
               }}
             >
               <iframe
+                key={iframeKey}
                 src={iframeSrc}
                 className="w-full h-full"
                 title="Customer Cart"
@@ -205,11 +206,11 @@ export const CartIframePopup: React.FC<CartIframePopupProps> = ({
             </>
           )}
 
-          {/* Rotate Button - Cycle through Mobile/Tablet/Desktop */}
+          {/* Rotate Button - Refresh iframe content */}
           <button
-            onClick={cycleViewMode}
+            onClick={refreshIframe}
             className="absolute -top-3 -right-14 flex items-center justify-center w-9 h-9 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-xl border-2 border-white z-[10000]"
-            title="Cycle view mode"
+            title="Refresh content"
           >
             <RotateCw className="h-4 w-4" />
           </button>
@@ -231,6 +232,7 @@ export const CartIframePopup: React.FC<CartIframePopupProps> = ({
             }}
           >
             <iframe
+              key={iframeKey}
               src={iframeSrc}
               className="w-full h-full"
               title="Customer Cart"
