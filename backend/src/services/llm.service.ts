@@ -1163,7 +1163,6 @@ export class LLMService {
             orderCode: args.orderCode,
           })
 
-
         case "resetCart":
           // 🗑️ PRIORITY 3.5 - MEDIUM (requires confirmation)
           console.log("🗑️ resetCart called (PRIORITY 3.5):", args)

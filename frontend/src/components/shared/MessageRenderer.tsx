@@ -1,6 +1,10 @@
 import DOMPurify from "dompurify"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import { useState } from "react"
+import { YouTubePreview } from "./YouTubePreview"
+import { YouTubePlayerModal } from "./YouTubePlayerModal"
+import { extractYouTubeLinks, containsYouTubeLink } from "@/utils/youtubeUtils"
 
 interface MessageRendererProps {
   content: string
@@ -15,6 +19,8 @@ export function MessageRenderer({
   variant = "chat",
   onLinkClick,
 }: MessageRendererProps) {
+  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null)
+
   // Base classes for consistent formatting
   const baseClasses = "break-words text-sm text-left"
 
@@ -23,6 +29,9 @@ export function MessageRenderer({
     chat: "leading-tight",
     compact: "leading-normal",
   }
+
+  // 🎥 FEATURE: YouTube Preview - Detect and render YouTube links as previews
+  const hasYouTubeLink = containsYouTubeLink(content)
 
   // SOLUZIONE BRUTALE: Spacca il testo e trova tutti gli URL
   const renderWithLinks = (text: string) => {
@@ -33,6 +42,22 @@ export function MessageRenderer({
     return parts.map((part, index) => {
       // Se inizia con http:// o https:// è un link
       if (part.match(/^https?:\/\//)) {
+        // 🎥 CHECK: È un link YouTube?
+        const youtubeLinks = extractYouTubeLinks(part)
+        if (youtubeLinks.length > 0) {
+          // Renderizza YouTube Preview invece del link normale
+          return (
+            <div key={index} className="my-2">
+              <YouTubePreview
+                url={part}
+                onClick={(videoId) => setSelectedVideoId(videoId)}
+                className="max-w-md"
+              />
+            </div>
+          )
+        }
+
+        // Link normale (non YouTube)
         return (
           <a
             key={index}
@@ -76,12 +101,20 @@ export function MessageRenderer({
   // Se è chat, splitta e renderizza con link
   if (variant === "chat") {
     return (
-      <div
-        className={`${baseClasses} ${variantClasses[variant]} ${className}`}
-        style={{ whiteSpace: "pre-wrap" }}
-      >
-        {renderWithLinks(content)}
-      </div>
+      <>
+        <div
+          className={`${baseClasses} ${variantClasses[variant]} ${className}`}
+          style={{ whiteSpace: "pre-wrap" }}
+        >
+          {renderWithLinks(content)}
+        </div>
+
+        {/* 🎥 YouTube Player Modal */}
+        <YouTubePlayerModal
+          videoId={selectedVideoId}
+          onClose={() => setSelectedVideoId(null)}
+        />
+      </>
     )
   }
 
