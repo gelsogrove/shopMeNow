@@ -1019,14 +1019,28 @@ export class LLMService {
               customerData?.lastordercode || customer.lastOrderCode || "",
             languageUser:
               customerData?.languageUser || customer.language || language,
+            agentName: customer.sales
+              ? `${customer.sales.firstName} ${customer.sales.lastName}`.trim()
+              : "Agente",
+            agentPhone: customer.sales?.phone || "N/A",
+            agentEmail: customer.sales?.email || "info@laltrait.com",
             tokenDuration: this.getTokenDurationText(
               process.env.TOKEN_EXPIRATION || "1h"
             ),
           }
         )
 
+        // 🔗 Replace link tokens in CF response (e.g., [LINK_CHECKOUT_WITH_TOKEN])
+        const linkReplacements: any[] = []
+        const finalFunctionResponse = await this.replaceLinkTokens(
+          processedFunctionResponse,
+          customer,
+          workspace,
+          linkReplacements
+        )
+
         return {
-          response: processedFunctionResponse,
+          response: finalFunctionResponse,
           tokenUsage,
           costInfo,
           functionCalls,
@@ -1048,6 +1062,11 @@ export class LLMService {
           customerData?.lastordercode || customer.lastOrderCode || "",
         languageUser:
           customerData?.languageUser || customer.language || language,
+        agentName: customer.sales
+          ? `${customer.sales.firstName} ${customer.sales.lastName}`.trim()
+          : "Agente",
+        agentPhone: customer.sales?.phone || "N/A",
+        agentEmail: customer.sales?.email || "info@laltrait.com",
         tokenDuration: this.getTokenDurationText(
           process.env.TOKEN_EXPIRATION || "1h"
         ),
@@ -1260,6 +1279,9 @@ export class LLMService {
       companyName: string
       lastordercode: string
       languageUser: string
+      agentName: string
+      agentPhone: string
+      agentEmail: string
       tokenDuration: string
     }
   ): string {
@@ -1271,6 +1293,9 @@ export class LLMService {
     result = result.replace(/\{\{companyName\}\}/g, variables.companyName)
     result = result.replace(/\{\{lastordercode\}\}/g, variables.lastordercode)
     result = result.replace(/\{\{languageUser\}\}/g, variables.languageUser)
+    result = result.replace(/\{\{agentName\}\}/g, variables.agentName)
+    result = result.replace(/\{\{agentPhone\}\}/g, variables.agentPhone)
+    result = result.replace(/\{\{agentEmail\}\}/g, variables.agentEmail)
     result = result.replace(/\{\{TOKEN_DURATION\}\}/g, variables.tokenDuration)
 
     return result

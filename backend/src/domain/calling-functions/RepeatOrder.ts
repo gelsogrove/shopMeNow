@@ -70,7 +70,11 @@ export async function RepeatOrder(
           success: false,
           error: "Cliente non trovato",
           message:
-            "Non riesco a trovare il tuo account. Contatta il nostro supporto.",
+            "Ops {{nameUser}}! 😅\n\n" +
+            "Non riesco a trovare il tuo account nel sistema. Questo è strano!\n\n" +
+            "📞 Contatta il nostro supporto: {{agentPhone}}\n" +
+            "📧 Email: {{agentEmail}}\n\n" +
+            "Ti aiuteremo subito! 🚀",
           timestamp: new Date().toISOString(),
         }
       }
@@ -120,7 +124,11 @@ export async function RepeatOrder(
           success: false,
           error: "Nessun ordine trovato",
           message:
-            "Non trovo ordini precedenti da ripetere. Fai un nuovo ordine!",
+            "Ciao {{nameUser}}! 👋\n\n" +
+            "Non trovo ordini precedenti da ripetere. È la prima volta che ordini da noi? 🎉\n\n" +
+            "Nessun problema! Dai un'occhiata alle nostre **offerte speciali** e ai prodotti disponibili!\n\n" +
+            "💡 Hai uno sconto del **{{discountUser}}%** su tutti i prodotti! 🛍️\n\n" +
+            "Cosa ti piacerebbe ordinare oggi? 😊",
           timestamp: new Date().toISOString(),
         }
       }
@@ -219,7 +227,14 @@ export async function RepeatOrder(
 
       return {
         success: true,
-        message: `✅ Ho aggiunto ${productsAdded} prodotto/i dal tuo ultimo ordine al carrello!\n\n🛒 [LINK_CHECKOUT_WITH_TOKEN]\n\n⏰ Link valido per {{TOKEN_DURATION}}`,
+        message:
+          `Perfetto {{nameUser}}! ✅\n\n` +
+          `Ho aggiunto **${productsAdded} prodotto/i** dal tuo ultimo ordine (${order.orderCode}) al carrello! 🛒\n\n` +
+          `🛒 **Vai al checkout**:\n` +
+          `[LINK_CHECKOUT_WITH_TOKEN]\n\n` +
+          `⏰ Link valido per {{TOKEN_DURATION}}\n\n` +
+          `💡 **Ricorda**: hai uno sconto del **{{discountUser}}%** applicato automaticamente! 🎉\n\n` +
+          `Vuoi procedere con l'ordine o modificare qualcosa? 😊`,
         cartCode: cart.id,
         orderCode: order.orderCode,
         productsAdded,
@@ -234,7 +249,14 @@ export async function RepeatOrder(
       return {
         success: false,
         error: error instanceof Error ? error.message : "Errore del database",
-        message: "Impossibile ripetere l'ordine. Riprova più tardi.",
+        message:
+          "Ops {{nameUser}}! 😅\n\n" +
+          "Si è verificato un problema tecnico durante il ripristino del tuo ordine.\n\n" +
+          "Non preoccuparti! Puoi:\n" +
+          "• Riprovare tra qualche minuto ⏰\n" +
+          "• Fare un nuovo ordine manualmente 🛍️\n" +
+          "• Contattare il supporto: {{agentPhone}} 📞\n\n" +
+          "Ci scusiamo per l'inconveniente! 🙏",
         timestamp: new Date().toISOString(),
       }
     }
@@ -243,7 +265,14 @@ export async function RepeatOrder(
     return {
       success: false,
       error: error instanceof Error ? error.message : "Errore interno",
-      message: "Impossibile ripetere l'ordine. Riprova più tardi.",
+      message:
+        "Ops {{nameUser}}! 😅\n\n" +
+        "Si è verificato un problema tecnico durante il ripristino del tuo ordine.\n\n" +
+        "Non preoccuparti! Puoi:\n" +
+        "• Riprovare tra qualche minuto ⏰\n" +
+        "• Fare un nuovo ordine manualmente 🛍️\n" +
+        "• Contattare il supporto: {{agentPhone}} 📞\n\n" +
+        "Ci scusiamo per l'inconveniente! 🙏",
       timestamp: new Date().toISOString(),
     }
   }

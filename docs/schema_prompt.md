@@ -12,4 +12,6 @@
 ├── 5. Dati Dinamici (Offerte, Categorie, Prodotti, FAQ, Servizi)
 └── 6. Regole Finali (Formatter, Conversazione, Checkout)
 
-ricntrolla e' importante il prompt non possiamo perdere nulla ma neanche confondere nulla
+- ricntrolla e' importante il prompt non possiamo perdere nulla ma neanche confondere nulla, cancella solo se ha senso cancellare
+
+- ricordai che non tutti i testi sono nel prompt_agent ci sono risposte che arrivano dalle CF
