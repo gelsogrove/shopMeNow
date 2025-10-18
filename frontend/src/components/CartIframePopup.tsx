@@ -17,11 +17,17 @@ export const CartIframePopup: React.FC<CartIframePopupProps> = ({
   layoutType = "modal",
 }) => {
   const [viewMode, setViewMode] = useState<ViewMode>("mobile")
+  const [iframeKey, setIframeKey] = useState(0) // 🔄 Key per forzare reload iframe
 
   const cycleViewMode = () => {
     if (viewMode === "mobile") setViewMode("tablet")
     else if (viewMode === "tablet") setViewMode("desktop")
     else setViewMode("mobile")
+  }
+
+  // 🔄 Refresh iframe content (force reload)
+  const refreshIframe = () => {
+    setIframeKey((prev) => prev + 1)
   }
 
   // Size for INLINE mode - fit in split view but not too small

@@ -1,6 +1,6 @@
 /**
  * Script per aggiornare i messaggi di benvenuto con link YouTube
- * 
+ *
  * Aggiunge il link YouTube al video tutorial in tutte le lingue:
  * https://www.youtube.com/watch?v=fj5jQG8RyZs
  */
@@ -106,7 +106,9 @@ async function updateWelcomeMessages() {
 
     // Update each workspace
     for (const workspace of workspaces) {
-      console.log(`\n📝 Updating workspace: ${workspace.name} (${workspace.id})`)
+      console.log(
+        `\n📝 Updating workspace: ${workspace.name} (${workspace.id})`
+      )
 
       await prisma.workspace.update({
         where: { id: workspace.id },

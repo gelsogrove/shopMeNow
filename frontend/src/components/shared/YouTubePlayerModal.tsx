@@ -1,6 +1,6 @@
-import React, { useEffect } from "react"
-import { X } from "lucide-react"
 import { getYouTubeEmbedUrl } from "@/utils/youtubeUtils"
+import { X } from "lucide-react"
+import React, { useEffect } from "react"
 
 interface YouTubePlayerModalProps {
   /** ID del video YouTube da riprodurre */
@@ -11,17 +11,17 @@ interface YouTubePlayerModalProps {
 
 /**
  * YouTubePlayerModal Component
- * 
+ *
  * Modal fullscreen per riprodurre video YouTube con:
  * - Player YouTube iframe (autoplay)
  * - Pulsante X in alto a destra per chiudere
  * - Click fuori dal player per chiudere
  * - ESC key per chiudere
  * - Responsive (16:9 aspect ratio)
- * 
+ *
  * @example
  * const [videoId, setVideoId] = useState<string | null>(null)
- * 
+ *
  * <YouTubePlayerModal
  *   videoId={videoId}
  *   onClose={() => setVideoId(null)}
@@ -100,12 +100,12 @@ export const YouTubePlayerModal: React.FC<YouTubePlayerModalProps> = ({
 
 /**
  * Custom CSS per animazioni (aggiungere a index.css o globals.css)
- * 
+ *
  * @keyframes fadeIn {
  *   from { opacity: 0; }
  *   to { opacity: 1; }
  * }
- * 
+ *
  * @keyframes slideUp {
  *   from {
  *     opacity: 0;
@@ -116,11 +116,11 @@ export const YouTubePlayerModal: React.FC<YouTubePlayerModalProps> = ({
  *     transform: translateY(0);
  *   }
  * }
- * 
+ *
  * .animate-fadeIn {
  *   animation: fadeIn 0.2s ease-out;
  * }
- * 
+ *
  * .animate-slideUp {
  *   animation: slideUp 0.3s ease-out;
  * }

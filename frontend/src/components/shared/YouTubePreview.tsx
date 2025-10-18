@@ -1,6 +1,9 @@
-import React from "react"
+import {
+  extractYouTubeVideoId,
+  getYouTubeThumbnailUrl,
+} from "@/utils/youtubeUtils"
 import { Play } from "lucide-react"
-import { extractYouTubeVideoId, getYouTubeThumbnailUrl } from "@/utils/youtubeUtils"
+import React from "react"
 
 interface YouTubePreviewProps {
   /** URL YouTube completo */
@@ -13,13 +16,13 @@ interface YouTubePreviewProps {
 
 /**
  * YouTubePreview Component
- * 
+ *
  * Mostra preview cliccabile di un video YouTube con:
  * - Thumbnail del video (maxresdefault)
  * - Icona play centrale semi-trasparente
  * - Effetto hover con ingrandimento
  * - Click → apre player in modal
- * 
+ *
  * @example
  * <YouTubePreview
  *   url="https://www.youtube.com/watch?v=Sy-K9HuZgYA"
