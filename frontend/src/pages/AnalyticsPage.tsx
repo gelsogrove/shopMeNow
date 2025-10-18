@@ -178,7 +178,7 @@ export function AnalyticsPage() {
               <CardContent>
                 {analytics.topProducts && analytics.topProducts.length > 0 ? (
                   <div className="space-y-3">
-                    {analytics.topProducts.slice(0, 3).map((product, index) => (
+                    {analytics.topProducts.map((product, index) => (
                       <div
                         key={product.id}
                         className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
@@ -237,7 +237,6 @@ export function AnalyticsPage() {
                 {analytics.topCustomers && analytics.topCustomers.length > 0 ? (
                   <div className="space-y-3">
                     {analytics.topCustomers
-                      .slice(0, 3)
                       .map((customer, index) => (
                         <div
                           key={customer.id}

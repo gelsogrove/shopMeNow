@@ -499,7 +499,7 @@ export class AnalyticsService {
           AND s."isActive" = true
         GROUP BY s.id, s."firstName", s."lastName", s.email, s.phone
         ORDER BY total_revenue DESC, total_orders DESC, total_customers DESC
-        LIMIT 3
+        LIMIT 10
       `) as {
         id: string
         firstName: string

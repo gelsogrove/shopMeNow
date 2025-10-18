@@ -618,12 +618,7 @@ export class LLMService {
         function: {
           name: "resetCart",
           description:
-            "🗑️ PRIORITY 3.5 - MEDIUM (Richiede SEMPRE conferma). Svuota COMPLETAMENTE il carrello del cliente, eliminando TUTTI i prodotti/servizi. " +
-            "QUANDO USARE: Cliente dice 'cancella carrello', 'svuota carrello', 'elimina tutto dal carrello', 'pulisci carrello', 'ricomincia da capo', 'reset carrello', 'rimuovi tutto'. " +
-            "⚠️ DISAMBIGUAZIONE CRITICA: 'cancella CARRELLO' / 'svuota TUTTO' → resetCart() (elimina TUTTO il carrello) | 'cancella BURRATA' / 'rimuovi PARMIGIANO' → removeProduct() (elimina UN prodotto specifico). " +
-            "🚨 FLOW OBBLIGATORIO: 1) Cliente chiede di svuotare carrello → 2) TU chiedi SEMPRE conferma: 'Vuoi davvero svuotare il carrello? Perderai tutti i prodotti! 🗑️' → 3) Aspetti risposta → 4a) Se conferma ('sì', 'ok', 'procedi', 'conferma') → chiami resetCart() → mostri messaggio successo | 4b) Se rifiuta ('no', 'aspetta', 'annulla') → NON chiami resetCart(), mantieni carrello. " +
-            "❌ NON chiamare se: cliente vuole rimuovere UN prodotto specifico, cliente non ha confermato esplicitamente, carrello già vuoto. " +
-            "DOPO svuotamento: mostra messaggio risultato CF + suggerisci offerte/prodotti per ricominciare.",
+            "🗑️ PRIORITY 3.5 - MEDIUM. Svuota COMPLETAMENTE il carrello del cliente, rimuovendo TUTTI i prodotti/servizi. Usare SOLO quando l'utente dice: 'cancella carrello', 'svuota carrello', 'elimina tutto dal carrello', 'pulisci carrello', 'ricomincia da capo', 'reset carrello', 'rimuovi tutto'. ⚠️ DISAMBIGUAZIONE CRITICA: 'cancella carrello' / 'svuota carrello' = resetCart() (elimina TUTTO il carrello) | 'cancella prodotto X' / 'rimuovi burrata' = NON questa funzione (gestito altrove). FLOW OBBLIGATORIO: 1) Chiedi SEMPRE conferma 'Vuoi davvero svuotare il carrello?', 2) Se conferma ('sì', 'ok', 'procedi') → chiama resetCart(). NON chiamare se: utente vuole rimuovere UN prodotto specifico, utente non ha confermato, carrello già vuoto. Dopo svuotamento → suggerisci offerte o prodotti.",
           parameters: {
             type: "object",
             properties: {},
@@ -1163,15 +1158,6 @@ export class LLMService {
             orderCode: args.orderCode,
           })
 
-
-        case "resetCart":
-          // 🗑️ PRIORITY 3.5 - MEDIUM (requires confirmation)
-          console.log("🗑️ resetCart called (PRIORITY 3.5):", args)
-          const { ResetCart } = require("../domain/calling-functions/ResetCart")
-          return await ResetCart({
-            customerId: customer.id,
-            workspaceId: workspace.id,
-          })
         case "addProduct":
           // ⚙️ PRIORITY 4 - MEDIUM (requires confirmation)
           console.log("🛒 addProduct called (PRIORITY 4):", args)
