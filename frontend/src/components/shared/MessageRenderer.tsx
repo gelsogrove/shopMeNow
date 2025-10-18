@@ -1,10 +1,10 @@
+import { containsYouTubeLink, extractYouTubeLinks } from "@/utils/youtubeUtils"
 import DOMPurify from "dompurify"
+import { useState } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
-import { useState } from "react"
-import { YouTubePreview } from "./YouTubePreview"
 import { YouTubePlayerModal } from "./YouTubePlayerModal"
-import { extractYouTubeLinks, containsYouTubeLink } from "@/utils/youtubeUtils"
+import { YouTubePreview } from "./YouTubePreview"
 
 interface MessageRendererProps {
   content: string
