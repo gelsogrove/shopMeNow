@@ -199,7 +199,7 @@ router.get(
  *                 type: string
  *               whatsappPhoneNumber:
  *                 type: string
- *               whatsappApiToken:
+ *               whatsappApiKey:
  *                 type: string
  *               whatsappWebhookUrl:
  *                 type: string
