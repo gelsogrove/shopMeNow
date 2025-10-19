@@ -260,6 +260,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
     data: Partial<WorkspaceProps>
   ): Promise<Workspace | null> {
     logger.debug(`Updating workspace with ID ${id}`)
+    logger.debug(`📥 Raw data received in repository.update:`, JSON.stringify(data, null, 2))
 
     try {
       const existingWorkspace = await this.prisma.workspace.findUnique({
@@ -271,13 +272,17 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
         return null
       }
 
-      // Ensure whatsappApiToken is mapped to whatsappApiKey for Prisma
+      // Ensure whatsappApiToken/whatsappApiKey is mapped correctly for Prisma
       const dbData: any = { ...data }
+      
+      // Handle both whatsappApiToken (old) and whatsappApiKey (new) fields
       if (dbData.whatsappApiToken !== undefined) {
         dbData.whatsappApiKey = dbData.whatsappApiToken
         delete dbData.whatsappApiToken
       }
-
+      // If whatsappApiKey is sent directly, keep it as is (no transformation needed)
+      // Prisma schema uses whatsappApiKey field
+      
       // Handle adminEmail - should be saved in whatsappSettings, not workspace
       let adminEmail: string | undefined
       if (dbData.adminEmail !== undefined) {
