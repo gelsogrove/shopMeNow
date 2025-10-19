@@ -106,16 +106,24 @@ export const validateWorkspaceUpdateData = (
       try {
         new URL(url)
       } catch {
-        errors.push("Workspace URL must be a valid URL (e.g., http://localhost:3000)")
+        errors.push(
+          "Workspace URL must be a valid URL (e.g., http://localhost:3000)"
+        )
       }
     }
 
     // 5. Validate boolean fields (if provided)
-    if (req.body.isActive !== undefined && typeof req.body.isActive !== "boolean") {
+    if (
+      req.body.isActive !== undefined &&
+      typeof req.body.isActive !== "boolean"
+    ) {
       errors.push("isActive must be a boolean value")
     }
 
-    if (req.body.debugMode !== undefined && typeof req.body.debugMode !== "boolean") {
+    if (
+      req.body.debugMode !== undefined &&
+      typeof req.body.debugMode !== "boolean"
+    ) {
       errors.push("debugMode must be a boolean value")
     }
 
