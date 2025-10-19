@@ -28,7 +28,7 @@ export class WorkspaceController {
         slug: workspace.slug,
         description: workspace.description,
         whatsappPhoneNumber: workspace.whatsappPhoneNumber,
-        whatsappApiToken: workspace.whatsappApiToken,
+        whatsappApiKey: workspace.whatsappApiKey, // ✅ FIXED: Use whatsappApiKey instead of whatsappApiToken
         webhookUrl: workspace.webhookUrl,
         notificationEmail: workspace.notificationEmail,
         adminEmail: workspace.adminEmail, // Explicitly include adminEmail
@@ -84,7 +84,7 @@ export class WorkspaceController {
           slug: workspace.slug,
           description: workspace.description,
           whatsappPhoneNumber: workspace.whatsappPhoneNumber,
-          whatsappApiToken: workspace.whatsappApiToken,
+          whatsappApiKey: workspace.whatsappApiKey, // ✅ FIXED: Use whatsappApiKey instead of whatsappApiToken
           webhookUrl: workspace.webhookUrl,
           notificationEmail: workspace.notificationEmail,
           adminEmail: workspace.adminEmail, // Explicitly include adminEmail
