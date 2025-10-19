@@ -305,9 +305,10 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       }
 
       logger.debug(
-        `Update data for workspace ${id}:`,
+        `📝 Data prepared for Prisma update (workspace ${id}):`,
         JSON.stringify(dbData, null, 2)
       )
+      logger.debug(`📧 AdminEmail to update: ${adminEmail}`)
 
       const updatedWorkspace = await this.prisma.workspace.update({
         where: { id },
