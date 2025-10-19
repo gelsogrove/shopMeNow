@@ -60,7 +60,7 @@ export default function SettingsPage() {
   })
   const [selectedWelcomeLang, setSelectedWelcomeLang] = useState("en")
   const [selectedWipLang, setSelectedWipLang] = useState("en")
-  const { workspace, loading, refreshWorkspace } = useWorkspace()
+  const { workspace, loading, setCurrentWorkspace } = useWorkspace()
 
   useEffect(() => {
     if (!workspace) return
@@ -92,7 +92,10 @@ export default function SettingsPage() {
     mutationFn: async (updateData: any) => updateWorkspace(formData.id, updateData),
     onSuccess: async (updatedWorkspace) => {
       logger.info("✅ Workspace updated successfully:", updatedWorkspace)
-      await refreshWorkspace()
+      // Update the workspace context with the new data
+      if (updatedWorkspace) {
+        setCurrentWorkspace(updatedWorkspace)
+      }
       toast.success("Settings saved successfully")
     },
     onError: (error: any) => {
