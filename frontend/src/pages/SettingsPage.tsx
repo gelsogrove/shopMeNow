@@ -53,9 +53,15 @@ export default function SettingsPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const [formData, setFormData] = useState<WorkspaceData>({
-    id: "", name: "", whatsappPhoneNumber: "", whatsappApiKey: "",
-    adminEmail: "", url: "http://localhost:3000", isActive: true,
-    debugMode: true, welcomeMessages: defaultWelcomeMessages,
+    id: "",
+    name: "",
+    whatsappPhoneNumber: "",
+    whatsappApiKey: "",
+    adminEmail: "",
+    url: "http://localhost:3000",
+    isActive: true,
+    debugMode: true,
+    welcomeMessages: defaultWelcomeMessages,
     wipMessages: defaultWipMessages,
   })
   const [selectedWelcomeLang, setSelectedWelcomeLang] = useState("en")
@@ -68,28 +74,42 @@ export default function SettingsPage() {
     let welcomeMessages = defaultWelcomeMessages
     if (workspace.welcomeMessages) {
       try {
-        welcomeMessages = typeof workspace.welcomeMessages === "string" ? JSON.parse(workspace.welcomeMessages) : workspace.welcomeMessages
-      } catch (e) { logger.error("Error parsing welcome messages:", e) }
+        welcomeMessages =
+          typeof workspace.welcomeMessages === "string"
+            ? JSON.parse(workspace.welcomeMessages)
+            : workspace.welcomeMessages
+      } catch (e) {
+        logger.error("Error parsing welcome messages:", e)
+      }
     }
     let wipMessages = defaultWipMessages
     if (workspace.wipMessages) {
       try {
-        wipMessages = typeof workspace.wipMessages === "string" ? JSON.parse(workspace.wipMessages) : workspace.wipMessages
-      } catch (e) { logger.error("Error parsing WIP messages:", e) }
+        wipMessages =
+          typeof workspace.wipMessages === "string"
+            ? JSON.parse(workspace.wipMessages)
+            : workspace.wipMessages
+      } catch (e) {
+        logger.error("Error parsing WIP messages:", e)
+      }
     }
     setFormData({
-      id: workspace.id, name: workspace.name || "",
+      id: workspace.id,
+      name: workspace.name || "",
       whatsappPhoneNumber: workspace.whatsappPhoneNumber || "",
       whatsappApiKey: workspace.whatsappApiKey || "",
       adminEmail: workspace.adminEmail || "",
       url: workspace.url || "http://localhost:3000",
-      isActive: workspace.isActive ?? true, debugMode: workspace.debugMode ?? true,
-      welcomeMessages, wipMessages,
+      isActive: workspace.isActive ?? true,
+      debugMode: workspace.debugMode ?? true,
+      welcomeMessages,
+      wipMessages,
     })
   }, [workspace])
 
   const saveSettingsMutation = useMutation({
-    mutationFn: async (updateData: any) => updateWorkspace(formData.id, updateData),
+    mutationFn: async (updateData: any) =>
+      updateWorkspace(formData.id, updateData),
     onSuccess: async (updatedWorkspace) => {
       logger.info("✅ Workspace updated successfully:", updatedWorkspace)
       // Update the workspace context with the new data
@@ -101,8 +121,12 @@ export default function SettingsPage() {
     onError: (error: any) => {
       logger.error("❌ Error saving settings:", error)
       if (error.response?.data?.details) {
-        toast.error(`Validation failed: ${error.response.data.details.join(", ")}`)
-      } else { toast.error("Failed to save settings") }
+        toast.error(
+          `Validation failed: ${error.response.data.details.join(", ")}`
+        )
+      } else {
+        toast.error("Failed to save settings")
+      }
     },
   })
 
@@ -125,23 +149,38 @@ export default function SettingsPage() {
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }))
   }
 
-  const handleMessageChange = (messageType: "welcomeMessages" | "wipMessages", lang: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [messageType]: { ...prev[messageType], [lang]: value } }))
+  const handleMessageChange = (
+    messageType: "welcomeMessages" | "wipMessages",
+    lang: string,
+    value: string
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      [messageType]: { ...prev[messageType], [lang]: value },
+    }))
   }
 
   const validateForm = (): boolean => {
     const newErrors: { [key: string]: string } = {}
-    if (!formData.adminEmail.trim()) newErrors.adminEmail = "Admin email is required"
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.adminEmail)) newErrors.adminEmail = "Please enter a valid email address"
+    if (!formData.adminEmail.trim())
+      newErrors.adminEmail = "Admin email is required"
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.adminEmail))
+      newErrors.adminEmail = "Please enter a valid email address"
     if (formData.whatsappPhoneNumber && formData.whatsappPhoneNumber.trim()) {
       const cleanPhone = formData.whatsappPhoneNumber.replace(/\s/g, "")
-      if (!/^\+?\d{10,15}$/.test(cleanPhone)) newErrors.whatsappPhoneNumber = "Phone must be in international format (+1234567890) with 10-15 digits"
+      if (!/^\+?\d{10,15}$/.test(cleanPhone))
+        newErrors.whatsappPhoneNumber =
+          "Phone must be in international format (+1234567890) with 10-15 digits"
     }
     if (!formData.name.trim()) newErrors.name = "Workspace name is required"
-    else if (formData.name.length < 2 || formData.name.length > 100) newErrors.name = "Name must be between 2 and 100 characters"
+    else if (formData.name.length < 2 || formData.name.length > 100)
+      newErrors.name = "Name must be between 2 and 100 characters"
     if (formData.url && formData.url.trim()) {
-      try { new URL(formData.url) }
-      catch { newErrors.url = "Please enter a valid URL (e.g., http://localhost:3000)" }
+      try {
+        new URL(formData.url)
+      } catch {
+        newErrors.url = "Please enter a valid URL (e.g., http://localhost:3000)"
+      }
     }
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -149,12 +188,20 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     if (saveSettingsMutation.isPending) return
-    if (!validateForm()) { toast.error("Please fix validation errors before saving"); return }
+    if (!validateForm()) {
+      toast.error("Please fix validation errors before saving")
+      return
+    }
     const updateData = {
-      id: formData.id, name: formData.name, whatsappPhoneNumber: formData.whatsappPhoneNumber,
-      whatsappApiKey: formData.whatsappApiKey, adminEmail: formData.adminEmail,
-      url: formData.url || "http://localhost:3000", isActive: formData.isActive,
-      debugMode: formData.debugMode, welcomeMessages: formData.welcomeMessages,
+      id: formData.id,
+      name: formData.name,
+      whatsappPhoneNumber: formData.whatsappPhoneNumber,
+      whatsappApiKey: formData.whatsappApiKey,
+      adminEmail: formData.adminEmail,
+      url: formData.url || "http://localhost:3000",
+      isActive: formData.isActive,
+      debugMode: formData.debugMode,
+      welcomeMessages: formData.welcomeMessages,
       wipMessages: formData.wipMessages,
     }
     logger.info("💾 Saving workspace settings:", updateData)
@@ -166,19 +213,28 @@ export default function SettingsPage() {
     deleteWorkspaceMutation.mutate()
   }
 
-  if (loading) return (
-    <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[50vh]">
-      <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-      <h2 className="text-xl font-medium">Loading settings...</h2>
-    </div>
-  )
+  if (loading)
+    return (
+      <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[50vh]">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <h2 className="text-xl font-medium">Loading settings...</h2>
+      </div>
+    )
 
-  if (!workspace) return (
-    <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[50vh]">
-      <h2 className="text-xl font-medium text-red-600">No workspace found. Please select a workspace.</h2>
-      <Button onClick={() => navigate("/workspace-selection")} className="mt-4">Go to Workspace Selection</Button>
-    </div>
-  )
+  if (!workspace)
+    return (
+      <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[50vh]">
+        <h2 className="text-xl font-medium text-red-600">
+          No workspace found. Please select a workspace.
+        </h2>
+        <Button
+          onClick={() => navigate("/workspace-selection")}
+          className="mt-4"
+        >
+          Go to Workspace Selection
+        </Button>
+      </div>
+    )
 
   return (
     <div className="container mx-auto py-6 px-4">
@@ -193,60 +249,200 @@ export default function SettingsPage() {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Active</span>
-                <Switch checked={formData.isActive} onCheckedChange={(checked) => handleFieldChange("isActive", checked)} />
+                <Switch
+                  checked={formData.isActive}
+                  onCheckedChange={(checked) =>
+                    handleFieldChange("isActive", checked)
+                  }
+                />
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Debug Mode</span>
-                <Switch checked={formData.debugMode} onCheckedChange={(checked) => handleFieldChange("debugMode", checked)} />
+                <span className="text-sm text-muted-foreground">
+                  Debug Mode
+                </span>
+                <Switch
+                  checked={formData.debugMode}
+                  onCheckedChange={(checked) =>
+                    handleFieldChange("debugMode", checked)
+                  }
+                />
               </div>
             </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="name">Workspace Name <span className="text-red-500">*</span></Label>
-            <Input id="name" value={formData.name} onChange={(e) => handleFieldChange("name", e.target.value)} placeholder="My Business" className={errors.name ? "border-red-500" : ""} />
-            {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
+            <Label htmlFor="name">
+              Workspace Name <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => handleFieldChange("name", e.target.value)}
+              placeholder="My Business"
+              className={errors.name ? "border-red-500" : ""}
+            />
+            {errors.name && (
+              <p className="text-sm text-red-500">{errors.name}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="whatsappPhoneNumber">WhatsApp Phone Number</Label>
-            <Input id="whatsappPhoneNumber" value={formData.whatsappPhoneNumber} onChange={(e) => handleFieldChange("whatsappPhoneNumber", e.target.value)} placeholder="+1234567890" className={errors.whatsappPhoneNumber ? "border-red-500" : ""} />
-            {errors.whatsappPhoneNumber && <p className="text-sm text-red-500">{errors.whatsappPhoneNumber}</p>}
-            <p className="text-xs text-muted-foreground">International format with country code (e.g., +1234567890)</p>
+            <Input
+              id="whatsappPhoneNumber"
+              value={formData.whatsappPhoneNumber}
+              onChange={(e) =>
+                handleFieldChange("whatsappPhoneNumber", e.target.value)
+              }
+              placeholder="+1234567890"
+              className={errors.whatsappPhoneNumber ? "border-red-500" : ""}
+            />
+            {errors.whatsappPhoneNumber && (
+              <p className="text-sm text-red-500">
+                {errors.whatsappPhoneNumber}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              International format with country code (e.g., +1234567890)
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="whatsappApiKey">WhatsApp API Key</Label>
-            <Input id="whatsappApiKey" type="password" value={formData.whatsappApiKey} onChange={(e) => handleFieldChange("whatsappApiKey", e.target.value)} placeholder="Your WhatsApp API Key" />
+            <Input
+              id="whatsappApiKey"
+              type="password"
+              value={formData.whatsappApiKey}
+              onChange={(e) =>
+                handleFieldChange("whatsappApiKey", e.target.value)
+              }
+              placeholder="Your WhatsApp API Key"
+            />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="adminEmail">Admin Email <span className="text-red-500">*</span></Label>
-            <Input id="adminEmail" type="email" value={formData.adminEmail} onChange={(e) => handleFieldChange("adminEmail", e.target.value)} placeholder="admin@example.com" className={errors.adminEmail ? "border-red-500" : ""} />
-            {errors.adminEmail && <p className="text-sm text-red-500">{errors.adminEmail}</p>}
-            <p className="text-xs text-muted-foreground">This email will receive notifications when users request operator assistance</p>
+            <Label htmlFor="adminEmail">
+              Admin Email <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="adminEmail"
+              type="email"
+              value={formData.adminEmail}
+              onChange={(e) => handleFieldChange("adminEmail", e.target.value)}
+              placeholder="admin@example.com"
+              className={errors.adminEmail ? "border-red-500" : ""}
+            />
+            {errors.adminEmail && (
+              <p className="text-sm text-red-500">{errors.adminEmail}</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              This email will receive notifications when users request operator
+              assistance
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="url">Workspace URL</Label>
-            <Input id="url" type="url" value={formData.url} onChange={(e) => handleFieldChange("url", e.target.value)} placeholder="http://localhost:3000" className={errors.url ? "border-red-500" : ""} />
+            <Input
+              id="url"
+              type="url"
+              value={formData.url}
+              onChange={(e) => handleFieldChange("url", e.target.value)}
+              placeholder="http://localhost:3000"
+              className={errors.url ? "border-red-500" : ""}
+            />
             {errors.url && <p className="text-sm text-red-500">{errors.url}</p>}
-            <p className="text-xs text-muted-foreground">Base URL for generating short links and redirects</p>
+            <p className="text-xs text-muted-foreground">
+              Base URL for generating short links and redirects
+            </p>
           </div>
           <div className="space-y-2">
             <Label>Welcome Messages</Label>
             <div className="flex gap-2 mb-2">
-              {["en", "it", "es", "pt"].map((lang) => <Button key={lang} variant={selectedWelcomeLang === lang ? "default" : "outline"} size="sm" onClick={() => setSelectedWelcomeLang(lang)}>{lang.toUpperCase()}</Button>)}
+              {["en", "it", "es", "pt"].map((lang) => (
+                <Button
+                  key={lang}
+                  variant={selectedWelcomeLang === lang ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedWelcomeLang(lang)}
+                >
+                  {lang.toUpperCase()}
+                </Button>
+              ))}
             </div>
-            <Textarea value={formData.welcomeMessages[selectedWelcomeLang as keyof typeof formData.welcomeMessages]} onChange={(e) => handleMessageChange("welcomeMessages", selectedWelcomeLang, e.target.value)} rows={3} placeholder="Enter welcome message..." />
+            <Textarea
+              value={
+                formData.welcomeMessages[
+                  selectedWelcomeLang as keyof typeof formData.welcomeMessages
+                ]
+              }
+              onChange={(e) =>
+                handleMessageChange(
+                  "welcomeMessages",
+                  selectedWelcomeLang,
+                  e.target.value
+                )
+              }
+              rows={3}
+              placeholder="Enter welcome message..."
+            />
           </div>
           <div className="space-y-2">
             <Label>Work in Progress Messages</Label>
             <div className="flex gap-2 mb-2">
-              {["en", "it", "es", "pt"].map((lang) => <Button key={lang} variant={selectedWipLang === lang ? "default" : "outline"} size="sm" onClick={() => setSelectedWipLang(lang)}>{lang.toUpperCase()}</Button>)}
+              {["en", "it", "es", "pt"].map((lang) => (
+                <Button
+                  key={lang}
+                  variant={selectedWipLang === lang ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedWipLang(lang)}
+                >
+                  {lang.toUpperCase()}
+                </Button>
+              ))}
             </div>
-            <Textarea value={formData.wipMessages[selectedWipLang as keyof typeof formData.wipMessages]} onChange={(e) => handleMessageChange("wipMessages", selectedWipLang, e.target.value)} rows={3} placeholder="Enter work in progress message..." />
+            <Textarea
+              value={
+                formData.wipMessages[
+                  selectedWipLang as keyof typeof formData.wipMessages
+                ]
+              }
+              onChange={(e) =>
+                handleMessageChange(
+                  "wipMessages",
+                  selectedWipLang,
+                  e.target.value
+                )
+              }
+              rows={3}
+              placeholder="Enter work in progress message..."
+            />
           </div>
           <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="destructive" onClick={() => setShowDeleteDialog(true)} disabled={deleteWorkspaceMutation.isPending || saveSettingsMutation.isPending}><Trash2 className="h-4 w-4 mr-2" />Delete Workspace</Button>
-            <Button onClick={handleSave} disabled={saveSettingsMutation.isPending}>{saveSettingsMutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving...</> : <><Save className="h-4 w-4 mr-2" />Save Changes</>}</Button>
+            <Button
+              variant="destructive"
+              onClick={() => setShowDeleteDialog(true)}
+              disabled={
+                deleteWorkspaceMutation.isPending ||
+                saveSettingsMutation.isPending
+              }
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Workspace
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={saveSettingsMutation.isPending}
+            >
+              {saveSettingsMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Changes
+                </>
+              )}
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -254,11 +450,34 @@ export default function SettingsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Workspace</DialogTitle>
-            <DialogDescription>This action cannot be undone. This will permanently delete your workspace and all associated data including products, customers, orders, and chat history.</DialogDescription>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete your
+              workspace and all associated data including products, customers,
+              orders, and chat history.
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)} disabled={deleteWorkspaceMutation.isPending}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={deleteWorkspaceMutation.isPending}>{deleteWorkspaceMutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Deleting...</> : "Delete Workspace"}</Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={deleteWorkspaceMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleteWorkspaceMutation.isPending}
+            >
+              {deleteWorkspaceMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete Workspace"
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

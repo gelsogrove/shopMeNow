@@ -149,7 +149,9 @@ export class WorkspaceController {
       const workspaceData = req.body
 
       logger.info(`Updating workspace ${id}`)
-      logger.info(`📦 Workspace data received: ${JSON.stringify(workspaceData, null, 2)}`)
+      logger.info(
+        `📦 Workspace data received: ${JSON.stringify(workspaceData, null, 2)}`
+      )
 
       const workspace = await this.workspaceService.update(id, workspaceData)
 
@@ -183,7 +185,9 @@ export class WorkspaceController {
         updatedAt: workspace.updatedAt,
       }
 
-      logger.info(`✅ Workspace serialized and ready to return: ${JSON.stringify(serializedWorkspace, null, 2)}`)
+      logger.info(
+        `✅ Workspace serialized and ready to return: ${JSON.stringify(serializedWorkspace, null, 2)}`
+      )
       return res.json(serializedWorkspace)
     } catch (error) {
       logger.error(`Error updating workspace ${req.params.id}:`, error)
