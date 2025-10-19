@@ -242,7 +242,7 @@ router.post("/", wrapController(workspaceController.createWorkspace))
  *                 type: string
  *               whatsappPhoneNumber:
  *                 type: string
- *               whatsappApiToken:
+ *               whatsappApiKey:
  *                 type: string
  *               whatsappWebhookUrl:
  *                 type: string
