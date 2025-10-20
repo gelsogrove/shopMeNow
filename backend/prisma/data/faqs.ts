@@ -1,7 +1,7 @@
 /**
  * FAQs Data - Auto-generated from database
- * Last updated: 2025-10-18T12:08:16.575Z
- * DO NOT EDIT MANUALLY - Use npm run db:export-to-seed
+ * Last updated: 2025-10-20T08:07:41.501Z
+ * DO NOT EDIT MANUALLY - Use npm run db:export
  */
 
 export interface FAQData {

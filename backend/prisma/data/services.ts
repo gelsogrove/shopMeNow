@@ -1,7 +1,7 @@
 /**
  * Services Data - Auto-generated from database
- * Last updated: 2025-10-17T15:45:07.361Z
- * DO NOT EDIT MANUALLY - Use npm run db:export-to-seed
+ * Last updated: 2025-10-20T08:07:41.498Z
+ * DO NOT EDIT MANUALLY - Use npm run db:export
  */
 
 export interface ServiceData {

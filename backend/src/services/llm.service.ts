@@ -318,10 +318,16 @@ export class LLMService {
    */
   private getLanguageDisplayName(languageCode: string): string {
     const languageMap: Record<string, string> = {
+      // Lowercase format (old)
       it: "ITALIANO",
       en: "ENGLISH",
       es: "ESPAÑOL",
-      pt: "Português",
+      pt: "PORTUGUÊS",
+      // Uppercase format (database)
+      IT: "ITALIANO",
+      ENG: "ENGLISH",
+      ESP: "ESPAÑOL",
+      PRT: "PORTUGUÊS",
     }
     return languageMap[languageCode] || languageCode.toUpperCase()
   }

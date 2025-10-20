@@ -1,7 +1,7 @@
 /**
  * FAQs Data - Auto-generated from database
- * Last updated: 2025-10-17T15:45:07.366Z
- * DO NOT EDIT MANUALLY - Use npm run db:export-to-seed
+ * Last updated: 2025-10-20T08:05:43.344Z
+ * DO NOT EDIT MANUALLY - Use npm run db:export
  */
 
 export interface FAQData {
@@ -147,15 +147,15 @@ export const faqs: FAQData[] = [
     isActive: true,
   },
   {
-    question: "Show cart",
-    answer: "Here is your cart! 🛒 [LINK_CHECKOUT_WITH_TOKEN]",
+    question: "New order",
+    answer: "Click here to activate your cart 🛒 [LINK_CHECKOUT_WITH_TOKEN]",
     category: null,
     language: null,
     isActive: true,
   },
   {
-    question: "New order",
-    answer: "Click here to activate your cart 🛒 [LINK_CHECKOUT_WITH_TOKEN]",
+    question: "Show cart",
+    answer: "Here is your cart! 🛒 [LINK_CHECKOUT_WITH_TOKEN]",
     category: null,
     language: null,
     isActive: true,
@@ -169,7 +169,7 @@ export const faqs: FAQData[] = [
   },
   {
     question: "Defective products",
-    answer: "I'm sorry about the defective product! 😔\n\nTo resolve:\n✅ **Contact us immediately** at (+34) 93 15 91 221 or info@laltrait.com\n✅ **Free return** with free pickup\n✅ **Full refund** or immediate replacement\n\nQuality is our priority. We'll help you resolve it right away!",
+    answer: "I'm sorry about the defective product! 😔\n\nQuality is our priority. We'll help you resolve it right away, do you want to talk with an operator?",
     category: null,
     language: null,
     isActive: true,
