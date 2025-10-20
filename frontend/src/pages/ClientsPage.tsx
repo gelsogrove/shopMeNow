@@ -118,28 +118,34 @@ const stringifyAddress = (address: ShippingAddress): string => {
 export default function ClientsPage(): JSX.Element {
   const { workspace, loading: isLoadingWorkspace } = useWorkspace()
   const [searchValue, setSearchValue] = useState("")
-  
+
   // 🔥 State per il cliente selezionato - INIZIALIZZA da sessionStorage
   const [selectedClient, setSelectedClient] = useState<Client | null>(() => {
     const savedClientId = sessionStorage.getItem("selectedClientId")
-    
+
     // 🚨 LOG PER DEBUG INIZIALIZZAZIONE
-    console.log("🚨🚨🚨 INIT STATE - sessionStorage ha:", savedClientId || "NULL")
+    console.log(
+      "🚨🚨🚨 INIT STATE - sessionStorage ha:",
+      savedClientId || "NULL"
+    )
     console.log("🚨🚨🚨 sessionStorage completo:", sessionStorage)
-    
+
     if (savedClientId) {
       console.log("✅ Inizializzo selectedClient con ID:", savedClientId)
-      logger.info("🔍 Inizializzo selectedClient con ID da sessionStorage:", savedClientId)
+      logger.info(
+        "🔍 Inizializzo selectedClient con ID da sessionStorage:",
+        savedClientId
+      )
       // Ritorna un oggetto parziale temporaneo - verrà aggiornato dall'useEffect
       return { id: savedClientId } as Client
     }
     console.log("❌ Nessun ID in sessionStorage, ritorno NULL")
     return null
   })
-  
+
   // 🔥 State per l'ID da ripristinare da sessionStorage (letto una sola volta al mount)
   // ❌ NON PIÙ NECESSARIO - usiamo direttamente selectedClient
-  
+
   const [clientSheetOpen, setClientSheetOpen] = useState(false)
   const [clientSheetMode, setClientSheetMode] = useState<"view" | "edit">(
     "view"
@@ -253,43 +259,62 @@ export default function ClientsPage(): JSX.Element {
     console.log("   - isLoadingClients:", isLoadingClients)
     console.log("   - selectedClient:", selectedClient)
     console.log("   - hasRestoredRef:", hasRestoredRef.current)
-    
+
     if (selectedClient) {
       console.log("   - selectedClient.id:", selectedClient.id)
-      console.log("   - selectedClient.name:", selectedClient.name || "MANCANTE")
+      console.log(
+        "   - selectedClient.name:",
+        selectedClient.name || "MANCANTE"
+      )
     }
-    
-    logger.info("🔵 useEffect ATTIVATO - clients.length:", clients.length, "isLoadingClients:", isLoadingClients, "hasRestoredRef:", hasRestoredRef.current, "selectedClient:", selectedClient)
-    
+
+    logger.info(
+      "🔵 useEffect ATTIVATO - clients.length:",
+      clients.length,
+      "isLoadingClients:",
+      isLoadingClients,
+      "hasRestoredRef:",
+      hasRestoredRef.current,
+      "selectedClient:",
+      selectedClient
+    )
+
     // Aspetta che i dati siano caricati
     if (clients.length === 0 || isLoadingClients) return
-    
+
     // Evita aggiornamenti multipli
     if (hasRestoredRef.current) {
       logger.info("🟡 Già processato, skip")
       return
     }
-    
+
     // ✅ Se selectedClient ha solo l'ID (oggetto parziale da sessionStorage), completalo
     if (selectedClient?.id && !selectedClient.name) {
-      const fullClient = clients.find(c => c.id === selectedClient.id)
+      const fullClient = clients.find((c) => c.id === selectedClient.id)
       if (fullClient) {
-        logger.info("✅ Completo selectedClient con dati da API:", fullClient.name)
+        logger.info(
+          "✅ Completo selectedClient con dati da API:",
+          fullClient.name
+        )
         setSelectedClient(fullClient)
         hasRestoredRef.current = true
         return
       } else {
-        logger.warn("❌ Cliente con ID", selectedClient.id, "non trovato nella lista!")
+        logger.warn(
+          "❌ Cliente con ID",
+          selectedClient.id,
+          "non trovato nella lista!"
+        )
       }
     }
-    
+
     // Se selectedClient ha già tutti i dati (nome presente), non fare nulla
     if (selectedClient?.name) {
       logger.info("✅ selectedClient già completo:", selectedClient.name)
       hasRestoredRef.current = true
       return
     }
-    
+
     // 🔴 COMMENTATO PER DEBUG: Se arriviamo qui → selectedClient era null → seleziona il primo
     // if (clients.length > 0) {
     //   logger.info("📌 Nessun cliente in sessionStorage, seleziono il primo:", clients[0].name)

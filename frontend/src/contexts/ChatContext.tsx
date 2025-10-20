@@ -1,5 +1,11 @@
 import { Chat } from "@/types/chat"
-import { createContext, ReactNode, useContext, useState, useEffect } from "react"
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from "react"
 
 interface ChatContextType {
   selectedChat: Chat | null
@@ -15,9 +21,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   // 🔥 Leggi da sessionStorage DOPO il mount per garantire la sincronizzazione
   useEffect(() => {
     const savedChatId = sessionStorage.getItem("selectedChatId")
-    
+
     if (savedChatId) {
-      console.log("🔍 ChatContext useEffect - Trovato chat ID in sessionStorage:", savedChatId)
+      console.log(
+        "🔍 ChatContext useEffect - Trovato chat ID in sessionStorage:",
+        savedChatId
+      )
       // Imposta un oggetto parziale con solo l'ID
       // Verrà completato quando le chat si caricano in ChatPage
       setSelectedChat({ sessionId: savedChatId } as Chat)

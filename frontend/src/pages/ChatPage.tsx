@@ -240,20 +240,23 @@ export function ChatPage() {
   useEffect(() => {
     console.log("🚨🚨🚨 [MOUNT] ChatPage useEffect RESET si sta eseguendo")
     console.log("   - selectedChat attuale:", selectedChat)
-    
+
     logger.info("[ChatPage] 🔄 RESET: Cleaning all data on mount")
 
     // 1. ✅ PRIMA verifica sessionStorage - se c'è un valore salvato, NON resettare MAI
     const savedChatId = sessionStorage.getItem("selectedChatId")
     console.log("   - sessionStorage selectedChatId:", savedChatId)
-    
+
     if (!savedChatId) {
       console.log("   ❌ Nessuna chat salvata → RESET selectedChat a NULL")
       logger.info("[ChatPage] Nessuna chat salvata, reset selectedChat")
       setSelectedChat(null)
     } else {
       console.log("   ✅ Chat salvata trovata → NON resetto selectedChat")
-      logger.info("[ChatPage] ✅ Chat salvata trovata, NON resetto selectedChat:", savedChatId)
+      logger.info(
+        "[ChatPage] ✅ Chat salvata trovata, NON resetto selectedChat:",
+        savedChatId
+      )
       // NON fare nulla - selectedChat è già stato inizializzato da ChatContext
     }
 
@@ -337,22 +340,39 @@ export function ChatPage() {
     console.log("🔵🔵🔵 [SELECTION] useEffect si sta eseguendo")
     console.log("   - chats.length:", chats.length)
     console.log("   - selectedChat:", selectedChat)
-    console.log("   - hasCompletedChatDataRef:", hasCompletedChatDataRef.current)
-    
+    console.log(
+      "   - hasCompletedChatDataRef:",
+      hasCompletedChatDataRef.current
+    )
+
     // 🔥 Se selectedChat ha solo sessionId (oggetto parziale da sessionStorage), completalo UNA VOLTA
-    if (selectedChat?.sessionId && !selectedChat.customerName && chats.length > 0 && !hasCompletedChatDataRef.current) {
-      console.log("   🔍 selectedChat ha solo sessionId, cerco dati completi...")
-      const fullChat = chats.find(c => c.sessionId === selectedChat.sessionId)
+    if (
+      selectedChat?.sessionId &&
+      !selectedChat.customerName &&
+      chats.length > 0 &&
+      !hasCompletedChatDataRef.current
+    ) {
+      console.log(
+        "   🔍 selectedChat ha solo sessionId, cerco dati completi..."
+      )
+      const fullChat = chats.find((c) => c.sessionId === selectedChat.sessionId)
       if (fullChat) {
-        console.log("   ✅ Trovato! Completo selectedChat:", fullChat.customerName)
+        console.log(
+          "   ✅ Trovato! Completo selectedChat:",
+          fullChat.customerName
+        )
         setSelectedChat(fullChat)
         hasCompletedChatDataRef.current = true // ✅ Segna come completato
         return
       } else {
-        console.warn("   ❌ Chat con sessionId", selectedChat.sessionId, "non trovata nella lista!")
+        console.warn(
+          "   ❌ Chat con sessionId",
+          selectedChat.sessionId,
+          "non trovata nella lista!"
+        )
       }
     }
-    
+
     // Only auto-select if we don't have a selection yet
     if (filteredChats.length > 0 && !selectedChat && !clientSearchTerm) {
       selectChat(filteredChats[0])
@@ -635,7 +655,10 @@ export function ChatPage() {
     // � Salva l'ID della chat selezionata in sessionStorage
     if (chat?.sessionId) {
       sessionStorage.setItem("selectedChatId", chat.sessionId)
-      console.log("💾 Salvato selectedChatId in sessionStorage:", chat.sessionId)
+      console.log(
+        "💾 Salvato selectedChatId in sessionStorage:",
+        chat.sessionId
+      )
     }
     // �🚨 REMOVED: No longer setting sessionId in URL - chat managed via context only
     // Preserve client search term if present
