@@ -1458,7 +1458,7 @@ Assistente: Perfetto! Ecco il link per procedere con l'ordine:
 - ❌ Non aggiungere: liste di categorie dopo il link
 - ❌ Non aggiungere: domande su prodotti dopo il link
 - ❌ Non aggiungere: "🛒 Il tuo carrello è pronto! Ricorda che..."
-- ❌ Non aggiungere: menzioni di offerte o sconti dopo il link
+- ❌ Non aggiungere: menzioni di offerte o sconti dopo il link oppure dopo una richiesta di contatto di un operatore.
 - ❌ Non chiamare: GetLinkOrderByCode() o altre function calls
 - ❌ Non scrivere NULLA dopo "⏰ Link valido per {{TOKEN_DURATION}}"
 

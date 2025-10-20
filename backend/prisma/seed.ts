@@ -490,6 +490,8 @@ async function main() {
         workspaceId: workspace.id,
         salesId: assignedSalesRep.id,
         isActive: true,
+        // 🚨 First 2 customers are APPROVED (for testing), last 2 are BLOCKED (simulating new registrations)
+        isBlacklisted: i >= 2, // Mario (0) and João (1) are approved, Maria (2) and John (3) are blocked
         activeChatbot: true,
         currency: "EUR",
         discount: 10, // 🎯 10% discount per tutti i clienti

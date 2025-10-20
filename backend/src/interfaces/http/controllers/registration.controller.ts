@@ -179,8 +179,8 @@ export class RegistrationController {
               ? new Date()
               : null,
             isActive: true, // CRITICAL: Activate the customer after registration!
-            isBlacklisted: false, // New users are NOT blocked - they can use chatbot immediately
-            activeChatbot: true, // New users have chatbot enabled by default
+            isBlacklisted: true, // 🚨 NEW USERS ARE BLOCKED until admin approval!
+            activeChatbot: true, // New users have chatbot enabled to handle registration requests
           },
         })
       } else {
@@ -202,8 +202,8 @@ export class RegistrationController {
                 ? new Date()
                 : null,
               isActive: true,
-              isBlacklisted: false, // New users are NOT blocked - they can use chatbot immediately
-              activeChatbot: true, // New users have chatbot enabled by default
+              isBlacklisted: true, // 🚨 NEW USERS ARE BLOCKED until admin approval!
+              activeChatbot: true, // New users have chatbot enabled to handle registration requests
             },
           })
         } catch (createError: any) {

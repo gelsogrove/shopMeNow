@@ -1,6 +1,6 @@
 /**
  * FAQs Data - Auto-generated from database
- * Last updated: 2025-10-20T10:51:38.518Z
+ * Last updated: 2025-10-20T13:17:25.033Z
  * DO NOT EDIT MANUALLY - Use npm run db:export
  */
 

@@ -1,6 +1,6 @@
 /**
  * Product Data - Auto-generated from database
- * Last updated: 2025-10-20T08:07:41.496Z
+ * Last updated: 2025-10-20T10:51:38.507Z
  * DO NOT EDIT MANUALLY - Use npm run db:export
  */
 
@@ -545,5 +545,65 @@ export const products: ProductData[] = [
     slug: "giardiniera-aceto-1760539790724-1760541634718-1760541681212-1760542112066-1760542245356-1760543283459-1760544291850-1760544741793-1760544839753-1760561170969-1760562940193-1760565166944-1760565309473-1760565465367-1760565693190-1760655750427-1760715768987",
     categoryName: "Preserves",
     imageUrl: ["/uploads/products/SOTT006_1760557241649_794dfa.jpg"],
+  },
+  {
+    name: "Carciofi alla Romana Surgelati",
+    ProductCode: "FROZ001",
+    description: "Roman-style artichokes, pre-cooked with garlic, mint and extra virgin olive oil. Flash-frozen to preserve authentic flavor. Ready to heat and serve.",
+    formato: "400g",
+    price: 8.5,
+    stock: 35,
+    status: "ACTIVE",
+    slug: "carciofi-romana-surgelati",
+    categoryName: "Frozen Products",
+    imageUrl: [],
+  },
+  {
+    name: "Supplì al Telefono Surgelati",
+    ProductCode: "FROZ002",
+    description: "Classic Roman rice croquettes with tomato sauce and mozzarella center. Breaded and ready to fry. When you bite, the mozzarella stretches like a telephone cord!",
+    formato: "6 pezzi (450g)",
+    price: 9.5,
+    stock: 40,
+    status: "ACTIVE",
+    slug: "suppli-telefono-surgelati",
+    categoryName: "Frozen Products",
+    imageUrl: [],
+  },
+  {
+    name: "Funghi Porcini Trifolati Surgelati",
+    ProductCode: "FROZ003",
+    description: "Italian porcini mushrooms sautéed with garlic and parsley, flash-frozen at peak freshness. Perfect for risottos, pasta, or as a side dish. No soaking needed.",
+    formato: "300g",
+    price: 12.5,
+    stock: 45,
+    status: "ACTIVE",
+    slug: "funghi-porcini-trifolati-surgelati",
+    categoryName: "Frozen Products",
+    imageUrl: [],
+  },
+  {
+    name: "Tortellini Bolognesi Surgelati",
+    ProductCode: "FROZ004",
+    description: "Handmade-style tortellini filled with traditional Bolognese meat filling. Frozen to preserve fresh pasta quality. Cook directly from frozen in 3-4 minutes.",
+    formato: "500g",
+    price: 7.8,
+    stock: 50,
+    status: "ACTIVE",
+    slug: "tortellini-bolognesi-surgelati",
+    categoryName: "Frozen Products",
+    imageUrl: [],
+  },
+  {
+    name: "Arancini Siciliani al Ragù Surgelati",
+    ProductCode: "FROZ005",
+    description: "Authentic Sicilian rice balls with beef ragù, peas and mozzarella. Perfectly breaded and ready to fry. A taste of Sicilian street food tradition at home.",
+    formato: "4 pezzi (400g)",
+    price: 9.5,
+    stock: 35,
+    status: "ACTIVE",
+    slug: "arancini-siciliani-ragu-surgelati",
+    categoryName: "Frozen Products",
+    imageUrl: [],
   }
 ]

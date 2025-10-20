@@ -104,17 +104,21 @@ export class LLMService {
       return await this.NewUser(llmRequest, workspace, messageRepo, debugInfo)
     }
 
-    // 3. Blocca se blacklisted - non salvare nulla nello storico
+    // 3. Blocca se blacklisted O se chatbot disabilitato - non salvare nulla nello storico
     const isBlocked = await messageRepo.isCustomerBlacklisted(
       customer.phone,
       workspace.id
     )
-    if (isBlocked || customer.isBlacklisted) {
-      debugInfo.stage = "blocked_user"
+    // 🚨 CRITICAL: Block if user is blacklisted OR if chatbot is disabled for this customer
+    if (isBlocked || customer.isBlacklisted || !customer.activeChatbot) {
+      debugInfo.stage = "blocked_user_or_chatbot_disabled"
       // Restituisci null per ignorare completamente questa interazione
       return {
         success: false,
-        output: "❌ User blocked",
+        output:
+          customer.activeChatbot === false
+            ? "❌ Chatbot disabled for this customer"
+            : "❌ User blocked",
         debugInfo: JSON.stringify(debugInfo),
       }
     }

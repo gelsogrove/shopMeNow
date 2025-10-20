@@ -739,6 +739,8 @@ export class MessageRepository {
               phone: data.phoneNumber,
               workspaceId: workspaceId,
               isActive: false, // Mark as inactive until they register
+              isBlacklisted: true, // 🚨 NEW USERS ARE BLOCKED until admin approval!
+              activeChatbot: true, // Enable chatbot to handle registration requests
               language: detectedLanguage,
               currency: "EUR",
             },
@@ -1702,11 +1704,14 @@ export class MessageRepository {
           workspaceId,
           language,
           isActive: true,
-          activeChatbot: true,
+          isBlacklisted: true, // 🚨 NEW USERS ARE BLOCKED until admin approval!
+          activeChatbot: true, // Enable chatbot to handle registration requests
           currency: "EUR",
         },
       })
-      logger.info(`Created customer: ${customer.id}`)
+      logger.info(
+        `Created customer: ${customer.id} (blocked until admin approval)`
+      )
       return customer
     } catch (error: any) {
       // P2002: Unique constraint violation (phone or email already exists)
