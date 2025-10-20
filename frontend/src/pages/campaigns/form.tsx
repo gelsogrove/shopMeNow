@@ -53,7 +53,7 @@ export default function CampaignFormPage() {
       const { data } = await api.get(`/workspaces/${workspace?.id}/customers`)
       setCustomers(data.data || [])
     } catch (error) {
-      console.error("Error loading customers:", error)
+      logger.error("Error loading customers:", error)
     }
   }
 

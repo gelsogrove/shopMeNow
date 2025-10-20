@@ -9,6 +9,8 @@
  * @see docs/prompt_agent.md - Sezione "addProduct()"
  */
 
+import logger from "../../utils/logger"
+
 import { CallingFunctionsService } from "../../services/calling-functions.service"
 
 export interface AddProductRequest {
@@ -41,7 +43,7 @@ export async function AddProduct(
   request: AddProductRequest
 ): Promise<AddProductResult> {
   try {
-    console.log("🛒 AddProduct called with:", {
+    logger.info("🛒 AddProduct called with:", {
       customerId: request.customerId,
       workspaceId: request.workspaceId,
       productCode: request.productCode,
@@ -50,7 +52,7 @@ export async function AddProduct(
 
     // Validazione parametri obbligatori
     if (!request.customerId || !request.workspaceId || !request.productCode) {
-      console.error("❌ Missing required parameters in AddProduct")
+      logger.error("❌ Missing required parameters in AddProduct")
       return {
         success: false,
         error: "Parametri richiesti mancanti",
@@ -64,7 +66,7 @@ export async function AddProduct(
 
     // Validazione quantità positiva
     if (quantity < 1 || !Number.isInteger(quantity)) {
-      console.error("❌ Invalid quantity in AddProduct:", quantity)
+      logger.error("❌ Invalid quantity in AddProduct:", quantity)
       return {
         success: false,
         error: "Quantità non valida",
@@ -84,11 +86,10 @@ export async function AddProduct(
       notes: request.notes,
     })
 
-    console.log("✅ AddProduct result:", result)
-
+    logger.info("✅ AddProduct result:", result)
     return result
   } catch (error) {
-    console.error("❌ Error in AddProduct:", error)
+    logger.error("❌ Error in AddProduct:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Errore interno",

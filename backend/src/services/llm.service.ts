@@ -63,7 +63,7 @@ export class LLMService {
     llmRequest: LLMRequest,
     customerData?: any
   ): Promise<any> {
-    console.log(
+    logger.info(
       "🚀 LLM: handleMessage chiamato per telefono:",
       llmRequest.phone
     )
@@ -217,7 +217,7 @@ export class LLMService {
         `=== PROMPT GENERATO ${new Date().toISOString()} ===\n\n${promptWithVars}\n\n=== FINE PROMPT ===\n`
       )
     } catch (error) {
-      console.log("❌ Errore salvando prompt:", error.message)
+      logger.info("❌ Errore salvando prompt:", error.message)
     }
 
     // 🔧 DEBUG: Add processed prompt info
@@ -234,7 +234,7 @@ export class LLMService {
       workspace.id
     )
 
-    console.log(
+    logger.info(
       `📚 [HISTORY] Retrieved ${recentMessages.length} messages from last 5 minutes for context`
     )
     debugInfo.historyMessagesCount = recentMessages.length
@@ -764,11 +764,11 @@ export class LLMService {
         }
       }
 
-      console.log(
+      logger.info(
         `💬 [HISTORY] Including ${conversationHistory.length} messages in context`
       )
       if (conversationHistory.length > 0) {
-        console.log(
+        logger.info(
           `📝 [HISTORY] Last message in history:`,
           conversationHistory[conversationHistory.length - 1]
         )
@@ -786,7 +786,7 @@ export class LLMService {
         },
       ]
 
-      console.log(
+      logger.info(
         `🔢 [MESSAGES] Total messages sent to LLM: ${messages.length}`
       )
 
@@ -809,11 +809,10 @@ export class LLMService {
           }),
         }
       )
-      console.log("***language", language)
-      console.log("🌐 OpenRouter status:", response.status)
+      logger.info("***language", language)
+      logger.info("🌐 OpenRouter status:", response.status)
       const data = await response.json()
-      console.log("🌐 OpenRouter response:", JSON.stringify(data, null, 2))
-
+      logger.info("🌐 OpenRouter response:", JSON.stringify(data, null, 2))
       // 🔧 DEBUG: Calculate token usage and cost
       let tokenUsage: any = null
       let costInfo: any = null
@@ -918,7 +917,7 @@ export class LLMService {
 
         if (BACKGROUND_FUNCTIONS.includes(functionName)) {
           // Esegui la funzione in background (non aspettare il risultato)
-          console.log(
+          logger.info(
             `🔍 [BACKGROUND] Executing ${functionName} in background...`
           )
           this.executeFunctionCall(
@@ -928,11 +927,11 @@ export class LLMService {
             workspace,
             customerData
           ).catch((error) => {
-            console.error(`❌ [BACKGROUND] Error in ${functionName}:`, error)
+            logger.error(`❌ [BACKGROUND] Error in ${functionName}:`, error)
           })
 
           // Chiedi all'LLM di generare una risposta naturale come se la funzione non fosse stata chiamata
-          console.log(
+          logger.info(
             "💬 [BACKGROUND] Asking LLM for natural response (ignoring function call)..."
           )
 
@@ -984,7 +983,7 @@ export class LLMService {
           )
 
           const followUpData = await followUpResponse.json()
-          console.log(
+          logger.info(
             "🌐 [BACKGROUND] Follow-up response:",
             JSON.stringify(followUpData, null, 2)
           )
@@ -993,7 +992,7 @@ export class LLMService {
             followUpData.choices?.[0]?.message?.content ||
             i18n.fallback[language]
 
-          console.log(
+          logger.info(
             `✅ [BACKGROUND] Natural response generated:`,
             naturalResponse
           )
@@ -1131,7 +1130,7 @@ export class LLMService {
         ),
       })
 
-      console.log("🎯 LLM Final Response:", processedResponse)
+      logger.info("🎯 LLM Final Response:", processedResponse)
       return {
         response: processedResponse,
         tokenUsage,
@@ -1139,7 +1138,7 @@ export class LLMService {
         functionCalls,
       }
     } catch (error) {
-      console.error("❌ Error generating LLM response:", error)
+      logger.error("❌ Error generating LLM response:", error)
       const errorMessages = {
         it: "❌ Mi dispiace, si è verificato un errore. Riprova più tardi.",
         es: "❌ Lo siento, se ha producido un error. Inténtalo más tarde.",
@@ -1173,7 +1172,7 @@ export class LLMService {
       switch (functionName) {
         case "ContactOperator":
           // 🚨 PRIORITY 1 - HIGHEST
-          console.log("📞 ContactOperator called (PRIORITY 1)")
+          logger.info("📞 ContactOperator called (PRIORITY 1)")
           return await this.callingFunctionsService.contactOperator({
             customerId: customer.id,
             workspaceId: workspace.id,
@@ -1182,7 +1181,7 @@ export class LLMService {
 
         case "GetLinkOrderByCode":
           // 🚨 PRIORITY 2 - HIGH
-          console.log("📦 GetLinkOrderByCode called (PRIORITY 2):", args)
+          logger.info("📦 GetLinkOrderByCode called (PRIORITY 2):", args)
           return await this.callingFunctionsService.getOrdersListLink({
             customerId: customer.id,
             workspaceId: workspace.id,
@@ -1194,7 +1193,7 @@ export class LLMService {
 
         case "repeatOrder":
           // ⚙️ PRIORITY 3 - MEDIUM (requires confirmation)
-          console.log("� repeatOrder called (PRIORITY 3):", args)
+          logger.info("� repeatOrder called (PRIORITY 3):", args)
           const {
             RepeatOrder,
           } = require("../domain/calling-functions/RepeatOrder")
@@ -1206,7 +1205,7 @@ export class LLMService {
 
         case "resetCart":
           // 🗑️ PRIORITY 3.5 - MEDIUM (requires confirmation)
-          console.log("🗑️ resetCart called (PRIORITY 3.5):", args)
+          logger.info("🗑️ resetCart called (PRIORITY 3.5):", args)
           const { ResetCart } = require("../domain/calling-functions/ResetCart")
           return await ResetCart({
             customerId: customer.id,
@@ -1214,7 +1213,7 @@ export class LLMService {
           })
         case "addProduct":
           // ⚙️ PRIORITY 4 - MEDIUM (requires confirmation)
-          console.log("🛒 addProduct called (PRIORITY 4):", args)
+          logger.info("🛒 addProduct called (PRIORITY 4):", args)
           const {
             AddProduct,
           } = require("../domain/calling-functions/AddProduct")
@@ -1228,7 +1227,7 @@ export class LLMService {
 
         case "searchProduct":
           // � PRIORITY 5 - BACKGROUND ONLY (non-blocking, analytics)
-          console.log(
+          logger.info(
             "🔍 searchProduct called (PRIORITY 5 - BACKGROUND):",
             args
           )
@@ -1239,11 +1238,11 @@ export class LLMService {
           })
 
         default:
-          console.error(`❌ Unknown function: ${functionName}`)
+          logger.error(`❌ Unknown function: ${functionName}`)
           return { error: "Funzione non riconosciuta" }
       }
     } catch (error) {
-      console.error(`❌ Error executing function ${functionName}:`, error)
+      logger.error(`❌ Error executing function ${functionName}:`, error)
       return { error: `Errore nell'esecuzione della funzione ${functionName}` }
     }
   }
@@ -1294,12 +1293,12 @@ export class LLMService {
       )
       const finalRegistrationLink = `${workspaceUrl.replace(/\/$/, "")}${shortResult.shortUrl}`
 
-      console.log(
+      logger.info(
         `📎 Created short registration link: ${finalRegistrationLink} → ${registrationLink}`
       )
       return finalRegistrationLink
     } catch (shortError) {
-      console.warn(
+      logger.warn(
         "⚠️ Failed to create short URL for registration, using long URL:",
         shortError
       )

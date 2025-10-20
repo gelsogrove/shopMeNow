@@ -155,26 +155,6 @@ export class OfferController {
         const offer = await this.offerService.updateOffer(id, offerData)
         logger.info(`Offer ${id} successfully updated in controller`)
 
-        // 💰 BILLING: Track ACTIVE_OFFER (€0.50) when offer becomes active
-        if (isBeingActivated) {
-          try {
-            await this.billingService.trackActiveOffer(
-              workspaceId,
-              id,
-              offer.name || "Unnamed offer"
-            )
-            logger.info(
-              `[BILLING] 💰 Offer activated: €0.50 charged (workspace: ${workspaceId}, offer: ${id})`
-            )
-          } catch (billingError) {
-            logger.error(
-              `[BILLING] ❌ Failed to track offer activation billing:`,
-              billingError
-            )
-            // Don't fail offer update if billing fails
-          }
-        }
-
         return res.json(offer)
       } catch (serviceError) {
         logger.error(`Service error updating offer ${id}:`, serviceError)

@@ -70,7 +70,7 @@ export class FunctionHandlerService {
     orderId?: string
   ): Promise<any> {
     try {
-      console.log(
+      logger.info(
         `🔍 FunctionHandler: Getting order status for customer ${customerId}, orderId: ${orderId}`
       )
 
@@ -133,7 +133,7 @@ export class FunctionHandlerService {
         orders: orders,
       }
     } catch (error) {
-      console.error("❌ Error getting order status:", error)
+      logger.error("❌ Error getting order status:", error)
       return {
         success: false,
         response:
@@ -162,7 +162,7 @@ export class FunctionHandlerService {
       })
 
       if (orphanedItems.length > 0) {
-        console.warn(
+        logger.warn(
           `🧹 Found ${orphanedItems.length} orphaned cart items in workspace ${workspaceId}`
         )
 
@@ -175,10 +175,10 @@ export class FunctionHandlerService {
           },
         })
 
-        console.log(`🧹 Cleaned up ${orphanedItems.length} orphaned cart items`)
+        logger.info(`🧹 Cleaned up ${orphanedItems.length} orphaned cart items`)
       }
     } catch (error) {
-      console.error("❌ Error cleaning up orphaned cart items:", error)
+      logger.error("❌ Error cleaning up orphaned cart items:", error)
     }
   }
   private messageRepository: MessageRepository
@@ -229,7 +229,7 @@ export class FunctionHandlerService {
     )
 
     try {
-      console.log(
+      logger.info(
         "🔧 [DEBUG] Entering switch statement for functionName:",
         functionName
       )
@@ -357,8 +357,8 @@ export class FunctionHandlerService {
           }
       }
     } catch (error) {
-      console.error("❌ [DEBUG] Error in handleFunctionCall:", error)
-      console.error("❌ [DEBUG] Error stack:", error.stack)
+      logger.error("❌ [DEBUG] Error in handleFunctionCall:", error)
+      logger.error("❌ [DEBUG] Error stack:", error.stack)
       logger.error(
         `❌ Errore in handleFunctionCall per ${functionName}:`,
         error
@@ -386,8 +386,7 @@ export class FunctionHandlerService {
    */
   async handleGetCartLink(customer: any, workspaceId: string): Promise<any> {
     try {
-      console.log("🔧 FunctionHandlerService: handleGetCartLink called")
-
+      logger.info("🔧 FunctionHandlerService: handleGetCartLink called")
       // Import the CallingFunctionsService
       const {
         CallingFunctionsService,
@@ -400,11 +399,10 @@ export class FunctionHandlerService {
         workspaceId: workspaceId,
       })
 
-      console.log("🔧 FunctionHandlerService: getCartLink result:", result)
-
+      logger.info("🔧 FunctionHandlerService: getCartLink result:", result)
       return result
     } catch (error) {
-      console.error(
+      logger.error(
         "❌ FunctionHandlerService: Error in handleGetCartLink:",
         error
       )
@@ -430,7 +428,7 @@ export class FunctionHandlerService {
     workspaceId: string
   ): Promise<any> {
     try {
-      console.log(
+      logger.info(
         "🔧 FunctionHandlerService: handleGetLinkOrderByCode called with:",
         params
       )
@@ -449,14 +447,14 @@ export class FunctionHandlerService {
         language: params.language || "it",
       })
 
-      console.log(
+      logger.info(
         "🔧 FunctionHandlerService: GetLinkOrderByCode result:",
         result
       )
 
       return result
     } catch (error) {
-      console.error(
+      logger.error(
         "❌ FunctionHandlerService: Error in handleGetLinkOrderByCode:",
         error
       )
@@ -504,7 +502,7 @@ export class FunctionHandlerService {
           price: product.price,
           description: product.description,
           stock: product.stock,
-          productCode: product.ProductCode,
+          productCode: product.productCode,
         })),
         query,
         totalFound: products.length,
@@ -643,8 +641,7 @@ export class FunctionHandlerService {
     workspaceId: string
   ): Promise<any> {
     try {
-      console.log("🔧 FunctionHandlerService: handleContactOperator called")
-
+      logger.info("🔧 FunctionHandlerService: handleContactOperator called")
       // Import the CallingFunctionsService
       const {
         CallingFunctionsService,
@@ -659,10 +656,10 @@ export class FunctionHandlerService {
         workspaceId: workspaceId,
       })
 
-      console.log("🔧 ContactOperator result:", result)
+      logger.info("🔧 ContactOperator result:", result)
       return result
     } catch (error) {
-      console.error("❌ Error in handleContactOperator:", error)
+      logger.error("❌ Error in handleContactOperator:", error)
       return {
         success: false,
         error: error.message || "Error contacting operator",
@@ -680,14 +677,14 @@ export class FunctionHandlerService {
     workspaceId: string
   ): Promise<any> {
     try {
-      console.log(
+      logger.info(
         "🛒 FunctionHandlerService: handleAddProduct called with:",
         params
       )
 
       // Validazione parametri
       if (!params.productCode || !customer?.id) {
-        console.error("❌ Missing productCode or customerId")
+        logger.error("❌ Missing productCode or customerId")
         return {
           success: false,
           error: "Parametri richiesti mancanti",
@@ -708,10 +705,10 @@ export class FunctionHandlerService {
         notes: params.notes,
       })
 
-      console.log("✅ AddProduct result:", result)
+      logger.info("✅ AddProduct result:", result)
       return result
     } catch (error) {
-      console.error("❌ Error in handleAddProduct:", error)
+      logger.error("❌ Error in handleAddProduct:", error)
       return {
         success: false,
         error: error.message || "Error adding product",
@@ -729,13 +726,13 @@ export class FunctionHandlerService {
     workspaceId: string
   ): Promise<any> {
     try {
-      console.log(
+      logger.info(
         "🔄 FunctionHandlerService: handleRepeatOrder called with:",
         params
       )
 
       if (!customer?.id) {
-        console.error("❌ Missing customerId")
+        logger.error("❌ Missing customerId")
         return {
           success: false,
           error: "Cliente non trovato",
@@ -754,10 +751,10 @@ export class FunctionHandlerService {
         orderCode: params.orderCode,
       })
 
-      console.log("✅ RepeatOrder result:", result)
+      logger.info("✅ RepeatOrder result:", result)
       return result
     } catch (error) {
-      console.error("❌ Error in handleRepeatOrder:", error)
+      logger.error("❌ Error in handleRepeatOrder:", error)
       return {
         success: false,
         error: error.message || "Error repeating order",
@@ -776,13 +773,13 @@ export class FunctionHandlerService {
     workspaceId: string
   ): Promise<any> {
     try {
-      console.log(
+      logger.info(
         "🔍 FunctionHandlerService: handleSearchProduct called with:",
         params
       )
 
       if (!customer?.id) {
-        console.error("❌ Missing customerId")
+        logger.error("❌ Missing customerId")
         return {
           success: false,
           error: "Cliente non trovato",
@@ -791,7 +788,7 @@ export class FunctionHandlerService {
       }
 
       if (!params.productName) {
-        console.error("❌ Missing productName")
+        logger.error("❌ Missing productName")
         return {
           success: false,
           error: "Nome prodotto non fornito",
@@ -810,10 +807,10 @@ export class FunctionHandlerService {
         productName: params.productName,
       })
 
-      console.log("✅ SearchProduct result:", result)
+      logger.info("✅ SearchProduct result:", result)
       return result
     } catch (error) {
-      console.error("❌ Error in handleSearchProduct:", error)
+      logger.error("❌ Error in handleSearchProduct:", error)
       return {
         success: false,
         error: error.message || "Error registering search",

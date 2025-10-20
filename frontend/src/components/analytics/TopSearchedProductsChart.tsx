@@ -60,7 +60,7 @@ export function TopSearchedProductsChart({
       setProducts(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load data")
-      console.error("Error fetching top searched products:", err)
+      logger.error("Error fetching top searched products:", err)
     } finally {
       setLoading(false)
     }

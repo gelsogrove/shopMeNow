@@ -70,7 +70,7 @@ export default function CampaignsPage() {
       setCampaigns(data.data || [])
     } catch (error) {
       toast.error("Error loading campaigns")
-      console.error(error)
+      logger.error(error)
     } finally {
       setLoading(false)
     }

@@ -1,5 +1,4 @@
 import { PrismaClient } from "@prisma/client"
-import crypto from "crypto"
 import * as qrcode from "qrcode"
 import * as speakeasy from "speakeasy"
 import { AppError } from "../../interfaces/http/middlewares/error.middleware"
@@ -54,7 +53,16 @@ export class OtpService {
     })
   }
 
+  /**
+   * ⚠️ DEPRECATED: otpToken table was removed during database cleanup
+   * Use setupTwoFactor/verifyTwoFactor instead for 2FA functionality
+   */
   async generateOtp(userId: string): Promise<string> {
+    throw new AppError(
+      501,
+      "OTP generation is no longer supported. Use 2FA instead."
+    )
+    /*
     // Generate a 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString()
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
@@ -72,9 +80,19 @@ export class OtpService {
     })
 
     return otp
+    */
   }
 
+  /**
+   * ⚠️ DEPRECATED: otpToken table was removed during database cleanup
+   * Use setupTwoFactor/verifyTwoFactor instead for 2FA functionality
+   */
   async verifyOtp(userId: string, otp: string): Promise<boolean> {
+    throw new AppError(
+      501,
+      "OTP verification is no longer supported. Use 2FA instead."
+    )
+    /*
     // Hash the provided OTP
     const otpHash = crypto.createHash("sha256").update(otp).digest("hex")
 
@@ -101,13 +119,20 @@ export class OtpService {
     })
 
     return true
+    */
   }
 
+  /**
+   * ⚠️ DEPRECATED: otpToken table was removed during database cleanup
+   */
   async cleanupExpiredOtps(): Promise<void> {
+    // No-op: table no longer exists
+    /*
     await this.prisma.otpToken.deleteMany({
       where: {
         OR: [{ expiresAt: { lt: new Date() } }, { usedAt: { not: null } }],
       },
     })
+    */
   }
 }

@@ -38,7 +38,7 @@ async function updatePrompt() {
         isActive: true,
       },
       data: {
-        prompt: promptContent,
+        prompt: promptContent, // ✅ CORRECT: Field is 'prompt' in schema
         updatedAt: new Date(),
       },
     })

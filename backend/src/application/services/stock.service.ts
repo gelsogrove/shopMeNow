@@ -408,7 +408,7 @@ L'ordine è stato processato e lo stock è stato aggiornato.
         select: {
           id: true,
           name: true,
-          sku: true,
+          // sku: true, // REMOVED: field no longer exists
           stock: true,
           price: true,
         },

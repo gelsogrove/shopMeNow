@@ -502,7 +502,7 @@ Il sistema di billing traccia automaticamente tutti i costi secondo la pricing l
 
 | Servizio            | Costo  | Descrizione                                         |
 | ------------------- | ------ | --------------------------------------------------- |
-| **MONTHLY_CHANNEL** | €19.00 | Costo fisso mensile per workspace                   |
+| **MONTHLY_CHANNEL** | €49.00 | Costo fisso mensile per workspace                   |
 | **MESSAGE**         | €0.15  | Costo per messaggio/interazione                     |
 | **NEW_CUSTOMER**    | €1.50  | Costo per nuovo cliente (alla registrazione)        |
 | **NEW_ORDER**       | €1.50  | Costo per nuovo ordine                              |
@@ -517,7 +517,7 @@ Il sistema di billing traccia automaticamente tutti i costi secondo la pricing l
 
 Il servizio `BillingService` centralizza tutti gli addebiti con metodi dedicati:
 
-- `chargeMonthlyChannelCost(workspaceId)` - Costo mensile (€19.00)
+- `chargeMonthlyChannelCost(workspaceId)` - Costo mensile (€49.00)
 - `trackMessage(workspaceId, customerId, description, userQuery)` - Messaggio (€0.15)
 - `trackNewCustomer(workspaceId, customerId)` - Nuovo cliente (€1.50)
 - `trackNewOrder(workspaceId, customerId, description)` - Nuovo ordine (€1.50)
@@ -541,7 +541,7 @@ Ogni metodo calcola automaticamente i totali progressivi (previousTotal + curren
 | Cambio sconto         | PUSH_MESSAGE (€1.00)     | `customers.controller.ts`    |
 | Creazione FAQ         | NEW_FAQ (€0.50)          | `faq.controller.ts`          |
 | Attivazione offerta   | ACTIVE_OFFER (€0.50)     | `offer.controller.ts`        |
-| Inizio mese           | MONTHLY_CHANNEL (€19.00) | `scheduler.service.ts`       |
+| Inizio mese           | MONTHLY_CHANNEL (€49.00) | `scheduler.service.ts`       |
 
 #### **🔄 Flusso Esempio - Messaggio**
 

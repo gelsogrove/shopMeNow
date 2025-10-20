@@ -1,6 +1,7 @@
 import { Router } from "express"
 import { cartLimiter } from "../../../config/rate-limiters"
 import { asyncMiddleware } from "../../../middlewares/async.middleware"
+import { authMiddleware } from "../../../middlewares/auth.middleware"
 import { CartController } from "../controllers/cart.controller"
 
 const router = Router()
@@ -224,6 +225,42 @@ router.put(
 router.post(
   "/:token/checkout",
   asyncMiddleware(cartController.checkoutByToken.bind(cartController))
+)
+
+/**
+ * @swagger
+ * /api/workspaces/{workspaceId}/cart/calculate-price:
+ *   post:
+ *     summary: Calculate discounted price for a product (Admin)
+ *     tags: [Cart]
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The workspace ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               productId:
+ *                 type: string
+ *               quantity:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: Price calculated successfully
+ *       404:
+ *         description: Product not found
+ */
+router.post(
+  "/calculate-price",
+  authMiddleware,
+  asyncMiddleware(cartController.calculatePrice.bind(cartController))
 )
 
 export { router as cartRouter }

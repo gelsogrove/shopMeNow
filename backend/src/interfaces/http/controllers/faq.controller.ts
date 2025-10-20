@@ -166,24 +166,6 @@ export class FaqController {
 
       const faq = await this.faqService.create(faqData)
 
-      // 💰 BILLING: Track NEW_FAQ (€0.50)
-      try {
-        await this.billingService.trackNewFAQ(
-          workspaceId,
-          null, // FAQ created by admin, no specific customer
-          `FAQ created: ${question.substring(0, 50)}...`
-        )
-        logger.info(
-          `[BILLING] 💰 New FAQ created: €0.50 charged (workspace: ${workspaceId})`
-        )
-      } catch (billingError) {
-        logger.error(
-          `[BILLING] ❌ Failed to track new FAQ billing:`,
-          billingError
-        )
-        // Don't fail FAQ creation if billing fails
-      }
-
       return res.status(201).json(faq)
     } catch (error: any) {
       logger.error("Error creating FAQ:", error)

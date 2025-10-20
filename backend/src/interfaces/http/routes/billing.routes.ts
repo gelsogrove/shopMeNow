@@ -6,6 +6,7 @@ const router = express.Router()
 const billingController = new BillingController()
 
 // Protect all billing routes with authentication
+// Note: workspaceId validation is done in controller since it comes from route params
 router.use(authMiddleware)
 
 /**
@@ -33,6 +34,25 @@ router.get("/:workspaceId/summary", (req, res) => {
  */
 router.get("/:workspaceId/history", (req, res) => {
   billingController.getHistory(req, res)
+})
+
+/**
+ * @route GET /api/billing/:workspaceId/monthly
+ * @desc Get monthly billing breakdown for current month + 12 months history
+ * @returns Monthly breakdown with totals per billing type
+ */
+router.get("/:workspaceId/monthly", (req, res) => {
+  billingController.getMonthlyBreakdown(req, res)
+})
+
+/**
+ * @route GET /api/billing/:workspaceId/monthly/:year/:month
+ * @desc Get detailed billing records for a specific month
+ * @param year - Year (e.g., 2025)
+ * @param month - Month 1-12
+ */
+router.get("/:workspaceId/monthly/:year/:month", (req, res) => {
+  billingController.getMonthDetail(req, res)
 })
 
 export { router as billingRouter }

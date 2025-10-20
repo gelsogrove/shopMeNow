@@ -42,7 +42,7 @@ I tipi di billing sono definiti nell'enum `BillingType` e i prezzi corrispondent
 | NEW_ORDER            | 1.50         | Costo per nuovo ordine                                  | 📦    |
 | NEW_FAQ              | 0.50         | Costo per creazione di nuova FAQ                        | 📚    |
 | ACTIVE_OFFER         | 0.50         | Costo per offerta attivata                              | 🎯    |
-| MONTHLY_CHANNEL_COST | 19.00        | Costo fisso mensile del canale                          | 📆    |
+| MONTHLY_CHANNEL_COST | 49.00        | Costo fisso mensile del canale                          | 📆    |
 
 ## Servizio di Billing (`BillingService`)
 
@@ -55,7 +55,7 @@ Il servizio di billing (`BillingService`) fornisce metodi per tracciare le diver
 - `trackPushMessage(workspaceId, customerId, description)`: Traccia il costo di un messaggio push (€1.00)
 - `trackNewFAQ(workspaceId, customerId, description)`: Traccia il costo di una nuova FAQ (€0.50)
 - `trackActiveOffer(workspaceId, offerId, offerTitle)`: Traccia il costo di un'offerta attivata (€0.50)
-- `trackMonthlyChannelCost(workspaceId, description)`: Traccia il costo fisso mensile del canale (€19.00)
+- `trackMonthlyChannelCost(workspaceId, description)`: Traccia il costo fisso mensile del canale (€49.00)
 
 Ogni metodo:
 
@@ -78,7 +78,7 @@ Il sistema addebita automaticamente i costi in base a specifici trigger:
 | Attivazione offerta       | ACTIVE_OFFER (€0.50)          | Quando un'offerta viene attivata                       | `offer.controller.ts` - `updateOffer()`                      |
 | Messaggio chatbot         | MESSAGE (€0.15)               | Quando un messaggio viene inviato al chatbot           | `message.repository.ts` - `saveMessage()`                    |
 | Cambio percentuale sconto | PUSH_MESSAGE (€1.00)          | Quando si modifica la % di sconto di un cliente        | `customers.controller.ts` - `handleAutomaticPushMessages()`  |
-| Primo giorno di ogni mese | MONTHLY_CHANNEL_COST (€19.00) | Canone mensile fisso per il canale di comunicazione    | `scheduler.service.ts` - `trackMonthlyChannelCost()`         |
+| Primo giorno di ogni mese | MONTHLY_CHANNEL_COST (€49.00) | Canone mensile fisso per il canale di comunicazione    | `scheduler.service.ts` - `trackMonthlyChannelCost()`         |
 
 ### Prevenzione Double Charging
 

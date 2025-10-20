@@ -284,10 +284,9 @@ export class CustomerRepository implements ICustomerRepository {
         data: updateData,
       })
 
-      console.log("=== PRISMA UPDATE RESULT ===")
-      console.log("updatedCustomer.salesId:", updatedCustomer.salesId)
-      console.log("===========================")
-
+      logger.info("=== PRISMA UPDATE RESULT ===")
+      logger.info("updatedCustomer.salesId:", updatedCustomer.salesId)
+      logger.info("===========================")
       // Convert to domain entity
       return this.toDomainEntity(updatedCustomer)
     } catch (error) {

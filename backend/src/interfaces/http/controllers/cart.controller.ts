@@ -1,4 +1,5 @@
 import { Request, Response } from "express"
+import { PriceCalculationService } from "../../../application/services/price-calculation.service"
 import { SecureTokenService } from "../../../application/services/secure-token.service"
 import { prisma } from "../../../lib/prisma"
 import logger from "../../../utils/logger"
@@ -39,7 +40,7 @@ export class CartController {
       })
 
       if (orphanedItems.length > 0) {
-        console.warn(
+        logger.warn(
           `🧹 Found ${orphanedItems.length} orphaned cart items in workspace ${workspaceId}`
         )
 
@@ -52,16 +53,110 @@ export class CartController {
           },
         })
 
-        console.log(`🧹 Cleaned up ${orphanedItems.length} orphaned cart items`)
+        logger.info(`🧹 Cleaned up ${orphanedItems.length} orphaned cart items`)
       }
     } catch (error) {
-      console.error("❌ Error cleaning up orphaned cart items:", error)
+      logger.error("❌ Error cleaning up orphaned cart items:", error)
       // Don't throw - we don't want cleanup to break the request
     }
   }
 
   /**
-   * 🆕 Generate a new cart token for public access
+   * � Helper: Calculate product item pricing with discounts
+   * Extracts duplicated logic from getCartByToken, addItemToCart, checkoutByToken
+   */
+  private async calculateProductItemPrice(
+    item: any,
+    workspaceId: string,
+    customerDiscount: number
+  ): Promise<{
+    originalPrice: number
+    finalPrice: number
+    discountAmount: number
+    appliedDiscount: number
+    itemTotal: number
+  }> {
+    const priceService = new PriceCalculationService(prisma)
+
+    const itemPrices = await priceService.calculatePricesWithDiscounts(
+      workspaceId,
+      [item.productId],
+      customerDiscount
+    )
+
+    const originalPrice = item.product.price || 0
+    const finalPrice = itemPrices.products[0]?.finalPrice || originalPrice
+    const discountInfo = itemPrices.products[0]
+    const appliedDiscount = discountInfo?.appliedDiscount || 0
+    const discountAmount =
+      appliedDiscount > 0 ? (originalPrice * appliedDiscount) / 100 : 0
+    const itemTotal = finalPrice * item.quantity
+
+    return {
+      originalPrice,
+      finalPrice,
+      discountAmount,
+      appliedDiscount,
+      itemTotal,
+    }
+  }
+
+  /**
+   * 🎯 Helper: Calculate service item pricing (no discounts)
+   * Extracts duplicated logic from getCartByToken, addItemToCart, checkoutByToken
+   */
+  private calculateServiceItemPrice(item: any): {
+    originalPrice: number
+    finalPrice: number
+    discountAmount: number
+    appliedDiscount: number
+    itemTotal: number
+  } {
+    const originalPrice = item.service?.price || 0
+    const finalPrice = originalPrice // Services are NEVER discounted
+    const appliedDiscount = 0
+    const discountAmount = 0
+    const itemTotal = finalPrice * item.quantity
+
+    return {
+      originalPrice,
+      finalPrice,
+      discountAmount,
+      appliedDiscount,
+      itemTotal,
+    }
+  }
+
+  /**
+   * Helper: Calculate cart total amount (base prices without discounts)
+   * Used in addItemToCart, updateCartItem, removeCartItem
+   */
+  private calculateCartTotal(items: any[]): number {
+    return items.reduce((sum, item) => {
+      if (item.itemType === "PRODUCT") {
+        if (!item.product) {
+          logger.warn(
+            `Cart item ${item.id} has missing product (productId: ${item.productId})`
+          )
+          return sum
+        }
+        return sum + (item.product.price || 0) * item.quantity
+      }
+      if (item.itemType === "SERVICE") {
+        if (!item.service) {
+          logger.warn(
+            `Cart item ${item.id} has missing service (serviceId: ${item.serviceId})`
+          )
+          return sum
+        }
+        return sum + (item.service.price || 0) * item.quantity
+      }
+      return sum
+    }, 0)
+  }
+
+  /**
+   * �🆕 Generate a new cart token for public access
    */
   async generateToken(req: Request, res: Response): Promise<void> {
     try {
@@ -224,7 +319,7 @@ export class CartController {
                   select: {
                     id: true,
                     name: true,
-                    ProductCode: true,
+                    productCode: true,
                     price: true,
                     description: true,
                     formato: true,
@@ -251,7 +346,7 @@ export class CartController {
                   select: {
                     id: true,
                     name: true,
-                    ProductCode: true,
+                    productCode: true,
                     price: true,
                     description: true,
                     formato: true,
@@ -267,7 +362,7 @@ export class CartController {
 
         // If no cart exists, create one
         if (!cart) {
-          console.log(
+          logger.info(
             `🛒 Creating new cart for customer ${customerId} in workspace ${workspaceId}`
           )
           cart = await prisma.carts.create({
@@ -282,7 +377,7 @@ export class CartController {
                     select: {
                       id: true,
                       name: true,
-                      ProductCode: true,
+                      productCode: true,
                       price: true,
                       description: true,
                       formato: true,
@@ -316,12 +411,6 @@ export class CartController {
         }))
       )
 
-      // 🚀 KISS: Apply same price calculation logic as viewCart (Cloud Function)
-      const { PriceCalculationService } = await import(
-        "../../../application/services/price-calculation.service"
-      )
-      const priceService = new PriceCalculationService(prisma)
-
       // Get customer discount
       const customerDiscount = cart.customer?.discount || 0
 
@@ -334,7 +423,7 @@ export class CartController {
         if (item.itemType === "PRODUCT") {
           // 🎯 TASK: Handle missing product gracefully
           if (!item.product) {
-            console.warn(
+            logger.warn(
               `⚠️ Cart item ${item.id} has missing product (productId: ${item.productId})`
             )
             items.push({
@@ -355,38 +444,30 @@ export class CartController {
             continue
           }
 
-          // 🚀 KISS: Apply same discount calculation as viewCart
-          const itemPrices = await priceService.calculatePricesWithDiscounts(
+          // 🚀 Use helper method to calculate pricing with discounts
+          const pricing = await this.calculateProductItemPrice(
+            item,
             validation.data.workspaceId,
-            [item.productId],
             customerDiscount
           )
-
-          const originalPrice = item.product.price || 0
-          const finalPrice = itemPrices.products[0]?.finalPrice || originalPrice
-          const discountInfo = itemPrices.products[0]
-          const appliedDiscount = discountInfo?.appliedDiscount || 0
-          const discountAmount =
-            appliedDiscount > 0 ? (originalPrice * appliedDiscount) / 100 : 0
-          const itemTotal = finalPrice * item.quantity
-          totalAmount += itemTotal
+          totalAmount += pricing.itemTotal
 
           items.push({
             id: item.id,
             type: "product",
             itemType: "PRODUCT",
             productId: item.productId,
-            productCode: item.product.ProductCode || item.productId,
+            productCode: item.product.productCode || item.productId,
             name: item.product.formato
               ? `${item.product.name} ${item.product.formato}`
               : item.product.name || `Product ${item.productId}`,
             formato: item.product.formato || null,
-            originalPrice: originalPrice,
-            finalPrice: finalPrice,
-            discountAmount: discountAmount,
-            appliedDiscount: appliedDiscount,
+            originalPrice: pricing.originalPrice,
+            finalPrice: pricing.finalPrice,
+            discountAmount: pricing.discountAmount,
+            appliedDiscount: pricing.appliedDiscount,
             quantity: item.quantity,
-            total: itemTotal,
+            total: pricing.itemTotal,
             imageUrl: item.product.imageUrl || [], // Add product images
           })
         }
@@ -394,7 +475,7 @@ export class CartController {
         // Handle SERVICE items
         else if (item.itemType === "SERVICE") {
           if (!item.service) {
-            console.warn(
+            logger.warn(
               `⚠️ Cart item ${item.id} has missing service (serviceId: ${item.serviceId})`
             )
             items.push({
@@ -416,13 +497,9 @@ export class CartController {
             continue
           }
 
-          // 🎯 Services: NEVER have discounts - always use base price
-          const originalPrice = item.service.price || 0
-          const finalPrice = originalPrice // Services are NEVER discounted
-          const appliedDiscount = 0 // Services have NO discount
-
-          const itemTotal = finalPrice * item.quantity
-          totalAmount += itemTotal
+          // 🚀 Use helper method to calculate service pricing (no discounts)
+          const pricing = this.calculateServiceItemPrice(item)
+          totalAmount += pricing.itemTotal
 
           items.push({
             id: item.id,
@@ -433,13 +510,13 @@ export class CartController {
             name: item.service.name || `Service ${item.serviceId}`,
             description: item.service.description || null,
             duration: item.service.duration || null,
-            originalPrice: originalPrice,
-            finalPrice: finalPrice,
+            originalPrice: pricing.originalPrice,
+            finalPrice: pricing.finalPrice,
             discountAmount: 0, // Services NEVER have discount amount
             appliedDiscount: 0, // Services NEVER have applied discount
             quantity: item.quantity,
             notes: item.notes || null,
-            total: itemTotal,
+            total: pricing.itemTotal,
             imageUrl: item.service.imageUrl || [], // Add service images
           })
         }
@@ -686,31 +763,7 @@ export class CartController {
         },
       })
 
-      const totalAmount = cartWithItems!.items.reduce((sum, item) => {
-        // Handle product items
-        if (item.itemType === "PRODUCT") {
-          if (!item.product) {
-            console.warn(
-              `⚠️ Cart item ${item.id} has missing product (productId: ${item.productId})`
-            )
-            return sum
-          }
-          return sum + (item.product.price || 0) * item.quantity
-        }
-
-        // Handle service items
-        if (item.itemType === "SERVICE") {
-          if (!item.service) {
-            console.warn(
-              `⚠️ Cart item ${item.id} has missing service (serviceId: ${item.serviceId})`
-            )
-            return sum
-          }
-          return sum + (item.service.price || 0) * item.quantity
-        }
-
-        return sum
-      }, 0)
+      const totalAmount = this.calculateCartTotal(cartWithItems!.items)
 
       logger.info(
         `[CART] Item added to cart ${cart.id} via token - ${itemType}: ${productId || serviceId}`
@@ -893,13 +946,7 @@ export class CartController {
         },
       })
 
-      const totalAmount = cartWithItems!.items.reduce((sum, item) => {
-        const price =
-          item.itemType === "PRODUCT"
-            ? item.product?.price || 0
-            : item.service?.price || 0
-        return sum + price * item.quantity
-      }, 0)
+      const totalAmount = this.calculateCartTotal(cartWithItems!.items)
 
       logger.info(
         `[CART] Item ${cartItem.id} updated in cart ${cart.id} via token`
@@ -1042,13 +1089,7 @@ export class CartController {
         },
       })
 
-      const totalAmount = cartWithItems!.items.reduce((sum, item) => {
-        const price =
-          item.itemType === "PRODUCT"
-            ? item.product?.price || 0
-            : item.service?.price || 0
-        return sum + price * item.quantity
-      }, 0)
+      const totalAmount = this.calculateCartTotal(cartWithItems!.items)
 
       logger.info(
         `[CART] Item ${itemType} ${itemId} removed from cart ${cart.id} via token`
@@ -1121,7 +1162,7 @@ export class CartController {
         // Handle PRODUCT items
         if (item.itemType === "PRODUCT") {
           if (!item.product) {
-            console.warn(
+            logger.warn(
               `⚠️ Cart item ${item.id} has missing product (productId: ${item.productId})`
             )
             return sum
@@ -1132,7 +1173,7 @@ export class CartController {
         // Handle SERVICE items
         if (item.itemType === "SERVICE") {
           if (!item.service) {
-            console.warn(
+            logger.warn(
               `⚠️ Cart item ${item.id} has missing service (serviceId: ${item.serviceId})`
             )
             return sum
@@ -1165,7 +1206,7 @@ export class CartController {
               // Handle PRODUCT items
               if (item.itemType === "PRODUCT") {
                 if (!item.product) {
-                  console.warn(
+                  logger.warn(
                     `⚠️ Cart item ${item.id} has missing product (productId: ${item.productId})`
                   )
                   return {
@@ -1188,7 +1229,7 @@ export class CartController {
               // Handle SERVICE items
               if (item.itemType === "SERVICE") {
                 if (!item.service) {
-                  console.warn(
+                  logger.warn(
                     `⚠️ Cart item ${item.id} has missing service (serviceId: ${item.serviceId})`
                   )
                   return {
@@ -1209,7 +1250,7 @@ export class CartController {
               }
 
               // Fallback for unknown item types
-              console.warn(
+              logger.warn(
                 `⚠️ Cart item ${item.id} has unknown itemType: ${item.itemType}`
               )
               return {
@@ -1429,6 +1470,113 @@ export class CartController {
       res.status(500).json({
         valid: false,
         error: "Internal server error",
+      })
+    }
+  }
+
+  /**
+   * 💰 Calculate discounted price for a product
+   * Used by admin panel when adding products to orders manually
+   * Applies same discount logic as web cart (customer discount + active offers)
+   */
+  async calculatePrice(req: Request, res: Response): Promise<void> {
+    try {
+      const { workspaceId } = req.params
+      const { productId, quantity = 1, customerId } = req.body
+
+      if (!productId) {
+        res.status(400).json({ error: "Product ID is required" })
+        return
+      }
+
+      // Get product details
+      const product = await prisma.products.findFirst({
+        where: {
+          id: productId,
+          workspaceId: workspaceId,
+        },
+      })
+
+      if (!product) {
+        res.status(404).json({ error: "Product not found" })
+        return
+      }
+
+      // Get customer discount if customerId provided
+      let customerDiscount = 0
+      if (customerId) {
+        const customer = await prisma.customers.findFirst({
+          where: {
+            id: customerId,
+            workspaceId: workspaceId,
+          },
+        })
+        if (customer) {
+          customerDiscount = customer.discount || 0
+          logger.info(
+            `[CART] Customer ${customer.name} has ${customerDiscount}% discount`
+          )
+        }
+      }
+
+      // Calculate price with discounts (including customer discount)
+      const priceService = new PriceCalculationService(prisma)
+      logger.info(
+        `[CART] Calculating price for product ${productId} in workspace ${workspaceId} with customer discount ${customerDiscount}%`
+      )
+
+      const result = await priceService.calculatePricesWithDiscounts(
+        workspaceId,
+        [productId],
+        customerDiscount
+      )
+
+      logger.info(
+        `[CART] Price calculation result:`,
+        JSON.stringify(result, null, 2)
+      )
+
+      if (result.products.length === 0) {
+        res.status(404).json({ error: "Product pricing not found" })
+        return
+      }
+
+      const productPricing = result.products[0]
+      const originalPrice = product.price
+      const unitPrice = productPricing.finalPrice || originalPrice
+      const totalPrice = unitPrice * quantity
+
+      logger.info(
+        `[CART] Final pricing - Original: ${originalPrice}, Unit: ${unitPrice}, Total: ${totalPrice}, Discount: ${productPricing.appliedDiscount}%`
+      )
+
+      // Build discount message if applicable
+      let discountApplied = null
+      if (
+        productPricing.appliedDiscount &&
+        productPricing.appliedDiscount > 0
+      ) {
+        discountApplied = `${productPricing.appliedDiscount}% off`
+        if (productPricing.discountName) {
+          discountApplied += ` (${productPricing.discountName})`
+        }
+      }
+
+      res.json({
+        productId,
+        productName: product.name,
+        quantity,
+        originalPrice,
+        unitPrice,
+        totalPrice,
+        discountApplied,
+        appliedDiscountPercent: productPricing.appliedDiscount || 0,
+      })
+    } catch (error) {
+      logger.error("[CART] Error calculating price:", error)
+      res.status(500).json({
+        error: "Failed to calculate price",
+        message: (error as Error).message,
       })
     }
   }

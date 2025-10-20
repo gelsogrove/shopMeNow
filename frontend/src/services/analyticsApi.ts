@@ -285,7 +285,7 @@ export const getTopSearchedProducts = async (
 
     return response.data.data || []
   } catch (error) {
-    console.error("Error fetching top searched products:", error)
+    logger.error("Error fetching top searched products:", error)
     throw error
   }
 }
@@ -315,7 +315,7 @@ export const getSearchTrends = async (
 
     return response.data.data || []
   } catch (error) {
-    console.error("Error fetching search trends:", error)
+    logger.error("Error fetching search trends:", error)
     throw error
   }
 }

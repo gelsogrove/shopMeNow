@@ -175,4 +175,101 @@ export class BillingController {
       })
     }
   }
+
+  /**
+   * Get monthly billing breakdown for current month + 12 months history
+   * GET /api/billing/:workspaceId/monthly
+   */
+  async getMonthlyBreakdown(req: Request, res: Response): Promise<void> {
+    try {
+      const { workspaceId } = req.params
+
+      if (!workspaceId) {
+        res.status(400).json({
+          success: false,
+          error: "Workspace ID is required",
+        })
+        return
+      }
+
+      logger.info(
+        `[BILLING-CONTROLLER] 📊 Getting monthly breakdown for workspace ${workspaceId}`
+      )
+
+      const breakdown =
+        await this.billingService.getMonthlyBreakdown(workspaceId)
+
+      res.json({
+        success: true,
+        data: {
+          workspaceId,
+          currentMonth: breakdown.currentMonth,
+          history: breakdown.history,
+          currency: "EUR",
+        },
+      })
+    } catch (error) {
+      logger.error("Error getting monthly billing breakdown:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to get monthly billing breakdown",
+      })
+    }
+  }
+
+  /**
+   * Get detailed billing records for a specific month
+   * GET /api/billing/:workspaceId/monthly/:year/:month
+   */
+  async getMonthDetail(req: Request, res: Response): Promise<void> {
+    try {
+      const { workspaceId, year, month } = req.params
+
+      if (!workspaceId || !year || !month) {
+        res.status(400).json({
+          success: false,
+          error: "Workspace ID, year, and month are required",
+        })
+        return
+      }
+
+      const yearNum = parseInt(year)
+      const monthNum = parseInt(month)
+
+      if (isNaN(yearNum) || isNaN(monthNum) || monthNum < 1 || monthNum > 12) {
+        res.status(400).json({
+          success: false,
+          error: "Invalid year or month",
+        })
+        return
+      }
+
+      logger.info(
+        `[BILLING-CONTROLLER] 📋 Getting month detail for ${yearNum}-${monthNum} (workspace ${workspaceId})`
+      )
+
+      const details = await this.billingService.getMonthDetail(
+        workspaceId,
+        yearNum,
+        monthNum
+      )
+
+      res.json({
+        success: true,
+        data: {
+          workspaceId,
+          year: yearNum,
+          month: monthNum,
+          records: details,
+          currency: "EUR",
+        },
+      })
+    } catch (error) {
+      logger.error("Error getting month detail:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to get month detail",
+      })
+    }
+  }
 }

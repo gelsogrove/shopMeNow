@@ -9,6 +9,8 @@
  * This is a utility service, NOT a calling function for LLM.
  */
 
+import logger from "../../utils/logger"
+
 import { config } from "../../config"
 import { linkGeneratorService } from "./link-generator.service"
 import { SecureTokenService } from "./secure-token.service"
@@ -52,7 +54,7 @@ export class LinkReplacementService {
     workspaceId: string
   ): Promise<ReplaceLinkWithTokenResult> {
     try {
-      console.log("🔧 ReplaceLinkWithToken: Called with params:", {
+      logger.info("🔧 ReplaceLinkWithToken: Called with params:", {
         response: params.response.substring(0, 100),
         customerId,
         workspaceId,
@@ -134,7 +136,7 @@ export class LinkReplacementService {
             finalCartLink
           )
         } catch (error) {
-          console.error("❌ Error generating cart link:", error)
+          logger.error("❌ Error generating cart link:", error)
           replacedResponse = replacedResponse.replace(
             /\[LINK_CHECKOUT_WITH_TOKEN\]/g,
             "Link del carrello non disponibile"
@@ -173,7 +175,7 @@ export class LinkReplacementService {
             finalProfileLink
           )
         } catch (error) {
-          console.error("❌ Error generating profile link:", error)
+          logger.error("❌ Error generating profile link:", error)
           replacedResponse = replacedResponse.replace(
             /\[LINK_PROFILE_WITH_TOKEN\]/g,
             "Link del profilo non disponibile"
@@ -226,7 +228,7 @@ export class LinkReplacementService {
             finalOrdersLink
           )
         } catch (error) {
-          console.error("❌ Error generating orders link:", error)
+          logger.error("❌ Error generating orders link:", error)
           replacedResponse = replacedResponse.replace(
             /\[LINK_ORDERS_WITH_TOKEN\]/g,
             "Link degli ordini non disponibile"
@@ -265,7 +267,7 @@ export class LinkReplacementService {
             finalTrackingLink
           )
         } catch (error) {
-          console.error("❌ Error generating tracking link:", error)
+          logger.error("❌ Error generating tracking link:", error)
           replacedResponse = replacedResponse.replace(
             /\[LINK_TRACKING_WITH_TOKEN\]/g,
             "Link di tracking non disponibile"
@@ -304,7 +306,7 @@ export class LinkReplacementService {
             finalCheckoutLink
           )
         } catch (error) {
-          console.error("❌ Error generating checkout link:", error)
+          logger.error("❌ Error generating checkout link:", error)
           replacedResponse = replacedResponse.replace(
             /\[LINK_CHECKOUT_WITH_TOKEN\]/g,
             "Link di checkout non disponibile"
@@ -329,7 +331,7 @@ export class LinkReplacementService {
             finalCatalogLink
           )
         } catch (error) {
-          console.error("❌ Error generating catalog link:", error)
+          logger.error("❌ Error generating catalog link:", error)
           replacedResponse = replacedResponse.replace(
             /\[LINK_CATALOG\]/g,
             "https://laltrait.com/wp-content/uploads/LAltra-Italia-Catalogo-Agosto-2024-v2.pdf"
@@ -371,7 +373,7 @@ export class LinkReplacementService {
 
             await prisma.$disconnect()
           } catch (error) {
-            console.error("❌ Error getting customer discount:", error)
+            logger.error("❌ Error getting customer discount:", error)
             userDiscount = "0%"
           }
         }
@@ -411,7 +413,7 @@ export class LinkReplacementService {
 
             await prisma.$disconnect()
           } catch (error) {
-            console.error("❌ Error getting categories:", error)
+            logger.error("❌ Error getting categories:", error)
             listCategories = "Nessuna categoria disponibile al momento"
           }
         }
@@ -447,7 +449,7 @@ export class LinkReplacementService {
 
             await prisma.$disconnect()
           } catch (error) {
-            console.error("❌ Error getting services:", error)
+            logger.error("❌ Error getting services:", error)
             listServices = "Nessun servizio disponibile al momento"
           }
         }
@@ -488,7 +490,7 @@ export class LinkReplacementService {
 
             await prisma.$disconnect()
           } catch (error) {
-            console.error("❌ Error getting active offers:", error)
+            logger.error("❌ Error getting active offers:", error)
             listActiveOffers = "Nessuna offerta attiva al momento"
           }
         }
@@ -524,7 +526,7 @@ export class LinkReplacementService {
 
             await prisma.$disconnect()
           } catch (error) {
-            console.error("❌ Error getting data:", error)
+            logger.error("❌ Error getting data:", error)
             listOffers =
               context === "services"
                 ? "Nessun servizio disponibile al momento"
@@ -547,7 +549,7 @@ export class LinkReplacementService {
         linkType: linkType,
       }
     } catch (error) {
-      console.error("❌ LinkReplacementService error:", error)
+      logger.error("❌ LinkReplacementService error:", error)
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",

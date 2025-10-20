@@ -52,7 +52,7 @@ export class ProductController {
       // Map backend 'ProductCode' field to frontend 'code' field for all products
       const productsWithCode = result.products.map((product) => ({
         ...product,
-        code: product.ProductCode,
+        code: product.productCode,
         formato: product.formato,
       }))
 
@@ -95,7 +95,7 @@ export class ProductController {
       // Map backend 'ProductCode' field to frontend 'code' field
       const responseProduct = {
         ...product,
-        code: product.ProductCode,
+        code: product.productCode,
       }
 
       return res.json(responseProduct)
@@ -172,11 +172,11 @@ export class ProductController {
       }
 
       // Validate ProductCode uniqueness within workspace
-      const productCode = productData.code || productData.ProductCode
+      const productCode = productData.code || productData.productCode
       if (productCode) {
         const existingProduct = await prisma.products.findFirst({
           where: {
-            ProductCode: productCode,
+            productCode: productCode,
             workspaceId: workspaceId,
           },
         })
@@ -204,8 +204,8 @@ export class ProductController {
       }
 
       // Map frontend 'code' field to backend 'ProductCode' field
-      if (productData.code && !productData.ProductCode) {
-        productData.ProductCode = productData.code
+      if (productData.code && !productData.productCode) {
+        productData.productCode = productData.code
         delete productData.code
       }
 
@@ -243,7 +243,7 @@ export class ProductController {
       // Map backend 'ProductCode' field to frontend 'code' field
       const responseProduct = {
         ...product,
-        code: product.ProductCode,
+        code: product.productCode,
       }
 
       return res.status(201).json(responseProduct)
@@ -304,8 +304,8 @@ export class ProductController {
       }
 
       // Map frontend 'code' field to backend 'ProductCode' field
-      if (productData.code && !productData.ProductCode) {
-        productData.ProductCode = productData.code
+      if (productData.code && !productData.productCode) {
+        productData.productCode = productData.code
         delete productData.code
       }
 
@@ -388,10 +388,10 @@ export class ProductController {
         return res.status(404).json({ message: "Product not found" })
       }
 
-      // Map backend 'ProductCode' field to frontend 'code' field
+      // Map backend 'productCode' field to frontend 'code' field
       const responseProduct = {
         ...updatedProduct,
-        code: updatedProduct.ProductCode,
+        code: updatedProduct.productCode,
       }
 
       return res.json(responseProduct)

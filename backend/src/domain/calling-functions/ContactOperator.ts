@@ -7,6 +7,8 @@
  * @see docs/prompt_agent.md - Line 177: Definizione della calling function
  */
 
+import logger from "../../utils/logger"
+
 export interface ContactOperatorRequest {
   phoneNumber: string
   workspaceId: string
@@ -32,7 +34,7 @@ export async function ContactOperator(
   request: ContactOperatorRequest
 ): Promise<ContactOperatorResult> {
   try {
-    console.log("📞 ContactOperator called with:", {
+    logger.info("📞 ContactOperator called with:", {
       phoneNumber: request.phoneNumber,
       workspaceId: request.workspaceId,
       customerId: request.customerId,
@@ -53,7 +55,7 @@ export async function ContactOperator(
       })
 
       if (!customer) {
-        console.warn(
+        logger.warn(
           "⚠️ Customer not found for ContactOperator:",
           request.phoneNumber
         )
@@ -79,15 +81,14 @@ export async function ContactOperator(
         data: { activeChatbot: false },
       })
 
-      console.log("✅ Chatbot disabled for customer:", customer.id)
-
+      logger.info("✅ Chatbot disabled for customer:", customer.id)
       // Create escalation record (or update existing conversation metadata)
       // For now, we just log and return success
       // Future: Create ticket in CRM, notify operators via email/Slack, etc.
 
       const ticketId = `TICKET-${Date.now()}`
 
-      console.log("✅ ContactOperator escalation registered:", {
+      logger.info("✅ ContactOperator escalation registered:", {
         ticketId,
         customerId: customer?.id,
         phoneNumber: request.phoneNumber,
@@ -111,7 +112,7 @@ export async function ContactOperator(
         ticketId,
       }
     } catch (dbError) {
-      console.error("❌ Database error in ContactOperator:", dbError)
+      logger.error("❌ Database error in ContactOperator:", dbError)
       await prisma.$disconnect()
 
       // Still return success - escalation intent is recorded in logs
@@ -130,7 +131,7 @@ export async function ContactOperator(
       }
     }
   } catch (error) {
-    console.error("❌ Error in ContactOperator:", error)
+    logger.error("❌ Error in ContactOperator:", error)
     return {
       success: false,
       message: "Si è verificato un errore. Riprova più tardi.",

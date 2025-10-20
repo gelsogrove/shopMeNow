@@ -1,5 +1,6 @@
 import { Router } from "express"
 import rateLimit from "express-rate-limit"
+import logger from "../../../utils/logger"
 import { AuthController } from "../controllers/auth.controller"
 import { asyncHandler } from "../middlewares/async.middleware"
 import { authMiddleware } from "../middlewares/auth.middleware"
@@ -23,7 +24,7 @@ const loginLimiter = rateLimit({
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   handler: (req, res) => {
-    console.log(`🚨 RATE LIMIT EXCEEDED for IP ${req.ip} on ${req.path}`)
+    logger.info(`🚨 RATE LIMIT EXCEEDED for IP ${req.ip} on ${req.path}`)
     res.status(429).json({
       error: "Too many login attempts",
       message:

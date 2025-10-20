@@ -254,7 +254,7 @@ export class OrdersController {
           customer: true,
           items: {
             include: {
-              product: { select: { name: true, ProductCode: true } },
+              product: { select: { name: true, productCode: true } },
               service: { select: { name: true, code: true } },
             },
           },
@@ -439,7 +439,7 @@ export class OrdersController {
           customer: true,
           items: {
             include: {
-              product: { select: { name: true, ProductCode: true } },
+              product: { select: { name: true, productCode: true } },
               service: { select: { name: true, code: true } },
             },
           },

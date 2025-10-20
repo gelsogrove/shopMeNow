@@ -124,14 +124,13 @@ export default function ClientsPage(): JSX.Element {
     const savedClientId = sessionStorage.getItem("selectedClientId")
 
     // 🚨 LOG PER DEBUG INIZIALIZZAZIONE
-    console.log(
+    logger.info(
       "🚨🚨🚨 INIT STATE - sessionStorage ha:",
       savedClientId || "NULL"
     )
-    console.log("🚨🚨🚨 sessionStorage completo:", sessionStorage)
-
+    logger.info("🚨🚨🚨 sessionStorage completo:", sessionStorage)
     if (savedClientId) {
-      console.log("✅ Inizializzo selectedClient con ID:", savedClientId)
+      logger.info("✅ Inizializzo selectedClient con ID:", savedClientId)
       logger.info(
         "🔍 Inizializzo selectedClient con ID da sessionStorage:",
         savedClientId
@@ -139,7 +138,7 @@ export default function ClientsPage(): JSX.Element {
       // Ritorna un oggetto parziale temporaneo - verrà aggiornato dall'useEffect
       return { id: savedClientId } as Client
     }
-    console.log("❌ Nessun ID in sessionStorage, ritorno NULL")
+    logger.info("❌ Nessun ID in sessionStorage, ritorno NULL")
     return null
   })
 
@@ -254,15 +253,14 @@ export default function ClientsPage(): JSX.Element {
   // 🔥 Gestione selezione cliente: completa i dati da sessionStorage
   useEffect(() => {
     // 🚨 LOG PER DEBUG
-    console.log("🔵🔵🔵 useEffect ATTIVATO")
-    console.log("   - clients.length:", clients.length)
-    console.log("   - isLoadingClients:", isLoadingClients)
-    console.log("   - selectedClient:", selectedClient)
-    console.log("   - hasRestoredRef:", hasRestoredRef.current)
-
+    logger.info("🔵🔵🔵 useEffect ATTIVATO")
+    logger.info("   - clients.length:", clients.length)
+    logger.info("   - isLoadingClients:", isLoadingClients)
+    logger.info("   - selectedClient:", selectedClient)
+    logger.info("   - hasRestoredRef:", hasRestoredRef.current)
     if (selectedClient) {
-      console.log("   - selectedClient.id:", selectedClient.id)
-      console.log(
+      logger.info("   - selectedClient.id:", selectedClient.id)
+      logger.info(
         "   - selectedClient.name:",
         selectedClient.name || "MANCANTE"
       )
@@ -373,11 +371,10 @@ export default function ClientsPage(): JSX.Element {
     if (!workspace?.id) return
 
     try {
-      console.log("=== FRONTEND UPDATE DEBUG ===")
-      console.log("customerData.salesId:", customerData.salesId)
-      console.log("Full customerData:", customerData)
-      console.log("============================")
-
+      logger.info("=== FRONTEND UPDATE DEBUG ===")
+      logger.info("customerData.salesId:", customerData.salesId)
+      logger.info("Full customerData:", customerData)
+      logger.info("============================")
       logger.info("Updating customer with data:", customerData)
       logger.info("Customer ID:", clientId)
       logger.info("Workspace ID:", workspace.id)

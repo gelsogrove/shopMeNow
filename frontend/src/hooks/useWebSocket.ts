@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger"
 import { useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
 import { io, Socket } from "socket.io-client"
@@ -63,7 +64,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
     // Don't connect if no workspace
     if (!workspaceId) {
       if (socketRef.current) {
-        console.log("[WebSocket] Disconnecting - no workspace")
+        logger.info("[WebSocket] Disconnecting - no workspace")
         socketRef.current.disconnect()
         socketRef.current = null
         setIsConnected(false)
@@ -73,12 +74,11 @@ export function useWebSocket(options: UseWebSocketOptions) {
 
     // 🚨 FIX: Don't create new socket if already connected to same workspace
     if (socketRef.current?.connected) {
-      console.log("[WebSocket] Already connected, reusing existing socket")
+      logger.info("[WebSocket] Already connected, reusing existing socket")
       return
     }
 
-    console.log("[WebSocket] Creating new socket connection")
-
+    logger.info("[WebSocket] Creating new socket connection")
     // Create socket connection
     const socket = io(import.meta.env.VITE_API_URL || "http://localhost:3001", {
       transports: ["websocket", "polling"],
@@ -91,7 +91,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
 
     // Connection handlers
     socket.on("connect", () => {
-      console.log("[WebSocket] Connected:", socket.id)
+      logger.info("[WebSocket] Connected:", socket.id)
       setIsConnected(true)
 
       // Join workspace room
@@ -101,25 +101,24 @@ export function useWebSocket(options: UseWebSocketOptions) {
     })
 
     socket.on("disconnect", (reason) => {
-      console.log("[WebSocket] Disconnected:", reason)
+      logger.info("[WebSocket] Disconnected:", reason)
       setIsConnected(false)
       onDisconnectRef.current?.()
     })
 
     socket.on("connect_error", (error) => {
-      console.error("[WebSocket] Connection error:", error)
+      logger.error("[WebSocket] Connection error:", error)
       onErrorRef.current?.(error)
     })
 
     // Workspace joined confirmation
     socket.on("workspace-joined", (data: { workspaceId: string }) => {
-      console.log("[WebSocket] Joined workspace:", data.workspaceId)
+      logger.info("[WebSocket] Joined workspace:", data.workspaceId)
     })
 
     // New message received - invalidate message queries
     socket.on("new-message", (message: WebSocketMessage) => {
-      console.log("[WebSocket] New message:", message)
-
+      logger.info("[WebSocket] New message:", message)
       // Get sessionId from sessionStorage
       const sessionId = sessionStorage.getItem("sessionId")
 
@@ -141,8 +140,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
 
     // Chat list updated (new chat, status change, etc.)
     socket.on("chat-updated", (chat: WebSocketChat) => {
-      console.log("[WebSocket] Chat updated:", chat)
-
+      logger.info("[WebSocket] Chat updated:", chat)
       // Get sessionId from sessionStorage
       const sessionId = sessionStorage.getItem("sessionId")
 
@@ -159,8 +157,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
 
     // Workspace changed - invalidate ALL cached data
     socket.on("workspace-changed", (data: { workspaceId: string }) => {
-      console.log("[WebSocket] Workspace changed:", data.workspaceId)
-
+      logger.info("[WebSocket] Workspace changed:", data.workspaceId)
       // Invalidate all chat-related queries
       queryClient.invalidateQueries({
         queryKey: ["chats"],
@@ -175,7 +172,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
 
     // Cleanup on unmount or workspace change
     return () => {
-      console.log("[WebSocket] Cleaning up connection")
+      logger.info("[WebSocket] Cleaning up connection")
       socket.off("connect")
       socket.off("disconnect")
       socket.off("connect_error")

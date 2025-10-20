@@ -34,7 +34,9 @@ export class SpamDetectionService {
 
       // Calculate time window (60 seconds ago)
       const now = new Date()
-      const timeWindowStart = new Date(now.getTime() - (this.TIME_WINDOW_SECONDS * 1000))
+      const timeWindowStart = new Date(
+        now.getTime() - this.TIME_WINDOW_SECONDS * 1000
+      )
 
       // Count messages from this phone number in the last 60 seconds
       const messageCount = await this.prisma.message.count({
@@ -45,7 +47,7 @@ export class SpamDetectionService {
               phone: phoneNumber,
             },
           },
-          direction: 'INBOUND',
+          direction: "INBOUND",
           createdAt: {
             gte: timeWindowStart,
           },
@@ -65,16 +67,21 @@ export class SpamDetectionService {
         messageCount,
         timeWindow: this.TIME_WINDOW_SECONDS,
         threshold: this.SPAM_THRESHOLD,
-        reason: isSpam ? `Sent ${messageCount} messages in ${this.TIME_WINDOW_SECONDS} seconds` : undefined
+        reason: isSpam
+          ? `Sent ${messageCount} messages in ${this.TIME_WINDOW_SECONDS} seconds`
+          : undefined,
       }
     } catch (error) {
-      logger.error(`[SPAM_DETECTION] Error checking spam for ${phoneNumber}:`, error)
+      logger.error(
+        `[SPAM_DETECTION] Error checking spam for ${phoneNumber}:`,
+        error
+      )
       // Return false on error to avoid false positives
       return {
         isSpam: false,
         messageCount: 0,
         timeWindow: this.TIME_WINDOW_SECONDS,
-        threshold: this.SPAM_THRESHOLD
+        threshold: this.SPAM_THRESHOLD,
       }
     }
   }
@@ -95,16 +102,18 @@ export class SpamDetectionService {
       const customer = await this.prisma.customers.findFirst({
         where: {
           phone: phoneNumber,
-          workspaceId: workspaceId
-        }
+          workspaceId: workspaceId,
+        },
       })
 
       if (customer) {
         await this.prisma.customers.update({
           where: { id: customer.id },
-          data: { isBlacklisted: true }
+          data: { isBlacklisted: true },
         })
-        logger.info(`[SPAM_DETECTION] Marked customer ${customer.name} (${phoneNumber}) as blacklisted`)
+        logger.info(
+          `[SPAM_DETECTION] Marked customer ${customer.name} (${phoneNumber}) as blacklisted`
+        )
       } else {
         // Create a blocked customer record
         await this.prisma.customers.create({
@@ -112,12 +121,14 @@ export class SpamDetectionService {
             phone: phoneNumber,
             workspaceId: workspaceId,
             name: "Spam User",
-            email: `${phoneNumber.replace(/[^0-9]/g, '')}@spam.com`,
+            email: `${phoneNumber.replace(/[^0-9]/g, "")}@spam.com`,
             isBlacklisted: true,
-            isActive: true
-          }
+            isActive: true,
+          },
         })
-        logger.info(`[SPAM_DETECTION] Created blocked customer record for ${phoneNumber}`)
+        logger.info(
+          `[SPAM_DETECTION] Created blocked customer record for ${phoneNumber}`
+        )
       }
 
       // 2. Add phone number to workspace blocklist
@@ -125,9 +136,11 @@ export class SpamDetectionService {
 
       // 3. Log the spam event for audit
       logger.warn(`[SPAM_DETECTION] Blocked ${phoneNumber} for spam: ${reason}`)
-
     } catch (error) {
-      logger.error(`[SPAM_DETECTION] Error blocking spam user ${phoneNumber}:`, error)
+      logger.error(
+        `[SPAM_DETECTION] Error blocking spam user ${phoneNumber}:`,
+        error
+      )
       throw error
     }
   }
@@ -145,37 +158,52 @@ export class SpamDetectionService {
       // Get current workspace
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { blocklist: true },
+        select: {
+          id: true, // blocklist field removed - using customers.isBlacklisted instead
+        },
       })
 
       if (!workspace) {
         throw new Error(`Workspace ${workspaceId} not found`)
       }
 
+      /**
+       * ⚠️ DEPRECATED: workspace.blocklist field was removed
+       * Now using customers.isBlacklisted instead
+       * Use CustomerRepository.updateCustomer({ isBlacklisted: true })
+       */
+      logger.warn(
+        `[SPAM_DETECTION] addToWorkspaceBlocklist is deprecated. Use customers.isBlacklisted instead for ${phoneNumber}`
+      )
+      return // No-op
+
       // Parse current blocklist
-      const currentBlocklist = workspace.blocklist || ""
-      const blockedNumbers = currentBlocklist
-        .split(/[\n,]/)
-        .map((num) => num.trim())
-        .filter((num) => num.length > 0)
+      // const currentBlocklist = workspace.blocklist || ""
+      // const blockedNumbers = currentBlocklist
+      //   .split(/[\n,]/)
+      //   .map((num) => num.trim())
+      //   .filter((num) => num.length > 0)
 
-      // Add phone number if not already present
-      if (!blockedNumbers.includes(phoneNumber)) {
-        blockedNumbers.push(phoneNumber)
+      // // Add phone number if not already present
+      // if (!blockedNumbers.includes(phoneNumber)) {
+      //   blockedNumbers.push(phoneNumber)
 
-        // Update workspace blocklist
-        const newBlocklist = blockedNumbers.join("\n")
-        await this.prisma.workspace.update({
-          where: { id: workspaceId },
-          data: { blocklist: newBlocklist },
-        })
+      //   // Update workspace blocklist
+      //   const newBlocklist = blockedNumbers.join("\n")
+      //   await this.prisma.workspace.update({
+      //     where: { id: workspaceId },
+      //     data: { blocklist: newBlocklist },
+      //   })
 
-        logger.info(`[SPAM_DETECTION] Added ${phoneNumber} to workspace ${workspaceId} blocklist`)
-      } else {
-        logger.info(`[SPAM_DETECTION] ${phoneNumber} already in workspace ${workspaceId} blocklist`)
-      }
+      //   logger.info(`[SPAM_DETECTION] Added ${phoneNumber} to workspace ${workspaceId} blocklist`)
+      // } else {
+      //   logger.info(`[SPAM_DETECTION] ${phoneNumber} already in workspace ${workspaceId} blocklist`)
+      // }
     } catch (error) {
-      logger.error(`[SPAM_DETECTION] Error adding to workspace blocklist:`, error)
+      logger.error(
+        `[SPAM_DETECTION] Error adding to workspace blocklist:`,
+        error
+      )
       throw error
     }
   }
@@ -195,8 +223,8 @@ export class SpamDetectionService {
       const totalBlocked = await this.prisma.customers.count({
         where: {
           workspaceId: workspaceId,
-          isBlacklisted: true
-        }
+          isBlacklisted: true,
+        },
       })
 
       // Count recent spam attempts (last 24 hours)
@@ -206,37 +234,38 @@ export class SpamDetectionService {
           chatSession: {
             workspaceId: workspaceId,
             customer: {
-              isBlacklisted: true
-            }
+              isBlacklisted: true,
+            },
           },
-          direction: 'INBOUND',
+          direction: "INBOUND",
           createdAt: {
-            gte: last24Hours
-          }
-        }
+            gte: last24Hours,
+          },
+        },
       })
 
-      // Get blocklist size
-      const workspace = await this.prisma.workspace.findUnique({
-        where: { id: workspaceId },
-        select: { blocklist: true }
+      // Get blocklist size - DEPRECATED: using customers.isBlacklisted count instead
+      const blacklistedCustomers = await this.prisma.customers.count({
+        where: {
+          workspaceId,
+          isBlacklisted: true,
+        },
       })
-
-      const blocklistSize = workspace?.blocklist 
-        ? workspace.blocklist.split(/[\n,]/).filter(num => num.trim().length > 0).length
-        : 0
 
       return {
         totalBlocked,
         recentSpamAttempts,
-        blocklistSize
+        blocklistSize: blacklistedCustomers,
       }
     } catch (error) {
-      logger.error(`[SPAM_DETECTION] Error getting spam stats for workspace ${workspaceId}:`, error)
+      logger.error(
+        `[SPAM_DETECTION] Error getting spam stats for workspace ${workspaceId}:`,
+        error
+      )
       return {
         totalBlocked: 0,
         recentSpamAttempts: 0,
-        blocklistSize: 0
+        blocklistSize: 0,
       }
     }
   }

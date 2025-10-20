@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { Workspace } from "@/hooks/use-workspace"
 import { useWorkspace } from "@/hooks/use-workspace"
+import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
 import { LogOut, PlusCircle } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -38,13 +39,13 @@ export function WorkspaceSelectionPage() {
     try {
       // 🆕 CRITICAL: Verify sessionId exists before making API call
       const sessionId = sessionStorage.getItem("sessionId")
-      console.log(
+      logger.info(
         "🔍 [WorkspaceSelectionPage] SessionId in sessionStorage:",
         sessionId ? sessionId.substring(0, 8) + "..." : "NULL"
       )
 
       if (!sessionId) {
-        console.error(
+        logger.error(
           "❌ [WorkspaceSelectionPage] CRITICAL: No sessionId found, redirecting to login"
         )
         setErrorMessage("Session expired, please login again")
@@ -53,7 +54,7 @@ export function WorkspaceSelectionPage() {
       }
 
       setIsLoading(true)
-      console.log(
+      logger.info(
         "🔍 [WorkspaceSelectionPage] Calling getWorkspaces() with sessionId:",
         sessionId.substring(0, 8) + "..."
       )
@@ -61,7 +62,7 @@ export function WorkspaceSelectionPage() {
       // Set workspaces without filtering for isDelete
       setWorkspaces(workspaces)
     } catch (error) {
-      console.error(
+      logger.error(
         "❌ [WorkspaceSelectionPage] Error loading workspaces:",
         error
       )
@@ -78,10 +79,9 @@ export function WorkspaceSelectionPage() {
     setCurrentWorkspace(workspace)
 
     // ✅ NO MORE sessionStorage - only localStorage via context
-    console.log("✅ Workspace selected:", workspace.name, workspace.id)
-
+    logger.info("✅ Workspace selected:", workspace.name, workspace.id)
     // 🔄 HARD RELOAD - Force page refresh to load new workspace
-    console.log("🔄 Reloading to /chat")
+    logger.info("🔄 Reloading to /chat")
     window.location.href = "/chat"
   }
 
@@ -156,8 +156,7 @@ export function WorkspaceSelectionPage() {
 
   // 🆕 LOGOUT HANDLER
   const handleLogout = () => {
-    console.log("🚪 [WorkspaceSelectionPage] Logout requested")
-
+    logger.info("🚪 [WorkspaceSelectionPage] Logout requested")
     // Clear sessionId from localStorage
     clearSessionId()
 

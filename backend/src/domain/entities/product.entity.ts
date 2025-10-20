@@ -4,7 +4,7 @@ import { Category } from "./category.entity"
 export class Product {
   id: string
   name: string
-  ProductCode: string | null
+  productCode: string | null // Fixed: was ProductCode
   description: string | null
   formato: string | null
   price: number
@@ -26,7 +26,7 @@ export class Product {
   constructor(data: Partial<Product>) {
     this.id = data.id || ""
     this.name = data.name || ""
-    this.ProductCode = data.ProductCode || null
+    this.productCode = data.productCode || null // Fixed: was ProductCode
     this.description = data.description || null
     this.formato = data.formato || null
     this.price = data.price || 0

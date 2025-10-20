@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger"
 import { api } from "./api"
 
 export interface Language {
@@ -49,7 +50,7 @@ const workspaceApi = {
   async getAll(): Promise<Workspace[]> {
     // 🆕 FORCE sessionId in headers (from sessionStorage)
     const sessionId = sessionStorage.getItem("sessionId")
-    console.log(
+    logger.info(
       "🔍 [workspaceApi.getAll] Forcing X-Session-Id header:",
       sessionId ? sessionId.substring(0, 8) + "..." : "NULL"
     )

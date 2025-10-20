@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { logger } from "@/lib/logger"
 import { DashboardAnalytics } from "@/services/analyticsApi"
 import { TrendingUp } from "lucide-react"
 import React from "react"
@@ -42,7 +43,7 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
   analytics.trends.customers.forEach((d) => allMonths.add(d.month))
   analytics.trends.usageCost.forEach((d) => allMonths.add(d.month))
 
-  console.log("📊 [HistoricalChart] Raw trends data:", {
+  logger.info("📊 [HistoricalChart] Raw trends data:", {
     orders: analytics.trends.orders,
     customers: analytics.trends.customers,
     usageCost: analytics.trends.usageCost,
@@ -65,8 +66,7 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
     }
   })
 
-  console.log("📊 [HistoricalChart] Chart data merged:", chartData)
-
+  logger.info("📊 [HistoricalChart] Chart data merged:", chartData)
   // Prepare category pie chart data - aggregate all months
   const categoryTotals: { [categoryName: string]: number } = {}
   analytics.trends.categories.forEach((monthData) => {
@@ -94,8 +94,7 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
     "#ef4444", // red
   ]
 
-  console.log("📊 [HistoricalChart] Category pie data:", categoryPieData)
-
+  logger.info("📊 [HistoricalChart] Category pie data:", categoryPieData)
   // Custom tooltip formatter
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -245,7 +244,7 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-orange-600" />
-            Costi LLM nel Tempo
+            LLM Usage Costs
           </CardTitle>
           <p className="text-sm text-gray-500 mt-1">
             Andamento dei costi di utilizzo del sistema LLM

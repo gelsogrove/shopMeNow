@@ -263,9 +263,9 @@ export class MessageRepository {
           // MESSAGE billing should only attach to INBOUND messages
           if (billing.type === "MESSAGE" && !isInbound) return false
 
-          // PUSH_MESSAGE and HUMAN_SUPPORT should only attach to OUTBOUND messages
+          // PUSH_CAMPAIGN and HUMAN_SUPPORT should only attach to OUTBOUND messages
           if (
-            (billing.type === "PUSH_MESSAGE" ||
+            (billing.type === "PUSH_CAMPAIGN" ||
               billing.type === "HUMAN_SUPPORT") &&
             !isOutbound
           )
@@ -398,24 +398,8 @@ export class MessageRepository {
         workspaceId = customer.workspaceId
       }
 
-      // If we have a workspaceId, check the workspace blocklist
-      if (workspaceId) {
-        const workspace = await this.prisma.workspace.findUnique({
-          where: { id: workspaceId },
-          select: { blocklist: true },
-        })
-
-        if (workspace?.blocklist) {
-          // Split the blocklist by newlines and check if the phone number is in the list
-          const blockedNumbers = workspace.blocklist
-            .split(/[\n,]/)
-            .map((num) => num.trim())
-          if (blockedNumbers.includes(phoneNumber)) {
-            return true
-          }
-        }
-      }
-
+      // Blocklist check is now done via customers.isBlacklisted field
+      // (workspace-level blocklist removed during database cleanup)
       return false
     } catch (error) {
       logger.error("Error checking customer blacklist status:", error)
@@ -1164,7 +1148,7 @@ export class MessageRepository {
         select: {
           id: true,
           name: true,
-          ProductCode: true,
+          productCode: true,
           price: true,
           description: true, // Aggiungi description per il prompt
           formato: true, // Aggiungi formato per il prompt
@@ -1574,27 +1558,6 @@ export class MessageRepository {
   }
 
   /**
-   * Get the router agent
-   * @param workspaceId Workspace ID to filter by
-   * @returns The router agent prompt
-   */
-  async getRouterAgent(workspaceId?: string) {
-    try {
-      const routerAgent = await this.prisma.prompts.findFirst({
-        where: {
-          isRouter: true,
-          ...(workspaceId ? { workspaceId } : {}),
-        },
-      })
-
-      return routerAgent
-    } catch (error) {
-      logger.error("Error getting router agent:", error)
-      return null
-    }
-  }
-
-  /**
    * Get all products
    * @param workspaceId Workspace ID to filter by
    * @returns List of products
@@ -1764,35 +1727,6 @@ export class MessageRepository {
   }
 
   /**
-   * Ottiene il prompt per il router di funzioni
-   * @returns Il contenuto del prompt
-   */
-  async getFunctionRouterPrompt(): Promise<string> {
-    try {
-      // Usa il prompt principale dell'agente per il function router
-      const agentPrompt = await this.prisma.prompts.findFirst({
-        where: {
-          name: {
-            contains: "SofIA",
-            mode: "insensitive",
-          },
-          isActive: true,
-        },
-      })
-
-      if (!agentPrompt) {
-        logger.warn("Agent prompt not found, using default")
-        return "You are a function router for a WhatsApp chatbot. Your task is to analyze the user's message and determine which function to call."
-      }
-
-      return agentPrompt.content
-    } catch (error) {
-      logger.error("Error getting function router prompt:", error)
-      return "You are a function router for a WhatsApp chatbot. Your task is to analyze the user's message and determine which function to call."
-    }
-  }
-
-  /**
    * Chiama il function router di OpenAI per ottenere la funzione da chiamare
    * @param message Messaggio dell'utente
    * @param conversationContext Array di messaggi precedenti per contesto
@@ -1802,10 +1736,10 @@ export class MessageRepository {
     message: string,
     conversationContext: any[] = []
   ): Promise<any> {
-    console.log("🚨 DEBUG - callFunctionRouter CALLED with message:", message)
+    logger.info("🚨 DEBUG - callFunctionRouter CALLED with message:", message)
     try {
       // Check if OpenRouter is properly configured
-      console.log("🔍 DEBUG - OPENROUTER_API_KEY check:", {
+      logger.info("🔍 DEBUG - OPENROUTER_API_KEY check:", {
         present: !!process.env.OPENROUTER_API_KEY,
         length: process.env.OPENROUTER_API_KEY?.length || 0,
         prefix: process.env.OPENROUTER_API_KEY?.substring(0, 15) || "MISSING",
@@ -1823,8 +1757,9 @@ export class MessageRepository {
         }
       }
 
-      // Ottieni il prompt del function router
-      const functionRouterPrompt = await this.getFunctionRouterPrompt()
+      // Use a simple default prompt for function routing
+      const functionRouterPrompt =
+        "You are a function router for a WhatsApp chatbot. Analyze the user's message and select the most appropriate function to call."
 
       // ANDREA DECISION: CF ATTIVE CON NOMI CORRETTI
       const availableFunctions = [
@@ -1902,22 +1837,21 @@ export class MessageRepository {
       const openRouterApiKey = process.env.OPENROUTER_API_KEY
 
       // DEBUG: Log prompt e funzioni
-      console.log(
+      logger.info(
         "🔍 DEBUG - Function Router Prompt:",
         functionRouterPrompt.substring(0, 200) + "..."
       )
-      console.log(
+      logger.info(
         "🔍 DEBUG - Available Functions:",
         availableFunctions.map((f) => f.name)
       )
-      console.log("🔍 DEBUG - User Message:", message)
-      console.log(
+      logger.info("🔍 DEBUG - User Message:", message)
+      logger.info(
         "🔍 DEBUG - Conversation Context:",
         conversationContext.length,
         "messages"
       )
-      console.log("🔍 DEBUG - OpenRouter API Key present:", !!openRouterApiKey)
-
+      logger.info("🔍 DEBUG - OpenRouter API Key present:", !!openRouterApiKey)
       // Costruisci l'array di messaggi includendo il contesto della conversazione
       const messages = [{ role: "system", content: functionRouterPrompt }]
 
@@ -1930,7 +1864,7 @@ export class MessageRepository {
             content: contextMsg.content,
           })
         }
-        console.log(
+        logger.info(
           "🔍 DEBUG - Added",
           recentContext.length,
           "context messages"
@@ -1950,7 +1884,7 @@ export class MessageRepository {
         tool_choice: "auto",
       }
 
-      console.log(
+      logger.info(
         "🔍 DEBUG - Request payload:",
         JSON.stringify(requestPayload, null, 2)
       )
@@ -1965,11 +1899,11 @@ export class MessageRepository {
             "X-Title": "ShopME Function Router",
           },
         })
-        console.log("🔍 DEBUG - Axios call successful")
+        logger.info("🔍 DEBUG - Axios call successful")
       } catch (axiosError) {
-        console.error("🔍 DEBUG - Axios error:", axiosError.message)
+        logger.error("🔍 DEBUG - Axios error:", axiosError.message)
         if (axiosError.response) {
-          console.error(
+          logger.error(
             "🔍 DEBUG - Axios response error:",
             axiosError.response.data
           )
@@ -1978,7 +1912,7 @@ export class MessageRepository {
       }
 
       // DEBUG: Log risposta OpenRouter
-      console.log(
+      logger.info(
         "🔍 DEBUG - OpenRouter Response:",
         JSON.stringify(response.data.choices[0]?.message, null, 2)
       )
@@ -2201,25 +2135,6 @@ export class MessageRepository {
   }
 
   /**
-   * Get agent by workspace ID
-   * @param workspaceId Workspace ID
-   * @returns Agent for the workspace
-   */
-  async getAgentByWorkspaceId(workspaceId: string) {
-    try {
-      const agent = await this.prisma.prompts.findFirst({
-        where: {
-          workspaceId,
-        },
-      })
-      return agent
-    } catch (error) {
-      logger.error(`Error getting agent for workspace ${workspaceId}:`, error)
-      return null
-    }
-  }
-
-  /**
    * Get response from an agent
    * @param agent The agent to use
    * @param message The message to process
@@ -2331,7 +2246,11 @@ export class MessageRepository {
   }
 
   /**
-   * Add phone number to workspace blocklist
+   * Add phone number to blocklist
+   * NOTE: Workspace-level blocklist was removed during database cleanup.
+   * Now using customers.isBlacklisted field instead.
+   * This method is kept for backward compatibility but does nothing.
+   * @deprecated Use customer.isBlacklisted field directly
    * @param phoneNumber Phone number to add
    * @param workspaceId Workspace ID
    */
@@ -2339,47 +2258,11 @@ export class MessageRepository {
     phoneNumber: string,
     workspaceId: string
   ): Promise<void> {
-    try {
-      // Get current workspace
-      const workspace = await this.prisma.workspace.findUnique({
-        where: { id: workspaceId },
-        select: { blocklist: true },
-      })
-
-      if (!workspace) {
-        throw new Error(`Workspace ${workspaceId} not found`)
-      }
-
-      // Parse current blocklist
-      const currentBlocklist = workspace.blocklist || ""
-      const blockedNumbers = currentBlocklist
-        .split(/[\n,]/)
-        .map((num) => num.trim())
-        .filter((num) => num.length > 0)
-
-      // Add phone number if not already present
-      if (!blockedNumbers.includes(phoneNumber)) {
-        blockedNumbers.push(phoneNumber)
-
-        // Update workspace blocklist
-        const newBlocklist = blockedNumbers.join("\n")
-        await this.prisma.workspace.update({
-          where: { id: workspaceId },
-          data: { blocklist: newBlocklist },
-        })
-
-        logger.info(
-          `Phone ${phoneNumber} added to workspace ${workspaceId} blocklist`
-        )
-      } else {
-        logger.info(
-          `Phone ${phoneNumber} already in workspace ${workspaceId} blocklist`
-        )
-      }
-    } catch (error) {
-      logger.error("Error adding to workspace blocklist:", error)
-      throw error
-    }
+    logger.warn(
+      `addToWorkspaceBlocklist is deprecated. Use customers.isBlacklisted field instead. Phone: ${phoneNumber}, Workspace: ${workspaceId}`
+    )
+    // Method kept for backward compatibility - workspace.blocklist field removed
+    // To block a customer, update: customers.isBlacklisted = true
   }
 
   /**
@@ -2617,7 +2500,7 @@ export class MessageRepository {
       }
 
       return {
-        prompt: agentConfig.prompt || "",
+        prompt: agentConfig.prompt || "", // ✅ CORRECT: Field is 'prompt' in schema
         model: agentConfig.model || "openai/gpt-4o-mini",
         temperature: agentConfig.temperature || 0.0, // Default to 0 temperature
         maxTokens: agentConfig.maxTokens || 5000,
@@ -2650,58 +2533,6 @@ export class MessageRepository {
     } catch (error) {
       logger.error("Error getting workspace URL:", error)
       return "http://localhost:3000"
-    }
-  }
-
-  /**
-   * Get prompt by name from database
-   */
-  async getPromptByName(
-    workspaceId: string,
-    promptName: string
-  ): Promise<{
-    id: string
-    name: string
-    content: string
-    model: string
-    temperature: number
-    maxTokens: number
-  } | null> {
-    try {
-      const prompt = await this.prisma.prompts.findFirst({
-        where: {
-          workspaceId,
-          name: promptName,
-          isActive: true,
-        },
-        select: {
-          id: true,
-          name: true,
-          content: true,
-          model: true,
-          temperature: true,
-          max_tokens: true,
-        },
-      })
-
-      if (!prompt) {
-        logger.warn(
-          `Prompt "${promptName}" not found for workspace ${workspaceId}`
-        )
-        return null
-      }
-
-      return {
-        id: prompt.id,
-        name: prompt.name,
-        content: prompt.content,
-        model: prompt.model || "openai/gpt-4o-mini",
-        temperature: prompt.temperature || 0.0, // Default to 0 temperature
-        maxTokens: prompt.max_tokens || 5000,
-      }
-    } catch (error) {
-      logger.error(`Error getting prompt "${promptName}":`, error)
-      return null
     }
   }
 

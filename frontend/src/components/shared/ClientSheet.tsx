@@ -362,13 +362,12 @@ export function ClientSheet({
     const clientId = typeof client === "string" ? client : fetchedClient?.id
 
     // Debug log
-    console.log("=== CLIENT SUBMIT DEBUG ===")
-    console.log("salesId state:", salesId)
-    console.log("customerData.salesId:", customerData.salesId)
-    console.log("clientId:", clientId)
-    console.log("Full customerData:", customerData)
-    console.log("=========================")
-
+    logger.info("=== CLIENT SUBMIT DEBUG ===")
+    logger.info("salesId state:", salesId)
+    logger.info("customerData.salesId:", customerData.salesId)
+    logger.info("clientId:", clientId)
+    logger.info("Full customerData:", customerData)
+    logger.info("=========================")
     try {
       await onSubmit(customerData, clientId)
       // ✅ Il toast è già gestito in ClientsPage.tsx

@@ -1,12 +1,15 @@
+import { BillingTab } from "@/components/analytics/BillingTab"
 import DateRangeSelector, {
   PeriodPreset,
   getDateRangeFromPeriod,
 } from "@/components/analytics/DateRangeSelector"
 import { HistoricalChart } from "@/components/analytics/HistoricalChart"
 import { MetricsOverview } from "@/components/analytics/MetricsOverview"
+import { PricingList } from "@/components/analytics/PricingList"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { useAnalyticsPeriod } from "@/hooks/useAnalyticsPeriod"
 import { logger } from "@/lib/logger"
@@ -20,6 +23,7 @@ import {
   Activity,
   AlertCircle,
   BarChart3,
+  Euro,
   TrendingUp,
   Users,
 } from "lucide-react"
@@ -33,9 +37,27 @@ export function AnalyticsPage() {
   const { selectedPeriod, setSelectedPeriod, isInitialized } =
     useAnalyticsPeriod()
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("all")
+  const [activeTab, setActiveTab] = useState<
+    "analytics" | "billing" | "pricing"
+  >("analytics")
 
   // Get translations
   const t = getAdminPageTexts()
+
+  // Dynamic page title based on active tab
+  const pageTitle =
+    activeTab === "analytics"
+      ? t.analyticsTitle
+      : activeTab === "billing"
+      ? "Billing"
+      : "Pricing"
+
+  const pageSubtitle =
+    activeTab === "analytics"
+      ? t.analyticsSubtitle
+      : activeTab === "billing"
+      ? "Monthly billing breakdown and cost tracking"
+      : "Transparent pricing for all ShopMe services"
 
   const loadAnalytics = async (period: PeriodPreset) => {
     if (!currentWorkspace?.id) return
@@ -114,17 +136,19 @@ export function AnalyticsPage() {
           <div className="flex items-center gap-2 mb-6">
             <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <BarChart3 className="h-6 w-6 text-blue-600" />
-              {t.analyticsTitle}
+              {pageTitle}
             </h1>
           </div>
-          <p className="text-gray-600 mt-1">{t.analyticsSubtitle}</p>
+          <p className="text-gray-600 mt-1">{pageSubtitle}</p>
         </div>
 
-        {/* Period Selector */}
-        <DateRangeSelector
-          selectedPeriod={selectedPeriod}
-          onPeriodChange={handlePeriodChange}
-        />
+        {/* Period Selector - Only show for Analytics tab */}
+        {activeTab === "analytics" && (
+          <DateRangeSelector
+            selectedPeriod={selectedPeriod}
+            onPeriodChange={handlePeriodChange}
+          />
+        )}
       </div>
 
       {loading ? (
@@ -153,210 +177,234 @@ export function AnalyticsPage() {
           </Card>
         </div>
       ) : analytics ? (
-        // Data Loaded
-        <div className="space-y-6">
-          {/* Metrics Overview */}
-          <MetricsOverview analytics={analytics} />
+        // Data Loaded - Now with Tabs
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) =>
+            setActiveTab(value as "analytics" | "billing" | "pricing")
+          }
+          className="space-y-6"
+        >
+          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
+            <TabsTrigger value="analytics" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Analytics
+            </TabsTrigger>
+            <TabsTrigger value="billing" className="flex items-center gap-2">
+              <Euro className="h-4 w-4" />
+              Billing
+            </TabsTrigger>
+            <TabsTrigger value="pricing" className="flex items-center gap-2">
+              <Euro className="h-4 w-4" />
+              Pricing
+            </TabsTrigger>
+          </TabsList>
 
-          {/* Historical Chart (include Top Searched Products affiancato a Distribuzione Categorie) */}
-          <HistoricalChart
-            analytics={analytics}
-            period={selectedPeriod}
-            loading={loading}
-          />
+          {/* Analytics Tab */}
+          <TabsContent value="analytics" className="space-y-6">
+            {/* Metrics Overview */}
+            <MetricsOverview analytics={analytics} />
 
-          {/* Additional Analytics Cards - All in one row (3 columns) */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Top Products */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-green-600" />
-                  {t.topProducts}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {analytics.topProducts && analytics.topProducts.length > 0 ? (
-                  <div className="space-y-3">
-                    {analytics.topProducts.map((product, index) => (
-                      <div
-                        key={product.id}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center text-xs font-bold text-green-700">
-                            {index + 1}
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900">
-                              {product.name}
-                            </p>
-                            {product.formato && (
-                              <p className="text-sm text-blue-600 font-medium">
-                                {t.format}: {product.formato}
+            {/* Historical Chart (include Top Searched Products affiancato a Distribuzione Categorie) */}
+            <HistoricalChart
+              analytics={analytics}
+              period={selectedPeriod}
+              loading={loading}
+            />
+
+            {/* Additional Analytics Cards - All in one row (3 columns) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Top Products */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-green-600" />
+                    {t.topProducts}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {analytics.topProducts && analytics.topProducts.length > 0 ? (
+                    <div className="space-y-3">
+                      {analytics.topProducts.map((product, index) => (
+                        <div
+                          key={product.id}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center text-xs font-bold text-green-700">
+                              {index + 1}
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">
+                                {product.name}
                               </p>
-                            )}
-                            <p className="text-sm text-gray-500">
-                              {product.totalSold} {t.sold}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-green-600">
-                            {new Intl.NumberFormat("en-US", {
-                              style: "currency",
-                              currency: "EUR",
-                              minimumFractionDigits: 0,
-                            }).format(product.revenue)}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {t.stock}: {product.stock}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <TrendingUp className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-gray-500">{t.noProductData}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Top Customers */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5 text-blue-600" />
-                  {t.topCustomers}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {analytics.topCustomers && analytics.topCustomers.length > 0 ? (
-                  <div className="space-y-3">
-                    {analytics.topCustomers.map((customer, index) => (
-                      <div
-                        key={customer.id}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs font-bold text-blue-700">
-                            {index + 1}
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900">
-                              {customer.name}
-                            </p>
-                            <p className="text-sm text-gray-500">
-                              {customer.email}
-                            </p>
-                            {customer.company && (
-                              <p className="text-xs text-gray-400">
-                                {customer.company}
+                              {product.formato && (
+                                <p className="text-sm text-blue-600 font-medium">
+                                  {t.format}: {product.formato}
+                                </p>
+                              )}
+                              <p className="text-sm text-gray-500">
+                                {product.totalSold} {t.sold}
                               </p>
-                            )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-green-600">
+                              {new Intl.NumberFormat("en-US", {
+                                style: "currency",
+                                currency: "EUR",
+                                minimumFractionDigits: 0,
+                              }).format(product.revenue)}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {t.stock}: {product.stock}
+                            </p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold text-blue-600">
-                            {new Intl.NumberFormat("en-US", {
-                              style: "currency",
-                              currency: "EUR",
-                              minimumFractionDigits: 0,
-                            }).format(customer.totalSpent)}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {customer.totalOrders} {t.orders}
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            {t.average}:{" "}
-                            {new Intl.NumberFormat("en-US", {
-                              style: "currency",
-                              currency: "EUR",
-                              minimumFractionDigits: 0,
-                            }).format(customer.averageOrderValue)}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Activity className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-gray-500">{t.noCustomerData}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <TrendingUp className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-500">{t.noProductData}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
-            {/* Top Sellers */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-purple-600" />
-                  {t.topSellers}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {analytics.topSellers && analytics.topSellers.length > 0 ? (
-                  <div className="space-y-3">
-                    {analytics.topSellers.map((seller, index) => (
-                      <div
-                        key={seller.id}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-xs font-bold text-purple-700">
-                            {index + 1}
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900">
-                              {seller.firstName} {seller.lastName}
-                            </p>
-                            <p className="text-sm text-gray-500">
-                              {seller.email}
-                            </p>
-                            {seller.phone && (
-                              <p className="text-xs text-gray-400">
-                                {seller.phone}
+              {/* Top Customers */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="h-5 w-5 text-blue-600" />
+                    {t.topCustomers}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {analytics.topCustomers &&
+                  analytics.topCustomers.length > 0 ? (
+                    <div className="space-y-3">
+                      {analytics.topCustomers.map((customer, index) => (
+                        <div
+                          key={customer.id}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs font-bold text-blue-700">
+                              {index + 1}
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">
+                                {customer.name}
                               </p>
-                            )}
+                              <p className="text-sm text-gray-500">
+                                {customer.email}
+                              </p>
+                              {customer.company && (
+                                <p className="text-xs text-gray-400">
+                                  {customer.company}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-blue-600">
+                              {new Intl.NumberFormat("en-US", {
+                                style: "currency",
+                                currency: "EUR",
+                                minimumFractionDigits: 0,
+                              }).format(customer.totalSpent)}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {customer.totalOrders} {t.orders}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              {t.average}:{" "}
+                              {new Intl.NumberFormat("en-US", {
+                                style: "currency",
+                                currency: "EUR",
+                                minimumFractionDigits: 0,
+                              }).format(customer.averageOrderValue)}
+                            </p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold text-purple-600">
-                            {new Intl.NumberFormat("en-US", {
-                              style: "currency",
-                              currency: "EUR",
-                              minimumFractionDigits: 0,
-                            }).format(seller.totalRevenue)}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {seller.totalOrders} {t.orders}
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            {seller.totalCustomers} {t.clients}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Users className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-gray-500">{t.noSellerData}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Activity className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-500">{t.noCustomerData}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
-          {/* Pricing List - Moved to top 
+              {/* Top Sellers */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-purple-600" />
+                    {t.topSellers}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {analytics.topSellers && analytics.topSellers.length > 0 ? (
+                    <div className="space-y-3">
+                      {analytics.topSellers.map((seller, index) => (
+                        <div
+                          key={seller.id}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-xs font-bold text-purple-700">
+                              {index + 1}
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">
+                                {seller.firstName} {seller.lastName}
+                              </p>
+                              <p className="text-sm text-gray-500">
+                                {seller.email}
+                              </p>
+                              {seller.phone && (
+                                <p className="text-xs text-gray-400">
+                                  {seller.phone}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-purple-600">
+                              {new Intl.NumberFormat("en-US", {
+                                style: "currency",
+                                currency: "EUR",
+                                minimumFractionDigits: 0,
+                              }).format(seller.totalRevenue)}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {seller.totalOrders} {t.orders}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              {seller.totalCustomers} {t.clients}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Users className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-500">{t.noSellerData}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Pricing List - Moved to top 
           <PricingList />*/}
 
-          {/* System Logs - Full Width 
+            {/* System Logs - Full Width 
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -585,7 +633,18 @@ export function AnalyticsPage() {
             </CardContent>
           </Card>
           */}
-        </div>
+          </TabsContent>
+
+          {/* Billing Tab */}
+          <TabsContent value="billing">
+            <BillingTab />
+          </TabsContent>
+
+          {/* Pricing Tab */}
+          <TabsContent value="pricing">
+            <PricingList />
+          </TabsContent>
+        </Tabs>
       ) : (
         // No Data State
         <div className="flex items-center justify-center h-64">
