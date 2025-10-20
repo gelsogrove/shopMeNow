@@ -67,19 +67,18 @@ export function ProductsPage() {
   useEffect(() => {
     const loadProducts = async () => {
       if (!workspace?.id) {
-        console.log("❌ No workspace ID, skipping products load")
+        logger.info("❌ No workspace ID, skipping products load")
         return
       }
 
-      console.log("🔄 Loading products for workspace:", workspace.id)
+      logger.info("🔄 Loading products for workspace:", workspace.id)
       setIsLoading(true)
       try {
         const response = await productsApi.getAllForWorkspace(workspace.id)
 
-        console.log("✅ API Response:", response)
-
+        logger.info("✅ API Response:", response)
         if (response && Array.isArray(response.products)) {
-          console.log(
+          logger.info(
             `🔍 Products received from API: ${response.products.length}`
           )
           setProducts(response.products)
@@ -90,7 +89,7 @@ export function ProductsPage() {
         }
       } catch (error) {
         logger.error("Failed to load products:", error)
-        console.error("❌ Products load error:", error)
+        logger.error("❌ Products load error:", error)
         setProducts([])
         toast.error("Failed to load products")
       } finally {
@@ -128,7 +127,7 @@ export function ProductsPage() {
 
   // Filter and sort products
   const filteredProducts = React.useMemo(() => {
-    console.log("🔍 Filter Debug:", {
+    logger.info("🔍 Filter Debug:", {
       totalProducts: products.length,
       filterCategory,
       searchValue,
@@ -146,12 +145,11 @@ export function ProductsPage() {
         product.category?.name.toLowerCase().includes(searchValue.toLowerCase())
     )
 
-    console.log("🔍 After search filter:", filtered.length)
-
+    logger.info("🔍 After search filter:", filtered.length)
     // Filter by category
     if (filterCategory !== "all") {
       filtered = filtered.filter((p) => p.categoryId === filterCategory)
-      console.log(
+      logger.info(
         "🔍 After category filter:",
         filtered.length,
         "categoryId:",
@@ -170,7 +168,7 @@ export function ProductsPage() {
       }
     })
 
-    console.log("🔍 Final filtered products:", filtered.length)
+    logger.info("🔍 Final filtered products:", filtered.length)
     return filtered
   }, [products, searchValue, filterCategory, sortBy])
 

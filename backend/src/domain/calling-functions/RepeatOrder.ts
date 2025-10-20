@@ -1,11 +1,15 @@
 /**
  * RepeatOrder - LLM-Callable Function
  *
- * Ripete l'ultimo ordine (o un ordine specifico) aggiungendo tutti i prodotti al carrello.
- * Utilizzata quando l'utente chiede: "Ripeti il mio ultimo ordine", "Ordina di nuovo come l'ultima volta", etc.
+ * Repeats a previous order by adding all its items to the current cart.
+ * Used when customer says: "Voglio riordinare", "Ripeti l'ordine", "Riordino", etc.
+ *
+ * ⚠️ IMPORTANTE: Questa funzione aggiunge al carrello esistente (non lo sostituisce)
  *
  * @see docs/prompt_agent.md - Sezione "repeatOrder()"
  */
+
+import logger from "../../utils/logger"
 
 export interface RepeatOrderRequest {
   customerId: string
@@ -35,7 +39,7 @@ export async function RepeatOrder(
   request: RepeatOrderRequest
 ): Promise<RepeatOrderResult> {
   try {
-    console.log("🔄 RepeatOrder called with:", {
+    logger.info("🔄 RepeatOrder called with:", {
       customerId: request.customerId,
       workspaceId: request.workspaceId,
       orderCode: request.orderCode,
@@ -43,7 +47,7 @@ export async function RepeatOrder(
 
     // Validazione parametri obbligatori
     if (!request.customerId || !request.workspaceId) {
-      console.error("❌ Missing required parameters in RepeatOrder")
+      logger.error("❌ Missing required parameters in RepeatOrder")
       return {
         success: false,
         error: "Parametri richiesti mancanti",
@@ -65,7 +69,7 @@ export async function RepeatOrder(
       })
 
       if (!customer) {
-        console.error("❌ Customer not found in RepeatOrder")
+        logger.error("❌ Customer not found in RepeatOrder")
         return {
           success: false,
           error: "Cliente non trovato",
@@ -119,7 +123,7 @@ export async function RepeatOrder(
       }
 
       if (!order || !order.items || order.items.length === 0) {
-        console.error("❌ No order found to repeat")
+        logger.error("❌ No order found to repeat")
         return {
           success: false,
           error: "Nessun ordine trovato",
@@ -223,8 +227,7 @@ export async function RepeatOrder(
 
       await prisma.$disconnect()
 
-      console.log("✅ RepeatOrder success: added", productsAdded, "products")
-
+      logger.info("✅ RepeatOrder success: added", productsAdded, "products")
       return {
         success: true,
         message:
@@ -243,7 +246,7 @@ export async function RepeatOrder(
         timestamp: new Date().toISOString(),
       }
     } catch (error) {
-      console.error("❌ Error in RepeatOrder database operations:", error)
+      logger.error("❌ Error in RepeatOrder database operations:", error)
       await prisma.$disconnect()
 
       return {
@@ -261,7 +264,7 @@ export async function RepeatOrder(
       }
     }
   } catch (error) {
-    console.error("❌ Error in RepeatOrder:", error)
+    logger.error("❌ Error in RepeatOrder:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Errore interno",

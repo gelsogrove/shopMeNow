@@ -158,7 +158,7 @@ export class CheckoutController {
             id: item.id,
             itemType: "PRODUCT",
             productId: item.productId,
-            codice: item.product?.ProductCode || item.product?.sku || "N/A",
+            codice: item.product?.productCode || "N/A",
             descrizione: item.product?.name || "Unknown Product",
             formato: item.product?.formato,
             prezzo: priceInfo.finalPrice,
@@ -294,7 +294,7 @@ export class CheckoutController {
       const productCodes = productItems.map((item: any) => item.codice)
       const products = await prisma.products.findMany({
         where: {
-          ProductCode: { in: productCodes },
+          productCode: { in: productCodes },
           workspaceId: workspaceId,
         },
       })
@@ -302,7 +302,7 @@ export class CheckoutController {
       // Create a map of productCode -> productId
       const productMap = new Map()
       products.forEach((product) => {
-        productMap.set(product.ProductCode, product.id)
+        productMap.set(product.productCode, product.id)
       })
 
       // Find services by serviceId

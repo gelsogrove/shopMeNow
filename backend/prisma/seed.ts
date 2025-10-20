@@ -18,6 +18,7 @@
 
 import { PrismaClient } from "@prisma/client"
 import * as bcrypt from "bcrypt"
+import { BillingPrices } from "../src/domain/enums/billing-prices.enum"
 import { campaigns } from "./data/campaigns"
 import { categories } from "./data/categories"
 import { faqs } from "./data/faqs"
@@ -40,7 +41,7 @@ async function main() {
   await prisma.message.deleteMany()
   await prisma.chatSession.deleteMany()
   await prisma.passwordReset.deleteMany()
-  await prisma.otpToken.deleteMany()
+  // await prisma.otpToken.deleteMany() // ❌ REMOVED - table dropped
   await prisma.registrationToken.deleteMany()
   await prisma.secureToken.deleteMany()
   await prisma.customerFeedback.deleteMany()
@@ -54,10 +55,11 @@ async function main() {
   await prisma.carts.deleteMany()
   await prisma.orders.deleteMany()
   await prisma.customers.deleteMany()
-  await prisma.documentChunks.deleteMany()
-  await prisma.fAQChunks.deleteMany()
-  await prisma.serviceChunks.deleteMany()
-  await prisma.productChunks.deleteMany()
+  // ❌ CHUNKS TABLES REMOVED
+  // await prisma.documentChunks.deleteMany()
+  // await prisma.fAQChunks.deleteMany()
+  // await prisma.serviceChunks.deleteMany()
+  // await prisma.productChunks.deleteMany()
   await prisma.documents.deleteMany()
   await prisma.fAQ.deleteMany()
   await prisma.offers.deleteMany()
@@ -205,7 +207,7 @@ async function main() {
     await prisma.products.create({
       data: {
         name: prod.name,
-        ProductCode: prod.ProductCode || `PROD-${Date.now()}`,
+        productCode: prod.ProductCode || `PROD-${Date.now()}`,
         description: prod.description,
         formato: prod.formato,
         price: prod.price,
@@ -772,7 +774,7 @@ async function main() {
           data: {
             workspaceId: workspace.id,
             customerId: customerId,
-            amount: 1.5, // BillingPrices.NEW_ORDER
+            amount: BillingPrices.NEW_ORDER,
             type: "NEW_ORDER",
             description: `Order ${orderCode} confirmed`,
             createdAt: date, // Use same date as order for historical data
@@ -907,7 +909,7 @@ async function main() {
     where: { workspaceId: workspace.id },
   })
 
-  const messageCost = 0.15
+  const messageCost = BillingPrices.MESSAGE
   let messageBillingRecords = 0
   let totalMessages = 0
 
@@ -985,10 +987,10 @@ async function main() {
   console.log(`   - Unit cost: €${messageCost.toFixed(2)}/message`)
   console.log(`   - Average: ~${Math.round(totalMessages / 7)} messages/month`)
 
-  // 9. Create MONTHLY_CHANNEL billing (€19/month) for each month
+  // 9. Create MONTHLY_CHANNEL billing (€49/month) for each month
   console.log("\n💳 Creating monthly channel billing...")
 
-  const monthlyChannelCost = 19.0
+  const monthlyChannelCost = BillingPrices.MONTHLY_CHANNEL_COST
   let channelBillingCount = 0
 
   // Generate for same months as messages (April-October 2025)
@@ -1035,7 +1037,7 @@ async function main() {
     where: { workspaceId: workspace.id },
   })
 
-  const pushCampaignCost = 1.0
+  const pushCampaignCost = BillingPrices.PUSH_CAMPAIGN
   let pushCampaignCount = 0
 
   if (customersForPush.length >= 3) {

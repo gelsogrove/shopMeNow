@@ -11,12 +11,12 @@ import { useState } from "react"
 
 // Pricing constants from billing-prices.enum.ts
 const PRICES = {
-  MONTHLY_CHANNEL: 19.0,
+  MONTHLY_CHANNEL: 49.0,
   MESSAGE: 0.15,
   NEW_CUSTOMER: 1.5,
   NEW_ORDER: 1.5,
   PUSH_CAMPAIGN: 1.0,
-  HUMAN_SUPPORT: 0.5,
+  HUMAN_SUPPORT: 1,
 }
 
 export function PricingSimulator() {

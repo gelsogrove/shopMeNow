@@ -4,52 +4,52 @@
  * Logic: NON-CUMULATIVE - highest discount wins
  */
 
-import { PrismaClient } from '@prisma/client';
-import logger from '../../utils/logger';
+import { PrismaClient } from "@prisma/client"
+import logger from "../../utils/logger"
 
 export interface ProductWithPrice {
-  id: string;
-  name: string;
-  price: number;
-  categoryId?: string | null;
-  formato?: string | null;
-  ProductCode?: string | null;
-  description?: string | null;
-  stock?: number;
-  sku?: string | null;
-  originalPrice?: number;
-  finalPrice?: number;
-  appliedDiscount?: number;
-  discountSource?: 'customer' | 'offer';
-  discountName?: string;
+  id: string
+  name: string
+  price: number
+  categoryId?: string | null
+  formato?: string | null
+  ProductCode?: string | null
+  description?: string | null
+  stock?: number
+  sku?: string | null
+  originalPrice?: number
+  finalPrice?: number
+  appliedDiscount?: number
+  discountSource?: "customer" | "offer"
+  discountName?: string
 }
 
 interface PriceCalculationResult {
-  products: ProductWithPrice[];
-  totalDiscount: number;
+  products: ProductWithPrice[]
+  totalDiscount: number
   discountsApplied: {
-    customerDiscount: number;
-    bestOfferDiscount: number;
-    appliedDiscount: number;
-    source: 'customer' | 'offer' | 'none';
-  };
+    customerDiscount: number
+    bestOfferDiscount: number
+    appliedDiscount: number
+    source: "customer" | "offer" | "none"
+  }
 }
 
 export interface OfferData {
-  id: string;
-  name: string;
-  discountPercent: number;
-  startDate: Date;
-  endDate: Date;
-  isActive: boolean;
-  categoryId: string | null;
+  id: string
+  name: string
+  discountPercent: number
+  startDate: Date
+  endDate: Date
+  isActive: boolean
+  categoryId: string | null
 }
 
 export class PriceCalculationService {
-  private prisma: PrismaClient;
+  private prisma: PrismaClient
 
   constructor(prisma: PrismaClient) {
-    this.prisma = prisma;
+    this.prisma = prisma
   }
 
   /**
@@ -64,10 +64,12 @@ export class PriceCalculationService {
     customerDiscount: number = 0
   ): Promise<PriceCalculationResult> {
     try {
-      logger.info(`Calculating prices for workspace ${workspaceId} with customer discount ${customerDiscount}%`);
+      logger.info(
+        `Calculating prices for workspace ${workspaceId} with customer discount ${customerDiscount}%`
+      )
 
       // Get products
-      const products = await this.getProducts(workspaceId, productIds);
+      const products = await this.getProducts(workspaceId, productIds)
       if (products.length === 0) {
         return {
           products: [],
@@ -76,64 +78,80 @@ export class PriceCalculationService {
             customerDiscount: 0,
             bestOfferDiscount: 0,
             appliedDiscount: 0,
-            source: 'none'
-          }
-        };
+            source: "none",
+          },
+        }
       }
 
       // Get active offers for workspace
-      const activeOffers = await this.getActiveOffers(workspaceId);
-      logger.info(`Found ${activeOffers.length} active offers`);
+      const activeOffers = await this.getActiveOffers(workspaceId)
+      logger.info(`Found ${activeOffers.length} active offers`)
 
       // Calculate prices for each product
-      const productsWithPrices = products.map(product => {
+      const productsWithPrices = products.map((product) => {
         // Find best offer for this product
-        const applicableOffers = this.findApplicableOffers(product, activeOffers);
-        const bestOffer = this.getBestOffer(applicableOffers);
-        
-        const bestOfferDiscount = bestOffer ? bestOffer.discountPercent : 0;
-        
+        const applicableOffers = this.findApplicableOffers(
+          product,
+          activeOffers
+        )
+        const bestOffer = this.getBestOffer(applicableOffers)
+
+        const bestOfferDiscount = bestOffer ? bestOffer.discountPercent : 0
+
         // Andrea's Logic: Highest discount wins (NON-CUMULATIVE)
-        let appliedDiscount = 0;
-        let discountSource: 'customer' | 'offer' | 'none' = 'none';
-        let discountName = '';
+        let appliedDiscount = 0
+        let discountSource: "customer" | "offer" | "none" = "none"
+        let discountName = ""
 
         if (bestOfferDiscount > customerDiscount) {
           // Offer discount is higher
-          appliedDiscount = bestOfferDiscount;
-          discountSource = 'offer';
-          discountName = bestOffer?.name || '';
+          appliedDiscount = bestOfferDiscount
+          discountSource = "offer"
+          discountName = bestOffer?.name || ""
         } else if (customerDiscount > 0) {
           // Customer discount is higher (or equal)
-          appliedDiscount = customerDiscount;
-          discountSource = 'customer';
-          discountName = 'Customer Discount';
+          appliedDiscount = customerDiscount
+          discountSource = "customer"
+          discountName = "Customer Discount"
         }
 
         // Calculate final price
-        const originalPrice = product.price;
-        const finalPrice = appliedDiscount > 0 
-          ? originalPrice * (1 - appliedDiscount / 100)
-          : originalPrice;
+        const originalPrice = product.price
+        const finalPrice =
+          appliedDiscount > 0
+            ? originalPrice * (1 - appliedDiscount / 100)
+            : originalPrice
 
         return {
           ...product,
           originalPrice,
           finalPrice,
           appliedDiscount,
-          discountSource: discountSource !== 'none' ? discountSource : undefined,
-          discountName: discountName || undefined
-        };
-      });
+          discountSource:
+            discountSource !== "none" ? discountSource : undefined,
+          discountName: discountName || undefined,
+        }
+      })
 
       // Calculate total discount applied
-      const totalOriginalPrice = productsWithPrices.reduce((sum, p) => sum + p.originalPrice!, 0);
-      const totalFinalPrice = productsWithPrices.reduce((sum, p) => sum + p.finalPrice!, 0);
-      const totalDiscount = totalOriginalPrice - totalFinalPrice;
+      const totalOriginalPrice = productsWithPrices.reduce(
+        (sum, p) => sum + p.originalPrice!,
+        0
+      )
+      const totalFinalPrice = productsWithPrices.reduce(
+        (sum, p) => sum + p.finalPrice!,
+        0
+      )
+      const totalDiscount = totalOriginalPrice - totalFinalPrice
 
       // Get best overall discount applied
-      const bestOverallDiscount = Math.max(...productsWithPrices.map(p => p.appliedDiscount || 0));
-      const bestOfferDiscount = Math.max(...activeOffers.map(o => o.discountPercent), 0);
+      const bestOverallDiscount = Math.max(
+        ...productsWithPrices.map((p) => p.appliedDiscount || 0)
+      )
+      const bestOfferDiscount = Math.max(
+        ...activeOffers.map((o) => o.discountPercent),
+        0
+      )
 
       return {
         products: productsWithPrices,
@@ -142,14 +160,17 @@ export class PriceCalculationService {
           customerDiscount,
           bestOfferDiscount,
           appliedDiscount: bestOverallDiscount,
-          source: bestOverallDiscount === bestOfferDiscount ? 'offer' : 
-                  bestOverallDiscount === customerDiscount ? 'customer' : 'none'
-        }
-      };
-
+          source:
+            bestOverallDiscount === bestOfferDiscount
+              ? "offer"
+              : bestOverallDiscount === customerDiscount
+                ? "customer"
+                : "none",
+        },
+      }
     } catch (error) {
-      logger.error('Error calculating prices with discounts:', error);
-      throw error;
+      logger.error("Error calculating prices with discounts:", error)
+      throw error
     }
   }
 
@@ -160,11 +181,11 @@ export class PriceCalculationService {
     const whereClause: any = {
       workspaceId,
       isActive: true,
-      status: 'ACTIVE'
-    };
+      status: "ACTIVE",
+    }
 
     if (productIds && productIds.length > 0) {
-      whereClause.id = { in: productIds };
+      whereClause.id = { in: productIds }
     }
 
     return await this.prisma.products.findMany({
@@ -175,26 +196,26 @@ export class PriceCalculationService {
         price: true,
         categoryId: true,
         formato: true,
-        ProductCode: true,
+        productCode: true,
         description: true,
         stock: true,
-        sku: true
-      }
-    });
+        // sku: true // REMOVED: field no longer exists
+      },
+    })
   }
 
   /**
    * Get active offers for workspace
    */
   private async getActiveOffers(workspaceId: string): Promise<OfferData[]> {
-    const now = new Date();
-    
+    const now = new Date()
+
     return await this.prisma.offers.findMany({
       where: {
         workspaceId,
         isActive: true,
         startDate: { lte: now },
-        endDate: { gte: now }
+        endDate: { gte: now },
       },
       select: {
         id: true,
@@ -203,29 +224,29 @@ export class PriceCalculationService {
         startDate: true,
         endDate: true,
         isActive: true,
-        categoryId: true
-      }
-    });
+        categoryId: true,
+      },
+    })
   }
 
   /**
    * Find offers applicable to a specific product
    */
   private findApplicableOffers(product: any, offers: OfferData[]): OfferData[] {
-    return offers.filter(offer => {
+    return offers.filter((offer) => {
       // If offer has no categoryId, it applies to all products
       if (!offer.categoryId) {
-        return true;
+        return true
       }
-      
+
       // If product has no category, it can't match category-specific offers
       if (!product.categoryId) {
-        return false;
+        return false
       }
-      
+
       // Check if product category matches offer category
-      return offer.categoryId === product.categoryId;
-    });
+      return offer.categoryId === product.categoryId
+    })
   }
 
   /**
@@ -233,12 +254,12 @@ export class PriceCalculationService {
    */
   private getBestOffer(offers: OfferData[]): OfferData | null {
     if (offers.length === 0) {
-      return null;
+      return null
     }
-    
-    return offers.reduce((best, current) => 
+
+    return offers.reduce((best, current) =>
       current.discountPercent > best.discountPercent ? current : best
-    );
+    )
   }
 
   /**
@@ -247,37 +268,42 @@ export class PriceCalculationService {
   async getAvailableDiscounts(workspaceId: string, customerId?: string) {
     try {
       // Get customer discount
-      let customerDiscount = 0;
+      let customerDiscount = 0
       if (customerId) {
         const customer = await this.prisma.customers.findUnique({
           where: { id: customerId },
-          select: { discount: true }
-        });
-        customerDiscount = customer?.discount || 0;
+          select: { discount: true },
+        })
+        customerDiscount = customer?.discount || 0
       }
 
       // Get active offers
-      const activeOffers = await this.getActiveOffers(workspaceId);
-      const bestOfferDiscount = activeOffers.length > 0 
-        ? Math.max(...activeOffers.map(o => o.discountPercent))
-        : 0;
+      const activeOffers = await this.getActiveOffers(workspaceId)
+      const bestOfferDiscount =
+        activeOffers.length > 0
+          ? Math.max(...activeOffers.map((o) => o.discountPercent))
+          : 0
 
       return {
         customerDiscount,
         bestOfferDiscount,
-        activeOffers: activeOffers.map(offer => ({
+        activeOffers: activeOffers.map((offer) => ({
           id: offer.id,
           name: offer.name,
           discountPercent: offer.discountPercent,
-          categoryId: offer.categoryId
+          categoryId: offer.categoryId,
         })),
         bestDiscount: Math.max(customerDiscount, bestOfferDiscount),
-        discountSource: bestOfferDiscount > customerDiscount ? 'offer' : 
-                       customerDiscount > 0 ? 'customer' : 'none'
-      };
+        discountSource:
+          bestOfferDiscount > customerDiscount
+            ? "offer"
+            : customerDiscount > 0
+              ? "customer"
+              : "none",
+      }
     } catch (error) {
-      logger.error('Error getting available discounts:', error);
-      throw error;
+      logger.error("Error getting available discounts:", error)
+      throw error
     }
   }
-} 
+}

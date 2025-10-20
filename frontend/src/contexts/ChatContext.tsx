@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger"
 import { Chat } from "@/types/chat"
 import {
   createContext,
@@ -23,7 +24,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const savedChatId = sessionStorage.getItem("selectedChatId")
 
     if (savedChatId) {
-      console.log(
+      logger.info(
         "🔍 ChatContext useEffect - Trovato chat ID in sessionStorage:",
         savedChatId
       )
@@ -31,7 +32,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       // Verrà completato quando le chat si caricano in ChatPage
       setSelectedChat({ sessionId: savedChatId } as Chat)
     } else {
-      console.log("🔍 ChatContext useEffect - Nessun chat ID in sessionStorage")
+      logger.info("🔍 ChatContext useEffect - Nessun chat ID in sessionStorage")
     }
   }, []) // ✅ Esegui solo una volta al mount
 

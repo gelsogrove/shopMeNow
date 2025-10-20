@@ -30,6 +30,8 @@
  * // Risposta: { success: true, message: "Ho svuotato il carrello...", itemsRemoved: 3 }
  */
 
+import logger from "../../utils/logger"
+
 /**
  * Request interface per resetCart
  */
@@ -82,7 +84,7 @@ export async function ResetCart(
 ): Promise<ResetCartResult> {
   const timestamp = new Date().toISOString()
 
-  console.log("🗑️ ResetCart called with:", {
+  logger.info("🗑️ ResetCart called with:", {
     customerId: request.customerId,
     workspaceId: request.workspaceId,
     timestamp,
@@ -90,7 +92,7 @@ export async function ResetCart(
 
   // 🔒 SECURITY: Validazione parametri obbligatori
   if (!request.customerId || !request.workspaceId) {
-    console.error("❌ ResetCart - Missing required parameters")
+    logger.error("❌ ResetCart - Missing required parameters")
     return createErrorResponse(
       "Parametri richiesti mancanti",
       "Ops {{nameUser}}! 😅\n\n" +
@@ -115,7 +117,7 @@ export async function ResetCart(
     })
 
     if (!customer) {
-      console.error("❌ ResetCart - Customer not found or wrong workspace")
+      logger.error("❌ ResetCart - Customer not found or wrong workspace")
       await prisma.$disconnect()
       return createErrorResponse(
         "Cliente non trovato",
@@ -144,7 +146,7 @@ export async function ResetCart(
     // Caso 1: Nessun carrello esistente
     if (!cart || cart.items.length === 0) {
       const status = !cart ? "no cart found" : "cart empty"
-      console.log(`ℹ️ ResetCart - ${status} for customer ${request.customerId}`)
+      logger.info(`ℹ️ ResetCart - ${status} for customer ${request.customerId}`)
       await prisma.$disconnect()
 
       return {
@@ -166,7 +168,7 @@ export async function ResetCart(
 
     await prisma.$disconnect()
 
-    console.log(
+    logger.info(
       `✅ ResetCart success - Removed ${itemsRemoved} items from cart ${cart.id}`
     )
 
@@ -177,7 +179,7 @@ export async function ResetCart(
       timestamp,
     }
   } catch (error) {
-    console.error("❌ ResetCart - Database error:", error)
+    logger.error("❌ ResetCart - Database error:", error)
     await prisma.$disconnect()
 
     return createErrorResponse(

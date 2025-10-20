@@ -15,7 +15,7 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react"
-import { useEffect, useState } from "react"
+import React, { useEffect, useState } from "react"
 
 const BILLING_TYPE_LABELS: Record<string, string> = {
   MONTHLY_CHANNEL: "Monthly Subscription",
@@ -367,9 +367,8 @@ export function BillingTab() {
                   const isLoadingDetails = loadingDetails[monthKey]
 
                   return (
-                    <>
+                    <React.Fragment key={monthKey}>
                       <tr
-                        key={monthKey}
                         className={`border-b border-gray-100 ${
                           hasData
                             ? "hover:bg-gray-50 cursor-pointer"
@@ -533,7 +532,7 @@ export function BillingTab() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </React.Fragment>
                   )
                 })}
               </tbody>

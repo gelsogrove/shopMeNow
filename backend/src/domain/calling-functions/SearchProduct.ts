@@ -14,6 +14,7 @@
  */
 
 import { PrismaClient } from "@prisma/client"
+import logger from "../../utils/logger"
 
 export interface SearchProductRequest {
   customerId: string
@@ -39,7 +40,7 @@ export async function SearchProduct(
   request: SearchProductRequest
 ): Promise<SearchProductResult> {
   try {
-    console.log("🔍 SearchProduct called with:", {
+    logger.info("🔍 SearchProduct called with:", {
       customerId: request.customerId,
       workspaceId: request.workspaceId,
       productName: request.productName,
@@ -47,7 +48,7 @@ export async function SearchProduct(
 
     // Validazione parametri obbligatori
     if (!request.customerId || !request.workspaceId || !request.productName) {
-      console.error("❌ Missing required parameters in SearchProduct")
+      logger.error("❌ Missing required parameters in SearchProduct")
       return {
         success: false,
         error: "Parametri richiesti mancanti",
@@ -58,7 +59,7 @@ export async function SearchProduct(
 
     // Validazione lunghezza productName (max 255 char)
     if (request.productName.length > 255) {
-      console.error("❌ Product name too long:", request.productName.length)
+      logger.error("❌ Product name too long:", request.productName.length)
       return {
         success: false,
         error: "Nome prodotto troppo lungo",
@@ -69,7 +70,7 @@ export async function SearchProduct(
 
     // Validazione: productName deve essere una stringa non vuota
     if (request.productName.trim().length === 0) {
-      console.error("❌ Empty product name")
+      logger.error("❌ Empty product name")
       return {
         success: false,
         error: "Nome prodotto vuoto",
@@ -90,7 +91,7 @@ export async function SearchProduct(
         },
       })
 
-      console.log("✅ SearchProduct saved:", {
+      logger.info("✅ SearchProduct saved:", {
         searchId: productSearch.id,
         productName: request.productName,
       })
@@ -104,7 +105,7 @@ export async function SearchProduct(
         timestamp: new Date().toISOString(),
       }
     } catch (dbError) {
-      console.error("❌ Database error in SearchProduct:", dbError)
+      logger.error("❌ Database error in SearchProduct:", dbError)
       await prisma.$disconnect()
 
       return {
@@ -115,7 +116,7 @@ export async function SearchProduct(
       }
     }
   } catch (error) {
-    console.error("❌ Error in SearchProduct:", error)
+    logger.error("❌ Error in SearchProduct:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Errore interno",

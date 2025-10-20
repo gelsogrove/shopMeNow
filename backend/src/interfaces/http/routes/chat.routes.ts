@@ -1,5 +1,6 @@
 import express from "express"
 import { recentChatsRateLimiter } from "../../../middlewares/rateLimiter"
+import logger from "../../../utils/logger"
 import { ChatController } from "../controllers/chat.controller"
 import { asyncHandler } from "../middlewares/async.middleware"
 import { authMiddleware } from "../middlewares/auth.middleware"
@@ -143,7 +144,7 @@ export const chatRouter = (chatController: ChatController): express.Router => {
         const timeToReset = recentChatsRateLimiter.getTimeToReset(identifier)
         const currentCount = recentChatsRateLimiter.getCurrentCount(identifier)
 
-        console.log(
+        logger.info(
           `🚫 Rate limit exceeded for ${identifier}: ${currentCount} requests, reset in ${Math.ceil(timeToReset / 1000)}s`
         )
 

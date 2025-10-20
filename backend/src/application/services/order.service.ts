@@ -210,6 +210,55 @@ export class OrderService {
         throw new Error("Order ID is required")
       }
 
+      // Check if order exists and get current status
+      const existingOrder = await this.orderRepository.findById(id, workspaceId)
+      if (!existingOrder) {
+        throw new Error("Order not found")
+      }
+
+      // Determine the final status (after update)
+      const finalStatus = orderData.status || existingOrder.status
+
+      // Block modification of order items if FINAL status is NOT PENDING or PROCESSING
+      if (
+        finalStatus !== "PENDING" &&
+        finalStatus !== "PROCESSING" &&
+        orderData.items !== undefined
+      ) {
+        // Check if items have actually changed
+        const existingItemIds = existingOrder.items
+          .map((item: any) => item.id)
+          .sort()
+        const newItemIds = orderData.items
+          .map((item: any) => item.id || "new")
+          .sort()
+
+        const itemsCountChanged =
+          existingOrder.items.length !== orderData.items.length
+        const itemsIdsChanged =
+          JSON.stringify(existingItemIds) !== JSON.stringify(newItemIds)
+
+        // Check if quantities have changed
+        let quantitiesChanged = false
+        if (!itemsCountChanged && !itemsIdsChanged) {
+          for (const newItem of orderData.items) {
+            const existingItem = existingOrder.items.find(
+              (item: any) => item.id === newItem.id
+            )
+            if (existingItem && existingItem.quantity !== newItem.quantity) {
+              quantitiesChanged = true
+              break
+            }
+          }
+        }
+
+        if (itemsCountChanged || itemsIdsChanged || quantitiesChanged) {
+          throw new Error(
+            `Cannot modify order items when status is ${finalStatus}. Only PENDING and PROCESSING orders can have items modified.`
+          )
+        }
+      }
+
       // Check if totalAmount is valid when provided
       if (orderData.totalAmount !== undefined && orderData.totalAmount <= 0) {
         throw new Error("Total amount must be greater than 0")

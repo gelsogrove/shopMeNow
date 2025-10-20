@@ -1,11 +1,13 @@
 /**
  * GetShipmentTrackingLink - LLM-Callable Function
- * 
+ *
  * Genera un link DHL per tracciare la spedizione di un ordine.
  * Utilizzata quando l'utente chiede: "dov'è il mio ordine?", "tracking spedizione", etc.
- * 
+ *
  * @see docs/prompt_agent.md - Line 210: Definizione della calling function
  */
+
+import logger from "../../utils/logger"
 
 export interface GetShipmentTrackingLinkRequest {
   customerId: string
@@ -27,7 +29,7 @@ export interface GetShipmentTrackingLinkResult {
 
 /**
  * Generates DHL tracking link for order shipment
- * 
+ *
  * @param request - Request parameters
  * @returns Short URL redirecting to DHL tracking page
  */
@@ -35,8 +37,7 @@ export async function GetShipmentTrackingLink(
   request: GetShipmentTrackingLinkRequest
 ): Promise<GetShipmentTrackingLinkResult> {
   try {
-    console.log("📦 GetShipmentTrackingLink called with:", request)
-
+    logger.info("📦 GetShipmentTrackingLink called with:", request)
     const { PrismaClient } = require("@prisma/client")
     const prisma = new PrismaClient()
 
@@ -59,7 +60,7 @@ export async function GetShipmentTrackingLink(
       await prisma.$disconnect()
 
       if (!order) {
-        console.log("❌ Order not found:", request.orderCode || "ultimo ordine")
+        logger.info("❌ Order not found:", request.orderCode || "ultimo ordine")
         return {
           success: false,
           error: "Ordine non trovato",
@@ -69,17 +70,17 @@ export async function GetShipmentTrackingLink(
       }
 
       if (!order.trackingNumber) {
-        console.log("❌ No tracking number for order:", order.orderCode)
+        logger.info("❌ No tracking number for order:", order.orderCode)
         return {
           success: false,
           error: "Non c'è il tracking-id nell'ordine",
-          message: "Il tracking della spedizione non è ancora disponibile per questo ordine.",
+          message:
+            "Il tracking della spedizione non è ancora disponibile per questo ordine.",
           timestamp: new Date().toISOString(),
         }
       }
 
-      console.log("✅ Order found with tracking:", order.trackingNumber)
-
+      logger.info("✅ Order found with tracking:", order.trackingNumber)
       // Generate direct DHL tracking link
       const dhlTrackingUrl = `https://www.dhl.com/global-en/home/tracking/tracking-express.html?tracking-id=${encodeURIComponent(
         order.trackingNumber
@@ -98,8 +99,7 @@ export async function GetShipmentTrackingLink(
 
         const shortTrackingUrl = shortResult.shortUrl
 
-        console.log(`📎 Short tracking link created: ${shortTrackingUrl}`)
-
+        logger.info(`📎 Short tracking link created: ${shortTrackingUrl}`)
         return {
           success: true,
           linkUrl: shortTrackingUrl,
@@ -110,8 +110,7 @@ export async function GetShipmentTrackingLink(
           timestamp: new Date().toISOString(),
         }
       } catch (shortError) {
-        console.warn("⚠️ Failed to create short URL, using direct DHL link")
-
+        logger.warn("⚠️ Failed to create short URL, using direct DHL link")
         // Fallback to direct DHL link
         return {
           success: true,
@@ -124,7 +123,7 @@ export async function GetShipmentTrackingLink(
         }
       }
     } catch (dbError) {
-      console.error("❌ Database error:", dbError)
+      logger.error("❌ Database error:", dbError)
       await prisma.$disconnect()
 
       return {
@@ -135,7 +134,7 @@ export async function GetShipmentTrackingLink(
       }
     }
   } catch (error) {
-    console.error("❌ Error in GetShipmentTrackingLink:", error)
+    logger.error("❌ Error in GetShipmentTrackingLink:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Errore interno",

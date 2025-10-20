@@ -132,14 +132,13 @@ export class CustomersController {
       const { id, workspaceId } = req.params
 
       // DIRECT console.log - NOT logger!
-      console.log("=== CONTROLLER RAW BODY ===")
-      console.log("typeof req.body:", typeof req.body)
-      console.log("req.body:", req.body)
-      console.log("req.body.salesId:", req.body.salesId)
-      console.log("'salesId' in req.body:", "salesId" in req.body)
-      console.log("Object.keys(req.body):", Object.keys(req.body))
-      console.log("===========================")
-
+      logger.info("=== CONTROLLER RAW BODY ===")
+      logger.info("typeof req.body:", typeof req.body)
+      logger.info("req.body:", req.body)
+      logger.info("req.body.salesId:", req.body.salesId)
+      logger.info("'salesId' in req.body:", "salesId" in req.body)
+      logger.info("Object.keys(req.body):", Object.keys(req.body))
+      logger.info("===========================")
       const {
         name,
         email,
@@ -161,13 +160,12 @@ export class CustomersController {
         salesId,
       } = req.body
 
-      console.log("=== AFTER DESTRUCTURING ===")
-      console.log("salesId variable:", salesId)
-      console.log("typeof salesId:", typeof salesId)
-      console.log("salesId === undefined:", salesId === undefined)
-      console.log("salesId === null:", salesId === null)
-      console.log("===========================")
-
+      logger.info("=== AFTER DESTRUCTURING ===")
+      logger.info("salesId variable:", salesId)
+      logger.info("typeof salesId:", typeof salesId)
+      logger.info("salesId === undefined:", salesId === undefined)
+      logger.info("salesId === null:", salesId === null)
+      logger.info("===========================")
       // Get original customer data to compare changes
       const originalCustomer = await this.customerService.getById(
         id,

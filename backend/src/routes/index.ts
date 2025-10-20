@@ -49,10 +49,9 @@ async function checkCustomerBlacklist(
     })
 
     // ✅ BLACKLIST CHECK ENABLED - Check customer blacklist status
-    console.log(`🚫 ${format}: Checking blacklist status for ${phoneNumber}`)
-
+    logger.info(`🚫 ${format}: Checking blacklist status for ${phoneNumber}`)
     if (customer?.isBlacklisted) {
-      console.log(
+      logger.info(
         `🚫 ${format}: Customer ${phoneNumber} is blacklisted - IGNORING MESSAGE`
       )
       res.status(200).json({
@@ -157,7 +156,7 @@ async function handleNewUserWelcomeFlow(
     )
     if (isBlocked) {
       // ✅ REGISTRATION ATTEMPTS CHECK ENABLED - Block users with too many attempts
-      console.log(
+      logger.info(
         `🚫 ${format}: User ${phoneNumber} is blocked due to too many registration attempts - IGNORING MESSAGE`
       )
       res.status(200).json({
@@ -175,14 +174,14 @@ async function handleNewUserWelcomeFlow(
       phoneNumber,
       workspaceId
     )
-    console.log(
+    logger.info(
       `📊 ${format}: Registration attempt ${attempt.attemptCount}/3 for ${phoneNumber}`
     )
 
     // If user is now blocked after this attempt, ignore completely (blacklist totale)
     if (attempt.isBlocked) {
       // ✅ REGISTRATION ATTEMPTS CHECK ENABLED - Block users after too many attempts
-      console.log(
+      logger.info(
         `🚫 ${format}: User ${phoneNumber} blocked after ${attempt.attemptCount} attempts - IGNORING MESSAGE`
       )
       res.status(200).json({
@@ -205,7 +204,7 @@ async function handleNewUserWelcomeFlow(
       detectedLanguage
     )
     if (!welcomeMessage) {
-      console.error(
+      logger.error(
         `❌ ${format}: No welcome message found for language ${detectedLanguage} in workspace ${workspaceId}`
       )
       res.status(500).send("ERROR")
@@ -253,18 +252,18 @@ async function handleNewUserWelcomeFlow(
           attemptCount: attempt.attemptCount,
         }),
       })
-      console.log(
+      logger.info(
         `💾 ${format}: New user welcome message saved to history for ${phoneNumber}`
       )
     } catch (saveError) {
-      console.error(
+      logger.error(
         `❌ ${format}: Failed to save new user welcome message:`,
         saveError
       )
       // Continue - don't fail the whole request if save fails
     }
 
-    console.log(
+    logger.info(
       `✅ ${format}: New user welcome message sent to ${phoneNumber} in ${detectedLanguage}`
     )
     res.status(200).json({
@@ -277,7 +276,7 @@ async function handleNewUserWelcomeFlow(
 
     return true // Handled successfully
   } catch (error) {
-    console.error(
+    logger.error(
       `❌ ${format}: Error handling new user welcome flow for ${phoneNumber}:`,
       error
     )
@@ -322,6 +321,7 @@ import workspaceRoutesLegacy from "./workspace.routes"
 import { SettingsController } from "../interfaces/http/controllers/settings.controller"
 import { authMiddleware } from "../interfaces/http/middlewares/auth.middleware"
 import { sessionValidationMiddleware } from "../interfaces/http/middlewares/session-validation.middleware"
+import { workspaceValidationMiddleware } from "../interfaces/http/middlewares/workspace-validation.middleware"
 import { createUserRouter } from "../interfaces/http/routes/user.routes"
 // Import analytics routes
 import analyticsRoutes from "../interfaces/http/routes/analytics.routes"
@@ -411,7 +411,7 @@ import { LLMRequest } from "../types/whatsapp.types"
 
 // 🔧 FIX: /api/chat endpoint for WhatsApp compatibility (NO AUTHENTICATION)
 router.post("/chat", async (req, res) => {
-  console.log(
+  logger.info(
     "🔧 COMPATIBILITY: /api/chat called - forwarding to WhatsApp webhook logic"
   )
 
@@ -430,7 +430,7 @@ router.post("/chat", async (req, res) => {
       const verifyToken =
         process.env.WHATSAPP_VERIFY_TOKEN || "test-verify-token"
       if (mode === "subscribe" && token === verifyToken) {
-        console.log("WhatsApp webhook verified via /api/chat")
+        logger.info("WhatsApp webhook verified via /api/chat")
         res.status(200).send(challenge)
         return
       }
@@ -441,8 +441,7 @@ router.post("/chat", async (req, res) => {
 
     // Process as WhatsApp message - extract message from body
     const body = req.body
-    console.log("🔧 /api/chat: Processing body:", JSON.stringify(body, null, 2))
-
+    logger.info("🔧 /api/chat: Processing body:", JSON.stringify(body, null, 2))
     // Handle direct message format: {message: "text", phoneNumber: "+123", workspaceId: "xyz"}
     if (body?.message && body?.phoneNumber && body?.workspaceId) {
       try {
@@ -507,11 +506,11 @@ router.post("/chat", async (req, res) => {
           if (agentConfig?.maxTokens) {
             agentMaxTokens = agentConfig.maxTokens
           }
-          console.log(
+          logger.info(
             `🔧 /api/chat: Using agent model: ${agentModel}, maxTokens: ${agentMaxTokens}`
           )
         } catch (error) {
-          console.error("❌ Error fetching agent config:", error)
+          logger.error("❌ Error fetching agent config:", error)
         }
 
         // 🔧 CRITICAL FIX: Replace variables in prompt like webhook does
@@ -539,12 +538,12 @@ router.post("/chat", async (req, res) => {
               content: msg.content,
             }))
 
-            console.log(
+            logger.info(
               `🔍 /api/chat: Loaded ${chatHistory.length} messages from history for customer ${customer.id}`
             )
           }
         } catch (historyError) {
-          console.error("❌ Error loading chat history:", historyError)
+          logger.error("❌ Error loading chat history:", historyError)
           // Continue without history if error occurs
         }
 
@@ -561,10 +560,10 @@ router.post("/chat", async (req, res) => {
           prompt: agentPrompt, // 🔧 Now includes processed prompt with variables
         }
 
-        console.log(
+        logger.info(
           `🔧 /api/chat: LLM Request customerid: "${customer?.id || ""}" for customer: ${customer?.name || "Unknown"}`
         )
-        console.log(
+        logger.info(
           `🔧 /api/chat: LLM Request workspaceId: "${body.workspaceId}"`
         )
 
@@ -572,7 +571,7 @@ router.post("/chat", async (req, res) => {
 
         // Check if customer is blocked - if IGNORE is returned, stop processing completely
         if (response === "IGNORE") {
-          console.log(
+          logger.info(
             "🚫 /api/chat: Customer blocked - ignoring message completely"
           )
           res.status(200).json({
@@ -593,12 +592,12 @@ router.post("/chat", async (req, res) => {
               direction: "INBOUND",
               processingSource: "api-chat-endpoint",
             })
-            console.log(
+            logger.info(
               "💾 /api/chat: Message saved to database for conversation history"
             )
           }
         } catch (saveError) {
-          console.error("❌ /api/chat: Failed to save message:", saveError)
+          logger.error("❌ /api/chat: Failed to save message:", saveError)
           // Continue - don't fail the whole request if save fails
         }
 
@@ -607,7 +606,7 @@ router.post("/chat", async (req, res) => {
           debug: response.debugInfo, // 🔧 FIX: Map debugInfo to debug for frontend compatibility
         })
       } catch (error) {
-        console.error("❌ Error in /api/chat endpoint:", error)
+        logger.error("❌ Error in /api/chat endpoint:", error)
         return res.status(500).json({
           status: "error",
           message: "Internal server error processing chat request",
@@ -622,7 +621,7 @@ router.post("/chat", async (req, res) => {
         "Invalid request format for /api/chat endpoint. Expected: {message, phoneNumber, workspaceId}",
     })
   } catch (error) {
-    console.error("🔧 Error in /api/chat endpoint:", error)
+    logger.error("🔧 Error in /api/chat endpoint:", error)
     res.status(500).json({
       status: "error",
       message:
@@ -634,9 +633,9 @@ router.post("/chat", async (req, res) => {
 // Public WhatsApp webhook routes (NO AUTHENTICATION)
 // 🔒 SECURITY: Rate limited to 10 requests per minute per IP
 router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
-  console.log("🔥 WEBHOOK POST RECEIVED", new Date().toISOString()) // 🔧 FIRST LOG
-  console.log("📨 Request body:", JSON.stringify(req.body, null, 2)) // 🔧 DEBUG BODY
-  console.log("📨 Request headers:", JSON.stringify(req.headers, null, 2)) // 🔧 DEBUG HEADERS
+  logger.info("🔥 WEBHOOK POST RECEIVED", new Date().toISOString())
+  logger.info("📨 Request body:", JSON.stringify(req.body, null, 2))
+  logger.info("📨 Request headers:", JSON.stringify(req.headers, null, 2))
 
   // 🔧 WRITE TO DEBUG FILE
   const fs = require("fs")
@@ -652,12 +651,11 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
   )
 
   try {
-    console.log("🚨🚨🚨 WEBHOOK: INITIALIZING LLM SERVICE")
+    logger.info("🚨🚨🚨 WEBHOOK: INITIALIZING LLM SERVICE")
     // Initialize services
     const llmService = new LLMService()
     const messageRepository = new MessageRepository()
-    console.log("🚨🚨🚨 WEBHOOK: LLM SERVICE INITIALIZED")
-
+    logger.info("🚨🚨🚨 WEBHOOK: LLM SERVICE INITIALIZED")
     // For GET requests (verification)
     if (req.method === "GET") {
       const mode = req.query["hub.mode"]
@@ -667,7 +665,7 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
       const verifyToken =
         process.env.WHATSAPP_VERIFY_TOKEN || "test-verify-token"
       if (mode === "subscribe" && token === verifyToken) {
-        console.log("WhatsApp webhook verified")
+        logger.info("WhatsApp webhook verified")
         res.status(200).send(challenge)
         return
       }
@@ -683,12 +681,12 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
     let phoneNumber, messageContent, workspaceId, customerId
 
     // Check if it's WhatsApp format
-    console.log(
+    logger.info(
       "🔍 CHECKING FORMAT - WhatsApp condition:",
       !!data.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.from
     )
     if (data.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.from) {
-      console.log("📱 USING WHATSAPP FORMAT")
+      logger.info("📱 USING WHATSAPP FORMAT")
       phoneNumber = data.entry[0].changes[0].value.messages[0].from
       messageContent = data.entry[0].changes[0].value.messages[0].text?.body
       workspaceId =
@@ -696,7 +694,7 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
 
       // Find customer by phone number with ALL needed data in ONE query
       try {
-        console.log(
+        logger.info(
           `🔍 WHATSAPP: Looking for customer with phone="${phoneNumber}" (normalized: "${phoneNumber.replace(/\s+/g, "")}")`
         )
 
@@ -729,13 +727,12 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
           }
 
           customerId = customer.id
-          console.log(
+          logger.info(
             `✅ WHATSAPP: Customer found: ${customer.name} (${customer.phone})`
           )
         } else {
           // 🆕 NEW USER DETECTED - Use handleNewUserWelcomeFlow for consistency
-          console.log(`🆕 New user detected for phone: ${phoneNumber}`)
-
+          logger.info(`🆕 New user detected for phone: ${phoneNumber}`)
           // Handle new user welcome flow using the centralized function
           const handled = await handleNewUserWelcomeFlow(
             phoneNumber,
@@ -754,7 +751,7 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
           ;(req as any).customerData = customer
         }
       } catch (error) {
-        console.error("❌ Error finding customer:", error)
+        logger.error("❌ Error finding customer:", error)
         res.status(500).send("ERROR")
         return
       }
@@ -765,13 +762,13 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
       phoneNumber = data.phoneNumber
       workspaceId = data.workspaceId
 
-      console.log(
+      logger.info(
         `🖥️ FRONTEND FORMAT: Processing message from ${phoneNumber}: "${messageContent}"`
       )
 
       // Get full customer data (including language) for frontend format
       try {
-        console.log(
+        logger.info(
           `🔍 FRONTEND FORMAT: Searching for customer with phone="${phoneNumber}" (normalized: "${phoneNumber.replace(/\s+/g, "")}"), workspaceId="${workspaceId}"`
         )
         const customer = await prisma.customers.findFirst({
@@ -791,7 +788,7 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
           },
         })
 
-        console.log(
+        logger.info(
           `🔍 FRONTEND FORMAT: Customer found:`,
           customer ? `${customer.name} (${customer.phone})` : "NONE"
         )
@@ -799,7 +796,7 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
         if (customer) {
           // ✅ BLACKLIST CHECK ENABLED - Check customer blacklist status
           if (customer.isBlacklisted) {
-            console.log(
+            logger.info(
               `🚫 FRONTEND FORMAT: Customer ${phoneNumber} is blacklisted - IGNORING MESSAGE`
             )
             res.status(200).json({
@@ -813,13 +810,12 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
           }
 
           customerId = customer.id
-          console.log(
+          logger.info(
             `✅ FRONTEND FORMAT: Customer found: ${customer.name} (${customer.phone})`
           )
         } else {
           // New user - handle welcome flow
-          console.log(`🆕 FRONTEND FORMAT: New user detected: ${phoneNumber}`)
-
+          logger.info(`🆕 FRONTEND FORMAT: New user detected: ${phoneNumber}`)
           // Handle new user welcome flow (includes blocking logic)
           const handled = await handleNewUserWelcomeFlow(
             phoneNumber,
@@ -833,7 +829,7 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
           }
         }
       } catch (error) {
-        console.error(
+        logger.error(
           "❌ Error getting customer data in frontend format:",
           error
         )
@@ -851,8 +847,6 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
 
       // Get full customer data (including language) for test format
       try {
-        // console.log(`🔍 TEST FORMAT: Looking for customer with phone: "${phoneNumber}" in workspace: "${workspaceId}"`);
-
         const customer = await prisma.customers.findFirst({
           where: {
             phone: phoneNumber.replace(/\s+/g, ""),
@@ -869,8 +863,6 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
           },
         })
 
-        // console.log(`🔍 TEST FORMAT: Customer search result:`, customer);
-
         if (customer) {
           // ✅ BLACKLIST CHECK ENABLED - Check customer blacklist status
           const isBlacklisted = await checkCustomerBlacklist(
@@ -884,7 +876,7 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
           }
 
           phoneNumber = customer.phone || "test-phone-123"
-          console.log(
+          logger.info(
             `✅ TEST: Customer found: ${customer.name} (${customer.phone}) - Language: ${customer.language}`
           )
 
@@ -892,7 +884,7 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
           ;(req as any).customerData = customer
         } else {
           // 🆕 NEW USER DETECTED IN TEST FORMAT - Use handleNewUserWelcomeFlow for consistency
-          console.log(
+          logger.info(
             `🆕 TEST FORMAT: New user detected for phone: ${phoneNumber}`
           )
 
@@ -909,7 +901,7 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
           }
         }
       } catch (error) {
-        console.error("❌ Error getting customer data in test format:", error)
+        logger.error("❌ Error getting customer data in test format:", error)
         res.status(500).send("ERROR")
         return
       }
@@ -932,7 +924,7 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
       )
 
       if (spamResult.isSpam) {
-        console.log(
+        logger.info(
           `🚨 SPAM DETECTED: ${phoneNumber} sent ${spamResult.messageCount} messages in ${spamResult.timeWindow} seconds`
         )
 
@@ -954,7 +946,7 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
         return
       }
     } catch (spamError) {
-      console.error("❌ Error in spam detection:", spamError)
+      logger.error("❌ Error in spam detection:", spamError)
       // Continue processing if spam detection fails
     }
 
@@ -976,7 +968,7 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
         isSessionDisabled = true
       }
     } catch (sessionError) {
-      console.error("❌ Error checking session status:", sessionError)
+      logger.error("❌ Error checking session status:", sessionError)
       // Continue with normal processing if check fails
     }
 
@@ -1021,13 +1013,12 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
         if (agentConfig?.maxTokens) {
           agentMaxTokens = agentConfig.maxTokens
         }
-        console.log(
+        logger.info(
           `🔧 WEBHOOK: Using agent model: ${agentModel}, maxTokens: ${agentMaxTokens}`
         )
 
         // Use customer data from first query (avoid double query)
         const customer = (req as any).customerData
-        // console.log('🔍 Customer data for variables:', customer);
 
         // Get last order
         const lastOrder = await prisma.orders.findFirst({
@@ -1075,24 +1066,21 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
               customer?.name || "Cliente",
               customer?.language || "it"
             )
-            console.log(
+            logger.info(
               `👋 WELCOME BACK: Customer ${customer?.name} returning after >2 hours - message: ${welcomeBackMessage}`
             )
           } else {
-            console.log(
+            logger.info(
               `👋 WELCOME BACK: Customer ${customer?.name} has recent activity - no welcome back needed`
             )
           }
         } catch (welcomeBackError) {
-          console.error(
+          logger.error(
             "❌ Error checking welcome back status:",
             welcomeBackError
           )
           // Continue without welcome back message if error occurs
         }
-
-        // console.log('✅ Variables prepared:', variables);
-        // console.log(`🌐 WEBHOOK DEBUG: Customer language is "${customer?.language}", setting languageUser to "${variables.languageUser}"`);
 
         // Replace variables in prompt
         agentPrompt = agentPrompt
@@ -1102,19 +1090,13 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
           .replace(/\{\{lastorder\}\}/g, variables.lastorder)
           .replace(/\{\{lastordercode\}\}/g, variables.lastordercode)
           .replace(/\{\{languageUser\}\}/g, variables.languageUser)
-
-        // console.log(`🌐 WEBHOOK DEBUG: Prompt after language substitution contains: ${agentPrompt.includes('languageUser: en') ? 'YES' : 'NO'} "languageUser: en"`);
       } catch (error) {
-        console.error("❌ Error processing customer data:", error)
+        logger.error("❌ Error processing customer data:", error)
       }
-
-      // console.log(`🔍 STARTING CHAT HISTORY RETRIEVAL - Customer: ${customerId}, Workspace: ${workspaceId}`); // 🔧 MOVED OUTSIDE TRY-CATCH
 
       //  RETRIEVE CHAT HISTORY FOR CONTEXT
       let chatHistory: any[] = []
       try {
-        // console.log(`🔍 SEARCHING FOR CHAT SESSION - Customer: ${customerId}, Workspace: ${workspaceId}`); // 🔧 DEBUG
-
         // Find or create chat session
         chatSession = await prisma.chatSession.findFirst({
           where: {
@@ -1139,7 +1121,6 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
 
         // 🔧 CREATE CHAT SESSION IF NOT EXISTS
         if (!chatSession) {
-          // console.log('🔧 Creating new chat session for customer:', customerId);
           chatSession = await prisma.chatSession.create({
             data: {
               customerId: customerId,
@@ -1164,26 +1145,19 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
             role: msg.direction === "INBOUND" ? "user" : "assistant",
             content: msg.content,
           }))
-          // console.log(`🗨️ WEBHOOK: Retrieved ${chatHistory.length} messages from chat history (last 24h only)`);
-          // console.log(`🗨️ WEBHOOK: Chat history preview:`, chatHistory.slice(-3)); // Last 3 messages
-          // console.log(`⏰ WEBHOOK: Time filter applied - excluding messages older than 24 hours`);
-          // console.log(`🔍 WEBHOOK: Full chat history:`, JSON.stringify(chatHistory, null, 2)); // 🔧 FULL DEBUG
         } else {
-          // console.log('🗨️ WEBHOOK: No chat history found, starting fresh conversation');
-          // console.log(`🗨️ WEBHOOK: Customer ID: ${customerId}, Workspace ID: ${workspaceId}`);
-          // console.log(`🔍 WEBHOOK: ChatSession exists: ${!!chatSession}, Messages count: ${chatSession?.messages?.length || 0}`); // 🔧 DEBUG
         }
 
         // 💾 NOTE: User message will be saved AFTER LLM processing by messageRepository.saveMessage()
         // This avoids duplicate message saving in the database
-        console.log(
+        logger.info(
           "� WEBHOOK: Skipping immediate user message save to avoid duplication"
         )
-        console.log(
+        logger.info(
           "� WEBHOOK: User message will be saved by messageRepository.saveMessage() after LLM processing"
         )
       } catch (historyError) {
-        console.error("❌ Error retrieving chat history:", historyError)
+        logger.error("❌ Error retrieving chat history:", historyError)
         // Continue without history if error occurs
       }
 
@@ -1202,12 +1176,12 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
         welcomeBackMessage: welcomeBackMessage || null, // 🎯 TASK: Pass welcome back message to LLM
       }
 
-      console.log(
+      logger.info(
         `🔧 WEBHOOK: LLM Request customerid: "${customerId}" workspaceId: "${workspaceId}"`
       )
 
       // Process with LLM service
-      console.log(
+      logger.info(
         "🚀 WEBHOOK: About to call LLM service with input:",
         messageContent
       )
@@ -1215,7 +1189,7 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
 
       // Check if customer is blocked - if IGNORE is returned, save user message but don't process response
       if (result === "IGNORE") {
-        console.log(
+        logger.info(
           "🚫 WEBHOOK: Customer blocked - saving user message only, no bot response"
         )
 
@@ -1230,7 +1204,7 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
           processingSource: "blocked-customer-no-response",
         })
 
-        console.log(
+        logger.info(
           "💾 WEBHOOK: User message saved, waiting for human operator response"
         )
 
@@ -1249,7 +1223,7 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
             },
           }
 
-          console.log(
+          logger.info(
             "🚫 WEBHOOK: Sending blocked customer response:",
             JSON.stringify(blockedResponse, null, 2)
           )
@@ -1261,7 +1235,7 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
         return
       }
 
-      console.log("🚀 WEBHOOK: LLM result received:", {
+      logger.info("🚀 WEBHOOK: LLM result received:", {
         success: result.success,
         hasOutput: !!result.output,
         translatedQuery: result.translatedQuery,
@@ -1296,15 +1270,14 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
 
         // 💰 Billing tracking is handled by messageRepository.saveMessage()
         // (removed duplicate tracking to avoid double billing)
-        console.log(`💰 Billing will be tracked by message.repository.ts`)
-
+        logger.info(`💰 Billing will be tracked by message.repository.ts`)
         // 💾 SAVE MESSAGE RESPONSE - handled by messageRepository.saveMessage() above
         // Assistant response is already saved by messageRepository.saveMessage()
-        console.log(
+        logger.info(
           "💾 Message and assistant response saved by messageRepository.saveMessage()"
         )
       } catch (saveError) {
-        console.error("❌ Failed to save message:", saveError)
+        logger.error("❌ Failed to save message:", saveError)
         // Continue - don't fail the whole request if save fails
       }
     }
@@ -1339,7 +1312,7 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
       },
     })
   } catch (error) {
-    console.error("❌ WHATSAPP WEBHOOK ERROR:", error)
+    logger.error("❌ WHATSAPP WEBHOOK ERROR:", error)
     res.status(500).json({
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
@@ -1355,7 +1328,7 @@ router.get("/whatsapp/webhook", async (req, res) => {
 
   const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN || "test-verify-token"
   if (mode === "subscribe" && token === verifyToken) {
-    console.log("WhatsApp webhook verified")
+    logger.info("WhatsApp webhook verified")
     res.status(200).send(challenge)
     return
   }
@@ -1533,6 +1506,12 @@ router.use("/workspaces/:workspaceId/orders", ordersRouterInstance)
 router.use("/orders", ordersRouterInstance)
 logger.info("Registered orders router with workspace routes")
 
+// Mount cart routes with workspace context (for price calculation)
+router.use("/workspaces/:workspaceId/cart", cartRouter)
+logger.info(
+  "Registered cart router with workspace routes for price calculation"
+)
+
 // Mount public orders routes (JWT-based)
 import ordersPublicRoutes from "../interfaces/http/routes/orders.routes"
 router.use("/orders", ordersPublicRoutes)
@@ -1568,16 +1547,21 @@ router.get("/health", (req, res) => {
   })
 })
 
-// Simple test route for workspace agent debugging
-router.get("/workspaces/:workspaceId/agent-test", (req, res) => {
-  res.json({
-    success: true,
-    message: "Test route working",
-    workspaceId: req.params.workspaceId,
-    originalUrl: req.originalUrl,
-    params: req.params,
-  })
-})
+// Simple test route for workspace agent debugging (🔒 PROTECTED)
+router.get(
+  "/workspaces/:workspaceId/agent-test",
+  authMiddleware, // ⚠️ FIXED: Added auth protection
+  workspaceValidationMiddleware, // ⚠️ FIXED: Added workspace validation
+  (req, res) => {
+    res.json({
+      success: true,
+      message: "Test route working",
+      workspaceId: req.params.workspaceId,
+      originalUrl: req.originalUrl,
+      params: req.params,
+    })
+  }
+)
 
 logger.info("API routes setup complete")
 

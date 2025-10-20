@@ -451,23 +451,23 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
 
       // Hard delete in cascading order to avoid foreign key constraints
       await this.prisma.$transaction(async (tx) => {
-        // 1. Delete document chunks
-        await tx.documentChunks.deleteMany({
-          where: {
-            document: {
-              workspaceId: id,
-            },
-          },
-        })
+        // 1. Delete document chunks - REMOVED: table no longer exists
+        // await tx.documentChunks.deleteMany({
+        //   where: {
+        //     document: {
+        //       workspaceId: id,
+        //     },
+        //   },
+        // })
 
-        // 2. Delete FAQ chunks
-        await tx.fAQChunks.deleteMany({
-          where: {
-            faq: {
-              workspaceId: id,
-            },
-          },
-        })
+        // 2. Delete FAQ chunks - REMOVED: table no longer exists
+        // await tx.fAQChunks.deleteMany({
+        //   where: {
+        //     faq: {
+        //       workspaceId: id,
+        //     },
+        //   },
+        // })
 
         // 3. Delete documents
         await tx.documents.deleteMany({

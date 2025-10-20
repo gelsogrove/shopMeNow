@@ -1,4 +1,4 @@
-import { RotateCw, X } from "lucide-react"
+import { Monitor, RotateCw, Smartphone, Tablet, X } from "lucide-react"
 import React, { useState } from "react"
 
 interface CartIframePopupProps {
@@ -10,19 +10,38 @@ interface CartIframePopupProps {
 
 type ViewMode = "mobile" | "tablet" | "desktop"
 
+const STORAGE_KEY = "shopme_cart_iframe_view_mode"
+
 export const CartIframePopup: React.FC<CartIframePopupProps> = ({
   isOpen,
   onClose,
   iframeSrc,
   layoutType = "modal",
 }) => {
-  const [viewMode, setViewMode] = useState<ViewMode>("mobile")
+  // 💾 Load saved view mode from localStorage on mount
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      return (saved as ViewMode) || "mobile"
+    } catch {
+      return "mobile"
+    }
+  })
   const [iframeKey, setIframeKey] = useState(0) // 🔄 Key per forzare reload iframe
 
   const cycleViewMode = () => {
-    if (viewMode === "mobile") setViewMode("tablet")
-    else if (viewMode === "tablet") setViewMode("desktop")
-    else setViewMode("mobile")
+    let newMode: ViewMode
+    if (viewMode === "mobile") newMode = "tablet"
+    else if (viewMode === "tablet") newMode = "desktop"
+    else newMode = "mobile"
+
+    setViewMode(newMode)
+    // 💾 Save to localStorage
+    try {
+      localStorage.setItem(STORAGE_KEY, newMode)
+    } catch (error) {
+      console.error("Failed to save view mode:", error)
+    }
   }
 
   // 🔄 Refresh iframe content (force reload)
@@ -86,6 +105,27 @@ export const CartIframePopup: React.FC<CartIframePopupProps> = ({
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h3 className="font-semibold text-gray-900">Preview</h3>
           <div className="flex gap-2">
+            <button
+              onClick={cycleViewMode}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              title={`Switch to ${
+                viewMode === "mobile"
+                  ? "tablet"
+                  : viewMode === "tablet"
+                  ? "desktop"
+                  : "mobile"
+              } view`}
+            >
+              {viewMode === "mobile" && (
+                <Smartphone className="h-4 w-4 text-blue-600" />
+              )}
+              {viewMode === "tablet" && (
+                <Tablet className="h-4 w-4 text-purple-600" />
+              )}
+              {viewMode === "desktop" && (
+                <Monitor className="h-4 w-4 text-green-600" />
+              )}
+            </button>
             <button
               onClick={refreshIframe}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -206,10 +246,27 @@ export const CartIframePopup: React.FC<CartIframePopupProps> = ({
             </>
           )}
 
+          {/* View Mode Button - Cycle through mobile/tablet/desktop */}
+          <button
+            onClick={cycleViewMode}
+            className="absolute -top-3 -right-[88px] flex items-center justify-center w-9 h-9 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors shadow-xl border-2 border-white z-[10000]"
+            title={`Switch to ${
+              viewMode === "mobile"
+                ? "tablet"
+                : viewMode === "tablet"
+                ? "desktop"
+                : "mobile"
+            } view`}
+          >
+            {viewMode === "mobile" && <Smartphone className="h-4 w-4" />}
+            {viewMode === "tablet" && <Tablet className="h-4 w-4" />}
+            {viewMode === "desktop" && <Monitor className="h-4 w-4" />}
+          </button>
+
           {/* Rotate Button - Refresh iframe content */}
           <button
             onClick={refreshIframe}
-            className="absolute -top-3 -right-14 flex items-center justify-center w-9 h-9 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-xl border-2 border-white z-[10000]"
+            className="absolute -top-3 -right-[50px] flex items-center justify-center w-9 h-9 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-xl border-2 border-white z-[10000]"
             title="Refresh content"
           >
             <RotateCw className="h-4 w-4" />

@@ -8,6 +8,7 @@ import {
   SuccessResponse,
   TokenResponse,
 } from "../types/whatsapp.types"
+import logger from "../utils/logger"
 
 export interface GetAllProductsRequest {
   workspaceId: string
@@ -34,8 +35,7 @@ export class CallingFunctionsService {
       error instanceof Error ? error.message : "Unknown error occurred"
     const details = error.response?.data?.message || errorMessage
 
-    console.error(`❌ ${context} error:`, error)
-
+    logger.error(`❌ ${context} error:`, error)
     return {
       success: false,
       error: errorMessage,
@@ -49,8 +49,7 @@ export class CallingFunctionsService {
     data: T,
     context: string
   ): SuccessResponse<T> {
-    console.log(`✅ ${context} response:`, data)
-
+    logger.info(`✅ ${context} response:`, data)
     return {
       success: true,
       data: data,
@@ -62,8 +61,7 @@ export class CallingFunctionsService {
     request: GetAllProductsRequest
   ): Promise<ServicesResponse> {
     try {
-      console.log("🔧 Calling getServices with:", request)
-
+      logger.info("🔧 Calling getServices with:", request)
       // Direct database query with Prisma for complete services list
       const { PrismaClient } = require("@prisma/client")
       const prisma = new PrismaClient()
@@ -88,8 +86,7 @@ export class CallingFunctionsService {
         } as ServicesResponse
       }
 
-      console.log("✅ Services found:", services.length)
-
+      logger.info("✅ Services found:", services.length)
       return {
         success: true,
         data: {
@@ -105,7 +102,7 @@ export class CallingFunctionsService {
         timestamp: new Date().toISOString(),
       }
     } catch (error) {
-      console.error("❌ Error in getServices:", error)
+      logger.error("❌ Error in getServices:", error)
       return this.createErrorResponse(error, "getServices") as ServicesResponse
     }
   }
@@ -114,14 +111,12 @@ export class CallingFunctionsService {
     request: GetOrdersListLinkRequest
   ): Promise<TokenResponse> {
     try {
-      console.log("🔧 Calling getOrdersListLink with:", request)
-
-      console.log("🔧 SecureTokenService instance:", !!this.secureTokenService)
-
+      logger.info("🔧 Calling getOrdersListLink with:", request)
+      logger.info("🔧 SecureTokenService instance:", !!this.secureTokenService)
       // If orderCode is specified, validate it exists in database
       if (request.orderCode) {
         try {
-          console.log(
+          logger.info(
             "🔍 Checking if order exists in database:",
             request.orderCode
           )
@@ -141,7 +136,7 @@ export class CallingFunctionsService {
           await prisma.$disconnect()
 
           if (!order) {
-            console.log("❌ Order not found in database:", request.orderCode)
+            logger.info("❌ Order not found in database:", request.orderCode)
             return {
               success: false,
               error: `Ordine non trovato`,
@@ -150,9 +145,9 @@ export class CallingFunctionsService {
             } as TokenResponse
           }
 
-          console.log("✅ Order found in database:", request.orderCode)
+          logger.info("✅ Order found in database:", request.orderCode)
         } catch (dbError) {
-          console.log("❌ Database error while checking order:", dbError)
+          logger.info("❌ Database error while checking order:", dbError)
           return {
             success: false,
             error: `Ordine non trovato`,
@@ -162,7 +157,7 @@ export class CallingFunctionsService {
         }
       }
 
-      console.log("🔧 About to create token...")
+      logger.info("🔧 About to create token...")
       const token = await this.secureTokenService.createToken(
         "orders",
         request.workspaceId,
@@ -173,8 +168,7 @@ export class CallingFunctionsService {
         undefined,
         request.customerId
       )
-      console.log("🔧 Token created successfully:", token)
-
+      logger.info("🔧 Token created successfully:", token)
       // Use centralized link generator for consistent URL shortening
       const {
         linkGeneratorService,
@@ -206,9 +200,8 @@ export class CallingFunctionsService {
     request: GetCartLinkRequest
   ): Promise<TokenResponse> {
     try {
-      console.log("🔧 Calling getCartLink with:", request)
-
-      console.log("🔧 About to create token...")
+      logger.info("🔧 Calling getCartLink with:", request)
+      logger.info("🔧 About to create token...")
       const token = await this.secureTokenService.createToken(
         "cart",
         request.workspaceId,
@@ -219,8 +212,7 @@ export class CallingFunctionsService {
         undefined,
         request.customerId
       )
-      console.log("🔧 Token created successfully:", token)
-
+      logger.info("🔧 Token created successfully:", token)
       // Use centralized link generator for consistent URL shortening
       const {
         linkGeneratorService,
@@ -248,9 +240,8 @@ export class CallingFunctionsService {
     request: GetCartLinkRequest
   ): Promise<TokenResponse> {
     try {
-      console.log("🔧 Calling getProfileLink with:", request)
-
-      console.log("🔧 About to create token...")
+      logger.info("🔧 Calling getProfileLink with:", request)
+      logger.info("🔧 About to create token...")
       const token = await this.secureTokenService.createToken(
         "profile",
         request.workspaceId,
@@ -261,8 +252,7 @@ export class CallingFunctionsService {
         undefined,
         request.customerId
       )
-      console.log("🔧 Token created successfully:", token)
-
+      logger.info("🔧 Token created successfully:", token)
       // Use centralized link generator for consistent URL shortening
       const {
         linkGeneratorService,
@@ -292,8 +282,7 @@ export class CallingFunctionsService {
     phoneNumber: string
   }): Promise<StandardResponse> {
     try {
-      console.log("🔧 Calling ContactOperator with:", request)
-
+      logger.info("🔧 Calling ContactOperator with:", request)
       // Import the ContactOperator function
       const {
         ContactOperator,
@@ -305,8 +294,7 @@ export class CallingFunctionsService {
         customerId: request.customerId, // 🎯 AGGIUNTO: customerId se disponibile
       })
 
-      console.log("✅ ContactOperator result:", result)
-
+      logger.info("✅ ContactOperator result:", result)
       return {
         success: true,
         message:
@@ -315,7 +303,7 @@ export class CallingFunctionsService {
         timestamp: new Date().toISOString(),
       }
     } catch (error) {
-      console.error("❌ Error in contactOperator:", error)
+      logger.error("❌ Error in contactOperator:", error)
       return {
         success: false,
         message:
@@ -335,7 +323,7 @@ export class CallingFunctionsService {
     workspaceId: string
   ): Promise<StandardResponse> {
     try {
-      console.log("🔧 Calling replaceLinkWithToken with:", {
+      logger.info("🔧 Calling replaceLinkWithToken with:", {
         response,
         linkType,
         customerId,
@@ -381,8 +369,7 @@ export class CallingFunctionsService {
     notes?: string
   }): Promise<any> {
     try {
-      console.log("🛒 Calling addProductToCart with:", request)
-
+      logger.info("🛒 Calling addProductToCart with:", request)
       const { PrismaClient } = require("@prisma/client")
       const prisma = new PrismaClient()
 
@@ -396,7 +383,7 @@ export class CallingFunctionsService {
         })
 
         if (!customer) {
-          console.error("❌ Customer not found in addProductToCart")
+          logger.error("❌ Customer not found in addProductToCart")
           return {
             success: false,
             error: "Cliente non trovato",
@@ -415,7 +402,7 @@ export class CallingFunctionsService {
         })
 
         if (!product) {
-          console.error("❌ Product not found:", request.productCode)
+          logger.error("❌ Product not found:", request.productCode)
           return {
             success: false,
             error: "Prodotto non trovato",
@@ -426,7 +413,7 @@ export class CallingFunctionsService {
 
         // Verifica stock disponibile
         if (product.stock < request.quantity) {
-          console.error(
+          logger.error(
             `❌ Insufficient stock for product ${request.productCode}. Available: ${product.stock}, Requested: ${request.quantity}`
           )
           return {
@@ -452,7 +439,7 @@ export class CallingFunctionsService {
               workspaceId: request.workspaceId,
             },
           })
-          console.log("✅ Created new cart for customer:", request.customerId)
+          logger.info("✅ Created new cart for customer:", request.customerId)
         }
 
         // Controlla se il prodotto è già nel carrello
@@ -471,7 +458,7 @@ export class CallingFunctionsService {
               quantity: existingCartItem.quantity + request.quantity,
             },
           })
-          console.log(
+          logger.info(
             "✅ Updated existing cart item for product:",
             request.productCode
           )
@@ -486,7 +473,7 @@ export class CallingFunctionsService {
               notes: request.notes || "",
             },
           })
-          console.log("✅ Added product to cart:", request.productCode)
+          logger.info("✅ Added product to cart:", request.productCode)
         }
 
         // Genera token per accesso al carrello
@@ -524,15 +511,12 @@ export class CallingFunctionsService {
           timestamp: new Date().toISOString(),
         }
       } catch (error) {
-        console.error(
-          "❌ Error in addProductToCart database operations:",
-          error
-        )
+        logger.error("❌ Error in addProductToCart database operations:", error)
         await prisma.$disconnect()
         throw error
       }
     } catch (error) {
-      console.error("❌ Error in addProductToCart:", error)
+      logger.error("❌ Error in addProductToCart:", error)
       return {
         success: false,
         error: error instanceof Error ? error.message : "Errore interno",
@@ -551,8 +535,7 @@ export class CallingFunctionsService {
     productName: string
   }): Promise<any> {
     try {
-      console.log("🔍 Calling searchProduct with:", request)
-
+      logger.info("🔍 Calling searchProduct with:", request)
       // Import the SearchProduct function
       const {
         SearchProduct,
@@ -564,15 +547,14 @@ export class CallingFunctionsService {
         productName: request.productName,
       })
 
-      console.log("✅ SearchProduct result:", result)
-
+      logger.info("✅ SearchProduct result:", result)
       return {
         success: true,
         message: result.message || "Ricerca registrata per analytics",
         timestamp: new Date().toISOString(),
       }
     } catch (error) {
-      console.error("❌ Error in searchProduct:", error)
+      logger.error("❌ Error in searchProduct:", error)
       return {
         success: false,
         message: "Errore nel registrare la ricerca.",

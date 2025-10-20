@@ -113,7 +113,7 @@ export function Header() {
   // Gestisce il ritorno alla selezione dei workspace
   const handleBackToWorkspaces = () => {
     // 🔄 HARD RELOAD - Force page refresh when changing workspace
-    console.log("🔄 Navigating to workspace selection with reload")
+    logger.info("🔄 Navigating to workspace selection with reload")
     window.location.href = "/workspace-selection"
   }
 

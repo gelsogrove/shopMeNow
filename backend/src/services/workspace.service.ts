@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client"
+import logger from "../utils/logger"
 
 const prisma = new PrismaClient()
 
@@ -60,7 +61,7 @@ export const workspaceService = {
         messageLimit: true,
         challengeStatus: true,
         wipMessages: true,
-        blocklist: true,
+        // blocklist: true, // REMOVED: field no longer exists
         url: true,
         welcomeMessages: true,
       },
@@ -87,7 +88,7 @@ export const workspaceService = {
         messageLimit: true,
         challengeStatus: true,
         wipMessages: true,
-        blocklist: true,
+        // blocklist: true, // REMOVED: field no longer exists
         url: true,
         welcomeMessages: true,
       },
@@ -115,12 +116,12 @@ export const workspaceService = {
     })
 
     // 🚨 CRITICAL DEBUG: Log what we found
-    console.log(
+    logger.info(
       `🔍 WORKSPACE.SERVICE: Loading AgentConfigs for workspace ${id}`
     )
-    console.log(`📋 Found ${agentConfigs.length} active AgentConfigs:`)
+    logger.info(`📋 Found ${agentConfigs.length} active AgentConfigs:`)
     agentConfigs.forEach((config, index) => {
-      console.log(
+      logger.info(
         `  [${index}] ID: ${config.id?.substring(0, 8)}..., Model: ${config.model}, Temp: ${config.temperature}, Updated: ${config.updatedAt}`
       )
     })
@@ -155,7 +156,7 @@ export const workspaceService = {
         messageLimit: true,
         challengeStatus: true,
         wipMessages: true,
-        blocklist: true,
+        // blocklist: true, // REMOVED: field no longer exists
         url: true,
         welcomeMessages: true,
       },
@@ -193,7 +194,7 @@ export const workspaceService = {
         messageLimit: true,
         challengeStatus: true,
         wipMessages: true,
-        blocklist: true,
+        // blocklist: true, // REMOVED: field no longer exists
         url: true,
         welcomeMessages: true,
       },

@@ -18,6 +18,9 @@ import { Code, MessageCircle, Send, Settings, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { MessageRenderer } from "./MessageRenderer"
 
+// Utility functions are available in @/utils/messageUtils if needed for extraction
+// import { getInitials, isValidPhoneNumber, formatWhatsAppMessage, getMessageStyle } from "@/utils/messageUtils"
+
 // Define a global variable to store the current session ID
 // This will persist across modal closes/opens but not page refreshes
 let globalSessionId: string | null = null

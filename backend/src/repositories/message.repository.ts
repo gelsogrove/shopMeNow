@@ -398,24 +398,8 @@ export class MessageRepository {
         workspaceId = customer.workspaceId
       }
 
-      // If we have a workspaceId, check the workspace blocklist
-      if (workspaceId) {
-        const workspace = await this.prisma.workspace.findUnique({
-          where: { id: workspaceId },
-          select: { blocklist: true },
-        })
-
-        if (workspace?.blocklist) {
-          // Split the blocklist by newlines and check if the phone number is in the list
-          const blockedNumbers = workspace.blocklist
-            .split(/[\n,]/)
-            .map((num) => num.trim())
-          if (blockedNumbers.includes(phoneNumber)) {
-            return true
-          }
-        }
-      }
-
+      // Blocklist check is now done via customers.isBlacklisted field
+      // (workspace-level blocklist removed during database cleanup)
       return false
     } catch (error) {
       logger.error("Error checking customer blacklist status:", error)
@@ -1164,7 +1148,7 @@ export class MessageRepository {
         select: {
           id: true,
           name: true,
-          ProductCode: true,
+          productCode: true,
           price: true,
           description: true, // Aggiungi description per il prompt
           formato: true, // Aggiungi formato per il prompt
@@ -1752,10 +1736,10 @@ export class MessageRepository {
     message: string,
     conversationContext: any[] = []
   ): Promise<any> {
-    console.log("🚨 DEBUG - callFunctionRouter CALLED with message:", message)
+    logger.info("🚨 DEBUG - callFunctionRouter CALLED with message:", message)
     try {
       // Check if OpenRouter is properly configured
-      console.log("🔍 DEBUG - OPENROUTER_API_KEY check:", {
+      logger.info("🔍 DEBUG - OPENROUTER_API_KEY check:", {
         present: !!process.env.OPENROUTER_API_KEY,
         length: process.env.OPENROUTER_API_KEY?.length || 0,
         prefix: process.env.OPENROUTER_API_KEY?.substring(0, 15) || "MISSING",
@@ -1853,22 +1837,21 @@ export class MessageRepository {
       const openRouterApiKey = process.env.OPENROUTER_API_KEY
 
       // DEBUG: Log prompt e funzioni
-      console.log(
+      logger.info(
         "🔍 DEBUG - Function Router Prompt:",
         functionRouterPrompt.substring(0, 200) + "..."
       )
-      console.log(
+      logger.info(
         "🔍 DEBUG - Available Functions:",
         availableFunctions.map((f) => f.name)
       )
-      console.log("🔍 DEBUG - User Message:", message)
-      console.log(
+      logger.info("🔍 DEBUG - User Message:", message)
+      logger.info(
         "🔍 DEBUG - Conversation Context:",
         conversationContext.length,
         "messages"
       )
-      console.log("🔍 DEBUG - OpenRouter API Key present:", !!openRouterApiKey)
-
+      logger.info("🔍 DEBUG - OpenRouter API Key present:", !!openRouterApiKey)
       // Costruisci l'array di messaggi includendo il contesto della conversazione
       const messages = [{ role: "system", content: functionRouterPrompt }]
 
@@ -1881,7 +1864,7 @@ export class MessageRepository {
             content: contextMsg.content,
           })
         }
-        console.log(
+        logger.info(
           "🔍 DEBUG - Added",
           recentContext.length,
           "context messages"
@@ -1901,7 +1884,7 @@ export class MessageRepository {
         tool_choice: "auto",
       }
 
-      console.log(
+      logger.info(
         "🔍 DEBUG - Request payload:",
         JSON.stringify(requestPayload, null, 2)
       )
@@ -1916,11 +1899,11 @@ export class MessageRepository {
             "X-Title": "ShopME Function Router",
           },
         })
-        console.log("🔍 DEBUG - Axios call successful")
+        logger.info("🔍 DEBUG - Axios call successful")
       } catch (axiosError) {
-        console.error("🔍 DEBUG - Axios error:", axiosError.message)
+        logger.error("🔍 DEBUG - Axios error:", axiosError.message)
         if (axiosError.response) {
-          console.error(
+          logger.error(
             "🔍 DEBUG - Axios response error:",
             axiosError.response.data
           )
@@ -1929,7 +1912,7 @@ export class MessageRepository {
       }
 
       // DEBUG: Log risposta OpenRouter
-      console.log(
+      logger.info(
         "🔍 DEBUG - OpenRouter Response:",
         JSON.stringify(response.data.choices[0]?.message, null, 2)
       )
@@ -2263,7 +2246,11 @@ export class MessageRepository {
   }
 
   /**
-   * Add phone number to workspace blocklist
+   * Add phone number to blocklist
+   * NOTE: Workspace-level blocklist was removed during database cleanup.
+   * Now using customers.isBlacklisted field instead.
+   * This method is kept for backward compatibility but does nothing.
+   * @deprecated Use customer.isBlacklisted field directly
    * @param phoneNumber Phone number to add
    * @param workspaceId Workspace ID
    */
@@ -2271,47 +2258,11 @@ export class MessageRepository {
     phoneNumber: string,
     workspaceId: string
   ): Promise<void> {
-    try {
-      // Get current workspace
-      const workspace = await this.prisma.workspace.findUnique({
-        where: { id: workspaceId },
-        select: { blocklist: true },
-      })
-
-      if (!workspace) {
-        throw new Error(`Workspace ${workspaceId} not found`)
-      }
-
-      // Parse current blocklist
-      const currentBlocklist = workspace.blocklist || ""
-      const blockedNumbers = currentBlocklist
-        .split(/[\n,]/)
-        .map((num) => num.trim())
-        .filter((num) => num.length > 0)
-
-      // Add phone number if not already present
-      if (!blockedNumbers.includes(phoneNumber)) {
-        blockedNumbers.push(phoneNumber)
-
-        // Update workspace blocklist
-        const newBlocklist = blockedNumbers.join("\n")
-        await this.prisma.workspace.update({
-          where: { id: workspaceId },
-          data: { blocklist: newBlocklist },
-        })
-
-        logger.info(
-          `Phone ${phoneNumber} added to workspace ${workspaceId} blocklist`
-        )
-      } else {
-        logger.info(
-          `Phone ${phoneNumber} already in workspace ${workspaceId} blocklist`
-        )
-      }
-    } catch (error) {
-      logger.error("Error adding to workspace blocklist:", error)
-      throw error
-    }
+    logger.warn(
+      `addToWorkspaceBlocklist is deprecated. Use customers.isBlacklisted field instead. Phone: ${phoneNumber}, Workspace: ${workspaceId}`
+    )
+    // Method kept for backward compatibility - workspace.blocklist field removed
+    // To block a customer, update: customers.isBlacklisted = true
   }
 
   /**
