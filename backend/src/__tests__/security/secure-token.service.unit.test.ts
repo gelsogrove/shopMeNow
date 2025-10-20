@@ -661,7 +661,9 @@ describe("🔐 SECURE TOKEN SERVICE - UNIT TESTS (Andrea's Security)", () => {
 
         console.log(`  📝 TOKEN_EXPIRATION set to: 2h`)
         console.log(`  📝 Token created at: ${now.toISOString()}`)
-        console.log(`  📝 Token should expire at: ~${expectedExpiry.toISOString()}`)
+        console.log(
+          `  📝 Token should expire at: ~${expectedExpiry.toISOString()}`
+        )
         console.log(`  📝 Actual expiry: ${capturedExpiresAt?.toISOString()}`)
 
         // ASSERT: Token should expire in 2 hours (with 1 minute tolerance)
