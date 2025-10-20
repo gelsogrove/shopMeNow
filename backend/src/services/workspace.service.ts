@@ -236,18 +236,19 @@ export const workspaceService = {
   },
 
   /**
-   * Recupera il prompt attivo per un workspace
+   * Get active prompt content for a workspace from agent_configs table
+   * 🔒 SECURITY: This reads from the unified agent_configs table (single source of truth)
    * @param workspaceId string
    * @returns string | null
    */
   async getActivePromptByWorkspaceId(
     workspaceId: string
   ): Promise<string | null> {
-    const promptRow = await prisma.prompts.findFirst({
+    const agentConfig = await prisma.agentConfig.findFirst({
       where: { workspaceId, isActive: true },
       orderBy: { createdAt: "desc" },
     })
-    return promptRow?.content || null
+    return agentConfig?.prompt || null
   },
 
   /**

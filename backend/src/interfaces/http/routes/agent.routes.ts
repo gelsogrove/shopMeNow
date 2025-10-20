@@ -89,90 +89,6 @@ export const createAgentRouter = (): Router => {
   /**
    * @swagger
    * /api/agent/{id}:
-   *   get:
-   *     summary: Get a specific agent
-   *     tags: [Agent]
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         schema:
-   *           type: string
-   *         required: true
-   *         description: ID of the agent
-   *       - in: header
-   *         name: x-workspace-id
-   *         schema:
-   *           type: string
-   *         required: true
-   *         description: ID of the workspace
-   *     responses:
-   *       200:
-   *         description: Agent details
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/Agent'
-   *       404:
-   *         description: Agent not found
-   */
-  router.get("/:id", asyncHandler(agentController.getById))
-
-  /**
-   * @swagger
-   * /api/agent:
-   *   post:
-   *     summary: Create a new agent
-   *     tags: [Agent]
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: header
-   *         name: x-workspace-id
-   *         schema:
-   *           type: string
-   *         required: true
-   *         description: ID of the workspace
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - name
-   *             properties:
-   *               name:
-   *                 type: string
-   *                 description: Name of the agent
-   *               content:
-   *                 type: string
-   *                 description: Content of the agent
-   *               isActive:
-   *                 type: boolean
-   *                 description: Whether the agent is active
-   *                 default: true
-   *               isRouter:
-   *                 type: boolean
-   *                 description: Whether the agent is a router
-   *                 default: false
-   *               department:
-   *                 type: string
-   *                 description: Department of the agent
-   *     responses:
-   *       201:
-   *         description: Agent created successfully
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/Agent'
-   */
-  router.post("/", asyncHandler(agentController.create))
-
-  /**
-   * @swagger
-   * /api/agent/{id}:
    *   put:
    *     summary: Update an existing agent
    *     tags: [Agent]
@@ -202,35 +118,6 @@ export const createAgentRouter = (): Router => {
    *         description: Agent not found
    */
   router.put("/:id", asyncHandler(agentController.update))
-
-  /**
-   * @swagger
-   * /api/agent/{id}:
-   *   delete:
-   *     summary: Delete an agent
-   *     tags: [Agent]
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         schema:
-   *           type: string
-   *         required: true
-   *         description: ID of the agent
-   *       - in: header
-   *         name: x-workspace-id
-   *         schema:
-   *           type: string
-   *         required: true
-   *         description: ID of the workspace
-   *     responses:
-   *       204:
-   *         description: Agent deleted successfully
-   *       404:
-   *         description: Agent not found
-   */
-  router.delete("/:id", asyncHandler(agentController.delete))
 
   logger.info("Agent routes setup complete")
 

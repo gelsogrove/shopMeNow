@@ -263,9 +263,9 @@ export class MessageRepository {
           // MESSAGE billing should only attach to INBOUND messages
           if (billing.type === "MESSAGE" && !isInbound) return false
 
-          // PUSH_MESSAGE and HUMAN_SUPPORT should only attach to OUTBOUND messages
+          // PUSH_CAMPAIGN and HUMAN_SUPPORT should only attach to OUTBOUND messages
           if (
-            (billing.type === "PUSH_MESSAGE" ||
+            (billing.type === "PUSH_CAMPAIGN" ||
               billing.type === "HUMAN_SUPPORT") &&
             !isOutbound
           )
@@ -1574,27 +1574,6 @@ export class MessageRepository {
   }
 
   /**
-   * Get the router agent
-   * @param workspaceId Workspace ID to filter by
-   * @returns The router agent prompt
-   */
-  async getRouterAgent(workspaceId?: string) {
-    try {
-      const routerAgent = await this.prisma.prompts.findFirst({
-        where: {
-          isRouter: true,
-          ...(workspaceId ? { workspaceId } : {}),
-        },
-      })
-
-      return routerAgent
-    } catch (error) {
-      logger.error("Error getting router agent:", error)
-      return null
-    }
-  }
-
-  /**
    * Get all products
    * @param workspaceId Workspace ID to filter by
    * @returns List of products
@@ -1764,35 +1743,6 @@ export class MessageRepository {
   }
 
   /**
-   * Ottiene il prompt per il router di funzioni
-   * @returns Il contenuto del prompt
-   */
-  async getFunctionRouterPrompt(): Promise<string> {
-    try {
-      // Usa il prompt principale dell'agente per il function router
-      const agentPrompt = await this.prisma.prompts.findFirst({
-        where: {
-          name: {
-            contains: "SofIA",
-            mode: "insensitive",
-          },
-          isActive: true,
-        },
-      })
-
-      if (!agentPrompt) {
-        logger.warn("Agent prompt not found, using default")
-        return "You are a function router for a WhatsApp chatbot. Your task is to analyze the user's message and determine which function to call."
-      }
-
-      return agentPrompt.content
-    } catch (error) {
-      logger.error("Error getting function router prompt:", error)
-      return "You are a function router for a WhatsApp chatbot. Your task is to analyze the user's message and determine which function to call."
-    }
-  }
-
-  /**
    * Chiama il function router di OpenAI per ottenere la funzione da chiamare
    * @param message Messaggio dell'utente
    * @param conversationContext Array di messaggi precedenti per contesto
@@ -1823,8 +1773,8 @@ export class MessageRepository {
         }
       }
 
-      // Ottieni il prompt del function router
-      const functionRouterPrompt = await this.getFunctionRouterPrompt()
+      // Use a simple default prompt for function routing
+      const functionRouterPrompt = "You are a function router for a WhatsApp chatbot. Analyze the user's message and select the most appropriate function to call."
 
       // ANDREA DECISION: CF ATTIVE CON NOMI CORRETTI
       const availableFunctions = [
@@ -2197,25 +2147,6 @@ export class MessageRepository {
     } catch (error) {
       logger.error("[HISTORY] Error getting recent messages by time:", error)
       return []
-    }
-  }
-
-  /**
-   * Get agent by workspace ID
-   * @param workspaceId Workspace ID
-   * @returns Agent for the workspace
-   */
-  async getAgentByWorkspaceId(workspaceId: string) {
-    try {
-      const agent = await this.prisma.prompts.findFirst({
-        where: {
-          workspaceId,
-        },
-      })
-      return agent
-    } catch (error) {
-      logger.error(`Error getting agent for workspace ${workspaceId}:`, error)
-      return null
     }
   }
 
@@ -2617,7 +2548,7 @@ export class MessageRepository {
       }
 
       return {
-        prompt: agentConfig.prompt || "",
+        prompt: agentConfig.prompt || "", // ✅ CORRECT: Field is 'prompt' in schema
         model: agentConfig.model || "openai/gpt-4o-mini",
         temperature: agentConfig.temperature || 0.0, // Default to 0 temperature
         maxTokens: agentConfig.maxTokens || 5000,
@@ -2650,58 +2581,6 @@ export class MessageRepository {
     } catch (error) {
       logger.error("Error getting workspace URL:", error)
       return "http://localhost:3000"
-    }
-  }
-
-  /**
-   * Get prompt by name from database
-   */
-  async getPromptByName(
-    workspaceId: string,
-    promptName: string
-  ): Promise<{
-    id: string
-    name: string
-    content: string
-    model: string
-    temperature: number
-    maxTokens: number
-  } | null> {
-    try {
-      const prompt = await this.prisma.prompts.findFirst({
-        where: {
-          workspaceId,
-          name: promptName,
-          isActive: true,
-        },
-        select: {
-          id: true,
-          name: true,
-          content: true,
-          model: true,
-          temperature: true,
-          max_tokens: true,
-        },
-      })
-
-      if (!prompt) {
-        logger.warn(
-          `Prompt "${promptName}" not found for workspace ${workspaceId}`
-        )
-        return null
-      }
-
-      return {
-        id: prompt.id,
-        name: prompt.name,
-        content: prompt.content,
-        model: prompt.model || "openai/gpt-4o-mini",
-        temperature: prompt.temperature || 0.0, // Default to 0 temperature
-        maxTokens: prompt.max_tokens || 5000,
-      }
-    } catch (error) {
-      logger.error(`Error getting prompt "${promptName}":`, error)
-      return null
     }
   }
 

@@ -281,9 +281,9 @@ export class CustomersController {
           }
         )
 
-        // 💰 BILLING: Track PUSH_MESSAGE when discount changes (€1.00)
+        // 💰 BILLING: Track PUSH_CAMPAIGN when discount changes (€1.00)
         try {
-          await this.billingService.trackPushMessage(
+          await this.billingService.trackPushCampaign(
             updatedCustomer.workspaceId,
             updatedCustomer.id,
             `Discount changed from ${originalCustomer.discount}% to ${updatedCustomer.discount}%`

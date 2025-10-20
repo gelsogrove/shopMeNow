@@ -147,18 +147,13 @@ For privacy inquiries, please contact our support team.`;
       // 3. Create default agent configuration
       try {
         const defaultAgentContent = await this.getDefaultAgentContent();
-        await tx.prompts.create({
+        await tx.agentConfig.create({
           data: {
-            name: 'Default Assistant',
-            content: defaultAgentContent,
+            prompt: defaultAgentContent,
             workspaceId: createdWorkspace.id,
-            isRouter: true,
-            isActive: true,
-            temperature: 0.0, // Zero temperature for deterministic responses
-            top_p: 0.9,
-            top_k: 40,
             model: 'openai/gpt-4o-mini',
-            max_tokens: 1000,
+            temperature: 0.0, // Zero temperature for deterministic responses
+            maxTokens: 5000,
           },
         });
         logger.info(`Created default agent configuration for workspace ${createdWorkspace.id}`);

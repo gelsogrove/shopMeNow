@@ -74,67 +74,6 @@ export class AgentController {
   /**
    * Get a specific agent by ID
    */
-  getById = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { id } = req.params
-      let workspaceId = req.params.workspaceId
-
-      // If not in params, try to determine from user context
-      workspaceId = this.agentService.getWorkspaceId(
-        workspaceId,
-        (req as any).user
-      )
-
-      logger.info(`Getting agent ${id} for workspace ${workspaceId}`)
-
-      const agent = await this.agentService.getById(id, workspaceId)
-
-      if (!agent) {
-        return res.status(404).json({ message: "Agent not found" })
-      }
-
-      return res.json(agent)
-    } catch (error) {
-      logger.error("Error fetching agent:", error)
-      return next(error)
-    }
-  }
-
-  /**
-   * Create a new agent
-   */
-  async create(req: Request, res: Response): Promise<void> {
-    try {
-      let workspaceId = (req as any).workspaceId
-      workspaceId = this.agentService.getWorkspaceId(
-        workspaceId,
-        (req as any).user
-      )
-
-      // Get data from request body
-      const data = {
-        ...req.body,
-        workspaceId,
-      }
-
-      // Create the agent with workspaceId
-      const agent = await this.agentService.create(data, workspaceId)
-
-      res.status(201).json(agent)
-    } catch (err: any) {
-      // Check if this is a conflict error (duplicate router agent)
-      if (err.message && err.message.includes("router agent already exists")) {
-        res.status(409).json({
-          status: "error",
-          message: "A router agent already exists for this workspace",
-        })
-        return
-      }
-
-      this.handleError(res, err, "Error creating agent")
-    }
-  }
-
   /**
    * Update an existing agent
    */
@@ -162,11 +101,15 @@ export class AgentController {
 
       logger.info(`Updating agentConfig ${id} for workspace ${workspaceId}`)
 
+      // Extract userId from authenticated request for security check
+      const userId = (req as any).user?.id
+
       // Use updateAgentConfig method for AgentConfig table
       const updatedAgent = await this.agentService.updateAgentConfig(
         id,
         req.body,
-        workspaceId
+        workspaceId,
+        userId // Pass userId for admin verification
       )
 
       if (!updatedAgent) {
@@ -187,38 +130,6 @@ export class AgentController {
         })
       }
 
-      return next(error)
-    }
-  }
-
-  /**
-   * Delete an agent
-   */
-  delete = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { id } = req.params
-      let workspaceId = req.params.workspaceId
-
-      // If not in params, try to determine from user context
-      workspaceId = this.agentService.getWorkspaceId(
-        workspaceId,
-        (req as any).user
-      )
-
-      logger.info(`Deleting agent ${id} for workspace ${workspaceId}`)
-
-      try {
-        await this.agentService.delete(id, workspaceId)
-        return res.status(204).send()
-      } catch (error: any) {
-        // Check if error is because the agent wasn't found
-        if (error.code === "P2025" || error.message === "Agent not found") {
-          return res.status(404).json({ message: "Agent not found" })
-        }
-        throw error
-      }
-    } catch (error) {
-      logger.error("Error deleting agent:", error)
       return next(error)
     }
   }

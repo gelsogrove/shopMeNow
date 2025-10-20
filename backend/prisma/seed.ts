@@ -67,7 +67,6 @@ async function main() {
   await prisma.categories.deleteMany()
   await prisma.sales.deleteMany()
   await prisma.languages.deleteMany()
-  await prisma.prompts.deleteMany()
   await prisma.agentConfig.deleteMany()
   await prisma.gdprContent.deleteMany()
   await prisma.whatsappSettings.deleteMany()
@@ -348,19 +347,21 @@ async function main() {
     )
   }
 
-  await prisma.prompts.create({
+  // Create AgentConfig (CRITICAL: Required for LLM to work!)
+  console.log("🤖 Creating agent configuration...")
+  
+  await prisma.agentConfig.create({
     data: {
       workspaceId: workspace.id,
-      name: "SofiA - Main Agent Prompt",
-      content: agentPrompt,
-      isActive: true,
-      model: "openai/gpt-4o-mini",
+      model: "anthropic/claude-3.5-haiku",
       temperature: 0.7,
-      max_tokens: 1000,
+      maxTokens: 1000,
+      prompt: agentPrompt, // ✅ CORRECT: Field is 'prompt' in schema, not 'systemPrompt'
+      isActive: true,
     },
   })
 
-  console.log("✅ Prompt created in Prompts table")
+  console.log("✅ Agent configuration created")
 
   // 13. Create Sales Representatives
   console.log("👔 Creating sales representatives...")
@@ -765,6 +766,20 @@ async function main() {
         }
       }
 
+      // 💰 BILLING: Track NEW_ORDER if status is CONFIRMED (€1.50)
+      if (status === "CONFIRMED" || status === "DELIVERED") {
+        await prisma.billing.create({
+          data: {
+            workspaceId: workspace.id,
+            customerId: customerId,
+            amount: 1.5, // BillingPrices.NEW_ORDER
+            type: "NEW_ORDER",
+            description: `Order ${orderCode} confirmed`,
+            createdAt: date, // Use same date as order for historical data
+          },
+        })
+      }
+
       return order
     }
 
@@ -884,85 +899,185 @@ async function main() {
     console.log("⚠️  No products or customers found, skipping product searches")
   }
 
-  // 11. Create LLM Billing Data (Historical Costs)
-  console.log("\n💰 Creating LLM billing history...")
+  // 8. Create MESSAGE billing (€0.15 per message/interaction)
+  console.log("\n� Creating message billing (LLM usage)...")
 
-  // Monthly LLM costs matching the report data (April-October 2025)
-  const billingData = [
-    {
-      month: 4,
-      year: 2025,
-      amount: 1.25,
-      description: "GPT-4-mini usage - April 2025",
-    },
-    {
-      month: 5,
-      year: 2025,
-      amount: 3.68,
-      description: "GPT-4-mini usage - May 2025",
-    },
-    {
-      month: 6,
-      year: 2025,
-      amount: 6.12,
-      description: "GPT-4-mini usage - June 2025",
-    },
-    {
-      month: 7,
-      year: 2025,
-      amount: 5.64,
-      description: "GPT-4-mini usage - July 2025",
-    },
-    {
-      month: 8,
-      year: 2025,
-      amount: 4.34,
-      description: "GPT-4-mini usage - August 2025",
-    },
-    {
-      month: 9,
-      year: 2025,
-      amount: 7.84,
-      description: "GPT-4-mini usage - September 2025",
-    },
-    {
-      month: 10,
-      year: 2025,
-      amount: 12.67,
-      description: "GPT-4-mini usage - October 2025",
-    },
+  // Re-fetch all customers for message billing
+  const customersForMessages = await prisma.customers.findMany({
+    where: { workspaceId: workspace.id },
+  })
+
+  const messageCost = 0.15
+  let messageBillingRecords = 0
+  let totalMessages = 0
+
+  if (customersForMessages.length > 0) {
+    // Generate realistic message interactions across different months
+    // Each entry represents total messages for one customer in one month
+    const monthsToSimulate = [
+      { month: 4, year: 2025, messagesPerCustomer: [12, 18, 8, 15, 22, 10, 8] }, // April - 93 messages total
+      { month: 5, year: 2025, messagesPerCustomer: [8, 10, 15, 8, 12, 18, 6] }, // May - 77 messages
+      { month: 6, year: 2025, messagesPerCustomer: [20, 15, 25, 12, 18, 16, 12] }, // June - 118 messages
+      { month: 7, year: 2025, messagesPerCustomer: [16, 12, 20, 15, 22, 8, 15] }, // July - 108 messages
+      { month: 8, year: 2025, messagesPerCustomer: [12, 8, 15, 12, 18, 10, 8] }, // August - 83 messages
+      { month: 9, year: 2025, messagesPerCustomer: [25, 20, 30, 15, 22, 18, 12] }, // September - 142 messages
+      { month: 10, year: 2025, messagesPerCustomer: [35, 30, 40, 22, 32, 28, 18] }, // October - 205 messages
+    ]
+
+    for (const monthData of monthsToSimulate) {
+      for (let i = 0; i < customersForMessages.length && i < monthData.messagesPerCustomer.length; i++) {
+        const customer = customersForMessages[i]
+        const numMessages = monthData.messagesPerCustomer[i]
+
+        if (numMessages > 0) {
+          // Use last day of conversations (around day 25-28) as the billing date
+          const lastMessageDay = 25 + Math.floor(Math.random() * 3)
+          const billingDate = new Date(monthData.year, monthData.month - 1, lastMessageDay)
+          const totalCost = numMessages * messageCost
+
+          await prisma.billing.create({
+            data: {
+              workspaceId: workspace.id,
+              customerId: customer.id,
+              amount: totalCost,
+              type: "MESSAGE",
+              description: `${numMessages} LLM messages (€${messageCost.toFixed(2)} each)`,
+              createdAt: billingDate,
+            },
+          })
+          messageBillingRecords++
+          totalMessages += numMessages
+        }
+      }
+    }
+  }
+
+  console.log(`✅ Created ${messageBillingRecords} message billing records`)
+  console.log(`   - Total messages: ${totalMessages} messages`)
+  console.log(`   - Total message costs: €${(messageCost * totalMessages).toFixed(2)}`)
+  console.log(`   - Unit cost: €${messageCost.toFixed(2)}/message`)
+  console.log(`   - Average: ~${Math.round(totalMessages / 7)} messages/month`)
+
+  // 9. Create MONTHLY_CHANNEL billing (€19/month) for each month
+  console.log("\n💳 Creating monthly channel billing...")
+
+  const monthlyChannelCost = 19.0
+  let channelBillingCount = 0
+
+  // Generate for same months as messages (April-October 2025)
+  const billingMonths = [
+    { month: 4, year: 2025 },
+    { month: 5, year: 2025 },
+    { month: 6, year: 2025 },
+    { month: 7, year: 2025 },
+    { month: 8, year: 2025 },
+    { month: 9, year: 2025 },
+    { month: 10, year: 2025 },
   ]
 
-  let totalBillingAmount = 0
-
-  for (const billing of billingData) {
-    // Create billing record on the 1st day of each month
-    const billingDate = new Date(billing.year, billing.month - 1, 1)
+  for (const monthData of billingMonths) {
+    // Create MONTHLY_CHANNEL billing on the 1st day of each month
+    const channelDate = new Date(monthData.year, monthData.month - 1, 1)
 
     await prisma.billing.create({
       data: {
         workspaceId: workspace.id,
-        amount: billing.amount,
-        type: "MESSAGE", // Represents LLM usage costs
-        description: billing.description,
-        currentCharge: billing.amount,
-        previousTotal: totalBillingAmount,
-        newTotal: totalBillingAmount + billing.amount,
-        createdAt: billingDate,
+        amount: monthlyChannelCost,
+        type: "MONTHLY_CHANNEL",
+        description: `Monthly channel subscription cost - ${monthData.year}-${String(monthData.month).padStart(2, "0")}`,
+        createdAt: channelDate,
       },
     })
 
-    totalBillingAmount += billing.amount
+    channelBillingCount++
   }
 
-  console.log(`✅ Created ${billingData.length} LLM billing records`)
-  console.log(
-    `   - Total LLM costs: €${totalBillingAmount.toFixed(2)} (Apr-Oct 2025)`
-  )
-  console.log(
-    `   - Average: €${(totalBillingAmount / billingData.length).toFixed(2)}/month`
-  )
-  console.log(`   - Peak: €12.67 (October 2025)`)
+  console.log(`✅ Created ${channelBillingCount} monthly channel billing records`)
+  console.log(`   - Total channel costs: €${(monthlyChannelCost * channelBillingCount).toFixed(2)} (${channelBillingCount} months)`)
+  console.log(`   - Monthly rate: €${monthlyChannelCost.toFixed(2)}/month`)
+
+  // 10. Create PUSH_CAMPAIGN billing (€1.00) for advertising push notifications
+  console.log("\n� Creating push campaign billing (advertising)...")
+
+  // Re-fetch all customers for push billing
+  const customersForPush = await prisma.customers.findMany({
+    where: { workspaceId: workspace.id },
+  })
+
+  const pushCampaignCost = 1.0
+  let pushCampaignCount = 0
+
+  if (customersForPush.length >= 3) {
+    // Simulate advertising campaigns sent to customers
+    const pushCampaigns = []
+    
+    // Campaign 1: Spring Sale - first 3 customers
+    pushCampaigns.push({ 
+      month: 5, year: 2025, day: 15, 
+      customers: customersForPush.slice(0, 3).map(c => c.id), 
+      campaign: "Spring Sale 2025" 
+    })
+    
+    // Campaign 2: Summer Offers - next 3 (or loop back if needed)
+    if (customersForPush.length >= 6) {
+      pushCampaigns.push({ 
+        month: 6, year: 2025, day: 20, 
+        customers: customersForPush.slice(3, 6).map(c => c.id), 
+        campaign: "Summer Offers" 
+      })
+    } else {
+      pushCampaigns.push({ 
+        month: 6, year: 2025, day: 20, 
+        customers: customersForPush.slice(0, Math.min(3, customersForPush.length)).map(c => c.id), 
+        campaign: "Summer Offers" 
+      })
+    }
+    
+    // Campaign 3: Mid-Year Promo - select subset
+    pushCampaigns.push({ 
+      month: 7, year: 2025, day: 10, 
+      customers: [customersForPush[0].id, customersForPush[Math.min(2, customersForPush.length-1)].id], 
+      campaign: "Mid-Year Promo" 
+    })
+    
+    // Campaign 4: Back to School
+    pushCampaigns.push({ 
+      month: 8, year: 2025, day: 25, 
+      customers: customersForPush.slice(1, Math.min(4, customersForPush.length)).map(c => c.id), 
+      campaign: "Back to School" 
+    })
+    
+    // Campaign 5: Autumn Collection - all available customers
+    pushCampaigns.push({ 
+      month: 9, year: 2025, day: 18, 
+      customers: customersForPush.map(c => c.id), 
+      campaign: "Autumn Collection Launch" 
+    })
+
+    for (const campaign of pushCampaigns) {
+      const campaignDate = new Date(campaign.year, campaign.month - 1, campaign.day)
+      for (const customerId of campaign.customers) {
+        await prisma.billing.create({
+          data: {
+            workspaceId: workspace.id,
+            customerId: customerId,
+            amount: pushCampaignCost,
+            type: "PUSH_CAMPAIGN",
+            description: `Campaign push: ${campaign.campaign}`,
+            createdAt: campaignDate,
+          },
+        })
+        pushCampaignCount++
+      }
+    }
+  }
+
+  console.log(`✅ Created ${pushCampaignCount} push campaign billing records`)
+  console.log(`   - Total push campaign costs: €${(pushCampaignCost * pushCampaignCount).toFixed(2)}`)
+  console.log(`   - Unit cost: €${pushCampaignCost.toFixed(2)}/push`)
+  console.log(`   - Campaigns: 5 (with ${pushCampaignCount} total sends)`)
+
+
 
   console.log("\n🎉 Database seed completed successfully!")
   console.log(`\n📊 Summary:`)
@@ -978,7 +1093,9 @@ async function main() {
   console.log(`   - Test Customers: 4 (distributed Apr-Jul 2025)`)
   console.log(`   - Historical Orders: ~48 orders (Apr-Sep 2025)`)
   console.log(`   - Product Searches: 855 searches (Top 10 products)`)
-  console.log(`   - LLM Billing: 7 months, €41.54 total costs`)
+  console.log(`   - Message Billing: ${messageBillingRecords} records, ${totalMessages} messages, €${(messageCost * totalMessages).toFixed(2)} total`)
+  console.log(`   - Channel Billing: ${channelBillingCount} months, €${(monthlyChannelCost * channelBillingCount).toFixed(2)} total`)
+  console.log(`   - Push Campaign Billing: ${pushCampaignCount} sends, €${(pushCampaignCost * pushCampaignCount).toFixed(2)} total`)
   console.log(`\n✅ Ready to use!`)
 }
 

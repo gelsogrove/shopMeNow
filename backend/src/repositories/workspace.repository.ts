@@ -546,8 +546,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
           where: { workspaceId: id },
         })
 
-        // 16. Delete prompts
-        await tx.prompts.deleteMany({
+        // 16. Delete agent configurations
+        await tx.agentConfig.deleteMany({
           where: { workspaceId: id },
         })
 

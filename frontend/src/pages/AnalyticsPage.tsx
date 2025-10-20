@@ -4,9 +4,12 @@ import DateRangeSelector, {
 } from "@/components/analytics/DateRangeSelector"
 import { HistoricalChart } from "@/components/analytics/HistoricalChart"
 import { MetricsOverview } from "@/components/analytics/MetricsOverview"
+import { BillingTab } from "@/components/analytics/BillingTab"
+import { PricingList } from "@/components/analytics/PricingList"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { useAnalyticsPeriod } from "@/hooks/useAnalyticsPeriod"
 import { logger } from "@/lib/logger"
@@ -20,6 +23,7 @@ import {
   Activity,
   AlertCircle,
   BarChart3,
+  Euro,
   TrendingUp,
   Users,
 } from "lucide-react"
@@ -33,9 +37,23 @@ export function AnalyticsPage() {
   const { selectedPeriod, setSelectedPeriod, isInitialized } =
     useAnalyticsPeriod()
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("all")
+  const [activeTab, setActiveTab] = useState<"analytics" | "billing" | "pricing">("analytics")
 
   // Get translations
   const t = getAdminPageTexts()
+
+  // Dynamic page title based on active tab
+  const pageTitle = activeTab === "analytics" 
+    ? t.analyticsTitle 
+    : activeTab === "billing" 
+    ? "Billing" 
+    : "Pricing"
+  
+  const pageSubtitle = activeTab === "analytics" 
+    ? t.analyticsSubtitle 
+    : activeTab === "billing" 
+    ? "Monthly billing breakdown and cost tracking" 
+    : "Transparent pricing for all ShopMe services"
 
   const loadAnalytics = async (period: PeriodPreset) => {
     if (!currentWorkspace?.id) return
@@ -114,17 +132,19 @@ export function AnalyticsPage() {
           <div className="flex items-center gap-2 mb-6">
             <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <BarChart3 className="h-6 w-6 text-blue-600" />
-              {t.analyticsTitle}
+              {pageTitle}
             </h1>
           </div>
-          <p className="text-gray-600 mt-1">{t.analyticsSubtitle}</p>
+          <p className="text-gray-600 mt-1">{pageSubtitle}</p>
         </div>
 
-        {/* Period Selector */}
-        <DateRangeSelector
-          selectedPeriod={selectedPeriod}
-          onPeriodChange={handlePeriodChange}
-        />
+        {/* Period Selector - Only show for Analytics tab */}
+        {activeTab === "analytics" && (
+          <DateRangeSelector
+            selectedPeriod={selectedPeriod}
+            onPeriodChange={handlePeriodChange}
+          />
+        )}
       </div>
 
       {loading ? (
@@ -153,10 +173,31 @@ export function AnalyticsPage() {
           </Card>
         </div>
       ) : analytics ? (
-        // Data Loaded
-        <div className="space-y-6">
-          {/* Metrics Overview */}
-          <MetricsOverview analytics={analytics} />
+        // Data Loaded - Now with Tabs
+        <Tabs 
+          value={activeTab} 
+          onValueChange={(value) => setActiveTab(value as "analytics" | "billing" | "pricing")} 
+          className="space-y-6"
+        >
+          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
+            <TabsTrigger value="analytics" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Analytics
+            </TabsTrigger>
+            <TabsTrigger value="billing" className="flex items-center gap-2">
+              <Euro className="h-4 w-4" />
+              Billing
+            </TabsTrigger>
+            <TabsTrigger value="pricing" className="flex items-center gap-2">
+              <Euro className="h-4 w-4" />
+              Pricing
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Analytics Tab */}
+          <TabsContent value="analytics" className="space-y-6">
+            {/* Metrics Overview */}
+            <MetricsOverview analytics={analytics} />
 
           {/* Historical Chart (include Top Searched Products affiancato a Distribuzione Categorie) */}
           <HistoricalChart
@@ -585,7 +626,18 @@ export function AnalyticsPage() {
             </CardContent>
           </Card>
           */}
-        </div>
+          </TabsContent>
+
+          {/* Billing Tab */}
+          <TabsContent value="billing">
+            <BillingTab />
+          </TabsContent>
+
+          {/* Pricing Tab */}
+          <TabsContent value="pricing">
+            <PricingList />
+          </TabsContent>
+        </Tabs>
       ) : (
         // No Data State
         <div className="flex items-center justify-center h-64">

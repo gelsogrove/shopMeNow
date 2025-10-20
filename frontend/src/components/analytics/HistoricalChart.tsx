@@ -245,7 +245,7 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-orange-600" />
-            Costi LLM nel Tempo
+            LLM Usage Costs
           </CardTitle>
           <p className="text-sm text-gray-500 mt-1">
             Andamento dei costi di utilizzo del sistema LLM

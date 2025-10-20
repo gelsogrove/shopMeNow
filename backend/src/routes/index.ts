@@ -319,11 +319,9 @@ import { workspaceRoutes } from "../interfaces/http/routes/workspace.routes"
 // Import the legacy workspace routes that has the /current endpoint
 import workspaceRoutesLegacy from "./workspace.routes"
 // Add these imports for backward compatibility during migration
-import { PromptsController } from "../interfaces/http/controllers/prompts.controller"
 import { SettingsController } from "../interfaces/http/controllers/settings.controller"
 import { authMiddleware } from "../interfaces/http/middlewares/auth.middleware"
 import { sessionValidationMiddleware } from "../interfaces/http/middlewares/session-validation.middleware"
-import createPromptsRouter from "../interfaces/http/routes/prompts.routes"
 import { createUserRouter } from "../interfaces/http/routes/user.routes"
 // Import analytics routes
 import analyticsRoutes from "../interfaces/http/routes/analytics.routes"
@@ -1396,7 +1394,6 @@ const authController = new AuthController(
   otpService,
   passwordResetService
 )
-const promptsController = new PromptsController()
 const faqController = new FaqController()
 // Removed whatsappController
 
@@ -1486,9 +1483,6 @@ router.get("/workspaces/:workspaceId/test", authMiddleware, (req, res) => {
     user: req.user ? { userId: (req.user as any).userId } : null,
   })
 })
-
-// For backward compatibility during migration
-router.use("/prompts", createPromptsRouter(promptsController))
 
 // Mount products routes with workspace context
 import productsRouter from "../interfaces/http/routes/products.routes"

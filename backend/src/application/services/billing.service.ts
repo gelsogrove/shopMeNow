@@ -194,12 +194,12 @@ export class BillingService {
   }
 
   /**
-   * Track usage cost for push message
+   * Track usage cost for advertising push campaign
    */
-  async trackPushMessage(
+  async trackPushCampaign(
     workspaceId: string,
     customerId: string,
-    description?: string
+    campaignName?: string
   ): Promise<void> {
     try {
       // Get current total for this customer
@@ -207,7 +207,7 @@ export class BillingService {
         workspaceId,
         customerId
       )
-      const currentCharge = BillingPrices.PUSH_MESSAGE
+      const currentCharge = BillingPrices.PUSH_CAMPAIGN
       const newTotal = previousTotal + currentCharge
 
       await this.prisma.billing.create({
@@ -215,97 +215,19 @@ export class BillingService {
           workspaceId,
           customerId,
           amount: currentCharge,
-          type: BillingType.PUSH_MESSAGE,
-          description: description || "Push message sent",
+          type: BillingType.PUSH_CAMPAIGN,
+          description: campaignName ? `Campaign push: ${campaignName}` : "Advertising push notification sent",
           previousTotal,
           currentCharge,
           newTotal,
         },
       })
       logger.info(
-        `[BILLING] 💰 Push Message: €${previousTotal.toFixed(2)} + €${currentCharge.toFixed(2)} = €${newTotal.toFixed(2)} (workspace: ${workspaceId}, customer: ${customerId})`
+        `[BILLING] 💰 Push Campaign (Advertising): €${previousTotal.toFixed(2)} + €${currentCharge.toFixed(2)} = €${newTotal.toFixed(2)} (workspace: ${workspaceId}, customer: ${customerId})`
       )
     } catch (error) {
       logger.error(
-        `Failed to charge push message for workspace ${workspaceId}, customer ${customerId}`,
-        error
-      )
-      throw error
-    }
-  }
-
-  /**
-   * Track usage cost for new FAQ
-   */
-  async trackNewFAQ(
-    workspaceId: string,
-    customerId: string | null = null,
-    description: string = "New FAQ created"
-  ): Promise<void> {
-    try {
-      // Get current total for workspace (FAQ can be created by admin without specific customer)
-      const previousTotal = customerId
-        ? await this.getCurrentTotalForCustomer(workspaceId, customerId)
-        : await this.getCurrentTotal(workspaceId)
-      const currentCharge = BillingPrices.NEW_FAQ
-      const newTotal = previousTotal + currentCharge
-
-      await this.prisma.billing.create({
-        data: {
-          workspaceId,
-          customerId,
-          amount: currentCharge,
-          type: BillingType.NEW_FAQ,
-          description,
-          previousTotal,
-          currentCharge,
-          newTotal,
-        },
-      })
-      logger.info(
-        `[BILLING] 💰 New FAQ: €${previousTotal.toFixed(2)} + €${currentCharge.toFixed(2)} = €${newTotal.toFixed(2)} (workspace: ${workspaceId}${customerId ? `, customer: ${customerId}` : ""})`
-      )
-    } catch (error) {
-      logger.error(
-        `Failed to charge new FAQ for workspace ${workspaceId}`,
-        error
-      )
-      throw error
-    }
-  }
-
-  /**
-   * Track usage cost for active offer
-   */
-  async trackActiveOffer(
-    workspaceId: string,
-    offerId: string,
-    offerTitle: string = "Offer activated"
-  ): Promise<void> {
-    try {
-      const previousTotal = await this.getCurrentTotal(workspaceId)
-      const currentCharge = BillingPrices.ACTIVE_OFFER // €0.50
-      const newTotal = previousTotal + currentCharge
-
-      await this.prisma.billing.create({
-        data: {
-          workspaceId,
-          amount: currentCharge,
-          type: BillingType.ACTIVE_OFFER,
-          description: `Offer activated: ${offerTitle}`,
-          previousTotal,
-          currentCharge,
-          newTotal,
-        },
-      })
-      logger.info(
-        `[BILLING] 💰 Active offer: €${previousTotal.toFixed(
-          2
-        )} + €${currentCharge.toFixed(2)} = €${newTotal.toFixed(2)}`
-      )
-    } catch (error) {
-      logger.error(
-        `Failed to charge active offer for workspace ${workspaceId}`,
+        `Failed to charge push campaign for workspace ${workspaceId}, customer ${customerId}`,
         error
       )
       throw error
@@ -421,6 +343,239 @@ export class BillingService {
     } catch (error) {
       logger.error(
         `Failed to get current total for workspace ${workspaceId}, customer ${customerId}`,
+        error
+      )
+      throw error
+    }
+  }
+
+  /**
+   * Get monthly billing breakdown for current month + ALL historical months
+   * Returns data organized by calendar months with breakdown by type
+   */
+  async getMonthlyBreakdown(workspaceId: string): Promise<{
+    currentMonth: {
+      year: number
+      month: number
+      monthName: string
+      total: number
+      byType: Record<string, { count: number; cost: number }>
+      isComplete: boolean
+    }
+    history: Array<{
+      year: number
+      month: number
+      monthName: string
+      total: number
+      byType: Record<string, { count: number; cost: number }>
+    }>
+  }> {
+    try {
+      const now = new Date()
+      const currentYear = now.getFullYear()
+      const currentMonth = now.getMonth() + 1 // 1-12
+
+      logger.info(
+        `[BILLING] 📊 Getting monthly breakdown for workspace ${workspaceId} (all history)`
+      )
+
+      // Get ALL billing records (no date limit)
+      const billings = await this.prisma.billing.findMany({
+        where: {
+          workspaceId,
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      })
+
+      logger.info(
+        `[BILLING] Found ${billings.length} billing records for breakdown`
+      )
+
+      // Group by month
+      const monthlyMap = new Map<
+        string,
+        {
+          year: number
+          month: number
+          total: number
+          byType: Record<string, { count: number; cost: number }>
+        }
+      >()
+
+      billings.forEach((billing) => {
+        const date = new Date(billing.createdAt)
+        const year = date.getFullYear()
+        const month = date.getMonth() + 1 // 1-12
+        const key = `${year}-${month.toString().padStart(2, "0")}`
+
+        if (!monthlyMap.has(key)) {
+          monthlyMap.set(key, {
+            year,
+            month,
+            total: 0,
+            byType: {},
+          })
+        }
+
+        const monthData = monthlyMap.get(key)!
+        monthData.total += billing.amount
+
+        const type = billing.type
+        if (!monthData.byType[type]) {
+          monthData.byType[type] = { count: 0, cost: 0 }
+        }
+        monthData.byType[type].count += 1
+        monthData.byType[type].cost += billing.amount
+      })
+
+      // Get current month data
+      const currentMonthKey = `${currentYear}-${currentMonth.toString().padStart(2, "0")}`
+      const currentMonthData = monthlyMap.get(currentMonthKey) || {
+        year: currentYear,
+        month: currentMonth,
+        total: 0,
+        byType: {},
+      }
+
+      // Get history (ALL complete months, excluding current, sorted by date DESC)
+      const history: Array<{
+        year: number
+        month: number
+        monthName: string
+        total: number
+        byType: Record<string, { count: number; cost: number }>
+      }> = []
+
+      // Build history from all months in the map except current
+      for (const [key, data] of monthlyMap.entries()) {
+        const [year, month] = key.split("-").map(Number)
+        
+        // Skip current month
+        if (year === currentYear && month === currentMonth) {
+          continue
+        }
+
+        history.push({
+          year: data.year,
+          month: data.month,
+          monthName: this.getMonthName(data.month),
+          total: data.total,
+          byType: data.byType,
+        })
+      }
+
+      // Sort history by date DESC (most recent first)
+      history.sort((a, b) => {
+        if (a.year !== b.year) return b.year - a.year
+        return b.month - a.month
+      })
+
+      logger.info(
+        `[BILLING] 💰 Current month (${currentMonth}/${currentYear}): €${currentMonthData.total.toFixed(2)}`
+      )
+      logger.info(`[BILLING] 📋 History: ${history.length} months`)
+
+      return {
+        currentMonth: {
+          year: currentMonthData.year,
+          month: currentMonthData.month,
+          monthName: this.getMonthName(currentMonthData.month),
+          total: currentMonthData.total,
+          byType: currentMonthData.byType,
+          isComplete: false, // Current month is never complete
+        },
+        history,
+      }
+    } catch (error) {
+      logger.error(
+        `Failed to get monthly breakdown for workspace ${workspaceId}`,
+        error
+      )
+      throw error
+    }
+  }
+
+  /**
+   * Helper to get month name from month number (1-12)
+   */
+  private getMonthName(month: number): string {
+    const months = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ]
+    return months[month - 1]
+  }
+
+  /**
+   * Get detailed billing records for a specific month
+   */
+  async getMonthDetail(
+    workspaceId: string,
+    year: number,
+    month: number
+  ): Promise<Array<{
+    id: string
+    date: Date
+    type: string
+    amount: number
+    description: string
+    customerName: string | null
+    customerEmail: string | null
+  }>> {
+    try {
+      // Start and end of the month
+      const startDate = new Date(year, month - 1, 1)
+      const endDate = new Date(year, month, 1)
+
+      logger.info(
+        `[BILLING] 📋 Getting detail for ${year}-${month} (workspace ${workspaceId})`
+      )
+
+      const billings = await this.prisma.billing.findMany({
+        where: {
+          workspaceId,
+          createdAt: {
+            gte: startDate,
+            lt: endDate,
+          },
+        },
+        include: {
+          customer: {
+            select: {
+              name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      })
+
+      return billings.map((b) => ({
+        id: b.id,
+        date: b.createdAt,
+        type: b.type,
+        amount: b.amount,
+        description: b.description || "",
+        customerName: b.customer?.name || null,
+        customerEmail: b.customer?.email || null,
+      }))
+    } catch (error) {
+      logger.error(
+        `Failed to get month detail for workspace ${workspaceId}, ${year}-${month}`,
         error
       )
       throw error
