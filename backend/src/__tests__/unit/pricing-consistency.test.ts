@@ -1,17 +1,17 @@
 /**
  * PRICING CONSISTENCY TEST
- * 
+ *
  * This test verifies that all pricing information is consistent across:
  * - Schema (BillingType enum)
  * - Backend (billing-prices.enum.ts)
  * - Seed data
  * - Frontend UI components
- * 
+ *
  * CRITICAL: If this test fails, it means pricing is inconsistent!
  */
 
+import { BillingType } from "@prisma/client"
 import { BillingPrices } from "../../domain/enums/billing-prices.enum"
-import { PrismaClient, BillingType } from "@prisma/client"
 
 describe("Pricing Consistency Tests", () => {
   describe("BillingPrices Enum Structure", () => {
@@ -19,7 +19,7 @@ describe("Pricing Consistency Tests", () => {
       const prices = Object.keys(BillingPrices)
       // Enum keys are duplicated in TypeScript (key & numeric value), so divide by 2
       const uniqueKeys = prices.filter((key) => isNaN(Number(key)))
-      
+
       expect(uniqueKeys).toHaveLength(6)
       expect(uniqueKeys).toContain("MONTHLY_CHANNEL_COST")
       expect(uniqueKeys).toContain("MESSAGE")
@@ -55,9 +55,9 @@ describe("Pricing Consistency Tests", () => {
   describe("Schema BillingType Enum", () => {
     it("should have exactly 9 billing types (5 paid + 4 free)", () => {
       const billingTypes = Object.values(BillingType)
-      
+
       expect(billingTypes).toHaveLength(9)
-      
+
       // Paid types
       expect(billingTypes).toContain(BillingType.MONTHLY_CHANNEL)
       expect(billingTypes).toContain(BillingType.MESSAGE)
@@ -65,7 +65,7 @@ describe("Pricing Consistency Tests", () => {
       expect(billingTypes).toContain(BillingType.NEW_ORDER)
       expect(billingTypes).toContain(BillingType.PUSH_CAMPAIGN)
       expect(billingTypes).toContain(BillingType.HUMAN_SUPPORT)
-      
+
       // Free types
       expect(billingTypes).toContain(BillingType.FEEDBACK)
       expect(billingTypes).toContain(BillingType.ORDER_REVIEW)
@@ -82,19 +82,19 @@ describe("Pricing Consistency Tests", () => {
     it("should map BillingPrices to BillingType correctly", () => {
       // MONTHLY_CHANNEL_COST -> MONTHLY_CHANNEL
       expect(BillingType.MONTHLY_CHANNEL).toBeDefined()
-      
+
       // MESSAGE -> MESSAGE
       expect(BillingType.MESSAGE).toBeDefined()
-      
+
       // NEW_CUSTOMER -> NEW_CUSTOMER
       expect(BillingType.NEW_CUSTOMER).toBeDefined()
-      
+
       // NEW_ORDER -> NEW_ORDER
       expect(BillingType.NEW_ORDER).toBeDefined()
-      
+
       // PUSH_CAMPAIGN -> PUSH_CAMPAIGN
       expect(BillingType.PUSH_CAMPAIGN).toBeDefined()
-      
+
       // HUMAN_SUPPORT -> HUMAN_SUPPORT
       expect(BillingType.HUMAN_SUPPORT).toBeDefined()
     })
@@ -112,7 +112,9 @@ describe("Pricing Consistency Tests", () => {
         humanSupport: 0.5,
       }
 
-      expect(BillingPrices.MONTHLY_CHANNEL_COST).toBe(expectedPricing.monthlyChannel)
+      expect(BillingPrices.MONTHLY_CHANNEL_COST).toBe(
+        expectedPricing.monthlyChannel
+      )
       expect(BillingPrices.MESSAGE).toBe(expectedPricing.message)
       expect(BillingPrices.NEW_CUSTOMER).toBe(expectedPricing.newCustomer)
       expect(BillingPrices.NEW_ORDER).toBe(expectedPricing.newOrder)
@@ -134,9 +136,11 @@ describe("Pricing Consistency Tests", () => {
       ]
 
       expect(expectedPricingItems).toHaveLength(6)
-      
+
       // Verify prices match enum
-      expect(expectedPricingItems[0].price).toBe(BillingPrices.MONTHLY_CHANNEL_COST)
+      expect(expectedPricingItems[0].price).toBe(
+        BillingPrices.MONTHLY_CHANNEL_COST
+      )
       expect(expectedPricingItems[1].price).toBe(BillingPrices.MESSAGE)
       expect(expectedPricingItems[2].price).toBe(BillingPrices.NEW_CUSTOMER)
       expect(expectedPricingItems[3].price).toBe(BillingPrices.NEW_ORDER)
@@ -155,10 +159,12 @@ describe("Pricing Consistency Tests", () => {
       ]
 
       expect(expectedSliders).toHaveLength(5)
-      
+
       // No PUSH_MESSAGE slider
-      const hasPushMessage = expectedSliders.some(s => 
-        s.name.includes("System") || s.price === 0.5 && s.name.includes("Push")
+      const hasPushMessage = expectedSliders.some(
+        (s) =>
+          s.name.includes("System") ||
+          (s.price === 0.5 && s.name.includes("Push"))
       )
       expect(hasPushMessage).toBe(false)
     })
@@ -194,7 +200,9 @@ describe("Pricing Consistency Tests", () => {
       }
 
       // Verify seed pricing matches enum
-      expect(seedPricing.monthlyChannel).toBe(BillingPrices.MONTHLY_CHANNEL_COST)
+      expect(seedPricing.monthlyChannel).toBe(
+        BillingPrices.MONTHLY_CHANNEL_COST
+      )
       expect(seedPricing.message).toBe(BillingPrices.MESSAGE)
       expect(seedPricing.newCustomer).toBe(BillingPrices.NEW_CUSTOMER)
       expect(seedPricing.newOrder).toBe(BillingPrices.NEW_ORDER)
@@ -206,7 +214,7 @@ describe("Pricing Consistency Tests", () => {
   describe("Total Consistency Check", () => {
     it("should have consistent pricing across all layers", () => {
       // Final comprehensive check
-      const allPricesConsistent = 
+      const allPricesConsistent =
         BillingPrices.MONTHLY_CHANNEL_COST === 19.0 &&
         BillingPrices.MESSAGE === 0.15 &&
         BillingPrices.NEW_CUSTOMER === 1.5 &&
@@ -220,7 +228,7 @@ describe("Pricing Consistency Tests", () => {
     it("should NOT have any PUSH_MESSAGE references", () => {
       const enumKeys = Object.keys(BillingPrices)
       const schemaTypes = Object.values(BillingType)
-      
+
       expect(enumKeys).not.toContain("PUSH_MESSAGE")
       expect(schemaTypes).not.toContain("PUSH_MESSAGE")
     })
@@ -229,7 +237,7 @@ describe("Pricing Consistency Tests", () => {
       const paidTypes = 5 // MESSAGE, NEW_CUSTOMER, NEW_ORDER, PUSH_CAMPAIGN, HUMAN_SUPPORT
       const freeTypes = 3 // FEEDBACK, ORDER_REVIEW, CAMPAIGN_LINK
       const monthlyFixed = 1 // MONTHLY_CHANNEL
-      
+
       const totalBillingTypes = Object.values(BillingType).length
       expect(totalBillingTypes).toBe(paidTypes + freeTypes + monthlyFixed)
     })

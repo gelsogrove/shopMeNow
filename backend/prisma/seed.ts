@@ -349,7 +349,7 @@ async function main() {
 
   // Create AgentConfig (CRITICAL: Required for LLM to work!)
   console.log("🤖 Creating agent configuration...")
-  
+
   await prisma.agentConfig.create({
     data: {
       workspaceId: workspace.id,
@@ -917,22 +917,47 @@ async function main() {
     const monthsToSimulate = [
       { month: 4, year: 2025, messagesPerCustomer: [12, 18, 8, 15, 22, 10, 8] }, // April - 93 messages total
       { month: 5, year: 2025, messagesPerCustomer: [8, 10, 15, 8, 12, 18, 6] }, // May - 77 messages
-      { month: 6, year: 2025, messagesPerCustomer: [20, 15, 25, 12, 18, 16, 12] }, // June - 118 messages
-      { month: 7, year: 2025, messagesPerCustomer: [16, 12, 20, 15, 22, 8, 15] }, // July - 108 messages
+      {
+        month: 6,
+        year: 2025,
+        messagesPerCustomer: [20, 15, 25, 12, 18, 16, 12],
+      }, // June - 118 messages
+      {
+        month: 7,
+        year: 2025,
+        messagesPerCustomer: [16, 12, 20, 15, 22, 8, 15],
+      }, // July - 108 messages
       { month: 8, year: 2025, messagesPerCustomer: [12, 8, 15, 12, 18, 10, 8] }, // August - 83 messages
-      { month: 9, year: 2025, messagesPerCustomer: [25, 20, 30, 15, 22, 18, 12] }, // September - 142 messages
-      { month: 10, year: 2025, messagesPerCustomer: [35, 30, 40, 22, 32, 28, 18] }, // October - 205 messages
+      {
+        month: 9,
+        year: 2025,
+        messagesPerCustomer: [25, 20, 30, 15, 22, 18, 12],
+      }, // September - 142 messages
+      {
+        month: 10,
+        year: 2025,
+        messagesPerCustomer: [35, 30, 40, 22, 32, 28, 18],
+      }, // October - 205 messages
     ]
 
     for (const monthData of monthsToSimulate) {
-      for (let i = 0; i < customersForMessages.length && i < monthData.messagesPerCustomer.length; i++) {
+      for (
+        let i = 0;
+        i < customersForMessages.length &&
+        i < monthData.messagesPerCustomer.length;
+        i++
+      ) {
         const customer = customersForMessages[i]
         const numMessages = monthData.messagesPerCustomer[i]
 
         if (numMessages > 0) {
           // Use last day of conversations (around day 25-28) as the billing date
           const lastMessageDay = 25 + Math.floor(Math.random() * 3)
-          const billingDate = new Date(monthData.year, monthData.month - 1, lastMessageDay)
+          const billingDate = new Date(
+            monthData.year,
+            monthData.month - 1,
+            lastMessageDay
+          )
           const totalCost = numMessages * messageCost
 
           await prisma.billing.create({
@@ -954,7 +979,9 @@ async function main() {
 
   console.log(`✅ Created ${messageBillingRecords} message billing records`)
   console.log(`   - Total messages: ${totalMessages} messages`)
-  console.log(`   - Total message costs: €${(messageCost * totalMessages).toFixed(2)}`)
+  console.log(
+    `   - Total message costs: €${(messageCost * totalMessages).toFixed(2)}`
+  )
   console.log(`   - Unit cost: €${messageCost.toFixed(2)}/message`)
   console.log(`   - Average: ~${Math.round(totalMessages / 7)} messages/month`)
 
@@ -992,8 +1019,12 @@ async function main() {
     channelBillingCount++
   }
 
-  console.log(`✅ Created ${channelBillingCount} monthly channel billing records`)
-  console.log(`   - Total channel costs: €${(monthlyChannelCost * channelBillingCount).toFixed(2)} (${channelBillingCount} months)`)
+  console.log(
+    `✅ Created ${channelBillingCount} monthly channel billing records`
+  )
+  console.log(
+    `   - Total channel costs: €${(monthlyChannelCost * channelBillingCount).toFixed(2)} (${channelBillingCount} months)`
+  )
   console.log(`   - Monthly rate: €${monthlyChannelCost.toFixed(2)}/month`)
 
   // 10. Create PUSH_CAMPAIGN billing (€1.00) for advertising push notifications
@@ -1010,52 +1041,75 @@ async function main() {
   if (customersForPush.length >= 3) {
     // Simulate advertising campaigns sent to customers
     const pushCampaigns = []
-    
+
     // Campaign 1: Spring Sale - first 3 customers
-    pushCampaigns.push({ 
-      month: 5, year: 2025, day: 15, 
-      customers: customersForPush.slice(0, 3).map(c => c.id), 
-      campaign: "Spring Sale 2025" 
+    pushCampaigns.push({
+      month: 5,
+      year: 2025,
+      day: 15,
+      customers: customersForPush.slice(0, 3).map((c) => c.id),
+      campaign: "Spring Sale 2025",
     })
-    
+
     // Campaign 2: Summer Offers - next 3 (or loop back if needed)
     if (customersForPush.length >= 6) {
-      pushCampaigns.push({ 
-        month: 6, year: 2025, day: 20, 
-        customers: customersForPush.slice(3, 6).map(c => c.id), 
-        campaign: "Summer Offers" 
+      pushCampaigns.push({
+        month: 6,
+        year: 2025,
+        day: 20,
+        customers: customersForPush.slice(3, 6).map((c) => c.id),
+        campaign: "Summer Offers",
       })
     } else {
-      pushCampaigns.push({ 
-        month: 6, year: 2025, day: 20, 
-        customers: customersForPush.slice(0, Math.min(3, customersForPush.length)).map(c => c.id), 
-        campaign: "Summer Offers" 
+      pushCampaigns.push({
+        month: 6,
+        year: 2025,
+        day: 20,
+        customers: customersForPush
+          .slice(0, Math.min(3, customersForPush.length))
+          .map((c) => c.id),
+        campaign: "Summer Offers",
       })
     }
-    
+
     // Campaign 3: Mid-Year Promo - select subset
-    pushCampaigns.push({ 
-      month: 7, year: 2025, day: 10, 
-      customers: [customersForPush[0].id, customersForPush[Math.min(2, customersForPush.length-1)].id], 
-      campaign: "Mid-Year Promo" 
+    pushCampaigns.push({
+      month: 7,
+      year: 2025,
+      day: 10,
+      customers: [
+        customersForPush[0].id,
+        customersForPush[Math.min(2, customersForPush.length - 1)].id,
+      ],
+      campaign: "Mid-Year Promo",
     })
-    
+
     // Campaign 4: Back to School
-    pushCampaigns.push({ 
-      month: 8, year: 2025, day: 25, 
-      customers: customersForPush.slice(1, Math.min(4, customersForPush.length)).map(c => c.id), 
-      campaign: "Back to School" 
+    pushCampaigns.push({
+      month: 8,
+      year: 2025,
+      day: 25,
+      customers: customersForPush
+        .slice(1, Math.min(4, customersForPush.length))
+        .map((c) => c.id),
+      campaign: "Back to School",
     })
-    
+
     // Campaign 5: Autumn Collection - all available customers
-    pushCampaigns.push({ 
-      month: 9, year: 2025, day: 18, 
-      customers: customersForPush.map(c => c.id), 
-      campaign: "Autumn Collection Launch" 
+    pushCampaigns.push({
+      month: 9,
+      year: 2025,
+      day: 18,
+      customers: customersForPush.map((c) => c.id),
+      campaign: "Autumn Collection Launch",
     })
 
     for (const campaign of pushCampaigns) {
-      const campaignDate = new Date(campaign.year, campaign.month - 1, campaign.day)
+      const campaignDate = new Date(
+        campaign.year,
+        campaign.month - 1,
+        campaign.day
+      )
       for (const customerId of campaign.customers) {
         await prisma.billing.create({
           data: {
@@ -1073,11 +1127,11 @@ async function main() {
   }
 
   console.log(`✅ Created ${pushCampaignCount} push campaign billing records`)
-  console.log(`   - Total push campaign costs: €${(pushCampaignCost * pushCampaignCount).toFixed(2)}`)
+  console.log(
+    `   - Total push campaign costs: €${(pushCampaignCost * pushCampaignCount).toFixed(2)}`
+  )
   console.log(`   - Unit cost: €${pushCampaignCost.toFixed(2)}/push`)
   console.log(`   - Campaigns: 5 (with ${pushCampaignCount} total sends)`)
-
-
 
   console.log("\n🎉 Database seed completed successfully!")
   console.log(`\n📊 Summary:`)
@@ -1093,9 +1147,15 @@ async function main() {
   console.log(`   - Test Customers: 4 (distributed Apr-Jul 2025)`)
   console.log(`   - Historical Orders: ~48 orders (Apr-Sep 2025)`)
   console.log(`   - Product Searches: 855 searches (Top 10 products)`)
-  console.log(`   - Message Billing: ${messageBillingRecords} records, ${totalMessages} messages, €${(messageCost * totalMessages).toFixed(2)} total`)
-  console.log(`   - Channel Billing: ${channelBillingCount} months, €${(monthlyChannelCost * channelBillingCount).toFixed(2)} total`)
-  console.log(`   - Push Campaign Billing: ${pushCampaignCount} sends, €${(pushCampaignCost * pushCampaignCount).toFixed(2)} total`)
+  console.log(
+    `   - Message Billing: ${messageBillingRecords} records, ${totalMessages} messages, €${(messageCost * totalMessages).toFixed(2)} total`
+  )
+  console.log(
+    `   - Channel Billing: ${channelBillingCount} months, €${(monthlyChannelCost * channelBillingCount).toFixed(2)} total`
+  )
+  console.log(
+    `   - Push Campaign Billing: ${pushCampaignCount} sends, €${(pushCampaignCost * pushCampaignCount).toFixed(2)} total`
+  )
   console.log(`\n✅ Ready to use!`)
 }
 

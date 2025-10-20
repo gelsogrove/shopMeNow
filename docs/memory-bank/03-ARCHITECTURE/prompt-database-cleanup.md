@@ -11,6 +11,7 @@
 ### Duplicazione Prompt - 2 tabelle:
 
 1. **`Prompts`** (vecchia/legacy)
+
    - Campi: `content`, `model`, `temperature`, `max_tokens`
    - Relation: `Message.promptId` → `Prompts.id`
    - **NON usata dal sistema LLM**
@@ -58,17 +59,18 @@
 ```prisma
 model Message {
   // ... altri campi ...
-  
+
   // ❌ RIMUOVERE QUESTI:
   promptId    String?
   prompt      Prompts? @relation(fields: [promptId], references: [id])
-  
+
   // ✅ MANTENERE:
   chatSession ChatSession @relation(fields: [chatSessionId], references: [id])
 }
 ```
 
 **Migration**:
+
 ```bash
 npx prisma migrate dev --name remove_message_promptid
 ```
@@ -88,17 +90,19 @@ model Prompts {
 ```
 
 **E nel Workspace model**:
+
 ```prisma
 model Workspace {
   // ❌ RIMUOVERE:
   prompts     Prompts[]
-  
+
   // ✅ MANTENERE:
   agentConfigs AgentConfig[]
 }
 ```
 
 **Migration**:
+
 ```bash
 npx prisma migrate dev --name drop_prompts_table
 ```
@@ -126,6 +130,7 @@ console.log("✅ Prompt created in Prompts table")
 ```
 
 ✅ MANTENERE SOLO:
+
 ```typescript
 await prisma.agentConfig.create({
   data: {
@@ -133,7 +138,7 @@ await prisma.agentConfig.create({
     model: "anthropic/claude-3.5-haiku",
     temperature: 0.7,
     maxTokens: 1000,
-    prompt: agentPrompt,  // ← Campo corretto
+    prompt: agentPrompt, // ← Campo corretto
     isActive: true,
   },
 })
@@ -156,6 +161,7 @@ grep -r "promptId" backend/src/
 ```
 
 **File da controllare**:
+
 - ✅ `message.repository.ts` - Deve usare `getAgentConfig()` che legge da `agent_configs`
 - ✅ `agent.service.ts` - Deve avere sicurezza admin su `agentConfig`
 - ✅ `update-prompt.js` - Deve scrivere su `agentConfig.prompt`
@@ -167,29 +173,32 @@ grep -r "promptId" backend/src/
 ### Unica Fonte di Verità: `agent_configs`
 
 **Lettura** (qualsiasi utente autenticato):
+
 ```typescript
 const config = await prisma.agentConfig.findFirst({
-  where: { workspaceId, isActive: true }
+  where: { workspaceId, isActive: true },
 })
 const prompt = config.prompt
 ```
 
 **Scrittura** (SOLO admin):
+
 ```typescript
 // Verifica ruolo ADMIN prima di permettere update
-if (user.role !== 'ADMIN') {
-  throw new Error('Only admin users can modify agent prompts')
+if (user.role !== "ADMIN") {
+  throw new Error("Only admin users can modify agent prompts")
 }
 
 await prisma.agentConfig.update({
   where: { id },
-  data: { prompt: newPrompt }
+  data: { prompt: newPrompt },
 })
 ```
 
 ### Log Audit Trail
 
 Ogni modifica prompt deve loggare:
+
 ```typescript
 logger.info(`✅ Admin ${userId} updated prompt for workspace ${workspaceId}`)
 ```
@@ -199,6 +208,7 @@ logger.info(`✅ Admin ${userId} updated prompt for workspace ${workspaceId}`)
 ## 🧪 Test Post-Cleanup
 
 ### Test 1: Seed crea solo agent_configs
+
 ```bash
 npm run seed
 psql ... -c "SELECT COUNT(*) FROM agent_configs;"  # Deve essere > 0
@@ -206,6 +216,7 @@ psql ... -c "SELECT COUNT(*) FROM \"Prompts\";"    # Deve dare errore (table doe
 ```
 
 ### Test 2: LLM legge correttamente
+
 ```bash
 # Invia messaggio WhatsApp
 # Verifica log: [BILLING] 💰 €0.15 message cost tracked
@@ -213,6 +224,7 @@ psql ... -c "SELECT COUNT(*) FROM \"Prompts\";"    # Deve dare errore (table doe
 ```
 
 ### Test 3: Update prompt funziona
+
 ```bash
 npm run update-prompt
 psql ... -c "SELECT prompt FROM agent_configs LIMIT 1;" | head -5
@@ -220,6 +232,7 @@ psql ... -c "SELECT prompt FROM agent_configs LIMIT 1;" | head -5
 ```
 
 ### Test 4: Sicurezza admin
+
 - Admin aggiorna prompt → ✅ Succede
 - User normale prova → ❌ Errore "Only admin users can modify agent prompts"
 
@@ -243,6 +256,7 @@ psql ... -c "SELECT prompt FROM agent_configs LIMIT 1;" | head -5
 ## 🎯 Risultato Finale
 
 ### Prima (CAOTICO):
+
 ```
 Workspace
   ├─ Prompts[] (mai letta)
@@ -253,6 +267,7 @@ Message
 ```
 
 ### Dopo (PULITO):
+
 ```
 Workspace
   └─ AgentConfig[] (UNICA fonte)
@@ -262,9 +277,10 @@ Message
 ```
 
 ### Flusso Unificato:
+
 ```
 1. Seed → Crea agent_configs
-2. LLM → Legge da agent_configs  
+2. LLM → Legge da agent_configs
 3. Update → Scrive su agent_configs (admin only)
 4. Frontend → Legge da agent_configs
 ```

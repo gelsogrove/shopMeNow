@@ -196,9 +196,8 @@ export class BillingController {
         `[BILLING-CONTROLLER] 📊 Getting monthly breakdown for workspace ${workspaceId}`
       )
 
-      const breakdown = await this.billingService.getMonthlyBreakdown(
-        workspaceId
-      )
+      const breakdown =
+        await this.billingService.getMonthlyBreakdown(workspaceId)
 
       res.json({
         success: true,
@@ -237,12 +236,7 @@ export class BillingController {
       const yearNum = parseInt(year)
       const monthNum = parseInt(month)
 
-      if (
-        isNaN(yearNum) ||
-        isNaN(monthNum) ||
-        monthNum < 1 ||
-        monthNum > 12
-      ) {
+      if (isNaN(yearNum) || isNaN(monthNum) || monthNum < 1 || monthNum > 12) {
         res.status(400).json({
           success: false,
           error: "Invalid year or month",

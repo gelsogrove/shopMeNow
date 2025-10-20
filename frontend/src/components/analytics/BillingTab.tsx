@@ -70,7 +70,9 @@ export function BillingTab() {
       setHistory(response.data.history)
 
       logger.info(
-        `[BILLING-TAB] Loaded billing data: current month €${response.data.currentMonth.total.toFixed(2)}, ${response.data.history.length} months history`
+        `[BILLING-TAB] Loaded billing data: current month €${response.data.currentMonth.total.toFixed(
+          2
+        )}, ${response.data.history.length} months history`
       )
     } catch (err) {
       logger.error("[BILLING-TAB] Error loading billing data:", err)
@@ -95,11 +97,7 @@ export function BillingTab() {
     if (!monthDetails[key] && currentWorkspace?.id) {
       setLoadingDetails((prev) => ({ ...prev, [key]: true }))
       try {
-        const response = await getMonthDetail(
-          currentWorkspace.id,
-          year,
-          month
-        )
+        const response = await getMonthDetail(currentWorkspace.id, year, month)
         setMonthDetails((prev) => ({
           ...prev,
           [key]: response.data.records,
@@ -240,7 +238,9 @@ export function BillingTab() {
                                 .map(([type, data]) => (
                                   <span
                                     key={type}
-                                    className={`text-xs px-2 py-1 rounded ${BILLING_TYPE_COLORS[type] || "bg-gray-100"}`}
+                                    className={`text-xs px-2 py-1 rounded ${
+                                      BILLING_TYPE_COLORS[type] || "bg-gray-100"
+                                    }`}
                                   >
                                     {BILLING_TYPE_LABELS[type] || type}: €
                                     {data.cost.toFixed(2)}
@@ -315,7 +315,11 @@ export function BillingTab() {
                                             </td>
                                             <td className="py-2 px-3">
                                               <span
-                                                className={`text-xs px-2 py-1 rounded ${BILLING_TYPE_COLORS[record.type] || "bg-gray-100"}`}
+                                                className={`text-xs px-2 py-1 rounded ${
+                                                  BILLING_TYPE_COLORS[
+                                                    record.type
+                                                  ] || "bg-gray-100"
+                                                }`}
                                               >
                                                 {BILLING_TYPE_LABELS[
                                                   record.type
@@ -418,7 +422,9 @@ export function BillingTab() {
                                 .map(([type, data]) => (
                                   <span
                                     key={type}
-                                    className={`text-xs px-2 py-1 rounded ${BILLING_TYPE_COLORS[type] || "bg-gray-100"}`}
+                                    className={`text-xs px-2 py-1 rounded ${
+                                      BILLING_TYPE_COLORS[type] || "bg-gray-100"
+                                    }`}
                                   >
                                     {BILLING_TYPE_LABELS[type] || type}: €
                                     {data.cost.toFixed(2)}
@@ -492,7 +498,11 @@ export function BillingTab() {
                                             </td>
                                             <td className="py-2 px-3">
                                               <span
-                                                className={`text-xs px-2 py-1 rounded ${BILLING_TYPE_COLORS[record.type] || "bg-gray-100"}`}
+                                                className={`text-xs px-2 py-1 rounded ${
+                                                  BILLING_TYPE_COLORS[
+                                                    record.type
+                                                  ] || "bg-gray-100"
+                                                }`}
                                               >
                                                 {BILLING_TYPE_LABELS[
                                                   record.type

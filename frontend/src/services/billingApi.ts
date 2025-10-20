@@ -38,9 +38,7 @@ export const getMonthlyBreakdown = async (
     throw new Error("Workspace ID is required for billing operations")
   }
 
-  const response = await api.get(
-    `/billing/${workspaceId}/monthly`
-  )
+  const response = await api.get(`/billing/${workspaceId}/monthly`)
   return response.data
 }
 
@@ -73,7 +71,9 @@ export const getMonthDetail = async (
     throw new Error("Workspace ID is required for billing operations")
   }
 
-  const response = await api.get(`/billing/${workspaceId}/monthly/${year}/${month}`)
+  const response = await api.get(
+    `/billing/${workspaceId}/monthly/${year}/${month}`
+  )
   return response.data
 }
 

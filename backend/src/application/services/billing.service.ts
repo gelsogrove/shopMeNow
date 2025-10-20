@@ -216,7 +216,9 @@ export class BillingService {
           customerId,
           amount: currentCharge,
           type: BillingType.PUSH_CAMPAIGN,
-          description: campaignName ? `Campaign push: ${campaignName}` : "Advertising push notification sent",
+          description: campaignName
+            ? `Campaign push: ${campaignName}`
+            : "Advertising push notification sent",
           previousTotal,
           currentCharge,
           newTotal,
@@ -451,7 +453,7 @@ export class BillingService {
       // Build history from all months in the map except current
       for (const [key, data] of monthlyMap.entries()) {
         const [year, month] = key.split("-").map(Number)
-        
+
         // Skip current month
         if (year === currentYear && month === currentMonth) {
           continue
@@ -525,15 +527,17 @@ export class BillingService {
     workspaceId: string,
     year: number,
     month: number
-  ): Promise<Array<{
-    id: string
-    date: Date
-    type: string
-    amount: number
-    description: string
-    customerName: string | null
-    customerEmail: string | null
-  }>> {
+  ): Promise<
+    Array<{
+      id: string
+      date: Date
+      type: string
+      amount: number
+      description: string
+      customerName: string | null
+      customerEmail: string | null
+    }>
+  > {
     try {
       // Start and end of the month
       const startDate = new Date(year, month - 1, 1)

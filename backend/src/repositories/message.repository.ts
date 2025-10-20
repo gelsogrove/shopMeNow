@@ -1774,7 +1774,8 @@ export class MessageRepository {
       }
 
       // Use a simple default prompt for function routing
-      const functionRouterPrompt = "You are a function router for a WhatsApp chatbot. Analyze the user's message and select the most appropriate function to call."
+      const functionRouterPrompt =
+        "You are a function router for a WhatsApp chatbot. Analyze the user's message and select the most appropriate function to call."
 
       // ANDREA DECISION: CF ATTIVE CON NOMI CORRETTI
       const availableFunctions = [

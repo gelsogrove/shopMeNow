@@ -14,17 +14,20 @@ Implementare un sistema di visualizzazione della fatturazione basato su **mesi c
 ## 📊 Caratteristiche Implementate
 
 ### 1. **Mese Corrente**
+
 - ✅ Visualizzazione del totale parziale del mese in corso
 - ✅ Breakdown dettagliato per tipo di costo (messaggi, ordini, canale, ecc.)
 - ✅ Indicatore chiaro che il mese è incompleto
 
 ### 2. **Storico 12 Mesi**
+
 - ✅ Tabella con ultimi 12 mesi completi
 - ✅ Totali per mese
 - ✅ Dettaglio operazioni e tipologie
 - ✅ Statistiche: media mensile, mese più alto, mese più basso
 
 ### 3. **Sicurezza Multi-Tenant**
+
 - ✅ Ogni query Prisma filtra per `workspaceId`
 - ✅ API client valida `workspaceId` obbligatorio
 - ✅ Middleware `authMiddleware` su tutte le routes
@@ -46,18 +49,20 @@ async getMonthlyBreakdown(workspaceId: string): Promise<{
 ```
 
 **Logica**:
+
 1. Recupera tutti i record `Billing` degli ultimi 13 mesi (12 completi + corrente)
 2. Raggruppa per mese calendario (anno-mese)
 3. Calcola totali e breakdown per tipo
 4. Separa mese corrente (incompleto) dallo storico
 
 **Sicurezza**:
+
 ```typescript
 const billings = await this.prisma.billing.findMany({
   where: {
     workspaceId, // ✅ CRITICO: sempre presente
-    createdAt: { gte: startDate }
-  }
+    createdAt: { gte: startDate },
+  },
 })
 ```
 
@@ -72,6 +77,7 @@ async getMonthlyBreakdown(req: Request, res: Response): Promise<void>
 ```
 
 **Validazione**:
+
 - Verifica `workspaceId` presente nei params
 - Ritorna errore 400 se mancante
 - Log con workspaceId per audit
@@ -102,6 +108,7 @@ export const getMonthlyBreakdown = async (
 ```
 
 **Validazione Client-Side**:
+
 ```typescript
 if (!workspaceId) {
   throw new Error("Workspace ID is required for billing operations")
@@ -113,6 +120,7 @@ if (!workspaceId) {
 **File**: `frontend/src/components/analytics/BillingTab.tsx`
 
 Componente React che:
+
 1. Usa `useWorkspace()` per ottenere workspace corrente
 2. Chiama API con `workspaceId` validato
 3. Visualizza mese corrente + storico
@@ -123,6 +131,7 @@ Componente React che:
 **File**: `frontend/src/pages/AnalyticsPage.tsx`
 
 Integrazione:
+
 - Aggiunto sistema tabs (Analytics / Fatturazione)
 - Tab "Fatturazione" mostra `<BillingTab />`
 - Mantiene date picker per Analytics tab
@@ -135,7 +144,7 @@ Integrazione:
 
 1. **Database-First**: Nessun fallback, tutto dal DB filtrato per workspace
 2. **Workspace Isolation**: Ogni query ha `WHERE workspaceId = ...`
-3. **Validation Layer**: 
+3. **Validation Layer**:
    - Backend: controller valida params
    - Frontend: API client valida prima della chiamata
 4. **Audit Trail**: Log include sempre `workspaceId`
@@ -145,7 +154,7 @@ Integrazione:
 ```typescript
 // ✅ Backend Service
 const billings = await this.prisma.billing.findMany({
-  where: { workspaceId } // MANDATORY
+  where: { workspaceId }, // MANDATORY
 })
 
 // ✅ Backend Controller
@@ -169,14 +178,14 @@ await getMonthlyBreakdown(workspace.id) // ✅ Never hardcoded
 
 ### Mese Corrente
 
-| Campo | Descrizione |
-|-------|-------------|
-| `year` | Anno (es. 2025) |
-| `month` | Mese 1-12 |
-| `monthName` | Nome in italiano (es. "Ottobre") |
-| `total` | Totale parziale del mese |
-| `byType` | Breakdown per tipo di costo |
-| `isComplete` | `false` (mese in corso) |
+| Campo        | Descrizione                      |
+| ------------ | -------------------------------- |
+| `year`       | Anno (es. 2025)                  |
+| `month`      | Mese 1-12                        |
+| `monthName`  | Nome in italiano (es. "Ottobre") |
+| `total`      | Totale parziale del mese         |
+| `byType`     | Breakdown per tipo di costo      |
+| `isComplete` | `false` (mese in corso)          |
 
 ### Storico (12 mesi)
 
@@ -204,6 +213,7 @@ ACTIVE_OFFER: "Offerte Attive" (€0.50)
 **Scenario**: Due workspace differenti non devono vedere dati reciproci
 
 **Test Case 1**: Chiamata con workspaceId diverso
+
 ```bash
 # Login come user workspace A
 curl -H "Authorization: Bearer TOKEN_A" \
@@ -213,6 +223,7 @@ curl -H "Authorization: Bearer TOKEN_A" \
 ```
 
 **Test Case 2**: Workspace ID mancante
+
 ```bash
 curl -H "Authorization: Bearer TOKEN" \
   http://localhost:3001/api/billing/monthly
@@ -221,6 +232,7 @@ curl -H "Authorization: Bearer TOKEN" \
 ```
 
 **Test Case 3**: WorkspaceId nel token vs params
+
 ```typescript
 // authMiddleware estrae workspaceId dal token
 // Controller DEVE validare che req.params.workspaceId === (req as any).workspaceId
@@ -269,6 +281,7 @@ cd frontend && npm run build
 ### Per lo Sviluppatore
 
 **Aggiungere nuovo tipo di billing**:
+
 1. Aggiorna enum `BillingType` in Prisma schema
 2. Aggiungi prezzo in `BillingPrices` enum
 3. Aggiungi label in `BILLING_TYPE_LABELS` (frontend)
@@ -279,14 +292,17 @@ cd frontend && npm run build
 ## 🐛 Troubleshooting
 
 ### "Workspace ID is required"
+
 - **Causa**: `workspaceId` non presente nella chiamata API
 - **Fix**: Verificare che componente usi `useWorkspace()` e passi `workspace.id`
 
 ### "No data available"
+
 - **Causa**: Nessun record Billing nel database per questo workspace
 - **Fix**: Eseguire seed o effettuare operazioni che generano billing
 
 ### Dati di altri workspace visibili
+
 - **CRITICO**: Bug di sicurezza multi-tenant
 - **Fix**: Verificare query Prisma include `WHERE workspaceId`
 - **Log**: Cercare in logs se `workspaceId` è corretto
@@ -296,11 +312,13 @@ cd frontend && npm run build
 ## 📚 File Modificati
 
 ### Backend
+
 - `backend/src/interfaces/http/routes/billing.routes.ts` (nuovo endpoint)
 - `backend/src/interfaces/http/controllers/billing.controller.ts` (nuovo metodo)
 - `backend/src/application/services/billing.service.ts` (logica breakdown)
 
 ### Frontend
+
 - `frontend/src/services/billingApi.ts` (NUOVO)
 - `frontend/src/components/analytics/BillingTab.tsx` (NUOVO)
 - `frontend/src/pages/AnalyticsPage.tsx` (aggiunte tabs)
@@ -310,6 +328,7 @@ cd frontend && npm run build
 ## ✅ Completamento
 
 **Tutti i TODO completati**:
+
 1. ✅ Sicurezza multi-tenant su routes
 2. ✅ Endpoint `/api/billing/:workspaceId/monthly`
 3. ✅ Logica `getMonthlyBreakdown` in service

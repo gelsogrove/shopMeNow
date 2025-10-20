@@ -2,10 +2,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Calculator,
   MessageSquare,
-  UserPlus,
-  ShoppingCart,
-  Send,
   Package,
+  Send,
+  ShoppingCart,
+  UserPlus,
 } from "lucide-react"
 import { useState } from "react"
 
@@ -34,11 +34,7 @@ export function PricingSimulator() {
   const humanSupportCost = humanSupport * PRICES.HUMAN_SUPPORT
 
   const totalVariableCost =
-    messageCost +
-    customerCost +
-    orderCost +
-    pushCampaignCost +
-    humanSupportCost
+    messageCost + customerCost + orderCost + pushCampaignCost + humanSupportCost
 
   const totalMonthlyCost = PRICES.MONTHLY_CHANNEL + totalVariableCost
 
@@ -143,7 +139,8 @@ export function PricingSimulator() {
                           {slider.label}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {slider.description} · €{slider.unitCost.toFixed(2)} each
+                          {slider.description} · €{slider.unitCost.toFixed(2)}{" "}
+                          each
                         </p>
                       </div>
                     </div>
@@ -153,7 +150,7 @@ export function PricingSimulator() {
                       </p>
                     </div>
                   </div>
-                  
+
                   {/* Slider */}
                   <input
                     type="range"
@@ -164,12 +161,10 @@ export function PricingSimulator() {
                     step={slider.step}
                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mb-2 accent-blue-600"
                   />
-                  
+
                   {/* Cost Display */}
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">
-                      0 - {slider.max}
-                    </span>
+                    <span className="text-gray-600">0 - {slider.max}</span>
                     <span className={`font-bold ${slider.color}`}>
                       €{slider.cost.toFixed(2)}
                     </span>
@@ -186,13 +181,11 @@ export function PricingSimulator() {
                 <Calculator className="h-5 w-5 text-blue-600" />
                 Monthly Total
               </h3>
-              
+
               <div className="space-y-3">
                 {/* Fixed Cost */}
                 <div className="flex items-center justify-between text-sm pb-2 border-b border-gray-300">
-                  <span className="text-gray-700 font-medium">
-                    Fixed Cost
-                  </span>
+                  <span className="text-gray-700 font-medium">Fixed Cost</span>
                   <span className="font-bold text-orange-600">
                     €{PRICES.MONTHLY_CHANNEL.toFixed(2)}
                   </span>
@@ -200,30 +193,44 @@ export function PricingSimulator() {
 
                 {/* Variable Costs Breakdown */}
                 <div className="space-y-2 pb-2 border-b border-gray-300">
-                  <p className="text-xs font-semibold text-gray-600 uppercase">Variable Costs</p>
+                  <p className="text-xs font-semibold text-gray-600 uppercase">
+                    Variable Costs
+                  </p>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-gray-600">Messages</span>
-                    <span className="font-semibold text-blue-600">€{messageCost.toFixed(2)}</span>
+                    <span className="font-semibold text-blue-600">
+                      €{messageCost.toFixed(2)}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-gray-600">Customers</span>
-                    <span className="font-semibold text-green-600">€{customerCost.toFixed(2)}</span>
+                    <span className="font-semibold text-green-600">
+                      €{customerCost.toFixed(2)}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-gray-600">Orders</span>
-                    <span className="font-semibold text-purple-600">€{orderCost.toFixed(2)}</span>
+                    <span className="font-semibold text-purple-600">
+                      €{orderCost.toFixed(2)}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-gray-600">Push</span>
-                    <span className="font-semibold text-pink-600">€{pushCampaignCost.toFixed(2)}</span>
+                    <span className="font-semibold text-pink-600">
+                      €{pushCampaignCost.toFixed(2)}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-gray-600">Support</span>
-                    <span className="font-semibold text-red-600">€{humanSupportCost.toFixed(2)}</span>
+                    <span className="font-semibold text-red-600">
+                      €{humanSupportCost.toFixed(2)}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between text-sm font-medium pt-1">
                     <span className="text-gray-700">Subtotal</span>
-                    <span className="text-blue-600">€{totalVariableCost.toFixed(2)}</span>
+                    <span className="text-blue-600">
+                      €{totalVariableCost.toFixed(2)}
+                    </span>
                   </div>
                 </div>
 

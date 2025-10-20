@@ -111,7 +111,12 @@ export class AgentService {
    * Update agent configuration (AgentConfig table)
    * 🔒 SECURITY: Only admin users can update prompt/content
    */
-  async updateAgentConfig(id: string, data: any, workspaceId: string, userId?: string) {
+  async updateAgentConfig(
+    id: string,
+    data: any,
+    workspaceId: string,
+    userId?: string
+  ) {
     try {
       logger.info(`🔄 Updating agentConfig ${id} for workspace ${workspaceId}`)
       logger.info("📝 Update data received:", data)
@@ -151,11 +156,13 @@ export class AgentService {
           select: { role: true },
         })
 
-        if (!user || user.role !== 'ADMIN') {
-          logger.warn(`🚨 SECURITY: Non-admin user ${userId} attempted to modify agent prompt`)
-          throw new Error('Only admin users can modify agent prompts')
+        if (!user || user.role !== "ADMIN") {
+          logger.warn(
+            `🚨 SECURITY: Non-admin user ${userId} attempted to modify agent prompt`
+          )
+          throw new Error("Only admin users can modify agent prompts")
         }
-        
+
         logger.info(`✅ Admin ${userId} authorized to update prompt`)
       }
 
@@ -163,11 +170,11 @@ export class AgentService {
       // Frontend sends: content, max_tokens
       // Database expects: prompt, maxTokens
       const updateData: any = {}
-      
+
       // 🔒 CRITICAL: Only allow prompt updates from verified admin users
       if (data.prompt !== undefined) updateData.prompt = data.prompt
       if (data.content !== undefined) updateData.prompt = data.content // Map content → prompt
-      
+
       // These fields can be updated by any authenticated user
       if (data.model !== undefined) updateData.model = data.model
       if (data.temperature !== undefined)
