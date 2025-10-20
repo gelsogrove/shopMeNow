@@ -10,71 +10,12 @@ export class SchedulerService {
   private campaignScheduler: CampaignScheduler
   private readonly CHECK_INTERVAL = 5 * 60 * 1000 // 5 minuti
   private readonly URL_CLEANUP_INTERVAL = 60 * 60 * 1000 // 1 ora
-  private readonly CHAT_CLEANUP_INTERVAL = 12 * 60 * 60 * 1000 // 12 ore
   private readonly BILLING_CHECK_INTERVAL = 24 * 60 * 60 * 1000 // 24 ore
-  private readonly MESSAGE_LIMIT = 50 // limite di messaggi per cliente
 
   constructor() {
     this.prisma = new PrismaClient()
     this.billingService = new BillingService(this.prisma)
     this.campaignScheduler = new CampaignScheduler(this.prisma)
-  }
-
-  /**
-   * IMPORTANTE: NON eliminiamo più i messaggi vecchi perché servono per il calcolo del billing
-   * Questa funzione è stata disattivata per garantire l'integrità dei dati di fatturazione
-   *
-   * @deprecated Non eliminare i messaggi perché necessari per il billing
-   */
-  private async cleanupChatHistory(): Promise<void> {
-    // DISABILITATO: Non possiamo eliminare i messaggi vecchi perché necessari per il calcolo del billing
-    logger.info(
-      "📊 Chat history cleanup skipped: messages are required for billing calculations"
-    )
-
-    /* CODICE PRECEDENTE DISATTIVATO
-    try {
-      // Ottiene tutte le sessioni di chat attive
-      const chatSessions = await this.prisma.chatSession.findMany({
-        select: {
-          id: true,
-          customerId: true,
-          messages: {
-            orderBy: {
-              createdAt: "desc",
-            },
-          },
-        },
-      })
-
-      for (const session of chatSessions) {
-        // Se il cliente ha più di 50 messaggi, elimina i più vecchi
-        if (session.messages.length > this.MESSAGE_LIMIT) {
-          // Ottiene gli ID dei messaggi da eliminare
-          const messagesToDelete = session.messages
-            .slice(this.MESSAGE_LIMIT)
-            .map((msg) => msg.id)
-
-          // Elimina i messaggi più vecchi
-          const result = await this.prisma.message.deleteMany({
-            where: {
-              id: {
-                in: messagesToDelete,
-              },
-            },
-          })
-
-          if (result.count > 0) {
-            logger.info(
-              `🧹 Removed ${result.count} old messages for chat session ${session.id}`
-            )
-          }
-        }
-      }
-    } catch (error) {
-      logger.error("Error cleaning up chat history:", error)
-    }
-    */
   }
 
   /**
@@ -190,8 +131,7 @@ export class SchedulerService {
     // Esegui immediatamente al primo avvio
     this.updateExpiredOffers()
     this.cleanupUrls()
-    // this.cleanupChatHistory() // Disabilitato: i messaggi sono necessari per il billing
-    this.trackMonthlyChannelCost() // Verifica se è necessario addebitare il costo mensile
+    this.trackMonthlyChannelCost()
 
     // Imposta gli intervalli per le esecuzioni successive
     setInterval(() => {
@@ -207,16 +147,11 @@ export class SchedulerService {
       this.trackMonthlyChannelCost()
     }, this.BILLING_CHECK_INTERVAL)
 
-    // Interval disabilitato: i messaggi sono necessari per il billing
-    // setInterval(() => {
-    //   this.cleanupChatHistory()
-    // }, this.CHAT_CLEANUP_INTERVAL)
-
     // Start campaign scheduler (runs daily at 10:00 AM)
     this.campaignScheduler.start()
 
     logger.info(
-      "Scheduler service started - managing offers, URLs cleanup, monthly billing, and campaign scheduler (chat history cleanup disabled for billing)"
+      "Scheduler service started - managing offers, URLs cleanup, monthly billing, and campaign scheduler"
     )
   }
 }

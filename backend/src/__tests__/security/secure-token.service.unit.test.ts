@@ -402,11 +402,10 @@ describe("🔐 SECURE TOKEN SERVICE - UNIT TESTS (Andrea's Security)", () => {
           undefined,
           undefined // NO customerId!
         )
-      ).rejects.toThrow("Errore creazione token di tipo 'checkout'")
+      ).rejects.toThrow("KISS TOKEN: customerId è obbligatorio")
 
       // Verify the error is thrown (customerId missing)
-      // Original error is "KISS TOKEN: customerId è obbligatorio"
-      // but it gets wrapped in a generic error message
+      // The service re-throws validation errors as-is to preserve the specific error message
 
       console.log("  ✅ Token creation without customerId REJECTED")
       console.log("  ✅ Security validation ENFORCED")
