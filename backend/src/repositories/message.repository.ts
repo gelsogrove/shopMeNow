@@ -307,6 +307,9 @@ export class MessageRepository {
         where: {
           phone: phoneNumber,
         },
+        include: {
+          sales: true, // Include agent data
+        },
       })
       return customer
     } catch (error) {
@@ -729,20 +732,28 @@ export class MessageRepository {
 
         // Create a temporary customer for new users
         try {
-          customer = await this.prisma.customers.create({
+          const newCustomer = await this.prisma.customers.create({
             data: {
               name: `Unknown User-${randomNumber}`,
               email: `${data.phoneNumber.replace(/[^0-9]/g, "")}@temp.com`,
               phone: data.phoneNumber,
               workspaceId: workspaceId,
               isActive: false, // Mark as inactive until they register
+              isBlacklisted: true, // 🚨 NEW USERS ARE BLOCKED until admin approval!
+              activeChatbot: true, // Enable chatbot to handle registration requests
               language: detectedLanguage,
               currency: "EUR",
             },
           })
 
+          // Reload customer with sales relation
+          customer = await this.prisma.customers.findUnique({
+            where: { id: newCustomer.id },
+            include: { sales: true },
+          })
+
           logger.info(
-            `saveMessage: Created temporary customer ${customer.id} (Unknown User-${randomNumber}) for new user ${data.phoneNumber} with detected language: ${detectedLanguage}`
+            `saveMessage: Created temporary customer ${newCustomer.id} (Unknown User-${randomNumber}) for new user ${data.phoneNumber} with detected language: ${detectedLanguage}`
           )
         } catch (createError: any) {
           // P2002: Unique constraint violation (phone already exists)
@@ -756,6 +767,9 @@ export class MessageRepository {
               where: {
                 phone: data.phoneNumber,
                 workspaceId: workspaceId,
+              },
+              include: {
+                sales: true, // Include agent data
               },
             })
 
@@ -1222,8 +1236,8 @@ export class MessageRepository {
           const formatoStr = p.formato ? ` ${p.formato}` : ""
 
           // WhatsApp strikethrough: ~text~ (single tilde at start and end)
-          // Format: CODICE formato NOME ~€originalPrice~ → €finalPrice - description
-          formattedProducts += `• ${p.ProductCode}${formatoStr} ${p.name} ~€${originalPrice}~ → €${finalPrice}${description}\n`
+          // Format: CODICE NOME formato ~€originalPrice~ → €finalPrice - description
+          formattedProducts += `• ${p.ProductCode} ${p.name}${formatoStr} ~€${originalPrice}~ → €${finalPrice}${description}\n`
         })
         formattedProducts += "\n"
       }
@@ -1690,11 +1704,14 @@ export class MessageRepository {
           workspaceId,
           language,
           isActive: true,
-          activeChatbot: true,
+          isBlacklisted: true, // 🚨 NEW USERS ARE BLOCKED until admin approval!
+          activeChatbot: true, // Enable chatbot to handle registration requests
           currency: "EUR",
         },
       })
-      logger.info(`Created customer: ${customer.id}`)
+      logger.info(
+        `Created customer: ${customer.id} (blocked until admin approval)`
+      )
       return customer
     } catch (error: any) {
       // P2002: Unique constraint violation (phone or email already exists)
@@ -2831,77 +2848,16 @@ export class MessageRepository {
   }
 
   /**
-   * Mapping delle traduzioni per le categorie
-   */
-  private getCategoryTranslations() {
-    return {
-      "Formaggi e Latticini": {
-        es: "Quesos y Lácteos",
-        pt: "Queijos e Laticínios",
-        en: "Cheese and Dairy",
-        it: "Formaggi e Latticini",
-      },
-      Salumi: {
-        es: "Embutidos",
-        pt: "Charcutaria",
-        en: "Cured Meats",
-        it: "Salumi",
-      },
-      "Farine e Panificazione": {
-        es: "Harinas y Panadería",
-        pt: "Farinhas e Panificação",
-        en: "Flour and Bakery",
-        it: "Farine e Panificazione",
-      },
-      "Prodotti Surgelati": {
-        es: "Productos Congelados",
-        pt: "Produtos Congelados",
-        en: "Frozen Products",
-        it: "Prodotti Surgelati",
-      },
-      "Pasta e Riso": {
-        es: "Pasta y Arroz",
-        pt: "Massa e Arroz",
-        en: "Pasta and Rice",
-        it: "Pasta e Riso",
-      },
-      "Salse e Conserve": {
-        es: "Salsas y Conservas",
-        pt: "Molhos e Conservas",
-        en: "Sauces and Preserves",
-        it: "Salse e Conserve",
-      },
-      "Varie e Spezie": {
-        es: "Varios y Especias",
-        pt: "Vários e Especiarias",
-        en: "Various and Spices",
-        it: "Varie e Spezie",
-      },
-      "Acqua e Bevande": {
-        es: "Agua y Bebidas",
-        pt: "Água e Bebidas",
-        en: "Water and Beverages",
-        it: "Acqua e Bevande",
-      },
-    }
-  }
-
-  /**
    * Recupera le categorie attive dal database e le formatta per il prompt.
+   * Il Translation Layer tradurrà automaticamente nella lingua del cliente.
    * @param workspaceId L'ID del workspace.
-   * @param language Lingua per la traduzione (default: 'it')
-   * @returns Una stringa con le categorie formattate.
+   * @returns Una stringa con le categorie formattate in italiano (lingua base).
    */
-  async getActiveCategories(
-    workspaceId: string,
-    language: string = "en"
-  ): Promise<string> {
+  async getActiveCategories(workspaceId: string): Promise<string> {
     try {
-      console.log("🔧 DEBUG getActiveCategories: workspaceId:", workspaceId)
-
       const categories = await this.prisma.categories.findMany({
         where: {
-          workspaceId: workspaceId,
+          workspaceId,
           isActive: true,
         },
         orderBy: {
@@ -2909,220 +2865,25 @@ export class MessageRepository {
         },
       })
 
-      console.log(
-        "🔧 DEBUG getActiveCategories: trovate",
-        categories.length,
-        "categorie"
-      )
-
       if (categories.length === 0) return ""
 
-      // Mappa delle traduzioni con icona, nome e descrizione
-      const translations: Record<
-        string,
-        {
-          it: { name: string; description: string }
-          es: { name: string; description: string }
-          pt: { name: string; description: string }
-        }
-      > = {
-        "Cheeses & Dairy": {
-          it: {
-            name: "🧀 Formaggi e Latticini",
-            description:
-              "Formaggi e latticini italiani premium, mozzarella, burrata e prodotti caseari di alta qualità.",
-          },
-          es: {
-            name: "🧀 Quesos y Lácteos",
-            description:
-              "Quesos y lácteos italianos premium, mozzarella, burrata y productos lácteos de alta calidad.",
-          },
-          pt: {
-            name: "🧀 Queijos e Laticínios",
-            description:
-              "Queijos e laticínios italianos premium, mozzarella, burrata e produtos lácteos de alta qualidade.",
-          },
-        },
-        "Cured Meats": {
-          it: {
-            name: "🥓 Salumi",
-            description:
-              "Salumi tradizionali italiani e insaccati artigianali di alta qualità.",
-          },
-          es: {
-            name: "🥓 Embutidos",
-            description:
-              "Embutidos italianos tradicionales y productos artesanales de alta calidad.",
-          },
-          pt: {
-            name: "🥓 Embutidos",
-            description:
-              "Embutidos tradicionais italianos e produtos artesanais de alta qualidade.",
-          },
-        },
-        "Flour & Baking": {
-          it: {
-            name: "🌾 Farine e Ingredienti per Panificazione",
-            description:
-              "Farine italiane e ingredienti per panificazione e pasticceria artigianale.",
-          },
-          es: {
-            name: "🌾 Harinas y Repostería",
-            description:
-              "Harinas italianas e ingredientes para panadería y repostería artesanal.",
-          },
-          pt: {
-            name: "🌾 Farinha e Panificação",
-            description:
-              "Farinhas italianas e ingredientes para panificação e confeitaria artesanal.",
-          },
-        },
-        "Frozen Products": {
-          it: {
-            name: "🧊 Prodotti Surgelati",
-            description:
-              "Dolci surgelati italiani, pasticceria e specialità congelate di alta qualità.",
-          },
-          es: {
-            name: "🧊 Productos Congelados",
-            description:
-              "Postres congelados italianos, repostería y especialidades congeladas de alta calidad.",
-          },
-          pt: {
-            name: "🧊 Produtos Congelados",
-            description:
-              "Sobremesas congeladas italianas, confeitaria e especialidades congeladas de alta qualidade.",
-          },
-        },
-        "Pasta & Rice": {
-          it: {
-            name: "🍝 Pasta e Riso",
-            description:
-              "Pasta e riso italiani premium, varietà tradizionali e artigianali di alta qualità.",
-          },
-          es: {
-            name: "🍝 Pasta y Arroz",
-            description:
-              "Pasta y arroz italianos premium, variedades tradicionales y artesanales de alta calidad.",
-          },
-          pt: {
-            name: "🍝 Massa e Arroz",
-            description:
-              "Massas e arroz italianos premium, variedades tradicionais e artesanais de alta qualidade.",
-          },
-        },
-        "Salami & Cold Cuts": {
-          it: {
-            name: "🍖 Salami e Affettati",
-            description:
-              "Salami artigianali, prosciutto e affettati italiani della migliore tradizione.",
-          },
-          es: {
-            name: "🍖 Salami y Fiambres",
-            description:
-              "Salami artesanales, jamón y fiambres italianos de la mejor tradición.",
-          },
-          pt: {
-            name: "🍖 Salames e Frios",
-            description:
-              "Salames artesanais, presunto e frios italianos da melhor tradição.",
-          },
-        },
-        "Sauces & Preserves": {
-          it: {
-            name: "🫙 Salse e Conserve",
-            description:
-              "Salse gourmet, conserve e condimenti italiani di alta qualità per arricchire ogni piatto.",
-          },
-          es: {
-            name: "🫙 Salsas y Conservas",
-            description:
-              "Salsas gourmet, conservas y condimentos italianos de alta calidad para enriquecer cada plato.",
-          },
-          pt: {
-            name: "🫙 Molhos e Conservas",
-            description:
-              "Molhos gourmet, conservas e condimentos italianos de alta qualidade para enriquecer cada prato.",
-          },
-        },
-        "Tomato Products": {
-          it: {
-            name: "🍅 Prodotti a Base di Pomodoro",
-            description:
-              "Salse di pomodoro italiane, passata e prodotti a base di pomodoro di qualità superiore.",
-          },
-          es: {
-            name: "🍅 Productos de Tomate",
-            description:
-              "Salsas de tomate italianas, puré y productos a base de tomate de alta calidad.",
-          },
-          pt: {
-            name: "🍅 Produtos de Tomate",
-            description:
-              "Molhos de tomate italianos, polpa e produtos à base de tomate de alta qualidade.",
-          },
-        },
-        "Various & Spices": {
-          it: {
-            name: "🌶️ Varie e Spezie",
-            description:
-              "Spezie italiane, condimenti e vari prodotti gourmet per la cucina tradizionale.",
-          },
-          es: {
-            name: "🌶️ Varios y Especias",
-            description:
-              "Especias italianas, condimentos y varios productos gourmet para la cocina tradicional.",
-          },
-          pt: {
-            name: "🌶️ Diversos e Especiarias",
-            description:
-              "Especiarias italianas, condimentos e diversos produtos gourmet para a cozinha tradicional.",
-          },
-        },
-        "Water & Beverages": {
-          it: {
-            name: "💧 Acque e Bevande",
-            description:
-              "Acque minerali italiane premium e bevande tradizionali di alta qualità.",
-          },
-          es: {
-            name: "💧 Aguas y Bebidas",
-            description:
-              "Aguas minerales italianas premium y bebidas tradicionales de alta calidad.",
-          },
-          pt: {
-            name: "💧 Águas e Bebidas",
-            description:
-              "Águas minerais italianas premium e bebidas tradicionais de alta qualidade.",
-          },
-        },
-      }
-
-      // Formattazione
+      // Formatta le categorie dal database - SEMPRE in italiano (lingua base)
+      // Il Translation Layer si occuperà della traduzione finale
       const formattedCategories = categories
         .map((category) => {
-          let name = category.name
-          let description = category.description || ""
+          const name = category.name || "Categoria"
+          const description = category.description || ""
 
-          if (
-            language !== "en" &&
-            translations[category.name]?.[language as "it"]
-          ) {
-            const t = translations[category.name][language as "it"]
-            name = t.name
-            description = t.description
-          }
+          // Prendi una descrizione breve (prima frase o primi 80 caratteri)
+          const shortDesc = description
+            .split(/[.,;]/)[0]
+            .substring(0, 80)
+            .trim()
 
-          // Prendi solo la prima parte della descrizione come breve
-          const shortDesc = description.split(",")[0].substring(0, 50).trim()
-          return `**${name}** - ${shortDesc}`
+          return `**${name}** - ${shortDesc || "Prodotti disponibili"}`
         })
         .join("\n")
 
-      console.log(
-        "🔧 DEBUG getActiveCategories: risultato finale:",
-        formattedCategories
-      )
       return `\n${formattedCategories}\n`
     } catch (error) {
       logger.error("Error fetching active categories:", error)
@@ -3132,21 +2893,17 @@ export class MessageRepository {
 
   /**
    * Recupera le offerte attive dal database e le formatta per il prompt.
+   * Il Translation Layer tradurrà automaticamente nella lingua del cliente.
    * @param workspaceId L'ID del workspace.
-   * @param language Lingua per la traduzione (default: 'it')
-   * @returns Una stringa con le offerte formattate.
+   * @returns Una stringa con le offerte formattate in italiano (lingua base).
    */
-  async getActiveOffers(
-    workspaceId: string,
-    language: string = "it"
-  ): Promise<string> {
+  async getActiveOffers(workspaceId: string): Promise<string> {
     try {
-      console.log("🔧 DEBUG getActiveOffers: workspaceId:", workspaceId)
       const now = new Date()
 
       const offers = await this.prisma.offers.findMany({
         where: {
-          workspaceId: workspaceId,
+          workspaceId,
           isActive: true,
           startDate: { lte: now },
           endDate: { gte: now },
@@ -3159,104 +2916,20 @@ export class MessageRepository {
         },
       })
 
-      console.log("🔧 DEBUG getActiveOffers: trovate", offers.length, "offerte")
-
       if (offers.length === 0) {
         return "" // Nessuna offerta attiva
       }
 
-      // Mappatura traduzioni categorie per offerte
-      const categoryTranslations: Record<string, Record<string, string>> = {
-        "Cheeses & Dairy": {
-          it: "Formaggi e Latticini",
-          es: "Quesos y Lácteos",
-          pt: "Queijos e Laticínios",
-          en: "Cheeses & Dairy",
-        },
-        "Cured Meats": {
-          it: "Salumi",
-          es: "Embutidos",
-          pt: "Embutidos",
-          en: "Cured Meats",
-        },
-        "Flour & Baking": {
-          it: "Farine e Panificazione",
-          es: "Harinas y Repostería",
-          pt: "Farinha e Panificação",
-          en: "Flour & Baking",
-        },
-        "Frozen Products": {
-          it: "Prodotti Surgelati",
-          es: "Productos Congelados",
-          pt: "Produtos Congelados",
-          en: "Frozen Products",
-        },
-        "Pasta & Rice": {
-          it: "Pasta e Riso",
-          es: "Pasta y Arroz",
-          pt: "Massa e Arroz",
-          en: "Pasta & Rice",
-        },
-        "Sauces & Preserves": {
-          it: "Salse e Conserve",
-          es: "Salsas y Conservas",
-          pt: "Molhos e Conservas",
-          en: "Sauces & Preserves",
-        },
-        "Various & Spices": {
-          it: "Varie e Spezie",
-          es: "Varios y Especias",
-          pt: "Diversos e Especiarias",
-          en: "Various & Spices",
-        },
-      }
-
-      // Traduzioni per il testo dell'offerta
-      const offerTextTranslations: Record<string, string> = {
-        it: "Sconto di questo mese:",
-        es: "Descuento de este mes:",
-        pt: "Desconto deste mês:",
-        en: "This month's discount:",
-      }
-
-      const categoryWordTranslations: Record<string, string> = {
-        it: "sulla categoria",
-        es: "en la categoría",
-        pt: "na categoria",
-        en: "on category",
-      }
-
-      // Formatta le offerte con traduzione
+      // Formatta le offerte dal database - SEMPRE in italiano (lingua base)
+      // Il Translation Layer si occuperà della traduzione finale
       const formattedOffers = offers
         .map((offer) => {
           const categoryName = offer.category?.name || "Generale"
-
-          // Traduci il nome della categoria
-          let translatedCategoryName = categoryName
-          if (categoryTranslations[categoryName]?.[language]) {
-            translatedCategoryName =
-              categoryTranslations[categoryName][language]
-          }
-
-          // Traduci il testo dell'offerta
-          const offerText =
-            offerTextTranslations[language] || offerTextTranslations["it"]
-          const categoryWord =
-            categoryWordTranslations[language] || categoryWordTranslations["it"]
-
-          return `${offerText} ${offer.discountPercent}% ${categoryWord} ${translatedCategoryName}`
+          return `Sconto di questo mese: ${offer.discountPercent}% sulla categoria ${categoryName}`
         })
         .join(" • ")
 
-      console.log("🔧 DEBUG getActiveOffers: risultato finale:")
-      console.log(formattedOffers)
-
-      const result = `\n${formattedOffers}\n`
-      console.log(
-        "🔧 DEBUG getActiveOffers: return string length:",
-        result.length
-      )
-      return result
+      return `\n${formattedOffers}\n`
     } catch (error) {
       logger.error("Error fetching active offers:", error)
       return "" // In caso di errore, restituisce una stringa vuota

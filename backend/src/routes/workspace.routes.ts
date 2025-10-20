@@ -1,6 +1,10 @@
 import { RequestHandler, Router } from "express"
 import { WorkspaceService } from "../application/services/workspace.service"
 import { WorkspaceController } from "../interfaces/http/controllers/workspace.controller"
+import {
+  validateWorkspaceOperation,
+  validateWorkspaceUpdateData,
+} from "../middlewares/workspace-validation.middleware"
 import { wrapController } from "../utils/controller-wrapper"
 import logger from "../utils/logger"
 
@@ -37,10 +41,10 @@ const workspaceService = new WorkspaceService()
  *           type: string
  *           nullable: true
  *           description: WhatsApp phone number for the workspace
- *         whatsappApiToken:
+ *         whatsappApiKey:
  *           type: string
  *           nullable: true
- *           description: WhatsApp API token
+ *           description: WhatsApp API key for authentication
  *         whatsappWebhookUrl:
  *           type: string
  *           nullable: true
@@ -98,7 +102,7 @@ const getCurrentWorkspace: RequestHandler = async (req, res): Promise<void> => {
       slug: workspace.slug,
       description: workspace.description,
       whatsappPhoneNumber: workspace.whatsappPhoneNumber,
-      whatsappApiToken: workspace.whatsappApiToken,
+      whatsappApiKey: workspace.whatsappApiKey, // ✅ FIXED: Use whatsappApiKey
       webhookUrl: workspace.webhookUrl,
       notificationEmail: workspace.notificationEmail,
       adminEmail: workspace.adminEmail,
@@ -168,7 +172,11 @@ router.get("/current", getCurrentWorkspace)
  *       404:
  *         description: Workspace not found
  */
-router.get("/:id", wrapController(workspaceController.getWorkspaceById))
+router.get(
+  "/:id",
+  validateWorkspaceOperation,
+  wrapController(workspaceController.getWorkspaceById)
+)
 
 /**
  * @swagger
@@ -191,7 +199,7 @@ router.get("/:id", wrapController(workspaceController.getWorkspaceById))
  *                 type: string
  *               whatsappPhoneNumber:
  *                 type: string
- *               whatsappApiToken:
+ *               whatsappApiKey:
  *                 type: string
  *               whatsappWebhookUrl:
  *                 type: string
@@ -234,7 +242,7 @@ router.post("/", wrapController(workspaceController.createWorkspace))
  *                 type: string
  *               whatsappPhoneNumber:
  *                 type: string
- *               whatsappApiToken:
+ *               whatsappApiKey:
  *                 type: string
  *               whatsappWebhookUrl:
  *                 type: string
@@ -250,7 +258,12 @@ router.post("/", wrapController(workspaceController.createWorkspace))
  *       404:
  *         description: Workspace not found
  */
-router.put("/:id", wrapController(workspaceController.updateWorkspace))
+router.put(
+  "/:id",
+  validateWorkspaceOperation,
+  validateWorkspaceUpdateData,
+  wrapController(workspaceController.updateWorkspace)
+)
 
 /**
  * @swagger

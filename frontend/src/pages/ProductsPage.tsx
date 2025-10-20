@@ -49,7 +49,7 @@ export function ProductsPage() {
 
   // Load filters from localStorage or use defaults
   const [filterCategory, setFilterCategory] = useState<string>("all")
-  const [sortBy, setSortBy] = useState<"name" | "sales" | "stock">("name")
+  const [sortBy, setSortBy] = useState<"name" | "stock">("name")
 
   // Get currency symbol based on workspace settings
   const currencySymbol = getCurrencySymbol(workspace?.currency as string)
@@ -162,8 +162,6 @@ export function ProductsPage() {
     // Sort products
     filtered.sort((a, b) => {
       switch (sortBy) {
-        case "sales":
-          return (b.salesScore || 0) - (a.salesScore || 0)
         case "stock":
           return (b.stock || 0) - (a.stock || 0)
         case "name":
@@ -580,14 +578,13 @@ export function ProductsPage() {
           {/* Sort By */}
           <Select
             value={sortBy}
-            onValueChange={(v) => setSortBy(v as "name" | "sales" | "stock")}
+            onValueChange={(v) => setSortBy(v as "name" | "stock")}
           >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Sort By" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="name">Sort by Name</SelectItem>
-              <SelectItem value="sales">Sort by Sales</SelectItem>
               <SelectItem value="stock">Sort by Stock</SelectItem>
             </SelectContent>
           </Select>
@@ -615,87 +612,7 @@ export function ProductsPage() {
               >
                 <CardContent className="p-4">
                   <div className="flex flex-col gap-3">
-                    {/* Sales Performance Bar - Enhanced UI */}
-                    {(() => {
-                      // Use real sales data from backend (defaults to 0 if not available)
-                      const salesScore = product.salesScore || 0
-                      const salesCount = product.salesCount || 0
-
-                      const getGradientColor = (score: number) => {
-                        if (score < 50) {
-                          const r = 239
-                          const g = Math.round(68 + (score / 50) * (234 - 68))
-                          const b = 68
-                          return `rgb(${r}, ${g}, ${b})`
-                        } else {
-                          const r = Math.round(
-                            234 - ((score - 50) / 50) * (234 - 34)
-                          )
-                          const g = Math.round(
-                            234 - ((score - 50) / 50) * (234 - 197)
-                          )
-                          const b = Math.round(
-                            68 + ((score - 50) / 50) * (94 - 68)
-                          )
-                          return `rgb(${r}, ${g}, ${b})`
-                        }
-                      }
-
-                      const getEmoji = (score: number) => {
-                        if (score < 30) return "🔴"
-                        if (score < 70) return "🟡"
-                        return "🔥"
-                      }
-
-                      const getLabel = (score: number) => {
-                        if (score < 30) return "Slow Mover"
-                        if (score < 70) return "Steady Sales"
-                        return "Hot Seller!"
-                      }
-
-                      const getTrendArrow = (score: number) => {
-                        if (score < 40) return "↘"
-                        if (score < 60) return "→"
-                        return "↗"
-                      }
-
-                      return (
-                        <div className="w-full">
-                          {/* Progress Bar */}
-                          <div className="relative w-full h-1.5 bg-gray-200 rounded-t-md overflow-hidden">
-                            <div
-                              className="h-full transition-all duration-500 ease-out"
-                              style={{
-                                width: `${salesScore}%`,
-                                backgroundColor: getGradientColor(salesScore),
-                              }}
-                            />
-                          </div>
-                          {/* Label Bar */}
-                          <div className="w-full bg-gradient-to-r from-gray-50 to-white px-2 py-1 flex items-center justify-between border-b border-gray-100">
-                            <span className="flex items-center gap-1 text-xs font-medium">
-                              <span className="text-base">
-                                {getEmoji(salesScore)}
-                              </span>
-                              <span className="text-gray-700">
-                                {getLabel(salesScore)}
-                              </span>
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <span
-                                className="text-xs font-bold"
-                                style={{ color: getGradientColor(salesScore) }}
-                              >
-                                {salesScore}%
-                              </span>
-                              <span className="text-sm">
-                                {getTrendArrow(salesScore)}
-                              </span>
-                            </span>
-                          </div>
-                        </div>
-                      )
-                    })()}
+                    {/* Sales Performance - REMOVED */}
 
                     {/* Image */}
                     <div className="w-full h-32 flex items-center justify-center bg-gray-50 overflow-hidden relative">

@@ -266,14 +266,20 @@ Remember: Return ONLY the JSON object with translatedText, blocked, and reason f
    */
   private getLanguageName(code: string): string {
     const languages: Record<string, string> = {
+      // Lowercase ISO codes
       it: "Italian",
       en: "English",
       es: "Spanish",
       pt: "Portuguese",
       de: "German",
       fr: "French",
+      // Uppercase database format
+      IT: "Italian",
+      ENG: "English",
+      ESP: "Spanish",
+      PRT: "Portuguese",
     }
-    return languages[code.toLowerCase()] || "Italian"
+    return languages[code] || languages[code.toLowerCase()] || "Italian"
   }
 
   /**

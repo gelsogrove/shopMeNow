@@ -10,13 +10,28 @@ import {
 export interface Workspace {
   id: string
   name: string
+  slug?: string
   description?: string
   isActive: boolean
   isDelete: boolean
   createdAt: string
   updatedAt: string
   whatsappPhoneNumber?: string
+  whatsappApiKey?: string
+  adminEmail?: string
+  url?: string
+  debugMode?: boolean
   currency?: string
+  language?: string
+  welcomeMessages?: any
+  wipMessages?: any
+  afterRegistrationMessages?: any
+  messageLimit?: number
+  blocklist?: string
+  challengeStatus?: boolean
+  notificationEmail?: string
+  webhookUrl?: string
+  businessType?: string
 }
 
 interface WorkspaceContextType {

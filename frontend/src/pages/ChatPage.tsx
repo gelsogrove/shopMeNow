@@ -74,14 +74,18 @@ const formatDate = (dateString: string | null | undefined): string => {
 
 // Helper function to get language flag emoji
 const getLanguageFlag = (language?: string): string => {
-  switch (language?.toLowerCase()) {
-    case "it":
+  const normalizedLang = language?.toUpperCase() // Normalize to uppercase
+  switch (normalizedLang) {
+    case "IT":
       return "🇮🇹"
-    case "en":
+    case "EN":
+    case "ENG":
       return "🇬🇧"
-    case "es":
+    case "ES":
+    case "ESP":
       return "🇪🇸"
-    case "pt":
+    case "PT":
+    case "PRT":
       return "🇵🇹"
     default:
       return "🌐"
@@ -122,6 +126,8 @@ export function ChatPage() {
   const [isWorkspaceChanging, setIsWorkspaceChanging] = useState(false) // 🆕 Loading per workspace change
   const [searchParams, setSearchParams] = useSearchParams()
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const hasCompletedChatDataRef = useRef(false) // 🔥 Traccia se abbiamo completato i dati della chat
+  const hasResetOnMountRef = useRef(false) // 🔥 Traccia se abbiamo fatto il reset iniziale
   // 🚨 REMOVED: sessionId from URL - chat selection now managed via React context only
 
   // �🚨 FIX: RELOAD page when workspace changes (hard refresh)
@@ -230,15 +236,34 @@ export function ChatPage() {
   const [showPlaygroundDialog, setShowPlaygroundDialog] = useState(false)
   const queryClient = useQueryClient()
 
-  // 🚨 RESET COMPLETO: Pulisce tutto quando si entra in ChatPage
+  // 🚨 RESET COMPLETO: Pulisce tutto quando si entra in ChatPage (UNA SOLA VOLTA)
   useEffect(() => {
+    console.log("🚨🚨🚨 [MOUNT] ChatPage useEffect RESET si sta eseguendo")
+    console.log("   - selectedChat attuale:", selectedChat)
+
     logger.info("[ChatPage] 🔄 RESET: Cleaning all data on mount")
 
-    // 1. Pulisci selected chat
-    setSelectedChat(null)
+    // 1. ✅ PRIMA verifica sessionStorage - se c'è un valore salvato, NON resettare MAI
+    const savedChatId = sessionStorage.getItem("selectedChatId")
+    console.log("   - sessionStorage selectedChatId:", savedChatId)
 
-    // 2. Pulisci messaggi
-    setMessages([])
+    if (!savedChatId) {
+      console.log("   ❌ Nessuna chat salvata → RESET selectedChat a NULL")
+      logger.info("[ChatPage] Nessuna chat salvata, reset selectedChat")
+      setSelectedChat(null)
+    } else {
+      console.log("   ✅ Chat salvata trovata → NON resetto selectedChat")
+      logger.info(
+        "[ChatPage] ✅ Chat salvata trovata, NON resetto selectedChat:",
+        savedChatId
+      )
+      // NON fare nulla - selectedChat è già stato inizializzato da ChatContext
+    }
+
+    // 2. Pulisci messaggi SOLO se non c'è chat salvata
+    if (!savedChatId) {
+      setMessages([])
+    }
 
     // 3. Pulisci URL params
     setSearchParams({})
@@ -249,7 +274,7 @@ export function ChatPage() {
     queryClient.invalidateQueries({ queryKey: ["recent-chats"] })
 
     logger.info("[ChatPage] ✅ RESET completed - ready for fresh data")
-  }, []) // Solo al mount - no dependencies!
+  }, []) // Solo al mount - SEMPRE si esegue quando torni alla pagina
 
   // Redirect to workspace selection if user has no workspace
   useEffect(() => {
@@ -312,6 +337,42 @@ export function ChatPage() {
 
   // SMART SELECTION: Auto-select when appropriate, but DON'T update existing selection
   useEffect(() => {
+    console.log("🔵🔵🔵 [SELECTION] useEffect si sta eseguendo")
+    console.log("   - chats.length:", chats.length)
+    console.log("   - selectedChat:", selectedChat)
+    console.log(
+      "   - hasCompletedChatDataRef:",
+      hasCompletedChatDataRef.current
+    )
+
+    // 🔥 Se selectedChat ha solo sessionId (oggetto parziale da sessionStorage), completalo UNA VOLTA
+    if (
+      selectedChat?.sessionId &&
+      !selectedChat.customerName &&
+      chats.length > 0 &&
+      !hasCompletedChatDataRef.current
+    ) {
+      console.log(
+        "   🔍 selectedChat ha solo sessionId, cerco dati completi..."
+      )
+      const fullChat = chats.find((c) => c.sessionId === selectedChat.sessionId)
+      if (fullChat) {
+        console.log(
+          "   ✅ Trovato! Completo selectedChat:",
+          fullChat.customerName
+        )
+        setSelectedChat(fullChat)
+        hasCompletedChatDataRef.current = true // ✅ Segna come completato
+        return
+      } else {
+        console.warn(
+          "   ❌ Chat con sessionId",
+          selectedChat.sessionId,
+          "non trovata nella lista!"
+        )
+      }
+    }
+
     // Only auto-select if we don't have a selection yet
     if (filteredChats.length > 0 && !selectedChat && !clientSearchTerm) {
       selectChat(filteredChats[0])
@@ -591,7 +652,15 @@ export function ChatPage() {
   // Function to select a chat
   const selectChat = (chat: Chat) => {
     setSelectedChat(chat)
-    // 🚨 REMOVED: No longer setting sessionId in URL - chat managed via context only
+    // � Salva l'ID della chat selezionata in sessionStorage
+    if (chat?.sessionId) {
+      sessionStorage.setItem("selectedChatId", chat.sessionId)
+      console.log(
+        "💾 Salvato selectedChatId in sessionStorage:",
+        chat.sessionId
+      )
+    }
+    // �🚨 REMOVED: No longer setting sessionId in URL - chat managed via context only
     // Preserve client search term if present
     const newParams = new URLSearchParams(searchParams)
     if (clientSearchTerm) {

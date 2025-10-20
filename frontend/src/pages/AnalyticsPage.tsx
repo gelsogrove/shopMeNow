@@ -158,8 +158,12 @@ export function AnalyticsPage() {
           {/* Metrics Overview */}
           <MetricsOverview analytics={analytics} />
 
-          {/* Historical Chart */}
-          <HistoricalChart analytics={analytics} />
+          {/* Historical Chart (include Top Searched Products affiancato a Distribuzione Categorie) */}
+          <HistoricalChart
+            analytics={analytics}
+            period={selectedPeriod}
+            loading={loading}
+          />
 
           {/* Additional Analytics Cards - All in one row (3 columns) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -174,7 +178,7 @@ export function AnalyticsPage() {
               <CardContent>
                 {analytics.topProducts && analytics.topProducts.length > 0 ? (
                   <div className="space-y-3">
-                    {analytics.topProducts.slice(0, 3).map((product, index) => (
+                    {analytics.topProducts.map((product, index) => (
                       <div
                         key={product.id}
                         className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
@@ -232,53 +236,51 @@ export function AnalyticsPage() {
               <CardContent>
                 {analytics.topCustomers && analytics.topCustomers.length > 0 ? (
                   <div className="space-y-3">
-                    {analytics.topCustomers
-                      .slice(0, 3)
-                      .map((customer, index) => (
-                        <div
-                          key={customer.id}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs font-bold text-blue-700">
-                              {index + 1}
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900">
-                                {customer.name}
-                              </p>
-                              <p className="text-sm text-gray-500">
-                                {customer.email}
-                              </p>
-                              {customer.company && (
-                                <p className="text-xs text-gray-400">
-                                  {customer.company}
-                                </p>
-                              )}
-                            </div>
+                    {analytics.topCustomers.map((customer, index) => (
+                      <div
+                        key={customer.id}
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs font-bold text-blue-700">
+                            {index + 1}
                           </div>
-                          <div className="text-right">
-                            <p className="font-bold text-blue-600">
-                              {new Intl.NumberFormat("en-US", {
-                                style: "currency",
-                                currency: "EUR",
-                                minimumFractionDigits: 0,
-                              }).format(customer.totalSpent)}
+                          <div>
+                            <p className="font-medium text-gray-900">
+                              {customer.name}
                             </p>
-                            <p className="text-xs text-gray-500">
-                              {customer.totalOrders} {t.orders}
+                            <p className="text-sm text-gray-500">
+                              {customer.email}
                             </p>
-                            <p className="text-xs text-gray-400">
-                              {t.average}:{" "}
-                              {new Intl.NumberFormat("en-US", {
-                                style: "currency",
-                                currency: "EUR",
-                                minimumFractionDigits: 0,
-                              }).format(customer.averageOrderValue)}
-                            </p>
+                            {customer.company && (
+                              <p className="text-xs text-gray-400">
+                                {customer.company}
+                              </p>
+                            )}
                           </div>
                         </div>
-                      ))}
+                        <div className="text-right">
+                          <p className="font-bold text-blue-600">
+                            {new Intl.NumberFormat("en-US", {
+                              style: "currency",
+                              currency: "EUR",
+                              minimumFractionDigits: 0,
+                            }).format(customer.totalSpent)}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {customer.totalOrders} {t.orders}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {t.average}:{" "}
+                            {new Intl.NumberFormat("en-US", {
+                              style: "currency",
+                              currency: "EUR",
+                              minimumFractionDigits: 0,
+                            }).format(customer.averageOrderValue)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ) : (
                   <div className="text-center py-8">

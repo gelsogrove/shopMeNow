@@ -8,14 +8,20 @@ async function updatePrompt() {
   try {
     console.log("📝 Reading prompt from docs/prompt_agent.md...")
 
-    const promptPath = path.join(__dirname, "..", "docs", "prompt_agent.md")
+    const promptPath = path.join(
+      __dirname,
+      "..",
+      "..",
+      "docs",
+      "prompt_agent.md"
+    )
     const promptContent = fs.readFileSync(promptPath, "utf-8")
 
     console.log(`✅ Prompt read: ${promptContent.length} characters`)
 
-    // Get workspace
+    // Get workspace (usa il primo workspace disponibile)
     const workspace = await prisma.workspace.findFirst({
-      where: { name: "L'Altra Italia(ESP)" },
+      orderBy: { createdAt: "desc" },
     })
 
     if (!workspace) {

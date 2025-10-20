@@ -1,9 +1,9 @@
 /**
  * ContactOperator - LLM-Callable Function
- * 
+ *
  * Escalation a operatore umano quando il cliente richiede assistenza personale.
  * Utilizzata quando l'utente chiede: "voglio parlare con operatore", "assistenza umana", etc.
- * 
+ *
  * @see docs/prompt_agent.md - Line 177: Definizione della calling function
  */
 
@@ -24,7 +24,7 @@ export interface ContactOperatorResult {
 
 /**
  * Registers customer request for human operator contact
- * 
+ *
  * @param request - Request parameters
  * @returns Result with confirmation message
  */
@@ -53,8 +53,33 @@ export async function ContactOperator(
       })
 
       if (!customer) {
-        console.warn("⚠️ Customer not found for ContactOperator:", request.phoneNumber)
+        console.warn(
+          "⚠️ Customer not found for ContactOperator:",
+          request.phoneNumber
+        )
+        await prisma.$disconnect()
+        return {
+          success: true,
+          message:
+            "Ciao {{nameUser}}! 👋\n\n" +
+            "Perfetto, ho registrato la tua richiesta di assistenza. Verrai contattato il prima possibile dal nostro agente **{{agentName}}** (📞 {{agentPhone}}).\n\n" +
+            "Nel frattempo, ti invitiamo a scrivere una **mail dettagliata** all'indirizzo:\n" +
+            "📧 **{{agentEmail}}**\n\n" +
+            "Includi eventualmente foto, documenti o qualsiasi allegato utile così da poter analizzare immediatamente la situazione e offrirti la soluzione più rapida! 🚀\n\n" +
+            "💡 **Ricorda**: hai uno sconto personalizzato del **{{discountUser}}%** su tutti i prodotti! 🎉\n\n" +
+            "Ci scusiamo per il disturbo. La chat ora verrà **disattivata** e passiamo la palla ad un operatore in carne e ossa! 👤\n\n" +
+            "A presto! 😊",
+          timestamp: new Date().toISOString(),
+        }
       }
+
+      // 🚨 DISABLE CHATBOT - Set activeChatbot = false
+      await prisma.customers.update({
+        where: { id: customer.id },
+        data: { activeChatbot: false },
+      })
+
+      console.log("✅ Chatbot disabled for customer:", customer.id)
 
       // Create escalation record (or update existing conversation metadata)
       // For now, we just log and return success
@@ -66,13 +91,22 @@ export async function ContactOperator(
         ticketId,
         customerId: customer?.id,
         phoneNumber: request.phoneNumber,
+        activeChatbot: false,
       })
 
       await prisma.$disconnect()
 
       return {
         success: true,
-        message: "Certo, verrà contattato il prima possibile dal nostro operatore.",
+        message:
+          "Ciao {{nameUser}}! 👋\n\n" +
+          "Perfetto, ho registrato la tua richiesta di assistenza. Verrai contattato il prima possibile dal nostro agente **{{agentName}}** (📞 {{agentPhone}}).\n\n" +
+          "Nel frattempo, ti invitiamo a scrivere una **mail dettagliata** all'indirizzo:\n" +
+          "📧 **{{agentEmail}}**\n\n" +
+          "Includi eventualmente foto, documenti o qualsiasi allegato utile così da poter analizzare immediatamente la situazione e offrirti la soluzione più rapida! 🚀\n\n" +
+          "💡 **Ricorda**: hai uno sconto personalizzato del **{{discountUser}}%** su tutti i prodotti! 🎉\n\n" +
+          "Ci scusiamo per il disturbo. La chat ora verrà **disattivata** e passiamo la palla ad un operatore in carne e ossa! 👤\n\n" +
+          "A presto! 😊",
         timestamp: new Date().toISOString(),
         ticketId,
       }
@@ -83,7 +117,15 @@ export async function ContactOperator(
       // Still return success - escalation intent is recorded in logs
       return {
         success: true,
-        message: "Perfetto! Un nostro operatore la contatterà al più presto.",
+        message:
+          "Ciao {{nameUser}}! 👋\n\n" +
+          "Perfetto, ho registrato la tua richiesta di assistenza. Verrai contattato il prima possibile dal nostro agente **{{agentName}}** (📞 {{agentPhone}}).\n\n" +
+          "Nel frattempo, ti invitiamo a scrivere una **mail dettagliata** all'indirizzo:\n" +
+          "📧 **{{agentEmail}}**\n\n" +
+          "Includi eventualmente foto, documenti o qualsiasi allegato utile così da poter analizzare immediatamente la situazione e offrirti la soluzione più rapida! 🚀\n\n" +
+          "💡 **Ricorda**: hai uno sconto personalizzato del **{{discountUser}}%** su tutti i prodotti! 🎉\n\n" +
+          "Ci scusiamo per il disturbo. La chat ora verrà **disattivata** e passiamo la palla ad un operatore in carne e ossa! 👤\n\n" +
+          "A presto! 😊",
         timestamp: new Date().toISOString(),
       }
     }

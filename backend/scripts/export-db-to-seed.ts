@@ -73,8 +73,6 @@ async function exportToSeed() {
     console.log(`\n🏢 Workspace: ${mainWorkspace.name}`)
     console.log(`📋 Workspace ID: ${mainWorkspace.id}\n`)
 
-    const dataDir = path.join(__dirname, "..", "prisma", "data")
-
     // ==================== CATEGORIES ====================
     console.log("📂 Exporting categories...")
     const categories = await prisma.categories.findMany({
@@ -85,7 +83,7 @@ async function exportToSeed() {
     const categoriesContent = `/**
  * Categories Data - Auto-generated from database
  * Last updated: ${new Date().toISOString()}
- * DO NOT EDIT MANUALLY - Use npm run db:export-to-seed
+ * DO NOT EDIT MANUALLY - Use npm run db:export
  */
 
 export interface CategoryData {
@@ -98,7 +96,7 @@ export interface CategoryData {
 export const categories: CategoryData[] = [
 ${categories
   .map(
-    (cat) => `  {
+    (cat: any) => `  {
     name: ${formatValue(cat.name)},
     description: ${formatValue(cat.description)},
     slug: ${formatValue(cat.slug)},
@@ -123,7 +121,7 @@ ${categories
     const productsContent = `/**
  * Product Data - Auto-generated from database
  * Last updated: ${new Date().toISOString()}
- * DO NOT EDIT MANUALLY - Use npm run db:export-to-seed
+ * DO NOT EDIT MANUALLY - Use npm run db:export
  */
 
 export interface ProductData {
@@ -142,9 +140,9 @@ export interface ProductData {
 export const products: ProductData[] = [
 ${products
   .map(
-    (p) => `  {
+    (p: any) => `  {
     name: ${formatValue(p.name)},
-    ProductCode: ${formatValue(p.ProductCode)},
+    ProductCode: ${formatValue(p.productCode)},
     description: ${formatValue(p.description)},
     formato: ${formatValue(p.formato)},
     price: ${formatValue(p.price)},
@@ -172,7 +170,7 @@ ${products
     const servicesContent = `/**
  * Services Data - Auto-generated from database
  * Last updated: ${new Date().toISOString()}
- * DO NOT EDIT MANUALLY - Use npm run db:export-to-seed
+ * DO NOT EDIT MANUALLY - Use npm run db:export
  */
 
 export interface ServiceData {
@@ -187,7 +185,7 @@ export interface ServiceData {
 export const services: ServiceData[] = [
 ${services
   .map(
-    (s) => `  {
+    (s: any) => `  {
     name: ${formatValue(s.name)},
     code: ${formatValue(s.code)},
     description: ${formatValue(s.description)},
@@ -213,7 +211,7 @@ ${services
     const faqsContent = `/**
  * FAQs Data - Auto-generated from database
  * Last updated: ${new Date().toISOString()}
- * DO NOT EDIT MANUALLY - Use npm run db:export-to-seed
+ * DO NOT EDIT MANUALLY - Use npm run db:export
  */
 
 export interface FAQData {
@@ -227,7 +225,7 @@ export interface FAQData {
 export const faqs: FAQData[] = [
 ${faqs
   .map(
-    (faq) => `  {
+    (faq: any) => `  {
     question: ${formatValue(faq.question)},
     answer: ${formatValue(faq.answer)},
     category: ${formatValue(faq.category)},
@@ -247,35 +245,45 @@ ${faqs
     const offers: any[] = await prisma.offers.findMany({
       where: { workspaceId: mainWorkspace.id },
       orderBy: { createdAt: "asc" },
+      include: {
+        category: true, // Include single category relation (legacy)
+        categories: true, // Include many-to-many relation
+      },
     })
 
     const offersContent = `/**
  * Offers Data - Auto-generated from database
  * Last updated: ${new Date().toISOString()}
- * DO NOT EDIT MANUALLY - Use npm run db:export-to-seed
+ * DO NOT EDIT MANUALLY - Use npm run db:export
  */
 
 export interface OfferData {
   name: string
   description: string
-  type: string
-  value: number
-  validFrom: Date
-  validUntil: Date
+  type: string | null
+  value: number | null
+  validFrom: Date | null
+  validUntil: Date | null
   isActive: boolean
+  categoryId?: string | null
+  categoryName?: string | null
+  categoryNames?: string[]
 }
 
 export const offers: OfferData[] = [
 ${offers
   .map(
-    (offer) => `  {
+    (offer: any) => `  {
     name: ${formatValue(offer.name)},
     description: ${formatValue(offer.description)},
-    type: ${formatValue(offer.type)},
-    value: ${formatValue(offer.value)},
-    validFrom: ${formatValue(offer.validFrom)},
-    validUntil: ${formatValue(offer.validUntil)},
+    type: null,
+    value: ${formatValue(offer.discountPercent)},
+    validFrom: ${formatValue(offer.startDate)},
+    validUntil: ${formatValue(offer.endDate)},
     isActive: ${formatValue(offer.isActive)},
+    categoryId: ${formatValue(offer.categoryId)},
+    categoryName: ${formatValue(offer.category?.name)},
+    categoryNames: ${formatValue(offer.categories?.map((c: any) => c.name) || [])},
   }`
   )
   .join(",\n")}
@@ -285,35 +293,209 @@ ${offers
     fs.writeFileSync(path.join(dataDir, "offers.ts"), offersContent)
     console.log(`   ✅ Exported ${offers.length} offers`)
 
+    // ==================== CAMPAIGNS ====================
+    console.log("📢 Exporting campaigns...")
+    const campaigns: any[] = await prisma.campaign.findMany({
+      where: { workspaceId: mainWorkspace.id },
+      orderBy: { createdAt: "asc" },
+    })
+
+    const campaignsContent = `/**
+ * Campaigns Data - Auto-generated from database
+ * Last updated: ${new Date().toISOString()}
+ * DO NOT EDIT MANUALLY - Use npm run db:export
+ */
+
+export interface CampaignData {
+  name: string
+  messagePreview: string
+  frequency: string
+  isActive: boolean
+  targetType: string
+  customerIds?: string[]
+  templateName?: string | null
+  templateParams?: any | null
+  lastRunAt?: Date | null
+}
+
+export const campaigns: CampaignData[] = [
+${campaigns
+  .map(
+    (campaign: any) => `  {
+    name: ${formatValue(campaign.name)},
+    messagePreview: ${formatValue(campaign.messagePreview)},
+    frequency: ${formatValue(campaign.frequency)},
+    isActive: ${formatValue(campaign.isActive)},
+    targetType: ${formatValue(campaign.targetType)},
+    customerIds: ${formatValue(campaign.customerIds || [])},
+    templateName: ${formatValue(campaign.templateName)},
+    templateParams: ${formatValue(campaign.templateParams)},
+    lastRunAt: ${formatValue(campaign.lastRunAt)},
+  }`
+  )
+  .join(",\n")}
+]
+`
+
+    fs.writeFileSync(path.join(dataDir, "campaigns.ts"), campaignsContent)
+    console.log(`   ✅ Exported ${campaigns.length} campaigns`)
+
+    // ==================== SALES REPRESENTATIVES ====================
+    console.log("👔 Exporting sales representatives...")
+    const salesReps: any[] = await prisma.sales.findMany({
+      where: { workspaceId: mainWorkspace.id },
+      orderBy: { createdAt: "asc" },
+    })
+
+    const salesRepsContent = `/**
+ * Sales Representatives Data - Auto-generated from database
+ * Last updated: ${new Date().toISOString()}
+ * DO NOT EDIT MANUALLY - Use npm run db:export
+ */
+
+export interface SalesRepData {
+  firstName: string
+  lastName: string
+  email: string
+  phone: string | null
+  isActive: boolean
+}
+
+export const salesReps: SalesRepData[] = [
+${salesReps
+  .map(
+    (rep: any) => `  {
+    firstName: ${formatValue(rep.firstName)},
+    lastName: ${formatValue(rep.lastName)},
+    email: ${formatValue(rep.email)},
+    phone: ${formatValue(rep.phone)},
+    isActive: ${formatValue(rep.isActive)},
+  }`
+  )
+  .join(",\n")}
+]
+`
+
+    fs.writeFileSync(path.join(dataDir, "salesReps.ts"), salesRepsContent)
+    console.log(`   ✅ Exported ${salesReps.length} sales representatives`)
+
+    // ==================== WORKSPACE SETTINGS ====================
+    console.log("⚙️  Exporting workspace settings...")
+
+    const workspaceSettings = {
+      name: mainWorkspace.name,
+      url: mainWorkspace.url,
+      whatsappPhoneNumber: mainWorkspace.whatsappPhoneNumber,
+      notificationEmail: mainWorkspace.notificationEmail,
+      welcomeMessages: mainWorkspace.welcomeMessages,
+      wipMessages: mainWorkspace.wipMessages,
+      afterRegistrationMessages: mainWorkspace.afterRegistrationMessages,
+      debugMode: mainWorkspace.debugMode,
+    }
+
+    const workspaceSettingsContent = `/**
+ * Workspace Settings Data - Auto-generated from database
+ * Last updated: ${new Date().toISOString()}
+ * DO NOT EDIT MANUALLY - Use npm run db:export
+ */
+
+export interface WorkspaceSettingsData {
+  name: string
+  url?: string | null
+  whatsappPhoneNumber?: string | null
+  notificationEmail?: string | null
+  welcomeMessages?: any
+  wipMessages?: any
+  afterRegistrationMessages?: any
+  debugMode?: boolean
+}
+
+export const workspaceSettings: WorkspaceSettingsData = ${JSON.stringify(workspaceSettings, null, 2)}
+`
+
+    fs.writeFileSync(
+      path.join(dataDir, "workspaceSettings.ts"),
+      workspaceSettingsContent
+    )
+    console.log(`   ✅ Exported workspace settings`)
+
+    // ==================== AGENT PROMPT ====================
+    console.log("🤖 Exporting agent prompt...")
+    const activePrompt = await prisma.prompts.findFirst({
+      where: { workspaceId: mainWorkspace.id, isActive: true },
+      orderBy: { createdAt: "desc" },
+    })
+
+    if (activePrompt) {
+      const agentPromptContent = `/**
+ * Agent Prompt Data - Auto-generated from database
+ * Last updated: ${new Date().toISOString()}
+ * DO NOT EDIT MANUALLY - Use npm run db:export
+ */
+
+export interface AgentPromptData {
+  name: string
+  content: string
+  model: string
+  temperature: number
+  maxTokens: number
+}
+
+export const agentPrompt: AgentPromptData = {
+  name: ${formatValue(activePrompt.name)},
+  content: ${formatValue(activePrompt.content)},
+  model: ${formatValue(activePrompt.model)},
+  temperature: ${formatValue(activePrompt.temperature)},
+  maxTokens: ${formatValue(activePrompt.max_tokens)},
+}
+`
+
+      fs.writeFileSync(path.join(dataDir, "agentPrompt.ts"), agentPromptContent)
+      console.log(
+        `   ✅ Exported agent prompt (${activePrompt.content.length} chars)`
+      )
+    } else {
+      console.log(`   ⚠️  No active prompt found`)
+    }
+
     // ========================================
-    // 6. BACKUP IMMAGINI
+    // BACKUP IMMAGINI
     // ========================================
-    console.log("\n6️⃣ BACKUP UPLOADS...")
+    console.log("\n📸 BACKUP UPLOADS...")
 
     const uploadsDir = path.join(__dirname, "..", "uploads")
-    const backupDir = path.join(__dirname, "..", "prisma", "uploads-backup")
+    const uploadsBackupDir = path.join(
+      __dirname,
+      "..",
+      "prisma",
+      "uploads-backup"
+    )
 
     // Cancella vecchio backup e crea nuovo
-    if (fs.existsSync(backupDir)) {
-      await fse.remove(backupDir)
-      console.log("   🗑️  Removed old backup")
+    if (fs.existsSync(uploadsBackupDir)) {
+      await fse.remove(uploadsBackupDir)
+      console.log("   🗑️  Removed old uploads backup")
     }
 
     // Copia uploads → uploads-backup
     if (fs.existsSync(uploadsDir)) {
-      await fse.copy(uploadsDir, backupDir)
+      await fse.copy(uploadsDir, uploadsBackupDir)
       console.log(`   ✅ Backed up uploads to prisma/uploads-backup/`)
 
       // Conta files
-      const productImages = fs.existsSync(path.join(backupDir, "products"))
-        ? fs.readdirSync(path.join(backupDir, "products")).length
+      const productImages = fs.existsSync(
+        path.join(uploadsBackupDir, "products")
+      )
+        ? fs.readdirSync(path.join(uploadsBackupDir, "products")).length
         : 0
-      const serviceImages = fs.existsSync(path.join(backupDir, "services"))
-        ? fs.readdirSync(path.join(backupDir, "services")).length
+      const serviceImages = fs.existsSync(
+        path.join(uploadsBackupDir, "services")
+      )
+        ? fs.readdirSync(path.join(uploadsBackupDir, "services")).length
         : 0
 
       console.log(`   📷 Product images: ${productImages}`)
-      console.log(`   📷 Service images: ${serviceImages}`)
+      console.log(`   �� Service images: ${serviceImages}`)
     } else {
       console.log("   ⚠️  No uploads directory found")
     }
@@ -326,6 +508,10 @@ ${offers
     console.log("   - services.ts")
     console.log("   - faqs.ts")
     console.log("   - offers.ts")
+    console.log("   - campaigns.ts")
+    console.log("   - salesReps.ts")
+    console.log("   - workspaceSettings.ts")
+    console.log("   - agentPrompt.ts")
     console.log("\n📁 Images backed up in: prisma/uploads-backup/")
     console.log("\n💡 Next time you run 'npm run seed', it will:")
     console.log("   1. Use these updated data files")

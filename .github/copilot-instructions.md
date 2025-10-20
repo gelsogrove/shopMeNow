@@ -22,6 +22,10 @@ ShopME is a **WhatsApp-based e-commerce platform** with AI chatbot integration. 
 - If data is missing: return proper error, don't invent defaults
 - Example: Agent prompts MUST come from `agentConfig` table, never from constants
 - **NO STATIC PROMPTS**: everything must be dynamic from database
+- **NO HARDCODED TRANSLATIONS**: Categories, offers, products SEMPRE in italiano (lingua base) dal database
+  - Methods like `getActiveCategories()` and `getActiveOffers()` return Italian text from DB
+  - Translation Layer (with LLM) handles final translation to customer's language
+  - NEVER create translation mappings (it/es/pt/en) - let LLM translate dynamically
 
 ### 2. **Workspace Isolation**
 

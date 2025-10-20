@@ -16,12 +16,11 @@ import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
 import { deleteWorkspace, updateWorkspace } from "@/services/workspaceApi"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation } from "@tanstack/react-query"
 import { Loader2, Save, Settings, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
-// Workspace data interface
 interface WorkspaceData {
   id: string
   name: string
@@ -31,28 +30,28 @@ interface WorkspaceData {
   url: string
   isActive: boolean
   debugMode: boolean
-  welcomeMessages: {
-    en: string
-    it: string
-    es: string
-    pt: string
-  }
-  wipMessages: {
-    en: string
-    it: string
-    es: string
-    pt: string
-  }
+  welcomeMessages: { en: string; it: string; es: string; pt: string }
+  wipMessages: { en: string; it: string; es: string; pt: string }
+}
+
+const defaultWelcomeMessages = {
+  en: "Hello! Thank you for contacting us. How can we help you today?",
+  it: "Ciao! Grazie per averci contattato. Come possiamo aiutarti oggi?",
+  es: "¡Hola! Gracias por contactarnos. ¿Cómo podemos ayudarte hoy?",
+  pt: "Olá! Obrigado por entrar em contato. Como podemos ajudar você hoje?",
+}
+
+const defaultWipMessages = {
+  en: "Work in progress. Please contact us later.",
+  it: "Lavori in corso. Contattaci più tardi.",
+  es: "Trabajos en curso. Por favor, contáctenos más tarde.",
+  pt: "Em manutenção. Por favor, contacte-nos mais tarde.",
 }
 
 export default function SettingsPage() {
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
-  const [isLoading, setIsLoading] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
-
-  // Form data state
   const [formData, setFormData] = useState<WorkspaceData>({
     id: "",
     name: "",
@@ -62,171 +61,94 @@ export default function SettingsPage() {
     url: "http://localhost:3000",
     isActive: true,
     debugMode: true,
-    welcomeMessages: {
-      en: "Hello! Thank you for contacting us. How can we help you today?",
-      it: "Ciao! Grazie per averci contattato. Come possiamo aiutarti oggi?",
-      es: "¡Hola! Gracias por contactarnos. ¿Cómo podemos ayudarte hoy?",
-      pt: "Olá! Obrigado por entrar em contato. Como podemos ajudar você hoje?",
-    },
-    wipMessages: {
-      en: "Work in progress. Please contact us later.",
-      it: "Lavori in corso. Contattaci più tardi.",
-      es: "Trabajos en curso. Por favor, contáctenos más tarde.",
-      pt: "Em manutenção. Por favor, contacte-nos mais tarde.",
-    },
+    welcomeMessages: defaultWelcomeMessages,
+    wipMessages: defaultWipMessages,
   })
-
-  // Language selection for messages
   const [selectedWelcomeLang, setSelectedWelcomeLang] = useState("en")
   const [selectedWipLang, setSelectedWipLang] = useState("en")
+  const { workspace, loading, setCurrentWorkspace } = useWorkspace()
 
-  // ✅ FIXED: Use WorkspaceContext to get workspaceId (single source of truth)
-  const { workspace: contextWorkspace, loading: contextLoading } =
-    useWorkspace()
-
-  // Then fetch full workspace details with all fields
-  const [workspace, setWorkspace] = useState<any>(null)
-  const [isPageLoading, setIsPageLoading] = useState(true)
-  const [workspaceError, setWorkspaceError] = useState<any>(null)
-  const isError = !!workspaceError
-
-  // Fetch full workspace data when contextWorkspace is available
   useEffect(() => {
-    const fetchWorkspaceDetails = async () => {
-      if (!contextWorkspace?.id) {
-        setIsPageLoading(false)
-        return
-      }
-
+    if (!workspace) return
+    logger.info("📝 Populating form with workspace data:", workspace)
+    let welcomeMessages = defaultWelcomeMessages
+    if (workspace.welcomeMessages) {
       try {
-        setIsPageLoading(true)
-        const response = await fetch(`/api/workspaces/${contextWorkspace.id}`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-            "X-Session-Id": sessionStorage.getItem("sessionId") || "",
-          },
-        })
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch workspace details")
-        }
-
-        const data = await response.json()
-        setWorkspace(data)
-        setWorkspaceError(null)
-      } catch (error) {
-        logger.error("Error fetching workspace details:", error)
-        setWorkspaceError(error)
-      } finally {
-        setIsPageLoading(false)
+        welcomeMessages =
+          typeof workspace.welcomeMessages === "string"
+            ? JSON.parse(workspace.welcomeMessages)
+            : workspace.welcomeMessages
+      } catch (e) {
+        logger.error("Error parsing welcome messages:", e)
       }
     }
-
-    fetchWorkspaceDetails()
-  }, [contextWorkspace?.id])
-
-  // Popola il form quando i dati del workspace sono disponibili
-  useEffect(() => {
-    if (workspace) {
-      logger.info("Populating form with workspace data:", workspace)
-
-      // Default messages - definiti staticamente per evitare loop
-      const defaultWelcomeMessages = {
-        en: "Hello! Thank you for contacting us. How can we help you today?",
-        it: "Ciao! Grazie per averci contattato. Come possiamo aiutarti oggi?",
-        es: "¡Hola! Gracias por contactarnos. ¿Cómo podemos ayudarte hoy?",
-        pt: "Olá! Obrigado por entrar em contato. Como podemos ajudar você hoje?",
+    let wipMessages = defaultWipMessages
+    if (workspace.wipMessages) {
+      try {
+        wipMessages =
+          typeof workspace.wipMessages === "string"
+            ? JSON.parse(workspace.wipMessages)
+            : workspace.wipMessages
+      } catch (e) {
+        logger.error("Error parsing WIP messages:", e)
       }
-
-      const defaultWipMessages = {
-        en: "Work in progress. Please contact us later.",
-        it: "Lavori in corso. Contattaci più tardi.",
-        es: "Trabajos en curso. Por favor, contáctenos más tarde.",
-        pt: "Em manutenção. Por favor, contacte-nos mais tarde.",
-      }
-
-      // Parse welcome messages
-      let welcomeMessages = defaultWelcomeMessages
-      if (workspace.welcomeMessages) {
-        try {
-          welcomeMessages =
-            typeof workspace.welcomeMessages === "string"
-              ? JSON.parse(workspace.welcomeMessages)
-              : workspace.welcomeMessages
-        } catch (e) {
-          logger.error("Error parsing welcome messages:", e)
-        }
-      }
-
-      // Parse WIP messages
-      let wipMessages = defaultWipMessages
-      if (workspace.wipMessages) {
-        try {
-          wipMessages =
-            typeof workspace.wipMessages === "string"
-              ? JSON.parse(workspace.wipMessages)
-              : workspace.wipMessages
-        } catch (e) {
-          logger.error("Error parsing WIP messages:", e)
-        }
-      }
-
-      setFormData({
-        id: workspace.id,
-        name: workspace.name || "",
-        whatsappPhoneNumber: workspace.whatsappPhoneNumber || "",
-        whatsappApiKey: workspace.whatsappApiKey || "",
-        adminEmail: workspace.adminEmail || "",
-        url: workspace.url || "http://localhost:3000",
-        isActive: workspace.isActive ?? true,
-        debugMode: workspace.debugMode ?? true,
-        welcomeMessages,
-        wipMessages,
-      })
     }
+    setFormData({
+      id: workspace.id,
+      name: workspace.name || "",
+      whatsappPhoneNumber: workspace.whatsappPhoneNumber || "",
+      whatsappApiKey: workspace.whatsappApiKey || "",
+      adminEmail: workspace.adminEmail || "",
+      url: workspace.url || "http://localhost:3000",
+      isActive: workspace.isActive ?? true,
+      debugMode: workspace.debugMode ?? true,
+      welcomeMessages,
+      wipMessages,
+    })
   }, [workspace])
 
-  // Gestisci errori del workspace
-  useEffect(() => {
-    if (isError && workspaceError) {
-      logger.error("Workspace loading error:", workspaceError)
-      toast.error("Failed to load workspace settings")
-    }
-  }, [isError, workspaceError])
-
-  // Mutation per salvare i settings
   const saveSettingsMutation = useMutation({
-    mutationFn: async (updateData: any) => {
-      return updateWorkspace(formData.id, updateData)
-    },
-    onSuccess: (updatedWorkspace) => {
-      logger.info("✅ Workspace updated:", updatedWorkspace)
-
-      // ✅ Update localStorage (single source of truth)
-      localStorage.setItem("currentWorkspace", JSON.stringify(updatedWorkspace))
-
-      // Update local state
-      setWorkspace(updatedWorkspace)
-
+    mutationFn: async (updateData: any) =>
+      updateWorkspace(formData.id, updateData),
+    onSuccess: async (updatedWorkspace) => {
+      logger.info("✅ Workspace updated successfully:", updatedWorkspace)
+      // Update the workspace context with the new data
+      if (updatedWorkspace) {
+        setCurrentWorkspace(updatedWorkspace)
+      }
       toast.success("Settings saved successfully")
     },
-    onError: (error) => {
+    onError: (error: any) => {
       logger.error("❌ Error saving settings:", error)
-      toast.error("Failed to save settings")
+      if (error.response?.data?.details) {
+        toast.error(
+          `Validation failed: ${error.response.data.details.join(", ")}`
+        )
+      } else {
+        toast.error("Failed to save settings")
+      }
     },
   })
 
-  // Handle form field changes
+  const deleteWorkspaceMutation = useMutation({
+    mutationFn: async () => deleteWorkspace(formData.id),
+    onSuccess: () => {
+      logger.info("✅ Workspace deleted successfully")
+      localStorage.removeItem("currentWorkspace")
+      toast.success("Workspace deleted successfully")
+      navigate("/workspace-selection")
+    },
+    onError: (error) => {
+      logger.error("❌ Error deleting workspace:", error)
+      toast.error("Failed to delete workspace")
+    },
+  })
+
   const handleFieldChange = (field: keyof WorkspaceData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
-
-    // Clear error for this field
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: "" }))
-    }
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }))
   }
 
-  // Handle message changes
   const handleMessageChange = (
     messageType: "welcomeMessages" | "wipMessages",
     lang: string,
@@ -234,82 +156,85 @@ export default function SettingsPage() {
   ) => {
     setFormData((prev) => ({
       ...prev,
-      [messageType]: {
-        ...prev[messageType],
-        [lang]: value,
-      },
+      [messageType]: { ...prev[messageType], [lang]: value },
     }))
   }
 
-  // Validate form data
   const validateForm = (): boolean => {
     const newErrors: { [key: string]: string } = {}
-
-    if (!formData.adminEmail.trim()) {
+    if (!formData.adminEmail.trim())
       newErrors.adminEmail = "Admin email is required"
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.adminEmail)) {
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.adminEmail))
       newErrors.adminEmail = "Please enter a valid email address"
+    if (formData.whatsappPhoneNumber && formData.whatsappPhoneNumber.trim()) {
+      const cleanPhone = formData.whatsappPhoneNumber.replace(/\s/g, "")
+      if (!/^\+?\d{10,15}$/.test(cleanPhone))
+        newErrors.whatsappPhoneNumber =
+          "Phone must be in international format (+1234567890) with 10-15 digits"
     }
-
+    if (!formData.name.trim()) newErrors.name = "Workspace name is required"
+    else if (formData.name.length < 2 || formData.name.length > 100)
+      newErrors.name = "Name must be between 2 and 100 characters"
+    if (formData.url && formData.url.trim()) {
+      try {
+        new URL(formData.url)
+      } catch {
+        newErrors.url = "Please enter a valid URL (e.g., http://localhost:3000)"
+      }
+    }
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
-  // Save workspace settings
   const handleSave = async () => {
-    // Prevenire chiamate multiple
-    if (saveSettingsMutation.isPending) {
-      return
-    }
-
+    if (saveSettingsMutation.isPending) return
     if (!validateForm()) {
+      toast.error("Please fix validation errors before saving")
       return
     }
-
     const updateData = {
       id: formData.id,
       name: formData.name,
       whatsappPhoneNumber: formData.whatsappPhoneNumber,
       whatsappApiKey: formData.whatsappApiKey,
       adminEmail: formData.adminEmail,
-      // currency rimosso - non serve più
       url: formData.url || "http://localhost:3000",
       isActive: formData.isActive,
       debugMode: formData.debugMode,
       welcomeMessages: formData.welcomeMessages,
       wipMessages: formData.wipMessages,
     }
-
     logger.info("💾 Saving workspace settings:", updateData)
     saveSettingsMutation.mutate(updateData)
   }
 
-  // Delete workspace
   const handleDelete = async () => {
-    setIsLoading(true)
-    try {
-      await deleteWorkspace(formData.id)
-      // ✅ Clear from localStorage (single source of truth)
-      localStorage.removeItem("currentWorkspace")
-      toast.success("Workspace deleted successfully")
-      navigate("/workspace-selection")
-    } catch (error) {
-      logger.error("Error deleting workspace:", error)
-      toast.error("Failed to delete workspace")
-    } finally {
-      setIsLoading(false)
-      setShowDeleteDialog(false)
-    }
+    setShowDeleteDialog(false)
+    deleteWorkspaceMutation.mutate()
   }
 
-  if (isPageLoading) {
+  if (loading)
     return (
       <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[50vh]">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
         <h2 className="text-xl font-medium">Loading settings...</h2>
       </div>
     )
-  }
+
+  if (!workspace)
+    return (
+      <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[50vh]">
+        <h2 className="text-xl font-medium text-red-600">
+          No workspace found. Please select a workspace.
+        </h2>
+        <Button
+          onClick={() => navigate("/workspace-selection")}
+          className="mt-4"
+        >
+          Go to Workspace Selection
+        </Button>
+      </div>
+    )
 
   return (
     <div className="container mx-auto py-6 px-4">
@@ -317,7 +242,6 @@ export default function SettingsPage() {
         <Settings className="h-6 w-6 text-green-600" />
         <h1 className="text-xl font-bold text-green-600">Workspace Settings</h1>
       </div>
-
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
@@ -346,20 +270,22 @@ export default function SettingsPage() {
             </div>
           </CardTitle>
         </CardHeader>
-
         <CardContent className="space-y-6">
-          {/* Workspace Name */}
           <div className="space-y-2">
-            <Label htmlFor="name">Workspace Name</Label>
+            <Label htmlFor="name">
+              Workspace Name <span className="text-red-500">*</span>
+            </Label>
             <Input
               id="name"
               value={formData.name}
               onChange={(e) => handleFieldChange("name", e.target.value)}
               placeholder="My Business"
+              className={errors.name ? "border-red-500" : ""}
             />
+            {errors.name && (
+              <p className="text-sm text-red-500">{errors.name}</p>
+            )}
           </div>
-
-          {/* WhatsApp Phone Number */}
           <div className="space-y-2">
             <Label htmlFor="whatsappPhoneNumber">WhatsApp Phone Number</Label>
             <Input
@@ -369,10 +295,17 @@ export default function SettingsPage() {
                 handleFieldChange("whatsappPhoneNumber", e.target.value)
               }
               placeholder="+1234567890"
+              className={errors.whatsappPhoneNumber ? "border-red-500" : ""}
             />
+            {errors.whatsappPhoneNumber && (
+              <p className="text-sm text-red-500">
+                {errors.whatsappPhoneNumber}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              International format with country code (e.g., +1234567890)
+            </p>
           </div>
-
-          {/* WhatsApp API Key */}
           <div className="space-y-2">
             <Label htmlFor="whatsappApiKey">WhatsApp API Key</Label>
             <Input
@@ -385,8 +318,6 @@ export default function SettingsPage() {
               placeholder="Your WhatsApp API Key"
             />
           </div>
-
-          {/* Admin Email */}
           <div className="space-y-2">
             <Label htmlFor="adminEmail">
               Admin Email <span className="text-red-500">*</span>
@@ -407,8 +338,6 @@ export default function SettingsPage() {
               assistance
             </p>
           </div>
-
-          {/* Workspace URL */}
           <div className="space-y-2">
             <Label htmlFor="url">Workspace URL</Label>
             <Input
@@ -417,14 +346,13 @@ export default function SettingsPage() {
               value={formData.url}
               onChange={(e) => handleFieldChange("url", e.target.value)}
               placeholder="http://localhost:3000"
+              className={errors.url ? "border-red-500" : ""}
             />
+            {errors.url && <p className="text-sm text-red-500">{errors.url}</p>}
             <p className="text-xs text-muted-foreground">
-              Base URL for generating short links and redirects (e.g.,
-              http://yourdomain.com)
+              Base URL for generating short links and redirects
             </p>
           </div>
-
-          {/* Welcome Messages */}
           <div className="space-y-2">
             <Label>Welcome Messages</Label>
             <div className="flex gap-2 mb-2">
@@ -456,8 +384,6 @@ export default function SettingsPage() {
               placeholder="Enter welcome message..."
             />
           </div>
-
-          {/* WIP Messages */}
           <div className="space-y-2">
             <Label>Work in Progress Messages</Label>
             <div className="flex gap-2 mb-2">
@@ -489,13 +415,14 @@ export default function SettingsPage() {
               placeholder="Enter work in progress message..."
             />
           </div>
-
-          {/* Action Buttons */}
           <div className="flex justify-end gap-2 pt-4 border-t">
             <Button
               variant="destructive"
               onClick={() => setShowDeleteDialog(true)}
-              disabled={isLoading || saveSettingsMutation.isPending}
+              disabled={
+                deleteWorkspaceMutation.isPending ||
+                saveSettingsMutation.isPending
+              }
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Delete Workspace
@@ -519,8 +446,6 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
@@ -535,16 +460,16 @@ export default function SettingsPage() {
             <Button
               variant="outline"
               onClick={() => setShowDeleteDialog(false)}
-              disabled={isLoading}
+              disabled={deleteWorkspaceMutation.isPending}
             >
               Cancel
             </Button>
             <Button
               variant="destructive"
               onClick={handleDelete}
-              disabled={isLoading}
+              disabled={deleteWorkspaceMutation.isPending}
             >
-              {isLoading ? (
+              {deleteWorkspaceMutation.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   Deleting...

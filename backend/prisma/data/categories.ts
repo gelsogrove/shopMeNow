@@ -1,7 +1,7 @@
 /**
  * Categories Data - Auto-generated from database
- * Last updated: 2025-10-15T22:02:42.558Z
- * DO NOT EDIT MANUALLY - Use npm run db:export-to-seed
+ * Last updated: 2025-10-20T13:17:25.021Z
+ * DO NOT EDIT MANUALLY - Use npm run db:export
  */
 
 export interface CategoryData {
@@ -58,6 +58,12 @@ export const categories: CategoryData[] = [
     name: "Preserves",
     description: "Vegetables preserved in olive oil and brine, ready to serve as refined antipasti or garnishes.",
     slug: "preserves",
+    isActive: true,
+  },
+  {
+    name: "Frozen Products",
+    description: "High-quality frozen Italian products, from seafood to ready-made dishes. Currently with 20% discount!",
+    slug: "frozen-products",
     isActive: true,
   }
 ]

@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express"
 import { adminSessionService } from "../../../application/services/admin-session.service"
 import logger from "../../../utils/logger"
+import { SecureErrorResponses } from "../../../utils/secure-error-responses"
 
 /**
  * Middleware di validazione SessionID
@@ -36,11 +37,10 @@ export const sessionValidationMiddleware = async (
     )
 
     if (!sessionId || sessionId.trim() === "") {
-      logger.warn(`⚠️ SessionID missing for ${req.method} ${req.url}`)
-      res.status(400).json({
-        error: "SessionID is required",
-        message: "Missing X-Session-Id header",
-      })
+      SecureErrorResponses.unauthorized(
+        res,
+        `SessionID missing for ${req.method} ${req.url}`
+      )
       return
     }
 
@@ -56,13 +56,10 @@ export const sessionValidationMiddleware = async (
     )
 
     if (!validation.valid) {
-      logger.warn(
-        `⚠️ Invalid session for ${req.method} ${req.url}: ${validation.error}`
+      SecureErrorResponses.unauthorized(
+        res,
+        `Invalid session for ${req.method} ${req.url}: ${validation.error}`
       )
-      res.status(401).json({
-        error: "Invalid session",
-        message: validation.error,
-      })
       return
     }
 
@@ -75,10 +72,7 @@ export const sessionValidationMiddleware = async (
         validatedSession,
         validatedUser,
       })
-      res.status(500).json({
-        error: "Session validation failed",
-        message: "Session data is malformed",
-      })
+      SecureErrorResponses.unauthorized(res, "Session data is malformed")
       return
     }
 
@@ -92,11 +86,6 @@ export const sessionValidationMiddleware = async (
 
     next()
   } catch (error) {
-    logger.error("❌ Session validation middleware CRASH:", error)
-    logger.error("❌ Error stack:", (error as Error).stack)
-    res.status(500).json({
-      error: "Session validation failed",
-      message: error instanceof Error ? error.message : "Internal server error",
-    })
+    SecureErrorResponses.internalError(res, error)
   }
 }

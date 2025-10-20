@@ -3,13 +3,51 @@ import * as path from "path"
 import { TokenService } from "../application/services/token.service"
 import { LLMRequest } from "../types/whatsapp.types"
 import logger from "../utils/logger"
-import {
-  calculateLLMCost,
-  calculateLLMTokenUsage,
-} from "../utils/token-calculator"
 import { CallingFunctionsService } from "./calling-functions.service"
 import { PromptProcessorService } from "./prompt-processor.service"
 import translationSecurityService from "./translation-security.service"
+
+/**
+ * Simple token usage calculator (approximation)
+ * OpenAI uses ~4 chars per token on average
+ */
+function calculateLLMTokenUsage(
+  prompt: string,
+  userQuery: string,
+  completion: string
+): { promptTokens: number; completionTokens: number; totalTokens: number } {
+  const promptTokens = Math.ceil((prompt.length + userQuery.length) / 4)
+  const completionTokens = Math.ceil(completion.length / 4)
+  return {
+    promptTokens,
+    completionTokens,
+    totalTokens: promptTokens + completionTokens,
+  }
+}
+
+/**
+ * Calculate LLM cost based on tokens and model
+ * Prices per 1M tokens for gpt-4o-mini:
+ * - Input: $0.15
+ * - Output: $0.60
+ */
+function calculateLLMCost(
+  promptTokens: number,
+  completionTokens: number,
+  model: string
+): { inputCost: number; outputCost: number; totalCost: number } {
+  const inputCostPer1M = 0.15
+  const outputCostPer1M = 0.6
+
+  const inputCost = (promptTokens / 1000000) * inputCostPer1M
+  const outputCost = (completionTokens / 1000000) * outputCostPer1M
+
+  return {
+    inputCost,
+    outputCost,
+    totalCost: inputCost + outputCost,
+  }
+}
 
 //todo non va il singoloo ordine
 export class LLMService {
@@ -66,17 +104,21 @@ export class LLMService {
       return await this.NewUser(llmRequest, workspace, messageRepo, debugInfo)
     }
 
-    // 3. Blocca se blacklisted - non salvare nulla nello storico
+    // 3. Blocca se blacklisted O se chatbot disabilitato - non salvare nulla nello storico
     const isBlocked = await messageRepo.isCustomerBlacklisted(
       customer.phone,
       workspace.id
     )
-    if (isBlocked || customer.isBlacklisted) {
-      debugInfo.stage = "blocked_user"
+    // 🚨 CRITICAL: Block if user is blacklisted OR if chatbot is disabled for this customer
+    if (isBlocked || customer.isBlacklisted || !customer.activeChatbot) {
+      debugInfo.stage = "blocked_user_or_chatbot_disabled"
       // Restituisci null per ignorare completamente questa interazione
       return {
         success: false,
-        output: "❌ User blocked",
+        output:
+          customer.activeChatbot === false
+            ? "❌ Chatbot disabled for this customer"
+            : "❌ User blocked",
         debugInfo: JSON.stringify(debugInfo),
       }
     }
@@ -104,7 +146,7 @@ export class LLMService {
     const faqs = await messageRepo.getActiveFaqs(workspace.id)
     const services = await messageRepo.getActiveServices(workspace.id)
     const categories = await messageRepo.getActiveCategories(workspace.id)
-    const offers = await messageRepo.getActiveOffers(workspace.id, userLanguage)
+    const offers = await messageRepo.getActiveOffers(workspace.id)
     const customerDiscount = customer.discount || 0
     const products =
       (await messageRepo.getActiveProducts(workspace.id, customerDiscount)) ||
@@ -117,6 +159,11 @@ export class LLMService {
       lastordercode:
         customerData?.lastordercode || customer.lastOrderCode || "",
       languageUser: this.getLanguageDisplayName(userLanguage),
+      agentName: customer.sales
+        ? `${customer.sales.firstName} ${customer.sales.lastName}`.trim()
+        : "Non assegnato",
+      agentPhone: customer.sales?.phone || "N/A",
+      agentEmail: customer.sales?.email || "N/A",
     }
 
     // 🔧 DEBUG: Add user info to debug
@@ -142,18 +189,25 @@ export class LLMService {
       process.env.TOKEN_EXPIRATION || "1h"
     )
 
+    // Get workspace URL for {{URL}} replacement
+    const workspaceUrl = workspace.url || "http://localhost:3000"
+
     let promptWithVars = prompt
       .replace("{{FAQ}}", faqs)
       .replace("{{SERVICES}}", services)
       .replace("{{PRODUCTS}}", products)
       .replace("{{CATEGORIES}}", categories)
       .replace("{{OFFERS}}", offers)
-      .replace("{{nameUser}}", userInfo.nameUser)
-      .replace("{{discountUser}}", String(userInfo.discountUser))
-      .replace("{{companyName}}", userInfo.companyName)
-      .replace("{{lastordercode}}", userInfo.lastordercode)
-      .replace("{{languageUser}}", userInfo.languageUser)
-      .replace("{{TOKEN_DURATION}}", tokenDuration)
+      .replace(/\{\{URL\}\}/g, workspaceUrl) // Replace ALL occurrences of {{URL}}
+      .replace(/\{\{nameUser\}\}/g, userInfo.nameUser) // Replace ALL occurrences
+      .replace(/\{\{discountUser\}\}/g, String(userInfo.discountUser)) // Replace ALL occurrences
+      .replace(/\{\{companyName\}\}/g, userInfo.companyName) // Replace ALL occurrences
+      .replace(/\{\{lastordercode\}\}/g, userInfo.lastordercode) // Replace ALL occurrences
+      .replace(/\{\{languageUser\}\}/g, userInfo.languageUser) // Replace ALL occurrences - FIX BUG LINGUA
+      .replace(/\{\{agentName\}\}/g, userInfo.agentName) // Replace ALL occurrences
+      .replace(/\{\{agentPhone\}\}/g, userInfo.agentPhone) // Replace ALL occurrences
+      .replace(/\{\{agentEmail\}\}/g, userInfo.agentEmail) // Replace ALL occurrences
+      .replace(/\{\{TOKEN_DURATION\}\}/g, tokenDuration) // Replace ALL occurrences
 
     // 🔧 SALVA IL PROMPT FINALE PER DEBUG
     try {
@@ -270,14 +324,47 @@ export class LLMService {
    * @param languageCode Codice lingua (it, en, es, pt)
    * @returns Nome lingua per il prompt
    */
-  private getLanguageDisplayName(languageCode: string): string {
+  /**
+   * Converte il codice lingua in nome visualizzabile
+   * IMPORTANTE: Se language è null/undefined/empty, defaulta a ITALIANO (lingua base del sistema)
+   * @param languageCode - Codice lingua (IT, ENG, ESP, PRT) - può essere null
+   * @returns Nome visualizzabile della lingua (ITALIANO, ENGLISH, ESPAÑOL, PORTUGUÊS)
+   */
+  private getLanguageDisplayName(
+    languageCode: string | null | undefined
+  ): string {
+    // ⚠️ FALLBACK: Se language è null/undefined/empty, defaulta a ITALIANO
+    if (!languageCode || languageCode.trim() === "") {
+      logger.warn(
+        "⚠️ [LANGUAGE] Customer language is null/undefined/empty, defaulting to ITALIANO"
+      )
+      return "ITALIANO" // Default per L'Altra Italia
+    }
+
     const languageMap: Record<string, string> = {
+      // Lowercase format (old)
       it: "ITALIANO",
       en: "ENGLISH",
       es: "ESPAÑOL",
-      pt: "Português",
+      pt: "PORTUGUÊS",
+      // Uppercase format (database)
+      IT: "ITALIANO",
+      ENG: "ENGLISH",
+      ESP: "ESPAÑOL",
+      PRT: "PORTUGUÊS",
     }
-    return languageMap[languageCode] || languageCode.toUpperCase()
+
+    const displayName = languageMap[languageCode]
+
+    // Se il codice non è riconosciuto, default a ITALIANO (non uppercase del codice sconosciuto)
+    if (!displayName) {
+      logger.warn(
+        `⚠️ [LANGUAGE] Unknown language code: ${languageCode}, defaulting to ITALIANO`
+      )
+      return "ITALIANO"
+    }
+
+    return displayName
   }
 
   /**
@@ -508,13 +595,20 @@ export class LLMService {
   }
 
   private getAvailableFunctions() {
+    // 🎯 PRIORITY ORDER (highest to lowest):
+    // 1. ContactOperator (🚨 PRIORITY 1 - Frustration, explicit operator request)
+    // 2. GetLinkOrderByCode (🚨 PRIORITY 2 - View specific order)
+    // 3. repeatOrder (⚙️ PRIORITY 3 - Repeat previous order, requires confirmation)
+    // 4. addProduct (⚙️ PRIORITY 4 - Add single product, requires confirmation)
+    // 5. searchProduct (📊 PRIORITY 5 - BACKGROUND ONLY, non-blocking)
+
     return [
       {
         type: "function",
         function: {
           name: "ContactOperator",
           description:
-            "Connette l'utente con un operatore umano per assistenza specializzata. Usare quando l'utente richiede esplicitamente di parlare con un operatore o assistenza umana.",
+            "🚨 PRIORITY 1 - HIGHEST. CHIAMA SUBITO quando utente dice: 'operatore', 'parlare con operatore', 'posso parlare con', 'voglio parlare', 'assistenza umana', 'customer service', 'contattare', 'operator', 'human'. OBBLIGATORIO chiamare questa funzione se l'utente menziona operatore/assistenza. NON rispondere con testo, CHIAMA la funzione!",
           parameters: {
             type: "object",
             properties: {},
@@ -525,28 +619,9 @@ export class LLMService {
       {
         type: "function",
         function: {
-          name: "GetShipmentTrackingLink",
-          description:
-            "Fornisce il link per tracciare la spedizione dell'ordine dell'utente. Usare quando l'utente vuole sapere dove si trova fisicamente il pacco o lo stato di spedizione. Se specificato un numero d'ordine, usa quello; altrimenti usa l'ultimo ordine.",
-          parameters: {
-            type: "object",
-            properties: {
-              orderCode: {
-                type: "string",
-                description:
-                  "Il codice dell'ordine da tracciare. Se l'utente specifica un numero d'ordine (es. 'dove ordine ORD-123'), usa quello. Se dice 'ultimo ordine' usa lastordercode. Opzionale.",
-              },
-            },
-            required: [],
-          },
-        },
-      },
-      {
-        type: "function",
-        function: {
           name: "GetLinkOrderByCode",
           description:
-            "Fornisce il link per visualizzare un ordine specifico tramite codice ordine. Usare quando l'utente vuole vedere un ordine specifico, la fattura, o dice 'ultimo ordine'.",
+            "🚨 PRIORITY 2 - HIGH. Fornisce il link per visualizzare UN SINGOLO ordine specifico tramite codice ordine. Usare quando l'utente vuole: 'vedere ordine specifico', 'dettagli ordine', 'fattura ordine', 'ultimo ordine', 'ordine ORD-123'. Se orderCode non specificato → usa automaticamente lastordercode. IMPORTANTE: Ha PRIORITÀ sulle FAQ per 'ultimo ordine'. NON usare per 'lista tutti gli ordini' (usa [LINK_ORDERS_WITH_TOKEN] token). NON usare per tracking 'dov'è il mio ordine' (tracking fisico).",
           parameters: {
             type: "object",
             properties: {
@@ -557,6 +632,91 @@ export class LLMService {
               },
             },
             required: ["orderCode"],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "repeatOrder",
+          description:
+            "⚙️ PRIORITY 3 - MEDIUM. Ripete esattamente lo stesso ordine di una volta precedente, aggiungendo TUTTI i prodotti al carrello. Usare quando l'utente dice: 'ripeti ordine', 'ordina di nuovo come prima', 'voglio lo stesso di prima', 'ripeti ultimo ordine', 'voglio rifare l'ultimo ordine', 'rifare ordine', 'come l'ultima volta', 'stesso ordine', 'stessi prodotti', 'ordina stessa cosa'. FLOW OBBLIGATORIO: 1) Mostra contenuto ordine, 2) Chiedi SEMPRE conferma 'Ricreo il tuo ultimo ordine?', 3) Se conferma → chiama repeatOrder(). Svuota carrello esistente e ricomincia pulito. Se orderCode non specificato → usa automaticamente ultimo ordine. Verifica disponibilità e avvisa se prodotti non disponibili. Dopo aggiunta → mostra link carrello. DISAMBIGUAZIONE: 'ripeti ordine'/'rifare ordine' = repeatOrder | 'aggiungi burrata' = addProduct.",
+          parameters: {
+            type: "object",
+            properties: {
+              orderCode: {
+                type: "string",
+                description:
+                  "Codice ordine da ripetere (opzionale). Se non specificato, usa automaticamente l'ultimo ordine del cliente. Es: 'ORD-123'.",
+              },
+            },
+            required: [],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "resetCart",
+          description:
+            "🗑️ PRIORITY 3.5 - MEDIUM (Richiede SEMPRE conferma). Svuota COMPLETAMENTE il carrello del cliente, eliminando TUTTI i prodotti/servizi. " +
+            "QUANDO USARE: Cliente dice 'cancella carrello', 'svuota carrello', 'elimina tutto dal carrello', 'pulisci carrello', 'ricomincia da capo', 'reset carrello', 'rimuovi tutto'. " +
+            "⚠️ DISAMBIGUAZIONE CRITICA: 'cancella CARRELLO' / 'svuota TUTTO' → resetCart() (elimina TUTTO il carrello) | 'cancella BURRATA' / 'rimuovi PARMIGIANO' → removeProduct() (elimina UN prodotto specifico). " +
+            "🚨 FLOW OBBLIGATORIO: 1) Cliente chiede di svuotare carrello → 2) TU chiedi SEMPRE conferma: 'Vuoi davvero svuotare il carrello? Perderai tutti i prodotti! 🗑️' → 3) Aspetti risposta → 4a) Se conferma ('sì', 'ok', 'procedi', 'conferma') → chiami resetCart() → mostri messaggio successo | 4b) Se rifiuta ('no', 'aspetta', 'annulla') → NON chiami resetCart(), mantieni carrello. " +
+            "❌ NON chiamare se: cliente vuole rimuovere UN prodotto specifico, cliente non ha confermato esplicitamente, carrello già vuoto. " +
+            "DOPO svuotamento: mostra messaggio risultato CF + suggerisci offerte/prodotti per ricominciare.",
+          parameters: {
+            type: "object",
+            properties: {},
+            required: [],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "addProduct",
+          description:
+            "⚙️ PRIORITY 4 - MEDIUM. Aggiunge UN SINGOLO PRODOTTO al carrello del cliente. Usare SOLO DOPO che il cliente ha CONFERMATO di voler aggiungere il prodotto. FLOW OBBLIGATORIO: 1) Mostra prodotto con prezzo e stock, 2) Chiedi 'Vuoi aggiungerlo al carrello? 🛒', 3) Se conferma ('sì', 'ok', 'perfetto', 'aggiungi') → chiama addProduct(), 4) Dopo aggiunta → mostra link carrello. NON chiamare se: cliente non ha confermato, stock insufficiente, productCode mancante, prodotto non trovato, utente sta solo chiedendo info. DISAMBIGUAZIONE: 'hai la burrata?' = searchProduct (BACKGROUND) | 'aggiungi burrata' (DOPO conferma) = addProduct | 'ripeti ordine' = repeatOrder.",
+          parameters: {
+            type: "object",
+            properties: {
+              productCode: {
+                type: "string",
+                description:
+                  "Codice esatto del prodotto da aggiungere (obbligatorio). Es: 'BUR-001', 'PAR-023', 'PRO-045'.",
+              },
+              quantity: {
+                type: "number",
+                description:
+                  "Quantità da aggiungere (default: 1, deve essere intero positivo). Min: 1.",
+              },
+              notes: {
+                type: "string",
+                description:
+                  "Note opzionali per il prodotto. Es: 'grande', 'bio', 'confezionato'.",
+              },
+            },
+            required: ["productCode"],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "searchProduct",
+          description:
+            "📊 PRIORITY 5 - BACKGROUND ONLY (non-blocking). Registra la ricerca di un prodotto da parte del cliente per analytics e trend analysis. Usare quando l'utente cerca/chiede di un prodotto alimentare: 'hai la burrata?', 'avete prosciutto?', 'mi serve parmigiano', 'vendete champagne?', 'non trovate tartufo?'. Viene chiamata SIA per prodotti trovati CHE per prodotti NON trovati. ⚠️ BACKGROUND FUNCTION: Il LLM continua a rispondere NORMALMENTE dopo la chiamata, l'utente NON deve sapere della registrazione. NON bloccare il flusso conversazionale con messaggi tecnici tipo 'sto registrando'. La funzione viene eseguita in parallelo alla risposta. NON usare per prodotti non alimentari (software, auto, abbigliamento). NON chiamare due volte per stesso prodotto nella stessa conversazione. DISAMBIGUAZIONE: 'hai burrata?' = searchProduct (BACKGROUND) | 'aggiungi burrata' (DOPO conferma) = addProduct.",
+          parameters: {
+            type: "object",
+            properties: {
+              productName: {
+                type: "string",
+                description:
+                  "Il nome del prodotto cercato dal cliente (obbligatorio, max 255 caratteri). Es: 'burrata', 'prosciutto di parma', 'vino rosso', 'champagne', 'tartufo', 'mozzarella'.",
+              },
+            },
+            required: ["productName"],
           },
         },
       },
@@ -587,16 +747,16 @@ export class LLMService {
 
       for (const msg of messagesToInclude) {
         // Skip current message to avoid duplication
-        if (msg.content === userQuery && msg.direction === "INCOMING") {
+        if (msg.content === userQuery && msg.direction === "INBOUND") {
           continue
         }
 
-        if (msg.direction === "INCOMING") {
+        if (msg.direction === "INBOUND") {
           conversationHistory.push({
             role: "user",
             content: msg.content,
           })
-        } else if (msg.direction === "OUTGOING" && msg.aiGenerated) {
+        } else if (msg.direction === "OUTBOUND" && msg.aiGenerated) {
           conversationHistory.push({
             role: "assistant",
             content: msg.content,
@@ -751,6 +911,102 @@ export class LLMService {
           timestamp: new Date().toISOString(),
         })
 
+        // 📊 BACKGROUND FUNCTIONS (PRIORITY 5) - Non bloccare il flusso conversazionale
+        // Queste funzioni vengono eseguite in parallelo senza aspettare il risultato
+        // L'utente NON è consapevole dell'esecuzione, il LLM risponde normalmente
+        const BACKGROUND_FUNCTIONS = ["searchProduct"]
+
+        if (BACKGROUND_FUNCTIONS.includes(functionName)) {
+          // Esegui la funzione in background (non aspettare il risultato)
+          console.log(
+            `🔍 [BACKGROUND] Executing ${functionName} in background...`
+          )
+          this.executeFunctionCall(
+            functionName,
+            functionArgs,
+            customer,
+            workspace,
+            customerData
+          ).catch((error) => {
+            console.error(`❌ [BACKGROUND] Error in ${functionName}:`, error)
+          })
+
+          // Chiedi all'LLM di generare una risposta naturale come se la funzione non fosse stata chiamata
+          console.log(
+            "💬 [BACKGROUND] Asking LLM for natural response (ignoring function call)..."
+          )
+
+          // Fai una seconda chiamata all'LLM dicendogli che la funzione è stata eseguita con successo
+          // ma chiedi una risposta naturale come se non ci fosse stata chiamata
+          const followUpMessages = [
+            {
+              role: "system",
+              content: processedPrompt,
+            },
+            ...conversationHistory,
+            {
+              role: "user",
+              content: userQuery,
+            },
+            {
+              role: "assistant",
+              content: null,
+              tool_calls: [toolCall],
+            },
+            {
+              role: "tool",
+              tool_call_id: toolCall.id,
+              name: functionName,
+              content: JSON.stringify({
+                success: true,
+                message: "Ricerca registrata con successo (background)",
+              }),
+            },
+          ]
+
+          const followUpResponse = await fetch(
+            "https://openrouter.ai/api/v1/chat/completions",
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                "Content-Type": "application/json",
+                "HTTP-Referer": "http://localhost:3001",
+                "X-Title": "ShopMe LLM Response",
+              },
+              body: JSON.stringify({
+                model: "openai/gpt-4o-mini",
+                messages: followUpMessages,
+                temperature: 0,
+                max_tokens: workspace.maxTokens || 5000,
+              }),
+            }
+          )
+
+          const followUpData = await followUpResponse.json()
+          console.log(
+            "🌐 [BACKGROUND] Follow-up response:",
+            JSON.stringify(followUpData, null, 2)
+          )
+
+          const naturalResponse =
+            followUpData.choices?.[0]?.message?.content ||
+            i18n.fallback[language]
+
+          console.log(
+            `✅ [BACKGROUND] Natural response generated:`,
+            naturalResponse
+          )
+
+          return {
+            response: naturalResponse,
+            tokenUsage,
+            costInfo,
+            functionCalls,
+          }
+        }
+
+        // Funzioni NORMALI (bloccanti) - comportamento originale
         const functionResult = await this.executeFunctionCall(
           functionName,
           functionArgs,
@@ -803,21 +1059,47 @@ export class LLMService {
           }
         }
 
-        if (functionName === "GetShipmentTrackingLink") {
-          return {
-            response: `${i18n.success.trackingLink[language]} ${functionResult.linkUrl}`,
-            tokenUsage,
-            costInfo,
-            functionCalls,
+        // Replace variables in function result message before returning
+        const rawResponse =
+          functionResult.message ||
+          functionResult.output ||
+          functionResult.linkUrl ||
+          `${i18n.success.default[language]} ${functionResult.linkUrl}`
+
+        const processedFunctionResponse = this.replaceVariablesInResponse(
+          rawResponse,
+          {
+            nameUser: customerData?.nameUser || customer.name || "Cliente",
+            discountUser: String(
+              customerData?.discountUser || customer.discount || 0
+            ),
+            companyName: customerData?.companyName || workspace.name || "Shop",
+            lastordercode:
+              customerData?.lastordercode || customer.lastOrderCode || "",
+            languageUser:
+              customerData?.languageUser || customer.language || language,
+            agentName: customer.sales
+              ? `${customer.sales.firstName} ${customer.sales.lastName}`.trim()
+              : "Agente",
+            agentPhone: customer.sales?.phone || "N/A",
+            agentEmail: customer.sales?.email || "info@laltrait.com",
+            tokenDuration: this.getTokenDurationText(
+              process.env.TOKEN_EXPIRATION || "1h"
+            ),
           }
-        }
+        )
+
+        // 🔗 Replace link tokens in CF response (e.g., [LINK_CHECKOUT_WITH_TOKEN])
+        const linkReplacements: any[] = []
+        const finalFunctionResponse = await this.replaceLinkTokens(
+          processedFunctionResponse,
+          customer,
+          workspace,
+          linkReplacements
+        )
 
         return {
-          response:
-            functionResult.message ||
-            functionResult.output ||
-            functionResult.linkUrl ||
-            `${i18n.success.default[language]} ${functionResult.linkUrl}`,
+          response: finalFunctionResponse,
           tokenUsage,
           costInfo,
           functionCalls,
@@ -827,9 +1109,31 @@ export class LLMService {
       const llmResponse =
         data.choices?.[0]?.message?.content || i18n.fallback[language]
 
-      console.log("🎯 LLM Final Response:", llmResponse)
+      // 🔧 POST-PROCESS: Replace variables in LLM response
+      // LLM might generate text with {{variables}} that need to be replaced
+      const processedResponse = this.replaceVariablesInResponse(llmResponse, {
+        nameUser: customerData?.nameUser || customer.name || "Cliente",
+        discountUser: String(
+          customerData?.discountUser || customer.discount || 0
+        ),
+        companyName: customerData?.companyName || workspace.name || "Shop",
+        lastordercode:
+          customerData?.lastordercode || customer.lastOrderCode || "",
+        languageUser:
+          customerData?.languageUser || customer.language || language,
+        agentName: customer.sales
+          ? `${customer.sales.firstName} ${customer.sales.lastName}`.trim()
+          : "Agente",
+        agentPhone: customer.sales?.phone || "N/A",
+        agentEmail: customer.sales?.email || "info@laltrait.com",
+        tokenDuration: this.getTokenDurationText(
+          process.env.TOKEN_EXPIRATION || "1h"
+        ),
+      })
+
+      console.log("🎯 LLM Final Response:", processedResponse)
       return {
-        response: llmResponse,
+        response: processedResponse,
         tokenUsage,
         costInfo,
         functionCalls,
@@ -859,25 +1163,26 @@ export class LLMService {
     customerData?: any
   ): Promise<any> {
     try {
+      // 🎯 PRIORITY ORDER (reflected in switch statement order):
+      // 1. ContactOperator (🚨 PRIORITY 1 - Frustration, explicit operator request)
+      // 2. GetLinkOrderByCode (🚨 PRIORITY 2 - View specific order)
+      // 3. repeatOrder (⚙️ PRIORITY 3 - Repeat previous order)
+      // 4. addProduct (⚙️ PRIORITY 4 - Add single product)
+      // 5. searchProduct (📊 PRIORITY 5 - BACKGROUND ONLY)
+
       switch (functionName) {
         case "ContactOperator":
+          // 🚨 PRIORITY 1 - HIGHEST
+          console.log("📞 ContactOperator called (PRIORITY 1)")
           return await this.callingFunctionsService.contactOperator({
             customerId: customer.id,
             workspaceId: workspace.id,
             phoneNumber: customer.phone,
           })
 
-        case "GetShipmentTrackingLink":
-          return await this.callingFunctionsService.getShipmentTrackingLink({
-            customerId: customer.id,
-            workspaceId: workspace.id,
-            orderCode:
-              args.orderCode ||
-              customerData?.lastordercode ||
-              customer.lastOrderCode,
-          })
-
         case "GetLinkOrderByCode":
+          // 🚨 PRIORITY 2 - HIGH
+          console.log("📦 GetLinkOrderByCode called (PRIORITY 2):", args)
           return await this.callingFunctionsService.getOrdersListLink({
             customerId: customer.id,
             workspaceId: workspace.id,
@@ -887,7 +1192,54 @@ export class LLMService {
               customer.lastOrderCode,
           })
 
+        case "repeatOrder":
+          // ⚙️ PRIORITY 3 - MEDIUM (requires confirmation)
+          console.log("� repeatOrder called (PRIORITY 3):", args)
+          const {
+            RepeatOrder,
+          } = require("../domain/calling-functions/RepeatOrder")
+          return await RepeatOrder({
+            customerId: customer.id,
+            workspaceId: workspace.id,
+            orderCode: args.orderCode,
+          })
+
+        case "resetCart":
+          // 🗑️ PRIORITY 3.5 - MEDIUM (requires confirmation)
+          console.log("🗑️ resetCart called (PRIORITY 3.5):", args)
+          const { ResetCart } = require("../domain/calling-functions/ResetCart")
+          return await ResetCart({
+            customerId: customer.id,
+            workspaceId: workspace.id,
+          })
+        case "addProduct":
+          // ⚙️ PRIORITY 4 - MEDIUM (requires confirmation)
+          console.log("🛒 addProduct called (PRIORITY 4):", args)
+          const {
+            AddProduct,
+          } = require("../domain/calling-functions/AddProduct")
+          return await AddProduct({
+            customerId: customer.id,
+            workspaceId: workspace.id,
+            productCode: args.productCode,
+            quantity: args.quantity || 1,
+            notes: args.notes,
+          })
+
+        case "searchProduct":
+          // � PRIORITY 5 - BACKGROUND ONLY (non-blocking, analytics)
+          console.log(
+            "🔍 searchProduct called (PRIORITY 5 - BACKGROUND):",
+            args
+          )
+          return await this.callingFunctionsService.searchProduct({
+            customerId: customer.id,
+            workspaceId: workspace.id,
+            productName: args.productName,
+          })
+
         default:
+          console.error(`❌ Unknown function: ${functionName}`)
           return { error: "Funzione non riconosciuta" }
       }
     } catch (error) {
@@ -980,5 +1332,59 @@ export class LLMService {
       output,
       debugInfo: JSON.stringify(debugInfo || { stage: "new_user" }),
     }
+  }
+
+  /**
+   * Replace variables in LLM response
+   * LLM might generate text with {{variables}} that need to be replaced with actual values
+   */
+  private replaceVariablesInResponse(
+    text: string,
+    variables: {
+      nameUser: string
+      discountUser: string
+      companyName: string
+      lastordercode: string
+      languageUser: string
+      agentName: string
+      agentPhone: string
+      agentEmail: string
+      tokenDuration: string
+    }
+  ): string {
+    let result = text
+
+    // Replace all known variables
+    result = result.replace(/\{\{nameUser\}\}/g, variables.nameUser)
+    result = result.replace(/\{\{discountUser\}\}/g, variables.discountUser)
+    result = result.replace(/\{\{companyName\}\}/g, variables.companyName)
+    result = result.replace(/\{\{lastordercode\}\}/g, variables.lastordercode)
+    result = result.replace(/\{\{languageUser\}\}/g, variables.languageUser)
+    result = result.replace(/\{\{agentName\}\}/g, variables.agentName)
+    result = result.replace(/\{\{agentPhone\}\}/g, variables.agentPhone)
+    result = result.replace(/\{\{agentEmail\}\}/g, variables.agentEmail)
+    result = result.replace(/\{\{TOKEN_DURATION\}\}/g, variables.tokenDuration)
+
+    return result
+  }
+
+  /**
+   * Convert token expiration time to human-readable text
+   */
+  private getTokenDurationText(expiration: string): string {
+    const hours = parseInt(expiration.replace(/[^0-9]/g, ""))
+
+    if (expiration.includes("h")) {
+      return hours === 1 ? "1 ora" : `${hours} ore`
+    } else if (expiration.includes("m")) {
+      const minutes = hours
+      return `${minutes} minuti`
+    } else if (expiration.includes("d")) {
+      const days = hours
+      return days === 1 ? "1 giorno" : `${days} giorni`
+    }
+
+    // Default fallback
+    return "1 ora"
   }
 }

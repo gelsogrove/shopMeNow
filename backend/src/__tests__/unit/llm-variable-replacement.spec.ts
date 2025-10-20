@@ -56,6 +56,7 @@ describe("LLMService - Variable Replacement", () => {
         Last Order Code: {{lastordercode}}
         User Language: {{languageUser}}
         Token Duration: {{TOKEN_DURATION}}
+        Workspace URL: {{URL}}
       `
 
       // Mock data
@@ -64,6 +65,7 @@ describe("LLMService - Variable Replacement", () => {
       const products = "Products Test Content"
       const categories = "Categories Test Content"
       const offers = "Offers Test Content"
+      const workspaceUrl = "http://localhost:3000"
       const userInfo = {
         nameUser: "Mario Rossi",
         discountUser: 10,
@@ -83,6 +85,7 @@ describe("LLMService - Variable Replacement", () => {
         .replace("{{PRODUCTS}}", products)
         .replace("{{CATEGORIES}}", categories)
         .replace("{{OFFERS}}", offers)
+        .replace(/\{\{URL\}\}/g, workspaceUrl) // Replace ALL occurrences
         .replace("{{nameUser}}", userInfo.nameUser)
         .replace("{{discountUser}}", String(userInfo.discountUser))
         .replace("{{companyName}}", userInfo.companyName)
@@ -96,6 +99,7 @@ describe("LLMService - Variable Replacement", () => {
       expect(processedPrompt).not.toContain("{{PRODUCTS}}")
       expect(processedPrompt).not.toContain("{{CATEGORIES}}")
       expect(processedPrompt).not.toContain("{{OFFERS}}")
+      expect(processedPrompt).not.toContain("{{URL}}")
       expect(processedPrompt).not.toContain("{{nameUser}}")
       expect(processedPrompt).not.toContain("{{discountUser}}")
       expect(processedPrompt).not.toContain("{{companyName}}")
@@ -109,6 +113,7 @@ describe("LLMService - Variable Replacement", () => {
       expect(processedPrompt).toContain(products)
       expect(processedPrompt).toContain(categories)
       expect(processedPrompt).toContain(offers)
+      expect(processedPrompt).toContain(workspaceUrl)
       expect(processedPrompt).toContain(userInfo.nameUser)
       expect(processedPrompt).toContain(String(userInfo.discountUser))
       expect(processedPrompt).toContain(userInfo.companyName)
@@ -162,6 +167,43 @@ describe("LLMService - Variable Replacement", () => {
 
       expect(processed30m).not.toContain("{{TOKEN_DURATION}}")
       expect(processed30m).toBe("Link valido per 30 minuti")
+    })
+
+    it("should replace ALL occurrences of {{URL}} in prompt with regex", () => {
+      const mockPrompt = `
+        Carrello: {{URL}}/cart/abc123
+        Ordine: {{URL}}/orders-public?token=xyz
+        Checkout: {{URL}}/checkout-public?token=456
+        Profilo: {{URL}}/profile
+      `
+
+      const workspaceUrl = "https://shop.example.com"
+
+      // Use regex to replace ALL occurrences (not just first one)
+      const processedPrompt = mockPrompt.replace(/\{\{URL\}\}/g, workspaceUrl)
+
+      // Verify NO {{URL}} placeholders remain
+      expect(processedPrompt).not.toContain("{{URL}}")
+
+      // Verify ALL 4 occurrences were replaced
+      expect(processedPrompt).toContain(
+        "Carrello: https://shop.example.com/cart/abc123"
+      )
+      expect(processedPrompt).toContain(
+        "Ordine: https://shop.example.com/orders-public?token=xyz"
+      )
+      expect(processedPrompt).toContain(
+        "Checkout: https://shop.example.com/checkout-public?token=456"
+      )
+      expect(processedPrompt).toContain(
+        "Profilo: https://shop.example.com/profile"
+      )
+
+      // Count how many times the URL appears (should be 4)
+      const urlOccurrences = (
+        processedPrompt.match(/https:\/\/shop\.example\.com/g) || []
+      ).length
+      expect(urlOccurrences).toBe(4)
     })
 
     it("should detect unreplaced variables in prompt", () => {

@@ -1,7 +1,6 @@
 import { PrismaClient } from "@prisma/client"
 import crypto from "crypto"
 import logger from "../../utils/logger"
-import { config } from "../../config"
 
 /**
  * Service for managing all types of secure tokens
@@ -162,9 +161,26 @@ export class SecureTokenService {
       const token = this.generateSecureToken()
       const expiresAt = new Date()
       // Use env variable directly to allow runtime changes (important for testing)
-      const effectiveExpiresIn = expiresIn || process.env.TOKEN_EXPIRATION || "1h"
-      const hours = parseInt(effectiveExpiresIn.replace("h", "")) || 1
-      expiresAt.setHours(expiresAt.getHours() + hours)
+      const effectiveExpiresIn =
+        expiresIn || process.env.TOKEN_EXPIRATION || "1h"
+
+      // Parse duration correctly for both hours (h) and minutes (m)
+      const match = effectiveExpiresIn.match(/^(\d+)([hm])$/)
+      if (!match) {
+        // Fallback to 1 hour if format is invalid
+        expiresAt.setHours(expiresAt.getHours() + 1)
+      } else {
+        const value = parseInt(match[1], 10)
+        const unit = match[2]
+
+        if (unit === "m") {
+          // Minutes
+          expiresAt.setMinutes(expiresAt.getMinutes() + value)
+        } else {
+          // Hours
+          expiresAt.setHours(expiresAt.getHours() + value)
+        }
+      }
 
       // Crea token del tipo specificato
       await this.prisma.secureToken.create({
@@ -187,6 +203,13 @@ export class SecureTokenService {
       return token
     } catch (error) {
       logger.error(`[KISS-TOKEN] ❌ Errore creazione token:`, error)
+
+      // Re-throw validation errors as-is to preserve the specific error message
+      if (error instanceof Error && error.message.includes("KISS TOKEN:")) {
+        throw error
+      }
+
+      // For other errors, wrap with generic message
       throw new Error(`Errore creazione token di tipo '${type}'`)
     }
   }

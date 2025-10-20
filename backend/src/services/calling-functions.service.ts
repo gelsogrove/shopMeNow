@@ -20,12 +20,6 @@ export interface GetOrdersListLinkRequest {
   orderCode?: string
 }
 
-export interface GetShipmentTrackingLinkRequest {
-  customerId: string
-  workspaceId: string
-  orderCode?: string
-}
-
 export class CallingFunctionsService {
   private secureTokenService: SecureTokenService
   private baseUrl: string
@@ -331,36 +325,6 @@ export class CallingFunctionsService {
     }
   }
 
-  public async getShipmentTrackingLink(
-    request: GetShipmentTrackingLinkRequest
-  ): Promise<TokenResponse> {
-    try {
-      console.log("🔧 Calling getShipmentTrackingLink with:", request)
-
-      // Import the GetShipmentTrackingLink function
-      const {
-        GetShipmentTrackingLink,
-      } = require("../domain/calling-functions/GetShipmentTrackingLink")
-
-      // Call the GetShipmentTrackingLink function
-      const result = await GetShipmentTrackingLink({
-        customerId: request.customerId,
-        workspaceId: request.workspaceId,
-        orderCode: request.orderCode || undefined,
-      })
-
-      console.log("✅ GetShipmentTrackingLink result:", result)
-
-      return result
-    } catch (error) {
-      console.error("❌ Error in getShipmentTrackingLink:", error)
-      return this.createErrorResponse(
-        error,
-        "getShipmentTrackingLink"
-      ) as TokenResponse
-    }
-  }
-
   /**
    * Replace [LINK_WITH_TOKEN] with generated link
    */
@@ -403,6 +367,217 @@ export class CallingFunctionsService {
         error,
         "replaceLinkWithToken"
       ) as StandardResponse
+    }
+  }
+
+  /**
+   * Aggiungi prodotto al carrello
+   */
+  public async addProductToCart(request: {
+    customerId: string
+    workspaceId: string
+    productCode: string
+    quantity: number
+    notes?: string
+  }): Promise<any> {
+    try {
+      console.log("🛒 Calling addProductToCart with:", request)
+
+      const { PrismaClient } = require("@prisma/client")
+      const prisma = new PrismaClient()
+
+      try {
+        // Trova il cliente
+        const customer = await prisma.customers.findFirst({
+          where: {
+            id: request.customerId,
+            workspaceId: request.workspaceId,
+          },
+        })
+
+        if (!customer) {
+          console.error("❌ Customer not found in addProductToCart")
+          return {
+            success: false,
+            error: "Cliente non trovato",
+            message: "Non riesco a trovare il tuo account.",
+            timestamp: new Date().toISOString(),
+          }
+        }
+
+        // Trova il prodotto per ProductCode
+        const product = await prisma.products.findFirst({
+          where: {
+            ProductCode: request.productCode,
+            workspaceId: request.workspaceId,
+            isActive: true,
+          },
+        })
+
+        if (!product) {
+          console.error("❌ Product not found:", request.productCode)
+          return {
+            success: false,
+            error: "Prodotto non trovato",
+            message: `Il prodotto "${request.productCode}" non è disponibile.`,
+            timestamp: new Date().toISOString(),
+          }
+        }
+
+        // Verifica stock disponibile
+        if (product.stock < request.quantity) {
+          console.error(
+            `❌ Insufficient stock for product ${request.productCode}. Available: ${product.stock}, Requested: ${request.quantity}`
+          )
+          return {
+            success: false,
+            error: "Stock insufficiente",
+            message: `Purtroppo disponibili solo ${product.stock} unità di "${product.name}".`,
+            timestamp: new Date().toISOString(),
+          }
+        }
+
+        // Trova o crea il carrello del cliente
+        let cart = await prisma.carts.findFirst({
+          where: {
+            customerId: request.customerId,
+            workspaceId: request.workspaceId,
+          },
+        })
+
+        if (!cart) {
+          cart = await prisma.carts.create({
+            data: {
+              customerId: request.customerId,
+              workspaceId: request.workspaceId,
+            },
+          })
+          console.log("✅ Created new cart for customer:", request.customerId)
+        }
+
+        // Controlla se il prodotto è già nel carrello
+        const existingCartItem = await prisma.cartItems.findFirst({
+          where: {
+            cartId: cart.id,
+            productId: product.id,
+          },
+        })
+
+        if (existingCartItem) {
+          // Se esiste già, aggiorna la quantità
+          await prisma.cartItems.update({
+            where: { id: existingCartItem.id },
+            data: {
+              quantity: existingCartItem.quantity + request.quantity,
+            },
+          })
+          console.log(
+            "✅ Updated existing cart item for product:",
+            request.productCode
+          )
+        } else {
+          // Altrimenti, crea un nuovo item
+          await prisma.cartItems.create({
+            data: {
+              cartId: cart.id,
+              productId: product.id,
+              quantity: request.quantity,
+              itemType: "PRODUCT",
+              notes: request.notes || "",
+            },
+          })
+          console.log("✅ Added product to cart:", request.productCode)
+        }
+
+        // Genera token per accesso al carrello
+        const token = await this.secureTokenService.createToken(
+          "cart",
+          request.workspaceId,
+          { customerId: request.customerId },
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          request.customerId
+        )
+
+        // Genera short URL del carrello
+        const {
+          linkGeneratorService,
+        } = require("../application/services/link-generator.service")
+        const cartUrl = await linkGeneratorService.generateCheckoutLink(
+          token,
+          request.workspaceId
+        )
+
+        await prisma.$disconnect()
+
+        return {
+          success: true,
+          message: `✅ Ho aggiunto ${request.quantity} x "${product.name}" al carrello!\n\n🛒 [LINK_CHECKOUT_WITH_TOKEN]\n\n⏰ Link valido per {{TOKEN_DURATION}}`,
+          productName: product.name,
+          quantity: request.quantity,
+          cartCode: cart.id,
+          cartUrl: cartUrl,
+          token: token,
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          timestamp: new Date().toISOString(),
+        }
+      } catch (error) {
+        console.error(
+          "❌ Error in addProductToCart database operations:",
+          error
+        )
+        await prisma.$disconnect()
+        throw error
+      }
+    } catch (error) {
+      console.error("❌ Error in addProductToCart:", error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Errore interno",
+        message: "Impossibile aggiungere il prodotto al carrello.",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  /**
+   * Registra ricerca prodotto per analytics
+   */
+  public async searchProduct(request: {
+    customerId: string
+    workspaceId: string
+    productName: string
+  }): Promise<any> {
+    try {
+      console.log("🔍 Calling searchProduct with:", request)
+
+      // Import the SearchProduct function
+      const {
+        SearchProduct,
+      } = require("../domain/calling-functions/SearchProduct")
+
+      const result = await SearchProduct({
+        customerId: request.customerId,
+        workspaceId: request.workspaceId,
+        productName: request.productName,
+      })
+
+      console.log("✅ SearchProduct result:", result)
+
+      return {
+        success: true,
+        message: result.message || "Ricerca registrata per analytics",
+        timestamp: new Date().toISOString(),
+      }
+    } catch (error) {
+      console.error("❌ Error in searchProduct:", error)
+      return {
+        success: false,
+        message: "Errore nel registrare la ricerca.",
+        timestamp: new Date().toISOString(),
+      }
     }
   }
 }

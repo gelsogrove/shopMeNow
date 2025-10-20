@@ -499,7 +499,7 @@ export class AnalyticsService {
           AND s."isActive" = true
         GROUP BY s.id, s."firstName", s."lastName", s.email, s.phone
         ORDER BY total_revenue DESC, total_orders DESC, total_customers DESC
-        LIMIT 3
+        LIMIT 10
       `) as {
         id: string
         firstName: string
@@ -958,6 +958,131 @@ export class AnalyticsService {
       }))
     } catch (error) {
       logger.error("Error fetching top clients:", error)
+      return []
+    }
+  }
+
+  /**
+   * Get top searched products
+   */
+  async getTopSearchedProducts(
+    workspaceId: string,
+    period: string = "7days",
+    limit: number = 10
+  ) {
+    try {
+      logger.info("📊 Fetching top searched products", {
+        workspaceId,
+        period,
+        limit,
+      })
+
+      // Calculate date filter
+      const now = new Date()
+      let dateFrom: Date
+
+      switch (period) {
+        case "7days":
+          dateFrom = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+          break
+        case "30days":
+          dateFrom = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+          break
+        case "alltime":
+          dateFrom = new Date(0)
+          break
+        default:
+          dateFrom = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      }
+
+      // Query top searched products
+      const topSearches = await this.prisma.$queryRaw<
+        Array<{ productName: string; searchCount: bigint }>
+      >`
+        SELECT 
+          query as "productName",
+          COUNT(*) as "searchCount"
+        FROM "product_searches"
+        WHERE "workspaceId" = ${workspaceId}
+          AND "createdAt" >= ${dateFrom}
+        GROUP BY query
+        ORDER BY "searchCount" DESC
+        LIMIT ${limit}
+      `
+
+      // Get total for percentage
+      const totalResult = await this.prisma.$queryRaw<Array<{ total: bigint }>>`
+        SELECT COUNT(*) as total
+        FROM "product_searches"
+        WHERE "workspaceId" = ${workspaceId}
+          AND "createdAt" >= ${dateFrom}
+      `
+
+      const total = Number(totalResult[0]?.total || 0)
+
+      // Format with rankings and percentages
+      return topSearches.map((item, index) => ({
+        rank: index + 1,
+        productName: item.productName,
+        searchCount: Number(item.searchCount),
+        percentage:
+          total > 0 ? Math.round((Number(item.searchCount) / total) * 100) : 0,
+      }))
+    } catch (error) {
+      logger.error("❌ Error fetching top searched products:", error)
+      return []
+    }
+  }
+
+  /**
+   * Get search trends over time (daily aggregation)
+   */
+  async getSearchTrends(workspaceId: string, period: string = "7days") {
+    try {
+      logger.info("📈 Fetching search trends", {
+        workspaceId,
+        period,
+      })
+
+      // Calculate date filter
+      const now = new Date()
+      let dateFrom: Date
+
+      switch (period) {
+        case "7days":
+          dateFrom = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+          break
+        case "30days":
+          dateFrom = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+          break
+        case "alltime":
+          dateFrom = new Date(0)
+          break
+        default:
+          dateFrom = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      }
+
+      // Query trends by date
+      const trends = await this.prisma.$queryRaw<
+        Array<{ date: Date; searchCount: bigint }>
+      >`
+        SELECT 
+          DATE("createdAt") as date,
+          COUNT(*) as "searchCount"
+        FROM "product_searches"
+        WHERE "workspaceId" = ${workspaceId}
+          AND "createdAt" >= ${dateFrom}
+        GROUP BY DATE("createdAt")
+        ORDER BY date DESC
+      `
+
+      // Format dates and convert bigint
+      return trends.map((item) => ({
+        date: new Date(item.date).toISOString().split("T")[0],
+        searchCount: Number(item.searchCount),
+      }))
+    } catch (error) {
+      logger.error("❌ Error fetching search trends:", error)
       return []
     }
   }

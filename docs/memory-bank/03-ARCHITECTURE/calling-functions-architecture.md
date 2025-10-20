@@ -1,14 +1,35 @@
 # Calling Functions Architecture - Clean Architecture / DDD
 
-**Data**: 14 Ottobre 2025  
-**Branch**: `01-layer-security`  
-**Pattern**: Clean Architecture + Domain-Driven Design
+**Data**: 17 Ottobre 2025  
+**Branch**: `84-design-implement-new-calling-functions-addproduct-repeatorder-full-befeprompt-integration`  
+**Pattern**: Clean Architecture + Domain-Driven Design  
+**Status**: 5 Functions Registered & Prioritized
 
 ---
 
 ## 🎯 Obiettivo
 
 Questo documento descrive l'architettura delle **Calling Functions** nel sistema ShopME, seguendo i principi di **Clean Architecture** e **Domain-Driven Design (DDD)**.
+
+⚠️ **IMPORTANTE**: Per specifiche dettagliate, trigger semantici ed esempi → vedi `docs/prompt_agent.md` sezione "CALLING FUNCTIONS"
+
+## 📊 Priorità e Funzioni Registrate (5 Total)
+
+| Priorità | Function           | Tipo       | Descrizione                           |
+| -------- | ------------------ | ---------- | ------------------------------------- |
+| 🚨 1     | ContactOperator    | Bloccante  | Assistenza umana, escalation          |
+| 🚨 2     | GetLinkOrderByCode | Bloccante  | Visualizza ordine specifico           |
+| ⚙️ 3     | repeatOrder        | Bloccante  | Ripete ordine precedente (conferma)   |
+| ⚙️ 4     | addProduct         | Bloccante  | Aggiunge singolo prodotto (conferma)  |
+| 📊 5     | searchProduct      | Background | Registra ricerca prodotto (analytics) |
+
+**Regole Disambiguazione**:
+
+- Frustrazione utente → ContactOperator (PRIORITÀ 1)
+- "Dammi ultimo ordine" → GetLinkOrderByCode (PRIORITÀ 2)
+- "Ripeti ordine" → repeatOrder (PRIORITÀ 3)
+- "Aggiungi burrata" → addProduct (PRIORITÀ 4, dopo conferma)
+- "Hai la burrata?" → searchProduct (PRIORITÀ 5, BACKGROUND)
 
 ---
 
@@ -40,8 +61,8 @@ Questo documento descrive l'architettura delle **Calling Functions** nel sistema
 ┌─────────────────────────────────────────────────────────┐
 │                    Domain Layer                          │
 │  domain/calling-functions/ - Core business logic        │
-│  ContactOperator, GetShipmentTrackingLink,              │
-│  GetLinkOrderByCode                                     │
+│  ContactOperator, GetLinkOrderByCode,                   │
+│  AddProduct, RepeatOrder, SearchProduct                 │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -54,17 +75,19 @@ Questo documento descrive l'architettura delle **Calling Functions** nel sistema
 ```
 backend/src/
 ├── domain/
-│   └── calling-functions/           # 🎯 CORE BUSINESS LOGIC
+│   └── calling-functions/           # 🎯 CORE BUSINESS LOGIC (5 functions)
 │       ├── ContactOperator.ts       # LLM-callable: Escalation operatore
-│       ├── GetShipmentTrackingLink.ts  # LLM-callable: Tracking DHL
-│       └── GetLinkOrderByCode.ts    # LLM-callable: Dettagli ordine
+│       ├── GetLinkOrderByCode.ts    # LLM-callable: Dettagli ordine
+│       ├── AddProduct.ts            # LLM-callable: Aggiunge prodotto al carrello (NEW)
+│       ├── RepeatOrder.ts           # LLM-callable: Ripete ordine precedente (NEW)
+│       └── SearchProduct.ts         # LLM-callable: Background tracking ricerche (NEW)
 │
 ├── application/services/            # 📋 APPLICATION SERVICES
 │   ├── link-replacement.service.ts  # Utility: Token replacement
-│   └── function-handler.service.ts  # Handler per function calls
+│   └── function-handler.service.ts  # Handler per function calls (con case per 5 funzioni)
 │
 ├── services/                        # 🔌 EXTERNAL INTEGRATIONS
-│   ├── calling-functions.service.ts # Orchestrator
+│   ├── calling-functions.service.ts # Orchestrator (con addProductToCart method)
 │   ├── llm.service.ts               # OpenRouter integration
 │   └── formatter.service.ts         # Response formatting
 │
@@ -79,7 +102,6 @@ backend/src/
 └── chatbot/
     └── calling-functions/           # ❌ CONFUSO: Mix domain + utility
         ├── ContactOperator.ts       # Domain logic
-        ├── GetShipmentTrackingLink.ts  # Domain logic
         ├── GetLinkOrderByCode.ts    # Domain logic
         └── ReplaceLinkWithToken.ts  # ❌ Utility (non domain!)
 ```
@@ -92,20 +114,25 @@ backend/src/
 
 ---
 
-## 🔧 Le 3 Calling Functions (Domain Layer)
+## 🔧 Le 5 Calling Functions (Domain Layer)
 
-### 1. ContactOperator
+⚠️ **RIFERIMENTO COMPLETO**: Vedi `docs/prompt_agent.md` sezione "CALLING FUNCTIONS" per:
 
-**File**: `domain/calling-functions/ContactOperator.ts`
+- Trigger semantici completi (multilingua)
+- Esempi d'uso dettagliati
+- Regole disambiguazione
+- Flow obbligatori
 
-**Scopo**: Escalation a operatore umano quando il cliente richiede assistenza personale.
+### 1. ContactOperator (🚨 PRIORITY 1)
 
-**Trigger LLM** (da `docs/prompt_agent.md` line 177):
+**File**: `domain/calling-functions/ContactOperator.ts`  
+**Tipo**: Bloccante (interrompe flusso normale)  
+**Scopo**: Escalation a operatore umano per assistenza specializzata o frustrazione.
 
-- "voglio parlare con operatore"
-- "assistenza umana"
-- "customer service"
-- Trigger di frustrazione: "stufo", "problema", "danneggiata"
+**Trigger Principali**:
+
+- Richiesta esplicita: "voglio parlare con operatore", "assistenza umana"
+- Frustrazione: "stufo", "problema", "danneggiata", "sempre", "ogni volta"
 
 **Signature**:
 
@@ -131,79 +158,448 @@ interface ContactOperatorRequest {
 
 ---
 
-### 2. GetShipmentTrackingLink
+### 2. GetLinkOrderByCode (🚨 PRIORITY 2)
 
-**File**: `domain/calling-functions/GetShipmentTrackingLink.ts`
+**File**: Implementato in `services/calling-functions.service.ts::getOrdersListLink()`  
+**Tipo**: Bloccante (interrompe flusso normale)  
+**Scopo**: Genera link per visualizzare un ordine specifico o ultimo ordine.
 
-**Scopo**: Genera link DHL per tracciare la spedizione di un ordine.
+**Trigger Principali**:
 
-**Trigger LLM** (da `docs/prompt_agent.md` line 210):
-
-- "dov'è il mio ordine?"
-- "tracking spedizione"
-- "quando arriva il pacco?"
-- "dove si trova il mio ordine?"
-
-**Signature**:
-
-```typescript
-export async function GetShipmentTrackingLink(
-  request: GetShipmentTrackingLinkRequest
-): Promise<GetShipmentTrackingLinkResult>
-
-interface GetShipmentTrackingLinkRequest {
-  customerId: string
-  workspaceId: string
-  orderCode?: string // Se omesso, usa ultimo ordine
-}
-```
-
-**Responsabilità**:
-
-- ✅ Recupera ordine da database con tracking number
-- ✅ Genera URL DHL: `https://www.dhl.com/.../tracking-id=XXX`
-- ✅ Crea short URL tramite URLShortenerService
-- ✅ Ritorna link tracciabile (1 ora validità)
-- ❌ NON modifica stato ordine
-
----
-
-### 3. GetLinkOrderByCode
-
-**File**: `domain/calling-functions/GetLinkOrderByCode.ts`
-
-**Scopo**: Genera link sicuro per visualizzare dettagli di un ordine specifico.
-
-**Trigger LLM** (da `docs/prompt_agent.md` line 247):
-
-- "dammi ordine"
-- "mostrami ultimo ordine"
-- "fattura ordine XXX"
+- "dammi ultimo ordine"
+- "mostrami ordine ORD-123"
+- "fattura ordine"
 - "dettagli ordine"
 
 **Signature**:
 
 ```typescript
-export async function GetLinkOrderByCode(
-  request: GetLinkOrderByCodeRequest
-): Promise<any>
+// Implementato in services/calling-functions.service.ts
+async getOrdersListLink(request: GetOrdersListLinkRequest): Promise<any>
 
-interface GetLinkOrderByCodeRequest {
+interface GetOrdersListLinkRequest {
   customerId: string
   workspaceId: string
   orderCode?: string // Se omesso, usa ultimo ordine
-  documentType?: string // 'order' | 'invoice'
-  language?: string // 'it' | 'en' | 'es' | 'pt'
 }
 ```
 
 **Responsabilità**:
 
-- ✅ Usa `CallingFunctionsService.getOrdersListLink()`
+- ✅ Recupera ordine da database
 - ✅ Genera token sicuro con SecureTokenService
-- ✅ Crea link pubblico `/orders-public?token=xxx`
+- ✅ Crea link pubblico `/orders-public?token=xxx` o `/orders-public/ORDER_CODE?token=xxx`
 - ✅ Validità: 1 ora
-- ❌ NON recupera direttamente i dati ordine (delegato a controller)
+- ❌ NON modifica stato ordine
+
+---
+
+### 3. repeatOrder (⚙️ PRIORITY 3)
+
+**File**: `domain/calling-functions/RepeatOrder.ts`  
+**Tipo**: Bloccante (richiede conferma utente)  
+**Scopo**: Ripete esattamente lo stesso ordine precedente, aggiungendo TUTTI i prodotti al carrello.
+
+**Trigger Principali**:
+
+- "ripeti ordine"
+- "ordina di nuovo come prima"
+- "voglio lo stesso di prima"
+- "come l'ultima volta"
+
+**Flow Obbligatorio**:
+
+1. Mostra contenuto ordine
+2. Chiedi conferma: "Ricreo il tuo ultimo ordine?"
+3. Se conferma → esegui repeatOrder()
+
+**Signature**:
+
+```typescript
+export async function RepeatOrder(
+  request: RepeatOrderRequest
+): Promise<RepeatOrderResult>
+
+interface RepeatOrderRequest {
+  customerId: string
+  workspaceId: string
+  orderCode?: string // Se omesso, usa ultimo ordine
+}
+```
+
+**Responsabilità**:
+
+- ✅ Recupera ordine precedente con prodotti
+- ✅ Svuota carrello esistente
+- ✅ Aggiunge TUTTI i prodotti dell'ordine al carrello
+- ✅ Verifica disponibilità stock
+- ✅ Ritorna link carrello
+- ❌ NON procede con checkout
+
+---
+
+### 4. addProduct (⚙️ PRIORITY 4)
+
+**File**: `domain/calling-functions/AddProduct.ts`  
+**Tipo**: Bloccante (richiede conferma utente)  
+**Scopo**: Aggiunge UN SINGOLO PRODOTTO al carrello dopo conferma esplicita.
+
+**Trigger Principali**:
+
+- SOLO dopo conferma: "sì", "ok", "perfetto", "aggiungi", "vai"
+- ⚠️ **IMPORTANTE**: Deve essere preceduta da: "Vuoi aggiungerlo al carrello?"
+
+**Flow Obbligatorio**:
+
+1. Mostra prodotto con prezzo e stock
+2. Chiedi: "Vuoi aggiungerlo al carrello? 🛒"
+3. Se conferma → esegui addProduct()
+
+**Signature**:
+
+```typescript
+export async function AddProduct(
+  request: AddProductRequest
+): Promise<AddProductResult>
+
+interface AddProductRequest {
+  customerId: string
+  workspaceId: string
+  productCode: string // Codice esatto del prodotto
+  quantity: number // Quantità (default: 1, minimo 1)
+  notes?: string // Note opzionali (es: "grande", "bio")
+}
+
+interface AddProductResult {
+  success: boolean
+  message: string
+  cartCode?: string
+  productName?: string
+  quantity?: number
+  cartUrl?: string // URL pubblico carrello con token
+  error?: string
+}
+```
+
+**Responsabilità**:
+
+- ✅ Valida parametri (customerId, workspaceId, productCode, quantity)
+- ✅ Verifica esistenza prodotto
+- ✅ Controlla stock disponibile (fail se insufficiente)
+- ✅ Trova o crea carrello del cliente
+- ✅ Aggiunge prodotto (o aggiorna quantità se già presente)
+- ✅ Ritorna link carrello
+- ❌ NON completa automaticamente l'ordine
+
+---
+
+### 5. searchProduct (📊 PRIORITY 5 - BACKGROUND)
+
+**File**: `domain/calling-functions/SearchProduct.ts`  
+**Tipo**: BACKGROUND (non-blocking, eseguito in parallelo)  
+**Scopo**: Registra ricerca prodotto per analytics e trend analysis.
+
+**Trigger Principali**:
+
+- "hai la burrata?"
+- "avete prosciutto?"
+- "vendete champagne?"
+- "non trovate tartufo?" (ANCHE prodotti NON trovati)
+
+**⚠️ COMPORTAMENTO SPECIALE - BACKGROUND FUNCTION**:
+
+- ✅ Viene eseguita in PARALLELO alla risposta LLM
+- ✅ L'utente NON è consapevole della chiamata
+- ✅ Il LLM continua a rispondere normalmente
+- ✅ NON blocca il flusso conversazionale
+- ❌ NON mostrare messaggi tipo "sto registrando"
+
+**Signature**:
+
+```typescript
+export async function SearchProduct(
+  request: SearchProductRequest
+): Promise<SearchProductResult>
+
+interface SearchProductRequest {
+  customerId: string
+  workspaceId: string
+  productName: string // Nome prodotto cercato (max 255 caratteri)
+}
+
+interface SearchProductResult {
+  success: boolean
+  message: string
+  recorded: boolean
+  error?: string
+}
+```
+
+**Responsabilità**:
+
+- ✅ Registra ricerca nel database (table: ProductSearch)
+- ✅ Salva: customerId, workspaceId, productName, timestamp, productFound (true/false)
+- ✅ Aggregazione per analytics dashboard
+- ❌ NON restituisce prodotti (delegato al prompt dinamico)
+- ❌ NON interrompe flusso conversazionale
+
+**Implementazione Background** (in llm.service.ts):
+
+````typescript
+// Funzioni BACKGROUND - Non bloccare il flusso conversazionale
+const BACKGROUND_FUNCTIONS = ["searchProduct"]
+
+if (BACKGROUND_FUNCTIONS.includes(functionName)) {
+  // Esegui in background (non aspettare risultato)
+  this.executeFunctionCall(...).catch(error => {
+    console.error(`❌ [BACKGROUND] Error:`, error)
+  })
+
+  // LLM continua a rispondere normalmente
+  const followUpResponse = await fetch(...)
+  return { response: naturalResponse }
+}
+3. Cliente conferma: "Sì"
+4. LLM chiama `addProduct(productCode: "BUR-001", quantity: 1)`
+5. Prodotto aggiunto a carrello
+6. LLM mostra link checkout
+
+**Validazioni**:
+
+- ✅ ProductCode deve corrispondere a prodotto isActive
+- ✅ Stock >= quantity richiesta
+- ✅ Quantity deve essere intero positivo
+- ✅ Workspace isolation (solo prodotti del workspace)
+
+---
+
+## 5. repeatOrder (NEW)
+
+**File**: `domain/calling-functions/RepeatOrder.ts`
+
+**Scopo**: Ripete un ordine precedente (ultimo o specifico) aggiungendo tutti i prodotti al carrello.
+
+**Trigger LLM** (da `docs/prompt_agent.md` line 350):
+
+- "Ripeti il mio ultimo ordine"
+- "Ordina di nuovo come l'ultima volta"
+- "Voglio lo stesso di prima"
+- "Ordina come l'ultima volta"
+
+**Signature**:
+
+```typescript
+export async function RepeatOrder(
+  request: RepeatOrderRequest
+): Promise<RepeatOrderResult>
+
+interface RepeatOrderRequest {
+  customerId: string
+  workspaceId: string
+  orderCode?: string // Se omesso, usa ultimo ordine
+}
+
+interface RepeatOrderResult {
+  success: boolean
+  message: string
+  cartCode?: string
+  orderCode?: string // Ordine copiato
+  productsAdded?: number // Numero prodotti aggiunti
+  cartUrl?: string // URL pubblico carrello
+  expiresAt?: string
+  timestamp: string
+  error?: string
+}
+````
+
+**Responsabilità**:
+
+- ✅ Valida customerId e workspaceId
+- ✅ Se orderCode omesso → trova ultimo ordine del cliente
+- ✅ Se orderCode specificato → valida esista e appartenga al cliente
+- ✅ Recupera tutti gli OrderItems dell'ordine
+- ✅ Svuota carrello esistente (ricomincia pulito)
+- ✅ Per ogni item: verifica ancora disponibile e in stock
+- ✅ Aggiunge solo items disponibili al carrello
+- ✅ Avvisa cliente se alcuni prodotti non sono più disponibili
+- ✅ Genera token SecureToken per accesso pubblico carrello
+- ✅ Ritorna URL carrello con validità 1 ora
+- ❌ NON copia note/preferenze dall'ordine originale (solo quantity)
+
+**Flow**:
+
+1. Cliente: "Ripeti il mio ultimo ordine"
+2. LLM richiede conferma: "Ricreo il tuo ultimo ordine nel carrello?"
+3. Cliente: "Sì"
+4. LLM chiama `repeatOrder(orderCode: undefined)` → usa ultimo
+5. Carrello svuotato e ripopolato
+6. LLM mostra: "Ho aggiunto 4 prodotti al carrello" + link checkout
+
+**Validazioni**:
+
+- ✅ OrderCode (se specificato) deve essere dell'ordine del cliente
+- ✅ Solo OrderItems con status != CANCELLED aggiunti
+- ✅ Verificare stock prima di aggiungere
+- ✅ Workspace isolation (solo ordini del workspace)
+
+**Gestione disponibilità**:
+
+```typescript
+// Se un prodotto non è più disponibile:
+if (!product || product.stock === 0) {
+  // Skip: non aggiungere al carrello
+  // Notificare cliente nel messaggio di risposta
+  productsSkipped.push({ name: product.name, reason: "Out of stock" })
+}
+```
+
+---
+
+## 6. searchProduct (NEW)
+
+**File**: `domain/calling-functions/SearchProduct.ts`
+
+**Scopo**: Registra ricerche di prodotti in background per analytics e trend analysis. È una **background function** - non interrompe il flusso conversazionale LLM.
+
+**Tipo**: ⚠️ **BACKGROUND FUNCTION** - Nessun impatto diretto sulla conversazione
+
+**Trigger LLM** (da `docs/prompt_agent.md` sezione 🔍 searchProduct):
+
+**Caso 1 - Prodotto trovato**:
+
+- "hai la burrata?"
+- "cercami un vino rosso"
+- "mi serve del parmigiano"
+- "avete prosciutto?"
+
+**Caso 2 - Prodotto NON trovato**:
+
+- "non trovate il tartufo?"
+- "non avete la mozzarella fresca?"
+- "non vendete champagne?"
+- "il salmone non lo avete?"
+
+**Signature**:
+
+```typescript
+export async function SearchProduct(
+  request: SearchProductRequest
+): Promise<SearchProductResult>
+
+interface SearchProductRequest {
+  customerId: string
+  workspaceId: string
+  productName: string // Nome prodotto cercato (max 255 chars)
+}
+
+interface SearchProductResult {
+  success: boolean
+  message: string
+  searchId?: string // ID della ricerca registrata
+  timestamp: string
+  error?: string
+}
+```
+
+**Responsabilità**:
+
+- ✅ Valida customerId e workspaceId
+- ✅ Valida productName (non vuoto, max 255 caratteri)
+- ✅ Registra ricerca in tabella `ProductSearch`
+- ✅ Salva timestamp della ricerca
+- ✅ Workspace isolation (legata a workspaceId)
+- ✅ Non interrompe conversazione LLM (background only)
+- ❌ NON modifica carrello, NON cambia ordini
+- ❌ NON filtra per disponibilità (registra qualunque ricerca)
+
+**Database**:
+
+```typescript
+// Tabella ProductSearch (schema.prisma)
+model ProductSearch {
+  id        String   @id @default(cuid())
+  query     String   @db.VarChar(255)  // Nome prodotto cercato
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String
+  customer  Customers? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customerId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId])
+  @@index([customerId])
+  @@index([createdAt])
+  @@index([query])
+}
+```
+
+**Flow**:
+
+1. Cliente: "Hai della burrata?"
+2. LLM risponde: "Sì, abbiamo burrata fresca!" (risposta normale)
+3. **IN BACKGROUND**: LLM chiama `searchProduct(productName: "burrata")`
+4. Ricerca registrata in ProductSearch table
+5. ✅ Cliente continua conversazione senza sapere della registrazione
+6. 📊 Data disponibile per analytics dashboard
+
+**Validazioni**:
+
+- ✅ productName non vuoto (trim + length check)
+- ✅ productName max 255 caratteri
+- ✅ workspaceId presente
+- ✅ customerId presente (o null se anonimo)
+- ✅ Salva anche ricerche di prodotti non trovati
+
+**Gestione errori**:
+
+```typescript
+// Se productName è vuoto
+if (!productName?.trim()) {
+  return {
+    success: false,
+    error: "productName cannot be empty",
+    message: "Invalid product name"
+  }
+}
+
+// Se productName troppo lungo
+if (productName.length > 255) {
+  return {
+    success: false,
+    error: "productName exceeds 255 characters",
+    message: "Product name too long"
+  }
+}
+
+// Database error
+catch (error) {
+  return {
+    success: false,
+    error: error.message,
+    message: "Failed to register search"
+  }
+}
+```
+
+**Analytics Use Cases**:
+
+- 📊 **Top 10 Searched Products**: Quali prodotti cercano di più i clienti?
+- 📈 **Trend Analysis**: Prodotti più cercati negli ultimi 7/30 giorni
+- 🎯 **Inventory Planning**: Se molti cercano un prodotto non disponibile → opportunità stock
+- 🔍 **Search Gaps**: Prodotti cercati ma non trovati nel catalog
+- 👥 **Customer Behavior**: Quali clienti cercano cosa e quando
+
+**Importante - Background Execution**:
+
+```typescript
+// ✅ CORRETTO - Registra in background senza bloccare risposta
+LLM Response: "Sì, abbiamo burrata fresca!"
+InBackground: searchProduct("burrata")  // NON blocca
+
+// ❌ SBAGLIATO - Bloccherebbe la risposta
+await searchProduct("burrata")  // Attende completamento
+LLM Response: "Sì, abbiamo burrata fresca!"  // Ritardata
+```
 
 ---
 

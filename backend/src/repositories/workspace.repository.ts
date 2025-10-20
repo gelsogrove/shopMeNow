@@ -260,10 +260,14 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
     data: Partial<WorkspaceProps>
   ): Promise<Workspace | null> {
     logger.debug(`Updating workspace with ID ${id}`)
+    logger.debug(
+      `📥 Raw data received in repository.update: ${JSON.stringify(data, null, 2)}`
+    )
 
     try {
       const existingWorkspace = await this.prisma.workspace.findUnique({
         where: { id },
+        include: { whatsappSettings: true },
       })
 
       if (!existingWorkspace) {
@@ -271,12 +275,31 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
         return null
       }
 
-      // Ensure whatsappApiToken is mapped to whatsappApiKey for Prisma
+      logger.debug(
+        `💾 BEFORE UPDATE - Current DB state: ${JSON.stringify(
+          {
+            name: existingWorkspace.name,
+            whatsappPhoneNumber: existingWorkspace.whatsappPhoneNumber,
+            whatsappApiKey: existingWorkspace.whatsappApiKey,
+            adminEmail: existingWorkspace.whatsappSettings?.adminEmail,
+            isActive: existingWorkspace.isActive,
+            debugMode: existingWorkspace.debugMode,
+          },
+          null,
+          2
+        )}`
+      )
+
+      // Ensure whatsappApiToken/whatsappApiKey is mapped correctly for Prisma
       const dbData: any = { ...data }
+
+      // Handle both whatsappApiToken (old) and whatsappApiKey (new) fields
       if (dbData.whatsappApiToken !== undefined) {
         dbData.whatsappApiKey = dbData.whatsappApiToken
         delete dbData.whatsappApiToken
       }
+      // If whatsappApiKey is sent directly, keep it as is (no transformation needed)
+      // Prisma schema uses whatsappApiKey field
 
       // Handle adminEmail - should be saved in whatsappSettings, not workspace
       let adminEmail: string | undefined
@@ -297,43 +320,77 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       }
 
       logger.debug(
-        `Update data for workspace ${id}:`,
-        JSON.stringify(dbData, null, 2)
+        `📝 Data prepared for Prisma update (workspace ${id}): ${JSON.stringify(dbData, null, 2)}`
       )
+      logger.debug(`📧 AdminEmail to update: ${adminEmail}`)
+
+      // Prepare the exact data object for Prisma
+      const prismaUpdateData: any = {
+        ...dbData,
+        // Update whatsappSettings if adminEmail is provided
+        ...(adminEmail !== undefined && {
+          whatsappSettings: {
+            upsert: {
+              create: {
+                phoneNumber:
+                  data.whatsappPhoneNumber ||
+                  dbData.whatsappPhoneNumber ||
+                  "placeholder",
+                apiKey:
+                  dbData.whatsappApiKey ||
+                  data.whatsappApiToken ||
+                  "placeholder",
+                adminEmail: adminEmail,
+              },
+              update: {
+                phoneNumber:
+                  data.whatsappPhoneNumber || dbData.whatsappPhoneNumber,
+                apiKey: dbData.whatsappApiKey || data.whatsappApiToken,
+                adminEmail: adminEmail,
+              },
+            },
+          },
+        }),
+      }
+
+      logger.debug(
+        `🔧 EXACT Prisma update data: ${JSON.stringify(prismaUpdateData, null, 2)}`
+      )
+      logger.info(`🚀 Calling Prisma.workspace.update with ID: ${id}`)
 
       const updatedWorkspace = await this.prisma.workspace.update({
         where: { id },
-        data: {
-          ...dbData,
-          // Update whatsappSettings if adminEmail is provided
-          ...(adminEmail !== undefined && {
-            whatsappSettings: {
-              upsert: {
-                create: {
-                  phoneNumber: data.whatsappPhoneNumber || "placeholder",
-                  apiKey:
-                    dbData.whatsappApiKey ||
-                    data.whatsappApiToken ||
-                    "placeholder",
-                  adminEmail: adminEmail,
-                },
-                update: {
-                  adminEmail: adminEmail,
-                },
-              },
-            },
-          }),
-        },
+        data: prismaUpdateData,
         include: {
           whatsappSettings: true,
         },
       })
 
-      logger.debug(`Updated workspace with ID ${id}`)
+      logger.debug(`✅ Prisma update completed for workspace ${id}`)
+      logger.debug(
+        `� AFTER UPDATE - New DB state: ${JSON.stringify(
+          {
+            name: updatedWorkspace.name,
+            whatsappPhoneNumber: updatedWorkspace.whatsappPhoneNumber,
+            whatsappApiKey: updatedWorkspace.whatsappApiKey,
+            adminEmail: updatedWorkspace.whatsappSettings?.adminEmail,
+            isActive: updatedWorkspace.isActive,
+            debugMode: updatedWorkspace.debugMode,
+            updatedAt: updatedWorkspace.updatedAt,
+          },
+          null,
+          2
+        )}`
+      )
 
       try {
-        return this.mapToDomain(updatedWorkspace)
+        const domainEntity = this.mapToDomain(updatedWorkspace)
+        logger.debug(
+          `🔄 Mapped to domain entity: ${JSON.stringify(domainEntity, null, 2)}`
+        )
+        return domainEntity
       } catch (error) {
+        logger.error(`❌ Error mapping workspace to domain entity:`, error)
         // If mapping fails but it's a deleted workspace, return a simplified version
         if (updatedWorkspace.isDelete) {
           logger.debug(

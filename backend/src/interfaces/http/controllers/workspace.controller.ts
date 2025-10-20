@@ -28,7 +28,7 @@ export class WorkspaceController {
         slug: workspace.slug,
         description: workspace.description,
         whatsappPhoneNumber: workspace.whatsappPhoneNumber,
-        whatsappApiToken: workspace.whatsappApiToken,
+        whatsappApiKey: workspace.whatsappApiKey, // ✅ FIXED: Use whatsappApiKey instead of whatsappApiToken
         webhookUrl: workspace.webhookUrl,
         notificationEmail: workspace.notificationEmail,
         adminEmail: workspace.adminEmail, // Explicitly include adminEmail
@@ -84,7 +84,7 @@ export class WorkspaceController {
           slug: workspace.slug,
           description: workspace.description,
           whatsappPhoneNumber: workspace.whatsappPhoneNumber,
-          whatsappApiToken: workspace.whatsappApiToken,
+          whatsappApiKey: workspace.whatsappApiKey, // ✅ FIXED: Use whatsappApiKey instead of whatsappApiToken
           webhookUrl: workspace.webhookUrl,
           notificationEmail: workspace.notificationEmail,
           adminEmail: workspace.adminEmail, // Explicitly include adminEmail
@@ -150,8 +150,7 @@ export class WorkspaceController {
 
       logger.info(`Updating workspace ${id}`)
       logger.info(
-        "Workspace data received:",
-        JSON.stringify(workspaceData, null, 2)
+        `📦 Workspace data received: ${JSON.stringify(workspaceData, null, 2)}`
       )
 
       const workspace = await this.workspaceService.update(id, workspaceData)
@@ -160,11 +159,36 @@ export class WorkspaceController {
         return res.status(404).json({ message: "Workspace not found" })
       }
 
+      // Serialize workspace to plain object with all properties (same as getWorkspaceById)
+      const serializedWorkspace = {
+        id: workspace.id,
+        name: workspace.name,
+        slug: workspace.slug,
+        description: workspace.description,
+        whatsappPhoneNumber: workspace.whatsappPhoneNumber,
+        whatsappApiKey: workspace.whatsappApiKey,
+        webhookUrl: workspace.webhookUrl,
+        notificationEmail: workspace.notificationEmail,
+        adminEmail: workspace.adminEmail,
+        language: workspace.language,
+        currency: workspace.currency,
+        messageLimit: workspace.messageLimit,
+        blocklist: workspace.blocklist,
+        welcomeMessages: workspace.welcomeMessages,
+        wipMessages: workspace.wipMessages,
+        challengeStatus: workspace.challengeStatus,
+        isActive: workspace.isActive,
+        isDelete: workspace.isDelete,
+        url: workspace.url,
+        debugMode: workspace.debugMode,
+        createdAt: workspace.createdAt,
+        updatedAt: workspace.updatedAt,
+      }
+
       logger.info(
-        "Workspace updated successfully:",
-        JSON.stringify(workspace, null, 2)
+        `✅ Workspace serialized and ready to return: ${JSON.stringify(serializedWorkspace, null, 2)}`
       )
-      return res.json(workspace)
+      return res.json(serializedWorkspace)
     } catch (error) {
       logger.error(`Error updating workspace ${req.params.id}:`, error)
       return next(error)

@@ -45,6 +45,7 @@ interface MessageTemplate {
   it: string
   en: string
   es?: string
+  pt?: string
   fr?: string
   de?: string
 }
@@ -57,6 +58,7 @@ const MESSAGE_TEMPLATES: Record<PushMessageType, MessageTemplate> = {
     it: "🎉 Ordine confermato! Numero ordine: {orderCode}. Ti contatteremo per i dettagli di consegna.",
     en: "🎉 Order confirmed! Order number: {orderCode}. We'll contact you for delivery details.",
     es: "🎉 ¡Pedido confirmado! Número de pedido: {orderCode}. Te contactaremos para los detalles de entrega.",
+    pt: "🎉 Pedido confirmado! Número do pedido: {orderCode}. Entraremos em contato para os detalhes da entrega.",
     fr: "🎉 Commande confirmée! Numéro de commande: {orderCode}. Nous vous contactrons pour les détails de livraison.",
     de: "🎉 Bestellung bestätigt! Bestellnummer: {orderCode}. Wir werden Sie bezüglich der Lieferdetails kontaktieren.",
   },
@@ -65,6 +67,7 @@ const MESSAGE_TEMPLATES: Record<PushMessageType, MessageTemplate> = {
     it: "👋 Benvenuto! Grazie per esserti registrato al nostro servizio di IA presto verrai attivato dai nostri commerciali.",
     en: "👋 Welcome! Thank you for registering to our AI service, you will be activated soon by our sales team.",
     es: "👋 ¡Bienvenido! Gracias por registrarte en nuestro servicio de IA, pronto serás activado por nuestro equipo comercial.",
+    pt: "👋 Bem-vindo! Obrigado por se registrar em nosso serviço de IA, você será ativado em breve por nossa equipe de vendas.",
     fr: "👋 Bienvenue! Merci de vous être inscrit à notre service d'IA, vous serez bientôt activé par notre équipe commerciale.",
     de: "👋 Willkommen! Danke für die Anmeldung bei unserem KI-Service, Sie werden bald von unserem Vertriebsteam aktiviert.",
   },
@@ -73,6 +76,7 @@ const MESSAGE_TEMPLATES: Record<PushMessageType, MessageTemplate> = {
     it: "💸 Ciao {customerName}! Da oggi puoi usufruire del {discountPercentage}% di sconto sui nostri prodotti.",
     en: "💸 Hi {customerName}! From today you can enjoy {discountPercentage}% discount on our products.",
     es: "💸 ¡Hola {customerName}! Desde hoy puedes disfrutar de {discountPercentage}% de descuento en nuestros productos.",
+    pt: "💸 Olá {customerName}! A partir de hoje você pode aproveitar {discountPercentage}% de desconto em nossos produtos.",
     fr: "💸 Salut {customerName}! À partir d'aujourd'hui, vous pouvez bénéficier de {discountPercentage}% de remise sur nos produits.",
     de: "💸 Hallo {customerName}! Ab heute können Sie {discountPercentage}% Rabatt auf unsere Produkte genießen.",
   },
@@ -81,6 +85,7 @@ const MESSAGE_TEMPLATES: Record<PushMessageType, MessageTemplate> = {
     it: "🎯 Ciao {customerName}! Abbiamo un'offerta del {offerPercentage}% sulla categoria: {categoryName} fino al {offerEndDate}",
     en: "🎯 Hi {customerName}! We have a {offerPercentage}% offer on category: {categoryName} until {offerEndDate}",
     es: "🎯 ¡Hola {customerName}! Tenemos una oferta del {offerPercentage}% en la categoría: {categoryName} hasta el {offerEndDate}",
+    pt: "🎯 Olá {customerName}! Temos uma oferta de {offerPercentage}% na categoria: {categoryName} até {offerEndDate}",
     fr: "🎯 Salut {customerName}! Nous avons une offre de {offerPercentage}% sur la catégorie: {categoryName} jusqu'au {offerEndDate}",
     de: "🎯 Hallo {customerName}! Wir haben ein {offerPercentage}% Angebot für die Kategorie: {categoryName} bis {offerEndDate}",
   },
@@ -89,6 +94,7 @@ const MESSAGE_TEMPLATES: Record<PushMessageType, MessageTemplate> = {
     it: "🤖 Ciao {customerName}, il chatbot è ora disponibile, come posso aiutarti oggi?",
     en: "🤖 Hi {customerName}, the chatbot is now available, how can I help you today?",
     es: "🤖 ¡Hola {customerName}, el chatbot ya está disponible, ¿cómo puedo ayudarte hoy?",
+    pt: "🤖 Olá {customerName}, o chatbot está agora disponível, como posso ajudá-lo hoje?",
     fr: "🤖 Salut {customerName}, le chatbot est maintenant disponible, comment puis-je vous aider aujourd'hui?",
     de: "🤖 Hallo {customerName}, der Chatbot ist jetzt verfügbar, wie kann ich Ihnen heute helfen?",
   },

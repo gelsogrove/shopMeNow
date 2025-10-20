@@ -49,6 +49,7 @@ const SESSION_EXEMPT_ROUTES = [
   "/auth/register",
   "/health",
   "/session/validate", // 🔑 CRITICAL: Used by LoginPage checkExistingSession
+  "/analytics", // Analytics routes (JWT-based only, no sessionId)
 ]
 
 // Add a request interceptor to handle authentication

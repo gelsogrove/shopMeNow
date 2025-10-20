@@ -36,6 +36,13 @@ export interface UpdateWorkspaceData {
   name?: string
   description?: string
   isActive?: boolean
+  whatsappPhoneNumber?: string
+  whatsappApiKey?: string
+  adminEmail?: string
+  url?: string
+  debugMode?: boolean
+  welcomeMessages?: any
+  wipMessages?: any
 }
 
 const workspaceApi = {
