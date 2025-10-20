@@ -185,21 +185,25 @@ export class LLMService {
       process.env.TOKEN_EXPIRATION || "1h"
     )
 
+    // Get workspace URL for {{URL}} replacement
+    const workspaceUrl = workspace.url || "http://localhost:3000"
+
     let promptWithVars = prompt
       .replace("{{FAQ}}", faqs)
       .replace("{{SERVICES}}", services)
       .replace("{{PRODUCTS}}", products)
       .replace("{{CATEGORIES}}", categories)
       .replace("{{OFFERS}}", offers)
-      .replace("{{nameUser}}", userInfo.nameUser)
-      .replace("{{discountUser}}", String(userInfo.discountUser))
-      .replace("{{companyName}}", userInfo.companyName)
-      .replace("{{lastordercode}}", userInfo.lastordercode)
-      .replace("{{languageUser}}", userInfo.languageUser)
-      .replace("{{agentName}}", userInfo.agentName)
-      .replace("{{agentPhone}}", userInfo.agentPhone)
-      .replace("{{agentEmail}}", userInfo.agentEmail)
-      .replace("{{TOKEN_DURATION}}", tokenDuration)
+      .replace(/\{\{URL\}\}/g, workspaceUrl) // Replace ALL occurrences of {{URL}}
+      .replace(/\{\{nameUser\}\}/g, userInfo.nameUser) // Replace ALL occurrences
+      .replace(/\{\{discountUser\}\}/g, String(userInfo.discountUser)) // Replace ALL occurrences
+      .replace(/\{\{companyName\}\}/g, userInfo.companyName) // Replace ALL occurrences
+      .replace(/\{\{lastordercode\}\}/g, userInfo.lastordercode) // Replace ALL occurrences
+      .replace(/\{\{languageUser\}\}/g, userInfo.languageUser) // Replace ALL occurrences - FIX BUG LINGUA
+      .replace(/\{\{agentName\}\}/g, userInfo.agentName) // Replace ALL occurrences
+      .replace(/\{\{agentPhone\}\}/g, userInfo.agentPhone) // Replace ALL occurrences
+      .replace(/\{\{agentEmail\}\}/g, userInfo.agentEmail) // Replace ALL occurrences
+      .replace(/\{\{TOKEN_DURATION\}\}/g, tokenDuration) // Replace ALL occurrences
 
     // 🔧 SALVA IL PROMPT FINALE PER DEBUG
     try {
@@ -316,7 +320,23 @@ export class LLMService {
    * @param languageCode Codice lingua (it, en, es, pt)
    * @returns Nome lingua per il prompt
    */
-  private getLanguageDisplayName(languageCode: string): string {
+  /**
+   * Converte il codice lingua in nome visualizzabile
+   * IMPORTANTE: Se language è null/undefined/empty, defaulta a ITALIANO (lingua base del sistema)
+   * @param languageCode - Codice lingua (IT, ENG, ESP, PRT) - può essere null
+   * @returns Nome visualizzabile della lingua (ITALIANO, ENGLISH, ESPAÑOL, PORTUGUÊS)
+   */
+  private getLanguageDisplayName(
+    languageCode: string | null | undefined
+  ): string {
+    // ⚠️ FALLBACK: Se language è null/undefined/empty, defaulta a ITALIANO
+    if (!languageCode || languageCode.trim() === "") {
+      logger.warn(
+        "⚠️ [LANGUAGE] Customer language is null/undefined/empty, defaulting to ITALIANO"
+      )
+      return "ITALIANO" // Default per L'Altra Italia
+    }
+
     const languageMap: Record<string, string> = {
       // Lowercase format (old)
       it: "ITALIANO",
@@ -329,7 +349,18 @@ export class LLMService {
       ESP: "ESPAÑOL",
       PRT: "PORTUGUÊS",
     }
-    return languageMap[languageCode] || languageCode.toUpperCase()
+
+    const displayName = languageMap[languageCode]
+
+    // Se il codice non è riconosciuto, default a ITALIANO (non uppercase del codice sconosciuto)
+    if (!displayName) {
+      logger.warn(
+        `⚠️ [LANGUAGE] Unknown language code: ${languageCode}, defaulting to ITALIANO`
+      )
+      return "ITALIANO"
+    }
+
+    return displayName
   }
 
   /**

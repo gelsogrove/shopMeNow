@@ -1,6 +1,6 @@
 /**
  * Campaigns Data - Auto-generated from database
- * Last updated: 2025-10-20T08:07:41.509Z
+ * Last updated: 2025-10-20T10:51:38.531Z
  * DO NOT EDIT MANUALLY - Use npm run db:export
  */
 
@@ -19,8 +19,7 @@ export interface CampaignData {
 export const campaigns: CampaignData[] = [
   {
     name: "Richiesta Feedback Trimestrale",
-    messagePreview:
-      "Ciao {{nome}}! 👋\n\nCi piacerebbe sapere cosa pensi dei nostri prodotti. [FEEDBACK]\n\nGrazie per il tuo tempo! 🙏",
+    messagePreview: "Ciao {{nome}}! 👋\n\nCi piacerebbe sapere cosa pensi dei nostri prodotti. [FEEDBACK]\n\nGrazie per il tuo tempo! 🙏",
     frequency: "QUARTERLY",
     isActive: true,
     targetType: "ALL",
@@ -28,5 +27,5 @@ export const campaigns: CampaignData[] = [
     templateName: null,
     templateParams: null,
     lastRunAt: new Date("2025-10-20T08:00:00.030Z"),
-  },
+  }
 ]

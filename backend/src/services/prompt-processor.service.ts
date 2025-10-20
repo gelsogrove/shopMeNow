@@ -35,9 +35,15 @@ export class PromptProcessorService {
       categories: string
       services: string
       offers: string
-    }
+    },
+    workspaceUrl?: string
   ): Promise<string> {
     let processedPrompt = promptContent
+
+    // Sostituzione URL workspace (PRIMA di altre sostituzioni)
+    if (workspaceUrl && processedPrompt.includes("{{URL}}")) {
+      processedPrompt = processedPrompt.replace(/\{\{URL\}\}/g, workspaceUrl)
+    }
 
     // Sostituzione delle informazioni utente
     processedPrompt = this.replaceVariables(processedPrompt, customerData)

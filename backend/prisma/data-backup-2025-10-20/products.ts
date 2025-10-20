@@ -1,6 +1,6 @@
 /**
  * Product Data - Auto-generated from database
- * Last updated: 2025-10-20T08:05:43.340Z
+ * Last updated: 2025-10-20T08:07:41.496Z
  * DO NOT EDIT MANUALLY - Use npm run db:export
  */
 
@@ -91,18 +91,6 @@ export const products: ProductData[] = [
     imageUrl: ["/uploads/products/SALUMI001_1760561414803_ho7x60.jpg"],
   },
   {
-    name: "Salame Milano",
-    ProductCode: null,
-    description: "Classic Milanese salami with fine grain and subtle garlic notes. Made from select pork cuts, aged to perfection with a delicate, refined taste.",
-    formato: "200g",
-    price: 6.8,
-    stock: 50,
-    status: "ACTIVE",
-    slug: "salame-milano-1760539790637-1760541634623-1760541681112-1760542111890-1760542245183-1760543283320-1760544291547-1760544741653-1760544839636-1760561170869-1760562939887-1760565166835-1760565309371-1760565465271-1760565693096-1760655750298-1760715768898",
-    categoryName: "Cured Meats",
-    imageUrl: ["/uploads/products/SALUMI002_1760556332343_qoonfk.jpg"],
-  },
-  {
     name: "Mortadella Bologna IGP",
     ProductCode: null,
     description: "Authentic Bologna mortadella with pistachios, featuring a smooth texture and aromatic spice blend. A cornerstone of Italian charcuterie boards.",
@@ -113,6 +101,18 @@ export const products: ProductData[] = [
     slug: "mortadella-bologna-igp-1760539790639-1760541634627-1760541681115-1760542111894-1760542245190-1760543283324-1760544291555-1760544741656-1760544839639-1760561170872-1760562939890-1760565166838-1760565309374-1760565465274-1760565693099-1760655750301-1760715768901",
     categoryName: "Cured Meats",
     imageUrl: ["/uploads/products/SALUMI003_1760557074306_bij2tp.webp"],
+  },
+  {
+    name: "Salame Milano",
+    ProductCode: null,
+    description: "Classic Milanese salami with fine grain and subtle garlic notes. Made from select pork cuts, aged to perfection with a delicate, refined taste.",
+    formato: "200g",
+    price: 6.8,
+    stock: 50,
+    status: "ACTIVE",
+    slug: "salame-milano-1760539790637-1760541634623-1760541681112-1760542111890-1760542245183-1760543283320-1760544291547-1760544741653-1760544839636-1760561170869-1760562939887-1760565166835-1760565309371-1760565465271-1760565693096-1760655750298-1760715768898",
+    categoryName: "Cured Meats",
+    imageUrl: ["/uploads/products/SALUMI002_1760556332343_qoonfk.jpg"],
   },
   {
     name: "Speck Alto Adige IGP",
@@ -151,18 +151,6 @@ export const products: ProductData[] = [
     imageUrl: ["/uploads/products/SALUMI006_1760561490111_bl6y3i.jpg"],
   },
   {
-    name: "Parmigiano Reggiano DOP 24 mesi",
-    ProductCode: null,
-    description: "24-month aged Parmigiano Reggiano with crystalline texture and complex nutty flavor. Made from raw cow's milk in traditional copper vats.",
-    formato: "250g",
-    price: 8.9,
-    stock: 60,
-    status: "ACTIVE",
-    slug: "parmigiano-reggiano-24-mesi-1760539790647-1760541634637-1760541681124-1760542111967-1760542245208-1760543283340-1760544291577-1760544741669-1760544839651-1760561170882-1760562939913-1760565166849-1760565309385-1760565465284-1760565693109-1760655750314-1760715768911",
-    categoryName: "Cheeses",
-    imageUrl: ["/uploads/products/FORMAG001_1760544790018_cseoji.jpg"],
-  },
-  {
     name: "Gorgonzola Dolce DOP",
     ProductCode: null,
     description: "Creamy sweet gorgonzola with delicate blue veining. Soft and spreadable, perfect for risotto or paired with honey and walnuts.",
@@ -173,6 +161,18 @@ export const products: ProductData[] = [
     slug: "gorgonzola-dolce-dop-1760539790650-1760541634640-1760541681126-1760542111970-1760542245211-1760543283349-1760544291582-1760544741672-1760544839654-1760561170885-1760562939923-1760565166852-1760565309390-1760565465286-1760565693111-1760655750319-1760715768914",
     categoryName: "Cheeses",
     imageUrl: ["/uploads/products/FORMAG002_1760561371143_uv0za8.webp"],
+  },
+  {
+    name: "Parmigiano Reggiano DOP 24 mesi",
+    ProductCode: null,
+    description: "24-month aged Parmigiano Reggiano with crystalline texture and complex nutty flavor. Made from raw cow's milk in traditional copper vats.",
+    formato: "250g",
+    price: 8.9,
+    stock: 60,
+    status: "ACTIVE",
+    slug: "parmigiano-reggiano-24-mesi-1760539790647-1760541634637-1760541681124-1760542111967-1760542245208-1760543283340-1760544291577-1760544741669-1760544839651-1760561170882-1760562939913-1760565166849-1760565309385-1760565465284-1760565693109-1760655750314-1760715768911",
+    categoryName: "Cheeses",
+    imageUrl: ["/uploads/products/FORMAG001_1760544790018_cseoji.jpg"],
   },
   {
     name: "Mozzarella di Bufala Campana DOP",
@@ -211,18 +211,6 @@ export const products: ProductData[] = [
     imageUrl: ["/uploads/products/FORMAG005_1760562254180_li39w3.jpg"],
   },
   {
-    name: "Burrata Pugliese",
-    ProductCode: null,
-    description: "Fresh cow's milk cheese with a solid mozzarella exterior and creamy stracciatella center. Best enjoyed within 48 hours of production.",
-    formato: "200g",
-    price: 8.2,
-    stock: 25,
-    status: "ACTIVE",
-    slug: "burrata-pugliese-1760539790658-1760541634649-1760541681135-1760542111982-1760542245226-1760543283368-1760544291625-1760544741686-1760544839666-1760561170896-1760562939938-1760565166863-1760565309402-1760565465295-1760565693122-1760655750330-1760715768922",
-    categoryName: "Cheeses",
-    imageUrl: ["/uploads/products/FORMAG006_1760565360921_l2arwv.jpg"],
-  },
-  {
     name: "Provolone Piccante",
     ProductCode: null,
     description: "Aged sharp provolone with a firm texture and bold flavor. Ideal for grating over pasta or enjoying with crusty bread and wine.",
@@ -233,6 +221,18 @@ export const products: ProductData[] = [
     slug: "provolone-piccante-1760539790660-1760541634652-1760541681138-1760542111986-1760542245231-1760543283372-1760544291635-1760544741689-1760544839669-1760561170898-1760562939942-1760565166866-1760565309404-1760565465298-1760565693125-1760655750334-1760715768924",
     categoryName: "Cheeses",
     imageUrl: ["/uploads/products/FORMAG007_1760557047801_iwxll7.webp"],
+  },
+  {
+    name: "Burrata Pugliese",
+    ProductCode: null,
+    description: "Fresh cow's milk cheese with a solid mozzarella exterior and creamy stracciatella center. Best enjoyed within 48 hours of production.",
+    formato: "200g",
+    price: 8.2,
+    stock: 25,
+    status: "ACTIVE",
+    slug: "burrata-pugliese-1760539790658-1760541634649-1760541681135-1760542111982-1760542245226-1760543283368-1760544291625-1760544741686-1760544839666-1760561170896-1760562939938-1760565166863-1760565309402-1760565465295-1760565693122-1760655750330-1760715768922",
+    categoryName: "Cheeses",
+    imageUrl: ["/uploads/products/FORMAG006_1760565360921_l2arwv.jpg"],
   },
   {
     name: "Olio Extravergine di Oliva Toscano IGP",
@@ -271,18 +271,6 @@ export const products: ProductData[] = [
     imageUrl: ["/uploads/products/COND003_1760544541742_sfrnk3.jpg"],
   },
   {
-    name: "Passata di Pomodoro San Marzano DOP",
-    ProductCode: null,
-    description: "Premium tomato passata made from San Marzano tomatoes grown in volcanic soil. Sweet, low-acid, perfect base for authentic Neapolitan pizza sauce.",
-    formato: "700g",
-    price: 4.8,
-    stock: 80,
-    status: "ACTIVE",
-    slug: "passata-pomodoro-san-marzano-dop-1760539790670-1760541634663-1760541681148-1760542111998-1760542245252-1760543283386-1760544291659-1760544741702-1760544839682-1760561170909-1760562939957-1760565166877-1760565309416-1760565465308-1760565693135-1760655750346-1760715768933",
-    categoryName: "Condiments",
-    imageUrl: ["/uploads/products/COND004_1760542504701_2ymnej.jpg"],
-  },
-  {
     name: "Tartufo Nero Estivo",
     ProductCode: null,
     description: "Summer black truffle slices preserved in olive oil. Earthy, aromatic, ideal for elevating pasta, risotto, and egg dishes.",
@@ -293,6 +281,18 @@ export const products: ProductData[] = [
     slug: "tartufo-nero-estivo-1760539790672-1760541634665-1760541681151-1760542112001-1760542245258-1760543283389-1760544291665-1760544741705-1760544839685-1760561170911-1760562939962-1760565166880-1760565309419-1760565465311-1760565693138-1760655750350-1760715768935",
     categoryName: "Condiments",
     imageUrl: ["/uploads/products/COND005_1760565187710_go4hpz.webp"],
+  },
+  {
+    name: "Passata di Pomodoro San Marzano DOP",
+    ProductCode: null,
+    description: "Premium tomato passata made from San Marzano tomatoes grown in volcanic soil. Sweet, low-acid, perfect base for authentic Neapolitan pizza sauce.",
+    formato: "700g",
+    price: 4.8,
+    stock: 80,
+    status: "ACTIVE",
+    slug: "passata-pomodoro-san-marzano-dop-1760539790670-1760541634663-1760541681148-1760542111998-1760542245252-1760543283386-1760544291659-1760544741702-1760544839682-1760561170909-1760562939957-1760565166877-1760565309416-1760565465308-1760565693135-1760655750346-1760715768933",
+    categoryName: "Condiments",
+    imageUrl: ["/uploads/products/COND004_1760542504701_2ymnej.jpg"],
   },
   {
     name: "Crema di Pistacchio di Bronte",

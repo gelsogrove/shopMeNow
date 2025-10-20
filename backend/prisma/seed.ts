@@ -8,7 +8,12 @@
  *
  * Usage: npm run seed
  *
- * IMPORTANT: Uses data from prisma/data/ (updated by db:export)
+ * IMPORTANT: Uses data from prisma/data/ (upd  console.log(`✅ Created ${faqs.length} FAQs`)
+
+  // 11. Create Campaigns
+  console.log("📣 Creating campaigns...")
+
+  for (const campaign of campaigns) {y db:export)
  */
 
 import { PrismaClient } from "@prisma/client"
@@ -141,7 +146,31 @@ async function main() {
 
   console.log("✅ Admin associated with workspace")
 
-  // 5. Create Categories
+  // 5. Create Languages
+  console.log("🌐 Creating languages...")
+
+  const languages = [
+    { code: "IT", name: "Italiano", isDefault: true },
+    { code: "ENG", name: "English", isDefault: false },
+    { code: "ESP", name: "Español", isDefault: false },
+    { code: "PRT", name: "Português", isDefault: false },
+  ]
+
+  for (const lang of languages) {
+    await prisma.languages.create({
+      data: {
+        code: lang.code,
+        name: lang.name,
+        isDefault: lang.isDefault,
+        isActive: true,
+        workspaceId: workspace.id,
+      },
+    })
+  }
+
+  console.log(`✅ Created ${languages.length} languages`)
+
+  // 6. Create Categories
   console.log("📂 Creating categories...")
 
   const categoryMap = new Map<string, string>()
@@ -162,7 +191,7 @@ async function main() {
 
   console.log(`✅ Created ${categories.length} categories`)
 
-  // 6. Create Products
+  // 7. Create Products
   console.log("📦 Creating products...")
 
   for (const prod of products) {
@@ -193,7 +222,7 @@ async function main() {
 
   console.log(`✅ Created ${products.length} products`)
 
-  // 7. Create Services
+  // 8. Create Services
   console.log("🛠️  Creating services...")
 
   for (const svc of services) {
@@ -212,7 +241,7 @@ async function main() {
 
   console.log(`✅ Created ${services.length} services`)
 
-  // 8. Create Offers
+  // 9. Create Offers
   console.log("🎯 Creating offers...")
 
   // Get first category as fallback
@@ -254,7 +283,7 @@ async function main() {
 
   console.log(`✅ Created ${offers.length} offers`)
 
-  // 9. Create FAQs
+  // 10. Create FAQs
   console.log("❓ Creating FAQs...")
 
   for (const faq of faqs) {
@@ -291,7 +320,7 @@ async function main() {
 
   console.log(`✅ Created ${campaigns.length} campaigns`)
 
-  // 11. Create Prompt (for LLM Service)
+  // 12. Create Prompt (for LLM Service)
   console.log("🤖 Creating prompt...")
 
   // 📖 Read prompt from docs/prompt_agent.md
@@ -333,7 +362,7 @@ async function main() {
 
   console.log("✅ Prompt created in Prompts table")
 
-  // 12. Create Sales Representatives
+  // 13. Create Sales Representatives
   console.log("👔 Creating sales representatives...")
 
   const salesReps = [
@@ -383,8 +412,8 @@ async function main() {
 
   console.log(`✅ Created ${createdSalesReps.length} sales representatives`)
 
-  // 13. Create Test Customers (each customer assigned to unique sales rep)
-  console.log("👥 Creating test customers...")
+  // 13. Create Test Customers with Historical Dates (distributed over months)
+  console.log("👥 Creating test customers with historical dates...")
 
   const testCustomers = [
     {
@@ -393,6 +422,13 @@ async function main() {
       phone: "+390212345678",
       language: "IT",
       company: "Rossi Limited S.r.l.",
+      shippingAddress: {
+        street: "Via Roma 123",
+        city: "Milano",
+        zip: "20100",
+        country: "Italia",
+      },
+      createdAt: new Date(2025, 3, 5), // April 5, 2025
     },
     {
       name: "João Silva",
@@ -400,6 +436,13 @@ async function main() {
       phone: "+351123456789",
       language: "PRT",
       company: "Silva & Filhos Lda",
+      shippingAddress: {
+        street: "Rua Augusta 456",
+        city: "Lisboa",
+        zip: "1100-053",
+        country: "Portugal",
+      },
+      createdAt: new Date(2025, 4, 12), // May 12, 2025
     },
     {
       name: "Maria Garcia",
@@ -407,6 +450,13 @@ async function main() {
       phone: "+34666777888",
       language: "ESP",
       company: "Garcia Imports S.L.",
+      shippingAddress: {
+        street: "Calle Mayor 789",
+        city: "Madrid",
+        zip: "28013",
+        country: "España",
+      },
+      createdAt: new Date(2025, 5, 8), // June 8, 2025
     },
     {
       name: "John Smith",
@@ -414,6 +464,13 @@ async function main() {
       phone: "+44123456789",
       language: "ENG",
       company: "Smith & Co Ltd",
+      shippingAddress: {
+        street: "Baker Street 221B",
+        city: "London",
+        zip: "NW1 6XE",
+        country: "United Kingdom",
+      },
+      createdAt: new Date(2025, 6, 15), // July 15, 2025
     },
   ]
 
@@ -424,18 +481,26 @@ async function main() {
 
     await prisma.customers.create({
       data: {
-        ...customer,
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        language: customer.language,
+        company: customer.company,
+        address: JSON.stringify(customer.shippingAddress), // 📦 Indirizzo (serializzato come JSON)
         workspaceId: workspace.id,
         salesId: assignedSalesRep.id,
         isActive: true,
         activeChatbot: true,
         currency: "EUR",
+        discount: 10, // 🎯 10% discount per tutti i clienti
+        createdAt: customer.createdAt,
+        updatedAt: customer.createdAt,
       },
     })
   }
 
   console.log(
-    `✅ Created ${testCustomers.length} test customers (each assigned to unique sales rep)`
+    `✅ Created ${testCustomers.length} test customers (distributed Apr-Jul 2025)`
   )
 
   // � CREATE CHAT SESSIONS WITH MESSAGE HISTORY
@@ -758,6 +823,145 @@ async function main() {
     )
   }
 
+  // 10. Create Product Searches for Top 10 Analytics
+  console.log("\n🔍 Creating product search history...")
+
+  if (productsList.length > 0 && customersList.length > 0) {
+    // Top 10 most searched products with realistic distribution
+    const topProducts = [
+      { name: "Mozzarella di Bufala", searches: 156 },
+      { name: "Parmigiano Reggiano 24 mesi", searches: 134 },
+      { name: "Prosciutto di Parma", searches: 112 },
+      { name: "Panettone Artigianale", searches: 98 },
+      { name: "Olio Extra Vergine Toscano", searches: 87 },
+      { name: "Aceto Balsamico di Modena", searches: 76 },
+      { name: "Tartufo Nero", searches: 64 },
+      { name: "Pasta Artigianale", searches: 52 },
+      { name: "Gorgonzola DOP", searches: 41 },
+      { name: "Limoncello di Sorrento", searches: 35 },
+    ]
+
+    let totalSearches = 0
+
+    for (const product of topProducts) {
+      for (let i = 0; i < product.searches; i++) {
+        // Distribute searches over last 30 days with more recent activity
+        const daysAgo = Math.floor(Math.random() * 30)
+        const hoursAgo = Math.floor(Math.random() * 24)
+        const searchDate = new Date()
+        searchDate.setDate(searchDate.getDate() - daysAgo)
+        searchDate.setHours(searchDate.getHours() - hoursAgo)
+
+        // Random customer or anonymous (70% with customer, 30% anonymous)
+        const hasCustomer = Math.random() > 0.3
+        const customer = hasCustomer
+          ? customersList[Math.floor(Math.random() * customersList.length)]
+          : null
+
+        await prisma.productSearch.create({
+          data: {
+            query: product.name,
+            workspaceId: workspace.id,
+            customerId: customer?.id,
+            createdAt: searchDate,
+          },
+        })
+
+        totalSearches++
+      }
+    }
+
+    console.log(`✅ Created ${totalSearches} product search records`)
+    console.log(
+      `   - Top searched: ${topProducts[0].name} (${topProducts[0].searches} searches)`
+    )
+    console.log(
+      `   - Distribution: Last 30 days with realistic hourly patterns`
+    )
+  } else {
+    console.log("⚠️  No products or customers found, skipping product searches")
+  }
+
+  // 11. Create LLM Billing Data (Historical Costs)
+  console.log("\n💰 Creating LLM billing history...")
+
+  // Monthly LLM costs matching the report data (April-October 2025)
+  const billingData = [
+    {
+      month: 4,
+      year: 2025,
+      amount: 1.25,
+      description: "GPT-4-mini usage - April 2025",
+    },
+    {
+      month: 5,
+      year: 2025,
+      amount: 3.68,
+      description: "GPT-4-mini usage - May 2025",
+    },
+    {
+      month: 6,
+      year: 2025,
+      amount: 6.12,
+      description: "GPT-4-mini usage - June 2025",
+    },
+    {
+      month: 7,
+      year: 2025,
+      amount: 5.64,
+      description: "GPT-4-mini usage - July 2025",
+    },
+    {
+      month: 8,
+      year: 2025,
+      amount: 4.34,
+      description: "GPT-4-mini usage - August 2025",
+    },
+    {
+      month: 9,
+      year: 2025,
+      amount: 7.84,
+      description: "GPT-4-mini usage - September 2025",
+    },
+    {
+      month: 10,
+      year: 2025,
+      amount: 12.67,
+      description: "GPT-4-mini usage - October 2025",
+    },
+  ]
+
+  let totalBillingAmount = 0
+
+  for (const billing of billingData) {
+    // Create billing record on the 1st day of each month
+    const billingDate = new Date(billing.year, billing.month - 1, 1)
+
+    await prisma.billing.create({
+      data: {
+        workspaceId: workspace.id,
+        amount: billing.amount,
+        type: "MESSAGE", // Represents LLM usage costs
+        description: billing.description,
+        currentCharge: billing.amount,
+        previousTotal: totalBillingAmount,
+        newTotal: totalBillingAmount + billing.amount,
+        createdAt: billingDate,
+      },
+    })
+
+    totalBillingAmount += billing.amount
+  }
+
+  console.log(`✅ Created ${billingData.length} LLM billing records`)
+  console.log(
+    `   - Total LLM costs: €${totalBillingAmount.toFixed(2)} (Apr-Oct 2025)`
+  )
+  console.log(
+    `   - Average: €${(totalBillingAmount / billingData.length).toFixed(2)}/month`
+  )
+  console.log(`   - Peak: €12.67 (October 2025)`)
+
   console.log("\n🎉 Database seed completed successfully!")
   console.log(`\n📊 Summary:`)
   console.log(`   - Workspace: ${workspace.name}`)
@@ -769,8 +973,10 @@ async function main() {
   console.log(`   - FAQs: ${faqs.length}`)
   console.log(`   - Campaigns: ${campaigns.length}`)
   console.log(`   - Sales Representatives: 5`)
-  console.log(`   - Test Customers: 4 (each assigned to unique sales rep)`)
+  console.log(`   - Test Customers: 4 (distributed Apr-Jul 2025)`)
   console.log(`   - Historical Orders: ~48 orders (Apr-Sep 2025)`)
+  console.log(`   - Product Searches: 855 searches (Top 10 products)`)
+  console.log(`   - LLM Billing: 7 months, €41.54 total costs`)
   console.log(`\n✅ Ready to use!`)
 }
 

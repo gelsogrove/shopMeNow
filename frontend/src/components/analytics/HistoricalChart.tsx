@@ -299,18 +299,23 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
               </p>
             </CardHeader>
             <CardContent>
-              <div className="h-80">
+              <div className="h-[280px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={categoryPieData}
                       cx="50%"
                       cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) =>
-                        `${name}: ${(percent * 100).toFixed(0)}%`
-                      }
-                      outerRadius={120}
+                      labelLine={true}
+                      label={({ name, percent }) => {
+                        const percentageNum = percent * 100
+                        const percentage = percentageNum.toFixed(0)
+                        // Show full label if > 8%, otherwise only percentage
+                        return percentageNum > 8
+                          ? `${name}: ${percentage}%`
+                          : `${percentage}%`
+                      }}
+                      outerRadius={90}
                       fill="#8884d8"
                       dataKey="value"
                     >
@@ -322,7 +327,6 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
                       ))}
                     </Pie>
                     <Tooltip />
-                    <Legend />
                   </PieChart>
                 </ResponsiveContainer>
               </div>

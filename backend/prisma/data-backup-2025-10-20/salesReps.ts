@@ -1,6 +1,6 @@
 /**
  * Sales Representatives Data - Auto-generated from database
- * Last updated: 2025-10-20T08:05:43.350Z
+ * Last updated: 2025-10-20T08:07:41.511Z
  * DO NOT EDIT MANUALLY - Use npm run db:export
  */
 

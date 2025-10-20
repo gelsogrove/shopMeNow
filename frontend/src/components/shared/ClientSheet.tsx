@@ -20,11 +20,11 @@ import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { logger } from "@/lib/logger"
 import { Client } from "@/pages/ClientsPage"
+import { api } from "@/services/api"
 import { salesApi } from "@/services/salesApi"
 import { Loader2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "../../lib/toast"
-import { api } from "@/services/api"
 
 // Invoice address interface
 interface InvoiceAddress {
@@ -69,10 +69,16 @@ function getWorkspaceId() {
 // Helper function to convert language code to name
 function convertLanguageCodeToName(code: string): string {
   const languageMap: { [key: string]: string } = {
+    // Lowercase format (legacy)
     it: "Italiano",
     en: "English",
     es: "Español",
     pt: "Português",
+    // Uppercase format (database)
+    IT: "Italiano",
+    ENG: "English",
+    ESP: "Español",
+    PRT: "Português",
   }
   return languageMap[code] || code
 }
@@ -80,10 +86,10 @@ function convertLanguageCodeToName(code: string): string {
 // Helper function to convert language name to code
 function convertLanguageNameToCode(name: string): string {
   const languageMap: { [key: string]: string } = {
-    Italiano: "it",
-    English: "en",
-    Español: "es",
-    Português: "pt",
+    Italiano: "IT", // Use uppercase to match database
+    English: "ENG",
+    Español: "ESP",
+    Português: "PRT",
   }
   return languageMap[name] || name
 }
@@ -301,7 +307,8 @@ export function ClientSheet({
         return
       }
 
-      api.get(`/workspaces/${workspaceId}/customers/${clientId}`)
+      api
+        .get(`/workspaces/${workspaceId}/customers/${clientId}`)
         .then((res) => {
           if (!res.data || !res.data.id) throw new Error("Client not found")
           setFetchedClient(res.data)
@@ -364,11 +371,9 @@ export function ClientSheet({
 
     try {
       await onSubmit(customerData, clientId)
-      toast.success("Client updated successfully")
+      // ✅ Il toast è già gestito in ClientsPage.tsx
       onOpenChange(false)
-      setTimeout(() => {
-        window.location.reload()
-      }, 1000)
+      // ❌ RIMOSSO: window.location.reload() causava refresh indesiderato
     } catch (err) {
       toast.error("Error updating client")
     }

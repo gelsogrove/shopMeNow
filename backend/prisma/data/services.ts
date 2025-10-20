@@ -1,6 +1,6 @@
 /**
  * Services Data - Auto-generated from database
- * Last updated: 2025-10-20T08:07:41.498Z
+ * Last updated: 2025-10-20T10:51:38.514Z
  * DO NOT EDIT MANUALLY - Use npm run db:export
  */
 

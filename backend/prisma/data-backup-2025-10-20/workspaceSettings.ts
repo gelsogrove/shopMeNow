@@ -1,6 +1,6 @@
 /**
  * Workspace Settings Data - Auto-generated from database
- * Last updated: 2025-10-20T08:05:43.350Z
+ * Last updated: 2025-10-20T08:07:41.511Z
  * DO NOT EDIT MANUALLY - Use npm run db:export
  */
 
@@ -17,7 +17,7 @@ export interface WorkspaceSettingsData {
 
 export const workspaceSettings: WorkspaceSettingsData = {
   "name": "Altro Gusto",
-  "url": "https://altrogusto.com",
+  "url": "http://localhost:3000",
   "whatsappPhoneNumber": "+34654728753",
   "notificationEmail": "info@altrogusto.com",
   "welcomeMessages": {
