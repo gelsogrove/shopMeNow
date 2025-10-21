@@ -1,0 +1,497 @@
+import React, { createContext, useContext, useEffect, useState } from "react"
+
+type Language = "it" | "en" | "es" | "pt"
+
+interface LanguageContextType {
+  language: Language
+  setLanguage: (lang: Language) => void
+  t: (key: string) => string
+}
+
+const LanguageContext = createContext<LanguageContextType | undefined>(
+  undefined
+)
+
+const translations = {
+  it: {
+    // Header
+    "header.tagline":
+      "La piattaforma completa per gestire il tuo e-commerce su WhatsApp",
+
+    // Hero Section
+    "hero.title": "Canale WhatsApp Alimentato da AI",
+    "hero.subtitle":
+      "ShopMe porta l'e-commerce intelligente direttamente su WhatsApp. Il nostro agente AI comprende le esigenze dei clienti, consiglia prodotti e chiude vendite 24/7—tutto attraverso conversazioni naturali.",
+    "hero.whyTitle": "Perché ShopMe?",
+
+    // Features
+    "features.pushNotifications": "Push Notifications",
+    "features.pushNotifications.desc":
+      "Invia campagne mirate e avvisi in tempo reale ai tuoi clienti via WhatsApp",
+    "features.24x7": "24/7 Availability",
+    "features.24x7.desc":
+      "Non perdere mai una vendita—il tuo agente AI lavora 24 ore su 24",
+    "features.multiLanguage": "Multi-Language Support",
+    "features.multiLanguage.desc":
+      "Servi i clienti nella loro lingua preferita automaticamente",
+    "features.ecommerce": "Complete E-commerce Platform",
+    "features.ecommerce.desc":
+      "Gestisci prodotti, ordini, inventario e relazioni con i clienti in un unico posto",
+
+    // News Section
+    "news.title": "Ultimi Aggiornamenti e Funzionalità",
+    "news.subtitle": "Rimani informato sugli ultimi miglioramenti di ShopMe",
+    "news.1.date": "15 Ottobre 2025",
+    "news.1.title": "Supporto Multilingua",
+    "news.1.category": "Lingue",
+    "news.1.desc":
+      "Siamo entusiasti di annunciare il supporto multilingua avanzato sulla nostra piattaforma! Comunica con i tuoi clienti in italiano, inglese, spagnolo e portoghese. Il nostro chatbot AI è stato addestrato per comprendere e rispondere naturalmente in più lingue, rilevando automaticamente la lingua preferita del cliente e mantenendo la stessa esperienza conversazionale di alta qualità in tutte le lingue. Espandi la tua attività a livello globale con una comunicazione multilingue senza interruzioni!",
+    "news.2.date": "8 Ottobre 2025",
+    "news.2.title": "Analisi Ricerca Prodotti",
+    "news.2.category": "Analisi",
+    "news.2.desc":
+      "Presentiamo la nuova funzionalità di Analisi Ricerca Prodotti! Ora puoi analizzare quali prodotti i tuoi clienti cercano più frequentemente. Questa potente intuizione ti aiuta a comprendere la domanda dei clienti, ottimizzare il tuo inventario e identificare i prodotti di tendenza. Il dashboard di analisi fornisce grafici e report dettagliati che mostrano i modelli di ricerca, le parole chiave popolari e i tassi di conversione.",
+    "news.3.date": "28 Settembre 2025",
+    "news.3.title": "Escalation Supporto Umano",
+    "news.3.category": "Servizio Clienti",
+    "news.3.desc":
+      "Scopri la nostra nuova funzionalità di Supporto Umano! A volte i clienti hanno bisogno di parlare con una persona reale, e ora possono passare senza problemi dalla chat AI agli agenti umani. Quando un cliente richiede assistenza umana o l'AI rileva un problema complesso, la conversazione viene trasferita istantaneamente al tuo team di supporto. Traccia tutte le escalation, i tempi di risposta e i tassi di risoluzione nel tuo dashboard.",
+    "news.4.date": "20 Settembre 2025",
+    "news.4.title": "Invia Notifiche Push",
+    "news.4.category": "Marketing",
+    "news.4.desc":
+      "Lancia campagne di marketing mirate con la nostra nuova funzionalità di Notifiche Push! Invia messaggi promozionali, offerte speciali e aggiornamenti direttamente ai tuoi clienti tramite WhatsApp. Crea campagne con messaggi personalizzati, programma gli invii per il momento ottimale e traccia i tassi di consegna e il coinvolgimento dei clienti. Perfetto per annunciare nuovi prodotti, vendite flash o aggiornamenti importanti per mantenere i tuoi clienti informati e coinvolti.",
+
+    // Pricing
+    "pricing.title": "Scegli il Tuo Piano",
+    "pricing.subtitle": "Inizia gratis e scala mentre cresci",
+    "pricing.free.desc": "Per testare la piattaforma",
+    "pricing.basic.desc": "Per aziende in crescita",
+    "pricing.premium.desc": "Per aziende consolidate",
+    "pricing.enterprise.desc": "Per operazioni su larga scala",
+    "pricing.usage.title":
+      "Le seguenti tariffe a consumo sono aggiuntive e si applicano a tutti i piani",
+    "pricing.usage.message": "per Messaggio",
+    "pricing.usage.message.desc":
+      "Dopo la quota gratuita (risposte alimentate da AI)",
+    "pricing.usage.customer": "per Nuovo Cliente",
+    "pricing.usage.customer.desc": "Ogni nuova registrazione cliente",
+    "pricing.usage.order": "per Nuovo Ordine",
+    "pricing.usage.order.desc": "Ogni ordine completato",
+    "pricing.usage.push": "per Utente Push",
+    "pricing.usage.push.desc": "Ogni messaggio promozionale inviato",
+    "pricing.usage.support": "per Human Support",
+    "pricing.usage.support.desc": "Escalation ad agente umano",
+    "pricing.features.channels": "Canali WhatsApp",
+    "pricing.features.channel": "Canale WhatsApp",
+    "pricing.features.products": "Prodotti",
+    "pricing.features.clients": "Clienti",
+    "pricing.features.support": "Supporto",
+    "pricing.features.analytics": "Analisi e Report Avanzati",
+    "pricing.features.branding": "Personalizzazione Brand",
+    "pricing.features.integration": "Integrazione con CRM / database",
+    "pricing.features.unlimited": "Illimitati",
+    "pricing.features.upto": "Fino a",
+    "pricing.features.priority": "Supporto Prioritario 24/7",
+    "pricing.button.start": "Inizia",
+    "pricing.button.contact": "Contatta Vendite",
+
+    // Contact
+    "contact.title": "Pronto per Iniziare?",
+    "contact.subtitle":
+      "Unisciti a migliaia di aziende che vendono già su WhatsApp",
+    "contact.cta": "Inizia la Prova Gratuita",
+
+    // Footer
+    "footer.tagline": "Trasforma WhatsApp nel tuo negozio online",
+    "footer.company": "Azienda",
+    "footer.about": "Chi Siamo",
+    "footer.careers": "Carriere",
+    "footer.contact": "Contattaci",
+    "footer.support": "Supporto",
+    "footer.docs": "Documentazione",
+    "footer.help": "Centro Assistenza",
+    "footer.legal": "Legale",
+    "footer.privacy": "Privacy Policy",
+    "footer.terms": "Termini di Servizio",
+    "footer.rights": "Tutti i diritti riservati",
+
+    // Login
+    "login.title": "Accedi al tuo account",
+    "login.email": "Email",
+    "login.password": "Password",
+    "login.forgot": "Password dimenticata?",
+    "login.button": "Accedi",
+    "login.noAccount": "Non hai un account?",
+    "login.signup": "Registrati",
+  },
+  en: {
+    // Header
+    "header.tagline":
+      "The complete platform to manage your e-commerce on WhatsApp",
+
+    // Hero Section
+    "hero.title": "AI-Powered WhatsApp Channel",
+    "hero.subtitle":
+      "ShopMe brings intelligent e-commerce directly to WhatsApp. Our AI agent understands customer needs, recommends products, and closes sales 24/7—all through natural conversations.",
+    "hero.whyTitle": "Why ShopMe?",
+
+    // Features
+    "features.pushNotifications": "Push Notifications",
+    "features.pushNotifications.desc":
+      "Send targeted campaigns and real-time alerts to your customers via WhatsApp",
+    "features.24x7": "24/7 Availability",
+    "features.24x7.desc":
+      "Never miss a sale—your AI agent works around the clock",
+    "features.multiLanguage": "Multi-Language Support",
+    "features.multiLanguage.desc":
+      "Serve customers in their preferred language automatically",
+    "features.ecommerce": "Complete E-commerce Platform",
+    "features.ecommerce.desc":
+      "Manage products, orders, inventory, and customer relationships in one place",
+
+    // News Section
+    "news.title": "Latest Updates and Features",
+    "news.subtitle": "Stay informed about the latest ShopMe improvements",
+    "news.1.date": "October 15, 2025",
+    "news.1.title": "Multilanguage Support",
+    "news.1.category": "Languages",
+    "news.1.desc":
+      "We're excited to announce enhanced multilanguage support on our platform! Communicate with your customers in Italian, English, Spanish, and Portuguese. Our AI chatbot has been trained to understand and respond naturally in multiple languages, automatically detecting the customer's preferred language and maintaining the same high-quality conversational experience across all languages. Expand your business globally with seamless multilingual communication!",
+    "news.2.date": "October 8, 2025",
+    "news.2.title": "Product Search Analytics",
+    "news.2.category": "Analytics",
+    "news.2.desc":
+      "Introducing our new Product Search Analytics feature! Now you can analyze which products your customers are searching for most frequently. This powerful insight helps you understand customer demand, optimize your inventory, and identify trending products. The analytics dashboard provides detailed charts and reports showing search patterns, popular keywords, and conversion rates.",
+    "news.3.date": "September 28, 2025",
+    "news.3.title": "Human Support Escalation",
+    "news.3.category": "Customer Service",
+    "news.3.desc":
+      "Meet our new Human Support feature! Sometimes customers need to speak with a real person, and now they can seamlessly escalate from AI chat to human agents. When a customer requests human assistance or the AI detects a complex issue, the conversation is instantly transferred to your support team. Track all escalations, response times, and resolution rates in your dashboard.",
+    "news.4.date": "September 20, 2025",
+    "news.4.title": "Send Push Notifications",
+    "news.4.category": "Marketing",
+    "news.4.desc":
+      "Launch targeted marketing campaigns with our new Push Notifications feature! Send promotional messages, special offers, and updates directly to your customers via WhatsApp. Create campaigns with custom messages, schedule sends for optimal timing, and track delivery rates and customer engagement. Perfect for announcing new products, flash sales, or important updates to keep your customers informed and engaged.",
+
+    // Pricing
+    "pricing.title": "Choose Your Plan",
+    "pricing.subtitle": "Start free and scale as you grow",
+    "pricing.free.desc": "For testing the platform",
+    "pricing.basic.desc": "For growing businesses",
+    "pricing.premium.desc": "For established businesses",
+    "pricing.enterprise.desc": "For large-scale operations",
+    "pricing.usage.title":
+      "The following usage-based fees are additional and apply to all plans",
+    "pricing.usage.message": "per Message",
+    "pricing.usage.message.desc": "After free quota (AI-powered responses)",
+    "pricing.usage.customer": "per New Customer",
+    "pricing.usage.customer.desc": "Each new customer registration",
+    "pricing.usage.order": "per New Order",
+    "pricing.usage.order.desc": "Each completed order",
+    "pricing.usage.push": "per Push User",
+    "pricing.usage.push.desc": "Each promotional message sent",
+    "pricing.usage.support": "per Human Support",
+    "pricing.usage.support.desc": "Escalation to human agent",
+    "pricing.features.channels": "WhatsApp Channels",
+    "pricing.features.channel": "WhatsApp Channel",
+    "pricing.features.products": "Products",
+    "pricing.features.clients": "Clients",
+    "pricing.features.support": "Support",
+    "pricing.features.analytics": "Advanced Analytics & Reports",
+    "pricing.features.branding": "Custom Branding",
+    "pricing.features.integration": "Integration with CRM / database",
+    "pricing.features.unlimited": "Unlimited",
+    "pricing.features.upto": "Up to",
+    "pricing.features.priority": "24/7 Priority Support",
+    "pricing.button.start": "Start",
+    "pricing.button.contact": "Contact Sales",
+
+    // Contact
+    "contact.title": "Ready to Get Started?",
+    "contact.subtitle":
+      "Join thousands of businesses already selling on WhatsApp",
+    "contact.cta": "Start Free Trial",
+
+    // Footer
+    "footer.tagline": "Transform WhatsApp into your online store",
+    "footer.company": "Company",
+    "footer.about": "About Us",
+    "footer.careers": "Careers",
+    "footer.contact": "Contact Us",
+    "footer.support": "Support",
+    "footer.docs": "Documentation",
+    "footer.help": "Help Center",
+    "footer.legal": "Legal",
+    "footer.privacy": "Privacy Policy",
+    "footer.terms": "Terms of Service",
+    "footer.rights": "All rights reserved",
+
+    // Login
+    "login.title": "Sign in to your account",
+    "login.email": "Email",
+    "login.password": "Password",
+    "login.forgot": "Forgot password?",
+    "login.button": "Sign In",
+    "login.noAccount": "Don't have an account?",
+    "login.signup": "Sign up",
+  },
+  es: {
+    // Header
+    "header.tagline":
+      "La plataforma completa para gestionar tu e-commerce en WhatsApp",
+
+    // Hero Section
+    "hero.title": "Canal de WhatsApp Impulsado por IA",
+    "hero.subtitle":
+      "ShopMe lleva el e-commerce inteligente directamente a WhatsApp. Nuestro agente de IA comprende las necesidades del cliente, recomienda productos y cierra ventas 24/7—todo a través de conversaciones naturales.",
+    "hero.whyTitle": "¿Por qué ShopMe?",
+
+    // Features
+    "features.pushNotifications": "Push Notifications",
+    "features.pushNotifications.desc":
+      "Envía campañas dirigidas y alertas en tiempo real a tus clientes a través de WhatsApp",
+    "features.24x7": "24/7 Availability",
+    "features.24x7.desc":
+      "Nunca pierdas una venta—tu agente de IA trabaja las 24 horas",
+    "features.multiLanguage": "Multi-Language Support",
+    "features.multiLanguage.desc":
+      "Atiende a los clientes en su idioma preferido automáticamente",
+    "features.ecommerce": "Complete E-commerce Platform",
+    "features.ecommerce.desc":
+      "Gestiona productos, pedidos, inventario y relaciones con clientes en un solo lugar",
+
+    // News Section
+    "news.title": "Últimas Actualizaciones y Funcionalidades",
+    "news.subtitle": "Mantente informado sobre las últimas mejoras de ShopMe",
+    "news.1.date": "15 de Octubre de 2025",
+    "news.1.title": "Soporte Multiidioma",
+    "news.1.category": "Idiomas",
+    "news.1.desc":
+      "¡Nos complace anunciar el soporte multiidioma mejorado en nuestra plataforma! Comunícate con tus clientes en italiano, inglés, español y portugués. Nuestro chatbot de IA ha sido entrenado para comprender y responder naturalmente en múltiples idiomas, detectando automáticamente el idioma preferido del cliente y manteniendo la misma experiencia conversacional de alta calidad en todos los idiomas. ¡Expande tu negocio globalmente con comunicación multilingüe sin interrupciones!",
+    "news.2.date": "8 de Octubre de 2025",
+    "news.2.title": "Análisis de Búsqueda de Productos",
+    "news.2.category": "Análisis",
+    "news.2.desc":
+      "¡Presentamos nuestra nueva función de Análisis de Búsqueda de Productos! Ahora puedes analizar qué productos buscan tus clientes con más frecuencia. Esta poderosa información te ayuda a comprender la demanda del cliente, optimizar tu inventario e identificar productos en tendencia. El panel de análisis proporciona gráficos e informes detallados que muestran patrones de búsqueda, palabras clave populares y tasas de conversión.",
+    "news.3.date": "28 de Septiembre de 2025",
+    "news.3.title": "Escalado a Soporte Humano",
+    "news.3.category": "Servicio al Cliente",
+    "news.3.desc":
+      "¡Conoce nuestra nueva función de Soporte Humano! A veces los clientes necesitan hablar con una persona real, y ahora pueden escalar sin problemas del chat de IA a agentes humanos. Cuando un cliente solicita asistencia humana o la IA detecta un problema complejo, la conversación se transfiere instantáneamente a tu equipo de soporte. Rastrea todas las escalaciones, tiempos de respuesta y tasas de resolución en tu panel.",
+    "news.4.date": "20 de Septiembre de 2025",
+    "news.4.title": "Enviar Notificaciones Push",
+    "news.4.category": "Marketing",
+    "news.4.desc":
+      "¡Lanza campañas de marketing dirigidas con nuestra nueva función de Notificaciones Push! Envía mensajes promocionales, ofertas especiales y actualizaciones directamente a tus clientes a través de WhatsApp. Crea campañas con mensajes personalizados, programa envíos para el momento óptimo y rastrea las tasas de entrega y el compromiso del cliente. Perfecto para anunciar nuevos productos, ventas flash o actualizaciones importantes para mantener a tus clientes informados y comprometidos.",
+
+    // Pricing
+    "pricing.title": "Elige Tu Plan",
+    "pricing.subtitle": "Comienza gratis y escala mientras creces",
+    "pricing.free.desc": "Para probar la plataforma",
+    "pricing.basic.desc": "Para empresas en crecimiento",
+    "pricing.premium.desc": "Para empresas consolidadas",
+    "pricing.enterprise.desc": "Para operaciones a gran escala",
+    "pricing.usage.title":
+      "Las siguientes tarifas por uso son adicionales y se aplican a todos los planes",
+    "pricing.usage.message": "por Mensaje",
+    "pricing.usage.message.desc":
+      "Después de la cuota gratuita (respuestas impulsadas por IA)",
+    "pricing.usage.customer": "por Nuevo Cliente",
+    "pricing.usage.customer.desc": "Cada nueva registro de cliente",
+    "pricing.usage.order": "por Nuevo Pedido",
+    "pricing.usage.order.desc": "Cada pedido completado",
+    "pricing.usage.push": "por Usuario Push",
+    "pricing.usage.push.desc": "Cada mensaje promocional enviado",
+    "pricing.usage.support": "por Human Support",
+    "pricing.usage.support.desc": "Escalación a agente humano",
+    "pricing.features.channels": "Canales WhatsApp",
+    "pricing.features.channel": "Canal WhatsApp",
+    "pricing.features.products": "Productos",
+    "pricing.features.clients": "Clientes",
+    "pricing.features.support": "Soporte",
+    "pricing.features.analytics": "Análisis y Reportes Avanzados",
+    "pricing.features.branding": "Personalización de Marca",
+    "pricing.features.integration": "Integración con CRM / base de datos",
+    "pricing.features.unlimited": "Ilimitados",
+    "pricing.features.upto": "Hasta",
+    "pricing.features.priority": "Soporte Prioritario 24/7",
+    "pricing.button.start": "Comenzar",
+    "pricing.button.contact": "Contactar Ventas",
+
+    // Contact
+    "contact.title": "¿Listo para Comenzar?",
+    "contact.subtitle": "Únete a miles de empresas que ya venden en WhatsApp",
+    "contact.cta": "Empezar Prueba Gratuita",
+
+    // Footer
+    "footer.tagline": "Transforma WhatsApp en tu tienda online",
+    "footer.company": "Empresa",
+    "footer.about": "Sobre Nosotros",
+    "footer.careers": "Carreras",
+    "footer.contact": "Contáctanos",
+    "footer.support": "Soporte",
+    "footer.docs": "Documentación",
+    "footer.help": "Centro de Ayuda",
+    "footer.legal": "Legal",
+    "footer.privacy": "Política de Privacidad",
+    "footer.terms": "Términos de Servicio",
+    "footer.rights": "Todos los derechos reservados",
+
+    // Login
+    "login.title": "Inicia sesión en tu cuenta",
+    "login.email": "Correo electrónico",
+    "login.password": "Contraseña",
+    "login.forgot": "¿Olvidaste tu contraseña?",
+    "login.button": "Iniciar Sesión",
+    "login.noAccount": "¿No tienes una cuenta?",
+    "login.signup": "Regístrate",
+  },
+  pt: {
+    // Header
+    "header.tagline":
+      "A plataforma completa para gerenciar seu e-commerce no WhatsApp",
+
+    // Hero Section
+    "hero.title": "Canal WhatsApp Alimentado por IA",
+    "hero.subtitle":
+      "ShopMe traz e-commerce inteligente diretamente para o WhatsApp. Nosso agente de IA entende as necessidades do cliente, recomenda produtos e fecha vendas 24/7—tudo através de conversas naturais.",
+    "hero.whyTitle": "Por que ShopMe?",
+
+    // Features
+    "features.pushNotifications": "Push Notifications",
+    "features.pushNotifications.desc":
+      "Envie campanhas direcionadas e alertas em tempo real para seus clientes via WhatsApp",
+    "features.24x7": "24/7 Availability",
+    "features.24x7.desc":
+      "Nunca perca uma venda—seu agente de IA funciona 24 horas por dia",
+    "features.multiLanguage": "Multi-Language Support",
+    "features.multiLanguage.desc":
+      "Atenda clientes em seu idioma preferido automaticamente",
+    "features.ecommerce": "Complete E-commerce Platform",
+    "features.ecommerce.desc":
+      "Gerencie produtos, pedidos, estoque e relacionamento com clientes em um só lugar",
+
+    // News Section
+    "news.title": "Últimas Atualizações e Funcionalidades",
+    "news.subtitle": "Fique informado sobre as últimas melhorias do ShopMe",
+    "news.1.date": "15 de Outubro de 2025",
+    "news.1.title": "Suporte Multilíngue",
+    "news.1.category": "Idiomas",
+    "news.1.desc":
+      "Estamos entusiasmados em anunciar o suporte multilíngue aprimorado em nossa plataforma! Comunique-se com seus clientes em italiano, inglês, espanhol e português. Nosso chatbot de IA foi treinado para entender e responder naturalmente em vários idiomas, detectando automaticamente o idioma preferido do cliente e mantendo a mesma experiência conversacional de alta qualidade em todos os idiomas. Expanda seu negócio globalmente com comunicação multilíngue perfeita!",
+    "news.2.date": "8 de Outubro de 2025",
+    "news.2.title": "Análise de Busca de Produtos",
+    "news.2.category": "Análise",
+    "news.2.desc":
+      "Apresentando nossa nova funcionalidade de Análise de Busca de Produtos! Agora você pode analisar quais produtos seus clientes estão procurando com mais frequência. Esta poderosa percepção ajuda você a entender a demanda do cliente, otimizar seu estoque e identificar produtos em tendência. O painel de análise fornece gráficos e relatórios detalhados mostrando padrões de busca, palavras-chave populares e taxas de conversão.",
+    "news.3.date": "28 de Setembro de 2025",
+    "news.3.title": "Escalação para Suporte Humano",
+    "news.3.category": "Atendimento ao Cliente",
+    "news.3.desc":
+      "Conheça nossa nova funcionalidade de Suporte Humano! Às vezes os clientes precisam falar com uma pessoa real, e agora eles podem escalar perfeitamente do chat de IA para agentes humanos. Quando um cliente solicita assistência humana ou a IA detecta um problema complexo, a conversa é instantaneamente transferida para sua equipe de suporte. Rastreie todas as escalações, tempos de resposta e taxas de resolução em seu painel.",
+    "news.4.date": "20 de Setembro de 2025",
+    "news.4.title": "Enviar Notificações Push",
+    "news.4.category": "Marketing",
+    "news.4.desc":
+      "Lance campanhas de marketing direcionadas com nossa nova funcionalidade de Notificações Push! Envie mensagens promocionais, ofertas especiais e atualizações diretamente para seus clientes via WhatsApp. Crie campanhas com mensagens personalizadas, agende envios para o momento ideal e rastreie taxas de entrega e engajamento do cliente. Perfeito para anunciar novos produtos, vendas relâmpago ou atualizações importantes para manter seus clientes informados e engajados.",
+
+    // Pricing
+    "pricing.title": "Escolha Seu Plano",
+    "pricing.subtitle": "Comece grátis e escale conforme você cresce",
+    "pricing.free.desc": "Para testar a plataforma",
+    "pricing.basic.desc": "Para empresas em crescimento",
+    "pricing.premium.desc": "Para empresas estabelecidas",
+    "pricing.enterprise.desc": "Para operações em grande escala",
+    "pricing.usage.title":
+      "As seguintes taxas por uso são adicionais e se aplicam a todos os planos",
+    "pricing.usage.message": "por Mensagem",
+    "pricing.usage.message.desc":
+      "Após a cota gratuita (respostas alimentadas por IA)",
+    "pricing.usage.customer": "por Novo Cliente",
+    "pricing.usage.customer.desc": "Cada novo registro de cliente",
+    "pricing.usage.order": "por Novo Pedido",
+    "pricing.usage.order.desc": "Cada pedido concluído",
+    "pricing.usage.push": "por Usuário Push",
+    "pricing.usage.push.desc": "Cada mensagem promocional enviada",
+    "pricing.usage.support": "por Human Support",
+    "pricing.usage.support.desc": "Escalação para agente humano",
+    "pricing.features.channels": "Canais WhatsApp",
+    "pricing.features.channel": "Canal WhatsApp",
+    "pricing.features.products": "Produtos",
+    "pricing.features.clients": "Clientes",
+    "pricing.features.support": "Suporte",
+    "pricing.features.analytics": "Análises e Relatórios Avançados",
+    "pricing.features.branding": "Personalização de Marca",
+    "pricing.features.integration": "Integração com CRM / banco de dados",
+    "pricing.features.unlimited": "Ilimitados",
+    "pricing.features.upto": "Até",
+    "pricing.features.priority": "Suporte Prioritário 24/7",
+    "pricing.button.start": "Começar",
+    "pricing.button.contact": "Contatar Vendas",
+
+    // Contact
+    "contact.title": "Pronto para Começar?",
+    "contact.subtitle":
+      "Junte-se a milhares de empresas que já vendem no WhatsApp",
+    "contact.cta": "Começar Teste Gratuito",
+
+    // Footer
+    "footer.tagline": "Transforme o WhatsApp em sua loja online",
+    "footer.company": "Empresa",
+    "footer.about": "Sobre Nós",
+    "footer.careers": "Carreiras",
+    "footer.contact": "Fale Conosco",
+    "footer.support": "Suporte",
+    "footer.docs": "Documentação",
+    "footer.help": "Centro de Ajuda",
+    "footer.legal": "Legal",
+    "footer.privacy": "Política de Privacidade",
+    "footer.terms": "Termos de Serviço",
+    "footer.rights": "Todos os direitos reservados",
+
+    // Login
+    "login.title": "Entre na sua conta",
+    "login.email": "E-mail",
+    "login.password": "Senha",
+    "login.forgot": "Esqueceu a senha?",
+    "login.button": "Entrar",
+    "login.noAccount": "Não tem uma conta?",
+    "login.signup": "Cadastre-se",
+  },
+}
+
+export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [language, setLanguageState] = useState<Language>(() => {
+    const saved = localStorage.getItem("language")
+    return (saved as Language) || "es"
+  })
+
+  useEffect(() => {
+    localStorage.setItem("language", language)
+  }, [language])
+
+  const setLanguage = (lang: Language) => {
+    setLanguageState(lang)
+  }
+
+  const t = (key: string): string => {
+    return translations[language][key] || key
+  }
+
+  return (
+    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+      {children}
+    </LanguageContext.Provider>
+  )
+}
+
+export const useLanguage = () => {
+  const context = useContext(LanguageContext)
+  if (!context) {
+    throw new Error("useLanguage must be used within a LanguageProvider")
+  }
+  return context
+}
