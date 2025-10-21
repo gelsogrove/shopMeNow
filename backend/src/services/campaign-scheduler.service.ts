@@ -121,12 +121,13 @@ export class CampaignScheduler {
    */
   private async getTargetCustomers(campaign: any): Promise<any[]> {
     if (campaign.targetType === "ALL") {
-      // Get all active customers in workspace
+      // Get all active, non-blacklisted customers with push notifications consent
       return await this.prisma.customers.findMany({
         where: {
           workspaceId: campaign.workspaceId,
           isActive: true,
           isBlacklisted: false,
+          push_notifications_consent: true,
         },
         select: {
           id: true,
@@ -137,13 +138,14 @@ export class CampaignScheduler {
         },
       })
     } else {
-      // Get only selected customers
+      // Get only selected customers who are active, not blacklisted, and have push notifications consent
       return await this.prisma.customers.findMany({
         where: {
           id: { in: campaign.customerIds },
           workspaceId: campaign.workspaceId,
           isActive: true,
           isBlacklisted: false,
+          push_notifications_consent: true,
         },
         select: {
           id: true,

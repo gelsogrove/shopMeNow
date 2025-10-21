@@ -1,9 +1,9 @@
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
-import { logger } from "@/lib/logger"
 import { DataTable } from "@/components/shared/DataTable"
 import { FormDialog } from "@/components/shared/FormDialog"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { useWorkspace } from "@/hooks/use-workspace"
+import { logger } from "@/lib/logger"
 import { categoriesApi, Category } from "@/services/categoriesApi"
 import { useEffect, useState } from "react"
 import { toast } from "../../lib/toast"
@@ -155,6 +155,7 @@ export function CategoriesPage() {
           globalFilter={searchValue}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          disablePagination={true}
         />
       </div>
 

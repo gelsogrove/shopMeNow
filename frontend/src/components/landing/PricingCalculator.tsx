@@ -4,7 +4,7 @@ export function PricingCalculator() {
   const [channels, setChannels] = useState(1)
   const [messages, setMessages] = useState(100)
 
-  const MONTHLY_CHANNEL_COST = 49.0
+  const MONTHLY_CHANNEL_COST = 59.0
   const MESSAGE_COST = 0.15
   const FREE_MESSAGES_PER_CHANNEL = 100
 

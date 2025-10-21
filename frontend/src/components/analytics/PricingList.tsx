@@ -15,7 +15,7 @@ export function PricingList() {
       icon: Send,
       title: "Channel",
       description: "Monthly cost",
-      price: "€49.00",
+      price: "€59.00",
       color: "text-orange-600",
       bgColor: "bg-orange-100",
     },

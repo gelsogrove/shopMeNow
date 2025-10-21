@@ -20,6 +20,7 @@ interface CrudPageContentProps<T> {
   renderActions?: (item: T) => React.ReactElement
   renderEmptyState?: ReactNode
   getRowClassName?: (item: T) => string
+  disablePagination?: boolean // New prop to disable pagination
 }
 
 /**
@@ -42,6 +43,7 @@ export function CrudPageContent<T>({
   renderActions,
   renderEmptyState,
   getRowClassName,
+  disablePagination = false,
 }: CrudPageContentProps<T>) {
   if (isLoading) {
     return (
@@ -75,6 +77,7 @@ export function CrudPageContent<T>({
             onDelete={onDelete}
             renderActions={renderActions}
             getRowClassName={getRowClassName}
+            disablePagination={disablePagination}
           />
         </div>
       )}

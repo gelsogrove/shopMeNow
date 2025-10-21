@@ -388,7 +388,7 @@ export class AnalyticsService {
           AND (o."createdAt" IS NULL OR (o."createdAt" >= ${startDate} AND o."createdAt" <= ${endDate}))
         GROUP BY p.id, p.name, p.formato, p.stock
         ORDER BY total_sold DESC, revenue DESC
-        LIMIT 10
+        LIMIT 5
       `) as {
         id: string
         name: string
@@ -441,7 +441,7 @@ export class AnalyticsService {
           AND c."isActive" = true
         GROUP BY c.id, c.name, c.email, c.phone, c.company
         ORDER BY total_spent DESC, total_orders DESC
-        LIMIT 10
+        LIMIT 5
       `) as {
         id: string
         name: string
@@ -499,7 +499,7 @@ export class AnalyticsService {
           AND s."isActive" = true
         GROUP BY s.id, s."firstName", s."lastName", s.email, s.phone
         ORDER BY total_revenue DESC, total_orders DESC, total_customers DESC
-        LIMIT 10
+        LIMIT 5
       `) as {
         id: string
         firstName: string

@@ -1,5 +1,4 @@
 import { PageLayout } from "@/components/layout/PageLayout"
-import { logger } from "@/lib/logger"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
 import { CrudPageContent } from "@/components/shared/CrudPageContent"
 import { Button } from "@/components/ui/button"
@@ -7,12 +6,12 @@ import { Calendar } from "@/components/ui/calendar"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
-    Popover,
+  Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
 import {
-    Sheet,
+  Sheet,
   SheetClose,
   SheetContent,
   SheetFooter,
@@ -22,6 +21,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { useWorkspace } from "@/hooks/use-workspace"
+import { logger } from "@/lib/logger"
 import { api } from "@/services/api"
 import { commonStyles } from "@/styles/common"
 import { format } from "date-fns"
@@ -519,6 +519,7 @@ export function OffersPage() {
         onDelete={handleDelete}
         isLoading={isLoading}
         addButtonText="Add"
+        disablePagination={true}
       />
 
       {/* Add Offer Sheet */}

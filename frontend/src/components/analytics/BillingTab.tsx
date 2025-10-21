@@ -415,25 +415,26 @@ export function BillingTab() {
                         <td className="py-3 px-4">
                           {hasData ? (
                             <div className="flex flex-wrap gap-1">
-                              {Object.entries(month.byType)
-                                .sort(([, a], [, b]) => b.cost - a.cost)
-                                .slice(0, 3)
-                                .map(([type, data]) => (
-                                  <span
-                                    key={type}
-                                    className={`text-xs px-2 py-1 rounded ${
-                                      BILLING_TYPE_COLORS[type] || "bg-gray-100"
-                                    }`}
-                                  >
-                                    {BILLING_TYPE_LABELS[type] || type}: €
-                                    {data.cost.toFixed(2)}
-                                  </span>
-                                ))}
-                              {Object.keys(month.byType).length > 3 && (
-                                <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600">
-                                  +{Object.keys(month.byType).length - 3} more
+                              {[
+                                {
+                                  key: "MONTHLY_CHANNEL",
+                                  label: "Subscription",
+                                },
+                                { key: "NEW_ORDER", label: "Orders" },
+                                { key: "MESSAGE", label: "Push message" },
+                                { key: "HUMAN_SUPPORT", label: "Human Supp." },
+                              ].map(({ key, label }) => (
+                                <span
+                                  key={key}
+                                  className={`text-xs px-2 py-1 rounded ${
+                                    BILLING_TYPE_COLORS[key] || "bg-gray-100"
+                                  }`}
+                                >
+                                  {label}: €
+                                  {month.byType[key]?.cost?.toFixed(2) ||
+                                    "0.00"}
                                 </span>
-                              )}
+                              ))}
                             </div>
                           ) : (
                             <span className="text-sm text-gray-400">

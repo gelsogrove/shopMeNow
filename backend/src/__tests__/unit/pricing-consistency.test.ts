@@ -35,7 +35,7 @@ describe("Pricing Consistency Tests", () => {
     })
 
     it("should have correct pricing values", () => {
-      expect(BillingPrices.MONTHLY_CHANNEL_COST).toBe(49.0)
+      expect(BillingPrices.MONTHLY_CHANNEL_COST).toBe(59.0)
       expect(BillingPrices.MESSAGE).toBe(0.15)
       expect(BillingPrices.NEW_CUSTOMER).toBe(1.5)
       expect(BillingPrices.NEW_ORDER).toBe(1.5)
@@ -104,7 +104,7 @@ describe("Pricing Consistency Tests", () => {
     it("should have pricing constants matching documented values", () => {
       // Based on PRD and billing-prices.enum.ts comments
       const expectedPricing = {
-        monthlyChannel: 49.0,
+        monthlyChannel: 59.0,
         message: 0.15,
         newCustomer: 1.5,
         newOrder: 1.5,
@@ -127,7 +127,7 @@ describe("Pricing Consistency Tests", () => {
     it("should have 6 pricing items displayed in PricingList", () => {
       // This is a documentation test - actual UI test would require frontend testing
       const expectedPricingItems = [
-        { name: "Channel", price: 49.0 },
+        { name: "Channel", price: 59.0 },
         { name: "LLM Response", price: 0.15 },
         { name: "New Customer", price: 1.5 },
         { name: "New Order", price: 1.5 },
@@ -191,7 +191,7 @@ describe("Pricing Consistency Tests", () => {
     it("should generate billing with correct pricing in seed data", () => {
       // This is a documentation test - verifies seed.ts uses correct prices
       const seedPricing = {
-        monthlyChannel: 49.0,
+        monthlyChannel: 59.0,
         message: 0.15,
         newCustomer: 1.5,
         newOrder: 1.5,
@@ -215,7 +215,7 @@ describe("Pricing Consistency Tests", () => {
     it("should have consistent pricing across all layers", () => {
       // Final comprehensive check
       const allPricesConsistent =
-        BillingPrices.MONTHLY_CHANNEL_COST === 49.0 &&
+        BillingPrices.MONTHLY_CHANNEL_COST === 59.0 &&
         BillingPrices.MESSAGE === 0.15 &&
         BillingPrices.NEW_CUSTOMER === 1.5 &&
         BillingPrices.NEW_ORDER === 1.5 &&

@@ -298,13 +298,13 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
               </p>
             </CardHeader>
             <CardContent>
-              <div className="h-[280px]">
+              <div className="h-[320px] flex items-center justify-center">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={categoryPieData}
                       cx="50%"
-                      cy="50%"
+                      cy="55%"
                       labelLine={true}
                       label={({ name, percent }) => {
                         const percentageNum = percent * 100
@@ -314,7 +314,7 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
                           ? `${name}: ${percentage}%`
                           : `${percentage}%`
                       }}
-                      outerRadius={90}
+                      outerRadius={120}
                       fill="#8884d8"
                       dataKey="value"
                     >

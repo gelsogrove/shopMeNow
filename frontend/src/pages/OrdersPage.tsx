@@ -22,7 +22,7 @@ import { clientsApi } from "@/services/clientsApi"
 import { ordersApi, type Order, type OrderStatus } from "@/services/ordersApi"
 import { commonStyles } from "@/styles/common"
 import { formatPrice } from "@/utils/format"
-import { Download, Pencil, ShoppingCart, Trash2 } from "lucide-react"
+import { Pencil, ShoppingCart, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { toast } from "../lib/toast"
@@ -512,27 +512,9 @@ export default function OrdersPage() {
     }
   }
 
-  // Custom actions for orders - Download PDFs, Edit and Delete
+  // Custom actions for orders - Edit and Delete
   const renderOrderActions = (order: Order) => (
     <div className="flex gap-1 justify-end">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => handleDownloadInvoice(order)}
-        title="Download Invoice PDF"
-        className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-700"
-      >
-        <Download className={`${commonStyles.actionIcon} text-blue-600`} />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => handleDownloadDdt(order)}
-        title="Download Delivery Note PDF"
-        className="h-8 w-8 p-0 hover:bg-purple-50 hover:text-purple-700"
-      >
-        <Download className={`${commonStyles.actionIcon} text-purple-600`} />
-      </Button>
       <Button
         variant="ghost"
         size="sm"

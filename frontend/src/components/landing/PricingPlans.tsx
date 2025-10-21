@@ -4,7 +4,7 @@ import { Check, MessageSquare, ShoppingCart, X } from "lucide-react"
 
 // Pricing from backend BillingPrices enum
 const PRICES = {
-  MONTHLY_CHANNEL: 49.0,
+  MONTHLY_CHANNEL: 59.0,
   MESSAGE: 0.15,
   NEW_CUSTOMER: 1.5,
   NEW_ORDER: 1.5,
@@ -15,6 +15,7 @@ const PRICES = {
 interface PricingPlan {
   name: string
   price: string
+  priceSuffix?: string
   description: string
   features: Array<{ name: string; included: boolean }>
   isPopular?: boolean
@@ -47,8 +48,9 @@ export function PricingPlans() {
     {
       name: "Free",
       price: "€0",
-      description: t("pricing.free.desc"),
-      buttonText: `${t("pricing.button.start")} Free Trial`,
+      priceSuffix: "/14 days",
+      description: t("pricing.free.creditDesc"),
+      buttonText: t("pricing.button.start") + " Free Trial",
       buttonVariant: "default",
       isPopular: true,
       features: [
@@ -81,18 +83,18 @@ export function PricingPlans() {
     },
     {
       name: "Premium",
-      price: "€49",
+      price: "€59",
       description: t("pricing.premium.desc"),
       buttonText: `${t("pricing.button.start")} Premium`,
       buttonVariant: "default",
       features: [
         { name: getFeatureText(2, "channels"), included: true },
-        { name: getFeatureText(80, "products"), included: true },
+        { name: getFeatureText(100, "products"), included: true },
         { name: getFeatureText(100, "clients"), included: true },
         { name: "Multi-Language Support", included: true },
         { name: t("pricing.features.analytics"), included: true },
         { name: t("pricing.features.support"), included: true },
-        { name: t("pricing.features.branding"), included: false },
+        { name: t("pricing.features.branding"), included: true },
         { name: t("pricing.features.integration"), included: false },
       ],
     },
@@ -140,47 +142,44 @@ export function PricingPlans() {
                 {plan.name}
               </h3>
               <div className="mb-3">
-                {plan.name === "Free" && (
-                  <span className="text-4xl font-bold text-green-600">€0</span>
+                {plan.price !== "Custom" && (
+                  <span className="text-4xl font-bold text-gray-900">
+                    {plan.price}
+                  </span>
                 )}
-                {plan.name === "Free" && (
-                  <span className="text-gray-600">/14-days</span>
+                {plan.priceSuffix && (
+                  <span className="text-gray-600"> {plan.priceSuffix}</span>
                 )}
-                {plan.name !== "Enterprise" &&
-                  plan.price !== "Custom" &&
-                  plan.price !== "€0" && (
-                    <span className="text-4xl font-bold text-green-600">
-                      {plan.price}
-                    </span>
+                {plan.name !== "Free" &&
+                  plan.name !== "Enterprise" &&
+                  plan.price !== "Custom" && (
+                    <span className="text-gray-600">/month</span>
                   )}
-                {plan.price !== "Custom" && plan.price !== "€0" && (
-                  <span className="text-gray-600">/month</span>
-                )}
               </div>
-              <p className="text-sm text-gray-600 min-h-[24px] flex items-center justify-center">
-                {plan.description}
-              </p>
+              <p className="text-gray-600 min-h-[40px]">{plan.description}</p>
             </div>
 
-            <Button
-              className={`w-full mb-6 ${
-                plan.name === "Basic" || plan.name === "Premium"
-                  ? "bg-green-600 hover:bg-green-700 text-white"
-                  : ""
-              }`}
-              variant={plan.buttonVariant}
-              size="lg"
-              disabled={
-                plan.name === "Premium" ||
-                plan.name === "Enterprise" ||
-                plan.name === "Basic"
-              }
-            >
-              {plan.name === "Free" && "Start Free Trial"}
-              {plan.name === "Basic" && "Start Basic"}
-              {plan.name === "Premium" && "Start Premium"}
-              {plan.name === "Enterprise" && "Contact Sales"}
-            </Button>
+            <div className="flex-grow mb-8">
+              <Button
+                className={`w-full ${
+                  plan.name === "Basic" || plan.name === "Premium"
+                    ? "bg-green-600 hover:bg-green-700 text-white"
+                    : ""
+                }`}
+                variant={plan.buttonVariant}
+                size="lg"
+                disabled={
+                  plan.name === "Premium" ||
+                  plan.name === "Enterprise" ||
+                  plan.name === "Basic"
+                }
+              >
+                {plan.name === "Free" && "Start Free Trial"}
+                {plan.name === "Basic" && "Start Basic"}
+                {plan.name === "Premium" && "Start Premium"}
+                {plan.name === "Enterprise" && "Contact Sales"}
+              </Button>
+            </div>
 
             <div className="space-y-3">
               {plan.features.map((feature) => (

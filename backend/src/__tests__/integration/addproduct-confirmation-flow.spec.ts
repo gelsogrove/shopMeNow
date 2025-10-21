@@ -5,7 +5,7 @@
  * 1. Utente: "voglio aggiungere il panettone" → Sistema chiede conferma (NO addProduct)
  * 2. Utente: "si" → Sistema chiama addProduct()
  *
- * ⚠️ ATTENZIONE: Questo test chiama OpenRouter API reale (costo ~$0.02)
+ * 🏠 LOCALE: Usa Ollama llama3.1:8b (gratuito, privato)
  *
  * Created: 17 October 2025
  * Branch: 84-design-implement-new-calling-functions-addproduct-repeatorder-full-befeprompt-integration
@@ -102,7 +102,7 @@ describe("🧪 addProduct Confirmation Flow - Integration Test", () => {
       language: "it",
       sessionId: sessionId,
       maxTokens: 5000,
-      model: "openai/gpt-4o-mini",
+      model: "LOCAL:llama3.1:8b", // 🏠 Use local Ollama for integration tests
       messages: contextMessages,
       prompt: "",
     })

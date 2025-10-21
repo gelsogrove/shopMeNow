@@ -254,10 +254,18 @@ export class MessageSendingService {
     language: "it" | "es" | "pt" | "en",
     workspaceId: string
   ) {
-    // Get allowed links for this workspace
+    // Get workspace with agentConfigs to use same LLM model as agent
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
-      select: { url: true },
+      select: {
+        url: true,
+        agentConfigs: {
+          select: {
+            model: true,
+          },
+          take: 1, // Get first (primary) agent config
+        },
+      },
     })
 
     const workspaceUrl = workspace?.url || ""
@@ -271,10 +279,23 @@ export class MessageSendingService {
       "https://wa.me/",
     ]
 
+    // 🔧 Get LLM config from Agent Settings (same model/provider as agent)
+    const { getLLMConfig } = await import("../config/llm.config")
+    const agentModel = workspace?.agentConfigs?.[0]?.model
+    const llmConfig = getLLMConfig(agentModel)
+
+    logger.info("🔒 [MESSAGE-SEND] Security layer using agent model", {
+      agentModel,
+      provider: llmConfig.useLocal ? "Ollama (local)" : "OpenRouter (cloud)",
+    })
+
     return await translationSecurityService.processResponse(
       message,
       language,
-      allowedLinks
+      allowedLinks,
+      llmConfig.model, // Use same model as agent
+      llmConfig.baseURL, // Use same baseURL as agent
+      llmConfig.apiKey // Use same API key as agent
     )
   }
 

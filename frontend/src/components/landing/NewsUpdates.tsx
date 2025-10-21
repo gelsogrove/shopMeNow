@@ -121,19 +121,19 @@ export function NewsUpdates() {
           {/* Left Arrow */}
           <button
             onClick={goToPrevious}
-            className="absolute left-0 md:left-8 z-20 bg-white hover:bg-green-50 text-gray-800 rounded-full p-3 md:p-4 shadow-xl hover:shadow-2xl transition-all hover:scale-110 border-2 border-gray-200 hover:border-green-500"
+            className="absolute -left-2 md:left-8 z-20 bg-white hover:bg-green-50 text-gray-800 rounded-full p-2 md:p-4 shadow-xl hover:shadow-2xl transition-all hover:scale-110 border-2 border-gray-200 hover:border-green-500"
             aria-label="Previous update"
           >
-            <ChevronLeft className="w-8 h-8 md:w-10 md:h-10" />
+            <ChevronLeft className="w-6 h-6 md:w-10 md:h-10" />
           </button>
 
           {/* Right Arrow */}
           <button
             onClick={goToNext}
-            className="absolute right-0 md:right-8 z-20 bg-white hover:bg-green-50 text-gray-800 rounded-full p-3 md:p-4 shadow-xl hover:shadow-2xl transition-all hover:scale-110 border-2 border-gray-200 hover:border-green-500"
+            className="absolute -right-2 md:right-8 z-20 bg-white hover:bg-green-50 text-gray-800 rounded-full p-2 md:p-4 shadow-xl hover:shadow-2xl transition-all hover:scale-110 border-2 border-gray-200 hover:border-green-500"
             aria-label="Next update"
           >
-            <ChevronRight className="w-8 h-8 md:w-10 md:h-10" />
+            <ChevronRight className="w-6 h-6 md:w-10 md:h-10" />
           </button>
 
           {/* Cards Container */}
@@ -227,7 +227,7 @@ export function NewsUpdates() {
         </div>
 
         {/* Indicators - Separate Row */}
-        <div className="flex justify-center gap-2 mt-8">
+        <div className="flex justify-center gap-2 mt-4">
           {newsItems.map((_, index) => {
             const normalizedIndex =
               ((currentIndex % newsItems.length) + newsItems.length) %
@@ -236,10 +236,10 @@ export function NewsUpdates() {
               <button
                 key={index}
                 onClick={() => setCurrentIndex(index)}
-                className={`h-2 rounded-full transition-all ${
+                className={`h-2 w-2 rounded-full transition-all ${
                   index === normalizedIndex
-                    ? "w-8 bg-green-500"
-                    : "w-2 bg-gray-300 hover:bg-gray-400"
+                    ? "bg-green-500 scale-150"
+                    : "bg-gray-300 hover:bg-gray-400"
                 }`}
                 aria-label={`Go to update ${index + 1}`}
               />

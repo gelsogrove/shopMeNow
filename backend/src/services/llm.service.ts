@@ -1,6 +1,7 @@
 import * as fs from "fs"
 import * as path from "path"
 import { TokenService } from "../application/services/token.service"
+import { getLLMConfig } from "../config/llm.config"
 import { LLMRequest } from "../types/whatsapp.types"
 import logger from "../utils/logger"
 import { CallingFunctionsService } from "./calling-functions.service"
@@ -251,6 +252,22 @@ export class LLMService {
       recentMessages // 🆕 Pass conversation history
     )
 
+    // 🔧 FIX: Check if LLM response is valid before post-processing
+    if (!llmResult || !llmResult.response) {
+      logger.error("❌ LLM returned empty or invalid response", {
+        llmResult,
+        customerId: customer.id,
+      })
+      return {
+        success: false,
+        output: "Mi dispiace, il servizio LLM non è al momento disponibile.",
+        debugInfo: JSON.stringify({
+          ...debugInfo,
+          error: "LLM returned empty response",
+        }),
+      }
+    }
+
     // 7. Post-processing: Replace link tokens
     const linkReplacements: any[] = []
     let finalResponse = await this.replaceLinkTokens(
@@ -263,9 +280,18 @@ export class LLMService {
 
     // 8. 🔒 TRANSLATION & SECURITY LAYER - Final filter before sending to customer
     try {
+      // 🔧 Get LLM config to use same model/provider as agent
+      const agentConfig = (workspace as any).agentConfigs?.[0]
+      const agentModel = agentConfig?.model
+      const llmConfig = getLLMConfig(agentModel)
+
       logger.info("🔒 Applying Translation & Security Layer", {
         customerId: customer.id,
         language: userLanguage,
+        usingAgentModel: agentModel, // 📊 Same model as agent
+        usingProvider: llmConfig.useLocal
+          ? "Ollama (local)"
+          : "OpenRouter (cloud)",
       })
 
       // Build list of allowed system links (all other links will be blocked)
@@ -286,7 +312,10 @@ export class LLMService {
         await translationSecurityService.processResponse(
           finalResponse,
           userLanguage,
-          allowedLinks
+          allowedLinks,
+          llmConfig.model, // Use same model as agent
+          llmConfig.baseURL, // Use same baseURL as agent (Ollama or OpenRouter)
+          llmConfig.apiKey // Use same API key as agent
         )
 
       if (translationResult.blocked) {
@@ -790,29 +819,62 @@ export class LLMService {
         `🔢 [MESSAGES] Total messages sent to LLM: ${messages.length}`
       )
 
-      const response = await fetch(
-        "https://openrouter.ai/api/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-            "Content-Type": "application/json",
-            "HTTP-Referer": "http://localhost:3001",
-            "X-Title": "ShopMe LLM Response",
-          },
-          body: JSON.stringify({
-            model: "openai/gpt-4o-mini",
-            messages: messages,
-            tools: this.getAvailableFunctions(),
-            temperature: 0,
-            max_tokens: workspace.maxTokens || 5000,
-          }),
-        }
+      // 🤖 Get LLM configuration (supports local Ollama or cloud OpenRouter)
+      // If model starts with "LOCAL:" → automatically uses Ollama
+      // FIX: workspace has agentConfigs (array), not agentConfig (singular)
+      const agentConfig = (workspace as any).agentConfigs?.[0]
+      const agentModel = agentConfig?.model
+      logger.info(`📊 Agent model from DB: "${agentModel}"`)
+      const llmConfig = getLLMConfig(agentModel)
+      logger.info(
+        `🤖 Using ${llmConfig.useLocal ? "LOCAL" : "CLOUD"} LLM: ${llmConfig.model} at ${llmConfig.baseURL}`
       )
+
+      // Debug API key
+      if (!llmConfig.apiKey) {
+        logger.error("❌ API KEY MANCANTE! llmConfig.apiKey è vuoto/undefined")
+      }
+
+      const response = await fetch(`${llmConfig.baseURL}/chat/completions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${llmConfig.apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "http://localhost:3001",
+          "X-Title": "ShopMe LLM Response",
+        },
+        body: JSON.stringify({
+          model: llmConfig.model,
+          messages: messages,
+          tools: this.getAvailableFunctions(),
+          temperature: 0,
+          max_tokens: workspace.maxTokens || 5000,
+        }),
+      })
       logger.info("***language", language)
-      logger.info("🌐 OpenRouter status:", response.status)
+      logger.info(
+        `🌐 ${llmConfig.useLocal ? "Ollama" : "OpenRouter"} status:`,
+        response.status
+      )
+
+      // Check if response is OK
+      if (!response.ok) {
+        const errorText = await response.text()
+        logger.error(`❌ LLM API Error (${response.status}):`, errorText)
+        throw new Error(`LLM API returned ${response.status}: ${errorText}`)
+      }
+
       const data = await response.json()
-      logger.info("🌐 OpenRouter response:", JSON.stringify(data, null, 2))
+      logger.info(
+        `🌐 ${llmConfig.useLocal ? "Ollama" : "OpenRouter"} response:`,
+        JSON.stringify(data, null, 2)
+      )
+
+      // Verify response structure
+      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+        logger.error("❌ Invalid LLM response structure:", data)
+        throw new Error("LLM response missing choices/message")
+      }
       // 🔧 DEBUG: Calculate token usage and cost
       let tokenUsage: any = null
       let costInfo: any = null
@@ -963,18 +1025,23 @@ export class LLMService {
             },
           ]
 
+          // 🤖 Get LLM configuration for follow-up request
+          // FIX: workspace has agentConfigs (array), not agentConfig (singular)
+          const agentConfigFollowUp = (workspace as any).agentConfigs?.[0]
+          const llmConfigFollowUp = getLLMConfig(agentConfigFollowUp?.model)
+
           const followUpResponse = await fetch(
-            "https://openrouter.ai/api/v1/chat/completions",
+            `${llmConfigFollowUp.baseURL}/chat/completions`,
             {
               method: "POST",
               headers: {
-                Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                Authorization: `Bearer ${llmConfigFollowUp.apiKey}`,
                 "Content-Type": "application/json",
                 "HTTP-Referer": "http://localhost:3001",
                 "X-Title": "ShopMe LLM Response",
               },
               body: JSON.stringify({
-                model: "openai/gpt-4o-mini",
+                model: llmConfigFollowUp.model,
                 messages: followUpMessages,
                 temperature: 0,
                 max_tokens: workspace.maxTokens || 5000,
@@ -1106,7 +1173,14 @@ export class LLMService {
       }
 
       const llmResponse =
-        data.choices?.[0]?.message?.content || i18n.fallback[language]
+        data.choices?.[0]?.message?.content ||
+        i18n.fallback[language] ||
+        i18n.fallback.it ||
+        "Ciao! Come posso aiutarti?"
+
+      logger.info(
+        `📝 LLM Response content length: ${llmResponse?.length || 0} chars`
+      )
 
       // 🔧 POST-PROCESS: Replace variables in LLM response
       // LLM might generate text with {{variables}} that need to be replaced

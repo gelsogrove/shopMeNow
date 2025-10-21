@@ -3,7 +3,7 @@ import { useState } from "react"
 
 // Pricing constants
 const PRICES = {
-  MONTHLY_CHANNEL: 49.0,
+  MONTHLY_CHANNEL: 59.0,
   MESSAGE: 0.15,
   FREE_MESSAGES: 100,
 }
