@@ -113,28 +113,36 @@ function getRegistrationText(language: string): {
 } {
   // Read TOKEN_EXPIRATION from environment (e.g., "15m" or "1h")
   const tokenExpiration = process.env.TOKEN_EXPIRATION || "1h"
-  
+
   // Parse the duration
   const match = tokenExpiration.match(/^(\d+)([hm])$/)
   let validityText = "1 hour" // Default fallback
-  
+
   if (match) {
     const value = parseInt(match[1], 10)
     const unit = match[2]
-    
+
     // Generate text based on language and duration
     if (unit === "m") {
       // Minutes
-      validityText = language.toLowerCase() === "en" ? `${value} minutes` :
-                     language.toLowerCase() === "es" ? `${value} minutos` :
-                     language.toLowerCase() === "pt" ? `${value} minutos` :
-                     `${value} minuti` // Italian
+      validityText =
+        language.toLowerCase() === "en"
+          ? `${value} minutes`
+          : language.toLowerCase() === "es"
+            ? `${value} minutos`
+            : language.toLowerCase() === "pt"
+              ? `${value} minutos`
+              : `${value} minuti` // Italian
     } else {
       // Hours
-      validityText = language.toLowerCase() === "en" ? `${value} hour${value > 1 ? 's' : ''}` :
-                     language.toLowerCase() === "es" ? `${value} hora${value > 1 ? 's' : ''}` :
-                     language.toLowerCase() === "pt" ? `${value} hora${value > 1 ? 's' : ''}` :
-                     `${value} ora${value > 1 ? '' : ''}` // Italian (1 ora, 2 ore)
+      validityText =
+        language.toLowerCase() === "en"
+          ? `${value} hour${value > 1 ? "s" : ""}`
+          : language.toLowerCase() === "es"
+            ? `${value} hora${value > 1 ? "s" : ""}`
+            : language.toLowerCase() === "pt"
+              ? `${value} hora${value > 1 ? "s" : ""}`
+              : `${value} ora${value > 1 ? "" : ""}` // Italian (1 ora, 2 ore)
     }
   }
 

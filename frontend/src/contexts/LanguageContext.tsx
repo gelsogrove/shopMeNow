@@ -181,7 +181,8 @@ const translations = {
     "pricing.title": "Choose Your Plan",
     "pricing.subtitle": "Start free and scale as you grow",
     "pricing.free.desc": "For testing the platform",
-    "pricing.free.creditDesc": "We offer you the first €29 to test the platform.",
+    "pricing.free.creditDesc":
+      "We offer you the first €29 to test the platform.",
     "pricing.basic.desc": "For growing businesses",
     "pricing.premium.desc": "For established businesses",
     "pricing.enterprise.desc": "For large-scale operations",
