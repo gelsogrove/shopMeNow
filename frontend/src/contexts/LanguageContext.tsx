@@ -66,6 +66,8 @@ const translations = {
     "pricing.title": "Scegli il Tuo Piano",
     "pricing.subtitle": "Inizia gratis e scala mentre cresci",
     "pricing.free.desc": "Per testare la piattaforma",
+    "pricing.free.creditDesc":
+      "I primi €29 per provare la piattaforma li offriamo noi.",
     "pricing.basic.desc": "Per aziende in crescita",
     "pricing.premium.desc": "Per aziende consolidate",
     "pricing.enterprise.desc": "Per operazioni su larga scala",
@@ -94,6 +96,7 @@ const translations = {
     "pricing.features.upto": "Fino a",
     "pricing.features.priority": "Supporto Prioritario 24/7",
     "pricing.button.start": "Inizia",
+    "pricing.button.startWithCredit": "Inizia con il tuo Credito",
     "pricing.button.contact": "Contatta Vendite",
 
     // Contact
@@ -178,6 +181,7 @@ const translations = {
     "pricing.title": "Choose Your Plan",
     "pricing.subtitle": "Start free and scale as you grow",
     "pricing.free.desc": "For testing the platform",
+    "pricing.free.creditDesc": "We offer you the first €29 to test the platform.",
     "pricing.basic.desc": "For growing businesses",
     "pricing.premium.desc": "For established businesses",
     "pricing.enterprise.desc": "For large-scale operations",
@@ -205,6 +209,7 @@ const translations = {
     "pricing.features.upto": "Up to",
     "pricing.features.priority": "24/7 Priority Support",
     "pricing.button.start": "Start",
+    "pricing.button.startWithCredit": "Start with your Credit",
     "pricing.button.contact": "Contact Sales",
 
     // Contact
@@ -289,6 +294,8 @@ const translations = {
     "pricing.title": "Elige Tu Plan",
     "pricing.subtitle": "Comienza gratis y escala mientras creces",
     "pricing.free.desc": "Para probar la plataforma",
+    "pricing.free.creditDesc":
+      "Te ofrecemos los primeros 29€ para probar la plataforma.",
     "pricing.basic.desc": "Para empresas en crecimiento",
     "pricing.premium.desc": "Para empresas consolidadas",
     "pricing.enterprise.desc": "Para operaciones a gran escala",
@@ -317,6 +324,7 @@ const translations = {
     "pricing.features.upto": "Hasta",
     "pricing.features.priority": "Soporte Prioritario 24/7",
     "pricing.button.start": "Comenzar",
+    "pricing.button.startWithCredit": "Empieza con tu Crédito",
     "pricing.button.contact": "Contactar Ventas",
 
     // Contact
@@ -400,6 +408,8 @@ const translations = {
     "pricing.title": "Escolha Seu Plano",
     "pricing.subtitle": "Comece grátis e escale conforme você cresce",
     "pricing.free.desc": "Para testar a plataforma",
+    "pricing.free.creditDesc":
+      "Oferecemos os primeiros €29 para testar a plataforma.",
     "pricing.basic.desc": "Para empresas em crescimento",
     "pricing.premium.desc": "Para empresas estabelecidas",
     "pricing.enterprise.desc": "Para operações em grande escala",
@@ -428,6 +438,7 @@ const translations = {
     "pricing.features.upto": "Até",
     "pricing.features.priority": "Suporte Prioritário 24/7",
     "pricing.button.start": "Começar",
+    "pricing.button.startWithCredit": "Comece com seu Crédito",
     "pricing.button.contact": "Contatar Vendas",
 
     // Contact

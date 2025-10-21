@@ -3,7 +3,7 @@
  * All prices are in EUR (€).
  *
  * PRICING STRUCTURE:
- * - Monthly subscription: €49.00
+ * - Monthly subscription: €59.00
  * - New customer: €1.50
  * - New order: €1.50
  * - Push notification: €1.00 (advertising campaigns)
@@ -12,7 +12,7 @@
  */
 export enum BillingPrices {
   // Monthly fixed costs
-  MONTHLY_CHANNEL_COST = 49.0, // Monthly subscription
+  MONTHLY_CHANNEL_COST = 59.0, // Monthly subscription
 
   // Per-action costs
   MESSAGE = 0.15, // Cost per message/interaction (LLM responses)

@@ -111,27 +111,54 @@ function getRegistrationText(language: string): {
   link: string
   validity: string
 } {
+  // Read TOKEN_EXPIRATION from environment (e.g., "15m" or "1h")
+  const tokenExpiration = process.env.TOKEN_EXPIRATION || "1h"
+  
+  // Parse the duration
+  const match = tokenExpiration.match(/^(\d+)([hm])$/)
+  let validityText = "1 hour" // Default fallback
+  
+  if (match) {
+    const value = parseInt(match[1], 10)
+    const unit = match[2]
+    
+    // Generate text based on language and duration
+    if (unit === "m") {
+      // Minutes
+      validityText = language.toLowerCase() === "en" ? `${value} minutes` :
+                     language.toLowerCase() === "es" ? `${value} minutos` :
+                     language.toLowerCase() === "pt" ? `${value} minutos` :
+                     `${value} minuti` // Italian
+    } else {
+      // Hours
+      validityText = language.toLowerCase() === "en" ? `${value} hour${value > 1 ? 's' : ''}` :
+                     language.toLowerCase() === "es" ? `${value} hora${value > 1 ? 's' : ''}` :
+                     language.toLowerCase() === "pt" ? `${value} hora${value > 1 ? 's' : ''}` :
+                     `${value} ora${value > 1 ? '' : ''}` // Italian (1 ora, 2 ore)
+    }
+  }
+
   switch (language.toLowerCase()) {
     case "en":
       return {
         link: "To continue, register here",
-        validity: "Link valid for 1 hour",
+        validity: `Link valid for ${validityText}`,
       }
     case "es":
       return {
         link: "Para continuar, regístrate aquí",
-        validity: "Enlace válido por 1 hora",
+        validity: `Enlace válido por ${validityText}`,
       }
     case "pt":
       return {
         link: "Para continuar, registre-se aqui",
-        validity: "Link válido por 1 hora",
+        validity: `Link válido por ${validityText}`,
       }
     case "it":
     default:
       return {
         link: "Per continuare, registrati qui",
-        validity: "Link valido per 1 ora",
+        validity: `Link valido per ${validityText}`,
       }
   }
 }

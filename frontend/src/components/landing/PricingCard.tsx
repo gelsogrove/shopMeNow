@@ -9,7 +9,7 @@ import {
 
 // Pricing from backend BillingPrices enum
 const PRICES = {
-  MONTHLY_CHANNEL: 49.0,
+  MONTHLY_CHANNEL: 59.0,
   MESSAGE: 0.15,
   NEW_CUSTOMER: 1.5,
   NEW_ORDER: 1.5,

@@ -194,7 +194,7 @@ Array di mesi con stessa struttura, ma `isComplete` non presente (sempre complet
 ### Tipi di Costo
 
 ```typescript
-MONTHLY_CHANNEL: "Canale Mensile" (€49)
+MONTHLY_CHANNEL: "Canale Mensile" (€59)
 MESSAGE: "Messaggi" (€0.15 cad.)
 NEW_CUSTOMER: "Nuovi Clienti" (€1.50)
 NEW_ORDER: "Nuovi Ordini" (€1.50)
