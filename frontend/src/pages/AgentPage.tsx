@@ -316,21 +316,21 @@ export function AgentPage() {
                                 <ul className="list-disc pl-5 space-y-1">
                                   <li>
                                     <span className="font-medium">
-                                      anthropic/claude-opus-4.1:
+                                      🌍 Cloud Models:
                                     </span>{" "}
-                                    Fast, cost-effective, good for most tasks
+                                    Use OpenRouter API (requires API key, costs
+                                    apply)
                                   </li>
                                   <li>
                                     <span className="font-medium">
-                                      openai/gpt-4o-mini
+                                      🏠 LOCAL Models:
                                     </span>{" "}
-                                    Most advanced, best quality responses
+                                    Run on your Mac with Ollama (FREE, private,
+                                    no internet needed)
                                   </li>
-                                  <li>
-                                    <span className="font-medium">
-                                      Claude-3.5-sonnet:
-                                    </span>{" "}
-                                    Excellent reasoning and analysis
+                                  <li className="text-xs text-muted-foreground">
+                                    Models starting with "LOCAL:" automatically
+                                    use Ollama
                                   </li>
                                 </ul>
                               </div>
@@ -360,21 +360,29 @@ export function AgentPage() {
                         </option>
 
                         <option value="openai/gpt-4">openai/gpt-4</option>
-
                         <option value="anthropic/claude-3.5-haiku">
                           anthropic/claude-3.5-haiku
                         </option>
-
-                        <option value="x-ai/grok-4">Grok 4</option>
-                        <option value="openai/gpt-4-turbo">GPT-4 Turbo</option>
+                        <option value="x-ai/grok-4">x-ai/grok-4</option>
+                        <option value="openai/gpt-4-turbo">
+                          openai/gpt-4-turbo
+                        </option>
                         <option value="openai/gpt-4o-mini">
-                          GPT-4o-mini (good)
+                          openai/gpt-4o-mini
                         </option>
                         <option value="deepseek/deepseek-r1">
-                          DeepSeek R1 (too many error for multiple languages)
+                          deepseek/deepseek-r1
                         </option>
                         <option value="anthropic/claude-3.5-sonnet">
-                          Claude 3.5 Sonnet (Works but expensive)
+                          anthropic/claude-3.5-sonnet
+                        </option>
+
+                        {/* LOCAL MODELS - Ollama (for server deployment) */}
+                        <option value="LOCAL:llama3.2:3b">
+                          🏠 LOCAL: llama3.2:3b
+                        </option>
+                        <option value="LOCAL:qwen3-coder:480b-cloud">
+                          🏠 LOCAL: qwen3-coder (cloud test)
                         </option>
                       </select>
                     </div>

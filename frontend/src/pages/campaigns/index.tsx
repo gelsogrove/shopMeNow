@@ -3,17 +3,15 @@ import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
 import { CrudPageContent } from "@/components/shared/CrudPageContent"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { commonStyles } from "@/styles/common"
 import { ColumnDef } from "@tanstack/react-table"
-import {
-  Calendar,
-  Edit,
-  Megaphone,
-  Power,
-  PowerOff,
-  Trash2,
-  Users,
-} from "lucide-react"
+import { Calendar, Megaphone, Pencil, Trash2, Users } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
@@ -70,7 +68,6 @@ export default function CampaignsPage() {
       setCampaigns(data.data || [])
     } catch (error) {
       toast.error("Error loading campaigns")
-      logger.error(error)
     } finally {
       setLoading(false)
     }
@@ -118,13 +115,11 @@ export default function CampaignsPage() {
   const columns: ColumnDef<Campaign>[] = [
     {
       accessorKey: "name",
-      header: "Campaign Name",
+      header: "Name",
+      size: 300,
       cell: ({ row }) => (
         <div>
           <div className="font-medium">{row.original.name}</div>
-          <div className="text-sm text-gray-500 line-clamp-1">
-            {row.original.messagePreview}
-          </div>
         </div>
       ),
     },
@@ -186,43 +181,43 @@ export default function CampaignsPage() {
 
   const renderActions = (campaign: Campaign) => (
     <div className="flex items-center gap-1">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => navigate(`/campaigns/edit/${campaign.id}`)}
-        className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
-        title="Edit campaign"
-      >
-        <Edit className="h-4 w-4" />
-      </Button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(`/campaigns/edit/${campaign.id}`)}
+              className="h-8 w-8 p-0 flex items-center justify-center"
+            >
+              <Pencil
+                className={`${commonStyles.actionIcon} ${commonStyles.primary}`}
+              />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Edit</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => handleToggleActive(campaign)}
-        className={`h-8 w-8 p-0 ${
-          campaign.isActive
-            ? "hover:bg-orange-50 hover:text-orange-600"
-            : "hover:bg-green-50 hover:text-green-600"
-        }`}
-        title={campaign.isActive ? "Deactivate" : "Activate"}
-      >
-        {campaign.isActive ? (
-          <PowerOff className="h-4 w-4" />
-        ) : (
-          <Power className="h-4 w-4" />
-        )}
-      </Button>
-
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => handleDeleteClick(campaign)}
-        className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
-        title="Delete campaign"
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleDeleteClick(campaign)}
+              className="h-8 w-8 p-0 flex items-center justify-center hover:bg-red-50"
+            >
+              <Trash2 className={commonStyles.actionIcon + " text-red-600"} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Delete</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </div>
   )
 
@@ -254,6 +249,7 @@ export default function CampaignsPage() {
         isLoading={loading}
         renderActions={renderActions}
         renderEmptyState={renderEmptyState}
+        disablePagination={true}
       />
 
       <ConfirmDialog

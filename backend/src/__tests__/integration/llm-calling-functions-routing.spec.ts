@@ -1,11 +1,11 @@
 /**
  * 🧪 LLM Calling Functions Routing - Integration Test
  *
- * Verifica che il LLM OpenRouter chiami le calling functions corrette
+ * Verifica che il LLM (Ollama locale) chiami le calling functions corrette
  * in base al query dell'utente, rispettando le priorità definite.
  *
- * ⚠️ ATTENZIONE: Questo test è COSTOSO perché chiama OpenRouter API reale.
- * Eseguire solo quando necessario per validare il routing delle calling functions.
+ * 🏠 LOCALE: Usa Ollama llama3.1:8b (gratuito, privato)
+ * Eseguire per validare il routing delle calling functions.
  *
  * Priorità Functions (docs/prompt_agent.md):
  * 🚨 1. ContactOperator - Assistenza umana, frustrazione
@@ -109,7 +109,7 @@ describe("🧪 LLM Calling Functions Routing - Integration Test", () => {
       language: "it",
       sessionId: "test-session",
       maxTokens: 5000,
-      model: "openai/gpt-4o-mini",
+      model: "LOCAL:llama3.1:8b", // 🏠 Use local Ollama for integration tests
       messages: [],
       prompt: "", // Will be loaded from database
     })

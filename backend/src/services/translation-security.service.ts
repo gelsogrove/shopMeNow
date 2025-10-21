@@ -124,14 +124,23 @@ export class TranslationSecurityService {
    * @param response - Text to translate/filter
    * @param targetLanguage - Target language code (it, en, es, pt, de, fr)
    * @param allowedLinks - Array of allowed system links (all other links will be blocked)
+   * @param model - LLM model to use (default: openai/gpt-4o-mini for backward compatibility)
+   * @param baseURL - LLM API base URL (default: https://openrouter.ai/api/v1)
+   * @param apiKey - LLM API key (default: use from constructor for backward compatibility)
    */
   async processResponse(
     response: string,
     targetLanguage: string,
-    allowedLinks: string[] = []
+    allowedLinks: string[] = [],
+    model: string = "openai/gpt-4o-mini",
+    baseURL: string = "https://openrouter.ai/api/v1",
+    apiKey?: string
   ): Promise<TranslationResult> {
+    // Use provided apiKey or fallback to constructor's key
+    const effectiveApiKey = apiKey || this.openRouterApiKey
+
     // Check if API key is available
-    if (!this.openRouterApiKey) {
+    if (!effectiveApiKey) {
       logger.warn("⚠️ Translation skipped - No API key available")
       return {
         translatedText: response,
@@ -149,13 +158,18 @@ export class TranslationSecurityService {
         needsTranslation,
         responseLength: response.length,
         allowedLinksCount: allowedLinks.length,
+        model: model,
+        baseURL: baseURL,
       })
 
       // Chiama LLM per traduzione + filtro
       const result = await this.callTranslationLLM(
         response,
         targetLanguage,
-        allowedLinks
+        allowedLinks,
+        model,
+        baseURL,
+        effectiveApiKey // Pass effective API key
       )
 
       if (result.blocked) {
@@ -178,12 +192,18 @@ export class TranslationSecurityService {
   }
 
   /**
-   * Call OpenRouter GPT-4-mini for translation + security
+   * Call LLM for translation + security
+   * @param model - LLM model to use (default: openai/gpt-4o-mini)
+   * @param baseURL - LLM API base URL (default: https://openrouter.ai/api/v1)
+   * @param apiKey - LLM API key to use for authentication
    */
   private async callTranslationLLM(
     text: string,
     targetLanguage: string,
-    allowedLinks: string[]
+    allowedLinks: string[],
+    model: string = "openai/gpt-4o-mini",
+    baseURL: string = "https://openrouter.ai/api/v1",
+    apiKey: string
   ): Promise<TranslationResult> {
     // Replace {{ALLOWED_LINKS}} in prompt with actual links
     const allowedLinksText =
@@ -205,9 +225,9 @@ Remember: Return ONLY the JSON object with translatedText, blocked, and reason f
 
     try {
       const response = await axios.post(
-        "https://openrouter.ai/api/v1/chat/completions",
+        `${baseURL}/chat/completions`,
         {
-          model: "openai/gpt-4o-mini",
+          model: model,
           messages: [
             {
               role: "system",
@@ -223,7 +243,7 @@ Remember: Return ONLY the JSON object with translatedText, blocked, and reason f
         },
         {
           headers: {
-            Authorization: `Bearer ${this.openRouterApiKey}`,
+            Authorization: `Bearer ${apiKey}`,
             "Content-Type": "application/json",
             "HTTP-Referer": "https://shopme.com",
             "X-Title": "ShopME Translation Security",

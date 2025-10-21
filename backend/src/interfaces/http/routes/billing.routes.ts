@@ -1,13 +1,14 @@
 import express from "express"
 import { authMiddleware } from "../../../middlewares/auth.middleware"
 import { BillingController } from "../controllers/billing.controller"
+import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
 
 const router = express.Router()
 const billingController = new BillingController()
 
-// Protect all billing routes with authentication
-// Note: workspaceId validation is done in controller since it comes from route params
+// 🔒 SECURITY: Protect all billing routes with authentication and workspace validation
 router.use(authMiddleware)
+router.use(workspaceValidationMiddleware)
 
 /**
  * @route GET /api/billing/:workspaceId/totals
