@@ -169,6 +169,13 @@ export const workspaceService = {
       adminEmail?: string
     }
 
+    // 🔍 LOG DETTAGLIATO per debug whatsappApiKey
+    logger.info("=== WORKSPACE UPDATE DEBUG ===")
+    logger.info("Workspace ID:", id)
+    logger.info("Data received:", JSON.stringify(data, null, 2))
+    logger.info("whatsappApiKey in data:", data.whatsappApiKey ? "✅ PRESENTE" : "❌ ASSENTE")
+    logger.info("workspaceData after adminEmail extraction:", JSON.stringify(workspaceData, null, 2))
+
     // Update workspace data
     const updatedWorkspace = await prisma.workspace.update({
       where: { id },
@@ -199,6 +206,11 @@ export const workspaceService = {
         welcomeMessages: true,
       },
     })
+
+    // 🔍 LOG RISULTATO UPDATE
+    logger.info("=== WORKSPACE AFTER UPDATE ===")
+    logger.info("Updated whatsappApiKey:", updatedWorkspace.whatsappApiKey ? "✅ SALVATA" : "❌ NULL")
+    logger.info("Updated workspace:", JSON.stringify(updatedWorkspace, null, 2))
 
     // Update adminEmail in WhatsappSettings if provided
     if (adminEmail !== undefined) {
