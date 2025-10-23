@@ -243,10 +243,12 @@ const translations = {
     "pricing.simulator.totalProducts": "How many products do you have?",
     "pricing.simulator.totalProducts.help":
       "📦 The number of products in your catalog",
-    "pricing.simulator.totalCustomers": "How many customers do you have in total?",
+    "pricing.simulator.totalCustomers":
+      "How many customers do you have in total?",
     "pricing.simulator.totalCustomers.help":
       "📊 This number helps suggest realistic values for messages, new customers and support",
-    "pricing.simulator.channels": "How many WhatsApp channels do you want to create?",
+    "pricing.simulator.channels":
+      "How many WhatsApp channels do you want to create?",
     "pricing.simulator.messages": "Estimated messages per month",
     "pricing.simulator.newCustomers": "Estimated new customers per month",
     "pricing.simulator.newOrders": "Estimated new orders per month",

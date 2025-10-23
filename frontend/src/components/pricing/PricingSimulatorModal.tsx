@@ -1,28 +1,27 @@
-import React, { useState, useEffect } from "react"
-import { motion } from "framer-motion"
-import {
-  Calculator,
-  Users,
-  ShoppingCart,
-  MessageSquare,
-  Bell,
-  Sparkles,
-  Building2,
-  Server,
-  X,
-} from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Slider } from "@/components/ui/slider"
-import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Separator } from "@/components/ui/separator"
+import { Slider } from "@/components/ui/slider"
+import { Switch } from "@/components/ui/switch"
+import {
+  Bell,
+  Building2,
+  Calculator,
+  MessageSquare,
+  Server,
+  ShoppingCart,
+  Sparkles,
+  Users,
+  X,
+} from "lucide-react"
+import { useEffect, useState } from "react"
 
 // 💰 Pricing constants from backend
 const BILLING_PRICES = {
@@ -64,7 +63,8 @@ export function PricingSimulatorModal({
   onOpenChange,
   t,
 }: PricingSimulatorModalProps) {
-  const [selectedPlan, setSelectedPlan] = useState<keyof typeof PLANS>("PREMIUM")
+  const [selectedPlan, setSelectedPlan] =
+    useState<keyof typeof PLANS>("PREMIUM")
   const [params, setParams] = useState<SimulationParams>({
     totalProducts: 50, // Default number of products in catalog
     totalCustomers: 100, // Total customers in database
@@ -88,7 +88,8 @@ export function PricingSimulatorModal({
       // ~5% escalate to human support
       suggestedHumanSupport: Math.round(totalCustomers * 0.05),
       // 1-3 push campaigns per month
-      suggestedPushCampaigns: totalCustomers > 200 ? 3 : totalCustomers > 100 ? 2 : 1,
+      suggestedPushCampaigns:
+        totalCustomers > 200 ? 3 : totalCustomers > 100 ? 2 : 1,
     }
   }
 
@@ -104,7 +105,7 @@ export function PricingSimulatorModal({
       params.totalProducts > 200
     )
       return "ENTERPRISE"
-    
+
     // PREMIUM: Branding OR più di 1 canale OR più di 100 clienti OR più di 500 messaggi OR più di 100 prodotti
     if (
       params.wantBranding ||
@@ -114,7 +115,7 @@ export function PricingSimulatorModal({
       params.totalProducts > 100
     )
       return "PREMIUM"
-    
+
     // BASIC: più di 50 clienti OR più di 100 messaggi OR più di 5 nuovi clienti al mese OR più di 50 prodotti
     if (
       params.totalCustomers > 50 ||
@@ -123,7 +124,7 @@ export function PricingSimulatorModal({
       params.totalProducts > 50
     )
       return "BASIC"
-    
+
     return "FREE"
   }
 
@@ -172,7 +173,9 @@ export function PricingSimulatorModal({
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-3 text-2xl">
               <Calculator className="w-7 h-7 text-green-600" />
-              <span className="text-slate-900">{t("pricing.simulator.title")}</span>
+              <span className="text-slate-900">
+                {t("pricing.simulator.title")}
+              </span>
             </DialogTitle>
             <Button
               variant="ghost"
@@ -191,34 +194,36 @@ export function PricingSimulatorModal({
         <div className="px-6 pb-6">
           {/* Plan Selector Pills */}
           <div className="flex flex-wrap gap-2 mb-6 mt-4">
-            {(Object.keys(PLANS) as Array<keyof typeof PLANS>).map((planKey) => {
-              const plan = PLANS[planKey]
-              const isSelected = selectedPlan === planKey
-              const isSuggested = getSuggestedPlan() === planKey
+            {(Object.keys(PLANS) as Array<keyof typeof PLANS>).map(
+              (planKey) => {
+                const plan = PLANS[planKey]
+                const isSelected = selectedPlan === planKey
+                const isSuggested = getSuggestedPlan() === planKey
 
-              return (
-                <button
-                  key={planKey}
-                  onClick={() => setSelectedPlan(planKey)}
-                  className={`relative px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-                    isSelected
-                      ? "bg-green-600 text-white shadow-lg scale-105"
-                      : "bg-white text-slate-700 border border-slate-200 hover:border-green-300"
-                  }`}
-                >
-                  {isSuggested && !isSelected && (
-                    <Sparkles className="w-3 h-3 absolute -top-1 -right-1 text-green-600" />
-                  )}
-                  {plan.name}
-                  {planKey !== "FREE" && (
-                    <span className="ml-2 opacity-75">
-                      €{plan.price}
-                      {planKey === "ENTERPRISE" && "+"}
-                    </span>
-                  )}
-                </button>
-              )
-            })}
+                return (
+                  <button
+                    key={planKey}
+                    onClick={() => setSelectedPlan(planKey)}
+                    className={`relative px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                      isSelected
+                        ? "bg-green-600 text-white shadow-lg scale-105"
+                        : "bg-white text-slate-700 border border-slate-200 hover:border-green-300"
+                    }`}
+                  >
+                    {isSuggested && !isSelected && (
+                      <Sparkles className="w-3 h-3 absolute -top-1 -right-1 text-green-600" />
+                    )}
+                    {plan.name}
+                    {planKey !== "FREE" && (
+                      <span className="ml-2 opacity-75">
+                        €{plan.price}
+                        {planKey === "ENTERPRISE" && "+"}
+                      </span>
+                    )}
+                  </button>
+                )
+              }
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -307,7 +312,9 @@ export function PricingSimulatorModal({
                     </div>
                     <Slider
                       value={[params.channels]}
-                      onValueChange={(v) => setParams({ ...params, channels: v[0] })}
+                      onValueChange={(v) =>
+                        setParams({ ...params, channels: v[0] })
+                      }
                       min={1}
                       max={5}
                       step={1}
@@ -333,7 +340,9 @@ export function PricingSimulatorModal({
                     </div>
                     <Slider
                       value={[params.messages]}
-                      onValueChange={(v) => setParams({ ...params, messages: v[0] })}
+                      onValueChange={(v) =>
+                        setParams({ ...params, messages: v[0] })
+                      }
                       min={0}
                       max={2000}
                       step={50}
@@ -393,7 +402,9 @@ export function PricingSimulatorModal({
                     </div>
                     <Slider
                       value={[params.newOrders]}
-                      onValueChange={(v) => setParams({ ...params, newOrders: v[0] })}
+                      onValueChange={(v) =>
+                        setParams({ ...params, newOrders: v[0] })
+                      }
                       min={0}
                       max={200}
                       step={5}
@@ -431,7 +442,8 @@ export function PricingSimulatorModal({
                       className="w-full"
                     />
                     <p className="text-xs text-slate-600">
-                      €{BILLING_PRICES.PUSH_CAMPAIGN.toFixed(2)} {t("pricing.simulator.price.perPushMessage")}
+                      €{BILLING_PRICES.PUSH_CAMPAIGN.toFixed(2)}{" "}
+                      {t("pricing.simulator.price.perPushMessage")}
                     </p>
                   </div>
 
@@ -439,7 +451,9 @@ export function PricingSimulatorModal({
 
                   {/* Extras */}
                   <div className="space-y-3 pt-2">
-                    <h4 className="text-sm font-semibold text-slate-900">{t("pricing.simulator.extras")}</h4>
+                    <h4 className="text-sm font-semibold text-slate-900">
+                      {t("pricing.simulator.extras")}
+                    </h4>
 
                     <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-100">
                       <div className="flex items-center gap-2">
@@ -569,7 +583,9 @@ export function PricingSimulatorModal({
                           <div className="text-3xl font-bold text-green-600">
                             €{costs.total.toFixed(2)}
                           </div>
-                          <p className="text-xs text-slate-600 mt-1">{t("pricing.simulator.estimated")}</p>
+                          <p className="text-xs text-slate-600 mt-1">
+                            {t("pricing.simulator.estimated")}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -582,7 +598,9 @@ export function PricingSimulatorModal({
                     >
                       {selectedPlan === "FREE"
                         ? t("pricing.simulator.cta.free")
-                        : `${t("pricing.simulator.cta.plan")} ${PLANS[selectedPlan].name}`}
+                        : `${t("pricing.simulator.cta.plan")} ${
+                            PLANS[selectedPlan].name
+                          }`}
                     </Button>
 
                     {/* Info Note */}

@@ -297,7 +297,6 @@ export function PricingPlans() {
               {t("pricing.usage.push.desc")}
             </p>
           </div>
-
         </div>
 
         <div className="mt-8 text-center">

@@ -1,14 +1,12 @@
 import { useLanguage } from "@/contexts/LanguageContext"
 import {
-  BarChart3,
-  Bell,
   Calendar,
   ChevronLeft,
   ChevronRight,
   Globe2,
   Headphones,
-  TrendingUp,
   Megaphone,
+  TrendingUp,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 

@@ -413,7 +413,7 @@ export function LoginPage() {
       {/* Pricing Section */}
       <div className="max-w-7xl mx-auto px-4 py-16 bg-gradient-to-b from-white to-slate-50">
         <PricingPlans />
-        
+
         {/* Simulator Button - Centered below pricing */}
         <div className="text-center mt-12">
           <Button

@@ -1,24 +1,24 @@
-import React, { useState, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import {
-  Calculator,
-  Users,
-  ShoppingCart,
-  MessageSquare,
-  Bell,
-  Check,
-  Sparkles,
-  TrendingUp,
-  Building2,
-  Server,
-  Crown,
-} from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
+import { motion } from "framer-motion"
+import {
+  Bell,
+  Building2,
+  Calculator,
+  Check,
+  Crown,
+  MessageSquare,
+  Server,
+  ShoppingCart,
+  Sparkles,
+  TrendingUp,
+  Users,
+} from "lucide-react"
+import { useEffect, useState } from "react"
 
 // 💰 Pricing constants from backend/src/domain/enums/billing-prices.enum.ts
 const BILLING_PRICES = {
@@ -46,7 +46,10 @@ const PLANS = {
       "Análises e Relatórios Avançados",
       "Suporte",
     ],
-    disabled: ["Personalização de Marca", "Integração com CRM / banco de dados"],
+    disabled: [
+      "Personalização de Marca",
+      "Integração com CRM / banco de dados",
+    ],
   },
   BASIC: {
     name: "Basic",
@@ -62,7 +65,10 @@ const PLANS = {
       "Análises e Relatórios Avançados",
       "Suporte",
     ],
-    disabled: ["Personalização de Marca", "Integração com CRM / banco de dados"],
+    disabled: [
+      "Personalização de Marca",
+      "Integração com CRM / banco de dados",
+    ],
   },
   PREMIUM: {
     name: "Premium",
@@ -113,7 +119,8 @@ interface SimulationParams {
 }
 
 export default function PricingSimulator() {
-  const [selectedPlan, setSelectedPlan] = useState<keyof typeof PLANS>("PREMIUM")
+  const [selectedPlan, setSelectedPlan] =
+    useState<keyof typeof PLANS>("PREMIUM")
   const [params, setParams] = useState<SimulationParams>({
     channels: 1,
     messages: 500,
@@ -127,7 +134,8 @@ export default function PricingSimulator() {
   // Calculate suggested plan based on usage
   const getSuggestedPlan = (): keyof typeof PLANS => {
     if (params.wantDedicatedServer || params.channels > 2) return "ENTERPRISE"
-    if (params.channels > 1 || params.messages > 1000 || params.wantBranding) return "PREMIUM"
+    if (params.channels > 1 || params.messages > 1000 || params.wantBranding)
+      return "PREMIUM"
     if (params.messages > 100 || params.newCustomers > 5) return "BASIC"
     return "FREE"
   }
@@ -208,7 +216,11 @@ export default function PricingSimulator() {
                     isSelected
                       ? "ring-2 ring-blue-500 shadow-lg"
                       : "hover:shadow-md border-gray-200"
-                  } ${planKey === "ENTERPRISE" ? "border-purple-200 bg-gradient-to-br from-purple-50 to-white" : ""}`}
+                  } ${
+                    planKey === "ENTERPRISE"
+                      ? "border-purple-200 bg-gradient-to-br from-purple-50 to-white"
+                      : ""
+                  }`}
                   onClick={() => setSelectedPlan(planKey)}
                 >
                   {isSuggested && (
@@ -230,12 +242,16 @@ export default function PricingSimulator() {
                     <div className="mt-4">
                       {planKey === "FREE" ? (
                         <>
-                          <div className="text-4xl font-bold text-gray-900">€0</div>
+                          <div className="text-4xl font-bold text-gray-900">
+                            €0
+                          </div>
                           <p className="text-xs text-gray-600 mt-1">/14 dias</p>
                         </>
                       ) : planKey === "ENTERPRISE" ? (
                         <>
-                          <div className="text-sm text-gray-600 mb-1">A partir de</div>
+                          <div className="text-sm text-gray-600 mb-1">
+                            A partir de
+                          </div>
                           <div className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
                             €{plan.price}
                           </div>
@@ -265,7 +281,9 @@ export default function PricingSimulator() {
                         className="flex items-start gap-2 text-sm opacity-40"
                       >
                         <div className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-500 line-through">{feature}</span>
+                        <span className="text-gray-500 line-through">
+                          {feature}
+                        </span>
                       </div>
                     ))}
                   </CardContent>
@@ -298,7 +316,9 @@ export default function PricingSimulator() {
                   </div>
                   <Slider
                     value={[params.channels]}
-                    onValueChange={(v) => setParams({ ...params, channels: v[0] })}
+                    onValueChange={(v) =>
+                      setParams({ ...params, channels: v[0] })
+                    }
                     min={1}
                     max={10}
                     step={1}
@@ -322,14 +342,17 @@ export default function PricingSimulator() {
                   </div>
                   <Slider
                     value={[params.messages]}
-                    onValueChange={(v) => setParams({ ...params, messages: v[0] })}
+                    onValueChange={(v) =>
+                      setParams({ ...params, messages: v[0] })
+                    }
                     min={0}
                     max={10000}
                     step={100}
                     className="w-full"
                   />
                   <p className="text-xs text-gray-600">
-                    €{BILLING_PRICES.MESSAGE.toFixed(2)} por mensagem/interação com IA
+                    €{BILLING_PRICES.MESSAGE.toFixed(2)} por mensagem/interação
+                    com IA
                   </p>
                 </div>
 
@@ -346,14 +369,17 @@ export default function PricingSimulator() {
                   </div>
                   <Slider
                     value={[params.newCustomers]}
-                    onValueChange={(v) => setParams({ ...params, newCustomers: v[0] })}
+                    onValueChange={(v) =>
+                      setParams({ ...params, newCustomers: v[0] })
+                    }
                     min={0}
                     max={500}
                     step={10}
                     className="w-full"
                   />
                   <p className="text-xs text-gray-600">
-                    €{BILLING_PRICES.NEW_CUSTOMER.toFixed(2)} por novo cliente registrado
+                    €{BILLING_PRICES.NEW_CUSTOMER.toFixed(2)} por novo cliente
+                    registrado
                   </p>
                 </div>
 
@@ -370,14 +396,17 @@ export default function PricingSimulator() {
                   </div>
                   <Slider
                     value={[params.newOrders]}
-                    onValueChange={(v) => setParams({ ...params, newOrders: v[0] })}
+                    onValueChange={(v) =>
+                      setParams({ ...params, newOrders: v[0] })
+                    }
                     min={0}
                     max={1000}
                     step={10}
                     className="w-full"
                   />
                   <p className="text-xs text-gray-600">
-                    €{BILLING_PRICES.NEW_ORDER.toFixed(2)} por novo pedido concluído
+                    €{BILLING_PRICES.NEW_ORDER.toFixed(2)} por novo pedido
+                    concluído
                   </p>
                 </div>
 
@@ -403,8 +432,8 @@ export default function PricingSimulator() {
                     className="w-full"
                   />
                   <p className="text-xs text-gray-600">
-                    €{BILLING_PRICES.PUSH_CAMPAIGN.toFixed(2)} por mensagem promocional
-                    enviada
+                    €{BILLING_PRICES.PUSH_CAMPAIGN.toFixed(2)} por mensagem
+                    promocional enviada
                   </p>
                 </div>
 
@@ -412,7 +441,9 @@ export default function PricingSimulator() {
 
                 {/* Extras */}
                 <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-gray-900">Extras</h3>
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    Extras
+                  </h3>
 
                   <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
                     <div className="flex items-center gap-3">
@@ -563,8 +594,8 @@ export default function PricingSimulator() {
 
                   {/* Info Note */}
                   <p className="text-xs text-center text-gray-600">
-                    💡 Todos os custos de uso são transparentes e cobrados mensalmente
-                    com base no consumo real
+                    💡 Todos os custos de uso são transparentes e cobrados
+                    mensalmente com base no consumo real
                   </p>
                 </CardContent>
               </Card>
@@ -582,9 +613,9 @@ export default function PricingSimulator() {
                   Por que escolher ShopME?
                 </h3>
                 <p className="text-sm text-gray-700 leading-relaxed">
-                  Todos os custos de uso são transparentes e cobrados mensalmente com
-                  base no consumo real. Sem surpresas, sem taxas ocultas. Você só paga
-                  pelo que usa! 🎉
+                  Todos os custos de uso são transparentes e cobrados
+                  mensalmente com base no consumo real. Sem surpresas, sem taxas
+                  ocultas. Você só paga pelo que usa! 🎉
                 </p>
               </div>
             </div>
