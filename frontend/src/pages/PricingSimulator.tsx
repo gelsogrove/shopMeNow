@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
+import { usePricing } from "@/hooks/usePricing"
 import { motion } from "framer-motion"
 import {
   Bell,
@@ -20,94 +21,6 @@ import {
 } from "lucide-react"
 import { useEffect, useState } from "react"
 
-// 💰 Pricing constants from backend/src/domain/enums/billing-prices.enum.ts
-const BILLING_PRICES = {
-  MONTHLY_CHANNEL_COST: 59.0,
-  MESSAGE: 0.15,
-  NEW_CUSTOMER: 1.5,
-  NEW_ORDER: 1.5,
-  PUSH_CAMPAIGN: 1.0,
-} as const
-
-// 📦 Plan configurations
-const PLANS = {
-  FREE: {
-    name: "Free",
-    price: 0,
-    trial: 14,
-    channels: 1,
-    products: 50,
-    customers: 50,
-    features: [
-      "Até 1 Canal WhatsApp",
-      "Até 50 Produtos",
-      "Até 50 Clientes",
-      "Multi-Language Support",
-      "Análises e Relatórios Avançados",
-      "Suporte",
-    ],
-    disabled: [
-      "Personalização de Marca",
-      "Integração com CRM / banco de dados",
-    ],
-  },
-  BASIC: {
-    name: "Basic",
-    price: 29,
-    channels: 1,
-    products: 50,
-    customers: 50,
-    features: [
-      "Até 1 Canal WhatsApp",
-      "Até 50 Produtos",
-      "Até 50 Clientes",
-      "Multi-Language Support",
-      "Análises e Relatórios Avançados",
-      "Suporte",
-    ],
-    disabled: [
-      "Personalização de Marca",
-      "Integração com CRM / banco de dados",
-    ],
-  },
-  PREMIUM: {
-    name: "Premium",
-    price: 59,
-    channels: 2,
-    products: 100,
-    customers: 100,
-    features: [
-      "Até 2 Canais WhatsApp",
-      "Até 100 Produtos",
-      "Até 100 Clientes",
-      "Multi-Language Support",
-      "Análises e Relatórios Avançados",
-      "Suporte",
-      "Personalização de Marca",
-    ],
-    disabled: ["Integração com CRM / banco de dados"],
-  },
-  ENTERPRISE: {
-    name: "Enterprise",
-    price: 199,
-    channels: Infinity,
-    products: Infinity,
-    customers: Infinity,
-    features: [
-      "Ilimitados Canais WhatsApp",
-      "Ilimitados Produtos",
-      "Ilimitados Clientes",
-      "Multi-Language Support",
-      "Análises e Relatórios Avançados",
-      "Suporte Prioritário 24/7",
-      "Personalização de Marca",
-      "Integração com CRM / banco de dados",
-      "Server Dedicado",
-    ],
-    disabled: [],
-  },
-}
-
 interface SimulationParams {
   channels: number
   messages: number
@@ -119,6 +32,108 @@ interface SimulationParams {
 }
 
 export default function PricingSimulator() {
+  // Fetch pricing from database
+  const { plans, usage, thresholds, isLoading } = usePricing()
+
+  // Show loading state while fetching pricing
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <Calculator className="w-12 h-12 text-blue-600 mx-auto mb-4 animate-pulse" />
+          <p className="text-gray-600">Carregando simulador...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // 💰 Dynamic pricing from database with fallbacks
+  const BILLING_PRICES = {
+    MONTHLY_CHANNEL_COST: usage.MONTHLY_CHANNEL_COST ?? 59.0,
+    MESSAGE: usage.MESSAGE ?? 0.15,
+    NEW_CUSTOMER: usage.NEW_CUSTOMER ?? 1.0,
+    NEW_ORDER: usage.NEW_ORDER ?? 1.5,
+    PUSH_CAMPAIGN: usage.PUSH_CAMPAIGN ?? 1.0,
+  } as const
+
+  // 📦 Plan configurations with dynamic pricing
+  const PLANS = {
+    FREE: {
+      name: "Free",
+      price: plans.FREE_MONTHLY ?? 0,
+      trial: 14,
+      channels: 1,
+      products: thresholds.FREE_PRODUCTS ?? 50,
+      customers: thresholds.FREE_CLIENTS ?? 50,
+      features: [
+        "Até 1 Canal WhatsApp",
+        `Até ${thresholds.FREE_PRODUCTS ?? 50} Produtos`,
+        `Até ${thresholds.FREE_CLIENTS ?? 50} Clientes`,
+        "Multi-Language Support",
+        "Análises e Relatórios Avançados",
+        "Suporte",
+      ],
+      disabled: [
+        "Personalização de Marca",
+        "Integração com CRM / banco de dados",
+      ],
+    },
+    BASIC: {
+      name: "Basic",
+      price: plans.BASIC_MONTHLY ?? 29,
+      channels: 1,
+      products: thresholds.BASIC_PRODUCTS ?? 50,
+      customers: thresholds.BASIC_CLIENTS ?? 50,
+      features: [
+        "Até 1 Canal WhatsApp",
+        `Até ${thresholds.BASIC_PRODUCTS ?? 50} Produtos`,
+        `Até ${thresholds.BASIC_CLIENTS ?? 50} Clientes`,
+        "Multi-Language Support",
+        "Análises e Relatórios Avançados",
+        "Suporte",
+      ],
+      disabled: [
+        "Personalização de Marca",
+        "Integração com CRM / banco de dados",
+      ],
+    },
+    PREMIUM: {
+      name: "Premium",
+      price: plans.PREMIUM_MONTHLY ?? 59,
+      channels: 2,
+      products: thresholds.PREMIUM_PRODUCTS ?? 100,
+      customers: thresholds.PREMIUM_CLIENTS ?? 100,
+      features: [
+        "Até 2 Canais WhatsApp",
+        `Até ${thresholds.PREMIUM_PRODUCTS ?? 100} Produtos`,
+        `Até ${thresholds.PREMIUM_CLIENTS ?? 100} Clientes`,
+        "Multi-Language Support",
+        "Análises e Relatórios Avançados",
+        "Suporte",
+        "Personalização de Marca",
+      ],
+      disabled: ["Integração com CRM / banco de dados"],
+    },
+    ENTERPRISE: {
+      name: "Enterprise",
+      price: plans.ENTERPRISE_MONTHLY || 0, // Dynamic from API
+      channels: Infinity,
+      products: Infinity,
+      customers: Infinity,
+      features: [
+        "Ilimitados Canais WhatsApp",
+        "Ilimitados Produtos",
+        "Ilimitados Clientes",
+        "Multi-Language Support",
+        "Análises e Relatórios Avançados",
+        "Suporte Prioritário 24/7",
+        "Personalização de Marca",
+        "Integração com CRM / banco de dados",
+        "Server Dedicado",
+      ],
+      disabled: [],
+    },
+  }
   const [selectedPlan, setSelectedPlan] =
     useState<keyof typeof PLANS>("PREMIUM")
   const [params, setParams] = useState<SimulationParams>({

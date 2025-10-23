@@ -19,6 +19,8 @@
     "db:backup": "ts-node scripts/backup-database.ts",
     "db:backup-data": "cp -r prisma/data prisma/data-backup-$(date +%Y%m%d_%H%M%S) && echo '✅ Data backup created'",
     "db:restore": "ts-node scripts/restore-database.ts",
+    "update-pricing": "ts-node scripts/update-pricing.ts",
+    "view-pricing": "ts-node scripts/view-pricing.ts",
     "start:prod": "node dist/src/index.js",
     "start:dev": "ts-node-dev --respawn --transpile-only --notify false --clear --exit-child -r dotenv/config src/index.ts",
     "scheduler": "ts-node-dev --respawn --transpile-only -r dotenv/config src/scheduler.ts",

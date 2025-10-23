@@ -107,7 +107,7 @@ memory-bank/
 | Feature e servizi core                 | [`02-features/`](./02-features/)                                           | Scheduler, short links, invio messaggi, analytics    |
 | Architettura sistema                   | [`03-architecture/`](./03-architecture/)                                   | Flow LLM, websocket, endpoints, style guide          |
 | Standard di sviluppo                   | [`04-best-practices/`](./04-best-practices/)                               | Linee guida backend e frontend                       |
-| Guide operative e onboarding           | [`05-guides/`](./05-guides/)                                               | WhatsApp setup, unit test, script operativi          |
+| Guide operative e onboarding           | [`05-guides/`](./05-guides/)                                               | WhatsApp setup, unit test, script operativi, **pricing management** 💰 |
 | Report e analisi                       | [`06-reports/`](./06-reports/)                                             | Cleanup reports, analisi costi LLM, verifiche finali |
 
 ---

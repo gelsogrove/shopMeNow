@@ -409,6 +409,7 @@ const SESSION_EXEMPT_ROUTES = [
   "/cart-tokens", // Support interface
   "/token/", // TOKEN-BASED routes (NO sessionId required)
   "/analytics", // Analytics routes (JWT-based authentication)
+  "/pricing", // PUBLIC pricing configuration endpoint (no auth required)
 ]
 
 router.use((req: Request, res: Response, next: NextFunction) => {
@@ -1435,6 +1436,14 @@ logger.info("⚠️ LEGACY: /registration (use /token/registration instead)")
 // ========================================
 // 🔐 AUTHENTICATED ROUTES (SessionID required)
 // ========================================
+
+// ========================================
+// 💰 PUBLIC PRICING ROUTES (No auth required)
+// ========================================
+import pricingRoutes from "../interfaces/http/routes/pricing.routes"
+router.use("/pricing", pricingRoutes)
+logger.info("✅ Registered pricing routes (/api/pricing/config)")
+
 router.use("/auth", authRouter(authController))
 router.use("/session", sessionRoutes)
 logger.info(

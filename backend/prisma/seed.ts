@@ -18,11 +18,11 @@
 
 import { PrismaClient } from "@prisma/client"
 import * as bcrypt from "bcrypt"
-import { BillingPrices } from "../src/domain/enums/billing-prices.enum"
 import { campaigns } from "./data/campaigns"
 import { categories } from "./data/categories"
 import { faqs } from "./data/faqs"
 import { offers } from "./data/offers"
+import { pricingConfigData } from "./data/pricingConfig"
 import { products } from "./data/products"
 import { services } from "./data/services"
 import { workspaceSettings } from "./data/workspaceSettings"
@@ -171,7 +171,33 @@ async function main() {
 
   console.log(`✅ Created ${languages.length} languages`)
 
-  // 6. Create Categories
+  // 6. Create Pricing Configuration (Single Source of Truth)
+  console.log("💰 Creating pricing configuration...")
+
+  for (const pricing of pricingConfigData) {
+    await prisma.pricingConfig.create({
+      data: {
+        type: pricing.type,
+        key: pricing.key,
+        value: pricing.value,
+        description: pricing.description,
+        isActive: pricing.isActive,
+      },
+    })
+  }
+
+  console.log(`✅ Created ${pricingConfigData.length} pricing configurations`)
+  console.log(
+    `   - Plans: ${pricingConfigData.filter((p) => p.type === "PLAN").length}`
+  )
+  console.log(
+    `   - Usage: ${pricingConfigData.filter((p) => p.type === "USAGE").length}`
+  )
+  console.log(
+    `   - Thresholds: ${pricingConfigData.filter((p) => p.type === "THRESHOLD").length}`
+  )
+
+  // 7. Create Categories
   console.log("📂 Creating categories...")
 
   const categoryMap = new Map<string, string>()
@@ -770,11 +796,14 @@ async function main() {
 
       // 💰 BILLING: Track NEW_ORDER if status is CONFIRMED (€1.50)
       if (status === "CONFIRMED" || status === "DELIVERED") {
+        const newOrderCost =
+          pricingConfigData.find((p) => p.key === "NEW_ORDER")?.value ?? 1.5
+
         await prisma.billing.create({
           data: {
             workspaceId: workspace.id,
             customerId: customerId,
-            amount: BillingPrices.NEW_ORDER,
+            amount: newOrderCost,
             type: "NEW_ORDER",
             description: `Order ${orderCode} confirmed`,
             createdAt: date, // Use same date as order for historical data
@@ -909,7 +938,9 @@ async function main() {
     where: { workspaceId: workspace.id },
   })
 
-  const messageCost = BillingPrices.MESSAGE
+  // Use pricing from database (with fallback for seed)
+  const messageCost =
+    pricingConfigData.find((p) => p.key === "MESSAGE")?.value ?? 0.15
   let messageBillingRecords = 0
   let totalMessages = 0
 
@@ -987,10 +1018,11 @@ async function main() {
   console.log(`   - Unit cost: €${messageCost.toFixed(2)}/message`)
   console.log(`   - Average: ~${Math.round(totalMessages / 7)} messages/month`)
 
-  // 9. Create MONTHLY_CHANNEL billing (€49/month) for each month
+  // 9. Create MONTHLY_CHANNEL billing (€59/month) for each month
   console.log("\n💳 Creating monthly channel billing...")
 
-  const monthlyChannelCost = BillingPrices.MONTHLY_CHANNEL_COST
+  const monthlyChannelCost =
+    pricingConfigData.find((p) => p.key === "MONTHLY_CHANNEL_COST")?.value ?? 59
   let channelBillingCount = 0
 
   // Generate for same months as messages (April-October 2025)
@@ -1037,7 +1069,8 @@ async function main() {
     where: { workspaceId: workspace.id },
   })
 
-  const pushCampaignCost = BillingPrices.PUSH_CAMPAIGN
+  const pushCampaignCost =
+    pricingConfigData.find((p) => p.key === "PUSH_CAMPAIGN")?.value ?? 1.0
   let pushCampaignCount = 0
 
   if (customersForPush.length >= 3) {

@@ -10,6 +10,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
+import { usePricing } from "@/hooks/usePricing"
 import {
   Bell,
   Building2,
@@ -22,23 +23,6 @@ import {
   X,
 } from "lucide-react"
 import { useEffect, useState } from "react"
-
-// 💰 Pricing constants from backend
-const BILLING_PRICES = {
-  MONTHLY_CHANNEL_COST: 59.0,
-  MESSAGE: 0.15,
-  NEW_CUSTOMER: 1.5,
-  NEW_ORDER: 1.5,
-  PUSH_CAMPAIGN: 1.0,
-} as const
-
-// 📦 Plan configurations (simplified - no cards display)
-const PLANS = {
-  FREE: { name: "Free", price: 0 },
-  BASIC: { name: "Basic", price: 29 },
-  PREMIUM: { name: "Premium", price: 59 },
-  ENTERPRISE: { name: "Enterprise", price: 199 },
-}
 
 interface SimulationParams {
   totalProducts: number // Total products in catalog
@@ -63,6 +47,26 @@ export function PricingSimulatorModal({
   onOpenChange,
   t,
 }: PricingSimulatorModalProps) {
+  // Fetch pricing from database
+  const { plans, usage, thresholds, isLoading } = usePricing()
+
+  // 💰 Dynamic pricing from database with fallbacks
+  const BILLING_PRICES = {
+    MONTHLY_CHANNEL_COST: usage.MONTHLY_CHANNEL_COST ?? 59.0,
+    MESSAGE: usage.MESSAGE ?? 0.15,
+    NEW_CUSTOMER: usage.NEW_CUSTOMER ?? 1.0,
+    NEW_ORDER: usage.NEW_ORDER ?? 1.5,
+    PUSH_CAMPAIGN: usage.PUSH_CAMPAIGN ?? 1.0,
+  } as const
+
+  // 📦 Plan configurations with dynamic pricing
+  const PLANS = {
+    FREE: { name: "Free", price: plans.FREE_MONTHLY || 0 },
+    BASIC: { name: "Basic", price: plans.BASIC_MONTHLY || 0 },
+    PREMIUM: { name: "Premium", price: plans.PREMIUM_MONTHLY || 0 },
+    ENTERPRISE: { name: "Enterprise", price: plans.ENTERPRISE_MONTHLY || 0 },
+  }
+
   const [selectedPlan, setSelectedPlan] =
     useState<keyof typeof PLANS>("PREMIUM")
   const [params, setParams] = useState<SimulationParams>({

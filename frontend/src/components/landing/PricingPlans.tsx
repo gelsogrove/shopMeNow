@@ -1,15 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { usePricing } from "@/hooks/usePricing"
 import { Check, MessageSquare, ShoppingCart, X } from "lucide-react"
-
-// Pricing from backend BillingPrices enum
-const PRICES = {
-  MONTHLY_CHANNEL: 59.0,
-  MESSAGE: 0.15,
-  NEW_CUSTOMER: 1.5,
-  NEW_ORDER: 1.5,
-  PUSH_CAMPAIGN: 1.0,
-}
 
 interface PricingPlan {
   name: string
@@ -24,6 +16,27 @@ interface PricingPlan {
 
 export function PricingPlans() {
   const { t } = useLanguage()
+  const { plans: pricingPlans, usage, isLoading } = usePricing()
+
+  // Show loading state while fetching prices
+  if (isLoading) {
+    return (
+      <div className="py-16 bg-gradient-to-br from-blue-50 via-white to-green-50">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <p className="text-gray-600">Loading pricing...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Use pricing from database (with fallbacks for safety)
+  const PRICES = {
+    MONTHLY_CHANNEL: usage.MONTHLY_CHANNEL_COST ?? 59.0,
+    MESSAGE: usage.MESSAGE ?? 0.15,
+    NEW_CUSTOMER: usage.NEW_CUSTOMER ?? 1.0,
+    NEW_ORDER: usage.NEW_ORDER ?? 1.5,
+    PUSH_CAMPAIGN: usage.PUSH_CAMPAIGN ?? 1.0,
+  }
 
   // Build dynamic features with translations
   const getFeatureText = (
@@ -99,7 +112,7 @@ export function PricingPlans() {
     },
     {
       name: "Enterprise",
-      price: "€199",
+      price: pricingPlans.ENTERPRISE_MONTHLY ? `€${pricingPlans.ENTERPRISE_MONTHLY}` : "€0",
       priceSuffix: "+",
       description: t("pricing.enterprise.desc"),
       buttonText: t("pricing.button.contact"),

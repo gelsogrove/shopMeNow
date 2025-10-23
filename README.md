@@ -140,6 +140,29 @@ cd backend && npm run db:migrate
 cd backend && npm run seed
 ```
 
+### Pricing Management
+
+**⚠️ IMPORTANT**: All pricing changes preserve historical billing records.
+
+```bash
+# View current pricing
+cd backend && npm run view-pricing
+
+# Update pricing (modify backend/scripts/update-pricing.ts first)
+cd backend && npm run update-pricing
+```
+
+**Single Source of Truth**: `backend/prisma/data/pricingConfig.ts`
+
+For detailed pricing management guide, see: [`docs/memory-bank/05-guides/pricing-management.md`](docs/memory-bank/05-guides/pricing-management.md)
+
+**Pricing Types**:
+- **PLAN**: Monthly subscription costs (€0-€199)
+- **USAGE**: Pay-per-use costs (€0.15-€1.50 per action)
+- **THRESHOLD**: Free tier limits (50-200 units)
+
+**Key Guarantee**: Historical billing records preserve the price at transaction time. Changing prices only affects new transactions.
+
 ## 🤖 AI Integration
 
 The platform uses OpenRouter for AI processing:
@@ -156,11 +179,23 @@ The platform uses OpenRouter for AI processing:
 - **Rate Limiting**: Protection against abuse
 - **Input Validation**: Comprehensive input sanitization
 
-## 📊 Usage Tracking
+## 📊 Usage Tracking & Billing
 
-- **Message Cost**: €0.005 per AI response
-- **Analytics Dashboard**: Complete usage statistics
-- **Workspace Filtering**: Isolated tracking per workspace
+**Dynamic Pricing System** - All prices are stored in the database and fetched in real-time:
+
+- **Message**: €0.15 per AI-powered response
+- **New Customer**: €1.00 per registration
+- **New Order**: €1.50 per completed order
+- **Push Campaign**: €1.00 per notification
+
+**Features**:
+- ✅ **Single Source of Truth**: Database-driven pricing
+- ✅ **Historical Preservation**: Billing records maintain original prices
+- ✅ **Automatic Updates**: Frontend and Backend sync automatically
+- ✅ **Analytics Dashboard**: Complete usage statistics
+- ✅ **Workspace Filtering**: Isolated tracking per workspace
+
+View current pricing: `npm run view-pricing` (in backend directory)
 
 ## 🌍 Multi-language Support
 

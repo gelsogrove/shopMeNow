@@ -216,8 +216,6 @@ export class MessageRepository {
         billingMap.set(record.id, {
           currentTotal: Number(record.previousTotal),
           messageCharge: record.type === "MESSAGE" ? Number(record.amount) : 0,
-          humanSupportCharge:
-            record.type === "HUMAN_SUPPORT" ? Number(record.amount) : 0,
           newTotal: Number(record.newTotal),
           userQuery: record.userQuery,
         })

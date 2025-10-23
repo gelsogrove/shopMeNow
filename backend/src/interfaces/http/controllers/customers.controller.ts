@@ -434,7 +434,7 @@ export class CustomersController {
           workspaceId
         )
 
-        // Note: NEW_CUSTOMER billing (€1.50) is now tracked at registration time
+        // Note: NEW_CUSTOMER billing (€1.00) is now tracked at registration time
         // not when admin unblocks, since new users are no longer blocked by default
 
         logger.info("Customer unblocked successfully")
