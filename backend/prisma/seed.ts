@@ -87,7 +87,7 @@ async function main() {
   console.log("👤 Creating admin user...")
 
   const adminEmail = process.env.ADMIN_EMAIL || "admin@shopme.com"
-  const adminPassword = process.env.ADMIN_PASSWORD || "venezia44"
+  const adminPassword = process.env.ADMIN_PASSWORD || "Venezia44"
   const hashedPassword = await bcrypt.hash(adminPassword, 10)
 
   const adminUser = await prisma.user.create({

@@ -14,7 +14,6 @@ import ClientsPage from "./pages/ClientsPage"
 import DataProtectionPage from "./pages/data-protection"
 
 import CampaignsPage from "./pages/campaigns"
-import CampaignFormPage from "./pages/campaigns/form"
 import CheckoutSuccessPage from "./pages/checkout-success"
 import CheckoutPage from "./pages/CheckoutPage"
 import ExpiredPage from "./pages/expired"
@@ -149,12 +148,6 @@ export function App() {
                 {/* Campaign routes */}
                 <Route path="/campaigns" element={<Layout />}>
                   <Route index element={<CampaignsPage />} />
-                </Route>
-                <Route path="/campaigns/new" element={<Layout />}>
-                  <Route index element={<CampaignFormPage />} />
-                </Route>
-                <Route path="/campaigns/edit/:id" element={<Layout />}>
-                  <Route index element={<CampaignFormPage />} />
                 </Route>
               </Route>
 

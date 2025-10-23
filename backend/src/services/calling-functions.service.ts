@@ -392,14 +392,32 @@ export class CallingFunctionsService {
           }
         }
 
-        // Trova il prodotto per ProductCode
-        const product = await prisma.products.findFirst({
+        // Trova il prodotto per productCode o per nome (fallback)
+        // Prima prova con productCode esatto
+        let product = await prisma.products.findFirst({
           where: {
-            ProductCode: request.productCode,
+            productCode: request.productCode,
             workspaceId: request.workspaceId,
             isActive: true,
           },
         })
+
+        // Se non trovato per ProductCode, cerca per nome (case-insensitive)
+        if (!product) {
+          logger.info(
+            `🔍 ProductCode not found, searching by name: ${request.productCode}`
+          )
+          product = await prisma.products.findFirst({
+            where: {
+              name: {
+                contains: request.productCode,
+                mode: "insensitive",
+              },
+              workspaceId: request.workspaceId,
+              isActive: true,
+            },
+          })
+        }
 
         if (!product) {
           logger.error("❌ Product not found:", request.productCode)

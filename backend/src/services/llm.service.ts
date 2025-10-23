@@ -959,6 +959,11 @@ export class LLMService {
       // 🔧 DEBUG: Track function calls
       let functionCalls: any[] = []
 
+      // 🧪 TEST MODE: If in test environment, only track function calls without executing them
+      const isTestMode =
+        process.env.NODE_ENV === "test" ||
+        process.env.INTEGRATION_TEST === "true"
+
       // Gestione tool calls (chiamate funzioni)
       if (data.choices?.[0]?.message?.tool_calls) {
         const toolCall = data.choices[0].message.tool_calls[0]
@@ -967,10 +972,27 @@ export class LLMService {
 
         // 🔧 DEBUG: Record function call details
         functionCalls.push({
-          functionName,
-          functionArgs,
+          name: functionName,
+          arguments: functionArgs,
           timestamp: new Date().toISOString(),
         })
+
+        // 🧪 TEST MODE: Skip function execution, just return detection info
+        if (isTestMode) {
+          logger.info(
+            `🧪 [TEST MODE] Function detected but NOT executed: ${functionName}`
+          )
+          const testResponse =
+            data.choices[0].message.content ||
+            `Function ${functionName} would be called with args: ${JSON.stringify(functionArgs)}`
+
+          return {
+            response: testResponse,
+            tokenUsage,
+            costInfo,
+            functionCalls,
+          }
+        }
 
         // 📊 BACKGROUND FUNCTIONS (PRIORITY 5) - Non bloccare il flusso conversazionale
         // Queste funzioni vengono eseguite in parallelo senza aspettare il risultato

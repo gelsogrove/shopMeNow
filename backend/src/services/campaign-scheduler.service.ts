@@ -121,13 +121,14 @@ export class CampaignScheduler {
    */
   private async getTargetCustomers(campaign: any): Promise<any[]> {
     if (campaign.targetType === "ALL") {
-      // Get all active, non-blacklisted customers with push notifications consent
+      // Get all active, non-blacklisted customers with push notifications consent and GDPR accepted
       return await this.prisma.customers.findMany({
         where: {
           workspaceId: campaign.workspaceId,
           isActive: true,
           isBlacklisted: false,
           push_notifications_consent: true,
+          last_privacy_version_accepted: { not: null },
         },
         select: {
           id: true,
@@ -138,7 +139,7 @@ export class CampaignScheduler {
         },
       })
     } else {
-      // Get only selected customers who are active, not blacklisted, and have push notifications consent
+      // Get only selected customers who are active, not blacklisted, have push notifications consent and GDPR accepted
       return await this.prisma.customers.findMany({
         where: {
           id: { in: campaign.customerIds },
@@ -146,6 +147,7 @@ export class CampaignScheduler {
           isActive: true,
           isBlacklisted: false,
           push_notifications_consent: true,
+          last_privacy_version_accepted: { not: null },
         },
         select: {
           id: true,

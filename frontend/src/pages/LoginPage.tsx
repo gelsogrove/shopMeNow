@@ -46,7 +46,7 @@ export function LoginPage() {
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: isDev ? "admin@shopme.com" : "",
-      password: isDev ? "venezia44" : "",
+      password: isDev ? "Venezia44" : "",
     } as LoginForm,
   })
 

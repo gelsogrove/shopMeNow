@@ -1,4 +1,5 @@
 import { PageLayout } from "@/components/layout/PageLayout"
+import { CampaignSheet } from "@/components/shared/CampaignSheet"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
 import { CrudPageContent } from "@/components/shared/CrudPageContent"
 import { Badge } from "@/components/ui/badge"
@@ -13,9 +14,8 @@ import { commonStyles } from "@/styles/common"
 import { ColumnDef } from "@tanstack/react-table"
 import { Calendar, Megaphone, Pencil, Trash2, Users } from "lucide-react"
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
-import { toast } from "sonner"
 import { useWorkspace } from "../../contexts/WorkspaceContext"
+import { toast } from "../../lib/toast"
 import { api } from "../../services/api"
 
 interface Campaign {
@@ -45,7 +45,6 @@ const frequencyLabels: Record<string, string> = {
 }
 
 export default function CampaignsPage() {
-  const navigate = useNavigate()
   const { workspace } = useWorkspace()
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(true)
@@ -53,6 +52,15 @@ export default function CampaignsPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(
     null
+  )
+
+  // Campaign Sheet state
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(
+    null
+  )
+  const [campaignSheetOpen, setCampaignSheetOpen] = useState(false)
+  const [campaignSheetMode, setCampaignSheetMode] = useState<"view" | "edit">(
+    "edit"
   )
 
   useEffect(() => {
@@ -103,6 +111,43 @@ export default function CampaignsPage() {
       setCampaignToDelete(null)
     } catch (error) {
       toast.error("Error deleting campaign")
+    }
+  }
+
+  // Handle edit campaign
+  const handleEditCampaign = (campaign: Campaign) => {
+    setSelectedCampaign(campaign)
+    setCampaignSheetMode("edit")
+    setCampaignSheetOpen(true)
+  }
+
+  // Handle add new campaign
+  const handleAddCampaign = () => {
+    setSelectedCampaign(null)
+    setCampaignSheetMode("edit")
+    setCampaignSheetOpen(true)
+  }
+
+  // Handle campaign form submission
+  const handleCampaignSubmit = async (formData: any, campaignId?: string) => {
+    try {
+      if (campaignId) {
+        // Update existing campaign
+        await api.put(
+          `/workspaces/${workspace?.id}/campaigns/${campaignId}`,
+          formData
+        )
+        toast.success("Campaign updated successfully")
+      } else {
+        // Create new campaign
+        await api.post(`/workspaces/${workspace?.id}/campaigns`, formData)
+        toast.success("Campaign created successfully")
+      }
+
+      setCampaignSheetOpen(false)
+      loadCampaigns()
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Error saving campaign")
     }
   }
 
@@ -187,7 +232,7 @@ export default function CampaignsPage() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate(`/campaigns/edit/${campaign.id}`)}
+              onClick={() => handleEditCampaign(campaign)}
               className="h-8 w-8 p-0 flex items-center justify-center"
             >
               <Pencil
@@ -242,7 +287,7 @@ export default function CampaignsPage() {
         searchValue={searchValue}
         onSearch={setSearchValue}
         searchPlaceholder="Search campaigns..."
-        onAdd={() => navigate("/campaigns/new")}
+        onAdd={handleAddCampaign}
         addButtonText="New Campaign"
         data={filteredCampaigns}
         columns={columns}
@@ -250,6 +295,15 @@ export default function CampaignsPage() {
         renderActions={renderActions}
         renderEmptyState={renderEmptyState}
         disablePagination={true}
+      />
+
+      <CampaignSheet
+        campaign={selectedCampaign}
+        open={campaignSheetOpen}
+        onOpenChange={setCampaignSheetOpen}
+        onSubmit={handleCampaignSubmit}
+        mode={campaignSheetMode}
+        workspaceId={workspace?.id}
       />
 
       <ConfirmDialog
