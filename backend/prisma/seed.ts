@@ -175,8 +175,15 @@ async function main() {
   console.log("💰 Creating pricing configuration...")
 
   for (const pricing of pricingConfigData) {
-    await prisma.pricingConfig.create({
-      data: {
+    await prisma.pricingConfig.upsert({
+      where: { key: pricing.key },
+      update: {
+        type: pricing.type,
+        value: pricing.value,
+        description: pricing.description,
+        isActive: pricing.isActive,
+      },
+      create: {
         type: pricing.type,
         key: pricing.key,
         value: pricing.value,
@@ -186,7 +193,7 @@ async function main() {
     })
   }
 
-  console.log(`✅ Created ${pricingConfigData.length} pricing configurations`)
+  console.log(`✅ Created/Updated ${pricingConfigData.length} pricing configurations`)
   console.log(
     `   - Plans: ${pricingConfigData.filter((p) => p.type === "PLAN").length}`
   )

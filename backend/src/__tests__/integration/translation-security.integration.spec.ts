@@ -1,11 +1,17 @@
 /**
- * 🔒 TRANSLATION & SECURITY LAYER - Unit Tests
+ * 🔒 TRANSLATION & SECURITY LAYER - Integration Tests (REAL API)
  *
- * Tests che il Translation & Security Service:
- * 1. Sia chiamato in TUTTI i punti dove inviamo risposte al cliente
- * 2. Filtri correttamente parolacce
- * 3. Blocchi link esterni non autorizzati
- * 4. Permetta solo link del workspace
+ * Tests REALI che verificano che il Translation & Security Service:
+ * 1. Traduce correttamente usando OpenRouter API
+ * 2. Filtra parolacce in tutte le lingue
+ * 3. Blocca link esterni e phishing
+ * 4. Permette solo link autorizzati del workspace
+ *
+ * ⚠️ IMPORTANTE:
+ * - Richiede OPENROUTER_API_KEY valida nel .env
+ * - Fa chiamate API REALI a OpenRouter (costa denaro)
+ * - Test più lenti (timeout 30 secondi)
+ * - Eseguire con: npm run test:integration
  *
  * @author Andrea Gelso
  * @date 2025-10-23
@@ -13,7 +19,7 @@
 
 import { TranslationSecurityService } from "../../services/translation-security.service"
 
-describe("🔒 Translation & Security Layer - Unit Tests", () => {
+describe("🔒 Translation & Security Layer - Integration Tests (REAL API)", () => {
   let service: TranslationSecurityService
 
   beforeAll(() => {
@@ -31,6 +37,35 @@ describe("🔒 Translation & Security Layer - Unit Tests", () => {
       expect(service.processResponse).toBeDefined()
       expect(typeof service.processResponse).toBe("function")
     })
+
+    it("🔍 DEBUG: should show what API returns for profanity", async () => {
+      // Check if API key exists
+      const apiKey = process.env.OPENROUTER_API_KEY
+      const fs = require('fs')
+      
+      fs.writeFileSync('/tmp/jest-debug.txt', `
+🔑 API Key check:
+  Exists: ${!!apiKey}
+  Length: ${apiKey?.length}
+  Prefix: ${apiKey?.substring(0, 10)}
+`, 'utf8')
+      
+      const result = await service.processResponse(
+        "Cazzo, questo prodotto è rotto!",
+        "it",
+        []
+      )
+
+      fs.appendFileSync('/tmp/jest-debug.txt', `
+🔍 DEBUG - API Response:
+  translatedText: ${result.translatedText}
+  blocked: ${result.blocked}
+  reason: ${result.reason}
+`, 'utf8')
+
+      // This test always passes - just for debugging
+      expect(result).toBeDefined()
+    }, 30000)
   })
 
   describe("🌐 Traduzione Base", () => {
