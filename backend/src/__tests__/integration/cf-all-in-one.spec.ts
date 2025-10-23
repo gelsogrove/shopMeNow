@@ -268,7 +268,8 @@ describe("🧪 Calling Functions - All Tests", () => {
       console.log("📊 Result:", {
         functionCalled: result.functionCalled,
         responseLength: result.response.length,
-        hasLink: result.response.includes("http") || result.response.includes("/s/"),
+        hasLink:
+          result.response.includes("http") || result.response.includes("/s/"),
         response: result.response.substring(0, 200), // Show first 200 chars
       })
 
@@ -318,11 +319,14 @@ describe("🧪 Calling Functions - All Tests", () => {
       console.log("📊 Result:", {
         functionCalled: result.functionCalled,
         responseLength: result.response.length,
-        hasLink: result.response.includes("http://") || result.response.includes("/s/"),
+        hasLink:
+          result.response.includes("http://") ||
+          result.response.includes("/s/"),
       })
 
       // Should have a link (token was replaced)
-      const hasLink = result.response.includes("http://") || result.response.includes("/s/")
+      const hasLink =
+        result.response.includes("http://") || result.response.includes("/s/")
       expect(hasLink).toBe(true)
       expect(result.functionCalled).toBeNull()
     }, 30000)
@@ -338,11 +342,14 @@ describe("🧪 Calling Functions - All Tests", () => {
       console.log("📊 Result:", {
         functionCalled: result.functionCalled,
         responseLength: result.response.length,
-        hasLink: result.response.includes("http://") || result.response.includes("/s/"),
+        hasLink:
+          result.response.includes("http://") ||
+          result.response.includes("/s/"),
       })
 
       // Should have a link (token was replaced)
-      const hasLink = result.response.includes("http://") || result.response.includes("/s/")
+      const hasLink =
+        result.response.includes("http://") || result.response.includes("/s/")
       expect(hasLink).toBe(true)
       expect(result.functionCalled).toBeNull()
     }, 30000)
@@ -358,11 +365,14 @@ describe("🧪 Calling Functions - All Tests", () => {
       console.log("📊 Result:", {
         functionCalled: result.functionCalled,
         responseLength: result.response.length,
-        hasLink: result.response.includes("http://") || result.response.includes("/s/"),
+        hasLink:
+          result.response.includes("http://") ||
+          result.response.includes("/s/"),
       })
 
       // Should have a link (token was replaced)
-      const hasLink = result.response.includes("http://") || result.response.includes("/s/")
+      const hasLink =
+        result.response.includes("http://") || result.response.includes("/s/")
       expect(hasLink).toBe(true)
       expect(result.functionCalled).toBeNull()
     }, 30000)
