@@ -1,6 +1,6 @@
 /**
  * 🔧 Shared Test Setup for Calling Functions Integration Tests
- * 
+ *
  * Common configuration and utilities for all CF integration tests
  * to ensure consistency and reduce code duplication.
  */
@@ -34,7 +34,7 @@ export async function setupTestCustomer() {
     where: { isActive: true, isDelete: false },
     // Don't include relations - just get basic workspace
   })
-  
+
   if (!workspace) {
     throw new Error("No workspace found! Run npm run seed first.")
   }

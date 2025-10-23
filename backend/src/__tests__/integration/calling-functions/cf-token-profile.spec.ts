@@ -1,15 +1,15 @@
 /**
  * 👤 Integration Test: Token Return - Indirizzo/Profilo
- * 
+ *
  * Tests that LLM returns profile link for address/profile changes.
  * Example: "voglio cambiare indirizzo di spedizione"
  */
 
 import {
   TEST_CONFIG,
-  setupTestCustomer,
   callLLMAndGetFunctionInfo,
   cleanup,
+  setupTestCustomer,
 } from "./cf-setup"
 
 describe("👤 CF: Token Indirizzo", () => {
@@ -21,33 +21,37 @@ describe("👤 CF: Token Indirizzo", () => {
     await cleanup()
   })
 
-  it("should return profile link (NOT function call) for 'voglio cambiare indirizzo di spedizione'", async () => {
-    const result = await callLLMAndGetFunctionInfo(
-      "voglio cambiare indirizzo di spedizione"
-    )
+  it(
+    "should return profile link (NOT function call) for 'voglio cambiare indirizzo di spedizione'",
+    async () => {
+      const result = await callLLMAndGetFunctionInfo(
+        "voglio cambiare indirizzo di spedizione"
+      )
 
-    console.log("📊 Token Profile Result:", {
-      functionCalled: result.functionCalled,
-      responseLength: result.response.length,
-      success: result.success,
-      hasLink:
+      console.log("📊 Token Profile Result:", {
+        functionCalled: result.functionCalled,
+        responseLength: result.response.length,
+        success: result.success,
+        hasLink:
+          result.response.includes("http://") ||
+          result.response.includes("https://"),
+        hasShortUrl: result.response.includes("/s/"),
+      })
+
+      // Should NOT call any function - link is generated directly by LLM
+      expect(result.functionCalled).toBeNull()
+      expect(result.success).toBe(true)
+
+      // Should contain a real link (HTTP/HTTPS)
+      const hasLink =
         result.response.includes("http://") ||
-        result.response.includes("https://"),
-      hasShortUrl: result.response.includes("/s/"),
-    })
+        result.response.includes("https://")
+      expect(hasLink).toBe(true)
 
-    // Should NOT call any function - link is generated directly by LLM
-    expect(result.functionCalled).toBeNull()
-    expect(result.success).toBe(true)
-
-    // Should contain a real link (HTTP/HTTPS)
-    const hasLink =
-      result.response.includes("http://") ||
-      result.response.includes("https://")
-    expect(hasLink).toBe(true)
-
-    // CRITICAL: Should contain SHORT URL pattern /s/XXXXXX
-    // The system uses short URLs for security and brevity
-    expect(result.response.includes("/s/")).toBe(true)
-  }, TEST_CONFIG.timeout)
+      // CRITICAL: Should contain SHORT URL pattern /s/XXXXXX
+      // The system uses short URLs for security and brevity
+      expect(result.response.includes("/s/")).toBe(true)
+    },
+    TEST_CONFIG.timeout
+  )
 })

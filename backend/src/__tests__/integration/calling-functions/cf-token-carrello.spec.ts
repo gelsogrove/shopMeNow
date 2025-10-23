@@ -41,20 +41,20 @@ describe("🛒 CF: Token Carrello", () => {
         "\n🛒 CARRELLO RESPONSE:\n" + result.response + "\n\n"
       )
 
-          // Should NOT call any function - link is generated directly by LLM
-    expect(result.functionCalled).toBeNull()
-    expect(result.success).toBe(true)
+      // Should NOT call any function - link is generated directly by LLM
+      expect(result.functionCalled).toBeNull()
+      expect(result.success).toBe(true)
 
-    // Should contain a real link (HTTP/HTTPS)
-    const hasLink =
-      result.response.includes("http://") ||
-      result.response.includes("https://")
-    expect(hasLink).toBe(true)
+      // Should contain a real link (HTTP/HTTPS)
+      const hasLink =
+        result.response.includes("http://") ||
+        result.response.includes("https://")
+      expect(hasLink).toBe(true)
 
-    // CRITICAL: Should contain SHORT URL pattern /s/XXXXXX (not full checkout?token=)
-    // The system uses short URLs for security and brevity
-    expect(result.response.includes("/s/")).toBe(true)
-  },
-  TEST_CONFIG.timeout
+      // CRITICAL: Should contain SHORT URL pattern /s/XXXXXX (not full checkout?token=)
+      // The system uses short URLs for security and brevity
+      expect(result.response.includes("/s/")).toBe(true)
+    },
+    TEST_CONFIG.timeout
   )
 })
