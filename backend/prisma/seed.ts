@@ -193,7 +193,9 @@ async function main() {
     })
   }
 
-  console.log(`✅ Created/Updated ${pricingConfigData.length} pricing configurations`)
+  console.log(
+    `✅ Created/Updated ${pricingConfigData.length} pricing configurations`
+  )
   console.log(
     `   - Plans: ${pricingConfigData.filter((p) => p.type === "PLAN").length}`
   )

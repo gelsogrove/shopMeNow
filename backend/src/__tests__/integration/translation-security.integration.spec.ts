@@ -41,27 +41,35 @@ describe("🔒 Translation & Security Layer - Integration Tests (REAL API)", () 
     it("🔍 DEBUG: should show what API returns for profanity", async () => {
       // Check if API key exists
       const apiKey = process.env.OPENROUTER_API_KEY
-      const fs = require('fs')
-      
-      fs.writeFileSync('/tmp/jest-debug.txt', `
+      const fs = require("fs")
+
+      fs.writeFileSync(
+        "/tmp/jest-debug.txt",
+        `
 🔑 API Key check:
   Exists: ${!!apiKey}
   Length: ${apiKey?.length}
   Prefix: ${apiKey?.substring(0, 10)}
-`, 'utf8')
-      
+`,
+        "utf8"
+      )
+
       const result = await service.processResponse(
         "Cazzo, questo prodotto è rotto!",
         "it",
         []
       )
 
-      fs.appendFileSync('/tmp/jest-debug.txt', `
+      fs.appendFileSync(
+        "/tmp/jest-debug.txt",
+        `
 🔍 DEBUG - API Response:
   translatedText: ${result.translatedText}
   blocked: ${result.blocked}
   reason: ${result.reason}
-`, 'utf8')
+`,
+        "utf8"
+      )
 
       // This test always passes - just for debugging
       expect(result).toBeDefined()
