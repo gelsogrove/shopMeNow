@@ -22,7 +22,7 @@ export const offers: OfferData[] = [
     name: "Frozen Products 20% Offer",
     description: "20% discount on all frozen products!",
     type: null,
-    value: 10,
+    value: 20,
     validFrom: new Date("2025-10-20T07:41:05.436Z"),
     validUntil: new Date("2025-11-19T07:41:05.436Z"),
     isActive: true,
@@ -53,5 +53,5 @@ export const offers: OfferData[] = [
     categoryId: "add0e98f-e2a6-4bc4-b359-976396434baa",
     categoryName: "Pasta",
     categoryNames: [],
-  }
+  },
 ]

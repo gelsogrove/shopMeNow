@@ -164,66 +164,160 @@ export async function RepeatOrder(
       })
 
       // Aggiungi tutti i prodotti/servizi dell'ordine al carrello
+      // Raggruppa prodotti per codice e somma le quantità
       let productsAdded = 0
+      const productGroups: Record<string, { item: any; totalQty: number }> = {}
+      const serviceGroups: Record<string, { item: any; totalQty: number }> = {}
+
       for (const item of order.items) {
-        if (item.itemType === "PRODUCT" && item.productId) {
-          // Verifica che il prodotto esista ancora e sia in stock
-          const product = await prisma.products.findUnique({
-            where: { id: item.productId },
+        if (item.itemType === "PRODUCT" && item.product) {
+          const code = item.product.productCode // 🔧 FIX: Use productCode, not code
+          if (!code) {
+            logger.warn(
+              `⚠️ Product ${item.product.name} has no productCode, skipping`
+            )
+            continue
+          }
+          if (!productGroups[code]) {
+            productGroups[code] = { item, totalQty: 0 }
+          }
+          productGroups[code].totalQty += item.quantity
+        } else if (item.itemType === "SERVICE" && item.service) {
+          const code = item.service.code // ✅ Services use 'code'
+          if (!code) {
+            logger.warn(`⚠️ Service ${item.service.name} has no code, skipping`)
+            continue
+          }
+          if (!serviceGroups[code]) {
+            serviceGroups[code] = { item, totalQty: 0 }
+          }
+          serviceGroups[code].totalQty += item.quantity
+        }
+      }
+
+      // Aggiungi prodotti raggruppati (o aggiorna quantità se già presente)
+      for (const code in productGroups) {
+        const { item, totalQty } = productGroups[code]
+        const product = await prisma.products.findFirst({
+          where: {
+            productCode: code, // 🔧 FIX: Use productCode field
+            workspaceId: request.workspaceId,
+          },
+        })
+        if (product && product.stock > 0) {
+          // 🔧 FIX: Check if product already exists in cart
+          const existingCartItem = await prisma.cartItems.findFirst({
+            where: {
+              cartId: cart.id,
+              productId: product.id,
+              itemType: "PRODUCT",
+            },
           })
 
-          if (product && product.stock > 0) {
+          if (existingCartItem) {
+            // Update existing quantity
+            await prisma.cartItems.update({
+              where: { id: existingCartItem.id },
+              data: { quantity: existingCartItem.quantity + totalQty },
+            })
+            logger.info(
+              `✅ Updated product ${product.code} (${product.name}): ${existingCartItem.quantity} + ${totalQty} = ${existingCartItem.quantity + totalQty}`
+            )
+          } else {
+            // Create new cart item
             await prisma.cartItems.create({
               data: {
                 cartId: cart.id,
-                productId: item.productId,
-                quantity: item.quantity,
+                productId: product.id,
+                quantity: totalQty,
                 itemType: "PRODUCT",
                 notes: item.notes,
               },
             })
-            productsAdded++
+            logger.info(
+              `✅ Added product ${product.productCode} (${product.name}) x${totalQty} to cart`
+            )
           }
-        } else if (item.itemType === "SERVICE" && item.serviceId) {
-          // Aggiungi servizio al carrello
-          await prisma.cartItems.create({
-            data: {
-              cartId: cart.id,
-              serviceId: item.serviceId,
-              quantity: item.quantity,
-              itemType: "SERVICE",
-              notes: item.notes,
-            },
-          })
           productsAdded++
+        } else {
+          logger.warn(`⚠️ Product ${code} not found or out of stock`)
         }
       }
 
-      // Genera link carrello con token sicuro
-      const {
-        SecureTokenService,
-      } = require("../../application/services/secure-token.service")
-      const secureTokenService = new SecureTokenService()
+      // Aggiungi servizi raggruppati (o aggiorna quantità se già presente)
+      for (const code in serviceGroups) {
+        const { item, totalQty } = serviceGroups[code]
+        const service = await prisma.services.findFirst({
+          where: {
+            code,
+            workspaceId: request.workspaceId,
+          },
+        })
+        if (service) {
+          // 🔧 FIX: Check if service already exists in cart
+          const existingCartItem = await prisma.cartItems.findFirst({
+            where: {
+              cartId: cart.id,
+              serviceId: service.id,
+              itemType: "SERVICE",
+            },
+          })
 
-      const token = await secureTokenService.createToken(
-        "cart",
-        request.workspaceId,
-        { customerId: request.customerId },
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        request.customerId
-      )
+          if (existingCartItem) {
+            // Update existing quantity
+            await prisma.cartItems.update({
+              where: { id: existingCartItem.id },
+              data: { quantity: existingCartItem.quantity + totalQty },
+            })
+            logger.info(
+              `✅ Updated service ${service.code} (${service.name}): ${existingCartItem.quantity} + ${totalQty} = ${existingCartItem.quantity + totalQty}`
+            )
+          } else {
+            // Create new cart item
+            await prisma.cartItems.create({
+              data: {
+                cartId: cart.id,
+                serviceId: service.id,
+                quantity: totalQty,
+                itemType: "SERVICE",
+                notes: item.notes,
+              },
+            })
+            logger.info(
+              `✅ Added service ${service.code} (${service.name}) x${totalQty} to cart`
+            )
+          }
+          productsAdded++
+        } else {
+          logger.warn(`⚠️ Service ${code} not found`)
+        }
+      }
 
-      // Genera short URL del carrello (come addProductToCart)
-      const {
-        linkGeneratorService,
-      } = require("../../application/services/link-generator.service")
-      const cartUrl = await linkGeneratorService.generateCheckoutLink(
-        token,
-        request.workspaceId
-      )
+      // Genera link carrello con token sicuro usando il servizio centralizzato
+      const CallingFunctionsService =
+        require("../../services/calling-functions.service").CallingFunctionsService
+      const callingFunctionsService = new CallingFunctionsService()
+
+      const cartLinkResult = await callingFunctionsService.getCartLink({
+        customerId: request.customerId,
+        workspaceId: request.workspaceId,
+      })
+
+      if (!cartLinkResult.success || !cartLinkResult.linkUrl) {
+        logger.error("❌ Failed to generate cart link in RepeatOrder")
+        await prisma.$disconnect()
+
+        return {
+          success: false,
+          error: "Errore generazione link carrello",
+          message:
+            "Si è verificato un errore durante la generazione del link. Riprova.",
+          timestamp: new Date().toISOString(),
+        }
+      }
+
+      const cartUrl = cartLinkResult.linkUrl
+      const token = cartLinkResult.token
 
       await prisma.$disconnect()
 

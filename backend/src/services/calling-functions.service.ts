@@ -1,3 +1,4 @@
+import { LinkGeneratorService } from "../application/services/link-generator.service"
 import { ReplaceLinkWithToken } from "../application/services/link-replacement.service"
 import { SecureTokenService } from "../application/services/secure-token.service"
 import {
@@ -23,10 +24,13 @@ export interface GetOrdersListLinkRequest {
 
 export class CallingFunctionsService {
   private secureTokenService: SecureTokenService
+  private linkGeneratorService: LinkGeneratorService
   private baseUrl: string
 
-  constructor() {
+  constructor(linkGeneratorService?: LinkGeneratorService) {
     this.secureTokenService = new SecureTokenService()
+    this.linkGeneratorService =
+      linkGeneratorService || new LinkGeneratorService()
     this.baseUrl = "http://localhost:3001/api/internal"
   }
 
@@ -169,12 +173,9 @@ export class CallingFunctionsService {
         request.customerId
       )
       logger.info("🔧 Token created successfully:", token)
-      // Use centralized link generator for consistent URL shortening
-      const {
-        linkGeneratorService,
-      } = require("../application/services/link-generator.service")
 
-      let linkUrl: string = await linkGeneratorService.generateOrdersLink(
+      // Use the injected linkGeneratorService instance
+      const linkUrl = await this.linkGeneratorService.generateOrdersLink(
         token,
         request.workspaceId,
         request.orderCode
@@ -213,12 +214,9 @@ export class CallingFunctionsService {
         request.customerId
       )
       logger.info("🔧 Token created successfully:", token)
-      // Use centralized link generator for consistent URL shortening
-      const {
-        linkGeneratorService,
-      } = require("../application/services/link-generator.service")
 
-      const linkUrl = await linkGeneratorService.generateCheckoutLink(
+      // Use the injected linkGeneratorService instance
+      const linkUrl = await this.linkGeneratorService.generateCheckoutLink(
         token,
         request.workspaceId
       )

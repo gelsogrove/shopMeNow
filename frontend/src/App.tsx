@@ -42,6 +42,7 @@ import { ProductsPage as SettingsProductsPage } from "./pages/settings/ProductsP
 import { Suspense, lazy } from "react"
 import { ChatListProvider } from "./contexts/ChatListContext"
 import { WorkspaceProvider } from "./contexts/WorkspaceContext"
+import ShortUrlRedirect from "./pages/ShortUrlRedirect"
 import { VerifyOtpPage } from "./pages/VerifyOtpPage"
 import { WorkspacePage } from "./pages/WorkspacePage"
 import { WorkspaceSelectionPage } from "./pages/WorkspaceSelectionPage"
@@ -74,6 +75,9 @@ export function App() {
               {/* Direct route for /forgot-password to avoid 404 */}
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
+              {/* Short URL redirect handler - must be before protected routes */}
+              <Route path="/s/:code" element={<ShortUrlRedirect />} />
+
               {/* Protected Routes - richiedono autenticazione */}
               <Route element={<ProtectedRoute />}>
                 {/* Workspace Selection */}
@@ -101,9 +105,6 @@ export function App() {
                 </Route>
                 <Route path="/admin/orders" element={<Layout />}>
                   <Route index element={<OrdersPage />} />
-                </Route>
-                <Route path="/cart" element={<Layout />}>
-                  <Route index element={<CheckoutPage />} />
                 </Route>
                 <Route path="/products" element={<Layout />}>
                   <Route index element={<ProductsPage />} />
@@ -262,6 +263,22 @@ export function App() {
               {/* Public Checkout page via secure token (external, no platform layout) */}
               <Route
                 path="/checkout"
+                element={
+                  <Suspense
+                    fallback={
+                      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+                        <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+                      </div>
+                    }
+                  >
+                    <CheckoutPage />
+                  </Suspense>
+                }
+              />
+
+              {/* Public Cart page via secure token (external, no platform layout) */}
+              <Route
+                path="/cart"
                 element={
                   <Suspense
                     fallback={

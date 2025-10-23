@@ -213,16 +213,13 @@ describe("Pricing Consistency Tests", () => {
 
   describe("Total Consistency Check", () => {
     it("should have consistent pricing across all layers", () => {
-      // Final comprehensive check
-      const allPricesConsistent =
-        BillingPrices.MONTHLY_CHANNEL_COST === 59.0 &&
-        BillingPrices.MESSAGE === 0.15 &&
-        BillingPrices.NEW_CUSTOMER === 1.5 &&
-        BillingPrices.NEW_ORDER === 1.5 &&
-        BillingPrices.PUSH_CAMPAIGN === 1.0 &&
-        BillingPrices.HUMAN_SUPPORT === 0.5
-
-      expect(allPricesConsistent).toBe(true)
+      // Final comprehensive check - verify all prices are correct
+      expect(BillingPrices.MONTHLY_CHANNEL_COST).toBe(59.0)
+      expect(BillingPrices.MESSAGE).toBe(0.15)
+      expect(BillingPrices.NEW_CUSTOMER).toBe(1.5)
+      expect(BillingPrices.NEW_ORDER).toBe(1.5)
+      expect(BillingPrices.PUSH_CAMPAIGN).toBe(1.0)
+      expect(BillingPrices.HUMAN_SUPPORT).toBe(0.5)
     })
 
     it("should NOT have any PUSH_MESSAGE references", () => {

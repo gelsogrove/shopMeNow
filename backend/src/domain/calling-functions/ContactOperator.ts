@@ -64,7 +64,7 @@ export async function ContactOperator(
           success: true,
           message:
             "Ciao {{nameUser}}! 👋\n\n" +
-            "Perfetto, ho registrato la tua richiesta di assistenza. Verrai contattato il prima possibile dal nostro agente **{{agentName}}** (📞 {{agentPhone}}).\n\n" +
+            "Questo è un caso dove abbiamo bisogno di un uomo in carne ed ossa :-) ! Verrai contattato il prima possibile dal nostro agente **{{agentName}}** (📞 {{agentPhone}}).\n\n" +
             "Nel frattempo, ti invitiamo a scrivere una **mail dettagliata** all'indirizzo:\n" +
             "📧 **{{agentEmail}}**\n\n" +
             "Includi eventualmente foto, documenti o qualsiasi allegato utile così da poter analizzare immediatamente la situazione e offrirti la soluzione più rapida! 🚀\n\n" +
@@ -101,7 +101,7 @@ export async function ContactOperator(
         success: true,
         message:
           "Ciao {{nameUser}}! 👋\n\n" +
-          "Perfetto, ho registrato la tua richiesta di assistenza. Verrai contattato il prima possibile dal nostro agente **{{agentName}}** (📞 {{agentPhone}}).\n\n" +
+          "Questo è un caso dove abbiamo bisogno di un uomo in carne ed ossa :-) ! Verrai contattato il prima possibile dal nostro agente **{{agentName}}** (📞 {{agentPhone}}).\n\n" +
           "Nel frattempo, ti invitiamo a scrivere una **mail dettagliata** all'indirizzo:\n" +
           "📧 **{{agentEmail}}**\n\n" +
           "Includi eventualmente foto, documenti o qualsiasi allegato utile così da poter analizzare immediatamente la situazione e offrirti la soluzione più rapida! 🚀\n\n" +
@@ -120,7 +120,7 @@ export async function ContactOperator(
         success: true,
         message:
           "Ciao {{nameUser}}! 👋\n\n" +
-          "Perfetto, ho registrato la tua richiesta di assistenza. Verrai contattato il prima possibile dal nostro agente **{{agentName}}** (📞 {{agentPhone}}).\n\n" +
+          "Questo è un caso dove abbiamo bisogno di un uomo in carne ed ossa :-) ! Verrai contattato il prima possibile dal nostro agente **{{agentName}}** (📞 {{agentPhone}}).\n\n" +
           "Nel frattempo, ti invitiamo a scrivere una **mail dettagliata** all'indirizzo:\n" +
           "📧 **{{agentEmail}}**\n\n" +
           "Includi eventualmente foto, documenti o qualsiasi allegato utile così da poter analizzare immediatamente la situazione e offrirti la soluzione più rapida! 🚀\n\n" +

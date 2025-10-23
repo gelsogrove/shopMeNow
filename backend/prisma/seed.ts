@@ -355,8 +355,8 @@ async function main() {
   await prisma.agentConfig.create({
     data: {
       workspaceId: workspace.id,
-      model: "anthropic/claude-3.5-haiku",
-      temperature: 0.7,
+      model: "openai/gpt-4o-mini",
+      temperature: 0.2,
       maxTokens: 1000,
       prompt: agentPrompt, // ✅ CORRECT: Field is 'prompt' in schema, not 'systemPrompt'
       isActive: true,

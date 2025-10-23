@@ -1,5 +1,6 @@
 import * as fs from "fs"
 import * as path from "path"
+import { LinkGeneratorService } from "../application/services/link-generator.service"
 import { TokenService } from "../application/services/token.service"
 import { getLLMConfig } from "../config/llm.config"
 import { LLMRequest } from "../types/whatsapp.types"
@@ -50,13 +51,15 @@ function calculateLLMCost(
   }
 }
 
-//todo non va il singoloo ordine
 export class LLMService {
   private callingFunctionsService: CallingFunctionsService
   private promptProcessorService: PromptProcessorService
 
   constructor() {
-    this.callingFunctionsService = new CallingFunctionsService()
+    const linkGeneratorService = new LinkGeneratorService()
+    this.callingFunctionsService = new CallingFunctionsService(
+      linkGeneratorService
+    )
     this.promptProcessorService = new PromptProcessorService()
   }
 
@@ -73,7 +76,6 @@ export class LLMService {
       new (require("../repositories/message.repository").MessageRepository)()
     const { workspaceService } = require("../services/workspace.service")
 
-    // 🔧 DEBUG: Start collecting debug information
     const debugInfo: any = {
       stage: "initializing",
       timestamp: new Date().toISOString(),
@@ -86,7 +88,6 @@ export class LLMService {
     const workspaceId = customer ? customer.workspaceId : llmRequest.workspaceId
     const workspace = await workspaceService.getById(workspaceId)
 
-    // 🔧 DEBUG: Add customer and workspace info
     debugInfo.workspaceId = workspaceId
     debugInfo.customerId = customer?.id || null
     debugInfo.customer = customer
@@ -110,10 +111,9 @@ export class LLMService {
       customer.phone,
       workspace.id
     )
-    // 🚨 CRITICAL: Block if user is blacklisted OR if chatbot is disabled for this customer
+    // Block if user is blacklisted OR if chatbot is disabled for this customer
     if (isBlocked || customer.isBlacklisted || !customer.activeChatbot) {
       debugInfo.stage = "blocked_user_or_chatbot_disabled"
-      // Restituisci null per ignorare completamente questa interazione
       return {
         success: false,
         output:
@@ -138,7 +138,6 @@ export class LLMService {
       }
     }
 
-    // 🔧 DEBUG: Get link counts before processing
     const linkCounts = await messageRepo.getLinkCounts(workspaceId)
     debugInfo.linkCounts = linkCounts
 
@@ -167,7 +166,6 @@ export class LLMService {
       agentEmail: customer.sales?.email || "N/A",
     }
 
-    // 🔧 DEBUG: Add user info to debug
     debugInfo.userInfo = {
       language: userLanguage,
       discount: customerDiscount,
@@ -210,7 +208,7 @@ export class LLMService {
       .replace(/\{\{agentEmail\}\}/g, userInfo.agentEmail) // Replace ALL occurrences
       .replace(/\{\{TOKEN_DURATION\}\}/g, tokenDuration) // Replace ALL occurrences
 
-    // 🔧 SALVA IL PROMPT FINALE PER DEBUG
+    // Save processed prompt for debugging
     try {
       const promptPath = path.join(process.cwd(), "prompt.txt")
       fs.writeFileSync(
@@ -221,7 +219,6 @@ export class LLMService {
       logger.info("❌ Errore salvando prompt:", error.message)
     }
 
-    // 🔧 DEBUG: Add processed prompt info
     debugInfo.promptInfo = {
       originalLength: prompt.length,
       processedLength: promptWithVars.length,
@@ -249,10 +246,10 @@ export class LLMService {
       customerData,
       userLanguage,
       debugInfo, // Pass debug info to track function calls
-      recentMessages // 🆕 Pass conversation history
+      recentMessages // Pass conversation history
     )
 
-    // 🔧 FIX: Check if LLM response is valid before post-processing
+    // Check if LLM response is valid before post-processing
     if (!llmResult || !llmResult.response) {
       logger.error("❌ LLM returned empty or invalid response", {
         llmResult,
@@ -906,54 +903,24 @@ export class LLMService {
         )
       }
 
-      // Dizionario messaggi multilingua
+      // 🌍 Base messages in English - Translation & Security Layer will translate to customer's language
       const i18n = {
         errors: {
-          orderNotFound: {
-            it: "Mi spiace non abbiamo trovato il tuo ordine. Di seguito la lista dei tuoi ordini: [LINK_ORDERS_WITH_TOKEN]",
-            es: "Lo siento, no hemos encontrado tu pedido. Aquí tienes la lista de tus pedidos: [LINK_ORDERS_WITH_TOKEN]",
-            pt: "Desculpe, não encontramos o seu pedido. Aqui está a lista dos seus pedidos: [LINK_ORDERS_WITH_TOKEN]",
-            en: "Sorry, we couldn't find your order. Here is the list of your orders: [LINK_ORDERS_WITH_TOKEN]",
-          },
-          trackingNotFound: {
-            it: "Mi spiace, al momento non riesco a trovare informazioni di tracking per il tuo ordine. Per assistenza contatta il nostro servizio clienti.",
-            es: "Lo siento, en este momento no puedo encontrar información de seguimiento de tu pedido. Para asistencia contacta nuestro servicio de atención al cliente.",
-            pt: "Desculpe, no momento não consigo encontrar informações de rastreamento do seu pedido. Para assistência, entre em contato com nosso atendimento ao cliente.",
-            en: "Sorry, I can't find tracking information for your order right now. Please contact our customer service for assistance.",
-          },
-          generic: {
-            it: "Si è verificato un errore.",
-            es: "Se ha producido un error.",
-            pt: "Ocorreu um erro.",
-            en: "An error has occurred.",
-          },
+          orderNotFound:
+            "Sorry, we couldn't find your order. Here is the list of your orders: [LINK_ORDERS_WITH_TOKEN]",
+          trackingNotFound:
+            "Sorry, I can't find tracking information for your order right now. Please contact our customer service for assistance.",
+          generic: "An error has occurred.",
         },
         success: {
-          orderLink: {
-            it: "Ciao! Di seguito puoi trovare il link dell'ordine che stai cercando dove puoi scaricare la fattura e la bolla di trasporto:",
-            es: "¡Hola! Aquí tienes el enlace de tu pedido donde puedes descargar la factura y la nota de envío:",
-            pt: "Olá! Aqui está o link do seu pedido onde você pode baixar a fatura e a guia de transporte:",
-            en: "Hello! Here is the link to your order where you can download the invoice and delivery note:",
-          },
-          trackingLink: {
-            it: "Ciao! Il tuo ordine è in viaggio 📦 Segui il pacco in tempo reale:",
-            es: "¡Hola! Tu pedido está en camino 📦 Sigue tu paquete en tiempo real:",
-            pt: "Olá! Seu pedido está a caminho 📦 Acompanhe seu pacote em tempo real:",
-            en: "Hello! Your order is on the way 📦 Track your package in real time:",
-          },
-          default: {
-            it: "Ciao! 😊 Di seguito puoi vedere il tuo ordine: per motivi di sicurezza sarà valido per 1 ora -",
-            es: "¡Hola! 😊 Aquí puedes ver tu pedido: por motivos de seguridad será válido durante 1 hora -",
-            pt: "Olá! 😊 Aqui você pode ver seu pedido: por motivos de segurança será válido por 1 hora -",
-            en: "Hello! 😊 Here you can see your order: for security reasons it will be valid for 1 hour -",
-          },
+          orderLink:
+            "Hello! To protect your privacy I cannot send you the invoice via WhatsApp but here is a secure link where you can download both the invoice and the delivery note in PDF format at the bottom of the page:",
+          trackingLink:
+            "Hello! Your order is on the way 📦 Track your package in real time:",
+          default:
+            "Hello! 😊 Here you can see your order: for security reasons it will be valid for 1 hour -",
         },
-        fallback: {
-          it: "Ciao! Come posso aiutarti oggi?",
-          es: "¡Hola! ¿Cómo puedo ayudarte hoy?",
-          pt: "Olá! Como posso te ajudar hoje?",
-          en: "Hello! How can I help you today?",
-        },
+        fallback: "Hello! How can I help you today?",
       }
 
       // 🔧 DEBUG: Track function calls
@@ -1112,7 +1079,7 @@ export class LLMService {
         if (functionResult.success === false) {
           if (functionName === "GetLinkOrderByCode") {
             return {
-              response: i18n.errors.orderNotFound[language],
+              response: i18n.errors.orderNotFound,
               tokenUsage,
               costInfo,
               functionCalls,
@@ -1120,7 +1087,7 @@ export class LLMService {
           }
           if (functionName === "GetShipmentTrackingLink") {
             return {
-              response: i18n.errors.trackingNotFound[language],
+              response: i18n.errors.trackingNotFound,
               tokenUsage,
               costInfo,
               functionCalls,
@@ -1130,7 +1097,7 @@ export class LLMService {
             response:
               functionResult.message ||
               functionResult.error ||
-              i18n.errors.generic[language],
+              i18n.errors.generic,
             tokenUsage,
             costInfo,
             functionCalls,
@@ -1138,9 +1105,12 @@ export class LLMService {
         }
 
         if (functionName === "GetLinkOrderByCode") {
-          // Always return in Italian - Translation Layer will translate
+          // Always return in English - Translation & Security Layer will translate to customer's language
+          const tokenDuration = this.getTokenDurationText(
+            process.env.TOKEN_EXPIRATION || "15m"
+          )
           return {
-            response: `${i18n.success.orderLink.it} ${functionResult.linkUrl || functionResult.output || functionResult.message} - valido per 1 ora`,
+            response: `${i18n.success.orderLink} ${functionResult.linkUrl || functionResult.output || functionResult.message}\n\n⏰ Link valid for ${tokenDuration}`,
             tokenUsage,
             costInfo,
             functionCalls,
@@ -1194,11 +1164,7 @@ export class LLMService {
         }
       }
 
-      const llmResponse =
-        data.choices?.[0]?.message?.content ||
-        i18n.fallback[language] ||
-        i18n.fallback.it ||
-        "Ciao! Come posso aiutarti?"
+      const llmResponse = data.choices?.[0]?.message?.content || i18n.fallback
 
       logger.info(
         `📝 LLM Response content length: ${llmResponse?.length || 0} chars`
@@ -1235,14 +1201,9 @@ export class LLMService {
       }
     } catch (error) {
       logger.error("❌ Error generating LLM response:", error)
-      const errorMessages = {
-        it: "❌ Mi dispiace, si è verificato un errore. Riprova più tardi.",
-        es: "❌ Lo siento, se ha producido un error. Inténtalo más tarde.",
-        pt: "❌ Desculpe, ocorreu um erro. Tente novamente mais tarde.",
-        en: "❌ Sorry, an error occurred. Please try again later.",
-      }
       return {
-        response: errorMessages[language],
+        response:
+          "❌ Sorry, an error occurred. Please try again later. Translation & Security Layer will translate this.",
         tokenUsage: null,
         costInfo: null,
         functionCalls: [],
