@@ -245,8 +245,7 @@ export class MessageRepository {
         // Find matching billing record (within 5 seconds of message)
         // 💰 IMPORTANT: Only match billing to the correct message direction:
         // - MESSAGE (€0.15) → INBOUND (customer message)
-        // - PUSH_MESSAGE (€1.00) → OUTBOUND (bot message with push)
-        // - HUMAN_SUPPORT (€1.00) → OUTBOUND (when chatbot is reactivated)
+        // - PUSH_CAMPAIGN (€1.00) → OUTBOUND (bot message with push)
         const matchingBilling = billingRecords.find((billing) => {
           const timeDiff = Math.abs(
             new Date(billing.createdAt).getTime() -
@@ -263,13 +262,8 @@ export class MessageRepository {
           // MESSAGE billing should only attach to INBOUND messages
           if (billing.type === "MESSAGE" && !isInbound) return false
 
-          // PUSH_CAMPAIGN and HUMAN_SUPPORT should only attach to OUTBOUND messages
-          if (
-            (billing.type === "PUSH_CAMPAIGN" ||
-              billing.type === "HUMAN_SUPPORT") &&
-            !isOutbound
-          )
-            return false
+          // PUSH_CAMPAIGN should only attach to OUTBOUND messages
+          if (billing.type === "PUSH_CAMPAIGN" && !isOutbound) return false
 
           return true
         })
@@ -952,39 +946,16 @@ export class MessageRepository {
               )
               const billingService = new BillingService(this.prisma)
 
-              // Check if this is a human support interaction
-              const isHumanSupport =
-                data.agentSelected?.includes("OPERATOR") ||
-                data.agentSelected?.includes("MANUAL") ||
-                data.agentSelected === "HUMAN_SUPPORT"
-
-              if (isHumanSupport) {
-                // Track ONLY human support (€1.00) - no double charging with message
-                await usageService.trackUsage({
-                  clientId: customer.id,
-                  workspaceId: workspaceId,
-                  price: 1.0, // Human support cost
-                })
-                await billingService.trackHumanSupport(
-                  workspaceId,
-                  customer.id,
-                  `Human support for: "${data.message?.substring(0, 50)}..."` // Include user query in description
-                )
-                logger.info(
-                  `[BILLING] 💰 €1.00 human support cost tracked for ${data.phoneNumber}`
-                )
-              } else {
-                // Only track regular message cost when not human support
-                await billingService.trackMessage(
-                  workspaceId,
-                  customer.id,
-                  `Message from ${data.phoneNumber}`,
-                  data.message // User's question
-                )
-                logger.info(
-                  `[BILLING] 💰 €0.15 message cost tracked for ${data.phoneNumber}`
-                )
-              }
+              // Track regular message cost (all messages are €0.15 regardless of agent type)
+              await billingService.trackMessage(
+                workspaceId,
+                customer.id,
+                `Message from ${data.phoneNumber}`,
+                data.message // User's question
+              )
+              logger.info(
+                `[BILLING] 💰 €0.15 message cost tracked for ${data.phoneNumber}`
+              )
             } else {
               // debugMode is true, skip tracking
               logger.info(

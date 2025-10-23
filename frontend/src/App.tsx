@@ -42,6 +42,7 @@ import { ProductsPage as SettingsProductsPage } from "./pages/settings/ProductsP
 import { Suspense, lazy } from "react"
 import { ChatListProvider } from "./contexts/ChatListContext"
 import { WorkspaceProvider } from "./contexts/WorkspaceContext"
+import PricingSimulator from "./pages/PricingSimulator"
 import ShortUrlRedirect from "./pages/ShortUrlRedirect"
 import { VerifyOtpPage } from "./pages/VerifyOtpPage"
 import { WorkspacePage } from "./pages/WorkspacePage"
@@ -74,6 +75,9 @@ export function App() {
               </Route>
               {/* Direct route for /forgot-password to avoid 404 */}
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+
+              {/* Pricing Simulator - Public route (no auth required) */}
+              <Route path="/pricing-simulator" element={<PricingSimulator />} />
 
               {/* Short URL redirect handler - must be before protected routes */}
               <Route path="/s/:code" element={<ShortUrlRedirect />} />

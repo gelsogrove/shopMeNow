@@ -317,24 +317,6 @@ export class CustomersController {
 
         // Only send push notification if chatbot was reactivated (false -> true)
         if (!originalCustomer.activeChatbot && updatedCustomer.activeChatbot) {
-          // 💰 BILLING: Track human support when chatbot is reactivated (€1.00)
-          try {
-            await this.billingService.trackHumanSupport(
-              updatedCustomer.workspaceId,
-              updatedCustomer.id,
-              "Chatbot reactivated after human support"
-            )
-            logger.info(
-              `[BILLING] 💰 Human support cost for customer-${updatedCustomer.id}: €1.00 charged`
-            )
-          } catch (billingError) {
-            logger.error(
-              `[BILLING] ❌ Failed to track human support for customer-${updatedCustomer.id}:`,
-              billingError
-            )
-            // Don't fail the request if billing fails
-          }
-
           const pushResult =
             await this.pushMessagingService.sendChatbotReactivated(
               updatedCustomer.id,
@@ -547,26 +529,6 @@ export class CustomersController {
         workspaceId,
         updateData
       )
-
-      // 💰 BILLING: Track human support when chatbot is reactivated (€1.00)
-      if (activeChatbot === true && existingCustomer.activeChatbot === false) {
-        try {
-          await this.billingService.trackHumanSupport(
-            workspaceId,
-            customerId,
-            "Chatbot reactivated after human support"
-          )
-          logger.info(
-            `[BILLING] 💰 Human support cost for customer-${customerId}: €1.00 - Reason: ${reason || "Chatbot reactivated after human support"}`
-          )
-        } catch (billingError) {
-          logger.error(
-            `[BILLING] ❌ Failed to track human support for customer-${customerId}:`,
-            billingError
-          )
-          // Don't fail the request if billing fails
-        }
-      }
 
       // Logging dettagliato per audit
       logger.info(

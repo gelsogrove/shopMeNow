@@ -693,11 +693,11 @@ enum BillingType {
   MESSAGE // €0.15 - Per message/interaction cost (LLM responses)
   NEW_CUSTOMER // €1.50 - New customer registration
   NEW_ORDER // €1.50 - New order placed
-  HUMAN_SUPPORT // €0.50 - Human support escalation
   PUSH_CAMPAIGN // €1.00 - Push notification (advertising campaigns)
   FEEDBACK // No cost - Customer feedback
   ORDER_REVIEW // No cost - Order review
   CAMPAIGN_LINK // No cost - Campaign link click
+  // NOTE: Human Support is FREE - messages during support are already charged at MESSAGE rate
 }
 
 enum CampaignFrequency {

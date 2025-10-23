@@ -153,47 +153,6 @@ export class BillingService {
   }
 
   /**
-   * Track usage cost for human support
-   */
-  async trackHumanSupport(
-    workspaceId: string,
-    customerId: string,
-    description: string = "Human support session"
-  ): Promise<void> {
-    try {
-      // Get current total for this customer
-      const previousTotal = await this.getCurrentTotalForCustomer(
-        workspaceId,
-        customerId
-      )
-      const currentCharge = BillingPrices.HUMAN_SUPPORT
-      const newTotal = previousTotal + currentCharge
-
-      await this.prisma.billing.create({
-        data: {
-          workspaceId,
-          customerId,
-          amount: currentCharge,
-          type: BillingType.HUMAN_SUPPORT,
-          description,
-          previousTotal,
-          currentCharge,
-          newTotal,
-        },
-      })
-      logger.info(
-        `[BILLING] 💰 Human Support: €${previousTotal.toFixed(2)} + €${currentCharge.toFixed(2)} = €${newTotal.toFixed(2)} (workspace: ${workspaceId}, customer: ${customerId})`
-      )
-    } catch (error) {
-      logger.error(
-        `Failed to charge human support for workspace ${workspaceId}, customer ${customerId}`,
-        error
-      )
-      throw error
-    }
-  }
-
-  /**
    * Track usage cost for advertising push campaign
    */
   async trackPushCampaign(
