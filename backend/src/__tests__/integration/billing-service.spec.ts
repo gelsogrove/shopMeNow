@@ -9,7 +9,7 @@
  * Andrea richiede: test per MESSAGE, NEW_CUSTOMER, NEW_ORDER
  */
 
-import { PrismaClient, BillingType } from "@prisma/client"
+import { BillingType, PrismaClient } from "@prisma/client"
 import { BillingService } from "../../application/services/billing.service"
 import { PricingRepository } from "../../repositories/pricing.repository"
 
@@ -119,10 +119,7 @@ describe("BillingService - Dynamic Pricing from Database", () => {
       const initialRecords = await prisma.billing.findMany({
         where: { workspaceId: testWorkspaceId, customerId: testCustomerId },
       })
-      const initialTotal = initialRecords.reduce(
-        (sum, r) => sum + r.amount,
-        0
-      )
+      const initialTotal = initialRecords.reduce((sum, r) => sum + r.amount, 0)
 
       // Send 3 messages
       await billingService.trackMessage(
@@ -186,10 +183,7 @@ describe("BillingService - Dynamic Pricing from Database", () => {
       const brandNewCustomerId = "brand-new-customer-" + Date.now()
       await createTestCustomer(brandNewCustomerId) // Create customer first
 
-      await billingService.trackNewCustomer(
-        testWorkspaceId,
-        brandNewCustomerId
-      )
+      await billingService.trackNewCustomer(testWorkspaceId, brandNewCustomerId)
 
       const record = await prisma.billing.findFirst({
         where: {

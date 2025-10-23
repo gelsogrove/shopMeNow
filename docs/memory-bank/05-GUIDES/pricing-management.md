@@ -64,32 +64,36 @@ Il sistema di pricing di ShopME è completamente **centralizzato nel database**.
 **Quando usarlo**: Per modifiche rapide di pochi prezzi
 
 1. **Apri il file di configurazione**:
+
    ```bash
    code backend/scripts/update-pricing.ts
    ```
 
 2. **Modifica i valori in `PRICING_UPDATES`**:
+
    ```typescript
    const PRICING_UPDATES = {
      // Decommenta solo i prezzi che vuoi cambiare
-     NEW_CUSTOMER: 1.00,  // Da €1.50 a €1.00
-     MESSAGE: 0.12,       // Da €0.15 a €0.12
+     NEW_CUSTOMER: 1.0, // Da €1.50 a €1.00
+     MESSAGE: 0.12, // Da €0.15 a €0.12
    }
    ```
 
 3. **Esegui lo script**:
+
    ```bash
    cd backend
    npm run update-pricing
    ```
 
 4. **Output atteso**:
+
    ```
    ✅ NEW_CUSTOMER:
       Old: €1.5
       New: €1
       Change: €-0.50
-   
+
    ✅ Pricing update completed!
    📊 Summary: Updated 2 pricing configurations
    ```
@@ -104,17 +108,19 @@ Il sistema di pricing di ShopME è completamente **centralizzato nel database**.
 **Quando usarlo**: Per configurazione iniziale o reset completo
 
 1. **Apri il file sorgente**:
+
    ```bash
    code backend/prisma/data/pricingConfig.ts
    ```
 
 2. **Modifica i valori**:
+
    ```typescript
    export const pricingConfigData = [
      {
        type: "USAGE" as const,
        key: "NEW_CUSTOMER",
-       value: 1.0,  // ⬅️ MODIFICA QUI
+       value: 1.0, // ⬅️ MODIFICA QUI
        description: "Cost per new customer registration",
        isActive: true,
      },
@@ -123,6 +129,7 @@ Il sistema di pricing di ShopME è completamente **centralizzato nel database**.
    ```
 
 3. **Re-seed del database**:
+
    ```bash
    cd backend
    npm run seed
@@ -138,40 +145,40 @@ Il sistema di pricing di ShopME è completamente **centralizzato nel database**.
 
 Costi fissi per i piani di abbonamento:
 
-| Key                   | Default | Descrizione                    |
-|-----------------------|---------|--------------------------------|
-| `FREE_MONTHLY`        | €0      | Piano gratuito (14 giorni)     |
-| `BASIC_MONTHLY`       | €29     | Piano base                     |
-| `PREMIUM_MONTHLY`     | €59     | Piano premium                  |
-| `ENTERPRISE_MONTHLY`  | €199    | Piano enterprise               |
-| `MONTHLY_CHANNEL_COST`| €59     | Costo canale WhatsApp          |
+| Key                    | Default | Descrizione                |
+| ---------------------- | ------- | -------------------------- |
+| `FREE_MONTHLY`         | €0      | Piano gratuito (14 giorni) |
+| `BASIC_MONTHLY`        | €29     | Piano base                 |
+| `PREMIUM_MONTHLY`      | €59     | Piano premium              |
+| `ENTERPRISE_MONTHLY`   | €199    | Piano enterprise           |
+| `MONTHLY_CHANNEL_COST` | €59     | Costo canale WhatsApp      |
 
 ### 2. **USAGE** (Costi a Consumo)
 
 Costi per operazioni specifiche:
 
-| Key             | Default | Descrizione                           |
-|-----------------|---------|---------------------------------------|
-| `MESSAGE`       | €0.15   | Per ogni messaggio AI                 |
-| `NEW_CUSTOMER`  | €1.00   | Per ogni nuovo cliente (era €1.50)   |
-| `NEW_ORDER`     | €1.50   | Per ogni nuovo ordine                 |
-| `PUSH_CAMPAIGN` | €1.00   | Per ogni notifica push                |
+| Key             | Default | Descrizione                        |
+| --------------- | ------- | ---------------------------------- |
+| `MESSAGE`       | €0.15   | Per ogni messaggio AI              |
+| `NEW_CUSTOMER`  | €1.00   | Per ogni nuovo cliente (era €1.50) |
+| `NEW_ORDER`     | €1.50   | Per ogni nuovo ordine              |
+| `PUSH_CAMPAIGN` | €1.00   | Per ogni notifica push             |
 
 ### 3. **THRESHOLD** (Soglie Gratuite)
 
 Limiti per i piani gratuiti:
 
-| Key                    | Default | Descrizione                    |
-|------------------------|---------|--------------------------------|
-| `FREE_MESSAGES`        | 200     | Messaggi gratis nel trial      |
-| `FREE_PRODUCTS`        | 50      | Prodotti max piano Free        |
-| `FREE_CLIENTS`         | 50      | Clienti max piano Free         |
-| `BASIC_PRODUCTS`       | 50      | Prodotti max piano Basic       |
-| `BASIC_CLIENTS`        | 50      | Clienti max piano Basic        |
-| `PREMIUM_PRODUCTS`     | 100     | Prodotti max piano Premium     |
-| `PREMIUM_CLIENTS`      | 100     | Clienti max piano Premium      |
-| `ENTERPRISE_PRODUCTS`  | 999999  | Prodotti illimitati            |
-| `ENTERPRISE_CLIENTS`   | 999999  | Clienti illimitati             |
+| Key                   | Default | Descrizione                |
+| --------------------- | ------- | -------------------------- |
+| `FREE_MESSAGES`       | 200     | Messaggi gratis nel trial  |
+| `FREE_PRODUCTS`       | 50      | Prodotti max piano Free    |
+| `FREE_CLIENTS`        | 50      | Clienti max piano Free     |
+| `BASIC_PRODUCTS`      | 50      | Prodotti max piano Basic   |
+| `BASIC_CLIENTS`       | 50      | Clienti max piano Basic    |
+| `PREMIUM_PRODUCTS`    | 100     | Prodotti max piano Premium |
+| `PREMIUM_CLIENTS`     | 100     | Clienti max piano Premium  |
+| `ENTERPRISE_PRODUCTS` | 999999  | Prodotti illimitati        |
+| `ENTERPRISE_CLIENTS`  | 999999  | Clienti illimitati         |
 
 ---
 
@@ -185,6 +192,7 @@ npm run test:unit -- billing-calculation.spec.ts
 ```
 
 **Test coperti**:
+
 - ✅ Calcolo costi singoli (MESSAGE, NEW_CUSTOMER, NEW_ORDER)
 - ✅ Accumulazione: `previousTotal + currentCharge = newTotal`
 - ✅ Edge cases (zero, numeri grandi, precisione)
@@ -199,6 +207,7 @@ npm run test:integration -- billing-service.spec.ts
 ```
 
 **Test coperti**:
+
 - ✅ BillingService.trackMessage() con prezzo da DB
 - ✅ BillingService.trackNewCustomer() con prezzo da DB
 - ✅ BillingService.trackNewOrder() con prezzo da DB
@@ -216,6 +225,7 @@ curl http://localhost:3001/api/pricing/config | jq
 ```
 
 **Output atteso**:
+
 ```json
 {
   "plans": {
@@ -246,22 +256,27 @@ curl http://localhost:3001/api/pricing/config | jq
 ### Checklist Completa
 
 1. **Database aggiornato?**
+
    ```bash
    cd backend && npm run view-pricing
    ```
+
    Controlla che i valori siano corretti.
 
 2. **Backend usa i prezzi dal database?**
+
    - Cerca in `billing.service.ts`: `await this.pricingRepository.getValue(...)`
    - ✅ Nessun hardcoded price, solo fallback per sicurezza
    - ✅ Fallback allineato con valore attuale nel database
 
 3. **Frontend riceve i prezzi dall'API?**
+
    - Hook `usePricing()` chiama `/api/pricing/config`
    - Componenti usano: `usage.NEW_CUSTOMER ?? 1.0` (fallback aggiornato)
    - Test: DevTools → Network → verifica chiamata API
 
 4. **Test passano?**
+
    ```bash
    npm run test:unit -- billing-calculation.spec.ts
    # Tutti i 15 test devono passare ✅
@@ -281,6 +296,7 @@ curl http://localhost:3001/api/pricing/config | jq
 **Causa**: Browser cache
 
 **Soluzione**:
+
 ```javascript
 // Browser DevTools Console
 localStorage.clear()
@@ -288,6 +304,7 @@ location.reload()
 ```
 
 Oppure:
+
 ```bash
 # Hard refresh
 Cmd + Shift + R (Mac)
@@ -299,10 +316,11 @@ Ctrl + Shift + R (Windows/Linux)
 **Causa**: Endpoint `/pricing` non in `SESSION_EXEMPT_ROUTES`
 
 **Soluzione**: Verifica `backend/src/routes/index.ts`:
+
 ```typescript
 const SESSION_EXEMPT_ROUTES = [
   "/auth/login",
-  "/pricing",  // ⬅️ Deve essere presente!
+  "/pricing", // ⬅️ Deve essere presente!
   // ...
 ]
 ```
@@ -312,6 +330,7 @@ const SESSION_EXEMPT_ROUTES = [
 **Causa**: Server non riavviato o cache frontend
 
 **Soluzione**:
+
 1. **Backend**: Hot-reload automatico (ts-node-dev)
 2. **Frontend**: Refresh browser (F5)
 3. **Database**: Verifica con `npm run view-pricing`
@@ -321,6 +340,7 @@ const SESSION_EXEMPT_ROUTES = [
 **Causa**: Test non aggiornati con nuovo prezzo
 
 **Soluzione**: Controlla i fallback nei test:
+
 ```typescript
 // ❌ VECCHIO
 NEW_CUSTOMER: usage.NEW_CUSTOMER ?? 1.5
@@ -400,26 +420,32 @@ NEW_CUSTOMER: usage.NEW_CUSTOMER ?? 1.0
 ### Step-by-Step
 
 1. **Modifica lo script**:
+
    ```typescript
    // backend/scripts/update-pricing.ts
    const PRICING_UPDATES = {
-     NEW_CUSTOMER: 1.00,  // Da €1.50 a €1.00
+     NEW_CUSTOMER: 1.0, // Da €1.50 a €1.00
    }
    ```
 
 2. **Esegui update**:
+
    ```bash
    npm run update-pricing
    ```
+
    Output: `✅ NEW_CUSTOMER: Old €1.5 → New €1 (Change: €-0.50)`
 
 3. **Verifica database**:
+
    ```bash
    npm run view-pricing
    ```
+
    Output: `✅ NEW_CUSTOMER €1 Cost per new customer registration`
 
 4. **Aggiorna sorgente** (per future seed):
+
    ```typescript
    // backend/prisma/data/pricingConfig.ts
    {
@@ -429,31 +455,38 @@ NEW_CUSTOMER: usage.NEW_CUSTOMER ?? 1.0
    ```
 
 5. **Aggiorna fallback frontend**:
+
    ```typescript
    // PricingPlans.tsx, PricingSimulator.tsx, PricingSimulatorModal.tsx
-   NEW_CUSTOMER: usage.NEW_CUSTOMER ?? 1.0  // Da 1.5 a 1.0
+   NEW_CUSTOMER: usage.NEW_CUSTOMER ?? 1.0 // Da 1.5 a 1.0
    ```
 
 6. **Aggiorna commenti**:
+
    ```typescript
    // billing.service.ts
-   const newCustomerCost = await this.pricingRepository.getValue("NEW_CUSTOMER") ?? 1.0
-   
+   const newCustomerCost =
+     (await this.pricingRepository.getValue("NEW_CUSTOMER")) ?? 1.0
+
    // registration.controller.ts
    // 💰 BILLING: Track NEW_CUSTOMER when user registers (€1.00)
    logger.info(`[BILLING] 💰 New customer registered: €1.00 charged...`)
    ```
 
 7. **Riesegui test**:
+
    ```bash
    npm run test:unit -- billing-calculation.spec.ts
    ```
+
    Output: `✅ Tests: 15 passed, 15 total`
 
 8. **Test manuale API**:
+
    ```bash
    curl http://localhost:3001/api/pricing/config | jq '.usage.NEW_CUSTOMER'
    ```
+
    Output: `1`
 
 9. **Refresh frontend** e verifica che mostri €1.00

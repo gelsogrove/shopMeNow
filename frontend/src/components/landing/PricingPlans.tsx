@@ -112,7 +112,9 @@ export function PricingPlans() {
     },
     {
       name: "Enterprise",
-      price: pricingPlans.ENTERPRISE_MONTHLY ? `€${pricingPlans.ENTERPRISE_MONTHLY}` : "€0",
+      price: pricingPlans.ENTERPRISE_MONTHLY
+        ? `€${pricingPlans.ENTERPRISE_MONTHLY}`
+        : "€0",
       priceSuffix: "+",
       description: t("pricing.enterprise.desc"),
       buttonText: t("pricing.button.contact"),

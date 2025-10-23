@@ -97,18 +97,18 @@ memory-bank/
 
 ## 🔎 Trova Subito quello che ti Serve
 
-| Obiettivo                              | Vai a                                                                      | Note                                                 |
-| -------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------- |
-| Autenticazione e routing sicuro        | [`01-security/authentication/`](./01-security/authentication/)             | Token vs SessionID, cheat sheet quotidiano           |
-| Sessioni e migrazioni storage          | [`01-security/session-management/`](./01-security/session-management/)     | Migrazione admin panel, fix storage                  |
-| Strategie Translation & Security Layer | [`01-security/translation-security/`](./01-security/translation-security/) | Analisi layer, mitigazione spam                      |
-| Audit e roadmap sicurezza              | [`01-security/assessments/`](./01-security/assessments/)                   | Security score, TODO prioritizzati, OWASP            |
-| Configurazione HTTPS & integrazioni    | [`01-security/guides/`](./01-security/guides/)                             | Setup SSL, guida integrazione security               |
-| Feature e servizi core                 | [`02-features/`](./02-features/)                                           | Scheduler, short links, invio messaggi, analytics    |
-| Architettura sistema                   | [`03-architecture/`](./03-architecture/)                                   | Flow LLM, websocket, endpoints, style guide          |
-| Standard di sviluppo                   | [`04-best-practices/`](./04-best-practices/)                               | Linee guida backend e frontend                       |
+| Obiettivo                              | Vai a                                                                      | Note                                                                   |
+| -------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Autenticazione e routing sicuro        | [`01-security/authentication/`](./01-security/authentication/)             | Token vs SessionID, cheat sheet quotidiano                             |
+| Sessioni e migrazioni storage          | [`01-security/session-management/`](./01-security/session-management/)     | Migrazione admin panel, fix storage                                    |
+| Strategie Translation & Security Layer | [`01-security/translation-security/`](./01-security/translation-security/) | Analisi layer, mitigazione spam                                        |
+| Audit e roadmap sicurezza              | [`01-security/assessments/`](./01-security/assessments/)                   | Security score, TODO prioritizzati, OWASP                              |
+| Configurazione HTTPS & integrazioni    | [`01-security/guides/`](./01-security/guides/)                             | Setup SSL, guida integrazione security                                 |
+| Feature e servizi core                 | [`02-features/`](./02-features/)                                           | Scheduler, short links, invio messaggi, analytics                      |
+| Architettura sistema                   | [`03-architecture/`](./03-architecture/)                                   | Flow LLM, websocket, endpoints, style guide                            |
+| Standard di sviluppo                   | [`04-best-practices/`](./04-best-practices/)                               | Linee guida backend e frontend                                         |
 | Guide operative e onboarding           | [`05-guides/`](./05-guides/)                                               | WhatsApp setup, unit test, script operativi, **pricing management** 💰 |
-| Report e analisi                       | [`06-reports/`](./06-reports/)                                             | Cleanup reports, analisi costi LLM, verifiche finali |
+| Report e analisi                       | [`06-reports/`](./06-reports/)                                             | Cleanup reports, analisi costi LLM, verifiche finali                   |
 
 ---
 

@@ -1,8 +1,8 @@
 /**
  * UPDATE PRICING Script - Automatically syncs database with pricingConfig.ts
- * 
+ *
  * 🎯 SINGLE SOURCE OF TRUTH: prisma/data/pricingConfig.ts
- * 
+ *
  * Usage:
  * 1. Edit values in prisma/data/pricingConfig.ts
  * 2. Run: npm run update-pricing
@@ -23,10 +23,13 @@ const prisma = new PrismaClient()
 // ============================================================================
 
 // Convert pricingConfigData array to key-value map
-const PRICING_FROM_FILE = pricingConfigData.reduce((acc, item) => {
-  acc[item.key] = item.value
-  return acc
-}, {} as Record<string, number>)
+const PRICING_FROM_FILE = pricingConfigData.reduce(
+  (acc, item) => {
+    acc[item.key] = item.value
+    return acc
+  },
+  {} as Record<string, number>
+)
 
 // ============================================================================
 // 📝 SCRIPT EXECUTION
@@ -34,7 +37,9 @@ const PRICING_FROM_FILE = pricingConfigData.reduce((acc, item) => {
 
 async function main() {
   console.log("💰 Starting pricing update from pricingConfig.ts...\n")
-  console.log("📄 Source: prisma/data/pricingConfig.ts (SINGLE SOURCE OF TRUTH)\n")
+  console.log(
+    "📄 Source: prisma/data/pricingConfig.ts (SINGLE SOURCE OF TRUTH)\n"
+  )
 
   const updates = Object.entries(PRICING_FROM_FILE)
 

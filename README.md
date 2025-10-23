@@ -157,6 +157,7 @@ cd backend && npm run update-pricing
 For detailed pricing management guide, see: [`docs/memory-bank/05-guides/pricing-management.md`](docs/memory-bank/05-guides/pricing-management.md)
 
 **Pricing Types**:
+
 - **PLAN**: Monthly subscription costs (€0-€199)
 - **USAGE**: Pay-per-use costs (€0.15-€1.50 per action)
 - **THRESHOLD**: Free tier limits (50-200 units)
@@ -189,6 +190,7 @@ The platform uses OpenRouter for AI processing:
 - **Push Campaign**: €1.00 per notification
 
 **Features**:
+
 - ✅ **Single Source of Truth**: Database-driven pricing
 - ✅ **Historical Preservation**: Billing records maintain original prices
 - ✅ **Automatic Updates**: Frontend and Backend sync automatically
