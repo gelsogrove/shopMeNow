@@ -193,16 +193,19 @@ describe("🧪 LLM Calling Functions Routing - Integration Test", () => {
       console.log("Response:", result.response.substring(0, 150) + "...")
 
       // System should return link (either by calling function OR generating directly)
+      // Check for http://, https://, or /s/ short URLs
       const hasLink =
         result.response.includes("http://") ||
-        result.response.includes("https://")
+        result.response.includes("https://") ||
+        result.response.includes("/s/")
 
       expect(hasLink).toBe(true)
 
-      // Response should mention order
+      // Response should mention order (in any language)
       expect(
         result.response.toLowerCase().includes("ordine") ||
           result.response.toLowerCase().includes("order") ||
+          result.response.toLowerCase().includes("pedido") ||
           result.response.toLowerCase().includes("link")
       ).toBe(true)
     }, 30000)
