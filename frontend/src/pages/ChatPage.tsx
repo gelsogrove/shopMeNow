@@ -332,17 +332,25 @@ export function ChatPage() {
     // � PRIORITÀ 1: Ripristina da sessionStorage se disponibile
     if (chats.length > 0 && !selectedChat) {
       const savedChatId = sessionStorage.getItem("selectedChatId")
-      
+
       if (savedChatId) {
-        logger.info("[ChatPage] 🔄 Ripristino chat da sessionStorage:", savedChatId)
+        logger.info(
+          "[ChatPage] 🔄 Ripristino chat da sessionStorage:",
+          savedChatId
+        )
         const savedChat = chats.find((c) => c.sessionId === savedChatId)
-        
+
         if (savedChat) {
-          logger.info("[ChatPage] ✅ Chat trovata e ripristinata:", savedChat.customerName)
+          logger.info(
+            "[ChatPage] ✅ Chat trovata e ripristinata:",
+            savedChat.customerName
+          )
           selectChat(savedChat)
           return
         } else {
-          logger.warn("[ChatPage] ⚠️ Chat salvata non trovata nella lista, rimuovo da storage")
+          logger.warn(
+            "[ChatPage] ⚠️ Chat salvata non trovata nella lista, rimuovo da storage"
+          )
           sessionStorage.removeItem("selectedChatId")
         }
       }
@@ -385,7 +393,10 @@ export function ChatPage() {
       )
 
       if (clientChats.length > 0) {
-        logger.info("[ChatPage] 📍 Seleziono primo risultato filtro client:", clientChats[0].customerName)
+        logger.info(
+          "[ChatPage] 📍 Seleziono primo risultato filtro client:",
+          clientChats[0].customerName
+        )
         selectChat(clientChats[0])
         return
       }
@@ -393,7 +404,10 @@ export function ChatPage() {
 
     // 🚀 PRIORITÀ 3: Fallback - seleziona il primo della lista solo se non c'è nulla di salvato
     if (filteredChats.length > 0 && !selectedChat && !clientSearchTerm) {
-      logger.info("[ChatPage] 📍 Nessuna chat salvata, seleziono il primo della lista:", filteredChats[0].customerName)
+      logger.info(
+        "[ChatPage] 📍 Nessuna chat salvata, seleziono il primo della lista:",
+        filteredChats[0].customerName
+      )
       selectChat(filteredChats[0])
       return
     }
@@ -760,7 +774,7 @@ export function ChatPage() {
 
       if (response.status === 200) {
         toast.success("Customer updated successfully", { duration: 1000 })
-        
+
         // 🔄 REFRESH COMPLETO - Ricarica la pagina per mostrare i dati aggiornati
         window.location.reload()
       } else {
