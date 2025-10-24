@@ -914,13 +914,13 @@ export class LLMService {
         },
         success: {
           orderLink:
-            "Hello! To protect your privacy I cannot send you the invoice via WhatsApp but here is a secure link where you can download both the invoice and the delivery note in PDF format at the bottom of the page:",
+            "Hello! To protect your privacy I cannot send you the details here via WhatsApp but here is a secure link where you can download documents and see all the details realted, Do you need help with anything else? 😊",
           trackingLink:
             "Hello! Your order is on the way 📦 Track your package in real time:",
           default:
             "Hello! 😊 Here you can see your order: for security reasons it will be valid for 1 hour -",
         },
-        fallback: "Hello! How can I help you today?",
+        fallback: "Hello! How can I help you today? ",
       }
 
       // 🔧 DEBUG: Track function calls

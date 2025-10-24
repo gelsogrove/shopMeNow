@@ -322,14 +322,16 @@ export async function RepeatOrder(
       await prisma.$disconnect()
 
       logger.info("✅ RepeatOrder success: added", productsAdded, "products")
+
+      // 🔧 IMPORTANTE: Usa cartUrl REALE nel message, non placeholder
       return {
         success: true,
         message:
           `Perfetto {{nameUser}}! ✅\n\n` +
           `Ho aggiunto **${productsAdded} prodotto/i** dal tuo ultimo ordine (${order.orderCode}) al carrello! 🛒\n\n` +
           `🛒 **Vai al checkout**:\n` +
-          `[LINK_CHECKOUT_WITH_TOKEN]\n\n` +
-          `⏰ Link valido per {{TOKEN_DURATION}}\n\n` +
+          `${cartUrl}\n\n` +
+          `⏰ Link valido per 15 minuti\n\n` +
           `💡 **Ricorda**: hai uno sconto del **{{discountUser}}%** applicato automaticamente! 🎉\n\n` +
           `Vuoi procedere con l'ordine o modificare qualcosa? 😊`,
         cartCode: cart.id,

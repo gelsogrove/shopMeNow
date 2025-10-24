@@ -242,7 +242,7 @@ async function main() {
     await prisma.products.create({
       data: {
         name: prod.name,
-        productCode: prod.ProductCode || `PROD-${Date.now()}`,
+        productCode: prod.productCode || `PROD-${Date.now()}`,
         description: prod.description,
         formato: prod.formato,
         price: prod.price,

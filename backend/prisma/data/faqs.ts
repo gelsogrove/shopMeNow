@@ -7,8 +7,8 @@
 export interface FAQData {
   question: string
   answer: string
-  category: string
-  language: string
+  category: string | null
+  language: string | null
   isActive: boolean
 }
 
@@ -121,6 +121,27 @@ export const faqs: FAQData[] = [
   {
     question: "How can I see the product catalog?",
     answer: "You can download our complete product catalog here: [LINK_CATALOG]",
+    category: null,
+    language: null,
+    isActive: true,
+  },
+  {
+    question: "Come posso vedere il catalogo prodotti?",
+    answer: "Puoi scaricare il nostro catalogo completo qui: [LINK_CATALOG]",
+    category: null,
+    language: null,
+    isActive: true,
+  },
+  {
+    question: "Voglio scaricare il catalogo",
+    answer: "Ecco il link per scaricare il nostro catalogo completo: [LINK_CATALOG]",
+    category: null,
+    language: null,
+    isActive: true,
+  },
+  {
+    question: "Dove trovo il catalogo?",
+    answer: "Puoi scaricare il catalogo completo dei nostri prodotti qui: [LINK_CATALOG]",
     category: null,
     language: null,
     isActive: true,
