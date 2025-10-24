@@ -53,11 +53,13 @@ export class ShortUrlController {
       }
 
       // Check if URL is a PDF file
-      const isPdf = result.originalUrl!.toLowerCase().endsWith('.pdf')
-      
+      const isPdf = result.originalUrl!.toLowerCase().endsWith(".pdf")
+
       if (isPdf) {
         // For PDF files, return HTML that opens in new window/tab
-        logger.info(`📎 PDF detected, opening in new window: ${result.originalUrl}`)
+        logger.info(
+          `📎 PDF detected, opening in new window: ${result.originalUrl}`
+        )
         res.send(`
           <!DOCTYPE html>
           <html>
