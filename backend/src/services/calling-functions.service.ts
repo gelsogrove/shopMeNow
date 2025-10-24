@@ -324,7 +324,7 @@ export class CallingFunctionsService {
   }): Promise<StandardResponse> {
     try {
       logger.info("🔔 Calling ManageNotifications with:", request)
-      
+
       // Import the ManageNotifications function
       const {
         ManageNotifications,
@@ -337,7 +337,7 @@ export class CallingFunctionsService {
       })
 
       logger.info("✅ ManageNotifications result:", result)
-      
+
       return {
         success: result.success,
         message: result.message,

@@ -228,7 +228,8 @@ export const faqs: FAQData[] = [
     isActive: true,
   },
   {
-    question: "How can I subscribe to receive exclusive offers and notifications?",
+    question:
+      "How can I subscribe to receive exclusive offers and notifications?",
     answer:
       "🎉 Great! I'm happy to subscribe you to exclusive offers!\n\nYou'll receive special promotions, new product alerts, and exclusive discounts directly via WhatsApp.\n\nWant to proceed? Just say **yes**! 📱✨\n\n(You can unsubscribe anytime)",
     category: null,

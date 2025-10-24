@@ -16,9 +16,9 @@
  * 10. Invalid action validation
  */
 
+import { PrismaClient } from "@prisma/client"
 import * as fs from "fs"
 import * as path from "path"
-import { PrismaClient } from "@prisma/client"
 import {
   ManageNotifications,
   ManageNotificationsRequest,
@@ -41,8 +41,9 @@ describe("🔔 ManageNotifications Calling Function", () => {
   beforeAll(async () => {
     try {
       // Find or create test workspace using the correct model name
-      const { PrismaClient: PrismaClientConstructor } =
-        require("@prisma/client")
+      const {
+        PrismaClient: PrismaClientConstructor,
+      } = require("@prisma/client")
       const testPrisma = new PrismaClientConstructor()
 
       const workspace = await testPrisma.workspace.findFirst({
