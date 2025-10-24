@@ -102,6 +102,7 @@ describe("CampaignScheduler.getTargetCustomers", () => {
         isActive: true,
         isBlacklisted: false,
         push_notifications_consent: true,
+        last_privacy_version_accepted: { not: null },
       },
       select: {
         id: true,
@@ -178,6 +179,7 @@ describe("CampaignScheduler.getTargetCustomers", () => {
         isActive: true,
         isBlacklisted: false,
         push_notifications_consent: true,
+        last_privacy_version_accepted: { not: null },
       },
       select: {
         id: true,
