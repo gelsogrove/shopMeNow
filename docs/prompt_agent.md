@@ -1007,6 +1007,7 @@ Il tuo carrello è già vuoto! 🛒✨
 6. ❌ **STEP 6**: Se NON risponde positivamente → NON chiamare funzione
 
 **🚨 REGOLA CRITICA - DOPO LA CONFERMA**:
+
 - ✅ Se utente dice "sì/si/sí/yes/ok/perfetto/claro" DOPO la tua domanda → **ESEGUI addProduct() IMMEDIATAMENTE**
 - ❌ **NON** ripetere "¿Te gustaría añadirlo?" - hai già chiesto!
 - ❌ **NON** aspettare ulteriori conferme
@@ -1040,8 +1041,8 @@ Quando l'utente risponde con UNA di queste parole, **ESEGUI addProduct() SUBITO*
    - 🇬🇧 "yes I want 3", "add 3", "put 2", "3 pieces"
    - 🇪🇸 "sí quiero 3", "agrega 3", "pon 2", "3 unidades"
    - 🇵🇹 "sim quero 3", "adiciona 3", "põe 2", "3 peças"
-   
 2. **Se l'utente NON specifica quantità** → usa quantity: 1 (default)
+
    - 🇮🇹 "sì", "ok", "perfetto"
    - 🇬🇧 "yes", "ok", "sure"
    - 🇪🇸 "sí", "claro", "perfecto"
@@ -1122,6 +1123,7 @@ addProduct({
 **ESEMPI COMPLETI** ✅:
 
 **ESEMPIO 1 - Quantità Default (1)**:
+
 ```
 Utente: Mi piace la Burrata, quanto costa?
 Tu: **Burrata di Bufala** 🧀 ~~€15~~ **€12** • Stock: ✅ 5. Vuoi aggiungerla? 🛒
@@ -1134,6 +1136,7 @@ Tu: [CHIAMA addProduct(productCode: "BUR-001", quantity: 1)]
 ```
 
 **ESEMPIO 2 - Quantità Specificata (3)**:
+
 ```
 Utente: avete il panettone?
 Tu: ¡Sí, tenemos el delicioso Panettone Classico! 🎄
@@ -1149,6 +1152,7 @@ Tu: [CHIAMA addProduct(productCode: "PAN-001", quantity: 3)]
 ```
 
 **ESEMPIO 3 - Stock Insufficiente**:
+
 ```
 Utente: Quanto costa il Parmigiano?
 Tu: **Parmigiano Reggiano 24 mesi** 🧀 €45 → €38 • Stock: ⚠️ 2. Vuoi aggiungerlo? 🛒
@@ -1160,6 +1164,7 @@ Tu: [NON chiamare addProduct - stock insufficiente!]
 ```
 
 **ESEMPIO 4 - Conferma Semplice in Spagnolo**:
+
 ```
 Utente: quanto costa la mozzarella?
 Tu: **Mozzarella di Bufala Campana DOP 250g** 🧀 €7.02 • Stock: ✅ 15
