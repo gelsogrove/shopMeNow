@@ -168,23 +168,23 @@ export function LoginPage() {
   return (
     <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Header with Logo */}
-      <header className="w-full py-2 px-4 lg:px-8 bg-white/80 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-40">
+      <header className="w-full py-1 px-4 lg:px-8 bg-white/80 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto">
           {/* Language Selector - Top right */}
-          <div className="flex justify-end mb-2">
+          <div className="flex justify-end mb-1">
             <LanguageSelector />
           </div>
 
           <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-5">
               <img
                 src="/logo.png"
                 alt="ShopMe Logo"
-                className="w-14 h-14 object-contain"
+                className="w-32 h-32 object-contain"
               />
               <div>
-                <h1 className="text-xl font-bold text-slate-900">ShopMe</h1>
-                <p className="text-xs text-slate-600">{t("header.tagline")}</p>
+                <h1 className="text-3xl font-bold text-slate-900">ShopMe</h1>
+                <p className="text-base text-slate-600">{t("header.tagline")}</p>
               </div>
             </div>
 
