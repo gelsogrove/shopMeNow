@@ -164,6 +164,7 @@ export class LLMService {
         : "Non assegnato",
       agentPhone: customer.sales?.phone || "N/A",
       agentEmail: customer.sales?.email || "N/A",
+      push_notifications_consent: customer.push_notifications_consent || false,
     }
 
     debugInfo.userInfo = {
@@ -626,6 +627,7 @@ export class LLMService {
     // 2. GetLinkOrderByCode (🚨 PRIORITY 2 - View specific order)
     // 3. repeatOrder (⚙️ PRIORITY 3 - Repeat previous order, requires confirmation)
     // 4. addProduct (⚙️ PRIORITY 4 - Add single product, requires confirmation)
+    // 4.5. manageNotifications (🔔 PRIORITY 4.5 - SUBSCRIBE/UNSUBSCRIBE push notifications)
     // 5. searchProduct (📊 PRIORITY 5 - BACKGROUND ONLY, non-blocking)
 
     return [
@@ -634,7 +636,7 @@ export class LLMService {
         function: {
           name: "ContactOperator",
           description:
-            "🚨 PRIORITY 1 - HIGHEST. CHIAMA SUBITO quando utente dice: 'operatore', 'parlare con operatore', 'posso parlare con', 'voglio parlare', 'assistenza umana', 'customer service', 'contattare', 'operator', 'human'. OBBLIGATORIO chiamare questa funzione se l'utente menziona operatore/assistenza. NON rispondere con testo, CHIAMA la funzione!",
+            "🚨 PRIORITY 1 - HIGHEST. CHIAMA IMMEDIATAMENTE quando utente: 1) RICHIEDE ESPLICITAMENTE operatore: 'operatore', 'parlare con operatore', 'assistenza umana', 'customer service', 'voglio parlare con', 'operator', 'human'. 2) ESPRIME FRUSTRAZIONE/PROBLEMA CRITICO (🔴 trigger automatico - NO conferma): 'merce scaduta', 'prodotto scaduto', 'scaduto', 'danneggiato', 'rotto', 'difettoso', 'marcio', 'andato a male', 'stufo/a', 'problema grave', 'sempre problemi', 'ogni volta', 'mai funziona', 'pessimo servizio', 'non funziona mai'. Se rilevi UNA di queste parole → ESEGUI SUBITO ContactOperator() senza chiedere conferma! NON rispondere con testo generico, CHIAMA la funzione!",
           parameters: {
             type: "object",
             properties: {},
@@ -724,6 +726,26 @@ export class LLMService {
               },
             },
             required: ["productCode"],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "manageNotifications",
+          description:
+            "🔔 PRIORITY 4.5 - MEDIUM. Gestisce sottoscrizione/cancellazione notifiche push WhatsApp. TRIGGER NATURALI (consigliati): Usare quando utente chiede in linguaggio naturale: 'voglio ricevere offerte', 'iscrivimi', 'subscribe me', 'quiero ofertas', 'quero receber', 'non voglio più offerte', 'disiscrivimi', 'unsubscribe', 'cancelar', etc. OPZIONE ALTERNATIVA (avanzata): riconosce keywords esatte 'SUBSCRIBE'/'UNSUBSCRIBE' (uppercase). FLOW OBBLIGATORIO: 1) Utente chiede iscrizione/disiscrizione (linguaggio naturale o keywords), 2) Chiedi conferma semplice: 'Vuoi iscriverti alle notifiche push? 📬' o 'Vuoi disiscriverti? 📭', 3) Se conferma ('sì','yes','si','sí','sim') → chiama manageNotifications(action), 4) Mostra messaggio risultato. {{SUBSCRIBE_MESSAGE}} token mostra invito SOLO se push_notifications_consent=false. NON suggerire mai disiscrizione nel chatbot normale (solo in campagne push). NON chiamare se: utente non ha confermato, contesto ambiguo.",
+          parameters: {
+            type: "object",
+            properties: {
+              action: {
+                type: "string",
+                enum: ["SUBSCRIBE", "UNSUBSCRIBE"],
+                description:
+                  "Azione richiesta: SUBSCRIBE (iscriviti) o UNSUBSCRIBE (disiscriviti). SEMPRE maiuscolo nel parametro.",
+              },
+            },
+            required: ["action"],
           },
         },
       },
@@ -1282,8 +1304,17 @@ export class LLMService {
             notes: args.notes,
           })
 
+        case "manageNotifications":
+          // 🔔 PRIORITY 4.5 - MEDIUM (SUBSCRIBE/UNSUBSCRIBE push notifications)
+          logger.info("🔔 manageNotifications called (PRIORITY 4.5):", args)
+          return await this.callingFunctionsService.manageNotifications({
+            action: args.action,
+            customerId: customer.id,
+            workspaceId: workspace.id,
+          })
+
         case "searchProduct":
-          // � PRIORITY 5 - BACKGROUND ONLY (non-blocking, analytics)
+          // 📊 PRIORITY 5 - BACKGROUND ONLY (non-blocking, analytics)
           logger.info(
             "🔍 searchProduct called (PRIORITY 5 - BACKGROUND):",
             args

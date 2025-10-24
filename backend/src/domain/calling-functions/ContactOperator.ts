@@ -68,7 +68,6 @@ export async function ContactOperator(
             "Nel frattempo, ti invitiamo a scrivere una **mail dettagliata** all'indirizzo:\n" +
             "📧 **{{agentEmail}}**\n\n" +
             "Includi eventualmente foto, documenti o qualsiasi allegato utile così da poter analizzare immediatamente la situazione e offrirti la soluzione più rapida! 🚀\n\n" +
-            "💡 **Ricorda**: hai uno sconto personalizzato del **{{discountUser}}%** su tutti i prodotti! 🎉\n\n" +
             "Ci scusiamo per il disturbo. La chat ora verrà **disattivata** e passiamo la palla ad un operatore in carne e ossa! 👤\n\n" +
             "A presto! 😊",
           timestamp: new Date().toISOString(),
@@ -105,7 +104,6 @@ export async function ContactOperator(
           "Nel frattempo, ti invitiamo a scrivere una **mail dettagliata** all'indirizzo:\n" +
           "📧 **{{agentEmail}}**\n\n" +
           "Includi eventualmente foto, documenti o qualsiasi allegato utile così da poter analizzare immediatamente la situazione e offrirti la soluzione più rapida! 🚀\n\n" +
-          "💡 **Ricorda**: hai uno sconto personalizzato del **{{discountUser}}%** su tutti i prodotti! 🎉\n\n" +
           "Ci scusiamo per il disturbo. La chat ora verrà **disattivata** e passiamo la palla ad un operatore in carne e ossa! 👤\n\n" +
           "A presto! 😊",
         timestamp: new Date().toISOString(),
@@ -124,7 +122,6 @@ export async function ContactOperator(
           "Nel frattempo, ti invitiamo a scrivere una **mail dettagliata** all'indirizzo:\n" +
           "📧 **{{agentEmail}}**\n\n" +
           "Includi eventualmente foto, documenti o qualsiasi allegato utile così da poter analizzare immediatamente la situazione e offrirti la soluzione più rapida! 🚀\n\n" +
-          "💡 **Ricorda**: hai uno sconto personalizzato del **{{discountUser}}%** su tutti i prodotti! 🎉\n\n" +
           "Ci scusiamo per il disturbo. La chat ora verrà **disattivata** e passiamo la palla ad un operatore in carne e ossa! 👤\n\n" +
           "A presto! 😊",
         timestamp: new Date().toISOString(),

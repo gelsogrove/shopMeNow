@@ -312,6 +312,53 @@ export class CallingFunctionsService {
   }
 
   /**
+   * Manage push notification subscription (SUBSCRIBE/UNSUBSCRIBE)
+   * Priority: 4.5 (between addProduct and searchProduct)
+   * @param request - Request with action, customerId, workspaceId
+   * @returns StandardResponse with confirmation message
+   */
+  public async manageNotifications(request: {
+    action: "SUBSCRIBE" | "UNSUBSCRIBE"
+    customerId: string
+    workspaceId: string
+  }): Promise<StandardResponse> {
+    try {
+      logger.info("🔔 Calling ManageNotifications with:", request)
+      
+      // Import the ManageNotifications function
+      const {
+        ManageNotifications,
+      } = require("../domain/calling-functions/ManageNotifications")
+
+      const result = await ManageNotifications({
+        action: request.action,
+        customerId: request.customerId,
+        workspaceId: request.workspaceId,
+      })
+
+      logger.info("✅ ManageNotifications result:", result)
+      
+      return {
+        success: result.success,
+        message: result.message,
+        timestamp: new Date().toISOString(),
+        data: {
+          action: result.action,
+          currentStatus: result.currentStatus,
+        },
+      }
+    } catch (error) {
+      logger.error("❌ Error in manageNotifications:", error)
+      return {
+        success: false,
+        message:
+          "An error occurred while updating your notification preferences. Please try again later.",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  /**
    * Replace [LINK_WITH_TOKEN] with generated link
    */
   public async replaceLinkWithToken(

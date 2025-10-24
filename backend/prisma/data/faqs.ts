@@ -227,4 +227,20 @@ export const faqs: FAQData[] = [
     language: null,
     isActive: true,
   },
+  {
+    question: "How can I subscribe to receive exclusive offers and notifications?",
+    answer:
+      "🎉 Great! I'm happy to subscribe you to exclusive offers!\n\nYou'll receive special promotions, new product alerts, and exclusive discounts directly via WhatsApp.\n\nWant to proceed? Just say **yes**! 📱✨\n\n(You can unsubscribe anytime)",
+    category: null,
+    language: null,
+    isActive: true,
+  },
+  {
+    question: "How can I unsubscribe from promotional notifications?",
+    answer:
+      "No problem! I understand. 😊\n\nWould you like to unsubscribe from promotional messages and exclusive offers?\n\nJust say **yes** to confirm, and you'll stop receiving push notifications.\n\n(You can always resubscribe later!) 📱",
+    category: null,
+    language: null,
+    isActive: true,
+  },
 ]
