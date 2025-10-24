@@ -249,9 +249,12 @@ export function ChatPage() {
       setMessages([])
     } else {
       logger.info(
-        "[ChatPage] ✅ Chat salvata trovata, NON resetto selectedChat:",
-        savedChatId
+        "[ChatPage] ✅ Chat salvata trovata in sessionStorage:",
+        savedChatId,
+        "- sarà ripristinata quando arrivano i dati"
       )
+      // NON resettiamo selectedChat se c'è un valore salvato
+      // Il ripristino vero avverrà nel useEffect che monitora chats
     }
 
     // 2. Pulisci URL params
@@ -326,7 +329,26 @@ export function ChatPage() {
 
   // SMART SELECTION: Auto-select when appropriate, but DON'T update existing selection
   useEffect(() => {
-    // 🔥 Se selectedChat ha solo sessionId (oggetto parziale da sessionStorage), completalo UNA VOLTA
+    // � PRIORITÀ 1: Ripristina da sessionStorage se disponibile
+    if (chats.length > 0 && !selectedChat) {
+      const savedChatId = sessionStorage.getItem("selectedChatId")
+      
+      if (savedChatId) {
+        logger.info("[ChatPage] 🔄 Ripristino chat da sessionStorage:", savedChatId)
+        const savedChat = chats.find((c) => c.sessionId === savedChatId)
+        
+        if (savedChat) {
+          logger.info("[ChatPage] ✅ Chat trovata e ripristinata:", savedChat.customerName)
+          selectChat(savedChat)
+          return
+        } else {
+          logger.warn("[ChatPage] ⚠️ Chat salvata non trovata nella lista, rimuovo da storage")
+          sessionStorage.removeItem("selectedChatId")
+        }
+      }
+    }
+
+    // �🔥 Se selectedChat ha solo sessionId (oggetto parziale da sessionStorage), completalo UNA VOLTA
     if (
       selectedChat?.sessionId &&
       !selectedChat.customerName &&
@@ -347,13 +369,7 @@ export function ChatPage() {
       }
     }
 
-    // Only auto-select if we don't have a selection yet
-    if (filteredChats.length > 0 && !selectedChat && !clientSearchTerm) {
-      selectChat(filteredChats[0])
-      return
-    }
-
-    // If we have a client search term, find chats for that client
+    // 🚀 PRIORITÀ 2: Se c'è un filtro client, seleziona il primo risultato filtrato
     if (chats.length > 0 && !selectedChat && clientSearchTerm) {
       const clientChats = chats.filter(
         (chat) =>
@@ -369,9 +385,17 @@ export function ChatPage() {
       )
 
       if (clientChats.length > 0) {
+        logger.info("[ChatPage] 📍 Seleziono primo risultato filtro client:", clientChats[0].customerName)
         selectChat(clientChats[0])
         return
       }
+    }
+
+    // 🚀 PRIORITÀ 3: Fallback - seleziona il primo della lista solo se non c'è nulla di salvato
+    if (filteredChats.length > 0 && !selectedChat && !clientSearchTerm) {
+      logger.info("[ChatPage] 📍 Nessuna chat salvata, seleziono il primo della lista:", filteredChats[0].customerName)
+      selectChat(filteredChats[0])
+      return
     }
   }, [chats, clientSearchTerm])
 
@@ -736,19 +760,9 @@ export function ChatPage() {
 
       if (response.status === 200) {
         toast.success("Customer updated successfully", { duration: 1000 })
-        setShowEditSheet(false)
-        // Update only the selected chat's customer info
-        if (selectedChat) {
-          const updatedCustomer = response.data
-          setSelectedChat({
-            ...selectedChat,
-            customerName: updatedCustomer.name || selectedChat.customerName,
-            customerPhone: updatedCustomer.phone || selectedChat.customerPhone,
-            companyName: updatedCustomer.company || selectedChat.companyName,
-          })
-        }
-        // Refresh chat list
-        queryClient.invalidateQueries({ queryKey: ["chats", userSessionId] })
+        
+        // 🔄 REFRESH COMPLETO - Ricarica la pagina per mostrare i dati aggiornati
+        window.location.reload()
       } else {
         toast.error(
           "Failed to update customer: " +
