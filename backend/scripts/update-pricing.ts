@@ -71,7 +71,7 @@ async function main() {
 
       // Check if value changed
       if (oldValue === newValue) {
-        console.log(`⏭️  ${key}: €${oldValue} (unchanged)`)
+        console.log(`⏭️  ${key}: €${Number(oldValue).toFixed(2)} (unchanged)`)
         unchangedCount++
         continue
       }
@@ -83,8 +83,8 @@ async function main() {
       })
 
       console.log(`✅ ${key}:`)
-      console.log(`   Old: €${oldValue}`)
-      console.log(`   New: €${newValue}`)
+      console.log(`   Old: €${Number(oldValue).toFixed(2)}`)
+      console.log(`   New: €${Number(newValue).toFixed(2)}`)
       console.log(
         `   Change: ${newValue > oldValue ? "+" : ""}€${((newValue as number) - oldValue).toFixed(2)}\n`
       )

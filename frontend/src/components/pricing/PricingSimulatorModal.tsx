@@ -53,9 +53,9 @@ export function PricingSimulatorModal({
   // 💰 Dynamic pricing from database with fallbacks
   const BILLING_PRICES = {
     MONTHLY_CHANNEL_COST: usage.MONTHLY_CHANNEL_COST ?? 59.0,
-    MESSAGE: usage.MESSAGE ?? 0.15,
+    MESSAGE: usage.MESSAGE ?? 0.2,
     NEW_CUSTOMER: usage.NEW_CUSTOMER ?? 1.0,
-    NEW_ORDER: usage.NEW_ORDER ?? 1.5,
+    NEW_ORDER: usage.NEW_ORDER ?? 1.0,
     PUSH_CAMPAIGN: usage.PUSH_CAMPAIGN ?? 1.0,
   } as const
 

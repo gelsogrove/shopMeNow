@@ -587,7 +587,7 @@ async function main() {
       data: {
         chatSessionId: chatSession1.id,
         direction: "OUTBOUND",
-        content: "Ciao! Benvenuto in Altro Gusto. Come posso aiutarti oggi?",
+        content: "Ciao! Benvenuto in Bell'Italia. Come posso aiutarti oggi?",
         type: "TEXT",
         aiGenerated: true,
         metadata: {
@@ -731,7 +731,7 @@ async function main() {
       data: {
         chatSessionId: chatSession4.id,
         direction: "OUTBOUND",
-        content: "Hello! Welcome to Altro Gusto. How can I help you today?",
+        content: "Hello! Welcome to Bell'Italia. How can I help you today?",
         type: "TEXT",
         aiGenerated: true,
         metadata: {

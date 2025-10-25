@@ -198,6 +198,7 @@ export class CampaignScheduler {
    */
   private getFrequencyDays(frequency: CampaignFrequency): number {
     const map: Record<CampaignFrequency, number> = {
+      ONCE: 999999, // One-time campaign, never reschedule
       WEEKLY: 7,
       BIWEEKLY: 14,
       MONTHLY: 30,

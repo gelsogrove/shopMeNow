@@ -732,6 +732,46 @@ export class LLMService {
       {
         type: "function",
         function: {
+          name: "addMultipleProducts",
+          description:
+            "🛒 PRIORITY 4 - MEDIUM. Aggiunge PIÙ PRODOTTI al carrello in una sola operazione. Usare quando il cliente chiede 2+ prodotti insieme e CONFERMA di volerli aggiungere. FLOW OBBLIGATORIO: 1) Mostra TUTTI i prodotti con codici e prezzi, 2) Chiedi 'Vuoi aggiungerli tutti al carrello? 🛒', 3) Se conferma ('sì', 'ok', 'perfetto', 'tutti') → chiama addMultipleProducts(products), 4) Dopo aggiunta → mostra riepilogo con link carrello. ESEMPIO: Cliente: 'Voglio Paccheri, Passata e Parmigiano' → Tu mostri i 3 prodotti → Cliente conferma 'sì' → Tu chiami addMultipleProducts([{productCode:'PASTA-005',quantity:1},{productCode:'COND-004',quantity:1},{productCode:'FORMAG-002',quantity:1}]). DISAMBIGUAZIONE: UN prodotto = addProduct | PIÙ prodotti = addMultipleProducts.",
+          parameters: {
+            type: "object",
+            properties: {
+              products: {
+                type: "array",
+                description:
+                  "Array di prodotti da aggiungere (minimo 1 prodotto, tipicamente 2+).",
+                items: {
+                  type: "object",
+                  properties: {
+                    productCode: {
+                      type: "string",
+                      description:
+                        "Codice esatto del prodotto. Es: 'PASTA-005', 'COND-004', 'FORMAG-002'.",
+                    },
+                    quantity: {
+                      type: "number",
+                      description:
+                        "Quantità (default: 1, intero positivo). Min: 1.",
+                    },
+                    notes: {
+                      type: "string",
+                      description:
+                        "Note opzionali per questo prodotto specifico.",
+                    },
+                  },
+                  required: ["productCode"],
+                },
+              },
+            },
+            required: ["products"],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
           name: "manageNotifications",
           description:
             "🔔 PRIORITY 4.5 - MEDIUM. Gestisce sottoscrizione/cancellazione notifiche push WhatsApp. TRIGGER NATURALI (consigliati): Usare quando utente chiede in linguaggio naturale: 'voglio ricevere offerte', 'iscrivimi', 'subscribe me', 'quiero ofertas', 'quero receber', 'non voglio più offerte', 'disiscrivimi', 'unsubscribe', 'cancelar', etc. OPZIONE ALTERNATIVA (avanzata): riconosce keywords esatte 'SUBSCRIBE'/'UNSUBSCRIBE' (uppercase). FLOW OBBLIGATORIO: 1) Utente chiede iscrizione/disiscrizione (linguaggio naturale o keywords), 2) Chiedi conferma semplice: 'Vuoi iscriverti alle notifiche push? 📬' o 'Vuoi disiscriverti? 📭', 3) Se conferma ('sì','yes','si','sí','sim') → chiama manageNotifications(action), 4) Mostra messaggio risultato. {{SUBSCRIBE_MESSAGE}} token mostra invito SOLO se push_notifications_consent=false. NON suggerire mai disiscrizione nel chatbot normale (solo in campagne push). NON chiamare se: utente non ha confermato, contesto ambiguo.",
@@ -954,8 +994,22 @@ export class LLMService {
         process.env.INTEGRATION_TEST === "true"
 
       // Gestione tool calls (chiamate funzioni)
+      // 🔧 SUPPORT MULTIPLE TOOL CALLS - Process all tool_calls returned by LLM
       if (data.choices?.[0]?.message?.tool_calls) {
-        const toolCall = data.choices[0].message.tool_calls[0]
+        const toolCalls = data.choices[0].message.tool_calls
+
+        // 🚨 Log multiple function calls
+        if (toolCalls.length > 1) {
+          logger.info(
+            `🔄 Multiple function calls detected: ${toolCalls.length} calls`
+          )
+          toolCalls.forEach((tc, idx) => {
+            logger.info(`  ${idx + 1}. ${tc.function.name}`)
+          })
+        }
+
+        // Process FIRST tool call (for now, maintain backward compatibility)
+        const toolCall = toolCalls[0]
         const functionName = toolCall.function.name
         const functionArgs = JSON.parse(toolCall.function.arguments || "{}")
 
@@ -1302,6 +1356,18 @@ export class LLMService {
             productCode: args.productCode,
             quantity: args.quantity || 1,
             notes: args.notes,
+          })
+
+        case "addMultipleProducts":
+          // 🛒 PRIORITY 4 - MEDIUM (requires confirmation, add multiple products at once)
+          logger.info("🛒 addMultipleProducts called (PRIORITY 4):", args)
+          const {
+            AddMultipleProducts,
+          } = require("../domain/calling-functions/AddMultipleProducts")
+          return await AddMultipleProducts({
+            customerId: customer.id,
+            workspaceId: workspace.id,
+            products: args.products, // Array of {productCode, quantity, notes}
           })
 
         case "manageNotifications":

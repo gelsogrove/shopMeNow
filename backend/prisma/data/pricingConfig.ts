@@ -54,7 +54,7 @@ export const pricingConfigData = [
   {
     type: "USAGE" as const,
     key: "MESSAGE",
-    value: 0.15,
+    value: 0.2,
     description:
       "Cost per message (AI-powered responses, including support conversations)",
     isActive: true,
@@ -69,14 +69,14 @@ export const pricingConfigData = [
   {
     type: "USAGE" as const,
     key: "NEW_ORDER",
-    value: 1.5,
+    value: 1.0,
     description: "Cost per new order completed",
     isActive: true,
   },
   {
     type: "USAGE" as const,
     key: "PUSH_CAMPAIGN",
-    value: 0.5,
+    value: 1.0,
     description: "Cost per push notification sent (promotional messages)",
     isActive: true,
   },
@@ -88,7 +88,7 @@ export const pricingConfigData = [
     type: "THRESHOLD" as const,
     key: "FREE_MESSAGES",
     value: 200,
-    description: "Free messages included in trial (after this, €0.15/message)",
+    description: "Free messages included in trial (after this, €0.20/message)",
     isActive: true,
   },
   {

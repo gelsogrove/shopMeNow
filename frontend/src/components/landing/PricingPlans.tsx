@@ -32,9 +32,9 @@ export function PricingPlans() {
   // Use pricing from database (with fallbacks for safety)
   const PRICES = {
     MONTHLY_CHANNEL: usage.MONTHLY_CHANNEL_COST ?? 59.0,
-    MESSAGE: usage.MESSAGE ?? 0.15,
+    MESSAGE: usage.MESSAGE ?? 0.2,
     NEW_CUSTOMER: usage.NEW_CUSTOMER ?? 1.0,
-    NEW_ORDER: usage.NEW_ORDER ?? 1.5,
+    NEW_ORDER: usage.NEW_ORDER ?? 1.0,
     PUSH_CAMPAIGN: usage.PUSH_CAMPAIGN ?? 1.0,
   }
 
@@ -115,7 +115,7 @@ export function PricingPlans() {
       price: pricingPlans.ENTERPRISE_MONTHLY
         ? `€${pricingPlans.ENTERPRISE_MONTHLY}`
         : "€0",
-      priceSuffix: "+",
+      priceSuffix: "/month",
       description: t("pricing.enterprise.desc"),
       buttonText: t("pricing.button.contact"),
       buttonVariant: "outline",
@@ -231,7 +231,7 @@ export function PricingPlans() {
               <MessageSquare className="w-6 h-6 text-green-600" />
             </div>
             <div className="text-3xl font-bold text-green-600 mb-1">
-              €{PRICES.MESSAGE}
+              €{PRICES.MESSAGE.toFixed(2)}
             </div>
             <div className="text-sm font-medium text-gray-900 mb-2">
               {t("pricing.usage.message")}

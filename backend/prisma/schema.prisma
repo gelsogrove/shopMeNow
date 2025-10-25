@@ -701,6 +701,7 @@ enum BillingType {
 }
 
 enum CampaignFrequency {
+  ONCE // Una sola volta (no ripetizione)
   WEEKLY // Ogni 7 giorni
   BIWEEKLY // Ogni 14 giorni
   MONTHLY // Ogni 30 giorni

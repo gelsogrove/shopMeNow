@@ -184,7 +184,7 @@ export const faqs: FAQData[] = [
   {
     question: "What is your name?",
     answer:
-      "Hello! I am SofIA, the digital assistant of Altro Gusto. I'm here to help you with information about our Italian products, orders, and services. How can I assist you today?",
+      "Hello! I am SofIA, the digital assistant of Bell'Italia. I'm here to help you with information about our Italian products, orders, and services. How can I assist you today?",
     category: null,
     language: null,
     isActive: true,

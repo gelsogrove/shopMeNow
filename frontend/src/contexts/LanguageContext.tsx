@@ -16,10 +16,10 @@ const translations = {
   it: {
     // Header
     "header.tagline":
-      "La piattaforma completa per gestire il tuo e-commerce su WhatsApp",
+      "Parla con i tuoi clienti attraverso la loro chat preferita",
 
     // Hero Section
-    "hero.title": "Canale WhatsApp Alimentato da AI",
+    "hero.title": "Crea il tuo agente AI per WhatsApp",
     "hero.subtitle":
       "ShopMe porta l'e-commerce intelligente direttamente su WhatsApp. Il nostro agente AI comprende le esigenze dei clienti, consiglia prodotti e chiude vendite 24/7—tutto attraverso conversazioni naturali.",
     "hero.whyTitle": "Perché ShopMe?",
@@ -51,6 +51,11 @@ const translations = {
     "news.2.category": "Analisi",
     "news.2.desc":
       "Presentiamo la nuova funzionalità di Analisi Ricerca Prodotti! Ora puoi analizzare quali prodotti i tuoi clienti cercano più frequentemente. Questa potente intuizione ti aiuta a comprendere la domanda dei clienti, ottimizzare il tuo inventario e identificare i prodotti di tendenza. Il dashboard di analisi fornisce grafici e report dettagliati che mostrano i modelli di ricerca, le parole chiave popolari e i tassi di conversione.",
+    "news.3.date": "28 Settembre 2025",
+    "news.3.title": "Gestione Team di Vendita",
+    "news.3.category": "Gestione",
+    "news.3.desc":
+      "Presentiamo la potente funzionalità di Gestione Team di Vendita! Ora puoi assegnare agenti di vendita dedicati ai tuoi clienti per un'esperienza personalizzata. Ogni cliente può avere un rappresentante di riferimento che gestisce il suo account, costruisce relazioni durature e fornisce supporto su misura. Il sistema traccia automaticamente le performance di ogni agente, monitora le conversioni e genera report dettagliati sulle vendite per team. Perfetto per organizzare il tuo team commerciale, ottimizzare la distribuzione dei clienti e massimizzare i risultati di vendita!",
     "news.4.date": "20 Settembre 2025",
     "news.4.title": "Invia Notifiche Push",
     "news.4.category": "Marketing",
@@ -160,10 +165,10 @@ const translations = {
   en: {
     // Header
     "header.tagline":
-      "The complete platform to manage your e-commerce on WhatsApp",
+      "Talk to your customers through their favorite chat",
 
     // Hero Section
-    "hero.title": "AI-Powered WhatsApp Channel",
+    "hero.title": "Create your AI agent for WhatsApp",
     "hero.subtitle":
       "ShopMe brings intelligent e-commerce directly to WhatsApp. Our AI agent understands customer needs, recommends products, and closes sales 24/7—all through natural conversations.",
     "hero.whyTitle": "Why ShopMe?",
@@ -305,10 +310,10 @@ const translations = {
   es: {
     // Header
     "header.tagline":
-      "La plataforma completa para gestionar tu e-commerce en WhatsApp",
+      "Habla con tus clientes a través de la sua chat favorita",
 
     // Hero Section
-    "hero.title": "Canal de WhatsApp Impulsado por IA",
+    "hero.title": "Crea tu agente AI para WhatsApp",
     "hero.subtitle":
       "ShopMe lleva el e-commerce inteligente directamente a WhatsApp. Nuestro agente de IA comprende las necesidades del cliente, recomienda productos y cierra ventas 24/7—todo a través de conversaciones naturales.",
     "hero.whyTitle": "¿Por qué ShopMe?",
@@ -448,10 +453,10 @@ const translations = {
   pt: {
     // Header
     "header.tagline":
-      "A plataforma completa para gerenciar seu e-commerce no WhatsApp",
+      "Fale com seus clientes através do chat favorito deles",
 
     // Hero Section
-    "hero.title": "Canal WhatsApp Alimentado por IA",
+    "hero.title": "Crie seu agente AI para WhatsApp",
     "hero.subtitle":
       "ShopMe traz e-commerce inteligente diretamente para o WhatsApp. Nosso agente de IA entende as necessidades do cliente, recomenda produtos e fecha vendas 24/7—tudo através de conversas naturais.",
     "hero.whyTitle": "Por que ShopMe?",

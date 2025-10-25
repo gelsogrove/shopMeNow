@@ -16,29 +16,29 @@ export interface WorkspaceSettingsData {
 }
 
 export const workspaceSettings: WorkspaceSettingsData = {
-  "name": "Altro Gusto",
-  "url": "http://localhost:3000",
-  "whatsappPhoneNumber": "+34654728753",
-  "notificationEmail": "info@altrogusto.com",
-  "welcomeMessages": {
-    "en": "👋 Welcome to Altro Gusto! I'm SofiA, your digital assistant. I can help you discover Italian gourmet products, answer questions, and manage orders. Watch our presentation: https://www.youtube.com/watch?v=cmpRLQZkTb8 - How can I help you today?",
-    "es": "👋 ¡Bienvenido a Altro Gusto! Soy SofiA, tu asistente digital. Puedo ayudarte a descubrir productos gourmet italianos, responder preguntas y gestionar pedidos. Mira nuestra presentación: https://www.youtube.com/watch?v=cmpRLQZkTb8 - ¿Cómo puedo ayudarte hoy?",
-    "it": "👋 Benvenuto da Altro Gusto! Sono SofiA, il tuo assistente digitale. Posso aiutarti a scoprire prodotti gourmet italiani, rispondere alle tue domande e gestire ordini. Guarda la nostra presentazione: https://www.youtube.com/watch?v=cmpRLQZkTb8 - Come posso aiutarti oggi?",
-    "pt": "👋 Bem-vindo ao Altro Gusto! Sou a SofiA, a sua assistente digital. Posso ajudá-lo a descobrir produtos gourmet italianos, responder perguntas e gerir encomendas. Veja a nossa apresentação: https://www.youtube.com/watch?v=cmpRLQZkTb8 - Como posso ajudá-lo hoje?"
+  name: "Bell'Italia",
+  url: "http://localhost:3000",
+  whatsappPhoneNumber: "+34654728753",
+  notificationEmail: "info@altrogusto.com",
+  welcomeMessages: {
+    en: "👋 Welcome to Bell'Italia! I'm SofiA, your digital assistant. I can help you discover Italian gourmet products, answer questions, and manage orders. Watch our presentation: https://www.youtube.com/watch?v=cmpRLQZkTb8 - How can I help you today?",
+    es: "👋 ¡Bienvenido a Bell'Italia! Soy SofiA, tu asistente digital. Puedo ayudarte a descubrir productos gourmet italianos, responder preguntas y gestionar pedidos. Mira nuestra presentación: https://www.youtube.com/watch?v=cmpRLQZkTb8 - ¿Cómo puedo ayudarte hoy?",
+    it: "👋 Benvenuto da Bell'Italia! Sono SofiA, il tuo assistente digitale. Posso aiutarti a scoprire prodotti gourmet italiani, rispondere alle tue domande e gestire ordini. Guarda la nostra presentazione: https://www.youtube.com/watch?v=cmpRLQZkTb8 - Come posso aiutarti oggi?",
+    pt: "👋 Bem-vindo ao Bell'Italia! Sou a SofiA, a sua assistente digital. Posso ajudá-lo a descobrir produtos gourmet italianos, responder perguntas e gerir encomendas. Veja a nossa apresentação: https://www.youtube.com/watch?v=cmpRLQZkTb8 - Como posso ajudá-lo hoje?",
   },
-  "wipMessages": {
-    "en": "Work in progress. Please contact us later.",
-    "es": "Trabajos en curso. Por favor, contáctenos más tarde.",
-    "it": "Lavori in corso. Contattaci più tardi.",
-    "pt": "Em manutenção. Por favor, contacte-nos mais tarde."
+  wipMessages: {
+    en: "Work in progress. Please contact us later.",
+    es: "Trabajos en curso. Por favor, contáctenos más tarde.",
+    it: "Lavori in corso. Contattaci più tardi.",
+    pt: "Em manutenção. Por favor, contacte-nos mais tarde.",
   },
-  "afterRegistrationMessages": {
-    "de": "Danke für Ihre Registrierung, [nome]! Wie kann ich Ihnen heute helfen? Möchten Sie Ihre Bestellungen sehen? Die Angebote? Oder benötigen Sie andere Informationen?",
-    "en": "Thank you for registering, [nome]! How can I help you today? Would you like to see your orders? The offers? Or do you need other information?",
-    "es": "¡Gracias por registrarte, [nome]! ¿Cómo puedo ayudarte hoy? ¿Quieres ver tus pedidos? ¿Las ofertas? ¿O necesitas otra información?",
-    "fr": "Merci de vous être inscrit, [nome] ! Comment puis-je vous aider aujourd'hui ? Voulez-vous voir vos commandes ? Les offres ? Ou avez-vous besoin d'autres informations ?",
-    "it": "Grazie per esserti registrato, [nome]! Come ti posso aiutare oggi? Vuoi vedere i tuoi ordini? Le offerte? O hai bisogno di altre informazioni?",
-    "pt": "Obrigado por se registrar, [nome]! Como posso ajudá-lo hoje? Quer ver seus pedidos? As ofertas? Ou precisa de outras informações?"
+  afterRegistrationMessages: {
+    de: "Danke für Ihre Registrierung, [nome]! Wie kann ich Ihnen heute helfen? Möchten Sie Ihre Bestellungen sehen? Die Angebote? Oder benötigen Sie andere Informationen?",
+    en: "Thank you for registering, [nome]! How can I help you today? Would you like to see your orders? The offers? Or do you need other information?",
+    es: "¡Gracias por registrarte, [nome]! ¿Cómo puedo ayudarte hoy? ¿Quieres ver tus pedidos? ¿Las ofertas? ¿O necesitas otra información?",
+    fr: "Merci de vous être inscrit, [nome] ! Comment puis-je vous aider aujourd'hui ? Voulez-vous voir vos commandes ? Les offres ? Ou avez-vous besoin d'autres informations ?",
+    it: "Grazie per esserti registrato, [nome]! Come ti posso aiutare oggi? Vuoi vedere i tuoi ordini? Le offerte? O hai bisogno di altre informazioni?",
+    pt: "Obrigado por se registrar, [nome]! Como posso ajudá-lo hoje? Quer ver seus pedidos? As ofertas? Ou precisa de outras informações?",
   },
-  "debugMode": true
+  debugMode: true,
 }

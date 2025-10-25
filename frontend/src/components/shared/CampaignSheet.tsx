@@ -56,6 +56,7 @@ interface CampaignSheetProps {
 }
 
 const frequencyOptions = [
+  { value: "ONCE", label: "One-time (send once)" },
   { value: "WEEKLY", label: "Weekly (every 7 days)" },
   { value: "BIWEEKLY", label: "Bi-weekly (every 14 days)" },
   { value: "MONTHLY", label: "Monthly (every 30 days)" },
