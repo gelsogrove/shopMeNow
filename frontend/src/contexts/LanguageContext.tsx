@@ -164,8 +164,7 @@ const translations = {
   },
   en: {
     // Header
-    "header.tagline":
-      "Talk to your customers through their favorite chat",
+    "header.tagline": "Talk to your customers through their favorite chat",
 
     // Hero Section
     "hero.title": "Create your AI agent for WhatsApp",
@@ -309,8 +308,7 @@ const translations = {
   },
   es: {
     // Header
-    "header.tagline":
-      "Habla con tus clientes a través de la sua chat favorita",
+    "header.tagline": "Habla con tus clientes a través de la sua chat favorita",
 
     // Hero Section
     "hero.title": "Crea tu agente AI para WhatsApp",
@@ -452,8 +450,7 @@ const translations = {
   },
   pt: {
     // Header
-    "header.tagline":
-      "Fale com seus clientes através do chat favorito deles",
+    "header.tagline": "Fale com seus clientes através do chat favorito deles",
 
     // Hero Section
     "hero.title": "Crie seu agente AI para WhatsApp",
