@@ -260,14 +260,14 @@ async function main() {
 
   // Mapping: category name → supplier company name
   const categoryToSupplier: Record<string, string> = {
-    "Pasta": "Pastificio Gragnano",
+    Pasta: "Pastificio Gragnano",
     "Cured Meats": "Salumificio Toscano",
-    "Cheeses": "Latticini del Sud",
-    "Condiments": "Oleificio Pugliese",
-    "Desserts": "Dolciaria Siciliana",
-    "Beverages": "Bevande Premium Italia",
-    "Specialties": "Specialità Regionali",
-    "Preserves": "Conserve Calabresi",
+    Cheeses: "Latticini del Sud",
+    Condiments: "Oleificio Pugliese",
+    Desserts: "Dolciaria Siciliana",
+    Beverages: "Bevande Premium Italia",
+    Specialties: "Specialità Regionali",
+    Preserves: "Conserve Calabresi",
     "Frozen Products": "Surgelati Naturali",
   }
 

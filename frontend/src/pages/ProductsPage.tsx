@@ -144,7 +144,7 @@ export function ProductsPage() {
     if (selectedProduct) {
       setSelectedCategoryId(selectedProduct.categoryId || "none")
       setSelectedSupplierId(selectedProduct.supplierId || "none")
-      logger.info('Setting selected values from product:', {
+      logger.info("Setting selected values from product:", {
         categoryId: selectedProduct.categoryId,
         supplierId: selectedProduct.supplierId,
       })
@@ -292,7 +292,7 @@ export function ProductsPage() {
       formData.delete("categoryId")
       formData.append("categoryId", "")
     }
-    
+
     // Make sure supplierId is set correctly if "none" is selected
     const suppId = formData.get("supplierId")
     if (suppId === "none") {

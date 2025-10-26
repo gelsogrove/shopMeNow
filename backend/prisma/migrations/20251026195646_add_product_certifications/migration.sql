@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "products" ADD COLUMN     "isGlutenFree" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "isHalal" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "isOrganic" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "isVegan" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "isWholeGrain" BOOLEAN NOT NULL DEFAULT false;

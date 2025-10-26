@@ -1,8 +1,8 @@
 import { Router } from "express"
 import { SupplierController } from "../controllers/supplier.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"
-import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
 import { handleUploadError, uploadImage } from "../middlewares/uploadMiddleware"
+import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
 
 const router = Router()
 const controller = new SupplierController()

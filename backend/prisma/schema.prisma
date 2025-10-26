@@ -128,27 +128,32 @@ model Suppliers {
 }
 
 model Products {
-  id          String        @id @default(uuid())
-  name        String
-  productCode String?
-  description String?
-  formato     String?
-  price       Float
-  stock       Int           @default(0)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  isActive    Boolean       @default(true)
-  workspaceId String
-  categoryId  String?
-  supplierId  String?
-  slug        String        @unique
-  status      ProductStatus @default(ACTIVE)
-  imageUrl    String[]      @default([])
-  cartItems   CartItems[]
-  orderItems  OrderItems[]
-  category    Categories?   @relation(fields: [categoryId], references: [id])
-  supplier    Suppliers?    @relation(fields: [supplierId], references: [id])
-  workspace   Workspace     @relation(fields: [workspaceId], references: [id])
+  id             String        @id @default(uuid())
+  name           String
+  productCode    String?
+  description    String?
+  formato        String?
+  price          Float
+  stock          Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  isActive       Boolean       @default(true)
+  workspaceId    String
+  categoryId     String?
+  supplierId     String?
+  slug           String        @unique
+  status         ProductStatus @default(ACTIVE)
+  imageUrl       String[]      @default([])
+  isWholeGrain   Boolean       @default(false)
+  isOrganic      Boolean       @default(false)
+  isHalal        Boolean       @default(false)
+  isVegan        Boolean       @default(false)
+  isGlutenFree   Boolean       @default(false)
+  cartItems      CartItems[]
+  orderItems     OrderItems[]
+  category       Categories?   @relation(fields: [categoryId], references: [id])
+  supplier       Suppliers?    @relation(fields: [supplierId], references: [id])
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id])
 
   @@map("products")
 }

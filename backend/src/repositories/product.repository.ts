@@ -232,6 +232,11 @@ export class ProductRepository implements IProductRepository {
         slug: product.slug,
         categoryId: product.categoryId,
         supplierId: product.supplierId,
+        isWholeGrain: product.isWholeGrain,
+        isOrganic: product.isOrganic,
+        isHalal: product.isHalal,
+        isVegan: product.isVegan,
+        isGlutenFree: product.isGlutenFree,
       }
 
       // Add imageUrl if provided
@@ -392,6 +397,11 @@ export class ProductRepository implements IProductRepository {
       supplierId: data.supplierId,
       workspaceId: data.workspaceId,
       imageUrl: data.imageUrl || [],
+      isWholeGrain: data.isWholeGrain ?? false,
+      isOrganic: data.isOrganic ?? false,
+      isHalal: data.isHalal ?? false,
+      isVegan: data.isVegan ?? false,
+      isGlutenFree: data.isGlutenFree ?? false,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
       category: data.category,

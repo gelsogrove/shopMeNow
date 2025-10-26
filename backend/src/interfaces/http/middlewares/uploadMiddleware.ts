@@ -48,20 +48,20 @@ const storage = multer.diskStorage({
     // Determine upload directory based on route
     const isProduct = req.baseUrl?.includes("/products")
     const isSupplier = req.baseUrl?.includes("/suppliers")
-    
+
     let uploadDir = uploadDirs.services // default
     if (isProduct) uploadDir = uploadDirs.products
     else if (isSupplier) uploadDir = uploadDirs.suppliers
-    
+
     cb(null, uploadDir)
   },
   filename: (req, file, cb) => {
     // Get code from body or params (ensure it's a string)
     const code =
-      req.body.ProductCode || 
-      req.body.code || 
+      req.body.ProductCode ||
+      req.body.code ||
       req.body.companyName || // For suppliers
-      req.params.code || 
+      req.params.code ||
       `file_${Date.now()}`
 
     // Sanitize code to prevent path traversal (ensure it's a string)

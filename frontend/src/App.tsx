@@ -27,7 +27,6 @@ import OrderSummaryPage from "./pages/OrderSummaryPage"
 
 import CategoriesPage from "./pages/products/CategoriesPage"
 import { ProductsPage } from "./pages/ProductsPage"
-import { SuppliersPage } from "./pages/SuppliersPage"
 import ProfilePage from "./pages/ProfilePage"
 import RegisterPage from "./pages/register"
 import RegistrationSuccess from "./pages/registration-success"
@@ -37,6 +36,7 @@ import { ServicesPage } from "./pages/ServicesPage"
 import { CategoriesPage as SettingsCategoriesPage } from "./pages/settings/CategoriesPage"
 import { ChannelTypesPage } from "./pages/settings/ChannelTypesPage"
 import { LanguagesPage } from "./pages/settings/LanguagesPage"
+import { SuppliersPage } from "./pages/SuppliersPage"
 
 import { ProductsPage as SettingsProductsPage } from "./pages/settings/ProductsPage"
 

@@ -52,13 +52,13 @@ export class SupplierController {
   async createSupplier(req: Request, res: Response): Promise<Response> {
     try {
       const workspaceId = (req as any).workspaceId
-      
+
       // DEBUG: Log everything about the request
-      logger.info('=== CREATE SUPPLIER DEBUG ===')
-      logger.info('req.body:', req.body)
-      logger.info('req.file:', req.file)
-      logger.info('workspaceId:', workspaceId)
-      
+      logger.info("=== CREATE SUPPLIER DEBUG ===")
+      logger.info("req.body:", req.body)
+      logger.info("req.file:", req.file)
+      logger.info("workspaceId:", workspaceId)
+
       const {
         companyName,
         description,
@@ -80,7 +80,7 @@ export class SupplierController {
         logoUrl = `/uploads/suppliers/${req.file.filename}`
         logger.info(`✅ Logo uploaded: ${logoUrl}`)
       } else {
-        logger.warn('⚠️ No file received in req.file')
+        logger.warn("⚠️ No file received in req.file")
       }
 
       const supplierData = {
@@ -95,12 +95,14 @@ export class SupplierController {
         logoUrl,
         workspaceId,
       }
-      
-      logger.info('Supplier data to create:', supplierData)
+
+      logger.info("Supplier data to create:", supplierData)
 
       const supplier = await this.supplierService.createSupplier(supplierData)
 
-      logger.info(`✅ Supplier created: ${supplier.companyName}, ID: ${supplier.id}, logoUrl: ${supplier.logoUrl}`)
+      logger.info(
+        `✅ Supplier created: ${supplier.companyName}, ID: ${supplier.id}, logoUrl: ${supplier.logoUrl}`
+      )
 
       return res.status(201).json(supplier)
     } catch (error) {
@@ -171,29 +173,39 @@ export class SupplierController {
       const workspaceId = (req as any).workspaceId
 
       // Check if supplier has products
-      const supplier = await this.supplierService.getSupplierById(id, workspaceId)
-      
+      const supplier = await this.supplierService.getSupplierById(
+        id,
+        workspaceId
+      )
+
       if (!supplier) {
         return res.status(404).json({ error: "Supplier not found" })
       }
 
       // Count products linked to this supplier (safely)
       const productCount = (supplier as any)._count?.products || 0
-      
+
       if (productCount > 0) {
-        logger.warn(`❌ Cannot delete supplier ${supplier.companyName} - has ${productCount} products`)
-        return res.status(400).json({ 
+        logger.warn(
+          `❌ Cannot delete supplier ${supplier.companyName} - has ${productCount} products`
+        )
+        return res.status(400).json({
           error: "Cannot delete supplier",
-          message: `This supplier has ${productCount} product(s) linked. Remove the products first or assign them to another supplier.`
+          message: `This supplier has ${productCount} product(s) linked. Remove the products first or assign them to another supplier.`,
         })
       }
 
       // Delete logo file if exists
       if (supplier.logoUrl) {
-        const fs = require('fs')
-        const path = require('path')
-        const filePath = path.join(process.cwd(), 'uploads', 'suppliers', path.basename(supplier.logoUrl))
-        
+        const fs = require("fs")
+        const path = require("path")
+        const filePath = path.join(
+          process.cwd(),
+          "uploads",
+          "suppliers",
+          path.basename(supplier.logoUrl)
+        )
+
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath)
           logger.info(`🗑️ Deleted logo file: ${filePath}`)
@@ -207,7 +219,10 @@ export class SupplierController {
 
       logger.info(`✅ Supplier deleted: ${deletedSupplier.companyName}`)
 
-      return res.json({ message: "Supplier deleted successfully", supplier: deletedSupplier })
+      return res.json({
+        message: "Supplier deleted successfully",
+        supplier: deletedSupplier,
+      })
     } catch (error) {
       logger.error("Error deleting supplier:", error)
       return res.status(500).json({

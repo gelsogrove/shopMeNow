@@ -146,14 +146,14 @@ export class ProductController {
       const workspaceId = workspaceIdParam || workspaceIdQuery
 
       const productData = req.body
-      
+
       // DEBUG: Log everything about the request
-      logger.info('=== CREATE PRODUCT DEBUG ===')
-      logger.info('req.body:', productData)
-      logger.info('req.files:', req.files)
-      logger.info('workspaceId:', workspaceId)
-      logger.info('supplierId in body:', productData.supplierId)
-      logger.info('categoryId in body:', productData.categoryId)
+      logger.info("=== CREATE PRODUCT DEBUG ===")
+      logger.info("req.body:", productData)
+      logger.info("req.files:", req.files)
+      logger.info("workspaceId:", workspaceId)
+      logger.info("supplierId in body:", productData.supplierId)
+      logger.info("categoryId in body:", productData.categoryId)
 
       if (!workspaceId) {
         return res.status(400).json({
@@ -210,18 +210,23 @@ export class ProductController {
       if (typeof productData.isActive === "string") {
         productData.isActive = productData.isActive === "true"
       }
-      
+
       // Handle supplierId: convert empty string to null
       if (productData.supplierId === "" || productData.supplierId === "none") {
         productData.supplierId = null
       }
-      
+
       // Handle categoryId: convert empty string to null
       if (productData.categoryId === "" || productData.categoryId === "none") {
         productData.categoryId = null
       }
-      
-      logger.info('✅ After conversion - supplierId:', productData.supplierId, 'categoryId:', productData.categoryId)
+
+      logger.info(
+        "✅ After conversion - supplierId:",
+        productData.supplierId,
+        "categoryId:",
+        productData.categoryId
+      )
 
       // Map frontend 'code' field to backend 'ProductCode' field
       if (productData.code && !productData.productCode) {
@@ -322,18 +327,23 @@ export class ProductController {
       if (typeof productData.isActive === "string") {
         productData.isActive = productData.isActive === "true"
       }
-      
+
       // Handle supplierId: convert empty string to null
       if (productData.supplierId === "" || productData.supplierId === "none") {
         productData.supplierId = null
       }
-      
+
       // Handle categoryId: convert empty string to null
       if (productData.categoryId === "" || productData.categoryId === "none") {
         productData.categoryId = null
       }
-      
-      logger.info('✅ UPDATE - After conversion - supplierId:', productData.supplierId, 'categoryId:', productData.categoryId)
+
+      logger.info(
+        "✅ UPDATE - After conversion - supplierId:",
+        productData.supplierId,
+        "categoryId:",
+        productData.categoryId
+      )
 
       // Map frontend 'code' field to backend 'ProductCode' field
       if (productData.code && !productData.productCode) {

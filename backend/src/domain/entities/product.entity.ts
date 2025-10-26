@@ -16,6 +16,11 @@ export class Product {
   supplierId: string | null
   workspaceId: string
   imageUrl: string[]
+  isWholeGrain: boolean
+  isOrganic: boolean
+  isHalal: boolean
+  isVegan: boolean
+  isGlutenFree: boolean
   createdAt: Date
   updatedAt: Date
   category?: Category
@@ -39,6 +44,11 @@ export class Product {
     this.supplierId = data.supplierId || null
     this.workspaceId = data.workspaceId || ""
     this.imageUrl = data.imageUrl || []
+    this.isWholeGrain = data.isWholeGrain ?? false
+    this.isOrganic = data.isOrganic ?? false
+    this.isHalal = data.isHalal ?? false
+    this.isVegan = data.isVegan ?? false
+    this.isGlutenFree = data.isGlutenFree ?? false
     this.createdAt = data.createdAt || new Date()
     this.updatedAt = data.updatedAt || new Date()
     this.category = data.category

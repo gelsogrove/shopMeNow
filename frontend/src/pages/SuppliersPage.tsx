@@ -1,8 +1,8 @@
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
 import { DataTable } from "@/components/shared/DataTable"
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner"
-import { PageHeader } from "@/components/shared/PageHeader"
 import { MultiImageCropUpload } from "@/components/shared/MultiImageCropUpload"
+import { PageHeader } from "@/components/shared/PageHeader"
 import { ProductImage } from "@/components/shared/ProductImage"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,11 +17,10 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { logger } from "@/lib/logger"
-import { supplierApi, type Supplier } from "@/services/supplier"
-import { Building2, Globe, Mail, MapPin, Phone, User } from "lucide-react"
-import { useEffect, useState } from "react"
 import { toast } from "@/lib/toast"
-import { IMG_BASE_URL } from "@/config"
+import { supplierApi, type Supplier } from "@/services/supplier"
+import { Building2 } from "lucide-react"
+import { useEffect, useState } from "react"
 
 export function SuppliersPage() {
   const { workspace } = useWorkspace()
@@ -31,7 +30,9 @@ export function SuppliersPage() {
   const [showAddSheet, setShowAddSheet] = useState(false)
   const [showEditSheet, setShowEditSheet] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null)
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(
+    null
+  )
   const [logoFiles, setLogoFiles] = useState<File[]>([])
   const [currentLogoUrl, setCurrentLogoUrl] = useState<string>("")
 
@@ -70,11 +71,7 @@ export function SuppliersPage() {
       cell: (info: any) => {
         const value = info.getValue()
         return value ? (
-          <ProductImage
-            imageUrl={[value]}
-            alt="Logo"
-            size="sm"
-          />
+          <ProductImage imageUrl={[value]} alt="Logo" size="sm" />
         ) : (
           <div className="h-10 w-10 rounded bg-gray-100 flex items-center justify-center">
             <Building2 className="h-5 w-5 text-gray-400" />
@@ -82,10 +79,14 @@ export function SuppliersPage() {
         )
       },
     },
-    { header: "Company", accessorKey: "companyName" as keyof Supplier, size: 250 },
-    { 
-      header: "Region", 
-      accessorKey: "region" as keyof Supplier, 
+    {
+      header: "Company",
+      accessorKey: "companyName" as keyof Supplier,
+      size: 250,
+    },
+    {
+      header: "Region",
+      accessorKey: "region" as keyof Supplier,
       size: 150,
       cell: (info: any) => {
         const value = info.getValue()
@@ -113,15 +114,20 @@ export function SuppliersPage() {
     // Add logo if uploaded
     if (logoFiles.length > 0) {
       formData.append("logo", logoFiles[0])
-      logger.info('✅ Logo file added to FormData:', logoFiles[0].name, 'size:', logoFiles[0].size)
+      logger.info(
+        "✅ Logo file added to FormData:",
+        logoFiles[0].name,
+        "size:",
+        logoFiles[0].size
+      )
     } else {
-      logger.warn('⚠️ No logo file to upload')
+      logger.warn("⚠️ No logo file to upload")
     }
-    
-    logger.info('=== CREATE SUPPLIER FRONTEND ===')
-    logger.info('CompanyName:', formData.get('companyName'))
-    logger.info('Description:', formData.get('description'))
-    logger.info('Logo file:', formData.get('logo'))
+
+    logger.info("=== CREATE SUPPLIER FRONTEND ===")
+    logger.info("CompanyName:", formData.get("companyName"))
+    logger.info("Description:", formData.get("description"))
+    logger.info("Logo file:", formData.get("logo"))
 
     try {
       const newSupplier = await supplierApi.create(workspace.id, formData)
@@ -168,7 +174,9 @@ export function SuppliersPage() {
         formData
       )
       setSuppliers(
-        suppliers.map((s) => (s.id === selectedSupplier.id ? updatedSupplier : s))
+        suppliers.map((s) =>
+          s.id === selectedSupplier.id ? updatedSupplier : s
+        )
       )
       setShowEditSheet(false)
       setSelectedSupplier(null)
