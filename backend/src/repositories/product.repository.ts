@@ -231,6 +231,7 @@ export class ProductRepository implements IProductRepository {
         isActive: product.isActive,
         slug: product.slug,
         categoryId: product.categoryId,
+        supplierId: product.supplierId,
       }
 
       // Add imageUrl if provided
@@ -388,6 +389,7 @@ export class ProductRepository implements IProductRepository {
       isActive: data.isActive,
       slug: data.slug,
       categoryId: data.categoryId,
+      supplierId: data.supplierId,
       workspaceId: data.workspaceId,
       imageUrl: data.imageUrl || [],
       createdAt: data.createdAt,

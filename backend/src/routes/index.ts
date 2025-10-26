@@ -1519,6 +1519,11 @@ router.use("/workspaces/:workspaceId/sales", salesRouterInstance)
 router.use("/sales", salesRouterInstance)
 logger.info("Registered sales router with workspace routes")
 
+// Mount suppliers routes
+import supplierRoutes from "../interfaces/http/routes/supplier.routes"
+router.use("/workspaces/:workspaceId/suppliers", supplierRoutes)
+logger.info("Registered suppliers router with workspace routes")
+
 // Mount services routes (with authentication)
 const servicesRouterInstance = servicesRouter(servicesController)
 router.use("/workspaces/:workspaceId/services", servicesRouterInstance)

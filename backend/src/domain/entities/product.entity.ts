@@ -13,6 +13,7 @@ export class Product {
   isActive: boolean
   slug: string
   categoryId: string | null
+  supplierId: string | null
   workspaceId: string
   imageUrl: string[]
   createdAt: Date
@@ -35,6 +36,7 @@ export class Product {
     this.isActive = data.isActive ?? true
     this.slug = data.slug || ""
     this.categoryId = data.categoryId || null
+    this.supplierId = data.supplierId || null
     this.workspaceId = data.workspaceId || ""
     this.imageUrl = data.imageUrl || []
     this.createdAt = data.createdAt || new Date()

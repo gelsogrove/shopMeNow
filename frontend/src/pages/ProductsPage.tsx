@@ -21,6 +21,7 @@ import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
 import { categoriesApi } from "@/services/categoriesApi"
 import { productsApi, type Product } from "@/services/productsApi"
+import { supplierApi, type Supplier } from "@/services/supplier"
 import { commonStyles } from "@/styles/common"
 import { getCurrencySymbol } from "@/utils/format"
 import { Package, Pencil, Trash2 } from "lucide-react"
@@ -33,12 +34,14 @@ export function ProductsPage() {
   const [categories, setCategories] = useState<
     Array<{ id: string; name: string }>
   >([])
+  const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [showAddSheet, setShowAddSheet] = useState(false)
   const [showEditSheet, setShowEditSheet] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [searchValue, setSearchValue] = useState("")
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("none")
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string>("none")
   const [productIsActive, setProductIsActive] = useState(true)
   const [productCode, setProductCode] = useState("")
   const [imageFiles, setImageFiles] = useState<File[]>([])
@@ -119,11 +122,35 @@ export function ProductsPage() {
     loadCategories()
   }, [workspace?.id])
 
-  // Reset category selection when product changes
+  // Fetch suppliers when workspace changes
   useEffect(() => {
-    setSelectedCategoryId(selectedProduct?.categoryId || "none")
+    const loadSuppliers = async () => {
+      if (!workspace?.id) return
+
+      try {
+        const suppliersData = await supplierApi.getAll(workspace.id)
+        setSuppliers(suppliersData)
+      } catch (error) {
+        logger.error("Failed to load suppliers:", error)
+        toast.error("Failed to load suppliers")
+      }
+    }
+
+    loadSuppliers()
+  }, [workspace?.id])
+
+  // Reset category and supplier selection when product changes
+  useEffect(() => {
+    if (selectedProduct) {
+      setSelectedCategoryId(selectedProduct.categoryId || "none")
+      setSelectedSupplierId(selectedProduct.supplierId || "none")
+      logger.info('Setting selected values from product:', {
+        categoryId: selectedProduct.categoryId,
+        supplierId: selectedProduct.supplierId,
+      })
+    }
     // Rimuovo il reset del productCode da qui per evitare conflitti
-  }, [selectedProduct])
+  }, [selectedProduct, suppliers]) // Also depend on suppliers being loaded
 
   // Filter and sort products
   const filteredProducts = React.useMemo(() => {
@@ -194,6 +221,7 @@ export function ProductsPage() {
       // Reset form state
       setProductCode("")
       setSelectedCategoryId("none")
+      setSelectedSupplierId("none")
 
       toast.success(
         "Product created successfully. Edit it to add details and images."
@@ -209,6 +237,7 @@ export function ProductsPage() {
   const handleEdit = (product: Product) => {
     setSelectedProduct(product)
     setSelectedCategoryId(product.categoryId || "none")
+    setSelectedSupplierId(product.supplierId || "none")
     setProductIsActive(product.isActive ?? true)
     setProductCode(product.code || "")
 
@@ -263,9 +292,18 @@ export function ProductsPage() {
       formData.delete("categoryId")
       formData.append("categoryId", "")
     }
+    
+    // Make sure supplierId is set correctly if "none" is selected
+    const suppId = formData.get("supplierId")
+    if (suppId === "none") {
+      formData.delete("supplierId")
+      formData.append("supplierId", "")
+    }
 
     // Debug logging
     logger.info("Form data being sent for product update")
+    logger.info("CategoryId:", formData.get("categoryId"))
+    logger.info("SupplierId:", formData.get("supplierId"))
 
     try {
       const updatedProduct = await productsApi.update(
@@ -374,6 +412,31 @@ export function ProductsPage() {
             type="hidden"
             name="categoryId"
             value={selectedCategoryId === "none" ? "" : selectedCategoryId}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="supplierId">Supplier</Label>
+          <Select
+            value={selectedSupplierId}
+            onValueChange={setSelectedSupplierId}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select a supplier" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No Supplier</SelectItem>
+              {suppliers.map((supplier) => (
+                <SelectItem key={supplier.id} value={supplier.id}>
+                  {supplier.companyName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <input
+            type="hidden"
+            name="supplierId"
+            value={selectedSupplierId === "none" ? "" : selectedSupplierId}
           />
         </div>
 
@@ -505,6 +568,31 @@ export function ProductsPage() {
             type="hidden"
             name="categoryId"
             value={selectedCategoryId === "none" ? "" : selectedCategoryId}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="supplierId">Supplier</Label>
+          <Select
+            value={selectedSupplierId}
+            onValueChange={setSelectedSupplierId}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select a supplier" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No Supplier</SelectItem>
+              {suppliers.map((supplier) => (
+                <SelectItem key={supplier.id} value={supplier.id}>
+                  {supplier.companyName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <input
+            type="hidden"
+            name="supplierId"
+            value={selectedSupplierId === "none" ? "" : selectedSupplierId}
           />
         </div>
 

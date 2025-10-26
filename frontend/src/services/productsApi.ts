@@ -21,6 +21,7 @@ export interface Product {
   isActive: boolean
   workspaceId: string
   categoryId: string | null
+  supplierId: string | null
   imageUrl: string[] | null
   category?: {
     id: string
@@ -49,6 +50,7 @@ export interface CreateProductData {
   stock?: number
   sku?: string
   categoryId?: string
+  supplierId?: string
   isActive?: boolean
 }
 
@@ -61,6 +63,7 @@ export interface UpdateProductData {
   stock?: number
   sku?: string
   categoryId?: string
+  supplierId?: string
   isActive?: boolean
 }
 

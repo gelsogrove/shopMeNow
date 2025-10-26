@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils"
 import {
   BarChart3,
+  Building2,
   HelpCircle,
   LucideIcon,
   Megaphone,
@@ -75,6 +76,11 @@ export function Sidebar() {
       href: "/products",
       label: "Products",
       icon: Package2,
+    },
+    {
+      href: "/suppliers",
+      label: "Suppliers",
+      icon: Building2,
     },
     {
       href: "/services",

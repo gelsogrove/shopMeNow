@@ -27,6 +27,7 @@ import OrderSummaryPage from "./pages/OrderSummaryPage"
 
 import CategoriesPage from "./pages/products/CategoriesPage"
 import { ProductsPage } from "./pages/ProductsPage"
+import { SuppliersPage } from "./pages/SuppliersPage"
 import ProfilePage from "./pages/ProfilePage"
 import RegisterPage from "./pages/register"
 import RegistrationSuccess from "./pages/registration-success"
@@ -112,6 +113,9 @@ export function App() {
                 </Route>
                 <Route path="/products" element={<Layout />}>
                   <Route index element={<ProductsPage />} />
+                </Route>
+                <Route path="/suppliers" element={<Layout />}>
+                  <Route index element={<SuppliersPage />} />
                 </Route>
                 <Route path="/categories" element={<Layout />}>
                   <Route index element={<CategoriesPage />} />

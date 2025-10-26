@@ -46,6 +46,7 @@ model Workspace {
   orders                    Orders[]
   products                  Products[]
   sales                     Sales[]
+  suppliers                 Suppliers[]
   secureTokens              SecureToken[]
   services                  Services[]
   billings                  Billing[]
@@ -105,6 +106,27 @@ model Languages {
   @@map("languages")
 }
 
+model Suppliers {
+  id              String     @id @default(uuid())
+  companyName     String
+  description     String?
+  website         String?
+  phone           String?
+  email           String?
+  contactName     String?
+  region          String?
+  country         String?
+  logoUrl         String?
+  isActive        Boolean    @default(true)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  workspaceId     String
+  workspace       Workspace  @relation(fields: [workspaceId], references: [id])
+  products        Products[]
+
+  @@map("suppliers")
+}
+
 model Products {
   id          String        @id @default(uuid())
   name        String
@@ -118,12 +140,14 @@ model Products {
   isActive    Boolean       @default(true)
   workspaceId String
   categoryId  String?
+  supplierId  String?
   slug        String        @unique
   status      ProductStatus @default(ACTIVE)
   imageUrl    String[]      @default([])
   cartItems   CartItems[]
   orderItems  OrderItems[]
   category    Categories?   @relation(fields: [categoryId], references: [id])
+  supplier    Suppliers?    @relation(fields: [supplierId], references: [id])
   workspace   Workspace     @relation(fields: [workspaceId], references: [id])
 
   @@map("products")
