@@ -46,6 +46,7 @@ model Workspace {
   orders                    Orders[]
   products                  Products[]
   sales                     Sales[]
+  suppliers                 Suppliers[]
   secureTokens              SecureToken[]
   services                  Services[]
   billings                  Billing[]
@@ -105,26 +106,55 @@ model Languages {
   @@map("languages")
 }
 
+model Suppliers {
+  id              String     @id @default(uuid())
+  companyName     String
+  description     String?
+  website         String?
+  phone           String?
+  email           String?
+  contactName     String?
+  region          String?
+  country         String?
+  logoUrl         String?
+  isActive        Boolean    @default(true)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  workspaceId     String
+  workspace       Workspace  @relation(fields: [workspaceId], references: [id])
+  products        Products[]
+
+  @@map("suppliers")
+}
+
 model Products {
-  id          String        @id @default(uuid())
-  name        String
-  productCode String?
-  description String?
-  formato     String?
-  price       Float
-  stock       Int           @default(0)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  isActive    Boolean       @default(true)
-  workspaceId String
-  categoryId  String?
-  slug        String        @unique
-  status      ProductStatus @default(ACTIVE)
-  imageUrl    String[]      @default([])
-  cartItems   CartItems[]
-  orderItems  OrderItems[]
-  category    Categories?   @relation(fields: [categoryId], references: [id])
-  workspace   Workspace     @relation(fields: [workspaceId], references: [id])
+  id             String        @id @default(uuid())
+  name           String
+  productCode    String?
+  description    String?
+  formato        String?
+  price          Float
+  stock          Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  isActive       Boolean       @default(true)
+  workspaceId    String
+  categoryId     String?
+  supplierId     String?
+  slug           String        @unique
+  status         ProductStatus @default(ACTIVE)
+  imageUrl       String[]      @default([])
+  isWholeGrain   Boolean       @default(false)
+  isOrganic      Boolean       @default(false)
+  isHalal        Boolean       @default(false)
+  isVegan        Boolean       @default(false)
+  isGlutenFree   Boolean       @default(false)
+  transportType  String        @default("Temperatura ambiente")
+  cartItems      CartItems[]
+  orderItems     OrderItems[]
+  category       Categories?   @relation(fields: [categoryId], references: [id])
+  supplier       Suppliers?    @relation(fields: [supplierId], references: [id])
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id])
 
   @@map("products")
 }
@@ -693,14 +723,15 @@ enum BillingType {
   MESSAGE // €0.15 - Per message/interaction cost (LLM responses)
   NEW_CUSTOMER // €1.50 - New customer registration
   NEW_ORDER // €1.50 - New order placed
-  HUMAN_SUPPORT // €0.50 - Human support escalation
   PUSH_CAMPAIGN // €1.00 - Push notification (advertising campaigns)
   FEEDBACK // No cost - Customer feedback
   ORDER_REVIEW // No cost - Order review
   CAMPAIGN_LINK // No cost - Campaign link click
+  // NOTE: Human Support is FREE - messages during support are already charged at MESSAGE rate
 }
 
 enum CampaignFrequency {
+  ONCE // Una sola volta (no ripetizione)
   WEEKLY // Ogni 7 giorni
   BIWEEKLY // Ogni 14 giorni
   MONTHLY // Ogni 30 giorni
@@ -803,4 +834,29 @@ model AdminSession {
   @@index([expiresAt])
   @@index([isActive])
   @@map("admin_sessions")
+}
+
+// ============================================================================
+// PRICING CONFIGURATION - Single Source of Truth for all pricing
+// ============================================================================
+model PricingConfig {
+  id          String      @id @default(cuid())
+  type        PricingType // PLAN, USAGE, or THRESHOLD
+  key         String      @unique // e.g., "BASIC_MONTHLY", "MESSAGE", "FREE_MESSAGES"
+  value       Float       // The actual price or threshold value
+  description String?     @db.Text // Human-readable description
+  isActive    Boolean     @default(true) // Can be toggled without deleting
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([type])
+  @@index([key])
+  @@index([isActive])
+  @@map("pricing_config")
+}
+
+enum PricingType {
+  PLAN      // Monthly subscription plans (€0, €29, €59, €199)
+  USAGE     // Per-action costs (€0.15/message, €1.50/customer, etc.)
+  THRESHOLD // Free tier limits (200 messages, 50 products, etc.)
 }

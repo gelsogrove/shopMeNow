@@ -224,6 +224,13 @@ ${text}
 Remember: Return ONLY the JSON object with translatedText, blocked, and reason fields.`
 
     try {
+      logger.info("🔐 Calling OpenRouter API", {
+        model,
+        baseURL,
+        textLength: text.length,
+        targetLanguage,
+      })
+
       const response = await axios.post(
         `${baseURL}/chat/completions`,
         {
@@ -251,20 +258,45 @@ Remember: Return ONLY the JSON object with translatedText, blocked, and reason f
         }
       )
 
+      logger.info("✅ OpenRouter API response received", {
+        status: response.status,
+        hasChoices: !!response.data.choices,
+        choicesLength: response.data.choices?.length,
+      })
+
       const content = response.data.choices[0]?.message?.content?.trim()
 
       if (!content) {
+        logger.error("❌ Empty content from OpenRouter")
         throw new Error("Empty response from OpenRouter")
       }
+
+      logger.info("📝 Raw LLM response:", {
+        contentLength: content.length,
+        contentPreview: content.substring(0, 200),
+      })
 
       // Parse JSON (rimuovi eventuali markdown)
       const jsonMatch = content.match(/\{[\s\S]*\}/)
       if (!jsonMatch) {
-        logger.error("Failed to extract JSON from LLM response:", content)
+        logger.error("❌ Failed to extract JSON from LLM response:", {
+          fullContent: content,
+        })
         throw new Error("Invalid JSON response")
       }
 
+      logger.info("🔍 Extracted JSON string:", {
+        jsonLength: jsonMatch[0].length,
+        jsonPreview: jsonMatch[0].substring(0, 200),
+      })
+
       const result: TranslationResult = JSON.parse(jsonMatch[0])
+
+      logger.info("✅ Parsed translation result:", {
+        blocked: result.blocked,
+        reason: result.reason,
+        translatedLength: result.translatedText?.length,
+      })
 
       // Validate structure
       if (

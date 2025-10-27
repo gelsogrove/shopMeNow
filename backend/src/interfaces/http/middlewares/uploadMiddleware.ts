@@ -1,11 +1,11 @@
 /**
  * Image Upload Middleware
  *
- * Handles file upload for products and services with validation:
+ * Handles file upload for products, services, and suppliers with validation:
  * - Max size: 4MB
  * - Accepted formats: PNG, JPG, JPEG, GIF, WEBP
  * - Filename: {code}.{extension}
- * - Storage: uploads/products/ or uploads/services/
+ * - Storage: uploads/products/, uploads/services/, or uploads/suppliers/
  */
 
 import fs from "fs"
@@ -19,6 +19,7 @@ const backendRoot = path.join(__dirname, "../../../../")
 const uploadDirs = {
   products: path.join(backendRoot, "uploads/products"),
   services: path.join(backendRoot, "uploads/services"),
+  suppliers: path.join(backendRoot, "uploads/suppliers"),
 }
 
 Object.values(uploadDirs).forEach((dir) => {
@@ -46,16 +47,25 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     // Determine upload directory based on route
     const isProduct = req.baseUrl?.includes("/products")
-    const uploadDir = isProduct ? uploadDirs.products : uploadDirs.services
+    const isSupplier = req.baseUrl?.includes("/suppliers")
+
+    let uploadDir = uploadDirs.services // default
+    if (isProduct) uploadDir = uploadDirs.products
+    else if (isSupplier) uploadDir = uploadDirs.suppliers
+
     cb(null, uploadDir)
   },
   filename: (req, file, cb) => {
-    // Get code from body or params
+    // Get code from body or params (ensure it's a string)
     const code =
-      req.body.ProductCode || req.body.code || req.params.code || Date.now()
+      req.body.ProductCode ||
+      req.body.code ||
+      req.body.companyName || // For suppliers
+      req.params.code ||
+      `file_${Date.now()}`
 
-    // Sanitize code to prevent path traversal
-    const sanitizedCode = code.replace(/[^a-zA-Z0-9-_]/g, "_")
+    // Sanitize code to prevent path traversal (ensure it's a string)
+    const sanitizedCode = String(code).replace(/[^a-zA-Z0-9-_]/g, "_")
 
     // Get file extension
     const ext = path.extname(file.originalname).toLowerCase()

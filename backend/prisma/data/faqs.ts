@@ -1,6 +1,6 @@
 /**
  * FAQs Data - Auto-generated from database
- * Last updated: 2025-10-20T13:17:25.033Z
+ * Last updated: 2025-10-26T20:38:25.357Z
  * DO NOT EDIT MANUALLY - Use npm run db:export
  */
 
@@ -126,6 +126,27 @@ export const faqs: FAQData[] = [
     isActive: true,
   },
   {
+    question: "Come posso vedere il catalogo prodotti?",
+    answer: "Puoi scaricare il nostro catalogo completo qui: [LINK_CATALOG]",
+    category: null,
+    language: null,
+    isActive: true,
+  },
+  {
+    question: "Voglio scaricare il catalogo",
+    answer: "Ecco il link per scaricare il nostro catalogo completo: [LINK_CATALOG]",
+    category: null,
+    language: null,
+    isActive: true,
+  },
+  {
+    question: "Dove trovo il catalogo?",
+    answer: "Puoi scaricare il catalogo completo dei nostri prodotti qui: [LINK_CATALOG]",
+    category: null,
+    language: null,
+    isActive: true,
+  },
+  {
     question: "How can I see my orders?",
     answer: "Hello! You can view your orders by clicking this link: [LINK_ORDERS_WITH_TOKEN]",
     category: null,
@@ -141,7 +162,7 @@ export const faqs: FAQData[] = [
   },
   {
     question: "What is your name?",
-    answer: "Hello! I am SofIA, the digital assistant of Altro Gusto. I'm here to help you with information about our Italian products, orders, and services. How can I assist you today?",
+    answer: "Hello! I am SofIA, the digital assistant of Bell'Italia. I'm here to help you with information about our Italian products, orders, and services. How can I assist you today?",
     category: null,
     language: null,
     isActive: true,
@@ -177,6 +198,20 @@ export const faqs: FAQData[] = [
   {
     question: "Is my personal data safe?",
     answer: "Absolutely! Your personal data is completely secure. 🔒\n\n✅ **100% Platform Security**: All your data is processed and stored securely within our platform\n✅ **No WhatsApp Storage**: Sensitive information never remains on WhatsApp servers\n✅ **AI Protection**: Your personal data is NEVER sent to any AI model or external service\n✅ **Encrypted Links**: All secure links are protected with encrypted tokens valid for only 15 minutes\n✅ **GDPR Compliant**: We fully comply with European data protection regulations\n\nYour privacy is our top priority. Your data is safe with us!",
+    category: null,
+    language: null,
+    isActive: true,
+  },
+  {
+    question: "How can I subscribe to receive exclusive offers and notifications?",
+    answer: "🎉 Great! I'm happy to subscribe you to exclusive offers!\n\nYou'll receive special promotions, new product alerts, and exclusive discounts directly via WhatsApp.\n\nWant to proceed? Just say **yes**! 📱✨\n\n(You can unsubscribe anytime)",
+    category: null,
+    language: null,
+    isActive: true,
+  },
+  {
+    question: "How can I unsubscribe from promotional notifications?",
+    answer: "No problem! I understand. 😊\n\nWould you like to unsubscribe from promotional messages and exclusive offers?\n\nJust say **yes** to confirm, and you'll stop receiving push notifications.\n\n(You can always resubscribe later!) 📱",
     category: null,
     language: null,
     isActive: true,

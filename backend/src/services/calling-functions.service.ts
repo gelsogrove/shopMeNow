@@ -1,3 +1,4 @@
+import { LinkGeneratorService } from "../application/services/link-generator.service"
 import { ReplaceLinkWithToken } from "../application/services/link-replacement.service"
 import { SecureTokenService } from "../application/services/secure-token.service"
 import {
@@ -23,10 +24,13 @@ export interface GetOrdersListLinkRequest {
 
 export class CallingFunctionsService {
   private secureTokenService: SecureTokenService
+  private linkGeneratorService: LinkGeneratorService
   private baseUrl: string
 
-  constructor() {
+  constructor(linkGeneratorService?: LinkGeneratorService) {
     this.secureTokenService = new SecureTokenService()
+    this.linkGeneratorService =
+      linkGeneratorService || new LinkGeneratorService()
     this.baseUrl = "http://localhost:3001/api/internal"
   }
 
@@ -169,12 +173,9 @@ export class CallingFunctionsService {
         request.customerId
       )
       logger.info("🔧 Token created successfully:", token)
-      // Use centralized link generator for consistent URL shortening
-      const {
-        linkGeneratorService,
-      } = require("../application/services/link-generator.service")
 
-      let linkUrl: string = await linkGeneratorService.generateOrdersLink(
+      // Use the injected linkGeneratorService instance
+      const linkUrl = await this.linkGeneratorService.generateOrdersLink(
         token,
         request.workspaceId,
         request.orderCode
@@ -213,12 +214,9 @@ export class CallingFunctionsService {
         request.customerId
       )
       logger.info("🔧 Token created successfully:", token)
-      // Use centralized link generator for consistent URL shortening
-      const {
-        linkGeneratorService,
-      } = require("../application/services/link-generator.service")
 
-      const linkUrl = await linkGeneratorService.generateCheckoutLink(
+      // Use the injected linkGeneratorService instance
+      const linkUrl = await this.linkGeneratorService.generateCheckoutLink(
         token,
         request.workspaceId
       )
@@ -314,6 +312,53 @@ export class CallingFunctionsService {
   }
 
   /**
+   * Manage push notification subscription (SUBSCRIBE/UNSUBSCRIBE)
+   * Priority: 4.5 (between addProduct and searchProduct)
+   * @param request - Request with action, customerId, workspaceId
+   * @returns StandardResponse with confirmation message
+   */
+  public async manageNotifications(request: {
+    action: "SUBSCRIBE" | "UNSUBSCRIBE"
+    customerId: string
+    workspaceId: string
+  }): Promise<StandardResponse> {
+    try {
+      logger.info("🔔 Calling ManageNotifications with:", request)
+
+      // Import the ManageNotifications function
+      const {
+        ManageNotifications,
+      } = require("../domain/calling-functions/ManageNotifications")
+
+      const result = await ManageNotifications({
+        action: request.action,
+        customerId: request.customerId,
+        workspaceId: request.workspaceId,
+      })
+
+      logger.info("✅ ManageNotifications result:", result)
+
+      return {
+        success: result.success,
+        message: result.message,
+        timestamp: new Date().toISOString(),
+        data: {
+          action: result.action,
+          currentStatus: result.currentStatus,
+        },
+      }
+    } catch (error) {
+      logger.error("❌ Error in manageNotifications:", error)
+      return {
+        success: false,
+        message:
+          "An error occurred while updating your notification preferences. Please try again later.",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  /**
    * Replace [LINK_WITH_TOKEN] with generated link
    */
   public async replaceLinkWithToken(
@@ -392,14 +437,32 @@ export class CallingFunctionsService {
           }
         }
 
-        // Trova il prodotto per ProductCode
-        const product = await prisma.products.findFirst({
+        // Trova il prodotto per productCode o per nome (fallback)
+        // Prima prova con productCode esatto
+        let product = await prisma.products.findFirst({
           where: {
-            ProductCode: request.productCode,
+            productCode: request.productCode,
             workspaceId: request.workspaceId,
             isActive: true,
           },
         })
+
+        // Se non trovato per ProductCode, cerca per nome (case-insensitive)
+        if (!product) {
+          logger.info(
+            `🔍 ProductCode not found, searching by name: ${request.productCode}`
+          )
+          product = await prisma.products.findFirst({
+            where: {
+              name: {
+                contains: request.productCode,
+                mode: "insensitive",
+              },
+              workspaceId: request.workspaceId,
+              isActive: true,
+            },
+          })
+        }
 
         if (!product) {
           logger.error("❌ Product not found:", request.productCode)
@@ -499,13 +562,15 @@ export class CallingFunctionsService {
 
         await prisma.$disconnect()
 
+        // 🔧 IMPORTANTE: Non usare placeholder nel message - usa il cartUrl REALE
+        // L'AI deve vedere il link diretto, non [LINK_CHECKOUT_WITH_TOKEN]
         return {
           success: true,
-          message: `✅ Ho aggiunto ${request.quantity} x "${product.name}" al carrello!\n\n🛒 [LINK_CHECKOUT_WITH_TOKEN]\n\n⏰ Link valido per {{TOKEN_DURATION}}`,
+          message: `✅ Ho aggiunto ${request.quantity} x "${product.name}" al carrello!\n\n🛒 Vedi il tuo carrello: ${cartUrl}\n\n⏰ Link valido per 15 minuti`,
           productName: product.name,
           quantity: request.quantity,
           cartCode: cart.id,
-          cartUrl: cartUrl,
+          cartUrl: cartUrl, // ✅ L'AI deve usare QUESTO campo per costruire la risposta
           token: token,
           expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
           timestamp: new Date().toISOString(),

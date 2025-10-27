@@ -52,9 +52,42 @@ export class ShortUrlController {
         return
       }
 
-      // Redirect to original URL
-      logger.info(`📎 Redirecting to: ${result.originalUrl}`)
-      res.redirect(302, result.originalUrl!)
+      // Check if URL is a PDF file
+      const isPdf = result.originalUrl!.toLowerCase().endsWith(".pdf")
+
+      if (isPdf) {
+        // For PDF files, return HTML that opens in new window/tab
+        logger.info(
+          `📎 PDF detected, opening in new window: ${result.originalUrl}`
+        )
+        res.send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <title>Opening PDF...</title>
+            <script>
+              // Open PDF in new window/tab and close redirect page
+              window.open('${result.originalUrl}', '_blank');
+              // Redirect current page to a confirmation or close
+              setTimeout(() => {
+                document.body.innerHTML = '<div style="font-family: Arial; text-align: center; margin-top: 50px;"><h2>PDF aperto in una nuova finestra</h2><p>Puoi chiudere questa scheda.</p></div>';
+              }, 100);
+            </script>
+          </head>
+          <body>
+            <div style="font-family: Arial; text-align: center; margin-top: 50px;">
+              <h2>Apertura PDF in corso...</h2>
+              <p>Se il PDF non si apre automaticamente, <a href="${result.originalUrl}" target="_blank">clicca qui</a>.</p>
+            </div>
+          </body>
+          </html>
+        `)
+      } else {
+        // For non-PDF URLs, use standard redirect
+        logger.info(`📎 Redirecting to: ${result.originalUrl}`)
+        res.redirect(302, result.originalUrl!)
+      }
     } catch (error) {
       logger.error("❌ Error in short URL redirect:", error)
       res.status(500).json({

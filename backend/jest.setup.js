@@ -2,7 +2,10 @@
 // This file runs before each test file
 // You can add global setup code here
 
-// 🔇 Silence console.log, console.warn, console.error in tests
+// � Load environment variables from .env file
+require("dotenv").config()
+
+// �🔇 Silence console.log, console.warn, console.error in tests
 global.console = {
   ...console,
   log: jest.fn(),
@@ -31,7 +34,7 @@ if (process.env.NODE_ENV === "test" && !process.env.INTEGRATION_TEST) {
         deleteMany: jest.fn(),
         count: jest.fn(),
       },
-      workspaces: {
+      workspace: {
         findMany: jest.fn(),
         findFirst: jest.fn(),
         findUnique: jest.fn(),

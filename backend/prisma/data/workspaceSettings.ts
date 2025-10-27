@@ -1,6 +1,6 @@
 /**
  * Workspace Settings Data - Auto-generated from database
- * Last updated: 2025-10-20T13:17:25.045Z
+ * Last updated: 2025-10-26T20:38:25.370Z
  * DO NOT EDIT MANUALLY - Use npm run db:export
  */
 
@@ -16,15 +16,15 @@ export interface WorkspaceSettingsData {
 }
 
 export const workspaceSettings: WorkspaceSettingsData = {
-  "name": "Altro Gusto",
+  "name": "Bell'Italia",
   "url": "http://localhost:3000",
   "whatsappPhoneNumber": "+34654728753",
   "notificationEmail": "info@altrogusto.com",
   "welcomeMessages": {
-    "en": "👋 Welcome to Altro Gusto! I'm SofiA, your digital assistant. I can help you discover Italian gourmet products, answer questions, and manage orders. Watch our presentation: https://www.youtube.com/watch?v=cmpRLQZkTb8 - How can I help you today?",
-    "es": "👋 ¡Bienvenido a Altro Gusto! Soy SofiA, tu asistente digital. Puedo ayudarte a descubrir productos gourmet italianos, responder preguntas y gestionar pedidos. Mira nuestra presentación: https://www.youtube.com/watch?v=cmpRLQZkTb8 - ¿Cómo puedo ayudarte hoy?",
-    "it": "👋 Benvenuto da Altro Gusto! Sono SofiA, il tuo assistente digitale. Posso aiutarti a scoprire prodotti gourmet italiani, rispondere alle tue domande e gestire ordini. Guarda la nostra presentazione: https://www.youtube.com/watch?v=cmpRLQZkTb8 - Come posso aiutarti oggi?",
-    "pt": "👋 Bem-vindo ao Altro Gusto! Sou a SofiA, a sua assistente digital. Posso ajudá-lo a descobrir produtos gourmet italianos, responder perguntas e gerir encomendas. Veja a nossa apresentação: https://www.youtube.com/watch?v=cmpRLQZkTb8 - Como posso ajudá-lo hoje?"
+    "en": "👋 Welcome to Bell'Italia! I'm SofiA, your digital assistant. I can help you discover Italian gourmet products, answer questions, and manage orders. Watch our presentation: https://www.youtube.com/watch?v=cmpRLQZkTb8 - How can I help you today?",
+    "es": "👋 ¡Bienvenido a Bell'Italia! Soy SofiA, tu asistente digital. Puedo ayudarte a descubrir productos gourmet italianos, responder preguntas y gestionar pedidos. Mira nuestra presentación: https://www.youtube.com/watch?v=cmpRLQZkTb8 - ¿Cómo puedo ayudarte hoy?",
+    "it": "👋 Benvenuto da Bell'Italia! Sono SofiA, il tuo assistente digitale. Posso aiutarti a scoprire prodotti gourmet italiani, rispondere alle tue domande e gestire ordini. Guarda la nostra presentazione: https://www.youtube.com/watch?v=cmpRLQZkTb8 - Come posso aiutarti oggi?",
+    "pt": "👋 Bem-vindo ao Bell'Italia! Sou a SofiA, a sua assistente digital. Posso ajudá-lo a descobrir produtos gourmet italianos, responder perguntas e gerir encomendas. Veja a nossa apresentação: https://www.youtube.com/watch?v=cmpRLQZkTb8 - Como posso ajudá-lo hoje?"
   },
   "wipMessages": {
     "en": "Work in progress. Please contact us later.",

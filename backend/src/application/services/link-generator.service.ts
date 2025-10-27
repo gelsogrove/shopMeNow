@@ -46,14 +46,14 @@ export class LinkGeneratorService {
   }
 
   /**
-   * Generate checkout link with token
+   * Generate checkout/cart link with token
    */
   async generateCheckoutLink(
     token: string,
     workspaceId: string
   ): Promise<string> {
-    const originalUrl = `${config.frontendUrl}/checkout?token=${token}`
-    return this.generateShortLink(originalUrl, workspaceId, "checkout")
+    const originalUrl = `${config.frontendUrl}/cart?token=${token}`
+    return this.generateShortLink(originalUrl, workspaceId, "cart")
   }
 
   /**

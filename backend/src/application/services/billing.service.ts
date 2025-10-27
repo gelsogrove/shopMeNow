@@ -1,19 +1,27 @@
 import { BillingType, PrismaClient } from "@prisma/client"
-import { BillingPrices } from "../../domain/enums/billing-prices.enum"
+import { PricingRepository } from "../../repositories/pricing.repository"
 import logger from "../../utils/logger"
 
 export class BillingService {
-  constructor(private prisma: PrismaClient) {}
+  private pricingRepository: PricingRepository
+
+  constructor(private prisma: PrismaClient) {
+    this.pricingRepository = new PricingRepository(prisma)
+  }
 
   /**
    * Charge the monthly channel cost on the first day of each month
    */
   async chargeMonthlyChannelCost(workspaceId: string): Promise<void> {
     try {
+      // Get current price from database
+      const monthlyChannelCost =
+        (await this.pricingRepository.getValue("MONTHLY_CHANNEL_COST")) ?? 59
+
       await this.prisma.billing.create({
         data: {
           workspaceId,
-          amount: BillingPrices.MONTHLY_CHANNEL_COST,
+          amount: monthlyChannelCost,
           type: BillingType.MONTHLY_CHANNEL,
           description: "Monthly channel subscription cost",
         },
@@ -38,12 +46,16 @@ export class BillingService {
     userQuery?: string
   ): Promise<void> {
     try {
+      // Get current price from database (fallback to 0.15 for safety)
+      const messageCost =
+        (await this.pricingRepository.getValue("MESSAGE")) ?? 0.15
+
       // Get current total for this customer
       const previousTotal = await this.getCurrentTotalForCustomer(
         workspaceId,
         customerId
       )
-      const currentCharge = BillingPrices.MESSAGE
+      const currentCharge = messageCost
       const newTotal = previousTotal + currentCharge
 
       await this.prisma.billing.create({
@@ -79,12 +91,16 @@ export class BillingService {
     customerId: string
   ): Promise<void> {
     try {
+      // Get current price from database
+      const newCustomerCost =
+        (await this.pricingRepository.getValue("NEW_CUSTOMER")) ?? 1.0
+
       // Get current total for this customer
       const previousTotal = await this.getCurrentTotalForCustomer(
         workspaceId,
         customerId
       )
-      const currentCharge = BillingPrices.NEW_CUSTOMER
+      const currentCharge = newCustomerCost
       const newTotal = previousTotal + currentCharge
 
       await this.prisma.billing.create({
@@ -120,12 +136,16 @@ export class BillingService {
     orderCode: string
   ): Promise<void> {
     try {
+      // Get current price from database
+      const newOrderCost =
+        (await this.pricingRepository.getValue("NEW_ORDER")) ?? 1.5
+
       // Get current total for this customer
       const previousTotal = await this.getCurrentTotalForCustomer(
         workspaceId,
         customerId
       )
-      const currentCharge = BillingPrices.NEW_ORDER
+      const currentCharge = newOrderCost
       const newTotal = previousTotal + currentCharge
 
       await this.prisma.billing.create({
@@ -153,47 +173,6 @@ export class BillingService {
   }
 
   /**
-   * Track usage cost for human support
-   */
-  async trackHumanSupport(
-    workspaceId: string,
-    customerId: string,
-    description: string = "Human support session"
-  ): Promise<void> {
-    try {
-      // Get current total for this customer
-      const previousTotal = await this.getCurrentTotalForCustomer(
-        workspaceId,
-        customerId
-      )
-      const currentCharge = BillingPrices.HUMAN_SUPPORT
-      const newTotal = previousTotal + currentCharge
-
-      await this.prisma.billing.create({
-        data: {
-          workspaceId,
-          customerId,
-          amount: currentCharge,
-          type: BillingType.HUMAN_SUPPORT,
-          description,
-          previousTotal,
-          currentCharge,
-          newTotal,
-        },
-      })
-      logger.info(
-        `[BILLING] 💰 Human Support: €${previousTotal.toFixed(2)} + €${currentCharge.toFixed(2)} = €${newTotal.toFixed(2)} (workspace: ${workspaceId}, customer: ${customerId})`
-      )
-    } catch (error) {
-      logger.error(
-        `Failed to charge human support for workspace ${workspaceId}, customer ${customerId}`,
-        error
-      )
-      throw error
-    }
-  }
-
-  /**
    * Track usage cost for advertising push campaign
    */
   async trackPushCampaign(
@@ -202,12 +181,16 @@ export class BillingService {
     campaignName?: string
   ): Promise<void> {
     try {
+      // Get current price from database
+      const pushCampaignCost =
+        (await this.pricingRepository.getValue("PUSH_CAMPAIGN")) ?? 1.0
+
       // Get current total for this customer
       const previousTotal = await this.getCurrentTotalForCustomer(
         workspaceId,
         customerId
       )
-      const currentCharge = BillingPrices.PUSH_CAMPAIGN
+      const currentCharge = pushCampaignCost
       const newTotal = previousTotal + currentCharge
 
       await this.prisma.billing.create({

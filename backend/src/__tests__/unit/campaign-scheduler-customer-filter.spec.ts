@@ -8,13 +8,11 @@ describe("CampaignScheduler.getTargetCustomers", () => {
     // Mock Prisma for testing
     prisma = {
       workspace: {
-        upsert: jest
-          .fn()
-          .mockResolvedValue({
-            id: "ws-test",
-            name: "Test WS",
-            slug: "test-ws",
-          }),
+        upsert: jest.fn().mockResolvedValue({
+          id: "ws-test",
+          name: "Test WS",
+          slug: "test-ws",
+        }),
       },
       customers: {
         upsert: jest
@@ -102,6 +100,7 @@ describe("CampaignScheduler.getTargetCustomers", () => {
         isActive: true,
         isBlacklisted: false,
         push_notifications_consent: true,
+        last_privacy_version_accepted: { not: null },
       },
       select: {
         id: true,
@@ -178,6 +177,7 @@ describe("CampaignScheduler.getTargetCustomers", () => {
         isActive: true,
         isBlacklisted: false,
         push_notifications_consent: true,
+        last_privacy_version_accepted: { not: null },
       },
       select: {
         id: true,

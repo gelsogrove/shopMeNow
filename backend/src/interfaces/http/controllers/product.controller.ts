@@ -147,6 +147,14 @@ export class ProductController {
 
       const productData = req.body
 
+      // DEBUG: Log everything about the request
+      logger.info("=== CREATE PRODUCT DEBUG ===")
+      logger.info("req.body:", productData)
+      logger.info("req.files:", req.files)
+      logger.info("workspaceId:", workspaceId)
+      logger.info("supplierId in body:", productData.supplierId)
+      logger.info("categoryId in body:", productData.categoryId)
+
       if (!workspaceId) {
         return res.status(400).json({
           message: "WorkspaceId is required",
@@ -202,6 +210,40 @@ export class ProductController {
       if (typeof productData.isActive === "string") {
         productData.isActive = productData.isActive === "true"
       }
+
+      // Convert checkbox values (HTML checkboxes send "on" when checked, undefined when unchecked)
+      productData.isWholeGrain =
+        productData.isWholeGrain === "on" || productData.isWholeGrain === true
+      productData.isOrganic =
+        productData.isOrganic === "on" || productData.isOrganic === true
+      productData.isHalal =
+        productData.isHalal === "on" || productData.isHalal === true
+      productData.isVegan =
+        productData.isVegan === "on" || productData.isVegan === true
+      productData.isGlutenFree =
+        productData.isGlutenFree === "on" || productData.isGlutenFree === true
+
+      // Handle supplierId: convert empty string to null
+      if (productData.supplierId === "" || productData.supplierId === "none") {
+        productData.supplierId = null
+      }
+
+      // Handle categoryId: convert empty string to null
+      if (productData.categoryId === "" || productData.categoryId === "none") {
+        productData.categoryId = null
+      }
+
+      // Handle transportType: set default if not provided
+      if (!productData.transportType) {
+        productData.transportType = "Temperatura ambiente"
+      }
+
+      logger.info(
+        "✅ After conversion - supplierId:",
+        productData.supplierId,
+        "categoryId:",
+        productData.categoryId
+      )
 
       // Map frontend 'code' field to backend 'ProductCode' field
       if (productData.code && !productData.productCode) {
@@ -302,6 +344,40 @@ export class ProductController {
       if (typeof productData.isActive === "string") {
         productData.isActive = productData.isActive === "true"
       }
+
+      // Convert checkbox values (HTML checkboxes send "on" when checked, undefined when unchecked)
+      productData.isWholeGrain =
+        productData.isWholeGrain === "on" || productData.isWholeGrain === true
+      productData.isOrganic =
+        productData.isOrganic === "on" || productData.isOrganic === true
+      productData.isHalal =
+        productData.isHalal === "on" || productData.isHalal === true
+      productData.isVegan =
+        productData.isVegan === "on" || productData.isVegan === true
+      productData.isGlutenFree =
+        productData.isGlutenFree === "on" || productData.isGlutenFree === true
+
+      // Handle supplierId: convert empty string to null
+      if (productData.supplierId === "" || productData.supplierId === "none") {
+        productData.supplierId = null
+      }
+
+      // Handle categoryId: convert empty string to null
+      if (productData.categoryId === "" || productData.categoryId === "none") {
+        productData.categoryId = null
+      }
+
+      // Handle transportType: set default if not provided
+      if (!productData.transportType) {
+        productData.transportType = "Temperatura ambiente"
+      }
+
+      logger.info(
+        "✅ UPDATE - After conversion - supplierId:",
+        productData.supplierId,
+        "categoryId:",
+        productData.categoryId
+      )
 
       // Map frontend 'code' field to backend 'ProductCode' field
       if (productData.code && !productData.productCode) {

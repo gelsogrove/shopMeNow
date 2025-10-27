@@ -1,5 +1,6 @@
 import { NewsUpdates } from "@/components/landing/NewsUpdates"
 import { PricingPlans } from "@/components/landing/PricingPlans"
+import { PricingSimulatorModal } from "@/components/pricing/PricingSimulatorModal"
 import { LanguageSelector } from "@/components/shared/LanguageSelector"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -11,6 +12,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import {
   AlertTriangle,
   Bell,
+  Calculator,
   Globe,
   Mail,
   MapPin,
@@ -37,6 +39,7 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [isValidatingSession, setIsValidatingSession] = useState(true)
+  const [showSimulator, setShowSimulator] = useState(false)
   const navigate = useNavigate()
 
   // Prefill credentials only in development
@@ -46,7 +49,7 @@ export function LoginPage() {
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: isDev ? "admin@shopme.com" : "",
-      password: isDev ? "venezia44" : "",
+      password: isDev ? "Venezia44" : "",
     } as LoginForm,
   })
 
@@ -165,23 +168,25 @@ export function LoginPage() {
   return (
     <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Header with Logo */}
-      <header className="w-full py-2 px-4 lg:px-8 bg-white/80 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-40">
+      <header className="w-full py-1 px-4 lg:px-8 bg-gradient-to-r from-white via-green-50/30 to-emerald-50/40 backdrop-blur-sm border-b border-green-100/50 sticky top-0 z-40 shadow-sm">
         <div className="max-w-7xl mx-auto">
           {/* Language Selector - Top right */}
-          <div className="flex justify-end mb-2">
+          <div className="flex justify-end mb-1">
             <LanguageSelector />
           </div>
 
           <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-5">
               <img
                 src="/logo.png"
                 alt="ShopMe Logo"
-                className="w-14 h-14 object-contain"
+                className="w-32 h-32 object-contain"
               />
               <div>
-                <h1 className="text-xl font-bold text-slate-900">ShopMe</h1>
-                <p className="text-xs text-slate-600">{t("header.tagline")}</p>
+                <h1 className="text-3xl font-bold text-slate-900">ShopMe</h1>
+                <p className="text-base text-slate-600">
+                  {t("header.tagline")}
+                </p>
               </div>
             </div>
 
@@ -249,20 +254,6 @@ export function LoginPage() {
             </h3>
             <div className="grid gap-3">
               <div className="flex items-start gap-3 p-3 rounded-xl bg-white shadow-sm border border-slate-200">
-                <div className="p-2 rounded-lg bg-green-100">
-                  <Bell className="w-5 h-5 text-green-600" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-slate-900 text-sm">
-                    {t("features.pushNotifications")}
-                  </h4>
-                  <p className="text-xs text-slate-600">
-                    {t("features.pushNotifications.desc")}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 p-3 rounded-xl bg-white shadow-sm border border-slate-200">
                 <div className="p-2 rounded-lg bg-purple-100">
                   <Zap className="w-5 h-5 text-purple-600" />
                 </div>
@@ -272,6 +263,20 @@ export function LoginPage() {
                   </h4>
                   <p className="text-xs text-slate-600">
                     {t("features.24x7.desc")}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-white shadow-sm border border-slate-200">
+                <div className="p-2 rounded-lg bg-green-100">
+                  <Bell className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-slate-900 text-sm">
+                    {t("features.pushNotifications")}
+                  </h4>
+                  <p className="text-xs text-slate-600">
+                    {t("features.pushNotifications.desc")}
                   </p>
                 </div>
               </div>
@@ -410,7 +415,29 @@ export function LoginPage() {
       {/* Pricing Section */}
       <div className="max-w-7xl mx-auto px-4 py-16 bg-gradient-to-b from-white to-slate-50">
         <PricingPlans />
+
+        {/* Simulator Button - Centered below pricing */}
+        <div className="text-center mt-12">
+          <Button
+            onClick={() => setShowSimulator(true)}
+            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+            size="lg"
+          >
+            <Calculator className="w-5 h-5 mr-2" />
+            {t("pricing.simulator.button")}
+          </Button>
+          <p className="text-sm text-slate-600 mt-3">
+            {t("pricing.simulator.description")}
+          </p>
+        </div>
       </div>
+
+      {/* Pricing Simulator Modal */}
+      <PricingSimulatorModal
+        open={showSimulator}
+        onOpenChange={setShowSimulator}
+        t={t}
+      />
 
       {/* Contact Section */}
       <div className="bg-slate-900 text-white py-12">

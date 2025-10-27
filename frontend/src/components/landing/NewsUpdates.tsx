@@ -1,12 +1,12 @@
 import { useLanguage } from "@/contexts/LanguageContext"
 import {
-  BarChart3,
-  Bell,
   Calendar,
   ChevronLeft,
   ChevronRight,
-  Globe,
+  Globe2,
   Headphones,
+  Megaphone,
+  TrendingUp,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 
@@ -28,7 +28,7 @@ const newsItems: NewsItem[] = [
     titleKey: "news.1.title",
     categoryKey: "news.1.category",
     descriptionKey: "news.1.desc",
-    icon: <Globe className="w-6 h-6" />,
+    icon: <Globe2 className="w-6 h-6" />,
     image: "/logo.png",
     bgGradient: "from-green-50 to-blue-50",
   },
@@ -38,7 +38,7 @@ const newsItems: NewsItem[] = [
     titleKey: "news.2.title",
     categoryKey: "news.2.category",
     descriptionKey: "news.2.desc",
-    icon: <BarChart3 className="w-6 h-6" />,
+    icon: <TrendingUp className="w-6 h-6" />,
     image: "/logo.png",
     bgGradient: "from-purple-50 to-pink-50",
   },
@@ -58,7 +58,7 @@ const newsItems: NewsItem[] = [
     titleKey: "news.4.title",
     categoryKey: "news.4.category",
     descriptionKey: "news.4.desc",
-    icon: <Bell className="w-6 h-6" />,
+    icon: <Megaphone className="w-6 h-6" />,
     image: "/logo.png",
     bgGradient: "from-orange-50 to-yellow-50",
   },

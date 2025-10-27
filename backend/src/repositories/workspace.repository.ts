@@ -20,7 +20,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       slug: data.slug,
       description: data.description,
       whatsappPhoneNumber: data.whatsappPhoneNumber,
-      whatsappApiToken: data.whatsappApiKey,
+      whatsappApiKey: data.whatsappApiKey, // ✅ FIX: Use whatsappApiKey (new field name)
+      whatsappApiToken: data.whatsappApiKey, // ✅ LEGACY: Keep for backward compatibility
       whatsappWebhookUrl: data.whatsappWebhookUrl,
       webhookUrl: data.webhookUrl,
       notificationEmail: data.notificationEmail,
@@ -53,7 +54,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       slug: workspace.slug,
       description: workspace.description,
       whatsappPhoneNumber: workspace.whatsappPhoneNumber,
-      whatsappApiKey: workspace.whatsappApiToken,
+      whatsappApiKey: workspace.whatsappApiKey || workspace.whatsappApiToken, // ✅ FIX: Prefer whatsappApiKey, fallback to whatsappApiToken
       whatsappWebhookUrl: workspace.whatsappWebhookUrl,
       webhookUrl: workspace.webhookUrl,
       notificationEmail: workspace.notificationEmail,

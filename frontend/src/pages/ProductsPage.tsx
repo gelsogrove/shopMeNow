@@ -21,6 +21,7 @@ import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
 import { categoriesApi } from "@/services/categoriesApi"
 import { productsApi, type Product } from "@/services/productsApi"
+import { supplierApi, type Supplier } from "@/services/supplier"
 import { commonStyles } from "@/styles/common"
 import { getCurrencySymbol } from "@/utils/format"
 import { Package, Pencil, Trash2 } from "lucide-react"
@@ -33,12 +34,14 @@ export function ProductsPage() {
   const [categories, setCategories] = useState<
     Array<{ id: string; name: string }>
   >([])
+  const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [showAddSheet, setShowAddSheet] = useState(false)
   const [showEditSheet, setShowEditSheet] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [searchValue, setSearchValue] = useState("")
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("none")
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string>("none")
   const [productIsActive, setProductIsActive] = useState(true)
   const [productCode, setProductCode] = useState("")
   const [imageFiles, setImageFiles] = useState<File[]>([])
@@ -46,6 +49,13 @@ export function ProductsPage() {
   const [reorderedImageUrls, setReorderedImageUrls] = useState<string[] | null>(
     null
   )
+
+  // Certification filters
+  const [filterOrganic, setFilterOrganic] = useState(false)
+  const [filterVegan, setFilterVegan] = useState(false)
+  const [filterGlutenFree, setFilterGlutenFree] = useState(false)
+  const [filterHalal, setFilterHalal] = useState(false)
+  const [filterWholeGrain, setFilterWholeGrain] = useState(false)
 
   // Load filters from localStorage or use defaults
   const [filterCategory, setFilterCategory] = useState<string>("all")
@@ -119,11 +129,35 @@ export function ProductsPage() {
     loadCategories()
   }, [workspace?.id])
 
-  // Reset category selection when product changes
+  // Fetch suppliers when workspace changes
   useEffect(() => {
-    setSelectedCategoryId(selectedProduct?.categoryId || "none")
+    const loadSuppliers = async () => {
+      if (!workspace?.id) return
+
+      try {
+        const suppliersData = await supplierApi.getAll(workspace.id)
+        setSuppliers(suppliersData)
+      } catch (error) {
+        logger.error("Failed to load suppliers:", error)
+        toast.error("Failed to load suppliers")
+      }
+    }
+
+    loadSuppliers()
+  }, [workspace?.id])
+
+  // Reset category and supplier selection when product changes
+  useEffect(() => {
+    if (selectedProduct) {
+      setSelectedCategoryId(selectedProduct.categoryId || "none")
+      setSelectedSupplierId(selectedProduct.supplierId || "none")
+      logger.info("Setting selected values from product:", {
+        categoryId: selectedProduct.categoryId,
+        supplierId: selectedProduct.supplierId,
+      })
+    }
     // Rimuovo il reset del productCode da qui per evitare conflitti
-  }, [selectedProduct])
+  }, [selectedProduct, suppliers]) // Also depend on suppliers being loaded
 
   // Filter and sort products
   const filteredProducts = React.useMemo(() => {
@@ -132,6 +166,13 @@ export function ProductsPage() {
       filterCategory,
       searchValue,
       sortBy,
+      certifications: {
+        organic: filterOrganic,
+        vegan: filterVegan,
+        glutenFree: filterGlutenFree,
+        halal: filterHalal,
+        wholeGrain: filterWholeGrain,
+      },
     })
 
     // Filter by search
@@ -146,6 +187,7 @@ export function ProductsPage() {
     )
 
     logger.info("🔍 After search filter:", filtered.length)
+
     // Filter by category
     if (filterCategory !== "all") {
       filtered = filtered.filter((p) => p.categoryId === filterCategory)
@@ -156,6 +198,25 @@ export function ProductsPage() {
         filterCategory
       )
     }
+
+    // Filter by certifications
+    if (filterOrganic) {
+      filtered = filtered.filter((p) => p.isOrganic)
+    }
+    if (filterVegan) {
+      filtered = filtered.filter((p) => p.isVegan)
+    }
+    if (filterGlutenFree) {
+      filtered = filtered.filter((p) => p.isGlutenFree)
+    }
+    if (filterHalal) {
+      filtered = filtered.filter((p) => p.isHalal)
+    }
+    if (filterWholeGrain) {
+      filtered = filtered.filter((p) => p.isWholeGrain)
+    }
+
+    logger.info("🔍 After certification filters:", filtered.length)
 
     // Sort products
     filtered.sort((a, b) => {
@@ -170,7 +231,17 @@ export function ProductsPage() {
 
     logger.info("🔍 Final filtered products:", filtered.length)
     return filtered
-  }, [products, searchValue, filterCategory, sortBy])
+  }, [
+    products,
+    searchValue,
+    filterCategory,
+    sortBy,
+    filterOrganic,
+    filterVegan,
+    filterGlutenFree,
+    filterHalal,
+    filterWholeGrain,
+  ])
 
   const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -194,6 +265,7 @@ export function ProductsPage() {
       // Reset form state
       setProductCode("")
       setSelectedCategoryId("none")
+      setSelectedSupplierId("none")
 
       toast.success(
         "Product created successfully. Edit it to add details and images."
@@ -209,6 +281,7 @@ export function ProductsPage() {
   const handleEdit = (product: Product) => {
     setSelectedProduct(product)
     setSelectedCategoryId(product.categoryId || "none")
+    setSelectedSupplierId(product.supplierId || "none")
     setProductIsActive(product.isActive ?? true)
     setProductCode(product.code || "")
 
@@ -264,8 +337,17 @@ export function ProductsPage() {
       formData.append("categoryId", "")
     }
 
+    // Make sure supplierId is set correctly if "none" is selected
+    const suppId = formData.get("supplierId")
+    if (suppId === "none") {
+      formData.delete("supplierId")
+      formData.append("supplierId", "")
+    }
+
     // Debug logging
     logger.info("Form data being sent for product update")
+    logger.info("CategoryId:", formData.get("categoryId"))
+    logger.info("SupplierId:", formData.get("supplierId"))
 
     try {
       const updatedProduct = await productsApi.update(
@@ -374,6 +456,31 @@ export function ProductsPage() {
             type="hidden"
             name="categoryId"
             value={selectedCategoryId === "none" ? "" : selectedCategoryId}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="supplierId">Supplier</Label>
+          <Select
+            value={selectedSupplierId}
+            onValueChange={setSelectedSupplierId}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select a supplier" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No Supplier</SelectItem>
+              {suppliers.map((supplier) => (
+                <SelectItem key={supplier.id} value={supplier.id}>
+                  {supplier.companyName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <input
+            type="hidden"
+            name="supplierId"
+            value={selectedSupplierId === "none" ? "" : selectedSupplierId}
           />
         </div>
 
@@ -508,6 +615,106 @@ export function ProductsPage() {
           />
         </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="supplierId">Supplier</Label>
+          <Select
+            value={selectedSupplierId}
+            onValueChange={setSelectedSupplierId}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select a supplier" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No Supplier</SelectItem>
+              {suppliers.map((supplier) => (
+                <SelectItem key={supplier.id} value={supplier.id}>
+                  {supplier.companyName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <input
+            type="hidden"
+            name="supplierId"
+            value={selectedSupplierId === "none" ? "" : selectedSupplierId}
+          />
+        </div>
+
+        {/* Certifications Section */}
+        <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
+          <Label className="text-base font-semibold">Certifications</Label>
+          <p className="text-xs text-gray-500 mb-3">
+            Select applicable certifications for this product
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                name="isWholeGrain"
+                defaultChecked={product?.isWholeGrain}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm">🌾 Integrale</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                name="isOrganic"
+                defaultChecked={product?.isOrganic}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm">🌿 Biologico</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                name="isHalal"
+                defaultChecked={product?.isHalal}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm">🕌 Halal</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                name="isVegan"
+                defaultChecked={product?.isVegan}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm">🌱 Vegan</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                name="isGlutenFree"
+                defaultChecked={product?.isGlutenFree}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm">🌾 Senza Glutine</span>
+            </label>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="transportType" className="text-sm font-medium">
+            🚚 Tipo di Trasporto
+          </Label>
+          <select
+            id="transportType"
+            name="transportType"
+            defaultValue={product?.transportType || "Temperatura ambiente"}
+            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="Temperatura ambiente">
+              🌡️ Temperatura ambiente
+            </option>
+            <option value="Trasporto refrigerato">
+              ❄️ Trasporto refrigerato
+            </option>
+            <option value="Trasporto congelato">🧊 Trasporto congelato</option>
+          </select>
+        </div>
+
         <div className="flex items-center justify-between border rounded-lg p-3">
           <div className="space-y-1">
             <Label htmlFor="isActive" className="text-sm font-medium">
@@ -586,6 +793,58 @@ export function ProductsPage() {
               <SelectItem value="stock">Sort by Stock</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Certification Filters */}
+        <div className="flex flex-wrap gap-3 items-center bg-gray-50 p-3 rounded-lg">
+          <span className="text-sm font-medium text-gray-700">
+            Certifications:
+          </span>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filterWholeGrain}
+              onChange={(e) => setFilterWholeGrain(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            <span className="text-sm">🌾 Integrale</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filterOrganic}
+              onChange={(e) => setFilterOrganic(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            <span className="text-sm">🌿 Biologico</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filterHalal}
+              onChange={(e) => setFilterHalal(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            <span className="text-sm">🕌 Halal</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filterVegan}
+              onChange={(e) => setFilterVegan(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            <span className="text-sm">🌱 Vegan</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filterGlutenFree}
+              onChange={(e) => setFilterGlutenFree(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            <span className="text-sm">🌾 Senza Glutine</span>
+          </label>
         </div>
 
         {/* Grid View */}

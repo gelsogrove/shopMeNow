@@ -48,6 +48,15 @@ export class PromptProcessorService {
     // Sostituzione delle informazioni utente
     processedPrompt = this.replaceVariables(processedPrompt, customerData)
 
+    // Sostituzione {{SUBSCRIBE_MESSAGE}} basato su push_notifications_consent
+    if (processedPrompt.includes("{{SUBSCRIBE_MESSAGE}}")) {
+      const subscribeMessage = this.getSubscribeMessage(customerData)
+      processedPrompt = processedPrompt.replace(
+        /\{\{SUBSCRIBE_MESSAGE\}\}/g,
+        subscribeMessage
+      )
+    }
+
     // Sostituzione contenuti dinamici
     if (processedPrompt.includes("{{FAQ}}")) {
       processedPrompt = processedPrompt.replace("{{FAQ}}", dynamicContent.faqs)
@@ -142,6 +151,23 @@ export class PromptProcessorService {
       )
       .replace(/\{\{lastordercode\}\}/g, customerData.lastordercode || "N/A")
       .replace(/\{\{languageUser\}\}/g, customerData.languageUser || "it")
+  }
+
+  /**
+   * Genera il messaggio di invito alla sottoscrizione push notifications.
+   * Se l'utente è già iscritto (push_notifications_consent = true), ritorna stringa vuota.
+   * Se non è iscritto, ritorna il messaggio di invito.
+   * @param customerData I dati del cliente.
+   * @returns Il messaggio di subscribe o stringa vuota.
+   */
+  private getSubscribeMessage(customerData: any): string {
+    // Se l'utente è già iscritto, non mostrare nulla
+    if (customerData?.push_notifications_consent === true) {
+      return ""
+    }
+
+    // Se non è iscritto, mostra invito semplice (in inglese - translation layer traduce)
+    return "💡 Want to receive exclusive offers and updates via WhatsApp? Let me know!"
   }
 
   /**

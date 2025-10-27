@@ -71,6 +71,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!workspace) return
     logger.info("📝 Populating form with workspace data:", workspace)
+
     let welcomeMessages = defaultWelcomeMessages
     if (workspace.welcomeMessages) {
       try {
@@ -204,7 +205,22 @@ export default function SettingsPage() {
       welcomeMessages: formData.welcomeMessages,
       wipMessages: formData.wipMessages,
     }
+
+    // 🔍 LOG DETTAGLIATO per debug whatsappApiKey
+    logger.info("=== FRONTEND SAVE DEBUG ===")
     logger.info("💾 Saving workspace settings:", updateData)
+    logger.info(
+      "whatsappApiKey presente:",
+      updateData.whatsappApiKey ? "✅ SÌ" : "❌ NO"
+    )
+    if (updateData.whatsappApiKey) {
+      logger.info("Lunghezza whatsappApiKey:", updateData.whatsappApiKey.length)
+      logger.info(
+        "Primi 10 caratteri:",
+        updateData.whatsappApiKey.substring(0, 10) + "..."
+      )
+    }
+
     saveSettingsMutation.mutate(updateData)
   }
 

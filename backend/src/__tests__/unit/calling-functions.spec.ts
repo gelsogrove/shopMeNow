@@ -1,17 +1,19 @@
 /**
- * Test per le 7 Calling Functions LLM
+ * Test per le 9 Calling Functions LLM
  *
- * Verifica che le 7 calling functions esistano come file separati
+ * Verifica che le 9 calling functions esistano come file separati
  * e che siano correttamente importabili e funzionanti.
  *
- * Le 7 calling functions implementate:
+ * Le 9 calling functions implementate:
  * 1. ContactOperator()
  * 2. GetLinkOrderByCode()
  * 3. GetShipmentTrackingLink()
  * 4. AddProduct()
- * 5. RepeatOrder()
- * 6. ResetCart()
- * 7. SearchProduct()
+ * 5. AddMultipleProducts()
+ * 6. RepeatOrder()
+ * 7. ResetCart()
+ * 8. SearchProduct()
+ * 9. ManageNotifications()
  */
 
 import * as fs from "fs"
@@ -28,17 +30,19 @@ describe("🔧 Calling Functions - File Existence & Architecture", () => {
       expect(fs.existsSync(callingFunctionsDir)).toBe(true)
     })
 
-    it("should have 7 calling functions files", () => {
+    it("should have 8 calling functions files", () => {
       const files = fs.readdirSync(callingFunctionsDir)
       const tsFiles = files.filter((f) => f.endsWith(".ts"))
-      expect(tsFiles.length).toBe(7)
+      expect(tsFiles.length).toBe(8)
       expect(tsFiles).toContain("ContactOperator.ts")
       expect(tsFiles).toContain("GetLinkOrderByCode.ts")
       expect(tsFiles).toContain("GetShipmentTrackingLink.ts")
       expect(tsFiles).toContain("AddProduct.ts")
+      // AddMultipleProducts removed - addProduct now handles arrays
       expect(tsFiles).toContain("RepeatOrder.ts")
       expect(tsFiles).toContain("ResetCart.ts")
       expect(tsFiles).toContain("SearchProduct.ts")
+      expect(tsFiles).toContain("ManageNotifications.ts")
     })
 
     it("should have ContactOperator.ts file", () => {
@@ -78,6 +82,11 @@ describe("🔧 Calling Functions - File Existence & Architecture", () => {
       const filePath = path.join(callingFunctionsDir, "ResetCart.ts")
       expect(fs.existsSync(filePath)).toBe(true)
     })
+
+    it("should have ManageNotifications.ts file", () => {
+      const filePath = path.join(callingFunctionsDir, "ManageNotifications.ts")
+      expect(fs.existsSync(filePath)).toBe(true)
+    })
   })
 
   describe("📦 Import & Export Verification", () => {
@@ -104,6 +113,8 @@ describe("🔧 Calling Functions - File Existence & Architecture", () => {
       expect(AddProduct).toBeDefined()
       expect(typeof AddProduct).toBe("function")
     })
+
+    // AddMultipleProducts removed - addProduct now handles arrays
 
     it("should export RepeatOrder function", async () => {
       const {
@@ -192,7 +203,7 @@ describe("🔧 Calling Functions - File Existence & Architecture", () => {
   })
 
   describe("📋 Documentation Alignment", () => {
-    it("should have all 7 calling functions documented in prompt_agent.md", () => {
+    it("should have all 8 calling functions documented in prompt_agent.md", () => {
       const promptPath = path.join(
         __dirname,
         "../../../../docs/prompt_agent.md"
@@ -204,9 +215,11 @@ describe("🔧 Calling Functions - File Existence & Architecture", () => {
       expect(promptContent).toContain("GetLinkOrderByCode")
       // GetShipmentTrackingLink is internal service, not LLM-callable
       expect(promptContent).toContain("addProduct")
+      // addMultipleProducts removed - addProduct now handles arrays
       expect(promptContent).toContain("repeatOrder")
       expect(promptContent).toContain("resetCart")
       expect(promptContent).toContain("searchProduct")
+      expect(promptContent).toContain("manageNotifications")
 
       // Verify main sections exist
       expect(promptContent).toContain("ContactOperator")
@@ -214,6 +227,7 @@ describe("🔧 Calling Functions - File Existence & Architecture", () => {
       expect(promptContent).toContain("repeatOrder")
       expect(promptContent).toContain("searchProduct")
       expect(promptContent).toContain("resetCart")
+      expect(promptContent).toContain("manageNotifications")
     })
   })
 })
@@ -274,7 +288,7 @@ describe("🧪 Calling Functions - Basic Functionality", () => {
 })
 
 describe("📊 Calling Functions - Summary Report", () => {
-  it("should have all 7 LLM-callable functions properly implemented", () => {
+  it("should have all 8 LLM-callable functions properly implemented", () => {
     const callingFunctionsDir = path.join(
       __dirname,
       "../../domain/calling-functions"
@@ -297,6 +311,9 @@ describe("📊 Calling Functions - Summary Report", () => {
     const {
       SearchProduct,
     } = require("../../domain/calling-functions/SearchProduct")
+    const {
+      ManageNotifications,
+    } = require("../../domain/calling-functions/ManageNotifications")
 
     // All functions exist and are callable
     expect(ContactOperator).toBeDefined()
@@ -306,6 +323,7 @@ describe("📊 Calling Functions - Summary Report", () => {
     expect(RepeatOrder).toBeDefined()
     expect(ResetCart).toBeDefined()
     expect(SearchProduct).toBeDefined()
+    expect(ManageNotifications).toBeDefined()
 
     // All files exist
     expect(
@@ -330,6 +348,9 @@ describe("📊 Calling Functions - Summary Report", () => {
     )
     expect(
       fs.existsSync(path.join(callingFunctionsDir, "SearchProduct.ts"))
+    ).toBe(true)
+    expect(
+      fs.existsSync(path.join(callingFunctionsDir, "ManageNotifications.ts"))
     ).toBe(true)
   })
 })

@@ -1,16 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { usePricing } from "@/hooks/usePricing"
 import { Check, MessageSquare, ShoppingCart, X } from "lucide-react"
-
-// Pricing from backend BillingPrices enum
-const PRICES = {
-  MONTHLY_CHANNEL: 59.0,
-  MESSAGE: 0.15,
-  NEW_CUSTOMER: 1.5,
-  NEW_ORDER: 1.5,
-  PUSH_CAMPAIGN: 1.0,
-  HUMAN_SUPPORT: 1.0,
-}
 
 interface PricingPlan {
   name: string
@@ -25,6 +16,27 @@ interface PricingPlan {
 
 export function PricingPlans() {
   const { t } = useLanguage()
+  const { plans: pricingPlans, usage, isLoading } = usePricing()
+
+  // Show loading state while fetching prices
+  if (isLoading) {
+    return (
+      <div className="py-16 bg-gradient-to-br from-blue-50 via-white to-green-50">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <p className="text-gray-600">Loading pricing...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Use pricing from database (with fallbacks for safety)
+  const PRICES = {
+    MONTHLY_CHANNEL: usage.MONTHLY_CHANNEL_COST ?? 59.0,
+    MESSAGE: usage.MESSAGE ?? 0.2,
+    NEW_CUSTOMER: usage.NEW_CUSTOMER ?? 1.0,
+    NEW_ORDER: usage.NEW_ORDER ?? 1.0,
+    PUSH_CAMPAIGN: usage.PUSH_CAMPAIGN ?? 1.0,
+  }
 
   // Build dynamic features with translations
   const getFeatureText = (
@@ -100,7 +112,10 @@ export function PricingPlans() {
     },
     {
       name: "Enterprise",
-      price: "Custom",
+      price: pricingPlans.ENTERPRISE_MONTHLY
+        ? `€${pricingPlans.ENTERPRISE_MONTHLY}`
+        : "€0",
+      priceSuffix: "/month",
       description: t("pricing.enterprise.desc"),
       buttonText: t("pricing.button.contact"),
       buttonVariant: "outline",
@@ -113,7 +128,7 @@ export function PricingPlans() {
         { name: t("pricing.features.priority"), included: true },
         { name: t("pricing.features.branding"), included: true },
         { name: t("pricing.features.integration"), included: true },
-        { name: "OnPremise", included: true },
+        { name: "Server Dedicado", included: true },
       ],
     },
   ]
@@ -209,14 +224,14 @@ export function PricingPlans() {
           {t("pricing.usage.title")}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
           {/* Messages */}
           <div className="bg-white rounded-xl p-6 border border-gray-200 text-center">
             <div className="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
               <MessageSquare className="w-6 h-6 text-green-600" />
             </div>
             <div className="text-3xl font-bold text-green-600 mb-1">
-              €{PRICES.MESSAGE}
+              €{PRICES.MESSAGE.toFixed(2)}
             </div>
             <div className="text-sm font-medium text-gray-900 mb-2">
               {t("pricing.usage.message")}
@@ -295,34 +310,6 @@ export function PricingPlans() {
             </div>
             <p className="text-xs text-gray-600">
               {t("pricing.usage.push.desc")}
-            </p>
-          </div>
-
-          {/* Human Support */}
-          <div className="bg-white rounded-xl p-6 border border-gray-200 text-center">
-            <div className="bg-red-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-              <svg
-                className="w-6 h-6 text-red-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"
-                />
-              </svg>
-            </div>
-            <div className="text-3xl font-bold text-red-600 mb-1">
-              €{PRICES.HUMAN_SUPPORT.toFixed(2)}
-            </div>
-            <div className="text-sm font-medium text-gray-900 mb-2">
-              {t("pricing.usage.support")}
-            </div>
-            <p className="text-xs text-gray-600">
-              {t("pricing.usage.support.desc")}
             </p>
           </div>
         </div>

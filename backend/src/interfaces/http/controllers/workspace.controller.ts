@@ -153,6 +153,23 @@ export class WorkspaceController {
         `📦 Workspace data received: ${JSON.stringify(workspaceData, null, 2)}`
       )
 
+      // 🔍 LOG SPECIFICO per whatsappApiKey
+      logger.info("=== WHATSAPP API KEY DEBUG ===")
+      logger.info(
+        "whatsappApiKey presente nel body:",
+        workspaceData.whatsappApiKey ? "✅ SÌ" : "❌ NO"
+      )
+      if (workspaceData.whatsappApiKey) {
+        logger.info(
+          "Lunghezza whatsappApiKey:",
+          workspaceData.whatsappApiKey.length
+        )
+        logger.info(
+          "Primi 10 caratteri:",
+          workspaceData.whatsappApiKey.substring(0, 10) + "..."
+        )
+      }
+
       const workspace = await this.workspaceService.update(id, workspaceData)
 
       if (!workspace) {

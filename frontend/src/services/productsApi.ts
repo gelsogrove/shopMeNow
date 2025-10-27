@@ -21,7 +21,14 @@ export interface Product {
   isActive: boolean
   workspaceId: string
   categoryId: string | null
+  supplierId: string | null
   imageUrl: string[] | null
+  isWholeGrain: boolean
+  isOrganic: boolean
+  isHalal: boolean
+  isVegan: boolean
+  isGlutenFree: boolean
+  transportType: string
   category?: {
     id: string
     name: string
@@ -49,7 +56,14 @@ export interface CreateProductData {
   stock?: number
   sku?: string
   categoryId?: string
+  supplierId?: string
   isActive?: boolean
+  isWholeGrain?: boolean
+  isOrganic?: boolean
+  isHalal?: boolean
+  isVegan?: boolean
+  isGlutenFree?: boolean
+  transportType?: string
 }
 
 export interface UpdateProductData {
@@ -61,7 +75,14 @@ export interface UpdateProductData {
   stock?: number
   sku?: string
   categoryId?: string
+  supplierId?: string
   isActive?: boolean
+  isWholeGrain?: boolean
+  isOrganic?: boolean
+  isHalal?: boolean
+  isVegan?: boolean
+  isGlutenFree?: boolean
+  transportType?: string
 }
 
 // Helper to process product data

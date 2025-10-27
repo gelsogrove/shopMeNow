@@ -14,7 +14,6 @@ import ClientsPage from "./pages/ClientsPage"
 import DataProtectionPage from "./pages/data-protection"
 
 import CampaignsPage from "./pages/campaigns"
-import CampaignFormPage from "./pages/campaigns/form"
 import CheckoutSuccessPage from "./pages/checkout-success"
 import CheckoutPage from "./pages/CheckoutPage"
 import ExpiredPage from "./pages/expired"
@@ -37,12 +36,15 @@ import { ServicesPage } from "./pages/ServicesPage"
 import { CategoriesPage as SettingsCategoriesPage } from "./pages/settings/CategoriesPage"
 import { ChannelTypesPage } from "./pages/settings/ChannelTypesPage"
 import { LanguagesPage } from "./pages/settings/LanguagesPage"
+import { SuppliersPage } from "./pages/SuppliersPage"
 
 import { ProductsPage as SettingsProductsPage } from "./pages/settings/ProductsPage"
 
 import { Suspense, lazy } from "react"
 import { ChatListProvider } from "./contexts/ChatListContext"
 import { WorkspaceProvider } from "./contexts/WorkspaceContext"
+import PricingSimulator from "./pages/PricingSimulator"
+import ShortUrlRedirect from "./pages/ShortUrlRedirect"
 import { VerifyOtpPage } from "./pages/VerifyOtpPage"
 import { WorkspacePage } from "./pages/WorkspacePage"
 import { WorkspaceSelectionPage } from "./pages/WorkspaceSelectionPage"
@@ -75,6 +77,12 @@ export function App() {
               {/* Direct route for /forgot-password to avoid 404 */}
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
+              {/* Pricing Simulator - Public route (no auth required) */}
+              <Route path="/pricing-simulator" element={<PricingSimulator />} />
+
+              {/* Short URL redirect handler - must be before protected routes */}
+              <Route path="/s/:code" element={<ShortUrlRedirect />} />
+
               {/* Protected Routes - richiedono autenticazione */}
               <Route element={<ProtectedRoute />}>
                 {/* Workspace Selection */}
@@ -103,11 +111,11 @@ export function App() {
                 <Route path="/admin/orders" element={<Layout />}>
                   <Route index element={<OrdersPage />} />
                 </Route>
-                <Route path="/cart" element={<Layout />}>
-                  <Route index element={<CheckoutPage />} />
-                </Route>
                 <Route path="/products" element={<Layout />}>
                   <Route index element={<ProductsPage />} />
+                </Route>
+                <Route path="/suppliers" element={<Layout />}>
+                  <Route index element={<SuppliersPage />} />
                 </Route>
                 <Route path="/categories" element={<Layout />}>
                   <Route index element={<CategoriesPage />} />
@@ -149,12 +157,6 @@ export function App() {
                 {/* Campaign routes */}
                 <Route path="/campaigns" element={<Layout />}>
                   <Route index element={<CampaignsPage />} />
-                </Route>
-                <Route path="/campaigns/new" element={<Layout />}>
-                  <Route index element={<CampaignFormPage />} />
-                </Route>
-                <Route path="/campaigns/edit/:id" element={<Layout />}>
-                  <Route index element={<CampaignFormPage />} />
                 </Route>
               </Route>
 
@@ -269,6 +271,22 @@ export function App() {
               {/* Public Checkout page via secure token (external, no platform layout) */}
               <Route
                 path="/checkout"
+                element={
+                  <Suspense
+                    fallback={
+                      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+                        <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+                      </div>
+                    }
+                  >
+                    <CheckoutPage />
+                  </Suspense>
+                }
+              />
+
+              {/* Public Cart page via secure token (external, no platform layout) */}
+              <Route
+                path="/cart"
                 element={
                   <Suspense
                     fallback={
