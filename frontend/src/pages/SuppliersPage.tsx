@@ -357,8 +357,8 @@ export function SuppliersPage() {
 
       {/* Submit Button */}
       <div className="pt-4 flex justify-end">
-        <Button 
-          type="submit" 
+        <Button
+          type="submit"
           className="bg-green-600 hover:bg-green-700 w-full"
         >
           {supplier ? "Save Changes" : "Add Supplier"}
@@ -403,9 +403,7 @@ export function SuppliersPage() {
               Add a new supplier to your workspace
             </SheetDescription>
           </SheetHeader>
-          <div className="mt-6">
-            {renderForm()}
-          </div>
+          <div className="mt-6">{renderForm()}</div>
         </SheetContent>
       </Sheet>
 

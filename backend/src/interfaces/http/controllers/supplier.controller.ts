@@ -76,7 +76,8 @@ export class SupplierController {
       }
 
       // Convert isActive from checkbox value ("on" / undefined) to boolean
-      const isActiveBoolean = isActive === "on" || isActive === true || isActive === "true"
+      const isActiveBoolean =
+        isActive === "on" || isActive === true || isActive === "true"
 
       // Handle logo upload
       let logoUrl: string | undefined
@@ -137,7 +138,8 @@ export class SupplierController {
       } = req.body
 
       // Convert isActive from checkbox value ("on" / undefined) to boolean
-      const isActiveBoolean = isActive === "on" || isActive === true || isActive === "true"
+      const isActiveBoolean =
+        isActive === "on" || isActive === true || isActive === "true"
 
       // Handle logo upload
       let logoUrl: string | undefined = existingLogoUrl

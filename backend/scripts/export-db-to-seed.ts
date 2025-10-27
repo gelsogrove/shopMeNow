@@ -500,10 +500,10 @@ export const agentPrompt: AgentPromptData = {
 `
 
       fs.writeFileSync(path.join(dataDir, "agentPrompt.ts"), agentPromptContent)
-      const contentLength = activePrompt.content ? activePrompt.content.length : 0
-      console.log(
-        `   ✅ Exported agent prompt (${contentLength} chars)`
-      )
+      const contentLength = activePrompt.content
+        ? activePrompt.content.length
+        : 0
+      console.log(`   ✅ Exported agent prompt (${contentLength} chars)`)
     } else {
       console.log(`   ⚠️  No active agent config found, skipping prompt export`)
     }

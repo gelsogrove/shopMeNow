@@ -187,7 +187,7 @@ export function ProductsPage() {
     )
 
     logger.info("🔍 After search filter:", filtered.length)
-    
+
     // Filter by category
     if (filterCategory !== "all") {
       filtered = filtered.filter((p) => p.categoryId === filterCategory)
