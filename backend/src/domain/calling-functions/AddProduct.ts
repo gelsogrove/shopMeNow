@@ -1,8 +1,8 @@
 /**
  * AddProduct - LLM-Callable Function
  *
- * Aggiunge un prodotto al carrello del cliente.
- * Utilizzata quando il cliente confirma: "Sì, voglio aggiungerlo al carrello"
+ * Aggiunge uno o più prodotti al carrello del cliente.
+ * Utilizzata quando il cliente confirma: "Sì, voglio aggiungerlo/i al carrello"
  *
  * ⚠️ IMPORTANTE: Questa funzione deve essere chiamata SOLO DOPO la conferma del cliente
  *
@@ -13,31 +13,41 @@ import logger from "../../utils/logger"
 
 import { CallingFunctionsService } from "../../services/calling-functions.service"
 
+export interface ProductToAdd {
+  productCode: string // Codice del prodotto
+  quantity: number // Quantità (default: 1)
+  notes?: string // Note opzionali
+}
+
 export interface AddProductRequest {
   customerId: string
   workspaceId: string
-  productCode: string // Codice del prodotto da aggiungere
-  quantity: number // Quantità da aggiungere (default: 1)
-  notes?: string // Note optional (es: "grande", "bio", etc.)
+  products: ProductToAdd[] // Array di prodotti da aggiungere (anche singolo prodotto)
 }
 
 export interface AddProductResult {
   success: boolean
   message: string
-  cartCode?: string // Codice carrello per accesso pubblico
-  productName?: string
-  quantity?: number
+  totalAdded: number // Numero totale prodotti aggiunti
+  skipped: number // Numero prodotti saltati (esauriti, errori)
   cartUrl?: string // URL pubblico del carrello con token
   expiresAt?: string
   timestamp: string
   error?: string
+  details?: Array<{
+    // Dettagli per ogni prodotto
+    productCode: string
+    productName?: string
+    success: boolean
+    message?: string
+  }>
 }
 
 /**
- * Aggiunge un prodotto al carrello
+ * Aggiunge uno o più prodotti al carrello
  *
- * @param request - Request parameters con customerId, workspaceId, productCode, quantity
- * @returns Result con confirmazione e link carrello
+ * @param request - Request parameters con customerId, workspaceId, products[]
+ * @returns Result con riepilogo aggiunte e link carrello
  */
 export async function AddProduct(
   request: AddProductRequest
@@ -46,55 +56,141 @@ export async function AddProduct(
     logger.info("🛒 AddProduct called with:", {
       customerId: request.customerId,
       workspaceId: request.workspaceId,
-      productCode: request.productCode,
-      quantity: request.quantity || 1,
+      productsCount: request.products?.length || 0,
+      products: request.products,
     })
 
     // Validazione parametri obbligatori
-    if (!request.customerId || !request.workspaceId || !request.productCode) {
+    if (!request.customerId || !request.workspaceId || !request.products) {
       logger.error("❌ Missing required parameters in AddProduct")
       return {
         success: false,
         error: "Parametri richiesti mancanti",
         message:
-          "Impossibile aggiungere il prodotto al carrello. Parametri incompleti.",
+          "Impossibile aggiungere i prodotti al carrello. Parametri incompleti.",
+        totalAdded: 0,
+        skipped: 0,
         timestamp: new Date().toISOString(),
       }
     }
 
-    const quantity = request.quantity || 1
-
-    // Validazione quantità positiva
-    if (quantity < 1 || !Number.isInteger(quantity)) {
-      logger.error("❌ Invalid quantity in AddProduct:", quantity)
+    // Validazione array prodotti
+    if (!Array.isArray(request.products) || request.products.length === 0) {
+      logger.error("❌ Invalid products array in AddProduct")
       return {
         success: false,
-        error: "Quantità non valida",
-        message: "La quantità deve essere un numero intero positivo.",
+        error: "Array prodotti non valido",
+        message: "Devi fornire almeno un prodotto da aggiungere al carrello.",
+        totalAdded: 0,
+        skipped: 0,
         timestamp: new Date().toISOString(),
       }
     }
 
     const callingFunctionsService = new CallingFunctionsService()
+    const details: AddProductResult["details"] = []
+    let totalAdded = 0
+    let skipped = 0
+    let cartUrl: string | undefined
+    let expiresAt: string | undefined
 
-    // Chiama il servizio per aggiungere il prodotto
-    const result = await callingFunctionsService.addProductToCart({
-      customerId: request.customerId,
-      workspaceId: request.workspaceId,
-      productCode: request.productCode,
-      quantity,
-      notes: request.notes,
-    })
+    // Itera su ogni prodotto e aggiungilo al carrello
+    for (const product of request.products) {
+      try {
+        // Validazione quantità
+        const quantity = product.quantity || 1
+        if (quantity < 1 || !Number.isInteger(quantity)) {
+          logger.warn(
+            `⚠️ Invalid quantity for ${product.productCode}: ${quantity}`
+          )
+          skipped++
+          details.push({
+            productCode: product.productCode,
+            success: false,
+            message: "Quantità non valida",
+          })
+          continue
+        }
 
-    logger.info("✅ AddProduct result:", result)
-    return result
+        // Chiama il servizio per aggiungere il prodotto
+        const result = await callingFunctionsService.addProductToCart({
+          customerId: request.customerId,
+          workspaceId: request.workspaceId,
+          productCode: product.productCode,
+          quantity,
+          notes: product.notes,
+        })
+
+        if (result.success) {
+          totalAdded++
+          // Salva cartUrl e expiresAt dalla prima aggiunta riuscita
+          if (!cartUrl && result.cartUrl) {
+            cartUrl = result.cartUrl
+            expiresAt = result.expiresAt
+          }
+          details.push({
+            productCode: product.productCode,
+            productName: result.productName,
+            success: true,
+            message: result.message,
+          })
+        } else {
+          skipped++
+          details.push({
+            productCode: product.productCode,
+            success: false,
+            message: result.message || result.error,
+          })
+        }
+      } catch (error) {
+        logger.error(`❌ Error adding product ${product.productCode}:`, error)
+        skipped++
+        details.push({
+          productCode: product.productCode,
+          success: false,
+          message:
+            error instanceof Error ? error.message : "Errore sconosciuto",
+        })
+      }
+    }
+
+    // Genera messaggio di riepilogo
+    let message = ""
+    if (totalAdded > 0 && skipped === 0) {
+      message = `✅ Ho aggiunto ${totalAdded} prodotto/i al carrello!`
+    } else if (totalAdded > 0 && skipped > 0) {
+      message = `✅ Ho aggiunto ${totalAdded} prodotto/i al carrello. ⚠️ ${skipped} prodotto/i non disponibile/i.`
+    } else {
+      message = `❌ Nessun prodotto aggiunto. Tutti i ${skipped} prodotti non sono disponibili.`
+    }
+
+    // ✅ Aggiungi link al carrello e scadenza al messaggio
+    if (totalAdded > 0 && cartUrl) {
+      message += `\n\n🛒 Vedi il tuo carrello: ${cartUrl}\n\n⏰ Link valido per 15 minuti`
+    }
+
+    const finalResult: AddProductResult = {
+      success: totalAdded > 0,
+      message,
+      totalAdded,
+      skipped,
+      cartUrl,
+      expiresAt,
+      timestamp: new Date().toISOString(),
+      details,
+    }
+
+    logger.info("✅ AddProduct result:", finalResult)
+    return finalResult
   } catch (error) {
     logger.error("❌ Error in AddProduct:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Errore interno",
       message:
-        "Impossibile aggiungere il prodotto al carrello. Riprova più tardi.",
+        "Impossibile aggiungere i prodotti al carrello. Riprova più tardi.",
+      totalAdded: 0,
+      skipped: 0,
       timestamp: new Date().toISOString(),
     }
   }

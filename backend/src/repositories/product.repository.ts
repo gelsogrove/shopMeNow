@@ -237,6 +237,7 @@ export class ProductRepository implements IProductRepository {
         isHalal: product.isHalal,
         isVegan: product.isVegan,
         isGlutenFree: product.isGlutenFree,
+        transportType: product.transportType,
       }
 
       // Add imageUrl if provided
@@ -402,6 +403,7 @@ export class ProductRepository implements IProductRepository {
       isHalal: data.isHalal ?? false,
       isVegan: data.isVegan ?? false,
       isGlutenFree: data.isGlutenFree ?? false,
+      transportType: data.transportType || "Temperatura ambiente",
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
       category: data.category,

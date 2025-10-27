@@ -695,6 +695,22 @@ export function ProductsPage() {
           </div>
         </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="transportType" className="text-sm font-medium">
+            🚚 Tipo di Trasporto
+          </Label>
+          <select
+            id="transportType"
+            name="transportType"
+            defaultValue={product?.transportType || "Temperatura ambiente"}
+            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="Temperatura ambiente">🌡️ Temperatura ambiente</option>
+            <option value="Trasporto refrigerato">❄️ Trasporto refrigerato</option>
+            <option value="Trasporto congelato">🧊 Trasporto congelato</option>
+          </select>
+        </div>
+
         <div className="flex items-center justify-between border rounded-lg p-3">
           <div className="space-y-1">
             <Label htmlFor="isActive" className="text-sm font-medium">

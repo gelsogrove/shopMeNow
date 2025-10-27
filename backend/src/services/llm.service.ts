@@ -705,50 +705,21 @@ export class LLMService {
         function: {
           name: "addProduct",
           description:
-            "⚙️ PRIORITY 4 - MEDIUM. Aggiunge UN SINGOLO PRODOTTO al carrello del cliente. Usare SOLO DOPO che il cliente ha CONFERMATO di voler aggiungere il prodotto. FLOW OBBLIGATORIO: 1) Mostra prodotto con prezzo e stock, 2) Chiedi 'Vuoi aggiungerlo al carrello? 🛒', 3) Se conferma ('sì', 'ok', 'perfetto', 'aggiungi') → chiama addProduct(), 4) Dopo aggiunta → mostra link carrello. NON chiamare se: cliente non ha confermato, stock insufficiente, productCode mancante, prodotto non trovato, utente sta solo chiedendo info. DISAMBIGUAZIONE: 'hai la burrata?' = searchProduct (BACKGROUND) | 'aggiungi burrata' (DOPO conferma) = addProduct | 'ripeti ordine' = repeatOrder.",
-          parameters: {
-            type: "object",
-            properties: {
-              productCode: {
-                type: "string",
-                description:
-                  "Codice esatto del prodotto da aggiungere (obbligatorio). Es: 'BUR-001', 'PAR-023', 'PRO-045'.",
-              },
-              quantity: {
-                type: "number",
-                description:
-                  "Quantità da aggiungere (default: 1, deve essere intero positivo). Min: 1.",
-              },
-              notes: {
-                type: "string",
-                description:
-                  "Note opzionali per il prodotto. Es: 'grande', 'bio', 'confezionato'.",
-              },
-            },
-            required: ["productCode"],
-          },
-        },
-      },
-      {
-        type: "function",
-        function: {
-          name: "addMultipleProducts",
-          description:
-            "🛒 PRIORITY 4 - MEDIUM. Aggiunge PIÙ PRODOTTI al carrello in una sola operazione. Usare quando il cliente chiede 2+ prodotti insieme e CONFERMA di volerli aggiungere. FLOW OBBLIGATORIO: 1) Mostra TUTTI i prodotti con codici e prezzi, 2) Chiedi 'Vuoi aggiungerli tutti al carrello? 🛒', 3) Se conferma ('sì', 'ok', 'perfetto', 'tutti') → chiama addMultipleProducts(products), 4) Dopo aggiunta → mostra riepilogo con link carrello. ESEMPIO: Cliente: 'Voglio Paccheri, Passata e Parmigiano' → Tu mostri i 3 prodotti → Cliente conferma 'sì' → Tu chiami addMultipleProducts([{productCode:'PASTA-005',quantity:1},{productCode:'COND-004',quantity:1},{productCode:'FORMAG-002',quantity:1}]). DISAMBIGUAZIONE: UN prodotto = addProduct | PIÙ prodotti = addMultipleProducts.",
+            "⚙️ PRIORITY 4 - MEDIUM. Aggiunge uno o più prodotti al carrello del cliente. Usare SOLO DOPO che il cliente ha CONFERMATO di voler aggiungere il/i prodotto/i. FLOW OBBLIGATORIO: 1) Mostra prodotto/i con prezzo e stock, 2) Chiedi 'Vuoi aggiungerlo/i al carrello? 🛒', 3) Se conferma ('sì', 'ok', 'perfetto', 'aggiungi', 'tutti') → chiama addProduct(products), 4) Dopo aggiunta → mostra link carrello. ESEMPI: SINGOLO: [{productCode:'BUR-001',quantity:1}] | MULTIPLI: [{productCode:'PASTA-005',quantity:1},{productCode:'COND-004',quantity:2},{productCode:'FORMAG-002',quantity:1}]. NON chiamare se: cliente non ha confermato, stock insufficiente, productCode mancante, prodotto non trovato, utente sta solo chiedendo info. DISAMBIGUAZIONE: 'hai la burrata?' = searchProduct (BACKGROUND) | 'aggiungi burrata' (DOPO conferma) = addProduct | 'ripeti ordine' = repeatOrder.",
           parameters: {
             type: "object",
             properties: {
               products: {
                 type: "array",
                 description:
-                  "Array di prodotti da aggiungere (minimo 1 prodotto, tipicamente 2+).",
+                  "Array di prodotti da aggiungere. Anche per singolo prodotto, usare array con 1 elemento.",
                 items: {
                   type: "object",
                   properties: {
                     productCode: {
                       type: "string",
                       description:
-                        "Codice esatto del prodotto. Es: 'PASTA-005', 'COND-004', 'FORMAG-002'.",
+                        "Codice esatto del prodotto. Es: 'BUR-001', 'PASTA-005', 'COND-004'.",
                     },
                     quantity: {
                       type: "number",
@@ -1345,26 +1316,12 @@ export class LLMService {
             workspaceId: workspace.id,
           })
         case "addProduct":
-          // ⚙️ PRIORITY 4 - MEDIUM (requires confirmation)
+          // 🛒 PRIORITY 4 - MEDIUM (requires confirmation, add one or more products)
           logger.info("🛒 addProduct called (PRIORITY 4):", args)
           const {
             AddProduct,
           } = require("../domain/calling-functions/AddProduct")
           return await AddProduct({
-            customerId: customer.id,
-            workspaceId: workspace.id,
-            productCode: args.productCode,
-            quantity: args.quantity || 1,
-            notes: args.notes,
-          })
-
-        case "addMultipleProducts":
-          // 🛒 PRIORITY 4 - MEDIUM (requires confirmation, add multiple products at once)
-          logger.info("🛒 addMultipleProducts called (PRIORITY 4):", args)
-          const {
-            AddMultipleProducts,
-          } = require("../domain/calling-functions/AddMultipleProducts")
-          return await AddMultipleProducts({
             customerId: customer.id,
             workspaceId: workspace.id,
             products: args.products, // Array of {productCode, quantity, notes}

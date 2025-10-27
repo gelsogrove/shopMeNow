@@ -21,6 +21,7 @@ export class Product {
   isHalal: boolean
   isVegan: boolean
   isGlutenFree: boolean
+  transportType: string
   createdAt: Date
   updatedAt: Date
   category?: Category
@@ -49,6 +50,7 @@ export class Product {
     this.isHalal = data.isHalal ?? false
     this.isVegan = data.isVegan ?? false
     this.isGlutenFree = data.isGlutenFree ?? false
+    this.transportType = data.transportType || "Temperatura ambiente"
     this.createdAt = data.createdAt || new Date()
     this.updatedAt = data.updatedAt || new Date()
     this.category = data.category

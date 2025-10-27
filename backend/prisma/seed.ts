@@ -306,6 +306,32 @@ async function main() {
       prod.name.toLowerCase().includes("whole") ||
       prod.name.toLowerCase().includes("integrale")
 
+    // Assign transport type based on product category and characteristics
+    let transportType = "Temperatura ambiente" // Default for most products
+    
+    // Refrigerated products (fresh meats, cheeses, dairy)
+    if (
+      prod.categoryName === "Cured Meats" ||
+      prod.categoryName === "Cheeses" ||
+      prod.name.toLowerCase().includes("burrata") ||
+      prod.name.toLowerCase().includes("prosciutto") ||
+      prod.name.toLowerCase().includes("guanciale") ||
+      prod.name.toLowerCase().includes("pancetta") ||
+      prod.name.toLowerCase().includes("ricotta")
+    ) {
+      transportType = "Trasporto refrigerato"
+    }
+    
+    // Frozen products (gelato, arancini, frozen pasta)
+    if (
+      prod.name.toLowerCase().includes("gelato") ||
+      prod.name.toLowerCase().includes("arancini") ||
+      prod.name.toLowerCase().includes("frozen") ||
+      prod.name.toLowerCase().includes("congelat")
+    ) {
+      transportType = "Trasporto congelato"
+    }
+
     await prisma.products.create({
       data: {
         name: prod.name,
@@ -325,6 +351,7 @@ async function main() {
         isGlutenFree: isGlutenFree,
         isHalal: isHalal,
         isWholeGrain: isWholeGrain,
+        transportType: transportType,
       },
     })
   }

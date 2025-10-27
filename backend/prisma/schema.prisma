@@ -149,6 +149,7 @@ model Products {
   isHalal        Boolean       @default(false)
   isVegan        Boolean       @default(false)
   isGlutenFree   Boolean       @default(false)
+  transportType  String        @default("Temperatura ambiente")
   cartItems      CartItems[]
   orderItems     OrderItems[]
   category       Categories?   @relation(fields: [categoryId], references: [id])

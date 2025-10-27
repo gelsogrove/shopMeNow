@@ -34,7 +34,7 @@ if (process.env.NODE_ENV === "test" && !process.env.INTEGRATION_TEST) {
         deleteMany: jest.fn(),
         count: jest.fn(),
       },
-      workspaces: {
+      workspace: {
         findMany: jest.fn(),
         findFirst: jest.fn(),
         findUnique: jest.fn(),

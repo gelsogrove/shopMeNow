@@ -28,6 +28,7 @@ export interface Product {
   isHalal: boolean
   isVegan: boolean
   isGlutenFree: boolean
+  transportType: string
   category?: {
     id: string
     name: string
@@ -62,6 +63,7 @@ export interface CreateProductData {
   isHalal?: boolean
   isVegan?: boolean
   isGlutenFree?: boolean
+  transportType?: string
 }
 
 export interface UpdateProductData {
@@ -80,6 +82,7 @@ export interface UpdateProductData {
   isHalal?: boolean
   isVegan?: boolean
   isGlutenFree?: boolean
+  transportType?: string
 }
 
 // Helper to process product data

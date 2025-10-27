@@ -233,6 +233,11 @@ export class ProductController {
         productData.categoryId = null
       }
 
+      // Handle transportType: set default if not provided
+      if (!productData.transportType) {
+        productData.transportType = "Temperatura ambiente"
+      }
+
       logger.info(
         "✅ After conversion - supplierId:",
         productData.supplierId,
@@ -360,6 +365,11 @@ export class ProductController {
       // Handle categoryId: convert empty string to null
       if (productData.categoryId === "" || productData.categoryId === "none") {
         productData.categoryId = null
+      }
+
+      // Handle transportType: set default if not provided
+      if (!productData.transportType) {
+        productData.transportType = "Temperatura ambiente"
       }
 
       logger.info(

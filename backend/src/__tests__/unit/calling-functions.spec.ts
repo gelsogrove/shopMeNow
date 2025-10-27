@@ -30,15 +30,15 @@ describe("🔧 Calling Functions - File Existence & Architecture", () => {
       expect(fs.existsSync(callingFunctionsDir)).toBe(true)
     })
 
-    it("should have 9 calling functions files", () => {
+    it("should have 8 calling functions files", () => {
       const files = fs.readdirSync(callingFunctionsDir)
       const tsFiles = files.filter((f) => f.endsWith(".ts"))
-      expect(tsFiles.length).toBe(9)
+      expect(tsFiles.length).toBe(8)
       expect(tsFiles).toContain("ContactOperator.ts")
       expect(tsFiles).toContain("GetLinkOrderByCode.ts")
       expect(tsFiles).toContain("GetShipmentTrackingLink.ts")
       expect(tsFiles).toContain("AddProduct.ts")
-      expect(tsFiles).toContain("AddMultipleProducts.ts")
+      // AddMultipleProducts removed - addProduct now handles arrays
       expect(tsFiles).toContain("RepeatOrder.ts")
       expect(tsFiles).toContain("ResetCart.ts")
       expect(tsFiles).toContain("SearchProduct.ts")
@@ -57,11 +57,6 @@ describe("🔧 Calling Functions - File Existence & Architecture", () => {
 
     it("should have AddProduct.ts file", () => {
       const filePath = path.join(callingFunctionsDir, "AddProduct.ts")
-      expect(fs.existsSync(filePath)).toBe(true)
-    })
-
-    it("should have AddMultipleProducts.ts file", () => {
-      const filePath = path.join(callingFunctionsDir, "AddMultipleProducts.ts")
       expect(fs.existsSync(filePath)).toBe(true)
     })
 
@@ -119,13 +114,7 @@ describe("🔧 Calling Functions - File Existence & Architecture", () => {
       expect(typeof AddProduct).toBe("function")
     })
 
-    it("should export AddMultipleProducts function", async () => {
-      const {
-        AddMultipleProducts,
-      } = require("../../domain/calling-functions/AddMultipleProducts")
-      expect(AddMultipleProducts).toBeDefined()
-      expect(typeof AddMultipleProducts).toBe("function")
-    })
+    // AddMultipleProducts removed - addProduct now handles arrays
 
     it("should export RepeatOrder function", async () => {
       const {
@@ -214,7 +203,7 @@ describe("🔧 Calling Functions - File Existence & Architecture", () => {
   })
 
   describe("📋 Documentation Alignment", () => {
-    it("should have all 9 calling functions documented in prompt_agent.md", () => {
+    it("should have all 8 calling functions documented in prompt_agent.md", () => {
       const promptPath = path.join(
         __dirname,
         "../../../../docs/prompt_agent.md"
@@ -226,7 +215,7 @@ describe("🔧 Calling Functions - File Existence & Architecture", () => {
       expect(promptContent).toContain("GetLinkOrderByCode")
       // GetShipmentTrackingLink is internal service, not LLM-callable
       expect(promptContent).toContain("addProduct")
-      expect(promptContent).toContain("addMultipleProducts")
+      // addMultipleProducts removed - addProduct now handles arrays
       expect(promptContent).toContain("repeatOrder")
       expect(promptContent).toContain("resetCart")
       expect(promptContent).toContain("searchProduct")
