@@ -81,11 +81,11 @@ describe("BillingService - Dynamic Pricing from Database", () => {
     await prisma.$disconnect()
   })
 
-  describe("trackMessage (€0.15 per message)", () => {
+  describe("trackMessage (€0.20 per message)", () => {
     it("should charge correct MESSAGE price from database", async () => {
       // Get current price from database
       const expectedPrice = await pricingRepo.getValue("MESSAGE")
-      expect(expectedPrice).toBe(0.15)
+      expect(expectedPrice).toBe(0.2)
 
       // Track message
       await billingService.trackMessage(
@@ -199,11 +199,11 @@ describe("BillingService - Dynamic Pricing from Database", () => {
     })
   })
 
-  describe("trackNewOrder (€1.50 per new order)", () => {
+  describe("trackNewOrder (€1.00 per new order)", () => {
     it("should charge correct NEW_ORDER price from database", async () => {
       // Get current price from database
       const expectedPrice = await pricingRepo.getValue("NEW_ORDER")
-      expect(expectedPrice).toBe(1.5)
+      expect(expectedPrice).toBe(1.0)
 
       const orderCustomerId = "order-customer-" + Date.now()
       await createTestCustomer(orderCustomerId) // Create customer first
@@ -272,21 +272,21 @@ describe("BillingService - Dynamic Pricing from Database", () => {
       expect(allRecords[0].currentCharge).toBe(1.0)
       expect(allRecords[0].newTotal).toBe(1.0)
 
-      // Check second record (MESSAGE)
+      // Check second record (MESSAGE) - €0.20
       expect(allRecords[1].type).toBe(BillingType.MESSAGE)
       expect(allRecords[1].previousTotal).toBe(1.0)
-      expect(allRecords[1].currentCharge).toBe(0.15)
-      expect(allRecords[1].newTotal).toBeCloseTo(1.15, 2)
+      expect(allRecords[1].currentCharge).toBe(0.2)
+      expect(allRecords[1].newTotal).toBeCloseTo(1.2, 2)
 
-      // Check third record (NEW_ORDER)
+      // Check third record (NEW_ORDER) - €1.00
       expect(allRecords[2].type).toBe(BillingType.NEW_ORDER)
-      expect(allRecords[2].previousTotal).toBeCloseTo(1.15, 2)
-      expect(allRecords[2].currentCharge).toBe(1.5)
-      expect(allRecords[2].newTotal).toBeCloseTo(2.65, 2)
+      expect(allRecords[2].previousTotal).toBeCloseTo(1.2, 2)
+      expect(allRecords[2].currentCharge).toBe(1.0)
+      expect(allRecords[2].newTotal).toBeCloseTo(2.2, 2)
 
-      // Total should be €1.00 + €0.15 + €1.50 = €2.65
+      // Total should be €1.00 + €0.20 + €1.00 = €2.20
       const totalAmount = allRecords.reduce((sum, r) => sum + r.amount, 0)
-      expect(totalAmount).toBeCloseTo(2.65, 2)
+      expect(totalAmount).toBeCloseTo(2.2, 2)
     })
   })
 
