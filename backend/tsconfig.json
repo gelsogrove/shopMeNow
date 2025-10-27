@@ -14,7 +14,8 @@
     "strictNullChecks": false,
     "noEmitOnError": false,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "types": ["node", "jest"]
   },
   "include": ["src/**/*", "src/types/**/*"],
   "exclude": ["node_modules", "**/*.spec.ts", "**/*.test.ts", "src/__tests__/**/*"]
