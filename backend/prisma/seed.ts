@@ -289,6 +289,23 @@ async function main() {
       ? supplierMap.get(supplierCompanyName)
       : createdSuppliers[0].id // fallback to first supplier
 
+    // Distribute boolean certifications based on product category and name
+    const isOrganic =
+      prod.name.toLowerCase().includes("organic") ||
+      prod.name.toLowerCase().includes("bio")
+    const isVegan =
+      prod.categoryName === "Pasta" ||
+      prod.categoryName === "Condiments" ||
+      prod.name.toLowerCase().includes("vegan")
+    const isGlutenFree =
+      prod.name.toLowerCase().includes("gluten-free") ||
+      prod.name.toLowerCase().includes("rice")
+    const isHalal = prod.categoryName === "Cured Meats" && prod.stock > 30 // Some meats are halal certified
+    const isWholeGrain =
+      prod.categoryName === "Pasta" ||
+      prod.name.toLowerCase().includes("whole") ||
+      prod.name.toLowerCase().includes("integrale")
+
     await prisma.products.create({
       data: {
         name: prod.name,
@@ -303,6 +320,11 @@ async function main() {
         supplierId: supplierId,
         workspaceId: workspace.id,
         imageUrl: prod.imageUrl || [],
+        isOrganic: isOrganic,
+        isVegan: isVegan,
+        isGlutenFree: isGlutenFree,
+        isHalal: isHalal,
+        isWholeGrain: isWholeGrain,
       },
     })
   }

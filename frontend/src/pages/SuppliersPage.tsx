@@ -14,6 +14,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
+import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { logger } from "@/lib/logger"
@@ -82,12 +83,21 @@ export function SuppliersPage() {
     {
       header: "Company",
       accessorKey: "companyName" as keyof Supplier,
-      size: 250,
+      size: 200,
+    },
+    {
+      header: "Contact",
+      accessorKey: "contactName" as keyof Supplier,
+      size: 150,
+      cell: (info: any) => {
+        const value = info.getValue()
+        return value || "-"
+      },
     },
     {
       header: "Region",
       accessorKey: "region" as keyof Supplier,
-      size: 150,
+      size: 120,
       cell: (info: any) => {
         const value = info.getValue()
         return value || "-"
@@ -223,7 +233,7 @@ export function SuppliersPage() {
   const renderForm = (supplier: Supplier | null = null) => (
     <form
       onSubmit={supplier ? handleEditSubmit : handleAdd}
-      className="space-y-6 pt-6"
+      className="space-y-6"
     >
       {/* Logo Upload */}
       <div className="space-y-2">
@@ -235,7 +245,7 @@ export function SuppliersPage() {
         />
       </div>
 
-      {/* Company Name */}
+      {/* Company Name - Full Width */}
       <div className="space-y-2">
         <Label htmlFor="companyName">
           Company Name <span className="text-red-500">*</span>
@@ -249,7 +259,7 @@ export function SuppliersPage() {
         />
       </div>
 
-      {/* Description */}
+      {/* Description - Full Width */}
       <div className="space-y-2">
         <Label htmlFor="description">Description</Label>
         <Textarea
@@ -261,7 +271,7 @@ export function SuppliersPage() {
         />
       </div>
 
-      {/* Contact Name & Phone */}
+      {/* Contact Info - 2 columns */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="contactName">Contact Name</Label>
@@ -283,30 +293,30 @@ export function SuppliersPage() {
         </div>
       </div>
 
-      {/* Email & Website */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            name="email"
-            type="email"
-            defaultValue={supplier?.email || ""}
-            placeholder="info@company.com"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="website">Website</Label>
-          <Input
-            id="website"
-            name="website"
-            defaultValue={supplier?.website || ""}
-            placeholder="https://company.com"
-          />
-        </div>
+      {/* Email - Full Width */}
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          defaultValue={supplier?.email || ""}
+          placeholder="info@company.com"
+        />
       </div>
 
-      {/* Region & Country */}
+      {/* Website - Full Width */}
+      <div className="space-y-2">
+        <Label htmlFor="website">Website</Label>
+        <Input
+          id="website"
+          name="website"
+          defaultValue={supplier?.website || ""}
+          placeholder="https://company.com"
+        />
+      </div>
+
+      {/* Region & Country - 2 columns */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="region">Region</Label>
@@ -328,10 +338,30 @@ export function SuppliersPage() {
         </div>
       </div>
 
+      {/* Active Status */}
+      <div className="flex items-center justify-between border rounded-lg p-3 bg-gray-50">
+        <div className="space-y-1">
+          <Label htmlFor="isActive" className="text-sm font-medium">
+            Active Supplier
+          </Label>
+          <p className="text-xs text-gray-500">
+            Only active suppliers will be shown in product forms
+          </p>
+        </div>
+        <Switch
+          id="isActive"
+          name="isActive"
+          defaultChecked={supplier?.isActive ?? true}
+        />
+      </div>
+
       {/* Submit Button */}
       <div className="pt-4 flex justify-end">
-        <Button type="submit" className="bg-green-600 hover:bg-green-700">
-          {supplier ? "Save Changes" : "Add"}
+        <Button 
+          type="submit" 
+          className="bg-green-600 hover:bg-green-700 w-full"
+        >
+          {supplier ? "Save Changes" : "Add Supplier"}
         </Button>
       </div>
     </form>
@@ -366,27 +396,31 @@ export function SuppliersPage() {
 
       {/* Add Supplier Sheet */}
       <Sheet open={showAddSheet} onOpenChange={setShowAddSheet}>
-        <SheetContent side="right" className="w-[25%]">
+        <SheetContent side="right" className="w-[500px] overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Add Supplier</SheetTitle>
             <SheetDescription>
               Add a new supplier to your workspace
             </SheetDescription>
           </SheetHeader>
-          {renderForm()}
+          <div className="mt-6">
+            {renderForm()}
+          </div>
         </SheetContent>
       </Sheet>
 
       {/* Edit Supplier Sheet */}
       <Sheet open={showEditSheet} onOpenChange={setShowEditSheet}>
-        <SheetContent side="right" className="w-[25%]">
+        <SheetContent side="right" className="w-[500px] overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Edit Supplier</SheetTitle>
             <SheetDescription>
               Make changes to your supplier here
             </SheetDescription>
           </SheetHeader>
-          {selectedSupplier && renderForm(selectedSupplier)}
+          <div className="mt-6">
+            {selectedSupplier && renderForm(selectedSupplier)}
+          </div>
         </SheetContent>
       </Sheet>
 

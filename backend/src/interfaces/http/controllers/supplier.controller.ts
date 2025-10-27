@@ -68,11 +68,15 @@ export class SupplierController {
         contactName,
         region,
         country,
+        isActive,
       } = req.body
 
       if (!companyName) {
         return res.status(400).json({ error: "Company name is required" })
       }
+
+      // Convert isActive from checkbox value ("on" / undefined) to boolean
+      const isActiveBoolean = isActive === "on" || isActive === true || isActive === "true"
 
       // Handle logo upload
       let logoUrl: string | undefined
@@ -94,6 +98,7 @@ export class SupplierController {
         country,
         logoUrl,
         workspaceId,
+        isActive: isActiveBoolean,
       }
 
       logger.info("Supplier data to create:", supplierData)
@@ -131,6 +136,9 @@ export class SupplierController {
         isActive,
       } = req.body
 
+      // Convert isActive from checkbox value ("on" / undefined) to boolean
+      const isActiveBoolean = isActive === "on" || isActive === true || isActive === "true"
+
       // Handle logo upload
       let logoUrl: string | undefined = existingLogoUrl
       if (req.file) {
@@ -151,7 +159,7 @@ export class SupplierController {
           region,
           country,
           logoUrl,
-          isActive,
+          isActive: isActiveBoolean,
         }
       )
 

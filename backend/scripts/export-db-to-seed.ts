@@ -110,6 +110,55 @@ ${categories
     fs.writeFileSync(path.join(dataDir, "categories.ts"), categoriesContent)
     console.log(`   ✅ Exported ${categories.length} categories`)
 
+    // ==================== SUPPLIERS ====================
+    console.log("🏭 Exporting suppliers...")
+    const suppliers: any[] = await (prisma as any).suppliers.findMany({
+      where: { workspaceId: mainWorkspace.id },
+      orderBy: { createdAt: "asc" },
+    })
+
+    const suppliersContent = `/**
+ * Suppliers Data - Auto-generated from database
+ * Last updated: ${new Date().toISOString()}
+ * DO NOT EDIT MANUALLY - Use npm run db:export
+ */
+
+export interface SupplierData {
+  companyName: string
+  description: string | null
+  website: string | null
+  phone: string | null
+  email: string | null
+  contactName: string | null
+  region: string | null
+  country: string | null
+  logoUrl: string | null
+  isActive?: boolean
+}
+
+export const suppliers: SupplierData[] = [
+${suppliers
+  .map(
+    (sup: any) => `  {
+    companyName: ${formatValue(sup.companyName)},
+    description: ${formatValue(sup.description)},
+    website: ${formatValue(sup.website)},
+    phone: ${formatValue(sup.phone)},
+    email: ${formatValue(sup.email)},
+    contactName: ${formatValue(sup.contactName)},
+    region: ${formatValue(sup.region)},
+    country: ${formatValue(sup.country)},
+    logoUrl: ${formatValue(sup.logoUrl)},
+    isActive: ${formatValue(sup.isActive)},
+  }`
+  )
+  .join(",\n")}
+]
+`
+
+    fs.writeFileSync(path.join(dataDir, "suppliers.ts"), suppliersContent)
+    console.log(`   ✅ Exported ${suppliers.length} suppliers`)
+
     // ==================== PRODUCTS ====================
     console.log("📦 Exporting products...")
     const products: any[] = await prisma.products.findMany({
@@ -421,7 +470,7 @@ export const workspaceSettings: WorkspaceSettingsData = ${JSON.stringify(workspa
 
     // ==================== AGENT PROMPT ====================
     console.log("🤖 Exporting agent prompt...")
-    const activePrompt = await prisma.prompts.findFirst({
+    const activePrompt = await (prisma as any).agentConfig.findFirst({
       where: { workspaceId: mainWorkspace.id, isActive: true },
       orderBy: { createdAt: "desc" },
     })
@@ -451,11 +500,12 @@ export const agentPrompt: AgentPromptData = {
 `
 
       fs.writeFileSync(path.join(dataDir, "agentPrompt.ts"), agentPromptContent)
+      const contentLength = activePrompt.content ? activePrompt.content.length : 0
       console.log(
-        `   ✅ Exported agent prompt (${activePrompt.content.length} chars)`
+        `   ✅ Exported agent prompt (${contentLength} chars)`
       )
     } else {
-      console.log(`   ⚠️  No active prompt found`)
+      console.log(`   ⚠️  No active agent config found, skipping prompt export`)
     }
 
     // ========================================
@@ -493,9 +543,15 @@ export const agentPrompt: AgentPromptData = {
       )
         ? fs.readdirSync(path.join(uploadsBackupDir, "services")).length
         : 0
+      const supplierImages = fs.existsSync(
+        path.join(uploadsBackupDir, "suppliers")
+      )
+        ? fs.readdirSync(path.join(uploadsBackupDir, "suppliers")).length
+        : 0
 
       console.log(`   📷 Product images: ${productImages}`)
-      console.log(`   �� Service images: ${serviceImages}`)
+      console.log(`   🔧 Service images: ${serviceImages}`)
+      console.log(`   🏭 Supplier images: ${supplierImages}`)
     } else {
       console.log("   ⚠️  No uploads directory found")
     }
@@ -504,6 +560,7 @@ export const agentPrompt: AgentPromptData = {
     console.log("✅ EXPORT COMPLETED SUCCESSFULLY!")
     console.log("\n📁 Files updated in: prisma/data/")
     console.log("   - categories.ts")
+    console.log("   - suppliers.ts")
     console.log("   - products.ts")
     console.log("   - services.ts")
     console.log("   - faqs.ts")
@@ -513,6 +570,9 @@ export const agentPrompt: AgentPromptData = {
     console.log("   - workspaceSettings.ts")
     console.log("   - agentPrompt.ts")
     console.log("\n📁 Images backed up in: prisma/uploads-backup/")
+    console.log("   - products/")
+    console.log("   - services/")
+    console.log("   - suppliers/")
     console.log("\n💡 Next time you run 'npm run seed', it will:")
     console.log("   1. Use these updated data files")
     console.log("   2. Restore images from uploads-backup/")

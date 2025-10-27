@@ -50,6 +50,13 @@ export function ProductsPage() {
     null
   )
 
+  // Certification filters
+  const [filterOrganic, setFilterOrganic] = useState(false)
+  const [filterVegan, setFilterVegan] = useState(false)
+  const [filterGlutenFree, setFilterGlutenFree] = useState(false)
+  const [filterHalal, setFilterHalal] = useState(false)
+  const [filterWholeGrain, setFilterWholeGrain] = useState(false)
+
   // Load filters from localStorage or use defaults
   const [filterCategory, setFilterCategory] = useState<string>("all")
   const [sortBy, setSortBy] = useState<"name" | "stock">("name")
@@ -159,6 +166,13 @@ export function ProductsPage() {
       filterCategory,
       searchValue,
       sortBy,
+      certifications: {
+        organic: filterOrganic,
+        vegan: filterVegan,
+        glutenFree: filterGlutenFree,
+        halal: filterHalal,
+        wholeGrain: filterWholeGrain,
+      },
     })
 
     // Filter by search
@@ -173,6 +187,7 @@ export function ProductsPage() {
     )
 
     logger.info("🔍 After search filter:", filtered.length)
+    
     // Filter by category
     if (filterCategory !== "all") {
       filtered = filtered.filter((p) => p.categoryId === filterCategory)
@@ -183,6 +198,25 @@ export function ProductsPage() {
         filterCategory
       )
     }
+
+    // Filter by certifications
+    if (filterOrganic) {
+      filtered = filtered.filter((p) => p.isOrganic)
+    }
+    if (filterVegan) {
+      filtered = filtered.filter((p) => p.isVegan)
+    }
+    if (filterGlutenFree) {
+      filtered = filtered.filter((p) => p.isGlutenFree)
+    }
+    if (filterHalal) {
+      filtered = filtered.filter((p) => p.isHalal)
+    }
+    if (filterWholeGrain) {
+      filtered = filtered.filter((p) => p.isWholeGrain)
+    }
+
+    logger.info("🔍 After certification filters:", filtered.length)
 
     // Sort products
     filtered.sort((a, b) => {
@@ -197,7 +231,17 @@ export function ProductsPage() {
 
     logger.info("🔍 Final filtered products:", filtered.length)
     return filtered
-  }, [products, searchValue, filterCategory, sortBy])
+  }, [
+    products,
+    searchValue,
+    filterCategory,
+    sortBy,
+    filterOrganic,
+    filterVegan,
+    filterGlutenFree,
+    filterHalal,
+    filterWholeGrain,
+  ])
 
   const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -596,6 +640,61 @@ export function ProductsPage() {
           />
         </div>
 
+        {/* Certifications Section */}
+        <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
+          <Label className="text-base font-semibold">Certifications</Label>
+          <p className="text-xs text-gray-500 mb-3">
+            Select applicable certifications for this product
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                name="isWholeGrain"
+                defaultChecked={product?.isWholeGrain}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm">🌾 Integrale</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                name="isOrganic"
+                defaultChecked={product?.isOrganic}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm">🌿 Biologico</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                name="isHalal"
+                defaultChecked={product?.isHalal}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm">🕌 Halal</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                name="isVegan"
+                defaultChecked={product?.isVegan}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm">🌱 Vegan</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                name="isGlutenFree"
+                defaultChecked={product?.isGlutenFree}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm">🌾 Senza Glutine</span>
+            </label>
+          </div>
+        </div>
+
         <div className="flex items-center justify-between border rounded-lg p-3">
           <div className="space-y-1">
             <Label htmlFor="isActive" className="text-sm font-medium">
@@ -674,6 +773,58 @@ export function ProductsPage() {
               <SelectItem value="stock">Sort by Stock</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Certification Filters */}
+        <div className="flex flex-wrap gap-3 items-center bg-gray-50 p-3 rounded-lg">
+          <span className="text-sm font-medium text-gray-700">
+            Certifications:
+          </span>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filterWholeGrain}
+              onChange={(e) => setFilterWholeGrain(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            <span className="text-sm">🌾 Integrale</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filterOrganic}
+              onChange={(e) => setFilterOrganic(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            <span className="text-sm">🌿 Biologico</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filterHalal}
+              onChange={(e) => setFilterHalal(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            <span className="text-sm">🕌 Halal</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filterVegan}
+              onChange={(e) => setFilterVegan(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            <span className="text-sm">🌱 Vegan</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filterGlutenFree}
+              onChange={(e) => setFilterGlutenFree(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            <span className="text-sm">🌾 Senza Glutine</span>
+          </label>
         </div>
 
         {/* Grid View */}

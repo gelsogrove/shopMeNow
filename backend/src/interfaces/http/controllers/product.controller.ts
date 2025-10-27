@@ -211,6 +211,13 @@ export class ProductController {
         productData.isActive = productData.isActive === "true"
       }
 
+      // Convert checkbox values (HTML checkboxes send "on" when checked, undefined when unchecked)
+      productData.isWholeGrain = productData.isWholeGrain === "on" || productData.isWholeGrain === true
+      productData.isOrganic = productData.isOrganic === "on" || productData.isOrganic === true
+      productData.isHalal = productData.isHalal === "on" || productData.isHalal === true
+      productData.isVegan = productData.isVegan === "on" || productData.isVegan === true
+      productData.isGlutenFree = productData.isGlutenFree === "on" || productData.isGlutenFree === true
+
       // Handle supplierId: convert empty string to null
       if (productData.supplierId === "" || productData.supplierId === "none") {
         productData.supplierId = null
@@ -327,6 +334,13 @@ export class ProductController {
       if (typeof productData.isActive === "string") {
         productData.isActive = productData.isActive === "true"
       }
+
+      // Convert checkbox values (HTML checkboxes send "on" when checked, undefined when unchecked)
+      productData.isWholeGrain = productData.isWholeGrain === "on" || productData.isWholeGrain === true
+      productData.isOrganic = productData.isOrganic === "on" || productData.isOrganic === true
+      productData.isHalal = productData.isHalal === "on" || productData.isHalal === true
+      productData.isVegan = productData.isVegan === "on" || productData.isVegan === true
+      productData.isGlutenFree = productData.isGlutenFree === "on" || productData.isGlutenFree === true
 
       // Handle supplierId: convert empty string to null
       if (productData.supplierId === "" || productData.supplierId === "none") {

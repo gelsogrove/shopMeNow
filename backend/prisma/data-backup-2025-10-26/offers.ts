@@ -1,6 +1,6 @@
 /**
  * Offers Data - Auto-generated from database
- * Last updated: 2025-10-26T20:38:25.363Z
+ * Last updated: 2025-10-26T20:38:08.899Z
  * DO NOT EDIT MANUALLY - Use npm run db:export
  */
 
