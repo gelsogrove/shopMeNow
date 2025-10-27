@@ -48,10 +48,12 @@ describe.skip("🔔 ManageNotifications Calling Function", () => {
         name: "Test Workspace",
         slug: "test-workspace",
       }
-      
+
       // Mock findFirst to return our test workspace (Prisma uses singular: workspace, not workspaces!)
-      ;(prisma.workspace.findFirst as jest.Mock).mockResolvedValue(mockWorkspace)
-      
+      ;(prisma.workspace.findFirst as jest.Mock).mockResolvedValue(
+        mockWorkspace
+      )
+
       const workspace = await prisma.workspace.findFirst({
         where: { name: { contains: "Altro" } },
       })
@@ -75,9 +77,9 @@ describe.skip("🔔 ManageNotifications Calling Function", () => {
         activeChatbot: true,
         isBlacklisted: false,
       }
-      
+
       ;(prisma.customers.create as jest.Mock).mockResolvedValue(mockCustomer)
-      
+
       // Create test customer
       testCustomer = await prisma.customers.create({
         data: {

@@ -308,7 +308,7 @@ async function main() {
 
     // Assign transport type based on product category and characteristics
     let transportType = "Temperatura ambiente" // Default for most products
-    
+
     // Refrigerated products (fresh meats, cheeses, dairy)
     if (
       prod.categoryName === "Cured Meats" ||
@@ -321,7 +321,7 @@ async function main() {
     ) {
       transportType = "Trasporto refrigerato"
     }
-    
+
     // Frozen products (gelato, arancini, frozen pasta)
     if (
       prod.name.toLowerCase().includes("gelato") ||

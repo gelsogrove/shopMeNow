@@ -705,8 +705,12 @@ export function ProductsPage() {
             defaultValue={product?.transportType || "Temperatura ambiente"}
             className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="Temperatura ambiente">🌡️ Temperatura ambiente</option>
-            <option value="Trasporto refrigerato">❄️ Trasporto refrigerato</option>
+            <option value="Temperatura ambiente">
+              🌡️ Temperatura ambiente
+            </option>
+            <option value="Trasporto refrigerato">
+              ❄️ Trasporto refrigerato
+            </option>
             <option value="Trasporto congelato">🧊 Trasporto congelato</option>
           </select>
         </div>
