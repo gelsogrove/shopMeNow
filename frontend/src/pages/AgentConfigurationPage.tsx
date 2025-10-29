@@ -41,16 +41,16 @@ import {
   Bot,
   Brain,
   ChevronRight,
+  GitBranch,
+  Headphones,
   Loader2,
+  LucideIcon,
+  Package,
   Save,
+  Search,
   Settings,
   Shield,
-  GitBranch,
-  Search,
   ShoppingCart,
-  Package,
-  Headphones,
-  LucideIcon,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
@@ -103,10 +103,10 @@ const iconMap: Record<string, LucideIcon> = {
 const getAgentIcon = (iconName: string | undefined, agentType: string) => {
   // Fallback to type-based icon if no icon name in database
   const Icon = iconName && iconMap[iconName] ? iconMap[iconName] : Settings
-  
+
   // Normalize agent type (handle ROUTER, Router, router, etc.)
   const normalizedType = agentType.toLowerCase().replace(/_/g, "_")
-  
+
   // Color mapping based on agent type for vibrant look
   const colorConfig: Record<string, { bg: string; icon: string }> = {
     router: { bg: "bg-green-100", icon: "text-green-600" },
@@ -116,13 +116,18 @@ const getAgentIcon = (iconName: string | undefined, agentType: string) => {
     customer_support: { bg: "bg-pink-100", icon: "text-pink-600" },
     safety_translation: { bg: "bg-indigo-100", icon: "text-indigo-600" },
   }
-  
-  // Debug: log per capire perché tutte le icone sono uguali
-  console.log("🔍 getAgentIcon called:", { iconName, agentType, normalizedType, hasColor: !!colorConfig[normalizedType] })
 
-  const colors = colorConfig[normalizedType] || { 
-    bg: "bg-gray-100", 
-    icon: "text-gray-600" 
+  // Debug: log per capire perché tutte le icone sono uguali
+  console.log("🔍 getAgentIcon called:", {
+    iconName,
+    agentType,
+    normalizedType,
+    hasColor: !!colorConfig[normalizedType],
+  })
+
+  const colors = colorConfig[normalizedType] || {
+    bg: "bg-gray-100",
+    icon: "text-gray-600",
   }
 
   return (
@@ -298,16 +303,22 @@ export function AgentConfigurationPage() {
 
                 // Normalize agent type to lowercase for lookup
                 const normalizedType = formData.agentType.toLowerCase()
-                const callFunctions =
-                  AGENT_CALL_FUNCTIONS[normalizedType] || []
+                const callFunctions = AGENT_CALL_FUNCTIONS[normalizedType] || []
                 const isSaving = savingAgents[agent.id]
-                
+
                 // Debug log to see what's happening
-                console.log("🔍 Agent CF lookup:", 
-                  "\n  Name:", formData.name,
-                  "\n  Type:", formData.agentType, 
-                  "\n  Normalized:", normalizedType,
-                  "\n  Functions:", callFunctions.length, "->", callFunctions
+                console.log(
+                  "🔍 Agent CF lookup:",
+                  "\n  Name:",
+                  formData.name,
+                  "\n  Type:",
+                  formData.agentType,
+                  "\n  Normalized:",
+                  normalizedType,
+                  "\n  Functions:",
+                  callFunctions.length,
+                  "->",
+                  callFunctions
                 )
 
                 return (
@@ -333,7 +344,9 @@ export function AgentConfigurationPage() {
                                 Temp: {formData.temperature.toFixed(1)}
                               </span>
                               <span className="text-gray-300">•</span>
-                              <span className="text-gray-500">Max Tokens: {formData.maxTokens}</span>
+                              <span className="text-gray-500">
+                                Max Tokens: {formData.maxTokens}
+                              </span>
                               <span className="text-gray-300">•</span>
                               <span
                                 className="max-w-[200px] truncate text-gray-500"
