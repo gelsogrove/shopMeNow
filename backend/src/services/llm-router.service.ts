@@ -420,7 +420,7 @@ export class LLMRouterService {
           totalTokens: llmResponse.tokensUsed,
         },
         input: {
-          userMessage,  // Always include current user message
+          userMessage, // Always include current user message
           conversationHistory, // Include conversation history from last 5 minutes
           functionResult:
             iterations > 1 ? messages[messages.length - 1]?.content : undefined,
@@ -483,8 +483,11 @@ export class LLMRouterService {
         // 🔧 Determine which sub-agent was used
         const lowerFunctionName = functionName.toLowerCase()
         let subAgentName = "UNKNOWN"
-        
-        if (lowerFunctionName.includes("search") || lowerFunctionName.includes("product"))
+
+        if (
+          lowerFunctionName.includes("search") ||
+          lowerFunctionName.includes("product")
+        )
           subAgentName = "Product Search Agent"
         else if (lowerFunctionName.includes("cart"))
           subAgentName = "Cart Management Agent"

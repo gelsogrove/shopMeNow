@@ -12,10 +12,9 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Textarea } from "@/components/ui/textarea"
 import { getWorkspaceId } from "@/config/workspace.config"
 import { logger } from "@/lib/logger"
-import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import axios from "axios"
-import { Code, MessageCircle, Send, Settings, X } from "lucide-react"
+import { MessageCircle, Send, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { MessageRenderer } from "./MessageRenderer"
 
@@ -551,43 +550,61 @@ export function WhatsAppChatModal({
           },
         ],
       })
-      logger.info("📥 FRONTEND DEBUG: Webhook response received:", response.data)
+      logger.info(
+        "📥 FRONTEND DEBUG: Webhook response received:",
+        response.data
+      )
       logger.info("📥 FRONTEND DEBUG: Response status:", response.status)
 
       // After sending via webhook, fetch the latest messages from the session
       // This ensures we get both user message and bot response
       const sessionIdToUse = localSelectedChat?.sessionId || sessionId
-      
+
       if (sessionIdToUse) {
-        logger.info("📥 FRONTEND DEBUG: Fetching updated messages for session:", sessionIdToUse)
-        
+        logger.info(
+          "📥 FRONTEND DEBUG: Fetching updated messages for session:",
+          sessionIdToUse
+        )
+
         // Small delay to ensure backend has processed the message
-        await new Promise(resolve => setTimeout(resolve, 500))
-        
+        await new Promise((resolve) => setTimeout(resolve, 500))
+
         try {
-          const messagesResponse = await api.get(`/chat/${sessionIdToUse}/messages`)
-          
+          const messagesResponse = await api.get(
+            `/chat/${sessionIdToUse}/messages`
+          )
+
           if (messagesResponse.data.success) {
-            const allMessages = messagesResponse.data.data.map((message: any) => ({
-              id: message.id,
-              content: message.content,
-              sender: message.direction === "INBOUND" ? "customer" : "bot",
-              timestamp: new Date(message.createdAt),
-              agentName: message.agentName || (message.direction === "OUTBOUND" ? "AI Assistant" : undefined),
-              debugInfo: message.debugInfo,
-              metadata: {
-                isOperatorMessage: message.isOperatorMessage || false,
-                isOperatorControl: message.isOperatorControl || false,
-                agentSelected: message.agentName || "AI",
-                sentBy: message.direction === "INBOUND" ? "CUSTOMER" : "AI",
-              },
-            }))
-            
-            logger.info("📥 FRONTEND DEBUG: Fetched", allMessages.length, "messages from backend")
-            
+            const allMessages = messagesResponse.data.data.map(
+              (message: any) => ({
+                id: message.id,
+                content: message.content,
+                sender: message.direction === "INBOUND" ? "customer" : "bot",
+                timestamp: new Date(message.createdAt),
+                agentName:
+                  message.agentName ||
+                  (message.direction === "OUTBOUND"
+                    ? "AI Assistant"
+                    : undefined),
+                debugInfo: message.debugInfo,
+                metadata: {
+                  isOperatorMessage: message.isOperatorMessage || false,
+                  isOperatorControl: message.isOperatorControl || false,
+                  agentSelected: message.agentName || "AI",
+                  sentBy: message.direction === "INBOUND" ? "CUSTOMER" : "AI",
+                },
+              })
+            )
+
+            logger.info(
+              "📥 FRONTEND DEBUG: Fetched",
+              allMessages.length,
+              "messages from backend"
+            )
+
             // Replace all messages with fresh data from backend
             setMessages(allMessages)
-            
+
             // Scroll to bottom
             setTimeout(() => {
               messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
