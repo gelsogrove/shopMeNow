@@ -20,6 +20,8 @@ import { PrismaClient } from "@prisma/client"
 import * as bcrypt from "bcrypt"
 import { campaigns } from "./data/campaigns"
 import { categories } from "./data/categories"
+import { defaultAgents } from "./data/defaultAgents"
+import { defaultFAQs } from "./data/defaultFAQs"
 import { faqs } from "./data/faqs"
 import { offers } from "./data/offers"
 import { pricingConfigData } from "./data/pricingConfig"
@@ -419,20 +421,25 @@ async function main() {
 
   console.log(`✅ Created ${offers.length} offers`)
 
-  // 10. Create FAQs
+  // 10. Create FAQs (from defaultFAQs with keywords + category)
   console.log("❓ Creating FAQs...")
 
-  for (const faq of faqs) {
+  const defaultFaqList = defaultFAQs(workspace.id)
+  for (const faq of defaultFaqList) {
     await prisma.fAQ.create({
       data: {
+        workspaceId: faq.workspaceId,
         question: faq.question,
         answer: faq.answer,
-        workspaceId: workspace.id,
+        keywords: faq.keywords,
+        category: faq.category,
+        order: faq.order,
+        isActive: faq.isActive,
       },
     })
   }
 
-  console.log(`✅ Created ${faqs.length} FAQs`)
+  console.log(`✅ Created ${defaultFaqList.length} FAQs (5 categories)`)
 
   // 10. Create Campaigns
   console.log("📢 Creating campaigns...")
@@ -484,21 +491,36 @@ async function main() {
     )
   }
 
-  // Create AgentConfig (CRITICAL: Required for LLM to work!)
-  console.log("🤖 Creating agent configuration...")
+  // Create Agent Configurations (Multi-Agent System)
+  console.log("🤖 Creating agent configurations...")
 
-  await prisma.agentConfig.create({
-    data: {
-      workspaceId: workspace.id,
-      model: "openai/gpt-4o-mini",
-      temperature: 0.2,
-      maxTokens: 1000,
-      prompt: agentPrompt, // ✅ CORRECT: Field is 'prompt' in schema, not 'systemPrompt'
-      isActive: true,
-    },
-  })
+  // Use defaultAgents from data file (includes all 6 agents with prompts)
+  const agentConfigs = defaultAgents(workspace.id)
+  console.log(
+    `📄 Preparing ${agentConfigs.length} agents (ROUTER + 5 specialists + SAFETY)`
+  )
 
-  console.log("✅ Agent configuration created")
+  for (const config of agentConfigs) {
+    await prisma.agentConfig.create({
+      data: {
+        workspaceId: config.workspaceId,
+        name: config.name,
+        type: config.type,
+        description: config.description,
+        systemPrompt: config.systemPrompt,
+        model: config.model,
+        temperature: config.temperature,
+        maxTokens: config.maxTokens,
+        order: config.order,
+        isActive: config.isActive,
+        availableFunctions: config.availableFunctions || null,
+      },
+    })
+  }
+
+  console.log(
+    `✅ Created ${agentConfigs.length} agents (ROUTER + specialists + SAFETY)`
+  )
 
   // 13. Create Sales Representatives
   console.log("👔 Creating sales representatives...")

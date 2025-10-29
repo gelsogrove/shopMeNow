@@ -442,229 +442,12 @@ router.get("/cart-tokens/:token/validate", (req, res) =>
 )
 
 // WhatsApp webhook routes (must be FIRST, before any authentication middleware)
-import { LLMService } from "../services/llm.service"
+import { LLMRouterService } from "../services/llm-router.service" // 🔧 Multi-agent router with Function Calling
 import { LLMRequest } from "../types/whatsapp.types"
 
-// 🔧 FIX: /api/chat endpoint for WhatsApp compatibility (NO AUTHENTICATION)
-router.post("/chat", async (req, res) => {
-  logger.info(
-    "🔧 COMPATIBILITY: /api/chat called - forwarding to WhatsApp webhook logic"
-  )
-
-  // Forward to the same webhook logic
-  try {
-    // Initialize services
-    const llmService = new LLMService()
-    const messageRepository = new MessageRepository()
-
-    // Check if this is a verification request
-    if (req.query["hub.mode"] && req.query["hub.verify_token"]) {
-      const mode = req.query["hub.mode"]
-      const token = req.query["hub.verify_token"]
-      const challenge = req.query["hub.challenge"]
-
-      const verifyToken =
-        process.env.WHATSAPP_VERIFY_TOKEN || "test-verify-token"
-      if (mode === "subscribe" && token === verifyToken) {
-        logger.info("WhatsApp webhook verified via /api/chat")
-        res.status(200).send(challenge)
-        return
-      }
-
-      res.status(403).send("Verification failed")
-      return
-    }
-
-    // Process as WhatsApp message - extract message from body
-    const body = req.body
-    logger.info("🔧 /api/chat: Processing body:", JSON.stringify(body, null, 2))
-    // Handle direct message format: {message: "text", phoneNumber: "+123", workspaceId: "xyz"}
-    if (body?.message && body?.phoneNumber && body?.workspaceId) {
-      try {
-        const workspaceId = body.workspaceId
-        const phoneNumber = body.phoneNumber
-        const language = body.language || "it"
-
-        // 🔧 FIX: Get customer data and process variables like webhook does
-        let variables = {
-          nameUser: "Cliente",
-          discountUser: "Nessuno sconto attivo",
-          companyName: "L'Altra Italia",
-          lastorder: "Nessun ordine recente",
-          lastordercode: "N/A",
-          languageUser: language,
-        }
-
-        // Get customer data by phone number
-        const customer = await prisma.customers.findFirst({
-          where: {
-            phone: phoneNumber,
-            workspaceId: workspaceId,
-          },
-          include: {
-            orders: {
-              orderBy: { createdAt: "desc" },
-              take: 1,
-            },
-          },
-        })
-
-        if (customer) {
-          const lastOrder = customer.orders[0]
-          variables = {
-            nameUser: customer?.name || "Unknown Customer",
-            discountUser: customer?.discount
-              ? `${customer.discount}% di sconto attivo`
-              : "Nessuno sconto attivo",
-            companyName: customer?.company || "L'Altra Italia",
-            lastorder: lastOrder
-              ? lastOrder.createdAt.toLocaleDateString()
-              : "Nessun ordine recente",
-            lastordercode: lastOrder?.orderCode || "N/A",
-            languageUser: customer?.language || language,
-          }
-        }
-
-        // Get agent config with prompt from database
-        let agentPrompt = "WhatsApp conversation" // fallback
-        let agentModel = "anthropic/claude-3.5-sonnet" // fallback to Claude
-        let agentMaxTokens = 5000 // fallback
-        try {
-          const agentConfig = await prisma.agentConfig.findFirst({
-            where: { workspaceId },
-          })
-          if (agentConfig?.prompt) {
-            agentPrompt = agentConfig.prompt
-          }
-          if (agentConfig?.model) {
-            agentModel = agentConfig.model
-          }
-          if (agentConfig?.maxTokens) {
-            agentMaxTokens = agentConfig.maxTokens
-          }
-          logger.info(
-            `🔧 /api/chat: Using agent model: ${agentModel}, maxTokens: ${agentMaxTokens}`
-          )
-        } catch (error) {
-          logger.error("❌ Error fetching agent config:", error)
-        }
-
-        // 🔧 CRITICAL FIX: Replace variables in prompt like webhook does
-        agentPrompt = agentPrompt
-          .replace(/\{\{nameUser\}\}/g, variables.nameUser)
-          .replace(/\{\{discountUser\}\}/g, variables.discountUser)
-          .replace(/\{\{companyName\}\}/g, variables.companyName)
-          .replace(/\{\{lastorder\}\}/g, variables.lastorder)
-          .replace(/\{\{lastordercode\}\}/g, variables.lastordercode)
-          .replace(/\{\{languageUser\}\}/g, variables.languageUser)
-
-        // 🔧 CRITICAL FIX: Get conversation history like webhook does
-        let chatHistory: any[] = []
-        try {
-          if (customer?.id && workspaceId) {
-            // Get recent messages for this customer (last 10 messages)
-            const recentMessages = await messageRepository.getLatesttMessages(
-              body.phoneNumber,
-              10,
-              workspaceId
-            )
-
-            chatHistory = recentMessages.map((msg) => ({
-              role: msg.direction === "INBOUND" ? "user" : "assistant",
-              content: msg.content,
-            }))
-
-            logger.info(
-              `🔍 /api/chat: Loaded ${chatHistory.length} messages from history for customer ${customer.id}`
-            )
-          }
-        } catch (historyError) {
-          logger.error("❌ Error loading chat history:", historyError)
-          // Continue without history if error occurs
-        }
-
-        const llmRequest: LLMRequest = {
-          chatInput: body.message,
-          workspaceId: body.workspaceId,
-          customerid: customer?.id || "", // Use actual customer ID if found
-          phone: body.phoneNumber,
-          language: variables.languageUser, // Use customer's language
-          sessionId: "chat-session",
-          maxTokens: agentMaxTokens,
-          model: agentModel, // Use agent config model instead of hardcoded
-          messages: chatHistory, // 🔧 NOW INCLUDES REAL CHAT HISTORY like webhook
-          prompt: agentPrompt, // 🔧 Now includes processed prompt with variables
-        }
-
-        logger.info(
-          `🔧 /api/chat: LLM Request customerid: "${customer?.id || ""}" for customer: ${customer?.name || "Unknown"}`
-        )
-        logger.info(
-          `🔧 /api/chat: LLM Request workspaceId: "${body.workspaceId}"`
-        )
-
-        const response = await llmService.handleMessage(llmRequest, variables)
-
-        // Check if customer is blocked - if IGNORE is returned, stop processing completely
-        if (response === "IGNORE") {
-          logger.info(
-            "🚫 /api/chat: Customer blocked - ignoring message completely"
-          )
-          res.status(200).json({
-            success: false,
-            message: "Customer interaction not allowed",
-          })
-          return
-        }
-
-        // 🔧 CRITICAL FIX: Save message to database like webhook does
-        try {
-          if (customer?.id && workspaceId && response.success) {
-            await messageRepository.saveMessage({
-              workspaceId: workspaceId,
-              phoneNumber: body.phoneNumber,
-              message: body.message,
-              response: response.output || "No response",
-              direction: "INBOUND",
-              processingSource: "api-chat-endpoint",
-            })
-            logger.info(
-              "💾 /api/chat: Message saved to database for conversation history"
-            )
-          }
-        } catch (saveError) {
-          logger.error("❌ /api/chat: Failed to save message:", saveError)
-          // Continue - don't fail the whole request if save fails
-        }
-
-        return res.json({
-          ...response,
-          debug: response.debugInfo, // 🔧 FIX: Map debugInfo to debug for frontend compatibility
-        })
-      } catch (error) {
-        logger.error("❌ Error in /api/chat endpoint:", error)
-        return res.status(500).json({
-          status: "error",
-          message: "Internal server error processing chat request",
-        })
-      }
-    }
-
-    // If we get here, return error
-    res.status(400).json({
-      status: "error",
-      message:
-        "Invalid request format for /api/chat endpoint. Expected: {message, phoneNumber, workspaceId}",
-    })
-  } catch (error) {
-    logger.error("🔧 Error in /api/chat endpoint:", error)
-    res.status(500).json({
-      status: "error",
-      message:
-        "Sorry, there was an error processing your message. Please try again later.",
-    })
-  }
-})
+// ❌ REMOVED: Old /api/chat endpoint (deprecated - use /api/whatsapp/webhook with LLMRouterService)
+// The old endpoint used monolithic LLMService with prompt.txt
+// New system uses multi-agent architecture with database-driven prompts
 
 // Public WhatsApp webhook routes (NO AUTHENTICATION)
 // 🔒 SECURITY: Rate limited to 10 requests per minute per IP
@@ -687,11 +470,11 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
   )
 
   try {
-    logger.info("🚨🚨🚨 WEBHOOK: INITIALIZING LLM SERVICE")
+    logger.info("🚨🚨🚨 WEBHOOK: INITIALIZING ROUTER SERVICE")
     // Initialize services
-    const llmService = new LLMService()
+    const routerService = new LLMRouterService(prisma) // 🔧 NEW: Use multi-agent router
     const messageRepository = new MessageRepository()
-    logger.info("🚨🚨🚨 WEBHOOK: LLM SERVICE INITIALIZED")
+    logger.info("🚨🚨🚨 WEBHOOK: ROUTER SERVICE INITIALIZED")
     // For GET requests (verification)
     if (req.method === "GET") {
       const mode = req.query["hub.mode"]
@@ -1040,8 +823,8 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
         const agentConfig = await prisma.agentConfig.findFirst({
           where: { workspaceId: workspaceId },
         })
-        if (agentConfig && agentConfig.prompt) {
-          agentPrompt = agentConfig.prompt
+        if (agentConfig && agentConfig.systemPrompt) {
+          agentPrompt = agentConfig.systemPrompt
         }
         if (agentConfig?.model) {
           agentModel = agentConfig.model
@@ -1216,90 +999,62 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
         `🔧 WEBHOOK: LLM Request customerid: "${customerId}" workspaceId: "${workspaceId}"`
       )
 
-      // Process with LLM service
+      // 🔧 NEW: Process with LLMRouterService (multi-agent with Function Calling)
       logger.info(
-        "🚀 WEBHOOK: About to call LLM service with input:",
+        "🚀 WEBHOOK: About to call Router service with input:",
         messageContent
       )
-      result = await llmService.handleMessage(llmRequest, variables)
 
-      // Check if customer is blocked - if IGNORE is returned, save user message but don't process response
-      if (result === "IGNORE") {
-        logger.info(
-          "🚫 WEBHOOK: Customer blocked - saving user message only, no bot response"
-        )
+      // Get customer details for router
+      const customer = await prisma.customers.findUnique({
+        where: { id: customerId },
+        select: { name: true, language: true },
+      })
 
-        // Save ONLY the user message to keep conversation history
-        await messageRepository.saveMessage({
-          workspaceId: workspaceId,
-          phoneNumber: phoneNumber,
-          message: messageContent,
-          response: null, // No bot response when blocked
-          direction: "INBOUND",
-          agentSelected: "CUSTOMER_BLOCKED",
-          processingSource: "blocked-customer-no-response",
-        })
+      result = await routerService.routeMessage({
+        workspaceId,
+        customerId,
+        conversationId: chatSession.id,
+        messageId: `msg-${Date.now()}`,
+        message: messageContent,
+        customerLanguage: customer?.language || "it",
+        customerName: customer?.name || "Customer",
+      })
 
-        logger.info(
-          "💾 WEBHOOK: User message saved, waiting for human operator response"
-        )
+      // 🔧 NEW: Router service doesn't return "IGNORE", it throws or handles internally
+      // The router always returns a response (even for blocked customers via Safety Agent)
 
-        // Check if this is a frontend call (has isNewConversation or workspaceId)
-        if (data.message && data.phoneNumber && data.workspaceId) {
-          // Frontend call - return success but no message displayed (customer waits for operator)
-          const blockedResponse = {
-            success: true,
-            message: "Message received, waiting for operator",
-            data: {
-              message: "", // Empty message so frontend doesn't show anything
-              output: "", // Empty output
-              isWaitingForOperator: true,
-              customerId: customerId,
-              sessionId: `session-${Date.now()}`,
-            },
-          }
-
-          logger.info(
-            "🚫 WEBHOOK: Sending blocked customer response:",
-            JSON.stringify(blockedResponse, null, 2)
-          )
-          res.status(200).json(blockedResponse)
-        } else {
-          // WhatsApp webhook - return plain OK (no message sent back)
-          res.status(200).send("OK")
-        }
-        return
-      }
-
-      logger.info("🚀 WEBHOOK: LLM result received:", {
-        success: result.success,
-        hasOutput: !!result.output,
-        translatedQuery: result.translatedQuery,
-        outputLength: result.output?.length || 0,
-        functionCallsCount: result.functionCalls?.length || 0,
-        functionCallsContent: JSON.stringify(result.functionCalls, null, 2),
-        debugInfo: result.debugInfo,
+      logger.info("� WEBHOOK: Router result received:", {
+        hasResponse: !!result.response,
+        agentUsed: result.agentUsed,
+        tokensUsed: result.tokensUsed,
+        executionTimeMs: result.executionTimeMs,
+        wasFAQ: result.wasFAQ,
+        responseLength: result.response?.length || 0,
+        debugInfo: result.debugInfo ? "present" : "missing",
       })
     }
 
     // Save message and track usage/billing
-    if (result.success && result.output) {
+    if (result.response) {
       try {
         // � Save message with response
         await messageRepository.saveMessage({
           workspaceId: workspaceId,
           phoneNumber: phoneNumber,
           message: messageContent,
-          response: result.output,
+          response: result.response,
           direction: "INBOUND",
-          agentSelected: "CHATBOT_LLM",
-          // 🔧 Debug data persistence
-          translatedQuery: result.translatedQuery,
-          processedPrompt: result.processedPrompt,
-          functionCallsDebug: result.functionCalls,
-          processingSource: result.functionCalls?.[0]?.source || "unknown",
+          agentSelected: result.agentUsed || "ROUTER",
+          // 🔧 NEW: Debug data from multi-agent router
+          processingSource: result.wasFAQ ? "faq" : "router",
           debugInfo: JSON.stringify({
             ...(result.debugInfo || {}),
+            agentUsed: result.agentUsed,
+            tokensUsed: result.tokensUsed,
+            executionTimeMs: result.executionTimeMs,
+            wasFAQ: result.wasFAQ,
+            faqId: result.faqId,
             costTimestamp: new Date().toISOString(),
           }),
         })
@@ -1450,6 +1205,16 @@ logger.info(
   "✅ Registered session routes (/api/session/validate, /api/session/stats)"
 )
 router.use("/chat", chatRouter(chatController))
+
+// ========================================
+// 🤖 MULTI-AGENT CHAT SYSTEM (Sprint 1 - Task 1.5)
+// ========================================
+import agentChatRoutes from "./agentChatRoutes"
+router.use("/agent-chat", agentChatRoutes)
+logger.info(
+  "✅ Registered multi-agent chat routes (/api/agent-chat, /api/agent-chat/metrics, /api/agent-chat/history/:customerId)"
+)
+
 // Removed messages, push-messaging, and push-testing routes (not used by frontend)
 router.use("/users", createUserRouter())
 // Mount customer routes on both legacy and workspace paths to ensure backward compatibility

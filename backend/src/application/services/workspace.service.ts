@@ -167,7 +167,9 @@ For privacy inquiries, please contact our support team.`
         const defaultAgentContent = await this.getDefaultAgentContent()
         await tx.agentConfig.create({
           data: {
-            prompt: defaultAgentContent,
+            name: "Default Agent",
+            type: "CUSTOM", // Default type
+            systemPrompt: defaultAgentContent,
             workspaceId: createdWorkspace.id,
             model: "openai/gpt-4o-mini",
             temperature: 0.0, // Zero temperature for deterministic responses

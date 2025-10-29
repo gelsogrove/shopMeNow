@@ -140,6 +140,28 @@ cd backend && npm run db:migrate
 cd backend && npm run seed
 ```
 
+### Agent Prompts Management
+
+**Multi-Agent System**: ShopME uses 6 specialized agents (ROUTER, PRODUCT_SEARCH, CART_MANAGEMENT, ORDER_TRACKING, CUSTOMER_SUPPORT, SAFETY_TRANSLATION).
+
+```bash
+# Export prompts from database to markdown files
+cd backend && npm run export:prompts
+
+# Update database from markdown files
+cd backend && npm run update:prompts
+```
+
+**Workflow**:
+
+1. Edit prompts in UI (`/agent` page) or modify `.md` files in `docs/prompts/`
+2. Export changes: `npm run export:prompts` (Database → .md files)
+3. Review exported files in `docs/prompts/`
+4. Commit changes to Git
+5. To restore: `npm run update:prompts` (.md files → Database)
+
+**Files**: `docs/prompts/router-agent.md`, `product-search.md`, `cart-management.md`, `order-tracking.md`, `customer-support.md`, `safety-translation.md`
+
 ### Pricing Management
 
 **⚠️ IMPORTANT**: All pricing changes preserve historical billing records.

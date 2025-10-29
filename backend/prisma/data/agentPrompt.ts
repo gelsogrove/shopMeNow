@@ -1,6 +1,6 @@
 /**
  * Agent Prompt Data - Auto-generated from database
- * Last updated: 2025-10-26T20:38:25.373Z
+ * Last updated: 2025-10-28T17:19:32.343Z
  * DO NOT EDIT MANUALLY - Use npm run db:export
  */
 
@@ -13,7 +13,7 @@ export interface AgentPromptData {
 }
 
 export const agentPrompt: AgentPromptData = {
-  name: null,
+  name: "Safety & Translation Agent",
   content: null,
   model: "openai/gpt-4o-mini",
   temperature: 0.2,

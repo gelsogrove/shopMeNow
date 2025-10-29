@@ -5,6 +5,7 @@ export interface Agent {
   id: string
   name: string
   content: string
+  systemPrompt?: string
   workspaceId: string
   isRouter?: boolean
   department?: string | null
@@ -12,7 +13,11 @@ export interface Agent {
   top_p?: number
   top_k?: number
   model?: string
-  max_tokens?: number
+  maxTokens?: number // ✅ STANDARD: camelCase
+  isActive?: boolean
+  order?: number
+  agentType?: string
+  functions?: readonly string[] // 🆕 Function calls list
   createdAt: string
   updatedAt: string
 }
@@ -23,15 +28,15 @@ export interface Agent {
 export async function getAgents(workspaceId: string): Promise<Agent[]> {
   logger.info(`=== GET AGENTS DEBUG ===`)
   logger.info(`Fetching agents for workspace ${workspaceId}`)
-  
+
   try {
     const url = `/workspaces/${workspaceId}/agent`
     logger.info(`GET request URL: ${url}`)
-    
+
     const response = await api.get(url, {
       headers: {
-        "x-workspace-id": workspaceId
-      }
+        "x-workspace-id": workspaceId,
+      },
     })
 
     logger.info(`Response status: ${response.status}`)
@@ -40,7 +45,7 @@ export async function getAgents(workspaceId: string): Promise<Agent[]> {
     const data = response.data
     logger.info(`Agents received:`, data)
     logger.info(`Number of agents: ${data?.length || 0}`)
-    
+
     return data || []
   } catch (error) {
     logger.error("Error fetching agents:", error)
@@ -51,9 +56,14 @@ export async function getAgents(workspaceId: string): Promise<Agent[]> {
 /**
  * Get a specific agent by ID
  */
-export async function getAgent(workspaceId: string, agentId?: string): Promise<Agent | null> {
+export async function getAgent(
+  workspaceId: string,
+  agentId?: string
+): Promise<Agent | null> {
   logger.info(`=== GET AGENT DEBUG ===`)
-  logger.info(`Getting agent for workspace ${workspaceId}, agentId: ${agentId || 'none'}`)
+  logger.info(
+    `Getting agent for workspace ${workspaceId}, agentId: ${agentId || "none"}`
+  )
   try {
     // If no agentId is provided, get the first agent (for single agent setup)
     if (!agentId) {
@@ -73,13 +83,13 @@ export async function getAgent(workspaceId: string, agentId?: string): Promise<A
     // Get specific agent by ID
     const url = `/workspaces/${workspaceId}/agent/${agentId}`
     logger.info(`GET specific agent URL: ${url}`)
-    
+
     const response = await api.get(url, {
       headers: {
-        "x-workspace-id": workspaceId
-      }
+        "x-workspace-id": workspaceId,
+      },
     })
-    
+
     logger.info(`Specific agent response status: ${response.status}`)
     const agentData = response.data
     logger.info("Specific agent data:", agentData)
@@ -93,13 +103,16 @@ export async function getAgent(workspaceId: string, agentId?: string): Promise<A
 /**
  * Create a new agent
  */
-export async function createAgent(workspaceId: string, data: Partial<Agent>): Promise<Agent> {
+export async function createAgent(
+  workspaceId: string,
+  data: Partial<Agent>
+): Promise<Agent> {
   logger.info(`Creating agent for workspace ${workspaceId}`, data)
-  
+
   const response = await api.post(`/workspaces/${workspaceId}/agent`, data, {
     headers: {
-      "x-workspace-id": workspaceId
-    }
+      "x-workspace-id": workspaceId,
+    },
   })
 
   return response.data
@@ -114,12 +127,16 @@ export async function updateAgent(
   data: Partial<Agent>
 ): Promise<Agent> {
   logger.info(`Updating agent ${agentId} for workspace ${workspaceId}`, data)
-  
-  const response = await api.put(`/workspaces/${workspaceId}/agent/${agentId}`, data, {
-    headers: {
-      "x-workspace-id": workspaceId
+
+  const response = await api.put(
+    `/workspaces/${workspaceId}/agent/${agentId}`,
+    data,
+    {
+      headers: {
+        "x-workspace-id": workspaceId,
+      },
     }
-  })
+  )
 
   return response.data
 }
@@ -127,12 +144,15 @@ export async function updateAgent(
 /**
  * Delete an agent
  */
-export async function deleteAgent(workspaceId: string, agentId: string): Promise<void> {
+export async function deleteAgent(
+  workspaceId: string,
+  agentId: string
+): Promise<void> {
   logger.info(`Deleting agent ${agentId} for workspace ${workspaceId}`)
-  
+
   await api.delete(`/workspaces/${workspaceId}/agent/${agentId}`, {
     headers: {
-      "x-workspace-id": workspaceId
-    }
+      "x-workspace-id": workspaceId,
+    },
   })
-} 
+}

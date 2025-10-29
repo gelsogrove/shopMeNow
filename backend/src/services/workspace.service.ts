@@ -107,7 +107,7 @@ export const workspaceService = {
         model: true,
         temperature: true,
         maxTokens: true,
-        prompt: true,
+        systemPrompt: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -270,7 +270,7 @@ export const workspaceService = {
       where: { workspaceId, isActive: true },
       orderBy: { createdAt: "desc" },
     })
-    return agentConfig?.prompt || null
+    return agentConfig?.systemPrompt || null
   },
 
   /**

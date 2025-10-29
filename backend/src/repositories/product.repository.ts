@@ -382,6 +382,150 @@ export class ProductRepository implements IProductRepository {
     }
   }
 
+  /**
+   * Search products with advanced filters for Agent system
+   * Used by ProductSearchAgent for customer queries
+   *
+   * @param workspaceId - Workspace ID (security filter)
+   * @param filters - Search filters
+   * @returns Array of matching products with category relations
+   */
+  async searchProducts(
+    workspaceId: string,
+    filters: {
+      keywords?: string[]
+      categoryId?: string
+      minPrice?: number
+      maxPrice?: number
+      allergens?: string[]
+      certifications?: string[]
+      limit?: number
+    }
+  ) {
+    try {
+      const where: Prisma.ProductsWhereInput = {
+        workspaceId,
+        isActive: true, // Only active products
+      }
+
+      // Keywords search (name, description, OR certifications with fuzzy matching)
+      if (filters.keywords && filters.keywords.length > 0) {
+        const orConditions: Prisma.ProductsWhereInput[] = []
+
+        filters.keywords.forEach((keyword) => {
+          const lowerKeyword = keyword.toLowerCase().trim()
+
+          // Search in name and description (case-insensitive)
+          orConditions.push(
+            { name: { contains: keyword, mode: "insensitive" } },
+            { description: { contains: keyword, mode: "insensitive" } }
+          )
+
+          // 🔧 IMPROVED: Fuzzy matching for certifications with typo tolerance
+          // Maps user input (with common typos) to database certification values
+          const certificationMatches: Record<string, string[]> = {
+            // Bio/Organic variations
+            bio: ["bio"],
+            organic: ["bio"],
+            biologico: ["bio"],
+
+            // Halal variations (with typos)
+            halal: ["halal"],
+            hallal: ["halal"], // Common typo (double L)
+            allal: ["halal"],
+
+            // Vegan variations
+            vegan: ["vegan"],
+            vegano: ["vegan"],
+
+            // Vegetarian variations
+            vegetarian: ["vegetarian"],
+            vegetariano: ["vegetarian"],
+
+            // Kosher
+            kosher: ["kosher"],
+
+            // Gluten-free variations
+            "gluten-free": ["gluten-free"],
+            glutenfree: ["gluten-free"],
+            "senza glutine": ["gluten-free"],
+            "sin gluten": ["gluten-free"],
+
+            // Lactose-free variations
+            "lactose-free": ["lactose-free"],
+            lactosefree: ["lactose-free"],
+            "senza lattosio": ["lactose-free"],
+            "sin lactosa": ["lactose-free"],
+          }
+
+          // Find certifications that match the keyword
+          const matchedCerts = certificationMatches[lowerKeyword] || []
+
+          if (matchedCerts.length > 0) {
+            // Add certification matches
+            matchedCerts.forEach((cert) => {
+              orConditions.push({ certifications: { has: cert } })
+            })
+          } else {
+            // Fallback: try partial match in certification names
+            orConditions.push({ certifications: { has: lowerKeyword } })
+          }
+        })
+
+        where.OR = orConditions
+      }
+
+      // Category filter
+      if (filters.categoryId) {
+        where.categoryId = filters.categoryId
+      }
+
+      // Price range filter
+      if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
+        where.price = {}
+        if (filters.minPrice !== undefined) {
+          where.price.gte = filters.minPrice
+        }
+        if (filters.maxPrice !== undefined) {
+          where.price.lte = filters.maxPrice
+        }
+      }
+
+      // Allergens filter - use dedicated array field
+      if (filters.allergens && filters.allergens.length > 0) {
+        where.allergens = {
+          hasSome: filters.allergens,
+        }
+      }
+
+      // Certifications filter - use dedicated array field
+      if (filters.certifications && filters.certifications.length > 0) {
+        where.certifications = {
+          hasSome: filters.certifications,
+        }
+      }
+
+      const products = await this.prisma.products.findMany({
+        where,
+        include: {
+          category: true, // Include category for name/translations
+        },
+        orderBy: {
+          createdAt: "desc", // Newest first
+        },
+        take: filters.limit || 20, // Default 20 results
+      })
+
+      logger.info(
+        `ProductRepository.searchProducts: Found ${products.length} products`
+      )
+      return products
+    } catch (error) {
+      logger.error("Error searching products:", error)
+      throw error
+    }
+  }
+
   private mapToDomainEntity(data: any): Product {
     return new Product({
       id: data.id,

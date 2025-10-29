@@ -225,12 +225,17 @@ export class MessageRepository {
       const parsedMessages = messages.map((message) => {
         let parsed = message
 
-        // Parse debugInfo
+        // Parse debugInfo and move it into metadata for frontend consumption
         if (message.debugInfo) {
           try {
+            const debugInfoParsed = JSON.parse(message.debugInfo as string)
             parsed = {
               ...message,
-              debugInfo: JSON.parse(message.debugInfo as string),
+              metadata: {
+                ...(message.metadata as any),
+                debugInfo: debugInfoParsed, // 🔧 Move debugInfo into metadata
+              },
+              debugInfo: undefined, // Remove top-level debugInfo (redundant)
             }
           } catch (parseError) {
             logger.warn(
@@ -2471,7 +2476,7 @@ export class MessageRepository {
       }
 
       return {
-        prompt: agentConfig.prompt || "", // ✅ CORRECT: Field is 'prompt' in schema
+        prompt: agentConfig.systemPrompt || "", // ✅ CORRECT: Field is 'systemPrompt' in schema
         model: agentConfig.model || "openai/gpt-4o-mini",
         temperature: agentConfig.temperature || 0.0, // Default to 0 temperature
         maxTokens: agentConfig.maxTokens || 5000,

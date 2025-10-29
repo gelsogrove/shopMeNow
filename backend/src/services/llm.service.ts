@@ -1,5 +1,3 @@
-import * as fs from "fs"
-import * as path from "path"
 import { LinkGeneratorService } from "../application/services/link-generator.service"
 import { TokenService } from "../application/services/token.service"
 import { getLLMConfig } from "../config/llm.config"
@@ -209,16 +207,9 @@ export class LLMService {
       .replace(/\{\{agentEmail\}\}/g, userInfo.agentEmail) // Replace ALL occurrences
       .replace(/\{\{TOKEN_DURATION\}\}/g, tokenDuration) // Replace ALL occurrences
 
-    // Save processed prompt for debugging
-    try {
-      const promptPath = path.join(process.cwd(), "prompt.txt")
-      fs.writeFileSync(
-        promptPath,
-        `=== PROMPT GENERATO ${new Date().toISOString()} ===\n\n${promptWithVars}\n\n=== FINE PROMPT ===\n`
-      )
-    } catch (error) {
-      logger.info("❌ Errore salvando prompt:", error.message)
-    }
+    // ❌ REMOVED: prompt.txt generation (obsolete - use AgentConversationLog for debugging)
+    // Old code wrote to prompt.txt file for debugging
+    // New multi-agent system logs everything to database via AgentLoggerService
 
     debugInfo.promptInfo = {
       originalLength: prompt.length,

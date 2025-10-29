@@ -1,6 +1,6 @@
 /**
  * Offers Data - Auto-generated from database
- * Last updated: 2025-10-26T20:38:25.363Z
+ * Last updated: 2025-10-28T17:19:32.334Z
  * DO NOT EDIT MANUALLY - Use npm run db:export
  */
 
@@ -26,7 +26,7 @@ export const offers: OfferData[] = [
     validFrom: new Date("2025-10-20T07:41:05.436Z"),
     validUntil: new Date("2025-11-19T07:41:05.436Z"),
     isActive: true,
-    categoryId: "49d3c610-32a0-4661-93df-27d9e205b177",
+    categoryId: "7fe6b723-5126-426f-afef-9dc8467e58b3",
     categoryName: "Frozen Products",
     categoryNames: [],
   },
@@ -38,7 +38,7 @@ export const offers: OfferData[] = [
     validFrom: new Date("2025-10-20T07:41:05.437Z"),
     validUntil: new Date("2025-11-19T07:41:05.437Z"),
     isActive: false,
-    categoryId: "0bfb097c-91ae-468e-8d86-b432e86b36a5",
+    categoryId: "e980b11e-58c2-41fd-a999-64d6c75170fa",
     categoryName: "Pasta",
     categoryNames: [],
   },
@@ -50,7 +50,7 @@ export const offers: OfferData[] = [
     validFrom: new Date("2025-10-20T07:41:05.438Z"),
     validUntil: new Date("2025-11-19T07:41:05.438Z"),
     isActive: false,
-    categoryId: "0bfb097c-91ae-468e-8d86-b432e86b36a5",
+    categoryId: "e980b11e-58c2-41fd-a999-64d6c75170fa",
     categoryName: "Pasta",
     categoryNames: [],
   }

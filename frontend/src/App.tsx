@@ -5,7 +5,7 @@ import { Toaster } from "sonner"
 import { Layout } from "./components/layout/Layout"
 import { ProtectedRoute } from "./components/ProtectedRoute"
 import { ChatProvider } from "./contexts/ChatContext"
-import { AgentPage } from "./pages/AgentPage"
+import { AgentSettingsPage } from "./pages/AgentSettingsPage"
 import { AnalyticsPage } from "./pages/AnalyticsPage"
 import SignupPage from "./pages/auth/SignupPage"
 import { ChatPage } from "./pages/ChatPage"
@@ -99,7 +99,10 @@ export function App() {
                   <Route index element={<AnalyticsPage />} />
                 </Route>
                 <Route path="/agent" element={<Layout />}>
-                  <Route index element={<AgentPage />} />
+                  <Route index element={<AgentSettingsPage />} />
+                </Route>
+                <Route path="/agent-settings" element={<Layout />}>
+                  <Route index element={<AgentSettingsPage />} />
                 </Route>
                 <Route path="/clients" element={<Layout />}>
                   <Route index element={<ClientsPage />} />

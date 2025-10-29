@@ -15,11 +15,12 @@
     "start": "node dist/src/index.js",
     "seed": "ts-node prisma/seed.ts",
     "seed:update": "ts-node scripts/export-db-to-seed.ts",
-    "db:export": "echo '⚠️  WARNING: This will OVERWRITE data files!' && ts-node scripts/export-db-to-seed.ts",
+    "db:export": "echo '⚠️  WARNING: This will OVERWRITE data files AND export prompts!' && ts-node scripts/export-db-to-seed.ts",
     "db:backup": "ts-node scripts/backup-database.ts",
     "db:backup-data": "cp -r prisma/data prisma/data-backup-$(date +%Y%m%d_%H%M%S) && echo '✅ Data backup created'",
     "db:restore": "ts-node scripts/restore-database.ts",
     "update-pricing": "ts-node scripts/update-pricing.ts",
+    "update:prompts": "node scripts/update-prompts.js",
     "view-pricing": "ts-node scripts/view-pricing.ts",
     "start:prod": "node dist/src/index.js",
     "start:dev": "ts-node-dev --respawn --transpile-only --notify false --clear --exit-child -r dotenv/config src/index.ts",
@@ -35,7 +36,6 @@
     "lint:fix": "eslint . --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
-    "update:prompt": "node scripts/update-prompt.js",
     "prepare": "cd .. && husky install backend/.husky"
   },
   "keywords": [
