@@ -420,8 +420,8 @@ export class LLMRouterService {
           totalTokens: llmResponse.tokensUsed,
         },
         input: {
-          userMessage: iterations === 1 ? userMessage : undefined,
-          conversationHistory: conversationHistory, // Always include history
+          userMessage,  // Always include current user message
+          conversationHistory, // Include conversation history from last 5 minutes
           functionResult:
             iterations > 1 ? messages[messages.length - 1]?.content : undefined,
         },
@@ -481,16 +481,17 @@ export class LLMRouterService {
         const functionExecutionTime = Date.now() - functionExecutionStart
 
         // 🔧 Determine which sub-agent was used
+        const lowerFunctionName = functionName.toLowerCase()
         let subAgentName = "UNKNOWN"
-        if (functionName.includes("search")) subAgentName = "ProductSearchAgent"
-        else if (functionName.includes("cart") || functionName.includes("Cart"))
-          subAgentName = "CartManagementAgent"
-        else if (
-          functionName.includes("order") ||
-          functionName.includes("Order")
-        )
-          subAgentName = "OrderTrackingAgent"
-        else if (functionName.includes("support")) subAgentName = "SupportAgent"
+        
+        if (lowerFunctionName.includes("search") || lowerFunctionName.includes("product"))
+          subAgentName = "Product Search Agent"
+        else if (lowerFunctionName.includes("cart"))
+          subAgentName = "Cart Management Agent"
+        else if (lowerFunctionName.includes("order"))
+          subAgentName = "Order Tracking Agent"
+        else if (lowerFunctionName.includes("support"))
+          subAgentName = "Customer Support Agent"
 
         // 🆕 ADD SUB-AGENT STEP TO DEBUG INFO
         debugSteps.push({

@@ -12,6 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Textarea } from "@/components/ui/textarea"
 import { getWorkspaceId } from "@/config/workspace.config"
 import { logger } from "@/lib/logger"
+import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import axios from "axios"
 import { Code, MessageCircle, Send, Settings, X } from "lucide-react"
@@ -291,7 +292,12 @@ export function WhatsAppChatModal({
   // Auto-scroll to the latest message
   useEffect(() => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
+      const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+      }
+      // Scroll immediately and after a short delay to ensure content is rendered
+      scrollToBottom()
+      setTimeout(scrollToBottom, 100)
     }
   }, [messages, isLoading])
 
@@ -515,7 +521,7 @@ export function WhatsAppChatModal({
     setIsLoading(true)
 
     try {
-      // Call the API to process the message - LLM SYSTEM
+      // Call the webhook API (same as real WhatsApp messages)
       const apiUrl = `${
         import.meta.env.VITE_API_URL || "http://localhost:3001"
       }/api/whatsapp/webhook`
@@ -523,7 +529,7 @@ export function WhatsAppChatModal({
       // Use provided workspaceId or get from config
       const currentWorkspaceId = getWorkspaceId(workspaceId)
 
-      logger.info("🔄 FRONTEND DEBUG: Making API call to LLM SYSTEM:", apiUrl)
+      logger.info("🔄 FRONTEND DEBUG: Making API call to webhook:", apiUrl)
       const response = await axios.post(apiUrl, {
         entry: [
           {
@@ -538,94 +544,61 @@ export function WhatsAppChatModal({
                       },
                     },
                   ],
+                  workspaceId: currentWorkspaceId,
                 },
               },
             ],
           },
         ],
       })
-      logger.info("📥 FRONTEND DEBUG: API response received:", response.data)
+      logger.info("📥 FRONTEND DEBUG: Webhook response received:", response.data)
       logger.info("📥 FRONTEND DEBUG: Response status:", response.status)
-      logger.info(
-        "📥 FRONTEND DEBUG: Response success field:",
-        response.data.success
-      )
 
-      if (response.data.success) {
-        // DUAL LLM SYSTEM response format
-        const botResponse = response.data.data.message
-
-        // Handle blacklisted customer - don't show any response
-        if (botResponse === "EVENT_RECEIVED_CUSTOMER_BLACKLISTED") {
-          logger.info("🚫 Customer is blacklisted - ignoring message")
-          return
-        }
-
-        if (botResponse && botResponse.trim() !== "") {
-          // Create the bot message from the API response
-          const botMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            content: botResponse,
-            sender: "bot",
-            timestamp: new Date(),
-            agentName: "AI Assistant",
-            // Debug fields from API response
-            translatedQuery: response.data.debug?.translatedQuery,
-            processedPrompt: response.data.debug?.processedPrompt,
-            processingSource: response.data.debug?.processingSource || "LLM", // 🔧 NEW: Source info
-            functionCalls: response.data.debug?.functionCalls || [],
-            // 💰 Cost tracking info
-            debugInfo: response.data.debug?.costInfo
-              ? JSON.stringify(
-                  {
-                    currentCallCost:
-                      response.data.debug.costInfo.currentCallCost,
-                    previousTotalUsage:
-                      response.data.debug.costInfo.previousTotalUsage,
-                    newTotalUsage: response.data.debug.costInfo.newTotalUsage,
-                    costTimestamp: response.data.debug.costInfo.costTimestamp,
-                  },
-                  null,
-                  2
-                )
-              : undefined,
-            metadata: {
-              isOperatorMessage: false,
-              isOperatorControl: false,
-              agentSelected: "CHATBOT",
-              sentBy: "AI",
-            },
+      // After sending via webhook, fetch the latest messages from the session
+      // This ensures we get both user message and bot response
+      const sessionIdToUse = localSelectedChat?.sessionId || sessionId
+      
+      if (sessionIdToUse) {
+        logger.info("📥 FRONTEND DEBUG: Fetching updated messages for session:", sessionIdToUse)
+        
+        // Small delay to ensure backend has processed the message
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        try {
+          const messagesResponse = await api.get(`/chat/${sessionIdToUse}/messages`)
+          
+          if (messagesResponse.data.success) {
+            const allMessages = messagesResponse.data.data.map((message: any) => ({
+              id: message.id,
+              content: message.content,
+              sender: message.direction === "INBOUND" ? "customer" : "bot",
+              timestamp: new Date(message.createdAt),
+              agentName: message.agentName || (message.direction === "OUTBOUND" ? "AI Assistant" : undefined),
+              debugInfo: message.debugInfo,
+              metadata: {
+                isOperatorMessage: message.isOperatorMessage || false,
+                isOperatorControl: message.isOperatorControl || false,
+                agentSelected: message.agentName || "AI",
+                sentBy: message.direction === "INBOUND" ? "CUSTOMER" : "AI",
+              },
+            }))
+            
+            logger.info("📥 FRONTEND DEBUG: Fetched", allMessages.length, "messages from backend")
+            
+            // Replace all messages with fresh data from backend
+            setMessages(allMessages)
+            
+            // Scroll to bottom
+            setTimeout(() => {
+              messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+            }, 100)
           }
-
-          // Add bot response to chat history
-          setMessages((prev) => [...prev, botMessage])
-        } else {
-          logger.info(
-            "Empty response from DUAL LLM SYSTEM, not adding bot message"
-          )
+        } catch (fetchError) {
+          logger.error("Error fetching messages after webhook:", fetchError)
         }
-      } else {
-        // Handle API error response
-        logger.error("API Error:", response.data.error)
-
-        // Add an error message to the chat
-        const errorMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          content:
-            "Sorry, there was an error processing your message. Please try again later.",
-          sender: "bot",
-          timestamp: new Date(),
-          agentName: "System",
-          metadata: {
-            isOperatorMessage: false,
-            isOperatorControl: false,
-            agentSelected: "SYSTEM_ERROR",
-            sentBy: "SYSTEM",
-          },
-        }
-
-        setMessages((prev) => [...prev, errorMessage])
       }
+
+      setIsLoading(false)
     } catch (error) {
       logger.error("Error calling message API:", error)
 
@@ -729,28 +702,7 @@ export function WhatsAppChatModal({
                 {userPhoneNumber || channelName}
               </span>
             </div>
-            <div className="flex gap-2 items-center">
-              <button
-                onClick={() => setShowFunctionCalls(!showFunctionCalls)}
-                className={`text-white hover:bg-green-600 rounded-full p-2 transition ${
-                  showFunctionCalls ? "bg-green-600" : ""
-                }`}
-                aria-label="Toggle Function Calls Debug"
-                title="Show/Hide Function Calls Debug"
-              >
-                <Code className="h-5 w-5" />
-              </button>
-              <button
-                onClick={() => setShowProcessedPrompt(!showProcessedPrompt)}
-                className={`text-white hover:bg-green-600 rounded-full p-2 transition ${
-                  showProcessedPrompt ? "bg-green-600" : ""
-                }`}
-                aria-label="Toggle Complete Debug Info"
-                title="Show/Hide Complete Debug Information"
-              >
-                <Settings className="h-5 w-5" />
-              </button>
-            </div>
+            {/* Icons removed as requested */}
           </div>
 
           {/* Chat Content Area - Flex layout: header top, messages flex-1, input bottom */}

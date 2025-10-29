@@ -285,6 +285,77 @@ export default function MessageFlowDialog({
             })}
           </VerticalTimeline>
         </div>
+
+        {/* Text Logs Section */}
+        <div className="border-t border-gray-200 bg-gray-50">
+          <details className="group">
+            <summary className="cursor-pointer px-6 py-3 font-semibold text-gray-700 hover:bg-gray-100">
+              📋 Debug Logs (Text Format)
+            </summary>
+            <div className="px-6 py-4 bg-white max-h-96 overflow-y-auto">
+              <div className="font-mono text-xs space-y-4">
+                {timelineSequence.map((step, index) => {
+                  const stepNumber = index + 1
+                  const agentName = step.agent || step.type.toUpperCase()
+                  
+                  return (
+                    <div key={index} className="border-b border-gray-200 pb-4 mb-4 last:border-0">
+                      <div className="font-bold text-sm text-gray-800 mb-2">
+                        STEP {stepNumber}: {agentName}
+                        {step.model && <span className="text-gray-500 ml-2">({step.model})</span>}
+                      </div>
+                      
+                      {/* INPUT */}
+                      {step.input && (
+                        <div className="mb-2">
+                          <div className="font-semibold text-blue-700">INPUT:</div>
+                          <div className="pl-4 text-gray-700 whitespace-pre-wrap">
+                            {step.input.userMessage && (
+                              <div>User Message: {step.input.userMessage}</div>
+                            )}
+                            {step.input.conversationHistory && step.input.conversationHistory.length > 0 && (
+                              <div>History: {step.input.conversationHistory.length} messages</div>
+                            )}
+                            {step.input.functionResult && (
+                              <div>Function Result: {JSON.stringify(step.input.functionResult)}</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* OUTPUT */}
+                      {step.output && (
+                        <div className="mb-2">
+                          <div className="font-semibold text-green-700">OUTPUT:</div>
+                          <div className="pl-4 text-gray-700 whitespace-pre-wrap">
+                            {step.functionName && (
+                              <div className="text-orange-700 font-semibold">
+                                Function Call: {formatFunctionCall(step)}
+                              </div>
+                            )}
+                            {step.output.textResponse && (
+                              <div>Response: {step.output.textResponse}</div>
+                            )}
+                            {step.output.decision && (
+                              <div>Decision: {step.output.decision}</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* TOKENS */}
+                      {step.tokenUsage && (
+                        <div className="text-gray-500">
+                          Tokens: {step.tokenUsage.totalTokens} ({step.tokenUsage.promptTokens} prompt + {step.tokenUsage.completionTokens} completion)
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </details>
+        </div>
       </div>
     </div>
   )

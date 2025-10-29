@@ -39,7 +39,7 @@ export class ConversationManager {
 
   constructor(
     private prisma: PrismaClient,
-    historyWindowMinutes: number = 10
+    historyWindowMinutes: number = 5
   ) {
     this.conversationRepo = new ConversationMessageRepository(prisma)
     this.historyWindowMinutes = historyWindowMinutes
