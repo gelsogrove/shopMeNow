@@ -1,4 +1,4 @@
-import { X } from "lucide-react"
+import { X, User, Brain, Shield, MessageSquare, Settings } from "lucide-react"
 import {
   VerticalTimeline,
   VerticalTimelineElement,
@@ -30,12 +30,14 @@ interface DebugStep {
   }
   output?: {
     decision?: string
-    functionCall?: { name: string; arguments: any }
+    functionCall?: { name: string; arguments: any } | string
     textResponse?: string
     result?: any
     executionTimeMs?: number
   }
   duration?: number
+  functionName?: string
+  functionArguments?: any
 }
 
 interface MessageFlowDialogProps {
@@ -64,17 +66,44 @@ export default function MessageFlowDialog({
     return "#3B82F6" // Blue for sub-agents
   }
 
-  const getAgentIcon = (type: string): string => {
-    if (type === "user") return "👤"
-    if (type === "router") return "🧠"
-    if (type === "safety") return "🛡️"
-    if (type === "whatsapp_delivery") return "📱"
-    return "⚙️"
+  const getAgentIcon = (type: string): React.ReactNode => {
+    if (type === "user") return <User className="w-5 h-5" />
+    if (type === "router") return <Brain className="w-5 h-5" />
+    if (type === "safety") return <Shield className="w-5 h-5" />
+    if (type === "whatsapp_delivery") return <MessageSquare className="w-5 h-5" />
+    return <Settings className="w-5 h-5" />
   }
 
   const formatJSON = (obj: any): string => {
     if (obj === null || obj === undefined) return "N/A"
     return JSON.stringify(obj, null, 2)
+  }
+
+  const formatFunctionCall = (step: DebugStep): string => {
+    try {
+      const functionName = step.functionName
+      const functionArgs = step.functionArguments
+      
+      if (!functionName) return 'N/A'
+      
+      if (!functionArgs || Object.keys(functionArgs).length === 0) {
+        return `${functionName}()`
+      }
+      
+      // Format arguments as a readable string
+      const argsStr = Object.entries(functionArgs)
+        .map(([key, value]) => {
+          if (typeof value === 'string') return `"${value}"`
+          if (typeof value === 'object') return JSON.stringify(value)
+          return String(value)
+        })
+        .join(', ')
+      
+      return `${functionName}(${argsStr})`
+    } catch (error) {
+      console.error('Error formatting function call:', error)
+      return 'Error formatting function call'
+    }
   }
 
   // Organizza steps per timeline
@@ -97,11 +126,18 @@ export default function MessageFlowDialog({
     input: { userMessage },
   }
 
+  // Estrai il messaggio finale dal Safety Agent o dall'ultimo Router
+  const finalMessage = 
+    safetySteps[0]?.output?.textResponse || 
+    safetySteps[0]?.output?.result?.translatedResponse ||
+    routerSteps[routerSteps.length - 1]?.output?.textResponse ||
+    "Message delivered"
+
   const whatsappStep: DebugStep = {
     type: "whatsapp_delivery",
     agent: "WhatsApp API",
     timestamp: new Date().toISOString(),
-    output: { textResponse: "Message delivered to WhatsApp" },
+    output: { textResponse: finalMessage },
   }
 
   // Sequenza timeline: UserMessage, Router1, SubAgent, Router2, Safety, WhatsApp
@@ -118,11 +154,11 @@ export default function MessageFlowDialog({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-4 flex items-center justify-between">
+        <div className="bg-gray-800 text-white px-6 py-4 flex items-center justify-between border-b border-gray-700">
           <h2 className="text-xl font-bold">Message Flow Timeline</h2>
           <button
             onClick={onClose}
-            className="hover:bg-white hover:bg-opacity-20 rounded-full p-1 transition-colors"
+            className="hover:bg-gray-700 rounded-full p-1 transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
@@ -136,15 +172,21 @@ export default function MessageFlowDialog({
           </div>
           <div>
             <span className="text-gray-500">Total Tokens:</span>{" "}
-            <span className="font-semibold">{debugInfo.totalTokens?.toLocaleString()}</span>
+            <span className="font-semibold">
+              {debugInfo.totalTokens?.toLocaleString()}
+            </span>
           </div>
           <div>
             <span className="text-gray-500">Cost:</span>{" "}
-            <span className="font-semibold">${debugInfo.totalCost?.toFixed(4)}</span>
+            <span className="font-semibold">
+              ${debugInfo.totalCost?.toFixed(4)}
+            </span>
           </div>
           <div>
             <span className="text-gray-500">Time:</span>{" "}
-            <span className="font-semibold">{(debugInfo.executionTimeMs / 1000).toFixed(2)}s</span>
+            <span className="font-semibold">
+              {(debugInfo.executionTimeMs / 1000).toFixed(2)}s
+            </span>
           </div>
         </div>
 
@@ -167,7 +209,7 @@ export default function MessageFlowDialog({
                   contentArrowStyle={{ borderRight: `7px solid ${color}` }}
                   date={new Date(step.timestamp).toLocaleTimeString()}
                   iconStyle={{ background: color, color: "#fff" }}
-                  icon={<span className="text-2xl">{icon}</span>}
+                  icon={icon}
                 >
                   {/* Card Header */}
                   <div className="mb-3">
@@ -181,7 +223,8 @@ export default function MessageFlowDialog({
                     )}
                     {step.output?.executionTimeMs && (
                       <p className="text-xs text-gray-400">
-                        Duration: {(step.output.executionTimeMs / 1000).toFixed(2)}s
+                        Duration:{" "}
+                        {(step.output.executionTimeMs / 1000).toFixed(2)}s
                       </p>
                     )}
                   </div>
@@ -200,27 +243,25 @@ export default function MessageFlowDialog({
                       </details>
                     )}
 
-                    {/* Function Call (always visible) */}
-                    {step.output?.functionCall && (
-                      <div>
-                        <p className="text-sm font-semibold text-orange-600 mb-2">
-                          📤 Function Arguments
-                        </p>
-                        <pre className="text-xs bg-orange-50 p-3 rounded overflow-x-auto max-h-60 overflow-y-auto">
-                          {formatJSON(step.output.functionCall)}
-                        </pre>
-                      </div>
-                    )}
-
-                    {/* Output */}
+                    {/* Output with function call if present */}
                     {step.output && (
-                      <details className="group">
+                      <details className="group" open={!!step.functionName}>
                         <summary className="cursor-pointer text-sm font-semibold text-green-600 hover:text-green-700">
                           📤 OUTPUT
                         </summary>
-                        <pre className="mt-2 text-xs bg-green-50 p-3 rounded overflow-x-auto max-h-60 overflow-y-auto">
-                          {formatJSON(step.output)}
-                        </pre>
+                        <div className="mt-2 text-xs bg-green-50 p-3 rounded overflow-x-auto max-h-60 overflow-y-auto">
+                          {step.functionName && (
+                            <div className="mb-3 pb-3 border-b border-green-200">
+                              <div className="font-semibold text-green-700 mb-1">Function Call:</div>
+                              <code className="text-green-900 font-mono text-sm">
+                                {formatFunctionCall(step)}
+                              </code>
+                            </div>
+                          )}
+                          <pre className="whitespace-pre-wrap break-words">
+                            {formatJSON(step.output)}
+                          </pre>
+                        </div>
                       </details>
                     )}
 
@@ -230,7 +271,8 @@ export default function MessageFlowDialog({
                         <span className="font-semibold">Tokens:</span>{" "}
                         {step.tokenUsage.totalTokens.toLocaleString()}{" "}
                         <span className="text-gray-400">
-                          ({step.tokenUsage.promptTokens} prompt + {step.tokenUsage.completionTokens} completion)
+                          ({step.tokenUsage.promptTokens} prompt +{" "}
+                          {step.tokenUsage.completionTokens} completion)
                         </span>
                       </div>
                     )}
