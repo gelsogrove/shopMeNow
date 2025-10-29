@@ -1,4 +1,4 @@
-import { X, User, Brain, Shield, MessageSquare, Settings } from "lucide-react"
+import { Brain, MessageSquare, Settings, Shield, User, X } from "lucide-react"
 import {
   VerticalTimeline,
   VerticalTimelineElement,
@@ -70,7 +70,8 @@ export default function MessageFlowDialog({
     if (type === "user") return <User className="w-5 h-5" />
     if (type === "router") return <Brain className="w-5 h-5" />
     if (type === "safety") return <Shield className="w-5 h-5" />
-    if (type === "whatsapp_delivery") return <MessageSquare className="w-5 h-5" />
+    if (type === "whatsapp_delivery")
+      return <MessageSquare className="w-5 h-5" />
     return <Settings className="w-5 h-5" />
   }
 
@@ -83,26 +84,26 @@ export default function MessageFlowDialog({
     try {
       const functionName = step.functionName
       const functionArgs = step.functionArguments
-      
-      if (!functionName) return 'N/A'
-      
+
+      if (!functionName) return "N/A"
+
       if (!functionArgs || Object.keys(functionArgs).length === 0) {
         return `${functionName}()`
       }
-      
+
       // Format arguments as a readable string
       const argsStr = Object.entries(functionArgs)
         .map(([key, value]) => {
-          if (typeof value === 'string') return `"${value}"`
-          if (typeof value === 'object') return JSON.stringify(value)
+          if (typeof value === "string") return `"${value}"`
+          if (typeof value === "object") return JSON.stringify(value)
           return String(value)
         })
-        .join(', ')
-      
+        .join(", ")
+
       return `${functionName}(${argsStr})`
     } catch (error) {
-      console.error('Error formatting function call:', error)
-      return 'Error formatting function call'
+      console.error("Error formatting function call:", error)
+      return "Error formatting function call"
     }
   }
 
@@ -127,8 +128,8 @@ export default function MessageFlowDialog({
   }
 
   // Estrai il messaggio finale dal Safety Agent o dall'ultimo Router
-  const finalMessage = 
-    safetySteps[0]?.output?.textResponse || 
+  const finalMessage =
+    safetySteps[0]?.output?.textResponse ||
     safetySteps[0]?.output?.result?.translatedResponse ||
     routerSteps[routerSteps.length - 1]?.output?.textResponse ||
     "Message delivered"
@@ -252,7 +253,9 @@ export default function MessageFlowDialog({
                         <div className="mt-2 text-xs bg-green-50 p-3 rounded overflow-x-auto max-h-60 overflow-y-auto">
                           {step.functionName && (
                             <div className="mb-3 pb-3 border-b border-green-200">
-                              <div className="font-semibold text-green-700 mb-1">Function Call:</div>
+                              <div className="font-semibold text-green-700 mb-1">
+                                Function Call:
+                              </div>
                               <code className="text-green-900 font-mono text-sm">
                                 {formatFunctionCall(step)}
                               </code>
