@@ -551,6 +551,7 @@ model AgentConfig {
   name               String    // Display name: "Product Search Agent"
   type               AgentType // Enum type
   description        String?   // User-friendly description
+  icon               String?   // Lucide icon name (e.g., "Search", "ShoppingCart", "MessageCircle")
   systemPrompt       String    @db.Text // Agent-specific prompt (was "prompt")
   model              String    @default("openai/gpt-4o-mini")
   temperature        Float     @default(0.7)

@@ -337,7 +337,7 @@ async function main() {
     await prisma.products.create({
       data: {
         name: prod.name,
-        productCode: prod.productCode || `PROD-${Date.now()}`,
+        productCode: prod.ProductCode || `PROD-${Date.now()}`,
         description: prod.description,
         formato: prod.formato,
         price: prod.price,
@@ -507,6 +507,7 @@ async function main() {
         name: config.name,
         type: config.type,
         description: config.description,
+        icon: config.icon,
         systemPrompt: config.systemPrompt,
         model: config.model,
         temperature: config.temperature,

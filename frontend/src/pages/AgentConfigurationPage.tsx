@@ -45,6 +45,12 @@ import {
   Save,
   Settings,
   Shield,
+  GitBranch,
+  Search,
+  ShoppingCart,
+  Package,
+  Headphones,
+  LucideIcon,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
@@ -59,6 +65,7 @@ interface AgentFormData {
   isActive: boolean
   order: number
   agentType: string
+  icon?: string
 }
 
 // Mapping agent types to their available call functions
@@ -79,23 +86,56 @@ const AGENT_CALL_FUNCTIONS: Record<string, string[]> = {
   safety: [], // Safety agent doesn't call functions, only validates
 }
 
-// Agent type to icon mapping (distinct icons per agent type)
-const getAgentIcon = (agentType: string) => {
-  const type = agentType.toLowerCase()
-
-  if (type === "router") {
-    return <Brain className="h-5 w-5 text-gray-700" />
-  } else if (type === "safety" || type === "safety_translation") {
-    return <Shield className="h-5 w-5 text-gray-700" />
-  } else {
-    // Sub-agents: use Settings icon
-    return <Settings className="h-5 w-5 text-gray-700" />
-  }
+// Map icon name from database to Lucide icon component
+const iconMap: Record<string, LucideIcon> = {
+  GitBranch,
+  Search,
+  ShoppingCart,
+  Package,
+  Headphones,
+  Shield,
+  Brain,
+  Settings,
+  Bot,
 }
 
-// Agent type to color mapping (neutral gray like the rest of the app)
+// Get icon component from database icon name with colorful background
+const getAgentIcon = (iconName: string | undefined, agentType: string) => {
+  // Fallback to type-based icon if no icon name in database
+  const Icon = iconName && iconMap[iconName] ? iconMap[iconName] : Settings
+  
+  // Normalize agent type (handle ROUTER, Router, router, etc.)
+  const normalizedType = agentType.toLowerCase().replace(/_/g, "_")
+  
+  // Color mapping based on agent type for vibrant look
+  const colorConfig: Record<string, { bg: string; icon: string }> = {
+    router: { bg: "bg-green-100", icon: "text-green-600" },
+    product_search: { bg: "bg-blue-100", icon: "text-blue-600" },
+    cart_management: { bg: "bg-emerald-100", icon: "text-emerald-600" },
+    order_tracking: { bg: "bg-orange-100", icon: "text-orange-600" },
+    customer_support: { bg: "bg-pink-100", icon: "text-pink-600" },
+    safety_translation: { bg: "bg-indigo-100", icon: "text-indigo-600" },
+  }
+  
+  // Debug: log per capire perché tutte le icone sono uguali
+  console.log("🔍 getAgentIcon called:", { iconName, agentType, normalizedType, hasColor: !!colorConfig[normalizedType] })
+
+  const colors = colorConfig[normalizedType] || { 
+    bg: "bg-gray-100", 
+    icon: "text-gray-600" 
+  }
+
+  return (
+    <div className={`${colors.bg} p-2.5 rounded-full`}>
+      <Icon className={`h-5 w-5 ${colors.icon}`} />
+    </div>
+  )
+}
+
+// Agent type to color mapping for text - ALL GREEN
 const getAgentColor = (agentType: string) => {
-  return "text-gray-800"
+  // Tutti i titoli VERDI come richiesto da Andrea
+  return "text-green-600"
 }
 
 export function AgentConfigurationPage() {
@@ -143,6 +183,7 @@ export function AgentConfigurationPage() {
             isActive: agent.isActive ?? true,
             order: agent.order || 0,
             agentType: agent.agentType || "router",
+            icon: agent.icon,
           }
         })
         setEditingAgents(initialEditing)
@@ -238,7 +279,7 @@ export function AgentConfigurationPage() {
           title={
             <div className="flex items-center gap-2">
               <Bot className="h-6 w-6 text-green-600" />
-              <span className="text-green-600">Agent Configuration</span>
+              <span className="text-green-600">Agents Configuration</span>
             </div>
           }
           description="Configure your multi-agent LLM system"
@@ -255,9 +296,19 @@ export function AgentConfigurationPage() {
                 const formData = editingAgents[agent.id]
                 if (!formData) return null
 
+                // Normalize agent type to lowercase for lookup
+                const normalizedType = formData.agentType.toLowerCase()
                 const callFunctions =
-                  AGENT_CALL_FUNCTIONS[formData.agentType] || []
+                  AGENT_CALL_FUNCTIONS[normalizedType] || []
                 const isSaving = savingAgents[agent.id]
+                
+                // Debug log to see what's happening
+                console.log("🔍 Agent CF lookup:", 
+                  "\n  Name:", formData.name,
+                  "\n  Type:", formData.agentType, 
+                  "\n  Normalized:", normalizedType,
+                  "\n  Functions:", callFunctions.length, "->", callFunctions
+                )
 
                 return (
                   <AccordionItem
@@ -268,7 +319,7 @@ export function AgentConfigurationPage() {
                     <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-gray-50">
                       <div className="flex items-center justify-between w-full pr-4">
                         <div className="flex items-center gap-3">
-                          {getAgentIcon(formData.agentType)}
+                          {getAgentIcon(formData.icon, formData.agentType)}
                           <div className="text-left">
                             <h3
                               className={`text-lg font-semibold ${getAgentColor(
@@ -277,19 +328,35 @@ export function AgentConfigurationPage() {
                             >
                               {formData.name}
                             </h3>
-                            <div className="flex items-center gap-4 text-sm text-gray-500">
-                              <span>
+                            <div className="flex items-center gap-3 text-sm">
+                              <span className="text-gray-500">
                                 Temp: {formData.temperature.toFixed(1)}
                               </span>
-                              <span>•</span>
-                              <span>Max Tokens: {formData.maxTokens}</span>
-                              <span>•</span>
+                              <span className="text-gray-300">•</span>
+                              <span className="text-gray-500">Max Tokens: {formData.maxTokens}</span>
+                              <span className="text-gray-300">•</span>
                               <span
-                                className="max-w-[200px] truncate"
+                                className="max-w-[200px] truncate text-gray-500"
                                 title={formData.model}
                               >
                                 {formData.model}
                               </span>
+                              {callFunctions.length > 0 && (
+                                <>
+                                  <span className="text-gray-300">•</span>
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    {callFunctions.map((func) => (
+                                      <span
+                                        key={func}
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border rounded-full text-xs font-medium text-gray-700"
+                                      >
+                                        <ChevronRight className="h-3 w-3 text-green-600" />
+                                        {func}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -298,7 +365,7 @@ export function AgentConfigurationPage() {
 
                     <AccordionContent className="px-6 pb-6">
                       <div className="space-y-6 pt-4">
-                        {/* Model, Temperature & Max Tokens - Same Row */}
+                        {/* First Row: Model, Temperature & Max Tokens */}
                         <div className="grid grid-cols-3 gap-6">
                           {/* Model Selection */}
                           <div className="space-y-2">
@@ -388,7 +455,7 @@ export function AgentConfigurationPage() {
                                   Number(e.target.value)
                                 )
                               }
-                              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-700"
+                              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600"
                             />
                             <div className="flex justify-between text-xs text-gray-500">
                               <span>0.1</span>
@@ -423,7 +490,7 @@ export function AgentConfigurationPage() {
                                   Number(e.target.value)
                                 )
                               }
-                              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-700"
+                              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600"
                             />
                             <div className="flex justify-between text-xs text-gray-500">
                               <span>0</span>
@@ -431,28 +498,6 @@ export function AgentConfigurationPage() {
                             </div>
                           </div>
                         </div>
-
-                        {/* Call Functions List */}
-                        {callFunctions.length > 0 && (
-                          <div className="space-y-2">
-                            <Label className="text-sm font-medium">
-                              Available Call Functions
-                            </Label>
-                            <div className="bg-gray-50 rounded-lg p-4 border">
-                              <div className="flex flex-wrap gap-2">
-                                {callFunctions.map((func) => (
-                                  <span
-                                    key={func}
-                                    className="inline-flex items-center gap-1 px-3 py-1 bg-white border rounded-full text-xs font-medium text-gray-700"
-                                  >
-                                    <ChevronRight className="h-3 w-3 text-green-600" />
-                                    {func}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        )}
 
                         {/* System Prompt */}
                         <div className="space-y-2">

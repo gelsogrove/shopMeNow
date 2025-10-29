@@ -17,6 +17,7 @@ export interface Agent {
   isActive?: boolean
   order?: number
   agentType?: string
+  icon?: string // 🎨 Lucide icon name from database
   functions?: readonly string[] // 🆕 Function calls list
   createdAt: string
   updatedAt: string

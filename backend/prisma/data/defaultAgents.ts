@@ -4,6 +4,7 @@ interface DefaultAgent {
   name: string
   type: AgentType
   description: string
+  icon: string // Lucide icon name
   systemPrompt: string
   model: string
   temperature: number
@@ -28,6 +29,7 @@ export const defaultAgents = (
     workspaceId,
     name: "Router Agent",
     type: "ROUTER" as AgentType,
+    icon: "GitBranch", // Router/decision tree icon
     description:
       "Entry point agent that checks FAQ and classifies user intent to route to specialized agents",
     systemPrompt: `# System Role
@@ -98,6 +100,7 @@ Rispondi SEMPRE con JSON valido in questo formato:
     workspaceId,
     name: "Product Search Agent",
     type: "PRODUCT_SEARCH" as AgentType,
+    icon: "Search", // Search icon
     description:
       "Specialized agent for intelligent product search with multilingual support and advanced filters",
     systemPrompt: `# System Role
@@ -173,6 +176,7 @@ Se 0 risultati:
     workspaceId,
     name: "Cart Management Agent",
     type: "CART_MANAGEMENT" as AgentType,
+    icon: "ShoppingCart", // Shopping cart icon
     description:
       "Handles all cart operations: add, remove, view, reset, repeat orders",
     systemPrompt: `# System Role
@@ -248,6 +252,7 @@ Tu sei il Cart Management Agent di ShopME. Gestisci il carrello del cliente.
     workspaceId,
     name: "Order Tracking Agent",
     type: "ORDER_TRACKING" as AgentType,
+    icon: "Package", // Package/delivery icon
     description:
       "Provides order status, tracking information, and invoice generation",
     systemPrompt: `# System Role
@@ -312,6 +317,7 @@ Tu sei l'Order Tracking Agent di ShopME. Aiuti i clienti con i loro ordini.
     workspaceId,
     name: "Customer Support Agent",
     type: "CUSTOMER_SUPPORT" as AgentType,
+    icon: "Headphones", // Support/help icon
     description:
       "Handles frustrated customers, provides empathetic support, and escalates to human operators when needed",
     systemPrompt: `# System Role
@@ -381,6 +387,7 @@ Monitora questi segnali di frustrazione:
     workspaceId,
     name: "Safety & Translation Agent",
     type: "SAFETY_TRANSLATION" as AgentType,
+    icon: "Shield", // Safety/security icon
     description:
       "Final safety filter and translation layer. Ensures responses are safe and translated to customer language",
     systemPrompt: `# System Role
