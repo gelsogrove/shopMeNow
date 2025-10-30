@@ -18,7 +18,7 @@
 import { AgentType, PrismaClient } from "@prisma/client"
 import axios from "axios"
 import { SafetyTranslationAgent } from "../application/agents/SafetyTranslationAgent"
-import { getFunctionsForAPI } from "../config/agent-functions"
+import { getFunctionsForRouter } from "../config/agent-functions"
 import { AgentConfigRepository } from "../repositories/agent-config.repository"
 import { FAQRepository } from "../repositories/faq.repository"
 import logger from "../utils/logger"
@@ -597,7 +597,9 @@ export class LLMRouterService {
           messages: options.messages,
           temperature: options.temperature,
           max_tokens: options.maxTokens,
-          tools: getFunctionsForAPI(), // Add functions from config
+          // 🔀 Router has ONLY delegation functions (call sub-agents)
+          // Router orchestrates, sub-agents execute business functions
+          tools: getFunctionsForRouter(), // Only: callProductSearchAgent, callCartManagementAgent, etc.
         },
         {
           headers: {

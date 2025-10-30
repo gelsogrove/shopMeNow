@@ -1,4 +1,18 @@
-import { Brain, MessageSquare, Settings, Shield, User, X } from "lucide-react"
+import { 
+  Brain, 
+  MessageSquare, 
+  Settings, 
+  Shield, 
+  User, 
+  X,
+  GitBranch,
+  Search,
+  ShoppingCart,
+  Package,
+  Headphones,
+  Database,
+  Send,
+} from "lucide-react"
 import {
   VerticalTimeline,
   VerticalTimelineElement,
@@ -69,15 +83,36 @@ export default function MessageFlowDialog({
   }
 
   const getAgentIcon = (type: string, agent?: string): React.ReactNode => {
+    // Customer
     if (type === "user") return <User className="w-5 h-5" />
-    if (type === "router") return <Brain className="w-5 h-5" />
-    if (type === "safety") return <Shield className="w-5 h-5" />
+    
+    // Router Agent
+    if (type === "router" || agent?.includes("Router")) 
+      return <GitBranch className="w-5 h-5" />
+    
+    // Safety & Translation Agent
+    if (type === "safety" || agent?.includes("Safety") || agent?.includes("Translation")) 
+      return <Shield className="w-5 h-5" />
+    
+    // Sub-agents by name
+    if (agent?.includes("Product Search")) 
+      return <Search className="w-5 h-5" />
+    if (agent?.includes("Cart Management")) 
+      return <ShoppingCart className="w-5 h-5" />
+    if (agent?.includes("Order Tracking")) 
+      return <Package className="w-5 h-5" />
+    if (agent?.includes("Customer Support")) 
+      return <Headphones className="w-5 h-5" />
+    
+    // Infrastructure steps
+    if (agent?.includes("Save to History"))
+      return <Database className="w-5 h-5" />
+    if (agent?.includes("WhatsApp Queue"))
+      return <Send className="w-5 h-5" />
     if (type === "whatsapp_delivery")
       return <MessageSquare className="w-5 h-5" />
-    if (agent?.includes("Save to History"))
-      return <span className="text-lg">💾</span>
-    if (agent?.includes("WhatsApp Queue"))
-      return <span className="text-lg">📤</span>
+    
+    // Default
     return <Settings className="w-5 h-5" />
   }
 

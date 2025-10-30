@@ -18,6 +18,81 @@ export interface FunctionDefinition {
 }
 
 export const AGENT_FUNCTIONS: FunctionDefinition[] = [
+  // ========================================
+  // SUB-AGENT DELEGATION FUNCTIONS (Router → Sub-Agents)
+  // ========================================
+  {
+    name: "productSearchAgent",
+    description:
+      "Delegate to Product Search specialist agent for complex product queries requiring catalog search, filtering, or recommendations. Use when customer needs detailed product information.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Customer's product search query or question",
+        },
+      },
+      required: ["query"],
+    },
+  },
+
+  {
+    name: "cartManagementAgent",
+    description:
+      "Delegate to Cart Management specialist agent for cart operations like adding items, viewing cart, updating quantities, or clearing cart.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Customer's cart-related request",
+        },
+      },
+      required: ["query"],
+    },
+  },
+
+  {
+    name: "orderTrackingAgent",
+    description:
+      "Delegate to Order Tracking specialist agent for viewing order history, checking order status, or repeating previous orders.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Customer's order-related question",
+        },
+      },
+      required: ["query"],
+    },
+  },
+
+  {
+    name: "customerSupportAgent",
+    description:
+      "Delegate to Customer Support specialist agent when customer is frustrated, has complex issues, or explicitly requests human assistance.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Customer's support request or issue",
+        },
+        urgency: {
+          type: "string",
+          enum: ["low", "medium", "high"],
+          description: "Urgency level of the support request",
+        },
+      },
+      required: ["query", "urgency"],
+    },
+  },
+
+  // ========================================
+  // DIRECT BUSINESS FUNCTIONS (Router can call directly for simple operations)
+  // ========================================
   {
     name: "searchProducts",
     description:
@@ -179,6 +254,59 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
 
   {
+    name: "getOrder",
+    description:
+      "Retrieve detailed information about a specific order by order code or ID. Use when customer asks about a specific order.",
+    parameters: {
+      type: "object",
+      properties: {
+        orderCode: {
+          type: "string",
+          description: "Order code or order ID to retrieve",
+        },
+      },
+      required: ["orderCode"],
+    },
+  },
+
+  {
+    name: "trackOrder",
+    description:
+      "Get real-time tracking information for an order including shipping status, carrier info, and estimated delivery. Use when customer asks 'where is my order' or tracking status.",
+    parameters: {
+      type: "object",
+      properties: {
+        orderCode: {
+          type: "string",
+          description: "Order code or order ID to track",
+        },
+      },
+      required: ["orderCode"],
+    },
+  },
+
+  {
+    name: "sendInvoice",
+    description:
+      "Send or resend the invoice for a specific order to customer's email. Use when customer requests invoice, receipt, or proof of purchase.",
+    parameters: {
+      type: "object",
+      properties: {
+        orderCode: {
+          type: "string",
+          description: "Order code or order ID to send invoice for",
+        },
+        email: {
+          type: "string",
+          description:
+            "Optional: Alternative email address (if different from customer's registered email)",
+        },
+      },
+      required: ["orderCode"],
+    },
+  },
+
+  {
     name: "contactSupport",
     description:
       "Escalate to human customer support when customer is frustrated, has complex issues, or explicitly requests to speak with a person. Creates a support ticket.",
@@ -200,6 +328,52 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
       required: ["reason", "urgency"],
     },
   },
+
+  // ========================================
+  // SAFETY & TRANSLATION LAYER FUNCTIONS
+  // ========================================
+  {
+    name: "sendAlertEmail",
+    description:
+      "Send alert email to administrators when detecting security issues, inappropriate content, data leakage attempts, or system policy violations in conversation.",
+    parameters: {
+      type: "object",
+      properties: {
+        alertType: {
+          type: "string",
+          enum: [
+            "security_violation",
+            "inappropriate_content",
+            "data_leakage",
+            "policy_violation",
+            "suspicious_behavior",
+          ],
+          description: "Type of security alert",
+        },
+        severity: {
+          type: "string",
+          enum: ["low", "medium", "high", "critical"],
+          description:
+            "Severity level: 'low' for minor issues, 'medium' for policy violations, 'high' for security concerns, 'critical' for data breaches",
+        },
+        description: {
+          type: "string",
+          description:
+            "Detailed description of the issue detected (what triggered the alert)",
+        },
+        conversationId: {
+          type: "string",
+          description: "ID of the conversation where issue was detected",
+        },
+        blockedContent: {
+          type: "string",
+          description:
+            "Optional: The content that was blocked (for review purposes)",
+        },
+      },
+      required: ["alertType", "severity", "description", "conversationId"],
+    },
+  },
 ]
 
 /**
@@ -207,6 +381,24 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
  */
 export function getFunctionsForAPI() {
   return AGENT_FUNCTIONS.map((fn) => ({
+    type: "function" as const,
+    function: {
+      name: fn.name,
+      description: fn.description,
+      parameters: fn.parameters,
+    },
+  }))
+}
+
+/**
+ * Get ONLY delegation functions for Router Agent
+ * Router orchestrates but doesn't execute business functions directly
+ */
+export function getFunctionsForRouter() {
+  const delegationFunctions = AGENT_FUNCTIONS.filter((fn) =>
+    fn.name.endsWith("Agent")
+  )
+  return delegationFunctions.map((fn) => ({
     type: "function" as const,
     function: {
       name: fn.name,

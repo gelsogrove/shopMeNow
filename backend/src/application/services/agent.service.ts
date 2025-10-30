@@ -66,9 +66,10 @@ export class AgentService {
         model: agent.model,
         maxTokens: agent.maxTokens, // ✅ STANDARD: camelCase
         order: agent.order,
-        agentType: agent.agentType,
+        agentType: agent.type, // ✅ FIX: Database field is "type" not "agentType"
         isActive: agent.isActive,
-        functions: getFunctionsForAgentType(agent.agentType), // 🆕 Function calls list
+        icon: agent.icon, // 🎨 Icon name from database
+        functions: getFunctionsForAgentType(agent.type), // ✅ FIX: Use "type" field
         createdAt: agent.createdAt,
         updatedAt: agent.updatedAt,
       }))

@@ -71,19 +71,29 @@ interface AgentFormData {
 // Mapping agent types to their available call functions
 const AGENT_CALL_FUNCTIONS: Record<string, string[]> = {
   router: [
-    "ContactOperator",
-    "GetLinkOrderByCode",
-    "repeatOrder",
-    "resetCart",
-    "addProduct",
-    "manageNotifications",
-    "searchProduct",
+    // ONLY Sub-Agent Delegation - Router orchestrates, doesn't execute
+    "productSearchAgent",
+    "cartManagementAgent",
+    "orderTrackingAgent",
+    "customerSupportAgent",
   ],
-  product_search: ["searchProduct"],
-  cart_management: ["addProduct", "resetCart"],
-  order_tracking: ["GetLinkOrderByCode", "repeatOrder"],
-  customer_support: ["ContactOperator"],
-  safety: [], // Safety agent doesn't call functions, only validates
+  product_search: ["searchProducts"],
+  cart_management: [
+    "addToCart",
+    "viewCart",
+    "removeFromCart",
+    "updateCartQuantity",
+    "clearCart",
+  ],
+  order_tracking: [
+    "getOrders",
+    "getOrder",
+    "trackOrder",
+    "sendInvoice",
+    "repeatLastOrder",
+  ],
+  customer_support: ["contactSupport"],
+  safety_translation: ["sendAlertEmail"], // Sends alerts for security/policy violations
 }
 
 // Map icon name from database to Lucide icon component
@@ -107,32 +117,22 @@ const getAgentIcon = (iconName: string | undefined, agentType: string) => {
   // Normalize agent type (handle ROUTER, Router, router, etc.)
   const normalizedType = agentType.toLowerCase().replace(/_/g, "_")
 
-  // Color mapping based on agent type for vibrant look
-  const colorConfig: Record<string, { bg: string; icon: string }> = {
-    router: { bg: "bg-green-100", icon: "text-green-600" },
-    product_search: { bg: "bg-blue-100", icon: "text-blue-600" },
-    cart_management: { bg: "bg-emerald-100", icon: "text-emerald-600" },
-    order_tracking: { bg: "bg-orange-100", icon: "text-orange-600" },
-    customer_support: { bg: "bg-pink-100", icon: "text-pink-600" },
-    safety_translation: { bg: "bg-indigo-100", icon: "text-indigo-600" },
+  // Color mapping based on agent type - SAME AS MESSAGE FLOW TIMELINE
+  // Solid background with white icon (timeline style)
+  const colorConfig: Record<string, { bg: string }> = {
+    router: { bg: "bg-purple-600" },           // Purple like timeline
+    product_search: { bg: "bg-blue-600" },     // Blue
+    cart_management: { bg: "bg-green-600" },   // Green
+    order_tracking: { bg: "bg-orange-600" },   // Orange
+    customer_support: { bg: "bg-pink-600" },   // Pink
+    safety_translation: { bg: "bg-red-600" },  // Red like timeline
   }
 
-  // Debug: log per capire perché tutte le icone sono uguali
-  console.log("🔍 getAgentIcon called:", {
-    iconName,
-    agentType,
-    normalizedType,
-    hasColor: !!colorConfig[normalizedType],
-  })
-
-  const colors = colorConfig[normalizedType] || {
-    bg: "bg-gray-100",
-    icon: "text-gray-600",
-  }
+  const colors = colorConfig[normalizedType] || { bg: "bg-gray-600" }
 
   return (
-    <div className={`${colors.bg} p-2.5 rounded-full`}>
-      <Icon className={`h-5 w-5 ${colors.icon}`} />
+    <div className={`${colors.bg} p-2.5 rounded-full shadow-md`}>
+      <Icon className="h-5 w-5 text-white" />
     </div>
   )
 }
@@ -306,30 +306,30 @@ export function AgentConfigurationPage() {
                 const callFunctions = AGENT_CALL_FUNCTIONS[normalizedType] || []
                 const isSaving = savingAgents[agent.id]
 
-                // Debug log to see what's happening
-                console.log(
-                  "🔍 Agent CF lookup:",
-                  "\n  Name:",
-                  formData.name,
-                  "\n  Type:",
-                  formData.agentType,
-                  "\n  Normalized:",
-                  normalizedType,
-                  "\n  Functions:",
-                  callFunctions.length,
-                  "->",
-                  callFunctions
-                )
+                // 🌳 Tree hierarchy: Router is root with sub-agents indented
+                // Safety & Translation is independent final layer (not child of Router)
+                const isRouter = normalizedType === "router"
+                const isSafety = normalizedType === "safety_translation"
+                const isSubAgent = !isRouter && !isSafety
+                const indentClass = isSubAgent ? "ml-8" : ""
 
                 return (
                   <AccordionItem
                     key={agent.id}
                     value={agent.id}
-                    className="border rounded-lg bg-white shadow-sm"
+                    className={`border rounded-lg bg-white shadow-sm ${indentClass}`}
                   >
                     <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-gray-50">
                       <div className="flex items-center justify-between w-full pr-4">
+                        {/* LEFT SIDE: Icon + Agent Info */}
                         <div className="flex items-center gap-3">
+                          {/* 🌳 Tree connector ONLY for sub-agents (not Router, not Safety) */}
+                          {isSubAgent && (
+                            <div className="flex items-center text-gray-400">
+                              <div className="w-6 h-px bg-gray-300"></div>
+                              <ChevronRight className="h-4 w-4 -ml-1" />
+                            </div>
+                          )}
                           {getAgentIcon(formData.icon, formData.agentType)}
                           <div className="text-left">
                             <h3
@@ -354,24 +354,29 @@ export function AgentConfigurationPage() {
                               >
                                 {formData.model}
                               </span>
-                              {callFunctions.length > 0 && (
-                                <>
-                                  <span className="text-gray-300">•</span>
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    {callFunctions.map((func) => (
-                                      <span
-                                        key={func}
-                                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border rounded-full text-xs font-medium text-gray-700"
-                                      >
-                                        <ChevronRight className="h-3 w-3 text-green-600" />
-                                        {func}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </>
-                              )}
                             </div>
                           </div>
+                        </div>
+
+                        {/* RIGHT SIDE: Call Functions or Routing Badge */}
+                        <div className="flex items-center gap-1.5 flex-wrap ml-4">
+                          {callFunctions.length > 0 ? (
+                            // Show CF badges for function-calling agents
+                            callFunctions.map((func) => (
+                              <span
+                                key={func}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border rounded-full text-xs font-medium text-gray-700"
+                              >
+                                <ChevronRight className="h-3 w-3 text-green-600" />
+                                {func}
+                              </span>
+                            ))
+                          ) : agent.name === "router" || agent.name === "safety_translation" ? (
+                            // Show routing badge for Router/Safety agents
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-200 rounded-full text-xs font-medium text-blue-700">
+                              🔀 Routes to sub-agents
+                            </span>
+                          ) : null}
                         </div>
                       </div>
                     </AccordionTrigger>
