@@ -77,7 +77,7 @@ const AGENT_CALL_FUNCTIONS: Record<string, string[]> = {
     "orderTrackingAgent",
     "customerSupportAgent",
   ],
-  product_search: ["searchProducts"],
+  product_search: ["searchProducts", "searchProductByCertifications"],
   cart_management: [
     "addToCart",
     "viewCart",

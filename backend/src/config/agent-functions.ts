@@ -136,6 +136,36 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
 
   {
+    name: "searchProductByCertifications",
+    description:
+      "Search for products filtered by specific certifications. Use this when customer explicitly asks for certified products (bio, halal, vegan, vegetarian, etc.). Returns products that match ALL specified certifications.",
+    parameters: {
+      type: "object",
+      properties: {
+        certifications: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            'Certification filters to match (e.g., ["bio", "halal", "vegan", "vegetarian"]). Products must have ALL specified certifications.',
+        },
+        category: {
+          type: "string",
+          description: "Optional category ID to further filter results",
+        },
+        minPrice: {
+          type: "number",
+          description: "Optional minimum price filter in EUR",
+        },
+        maxPrice: {
+          type: "number",
+          description: "Optional maximum price filter in EUR",
+        },
+      },
+      required: ["certifications"],
+    },
+  },
+
+  {
     name: "addToCart",
     description:
       "Add a specific product to the customer's cart. Use this when customer explicitly wants to purchase or add a product. Requires product ID from previous search results.",

@@ -98,7 +98,7 @@ export function App() {
                 <Route path="/analytics" element={<Layout />}>
                   <Route index element={<AnalyticsPage />} />
                 </Route>
-                <Route path="/agent" element={<Layout />}>
+                <Route path="/agents" element={<Layout />}>
                   <Route index element={<AgentConfigurationPage />} />
                 </Route>
                 <Route path="/clients" element={<Layout />}>

@@ -1,4 +1,5 @@
 import {
+  ChevronRight,
   Database,
   GitBranch,
   Headphones,
@@ -177,27 +178,42 @@ export default function MessageFlowDialog({
     "Message delivered"
 
   // 💾 Step: Save to History (BEFORE WhatsApp send)
-  const saveToHistoryStep: DebugStep = {
-    type: "function_call" as any,
+  const saveToHistoryStep: any = {
+    type: "function_call",
     agent: "💾 Save to History",
     timestamp: new Date(
       new Date(safetySteps[0]?.timestamp || new Date()).getTime() + 100
     ).toISOString(),
+    input: {
+      textToSave: finalMessage,
+      customerId: "customer-id",
+      conversationId: "conversation-id",
+      status: "pending",
+    },
     output: {
       result: "Message saved to database with status: pending",
+      messageId: "msg-" + Date.now(),
       executionTimeMs: 50,
     },
   }
 
   // 📤 Step: Add to WhatsApp Queue (BEFORE actual send)
-  const queueStep: DebugStep = {
-    type: "function_call" as any,
+  const queueStep: any = {
+    type: "function_call",
     agent: "📤 Add to WhatsApp Queue",
     timestamp: new Date(
       new Date(safetySteps[0]?.timestamp || new Date()).getTime() + 150
     ).toISOString(),
+    input: {
+      messageId: saveToHistoryStep.output?.messageId,
+      phoneNumber: "+39XXXXXXXXXX",
+      message: finalMessage,
+      priority: "normal",
+    },
     output: {
-      result: "Message queued for WhatsApp delivery (mock)",
+      result: "Message queued for WhatsApp delivery",
+      queuePosition: 1,
+      estimatedSendTime: "immediate",
       executionTimeMs: 20,
     },
   }
@@ -298,8 +314,17 @@ export default function MessageFlowDialog({
                         {step.model} • T: {step.temperature}
                       </p>
                     )}
+                    {/* 🎯 Show Call Function if present */}
+                    {step.functionName && (
+                      <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 bg-purple-50 border border-purple-200 rounded-full">
+                        <ChevronRight className="h-4 w-4 text-purple-600" />
+                        <span className="text-sm font-semibold text-purple-700">
+                          CF: {step.functionName}
+                        </span>
+                      </div>
+                    )}
                     {step.output?.executionTimeMs && (
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-gray-400 mt-1">
                         Duration:{" "}
                         {(step.output.executionTimeMs / 1000).toFixed(2)}s
                       </p>

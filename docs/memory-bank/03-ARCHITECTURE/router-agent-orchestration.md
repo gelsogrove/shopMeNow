@@ -167,8 +167,8 @@ The **Router Agent** is the central orchestrator of ShopME's multi-agent system.
 ### **1. Product Search Agent**
 
 - **Purpose**: Product catalog search, filtering, recommendations
-- **Call Functions**: `searchProducts`
-- **When to use**: Complex product queries, multiple filters, recommendations
+- **Call Functions**: `searchProducts`, `searchProductByCertifications`
+- **When to use**: Complex product queries, multiple filters, recommendations, certification-based searches
 
 ### **2. Cart Management Agent**
 
