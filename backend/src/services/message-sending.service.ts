@@ -132,7 +132,28 @@ export class MessageSendingService {
         })
       }
 
-      // 3. Send to WhatsApp
+      // 3. Save to database BEFORE sending to WhatsApp (for better audit trail)
+      let messageId: string | undefined
+      if (options.chatSessionId) {
+        logger.info("💾 [MESSAGE-SEND] Saving to history BEFORE WhatsApp send", {
+          chatSessionId: options.chatSessionId,
+          sendType: options.sendType,
+        })
+
+        messageId = await this.saveMessageToDatabase(
+          options,
+          finalMessage,
+          { success: false }, // Temporary status, will update after WhatsApp send
+          securityChecked
+        )
+
+        logger.info("✅ [MESSAGE-SEND] Message saved to history", {
+          messageId,
+          duration: Date.now() - startTime,
+        })
+      }
+
+      // 4. Send to WhatsApp
       logger.info("📱 [MESSAGE-SEND] Sending to WhatsApp", {
         phoneNumber: options.phoneNumber,
         messageLength: finalMessage.length,
@@ -150,6 +171,11 @@ export class MessageSendingService {
           phoneNumber: options.phoneNumber,
         })
 
+        // Update message status to failed
+        if (messageId) {
+          await this.updateMessageStatus(messageId, "failed", whatsappResult.error)
+        }
+
         return {
           success: false,
           error: whatsappResult.error,
@@ -163,14 +189,9 @@ export class MessageSendingService {
         duration: Date.now() - startTime,
       })
 
-      // 4. Save to database with audit trail
-      if (options.chatSessionId) {
-        await this.saveMessageToDatabase(
-          options,
-          finalMessage,
-          whatsappResult,
-          securityChecked
-        )
+      // 5. Update message status to sent
+      if (messageId) {
+        await this.updateMessageStatus(messageId, "sent", undefined, whatsappResult.messageId)
       }
 
       return {
@@ -301,20 +322,21 @@ export class MessageSendingService {
 
   /**
    * Salva il messaggio nel database con audit trail
+   * @returns messageId del messaggio salvato
    */
   private async saveMessageToDatabase(
     options: SendMessageOptions,
     finalMessage: string,
     whatsappResult: any,
     securityChecked: boolean
-  ) {
+  ): Promise<string | undefined> {
     try {
-      await this.prisma.message.create({
+      const savedMessage = await this.prisma.message.create({
         data: {
           chatSessionId: options.chatSessionId!,
           direction: "OUTBOUND",
           content: finalMessage,
-          whatsappStatus: whatsappResult.success ? "sent" : "failed",
+          whatsappStatus: whatsappResult.success ? "sent" : "pending",
           whatsappError: whatsappResult.error || null,
           whatsappMessageId: whatsappResult.messageId || null,
           metadata: {
@@ -330,13 +352,48 @@ export class MessageSendingService {
       logger.info("💾 [MESSAGE-SEND] Message saved to database", {
         chatSessionId: options.chatSessionId,
         sendType: options.sendType,
+        messageId: savedMessage.id,
       })
+
+      return savedMessage.id
     } catch (error) {
       logger.error("❌ [MESSAGE-SEND] Failed to save message to DB", {
         error,
         chatSessionId: options.chatSessionId,
       })
-      // Don't throw - WhatsApp message was sent successfully
+      // Don't throw - continue with WhatsApp send
+      return undefined
+    }
+  }
+
+  /**
+   * Aggiorna lo stato WhatsApp del messaggio
+   */
+  private async updateMessageStatus(
+    messageId: string,
+    status: "sent" | "failed" | "pending",
+    error?: string,
+    whatsappMessageId?: string
+  ) {
+    try {
+      await this.prisma.message.update({
+        where: { id: messageId },
+        data: {
+          whatsappStatus: status,
+          whatsappError: error || null,
+          whatsappMessageId: whatsappMessageId || null,
+        },
+      })
+
+      logger.info("✅ [MESSAGE-SEND] Message status updated", {
+        messageId,
+        status,
+      })
+    } catch (error) {
+      logger.error("❌ [MESSAGE-SEND] Failed to update message status", {
+        error,
+        messageId,
+      })
     }
   }
 

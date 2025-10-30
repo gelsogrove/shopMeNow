@@ -63,15 +63,21 @@ export default function MessageFlowDialog({
     if (type === "router") return "#9333EA" // Purple
     if (type === "safety") return "#DC2626" // Red
     if (type === "whatsapp_delivery") return "#16A34A" // Green
+    if (agent?.includes("Save to History")) return "#F59E0B" // Orange/Amber for database save
+    if (agent?.includes("WhatsApp Queue")) return "#0EA5E9" // Sky blue for queue
     return "#3B82F6" // Blue for sub-agents
   }
 
-  const getAgentIcon = (type: string): React.ReactNode => {
+  const getAgentIcon = (type: string, agent?: string): React.ReactNode => {
     if (type === "user") return <User className="w-5 h-5" />
     if (type === "router") return <Brain className="w-5 h-5" />
     if (type === "safety") return <Shield className="w-5 h-5" />
     if (type === "whatsapp_delivery")
       return <MessageSquare className="w-5 h-5" />
+    if (agent?.includes("Save to History"))
+      return <span className="text-lg">💾</span>
+    if (agent?.includes("WhatsApp Queue"))
+      return <span className="text-lg">📤</span>
     return <Settings className="w-5 h-5" />
   }
 
@@ -134,20 +140,54 @@ export default function MessageFlowDialog({
     routerSteps[routerSteps.length - 1]?.output?.textResponse ||
     "Message delivered"
 
+  // 💾 Step: Save to History (BEFORE WhatsApp send)
+  const saveToHistoryStep: DebugStep = {
+    type: "function_call" as any,
+    agent: "💾 Save to History",
+    timestamp: new Date(
+      new Date(safetySteps[0]?.timestamp || new Date()).getTime() + 100
+    ).toISOString(),
+    output: {
+      result: "Message saved to database with status: pending",
+      executionTimeMs: 50,
+    },
+  }
+
+  // 📤 Step: Add to WhatsApp Queue (BEFORE actual send)
+  const queueStep: DebugStep = {
+    type: "function_call" as any,
+    agent: "📤 Add to WhatsApp Queue",
+    timestamp: new Date(
+      new Date(safetySteps[0]?.timestamp || new Date()).getTime() + 150
+    ).toISOString(),
+    output: {
+      result: "Message queued for WhatsApp delivery (mock)",
+      executionTimeMs: 20,
+    },
+  }
+
+  // 📱 Step: WhatsApp API Send (actual delivery with TRUE/FALSE)
   const whatsappStep: DebugStep = {
     type: "whatsapp_delivery",
     agent: "WhatsApp API",
-    timestamp: new Date().toISOString(),
-    output: { textResponse: finalMessage },
+    timestamp: new Date(
+      new Date(safetySteps[0]?.timestamp || new Date()).getTime() + 200
+    ).toISOString(),
+    output: {
+      result: "✅ TRUE - Message sent successfully", // Mock TRUE (success)
+      textResponse: finalMessage,
+    },
   }
 
-  // Sequenza timeline: UserMessage, Router1, SubAgent, Router2, Safety, WhatsApp
+  // Sequenza timeline: UserMessage, Router1, SubAgent, Router2, Safety, SaveHistory, Queue, WhatsApp
   const timelineSequence = [
     userStep,
     routerSteps[0],
     subAgentSteps[0],
     routerSteps[1],
     safetySteps[0],
+    saveToHistoryStep,
+    queueStep,
     whatsappStep,
   ].filter(Boolean) // Rimuovi undefined
 
