@@ -135,10 +135,13 @@ export class MessageSendingService {
       // 3. Save to database BEFORE sending to WhatsApp (for better audit trail)
       let messageId: string | undefined
       if (options.chatSessionId) {
-        logger.info("💾 [MESSAGE-SEND] Saving to history BEFORE WhatsApp send", {
-          chatSessionId: options.chatSessionId,
-          sendType: options.sendType,
-        })
+        logger.info(
+          "💾 [MESSAGE-SEND] Saving to history BEFORE WhatsApp send",
+          {
+            chatSessionId: options.chatSessionId,
+            sendType: options.sendType,
+          }
+        )
 
         messageId = await this.saveMessageToDatabase(
           options,
@@ -173,7 +176,11 @@ export class MessageSendingService {
 
         // Update message status to failed
         if (messageId) {
-          await this.updateMessageStatus(messageId, "failed", whatsappResult.error)
+          await this.updateMessageStatus(
+            messageId,
+            "failed",
+            whatsappResult.error
+          )
         }
 
         return {
@@ -191,7 +198,12 @@ export class MessageSendingService {
 
       // 5. Update message status to sent
       if (messageId) {
-        await this.updateMessageStatus(messageId, "sent", undefined, whatsappResult.messageId)
+        await this.updateMessageStatus(
+          messageId,
+          "sent",
+          undefined,
+          whatsappResult.messageId
+        )
       }
 
       return {
