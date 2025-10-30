@@ -120,12 +120,12 @@ const getAgentIcon = (iconName: string | undefined, agentType: string) => {
   // Color mapping based on agent type - SAME AS MESSAGE FLOW TIMELINE
   // Solid background with white icon (timeline style)
   const colorConfig: Record<string, { bg: string }> = {
-    router: { bg: "bg-purple-600" },           // Purple like timeline
-    product_search: { bg: "bg-blue-600" },     // Blue
-    cart_management: { bg: "bg-green-600" },   // Green
-    order_tracking: { bg: "bg-orange-600" },   // Orange
-    customer_support: { bg: "bg-pink-600" },   // Pink
-    safety_translation: { bg: "bg-red-600" },  // Red like timeline
+    router: { bg: "bg-purple-600" }, // Purple like timeline
+    product_search: { bg: "bg-blue-600" }, // Blue
+    cart_management: { bg: "bg-green-600" }, // Green
+    order_tracking: { bg: "bg-orange-600" }, // Orange
+    customer_support: { bg: "bg-pink-600" }, // Pink
+    safety_translation: { bg: "bg-red-600" }, // Red like timeline
   }
 
   const colors = colorConfig[normalizedType] || { bg: "bg-gray-600" }
@@ -371,7 +371,8 @@ export function AgentConfigurationPage() {
                                 {func}
                               </span>
                             ))
-                          ) : agent.name === "router" || agent.name === "safety_translation" ? (
+                          ) : agent.name === "router" ||
+                            agent.name === "safety_translation" ? (
                             // Show routing badge for Router/Safety agents
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-200 rounded-full text-xs font-medium text-blue-700">
                               🔀 Routes to sub-agents

@@ -2,7 +2,7 @@
 
 **Status**: ✅ Active  
 **Last Updated**: 2025-10-30  
-**Owner**: Andrea  
+**Owner**: Andrea
 
 ---
 
@@ -17,11 +17,13 @@ The **Router Agent** is the central orchestrator of ShopME's multi-agent system.
 ### **Core Responsibilities**
 
 1. **Context Management**
+
    - Maintains full conversation history (storico)
    - Loads and integrates FAQ database into prompt
    - Understands customer roles and permissions
 
 2. **Intent Analysis**
+
    - Analyzes customer message intent
    - Decides whether to:
      - Answer directly (simple queries, FAQ matches)
@@ -129,6 +131,7 @@ The **Router Agent** is the central orchestrator of ShopME's multi-agent system.
 ### **Router Agent Functions**
 
 #### **Sub-Agent Delegation** (Priority: High)
+
 ```typescript
 {
   name: "productSearchAgent",
@@ -137,14 +140,14 @@ The **Router Agent** is the central orchestrator of ShopME's multi-agent system.
 }
 
 {
-  name: "cartManagementAgent", 
+  name: "cartManagementAgent",
   description: "Delegate to Cart Management specialist",
   parameters: { query: string }
 }
 
 {
   name: "orderTrackingAgent",
-  description: "Delegate to Order Tracking specialist", 
+  description: "Delegate to Order Tracking specialist",
   parameters: { query: string }
 }
 
@@ -162,26 +165,31 @@ The **Router Agent** is the central orchestrator of ShopME's multi-agent system.
 ## 🎭 Sub-Agent Specialists
 
 ### **1. Product Search Agent**
+
 - **Purpose**: Product catalog search, filtering, recommendations
 - **Call Functions**: `searchProducts`
 - **When to use**: Complex product queries, multiple filters, recommendations
 
-### **2. Cart Management Agent**  
+### **2. Cart Management Agent**
+
 - **Purpose**: All cart operations
 - **Call Functions**: `addToCart`, `viewCart`, `removeFromCart`, `updateCartQuantity`, `clearCart`
 - **When to use**: Cart modifications, viewing cart state
 
 ### **3. Order Tracking Agent**
+
 - **Purpose**: Order history, status, tracking, invoices, repeat orders
-- **Call Functions**: `getOrders`, `getOrder`, `trackOrder`, `sendInvoice`, `repeatLastOrder`  
+- **Call Functions**: `getOrders`, `getOrder`, `trackOrder`, `sendInvoice`, `repeatLastOrder`
 - **When to use**: Order inquiries, tracking status, invoice requests, reordering
 
 ### **4. Customer Support Agent**
+
 - **Purpose**: Escalation, complex issues, human handoff
 - **Call Functions**: `contactSupport`
 - **When to use**: Frustrated customers, unresolved issues
 
 ### **5. Safety & Translation Agent** (Always Last)
+
 - **Purpose**: Content validation, translation, security monitoring
 - **Call Functions**: `sendAlertEmail` (alerts admins of security issues)
 - **When to use**: ALWAYS - final step before WhatsApp
@@ -192,35 +200,40 @@ The **Router Agent** is the central orchestrator of ShopME's multi-agent system.
 ## 📊 Decision Logic
 
 ### **When Router Answers Directly**
+
 ✅ FAQ match (high confidence)  
 ✅ Simple greeting/small talk  
 ✅ Quick info requests (no business operations needed)
 ✅ Clarification questions
 
 ### **When Router Delegates to Sub-Agent**
+
 🔀 **ALWAYS** for product searches → productSearchAgent
 🔀 **ALWAYS** for cart operations → cartManagementAgent
 🔀 **ALWAYS** for order queries → orderTrackingAgent
 🔀 **ALWAYS** for support/escalation → customerSupportAgent
 
-**Important**: Router NEVER executes business functions directly. It only delegates to specialists.  
+**Important**: Router NEVER executes business functions directly. It only delegates to specialists.
 
 ---
 
 ## 🔒 Security & Validation
 
 ### **Safety & Translation Layer** (MANDATORY)
+
 ```
 EVERY response → Safety Agent → Translation → WhatsApp
 ```
 
 **Safety Checks**:
+
 - ❌ No personal data leakage
-- ❌ No inappropriate content  
+- ❌ No inappropriate content
 - ❌ No system information exposure
 - ✅ Business-appropriate language
 
 **Translation**:
+
 - Detects customer language
 - Translates to customer's preferred language
 - Maintains tone and context
@@ -230,6 +243,7 @@ EVERY response → Safety Agent → Translation → WhatsApp
 ## 💾 Data Flow
 
 ### **Router Agent Context**
+
 ```typescript
 {
   conversationHistory: Message[],  // Last 10 minutes
@@ -242,7 +256,7 @@ EVERY response → Safety Agent → Translation → WhatsApp
   },
   availableSubAgents: [
     "ProductSearch",
-    "CartManagement", 
+    "CartManagement",
     "OrderTracking",
     "CustomerSupport"
   ]
@@ -250,6 +264,7 @@ EVERY response → Safety Agent → Translation → WhatsApp
 ```
 
 ### **Sub-Agent Response Format**
+
 ```typescript
 {
   success: boolean,
@@ -265,16 +280,19 @@ EVERY response → Safety Agent → Translation → WhatsApp
 ## 📈 Performance Considerations
 
 ### **Token Optimization**
+
 - Router has full context → More tokens per call
 - Sub-agents are focused → Fewer tokens per call
 - Direct operations → No sub-agent overhead
 
 ### **Latency**
+
 - FAQ hit: ~50ms (database only)
 - Direct operation: ~500-1000ms (Router → Function)
 - Delegated operation: ~1500-2500ms (Router → Sub-Agent → Router)
 
 ### **Cost**
+
 - Router call: ~1500-2000 tokens (with history + FAQ)
 - Sub-agent call: ~500-800 tokens (focused context)
 - Safety layer: ~300-500 tokens (validation + translation)
@@ -284,21 +302,24 @@ EVERY response → Safety Agent → Translation → WhatsApp
 ## 🧪 Testing Strategy
 
 ### **Router Tests**
+
 ✅ FAQ matching accuracy  
 ✅ Intent classification  
 ✅ Delegation decisions  
-✅ Context management  
+✅ Context management
 
 ### **Sub-Agent Tests**
+
 ✅ Function execution  
 ✅ Result formatting  
 ✅ Error handling  
-✅ Token usage  
+✅ Token usage
 
 ### **Integration Tests**
+
 ✅ End-to-end flow  
 ✅ Safety layer validation  
-✅ Translation accuracy  
+✅ Translation accuracy
 
 ---
 
