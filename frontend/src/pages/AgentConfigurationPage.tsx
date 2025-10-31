@@ -81,11 +81,13 @@ interface AgentFormData {
 // Mapping agent types to their available call functions
 const AGENT_CALL_FUNCTIONS: Record<string, string[]> = {
   router: [
-    // ONLY Sub-Agent Delegation - Router orchestrates, doesn't execute
+    // Sub-Agent Delegation Functions
     "productSearchAgent",
     "cartManagementAgent",
     "orderTrackingAgent",
     "customerSupportAgent",
+    // Direct Utility Functions
+    "manageNotifications", // 🆕 SUBSCRIBE/UNSUBSCRIBE push notifications
   ],
   product_search: ["searchProducts", "searchProductByCertifications"],
   cart_management: [

@@ -359,6 +359,24 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     },
   },
 
+  {
+    name: "manageNotifications",
+    description:
+      "Manage customer's push notification subscription for offers and updates. Use when customer explicitly requests to subscribe/unsubscribe from promotional messages or asks about notifications. FLOW: 1) Customer asks ('voglio ricevere offerte', 'iscrivimi', 'subscribe', 'non voglio più notifiche', 'unsubscribe'), 2) Confirm intention, 3) Call this function, 4) Show result message. IMPORTANT: Only call after explicit customer confirmation.",
+    parameters: {
+      type: "object",
+      properties: {
+        action: {
+          type: "string",
+          enum: ["SUBSCRIBE", "UNSUBSCRIBE"],
+          description:
+            "Action to perform: SUBSCRIBE to enable push notifications, UNSUBSCRIBE to disable them",
+        },
+      },
+      required: ["action"],
+    },
+  },
+
   // ========================================
   // SAFETY & TRANSLATION LAYER FUNCTIONS
   // ========================================
@@ -421,14 +439,21 @@ export function getFunctionsForAPI() {
 }
 
 /**
- * Get ONLY delegation functions for Router Agent
- * Router orchestrates but doesn't execute business functions directly
+ * Get functions for Router Agent
+ * Includes: delegation functions (sub-agents) + direct utility functions
  */
 export function getFunctionsForRouter() {
-  const delegationFunctions = AGENT_FUNCTIONS.filter((fn) =>
-    fn.name.endsWith("Agent")
-  )
-  return delegationFunctions.map((fn) => ({
+  // Router Agent can call:
+  // 1. Delegation functions (productSearchAgent, cartManagementAgent, etc.)
+  // 2. Direct utility functions (manageNotifications)
+  const routerFunctions = AGENT_FUNCTIONS.filter((fn) => {
+    return (
+      fn.name.endsWith("Agent") || // Delegation to sub-agents
+      fn.name === "manageNotifications" // Customer engagement (SUBSCRIBE/UNSUBSCRIBE)
+    )
+  })
+
+  return routerFunctions.map((fn) => ({
     type: "function" as const,
     function: {
       name: fn.name,
@@ -436,4 +461,58 @@ export function getFunctionsForRouter() {
       parameters: fn.parameters,
     },
   }))
+}
+
+/**
+ * Get function names for a specific agent type (for UI display)
+ * Extracts function names from AGENT_FUNCTIONS based on agent type
+ */
+export function getFunctionNamesForAgentType(agentType: string): string[] {
+  switch (agentType) {
+    case "ROUTER":
+      // Router has: delegation functions + manageNotifications
+      return AGENT_FUNCTIONS.filter(
+        (fn) =>
+          fn.name.endsWith("Agent") ||
+          fn.name === "manageNotifications"
+      ).map((fn) => fn.name)
+
+    case "PRODUCT_SEARCH":
+      return ["searchProducts", "searchProductByCertifications"]
+
+    case "CART_MANAGEMENT":
+      return [
+        "addToCart",
+        "viewCart",
+        "removeFromCart",
+        "updateCartQuantity",
+        "clearCart",
+        "repeatLastOrder",
+      ]
+
+    case "ORDER_TRACKING":
+      return [
+        "getOrders",
+        "getOrder",
+        "trackOrder",
+        "sendInvoice",
+        "repeatLastOrder",
+      ]
+
+    case "CUSTOMER_SUPPORT":
+      return ["contactSupport"]
+
+    case "SAFETY_TRANSLATION":
+      return ["sendAlertEmail"]
+
+    default:
+      return []
+  }
+}
+
+/**
+ * Get all unique function names across all agents
+ */
+export function getAllFunctionNames(): string[] {
+  return AGENT_FUNCTIONS.map((fn) => fn.name).sort()
 }

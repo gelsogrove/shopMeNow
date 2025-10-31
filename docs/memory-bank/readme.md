@@ -59,9 +59,12 @@ memory-bank/
 │   ├── debug-system-implementation.md
 │   ├── image-upload-system.md
 │   ├── message-sending-implementation.md
+│   ├── push-notifications-subscription.md 🆕
 │   ├── scheduler-service.md
 │   ├── short-links.md
-│   └── whatsapp-implementation-complete.md
+│   ├── whatsapp-implementation-complete.md
+│   └── calling-functions/
+│       └── technical-documentation.md
 ├── 03-architecture/
 │   ├── calling-functions-architecture.md
 │   ├── calling-functions-routing.md
@@ -100,7 +103,8 @@ memory-bank/
 | **🔒 Message Translation Security**    | [`01-security/message-translation-security-layer.md`](./01-security/message-translation-security-layer.md) | **✅ NEW: English-only DB + mandatory translation layer**              |
 | Audit e roadmap sicurezza              | [`01-security/assessments/`](./01-security/assessments/)                                                   | Security score, TODO prioritizzati, OWASP                              |
 | Configurazione HTTPS & integrazioni    | [`01-security/guides/`](./01-security/guides/)                                                             | Setup SSL, guida integrazione security                                 |
-| Feature e servizi core                 | [`02-features/`](./02-features/)                                                                           | Scheduler, short links, invio messaggi, analytics                      |
+| Feature e servizi core                 | [`02-features/`](./02-features/)                                                                           | Scheduler, short links, invio messaggi, analytics, **push notifications** 🔔 |
+| **🔔 Push Notifications Subscription** | [`02-features/push-notifications-subscription.md`](./02-features/push-notifications-subscription.md)       | **✅ NEW: SUBSCRIBE/UNSUBSCRIBE via chatbot + calling functions**     |
 | Architettura sistema                   | [`03-architecture/`](./03-architecture/)                                                                   | Flow LLM, websocket, endpoints, style guide                            |
 | Standard di sviluppo                   | [`04-best-practices/`](./04-best-practices/)                                                               | Linee guida backend e frontend                                         |
 | Guide operative e onboarding           | [`05-guides/`](./05-guides/)                                                                               | WhatsApp setup, unit test, script operativi, **pricing management** 💰 |
