@@ -2,26 +2,21 @@
 
 > **Organized technical documentation for the ShopME platform**
 >
-> Naviga per cartelle tematiche: sicurezza, funzionalità,## 📎 Link Rapidi
+> Naviga per cartelle tematiche: sicurezza, funzionalità, architettura, best practice e guide operative.
 
+---
+
+## 📎 Link Rapidi
+
+- [PRD Generale](./prd.md)
 - [Security Hub](./01-security/readme.md)
 - [Token vs SessionID Architecture](./01-security/authentication/token-vs-sessionid-architecture.md)
 - [Rate Limiting Tests](./01-security/assessments/rate-limiting-tests.md)
 - [WhatsApp Setup Guide](./05-guides/whatsapp-setup-guide.md)
-- [PRD Generale](./prd.md)ettura, best practice e guide operative.
 
 ---
 
-## � Quick Start
-
-1. **Sicurezza prima di tutto** → [`01-SECURITY/README.md`](./01-SECURITY/README.md)
-2. **Capire le feature core** → [`02-FEATURES/`](./02-FEATURES/)
-3. **Mappa architettura completa** → [`03-ARCHITECTURE/`](./03-ARCHITECTURE/)
-4. **Setup e procedure** → [`05-GUIDES/`](./05-GUIDES/)
-
----
-
-## � Quick Start
+## 🚀 Quick Start
 
 1. **Sicurezza prima di tutto** → [`01-security/readme.md`](./01-security/readme.md)
 2. **Capire le feature core** → [`02-features/`](./02-features/)
@@ -30,7 +25,7 @@
 
 ---
 
-## �📂 Struttura Aggiornata
+## 📂 Struttura Aggiornata
 
 ```
 memory-bank/
@@ -59,7 +54,7 @@ memory-bank/
 │       └── integration-guide.md
 ├── 02-features/
 │   ├── analytics-top-sellers-implementation.md
-│   ├── billing-system.md
+│   ├── monthly-billing-system.md
 │   ├── cart-link-fix.md
 │   ├── debug-system-implementation.md
 │   ├── image-upload-system.md
