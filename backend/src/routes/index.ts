@@ -501,9 +501,18 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
       const token = req.query["hub.verify_token"]
       const challenge = req.query["hub.challenge"]
 
-      const verifyToken =
-        process.env.WHATSAPP_VERIFY_TOKEN || "test-verify-token"
-      if (mode === "subscribe" && token === verifyToken) {
+      // ✅ SECURITY FIX: No hardcoded fallback in production
+      const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN
+      if (!verifyToken && process.env.NODE_ENV === "production") {
+        logger.error("❌ WHATSAPP_VERIFY_TOKEN not configured")
+        res.status(500).send("Server configuration error")
+        return
+      }
+
+      if (
+        mode === "subscribe" &&
+        token === (verifyToken || "test-verify-token")
+      ) {
         logger.info("WhatsApp webhook verified")
         res.status(200).send(challenge)
         return
@@ -528,8 +537,17 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
       logger.info("📱 USING WHATSAPP FORMAT")
       phoneNumber = data.entry[0].changes[0].value.messages[0].from
       messageContent = data.entry[0].changes[0].value.messages[0].text?.body
-      workspaceId =
-        process.env.WHATSAPP_WORKSPACE_ID || "cm9hjgq9v00014qk8fsdy4ujv"
+
+      // ✅ SECURITY FIX: No hardcoded workspace ID
+      workspaceId = process.env.WHATSAPP_WORKSPACE_ID
+      if (!workspaceId) {
+        logger.error("❌ WHATSAPP_WORKSPACE_ID not configured")
+        if (process.env.NODE_ENV === "production") {
+          res.status(500).json({ error: "Server configuration error" })
+          return
+        }
+        workspaceId = "cm9hjgq9v00014qk8fsdy4ujv" // Dev only
+      }
 
       // Find customer by phone number with ALL needed data in ONE query
       try {
@@ -1093,8 +1111,6 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
       }
     }
 
-    // TODO: Send response back to WhatsApp
-
     res.json({
       success: true,
       data: {
@@ -1137,8 +1153,15 @@ router.get("/whatsapp/webhook", async (req, res) => {
   const token = req.query["hub.verify_token"]
   const challenge = req.query["hub.challenge"]
 
-  const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN || "test-verify-token"
-  if (mode === "subscribe" && token === verifyToken) {
+  // ✅ SECURITY FIX: No hardcoded fallback in production
+  const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN
+  if (!verifyToken && process.env.NODE_ENV === "production") {
+    logger.error("❌ WHATSAPP_VERIFY_TOKEN not configured")
+    res.status(500).send("Server configuration error")
+    return
+  }
+
+  if (mode === "subscribe" && token === (verifyToken || "test-verify-token")) {
     logger.info("WhatsApp webhook verified")
     res.status(200).send(challenge)
     return

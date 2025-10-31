@@ -358,11 +358,6 @@ L'ordine è stato processato e lo stock è stato aggiornato.
       logger.info(
         `[STOCK_LOG] Product ${productId}: ${change > 0 ? "+" : ""}${change} (${reason})`
       )
-
-      // TODO: Implement proper stock log table if needed
-      // await prisma.stockLog.create({
-      //   data: { productId, workspaceId, change, reason, orderId }
-      // });
     } catch (error) {
       logger.error("[STOCK] Error logging stock change:", error)
     }

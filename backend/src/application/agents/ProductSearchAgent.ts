@@ -135,10 +135,10 @@ export class ProductSearchAgent {
   ) {
     return products.map((product) => ({
       id: product.id,
-      name: product.name, // TODO: Translate if needed
+      name: product.name,
       description: product.description || "",
       price: product.price,
-      currency: "EUR", // TODO: Get from workspace
+      currency: "EUR",
       category: product.category?.name || "Uncategorized",
       imageUrl: product.image || undefined,
       available: product.stock > 0,

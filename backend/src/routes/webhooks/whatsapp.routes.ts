@@ -255,9 +255,22 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
       const token = req.query["hub.verify_token"]
       const challenge = req.query["hub.challenge"]
 
-      const verifyToken =
-        process.env.WHATSAPP_VERIFY_TOKEN || "test-verify-token"
-      if (mode === "subscribe" && token === verifyToken) {
+      // ✅ SECURITY FIX: No hardcoded fallback in production
+      const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN
+      if (!verifyToken) {
+        logger.error("❌ WHATSAPP_VERIFY_TOKEN not configured in environment")
+        if (process.env.NODE_ENV === "production") {
+          res.status(500).send("Server configuration error")
+          return
+        }
+        // Allow test token only in development
+        logger.warn("⚠️ Using test token in development mode")
+      }
+
+      if (
+        mode === "subscribe" &&
+        token === (verifyToken || "test-verify-token")
+      ) {
         logger.info("WhatsApp webhook verified")
         res.status(200).send(challenge)
         return
@@ -275,8 +288,19 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
       // WhatsApp format
       phoneNumber = data.entry[0].changes[0].value.messages[0].from
       messageContent = data.entry[0].changes[0].value.messages[0].text?.body
-      workspaceId =
-        process.env.WHATSAPP_WORKSPACE_ID || "cm9hjgq9v00014qk8fsdy4ujv"
+
+      // ✅ SECURITY FIX: No hardcoded workspace ID
+      workspaceId = process.env.WHATSAPP_WORKSPACE_ID
+      if (!workspaceId) {
+        logger.error("❌ WHATSAPP_WORKSPACE_ID not configured in environment")
+        if (process.env.NODE_ENV === "production") {
+          res.status(500).json({ error: "Server configuration error" })
+          return
+        }
+        // Allow test workspace only in development
+        logger.warn("⚠️ Using test workspace in development mode")
+        workspaceId = "cm9hjgq9v00014qk8fsdy4ujv"
+      }
 
       const customer = await prisma.customers.findFirst({
         where: {

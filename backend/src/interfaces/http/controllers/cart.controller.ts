@@ -532,7 +532,7 @@ export class CartController {
           items,
           totalItems: items.length,
           subtotal: totalAmount,
-          totalDiscount: 0, // TODO: Calculate if needed
+          totalDiscount: 0,
           finalTotal: totalAmount,
           lastUpdated: cart.updatedAt,
           createdAt: cart.createdAt,
