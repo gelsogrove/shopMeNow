@@ -42,10 +42,14 @@ describe("🔐 UNIT TEST: Basic Security Functionality", () => {
 
       // ✅ VERIFY: Only Workspace A customers returned
       expect(workspaceACustomers).toHaveLength(2)
-      expect(workspaceACustomers.every((c) => c.workspaceId === WORKSPACE_A)).toBe(true)
+      expect(
+        workspaceACustomers.every((c) => c.workspaceId === WORKSPACE_A)
+      ).toBe(true)
 
       // ✅ VERIFY: No Workspace B customers leaked
-      expect(workspaceACustomers.some((c) => c.workspaceId === WORKSPACE_B)).toBe(false)
+      expect(
+        workspaceACustomers.some((c) => c.workspaceId === WORKSPACE_B)
+      ).toBe(false)
     })
 
     test("should enforce workspaceId on CREATE operations", () => {
