@@ -11,6 +11,7 @@
 Sistema per gestire le iscrizioni dei clienti alle notifiche push promozionali attraverso conversazione naturale con il chatbot WhatsApp.
 
 **Funzionalità**:
+
 - ✅ Subscribe/Unsubscribe via conversazione naturale
 - ✅ Conferma esplicita richiesta prima dell'azione
 - ✅ Supporto multilingua (IT, EN, ES, PT)
@@ -22,6 +23,7 @@ Sistema per gestire le iscrizioni dei clienti alle notifiche push promozionali a
 ## 🎯 ARCHITETTURA
 
 ### Database Field
+
 ```prisma
 model Customers {
   id                        String   @id @default(uuid())
@@ -31,6 +33,7 @@ model Customers {
 ```
 
 ### Router Agent Function
+
 ```typescript
 // backend/src/config/agent-functions.ts
 {
@@ -51,6 +54,7 @@ model Customers {
 ```
 
 ### Service Implementation
+
 ```typescript
 // backend/src/services/calling-functions.service.ts (line 315)
 async manageNotifications(
@@ -59,19 +63,19 @@ async manageNotifications(
 ) {
   // Update customer pushNotificationsEnabled field
   await this.prisma.customers.update({
-    where: { 
-      id: context.customerId, 
-      workspaceId: context.workspaceId 
+    where: {
+      id: context.customerId,
+      workspaceId: context.workspaceId
     },
-    data: { 
-      pushNotificationsEnabled: args.action === "SUBSCRIBE" 
+    data: {
+      pushNotificationsEnabled: args.action === "SUBSCRIBE"
     }
   })
-  
+
   const message = args.action === "SUBSCRIBE"
     ? "✅ Iscrizione confermata! Riceverai le nostre offerte."
     : "✅ Disiscrizione confermata. Non riceverai più notifiche."
-    
+
   return { success: true, message }
 }
 ```
@@ -81,6 +85,7 @@ async manageNotifications(
 ## 💬 CONVERSATIONAL FLOW
 
 ### Subscribe Flow
+
 ```
 Cliente: "Voglio ricevere le offerte"
 Agent: "Perfetto! Vuoi iscriverti alle notifiche promozionali? Riceverai aggiornamenti sulle nostre offerte speciali."
@@ -90,6 +95,7 @@ Agent: "✅ Iscrizione confermata! Riceverai le nostre offerte e promozioni."
 ```
 
 ### Unsubscribe Flow
+
 ```
 Cliente: "Non voglio più ricevere messaggi"
 Agent: "Capisco. Vuoi disiscriverti dalle notifiche promozionali?"
@@ -103,6 +109,7 @@ Agent: "✅ Disiscrizione confermata. Non riceverai più notifiche da parte nost
 ## 🌍 TRIGGER SEMANTICI MULTILINGUA
 
 ### 🇮🇹 Italiano - SUBSCRIBE
+
 - "voglio ricevere offerte"
 - "iscrivimi alle notifiche"
 - "voglio le promozioni"
@@ -111,6 +118,7 @@ Agent: "✅ Disiscrizione confermata. Non riceverai più notifiche da parte nost
 - "attiva notifiche"
 
 ### 🇮🇹 Italiano - UNSUBSCRIBE
+
 - "non voglio più messaggi"
 - "disiscrivimi"
 - "basta notifiche"
@@ -119,6 +127,7 @@ Agent: "✅ Disiscrizione confermata. Non riceverai più notifiche da parte nost
 - "stop messaggi"
 
 ### 🇬🇧 English - SUBSCRIBE
+
 - "subscribe me"
 - "I want offers"
 - "send me promotions"
@@ -127,6 +136,7 @@ Agent: "✅ Disiscrizione confermata. Non riceverai più notifiche da parte nost
 - "sign me up"
 
 ### 🇬🇧 English - UNSUBSCRIBE
+
 - "unsubscribe"
 - "stop notifications"
 - "no more messages"
@@ -135,6 +145,7 @@ Agent: "✅ Disiscrizione confermata. Non riceverai più notifiche da parte nost
 - "remove me"
 
 ### 🇪🇸 Español - SUBSCRIBE
+
 - "quiero recibir ofertas"
 - "suscríbeme"
 - "envíame promociones"
@@ -142,12 +153,14 @@ Agent: "✅ Disiscrizione confermata. Non riceverai più notifiche da parte nost
 - "quiero estar informado"
 
 ### 🇪🇸 Español - UNSUBSCRIBE
+
 - "darme de baja"
 - "no más mensajes"
 - "cancelar suscripción"
 - "detener notificaciones"
 
 ### 🇵🇹 Português - SUBSCRIBE
+
 - "quero receber ofertas"
 - "inscrever-me"
 - "enviar promoções"
@@ -155,6 +168,7 @@ Agent: "✅ Disiscrizione confermata. Non riceverai più notifiche da parte nost
 - "quero receber atualizações"
 
 ### 🇵🇹 Português - UNSUBSCRIBE
+
 - "cancelar inscrição"
 - "não quero mais mensagens"
 - "parar notificações"
@@ -169,6 +183,7 @@ Agent: "✅ Disiscrizione confermata. Non riceverai più notifiche da parte nost
 Messaggio personalizzato per ogni workspace che spiega al cliente cosa succede iscrivendosi.
 
 **Esempio**:
+
 ```
 Iscrivendoti riceverai:
 - Offerte esclusive settimanali
@@ -193,14 +208,15 @@ Iscrivendoti riceverai:
 5. **GDPR Compliant**: Cliente può disiscriversi in qualsiasi momento
 
 ### Database Query Pattern
+
 ```typescript
 // ✅ SEMPRE con workspaceId per sicurezza multi-tenant
 await prisma.customers.update({
-  where: { 
-    id: customerId, 
-    workspaceId: workspaceId  // ⚠️ CRITICAL: multi-tenant isolation
+  where: {
+    id: customerId,
+    workspaceId: workspaceId, // ⚠️ CRITICAL: multi-tenant isolation
   },
-  data: { pushNotificationsEnabled: true }
+  data: { pushNotificationsEnabled: true },
 })
 ```
 
@@ -211,6 +227,7 @@ await prisma.customers.update({
 ### Test Conversazionali
 
 **Test 1 - Subscribe (Italiano)**:
+
 ```
 Input: "voglio ricevere le offerte"
 Expected: Agent chiede conferma → Cliente conferma → CALL manageNotifications(SUBSCRIBE)
@@ -218,6 +235,7 @@ Result: "✅ Iscrizione confermata!"
 ```
 
 **Test 2 - Unsubscribe (English)**:
+
 ```
 Input: "unsubscribe me"
 Expected: Agent chiede conferma → Cliente conferma → CALL manageNotifications(UNSUBSCRIBE)
@@ -225,6 +243,7 @@ Result: "✅ Disiscrizione confermata."
 ```
 
 **Test 3 - Ambiguous Request**:
+
 ```
 Input: "voglio info sulle offerte" (NON è richiesta di iscrizione)
 Expected: Agent spiega offerte disponibili, NON chiama manageNotifications
@@ -236,13 +255,13 @@ Result: Risposta informativa senza calling function
 ```typescript
 // Test SUBSCRIBE
 const customer = await prisma.customers.findUnique({
-  where: { id: customerId, workspaceId }
+  where: { id: customerId, workspaceId },
 })
 expect(customer.pushNotificationsEnabled).toBe(true)
 
 // Test UNSUBSCRIBE
 const customer = await prisma.customers.findUnique({
-  where: { id: customerId, workspaceId }
+  where: { id: customerId, workspaceId },
 })
 expect(customer.pushNotificationsEnabled).toBe(false)
 ```
@@ -252,26 +271,30 @@ expect(customer.pushNotificationsEnabled).toBe(false)
 ## 🐛 DEBUGGING
 
 ### Check Function Registration
+
 ```bash
 # Verifica funzione in agent-functions.ts
 grep -A 15 "manageNotifications" backend/src/config/agent-functions.ts
 ```
 
 ### Check Service Implementation
+
 ```bash
 # Verifica implementazione in calling-functions.service.ts
 grep -A 30 "async manageNotifications" backend/src/services/calling-functions.service.ts
 ```
 
 ### Check Database State
+
 ```sql
 -- Verifica stato iscrizione cliente
-SELECT id, phone, pushNotificationsEnabled 
-FROM "Customers" 
+SELECT id, phone, pushNotificationsEnabled
+FROM "Customers"
 WHERE "workspaceId" = 'xxx';
 ```
 
 ### Check LLM Logs
+
 ```bash
 # Verifica calling function nei log
 tail -f backend/logs/prompt-debug-*.txt | grep "manageNotifications"
@@ -290,9 +313,10 @@ tail -f backend/logs/prompt-debug-*.txt | grep "manageNotifications"
 5. **Language Distribution**: Lingua più usata per subscribe/unsubscribe
 
 ### Query Analytics
+
 ```sql
 -- Totale iscritti per workspace
-SELECT 
+SELECT
   "workspaceId",
   COUNT(*) FILTER (WHERE "pushNotificationsEnabled" = true) as subscribed,
   COUNT(*) FILTER (WHERE "pushNotificationsEnabled" = false) as unsubscribed,

@@ -472,9 +472,7 @@ export function getFunctionNamesForAgentType(agentType: string): string[] {
     case "ROUTER":
       // Router has: delegation functions + manageNotifications
       return AGENT_FUNCTIONS.filter(
-        (fn) =>
-          fn.name.endsWith("Agent") ||
-          fn.name === "manageNotifications"
+        (fn) => fn.name.endsWith("Agent") || fn.name === "manageNotifications"
       ).map((fn) => fn.name)
 
     case "PRODUCT_SEARCH":

@@ -3,14 +3,14 @@
  *
  * Maps each AgentType to its available function calls.
  * This is used by the Agent Settings UI to display which functions each agent can use.
- * 
+ *
  * ⚠️ DEPRECATED: Use getFunctionNamesForAgentType() from agent-functions.ts instead
  * This file is kept for backward compatibility but delegates to the centralized config.
  */
 
 import {
-  getFunctionNamesForAgentType as getFromCentralConfig,
   getAllFunctionNames as getAllFromCentralConfig,
+  getFunctionNamesForAgentType as getFromCentralConfig,
 } from "./agent-functions"
 
 /**
