@@ -1,6 +1,6 @@
 /**
  * FAQs Data - Auto-generated from database
- * Last updated: 2025-10-28T17:19:32.329Z
+ * Last updated: 2025-10-30T16:02:52.308Z
  * DO NOT EDIT MANUALLY - Use npm run db:export
  */
 
@@ -49,16 +49,16 @@ export const faqs: FAQData[] = [
     isActive: true,
   },
   {
-    question: "Will I receive an order confirmation?",
-    answer: "Yes! You will receive immediate confirmation via WhatsApp with:\n- Order code\n- Product summary\n- Total and payment method\n- Estimated delivery times\n\nYou will also receive updates on preparation and shipping.",
-    category: "Orders",
+    question: "What are the delivery times?",
+    answer: "Standard delivery times are:\n- Metropolitan area: 24-48 hours\n- Region: 2-3 business days\n- Rest of country: 3-5 business days\n\nOrders confirmed before 2:00 PM ship the same day!",
+    category: "Shipping",
     language: null,
     isActive: true,
   },
   {
-    question: "What are the delivery times?",
-    answer: "Standard delivery times are:\n- Metropolitan area: 24-48 hours\n- Region: 2-3 business days\n- Rest of country: 3-5 business days\n\nOrders confirmed before 2:00 PM ship the same day!",
-    category: "Shipping",
+    question: "Will I receive an order confirmation?",
+    answer: "Yes! You will receive immediate confirmation via WhatsApp with:\n- Order code\n- Product summary\n- Total and payment method\n- Estimated delivery times\n\nYou will also receive updates on preparation and shipping.",
+    category: "Orders",
     language: null,
     isActive: true,
   },
@@ -133,16 +133,16 @@ export const faqs: FAQData[] = [
     isActive: true,
   },
   {
-    question: "Can I see product certifications?",
-    answer: "Yes! Each product has detailed information on:\n- DOP/IGP/STG certifications\n- Organic/Bio certifications\n- Halal certifications\n- Allergen lists\n\nWrite \"product details [name]\" to see complete information.",
-    category: "Products",
+    question: "How do I register?",
+    answer: "Registration is automatic! Just start a conversation on WhatsApp and I will guide you. You will need:\n- Name and surname\n- Delivery address\n- Phone number (already have it!)\n\nThat's it, you're registered!",
+    category: "Account",
     language: null,
     isActive: true,
   },
   {
-    question: "How do I register?",
-    answer: "Registration is automatic! Just start a conversation on WhatsApp and I will guide you. You will need:\n- Name and surname\n- Delivery address\n- Phone number (already have it!)\n\nThat's it, you're registered!",
-    category: "Account",
+    question: "Can I see product certifications?",
+    answer: "Yes! Each product has detailed information on:\n- DOP/IGP/STG certifications\n- Organic/Bio certifications\n- Halal certifications\n- Allergen lists\n\nWrite \"product details [name]\" to see complete information.",
+    category: "Products",
     language: null,
     isActive: true,
   },

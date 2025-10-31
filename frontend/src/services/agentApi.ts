@@ -157,3 +157,24 @@ export async function deleteAgent(
     },
   })
 }
+
+/**
+ * Export database to seed files
+ */
+export async function exportDatabase(
+  workspaceId: string
+): Promise<{ success: boolean; message: string; timestamp: string }> {
+  logger.info(`Exporting database for workspace ${workspaceId}`)
+
+  const response = await api.post(
+    `/workspaces/${workspaceId}/database/export`,
+    {},
+    {
+      headers: {
+        "x-workspace-id": workspaceId,
+      },
+    }
+  )
+
+  return response.data
+}

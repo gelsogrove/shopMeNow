@@ -1,26 +1,123 @@
+/**
+ * 🔹 MAIN ROUTER - INDEX.TS
+ *
+ * Central routing file for ShopME backend.
+ *
+ * ORGANIZATION:
+ * 1. Core imports (Prisma, Express, Config)
+ * 2. Middleware imports
+ * 3. Service imports
+ * 4. Controller imports
+ * 5. Repository imports
+ * 6. Router imports (feature-specific)
+ * 7. Helper functions (moved to separate files where possible)
+ * 8. Route registration
+ */
+
+// ============================================================================
+// 1. CORE IMPORTS
+// ============================================================================
 import { PrismaClient } from "@prisma/client"
 import { NextFunction, Request, Response, Router } from "express"
-// BillingService import removed - billing handled by message.repository.ts
-import { linkGeneratorService } from "../application/services/link-generator.service"
+import { config } from "../config"
+import logger from "../utils/logger"
+
+// ============================================================================
+// 2. MIDDLEWARE IMPORTS
+// ============================================================================
+import { webhookLimiter } from "../config/rate-limiters"
+import { authMiddleware } from "../interfaces/http/middlewares/auth.middleware"
+import { sessionValidationMiddleware } from "../interfaces/http/middlewares/session-validation.middleware"
+import { workspaceValidationMiddleware } from "../interfaces/http/middlewares/workspace-validation.middleware"
+
+// ============================================================================
+// 3. SERVICE IMPORTS
+// ============================================================================
 import { OtpService } from "../application/services/otp.service"
 import { PasswordResetService } from "../application/services/password-reset.service"
 import { RegistrationAttemptsService } from "../application/services/registration-attempts.service"
 import { SecureTokenService } from "../application/services/secure-token.service"
 import { SpamDetectionService } from "../application/services/spam-detection.service"
 import { UserService } from "../application/services/user.service"
-import { config } from "../config"
-import { webhookLimiter } from "../config/rate-limiters"
-// BillingPrices import removed - billing handled by message.repository.ts
+import { LLMRouterService } from "../services/llm-router.service"
+
+// ============================================================================
+// 4. CONTROLLER IMPORTS
+// ============================================================================
 import { AuthController } from "../interfaces/http/controllers/auth.controller"
 import { CampaignController } from "../interfaces/http/controllers/campaign.controller"
 import { CartTokenController } from "../interfaces/http/controllers/cart-token.controller"
 import { CategoryController } from "../interfaces/http/controllers/category.controller"
 import { ChatController } from "../interfaces/http/controllers/chat.controller"
 import { CustomersController } from "../interfaces/http/controllers/customers.controller"
+import { FaqController } from "../interfaces/http/controllers/faq.controller"
 import { FeedbackController } from "../interfaces/http/controllers/feedback.controller"
+import { ProductController } from "../interfaces/http/controllers/product.controller"
+import { ServicesController } from "../interfaces/http/controllers/services.controller"
+import { SettingsController } from "../interfaces/http/controllers/settings.controller"
+import { UserController } from "../interfaces/http/controllers/user.controller"
+
+// ============================================================================
+// 5. REPOSITORY IMPORTS
+// ============================================================================
 import { MessageRepository } from "../repositories/message.repository"
-// usageService import removed - usage tracking handled by message.repository.ts
-import logger from "../utils/logger"
+
+// ============================================================================
+// 6. ROUTER IMPORTS (Feature-specific routes)
+// ============================================================================
+// Agent & AI
+import { createAgentRouter } from "../interfaces/http/routes/agent.routes"
+import agentChatRoutes from "./agentChatRoutes"
+
+// Auth & User
+import { authRouter } from "../interfaces/http/routes/auth.routes"
+import createRegistrationRouter from "../interfaces/http/routes/registration.routes"
+import { sessionRoutes } from "../interfaces/http/routes/session.routes"
+import { createUserRouter } from "../interfaces/http/routes/user.routes"
+
+// Workspace
+import { workspaceRoutes } from "../interfaces/http/routes/workspace.routes"
+import workspaceRoutesLegacy from "./workspace.routes"
+
+// E-commerce
+import { cartRouter } from "../interfaces/http/routes/cart.routes"
+import { categoriesRouter } from "../interfaces/http/routes/categories.routes"
+import { chatRouter } from "../interfaces/http/routes/chat.routes"
+import { checkoutRouter } from "../interfaces/http/routes/checkout.routes"
+import { offersRouter } from "../interfaces/http/routes/offers.routes"
+import { createOrderRouter } from "../interfaces/http/routes/order.routes"
+import ordersPublicRoutes from "../interfaces/http/routes/orders.routes"
+import productsRouter from "../interfaces/http/routes/products.routes"
+import publicOrdersRoutes from "../interfaces/http/routes/public-orders.routes"
+import { salesRouter } from "../interfaces/http/routes/sales.routes"
+
+// Customer & Communication
+import { campaignRoutes } from "../interfaces/http/routes/campaign.routes"
+import {
+  customersRouter,
+  workspaceCustomersRouter,
+} from "../interfaces/http/routes/customers.routes"
+import { faqsRouter } from "../interfaces/http/routes/faqs.routes"
+import { feedbackRoutes } from "../interfaces/http/routes/feedback.routes"
+
+// Services & Suppliers
+import { servicesRouter } from "../interfaces/http/routes/services.routes"
+import supplierRoutes from "../interfaces/http/routes/supplier.routes"
+
+// System & Config
+import analyticsRoutes from "../interfaces/http/routes/analytics.routes"
+import { billingRouter } from "../interfaces/http/routes/billing.routes"
+import { createLanguagesRouter } from "../interfaces/http/routes/languages.routes"
+import pricingRoutes from "../interfaces/http/routes/pricing.routes"
+import createSettingsRouter from "../interfaces/http/routes/settings.routes"
+import { shortUrlRoutes } from "../interfaces/http/routes/short-url.routes"
+import whatsappRoutes from "../interfaces/http/routes/whatsapp.routes"
+import { createTokenRouter } from "./token"
+
+// ============================================================================
+// 7. TYPE IMPORTS
+// ============================================================================
+import { LLMRequest } from "../types/whatsapp.types"
 
 /**
  * 🔒 BLACKLIST CHECK HELPER
@@ -230,86 +327,50 @@ async function handleNewUserWelcomeFlow(
     }
 
     // If no customer is found, this is a new user
-    // Determine language based on phone number prefix
-    const detectedLanguage = detectLanguageFromPhonePrefix(phoneNumber)
+    // 🔒 USE LLMService.handleNewUserWelcome() - ENSURES Safety & Translation layer
+    const { LLMService } = require("../services/llm.service")
+    const llmService = new LLMService()
 
-    // Get welcome message from database
-    const welcomeMessage = await messageRepository.getWelcomeMessage(
+    const result = await llmService.handleNewUserWelcome(
+      phoneNumber,
       workspaceId,
-      detectedLanguage
-    )
-    if (!welcomeMessage) {
-      logger.error(
-        `❌ ${format}: No welcome message found for language ${detectedLanguage} in workspace ${workspaceId}`
-      )
-      res.status(500).send("ERROR")
-      return true
-    }
-
-    // Generate secure registration token
-    const registrationToken = await secureTokenService.createToken(
-      "registration",
-      workspaceId,
-      { phone: phoneNumber, language: detectedLanguage },
-      undefined, // Uses TOKEN_EXPIRATION from env
-      undefined,
-      phoneNumber
+      messageContent
     )
 
-    // Create short registration URL using LinkGeneratorService
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000"
-    const longUrl = `${frontendUrl}/register?token=${registrationToken}&phone=${encodeURIComponent(phoneNumber)}&workspace=${workspaceId}&lang=${detectedLanguage}`
-    const registrationUrl = await linkGeneratorService.generateShortLink(
-      longUrl,
-      workspaceId,
-      "registration"
-    )
-
-    // Send complete welcome message with registration link in customer's language
-    const registrationText = getRegistrationText(detectedLanguage)
-    const completeMessage = `${welcomeMessage}\n\n🔗 **${registrationText.link}:**\n${registrationUrl}\n\n⏰ ${registrationText.validity}`
+    const completeMessage = result.message
+    const { detectedLanguage } = result.debugInfo
 
     // 💾 SAVE MESSAGE TO HISTORY - Save both user message and welcome response
-    try {
-      await messageRepository.saveMessage({
-        workspaceId: workspaceId,
-        phoneNumber: phoneNumber,
-        message: messageContent,
-        response: completeMessage,
-        direction: "INBOUND", // ✅ CORRECT: User message is INBOUND, system response is OUTBOUND
-        agentSelected: "CHATBOT", // ✅ ADD: Set agentSelected to CHATBOT for green styling
-        functionCallsDebug: [],
-        processingSource: "new_user_welcome",
-        debugInfo: JSON.stringify({
-          isNewUser: true,
-          detectedLanguage: detectedLanguage,
-          registrationUrl: registrationUrl,
-          attemptCount: attempt.attemptCount,
-        }),
-      })
-      logger.info(
-        `💾 ${format}: New user welcome message saved to history for ${phoneNumber}`
-      )
-    } catch (saveError) {
-      logger.error(
-        `❌ ${format}: Failed to save new user welcome message:`,
-        saveError
-      )
-      // Continue - don't fail the whole request if save fails
-    }
+    await messageRepository.saveMessage({
+      workspaceId: workspaceId,
+      phoneNumber: phoneNumber,
+      message: messageContent,
+      response: completeMessage,
+      direction: "INBOUND",
+      agentSelected: "CHATBOT",
+      functionCallsDebug: [],
+      processingSource: "new_user_welcome",
+      debugInfo: JSON.stringify({
+        isNewUser: true,
+        detectedLanguage,
+        attemptCount: attempt.attemptCount,
+        ...result.debugInfo,
+      }),
+    })
 
     logger.info(
-      `✅ ${format}: New user welcome message sent to ${phoneNumber} in ${detectedLanguage}`
+      `✅ ${format}: New user welcome sent (via LLMService) to ${phoneNumber}`
     )
+
     res.status(200).json({
       success: true,
       data: {
-        sessionId: null, // New users don't have a session yet
+        sessionId: null,
         message: completeMessage,
       },
     })
 
-    return true // Handled successfully
+    return true
   } catch (error) {
     logger.error(
       `❌ ${format}: Error handling new user welcome flow for ${phoneNumber}:`,
@@ -320,52 +381,10 @@ async function handleNewUserWelcomeFlow(
   }
 }
 
-import { FaqController } from "../interfaces/http/controllers/faq.controller"
-// Removed MessageController import
-import { ProductController } from "../interfaces/http/controllers/product.controller"
-import { ServicesController } from "../interfaces/http/controllers/services.controller"
-
-import { UserController } from "../interfaces/http/controllers/user.controller"
-// Removed WhatsAppController import
-import { createAgentRouter } from "../interfaces/http/routes/agent.routes"
-import { authRouter } from "../interfaces/http/routes/auth.routes"
-import { cartRouter } from "../interfaces/http/routes/cart.routes"
-import { categoriesRouter } from "../interfaces/http/routes/categories.routes"
-import { chatRouter } from "../interfaces/http/routes/chat.routes"
-import {
-  customersRouter,
-  workspaceCustomersRouter,
-} from "../interfaces/http/routes/customers.routes"
-import { salesRouter } from "../interfaces/http/routes/sales.routes"
-
-import { faqsRouter } from "../interfaces/http/routes/faqs.routes"
-import { createLanguagesRouter } from "../interfaces/http/routes/languages.routes"
-// Removed messagesRouter import
-import { offersRouter } from "../interfaces/http/routes/offers.routes"
-import { createOrderRouter } from "../interfaces/http/routes/order.routes"
-import createRegistrationRouter from "../interfaces/http/routes/registration.routes"
-import { servicesRouter } from "../interfaces/http/routes/services.routes"
-import createSettingsRouter from "../interfaces/http/routes/settings.routes"
-
-import { checkoutRouter } from "../interfaces/http/routes/checkout.routes"
-// Removed whatsappRouter import
-import { workspaceRoutes } from "../interfaces/http/routes/workspace.routes"
-// Import the legacy workspace routes that has the /current endpoint
-import workspaceRoutesLegacy from "./workspace.routes"
-// Add these imports for backward compatibility during migration
-import { SettingsController } from "../interfaces/http/controllers/settings.controller"
-import { authMiddleware } from "../interfaces/http/middlewares/auth.middleware"
-import { sessionValidationMiddleware } from "../interfaces/http/middlewares/session-validation.middleware"
-import { workspaceValidationMiddleware } from "../interfaces/http/middlewares/workspace-validation.middleware"
-import { createUserRouter } from "../interfaces/http/routes/user.routes"
-// Import analytics routes
-import analyticsRoutes from "../interfaces/http/routes/analytics.routes"
-// Import public orders routes (for secure token validation)
-import publicOrdersRoutes from "../interfaces/http/routes/public-orders.routes"
-// Import session routes (for sessionId management)
-import { sessionRoutes } from "../interfaces/http/routes/session.routes"
-// Import WhatsApp routes
-import whatsappRoutes from "../interfaces/http/routes/whatsapp.routes"
+// ============================================================================
+// 8. HELPER FUNCTIONS
+// ============================================================================
+// (checkCustomerBlacklist, detectLanguageFromPhonePrefix, getRegistrationText, handleNewUserWelcomeFlow defined above)
 
 // Simple logging middleware
 const loggingMiddleware = (req: Request, res: Response, next: NextFunction) => {
@@ -441,10 +460,11 @@ router.get("/cart-tokens/:token/validate", (req, res) =>
   cartTokenController.validateCartToken(req, res)
 )
 
-// WhatsApp webhook routes (must be FIRST, before any authentication middleware)
-import { LLMRouterService } from "../services/llm-router.service" // 🔧 Multi-agent router with Function Calling
-import { LLMRequest } from "../types/whatsapp.types"
+// ============================================================================
+// 9. ROUTE DEFINITIONS
+// ============================================================================
 
+// WhatsApp webhook routes (must be FIRST, before any authentication middleware)
 // ❌ REMOVED: Old /api/chat endpoint (deprecated - use /api/whatsapp/webhook with LLMRouterService)
 // The old endpoint used monolithic LLMService with prompt.txt
 // New system uses multi-agent architecture with database-driven prompts
@@ -1167,14 +1187,12 @@ const settingsController = new SettingsController()
 // ========================================
 // 🎫 TOKEN ROUTES (NO SessionID required)
 // ========================================
-import { createTokenRouter } from "./token"
 router.use("/token", createTokenRouter())
 logger.info(
   "✅ Registered /api/token/* routes (registration, checkout, orders-public)"
 )
 
 // Public routes (MUST BE BEFORE AUTH ROUTES)
-import { shortUrlRoutes } from "../interfaces/http/routes/short-url.routes"
 router.use(shortUrlRoutes)
 logger.info("Registered short URL routes for /s/:shortCode redirection")
 
@@ -1195,7 +1213,6 @@ logger.info("⚠️ LEGACY: /registration (use /token/registration instead)")
 // ========================================
 // 💰 PUBLIC PRICING ROUTES (No auth required)
 // ========================================
-import pricingRoutes from "../interfaces/http/routes/pricing.routes"
 router.use("/pricing", pricingRoutes)
 logger.info("✅ Registered pricing routes (/api/pricing/config)")
 
@@ -1209,7 +1226,6 @@ router.use("/chat", chatRouter(chatController))
 // ========================================
 // 🤖 MULTI-AGENT CHAT SYSTEM (Sprint 1 - Task 1.5)
 // ========================================
-import agentChatRoutes from "./agentChatRoutes"
 router.use("/agent-chat", agentChatRoutes)
 logger.info(
   "✅ Registered multi-agent chat routes (/api/agent-chat, /api/agent-chat/metrics, /api/agent-chat/history/:customerId)"
@@ -1226,14 +1242,12 @@ router.use("/workspaces", authMiddleware, workspaceRoutesLegacy)
 router.use("/workspaces", workspaceRoutes)
 
 // Mount campaign routes
-import { campaignRoutes } from "../interfaces/http/routes/campaign.routes"
 router.use("/workspaces", campaignRoutes(campaignController))
 logger.info(
   "✅ Registered campaign routes: /api/workspaces/:workspaceId/campaigns"
 )
 
 // Mount feedback routes (public + admin)
-import { feedbackRoutes } from "../interfaces/http/routes/feedback.routes"
 router.use(feedbackRoutes(feedbackController))
 logger.info(
   "✅ Registered feedback routes: /api/feedback (public), /api/workspaces/:workspaceId/feedbacks (admin)"
@@ -1267,7 +1281,6 @@ router.get("/workspaces/:workspaceId/test", authMiddleware, (req, res) => {
 })
 
 // Mount products routes with workspace context
-import productsRouter from "../interfaces/http/routes/products.routes"
 const productsRouterInstance = productsRouter()
 router.use("/workspaces/:workspaceId/products", productsRouterInstance)
 logger.info("Registered products router with workspace routes")
@@ -1285,7 +1298,6 @@ router.use("/sales", salesRouterInstance)
 logger.info("Registered sales router with workspace routes")
 
 // Mount suppliers routes
-import supplierRoutes from "../interfaces/http/routes/supplier.routes"
 router.use("/workspaces/:workspaceId/suppliers", supplierRoutes)
 logger.info("Registered suppliers router with workspace routes")
 
@@ -1304,7 +1316,6 @@ router.use("/settings", createSettingsRouter())
 router.use("/languages", createLanguagesRouter())
 
 // Mount billing routes
-import { billingRouter } from "../interfaces/http/routes/billing.routes"
 router.use("/billing", billingRouter)
 logger.info("Registered billing routes for usage tracking")
 
@@ -1327,7 +1338,6 @@ logger.info(
 )
 
 // Mount public orders routes (JWT-based)
-import ordersPublicRoutes from "../interfaces/http/routes/orders.routes"
 router.use("/orders", ordersPublicRoutes)
 logger.info("Registered public orders routes with JWT authentication")
 
@@ -1374,6 +1384,124 @@ router.get(
       originalUrl: req.originalUrl,
       params: req.params,
     })
+  }
+)
+
+// Database export endpoint (🔒 PROTECTED - Admin only, Workspace-specific)
+router.post(
+  "/workspaces/:workspaceId/database/export",
+  authMiddleware,
+  workspaceValidationMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user
+      const workspaceId = req.params.workspaceId
+
+      // Check if user is admin
+      if (user.role !== "ADMIN") {
+        return res.status(403).json({
+          success: false,
+          error: "Only admins can export database",
+        })
+      }
+
+      logger.info(`🗄️ Starting workspace-specific export for: ${workspaceId}`)
+
+      // Execute workspace-specific export script
+      const { execSync } = require("child_process")
+
+      try {
+        const output = execSync(
+          `npx ts-node scripts/export-workspace-backup.ts ${workspaceId}`,
+          {
+            cwd: process.cwd(),
+            encoding: "utf-8",
+            stdio: "pipe",
+          }
+        )
+
+        logger.info("✅ Workspace backup created successfully:", output)
+
+        return res.status(200).json({
+          success: true,
+          message: `Workspace ${workspaceId} backed up successfully`,
+          timestamp: new Date().toISOString(),
+        })
+      } catch (execError: any) {
+        logger.error("❌ Workspace backup error:", execError.message)
+        return res.status(500).json({
+          success: false,
+          error: "Failed to create workspace backup",
+          details: execError.message || "Unknown error during backup",
+        })
+      }
+    } catch (error) {
+      logger.error("❌ Database export error:", error)
+      return res.status(500).json({
+        success: false,
+        error: "Failed to start database export",
+        details: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+)
+
+// Database import endpoint (🔒 PROTECTED - Admin only, Workspace-specific)
+router.post(
+  "/workspaces/:workspaceId/database/import",
+  authMiddleware,
+  workspaceValidationMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user
+      const workspaceId = req.params.workspaceId
+
+      // Check if user is admin
+      if (user.role !== "ADMIN") {
+        return res.status(403).json({
+          success: false,
+          error: "Only admins can import database",
+        })
+      }
+
+      logger.info(`📥 Starting workspace-specific restore for: ${workspaceId}`)
+
+      // Execute workspace-specific restore script synchronously
+      const { execSync } = require("child_process")
+
+      try {
+        const output = execSync(
+          `npx ts-node scripts/restore-workspace-backup.ts ${workspaceId}`,
+          {
+            cwd: process.cwd(),
+            encoding: "utf-8",
+            stdio: "pipe",
+          }
+        )
+
+        logger.info("✅ Workspace restored successfully:", output)
+
+        return res.status(200).json({
+          success: true,
+          message: `Workspace ${workspaceId} restored successfully from latest backup`,
+          timestamp: new Date().toISOString(),
+        })
+      } catch (execError: any) {
+        logger.error("❌ Workspace restore error:", execError.message)
+        return res.status(500).json({
+          success: false,
+          error: "Failed to restore workspace",
+          details: execError.message || "Unknown error during restore",
+        })
+      }
+    } catch (error) {
+      logger.error("❌ Database import error:", error)
+      return res.status(500).json({
+        success: false,
+        error: "Failed to start database import",
+        details: error instanceof Error ? error.message : String(error),
+      })
+    }
   }
 )
 

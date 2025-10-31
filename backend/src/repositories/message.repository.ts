@@ -2292,74 +2292,60 @@ export class MessageRepository {
   }
 
   /**
-   * Get WIP message from database - NO HARDCODE
+   * Get WIP message from database - NO HARDCODE (English only)
    * @param workspaceId Workspace ID
-   * @param language Customer language
-   * @returns WIP message from database
+   * @returns WIP message from database (will be translated by Safety & Translation layer)
    */
-  async getWipMessage(workspaceId: string, language: string): Promise<string> {
+  async getWipMessage(workspaceId: string): Promise<string> {
     try {
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { wipMessages: true },
+        select: { wipMessage: true },
       })
 
-      if (!workspace?.wipMessages) {
-        logger.warn(`No WIP messages found for workspace ${workspaceId}`)
-        return "Service temporarily unavailable. We will be back soon!"
+      if (!workspace?.wipMessage) {
+        logger.error(
+          `❌ NO WIP MESSAGE in database for workspace ${workspaceId} - THIS SHOULD NOT HAPPEN`
+        )
+        throw new Error("WIP message not configured in database")
       }
 
-      const wipMessages = workspace.wipMessages as Record<string, string>
-      return (
-        wipMessages[language] ||
-        wipMessages["en"] ||
-        "Service temporarily unavailable. We will be back soon!"
-      )
+      return workspace.wipMessage
     } catch (error) {
       logger.error(
         `Error getting WIP message for workspace ${workspaceId}:`,
         error
       )
-      return "Service temporarily unavailable. We will be back soon!"
+      throw error // Don't use hardcoded fallback - throw to ensure proper configuration
     }
   }
 
   /**
-   * Get welcome message from database - NO HARDCODE
+   * Get welcome message from database - NO HARDCODE (English only)
    * @param workspaceId Workspace ID
-   * @param language Customer language
-   * @returns Welcome message from database
+   * @returns Welcome message from database (will be translated by Safety & Translation layer)
    */
-  async getWelcomeMessage(
-    workspaceId: string,
-    language: string
-  ): Promise<string> {
+  async getWelcomeMessage(workspaceId: string): Promise<string> {
     try {
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { welcomeMessages: true },
+        select: { welcomeMessage: true },
       })
 
-      if (!workspace?.welcomeMessages) {
-        logger.warn(`No welcome messages found for workspace ${workspaceId}`)
-        return "Welcome! Please register to continue:"
+      if (!workspace?.welcomeMessage) {
+        logger.error(
+          `❌ NO WELCOME MESSAGE in database for workspace ${workspaceId} - THIS SHOULD NOT HAPPEN`
+        )
+        throw new Error("Welcome message not configured in database")
       }
 
-      const welcomeMessages = workspace.welcomeMessages as Record<
-        string,
-        string
-      >
-      return (
-        welcomeMessages[language] ||
-        welcomeMessages["en"] ||
-        "Welcome! Please register to continue:"
-      )
+      return workspace.welcomeMessage
     } catch (error) {
       logger.error(
         `Error getting welcome message for workspace ${workspaceId}:`,
         error
       )
-      return "Welcome! Please register to continue:"
+      throw error // Don't use hardcoded fallback - throw to ensure proper configuration
     }
   }
 
@@ -2412,40 +2398,32 @@ export class MessageRepository {
   }
 
   /**
-   * Get error message from database - NO HARDCODE
-   * Uses wipMessages as fallback for error messages
+   * Get error message from database - NO HARDCODE (English only)
+   * Uses wipMessage as fallback for error messages
    * @param workspaceId Workspace ID
-   * @param language Customer language
-   * @returns Error message from database
+   * @returns Error message from database (will be translated by Safety & Translation layer)
    */
-  async getErrorMessage(
-    workspaceId: string,
-    language: string
-  ): Promise<string> {
+  async getErrorMessage(workspaceId: string): Promise<string> {
     try {
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { wipMessages: true },
+        select: { wipMessage: true },
       })
 
-      if (!workspace?.wipMessages) {
-        logger.warn(`No error messages found for workspace ${workspaceId}`)
-        return "Sorry, I'm having technical difficulties. Please try again later."
+      if (!workspace?.wipMessage) {
+        logger.error(
+          `❌ NO WIP MESSAGE in database for workspace ${workspaceId} - THIS SHOULD NOT HAPPEN`
+        )
+        throw new Error("Error message not configured in database")
       }
 
-      // Use WIP messages as error messages fallback
-      const wipMessages = workspace.wipMessages as Record<string, string>
-      return (
-        wipMessages[language] ||
-        wipMessages["en"] ||
-        "Sorry, I'm having technical difficulties. Please try again later."
-      )
+      return workspace.wipMessage
     } catch (error) {
       logger.error(
         `Error getting error message for workspace ${workspaceId}:`,
         error
       )
-      return "Sorry, I'm having technical difficulties. Please try again later."
+      throw error // Don't use hardcoded fallback
     }
   }
 

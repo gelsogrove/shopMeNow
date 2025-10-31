@@ -141,6 +141,16 @@ npx prisma generate
 
 # Update agent prompt from docs/prompt_agent.md to database
 cd backend && npm run update-prompt
+
+# Workspace Backup/Restore (ALWAYS workspace-isolated)
+# Export current workspace data
+npx ts-node scripts/export-workspace-backup.ts {workspaceId}
+
+# Restore workspace from latest backup
+npx ts-node scripts/restore-workspace-backup.ts {workspaceId}
+
+# Note: Backups stored in prisma/backups/{workspaceId}/
+# Only ONE backup per workspace (latest overwrites previous)
 ```
 
 ### Testing
@@ -158,7 +168,19 @@ cd frontend && npm test
 
 ---
 
-## 🎨 Code Conventions
+## 🎨 Code Conventions & Design Patterns
+
+### 📚 PRIMARY DOCUMENTATION SOURCE
+
+**CRITICAL**: The `docs/memory-bank/` directory is the **SINGLE SOURCE OF TRUTH** for all project knowledge:
+
+- **ALWAYS** consult `docs/memory-bank/PRD.md` (9933 lines - comprehensive spec) BEFORE making changes
+- **Architecture patterns**: Check `docs/memory-bank/03-architecture/` for system design
+- **Feature specs**: Check `docs/memory-bank/02-features/` for requirements
+- **Best practices**: Check `docs/memory-bank/04-best-practices/` for coding standards
+- **Guides**: Check `docs/memory-bank/05-guides/` for how-to documentation
+
+**When in doubt**: Ask Andrea questions BEFORE assuming or inventing features!
 
 ### Naming & Structure
 
@@ -169,6 +191,140 @@ cd frontend && npm test
   ```typescript
   router.get("/workspaces/:workspaceId/products", controller.getProducts)
   ```
+
+### Backend Design Patterns
+
+#### 1. **Clean Architecture / DDD Pattern**
+```
+backend/src/
+├── application/services/    # Business logic orchestration
+├── domain/                  # Core entities, value objects
+├── repositories/            # Data access layer (Prisma)
+├── interfaces/http/         # Controllers, routes, middleware
+├── services/                # External integrations (LLM, email)
+└── utils/                   # Helpers, formatters, logger
+```
+
+#### 2. **Dependency Injection**
+Controllers ALWAYS use constructor injection:
+```typescript
+export class ProductController {
+  constructor(
+    private productService: ProductService,
+    private prisma: PrismaClient
+  ) {}
+}
+```
+
+#### 3. **Repository Pattern**
+Database access ONLY through repositories:
+```typescript
+export class ProductRepository {
+  async findByWorkspace(workspaceId: string) {
+    return prisma.products.findMany({
+      where: { workspaceId, isActive: true }
+    })
+  }
+}
+```
+
+#### 4. **Import Organization (MANDATORY)**
+ALL files MUST have imports organized at the top:
+```typescript
+// 1. External dependencies (node_modules)
+import { PrismaClient } from "@prisma/client"
+import { Router } from "express"
+
+// 2. Internal core (config, types)
+import { config } from "../config"
+import logger from "../utils/logger"
+
+// 3. Middleware
+import { authMiddleware } from "../middlewares/auth.middleware"
+
+// 4. Services
+import { UserService } from "../services/user.service"
+
+// 5. Controllers
+import { ProductController } from "../controllers/product.controller"
+
+// 6. Routes
+import { productRoutes } from "../routes/product.routes"
+```
+
+#### 5. **Security Pattern (3-Layer)**
+ALL protected endpoints MUST use this middleware stack:
+```typescript
+router.post(
+  "/workspaces/:workspaceId/resource",
+  authMiddleware,              // JWT token validation
+  sessionValidationMiddleware, // x-session-id header
+  validateWorkspaceOperation,  // x-workspace-id + param validation
+  controller.action
+)
+```
+
+### Frontend Design Patterns
+
+#### 1. **Component Structure**
+```
+frontend/src/
+├── pages/           # Route components (one per URL)
+├── components/      # Reusable components
+│   ├── shared/      # Cross-feature components
+│   ├── layout/      # Sidebar, Header, Footer
+│   └── ui/          # shadcn/ui primitives
+├── services/        # API clients (axios)
+├── hooks/           # Custom React hooks
+├── contexts/        # React context providers
+└── utils/           # Client helpers
+```
+
+#### 2. **shadcn/ui Pattern**
+ALWAYS use shadcn/ui components for consistency:
+```typescript
+import { Button } from "@/components/ui/button"
+import { Dialog } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+```
+
+#### 3. **Slide Panel Pattern (NEW)**
+For edit forms, use slide panel from right:
+```typescript
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+
+<Sheet open={isOpen} onOpenChange={setIsOpen}>
+  <SheetContent side="right" className="w-[600px]">
+    {/* Edit form here */}
+  </SheetContent>
+</Sheet>
+```
+
+#### 4. **API Client Pattern**
+```typescript
+// services/productApi.ts
+export const productApi = {
+  async getAll(workspaceId: string) {
+    const { data } = await api.get(`/workspaces/${workspaceId}/products`)
+    return data
+  }
+}
+```
+
+### Code Quality Standards
+
+#### Cleanliness Rules
+- ✅ **Imports at top**: ALWAYS organize imports in logical sections
+- ✅ **No duplicates**: Check for duplicate imports/functions
+- ✅ **Delete unused**: Remove commented code and unused imports
+- ✅ **Consistent naming**: Follow project conventions
+- ✅ **File size**: Keep files under 500 lines (extract if larger)
+
+#### Testing Requirements
+- ✅ **Unit tests**: `npm run test:unit` for business logic
+- ✅ **Security tests**: `npm run test:security` for auth/access control
+- ✅ **Integration tests**: `npm run test:integration` for API endpoints
+- ✅ **Coverage target**: Aim for >80% on critical paths
 
 ### Error Handling
 

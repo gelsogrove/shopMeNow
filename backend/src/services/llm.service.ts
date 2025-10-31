@@ -1,3 +1,4 @@
+import { SafetyTranslationAgent } from "../application/agents/SafetyTranslationAgent"
 import { LinkGeneratorService } from "../application/services/link-generator.service"
 import { TokenService } from "../application/services/token.service"
 import { getLLMConfig } from "../config/llm.config"
@@ -405,6 +406,110 @@ export class LLMService {
     }
 
     return "1 ora" // Fallback
+  }
+
+  /**
+   * 🆕 Handle new user welcome message flow
+   *
+   * This is the ONLY entry point for new user messages.
+   * Ensures ALL messages go through Safety & Translation layer.
+   *
+   * @param phone - Customer phone number
+   * @param workspaceId - Workspace ID
+   * @param messageContent - Original message from customer
+   * @returns Object with welcome message, registration link, and debug info
+   */
+  async handleNewUserWelcome(
+    phone: string,
+    workspaceId: string,
+    messageContent: string
+  ): Promise<{
+    success: boolean
+    message: string
+    debugInfo: any
+  }> {
+    const startTime = Date.now()
+
+    logger.info(`🆕 handleNewUserWelcome called for new user`, {
+      phone,
+      workspaceId,
+    })
+
+    try {
+      const messageRepo =
+        new (require("../repositories/message.repository").MessageRepository)()
+      const { workspaceService } = require("../services/workspace.service")
+
+      // 1. Get workspace
+      const workspace = await workspaceService.getById(workspaceId)
+      if (!workspace) {
+        throw new Error(`Workspace not found: ${workspaceId}`)
+      }
+
+      // 2. Get welcome message from database (English)
+      const welcomeMessageEnglish =
+        await messageRepo.getWelcomeMessage(workspaceId)
+      if (!welcomeMessageEnglish) {
+        throw new Error("Welcome message not configured in database")
+      }
+
+      // 3. Detect customer language
+      const {
+        detectLanguageFromPhonePrefix,
+      } = require("../utils/language-detector")
+      const detectedLanguage = detectLanguageFromPhonePrefix(phone)
+
+      // 4. Translate through Safety & Translation layer (MANDATORY)
+      const welcomeMessageTranslated = await this.translateSystemMessage(
+        welcomeMessageEnglish,
+        workspaceId,
+        detectedLanguage,
+        undefined,
+        "new_user_welcome"
+      )
+
+      // 5. Generate registration link
+      const registrationLink = await this.generateRegistrationLink(
+        phone,
+        workspaceId
+      )
+
+      // 6. Build complete message with link
+      const { getRegistrationText } = require("../utils/language-detector")
+      const registrationText = getRegistrationText(detectedLanguage)
+      const completeMessage = `${welcomeMessageTranslated}\n\n🔗 **${registrationText.link}:**\n${registrationLink}\n\n⏰ ${registrationText.validity}`
+
+      const executionTimeMs = Date.now() - startTime
+
+      const debugInfo = {
+        stage: "new_user_welcome",
+        translationLayerPassed: true,
+        detectedLanguage,
+        executionTimeMs,
+        timestamp: new Date().toISOString(),
+      }
+
+      logger.info(`✅ handleNewUserWelcome completed`, {
+        phone,
+        workspaceId,
+        detectedLanguage,
+        executionTimeMs,
+      })
+
+      return {
+        success: true,
+        message: completeMessage,
+        debugInfo,
+      }
+    } catch (error) {
+      logger.error(`❌ handleNewUserWelcome failed`, {
+        phone,
+        workspaceId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+
+      throw error // Don't send message if translation/safety failed
+    }
   }
 
   /**
@@ -1408,6 +1513,77 @@ export class LLMService {
     }
   }
 
+  /**
+   * Translate system message (welcome/WIP) through Safety & Translation layer
+   * @param message - System message in English
+   * @param workspaceId - Workspace ID
+   * @param targetLanguage - Customer's language (it/es/en/pt)
+   * @param customerName - Optional customer name for context
+   * @param messageType - Type of message for debug logging
+   * @returns Translated and safety-checked message
+   */
+  private async translateSystemMessage(
+    message: string,
+    workspaceId: string,
+    targetLanguage: string,
+    customerName?: string,
+    messageType: string = "system_message"
+  ): Promise<string> {
+    const startTime = Date.now()
+
+    try {
+      logger.info(
+        `🌐 Translating ${messageType} through Safety & Translation layer`,
+        {
+          workspaceId,
+          targetLanguage,
+          messageType,
+          originalLength: message.length,
+        }
+      )
+
+      const { PrismaClient } = require("@prisma/client")
+      const prisma = new PrismaClient()
+      const safetyAgent = new SafetyTranslationAgent(prisma)
+      const result = await safetyAgent.process({
+        workspaceId,
+        response: message,
+        targetLanguage,
+        customerName,
+        allowedLinks: [], // System messages don't have dynamic links
+      })
+
+      const executionTimeMs = Date.now() - startTime
+
+      if (!result.safe) {
+        logger.error(`❌ ${messageType} BLOCKED by Safety & Translation`, {
+          workspaceId,
+          blockedReason: result.blockedReason,
+          messageType,
+        })
+        // BLOCK: Don't send if safety check fails
+        throw new Error(`System message blocked: ${result.blockedReason}`)
+      }
+
+      logger.info(`✅ ${messageType} translated successfully`, {
+        workspaceId,
+        targetLanguage,
+        tokensUsed: result.tokensUsed,
+        executionTimeMs,
+        messageType,
+      })
+
+      return result.translatedText
+    } catch (error) {
+      logger.error(`❌ Failed to translate ${messageType}`, {
+        workspaceId,
+        error: error instanceof Error ? error.message : String(error),
+        messageType,
+      })
+      throw error // BLOCK: Don't fall back to untranslated message
+    }
+  }
+
   // Funzione che gestisce il flusso per un nuovo utente e ritorna direttamente l'oggetto di risposta
   private async NewUser(
     llmRequest: LLMRequest,
@@ -1415,23 +1591,74 @@ export class LLMService {
     messageRepo: any,
     debugInfo?: any
   ): Promise<any> {
-    let welcomeMessage = await messageRepo.getWelcomeMessage(
-      workspace.id,
-      workspace.language || "it"
-    )
-    welcomeMessage =
-      welcomeMessage ||
-      "👋 Benvenuto! Devi prima registrarti per utilizzare i nostri servizi."
+    const startTime = Date.now()
 
+    // 1. Get welcome message from database (English only)
+    const welcomeMessageEnglish = await messageRepo.getWelcomeMessage(
+      workspace.id
+    )
+
+    if (!welcomeMessageEnglish) {
+      throw new Error(
+        "Welcome message not configured in database - this should not happen"
+      )
+    }
+
+    // 2. Detect customer language
+    const {
+      detectLanguageFromPhonePrefix,
+    } = require("../utils/language-detector")
+    const detectedLanguage = detectLanguageFromPhonePrefix(llmRequest.phone)
+
+    logger.info(
+      `🌐 NewUser: Detected language ${detectedLanguage} for phone ${llmRequest.phone}`
+    )
+
+    // 3. Translate welcome message through Safety & Translation layer
+    let welcomeMessage: string
+    try {
+      welcomeMessage = await this.translateSystemMessage(
+        welcomeMessageEnglish,
+        workspace.id,
+        detectedLanguage,
+        undefined, // No customer name yet (new user)
+        "welcome_message"
+      )
+
+      debugInfo = {
+        ...debugInfo,
+        stage: "new_user_welcome",
+        translationLayerPassed: true,
+        detectedLanguage,
+        translationTimeMs: Date.now() - startTime,
+      }
+    } catch (translationError) {
+      // BLOCK: If translation fails, don't send message
+      logger.error("❌ NewUser: Translation layer BLOCKED welcome message", {
+        error:
+          translationError instanceof Error
+            ? translationError.message
+            : String(translationError),
+        workspaceId: workspace.id,
+        phone: llmRequest.phone,
+      })
+
+      throw new Error(
+        `Welcome message translation failed: ${translationError instanceof Error ? translationError.message : "Unknown error"}`
+      )
+    }
+
+    // 4. Generate registration link and build final message
     const output = await this.newUserLink(
       llmRequest.phone,
       workspace.id,
       welcomeMessage
     )
+
     return {
       success: false,
       output,
-      debugInfo: JSON.stringify(debugInfo || { stage: "new_user" }),
+      debugInfo: JSON.stringify(debugInfo),
     }
   }
 

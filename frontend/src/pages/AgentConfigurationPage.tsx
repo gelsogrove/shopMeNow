@@ -16,6 +16,7 @@
  */
 
 import { PageLayout } from "@/components/layout/PageLayout"
+import { AgentEditSlidePanel } from "@/components/shared/AgentEditSlidePanel"
 import { PageHeader } from "@/components/shared/PageHeader"
 import {
   Accordion,
@@ -36,11 +37,19 @@ import { Textarea } from "@/components/ui/textarea"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
-import { Agent, getAgents, updateAgent } from "@/services/agentApi"
+import {
+  Agent,
+  exportDatabase,
+  getAgents,
+  updateAgent,
+} from "@/services/agentApi"
+import { api } from "@/services/api"
 import {
   Bot,
   Brain,
   ChevronRight,
+  Database,
+  Edit,
   GitBranch,
   Headphones,
   Loader2,
@@ -51,6 +60,7 @@ import {
   Settings,
   Shield,
   ShoppingCart,
+  Upload,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
@@ -152,6 +162,10 @@ export function AgentConfigurationPage() {
     Record<string, AgentFormData>
   >({})
   const [savingAgents, setSavingAgents] = useState<Record<string, boolean>>({})
+  const [isExporting, setIsExporting] = useState(false)
+  const [isImporting, setIsImporting] = useState(false)
+  const [editingAgent, setEditingAgent] = useState<Agent | null>(null)
+  const [isSlideOpen, setIsSlideOpen] = useState(false)
 
   // Redirect if no workspace
   useEffect(() => {
@@ -205,6 +219,56 @@ export function AgentConfigurationPage() {
     loadAgents()
   }, [workspace?.id])
 
+  const handleOpenEdit = (agent: Agent) => {
+    setEditingAgent(agent)
+    setIsSlideOpen(true)
+  }
+
+  const handleSaveFromSlide = async (updatedAgent: Agent) => {
+    if (!workspace?.id) return
+
+    try {
+      const savedAgent = await updateAgent(workspace.id, updatedAgent.id, {
+        name: updatedAgent.name,
+        content: updatedAgent.systemPrompt || "",
+        temperature: updatedAgent.temperature,
+        model: updatedAgent.model,
+        maxTokens: updatedAgent.maxTokens,
+        isActive: updatedAgent.isActive,
+        order: updatedAgent.order,
+        agentType: updatedAgent.agentType,
+      })
+
+      // Update local state
+      setAgents((prev) =>
+        prev.map((agent) => (agent.id === updatedAgent.id ? savedAgent : agent))
+      )
+
+      // Update editing state
+      setEditingAgents((prev) => ({
+        ...prev,
+        [updatedAgent.id]: {
+          id: savedAgent.id,
+          name: savedAgent.name,
+          systemPrompt: savedAgent.content || "",
+          temperature: savedAgent.temperature || 0.7,
+          model: savedAgent.model || "openai/gpt-4.1-mini",
+          maxTokens: savedAgent.maxTokens || 1000,
+          isActive: savedAgent.isActive ?? true,
+          order: savedAgent.order || 0,
+          agentType: savedAgent.agentType || "router",
+          icon: savedAgent.icon,
+        },
+      }))
+
+      toast.success(`${updatedAgent.name} saved successfully`)
+    } catch (error) {
+      logger.error(`Failed to save agent:`, error)
+      toast.error("Failed to save agent")
+      throw error
+    }
+  }
+
   const handleSaveAgent = async (agentId: string) => {
     if (!workspace?.id) return
 
@@ -255,6 +319,67 @@ export function AgentConfigurationPage() {
     }))
   }
 
+  const handleExportDatabase = async () => {
+    if (!workspace?.id) return
+
+    try {
+      setIsExporting(true)
+      logger.info("Starting database export...")
+
+      const result = await exportDatabase(workspace.id)
+
+      logger.info("Export result:", result)
+      toast.success(
+        "Database export started in background! Check logs for completion."
+      )
+    } catch (error) {
+      logger.error("Failed to export database:", error)
+      toast.error("Failed to start database export")
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  const handleImportDatabase = async () => {
+    if (!workspace?.id) return
+
+    // Conferma azione pericolosa
+    const confirmed = window.confirm(
+      "⚠️ WARNING: This will RESTORE the database from the latest backup and OVERWRITE current data. Continue?"
+    )
+
+    if (!confirmed) return
+
+    try {
+      setIsImporting(true)
+      logger.info("Starting database import from latest backup...")
+
+      // Qui chiameremo l'API di import
+      const response = await api.post(
+        `/workspaces/${workspace.id}/database/import`,
+        {},
+        {
+          headers: {
+            "x-workspace-id": workspace.id,
+          },
+        }
+      )
+
+      logger.info("Import result:", response.data)
+      toast.success("Database restored successfully! Reloading page...")
+
+      // Ricarica la pagina dopo 2 secondi per vedere i nuovi dati
+      setTimeout(() => {
+        window.location.reload()
+      }, 2000)
+    } catch (error) {
+      logger.error("Failed to import database:", error)
+      toast.error("Failed to restore database from backup")
+    } finally {
+      setIsImporting(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <PageLayout>
@@ -280,15 +405,55 @@ export function AgentConfigurationPage() {
   return (
     <PageLayout>
       <div className="flex-1 space-y-4 p-4 pt-2">
-        <PageHeader
-          title={
-            <div className="flex items-center gap-2">
-              <Bot className="h-6 w-6 text-green-600" />
-              <span className="text-green-600">Agents Configuration</span>
-            </div>
-          }
-          description="Configure your multi-agent LLM system"
-        />
+        <div className="flex items-center justify-between">
+          <PageHeader
+            title={
+              <div className="flex items-center gap-2">
+                <Bot className="h-6 w-6 text-green-600" />
+                <span className="text-green-600">Agents Configuration</span>
+              </div>
+            }
+            description="Configure your multi-agent LLM system"
+          />
+          <div className="flex gap-2">
+            <Button
+              onClick={handleImportDatabase}
+              disabled={isImporting || isExporting}
+              className="bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-400"
+              title="Restore workspace from latest backup (⚠️ Destructive operation)"
+            >
+              {isImporting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Restoring...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import Backup
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={handleExportDatabase}
+              disabled={isExporting || isImporting}
+              className="bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-400"
+              title="Create backup of current workspace data"
+            >
+              {isExporting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <Database className="mr-2 h-4 w-4" />
+                  Export Database
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
 
         {agents.length === 0 ? (
           <div className="flex justify-center items-center h-64">
@@ -322,7 +487,7 @@ export function AgentConfigurationPage() {
                     <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-gray-50">
                       <div className="flex items-center justify-between w-full pr-4">
                         {/* LEFT SIDE: Icon + Agent Info */}
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-1">
                           {/* 🌳 Tree connector ONLY for sub-agents (not Router, not Safety) */}
                           {isSubAgent && (
                             <div className="flex items-center text-gray-400">
@@ -358,8 +523,8 @@ export function AgentConfigurationPage() {
                           </div>
                         </div>
 
-                        {/* RIGHT SIDE: Call Functions or Routing Badge */}
-                        <div className="flex items-center gap-1.5 flex-wrap ml-4">
+                        {/* CENTER: Call Functions or Routing Badge */}
+                        <div className="flex items-center gap-1.5 flex-wrap mx-4">
                           {callFunctions.length > 0 ? (
                             // Show CF badges for function-calling agents
                             callFunctions.map((func) => (
@@ -379,6 +544,18 @@ export function AgentConfigurationPage() {
                             </span>
                           ) : null}
                         </div>
+
+                        {/* RIGHT SIDE: Edit Button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleOpenEdit(agent)
+                          }}
+                          className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+                          title="Edit agent"
+                        >
+                          <Edit className="h-4 w-4 text-gray-600" />
+                        </button>
                       </div>
                     </AccordionTrigger>
 
@@ -570,6 +747,19 @@ export function AgentConfigurationPage() {
           </div>
         )}
       </div>
+
+      {/* Slide Panel for Editing */}
+      {editingAgent && (
+        <AgentEditSlidePanel
+          agent={editingAgent}
+          open={isSlideOpen}
+          onOpenChange={(open) => {
+            setIsSlideOpen(open)
+            if (!open) setEditingAgent(null)
+          }}
+          onSave={handleSaveFromSlide}
+        />
+      )}
     </PageLayout>
   )
 }

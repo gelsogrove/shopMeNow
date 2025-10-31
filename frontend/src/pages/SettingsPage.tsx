@@ -30,23 +30,14 @@ interface WorkspaceData {
   url: string
   isActive: boolean
   debugMode: boolean
-  welcomeMessages: { en: string; it: string; es: string; pt: string }
-  wipMessages: { en: string; it: string; es: string; pt: string }
+  welcomeMessage: string
+  wipMessage: string
 }
 
-const defaultWelcomeMessages = {
-  en: "Hello! Thank you for contacting us. How can we help you today?",
-  it: "Ciao! Grazie per averci contattato. Come possiamo aiutarti oggi?",
-  es: "¡Hola! Gracias por contactarnos. ¿Cómo podemos ayudarte hoy?",
-  pt: "Olá! Obrigado por entrar em contato. Como podemos ajudar você hoje?",
-}
+const defaultWelcomeMessage =
+  "Welcome! I'm SofiA, your digital assistant. I can help you discover Italian gourmet products, answer questions, and manage orders. How can I help you today?"
 
-const defaultWipMessages = {
-  en: "Work in progress. Please contact us later.",
-  it: "Lavori in corso. Contattaci più tardi.",
-  es: "Trabajos en curso. Por favor, contáctenos más tarde.",
-  pt: "Em manutenção. Por favor, contacte-nos mais tarde.",
-}
+const defaultWipMessage = "Work in progress. Please contact us later."
 
 export default function SettingsPage() {
   const navigate = useNavigate()
@@ -61,39 +52,15 @@ export default function SettingsPage() {
     url: "http://localhost:3000",
     isActive: true,
     debugMode: true,
-    welcomeMessages: defaultWelcomeMessages,
-    wipMessages: defaultWipMessages,
+    welcomeMessage: defaultWelcomeMessage,
+    wipMessage: defaultWipMessage,
   })
-  const [selectedWelcomeLang, setSelectedWelcomeLang] = useState("en")
-  const [selectedWipLang, setSelectedWipLang] = useState("en")
   const { workspace, loading, setCurrentWorkspace } = useWorkspace()
 
   useEffect(() => {
     if (!workspace) return
     logger.info("📝 Populating form with workspace data:", workspace)
 
-    let welcomeMessages = defaultWelcomeMessages
-    if (workspace.welcomeMessages) {
-      try {
-        welcomeMessages =
-          typeof workspace.welcomeMessages === "string"
-            ? JSON.parse(workspace.welcomeMessages)
-            : workspace.welcomeMessages
-      } catch (e) {
-        logger.error("Error parsing welcome messages:", e)
-      }
-    }
-    let wipMessages = defaultWipMessages
-    if (workspace.wipMessages) {
-      try {
-        wipMessages =
-          typeof workspace.wipMessages === "string"
-            ? JSON.parse(workspace.wipMessages)
-            : workspace.wipMessages
-      } catch (e) {
-        logger.error("Error parsing WIP messages:", e)
-      }
-    }
     setFormData({
       id: workspace.id,
       name: workspace.name || "",
@@ -103,8 +70,8 @@ export default function SettingsPage() {
       url: workspace.url || "http://localhost:3000",
       isActive: workspace.isActive ?? true,
       debugMode: workspace.debugMode ?? true,
-      welcomeMessages,
-      wipMessages,
+      welcomeMessage: workspace.welcomeMessage || defaultWelcomeMessage,
+      wipMessage: workspace.wipMessage || defaultWipMessage,
     })
   }, [workspace])
 
@@ -150,17 +117,6 @@ export default function SettingsPage() {
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }))
   }
 
-  const handleMessageChange = (
-    messageType: "welcomeMessages" | "wipMessages",
-    lang: string,
-    value: string
-  ) => {
-    setFormData((prev) => ({
-      ...prev,
-      [messageType]: { ...prev[messageType], [lang]: value },
-    }))
-  }
-
   const validateForm = (): boolean => {
     const newErrors: { [key: string]: string } = {}
     if (!formData.adminEmail.trim())
@@ -202,8 +158,8 @@ export default function SettingsPage() {
       url: formData.url || "http://localhost:3000",
       isActive: formData.isActive,
       debugMode: formData.debugMode,
-      welcomeMessages: formData.welcomeMessages,
-      wipMessages: formData.wipMessages,
+      welcomeMessage: formData.welcomeMessage,
+      wipMessage: formData.wipMessage,
     }
 
     // 🔍 LOG DETTAGLIATO per debug whatsappApiKey
@@ -370,66 +326,44 @@ export default function SettingsPage() {
             </p>
           </div>
           <div className="space-y-2">
-            <Label>Welcome Messages</Label>
-            <div className="flex gap-2 mb-2">
-              {["en", "it", "es", "pt"].map((lang) => (
-                <Button
-                  key={lang}
-                  variant={selectedWelcomeLang === lang ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedWelcomeLang(lang)}
-                >
-                  {lang.toUpperCase()}
-                </Button>
-              ))}
-            </div>
+            <Label htmlFor="welcomeMessage">
+              Welcome Message{" "}
+              <span className="text-xs text-muted-foreground">
+                (English only)
+              </span>
+            </Label>
             <Textarea
-              value={
-                formData.welcomeMessages[
-                  selectedWelcomeLang as keyof typeof formData.welcomeMessages
-                ]
-              }
+              id="welcomeMessage"
+              value={formData.welcomeMessage}
               onChange={(e) =>
-                handleMessageChange(
-                  "welcomeMessages",
-                  selectedWelcomeLang,
-                  e.target.value
-                )
+                handleFieldChange("welcomeMessage", e.target.value)
               }
               rows={3}
-              placeholder="Enter welcome message..."
+              placeholder="Enter welcome message in English..."
             />
+            <p className="text-xs text-muted-foreground">
+              ℹ️ This message will be automatically translated to the customer's
+              language by the AI Translation layer
+            </p>
           </div>
           <div className="space-y-2">
-            <Label>Work in Progress Messages</Label>
-            <div className="flex gap-2 mb-2">
-              {["en", "it", "es", "pt"].map((lang) => (
-                <Button
-                  key={lang}
-                  variant={selectedWipLang === lang ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedWipLang(lang)}
-                >
-                  {lang.toUpperCase()}
-                </Button>
-              ))}
-            </div>
+            <Label htmlFor="wipMessage">
+              Work in Progress Message{" "}
+              <span className="text-xs text-muted-foreground">
+                (English only)
+              </span>
+            </Label>
             <Textarea
-              value={
-                formData.wipMessages[
-                  selectedWipLang as keyof typeof formData.wipMessages
-                ]
-              }
-              onChange={(e) =>
-                handleMessageChange(
-                  "wipMessages",
-                  selectedWipLang,
-                  e.target.value
-                )
-              }
+              id="wipMessage"
+              value={formData.wipMessage}
+              onChange={(e) => handleFieldChange("wipMessage", e.target.value)}
               rows={3}
-              placeholder="Enter work in progress message..."
+              placeholder="Enter work in progress message in English..."
             />
+            <p className="text-xs text-muted-foreground">
+              ℹ️ This message will be automatically translated to the customer's
+              language by the AI Translation layer
+            </p>
           </div>
           <div className="flex justify-end gap-2 pt-4 border-t">
             <Button
