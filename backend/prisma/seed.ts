@@ -132,8 +132,8 @@ async function main() {
         workspaceSettings.debugMode !== undefined
           ? workspaceSettings.debugMode
           : true,
-      welcomeMessages: workspaceSettings.welcomeMessages,
-      wipMessages: workspaceSettings.wipMessages,
+      welcomeMessage: workspaceSettings.welcomeMessages,
+      wipMessage: workspaceSettings.wipMessages,
       afterRegistrationMessages: workspaceSettings.afterRegistrationMessages,
     },
   })

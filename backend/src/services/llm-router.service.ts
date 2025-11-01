@@ -56,7 +56,13 @@ export interface DebugInfoSteps {
 }
 
 export interface DebugStep {
-  type: "router" | "function_call" | "function_result" | "safety" | "sub_agent"
+  type:
+    | "router"
+    | "function_call"
+    | "function_result"
+    | "safety"
+    | "sub_agent"
+    | "token-replacement" // NEW: Token replacement step
   agent?: string
   model?: string
   temperature?: number
@@ -75,6 +81,9 @@ export interface DebugStep {
     previousResponse?: string
     functionName?: string
     arguments?: any
+    // Token replacement specific
+    responseWithTokens?: string
+    tokensDetected?: string[]
   }
   output?: {
     decision?: string
@@ -84,6 +93,9 @@ export interface DebugStep {
     safe?: boolean
     result?: any
     executionTimeMs?: number
+    // Token replacement specific
+    message?: string
+    process?: string
   }
   // For router steps
   intent?: string
@@ -242,6 +254,42 @@ export class LLMRouterService {
 
       // 🔧 NEW: Collect debug steps from function calling loop
       const debugSteps = result.debugSteps || []
+
+      // STEP 5.5: Token Replacement (if any tokens were replaced)
+      // Extract link replacement info from last agent step (if present)
+      const lastAgentStep = debugSteps.find(
+        (step) =>
+          step.type !== "router" &&
+          step.type !== "safety" &&
+          step.type !== "token-replacement"
+      )
+      
+      // Check if response contains any token placeholders that will be replaced
+      const hasTokens =
+        result.response.includes("[LINK_") || result.response.includes("_TOKEN]")
+      
+      if (hasTokens) {
+        logger.info("Step 3.5: Token Replacement Process")
+        debugSteps.push({
+          type: "token-replacement",
+          agent: "Token Replacement Service",
+          model: "n/a", // Not an LLM call
+          temperature: 0,
+          timestamp: new Date().toISOString(),
+          tokenUsage: undefined, // No tokens used - technical process
+          input: {
+            responseWithTokens: result.response,
+            tokensDetected: [
+              ...(result.response.match(/\[LINK_[A-Z_]+\]/g) || []),
+            ],
+          },
+          output: {
+            message:
+              "Tokens will be replaced with secure URLs by link-replacement.service.ts",
+            process: "JWT generation + URL creation",
+          },
+        })
+      }
 
       // STEP 6: Apply Safety & Translation Layer
       logger.info("Step 4: Applying Safety & Translation Layer")
@@ -479,6 +527,190 @@ export class LLMRouterService {
           }
         )
         const functionExecutionTime = Date.now() - functionExecutionStart
+
+        // 🎯 DEBUG: Log function result structure
+        logger.info("🔍 Function result structure:", {
+          hasData: !!functionResult.data,
+          hasDelegateTo: !!functionResult.data?.delegateTo,
+          functionResult: JSON.stringify(functionResult),
+        })
+
+        // 🎯 CHECK IF THIS IS A DELEGATION REQUEST
+        if (functionResult.data?.delegateTo) {
+          const delegationTarget = functionResult.data.delegateTo
+          const delegationQuery = functionResult.data.query
+
+          logger.info(`🔀 Delegation detected to: ${delegationTarget}`, {
+            query: delegationQuery,
+          })
+
+          // Get customer full info with sales agent
+          const customer = await this.prisma.customers.findUnique({
+            where: { id: params.customerId },
+            include: {
+              sales: true,
+            },
+          })
+
+          if (!customer) {
+            throw new Error(`Customer not found: ${params.customerId}`)
+          }
+
+          // Get workspace info
+          const workspace = await this.prisma.workspace.findUnique({
+            where: { id: params.workspaceId },
+          })
+
+          if (!workspace) {
+            throw new Error(`Workspace not found: ${params.workspaceId}`)
+          }
+
+          // Get catalog data for sub-agent
+          const customerDiscount = customer.discount || 0
+          const messageRepo = new (require("../repositories/message.repository"))
+            .MessageRepository()
+
+          const [categories, offers, products, lastOrder] = await Promise.all([
+            messageRepo.getActiveCategories(params.workspaceId),
+            messageRepo.getActiveOffers(params.workspaceId),
+            messageRepo.getActiveProducts(params.workspaceId, customerDiscount),
+            this.prisma.orders.findFirst({
+              where: { customerId: customer.id },
+              orderBy: { createdAt: "desc" },
+              select: { orderCode: true },
+            }),
+          ])
+
+          // Helper function to get language display name
+          const getLanguageDisplayName = (
+            languageCode: string | null | undefined
+          ): string => {
+            if (!languageCode || languageCode.trim() === "") {
+              return "ITALIANO"
+            }
+            const languageMap: Record<string, string> = {
+              it: "ITALIANO",
+              en: "ENGLISH",
+              es: "ESPAÑOL",
+              pt: "PORTUGUÊS",
+              IT: "ITALIANO",
+              ENG: "ENGLISH",
+              ESP: "ESPAÑOL",
+              PRT: "PORTUGUÊS",
+            }
+            return languageMap[languageCode] || "ITALIANO"
+          }
+
+          // Build customerData object with all variables
+          const customerData = {
+            nameUser: customer.name || "",
+            discountUser: customer.discount || 0,
+            companyName: customer.company || "",
+            lastordercode: lastOrder?.orderCode || "",
+            languageUser: getLanguageDisplayName(
+              customer.language || workspace.language || "it"
+            ),
+            agentName: customer.sales
+              ? `${customer.sales.firstName} ${customer.sales.lastName}`.trim()
+              : "Non assegnato",
+            agentPhone: customer.sales?.phone || "N/A",
+            agentEmail: customer.sales?.email || "N/A",
+            PRODUCTS: products || "",
+            CATEGORIES: categories || "",
+            OFFERS: offers || "",
+          }
+
+          logger.info("📦 Customer data prepared for sub-agent", {
+            nameUser: customerData.nameUser,
+            discount: customerData.discountUser,
+            hasProducts: !!products,
+            hasCategories: !!categories,
+            hasOffers: !!offers,
+            productsLength: products?.length || 0,
+          })
+
+          // Import and call the appropriate sub-agent
+          let subAgentResponse: any
+
+          switch (delegationTarget) {
+            case "PRODUCT_SEARCH": {
+              const { LLMService } = require("./llm.service")
+              const llmService = new LLMService()
+              subAgentResponse = await llmService.handleMessage(
+                {
+                  phone: customer.phone,
+                  workspaceId: params.workspaceId,
+                  chatInput: delegationQuery,
+                  agentType: "PRODUCT_SEARCH",
+                },
+                customerData
+              )
+              break
+            }
+            case "CART_MANAGEMENT": {
+              const { LLMService } = require("./llm.service")
+              const llmService = new LLMService()
+              subAgentResponse = await llmService.handleMessage(
+                {
+                  phone: customer.phone,
+                  workspaceId: params.workspaceId,
+                  chatInput: delegationQuery,
+                  agentType: "CART_MANAGEMENT",
+                },
+                customerData
+              )
+              break
+            }
+            case "ORDER_TRACKING": {
+              const { LLMService } = require("./llm.service")
+              const llmService = new LLMService()
+              subAgentResponse = await llmService.handleMessage(
+                {
+                  phone: customer.phone,
+                  workspaceId: params.workspaceId,
+                  chatInput: delegationQuery,
+                  agentType: "ORDER_TRACKING",
+                },
+                customerData
+              )
+              break
+            }
+            case "CUSTOMER_SUPPORT": {
+              const { LLMService } = require("./llm.service")
+              const llmService = new LLMService()
+              subAgentResponse = await llmService.handleMessage(
+                {
+                  phone: customer.phone,
+                  workspaceId: params.workspaceId,
+                  chatInput: delegationQuery,
+                  agentType: "CUSTOMER_SUPPORT",
+                },
+                customerData
+              )
+              break
+            }
+            default:
+              throw new Error(`Unknown delegation target: ${delegationTarget}`)
+          }
+
+          // Extract response from sub-agent
+          // LLMService.handleMessage() returns { success, output, debugInfo }
+          const subAgentFinalResponse = subAgentResponse.output || subAgentResponse.response || ""
+          
+          logger.info("✅ Sub-agent delegation completed", {
+            delegationTarget,
+            responseLength: subAgentFinalResponse.length,
+          })
+
+          // Return sub-agent response immediately
+          return {
+            response: subAgentFinalResponse,
+            agentUsed: delegationTarget,
+            debugSteps,
+            tokensUsed: llmResponse.tokensUsed,
+            iterations,
+          }
+        }
 
         // 🔧 Determine which sub-agent was used
         const lowerFunctionName = functionName.toLowerCase()

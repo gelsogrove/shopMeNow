@@ -7,9 +7,10 @@
 
 ## 📋 OVERVIEW
 
-Il sistema LLM di ShopME utilizza **Calling Functions** per eseguire azioni nel sistema quando l'utente interagisce con il chatbot. 
+Il sistema LLM di ShopME utilizza **Calling Functions** per eseguire azioni nel sistema quando l'utente interagisce con il chatbot.
 
 **ARCHITETTURA ATTUALE**:
+
 - **Router Agent**: Definisce funzioni in `backend/src/config/agent-functions.ts` → OpenRouter API
 - **OLD System** (deprecated): `backend/src/services/llm.service.ts` → legacy functions
 
@@ -25,19 +26,22 @@ Le funzioni sono eseguite tramite `CallingFunctionsService.executeFunction()`.
 **Quando usare**: Cliente richiede esplicitamente di iscriversi/disiscriversi alle notifiche push
 
 **Trigger semantici**:
+
 - 🇮🇹 "voglio ricevere offerte", "iscrivimi alle notifiche", "non voglio più messaggi", "disiscrivimi"
 - 🇬🇧 "subscribe me", "I want offers", "unsubscribe", "stop notifications"
 - 🇪🇸 "quiero recibir ofertas", "suscribirse", "cancelar suscripción"
 - 🇵🇹 "quero receber ofertas", "inscrever-me", "cancelar inscrição"
 
 **Parametri**:
+
 ```typescript
 {
-  action: "SUBSCRIBE" | "UNSUBSCRIBE"  // Azione da eseguire
+  action: "SUBSCRIBE" | "UNSUBSCRIBE" // Azione da eseguire
 }
 ```
 
 **Comportamento**:
+
 1. ⚠️ **IMPORTANTE**: Richiedere sempre conferma esplicita prima di chiamare funzione
 2. Cliente esprime intenzione ("voglio ricevere offerte")
 3. Agent conferma: "Vuoi iscriverti alle notifiche promozionali?"
@@ -46,6 +50,7 @@ Le funzioni sono eseguite tramite `CallingFunctionsService.executeFunction()`.
 6. Mostrare messaggio di conferma
 
 **Flow Conversazionale**:
+
 ```
 Cliente: "Voglio ricevere le offerte"
 Agent: "Perfetto! Vuoi iscriverti alle notifiche promozionali?"
@@ -55,6 +60,7 @@ Agent: "✅ Ti sei iscritto! Riceverai notifiche sulle nostre offerte."
 ```
 
 **Implementazione Router Agent**:
+
 ```typescript
 // backend/src/config/agent-functions.ts
 {
@@ -74,23 +80,24 @@ Agent: "✅ Ti sei iscritto! Riceverai notifiche sulle nostre offerte."
 ```
 
 **Esecuzione**:
+
 ```typescript
 // backend/src/services/calling-functions.service.ts (line 315)
 async manageNotifications(args: { action: "SUBSCRIBE" | "UNSUBSCRIBE" }, context: any) {
   const { customerId, workspaceId } = context
-  
+
   // Update customer pushNotificationsEnabled field
   await this.prisma.customers.update({
     where: { id: customerId, workspaceId },
-    data: { 
-      pushNotificationsEnabled: args.action === "SUBSCRIBE" 
+    data: {
+      pushNotificationsEnabled: args.action === "SUBSCRIBE"
     }
   })
-  
+
   const message = args.action === "SUBSCRIBE"
     ? "✅ Iscrizione confermata! Riceverai le nostre offerte."
     : "✅ Disiscrizione confermata. Non riceverai più notifiche."
-    
+
   return { success: true, message }
 }
 ```
@@ -102,12 +109,14 @@ async manageNotifications(args: { action: "SUBSCRIBE" | "UNSUBSCRIBE" }, context
 ### 📋 **LISTA COMPLETA FUNZIONI ROUTER AGENT**
 
 #### **Sub-Agent Delegation Functions (4)**:
+
 1. `productSearchAgent` - Delega a specialist per ricerca prodotti complessa
 2. `cartManagementAgent` - Delega a specialist per gestione carrello
 3. `orderTrackingAgent` - Delega a specialist per tracking ordini
 4. `customerSupportAgent` - Delega a specialist per supporto clienti
 
 #### **Direct Business Functions (12)**:
+
 1. `searchProducts` - Ricerca prodotti con filtri (keywords, category, price, allergens, certifications)
 2. `searchProductByCertifications` - Ricerca per certificazioni specifiche (bio, halal, vegan)
 3. `addToCart` - Aggiungi prodotto al carrello (productId, quantity, notes)
@@ -122,10 +131,12 @@ async manageNotifications(args: { action: "SUBSCRIBE" | "UNSUBSCRIBE" }, context
 12. `sendInvoice` - Invia fattura via email (orderId)
 
 #### **Customer Engagement Functions (2)**:
+
 1. `contactSupport` - Crea ticket supporto (reason, urgency: low/medium/high)
 2. `manageNotifications` 🆕 - Gestisci iscrizione push notifications (action: SUBSCRIBE/UNSUBSCRIBE)
 
 #### **Safety Functions (1)**:
+
 1. `sendAlertEmail` - Invia alert via email per situazioni critiche
 
 **TOTALE: 17 FUNZIONI**

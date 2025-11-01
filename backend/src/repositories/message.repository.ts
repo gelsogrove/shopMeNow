@@ -1126,6 +1126,8 @@ export class MessageRepository {
           price: true,
           description: true, // Aggiungi description per il prompt
           formato: true, // Aggiungi formato per il prompt
+          stock: true, // Aggiungi stock per disponibilità
+          certifications: true, // Aggiungi certifications per filtri
           category: {
             select: {
               name: true,
@@ -1186,18 +1188,30 @@ export class MessageRepository {
         // Mostra tutti i prodotti della categoria
         const productsToShow = productList
 
-        // Formato: ogni prodotto su una riga separata con descrizione
+        // Formato: ogni prodotto su una riga separata con description, stock, certifications
         productsToShow.forEach((p) => {
           const originalPrice = Number(p.originalPrice).toFixed(2)
           const finalPrice = Number(p.finalPrice).toFixed(2)
           const description = p.description ? ` - ${p.description}` : ""
           const formatoStr = p.formato ? ` ${p.formato}` : ""
 
+          // Stock indicator
+          let stockIcon = "✅"
+          if (p.stock === 0) stockIcon = "❌"
+          else if (p.stock < 5) stockIcon = "⚠️"
+          const stockStr = ` | Stock: ${stockIcon} ${p.stock}`
+
+          // Certifications
+          const certificationsStr =
+            p.certifications && p.certifications.length > 0
+              ? ` | 🔖 ${p.certifications.join(", ")}`
+              : ""
+
           // WhatsApp strikethrough: ~text~ (single tilde at start and end)
-          // Format: [CODICE] NOME formato ~€originalPrice~ → €finalPrice - description
+          // Format: [CODICE] NOME formato ~€originalPrice~ → €finalPrice - description | Stock: ✅ N | 🔖 CERT1, CERT2
           // Se productCode è null/undefined, non mostrarlo
           const productCode = p.productCode ? `${p.productCode} ` : ""
-          formattedProducts += `• ${productCode}${p.name}${formatoStr} ~€${originalPrice}~ → €${finalPrice}${description}\n`
+          formattedProducts += `• ${productCode}${p.name}${formatoStr} ~€${originalPrice}~ → €${finalPrice}${description}${stockStr}${certificationsStr}\n`
         })
         formattedProducts += "\n"
       }
@@ -2310,7 +2324,14 @@ export class MessageRepository {
         throw new Error("WIP message not configured in database")
       }
 
-      return workspace.wipMessage
+      // wipMessage is Json (multilingual), extract English version
+      const wipMessageObj = workspace.wipMessage as {
+        en: string
+        es: string
+        it: string
+        pt: string
+      }
+      return wipMessageObj.en || JSON.stringify(workspace.wipMessage)
     } catch (error) {
       logger.error(
         `Error getting WIP message for workspace ${workspaceId}:`,
@@ -2339,7 +2360,14 @@ export class MessageRepository {
         throw new Error("Welcome message not configured in database")
       }
 
-      return workspace.welcomeMessage
+      // welcomeMessage is Json (multilingual), extract English version
+      const welcomeMessageObj = workspace.welcomeMessage as {
+        en: string
+        es: string
+        it: string
+        pt: string
+      }
+      return welcomeMessageObj.en || JSON.stringify(workspace.welcomeMessage)
     } catch (error) {
       logger.error(
         `Error getting welcome message for workspace ${workspaceId}:`,
@@ -2417,7 +2445,14 @@ export class MessageRepository {
         throw new Error("Error message not configured in database")
       }
 
-      return workspace.wipMessage
+      // wipMessage is Json (multilingual), extract English version
+      const wipMessageObj = workspace.wipMessage as {
+        en: string
+        es: string
+        it: string
+        pt: string
+      }
+      return wipMessageObj.en || JSON.stringify(workspace.wipMessage)
     } catch (error) {
       logger.error(
         `Error getting error message for workspace ${workspaceId}:`,

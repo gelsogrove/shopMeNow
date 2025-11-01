@@ -19,12 +19,12 @@ export interface FunctionDefinition {
 
 export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   // ========================================
-  // SUB-AGENT DELEGATION FUNCTIONS (Router → Sub-Agents)
+  // ROUTER DELEGATION FUNCTIONS (Function Calls to Sub-Agents)
   // ========================================
   {
     name: "productSearchAgent",
     description:
-      "Delegate to Product Search specialist agent for complex product queries requiring catalog search, filtering, or recommendations. Use when customer needs detailed product information.",
+      "Delegate to Product Search Agent for product search, catalog browsing, certification filters. Use when customer asks about products, prices, stock, categories.",
     parameters: {
       type: "object",
       properties: {
@@ -40,13 +40,13 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   {
     name: "cartManagementAgent",
     description:
-      "Delegate to Cart Management specialist agent for cart operations like adding items, viewing cart, updating quantities, or clearing cart.",
+      "Delegate to Cart Management Agent for adding/removing products, viewing cart, checkout. Use when customer wants to buy, add to cart, modify cart, or checkout.",
     parameters: {
       type: "object",
       properties: {
         query: {
           type: "string",
-          description: "Customer's cart-related request",
+          description: "Customer's cart-related request or action",
         },
       },
       required: ["query"],
@@ -56,13 +56,13 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   {
     name: "orderTrackingAgent",
     description:
-      "Delegate to Order Tracking specialist agent for viewing order history, checking order status, or repeating previous orders.",
+      "Delegate to Order Tracking Agent for order history, tracking, invoices, repeat orders. Use when customer asks about their orders, delivery status, or wants to reorder.",
     parameters: {
       type: "object",
       properties: {
         query: {
           type: "string",
-          description: "Customer's order-related question",
+          description: "Customer's order-related question or request",
         },
       },
       required: ["query"],
@@ -72,26 +72,42 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   {
     name: "customerSupportAgent",
     description:
-      "Delegate to Customer Support specialist agent when customer is frustrated, has complex issues, or explicitly requests human assistance.",
+      "Delegate to Customer Support Agent for complaints, refunds, issues, human operator contact. Use when customer is frustrated, has problems, or explicitly asks for human support.",
     parameters: {
       type: "object",
       properties: {
         query: {
           type: "string",
-          description: "Customer's support request or issue",
-        },
-        urgency: {
-          type: "string",
-          enum: ["low", "medium", "high"],
-          description: "Urgency level of the support request",
+          description: "Customer's support request or issue description",
         },
       },
-      required: ["query", "urgency"],
+      required: ["query"],
     },
   },
 
   // ========================================
-  // DIRECT BUSINESS FUNCTIONS (Router can call directly for simple operations)
+  // ROUTER DIRECT FUNCTIONS
+  // ========================================
+  {
+    name: "manageNotifications",
+    description:
+      "Subscribe or unsubscribe customer from promotional notifications. MUST ask for confirmation before calling!",
+    parameters: {
+      type: "object",
+      properties: {
+        action: {
+          type: "string",
+          enum: ["SUBSCRIBE", "UNSUBSCRIBE"],
+          description:
+            "Action to perform: SUBSCRIBE to enable or UNSUBSCRIBE to disable notifications",
+        },
+      },
+      required: ["action"],
+    },
+  },
+
+  // ========================================
+  // PRODUCT SEARCH AGENT FUNCTIONS
   // ========================================
   {
     name: "searchProducts",
@@ -444,12 +460,12 @@ export function getFunctionsForAPI() {
  */
 export function getFunctionsForRouter() {
   // Router Agent can call:
-  // 1. Delegation functions (productSearchAgent, cartManagementAgent, etc.)
-  // 2. Direct utility functions (manageNotifications)
+  // 1. Delegation functions (productSearchAgent, cartManagementAgent, orderTrackingAgent, customerSupportAgent)
+  // 2. Direct functions (manageNotifications)
   const routerFunctions = AGENT_FUNCTIONS.filter((fn) => {
     return (
       fn.name.endsWith("Agent") || // Delegation to sub-agents
-      fn.name === "manageNotifications" // Customer engagement (SUBSCRIBE/UNSUBSCRIBE)
+      fn.name === "manageNotifications" // Direct notification management
     )
   })
 

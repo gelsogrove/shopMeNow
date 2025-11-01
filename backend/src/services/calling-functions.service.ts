@@ -359,6 +359,133 @@ export class CallingFunctionsService {
   }
 
   /**
+   * Delegate to Product Search Agent
+   * This triggers a sub-agent call in the LLM orchestration layer
+   */
+  public async productSearchAgent(request: {
+    query: string
+    customerId: string
+    workspaceId: string
+  }): Promise<StandardResponse> {
+    try {
+      logger.info("🔍 Router delegating to Product Search Agent:", request)
+
+      // This function is called by Router Agent to delegate to Product Search Agent
+      // The actual delegation happens in llm-router.service.ts
+      // We return a signal that tells the router to call the sub-agent
+      return {
+        success: true,
+        message: `DELEGATE_TO_AGENT:PRODUCT_SEARCH:${request.query}`,
+        timestamp: new Date().toISOString(),
+        data: {
+          agentType: "PRODUCT_SEARCH",
+          query: request.query,
+        },
+      }
+    } catch (error) {
+      logger.error("❌ Error in productSearchAgent:", error)
+      return {
+        success: false,
+        message: "Error delegating to Product Search Agent",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  /**
+   * Delegate to Cart Management Agent
+   * This triggers a sub-agent call in the LLM orchestration layer
+   */
+  public async cartManagementAgent(request: {
+    query: string
+    customerId: string
+    workspaceId: string
+  }): Promise<StandardResponse> {
+    try {
+      logger.info("🛒 Router delegating to Cart Management Agent:", request)
+
+      return {
+        success: true,
+        message: `DELEGATE_TO_AGENT:CART_MANAGEMENT:${request.query}`,
+        timestamp: new Date().toISOString(),
+        data: {
+          agentType: "CART_MANAGEMENT",
+          query: request.query,
+        },
+      }
+    } catch (error) {
+      logger.error("❌ Error in cartManagementAgent:", error)
+      return {
+        success: false,
+        message: "Error delegating to Cart Management Agent",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  /**
+   * Delegate to Order Tracking Agent
+   * This triggers a sub-agent call in the LLM orchestration layer
+   */
+  public async orderTrackingAgent(request: {
+    query: string
+    customerId: string
+    workspaceId: string
+  }): Promise<StandardResponse> {
+    try {
+      logger.info("📦 Router delegating to Order Tracking Agent:", request)
+
+      return {
+        success: true,
+        message: `DELEGATE_TO_AGENT:ORDER_TRACKING:${request.query}`,
+        timestamp: new Date().toISOString(),
+        data: {
+          agentType: "ORDER_TRACKING",
+          query: request.query,
+        },
+      }
+    } catch (error) {
+      logger.error("❌ Error in orderTrackingAgent:", error)
+      return {
+        success: false,
+        message: "Error delegating to Order Tracking Agent",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  /**
+   * Delegate to Customer Support Agent
+   * This triggers a sub-agent call in the LLM orchestration layer
+   */
+  public async customerSupportAgent(request: {
+    query: string
+    customerId: string
+    workspaceId: string
+  }): Promise<StandardResponse> {
+    try {
+      logger.info("💬 Router delegating to Customer Support Agent:", request)
+
+      return {
+        success: true,
+        message: `DELEGATE_TO_AGENT:CUSTOMER_SUPPORT:${request.query}`,
+        timestamp: new Date().toISOString(),
+        data: {
+          agentType: "CUSTOMER_SUPPORT",
+          query: request.query,
+        },
+      }
+    } catch (error) {
+      logger.error("❌ Error in customerSupportAgent:", error)
+      return {
+        success: false,
+        message: "Error delegating to Customer Support Agent",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  /**
    * Replace [LINK_WITH_TOKEN] with generated link
    */
   public async replaceLinkWithToken(

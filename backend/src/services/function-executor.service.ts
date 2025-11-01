@@ -85,6 +85,24 @@ export class FunctionExecutor {
       let result: any
 
       switch (functionName) {
+        // Delegation functions (Router → Sub-Agent)
+        case "productSearchAgent":
+          result = await this.delegateToProductSearch(args, context)
+          break
+
+        case "cartManagementAgent":
+          result = await this.delegateToCartManagement(args, context)
+          break
+
+        case "orderTrackingAgent":
+          result = await this.delegateToOrderTracking(args, context)
+          break
+
+        case "customerSupportAgent":
+          result = await this.delegateToCustomerSupport(args, context)
+          break
+
+        // Direct function calls (Sub-Agents)
         case "searchProducts":
           result = await this.searchProducts(args, context)
           break
@@ -485,10 +503,81 @@ export class FunctionExecutor {
       case "getOrders":
         break
 
+      // Delegation functions
+      case "productSearchAgent":
+      case "cartManagementAgent":
+      case "orderTrackingAgent":
+      case "customerSupportAgent":
+        if (!args.query) {
+          return {
+            valid: false,
+            error: `${functionName} requires 'query' parameter`,
+          }
+        }
+        break
+
       default:
         return { valid: false, error: `Unknown function: ${functionName}` }
     }
 
     return { valid: true }
+  }
+
+  /**
+   * Delegation methods - Router → Sub-Agent
+   * These methods signal that a sub-agent should be called
+   */
+
+  private async delegateToProductSearch(
+    args: Record<string, any>,
+    context: ExecutionContext
+  ): Promise<any> {
+    logger.info("🔍 Delegating to Product Search Agent", { args, context })
+
+    // Return a special response that signals llm-router.service.ts to call Product Search Agent
+    return {
+      delegateTo: "PRODUCT_SEARCH",
+      query: args.query,
+      message: `Delegating to Product Search Agent for: ${args.query}`,
+    }
+  }
+
+  private async delegateToCartManagement(
+    args: Record<string, any>,
+    context: ExecutionContext
+  ): Promise<any> {
+    logger.info("🛒 Delegating to Cart Management Agent", { args, context })
+
+    return {
+      delegateTo: "CART_MANAGEMENT",
+      query: args.query,
+      message: `Delegating to Cart Management Agent for: ${args.query}`,
+    }
+  }
+
+  private async delegateToOrderTracking(
+    args: Record<string, any>,
+    context: ExecutionContext
+  ): Promise<any> {
+    logger.info("📦 Delegating to Order Tracking Agent", { args, context })
+
+    return {
+      delegateTo: "ORDER_TRACKING",
+      query: args.query,
+      message: `Delegating to Order Tracking Agent for: ${args.query}`,
+    }
+  }
+
+  private async delegateToCustomerSupport(
+    args: Record<string, any>,
+    context: ExecutionContext
+  ): Promise<any> {
+    logger.info("💬 Delegating to Customer Support Agent", { args, context })
+
+    return {
+      delegateTo: "CUSTOMER_SUPPORT",
+      query: args.query,
+      message: `Delegating to Customer Support Agent for: ${args.query}`,
+    }
   }
 }
