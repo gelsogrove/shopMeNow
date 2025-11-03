@@ -1,22 +1,47 @@
 /**
- * LLMRouterService (NEW - Function Calling Architecture)
+ * LLMRouterService - Multi-Agent System with Specialist Agents
  *
- * Main orchestration service for multi-agent system with OpenRouter Function Calling.
+ * ✅ CLEAN ARCHITECTURE: Each LLM has its own responsibility, NEVER mixed!
+ *
+ * Architecture:
+ * 1. Router LLM → Delegates to Specialist Agents (NEVER executes directly)
+ * 2. Specialist Agents (with OWN LLM) → Execute specific tasks
+ *    - ProductSearchAgentLLM: Product search/filtering
+ *    - CartManagementAgentLLM: Cart operations
+ *    - OrderTrackingAgentLLM: Order tracking/history
+ *    - CustomerSupportAgentLLM: FAQ/support tickets
+ * 3. SafetyTranslationAgent → Validates and translates to customer language
+ * 4. LinkReplacementService → Replaces [LINK_xxx] tokens with real URLs
  *
  * Flow:
- * 1. FAQ Check (fast path)
+ * 1. FAQ Check (fast path - skip LLM if FAQ match found)
  * 2. Load conversation history (last 10 minutes)
- * 3. Call Router LLM with functions definitions
- * 4. Loop: Execute functions → Return to LLM (max 5 iterations)
- * 5. Final response → SafetyTranslationAgent
- * 6. Save all messages to conversation_messages
+ * 3. Call Router LLM with delegation functions
+ * 4. Router delegates → Specialist Agent (with OWN LLM + prompt from DB)
+ * 5. Specialist Agent returns English response with [LINK_xxx] tokens
+ * 6. Router processes specialist response
+ * 7. Final response → SafetyTranslationAgent (translation + safety check)
+ * 8. LinkReplacementService → Replace tokens with secure URLs
+ * 9. Save all messages to conversation_messages
+ *
+ * Security:
+ * - ALL queries filtered by workspaceId (multi-tenant isolation)
+ * - Each specialist loads its own prompt from database (agentConfig table)
+ * - NO hardcoded prompts or data
+ * - NO mixing of responsibilities between LLMs
  *
  * @architecture Clean Architecture with Dependency Injection
+ * @critical NEVER call LLMService - it's the old monolithic system
+ * @critical ALWAYS use Specialist Agents with their OWN LLM
  * @critical ALWAYS pass final response through SafetyTranslationAgent
  */
 
 import { AgentType, PrismaClient } from "@prisma/client"
 import axios from "axios"
+import { CartManagementAgentLLM } from "../application/agents/CartManagementAgentLLM"
+import { CustomerSupportAgentLLM } from "../application/agents/CustomerSupportAgentLLM"
+import { OrderTrackingAgentLLM } from "../application/agents/OrderTrackingAgentLLM"
+import { ProductSearchAgentLLM } from "../application/agents/ProductSearchAgentLLM"
 import { SafetyTranslationAgent } from "../application/agents/SafetyTranslationAgent"
 import { LinkReplacementService } from "../application/services/link-replacement.service"
 import { getFunctionsForRouter } from "../config/agent-functions"
@@ -730,99 +755,97 @@ export class LLMRouterService {
             productsLength: products?.length || 0,
           })
 
-          // Import and call the appropriate sub-agent
+          // ✅ CALL SPECIALIST AGENTS with OWN LLM (NO LLMService!)
+          // Each specialist has its own LLM instance and system prompt from database
           let subAgentResponse: any
 
           switch (delegationTarget) {
             case "PRODUCT_SEARCH": {
-              const { LLMService } = require("./llm.service")
-              const llmService = new LLMService()
-              subAgentResponse = await llmService.handleMessage(
-                {
-                  phone: customer.phone,
-                  workspaceId: params.workspaceId,
-                  chatInput: delegationQuery,
-                  agentType: "PRODUCT_SEARCH",
-                },
-                customerData,
-                true // skipTranslation - Router will handle translation
-              )
+              const productSearchAgent = new ProductSearchAgentLLM(this.prisma)
+              subAgentResponse = await productSearchAgent.handleQuery({
+                workspaceId: params.workspaceId,
+                customerId: params.customerId,
+                customerName: params.customerName,
+                customerLanguage: params.customerLanguage,
+                query: delegationQuery,
+              })
               break
             }
             case "CART_MANAGEMENT": {
-              const { LLMService } = require("./llm.service")
-              const llmService = new LLMService()
-              subAgentResponse = await llmService.handleMessage(
-                {
-                  phone: customer.phone,
-                  workspaceId: params.workspaceId,
-                  chatInput: delegationQuery,
-                  agentType: "CART_MANAGEMENT",
-                },
-                customerData,
-                true // skipTranslation
+              const cartManagementAgent = new CartManagementAgentLLM(
+                this.prisma
               )
+              subAgentResponse = await cartManagementAgent.handleQuery({
+                workspaceId: params.workspaceId,
+                customerId: params.customerId,
+                customerName: params.customerName,
+                customerLanguage: params.customerLanguage,
+                query: delegationQuery,
+              })
               break
             }
             case "ORDER_TRACKING": {
-              const { LLMService } = require("./llm.service")
-              const llmService = new LLMService()
-              subAgentResponse = await llmService.handleMessage(
-                {
-                  phone: customer.phone,
-                  workspaceId: params.workspaceId,
-                  chatInput: delegationQuery,
-                  agentType: "ORDER_TRACKING",
-                },
-                customerData,
-                true // skipTranslation
-              )
+              const orderTrackingAgent = new OrderTrackingAgentLLM(this.prisma)
+              subAgentResponse = await orderTrackingAgent.handleQuery({
+                workspaceId: params.workspaceId,
+                customerId: params.customerId,
+                customerName: params.customerName,
+                customerLanguage: params.customerLanguage,
+                query: delegationQuery,
+              })
               break
             }
             case "CUSTOMER_SUPPORT": {
-              const { LLMService } = require("./llm.service")
-              const llmService = new LLMService()
-              subAgentResponse = await llmService.handleMessage(
-                {
-                  phone: customer.phone,
-                  workspaceId: params.workspaceId,
-                  chatInput: delegationQuery,
-                  agentType: "CUSTOMER_SUPPORT",
-                },
-                customerData,
-                true // skipTranslation
+              const customerSupportAgent = new CustomerSupportAgentLLM(
+                this.prisma
               )
+              subAgentResponse = await customerSupportAgent.handleQuery({
+                workspaceId: params.workspaceId,
+                customerId: params.customerId,
+                customerName: params.customerName,
+                customerLanguage: params.customerLanguage,
+                query: delegationQuery,
+              })
               break
             }
             default:
               throw new Error(`Unknown delegation target: ${delegationTarget}`)
           }
 
-          // Extract response from sub-agent
-          // LLMService.handleMessage() returns { success, output, debugInfo }
-          logger.info("🔍 Sub-agent raw response structure:", {
+          // Extract response from specialist agent
+          // Specialist agents return: { success, output, tokensUsed, executionTimeMs, functionCalls }
+          logger.info("🔍 Specialist agent response structure:", {
+            success: subAgentResponse.success,
             hasOutput: !!subAgentResponse.output,
-            hasResponse: !!subAgentResponse.response,
             outputLength: subAgentResponse.output?.length || 0,
-            responseLength: subAgentResponse.response?.length || 0,
+            tokensUsed: subAgentResponse.tokensUsed,
+            executionTimeMs: subAgentResponse.executionTimeMs,
+            functionCallsCount: subAgentResponse.functionCalls?.length || 0,
             outputPreview: subAgentResponse.output?.substring(0, 200),
-            responsePreview: subAgentResponse.response?.substring(0, 200),
           })
 
-          const subAgentFinalResponse =
-            subAgentResponse.output || subAgentResponse.response || ""
+          // Check if specialist agent failed
+          if (!subAgentResponse.success) {
+            throw new Error(
+              `Specialist agent ${delegationTarget} failed: ${subAgentResponse.output}`
+            )
+          }
 
-          logger.info("✅ Sub-agent delegation completed", {
+          const subAgentFinalResponse = subAgentResponse.output || ""
+
+          logger.info("✅ Specialist agent delegation completed", {
             delegationTarget,
             responseLength: subAgentFinalResponse.length,
+            tokensUsed: subAgentResponse.tokensUsed,
+            executionTimeMs: subAgentResponse.executionTimeMs,
             responsePreview: subAgentFinalResponse.substring(0, 200),
           })
 
-          // 🆕 CREATE DEBUG STEPS FROM SUB-AGENT FUNCTION CALLS
-          // Sub-agent doesn't create debug steps, but has functionCalls in debugInfo
-          // We reconstruct the steps from functionCalls array
+          // 🆕 CREATE DEBUG STEP FOR SPECIALIST AGENT
+          // Specialist agent returns { success, output, tokensUsed, executionTimeMs, functionCalls }
 
-          // 🔧 PARSE debugInfo if it's a JSON string
+          // 🔧 Extract function calls from specialist agent response
+          const subAgentFunctionCalls = subAgentResponse.functionCalls || []
           let subAgentDebugInfo = subAgentResponse.debugInfo
           if (typeof subAgentDebugInfo === "string") {
             try {
@@ -834,8 +857,8 @@ export class LLMRouterService {
             }
           }
 
-          // 🆕 CREATE DEBUG STEP: Show Router → Sub-Agent delegation with clear INPUT/OUTPUT
-          logger.info("🔍 Creating sub-agent debug step", {
+          // 🆕 CREATE DEBUG STEP: Show Router → Specialist Agent delegation with clear INPUT/OUTPUT
+          logger.info("🔍 Creating specialist agent debug step", {
             delegationTarget,
             delegationQuery: delegationQuery.substring(0, 50),
             hasDebugInfo: !!subAgentDebugInfo,
@@ -853,59 +876,63 @@ export class LLMRouterService {
               parameters: {
                 query: delegationQuery,
               },
-              // Show internal function calls if available
-              internalFunctionCalls: subAgentDebugInfo?.functionCalls || [],
+              // Show internal function calls from specialist agent
+              internalFunctionCalls: subAgentFunctionCalls,
             },
             output: {
               responseText: subAgentFinalResponse,
-              language: "en", // Sub-agents ALWAYS respond in English
+              language: "en", // Specialist agents ALWAYS respond in English
               containsTokens: subAgentFinalResponse.includes("[LINK_"),
-              executionTimeMs: subAgentDebugInfo?.executionTimeMs || 0,
+              executionTimeMs: subAgentResponse.executionTimeMs,
             },
-            tokenUsage: subAgentDebugInfo?.tokenUsage || {
+            tokenUsage: {
               promptTokens: 0,
-              completionTokens: 0,
-              totalTokens: 0,
+              completionTokens: subAgentResponse.tokensUsed,
+              totalTokens: subAgentResponse.tokensUsed,
             },
             isSubAgent: true,
             parentAgent: "ROUTER",
             subAgentType: delegationTarget,
           })
 
-          logger.info("✅ Sub-agent debug step created", {
+          logger.info("✅ Specialist agent debug step created", {
             totalDebugSteps: debugSteps.length,
             responseLength: subAgentFinalResponse.length,
+            tokensUsed: subAgentResponse.tokensUsed,
             hasTokens: subAgentFinalResponse.includes("[LINK_"),
           })
 
-          // 🔄 CRITICAL: Add sub-agent response to messages and CONTINUE to Router
+          // 🔄 CRITICAL: Add specialist agent response to messages and CONTINUE to Router
           // Router LLM will receive this as function result and process it
           messages.push({
             role: "function" as const,
             name: functionName,
-            content: subAgentFinalResponse, // Sub-agent's English response
+            content: subAgentFinalResponse, // Specialist agent's English response
           })
 
           // Track which agent was used
           agentUsed = delegationTarget
 
-          // Update total tokens
-          totalTokens += subAgentDebugInfo?.tokenUsage?.totalTokens || 0
+          // Update total tokens (from specialist agent response)
+          totalTokens += subAgentResponse.tokensUsed || 0
 
           logger.info(
-            "🔄 Sub-agent response added, continuing to Router for processing",
+            "🔄 Specialist agent response added, continuing to Router for processing",
             {
               agentUsed: delegationTarget,
               responseLength: subAgentFinalResponse.length,
+              tokensUsed: subAgentResponse.tokensUsed,
               hasTokens: subAgentFinalResponse.includes("[LINK_"),
               nextIteration: iterations + 1,
             }
           )
 
-          // CONTINUE loop - Router LLM will process sub-agent response
+          // CONTINUE loop - Router LLM will process specialist agent response
           continue
         }
 
+        // 🔧 OLD PATH: Direct function execution (DEPRECATED - should use delegation instead)
+        // This path is for backward compatibility with old function calls
         // 🔧 Determine which sub-agent was used
         const lowerFunctionName = functionName.toLowerCase()
         let subAgentName = "UNKNOWN"

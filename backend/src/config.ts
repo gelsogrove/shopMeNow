@@ -14,6 +14,7 @@ export interface Config {
     origin: string
   }
   frontendUrl: string
+  appUrl: string
   dhlTrackingBaseUrl: string
   llm: {
     defaultPrice: number
@@ -42,6 +43,7 @@ export const config: Config = {
     origin: process.env.CORS_ORIGIN || "http://localhost:5173",
   },
   frontendUrl: process.env.FRONTEND_URL || "http://localhost:5173", // Fixed: Vite runs on 5173, not 3000
+  appUrl: process.env.APP_URL || "http://localhost:3001", // Backend API URL for OpenRouter HTTP-Referer
   dhlTrackingBaseUrl:
     process.env.DHL_TRACKING_BASE_URL ||
     "https://www.dhl.com/global-en/home/tracking/tracking-express.html",
