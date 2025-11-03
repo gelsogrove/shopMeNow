@@ -516,25 +516,27 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
 
         // Pass through Safety & Translation Layer (MANDATORY)
         const safetyAgent = new SafetyTranslationAgent(prisma)
-        const safetyResult = await safetyAgent.process(
-          wipMessageText,
-          customerLanguage,
+        const safetyResult = await safetyAgent.process({
           workspaceId,
-          {
-            customerName: customerForWip?.name || "Customer",
-          }
-        )
+          response: wipMessageText,
+          targetLanguage: customerLanguage,
+          customerName: customerForWip?.name || "Customer",
+        })
 
         // Use translated/safe message
         let finalMessage = safetyResult.translatedText
 
         // Apply Link Replacement (if any tokens present)
-        const linkService = new LinkReplacementService(prisma)
-        finalMessage = await linkService.replaceLinks(
-          finalMessage,
-          workspaceId,
-          customerId
+        const linkService = new LinkReplacementService()
+        const linkResult = await linkService.replaceTokens(
+          { response: finalMessage },
+          customerId,
+          workspaceId
         )
+
+        if (linkResult.success && linkResult.response) {
+          finalMessage = linkResult.response
+        }
 
         // Save message to history
         const messageRepository = new MessageRepository()

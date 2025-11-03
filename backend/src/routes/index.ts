@@ -33,6 +33,8 @@ import { workspaceValidationMiddleware } from "../interfaces/http/middlewares/wo
 // ============================================================================
 // 3. SERVICE IMPORTS
 // ============================================================================
+import { SafetyTranslationAgent } from "../application/agents/SafetyTranslationAgent"
+import { LinkReplacementService } from "../application/services/link-replacement.service"
 import { OtpService } from "../application/services/otp.service"
 import { PasswordResetService } from "../application/services/password-reset.service"
 import { RegistrationAttemptsService } from "../application/services/registration-attempts.service"
@@ -805,6 +807,99 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
     } catch (spamError) {
       logger.error("❌ Error in spam detection:", spamError)
       // Continue processing if spam detection fails
+    }
+
+    // 🔒 CRITICAL: Check if workspace is in WIP (maintenance mode)
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: {
+        isActive: true,
+        wipMessage: true,
+      },
+    })
+
+    if (!workspace) {
+      logger.error(`❌ Workspace ${workspaceId} not found`)
+      res.status(404).json({ error: "Workspace not found" })
+      return
+    }
+
+    // Get customer details for language and name (if not already loaded)
+    const customerForWip = await prisma.customers.findUnique({
+      where: { id: customerId },
+      select: { name: true, language: true },
+    })
+
+    // If workspace is in WIP mode, send WIP message through Safety Layer
+    if (!workspace.isActive) {
+      logger.info(
+        `🚧 Workspace ${workspaceId} is in WIP mode - sending maintenance message`
+      )
+
+      try {
+        // Get WIP message from workspace settings (in customer's language)
+        const customerLanguage = customerForWip?.language || "it"
+        const wipMessages = workspace.wipMessage as any
+        let wipMessageText =
+          wipMessages?.[customerLanguage] ||
+          wipMessages?.["it"] ||
+          "Siamo in manutenzione. Ti contatteremo presto."
+
+        // Pass through Safety & Translation Layer (MANDATORY)
+        const safetyAgent = new SafetyTranslationAgent(prisma)
+        const safetyResult = await safetyAgent.process({
+          workspaceId,
+          response: wipMessageText,
+          targetLanguage: customerLanguage,
+          customerName: customerForWip?.name || "Customer",
+        })
+
+        // Use translated/safe message
+        let finalMessage = safetyResult.translatedText
+
+        // Apply Link Replacement (if any tokens present)
+        const linkService = new LinkReplacementService()
+        const linkResult = await linkService.replaceTokens(
+          { response: finalMessage },
+          customerId,
+          workspaceId
+        )
+
+        if (linkResult.success && linkResult.response) {
+          finalMessage = linkResult.response
+        }
+
+        // Save message to history
+        const messageRepository = new MessageRepository()
+        await messageRepository.saveMessage({
+          workspaceId,
+          phoneNumber,
+          message: messageContent,
+          response: finalMessage,
+          direction: "INBOUND",
+          agentSelected: "WIP_MESSAGE",
+          processingSource: "workspace_wip",
+          debugInfo: JSON.stringify({
+            workspaceInWIP: true,
+            safetyProcessed: true,
+            timestamp: new Date().toISOString(),
+          }),
+        })
+
+        // Return WIP message
+        res.json({
+          success: true,
+          data: {
+            sessionId: null,
+            message: finalMessage,
+          },
+        })
+        return
+      } catch (error) {
+        logger.error("❌ Failed to process WIP message:", error)
+        res.status(500).json({ error: "Failed to process WIP message" })
+        return
+      }
     }
 
     // Check if chat session is disabled (operator escalation)
