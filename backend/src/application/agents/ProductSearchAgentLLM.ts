@@ -31,8 +31,8 @@
 
 import { PrismaClient } from "@prisma/client"
 import axios from "axios"
-import { AgentConfigRepository } from "../../repositories/agent-config.repository"
 import { config } from "../../config"
+import { AgentConfigRepository } from "../../repositories/agent-config.repository"
 import logger from "../../utils/logger"
 import { ProductSearchAgent } from "./ProductSearchAgent"
 
