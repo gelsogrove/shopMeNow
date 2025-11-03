@@ -1,6 +1,6 @@
 /**
  * Language Detection Utility
- * 
+ *
  * Detects customer language from phone prefix and provides localized texts
  */
 
@@ -83,8 +83,7 @@ export function detectLanguageFromPhonePrefix(phone: string): string {
  */
 export function getRegistrationText(language: string): RegistrationText {
   return (
-    REGISTRATION_TEXTS[language] ||
-    REGISTRATION_TEXTS["en"] // Default to English
+    REGISTRATION_TEXTS[language] || REGISTRATION_TEXTS["en"] // Default to English
   )
 }
 

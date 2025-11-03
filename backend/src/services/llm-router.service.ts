@@ -17,8 +17,8 @@
 
 import { AgentType, PrismaClient } from "@prisma/client"
 import axios from "axios"
-import { LinkReplacementService } from "../application/services/link-replacement.service"
 import { SafetyTranslationAgent } from "../application/agents/SafetyTranslationAgent"
+import { LinkReplacementService } from "../application/services/link-replacement.service"
 import { getFunctionsForRouter } from "../config/agent-functions"
 import { AgentConfigRepository } from "../repositories/agent-config.repository"
 import { FAQRepository } from "../repositories/faq.repository"
@@ -750,7 +750,7 @@ export class LLMRouterService {
           // 🆕 CREATE DEBUG STEPS FROM SUB-AGENT FUNCTION CALLS
           // Sub-agent doesn't create debug steps, but has functionCalls in debugInfo
           // We reconstruct the steps from functionCalls array
-          
+
           // 🔧 PARSE debugInfo if it's a JSON string
           let subAgentDebugInfo = subAgentResponse.debugInfo
           if (typeof subAgentDebugInfo === "string") {

@@ -857,23 +857,23 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
       let welcomeBackMessage = null // 🎯 TASK: Declare welcome back message variable
       let agentModel: string
       let agentMaxTokens: number
-      
+
       const agentConfig = await prisma.agentConfig.findFirst({
         where: { workspaceId: workspaceId },
       })
-      
+
       if (!agentConfig) {
         throw new Error(`Agent config not found for workspace ${workspaceId}`)
       }
-      
+
       if (!agentConfig.systemPrompt) {
         throw new Error(`System prompt missing for workspace ${workspaceId}`)
       }
-      
+
       agentPrompt = agentConfig.systemPrompt
       agentModel = agentConfig.model
       agentMaxTokens = agentConfig.maxTokens
-      
+
       try {
         if (agentConfig?.maxTokens) {
           agentMaxTokens = agentConfig.maxTokens

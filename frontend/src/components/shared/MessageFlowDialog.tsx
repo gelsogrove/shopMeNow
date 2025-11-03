@@ -152,9 +152,11 @@ export default function MessageFlowDialog({
 
   // 🆕 ORGANIZZA TUTTI GLI STEP (inclusi sub-agent function calls)
   const allSteps = debugInfo.steps
-  const routerSteps = allSteps.filter((s) => s.type === "router" && !(s as any).isSubAgent)
+  const routerSteps = allSteps.filter(
+    (s) => s.type === "router" && !(s as any).isSubAgent
+  )
   const safetySteps = allSteps.filter((s) => s.type === "safety")
-  
+
   // 🆕 TUTTI GLI STEP DEL SUB-AGENT: function calls, results, sub_agent response, router receiving
   const subAgentSteps = allSteps.filter((s) => (s as any).isSubAgent)
 
@@ -237,9 +239,9 @@ export default function MessageFlowDialog({
   // subAgentSteps now includes ALL steps with isSubAgent flag (function calls, results, responses, etc.)
   const timelineSequence = [
     userStep,
-    routerSteps[0],        // Router decide di delegare
-    ...subAgentSteps,      // 🆕 TUTTI gli step del sub-agent in ordine cronologico
-    safetySteps[0],        // Safety & Translation
+    routerSteps[0], // Router decide di delegare
+    ...subAgentSteps, // 🆕 TUTTI gli step del sub-agent in ordine cronologico
+    safetySteps[0], // Safety & Translation
     saveToHistoryStep,
     queueStep,
     whatsappStep,

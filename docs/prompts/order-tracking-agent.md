@@ -321,14 +321,14 @@ You can use these tokens in your responses:
 
 ## 📊 DISAMBIGUAZIONE ORDINI
 
-| Frase Cliente     | Azione                                     | Spiegazione                      |
-| ----------------- | ------------------------------------------ | -------------------------------- |
+| Frase Cliente     | Azione                            | Spiegazione                      |
+| ----------------- | --------------------------------- | -------------------------------- |
 | "ultimo ordine"   | getOrders({})                     | Visualizza ultimo ordine         |
 | "ordine ORD-123"  | getOrders({orderCode: "ORD-123"}) | Ordine specifico                 |
 | "fattura"         | getOrders({})                     | Visualizza (include fattura PDF) |
-| "tutti ordini"    | [LINK_ORDERS_WITH_TOKEN]                   | Lista completa                   |
-| "ripeti ordine"   | cartManagementAgent()                      | Delega a Cart (ri-acquista)      |
-| "modifica ordine" | customerSupportAgent()                     | Delega a Support                 |
+| "tutti ordini"    | [LINK_ORDERS_WITH_TOKEN]          | Lista completa                   |
+| "ripeti ordine"   | cartManagementAgent()             | Delega a Cart (ri-acquista)      |
+| "modifica ordine" | customerSupportAgent()            | Delega a Support                 |
 | "dov'è ordine"    | FAQ + getOrders                   | Info tracking + link             |
 
 ## 🔴 PRIORITÀ ECCEZIONI

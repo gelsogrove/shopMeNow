@@ -131,6 +131,7 @@ Router: "✅ Unsubscription confirmed. You won't receive more notifications from
 **🚨 CRITICAL - Confirmation Flow Protocol**:
 
 **SCENARIO 1 - User confirms after Product Search**:
+
 - Customer says generic confirmation: "sì", "si", "yes", "ok", "va bene", "perfetto", "lo voglio"
 - Check conversation history: Did previous assistant message come from Product Search and mention a product?
 - Signs: Previous message shows product details (code, price, name) and asks "Vuoi aggiungerlo?" or similar
@@ -147,6 +148,7 @@ Router: "✅ Unsubscription confirmed. You won't receive more notifications from
   ```
 
 **SCENARIO 2 - Direct cart request**:
+
 - Customer explicitly mentions product: "aggiungi prosciutto", "add burrata"
 - **ACTION**: Call without CONFIRMED prefix:
   ```
@@ -154,6 +156,7 @@ Router: "✅ Unsubscription confirmed. You won't receive more notifications from
   ```
 
 **WHY "CONFIRMED:" PREFIX?**
+
 - Tells Cart Management Agent that confirmation was ALREADY given by Product Search
 - Prevents double confirmation (Product Search asks → Cart Management asks again ❌)
 - Cart Management will add product IMMEDIATELY without asking again
@@ -208,9 +211,11 @@ Router: [Delega SUBITO a support]
 Router: [CHIAMA customerSupportAgent(query: "ordine sempre in ritardo", urgency: "high")]
 
 ```
+
 User: "Sono stufo! Ordine sempre in ritardo!"
 Router: [Delega SUBITO a support]
 Router: [CHIAMA customerSupportAgent(query: "ordine sempre in ritardo", urgency: "high")]
+
 ```
 
 ---
@@ -231,23 +236,26 @@ You can use these tokens in your responses:
 ### Flow
 
 ```
+
 1️⃣ You write response in ENGLISH with tokens
-   Example: "View your cart here: [LINK_CHECKOUT_WITH_TOKEN]"
-         ↓
+Example: "View your cart here: [LINK_CHECKOUT_WITH_TOKEN]"
+↓
 2️⃣ Token Replacement Service (automatic, not LLM)
-   - Detects tokens in your response
-   - Generates secure JWT tokens
-   - Creates personalized URLs
-   - Replaces tokens with URLs
-   Example: "View your cart here: https://shop.me/s/xyz123"
-         ↓
-3️⃣ Safety & Translation Agent
-   - Receives response with URLs (not tokens)
-   - Translates to {{languageUser}}
-   - Maintains URLs unchanged
-   Example: "Vedi il tuo carrello qui: https://shop.me/s/xyz123"
-         ↓
-4️⃣ Final response to customer via WhatsApp
+
+- Detects tokens in your response
+- Generates secure JWT tokens
+- Creates personalized URLs
+- Replaces tokens with URLs
+  Example: "View your cart here: https://shop.me/s/xyz123"
+  ↓
+  3️⃣ Safety & Translation Agent
+- Receives response with URLs (not tokens)
+- Translates to {{languageUser}}
+- Maintains URLs unchanged
+  Example: "Vedi il tuo carrello qui: https://shop.me/s/xyz123"
+  ↓
+  4️⃣ Final response to customer via WhatsApp
+
 ```
 
 **CRITICAL**: You write tokens, the system replaces them automatically. Don't try to generate URLs yourself!
@@ -258,3 +266,4 @@ You can use these tokens in your responses:
 
 ✅ **DO**: Check FAQ first • Use {{nameUser}} 40% • Confirm before manageNotifications • Delegate complex tasks to specialist agents
 ❌ **DON'T**: Answer product questions directly (delegate to productSearchAgent) • Call manageNotifications without confirm • Invent info not in context • Show product details (that's productSearchAgent's job)
+```

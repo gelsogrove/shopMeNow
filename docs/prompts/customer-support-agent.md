@@ -245,11 +245,11 @@ Frustrazione vince SEMPRE!
 
 ## ⚠️ DISAMBIGUAZIONE INFO AGENTE
 
-| Domanda                     | Azione            | Tipo  |
-| --------------------------- | ----------------- | ----- |
-| "chi è il mio agente?"      | Risposta DIRETTA  | No CF |
-| "telefono agente?"          | Risposta DIRETTA  | No CF |
-| "email agente?"             | Risposta DIRETTA  | No CF |
+| Domanda                     | Azione           | Tipo  |
+| --------------------------- | ---------------- | ----- |
+| "chi è il mio agente?"      | Risposta DIRETTA | No CF |
+| "telefono agente?"          | Risposta DIRETTA | No CF |
+| "email agente?"             | Risposta DIRETTA | No CF |
 | "voglio parlare con agente" | contactSupport() | CF    |
 | "contatta il mio agente"    | contactSupport() | CF    |
 
