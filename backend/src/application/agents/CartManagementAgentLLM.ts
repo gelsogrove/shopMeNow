@@ -258,7 +258,7 @@ export class CartManagementAgentLLM {
           headers: {
             Authorization: `Bearer ${this.openRouterApiKey}`,
             "Content-Type": "application/json",
-            "HTTP-Referer": process.env.APP_URL || "http://localhost:3001",
+            "HTTP-Referer": config.appUrl,
             "X-Title": "ShopME - Cart Management Agent",
           },
         }
