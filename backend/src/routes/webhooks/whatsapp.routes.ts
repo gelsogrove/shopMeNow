@@ -8,7 +8,6 @@
 import { PrismaClient } from "@prisma/client"
 import { Response, Router } from "express"
 import { SafetyTranslationAgent } from "../../application/agents/SafetyTranslationAgent"
-import { LinkReplacementService } from "../../application/services/link-replacement.service"
 import { RegistrationAttemptsService } from "../../application/services/registration-attempts.service"
 import { SecureTokenService } from "../../application/services/secure-token.service"
 import { SpamDetectionService } from "../../application/services/spam-detection.service"
@@ -523,20 +522,8 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
           customerName: customerForWip?.name || "Customer",
         })
 
-        // Use translated/safe message
-        let finalMessage = safetyResult.translatedText
-
-        // Apply Link Replacement (if any tokens present)
-        const linkService = new LinkReplacementService()
-        const linkResult = await linkService.replaceTokens(
-          { response: finalMessage },
-          customerId,
-          workspaceId
-        )
-
-        if (linkResult.success && linkResult.response) {
-          finalMessage = linkResult.response
-        }
+        // Use translated/safe message (WIP messages don't contain tokens)
+        const finalMessage = safetyResult.translatedText
 
         // Save message to history
         const messageRepository = new MessageRepository()
@@ -671,14 +658,7 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
         direction: "INBOUND",
         agentSelected: result.agentUsed || "ROUTER",
         processingSource: result.wasFAQ ? "faq" : "router",
-        debugInfo: JSON.stringify({
-          ...(result.debugInfo || {}),
-          agentUsed: result.agentUsed,
-          tokensUsed: result.tokensUsed,
-          executionTimeMs: result.executionTimeMs,
-          wasFAQ: result.wasFAQ,
-          faqId: result.faqId,
-        }),
+        debugInfo: JSON.stringify(result.debugInfo || {}), // ✅ Use debugInfo as-is from Router (already contains all needed fields)
       })
     }
 

@@ -250,8 +250,8 @@ export default function MessageFlowDialog({
     routerSteps[0], // STEP 2: Router iteration 1 (delega a sub-agent)
     ...subAgentSteps, // STEP 3: Sub-agent execution
     routerSteps[1], // STEP 4: Router iteration 2 (riceve risposta)
-    safetySteps[0], // STEP 5: Safety & Translation
-    linkReplacementSteps[0], // STEP 6: Link Replacement
+    linkReplacementSteps[0], // STEP 5: Link Replacement (BEFORE Safety) ✅
+    safetySteps[0], // STEP 6: Safety & Translation (AFTER Link Replacement) ✅
     saveToHistoryStep, // STEP 7: Save to history
     queueStep, // STEP 8: Queue message
     whatsappStep, // STEP 9: WhatsApp send

@@ -34,7 +34,6 @@ import { workspaceValidationMiddleware } from "../interfaces/http/middlewares/wo
 // 3. SERVICE IMPORTS
 // ============================================================================
 import { SafetyTranslationAgent } from "../application/agents/SafetyTranslationAgent"
-import { LinkReplacementService } from "../application/services/link-replacement.service"
 import { OtpService } from "../application/services/otp.service"
 import { PasswordResetService } from "../application/services/password-reset.service"
 import { RegistrationAttemptsService } from "../application/services/registration-attempts.service"
@@ -854,20 +853,8 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
           customerName: customerForWip?.name || "Customer",
         })
 
-        // Use translated/safe message
-        let finalMessage = safetyResult.translatedText
-
-        // Apply Link Replacement (if any tokens present)
-        const linkService = new LinkReplacementService()
-        const linkResult = await linkService.replaceTokens(
-          { response: finalMessage },
-          customerId,
-          workspaceId
-        )
-
-        if (linkResult.success && linkResult.response) {
-          finalMessage = linkResult.response
-        }
+        // Use translated/safe message (WIP messages don't contain tokens)
+        const finalMessage = safetyResult.translatedText
 
         // Save message to history
         const messageRepository = new MessageRepository()
@@ -1224,15 +1211,7 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
           agentSelected: result.agentUsed || "ROUTER",
           // 🔧 NEW: Debug data from multi-agent router
           processingSource: result.wasFAQ ? "faq" : "router",
-          debugInfo: JSON.stringify({
-            ...(result.debugInfo || {}),
-            agentUsed: result.agentUsed,
-            tokensUsed: result.tokensUsed,
-            executionTimeMs: result.executionTimeMs,
-            wasFAQ: result.wasFAQ,
-            faqId: result.faqId,
-            costTimestamp: new Date().toISOString(),
-          }),
+          debugInfo: JSON.stringify(result.debugInfo || {}), // ✅ Use debugInfo as-is from Router (already contains all needed fields)
         })
 
         // 💰 Billing tracking is handled by messageRepository.saveMessage()

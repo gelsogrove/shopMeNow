@@ -53,6 +53,7 @@ export interface DebugInfoSteps {
   steps: DebugStep[]
   totalTokens: number
   totalCost: number
+  executionTimeMs: number // ✅ Total execution time for entire flow
   timestamp: string
 }
 
@@ -285,35 +286,77 @@ export class LLMRouterService {
         result.response.includes("[LINK_") ||
         result.response.includes("_TOKEN]")
 
-      if (hasTokens) {
-        logger.info("Step 3.5: Token Replacement Process")
+      // STEP 4: Replace tokens BEFORE Safety & Translation
+      // This ensures Safety agent receives actual URLs, not tokens
+      logger.info("Step 4: Replacing tokens in response (BEFORE Safety)")
+      const linkReplacementTimestamp = new Date().toISOString()
+      
+      let responseWithLinks = result.response
+      const tokensDetected = result.response.match(/\[LINK_[A-Z_]+\]/g) || []
+      
+      if (tokensDetected.length > 0) {
+        logger.info(`🔗 Found ${tokensDetected.length} tokens to replace:`, tokensDetected)
+        logger.info(`🔗 Input to linkReplacementService:`, {
+          response: result.response.substring(0, 200),
+          customerId: params.customerId,
+          workspaceId: params.workspaceId,
+        })
+        
+        const linkResult = await this.linkReplacementService.replaceTokens(
+          {
+            response: result.response,
+            orderCode: result.response.match(/ORD-\d+/)?.[0], // Extract order code if present
+          },
+          params.customerId,
+          params.workspaceId
+        )
+
+        logger.info(`🔗 Link replacement result:`, {
+          success: linkResult.success,
+          hasResponse: !!linkResult.response,
+          responsePreview: linkResult.response?.substring(0, 200),
+          error: linkResult.error,
+        })
+
+        if (linkResult.success && linkResult.response) {
+          responseWithLinks = linkResult.response
+          logger.info("✅ Link replacement successful - URLs replaced!")
+        } else {
+          logger.warn("⚠️ Link replacement failed:", {
+            success: linkResult.success,
+            error: linkResult.error,
+            willUseOriginal: true,
+          })
+        }
+
+        // 🔧 ADD DEBUG STEP: Link Replacement
         debugSteps.push({
           type: "token-replacement",
-          agent: "Token Replacement Service",
-          model: "n/a", // Not an LLM call
+          agent: "Link Replacement Service",
+          model: "N/A", // Not an LLM
           temperature: 0,
-          timestamp: new Date().toISOString(),
-          tokenUsage: undefined, // No tokens used - technical process
+          timestamp: linkReplacementTimestamp,
+          tokenUsage: undefined,
           input: {
             responseWithTokens: result.response,
-            tokensDetected: [
-              ...(result.response.match(/\[LINK_[A-Z_]+\]/g) || []),
-            ],
+            tokensDetected,
           },
           output: {
-            message:
-              "Tokens will be replaced with secure URLs by link-replacement.service.ts",
-            process: "JWT generation + URL creation",
+            message: linkResult.response || result.response,
+            process: `Replaced ${linkResult.success ? tokensDetected.length : 0} token(s) - JWT generation + URL creation`,
           },
         })
+      } else {
+        logger.info("ℹ️ No tokens found in response - skipping link replacement")
       }
 
-      // STEP 6: Apply Safety & Translation Layer
-      logger.info("Step 4: Applying Safety & Translation Layer")
+      // STEP 5: Apply Safety & Translation Layer
+      // Now processes the response WITH actual URLs (not tokens)
+      logger.info("Step 5: Applying Safety & Translation Layer")
       const safetyTimestamp = new Date().toISOString()
       const safeResponse = await this.safetyAgent.process({
         workspaceId: params.workspaceId,
-        response: result.response,
+        response: responseWithLinks, // ✅ Pass response with links already replaced
         targetLanguage: params.customerLanguage || "it",
         customerName: params.customerName,
       })
@@ -335,8 +378,8 @@ export class LLMRouterService {
             }
           : undefined,
         input: {
-          textToValidate: result.response,
-          previousResponse: "Router generated response",
+          textToValidate: responseWithLinks, // ✅ Input now has actual URLs
+          previousResponse: "Router generated response (with links replaced)",
         },
         output: {
           safe: safeResponse.safe,
@@ -355,45 +398,41 @@ export class LLMRouterService {
         })
       }
 
-      // STEP 7: Replace tokens in final response
-      // [LINK_ORDERS_WITH_TOKEN], [LINK_ORDER_WITH_TOKEN], [CATALOG_PDF_LINK]
-      logger.info("Step 5: Replacing tokens in final response")
-      const linkReplacementTimestamp = new Date().toISOString()
-      const finalResponse = await this.linkReplacementService.replaceTokens(
-        {
-          response: safeResponse.translatedText,
-          orderCode: result.response.match(/ORD-\d+/)?.[0], // Extract order code if present
-        },
-        params.customerId,
-        params.workspaceId
-      )
+      // STEP 5.5: Clean up punctuation attached to URLs (Safety may add punctuation)
+      // Example: "http://localhost:3000/s/xyz." → "http://localhost:3000/s/xyz ."
+      // Example: "http://localhost:3000/s/xyz)." → "http://localhost:3000/s/xyz ."
+      let finalCleanResponse = safeResponse.translatedText
+      
+      // Regex to find URLs ending with short paths (like /s/xxx) followed by punctuation
+      // This avoids matching domain dots like "localhost:3000"
+      const urlWithPunctuationRegex = /(https?:\/\/[^\s]+\/[a-zA-Z0-9_-]+)([\.!?,;:\)]+)(\s|$)/g
+      
+      const urlMatches = finalCleanResponse.match(urlWithPunctuationRegex)
+      if (urlMatches && urlMatches.length > 0) {
+        logger.info(`🧹 Cleaning punctuation from ${urlMatches.length} URL(s)`)
+        
+        finalCleanResponse = finalCleanResponse.replace(
+          urlWithPunctuationRegex,
+          (match, url, punctuation, trailing) => {
+            // Remove closing parenthesis from punctuation if present (artifact from Markdown)
+            const cleanPunct = punctuation.replace(/\)/g, '')
+            if (!cleanPunct) {
+              // If only ) was there, just return URL with trailing
+              return `${url}${trailing}`
+            }
+            // Move punctuation after the URL with a space
+            logger.debug(`Cleaned: "${url}${punctuation}" → "${url}${trailing}${cleanPunct}"`)
+            return `${url}${trailing}${cleanPunct}`
+          }
+        )
+      }
 
-      // 🔧 ADD DEBUG STEP: Link Replacement
-      debugSteps.push({
-        type: "token-replacement",
-        agent: "Link Replacement Service",
-        model: "N/A", // Not an LLM
-        temperature: 0,
-        timestamp: linkReplacementTimestamp,
-        tokenUsage: undefined,
-        input: {
-          responseWithTokens: safeResponse.translatedText,
-          tokensDetected: [
-            ...(safeResponse.translatedText.match(/\[LINK_[A-Z_]+\]/g) || []),
-          ],
-        },
-        output: {
-          message: finalResponse.response || safeResponse.translatedText,
-          process: `Replaced ${finalResponse.success ? "tokens" : "none"}`,
-        },
-      })
-
-      // STEP 8: Save final assistant message (with tokens replaced)
+      // STEP 6: Save final assistant message (with links replaced and translation applied)
       await this.conversationManager.saveAssistantMessage({
         workspaceId: params.workspaceId,
         customerId: params.customerId,
         conversationId: params.conversationId,
-        content: finalResponse.response || safeResponse.translatedText,
+        content: finalCleanResponse, // ✅ Final response with links + translation + cleanup
         agentType: "ROUTER",
         tokensUsed: totalTokens,
       })
@@ -404,7 +443,9 @@ export class LLMRouterService {
         executionTimeMs,
         totalTokens,
         iterations: result.iterations,
-        linkReplaced: finalResponse.success,
+        linksReplaced: tokensDetected.length,
+        safetyApproved: safeResponse.safe,
+        urlsCleaned: finalCleanResponse !== safeResponse.translatedText,
       })
 
       // 🔧 NEW: Calculate total cost (OpenRouter pricing)
@@ -412,7 +453,7 @@ export class LLMRouterService {
       const totalCost = (totalTokens / 1_000_000) * costPerMillionTokens
 
       return {
-        response: finalResponse.response || safeResponse.translatedText,
+        response: finalCleanResponse, // ✅ Return final clean response (links + translation + punctuation fix)
         agentUsed: result.agentUsed || "ROUTER",
         confidence: result.confidence || 0.9,
         tokensUsed: totalTokens,
@@ -422,6 +463,7 @@ export class LLMRouterService {
           steps: debugSteps,
           totalTokens,
           totalCost,
+          executionTimeMs, // ✅ Add executionTimeMs to debugInfo for frontend
           timestamp: new Date().toISOString(),
         },
       }
