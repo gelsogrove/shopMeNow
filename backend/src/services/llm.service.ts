@@ -64,7 +64,8 @@ export class LLMService {
 
   async handleMessage(
     llmRequest: LLMRequest,
-    customerData?: any
+    customerData?: any,
+    skipTranslation?: boolean // NEW: Skip translation when called from delegation
   ): Promise<any> {
     logger.info(
       "🚀 LLM: handleMessage chiamato per telefono:",
@@ -123,10 +124,31 @@ export class LLMService {
       }
     }
 
-    // 4. Get prompt
-    const prompt = await workspaceService.getActivePromptByWorkspaceId(
-      workspace.id
-    )
+    // 4. Get prompt - SPECIFIC AGENT if agentType provided, otherwise Router
+    const agentType = (llmRequest as any).agentType || "ROUTER"
+    let prompt: string | null = null
+    
+    if (agentType && agentType !== "ROUTER") {
+      // Get specific agent prompt from database
+      const prisma = new (require("@prisma/client").PrismaClient)()
+      const agentConfig = await prisma.agentConfig.findFirst({
+        where: { 
+          workspaceId: workspace.id, 
+          type: agentType,
+          isActive: true 
+        }
+      })
+      prompt = agentConfig?.systemPrompt || null
+      await prisma.$disconnect()
+      
+      logger.info(`🤖 Loading prompt for specific agent: ${agentType}`, {
+        found: !!prompt,
+        promptLength: prompt?.length || 0
+      })
+    } else {
+      // Default: get Router agent prompt
+      prompt = await workspaceService.getActivePromptByWorkspaceId(workspace.id)
+    }
 
     if (!prompt) {
       debugInfo.stage = "no_prompt"
@@ -144,25 +166,44 @@ export class LLMService {
     const userLanguage = customer.language || workspace.language || "it"
     const faqs = await messageRepo.getActiveFaqs(workspace.id)
     const services = await messageRepo.getActiveServices(workspace.id)
-    const categories = await messageRepo.getActiveCategories(workspace.id)
-    const offers = await messageRepo.getActiveOffers(workspace.id)
+
+    // Use customerData if provided (from delegation), otherwise fetch from DB
+    const categories =
+      customerData?.CATEGORIES ||
+      (await messageRepo.getActiveCategories(workspace.id))
+    const offers =
+      customerData?.OFFERS || (await messageRepo.getActiveOffers(workspace.id))
     const customerDiscount = customer.discount || 0
     const products =
+      customerData?.PRODUCTS ||
       (await messageRepo.getActiveProducts(workspace.id, customerDiscount)) ||
       ""
 
+    // 🔍 DEBUG: Log catalog data
+    logger.info("📦 Catalog data for LLM", {
+      hasProducts: !!products,
+      productsLength: products?.length || 0,
+      productsPreview: products?.substring(0, 200),
+      hasCategories: !!categories,
+      hasOffers: !!offers,
+      usingCustomerData: !!customerData?.PRODUCTS,
+    })
+
     const userInfo = {
-      nameUser: customer.name || "",
-      discountUser: customer.discount || 0,
-      companyName: customer.company || "",
+      nameUser: customerData?.nameUser || customer.name || "",
+      discountUser: customerData?.discountUser || customer.discount || 0,
+      companyName: customerData?.companyName || customer.company || "",
       lastordercode:
         customerData?.lastordercode || customer.lastOrderCode || "",
-      languageUser: this.getLanguageDisplayName(userLanguage),
-      agentName: customer.sales
-        ? `${customer.sales.firstName} ${customer.sales.lastName}`.trim()
-        : "Non assegnato",
-      agentPhone: customer.sales?.phone || "N/A",
-      agentEmail: customer.sales?.email || "N/A",
+      languageUser:
+        customerData?.languageUser || this.getLanguageDisplayName(userLanguage),
+      agentName:
+        customerData?.agentName ||
+        (customer.sales
+          ? `${customer.sales.firstName} ${customer.sales.lastName}`.trim()
+          : "Non assegnato"),
+      agentPhone: customerData?.agentPhone || customer.sales?.phone || "N/A",
+      agentEmail: customerData?.agentEmail || customer.sales?.email || "N/A",
       push_notifications_consent: customer.push_notifications_consent || false,
     }
 
@@ -191,6 +232,15 @@ export class LLMService {
     // Get workspace URL for {{URL}} replacement
     const workspaceUrl = workspace.url || "http://localhost:3000"
 
+    // 🔍 DEBUG: Check prompt BEFORE replacement (for PRODUCT_SEARCH only)
+    if ((llmRequest as any).agentType === "PRODUCT_SEARCH") {
+      logger.info("🔍 BEFORE replacement", {
+        promptLength: prompt.length,
+        hasPlaceholder: prompt.includes("{{PRODUCTS}}"),
+        placeholderCount: (prompt.match(/\{\{PRODUCTS\}\}/g) || []).length,
+      })
+    }
+
     let promptWithVars = prompt
       .replace("{{FAQ}}", faqs)
       .replace("{{SERVICES}}", services)
@@ -216,6 +266,26 @@ export class LLMService {
       originalLength: prompt.length,
       processedLength: promptWithVars.length,
       userMessageLength: llmRequest.chatInput.length,
+    }
+
+    // 🔍 DEBUG: Check if {{PRODUCTS}} was replaced
+    if ((llmRequest as any).agentType === "PRODUCT_SEARCH") {
+      const hasProductsPlaceholder = promptWithVars.includes("{{PRODUCTS}}")
+      const hasProductsContent = promptWithVars.includes("Panettone Classico")
+      const hasDolciCategory = promptWithVars.includes("**DESSERTS**")
+      const productsHasPanettone =
+        products?.includes("Panettone Classico") || false
+      const productsHasDesserts = products?.includes("**DESSERTS**") || false
+
+      logger.info("🔍 PRODUCT_SEARCH prompt check", {
+        hasPlaceholder: hasProductsPlaceholder,
+        hasProductContentInPrompt: hasProductsContent,
+        hasDolciCategoryInPrompt: hasDolciCategory,
+        hasProductContentInSource: productsHasPanettone,
+        hasDolciCategoryInSource: productsHasDesserts,
+        promptLength: promptWithVars.length,
+        productsSourceLength: products?.length || 0,
+      })
     }
 
     // 6.5 Get conversation history (last 5 minutes for context)
@@ -269,59 +339,65 @@ export class LLMService {
     debugInfo.linkReplacements = linkReplacements
 
     // 8. 🔒 TRANSLATION & SECURITY LAYER - Final filter before sending to customer
-    try {
-      // 🔧 Get LLM config to use same model/provider as agent
-      const agentConfig = (workspace as any).agentConfigs?.[0]
-      const agentModel = agentConfig?.model
-      const llmConfig = getLLMConfig(agentModel)
+    // 🚨 SKIP if called from delegation (Router will handle translation)
+    if (skipTranslation) {
+      logger.info("⏭️ Skipping Translation & Security Layer (delegation mode)")
+      debugInfo.translationSkipped = true
+    } else {
+      try {
+        // 🔧 Get LLM config to use same model/provider as agent
+        const agentConfig = (workspace as any).agentConfigs?.[0]
+        const agentModel = agentConfig?.model
+        const llmConfig = getLLMConfig(agentModel)
 
-      logger.info("🔒 Applying Translation & Security Layer", {
-        customerId: customer.id,
-        language: userLanguage,
-        usingAgentModel: agentModel, // 📊 Same model as agent
-        usingProvider: llmConfig.useLocal
-          ? "Ollama (local)"
-          : "OpenRouter (cloud)",
-      })
-
-      // Build list of allowed system links (all other links will be blocked)
-      const workspaceUrl = workspace.url || "http://localhost:3000"
-      const allowedLinks = [
-        workspaceUrl, // Base workspace URL
-        `${workspaceUrl}/s/`, // Short URLs (secure with token)
-        `${workspaceUrl}/orders-public`, // Public orders (secure with token)
-        `${workspaceUrl}/register`, // Registration page
-        `${workspaceUrl}/api/`, // API endpoints
-        "https://wa.me/", // WhatsApp official links
-      ]
-
-      // 🚨 SECURITY: /orders and /checkout are NOT allowed!
-      // They must use short URLs with tokens generated by auto-fix
-
-      const translationResult =
-        await translationSecurityService.processResponse(
-          finalResponse,
-          userLanguage,
-          allowedLinks,
-          llmConfig.model, // Use same model as agent
-          llmConfig.baseURL, // Use same baseURL as agent (Ollama or OpenRouter)
-          llmConfig.apiKey // Use same API key as agent
-        )
-
-      if (translationResult.blocked) {
-        logger.warn("⚠️ SECURITY: Blocked inappropriate content", {
+        logger.info("🔒 Applying Translation & Security Layer", {
           customerId: customer.id,
-          reason: translationResult.reason,
-          originalLength: finalResponse.length,
+          language: userLanguage,
+          usingAgentModel: agentModel, // 📊 Same model as agent
+          usingProvider: llmConfig.useLocal
+            ? "Ollama (local)"
+            : "OpenRouter (cloud)",
         })
-      }
 
-      finalResponse = translationResult.translatedText
-      debugInfo.translationBlocked = translationResult.blocked
-      debugInfo.translationReason = translationResult.reason
-    } catch (error) {
-      logger.error("❌ Translation & Security Layer failed", error)
-      // Continue with original response if translation fails
+        // Build list of allowed system links (all other links will be blocked)
+        const workspaceUrl = workspace.url || "http://localhost:3000"
+        const allowedLinks = [
+          workspaceUrl, // Base workspace URL
+          `${workspaceUrl}/s/`, // Short URLs (secure with token)
+          `${workspaceUrl}/orders-public`, // Public orders (secure with token)
+          `${workspaceUrl}/register`, // Registration page
+          `${workspaceUrl}/api/`, // API endpoints
+          "https://wa.me/", // WhatsApp official links
+        ]
+
+        // 🚨 SECURITY: /orders and /checkout are NOT allowed!
+        // They must use short URLs with tokens generated by auto-fix
+
+        const translationResult =
+          await translationSecurityService.processResponse(
+            finalResponse,
+            userLanguage,
+            allowedLinks,
+            llmConfig.model, // Use same model as agent
+            llmConfig.baseURL, // Use same baseURL as agent (Ollama or OpenRouter)
+            llmConfig.apiKey // Use same API key as agent
+          )
+
+        if (translationResult.blocked) {
+          logger.warn("⚠️ SECURITY: Blocked inappropriate content", {
+            customerId: customer.id,
+            reason: translationResult.reason,
+            originalLength: finalResponse.length,
+          })
+        }
+
+        finalResponse = translationResult.translatedText
+        debugInfo.translationBlocked = translationResult.blocked
+        debugInfo.translationReason = translationResult.reason
+      } catch (error) {
+        logger.error("❌ Translation & Security Layer failed", error)
+        // Continue with original response if translation fails
+      }
     }
 
     // 🔧 DEBUG: Complete debug information

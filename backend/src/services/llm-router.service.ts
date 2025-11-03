@@ -17,6 +17,7 @@
 
 import { AgentType, PrismaClient } from "@prisma/client"
 import axios from "axios"
+import { LinkReplacementService } from "../application/services/link-replacement.service"
 import { SafetyTranslationAgent } from "../application/agents/SafetyTranslationAgent"
 import { getFunctionsForRouter } from "../config/agent-functions"
 import { AgentConfigRepository } from "../repositories/agent-config.repository"
@@ -84,6 +85,11 @@ export interface DebugStep {
     // Token replacement specific
     responseWithTokens?: string
     tokensDetected?: string[]
+    // Sub-agent delegation specific
+    delegatedFrom?: string
+    functionCalled?: string
+    parameters?: any
+    internalFunctionCalls?: any[]
   }
   output?: {
     decision?: string
@@ -96,6 +102,10 @@ export interface DebugStep {
     // Token replacement specific
     message?: string
     process?: string
+    // Sub-agent specific
+    responseText?: string
+    language?: string
+    containsTokens?: boolean
   }
   // For router steps
   intent?: string
@@ -110,6 +120,10 @@ export interface DebugStep {
   language?: string
   blocked?: boolean
   blockedReason?: string
+  // 🆕 For sub-agent delegation tracking
+  isSubAgent?: boolean
+  parentAgent?: string
+  subAgentType?: string
 }
 
 interface FAQCheckResult {
@@ -127,6 +141,7 @@ export class LLMRouterService {
   private conversationManager: ConversationManager
   private functionExecutor: FunctionExecutor
   private safetyAgent: SafetyTranslationAgent
+  private linkReplacementService: LinkReplacementService
   private openRouterApiKey: string
   private openRouterBaseUrl = "https://openrouter.ai/api/v1"
   private maxFunctionIterations = 5
@@ -138,6 +153,7 @@ export class LLMRouterService {
     this.conversationManager = new ConversationManager(prisma, 10) // 10 minutes window
     this.functionExecutor = new FunctionExecutor(prisma)
     this.safetyAgent = new SafetyTranslationAgent(prisma)
+    this.linkReplacementService = new LinkReplacementService()
 
     this.openRouterApiKey = process.env.OPENROUTER_API_KEY || ""
     if (!this.openRouterApiKey) {
@@ -263,11 +279,12 @@ export class LLMRouterService {
           step.type !== "safety" &&
           step.type !== "token-replacement"
       )
-      
+
       // Check if response contains any token placeholders that will be replaced
       const hasTokens =
-        result.response.includes("[LINK_") || result.response.includes("_TOKEN]")
-      
+        result.response.includes("[LINK_") ||
+        result.response.includes("_TOKEN]")
+
       if (hasTokens) {
         logger.info("Step 3.5: Token Replacement Process")
         debugSteps.push({
@@ -338,12 +355,24 @@ export class LLMRouterService {
         })
       }
 
-      // STEP 7: Save final assistant message
+      // STEP 7: Replace tokens in final response
+      // [LINK_ORDERS_WITH_TOKEN], [LINK_ORDER_WITH_TOKEN], [CATALOG_PDF_LINK]
+      logger.info("Step 5: Replacing tokens in final response")
+      const finalResponse = await this.linkReplacementService.replaceTokens(
+        {
+          response: safeResponse.translatedText,
+          orderCode: result.response.match(/ORD-\d+/)?.[0], // Extract order code if present
+        },
+        params.customerId,
+        params.workspaceId
+      )
+
+      // STEP 8: Save final assistant message (with tokens replaced)
       await this.conversationManager.saveAssistantMessage({
         workspaceId: params.workspaceId,
         customerId: params.customerId,
         conversationId: params.conversationId,
-        content: safeResponse.translatedText,
+        content: finalResponse.response || safeResponse.translatedText,
         agentType: "ROUTER",
         tokensUsed: totalTokens,
       })
@@ -354,6 +383,7 @@ export class LLMRouterService {
         executionTimeMs,
         totalTokens,
         iterations: result.iterations,
+        linkReplaced: finalResponse.success,
       })
 
       // 🔧 NEW: Calculate total cost (OpenRouter pricing)
@@ -361,7 +391,7 @@ export class LLMRouterService {
       const totalCost = (totalTokens / 1_000_000) * costPerMillionTokens
 
       return {
-        response: safeResponse.translatedText,
+        response: finalResponse.response || safeResponse.translatedText,
         agentUsed: result.agentUsed || "ROUTER",
         confidence: result.confidence || 0.9,
         tokensUsed: totalTokens,
@@ -567,8 +597,8 @@ export class LLMRouterService {
 
           // Get catalog data for sub-agent
           const customerDiscount = customer.discount || 0
-          const messageRepo = new (require("../repositories/message.repository"))
-            .MessageRepository()
+          const messageRepo =
+            new (require("../repositories/message.repository").MessageRepository)()
 
           const [categories, offers, products, lastOrder] = await Promise.all([
             messageRepo.getActiveCategories(params.workspaceId),
@@ -643,7 +673,8 @@ export class LLMRouterService {
                   chatInput: delegationQuery,
                   agentType: "PRODUCT_SEARCH",
                 },
-                customerData
+                customerData,
+                true // skipTranslation - Router will handle translation
               )
               break
             }
@@ -657,7 +688,8 @@ export class LLMRouterService {
                   chatInput: delegationQuery,
                   agentType: "CART_MANAGEMENT",
                 },
-                customerData
+                customerData,
+                true // skipTranslation
               )
               break
             }
@@ -671,7 +703,8 @@ export class LLMRouterService {
                   chatInput: delegationQuery,
                   agentType: "ORDER_TRACKING",
                 },
-                customerData
+                customerData,
+                true // skipTranslation
               )
               break
             }
@@ -685,7 +718,8 @@ export class LLMRouterService {
                   chatInput: delegationQuery,
                   agentType: "CUSTOMER_SUPPORT",
                 },
-                customerData
+                customerData,
+                true // skipTranslation
               )
               break
             }
@@ -695,11 +729,82 @@ export class LLMRouterService {
 
           // Extract response from sub-agent
           // LLMService.handleMessage() returns { success, output, debugInfo }
-          const subAgentFinalResponse = subAgentResponse.output || subAgentResponse.response || ""
-          
+          logger.info("🔍 Sub-agent raw response structure:", {
+            hasOutput: !!subAgentResponse.output,
+            hasResponse: !!subAgentResponse.response,
+            outputLength: subAgentResponse.output?.length || 0,
+            responseLength: subAgentResponse.response?.length || 0,
+            outputPreview: subAgentResponse.output?.substring(0, 200),
+            responsePreview: subAgentResponse.response?.substring(0, 200),
+          })
+
+          const subAgentFinalResponse =
+            subAgentResponse.output || subAgentResponse.response || ""
+
           logger.info("✅ Sub-agent delegation completed", {
             delegationTarget,
             responseLength: subAgentFinalResponse.length,
+            responsePreview: subAgentFinalResponse.substring(0, 200),
+          })
+
+          // 🆕 CREATE DEBUG STEPS FROM SUB-AGENT FUNCTION CALLS
+          // Sub-agent doesn't create debug steps, but has functionCalls in debugInfo
+          // We reconstruct the steps from functionCalls array
+          
+          // 🔧 PARSE debugInfo if it's a JSON string
+          let subAgentDebugInfo = subAgentResponse.debugInfo
+          if (typeof subAgentDebugInfo === "string") {
+            try {
+              subAgentDebugInfo = JSON.parse(subAgentDebugInfo)
+              logger.info("🔍 Parsed sub-agent debugInfo from JSON string")
+            } catch (error) {
+              logger.error("❌ Failed to parse sub-agent debugInfo:", error)
+              subAgentDebugInfo = null
+            }
+          }
+
+          // 🆕 CREATE DEBUG STEP: Show Router → Sub-Agent delegation with clear INPUT/OUTPUT
+          logger.info("🔍 Creating sub-agent debug step", {
+            delegationTarget,
+            delegationQuery: delegationQuery.substring(0, 50),
+            hasDebugInfo: !!subAgentDebugInfo,
+            currentDebugStepsCount: debugSteps.length,
+          })
+
+          // � CLEAR DEBUG STEP: Show what Router delegated and what Sub-Agent returned
+          debugSteps.push({
+            type: "sub_agent",
+            agent: `${delegationTarget} Agent`,
+            timestamp: new Date().toISOString(),
+            input: {
+              delegatedFrom: "ROUTER",
+              functionCalled: delegationTarget,
+              parameters: {
+                query: delegationQuery,
+              },
+              // Show internal function calls if available
+              internalFunctionCalls: subAgentDebugInfo?.functionCalls || [],
+            },
+            output: {
+              responseText: subAgentFinalResponse,
+              language: "en", // Sub-agents ALWAYS respond in English
+              containsTokens: subAgentFinalResponse.includes("[LINK_"),
+              executionTimeMs: subAgentDebugInfo?.executionTimeMs || 0,
+            },
+            tokenUsage: subAgentDebugInfo?.tokenUsage || {
+              promptTokens: 0,
+              completionTokens: 0,
+              totalTokens: 0,
+            },
+            isSubAgent: true,
+            parentAgent: "ROUTER",
+            subAgentType: delegationTarget,
+          })
+
+          logger.info("✅ Sub-agent debug step created", {
+            totalDebugSteps: debugSteps.length,
+            responseLength: subAgentFinalResponse.length,
+            hasTokens: subAgentFinalResponse.includes("[LINK_"),
           })
 
           // Return sub-agent response immediately

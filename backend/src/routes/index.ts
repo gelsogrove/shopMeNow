@@ -853,20 +853,28 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
       }
 
       // Get agent config with prompt from database
-      let agentPrompt = "WhatsApp conversation" // fallback
+      let agentPrompt: string
       let welcomeBackMessage = null // 🎯 TASK: Declare welcome back message variable
-      let agentModel = "anthropic/claude-3.5-sonnet" // fallback to Claude
-      let agentMaxTokens = 5000 // fallback
+      let agentModel: string
+      let agentMaxTokens: number
+      
+      const agentConfig = await prisma.agentConfig.findFirst({
+        where: { workspaceId: workspaceId },
+      })
+      
+      if (!agentConfig) {
+        throw new Error(`Agent config not found for workspace ${workspaceId}`)
+      }
+      
+      if (!agentConfig.systemPrompt) {
+        throw new Error(`System prompt missing for workspace ${workspaceId}`)
+      }
+      
+      agentPrompt = agentConfig.systemPrompt
+      agentModel = agentConfig.model
+      agentMaxTokens = agentConfig.maxTokens
+      
       try {
-        const agentConfig = await prisma.agentConfig.findFirst({
-          where: { workspaceId: workspaceId },
-        })
-        if (agentConfig && agentConfig.systemPrompt) {
-          agentPrompt = agentConfig.systemPrompt
-        }
-        if (agentConfig?.model) {
-          agentModel = agentConfig.model
-        }
         if (agentConfig?.maxTokens) {
           agentMaxTokens = agentConfig.maxTokens
         }

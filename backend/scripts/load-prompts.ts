@@ -5,10 +5,7 @@ import path from "path"
 const promptsDir = path.join(__dirname, "../docs/prompts")
 
 const prompts = {
-  router: fs.readFileSync(
-    path.join(promptsDir, "router-agent-NEW.md"),
-    "utf-8"
-  ),
+  router: fs.readFileSync(path.join(promptsDir, "router-agent.md"), "utf-8"),
   productSearch: fs.readFileSync(
     path.join(promptsDir, "product-search-agent.md"),
     "utf-8"

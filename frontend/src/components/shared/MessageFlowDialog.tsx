@@ -150,11 +150,13 @@ export default function MessageFlowDialog({
     }
   }
 
-  // Organizza steps per timeline
+  // 🆕 ORGANIZZA TUTTI GLI STEP (inclusi sub-agent function calls)
   const allSteps = debugInfo.steps
-  const routerSteps = allSteps.filter((s) => s.type === "router")
+  const routerSteps = allSteps.filter((s) => s.type === "router" && !(s as any).isSubAgent)
   const safetySteps = allSteps.filter((s) => s.type === "safety")
-  const subAgentSteps = allSteps.filter((s) => s.type === "sub_agent")
+  
+  // 🆕 TUTTI GLI STEP DEL SUB-AGENT: function calls, results, sub_agent response, router receiving
+  const subAgentSteps = allSteps.filter((s) => (s as any).isSubAgent)
 
   // Estrai messaggio utente dal primo step
   const userMessage =
@@ -231,13 +233,13 @@ export default function MessageFlowDialog({
     },
   }
 
-  // Sequenza timeline: UserMessage, Router1, SubAgent, Router2, Safety, SaveHistory, Queue, WhatsApp
+  // 🆕 NUOVA SEQUENZA: Include TUTTI gli step del sub-agent
+  // subAgentSteps now includes ALL steps with isSubAgent flag (function calls, results, responses, etc.)
   const timelineSequence = [
     userStep,
-    routerSteps[0],
-    subAgentSteps[0],
-    routerSteps[1],
-    safetySteps[0],
+    routerSteps[0],        // Router decide di delegare
+    ...subAgentSteps,      // 🆕 TUTTI gli step del sub-agent in ordine cronologico
+    safetySteps[0],        // Safety & Translation
     saveToHistoryStep,
     queueStep,
     whatsappStep,
@@ -309,6 +311,12 @@ export default function MessageFlowDialog({
                     <h3 className="text-lg font-bold" style={{ color }}>
                       {step.agent || step.type.replace("_", " ").toUpperCase()}
                     </h3>
+                    {/* 🆕 SUB-AGENT BADGE */}
+                    {(step as any).isSubAgent && (
+                      <div className="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 bg-blue-100 border border-blue-300 rounded text-xs font-medium text-blue-800">
+                        <span>🔄 Sub-Agent: {(step as any).subAgentType}</span>
+                      </div>
+                    )}
                     {step.model && (
                       <p className="text-sm text-gray-500">
                         {step.model} • T: {step.temperature}

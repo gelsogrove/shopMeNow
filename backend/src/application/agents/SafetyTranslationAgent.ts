@@ -97,10 +97,11 @@ export class SafetyTranslationAgent {
         }
       }
 
-      // 2. Build system prompt with dynamic allowed links
+      // 2. Build system prompt with dynamic allowed links and customer name
       const systemPrompt = this.buildSystemPrompt(
         safetyAgent.systemPrompt,
-        options.allowedLinks || []
+        options.allowedLinks || [],
+        options.customerName
       )
 
       // 3. Build user message with context
@@ -221,7 +222,8 @@ export class SafetyTranslationAgent {
    */
   private buildSystemPrompt(
     basePrompt: string,
-    allowedLinks: string[]
+    allowedLinks: string[],
+    customerName?: string
   ): string {
     // Replace {{ALLOWED_LINKS}} placeholder with workspace-specific links
     const allowedLinksText =
@@ -229,7 +231,13 @@ export class SafetyTranslationAgent {
         ? allowedLinks.map((link) => `- ${link}`).join("\n")
         : "- No allowed links configured for this workspace"
 
-    return basePrompt.replace("{{ALLOWED_LINKS}}", allowedLinksText)
+    // Replace {{nameUser}} with actual customer name in examples
+    const withCustomerName = basePrompt.replace(
+      /\{\{nameUser\}\}/g,
+      customerName || "Cliente"
+    )
+
+    return withCustomerName.replace("{{ALLOWED_LINKS}}", allowedLinksText)
   }
 
   /**

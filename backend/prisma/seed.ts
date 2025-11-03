@@ -463,38 +463,9 @@ async function main() {
 
   console.log(`✅ Created ${campaigns.length} campaigns`)
 
-  // 12. Create Prompt (for LLM Service)
-  console.log("🤖 Creating prompt...")
-
-  // 📖 Read prompt from docs/prompt_agent.md
-  const fs = require("fs")
-  const path = require("path")
-  const promptPath = path.join(__dirname, "../../docs/prompt_agent.md")
-
-  let agentPrompt =
-    "You are a helpful AI assistant for an Italian gourmet food e-commerce store."
-
-  try {
-    if (fs.existsSync(promptPath)) {
-      agentPrompt = fs.readFileSync(promptPath, "utf8")
-      console.log(
-        `  ✅ Loaded prompt from docs/prompt_agent.md (${agentPrompt.length} chars)`
-      )
-    } else {
-      console.warn(
-        `  ⚠️  File not found: ${promptPath} - using placeholder prompt`
-      )
-    }
-  } catch (error: any) {
-    console.warn(
-      `  ⚠️  Error reading prompt file: ${error.message} - using placeholder`
-    )
-  }
-
-  // Create Agent Configurations (Multi-Agent System)
-  console.log("🤖 Creating agent configurations...")
-
-  // Use defaultAgents from data file (includes all 6 agents with prompts)
+  // 12. Create Agent Configurations (Multi-Agent System)
+  // Agents load their prompts from docs/prompts/*.md via defaultAgents()
+  console.log("🤖 Creating agent configurations...") // Use defaultAgents from data file (includes all 6 agents with prompts)
   const agentConfigs = defaultAgents(workspace.id)
   console.log(
     `📄 Preparing ${agentConfigs.length} agents (ROUTER + 5 specialists + SAFETY)`

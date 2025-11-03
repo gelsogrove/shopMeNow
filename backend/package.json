@@ -21,7 +21,6 @@
     "db:restore": "ts-node scripts/restore-database.ts",
     "update-pricing": "ts-node scripts/update-pricing.ts",
     "update:prompts": "node scripts/update-prompts.js",
-    "update:router-prompt": "ts-node scripts/update-router-prompt.ts",
     "update:all-prompts": "ts-node scripts/update-all-agent-prompts.ts",
     "quick-seed": "ts-node scripts/quick-seed.ts",
     "view-pricing": "ts-node scripts/view-pricing.ts",

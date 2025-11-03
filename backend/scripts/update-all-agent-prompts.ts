@@ -12,7 +12,7 @@ const loadPrompt = (filename: string): string => {
 }
 
 const PROMPTS = {
-  ROUTER: loadPrompt("router-agent-NEW.md"),
+  ROUTER: loadPrompt("router-agent.md"),
   PRODUCT_SEARCH: loadPrompt("product-search-agent.md"),
   CART_MANAGEMENT: loadPrompt("cart-management-agent.md"),
   ORDER_TRACKING: loadPrompt("order-tracking-agent.md"),
