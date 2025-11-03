@@ -7,6 +7,8 @@
 
 import { PrismaClient } from "@prisma/client"
 import { Response, Router } from "express"
+import { SafetyTranslationAgent } from "../../application/agents/SafetyTranslationAgent"
+import { LinkReplacementService } from "../../application/services/link-replacement.service"
 import { RegistrationAttemptsService } from "../../application/services/registration-attempts.service"
 import { SecureTokenService } from "../../application/services/secure-token.service"
 import { SpamDetectionService } from "../../application/services/spam-detection.service"
@@ -476,6 +478,97 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
       return
     }
 
+    // 🔒 CRITICAL: Check if workspace is in WIP (maintenance mode)
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: {
+        isActive: true,
+        wipMessage: true,
+      },
+    })
+
+    if (!workspace) {
+      logger.error(`❌ Workspace ${workspaceId} not found`)
+      res.status(404).json({ error: "Workspace not found" })
+      return
+    }
+
+    // Get customer details for language and name
+    const customerForWip = await prisma.customers.findUnique({
+      where: { id: customerId },
+      select: { name: true, language: true },
+    })
+
+    // If workspace is in WIP mode, send WIP message through Safety Layer
+    if (!workspace.isActive) {
+      logger.info(
+        `🚧 Workspace ${workspaceId} is in WIP mode - sending maintenance message`
+      )
+
+      try {
+        // Get WIP message from workspace settings (in customer's language)
+        const customerLanguage = customerForWip?.language || "it"
+        const wipMessages = workspace.wipMessage as any
+        let wipMessageText =
+          wipMessages?.[customerLanguage] ||
+          wipMessages?.["it"] ||
+          "Siamo in manutenzione. Ti contatteremo presto."
+
+        // Pass through Safety & Translation Layer (MANDATORY)
+        const safetyAgent = new SafetyTranslationAgent(prisma)
+        const safetyResult = await safetyAgent.process(
+          wipMessageText,
+          customerLanguage,
+          workspaceId,
+          {
+            customerName: customerForWip?.name || "Customer",
+          }
+        )
+
+        // Use translated/safe message
+        let finalMessage = safetyResult.translatedText
+
+        // Apply Link Replacement (if any tokens present)
+        const linkService = new LinkReplacementService(prisma)
+        finalMessage = await linkService.replaceLinks(
+          finalMessage,
+          workspaceId,
+          customerId
+        )
+
+        // Save message to history
+        const messageRepository = new MessageRepository()
+        await messageRepository.saveMessage({
+          workspaceId,
+          phoneNumber,
+          message: messageContent,
+          response: finalMessage,
+          direction: "INBOUND",
+          agentSelected: "WIP_MESSAGE",
+          processingSource: "workspace_wip",
+          debugInfo: JSON.stringify({
+            workspaceInWIP: true,
+            safetyProcessed: true,
+            timestamp: new Date().toISOString(),
+          }),
+        })
+
+        // Return WIP message (will be sent to WhatsApp)
+        res.json({
+          success: true,
+          data: {
+            sessionId: null,
+            message: finalMessage,
+          },
+        })
+        return
+      } catch (error) {
+        logger.error("❌ Failed to process WIP message:", error)
+        res.status(500).json({ error: "Failed to process WIP message" })
+        return
+      }
+    }
+
     // Get chat history
     let chatSession = await prisma.chatSession.findFirst({
       where: {
@@ -514,8 +607,47 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
     // Process with router
     const customer = await prisma.customers.findUnique({
       where: { id: customerId },
-      select: { name: true, language: true },
+      select: {
+        name: true,
+        language: true,
+        activeChatbot: true,
+        isBlacklisted: true,
+      },
     })
+
+    // 🔒 CRITICAL: If chatbot is disabled, ONLY save message - DO NOT process with LLM
+    if (customer && !customer.activeChatbot) {
+      logger.info(
+        `🚫 Chatbot disabled for customer ${customerId} - saving message without LLM processing`
+      )
+
+      // Save customer message to history
+      await messageRepository.saveMessage({
+        workspaceId,
+        phoneNumber,
+        message: messageContent,
+        response: null, // No response from bot
+        direction: "INBOUND",
+        agentSelected: "NONE",
+        processingSource: "chatbot_disabled",
+        debugInfo: JSON.stringify({
+          chatbotDisabled: true,
+          reason: "activeChatbot = false",
+          timestamp: new Date().toISOString(),
+        }),
+      })
+
+      // Return success WITHOUT sending any WhatsApp message
+      res.json({
+        success: true,
+        data: {
+          sessionId: chatSession?.id || null,
+          message: null, // No bot response
+          chatbotDisabled: true,
+        },
+      })
+      return
+    }
 
     const result = await routerService.routeMessage({
       workspaceId,

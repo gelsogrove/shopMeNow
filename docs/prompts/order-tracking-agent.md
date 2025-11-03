@@ -106,10 +106,16 @@ getOrders **DEVE SEMPRE** essere chiamata tramite tool_calls!
 
 ```
 Ecco la lista completa dei tuoi ordini! 📋
-[LINK_ORDERS_WITH_TOKEN]
+Puoi visualizzarli qui: [LINK_ORDERS_WITH_TOKEN]
 
 ⏰ Link valido per {{TOKEN_DURATION}}
 ```
+
+**IMPORTANTE**:
+
+- Usa SOLO il token [LINK_ORDERS_WITH_TOKEN] senza formato Markdown
+- NON usare [testo](url) - il sistema sostituirà automaticamente il token
+- Scrivi frasi semplici con il token alla fine o su riga separata
 
 ---
 

@@ -150,15 +150,24 @@ export default function MessageFlowDialog({
     }
   }
 
-  // 🆕 ORGANIZZA TUTTI GLI STEP (inclusi sub-agent function calls)
+  // 🆕 ORGANIZZA TUTTI GLI STEP IN ORDINE CRONOLOGICO
   const allSteps = debugInfo.steps
+
+  // Router steps: TUTTE le iterazioni (iteration 1 delega, iteration 2 riceve risposta)
   const routerSteps = allSteps.filter(
     (s) => s.type === "router" && !(s as any).isSubAgent
   )
+
+  // Sub-agent step (delegation execution)
+  const subAgentSteps = allSteps.filter((s) => (s as any).isSubAgent)
+
+  // Safety & Translation step
   const safetySteps = allSteps.filter((s) => s.type === "safety")
 
-  // 🆕 TUTTI GLI STEP DEL SUB-AGENT: function calls, results, sub_agent response, router receiving
-  const subAgentSteps = allSteps.filter((s) => (s as any).isSubAgent)
+  // Link Replacement step
+  const linkReplacementSteps = allSteps.filter(
+    (s) => s.type === "token-replacement"
+  )
 
   // Estrai messaggio utente dal primo step
   const userMessage =
@@ -235,16 +244,17 @@ export default function MessageFlowDialog({
     },
   }
 
-  // 🆕 NUOVA SEQUENZA: Include TUTTI gli step del sub-agent
-  // subAgentSteps now includes ALL steps with isSubAgent flag (function calls, results, responses, etc.)
+  // 🆕 TIMELINE COMPLETA: Mostra OGNI SINGOLO STEP in ordine
   const timelineSequence = [
-    userStep,
-    routerSteps[0], // Router decide di delegare
-    ...subAgentSteps, // 🆕 TUTTI gli step del sub-agent in ordine cronologico
-    safetySteps[0], // Safety & Translation
-    saveToHistoryStep,
-    queueStep,
-    whatsappStep,
+    userStep, // STEP 1: User message
+    routerSteps[0], // STEP 2: Router iteration 1 (delega a sub-agent)
+    ...subAgentSteps, // STEP 3: Sub-agent execution
+    routerSteps[1], // STEP 4: Router iteration 2 (riceve risposta)
+    safetySteps[0], // STEP 5: Safety & Translation
+    linkReplacementSteps[0], // STEP 6: Link Replacement
+    saveToHistoryStep, // STEP 7: Save to history
+    queueStep, // STEP 8: Queue message
+    whatsappStep, // STEP 9: WhatsApp send
   ].filter(Boolean) // Rimuovi undefined
 
   return (

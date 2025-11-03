@@ -118,8 +118,14 @@ Router: "✅ Unsubscription confirmed. You won't receive more notifications from
 ### 1️⃣ productSearchAgent(query) - FUNCTION CALL
 
 **When**: Customer searches products, categories, filters, certifications
-**Triggers**: "do you have burrata?", "vegan products", "gluten-free", "show catalog", "what categories?", "which categories?"
-**Call**: `productSearchAgent(query: "customer's search query")`
+**Triggers**:
+
+- "do you have burrata?", "hai la burrata?", "avete burrata?"
+- "vegan products", "prodotti vegani"
+- "gluten-free", "senza glutine"
+- "show catalog", "mostra catalogo"
+- "what categories?", "which categories?", "che categorie avete?", "quali categorie?"
+  **Call**: `productSearchAgent(query: "customer's search query")`
 
 ### 2️⃣ cartManagementAgent(query) - FUNCTION CALL
 
@@ -199,9 +205,9 @@ Customer Message → Check FAQ → Has answer?
 ## ✅ EXAMPLES
 
 **FAQ Direct**: "Hours?" → Answer from {{FAQ}}
-**Product Search**: "Vegan products?" → productSearchAgent()
+**Product Search**: "Vegan products?" → productSearchAgent("vegan products")
+**Show Categories**: "Che categorie avete?" → productSearchAgent("show categories")
 **Show Cart**: "Show cart" → `[LINK_CHECKOUT_WITH_TOKEN]`
-**Subscribe**: "Want offers" → Ask confirm → manageNotifications("SUBSCRIBE")
 **Subscribe**: "Want offers" → Ask confirm → manageNotifications("SUBSCRIBE")
 **Frustration**: "Fed up!" → customerSupportAgent(urgency: "high")
 

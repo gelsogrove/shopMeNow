@@ -358,6 +358,7 @@ export class LLMRouterService {
       // STEP 7: Replace tokens in final response
       // [LINK_ORDERS_WITH_TOKEN], [LINK_ORDER_WITH_TOKEN], [CATALOG_PDF_LINK]
       logger.info("Step 5: Replacing tokens in final response")
+      const linkReplacementTimestamp = new Date().toISOString()
       const finalResponse = await this.linkReplacementService.replaceTokens(
         {
           response: safeResponse.translatedText,
@@ -366,6 +367,26 @@ export class LLMRouterService {
         params.customerId,
         params.workspaceId
       )
+
+      // 🔧 ADD DEBUG STEP: Link Replacement
+      debugSteps.push({
+        type: "token-replacement",
+        agent: "Link Replacement Service",
+        model: "N/A", // Not an LLM
+        temperature: 0,
+        timestamp: linkReplacementTimestamp,
+        tokenUsage: undefined,
+        input: {
+          responseWithTokens: safeResponse.translatedText,
+          tokensDetected: [
+            ...(safeResponse.translatedText.match(/\[LINK_[A-Z_]+\]/g) || []),
+          ],
+        },
+        output: {
+          message: finalResponse.response || safeResponse.translatedText,
+          process: `Replaced ${finalResponse.success ? "tokens" : "none"}`,
+        },
+      })
 
       // STEP 8: Save final assistant message (with tokens replaced)
       await this.conversationManager.saveAssistantMessage({
@@ -807,14 +828,32 @@ export class LLMRouterService {
             hasTokens: subAgentFinalResponse.includes("[LINK_"),
           })
 
-          // Return sub-agent response immediately
-          return {
-            response: subAgentFinalResponse,
-            agentUsed: delegationTarget,
-            debugSteps,
-            tokensUsed: llmResponse.tokensUsed,
-            iterations,
-          }
+          // 🔄 CRITICAL: Add sub-agent response to messages and CONTINUE to Router
+          // Router LLM will receive this as function result and process it
+          messages.push({
+            role: "function" as const,
+            name: functionName,
+            content: subAgentFinalResponse, // Sub-agent's English response
+          })
+
+          // Track which agent was used
+          agentUsed = delegationTarget
+
+          // Update total tokens
+          totalTokens += subAgentDebugInfo?.tokenUsage?.totalTokens || 0
+
+          logger.info(
+            "🔄 Sub-agent response added, continuing to Router for processing",
+            {
+              agentUsed: delegationTarget,
+              responseLength: subAgentFinalResponse.length,
+              hasTokens: subAgentFinalResponse.includes("[LINK_"),
+              nextIteration: iterations + 1,
+            }
+          )
+
+          // CONTINUE loop - Router LLM will process sub-agent response
+          continue
         }
 
         // 🔧 Determine which sub-agent was used

@@ -117,9 +117,22 @@ export class LinkReplacementService {
             workspaceId
           )
 
+          // Smart replace: handle Markdown format and punctuation
+          // Pattern 1: Remove Markdown wrapper [text]([TOKEN])
           replacedResponse = replacedResponse.replace(
-            /\[LINK_CHECKOUT_WITH_TOKEN\]/g,
+            /\[([^\]]+)\]\(\[LINK_CHECKOUT_WITH_TOKEN\]\)/g,
             finalCartLink
+          )
+
+          // Pattern 2: Handle token with trailing punctuation/artifacts
+          replacedResponse = replacedResponse.replace(
+            /\[LINK_CHECKOUT_WITH_TOKEN\]([\)\.]?[\.!?,]?)/g,
+            (match, suffix) => {
+              const cleanSuffix = suffix.replace(/\)/g, "")
+              return cleanSuffix
+                ? `${finalCartLink}${cleanSuffix}`
+                : finalCartLink
+            }
           )
         } catch (error) {
           logger.error("❌ Error generating cart link:", error)
@@ -156,9 +169,19 @@ export class LinkReplacementService {
               workspaceId
             )
 
+          // Smart replace: handle Markdown format and punctuation
           replacedResponse = replacedResponse.replace(
-            /\[LINK_PROFILE_WITH_TOKEN\]/g,
+            /\[([^\]]+)\]\(\[LINK_PROFILE_WITH_TOKEN\]\)/g,
             finalProfileLink
+          )
+          replacedResponse = replacedResponse.replace(
+            /\[LINK_PROFILE_WITH_TOKEN\]([\)\.]?[\.!?,]?)/g,
+            (match, suffix) => {
+              const cleanSuffix = suffix.replace(/\)/g, "")
+              return cleanSuffix
+                ? `${finalProfileLink}${cleanSuffix}`
+                : finalProfileLink
+            }
           )
         } catch (error) {
           logger.error("❌ Error generating profile link:", error)
@@ -209,9 +232,19 @@ export class LinkReplacementService {
             orderCodeParam
           )
 
+          // Smart replace: handle Markdown format and punctuation
           replacedResponse = replacedResponse.replace(
-            /\[LINK_ORDERS_WITH_TOKEN\]/g,
+            /\[([^\]]+)\]\(\[LINK_ORDERS_WITH_TOKEN\]\)/g,
             finalOrdersLink
+          )
+          replacedResponse = replacedResponse.replace(
+            /\[LINK_ORDERS_WITH_TOKEN\]([\)\.]?[\.!?,]?)/g,
+            (match, suffix) => {
+              const cleanSuffix = suffix.replace(/\)/g, "")
+              return cleanSuffix
+                ? `${finalOrdersLink}${cleanSuffix}`
+                : finalOrdersLink
+            }
           )
         } catch (error) {
           logger.error("❌ Error generating orders link:", error)
@@ -234,9 +267,19 @@ export class LinkReplacementService {
             workspaceId
           )
 
+          // Smart replace: handle Markdown format and punctuation
           replacedResponse = replacedResponse.replace(
-            /\[LINK_CATALOG\]/g,
+            /\[([^\]]+)\]\(\[LINK_CATALOG\]\)/g,
             finalCatalogLink
+          )
+          replacedResponse = replacedResponse.replace(
+            /\[LINK_CATALOG\]([\)\.]?[\.!?,]?)/g,
+            (match, suffix) => {
+              const cleanSuffix = suffix.replace(/\)/g, "")
+              return cleanSuffix
+                ? `${finalCatalogLink}${cleanSuffix}`
+                : finalCatalogLink
+            }
           )
         } catch (error) {
           logger.error("❌ Error generating catalog link:", error)

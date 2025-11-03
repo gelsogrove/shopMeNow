@@ -106,21 +106,51 @@ export class LLMService {
       return await this.NewUser(llmRequest, workspace, messageRepo, debugInfo)
     }
 
-    // 3. Blocca se blacklisted O se chatbot disabilitato - non salvare nulla nello storico
+    // 3. Blocca se blacklisted - NON processare ma SALVARE messaggio in history
     const isBlocked = await messageRepo.isCustomerBlacklisted(
       customer.phone,
       workspace.id
     )
-    // Block if user is blacklisted OR if chatbot is disabled for this customer
-    if (isBlocked || customer.isBlacklisted || !customer.activeChatbot) {
-      debugInfo.stage = "blocked_user_or_chatbot_disabled"
+
+    // Block if user is blacklisted
+    if (isBlocked || customer.isBlacklisted) {
+      debugInfo.stage = "blocked_user"
       return {
         success: false,
-        output:
-          customer.activeChatbot === false
-            ? "❌ Chatbot disabled for this customer"
-            : "❌ User blocked",
+        output: "❌ User blocked",
         debugInfo: JSON.stringify(debugInfo),
+      }
+    }
+
+    // 3b. Se chatbot disabilitato, SALVA messaggio ma NON processare con LLM
+    if (!customer.activeChatbot) {
+      debugInfo.stage = "chatbot_disabled_save_only"
+
+      // Salva messaggio cliente in history
+      await messageRepo.saveMessage({
+        customerId: customer.id,
+        workspaceId: workspace.id,
+        direction: "INBOUND",
+        content: llmRequest.chatInput,
+        type: "TEXT",
+        aiGenerated: false,
+        metadata: {
+          chatbotDisabled: true,
+          savedAt: new Date().toISOString(),
+        },
+      })
+
+      logger.info("✅ Message saved to history (chatbot disabled)", {
+        customerId: customer.id,
+        messageLength: llmRequest.chatInput.length,
+      })
+
+      return {
+        success: true,
+        output:
+          "Message saved to history (chatbot disabled - no LLM processing)",
+        debugInfo: JSON.stringify(debugInfo),
+        chatbotDisabled: true, // Flag per sapere che non deve inviare risposta
       }
     }
 

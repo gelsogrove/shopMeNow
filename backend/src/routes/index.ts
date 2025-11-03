@@ -1054,18 +1054,53 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
       // Get customer details for router
       const customer = await prisma.customers.findUnique({
         where: { id: customerId },
-        select: { name: true, language: true },
+        select: {
+          name: true,
+          language: true,
+          activeChatbot: true,
+          isBlacklisted: true,
+        },
       })
 
-      result = await routerService.routeMessage({
-        workspaceId,
-        customerId,
-        conversationId: chatSession.id,
-        messageId: `msg-${Date.now()}`,
-        message: messageContent,
-        customerLanguage: customer?.language || "it",
-        customerName: customer?.name || "Customer",
-      })
+      // 🔒 CRITICAL: If chatbot is disabled, ONLY save message - DO NOT process with LLM
+      if (customer && !customer.activeChatbot) {
+        logger.info(
+          `🚫 Chatbot disabled for customer ${customerId} - saving message without LLM processing`
+        )
+
+        // Save customer message to history
+        await messageRepository.saveMessage({
+          workspaceId,
+          phoneNumber,
+          message: messageContent,
+          response: null, // No response from bot
+          direction: "INBOUND",
+          agentSelected: "NONE",
+          processingSource: "chatbot_disabled",
+          debugInfo: JSON.stringify({
+            chatbotDisabled: true,
+            reason: "activeChatbot = false",
+            timestamp: new Date().toISOString(),
+          }),
+        })
+
+        // Set result to indicate chatbot disabled (will skip response sending below)
+        result = {
+          success: true,
+          response: null, // No response to send
+          chatbotDisabled: true,
+        } as any
+      } else {
+        result = await routerService.routeMessage({
+          workspaceId,
+          customerId,
+          conversationId: chatSession.id,
+          messageId: `msg-${Date.now()}`,
+          message: messageContent,
+          customerLanguage: customer?.language || "it",
+          customerName: customer?.name || "Customer",
+        })
+      }
 
       // 🔧 NEW: Router service doesn't return "IGNORE", it throws or handles internally
       // The router always returns a response (even for blocked customers via Safety Agent)
