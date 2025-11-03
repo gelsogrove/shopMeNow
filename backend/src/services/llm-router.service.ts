@@ -290,18 +290,21 @@ export class LLMRouterService {
       // This ensures Safety agent receives actual URLs, not tokens
       logger.info("Step 4: Replacing tokens in response (BEFORE Safety)")
       const linkReplacementTimestamp = new Date().toISOString()
-      
+
       let responseWithLinks = result.response
       const tokensDetected = result.response.match(/\[LINK_[A-Z_]+\]/g) || []
-      
+
       if (tokensDetected.length > 0) {
-        logger.info(`🔗 Found ${tokensDetected.length} tokens to replace:`, tokensDetected)
+        logger.info(
+          `🔗 Found ${tokensDetected.length} tokens to replace:`,
+          tokensDetected
+        )
         logger.info(`🔗 Input to linkReplacementService:`, {
           response: result.response.substring(0, 200),
           customerId: params.customerId,
           workspaceId: params.workspaceId,
         })
-        
+
         const linkResult = await this.linkReplacementService.replaceTokens(
           {
             response: result.response,
@@ -347,7 +350,9 @@ export class LLMRouterService {
           },
         })
       } else {
-        logger.info("ℹ️ No tokens found in response - skipping link replacement")
+        logger.info(
+          "ℹ️ No tokens found in response - skipping link replacement"
+        )
       }
 
       // STEP 5: Apply Safety & Translation Layer
@@ -402,26 +407,29 @@ export class LLMRouterService {
       // Example: "http://localhost:3000/s/xyz." → "http://localhost:3000/s/xyz ."
       // Example: "http://localhost:3000/s/xyz)." → "http://localhost:3000/s/xyz ."
       let finalCleanResponse = safeResponse.translatedText
-      
+
       // Regex to find URLs ending with short paths (like /s/xxx) followed by punctuation
       // This avoids matching domain dots like "localhost:3000"
-      const urlWithPunctuationRegex = /(https?:\/\/[^\s]+\/[a-zA-Z0-9_-]+)([\.!?,;:\)]+)(\s|$)/g
-      
+      const urlWithPunctuationRegex =
+        /(https?:\/\/[^\s]+\/[a-zA-Z0-9_-]+)([\.!?,;:\)]+)(\s|$)/g
+
       const urlMatches = finalCleanResponse.match(urlWithPunctuationRegex)
       if (urlMatches && urlMatches.length > 0) {
         logger.info(`🧹 Cleaning punctuation from ${urlMatches.length} URL(s)`)
-        
+
         finalCleanResponse = finalCleanResponse.replace(
           urlWithPunctuationRegex,
           (match, url, punctuation, trailing) => {
             // Remove closing parenthesis from punctuation if present (artifact from Markdown)
-            const cleanPunct = punctuation.replace(/\)/g, '')
+            const cleanPunct = punctuation.replace(/\)/g, "")
             if (!cleanPunct) {
               // If only ) was there, just return URL with trailing
               return `${url}${trailing}`
             }
             // Move punctuation after the URL with a space
-            logger.debug(`Cleaned: "${url}${punctuation}" → "${url}${trailing}${cleanPunct}"`)
+            logger.debug(
+              `Cleaned: "${url}${punctuation}" → "${url}${trailing}${cleanPunct}"`
+            )
             return `${url}${trailing}${cleanPunct}`
           }
         )
