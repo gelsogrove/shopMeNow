@@ -35,6 +35,7 @@ import { AgentConfigRepository } from "../../repositories/agent-config.repositor
 import { CartRepository } from "../../repositories/cart.repository"
 import { OrderRepository } from "../../repositories/order.repository"
 import { ProductRepository } from "../../repositories/product.repository"
+import { config } from "../../config"
 import logger from "../../utils/logger"
 import { CartManagementAgent } from "./CartManagementAgent"
 
