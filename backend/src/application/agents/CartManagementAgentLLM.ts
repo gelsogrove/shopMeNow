@@ -31,11 +31,11 @@
 
 import { PrismaClient } from "@prisma/client"
 import axios from "axios"
+import { config } from "../../config"
 import { AgentConfigRepository } from "../../repositories/agent-config.repository"
 import { CartRepository } from "../../repositories/cart.repository"
 import { OrderRepository } from "../../repositories/order.repository"
 import { ProductRepository } from "../../repositories/product.repository"
-import { config } from "../../config"
 import logger from "../../utils/logger"
 import { CartManagementAgent } from "./CartManagementAgent"
 
