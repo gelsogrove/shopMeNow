@@ -31,6 +31,7 @@
 
 import { PrismaClient } from "@prisma/client"
 import axios from "axios"
+import { config } from "../../config"
 import { AgentConfigRepository } from "../../repositories/agent-config.repository"
 import { FAQRepository } from "../../repositories/faq.repository"
 import logger from "../../utils/logger"
@@ -247,7 +248,7 @@ export class CustomerSupportAgentLLM {
           headers: {
             Authorization: `Bearer ${this.openRouterApiKey}`,
             "Content-Type": "application/json",
-            "HTTP-Referer": process.env.APP_URL || "http://localhost:3001",
+            "HTTP-Referer": config.appUrl,
             "X-Title": "ShopME - Customer Support Agent",
           },
         }
