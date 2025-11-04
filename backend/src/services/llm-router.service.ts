@@ -317,12 +317,25 @@ export class LLMRouterService {
       const linkReplacementTimestamp = new Date().toISOString()
 
       let responseWithLinks = result.response
-      const tokensDetected = result.response.match(/\[LINK_[A-Z_]+\]/g) || []
 
-      if (tokensDetected.length > 0) {
+      // Detect tokens in multiple formats:
+      // - [LINK_XXX] (plain)
+      // - (LINK_XXX) (Markdown without square brackets)
+      // - [text](LINK_XXX)
+      // - [text]([LINK_XXX])
+      const tokensDetected = [
+        ...(result.response.match(/\[LINK_[A-Z_]+\]/g) || []),
+        ...(result.response.match(/\(LINK_[A-Z_]+\)/g) || []),
+        ...(result.response.match(/\[[^\]]+\]\(LINK_[A-Z_]+\)/g) || []),
+      ]
+
+      // Remove duplicates
+      const uniqueTokens = [...new Set(tokensDetected)]
+
+      if (uniqueTokens.length > 0) {
         logger.info(
-          `🔗 Found ${tokensDetected.length} tokens to replace:`,
-          tokensDetected
+          `🔗 Found ${uniqueTokens.length} tokens to replace:`,
+          uniqueTokens
         )
         logger.info(`🔗 Input to linkReplacementService:`, {
           response: result.response.substring(0, 200),
@@ -330,10 +343,52 @@ export class LLMRouterService {
           workspaceId: params.workspaceId,
         })
 
+        // ========================================================================
+        // CRITICAL: ORDER CODE DETECTION LOGIC
+        // ========================================================================
+        // This logic determines the correct URL format for order links:
+        //
+        // 1️⃣ SINGLE ORDER (1 code detected):
+        //    Response: "Your order ORD-048 is ready!"
+        //    Link: /orders-public/ORD-048-2025-9?token=xxx
+        //    → Includes orderCode in URL path for direct order view
+        //
+        // 2️⃣ MULTIPLE ORDERS (2+ codes detected):
+        //    Response: "Your last 3 orders: ORD-048, ORD-044, ORD-040..."
+        //    Link: /orders-public?token=xxx
+        //    → NO orderCode in path, shows customer's full order list
+        //
+        // 3️⃣ NO ORDERS (0 codes detected):
+        //    Response: "Click here to see your order history"
+        //    Link: /orders-public?token=xxx
+        //    → NO orderCode in path, shows full order list
+        //
+        // WHY THIS MATTERS:
+        // - Specific link (/orders-public/ORD-XXX) opens single order detail
+        // - General link (/orders-public) shows paginated list of ALL orders
+        // - Wrong format causes 404 or shows wrong data
+        //
+        // REGEX: /ORD-[0-9-]+/g matches format "ORD-048-2025-9"
+        // ========================================================================
+
+        const orderCodes = result.response.match(/ORD-[0-9-]+/g) || []
+
+        // ⚠️ CRITICAL DECISION: Only use specific link if EXACTLY ONE order code
+        const orderCode = orderCodes.length === 1 ? orderCodes[0] : undefined
+
+        logger.info(
+          `🔗 Detected ${orderCodes.length} order code(s):`,
+          orderCodes
+        )
+        logger.info(
+          `🔗 Using orderCode for link:`,
+          orderCode || "NONE (general list link)"
+        )
+
         const linkResult = await this.linkReplacementService.replaceTokens(
           {
             response: result.response,
-            orderCode: result.response.match(/ORD-\d+/)?.[0], // Extract order code if present
+            orderCode, // Only set if single order, otherwise undefined → general link
           },
           params.customerId,
           params.workspaceId
@@ -367,11 +422,11 @@ export class LLMRouterService {
           tokenUsage: undefined,
           input: {
             responseWithTokens: result.response,
-            tokensDetected,
+            tokensDetected: uniqueTokens,
           },
           output: {
             message: linkResult.response || result.response,
-            process: `Replaced ${linkResult.success ? tokensDetected.length : 0} token(s) - JWT generation + URL creation`,
+            process: `Replaced ${linkResult.success ? uniqueTokens.length : 0} token(s) - JWT generation + URL creation`,
           },
         })
       } else {
@@ -379,6 +434,16 @@ export class LLMRouterService {
           "ℹ️ No tokens found in response - skipping link replacement"
         )
       }
+
+      // STEP 4.5: Replace {{TOKEN_DURATION}} variable
+      const tokenDuration = this.formatTokenDuration(
+        process.env.TOKEN_EXPIRATION || "1h"
+      )
+      responseWithLinks = responseWithLinks.replace(
+        /\{\{TOKEN_DURATION\}\}/g,
+        tokenDuration
+      )
+      logger.info(`✅ Replaced {{TOKEN_DURATION}} with: ${tokenDuration}`)
 
       // STEP 5: Apply Safety & Translation Layer
       // Now processes the response WITH actual URLs (not tokens)
@@ -523,7 +588,29 @@ export class LLMRouterService {
         errorMessage: error instanceof Error ? error.message : String(error),
       })
 
-      throw error
+      // 🔧 Pass generic error message through Safety/Translation layer
+      const errorResponse = await this.safetyAgent.process({
+        workspaceId: params.workspaceId,
+        response: "System error - please try again",
+        targetLanguage: params.customerLanguage,
+        customerName: params.customerName,
+      })
+
+      return {
+        response: errorResponse.translatedText,
+        tokensUsed: 0,
+        executionTimeMs,
+        agentUsed: "ROUTER" as AgentType,
+        confidence: 0,
+        wasFAQ: false,
+        debugInfo: {
+          steps: [],
+          totalTokens: 0,
+          totalCost: 0,
+          executionTimeMs,
+          timestamp: new Date().toISOString(),
+        },
+      }
     }
   }
 
@@ -792,6 +879,7 @@ export class LLMRouterService {
                 customerName: params.customerName,
                 customerLanguage: params.customerLanguage,
                 query: delegationQuery,
+                lastOrderCode: customerData.lastordercode, // ✅ Pass last order code
               })
               break
             }
@@ -1126,5 +1214,26 @@ export class LLMRouterService {
       logger.error("Error checking FAQ:", error)
       return { matched: false }
     }
+  }
+
+  /**
+   * Format token duration for display in messages
+   * @param duration - Duration string (e.g., "1h", "30m", "2h")
+   * @returns Formatted duration (e.g., "1 ora", "30 minuti", "2 ore")
+   */
+  private formatTokenDuration(duration: string): string {
+    const match = duration.match(/^(\d+)([hm])$/)
+    if (!match) return "1 ora" // Fallback
+
+    const value = parseInt(match[1], 10)
+    const unit = match[2]
+
+    if (unit === "h") {
+      return value === 1 ? "1 ora" : `${value} ore`
+    } else if (unit === "m") {
+      return value === 1 ? "1 minuto" : `${value} minuti`
+    }
+
+    return "1 ora" // Fallback
   }
 }

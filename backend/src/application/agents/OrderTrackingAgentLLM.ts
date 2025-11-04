@@ -34,7 +34,9 @@ import axios from "axios"
 import { config } from "../../config"
 import { AgentConfigRepository } from "../../repositories/agent-config.repository"
 import { OrderRepository } from "../../repositories/order.repository"
+import { CallingFunctionsService } from "../../services/calling-functions.service"
 import logger from "../../utils/logger"
+import { LinkGeneratorService } from "../services/link-generator.service"
 
 export interface OrderTrackingLLMContext {
   workspaceId: string
@@ -42,6 +44,7 @@ export interface OrderTrackingLLMContext {
   customerName?: string
   customerLanguage?: string
   query: string
+  lastOrderCode?: string // ✅ Last order code (avoid extra query)
 }
 
 export interface OrderTrackingLLMResponse {
@@ -60,6 +63,7 @@ export class OrderTrackingAgentLLM {
   private prisma: PrismaClient
   private orderRepo: OrderRepository
   private agentConfigRepo: AgentConfigRepository
+  private callingFunctionsService: CallingFunctionsService
   private openRouterApiKey: string
   private openRouterBaseUrl: string
 
@@ -67,6 +71,12 @@ export class OrderTrackingAgentLLM {
     this.prisma = prisma
     this.orderRepo = new OrderRepository()
     this.agentConfigRepo = new AgentConfigRepository(prisma)
+
+    // Initialize CallingFunctionsService with LinkGeneratorService
+    const linkGeneratorService = new LinkGeneratorService()
+    this.callingFunctionsService = new CallingFunctionsService(
+      linkGeneratorService
+    )
 
     // OpenRouter API configuration
     this.openRouterApiKey = process.env.OPENROUTER_API_KEY || ""
@@ -111,11 +121,23 @@ export class OrderTrackingAgentLLM {
         model: agentConfig.model,
       })
 
+      // Replace variables in system prompt
+      let systemPrompt = agentConfig.systemPrompt
+      if (context.lastOrderCode) {
+        systemPrompt = systemPrompt.replace(
+          /\{\{lastordercode\}\}/g,
+          context.lastOrderCode
+        )
+        logger.info(
+          `✅ Replaced {{lastordercode}} with: ${context.lastOrderCode}`
+        )
+      }
+
       // STEP 2: Build messages for LLM
       const messages: any[] = [
         {
           role: "system" as const,
-          content: agentConfig.systemPrompt,
+          content: systemPrompt, // ✅ Use prompt with replaced variables
         },
         {
           role: "user" as const,
@@ -207,12 +229,25 @@ export class OrderTrackingAgentLLM {
     } catch (error) {
       const executionTimeMs = Date.now() - startTime
 
-      logger.error("❌ OrderTrackingAgentLLM error:", error)
+      // Extract only relevant error info (avoid circular references)
+      const errorInfo = {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        // Axios specific error fields
+        ...(error && typeof error === "object" && "response" in error
+          ? {
+              status: (error as any).response?.status,
+              statusText: (error as any).response?.statusText,
+              data: (error as any).response?.data,
+            }
+          : {}),
+      }
+
+      logger.error("❌ OrderTrackingAgentLLM error:", errorInfo)
 
       return {
         success: false,
-        output:
-          "I encountered an error while checking your orders. Please try again.",
+        output: "Error processing order tracking request",
         tokensUsed: 0,
         executionTimeMs,
         functionCalls: [],
@@ -235,12 +270,18 @@ export class OrderTrackingAgentLLM {
     tokensUsed: number
   }> {
     try {
+      // Convert functions to tools format (OpenRouter new API)
+      const tools = options.functions.map((fn) => ({
+        type: "function",
+        function: fn,
+      }))
+
       const response = await axios.post(
         `${this.openRouterBaseUrl}/chat/completions`,
         {
           model: options.model,
           messages: options.messages,
-          functions: options.functions,
+          tools, // ✅ Use tools instead of functions
           temperature: options.temperature,
           max_tokens: options.maxTokens,
         },
@@ -259,7 +300,7 @@ export class OrderTrackingAgentLLM {
 
       return {
         content: message?.content || null,
-        function_call: message?.function_call,
+        function_call: message?.tool_calls?.[0]?.function, // ✅ Parse from tool_calls
         tokensUsed: response.data.usage?.total_tokens || 0,
       }
     } catch (error) {
@@ -284,21 +325,71 @@ export class OrderTrackingAgentLLM {
             context.customerId
           )
 
-        case "getOrderDetails":
-          return await this.orderRepo.findByOrderCode(
-            context.workspaceId,
-            args.orderCode
+        case "getLastOrders":
+          // Get last N orders with summary details
+          const limit = args.limit || 3
+          const allOrders = await this.orderRepo.findByCustomerId(
+            context.customerId, // ✅ customerId first
+            context.workspaceId // ✅ workspaceId second
           )
 
+          // Return only the first N orders (already sorted by date DESC)
+          const limitedOrders = allOrders.slice(0, Math.min(limit, 10))
+
+          return limitedOrders.map((order: any) => ({
+            orderCode: order.orderCode,
+            createdAt: order.createdAt,
+            totalPrice: order.totalPrice,
+            status: order.status,
+            itemCount: order.items?.length || 0,
+          }))
+
+        case "getOrderDetails":
+          // If orderCode provided, get specific order
+          let order = null
+          if (args.orderCode) {
+            order = await this.orderRepo.findByOrderCode(
+              args.orderCode, // ✅ orderCode first
+              context.workspaceId // ✅ workspaceId second
+            )
+          } else {
+            // If no orderCode, get last order
+            const orders = await this.orderRepo.findByCustomerId(
+              context.customerId, // ✅ customerId first
+              context.workspaceId // ✅ workspaceId second
+            )
+            order = orders && orders.length > 0 ? orders[0] : null
+          }
+
+          if (!order) {
+            return null
+          }
+
+          // Generate secure link with token
+          const linkResult =
+            await this.callingFunctionsService.getOrdersListLink({
+              customerId: context.customerId,
+              workspaceId: context.workspaceId,
+              orderCode: order.orderCode, // ✅ Pass orderCode to generate specific order link
+            })
+
+          // Return order data + link
+          return {
+            ...order,
+            secureLink: linkResult.linkUrl || null,
+            linkToken: linkResult.token || null,
+            linkExpiresAt: linkResult.expiresAt || null,
+          }
+
         case "trackOrderStatus":
-          const order = await this.orderRepo.findByOrderCode(
-            context.workspaceId,
-            args.orderCode
+          const trackedOrder = await this.orderRepo.findByOrderCode(
+            args.orderCode, // ✅ orderCode first
+            context.workspaceId // ✅ workspaceId second
           )
           return {
-            success: !!order,
-            order: order || null,
-            status: order?.status || "NOT_FOUND",
+            success: !!trackedOrder,
+            order: trackedOrder || null,
+            status: trackedOrder?.status || "NOT_FOUND",
           }
 
         default:
@@ -338,18 +429,34 @@ export class OrderTrackingAgentLLM {
         },
       },
       {
+        name: "getLastOrders",
+        description:
+          "Get last N orders with summary details (orderCode, date, total, status). Use this when customer asks for 'recent orders' or 'last orders'.",
+        parameters: {
+          type: "object",
+          properties: {
+            limit: {
+              type: "number",
+              description: "Number of orders to return (default: 3, max: 10)",
+            },
+          },
+          required: [],
+        },
+      },
+      {
         name: "getOrderDetails",
         description:
-          "Get detailed information about a specific order by order code",
+          "Get detailed information about a specific order by order code, or get last order if no code provided",
         parameters: {
           type: "object",
           properties: {
             orderCode: {
               type: "string",
-              description: "Order code (e.g., 'ORD-2024-001')",
+              description:
+                "Order code (e.g., 'ORD-2024-001'). Optional: if empty, returns last order",
             },
           },
-          required: ["orderCode"],
+          required: [],
         },
       },
       {

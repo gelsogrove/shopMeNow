@@ -800,4 +800,276 @@ describe("LLM Router Multi-Agent Flow", () => {
       )
     })
   })
+
+  describe("🔗 CRITICAL: OrderCode Detection and Link Generation", () => {
+    /**
+     * These tests validate the FROZEN link format logic
+     * See: /docs/LINK_FORMATS_REFERENCE.md
+     */
+
+    beforeEach(() => {
+      // Mock Safety & Translation Agent
+      const {
+        SafetyTranslationAgent,
+      } = require("../../application/agents/SafetyTranslationAgent")
+      jest
+        .spyOn(SafetyTranslationAgent.prototype, "processMessage")
+        .mockResolvedValue({
+          translatedText: "Response in Italian",
+          safe: true,
+          tokensUsed: 50,
+        })
+    })
+
+    it("should generate SPECIFIC link when response contains 1 order code", async () => {
+      // Mock Router Agent
+      prisma.agentConfig.findFirst.mockResolvedValue({
+        id: "router-1",
+        type: "ROUTER",
+        systemPrompt: "Router prompt",
+        model: "openai/gpt-4o-mini",
+        temperature: 0.7,
+        maxTokens: 2000,
+        isActive: true,
+      })
+
+      prisma.customers.findUnique.mockResolvedValue({
+        id: "c1",
+        name: "Mario Rossi",
+        phone: "+393331234567",
+        workspaceId: "w1",
+        language: "it",
+        sales: { name: "Sales" },
+      })
+
+      prisma.conversations.findFirst.mockResolvedValue({
+        id: "conv1",
+        customerId: "c1",
+        workspaceId: "w1",
+      })
+
+      prisma.conversationMessages.findMany.mockResolvedValue([])
+      prisma.conversationMessages.create.mockResolvedValue({})
+      prisma.customers.findFirst.mockResolvedValue(null) // No FAQ
+
+      // Mock Axios (OpenRouter LLM response with SINGLE order code)
+      const axios = require("axios")
+      axios.post.mockResolvedValue({
+        data: {
+          choices: [
+            {
+              message: {
+                content: `Your order ORD-048-2025-9 is ready! Click [here](LINK_ORDERS_WITH_TOKEN) to view.`,
+              },
+            },
+          ],
+          usage: { total_tokens: 100 },
+        },
+      })
+
+      // Mock Link Replacement Service
+      const {
+        LinkReplacementService,
+      } = require("../../application/services/link-replacement.service")
+      const mockReplaceTokens = jest
+        .spyOn(LinkReplacementService.prototype, "replaceTokens")
+        .mockResolvedValue({
+          success: true,
+          response: "Your order ORD-048-2025-9 is ready! Click here to view.",
+        })
+
+      await routerService.routeMessage({
+        workspaceId: "w1",
+        customerId: "c1",
+        conversationId: "conv1",
+        messageId: "msg1",
+        message: "Where is my order?",
+        customerLanguage: "it",
+        customerName: "Mario Rossi",
+      })
+
+      // ✅ CRITICAL: Verify LinkReplacementService was called with orderCode
+      expect(mockReplaceTokens).toHaveBeenCalledWith(
+        expect.objectContaining({
+          response: expect.stringContaining("ORD-048-2025-9"),
+          orderCode: "ORD-048-2025-9", // Should pass specific code
+        }),
+        "c1",
+        "w1"
+      )
+
+      console.log(
+        "✅ SINGLE order code detected → orderCode passed to link service"
+      )
+    })
+
+    it("should generate GENERAL link when response contains 3 order codes", async () => {
+      // Mock Router Agent
+      prisma.agentConfig.findFirst.mockResolvedValue({
+        id: "router-1",
+        type: "ROUTER",
+        systemPrompt: "Router prompt",
+        model: "openai/gpt-4o-mini",
+        temperature: 0.7,
+        maxTokens: 2000,
+        isActive: true,
+      })
+
+      prisma.customers.findUnique.mockResolvedValue({
+        id: "c1",
+        name: "Mario Rossi",
+        phone: "+393331234567",
+        workspaceId: "w1",
+        language: "it",
+        sales: { name: "Sales" },
+      })
+
+      prisma.conversations.findFirst.mockResolvedValue({
+        id: "conv1",
+        customerId: "c1",
+        workspaceId: "w1",
+      })
+
+      prisma.conversationMessages.findMany.mockResolvedValue([])
+      prisma.conversationMessages.create.mockResolvedValue({})
+      prisma.customers.findFirst.mockResolvedValue(null) // No FAQ
+
+      // Mock Axios (OpenRouter LLM response with MULTIPLE order codes)
+      const axios = require("axios")
+      axios.post.mockResolvedValue({
+        data: {
+          choices: [
+            {
+              message: {
+                content: `📦 Your last 3 orders:
+1. ORD-048-2025-9 - $150.00
+2. ORD-044-2025-8 - $89.99
+3. ORD-040-2025-7 - $45.00
+
+View all [here](LINK_ORDERS_WITH_TOKEN)`,
+              },
+            },
+          ],
+          usage: { total_tokens: 100 },
+        },
+      })
+
+      // Mock Link Replacement Service
+      const {
+        LinkReplacementService,
+      } = require("../../application/services/link-replacement.service")
+      const mockReplaceTokens = jest
+        .spyOn(LinkReplacementService.prototype, "replaceTokens")
+        .mockResolvedValue({
+          success: true,
+          response: "Your last 3 orders: ...",
+        })
+
+      await routerService.routeMessage({
+        workspaceId: "w1",
+        customerId: "c1",
+        conversationId: "conv1",
+        messageId: "msg1",
+        message: "Show me my last orders",
+        customerLanguage: "it",
+        customerName: "Mario Rossi",
+      })
+
+      // ✅ CRITICAL: Verify LinkReplacementService was called WITHOUT orderCode
+      expect(mockReplaceTokens).toHaveBeenCalledWith(
+        expect.objectContaining({
+          response: expect.stringContaining("ORD-048-2025-9"),
+          orderCode: undefined, // Should NOT pass orderCode (3 codes detected)
+        }),
+        "c1",
+        "w1"
+      )
+
+      console.log(
+        "✅ MULTIPLE order codes detected → orderCode = undefined (general link)"
+      )
+    })
+
+    it("should generate GENERAL link when response contains NO order codes", async () => {
+      // Mock Router Agent
+      prisma.agentConfig.findFirst.mockResolvedValue({
+        id: "router-1",
+        type: "ROUTER",
+        systemPrompt: "Router prompt",
+        model: "openai/gpt-4o-mini",
+        temperature: 0.7,
+        maxTokens: 2000,
+        isActive: true,
+      })
+
+      prisma.customers.findUnique.mockResolvedValue({
+        id: "c1",
+        name: "Mario Rossi",
+        phone: "+393331234567",
+        workspaceId: "w1",
+        language: "it",
+        sales: { name: "Sales" },
+      })
+
+      prisma.conversations.findFirst.mockResolvedValue({
+        id: "conv1",
+        customerId: "c1",
+        workspaceId: "w1",
+      })
+
+      prisma.conversationMessages.findMany.mockResolvedValue([])
+      prisma.conversationMessages.create.mockResolvedValue({})
+      prisma.customers.findFirst.mockResolvedValue(null) // No FAQ
+
+      // Mock Axios (OpenRouter LLM response with NO order codes)
+      const axios = require("axios")
+      axios.post.mockResolvedValue({
+        data: {
+          choices: [
+            {
+              message: {
+                content: `You can view your complete order history [here](LINK_ORDERS_WITH_TOKEN). Link valid for 15 minutes.`,
+              },
+            },
+          ],
+          usage: { total_tokens: 100 },
+        },
+      })
+
+      // Mock Link Replacement Service
+      const {
+        LinkReplacementService,
+      } = require("../../application/services/link-replacement.service")
+      const mockReplaceTokens = jest
+        .spyOn(LinkReplacementService.prototype, "replaceTokens")
+        .mockResolvedValue({
+          success: true,
+          response: "You can view your order history here.",
+        })
+
+      await routerService.routeMessage({
+        workspaceId: "w1",
+        customerId: "c1",
+        conversationId: "conv1",
+        messageId: "msg1",
+        message: "Show me orders",
+        customerLanguage: "it",
+        customerName: "Mario Rossi",
+      })
+
+      // ✅ CRITICAL: Verify LinkReplacementService was called WITHOUT orderCode
+      expect(mockReplaceTokens).toHaveBeenCalledWith(
+        expect.objectContaining({
+          response: expect.stringContaining("LINK_ORDERS_WITH_TOKEN"),
+          orderCode: undefined, // Should NOT pass orderCode (0 codes detected)
+        }),
+        "c1",
+        "w1"
+      )
+
+      console.log(
+        "✅ NO order codes detected → orderCode = undefined (general link)"
+      )
+    })
+  })
 })

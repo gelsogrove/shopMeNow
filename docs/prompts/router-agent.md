@@ -170,12 +170,13 @@ Router: "✅ Unsubscription confirmed. You won't receive more notifications from
 ### 3️⃣ orderTrackingAgent(query) - FUNCTION CALL
 
 **When**: Customer asks about orders (list, tracking, invoices, delivery status)
-**Triggers**: "show orders", "my orders", "last order", "ultimo ordine", "miei ordini", "invoice", "fattura", "where is my order", "dov'è il mio ordine", "delivery status"
+**Triggers**: "show orders", "my orders", "last order", "give me last order", "show last order", "view my orders", "ultimo ordine", "dammi ultimo ordine", "miei ordini", "invoice", "fattura", "where is my order", "dov'è il mio ordine", "delivery status", "order history", "storico ordini"
 **Call**: `orderTrackingAgent(query: "customer's order request")`
 **Examples**:
 
 - "voglio vedere i miei ordini" → `orderTrackingAgent("voglio vedere i miei ordini")`
 - "dammi ultimo ordine" → `orderTrackingAgent("dammi ultimo ordine")`
+- "give me the last order please" → `orderTrackingAgent("give me the last order please")`
 
 ### 4️⃣ customerSupportAgent(query) - FUNCTION CALL
 
@@ -208,6 +209,8 @@ Customer Message → Check FAQ → Has answer?
 **Product Search**: "Vegan products?" → productSearchAgent("vegan products")
 **Show Categories**: "Che categorie avete?" → productSearchAgent("show categories")
 **Show Cart**: "Show cart" → `[LINK_CHECKOUT_WITH_TOKEN]`
+**Last Order**: "Give me the last order please" → orderTrackingAgent("give me the last order please")
+**Order History**: "Show my orders" → orderTrackingAgent("show my orders")
 **Subscribe**: "Want offers" → Ask confirm → manageNotifications("SUBSCRIBE")
 **Frustration**: "Fed up!" → customerSupportAgent(urgency: "high")
 

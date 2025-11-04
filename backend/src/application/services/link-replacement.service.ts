@@ -66,10 +66,11 @@ export class LinkReplacementService {
       }
 
       // Active tokens only (deprecated tokens removed)
-      const hasCartToken = response.includes("[LINK_CHECKOUT_WITH_TOKEN]")
-      const hasProfileToken = response.includes("[LINK_PROFILE_WITH_TOKEN]")
-      const hasOrdersToken = response.includes("[LINK_ORDERS_WITH_TOKEN]")
-      const hasCatalogToken = response.includes("[LINK_CATALOG]")
+      // Support both plain [TOKEN] and Markdown (TOKEN) formats
+      const hasCartToken = response.includes("LINK_CHECKOUT_WITH_TOKEN")
+      const hasProfileToken = response.includes("LINK_PROFILE_WITH_TOKEN")
+      const hasOrdersToken = response.includes("LINK_ORDERS_WITH_TOKEN")
+      const hasCatalogToken = response.includes("LINK_CATALOG")
 
       if (
         !hasCartToken &&
@@ -117,14 +118,22 @@ export class LinkReplacementService {
             workspaceId
           )
 
-          // Smart replace: handle Markdown format and punctuation
-          // Pattern 1: Remove Markdown wrapper [text]([TOKEN])
+          // Smart replace: handle multiple formats
+          // 1. Markdown with square brackets + trailing punctuation: [text]([LINK_CHECKOUT_WITH_TOKEN]).
           replacedResponse = replacedResponse.replace(
-            /\[([^\]]+)\]\(\[LINK_CHECKOUT_WITH_TOKEN\]\)/g,
-            finalCartLink
+            /\[([^\]]+)\]\(\[LINK_CHECKOUT_WITH_TOKEN\]\)([\.!?,;:]?)/g,
+            (match, text, punctuation) =>
+              `[${text}](${finalCartLink})${punctuation}`
           )
 
-          // Pattern 2: Handle token with trailing punctuation/artifacts
+          // 2. Markdown WITHOUT square brackets + trailing punctuation: [text](LINK_CHECKOUT_WITH_TOKEN).
+          replacedResponse = replacedResponse.replace(
+            /\[([^\]]+)\]\(LINK_CHECKOUT_WITH_TOKEN\)([\.!?,;:]?)/g,
+            (match, text, punctuation) =>
+              `[${text}](${finalCartLink})${punctuation}`
+          )
+
+          // 3. Plain token with optional punctuation: [LINK_CHECKOUT_WITH_TOKEN]
           replacedResponse = replacedResponse.replace(
             /\[LINK_CHECKOUT_WITH_TOKEN\]([\)\.]?[\.!?,]?)/g,
             (match, suffix) => {
@@ -133,6 +142,12 @@ export class LinkReplacementService {
                 ? `${finalCartLink}${cleanSuffix}`
                 : finalCartLink
             }
+          )
+
+          // 4. Bare token: LINK_CHECKOUT_WITH_TOKEN
+          replacedResponse = replacedResponse.replace(
+            /LINK_CHECKOUT_WITH_TOKEN/g,
+            finalCartLink
           )
         } catch (error) {
           logger.error("❌ Error generating cart link:", error)
@@ -169,11 +184,22 @@ export class LinkReplacementService {
               workspaceId
             )
 
-          // Smart replace: handle Markdown format and punctuation
+          // Smart replace: handle multiple formats
+          // 1. Markdown with square brackets + trailing punctuation: [text]([LINK_PROFILE_WITH_TOKEN]).
           replacedResponse = replacedResponse.replace(
-            /\[([^\]]+)\]\(\[LINK_PROFILE_WITH_TOKEN\]\)/g,
-            finalProfileLink
+            /\[([^\]]+)\]\(\[LINK_PROFILE_WITH_TOKEN\]\)([\.!?,;:]?)/g,
+            (match, text, punctuation) =>
+              `[${text}](${finalProfileLink})${punctuation}`
           )
+
+          // 2. Markdown WITHOUT square brackets + trailing punctuation: [text](LINK_PROFILE_WITH_TOKEN).
+          replacedResponse = replacedResponse.replace(
+            /\[([^\]]+)\]\(LINK_PROFILE_WITH_TOKEN\)([\.!?,;:]?)/g,
+            (match, text, punctuation) =>
+              `[${text}](${finalProfileLink})${punctuation}`
+          )
+
+          // 3. Plain token with optional punctuation: [LINK_PROFILE_WITH_TOKEN]
           replacedResponse = replacedResponse.replace(
             /\[LINK_PROFILE_WITH_TOKEN\]([\)\.]?[\.!?,]?)/g,
             (match, suffix) => {
@@ -182,6 +208,12 @@ export class LinkReplacementService {
                 ? `${finalProfileLink}${cleanSuffix}`
                 : finalProfileLink
             }
+          )
+
+          // 4. Bare token: LINK_PROFILE_WITH_TOKEN
+          replacedResponse = replacedResponse.replace(
+            /LINK_PROFILE_WITH_TOKEN/g,
+            finalProfileLink
           )
         } catch (error) {
           logger.error("❌ Error generating profile link:", error)
@@ -226,17 +258,36 @@ export class LinkReplacementService {
           }
 
           // Use centralized link generator
+          logger.info(`🔗 Generating orders link with:`, {
+            ordersToken: ordersToken.substring(0, 20) + "...",
+            workspaceId,
+            orderCodeParam,
+          })
+
           const finalOrdersLink = await linkGeneratorService.generateOrdersLink(
             ordersToken,
             workspaceId,
             orderCodeParam
           )
 
-          // Smart replace: handle Markdown format and punctuation
+          logger.info(`✅ Generated final orders link: ${finalOrdersLink}`)
+
+          // Smart replace: handle multiple formats
+          // 1. Markdown with square brackets + trailing punctuation: [text]([LINK_ORDERS_WITH_TOKEN]).
           replacedResponse = replacedResponse.replace(
-            /\[([^\]]+)\]\(\[LINK_ORDERS_WITH_TOKEN\]\)/g,
-            finalOrdersLink
+            /\[([^\]]+)\]\(\[LINK_ORDERS_WITH_TOKEN\]\)([\.!?,;:]?)/g,
+            (match, text, punctuation) =>
+              `[${text}](${finalOrdersLink})${punctuation}`
           )
+
+          // 2. Markdown WITHOUT square brackets + trailing punctuation: [text](LINK_ORDERS_WITH_TOKEN).
+          replacedResponse = replacedResponse.replace(
+            /\[([^\]]+)\]\(LINK_ORDERS_WITH_TOKEN\)([\.!?,;:]?)/g,
+            (match, text, punctuation) =>
+              `[${text}](${finalOrdersLink})${punctuation}`
+          )
+
+          // 3. Plain token with optional punctuation: [LINK_ORDERS_WITH_TOKEN]
           replacedResponse = replacedResponse.replace(
             /\[LINK_ORDERS_WITH_TOKEN\]([\)\.]?[\.!?,]?)/g,
             (match, suffix) => {
@@ -245,6 +296,12 @@ export class LinkReplacementService {
                 ? `${finalOrdersLink}${cleanSuffix}`
                 : finalOrdersLink
             }
+          )
+
+          // 4. Bare token without brackets: LINK_ORDERS_WITH_TOKEN
+          replacedResponse = replacedResponse.replace(
+            /LINK_ORDERS_WITH_TOKEN/g,
+            finalOrdersLink
           )
         } catch (error) {
           logger.error("❌ Error generating orders link:", error)
@@ -267,11 +324,22 @@ export class LinkReplacementService {
             workspaceId
           )
 
-          // Smart replace: handle Markdown format and punctuation
+          // Smart replace: handle multiple formats
+          // 1. Markdown with square brackets + trailing punctuation: [text]([LINK_CATALOG]).
           replacedResponse = replacedResponse.replace(
-            /\[([^\]]+)\]\(\[LINK_CATALOG\]\)/g,
-            finalCatalogLink
+            /\[([^\]]+)\]\(\[LINK_CATALOG\]\)([\.!?,;:]?)/g,
+            (match, text, punctuation) =>
+              `[${text}](${finalCatalogLink})${punctuation}`
           )
+
+          // 2. Markdown WITHOUT square brackets + trailing punctuation: [text](LINK_CATALOG).
+          replacedResponse = replacedResponse.replace(
+            /\[([^\]]+)\]\(LINK_CATALOG\)([\.!?,;:]?)/g,
+            (match, text, punctuation) =>
+              `[${text}](${finalCatalogLink})${punctuation}`
+          )
+
+          // 3. Plain token with optional punctuation: [LINK_CATALOG]
           replacedResponse = replacedResponse.replace(
             /\[LINK_CATALOG\]([\)\.]?[\.!?,]?)/g,
             (match, suffix) => {
@@ -280,6 +348,12 @@ export class LinkReplacementService {
                 ? `${finalCatalogLink}${cleanSuffix}`
                 : finalCatalogLink
             }
+          )
+
+          // 4. Bare token: LINK_CATALOG
+          replacedResponse = replacedResponse.replace(
+            /LINK_CATALOG/g,
+            finalCatalogLink
           )
         } catch (error) {
           logger.error("❌ Error generating catalog link:", error)

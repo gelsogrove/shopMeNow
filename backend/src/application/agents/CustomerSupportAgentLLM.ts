@@ -207,12 +207,25 @@ export class CustomerSupportAgentLLM {
     } catch (error) {
       const executionTimeMs = Date.now() - startTime
 
-      logger.error("❌ CustomerSupportAgentLLM error:", error)
+      // Extract only relevant error info (avoid circular references)
+      const errorInfo = {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        // Axios specific error fields
+        ...(error && typeof error === "object" && "response" in error
+          ? {
+              status: (error as any).response?.status,
+              statusText: (error as any).response?.statusText,
+              data: (error as any).response?.data,
+            }
+          : {}),
+      }
+
+      logger.error("❌ CustomerSupportAgentLLM error:", errorInfo)
 
       return {
         success: false,
-        output:
-          "I encountered an error while processing your support request. Please try again.",
+        output: "Error processing customer support request",
         tokensUsed: 0,
         executionTimeMs,
         functionCalls: [],
@@ -235,12 +248,18 @@ export class CustomerSupportAgentLLM {
     tokensUsed: number
   }> {
     try {
+      // Convert functions to tools format (OpenRouter new API)
+      const tools = options.functions.map((fn) => ({
+        type: "function",
+        function: fn,
+      }))
+
       const response = await axios.post(
         `${this.openRouterBaseUrl}/chat/completions`,
         {
           model: options.model,
           messages: options.messages,
-          functions: options.functions,
+          tools, // ✅ Use tools instead of functions
           temperature: options.temperature,
           max_tokens: options.maxTokens,
         },
@@ -259,7 +278,7 @@ export class CustomerSupportAgentLLM {
 
       return {
         content: message?.content || null,
-        function_call: message?.function_call,
+        function_call: message?.tool_calls?.[0]?.function, // ✅ Parse from tool_calls
         tokensUsed: response.data.usage?.total_tokens || 0,
       }
     } catch (error) {
