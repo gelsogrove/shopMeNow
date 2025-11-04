@@ -160,7 +160,7 @@ STEP 4: Router → [RETURN TEXT: "Fatto! ✅ Ho svuotato il carrello rimuovendo 
 - **ADD**: "add burrata", "aggiungi", "metti nel carrello"
 - **REMOVE**: "remove product", "rimuovi", "togli"
 - **VIEW**: "show cart", "mostra carrello", "vai al carrello"
-- **REPEAT**: "repeat order", "ripeti ordine", "riordina"
+- **REPEAT**: "repeat order", "ripeti ordine", "riordina", "ripeti ultimo ordine", "ordina di nuovo", "same order"
 
 **Call**: `cartManagementAgent(query: "customer's cart request")`
 **Note**: Cart Management Agent will generate [LINK_CHECKOUT_WITH_TOKEN] when needed
@@ -201,6 +201,16 @@ STEP 4: Router → [RETURN TEXT: "Fatto! ✅ Ho svuotato il carrello rimuovendo 
   Router: [CALL cartManagementAgent("cancella carrello")]
   ```
 - Cart Management Agent will handle deletion WITHOUT asking confirmation
+
+**SCENARIO 4 - Repeat order request**:
+
+- Customer says: "ripeti ultimo ordine", "ripeti ordine", "repeat order"
+- **ACTION**: Delegate to Cart Management (NOT Order Tracking!):
+  ```
+  User: "ripeti ultimo ordine"
+  Router: [CALL cartManagementAgent("ripeti ultimo ordine")]
+  ```
+- Cart Management Agent will handle the full flow (get order, show, confirm, add to cart)
 
 **WHY "CONFIRMED:" PREFIX?**
 
@@ -252,6 +262,7 @@ Customer Message → Check FAQ → Has answer?
 **Show Cart**: "Show cart" → `[LINK_CHECKOUT_WITH_TOKEN]`
 **Empty Cart**: "cancella carrello" → cartManagementAgent("cancella carrello") ← DELEGATE!
 **Add to Cart**: "aggiungi burrata" → cartManagementAgent("aggiungi burrata")
+**Repeat Order**: "ripeti ultimo ordine" → cartManagementAgent("ripeti ultimo ordine") ← DELEGATE!
 **Last Order**: "Give me the last order please" → orderTrackingAgent("give me the last order please")
 **Order History**: "Show my orders" → orderTrackingAgent("show my orders")
 **Subscribe**: "Want offers" → Ask confirm → manageNotifications("SUBSCRIBE")
@@ -281,6 +292,7 @@ Router: [CHIAMA customerSupportAgent(query: "ordine sempre in ritardo", urgency:
 You can use these tokens in your responses:
 
 - `[LINK_CHECKOUT_WITH_TOKEN]` - Secure link to cart/checkout (use for "show cart")
+- `[LINK_CHECKOUT_CONFIRM]` - Secure link to checkout at CONFIRM step (use after repeatOrder)
 - `[LINK_PROFILE_WITH_TOKEN]` - Secure link to customer profile
 - `[LINK_ORDERS_WITH_TOKEN]` - Secure link to order history (use for "show all orders")
 - `[LINK_CATALOG]` - Link to product catalog (use for "show catalog")

@@ -296,17 +296,25 @@ async function main() {
       prod.name.toLowerCase().includes("organic") ||
       prod.name.toLowerCase().includes("bio")
     const isVegan =
-      prod.categoryName === "Pasta" ||
-      prod.categoryName === "Condiments" ||
-      prod.name.toLowerCase().includes("vegan")
+      prod.name.toLowerCase().includes("vegan") ||
+      prod.name.toLowerCase().includes("vegano")
     const isGlutenFree =
       prod.name.toLowerCase().includes("gluten-free") ||
+      prod.name.toLowerCase().includes("senza glutine") ||
       prod.name.toLowerCase().includes("rice")
     const isHalal = prod.categoryName === "Cured Meats" && prod.stock > 30 // Some meats are halal certified
     const isWholeGrain =
-      prod.categoryName === "Pasta" ||
       prod.name.toLowerCase().includes("whole") ||
-      prod.name.toLowerCase().includes("integrale")
+      prod.name.toLowerCase().includes("integrale") ||
+      prod.name.toLowerCase().includes("integral")
+
+    // Build certifications array based on boolean fields
+    const certifications: string[] = []
+    if (isOrganic) certifications.push("bio")
+    if (isVegan) certifications.push("vegan")
+    if (isGlutenFree) certifications.push("gluten-free")
+    if (isHalal) certifications.push("halal")
+    if (isWholeGrain) certifications.push("whole-grain")
 
     // Assign transport type based on product category and characteristics
     let transportType = "Temperatura ambiente" // Default for most products
@@ -354,6 +362,7 @@ async function main() {
         isHalal: isHalal,
         isWholeGrain: isWholeGrain,
         transportType: transportType,
+        certifications: certifications,
       },
     })
   }

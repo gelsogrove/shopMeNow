@@ -68,12 +68,14 @@ export class LinkReplacementService {
       // Active tokens only (deprecated tokens removed)
       // Support both plain [TOKEN] and Markdown (TOKEN) formats
       const hasCartToken = response.includes("LINK_CHECKOUT_WITH_TOKEN")
+      const hasCartConfirmToken = response.includes("LINK_CHECKOUT_CONFIRM")
       const hasProfileToken = response.includes("LINK_PROFILE_WITH_TOKEN")
       const hasOrdersToken = response.includes("LINK_ORDERS_WITH_TOKEN")
       const hasCatalogToken = response.includes("LINK_CATALOG")
 
       if (
         !hasCartToken &&
+        !hasCartConfirmToken &&
         !hasProfileToken &&
         !hasOrdersToken &&
         !hasCatalogToken
@@ -154,6 +156,73 @@ export class LinkReplacementService {
           replacedResponse = replacedResponse.replace(
             /\[LINK_CHECKOUT_WITH_TOKEN\]/g,
             "Link del carrello non disponibile"
+          )
+        }
+      }
+
+      // Handle cart confirm token (checkout with step=confirm parameter)
+      if (hasCartConfirmToken) {
+        try {
+          const {
+            SecureTokenService,
+          } = require("../../application/services/secure-token.service")
+          const secureTokenService = new SecureTokenService()
+
+          const cartToken = await secureTokenService.createToken(
+            "cart",
+            workspaceId,
+            { customerId, workspaceId },
+            undefined, // Uses TOKEN_EXPIRATION from env
+            undefined,
+            undefined,
+            undefined,
+            customerId
+          )
+
+          // Generate checkout link with step=confirm parameter
+          const finalCartConfirmLink =
+            await linkGeneratorService.generateCheckoutLink(
+              cartToken,
+              workspaceId,
+              "confirm" // Pass step parameter to include in short URL
+            )
+
+          // Smart replace: handle multiple formats (same as LINK_CHECKOUT_WITH_TOKEN)
+          // 1. Markdown with square brackets
+          replacedResponse = replacedResponse.replace(
+            /\[([^\]]+)\]\(\[LINK_CHECKOUT_CONFIRM\]\)([\.!?,;:]?)/g,
+            (match, text, punctuation) =>
+              `[${text}](${finalCartConfirmLink})${punctuation}`
+          )
+
+          // 2. Markdown WITHOUT square brackets
+          replacedResponse = replacedResponse.replace(
+            /\[([^\]]+)\]\(LINK_CHECKOUT_CONFIRM\)([\.!?,;:]?)/g,
+            (match, text, punctuation) =>
+              `[${text}](${finalCartConfirmLink})${punctuation}`
+          )
+
+          // 3. Plain token with optional punctuation
+          replacedResponse = replacedResponse.replace(
+            /\[LINK_CHECKOUT_CONFIRM\]([\)\.]?[\.!?,]?)/g,
+            (match, suffix) => {
+              const cleanSuffix = suffix.replace(/\)/g, "")
+              return cleanSuffix
+                ? `${finalCartConfirmLink}${cleanSuffix}`
+                : finalCartConfirmLink
+            }
+          )
+
+          // 4. Bare token
+          replacedResponse = replacedResponse.replace(
+            /LINK_CHECKOUT_CONFIRM/g,
+            finalCartConfirmLink
+          )
+        } catch (error) {
+          logger.error("❌ Error generating cart confirm link:", error)
+          replacedResponse = replacedResponse.replace(
+            /\[LINK_CHECKOUT_CONFIRM\]/g,
+            "Link di conferma non disponibile"
           )
         }
       }

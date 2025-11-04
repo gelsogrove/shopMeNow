@@ -146,6 +146,29 @@ export class CustomerSupportAgentLLM {
           llmResponse.function_call.arguments || "{}"
         )
 
+        // 🚨 CRITICAL SECURITY CHECK: SubLLM CANNOT call other SubLLMs!
+        // Only Router can delegate to SubAgents
+        const forbiddenFunctions = [
+          "cartManagementAgent",
+          "productSearchAgent",
+          "orderTrackingAgent",
+          "customerSupportAgent",
+          "safetyTranslationAgent",
+        ]
+
+        if (forbiddenFunctions.includes(functionName)) {
+          logger.error(
+            `🚨 SECURITY VIOLATION: CustomerSupportAgentLLM tried to call another SubLLM!`,
+            {
+              attemptedFunction: functionName,
+              args: functionArgs,
+            }
+          )
+          throw new Error(
+            `INVALID OPERATION: SubLLM cannot call other SubLLMs. Only Router can delegate to SubAgents. Attempted: ${functionName}`
+          )
+        }
+
         logger.info(`⚙️ CustomerSupportAgentLLM: Function call requested`, {
           functionName,
           args: functionArgs,

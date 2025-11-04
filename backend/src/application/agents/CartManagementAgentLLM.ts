@@ -45,6 +45,7 @@ export interface CartLLMContext {
   customerName?: string
   customerLanguage?: string
   query: string
+  conversationHistory?: Array<{ role: string; content: string }> // Last 2-3 messages for context
 }
 
 export interface CartLLMResponse {
@@ -122,17 +123,30 @@ export class CartManagementAgentLLM {
         model: agentConfig.model,
       })
 
-      // STEP 2: Build messages for LLM
+      // STEP 2: Build messages for LLM (with conversation history for context)
       const messages: any[] = [
         {
           role: "system" as const,
           content: agentConfig.systemPrompt,
         },
-        {
-          role: "user" as const,
-          content: context.query,
-        },
       ]
+
+      // Add conversation history if provided (for context awareness)
+      if (
+        context.conversationHistory &&
+        context.conversationHistory.length > 0
+      ) {
+        logger.info(`📜 Adding conversation history`, {
+          historyLength: context.conversationHistory.length,
+        })
+        messages.push(...context.conversationHistory)
+      }
+
+      // Add current user query
+      messages.push({
+        role: "user" as const,
+        content: context.query,
+      })
 
       // STEP 3: Define function calls for cart management
       const functions = this.getCartManagementFunctions()
@@ -149,18 +163,52 @@ export class CartManagementAgentLLM {
       let totalTokens = llmResponse.tokensUsed
       let finalResponse = llmResponse.content || ""
       const functionCalls: any[] = []
+      const maxIterations = 5 // Prevent infinite loops
 
-      // STEP 5: Handle function calling loop
-      if (llmResponse.function_call) {
-        const functionName = llmResponse.function_call.name
+      // STEP 5: Handle function calling loop (like Router)
+      let currentResponse = llmResponse
+      let iteration = 0
+
+      while (currentResponse.function_call && iteration < maxIterations) {
+        iteration++
+
+        const functionName = currentResponse.function_call.name
         const functionArgs = JSON.parse(
-          llmResponse.function_call.arguments || "{}"
+          currentResponse.function_call.arguments || "{}"
         )
 
-        logger.info(`⚙️ CartManagementAgentLLM: Function call requested`, {
-          functionName,
-          args: functionArgs,
-        })
+        // 🚨 CRITICAL SECURITY CHECK: SubLLM CANNOT call other SubLLMs!
+        // Only Router can delegate to SubAgents
+        const forbiddenFunctions = [
+          "cartManagementAgent",
+          "productSearchAgent",
+          "orderTrackingAgent",
+          "customerSupportAgent",
+          "safetyTranslationAgent",
+        ]
+
+        if (forbiddenFunctions.includes(functionName)) {
+          logger.error(
+            `🚨 SECURITY VIOLATION: CartManagementAgentLLM tried to call another SubLLM!`,
+            {
+              attemptedFunction: functionName,
+              iteration,
+              args: functionArgs,
+            }
+          )
+          throw new Error(
+            `INVALID OPERATION: SubLLM cannot call other SubLLMs. Only Router can delegate to SubAgents. Attempted: ${functionName}`
+          )
+        }
+
+        logger.info(
+          `⚙️ CartManagementAgentLLM: Function call ${iteration}/${maxIterations}`,
+          {
+            functionName,
+            args: functionArgs,
+            currentMessagesCount: messages.length,
+          }
+        )
 
         // Execute function via CartManagementAgent
         const functionResult = await this.executeFunction(
@@ -175,11 +223,11 @@ export class CartManagementAgentLLM {
           result: functionResult,
         })
 
-        // STEP 6: Return function result to LLM for final response
+        // Add function call + result to conversation
         messages.push({
           role: "assistant" as const,
           content: null as any,
-          function_call: llmResponse.function_call,
+          function_call: currentResponse.function_call,
         })
         messages.push({
           role: "function" as const,
@@ -187,7 +235,8 @@ export class CartManagementAgentLLM {
           content: JSON.stringify(functionResult),
         })
 
-        const finalLLMResponse = await this.callLLM({
+        // Call LLM again with function result
+        const nextLLMResponse = await this.callLLM({
           model: agentConfig.model,
           messages,
           functions,
@@ -195,9 +244,53 @@ export class CartManagementAgentLLM {
           maxTokens: agentConfig.maxTokens || 2000,
         })
 
-        totalTokens += finalLLMResponse.tokensUsed
-        finalResponse = finalLLMResponse.content || ""
+        totalTokens += nextLLMResponse.tokensUsed
+        currentResponse = nextLLMResponse
+
+        logger.info(
+          `📥 CartManagementAgentLLM: LLM response after function ${iteration}`,
+          {
+            hasContent: !!currentResponse.content,
+            contentPreview: currentResponse.content?.substring(0, 100),
+            hasFunctionCall: !!currentResponse.function_call,
+            nextFunctionName: currentResponse.function_call?.name,
+            tokensUsed: nextLLMResponse.tokensUsed,
+          }
+        )
+
+        // If LLM returns text response, we're done
+        if (!currentResponse.function_call && currentResponse.content) {
+          finalResponse = currentResponse.content
+          logger.info(
+            `✅ CartManagementAgentLLM: Loop completed with text response`
+          )
+          break
+        }
       }
+
+      // If we exited loop with function_call still present, something went wrong
+      if (currentResponse.function_call) {
+        logger.warn(
+          `⚠️ CartManagementAgentLLM: Max iterations reached with pending function call`,
+          {
+            finalIteration: iteration,
+            pendingFunction: currentResponse.function_call.name,
+            totalFunctionCalls: functionCalls.length,
+            hasContent: !!currentResponse.content,
+          }
+        )
+        finalResponse =
+          currentResponse.content ||
+          "I need more information to complete this request."
+      }
+
+      logger.info(`🏁 CartManagementAgentLLM: Final response`, {
+        success: !!finalResponse,
+        responseLength: finalResponse?.length || 0,
+        totalIterations: iteration,
+        totalFunctionCalls: functionCalls.length,
+        totalTokens,
+      })
 
       const executionTimeMs = Date.now() - startTime
 
@@ -342,6 +435,118 @@ export class CartManagementAgentLLM {
         case "clearCart":
           return await this.cartManagementAgent.resetCart(agentContext)
 
+        case "getLastOrderDetails":
+          // Get customer's last order with full details
+          const orderDetails = await this.prisma.orders.findFirst({
+            where: {
+              customerId: context.customerId,
+              workspaceId: context.workspaceId,
+              status: "DELIVERED",
+            },
+            orderBy: { createdAt: "desc" },
+            include: {
+              items: {
+                include: {
+                  product: true,
+                },
+              },
+            },
+          })
+
+          if (!orderDetails) {
+            return {
+              success: false,
+              error: "NO_PREVIOUS_ORDER",
+              message: "No previous orders found",
+            }
+          }
+
+          // Format order summary for LLM response
+          const itemsSummary = orderDetails.items
+            .map((item) => {
+              const product = item.product
+              return `- ${product.name} x${item.quantity} (${item.unitPrice.toFixed(2)}€)`
+            })
+            .join("\n")
+
+          const totalPrice = orderDetails.items.reduce(
+            (sum, item) => sum + item.unitPrice * item.quantity,
+            0
+          )
+
+          return {
+            success: true,
+            orderCode: orderDetails.orderCode,
+            orderDate: orderDetails.createdAt.toISOString().split("T")[0],
+            itemsCount: orderDetails.items.length,
+            totalPrice: totalPrice.toFixed(2),
+            itemsSummary, // Formatted string ready for LLM
+            items: orderDetails.items.map((item) => ({
+              productName: item.product.name,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              total: (item.unitPrice * item.quantity).toFixed(2),
+            })),
+          }
+
+        case "repeatLastOrder":
+          // Get customer's last completed order (DELIVERED = completed)
+          const lastOrder = await this.prisma.orders.findFirst({
+            where: {
+              customerId: context.customerId,
+              workspaceId: context.workspaceId,
+              status: "DELIVERED",
+            },
+            orderBy: { createdAt: "desc" },
+            include: {
+              items: {
+                include: {
+                  product: true,
+                },
+              },
+            },
+          })
+
+          if (!lastOrder) {
+            logger.warn("repeatLastOrder: No previous DELIVERED orders found", {
+              customerId: context.customerId,
+              workspaceId: context.workspaceId,
+            })
+            return {
+              success: false,
+              error: "NO_PREVIOUS_ORDER",
+              message: "You don't have any previous orders to repeat",
+            }
+          }
+
+          logger.info("repeatLastOrder: Found last order", {
+            orderId: lastOrder.id,
+            orderCode: lastOrder.orderCode,
+            itemsCount: lastOrder.items.length,
+            items: lastOrder.items.map((i) => ({
+              productId: i.productId,
+              productName: i.product?.name,
+              quantity: i.quantity,
+            })),
+          })
+
+          // Call repeatOrder with lastOrder.id
+          const repeatResult = await this.cartManagementAgent.repeatOrder(
+            agentContext,
+            {
+              orderId: lastOrder.id,
+            }
+          )
+
+          logger.info("repeatLastOrder: Result from CartManagementAgent", {
+            success: repeatResult.success,
+            message: repeatResult.message,
+            error: repeatResult.error,
+            cartItemCount: repeatResult.cart?.itemCount,
+          })
+
+          return repeatResult
+
         default:
           logger.warn(`Unknown function: ${functionName}`)
           return {
@@ -430,6 +635,26 @@ export class CartManagementAgentLLM {
       {
         name: "clearCart",
         description: "Remove all items from the cart",
+        parameters: {
+          type: "object",
+          properties: {},
+          required: [],
+        },
+      },
+      {
+        name: "getLastOrderDetails",
+        description:
+          "Get details of customer's most recent DELIVERED order including product list. Use BEFORE repeatLastOrder to show products to customer.",
+        parameters: {
+          type: "object",
+          properties: {},
+          required: [],
+        },
+      },
+      {
+        name: "repeatLastOrder",
+        description:
+          "Copy all items from customer's most recent DELIVERED order to current cart. Use AFTER showing order details with getLastOrderDetails and receiving confirmation.",
         parameters: {
           type: "object",
           properties: {},

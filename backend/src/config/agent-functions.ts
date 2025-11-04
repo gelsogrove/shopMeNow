@@ -267,9 +267,20 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
 
   {
+    name: "getLastOrderDetails",
+    description:
+      "Get details of the customer's most recent order including product list, quantities, and prices. Use BEFORE repeatLastOrder to show customer what will be added to cart.",
+    parameters: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
+  },
+
+  {
     name: "repeatLastOrder",
     description:
-      "Copy all items from the customer's most recent completed order into the current cart. Use when customer wants to reorder or repeat a previous purchase.",
+      "Copy all items from the customer's most recent completed order into the current cart. Use AFTER showing order details with getLastOrderDetails and getting customer confirmation.",
     parameters: {
       type: "object",
       properties: {},
@@ -501,6 +512,7 @@ export function getFunctionNamesForAgentType(agentType: string): string[] {
         "removeFromCart",
         "updateCartQuantity",
         "clearCart",
+        "getLastOrderDetails",
         "repeatLastOrder",
       ]
 

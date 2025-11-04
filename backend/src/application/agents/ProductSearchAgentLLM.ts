@@ -150,6 +150,29 @@ export class ProductSearchAgentLLM {
           llmResponse.function_call.arguments || "{}"
         )
 
+        // 🚨 CRITICAL SECURITY CHECK: SubLLM CANNOT call other SubLLMs!
+        // Only Router can delegate to SubAgents
+        const forbiddenFunctions = [
+          "cartManagementAgent",
+          "productSearchAgent",
+          "orderTrackingAgent",
+          "customerSupportAgent",
+          "safetyTranslationAgent",
+        ]
+
+        if (forbiddenFunctions.includes(functionName)) {
+          logger.error(
+            `🚨 SECURITY VIOLATION: ProductSearchAgentLLM tried to call another SubLLM!`,
+            {
+              attemptedFunction: functionName,
+              args: functionArgs,
+            }
+          )
+          throw new Error(
+            `INVALID OPERATION: SubLLM cannot call other SubLLMs. Only Router can delegate to SubAgents. Attempted: ${functionName}`
+          )
+        }
+
         logger.info(`⚙️ ProductSearchAgentLLM: Function call requested`, {
           functionName,
           args: functionArgs,
@@ -305,7 +328,13 @@ export class ProductSearchAgentLLM {
           return await this.productSearchAgent.search(context.workspaceId, {
             detectedLanguage: context.customerLanguage || "en",
             keywords: args.keywords || [],
-            filters: args.filters,
+            filters: {
+              certifications: args.certifications,
+              category: args.categoryId || args.category,
+              minPrice: args.minPrice,
+              maxPrice: args.maxPrice,
+              allergens: args.allergens,
+            },
           })
 
         case "getProductDetails":

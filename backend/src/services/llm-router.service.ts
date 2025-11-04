@@ -971,12 +971,27 @@ export class LLMRouterService {
               const cartManagementAgent = new CartManagementAgentLLM(
                 this.prisma
               )
+
+              // Extract last 3 messages for context (excluding system prompt)
+              const recentHistory = conversationHistory
+                .filter((msg: any) => msg.role !== "system")
+                .slice(-3) // Last 3 messages
+
+              logger.info(`📜 Passing conversation history to CartManagement`, {
+                historyLength: recentHistory.length,
+                messages: recentHistory.map((m: any) => ({
+                  role: m.role,
+                  contentPreview: m.content?.substring(0, 50),
+                })),
+              })
+
               subAgentResponse = await cartManagementAgent.handleQuery({
                 workspaceId: params.workspaceId,
                 customerId: params.customerId,
                 customerName: params.customerName,
                 customerLanguage: params.customerLanguage,
                 query: delegationQuery,
+                conversationHistory: recentHistory, // ✅ Pass conversation context
               })
               break
             }

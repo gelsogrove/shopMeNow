@@ -408,68 +408,16 @@ export class ProductRepository implements IProductRepository {
         isActive: true, // Only active products
       }
 
-      // Keywords search (name, description, OR certifications with fuzzy matching)
+      // Keywords search (name, description ONLY - no fuzzy certification matching)
       if (filters.keywords && filters.keywords.length > 0) {
         const orConditions: Prisma.ProductsWhereInput[] = []
 
         filters.keywords.forEach((keyword) => {
-          const lowerKeyword = keyword.toLowerCase().trim()
-
-          // Search in name and description (case-insensitive)
+          // Search in name and description (case-insensitive) ONLY
           orConditions.push(
             { name: { contains: keyword, mode: "insensitive" } },
             { description: { contains: keyword, mode: "insensitive" } }
           )
-
-          // 🔧 IMPROVED: Fuzzy matching for certifications with typo tolerance
-          // Maps user input (with common typos) to database certification values
-          const certificationMatches: Record<string, string[]> = {
-            // Bio/Organic variations
-            bio: ["bio"],
-            organic: ["bio"],
-            biologico: ["bio"],
-
-            // Halal variations (with typos)
-            halal: ["halal"],
-            hallal: ["halal"], // Common typo (double L)
-            allal: ["halal"],
-
-            // Vegan variations
-            vegan: ["vegan"],
-            vegano: ["vegan"],
-
-            // Vegetarian variations
-            vegetarian: ["vegetarian"],
-            vegetariano: ["vegetarian"],
-
-            // Kosher
-            kosher: ["kosher"],
-
-            // Gluten-free variations
-            "gluten-free": ["gluten-free"],
-            glutenfree: ["gluten-free"],
-            "senza glutine": ["gluten-free"],
-            "sin gluten": ["gluten-free"],
-
-            // Lactose-free variations
-            "lactose-free": ["lactose-free"],
-            lactosefree: ["lactose-free"],
-            "senza lattosio": ["lactose-free"],
-            "sin lactosa": ["lactose-free"],
-          }
-
-          // Find certifications that match the keyword
-          const matchedCerts = certificationMatches[lowerKeyword] || []
-
-          if (matchedCerts.length > 0) {
-            // Add certification matches
-            matchedCerts.forEach((cert) => {
-              orConditions.push({ certifications: { has: cert } })
-            })
-          } else {
-            // Fallback: try partial match in certification names
-            orConditions.push({ certifications: { has: lowerKeyword } })
-          }
         })
 
         where.OR = orConditions
@@ -498,11 +446,40 @@ export class ProductRepository implements IProductRepository {
         }
       }
 
-      // Certifications filter - use dedicated array field
+      // Certifications filter - search ONLY boolean fields
+      // This is a SEPARATE search from keywords - don't mix them
       if (filters.certifications && filters.certifications.length > 0) {
-        where.certifications = {
-          hasSome: filters.certifications,
-        }
+        filters.certifications.forEach((cert) => {
+          const certLower = cert.toLowerCase().trim()
+
+          // Map certification names to boolean fields ONLY
+          if (
+            certLower === "halal" ||
+            certLower === "hallal" ||
+            certLower === "allal"
+          ) {
+            where.isHalal = true
+          } else if (
+            certLower === "bio" ||
+            certLower === "organic" ||
+            certLower === "biologico"
+          ) {
+            where.isOrganic = true
+          } else if (certLower === "vegan" || certLower === "vegano") {
+            where.isVegan = true
+          } else if (
+            certLower === "gluten-free" ||
+            certLower === "senza glutine"
+          ) {
+            where.isGlutenFree = true
+          } else if (
+            certLower === "whole-grain" ||
+            certLower === "integrali" ||
+            certLower === "integrale"
+          ) {
+            where.isWholeGrain = true
+          }
+        })
       }
 
       const products = await this.prisma.products.findMany({

@@ -50,9 +50,13 @@ export class LinkGeneratorService {
    */
   async generateCheckoutLink(
     token: string,
-    workspaceId: string
+    workspaceId: string,
+    step?: string
   ): Promise<string> {
-    const originalUrl = `${config.frontendUrl}/cart?token=${token}`
+    let originalUrl = `${config.frontendUrl}/cart?token=${token}`
+    if (step) {
+      originalUrl += `&step=${step}`
+    }
     return this.generateShortLink(originalUrl, workspaceId, "cart")
   }
 
