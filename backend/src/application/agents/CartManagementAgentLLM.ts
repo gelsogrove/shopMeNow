@@ -340,11 +340,7 @@ export class CartManagementAgentLLM {
           }
 
         case "clearCart":
-          // TODO: Implement clearCart in CartManagementAgent
-          return {
-            success: false,
-            error: "Function not implemented yet",
-          }
+          return await this.cartManagementAgent.resetCart(agentContext)
 
         default:
           logger.warn(`Unknown function: ${functionName}`)

@@ -283,10 +283,119 @@ export class LLMRouterService {
         )
       }
 
+      // STEP 4.5: Load customer data and dynamic content for Router prompt
+      logger.info("Step 4.5: Loading customer data and dynamic content")
+      const customer = await this.prisma.customers.findUnique({
+        where: { id: params.customerId },
+        include: { sales: true },
+      })
+
+      if (!customer) {
+        throw new Error(`Customer ${params.customerId} not found`)
+      }
+
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: params.workspaceId },
+      })
+
+      const messageRepo =
+        new (require("../repositories/message.repository").MessageRepository)()
+
+      const [categories, offers, products, services, faqs, lastOrder] =
+        await Promise.all([
+          messageRepo.getActiveCategories(params.workspaceId),
+          messageRepo.getActiveOffers(params.workspaceId),
+          messageRepo.getActiveProducts(
+            params.workspaceId,
+            customer.discount || 0
+          ),
+          messageRepo.getActiveServices(params.workspaceId),
+          messageRepo.getActiveFaqs(params.workspaceId),
+          this.prisma.orders.findFirst({
+            where: { customerId: customer.id },
+            orderBy: { createdAt: "desc" },
+            select: { orderCode: true },
+          }),
+        ])
+
+      // Helper function to get language display name
+      const getLanguageDisplayName = (
+        languageCode: string | null | undefined
+      ): string => {
+        if (!languageCode || languageCode.trim() === "") {
+          return "ITALIANO"
+        }
+        const languageMap: Record<string, string> = {
+          it: "ITALIANO",
+          en: "ENGLISH",
+          es: "ESPAÑOL",
+          pt: "PORTUGUÊS",
+          IT: "ITALIANO",
+          ENG: "ENGLISH",
+          ESP: "ESPAÑOL",
+          PRT: "PORTUGUÊS",
+        }
+        return languageMap[languageCode] || "ITALIANO"
+      }
+
+      // Build customerData object with all variables
+      const customerData = {
+        nameUser: customer.name || "",
+        discountUser: customer.discount || 0,
+        companyName: customer.company || "",
+        lastordercode: lastOrder?.orderCode || "",
+        languageUser: getLanguageDisplayName(
+          customer.language || workspace?.language || "it"
+        ),
+        agentName: customer.sales
+          ? `${customer.sales.firstName} ${customer.sales.lastName}`.trim()
+          : "Non assegnato",
+        agentPhone: customer.sales?.phone || "N/A",
+        agentEmail: customer.sales?.email || "N/A",
+        push_notifications_consent: customer.push_notifications_consent,
+      }
+
+      logger.info("📦 Customer data and dynamic content loaded for Router", {
+        nameUser: customerData.nameUser,
+        discount: customerData.discountUser,
+        hasProducts: !!products,
+        hasCategories: !!categories,
+        hasOffers: !!offers,
+        hasServices: !!services,
+        hasFAQs: !!faqs,
+      })
+
+      // Process Router prompt with variable replacement
+      const PromptProcessorService =
+        require("./prompt-processor.service").PromptProcessorService
+      const promptProcessor = new PromptProcessorService()
+
+      const processedRouterPrompt = await promptProcessor.preProcessPrompt(
+        routerAgent.systemPrompt,
+        params.workspaceId,
+        customerData,
+        {
+          faqs: faqs || "",
+          products: products || "",
+          categories: categories || "",
+          services: services || "",
+          offers: offers || "",
+        },
+        workspace?.url
+      )
+
+      logger.info("✅ Router prompt processed with variables replaced")
+
+      // Create processed router agent with replaced prompt
+      const processedRouterAgent = {
+        ...routerAgent,
+        systemPrompt: processedRouterPrompt,
+      }
+
       // STEP 5: Function Calling Loop
       logger.info("Step 3: Starting Function Calling loop")
       const result = await this.functionCallingLoop({
-        routerAgent,
+        routerAgent: processedRouterAgent,
         conversationHistory,
         userMessage: params.message,
         params,
