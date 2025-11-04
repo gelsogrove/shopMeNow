@@ -58,7 +58,8 @@ describe("OrderCode Detection Logic", () => {
     })
 
     it("should work with order code in Markdown link", () => {
-      const response = "Click [here](LINK_ORDERS_WITH_TOKEN) to view ORD-035-2025-5."
+      const response =
+        "Click [here](LINK_ORDERS_WITH_TOKEN) to view ORD-035-2025-5."
       const result = detectOrderCode(response)
 
       expect(result).toBe("ORD-035-2025-5")
@@ -67,8 +68,7 @@ describe("OrderCode Detection Logic", () => {
 
   describe("❌ Scenario 2: Multiple Orders Detection", () => {
     it("should return undefined when 2 order codes detected", () => {
-      const response =
-        "Your recent orders: ORD-048-2025-9 and ORD-044-2025-8."
+      const response = "Your recent orders: ORD-048-2025-9 and ORD-044-2025-8."
       const result = detectOrderCode(response)
 
       expect(result).toBeUndefined()

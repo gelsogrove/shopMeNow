@@ -481,6 +481,7 @@ View details: http://localhost:3000/s/abc123
 ```
 
 **Why?**
+
 - The Router's Link Replacement Service handles token → URL conversion
 - Using secureLink directly creates malformed Markdown links
 - Token ensures proper URL generation with orderCode detection logic
@@ -541,6 +542,7 @@ Visualizza i dettagli qui: [LINK_ORDERS_WITH_TOKEN]  ← Missing 👉
 ```
 
 **KEY RULES**:
+
 1. ✅ ALWAYS add blank line BEFORE link line (👉)
 2. ✅ ALWAYS add blank line BEFORE timer line (⏰)
 3. ✅ ALWAYS use emoji 👉 before link text
