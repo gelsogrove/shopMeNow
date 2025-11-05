@@ -113,6 +113,7 @@ import pricingRoutes from "../interfaces/http/routes/pricing.routes"
 import createSettingsRouter from "../interfaces/http/routes/settings.routes"
 import { shortUrlRoutes } from "../interfaces/http/routes/short-url.routes"
 import whatsappRoutes from "../interfaces/http/routes/whatsapp.routes"
+import debugRoutes from "../interfaces/http/routes/debug.routes"
 import { createTokenRouter } from "./token"
 
 // ============================================================================
@@ -1484,6 +1485,10 @@ logger.info("Registered public orders routes with JWT authentication")
 // Mount analytics routes
 router.use("/analytics", analyticsRoutes)
 logger.info("Registered analytics routes for dashboard metrics")
+
+// Mount debug routes
+router.use("/workspaces/:workspaceId/debug", debugRoutes)
+logger.info("Registered debug routes for testing and analysis")
 
 // Mount WhatsApp routes
 router.use("/whatsapp", whatsappRoutes)

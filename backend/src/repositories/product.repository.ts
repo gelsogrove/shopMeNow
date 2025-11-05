@@ -408,15 +408,24 @@ export class ProductRepository implements IProductRepository {
         isActive: true, // Only active products
       }
 
-      // Keywords search (name, description ONLY - no fuzzy certification matching)
+      // Keywords search (name, productCode, transportType, formato, supplier.companyName)
       if (filters.keywords && filters.keywords.length > 0) {
         const orConditions: Prisma.ProductsWhereInput[] = []
 
         filters.keywords.forEach((keyword) => {
-          // Search in name and description (case-insensitive) ONLY
+          // Search in: name, productCode, transportType, formato, supplier companyName (case-insensitive)
           orConditions.push(
             { name: { contains: keyword, mode: "insensitive" } },
-            { description: { contains: keyword, mode: "insensitive" } }
+            { productCode: { contains: keyword, mode: "insensitive" } },
+            { transportType: { contains: keyword, mode: "insensitive" } },
+            { formato: { contains: keyword, mode: "insensitive" } },
+            {
+              supplier: {
+                is: {
+                  companyName: { contains: keyword, mode: "insensitive" },
+                },
+              },
+            }
           )
         })
 
@@ -486,6 +495,7 @@ export class ProductRepository implements IProductRepository {
         where,
         include: {
           category: true, // Include category for name/translations
+          supplier: true, // Include supplier for companyName search
         },
         orderBy: {
           createdAt: "desc", // Newest first

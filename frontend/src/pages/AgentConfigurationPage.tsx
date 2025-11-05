@@ -63,7 +63,7 @@ import {
   Upload,
 } from "lucide-react"
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, Link } from "react-router-dom"
 
 interface AgentFormData {
   id: string
@@ -418,6 +418,14 @@ export function AgentConfigurationPage() {
             description="Configure your multi-agent LLM system"
           />
           <div className="flex gap-2">
+            <Link
+              to="/debug/search"
+              className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700 h-10 px-4 py-2"
+              title="Debug product search queries"
+            >
+              <Search className="mr-2 h-4 w-4" />
+              🔍 Search Debug
+            </Link>
             <Button
               onClick={handleImportDatabase}
               disabled={isImporting || isExporting}

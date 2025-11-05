@@ -39,6 +39,7 @@ import { LanguagesPage } from "./pages/settings/LanguagesPage"
 import { SuppliersPage } from "./pages/SuppliersPage"
 
 import { ProductsPage as SettingsProductsPage } from "./pages/settings/ProductsPage"
+import { ProductSearchDebug } from "./pages/debug/ProductSearchDebug"
 
 import { Suspense, lazy } from "react"
 import { ChatListProvider } from "./contexts/ChatListContext"
@@ -157,6 +158,11 @@ export function App() {
                 {/* Campaign routes */}
                 <Route path="/campaigns" element={<Layout />}>
                   <Route index element={<CampaignsPage />} />
+                </Route>
+
+                {/* Debug Search routes */}
+                <Route path="/debug/search" element={<Layout />}>
+                  <Route index element={<ProductSearchDebug />} />
                 </Route>
               </Route>
 

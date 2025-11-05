@@ -152,6 +152,7 @@ model Products {
   isVegan        Boolean       @default(false)
   isGlutenFree   Boolean       @default(false)
   transportType  String        @default("Temperatura ambiente")
+  region         String?
   allergens      String[]      @default([])
   certifications String[]      @default([])
   cartItems      CartItems[]
