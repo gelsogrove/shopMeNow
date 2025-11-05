@@ -1,8 +1,8 @@
 import { Router } from "express"
+import { ProductRepository } from "../../../repositories/product.repository"
+import { DebugController } from "../controllers/debug.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"
 import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
-import { DebugController } from "../controllers/debug.controller"
-import { ProductRepository } from "../../../repositories/product.repository"
 
 const router = Router()
 const productRepository = new ProductRepository()

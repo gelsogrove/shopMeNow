@@ -108,12 +108,12 @@ import supplierRoutes from "../interfaces/http/routes/supplier.routes"
 // System & Config
 import analyticsRoutes from "../interfaces/http/routes/analytics.routes"
 import { billingRouter } from "../interfaces/http/routes/billing.routes"
+import debugRoutes from "../interfaces/http/routes/debug.routes"
 import { createLanguagesRouter } from "../interfaces/http/routes/languages.routes"
 import pricingRoutes from "../interfaces/http/routes/pricing.routes"
 import createSettingsRouter from "../interfaces/http/routes/settings.routes"
 import { shortUrlRoutes } from "../interfaces/http/routes/short-url.routes"
 import whatsappRoutes from "../interfaces/http/routes/whatsapp.routes"
-import debugRoutes from "../interfaces/http/routes/debug.routes"
 import { createTokenRouter } from "./token"
 
 // ============================================================================

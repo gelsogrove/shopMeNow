@@ -1,11 +1,11 @@
-import { useState } from "react"
-import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Loader2 } from "lucide-react"
-import { api } from "@/services/api"
+import { Input } from "@/components/ui/input"
 import { useWorkspace } from "@/hooks/use-workspace"
+import { api } from "@/services/api"
+import { Loader2 } from "lucide-react"
+import { useState } from "react"
 
 interface SearchResult {
   success: boolean

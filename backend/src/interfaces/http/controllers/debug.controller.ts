@@ -38,7 +38,10 @@ export class DebugController {
 
       // Execute search
       const startTime = Date.now()
-      const results = await this.productRepository.searchProducts(workspaceId, filters)
+      const results = await this.productRepository.searchProducts(
+        workspaceId,
+        filters
+      )
       const executionTimeMs = Date.now() - startTime
 
       logger.info("✅ Search Completed", {
@@ -123,9 +126,7 @@ export class DebugController {
     }
 
     // Extract tokens
-    const tokens = lowerQuery
-      .split(/[\s,]+/)
-      .filter((t) => t.length > 2)
+    const tokens = lowerQuery.split(/[\s,]+/).filter((t) => t.length > 2)
 
     // Map tokens to categories
     for (const token of tokens) {

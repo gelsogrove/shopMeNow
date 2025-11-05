@@ -38,8 +38,8 @@ import { ChannelTypesPage } from "./pages/settings/ChannelTypesPage"
 import { LanguagesPage } from "./pages/settings/LanguagesPage"
 import { SuppliersPage } from "./pages/SuppliersPage"
 
-import { ProductsPage as SettingsProductsPage } from "./pages/settings/ProductsPage"
 import { ProductSearchDebug } from "./pages/debug/ProductSearchDebug"
+import { ProductsPage as SettingsProductsPage } from "./pages/settings/ProductsPage"
 
 import { Suspense, lazy } from "react"
 import { ChatListProvider } from "./contexts/ChatListContext"
