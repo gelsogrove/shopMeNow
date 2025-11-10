@@ -1,5 +1,52 @@
 # ShopMe Project Requirements Document (PRD)
 
+> **⚠️ NOTE**: QueryAnalyzer Agent and Translation Agent were removed on November 10, 2025.  
+> See `docs/other/DEPRECATED_QueryAnalyzer.md` for historical reference.  
+> Current architecture: **6 Agents** (Router, ProductSearch, Cart, OrderTracking, CustomerSupport, Safety&Translation)
+
+## 🏗️ Current Multi-Agent Architecture (November 10, 2025)
+
+### **6-Agent System**
+
+```
+Router Agent (order: 0) 🎯
+├── Product Search Agent (order: 2) 🔍
+├── Cart Management Agent (order: 3) 🛒
+├── Order Tracking Agent (order: 4) 📦
+├── Customer Support Agent (order: 5) 💬
+└── Safety & Translation Agent (order: 99) 🔒 ← ALWAYS LAST
+```
+
+**Agent Types** (from `schema.prisma`):
+- ✅ `ROUTER` (order: 0) - Intent routing
+- ✅ `PRODUCT_SEARCH` (order: 2) - Product discovery
+- ✅ `CART_MANAGEMENT` (order: 3) - Cart operations
+- ✅ `ORDER_TRACKING` (order: 4) - Order status
+- ✅ `CUSTOMER_SUPPORT` (order: 5) - Customer service
+- ✅ `SAFETY_TRANSLATION` (order: 99) - Final translation + safety check
+
+**Removed Agents** (November 10, 2025):
+- ❌ `QUERY_ANALYZER` (order: 6) - Replaced by direct RAG integration
+- ❌ `TRANSLATION` (order: -1) - Merged into Safety&Translation
+
+### **Centralized Services**
+
+**Link Generation**:
+- `LinkGeneratorService` (`application/services/link-generator.service.ts`)
+- `SecureTokenService` - Time-limited JWT tokens
+- `UrlShortenerService` - Creates `/s/xxx` short URLs
+
+**Token Management**:
+- `SecureTokenService` - Generates secure access tokens
+- Used by all public links (checkout, orders, profile)
+
+**Translation & Safety**:
+- `SafetyTranslationAgent` - Database-driven prompts (SAFETY_TRANSLATION agent)
+- Used by BOTH `LLMRouterService` (main flow) and `LLMService.handleNewUserWelcome()` (new users)
+- NO hardcoded translations - LLM handles IT/ES/PT/EN dynamically
+
+---
+
 ## Product & Service Image Management System (October 15, 2025) 🆕
 
 ### 📸 **Overview**

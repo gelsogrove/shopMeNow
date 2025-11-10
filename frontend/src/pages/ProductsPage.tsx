@@ -640,6 +640,19 @@ export function ProductsPage() {
           />
         </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="region">Italian Region</Label>
+          <Input
+            id="region"
+            name="region"
+            placeholder="e.g., Sardinia, Sicily, Emilia-Romagna"
+            defaultValue={product?.region || ""}
+          />
+          <p className="text-xs text-gray-500">
+            Region of origin or production (optional, in English)
+          </p>
+        </div>
+
         {/* Certifications Section */}
         <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
           <Label className="text-base font-semibold">Certifications</Label>
@@ -914,6 +927,11 @@ export function ProductsPage() {
                       {product.category && (
                         <p className="text-xs text-muted-foreground">
                           {product.category.name}
+                        </p>
+                      )}
+                      {product.region && (
+                        <p className="text-xs text-muted-foreground">
+                          📍 {product.region}
                         </p>
                       )}
                     </div>

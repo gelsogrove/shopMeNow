@@ -1667,7 +1667,11 @@ export function ChatPage() {
         <MessageFlowDialog
           isOpen={showFlowDialog}
           onClose={() => setShowFlowDialog(false)}
-          debugInfo={selectedFlowMessage.metadata.debugInfo}
+          debugInfo={
+            typeof selectedFlowMessage.metadata.debugInfo === "string"
+              ? JSON.parse(selectedFlowMessage.metadata.debugInfo)
+              : selectedFlowMessage.metadata.debugInfo
+          }
         />
       )}
     </PageLayout>

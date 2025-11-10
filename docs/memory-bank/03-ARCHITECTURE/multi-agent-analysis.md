@@ -140,10 +140,21 @@ User Message → Router Agent (order: 0) → Specialized Agent (order: 1-98) →
 │(order: 2)    │    │(order: 3)    │    │(order: 4)    │
 │              │    │              │    │              │
 │Has Sub-Agent:│    │Actions:      │    │Actions:      │
-│QueryPlanner  │    │- addToCart   │    │- viewOrders  │
-│              │    │- repeatOrder │    │- invoice     │
+│QueryAnalyzer │    │- addToCart   │    │- viewOrders  │
+│🔬 (LEVEL 3)  │    │- repeatOrder │    │- invoice     │
 │              │    │- resetCart   │    │              │
-└──────────────┘    └──────────────┘    └──────────────┘
+└──────┬───────┘    └──────────────┘    └──────────────┘
+       │
+       ▼
+┌──────────────┐
+│QUERY_ANALYZER│ ← NEW! LEVEL 3 Sub-Sub-Agent
+│🔬 (order: 6) │
+│              │
+│- Multi-lang  │ (IT/EN/ES/PT)
+│- Region Map  │ (20 Italian regions)
+│- Zero-Temp   │ (Deterministic)
+│- Pure JSON   │ (No functions)
+└──────────────┘
         │                    │                    │
         └────────────────────┼────────────────────┘
                              │
@@ -171,16 +182,17 @@ User Message → Router Agent (order: 0) → Specialized Agent (order: 1-98) →
 
 ### Agent Execution Order
 
-| Order | Agent Type         | Model         | Purpose                            |
-| ----- | ------------------ | ------------- | ---------------------------------- |
-| 0     | ROUTER             | GPT-4o-mini   | FAQ check + Intent classification  |
-| 2     | PRODUCT_SEARCH     | GPT-4o-mini   | Product search with QueryPlanner   |
-| 3     | CART_MANAGEMENT    | GPT-4o-mini   | Cart operations                    |
-| 4     | ORDER_TRACKING     | GPT-4o-mini   | Order viewing/tracking             |
-| 5     | CUSTOMER_SUPPORT   | GPT-4o-mini   | Frustration detection + escalation |
-| 6     | PROFILE_MANAGEMENT | GPT-4o-mini   | Profile modification links         |
-| 7     | NOTIFICATIONS      | GPT-4o-mini   | Push notification management       |
-| 99    | SAFETY_TRANSLATION | Claude Sonnet | Safety filter + translation        |
+| Order | Agent Type            | Model         | Purpose                                 |
+| ----- | --------------------- | ------------- | --------------------------------------- |
+| 0     | ROUTER                | GPT-4o-mini   | FAQ check + Intent classification       |
+| 2     | PRODUCT_SEARCH        | GPT-4o-mini   | Product search with QueryAnalyzer 🔬    |
+| 3     | CART_MANAGEMENT       | GPT-4o-mini   | Cart operations                         |
+| 4     | ORDER_TRACKING        | GPT-4o-mini   | Order viewing/tracking                  |
+| 5     | CUSTOMER_SUPPORT      | GPT-4o-mini   | Frustration detection + escalation      |
+| 6     | **QUERY_ANALYZER** 🔬 | GPT-4o-mini   | **LEVEL 3 sub-agent for ProductSearch** |
+| 7     | PROFILE_MANAGEMENT    | GPT-4o-mini   | Profile modification links              |
+| 8     | NOTIFICATIONS         | GPT-4o-mini   | Push notification management            |
+| 99    | SAFETY_TRANSLATION    | Claude Sonnet | Safety filter + translation             |
 
 **Note**: Orders 1, 8-98 riservati per futuri custom agents
 
@@ -454,43 +466,61 @@ Se routing:
 
 ### 2. PRODUCT_SEARCH AGENT (order: 2)
 
-**Ruolo**: Product search specialist with QueryPlanner sub-agent
+**Ruolo**: Product search specialist with QueryAnalyzer 🔬 sub-agent (LEVEL 3)
 
 **Responsabilità**:
 
-- Convertire query naturali a parametri strutturati
-- Gestire ricerche multilingua (tradurre a italiano = lingua DB)
-- Filtrare per categorie, certificazioni, ingredienti
+- Convertire query naturali a parametri strutturati via QueryAnalyzer
+- Gestire ricerche multilingua (IT/EN/ES/PT → traduzione a italiano = lingua DB)
+- Filtrare per categorie, suppliers, certificazioni, regioni italiane
 - Presentare risultati in modo user-friendly
+- Memoria conversazionale (10 minuti) per raffinamenti contestuali
 
-**QueryPlanner Sub-Agent**:
+**QueryAnalyzer Sub-Agent (LEVEL 3 - SUB-SUB LLM)**:
 
 ```javascript
+// 🔬 QueryAnalyzer Flow (LEVEL 3 - Zero Hardcoded Mappings)
+
 // Input: User query in any language
-"Dame productos vegetarianos sin aceite de palma"
+"organic sardinian cheese" (English)
+"queso sardo orgánico" (Spanish)
+"queijo sardo orgânico" (Portuguese)
+"formaggio sardo biologico" (Italian)
 
-// QueryPlanner LLM Process:
-1. Detect language: Spanish
-2. Translate query terms to Italian (DB language)
-3. Extract filters:
-   - Dietary: vegetarian
-   - Exclude ingredients: olio di palma
-4. Generate structured params
+// QueryAnalyzer LLM Process (Temperature: 0 - Deterministic):
+1. Detect language: IT/EN/ES/PT
+2. Extract structured filters via LLM intelligence:
+   - Categories: Match natural language to DB categoryIds
+   - Suppliers: Match company names to supplierIds
+   - Certifications: [isOrganic, isVegan, isGlutenFree, isHalal, isWholeGrain]
+   - Regions: 20 Italian regions in ENGLISH (Sardinia, Sicily, Tuscany, etc.)
+   - Keywords: ALWAYS translate to Italian (base language)
+   - PriceRange: {min, max}
+3. Handle conversational context (10 min memory):
+   - "only organic ones" → Inherit previous filters + add isOrganic
 
-// Output: Structured parameters
+// Output: Structured JSON filters
 {
-  query: "formaggi OR pasta OR verdure", // Italian search terms
-  excludeTerms: ["olio di palma"],
-  certifications: ["isVegetarian"],
-  categories: null,
-  priceRange: null,
-  onlyInStock: true
+  "categoryIds": [], // UUIDs from DB (never empty strings)
+  "supplierIds": [], // UUIDs from DB
+  "certifications": ["isOrganic"],
+  "regions": ["Sardinia"],
+  "keywords": ["formaggio", "sardo", "biologico"], // Italian
+  "priceRange": null,
+  "reasoning": "Detected organic certification and Sardinia region"
 }
+
+// 💾 Conversational State (SearchConversations table):
+- sessionId: WhatsApp/Chat session
+- lastQuery: "organic sardinian cheese"
+- lastResponse: "Found 5 products"
+- expiresAt: +10 minutes
+- state: ACTIVE | COMPLETED | ABANDONED | EXPIRED
 ```
 
 **Prompt Structure**:
 
-```markdown
+````markdown
 # System Role
 
 Sei il Product Search Agent di ShopME. Aiuti i clienti a trovare prodotti.
@@ -521,14 +551,25 @@ Sei il Product Search Agent di ShopME. Aiuti i clienti a trovare prodotti.
 
 # Calling Functions Available
 
-- searchProducts(params)
-- getProductDetails(productId)
-- getCategoryProducts(categoryId)
+```javascript
+// ProductSearch Agent Functions (LEVEL 2)
+1. searchProducts(params)
+2. getProductDetails(productId)
+3. getCategoryProducts(categoryId)
+
+// QueryAnalyzer Sub-Agent (LEVEL 3)
+- NO calling functions (pure analysis, returns JSON structure)
+- Output consumed by ProductSearchAgent to call searchProducts()
 ```
+````
 
 **Calling Functions**:
 
 - `searchProducts`: Main search with advanced filters
+  - **Before execution**: Calls QueryAnalyzer (LEVEL 3) to get structured filters
+  - **Input**: User query in any language (IT/EN/ES/PT)
+  - **QueryAnalyzer Output**: `{categoryIds, supplierIds, certifications, regions, keywords, priceRange, reasoning}`
+  - **Final Search**: Uses QueryAnalyzer output to filter products
 - `getProductDetails`: Single product details
 - `getCategoryProducts`: Browse by category
 
@@ -538,12 +579,24 @@ Sei il Product Search Agent di ShopME. Aiuti i clienti a trovare prodotti.
 - Temperature: 0.7
 - Max Tokens: 4096
 
-**QueryPlanner Sub-Agent**:
+**QueryAnalyzer Sub-Agent (LEVEL 3)**:
 
 - Model: `openai/gpt-4o-mini`
-- Temperature: 0.3 (low for structured output)
-- Max Tokens: 1024
-- Prompt: 5KB specialized prompt
+- Temperature: **0** (deterministic for consistency)
+- Max Tokens: 512
+- Icon: 🔬 (Microscope)
+- Prompt: Specialized for query analysis with multi-language support
+- Agent Type: `QUERY_ANALYZER` (order: 6 in agentConfig)
+- File: `backend/src/application/agents/QueryAnalyzerAgentLLM.ts`
+- Prompt: `docs/prompts/query-analyzer-agent.md`
+
+**Conversational Memory (SearchConversations)**:
+
+- Table: `search_conversations`
+- Duration: 10 minutes auto-expire
+- Cronjob: Mark expired every 5 min, delete >30 days weekly
+- State: ACTIVE → COMPLETED/ABANDONED/EXPIRED
+- Repository: `backend/src/repositories/searchConversation.repository.ts`
 
 ---
 

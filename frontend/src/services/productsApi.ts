@@ -22,6 +22,7 @@ export interface Product {
   workspaceId: string
   categoryId: string | null
   supplierId: string | null
+  region: string | null // Italian region in English
   imageUrl: string[] | null
   isWholeGrain: boolean
   isOrganic: boolean
@@ -57,6 +58,7 @@ export interface CreateProductData {
   sku?: string
   categoryId?: string
   supplierId?: string
+  region?: string
   isActive?: boolean
   isWholeGrain?: boolean
   isOrganic?: boolean
@@ -76,6 +78,7 @@ export interface UpdateProductData {
   sku?: string
   categoryId?: string
   supplierId?: string
+  region?: string
   isActive?: boolean
   isWholeGrain?: boolean
   isOrganic?: boolean

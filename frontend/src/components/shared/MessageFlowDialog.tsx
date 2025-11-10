@@ -4,6 +4,7 @@ import {
   GitBranch,
   Headphones,
   MessageSquare,
+  Microscope,
   Package,
   Search,
   Send,
@@ -28,6 +29,7 @@ interface DebugStep {
     | "sub_agent"
     | "whatsapp_delivery"
     | "user"
+    | "token-replacement"
   agent?: string
   model?: string
   temperature?: number
@@ -79,7 +81,14 @@ export default function MessageFlowDialog({
     if (type === "whatsapp_delivery") return "#16A34A" // Green
     if (agent?.includes("Save to History")) return "#F59E0B" // Orange/Amber for database save
     if (agent?.includes("WhatsApp Queue")) return "#0EA5E9" // Sky blue for queue
-    return "#3B82F6" // Blue for sub-agents
+    
+    // 🆕 6 AGENTS ARCHITECTURE (no QueryAnalyzer, no Translation)
+    if (agent?.includes("Product Search")) return "#3B82F6" // Blue
+    if (agent?.includes("Cart Management")) return "#10B981" // Green
+    if (agent?.includes("Order Tracking")) return "#F97316" // Orange
+    if (agent?.includes("Customer Support")) return "#EC4899" // Pink
+    
+    return "#3B82F6" // Blue for generic sub-agents
   }
 
   const getAgentIcon = (type: string, agent?: string): React.ReactNode => {
@@ -90,7 +99,7 @@ export default function MessageFlowDialog({
     if (type === "router" || agent?.includes("Router"))
       return <GitBranch className="w-5 h-5" />
 
-    // Safety & Translation Agent
+    // Safety & Translation Agent (order: 99)
     if (
       type === "safety" ||
       agent?.includes("Safety") ||
@@ -98,7 +107,7 @@ export default function MessageFlowDialog({
     )
       return <Shield className="w-5 h-5" />
 
-    // Sub-agents by name
+    // 🆕 6 AGENTS ARCHITECTURE - Specialist agents
     if (agent?.includes("Product Search")) return <Search className="w-5 h-5" />
     if (agent?.includes("Cart Management"))
       return <ShoppingCart className="w-5 h-5" />
@@ -151,7 +160,7 @@ export default function MessageFlowDialog({
   }
 
   // 🆕 ORGANIZZA TUTTI GLI STEP IN ORDINE CRONOLOGICO
-  const allSteps = debugInfo.steps
+  const allSteps = debugInfo?.steps || []
 
   // Router steps: TUTTE le iterazioni (iteration 1 delega, iteration 2 riceve risposta)
   const routerSteps = allSteps.filter(
@@ -307,24 +316,54 @@ export default function MessageFlowDialog({
               return (
                 <VerticalTimelineElement
                   key={index}
-                  className="vertical-timeline-element"
+                  className={`vertical-timeline-element ${
+                    (step as any).isNested ? "nested-step" : ""
+                  }`}
                   contentStyle={{
                     background: "#fff",
-                    boxShadow: "0 3px 10px rgba(0,0,0,0.1)",
-                    border: "1px solid #e5e7eb",
+                    boxShadow: (step as any).isNested
+                      ? "0 2px 6px rgba(0,0,0,0.08)"
+                      : "0 3px 10px rgba(0,0,0,0.1)",
+                    border: (step as any).isNested
+                      ? "1px solid #f3e8ff"
+                      : "1px solid #e5e7eb",
+                    marginLeft: (step as any).isNested ? "40px" : "0", // 🆕 Indentation for nested
+                    backgroundColor: (step as any).isNested
+                      ? "#faf5ff"
+                      : "#fff", // 🆕 Light purple bg for nested
                   }}
                   contentArrowStyle={{ borderRight: `7px solid ${color}` }}
                   date={new Date(step.timestamp).toLocaleTimeString()}
-                  iconStyle={{ background: color, color: "#fff" }}
+                  iconStyle={{
+                    background: color,
+                    color: "#fff",
+                    transform: (step as any).isNested
+                      ? "scale(0.8)"
+                      : "scale(1)", // 🆕 Smaller icon for nested
+                  }}
                   icon={icon}
                 >
                   {/* Card Header */}
                   <div className="mb-3">
-                    <h3 className="text-lg font-bold" style={{ color }}>
+                    <h3
+                      className={`text-lg font-bold ${
+                        (step as any).isNested ? "text-sm" : ""
+                      }`}
+                      style={{ color }}
+                    >
+                      {(step as any).isNested && "↳ "}
                       {step.agent || step.type.replace("_", " ").toUpperCase()}
                     </h3>
+                    {/* 🆕 NESTED BADGE (for Query Analyzer under Product Search) */}
+                    {(step as any).isNested && (
+                      <div className="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 bg-purple-100 border border-purple-300 rounded text-xs font-medium text-purple-800">
+                        <span>
+                          🔬 Internal: Called by {(step as any).parentAgent}
+                        </span>
+                      </div>
+                    )}
                     {/* 🆕 SUB-AGENT BADGE */}
-                    {(step as any).isSubAgent && (
+                    {(step as any).isSubAgent && !(step as any).isNested && (
                       <div className="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 bg-blue-100 border border-blue-300 rounded text-xs font-medium text-blue-800">
                         <span>🔄 Sub-Agent: {(step as any).subAgentType}</span>
                       </div>
