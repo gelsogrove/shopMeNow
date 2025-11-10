@@ -754,4 +754,138 @@ export class CallingFunctionsService {
       }
     }
   }
+
+  /**
+   * Get specific order details by order ID or code
+   */
+  public async getOrder(request: {
+    customerId: string
+    workspaceId: string
+    orderId: string
+  }): Promise<any> {
+    try {
+      logger.info("📦 Calling getOrder with:", request)
+      const { getOrder } = require("../domain/calling-functions/GetOrder")
+
+      const result = await getOrder({
+        customerId: request.customerId,
+        workspaceId: request.workspaceId,
+        orderId: request.orderId,
+      })
+
+      logger.info("✅ GetOrder result:", result)
+      return result
+    } catch (error) {
+      logger.error("❌ Error in getOrder:", error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        message: "Errore nel recupero dell'ordine.",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  /**
+   * Track order shipment status
+   */
+  public async trackOrder(request: {
+    customerId: string
+    workspaceId: string
+    orderId: string
+  }): Promise<any> {
+    try {
+      logger.info("📍 Calling trackOrder with:", request)
+      const { trackOrder } = require("../domain/calling-functions/TrackOrder")
+
+      const result = await trackOrder({
+        customerId: request.customerId,
+        workspaceId: request.workspaceId,
+        orderId: request.orderId,
+      })
+
+      logger.info("✅ TrackOrder result:", result)
+      return result
+    } catch (error) {
+      logger.error("❌ Error in trackOrder:", error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        message: "Errore nel tracking dell'ordine.",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  /**
+   * Send invoice PDF via email
+   */
+  public async sendInvoice(request: {
+    customerId: string
+    workspaceId: string
+    orderId: string
+    email?: string
+  }): Promise<any> {
+    try {
+      logger.info("📧 Calling sendInvoice with:", request)
+      const { sendInvoice } = require("../domain/calling-functions/SendInvoice")
+
+      const result = await sendInvoice({
+        customerId: request.customerId,
+        workspaceId: request.workspaceId,
+        orderId: request.orderId,
+        email: request.email,
+      })
+
+      logger.info("✅ SendInvoice result:", result)
+      return result
+    } catch (error) {
+      logger.error("❌ Error in sendInvoice:", error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        message: "Errore nell'invio della fattura.",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  /**
+   * Send security alert email to workspace admins
+   */
+  public async sendAlertEmail(request: {
+    workspaceId: string
+    customerId: string
+    alertType: string
+    messageContent: string
+    severity: string
+    additionalInfo?: string
+  }): Promise<any> {
+    try {
+      logger.warn("🚨 Calling sendAlertEmail with:", request)
+      const {
+        sendAlertEmail,
+      } = require("../domain/calling-functions/SendAlertEmail")
+
+      const result = await sendAlertEmail({
+        workspaceId: request.workspaceId,
+        customerId: request.customerId,
+        alertType: request.alertType as any,
+        messageContent: request.messageContent,
+        severity: request.severity as any,
+        additionalInfo: request.additionalInfo,
+      })
+
+      logger.warn("✅ SendAlertEmail result:", result)
+      return result
+    } catch (error) {
+      logger.error("❌ Error in sendAlertEmail:", error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        message: "Errore nell'invio dell'alert.",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
 }

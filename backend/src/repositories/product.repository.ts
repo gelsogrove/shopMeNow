@@ -161,6 +161,40 @@ export class ProductRepository implements IProductRepository {
     }
   }
 
+  /**
+   * Find product by productCode (e.g., "SALUMI-006")
+   * Used by CartManagementAgent to add products to cart
+   */
+  async findByProductCode(
+    productCode: string,
+    workspaceId: string
+  ): Promise<Product | null> {
+    try {
+      const product = await this.prisma.products.findFirst({
+        where: {
+          productCode,
+          workspaceId,
+          isActive: true, // Only active products can be added to cart
+        },
+        include: {
+          category: true,
+        },
+      })
+
+      if (!product) {
+        logger.warn(
+          `Product not found: ${productCode} in workspace ${workspaceId}`
+        )
+        return null
+      }
+
+      return this.mapToDomainEntity(product)
+    } catch (error) {
+      logger.error(`Error in findByProductCode for ${productCode}:`, error)
+      return null
+    }
+  }
+
   async findByCategory(
     categoryId: string,
     workspaceId: string
@@ -395,6 +429,8 @@ export class ProductRepository implements IProductRepository {
     filters: {
       keywords?: string[]
       categoryId?: string
+      supplierIds?: string[]
+      regions?: string[]
       minPrice?: number
       maxPrice?: number
       allergens?: string[]
@@ -409,16 +445,19 @@ export class ProductRepository implements IProductRepository {
       }
 
       // Keywords search (name, productCode, transportType, formato, supplier.companyName)
+      // 🔧 CRITICAL: If categoryId is provided, keywords become OPTIONAL (OR)
+      // This allows "formaggi?" to match category WITHOUT requiring "formaggi" in product name
       if (filters.keywords && filters.keywords.length > 0) {
         const orConditions: Prisma.ProductsWhereInput[] = []
 
         filters.keywords.forEach((keyword) => {
-          // Search in: name, productCode, transportType, formato, supplier companyName (case-insensitive)
+          // Search in: name, productCode, transportType, formato, region, supplier companyName (case-insensitive)
           orConditions.push(
             { name: { contains: keyword, mode: "insensitive" } },
             { productCode: { contains: keyword, mode: "insensitive" } },
             { transportType: { contains: keyword, mode: "insensitive" } },
             { formato: { contains: keyword, mode: "insensitive" } },
+            { region: { contains: keyword, mode: "insensitive" } },
             {
               supplier: {
                 is: {
@@ -429,12 +468,32 @@ export class ProductRepository implements IProductRepository {
           )
         })
 
-        where.OR = orConditions
+        // 🆕 If categoryId is present, keywords are OPTIONAL (enhance search)
+        // Otherwise, keywords are REQUIRED (OR match)
+        if (!filters.categoryId) {
+          where.OR = orConditions
+        }
+        // When categoryId exists, don't apply OR - category is the primary filter
       }
 
-      // Category filter
+      // Category filter (single or multiple)
+      // 🎯 Primary filter when user asks "formaggi?" - matches category, not product name
       if (filters.categoryId) {
         where.categoryId = filters.categoryId
+      }
+
+      // Supplier filter (array of supplier IDs)
+      if (filters.supplierIds && filters.supplierIds.length > 0) {
+        where.supplierId = {
+          in: filters.supplierIds,
+        }
+      }
+
+      // Regions filter (array of Italian region names)
+      if (filters.regions && filters.regions.length > 0) {
+        where.region = {
+          in: filters.regions,
+        }
       }
 
       // Price range filter
@@ -462,27 +521,36 @@ export class ProductRepository implements IProductRepository {
           const certLower = cert.toLowerCase().trim()
 
           // Map certification names to boolean fields ONLY
+          // Accept both "halal" and "isHalal" formats from QueryAnalyzer
           if (
             certLower === "halal" ||
+            certLower === "ishalal" ||
             certLower === "hallal" ||
             certLower === "allal"
           ) {
             where.isHalal = true
           } else if (
             certLower === "bio" ||
+            certLower === "isorganic" ||
             certLower === "organic" ||
             certLower === "biologico"
           ) {
             where.isOrganic = true
-          } else if (certLower === "vegan" || certLower === "vegano") {
+          } else if (
+            certLower === "vegan" ||
+            certLower === "isvegan" ||
+            certLower === "vegano"
+          ) {
             where.isVegan = true
           } else if (
             certLower === "gluten-free" ||
+            certLower === "isglutenfree" ||
             certLower === "senza glutine"
           ) {
             where.isGlutenFree = true
           } else if (
             certLower === "whole-grain" ||
+            certLower === "iswholegrain" ||
             certLower === "integrali" ||
             certLower === "integrale"
           ) {

@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client"
 import "dotenv/config"
 import { createServer } from "http"
 import app from "./app"
+import { startScheduler, stopScheduler } from "./scheduler"
 import { websocketService } from "./services/websocket.service"
 import logger from "./utils/logger"
 
@@ -25,11 +26,15 @@ async function startServer() {
     httpServer.listen(PORT, () => {
       logger.info(`Server is running on port ${PORT}`)
       logger.info(`WebSocket server ready on ws://localhost:${PORT}`)
+
+      // Start background scheduler
+      startScheduler()
     })
 
     // Graceful shutdown
     process.on("SIGTERM", async () => {
       logger.info("SIGTERM received, shutting down gracefully")
+      stopScheduler()
       await websocketService.shutdown()
       await prisma.$disconnect()
       process.exit(0)

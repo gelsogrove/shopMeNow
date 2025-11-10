@@ -735,6 +735,7 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
           }
 
           phoneNumber = customer.phone || "test-phone-123"
+          customerId = customer.id // 🔧 FIX: Assign customerId for test format
           logger.info(
             `✅ TEST: Customer found: ${customer.name} (${customer.phone}) - Language: ${customer.language}`
           )
@@ -825,10 +826,14 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
     }
 
     // Get customer details for language and name (if not already loaded)
-    const customerForWip = await prisma.customers.findUnique({
-      where: { id: customerId },
-      select: { name: true, language: true },
-    })
+    // For test format, customerId might not be set yet - retrieve from customerData
+    const actualCustomerId = customerId || (req as any).customerData?.id
+    const customerForWip = actualCustomerId
+      ? await prisma.customers.findUnique({
+          where: { id: actualCustomerId },
+          select: { name: true, language: true },
+        })
+      : null
 
     // If workspace is in WIP mode, send WIP message through Safety Layer
     if (!workspace.isActive) {
@@ -1135,8 +1140,10 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
       )
 
       // Get customer details for router
+      // For test format, customerId might not be set yet - retrieve from customerData
+      const finalCustomerId = customerId || (req as any).customerData?.id
       const customer = await prisma.customers.findUnique({
-        where: { id: customerId },
+        where: { id: finalCustomerId },
         select: {
           name: true,
           language: true,
@@ -1233,7 +1240,7 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
       success: true,
       data: {
         sessionId: chatSession?.id || null,
-        message: result.output,
+        message: result.response, // 🔧 FIX: Use result.response, not result.output
       },
       debug: {
         translatedQuery: result.translatedQuery,
@@ -1245,7 +1252,7 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
           : {}),
         // 💰 Cost tracking info
         costInfo:
-          result.success && result.output
+          result.success && result.response
             ? {
                 currentCallCost: config.llm.defaultPrice,
                 previousTotalUsage: result.debugInfo?.previousTotalUsage || 0,

@@ -36,6 +36,7 @@ import { AgentConfigRepository } from "../../repositories/agent-config.repositor
 import { SearchConversationRepository } from "../../repositories/searchConversation.repository"
 import logger from "../../utils/logger"
 import { ProductSearchAgent } from "./ProductSearchAgent"
+import { QueryAnalyzerAgentLLM } from "./QueryAnalyzerAgentLLM"
 
 export interface ProductSearchLLMContext {
   workspaceId: string
@@ -61,6 +62,7 @@ export interface ProductSearchLLMResponse {
 export class ProductSearchAgentLLM {
   private prisma: PrismaClient
   private productSearchAgent: ProductSearchAgent
+  private queryAnalyzerAgent: QueryAnalyzerAgentLLM
   private searchConversationRepo: SearchConversationRepository
   private agentConfigRepo: AgentConfigRepository
   private openRouterApiKey: string
@@ -69,6 +71,7 @@ export class ProductSearchAgentLLM {
   constructor(prisma: PrismaClient) {
     this.prisma = prisma
     this.productSearchAgent = new ProductSearchAgent(prisma)
+    this.queryAnalyzerAgent = new QueryAnalyzerAgentLLM(prisma)
     this.searchConversationRepo = new SearchConversationRepository()
     this.agentConfigRepo = new AgentConfigRepository(prisma)
 
@@ -117,37 +120,24 @@ export class ProductSearchAgentLLM {
 
         if (groupSelectionMatch) {
           const groupNumber = parseInt(groupSelectionMatch[1])
-          const allProducts = conversation.metadata.groups
-          const lastResponse = conversation.lastResponse || ""
+          const allProducts = conversation.metadata.groups // All products from last search
 
-          logger.info(`🎯 Group selection detected`, {
+          logger.info(`🎯 Group selection detected - will use LLM to interpret`, {
             sessionId: context.sessionId,
             groupNumber,
             productsTotal: allProducts.length,
+            lastQuery: conversation.lastQuery,
           })
 
-          // 🔍 Extract group text from LLM response
-          const groupText = this.extractGroupText(lastResponse, groupNumber)
+          // Pass ALL products to searchProducts but force shouldGroup=false
+          // LLM will intelligently select the right group based on conversation history
+          preFilteredProducts = allProducts
+          forceNoGrouping = true // CRITICAL: Disable grouping for drill-down
 
-          if (groupText) {
-            // 🎯 Filter products by group keywords
-            preFilteredProducts = this.filterByGroupKeywords(
-              allProducts,
-              groupText
-            )
-            forceNoGrouping = true
-
-            logger.info(`📦 Filtered products for group ${groupNumber}`, {
-              groupText: groupText.substring(0, 50),
-              originalCount: allProducts.length,
-              filteredCount: preFilteredProducts.length,
-            })
-          } else {
-            // Fallback if parsing fails
-            preFilteredProducts = allProducts
-            forceNoGrouping = true
-            logger.warn(`⚠️ Could not parse group, using all products`)
-          }
+          logger.info(`� Pre-filtered products ready for LLM interpretation`, {
+            productsCount: allProducts.length,
+            forceNoGrouping,
+          })
         }
       }
 
@@ -460,10 +450,13 @@ export class ProductSearchAgentLLM {
         case "searchProducts":
           // 🔬 STEP 1: Check if we have pre-filtered products (group selection)
           if (preFilteredProducts && preFilteredProducts.length > 0) {
-            logger.info(`📦 Using pre-filtered products from group selection`, {
-              productsCount: preFilteredProducts.length,
-              forceNoGrouping,
-            })
+            logger.info(
+              `📦 Using pre-filtered products from group selection`,
+              {
+                productsCount: preFilteredProducts.length,
+                forceNoGrouping,
+              }
+            )
 
             // Return pre-filtered products with shouldGroup=false
             return {
@@ -475,35 +468,69 @@ export class ProductSearchAgentLLM {
             }
           }
 
-          // 🎯 STEP 2: Direct search using provided filters
-          logger.info(`� Direct product search`, {
+          // 🔬 STEP 2: Call QueryAnalyzerAgent to analyze query (normal flow)
+          logger.info(`🔬 Calling QueryAnalyzerAgent for query analysis`, {
             query: args.query || context.query,
-            keywords: args.keywords,
-            category: args.category,
-            certifications: args.certifications,
           })
 
+          const analysisResult = await this.queryAnalyzerAgent.analyzeQuery({
+            workspaceId: context.workspaceId,
+            query: args.query || context.query,
+            hasFilteredList: false,
+          })
+
+          logger.info(`🔬 QueryAnalyzer result:`, {
+            isRefinement: analysisResult.isRefinement,
+            shouldGroup: analysisResult.shouldGroup,
+            filters: analysisResult.filters,
+            reasoning: analysisResult.reasoning,
+          })
+
+          // 🎯 STEP 3: Search products using analyzed filters
           const searchResult = await this.productSearchAgent.search(
             context.workspaceId,
             {
               detectedLanguage: context.customerLanguage || "en",
-              keywords: args.keywords || [],
+              keywords: analysisResult.filters.keywords,
               filters: {
-                certifications: args.certifications,
-                category: args.category,
-                minPrice: args.minPrice,
-                maxPrice: args.maxPrice,
+                certifications: analysisResult.filters.certifications,
+                category: analysisResult.filters.categoryIds[0],
+                minPrice: analysisResult.filters.priceRange?.min,
+                maxPrice: analysisResult.filters.priceRange?.max,
                 allergens: args.allergens,
               },
             }
           )
 
-          // 🎯 STEP 3: Return search results (LLM decides grouping via prompt)
+          // 🎯 STEP 4: Inject shouldGroup flag in response for LLM
+          // If forceNoGrouping is true, override analysisResult
+          const finalShouldGroup = forceNoGrouping
+            ? false
+            : analysisResult.shouldGroup
+
           return {
             ...searchResult,
-            shouldGroup: false, // LLM handles grouping decision via prompt variable
-            _groupingInstruction:
-              "Show products in a numbered list with full details.",
+            shouldGroup: finalShouldGroup,
+            _groupingInstruction: finalShouldGroup
+              ? `🚨 CRITICAL: shouldGroup=true - You MUST create intelligent groups for these ${searchResult.products?.length || 0} products.
+
+EXAMPLE FORMAT:
+"Ciao! Abbiamo diversi prodotti disponibili. Ecco le categorie:
+
+1. 🏆 Categoria DOP (X prodotti)
+   Descrizione breve
+
+2. 🥛 Categoria Freschi (Y prodotti)
+   Descrizione breve
+
+Quale categoria ti interessa? 🧀"
+
+RULES:
+- Analyze products and create 2-4 groups by certification/type/category
+- Each group: emoji + name + count + brief description
+- Show ONLY groups, NOT individual products
+- End with question asking which group user wants`
+              : "You can show individual products in a numbered list.",
           }
 
         case "getProductDetails":
@@ -620,7 +647,10 @@ export class ProductSearchAgentLLM {
    * Filter products by keywords extracted from group text
    * Uses certifications and category/name matching
    */
-  private filterByGroupKeywords(products: any[], groupText: string): any[] {
+  private filterByGroupKeywords(
+    products: any[],
+    groupText: string
+  ): any[] {
     try {
       const lowerGroupText = groupText.toLowerCase()
 
@@ -650,10 +680,7 @@ export class ProductSearchAgentLLM {
         return filtered
       }
 
-      if (
-        lowerGroupText.includes("bio") ||
-        lowerGroupText.includes("organic")
-      ) {
+      if (lowerGroupText.includes("bio") || lowerGroupText.includes("organic")) {
         const filtered = products.filter((p: any) =>
           p.certifications?.some(
             (c: any) =>
@@ -731,9 +758,10 @@ export class ProductSearchAgentLLM {
       }
 
       // Fallback: return all if no match (better than empty)
-      logger.warn(`⚠️ No specific filter matched, returning all products`, {
-        groupText: groupText.substring(0, 40),
-      })
+      logger.warn(
+        `⚠️ No specific filter matched, returning all products`,
+        { groupText: groupText.substring(0, 40) }
+      )
       return products
     } catch (error) {
       logger.error(`❌ Error filtering products:`, error)
@@ -747,7 +775,9 @@ export class ProductSearchAgentLLM {
    */
   private extractKeywords(text: string): string[] {
     // Remove emojis, numbers, parentheses
-    const cleaned = text.replace(/[0-9\(\)🏆🥛🧀🥓🍖]/g, " ").toLowerCase()
+    const cleaned = text
+      .replace(/[0-9\(\)🏆🥛🧀🥓🍖]/g, " ")
+      .toLowerCase()
 
     // Split and filter common words
     const stopWords = [

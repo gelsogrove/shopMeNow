@@ -130,9 +130,10 @@ export class CartManagementAgent {
         }
       }
 
-      // Verify product exists and is available
-      const product = await this.productRepo.findById(
-        productId,
+      // 🔍 CRITICAL FIX: productId is actually a productCode (e.g., "SALUMI-006")
+      // Search by productCode instead of UUID
+      const product = await this.productRepo.findByProductCode(
+        productId, // This is actually productCode like "SALUMI-006"
         context.workspaceId
       )
 
@@ -140,7 +141,7 @@ export class CartManagementAgent {
         return {
           success: false,
           error: "PRODUCT_NOT_FOUND",
-          message: `Product with ID ${productId} not found`,
+          message: `Product with code ${productId} not found`,
         }
       }
 

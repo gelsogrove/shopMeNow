@@ -58,6 +58,7 @@ model Workspace {
   adminSessions             AdminSession[]
   campaigns                 Campaign[]
   productSearches           ProductSearch[]
+  searchConversations       SearchConversations[]
 }
 
 model Categories {
@@ -205,6 +206,28 @@ model Customers {
 
   @@index([phone])
   @@map("customers")
+}
+
+model SearchConversations {
+  id            String   @id @default(uuid())
+  sessionId     String   @unique // WhatsApp session ID or chat session ID
+  workspaceId   String
+  customerId    String
+  state         SearchConversationState @default(ACTIVE)
+  activeAgent   AgentType? // Current agent in control (null = Router decides)
+  lastQuery     String?  // Last search query from customer
+  lastResponse  String?  // Last response summary
+  metadata      Json?    // Additional context (filters, results count, etc.)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  expiresAt     DateTime // Auto-expire after 10 minutes of inactivity
+  
+  workspace     Workspace @relation(fields: [workspaceId], references: [id])
+  
+  @@index([sessionId])
+  @@index([customerId])
+  @@index([expiresAt])
+  @@map("search_conversations")
 }
 
 model Orders {
@@ -949,4 +972,11 @@ enum AgentType {
   NOTIFICATIONS         // order: 7 - Push notifications
   SAFETY_TRANSLATION    // order: 99 - Safety + translation
   CUSTOM                // order: 1, 8-98 - Custom agents
+}
+
+enum SearchConversationState {
+  ACTIVE      // Conversation is ongoing
+  COMPLETED   // Customer finished successfully
+  ABANDONED   // Customer left without completing
+  EXPIRED     // Session expired (>10 min inactivity)
 }

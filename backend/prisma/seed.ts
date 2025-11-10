@@ -77,6 +77,7 @@ async function main() {
   await prisma.gdprContent.deleteMany()
   await prisma.whatsappSettings.deleteMany()
   await prisma.paymentDetails.deleteMany()
+  await prisma.searchConversations.deleteMany() // 🆕 Delete before workspace
 
   // Delete user-related tables
   await prisma.userWorkspace.deleteMany()
@@ -342,6 +343,127 @@ async function main() {
       transportType = "Trasporto congelato"
     }
 
+    // Assign Italian region based on product name (English region names)
+    let region: string | null = null
+    const prodNameLower = prod.name.toLowerCase()
+
+    // Map products to regions (20 Italian regions in English)
+    if (
+      prodNameLower.includes("parmigiano") ||
+      prodNameLower.includes("parma") ||
+      prodNameLower.includes("modena")
+    ) {
+      region = "Emilia-Romagna"
+    } else if (
+      prodNameLower.includes("romano") ||
+      prodNameLower.includes("roma")
+    ) {
+      region = "Lazio"
+    } else if (
+      prodNameLower.includes("sardo") ||
+      prodNameLower.includes("pecorino sardo") ||
+      prodNameLower.includes("sardinia")
+    ) {
+      region = "Sardinia"
+    } else if (
+      prodNameLower.includes("mozzarella") ||
+      prodNameLower.includes("buffalo") ||
+      prodNameLower.includes("napoli") ||
+      prodNameLower.includes("sorrento")
+    ) {
+      region = "Campania"
+    } else if (
+      prodNameLower.includes("gorgonzola") ||
+      prodNameLower.includes("milan") ||
+      prodNameLower.includes("panettone")
+    ) {
+      region = "Lombardy"
+    } else if (
+      prodNameLower.includes("toscano") ||
+      prodNameLower.includes("tuscan") ||
+      prodNameLower.includes("chianti") ||
+      prodNameLower.includes("florence")
+    ) {
+      region = "Tuscany"
+    } else if (
+      prodNameLower.includes("sicilian") ||
+      prodNameLower.includes("sicilia") ||
+      prodNameLower.includes("etna") ||
+      prodNameLower.includes("arancini")
+    ) {
+      region = "Sicily"
+    } else if (
+      prodNameLower.includes("piedmont") ||
+      prodNameLower.includes("barolo") ||
+      prodNameLower.includes("alba") ||
+      prodNameLower.includes("tartufo")
+    ) {
+      region = "Piedmont"
+    } else if (
+      prodNameLower.includes("venice") ||
+      prodNameLower.includes("veneto") ||
+      prodNameLower.includes("prosecco")
+    ) {
+      region = "Veneto"
+    } else if (
+      prodNameLower.includes("puglia") ||
+      prodNameLower.includes("apulia") ||
+      prodNameLower.includes("orecchiette")
+    ) {
+      region = "Apulia"
+    } else if (
+      prodNameLower.includes("calabria") ||
+      prodNameLower.includes("calabrese") ||
+      prodNameLower.includes("bergamot")
+    ) {
+      region = "Calabria"
+    } else if (
+      prodNameLower.includes("liguria") ||
+      prodNameLower.includes("genoa") ||
+      prodNameLower.includes("pesto")
+    ) {
+      region = "Liguria"
+    } else if (
+      prodNameLower.includes("marche") ||
+      prodNameLower.includes("ancona")
+    ) {
+      region = "Marche"
+    } else if (
+      prodNameLower.includes("abruzzo") ||
+      prodNameLower.includes("montepulciano d'abruzzo")
+    ) {
+      region = "Abruzzo"
+    } else if (
+      prodNameLower.includes("friuli") ||
+      prodNameLower.includes("venezia giulia")
+    ) {
+      region = "Friuli-Venezia Giulia"
+    } else if (
+      prodNameLower.includes("trentino") ||
+      prodNameLower.includes("alto adige") ||
+      prodNameLower.includes("south tyrol")
+    ) {
+      region = "Trentino-South Tyrol"
+    } else if (
+      prodNameLower.includes("umbria") ||
+      prodNameLower.includes("perugia") ||
+      prodNameLower.includes("norcia")
+    ) {
+      region = "Umbria"
+    } else if (
+      prodNameLower.includes("basilicata") ||
+      prodNameLower.includes("matera")
+    ) {
+      region = "Basilicata"
+    } else if (prodNameLower.includes("molise")) {
+      region = "Molise"
+    } else if (
+      prodNameLower.includes("aosta") ||
+      prodNameLower.includes("valle d'aosta")
+    ) {
+      region = "Aosta Valley"
+    }
+
     await prisma.products.create({
       data: {
         name: prod.name,
@@ -362,6 +484,7 @@ async function main() {
         isHalal: isHalal,
         isWholeGrain: isWholeGrain,
         transportType: transportType,
+        region: region,
         certifications: certifications,
       },
     })

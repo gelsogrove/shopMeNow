@@ -148,6 +148,7 @@ export interface DebugStep {
   blockedReason?: string
   // 🆕 For sub-agent delegation tracking
   isSubAgent?: boolean
+  isNested?: boolean // 🆕 For nested/indented sub-agents (e.g., QueryAnalyzer under ProductSearch)
   parentAgent?: string
   subAgentType?: string
 }
@@ -262,6 +263,63 @@ export class LLMRouterService {
         params.workspaceId,
         params.conversationId
       )
+
+      // STEP 2.5: STATE-BASED PRE-ROUTING CHECK
+      logger.info("Step 2.5: Checking for active agent state")
+      const searchConversation =
+        await this.prisma.searchConversations.findUnique({
+          where: { sessionId: params.conversationId },
+        })
+
+      // @ts-ignore - activeAgent field exists in runtime (Prisma Client regenerated)
+      if (searchConversation?.activeAgent) {
+        const query = params.message.trim()
+        const isSimpleQuery = /^(sì|si|yes|no|ok|\d+)$/i.test(query)
+
+        // Check if user wants TRUE exit (help/operator only)
+        // ❌ REMOVED: carrello, cart, ordini, orders
+        // WHY: These are NOT out-of-context! SubLLM can handle cart/order operations with history
+        const exitKeywords = ["aiuto", "help", "operatore", "operator"]
+        const isExitQuery = exitKeywords.some((kw) =>
+          query.toLowerCase().includes(kw)
+        )
+
+        if (isExitQuery) {
+          logger.info(
+            `🚪 EXIT KEYWORD detected in delegate mode - letting Router LLM decide`,
+            {
+              activeAgent: (searchConversation as any).activeAgent,
+              query: query.substring(0, 50),
+              exitKeywords: exitKeywords.filter((kw) =>
+                query.toLowerCase().includes(kw)
+              ),
+            }
+          )
+          // Continue to Router LLM below
+        } else {
+          // FORCE delegation to activeAgent for ALL queries (simple OR complex)
+          // This ensures progressive filtering works correctly
+          const cachedCount =
+            (searchConversation as any)?.metadata?.filteredProducts?.length || 0
+          logger.info(
+            `🎯 DELEGATE: Staying in ${(searchConversation as any).activeAgent}`,
+            {
+              activeAgent: (searchConversation as any).activeAgent,
+              query: query.substring(0, 50),
+              cachedProducts: cachedCount,
+              mode: cachedCount > 0 ? "REFINEMENT" : "NEW_SEARCH",
+            }
+          )
+
+          return await this.delegateToActiveAgent({
+            // @ts-ignore
+            activeAgent: (searchConversation as any).activeAgent,
+            query,
+            params,
+            conversationHistory,
+          })
+        }
+      }
 
       // STEP 3: Save user message
       await this.conversationManager.saveUserMessage({
@@ -659,6 +717,24 @@ export class LLMRouterService {
       const costPerMillionTokens = 0.15 // GPT-4o-mini average cost
       const totalCost = (totalTokens / 1_000_000) * costPerMillionTokens
 
+      // FASE 5: State Reset - Check for mission complete or topic change
+      const missionComplete =
+        finalCleanResponse.includes("✅") ||
+        finalCleanResponse.toLowerCase().includes("completat") ||
+        finalCleanResponse.toLowerCase().includes("fatto")
+
+      if (missionComplete) {
+        logger.info(
+          `🔄 State Reset: Mission complete detected for session ${params.conversationId}`
+        )
+        await this.prisma.searchConversations.updateMany({
+          where: { sessionId: params.conversationId },
+          data: {
+            activeAgent: null,
+          } as any, // VSCode Prisma type cache
+        })
+      }
+
       return {
         response: finalCleanResponse, // ✅ Return final clean response (links + translation + punctuation fix)
         agentUsed: result.agentUsed || "ROUTER",
@@ -951,6 +1027,61 @@ export class LLMRouterService {
             productsLength: products?.length || 0,
           })
 
+          // FASE 4: Update activeAgent state BEFORE delegation
+          logger.info(
+            `📝 Updating activeAgent state: ${delegationTarget} for session ${params.conversationId}`
+          )
+
+          // 🔍 Check current activeAgent to detect context switch
+          const currentConversation =
+            await this.prisma.searchConversations.findUnique({
+              where: { sessionId: params.conversationId },
+            })
+
+          const previousAgent = (currentConversation as any)?.activeAgent
+          const isLeavingProductSearch =
+            previousAgent === "PRODUCT_SEARCH" &&
+            delegationTarget !== "PRODUCT_SEARCH"
+
+          // 🧹 RESET filteredProducts when leaving PRODUCT_SEARCH context
+          let updatedMetadata: any = currentConversation?.metadata || {}
+          if (isLeavingProductSearch) {
+            const cachedCount =
+              (updatedMetadata as any)?.filteredProducts?.length || 0
+            logger.info(
+              `🧹 RESET: Leaving PRODUCT_SEARCH → ${delegationTarget}`,
+              {
+                previousAgent,
+                newAgent: delegationTarget,
+                cachedProducts: cachedCount,
+                query: params.message,
+              }
+            )
+            updatedMetadata = {
+              ...(updatedMetadata as any),
+              filteredProducts: null, // Clear filtered list
+              lastSearch: null, // Clear last search metadata
+              // Keep selectedProductCode if user confirmed a product
+            }
+          }
+
+          await this.prisma.searchConversations.upsert({
+            where: { sessionId: params.conversationId },
+            create: {
+              sessionId: params.conversationId,
+              workspaceId: params.workspaceId,
+              customerId: params.customerId,
+              activeAgent: delegationTarget,
+              metadata: updatedMetadata,
+              expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min TTL
+            } as any, // VSCode Prisma type cache
+            update: {
+              activeAgent: delegationTarget,
+              metadata: updatedMetadata,
+              expiresAt: new Date(Date.now() + 10 * 60 * 1000), // Reset TTL
+            } as any,
+          })
+
           // ✅ CALL SPECIALIST AGENTS with OWN LLM (NO LLMService!)
           // Each specialist has its own LLM instance and system prompt from database
           let subAgentResponse: any
@@ -963,7 +1094,8 @@ export class LLMRouterService {
                 customerId: params.customerId,
                 customerName: params.customerName,
                 customerLanguage: params.customerLanguage,
-                query: delegationQuery,
+                query: params.message, // ✅ USE ORIGINAL CUSTOMER QUERY for QueryAnalyzer multi-language
+                sessionId: `${params.workspaceId}-${params.customerId}`, // ✅ FIX: Use workspace+customer as session key for memory
               })
               break
             }
@@ -1077,7 +1209,54 @@ export class LLMRouterService {
             currentDebugStepsCount: debugSteps.length,
           })
 
-          // � CLEAR DEBUG STEP: Show what Router delegated and what Sub-Agent returned
+          // 🔍 EXTRACT QUERY ANALYZER CALLS (if Product Search Agent)
+          // Product Search Agent internally calls QueryAnalyzer (L3) - show as nested step
+          const queryAnalyzerCalls: any[] = []
+          if (
+            delegationTarget === "PRODUCT_SEARCH" &&
+            subAgentFunctionCalls &&
+            subAgentFunctionCalls.length > 0
+          ) {
+            // Look for searchProducts function calls which trigger QueryAnalyzer
+            const searchProductsCalls = subAgentFunctionCalls.filter(
+              (fc: any) => fc.name === "searchProducts"
+            )
+
+            if (searchProductsCalls.length > 0) {
+              // QueryAnalyzer was called for each searchProducts
+              searchProductsCalls.forEach((fc: any) => {
+                queryAnalyzerCalls.push({
+                  type: "sub_agent",
+                  agent: "Query Analyzer Agent", // L3 - sub-sub-agent
+                  timestamp: new Date().toISOString(),
+                  input: {
+                    delegatedFrom: "PRODUCT_SEARCH",
+                    query: delegationQuery,
+                    keywords: fc.arguments?.keywords || [],
+                  },
+                  output: {
+                    filters: fc.result?.filters || {},
+                    reasoning: fc.result?.reasoning || "",
+                  },
+                  tokenUsage: {
+                    promptTokens: 0,
+                    completionTokens: 0, // QueryAnalyzer tokens already included in ProductSearch total
+                    totalTokens: 0,
+                  },
+                  isSubAgent: true,
+                  isNested: true, // 🆕 Flag for nested/indented display
+                  parentAgent: "PRODUCT_SEARCH",
+                  subAgentType: "QUERY_ANALYZER",
+                })
+              })
+
+              logger.info(
+                `🔬 Found ${queryAnalyzerCalls.length} QueryAnalyzer call(s) to show as nested steps`
+              )
+            }
+          }
+
+          // � MAIN DEBUG STEP: Show what Router delegated and what Sub-Agent returned
           debugSteps.push({
             type: "sub_agent",
             agent: `${delegationTarget} Agent`,
@@ -1107,15 +1286,112 @@ export class LLMRouterService {
             subAgentType: delegationTarget,
           })
 
+          // 🔬 ADD NESTED QUERY ANALYZER STEPS (indented under Product Search)
+          if (queryAnalyzerCalls.length > 0) {
+            queryAnalyzerCalls.forEach((qaStep) => {
+              debugSteps.push(qaStep)
+            })
+            logger.info(
+              `✅ Added ${queryAnalyzerCalls.length} nested QueryAnalyzer step(s)`
+            )
+          }
+
           logger.info("✅ Specialist agent debug step created", {
             totalDebugSteps: debugSteps.length,
             responseLength: subAgentFinalResponse.length,
             tokensUsed: subAgentResponse.tokensUsed,
             hasTokens: subAgentFinalResponse.includes("[LINK_"),
+            hasNestedQueryAnalyzer: queryAnalyzerCalls.length > 0,
           })
 
-          // 🔄 CRITICAL: Add specialist agent response to messages and CONTINUE to Router
-          // Router LLM will receive this as function result and process it
+          // � CHECK IF PRODUCT SEARCH AGENT IS REQUESTING CART DELEGATION
+          // Pattern: "🛒 DELEGATE_TO_CART: add [PRODUCT_NAME]"
+          if (
+            delegationTarget === "PRODUCT_SEARCH" &&
+            subAgentFinalResponse.includes("🛒 DELEGATE_TO_CART:")
+          ) {
+            const cartDelegationMatch = subAgentFinalResponse.match(
+              /🛒 DELEGATE_TO_CART:\s*(.+)/i
+            )
+
+            if (cartDelegationMatch) {
+              const cartQuery = cartDelegationMatch[1].trim()
+
+              logger.info("🛒 ProductSearch requested cart delegation", {
+                cartQuery,
+                originalResponse: subAgentFinalResponse,
+              })
+
+              // Call Cart Management Agent with the extracted query
+              const cartManagementAgent = new CartManagementAgentLLM(
+                this.prisma
+              )
+
+              const recentHistory = conversationHistory
+                .filter((msg: any) => msg.role !== "system")
+                .slice(-3)
+
+              const cartResponse = await cartManagementAgent.handleQuery({
+                workspaceId: params.workspaceId,
+                customerId: params.customerId,
+                customerName: params.customerName,
+                customerLanguage: params.customerLanguage,
+                query: `CONFIRMED: ${cartQuery}`, // Add CONFIRMED prefix
+                conversationHistory: recentHistory,
+              })
+
+              logger.info("✅ Cart delegation completed", {
+                cartResponseLength: cartResponse.output?.length || 0,
+                success: cartResponse.success,
+              })
+
+              // Update response to cart result
+              messages.push({
+                role: "function" as const,
+                name: functionName,
+                content: cartResponse.output || "Cart operation completed",
+              })
+
+              agentUsed = "CART_MANAGEMENT" as AgentType
+              totalTokens += cartResponse.tokensUsed || 0
+
+              // Add cart agent debug step
+              debugSteps.push({
+                type: "sub_agent",
+                agent: "Cart Management Agent",
+                timestamp: new Date().toISOString(),
+                input: {
+                  delegatedFrom: "PRODUCT_SEARCH",
+                  functionCalled: "CART_MANAGEMENT",
+                  parameters: {
+                    query: cartQuery,
+                  },
+                },
+                output: {
+                  responseText: cartResponse.output || "",
+                  language: "en",
+                  containsTokens: false,
+                  executionTimeMs: cartResponse.executionTimeMs || 0,
+                },
+                tokenUsage: {
+                  promptTokens: 0,
+                  completionTokens: cartResponse.tokensUsed || 0,
+                  totalTokens: cartResponse.tokensUsed || 0,
+                },
+                isSubAgent: true,
+                parentAgent: "PRODUCT_SEARCH",
+                subAgentType: "CART_MANAGEMENT",
+              })
+
+              logger.info("🔄 Cart response added, continuing to Router", {
+                nextIteration: iterations + 1,
+              })
+
+              continue
+            }
+          }
+
+          // Add specialist response to messages for Router LLM processing
           messages.push({
             role: "function" as const,
             name: functionName,
@@ -1273,7 +1549,7 @@ export class LLMRouterService {
             "HTTP-Referer": process.env.FRONTEND_URL || "https://shopme.ai",
             "X-Title": "ShopME Multi-Agent Router",
           },
-          timeout: 30000,
+          timeout: 60000, // Increased from 30s to 60s for complex queries like "prodotti DOP"
         }
       )
 
@@ -1337,6 +1613,193 @@ export class LLMRouterService {
     } catch (error) {
       logger.error("Error checking FAQ:", error)
       return { matched: false }
+    }
+  }
+
+  /**
+   * Delegate message directly to active agent (bypass Router LLM)
+   * Used for simple queries like "sì", "no", numbers when agent has control
+   */
+  private async delegateToActiveAgent(options: {
+    activeAgent: string
+    query: string
+    params: RouteMessageParams
+    conversationHistory: any[]
+  }): Promise<RouteMessageResponse> {
+    const startTime = Date.now()
+    const { activeAgent, query, params, conversationHistory } = options
+
+    try {
+      logger.info(`🎯 Delegating to ${activeAgent} (auto-delegation)`, {
+        query,
+        sessionId: params.conversationId,
+      })
+
+      // Get specialist agent instance
+      const specialist = await this.getSpecialistAgent(
+        activeAgent as AgentType,
+        params.workspaceId
+      )
+
+      // Call specialist directly with handleQuery method
+      const specialistResponse = await specialist.handleQuery({
+        workspaceId: params.workspaceId,
+        customerId: params.customerId,
+        sessionId: params.conversationId,
+        query,
+        customerName: params.customerName,
+        customerLanguage: params.customerLanguage || "it",
+      })
+
+      // Check for delegation handoff pattern
+      if (specialistResponse.output.includes("🛒 DELEGATE_TO_CART:")) {
+        return await this.handleDelegationHandoff(specialistResponse, options)
+      }
+
+      // Apply Safety & Translation Layer
+      const safeResponse = await this.safetyAgent.process({
+        workspaceId: params.workspaceId,
+        response: specialistResponse.output,
+        targetLanguage: params.customerLanguage || "it",
+        customerName: params.customerName,
+      })
+
+      if (!safeResponse.safe) {
+        logger.warn("⚠️ Response blocked by safety layer", {
+          reason: safeResponse.blockedReason,
+        })
+      }
+
+      const executionTimeMs = Date.now() - startTime
+
+      return {
+        response: safeResponse.translatedText,
+        agentUsed: activeAgent as AgentType,
+        tokensUsed: specialistResponse.tokensUsed || 0,
+        executionTimeMs,
+        confidence: 1.0, // Auto-delegation has high confidence
+        wasFAQ: false,
+      }
+    } catch (error) {
+      logger.error(`❌ Error delegating to ${activeAgent}:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Handle delegation handoff from one agent to another
+   * Example: ProductSearch → "🛒 DELEGATE_TO_CART: add" → Cart
+   *
+   * CRITICAL: ALWAYS reads product code from metadata.selectedProductCode,
+   * NEVER trusts LLM-generated code in response (can be stale/wrong)
+   */
+  private async handleDelegationHandoff(
+    response: any,
+    options: {
+      activeAgent: string
+      query: string
+      params: RouteMessageParams
+      conversationHistory: any[]
+    }
+  ): Promise<RouteMessageResponse> {
+    const startTime = Date.now()
+
+    try {
+      // � ALWAYS read product code from metadata (source of truth)
+      // ProductSearchAgent saves selectedProductCode after user picks from list
+      const conversation = await this.prisma.searchConversations.findUnique({
+        where: { sessionId: options.params.conversationId },
+        select: { metadata: true },
+      })
+
+      const metadata = conversation?.metadata as any
+      const selectedProductCode = metadata?.selectedProductCode
+
+      if (!selectedProductCode) {
+        logger.error(
+          "❌ No selectedProductCode in metadata for cart delegation"
+        )
+        throw new Error(
+          "Product code not found - user must select product first"
+        )
+      }
+
+      const cartQuery = `add ${selectedProductCode}`
+      logger.info(
+        `🔀 HANDOFF: ${options.activeAgent} → CART_MANAGEMENT (product: ${selectedProductCode})`
+      )
+
+      // Update activeAgent in SearchConversations
+      await this.prisma.searchConversations.update({
+        where: { sessionId: options.params.conversationId },
+        data: {
+          activeAgent: "CART_MANAGEMENT",
+          expiresAt: new Date(Date.now() + 10 * 60 * 1000), // Reset TTL
+        } as any, // VSCode Prisma type cache - field exists in runtime
+      })
+
+      // Get Cart agent
+      const cartAgent = await this.getSpecialistAgent(
+        "CART_MANAGEMENT",
+        options.params.workspaceId
+      )
+
+      // Delegate to Cart with extracted command
+      const cartResponse = await cartAgent.handleQuery({
+        workspaceId: options.params.workspaceId,
+        customerId: options.params.customerId,
+        sessionId: options.params.conversationId,
+        query: cartQuery,
+        customerName: options.params.customerName,
+        customerLanguage: options.params.customerLanguage || "it",
+      })
+
+      // Apply Safety & Translation
+      const safeResponse = await this.safetyAgent.process({
+        workspaceId: options.params.workspaceId,
+        response: cartResponse.output,
+        targetLanguage: options.params.customerLanguage || "it",
+        customerName: options.params.customerName,
+      })
+
+      const executionTimeMs = Date.now() - startTime
+
+      return {
+        response: safeResponse.translatedText,
+        agentUsed: "CART_MANAGEMENT",
+        tokensUsed: cartResponse.tokensUsed || 0,
+        executionTimeMs,
+        confidence: 1.0, // Delegation handoff has high confidence
+        wasFAQ: false,
+      }
+    } catch (error) {
+      logger.error("❌ Error handling delegation handoff:", error)
+      throw error
+    }
+  }
+
+  /**
+   * Get specialist agent instance by type
+   */
+  private async getSpecialistAgent(
+    agentType: AgentType,
+    workspaceId: string
+  ): Promise<any> {
+    switch (agentType) {
+      case "PRODUCT_SEARCH":
+        return new ProductSearchAgentLLM(this.prisma)
+
+      case "CART_MANAGEMENT":
+        return new CartManagementAgentLLM(this.prisma)
+
+      case "ORDER_TRACKING":
+        return new OrderTrackingAgentLLM(this.prisma)
+
+      case "CUSTOMER_SUPPORT":
+        return new CustomerSupportAgentLLM(this.prisma)
+
+      default:
+        throw new Error(`Unknown agent type: ${agentType}`)
     }
   }
 
