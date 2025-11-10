@@ -18,6 +18,7 @@ Router Agent (order: 0) 🎯
 ```
 
 **Agent Types** (from `schema.prisma`):
+
 - ✅ `ROUTER` (order: 0) - Intent routing
 - ✅ `PRODUCT_SEARCH` (order: 2) - Product discovery
 - ✅ `CART_MANAGEMENT` (order: 3) - Cart operations
@@ -26,21 +27,25 @@ Router Agent (order: 0) 🎯
 - ✅ `SAFETY_TRANSLATION` (order: 99) - Final translation + safety check
 
 **Removed Agents** (November 10, 2025):
+
 - ❌ `QUERY_ANALYZER` (order: 6) - Replaced by direct RAG integration
 - ❌ `TRANSLATION` (order: -1) - Merged into Safety&Translation
 
 ### **Centralized Services**
 
 **Link Generation**:
+
 - `LinkGeneratorService` (`application/services/link-generator.service.ts`)
 - `SecureTokenService` - Time-limited JWT tokens
 - `UrlShortenerService` - Creates `/s/xxx` short URLs
 
 **Token Management**:
+
 - `SecureTokenService` - Generates secure access tokens
 - Used by all public links (checkout, orders, profile)
 
 **Translation & Safety**:
+
 - `SafetyTranslationAgent` - Database-driven prompts (SAFETY_TRANSLATION agent)
 - Used by BOTH `LLMRouterService` (main flow) and `LLMService.handleNewUserWelcome()` (new users)
 - NO hardcoded translations - LLM handles IT/ES/PT/EN dynamically

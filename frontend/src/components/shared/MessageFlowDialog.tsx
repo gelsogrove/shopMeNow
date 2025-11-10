@@ -4,7 +4,6 @@ import {
   GitBranch,
   Headphones,
   MessageSquare,
-  Microscope,
   Package,
   Search,
   Send,
@@ -81,13 +80,13 @@ export default function MessageFlowDialog({
     if (type === "whatsapp_delivery") return "#16A34A" // Green
     if (agent?.includes("Save to History")) return "#F59E0B" // Orange/Amber for database save
     if (agent?.includes("WhatsApp Queue")) return "#0EA5E9" // Sky blue for queue
-    
+
     // 🆕 6 AGENTS ARCHITECTURE (no QueryAnalyzer, no Translation)
     if (agent?.includes("Product Search")) return "#3B82F6" // Blue
     if (agent?.includes("Cart Management")) return "#10B981" // Green
     if (agent?.includes("Order Tracking")) return "#F97316" // Orange
     if (agent?.includes("Customer Support")) return "#EC4899" // Pink
-    
+
     return "#3B82F6" // Blue for generic sub-agents
   }
 

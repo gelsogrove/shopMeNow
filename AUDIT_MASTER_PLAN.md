@@ -3,6 +3,7 @@
 ## ✅ STATO ARCHITETTURA FINALE
 
 **6 AGENTS ATTIVI**:
+
 1. Router Agent (order: 0) - Entry point multi-lingua
 2. Product Search Agent (order: 2) - CF: cartManagementAgent
 3. Cart Management Agent (order: 3) - CF: addToCart, viewCart, clearCart
@@ -11,6 +12,7 @@
 6. Safety & Translation Agent (order: 99) - CF: sendAlertEmail
 
 **AGENTS RIMOSSI**:
+
 - ❌ Translation Agent (order: -1) - già rimosso
 - ❌ QueryAnalyzer Agent (order: 6) - già rimosso
 
@@ -19,14 +21,17 @@
 ## 🎯 TASK 1: VIEW FLOW ALIGNMENT
 
 ### File da aggiornare:
+
 - `frontend/src/components/shared/MessageFlowDialog.tsx`
 
 ### Problemi trovati:
+
 1. ❌ Line 83-84: Ancora riferimento a QueryAnalyzer (color pink)
 2. ❌ Line 108-109: Icon per QueryAnalyzer (Microscope)
 3. ⚠️ Line 101: Riferimento generico "Translation" - verificare se è per Safety & Translation
 
 ### Fix necessari:
+
 - Rimuovere QueryAnalyzer color mapping
 - Rimuovere QueryAnalyzer icon mapping
 - Verificare che "Safety & Translation" sia mostrato correttamente
@@ -39,11 +44,13 @@
 ### CF da testare in IT/ES/PT/EN:
 
 **Cart Management**:
+
 - ✅ addToCart(productId, quantity)
 - ✅ viewCart() → [LINK_CHECKOUT_WITH_TOKEN]
 - ✅ clearCart()
 
 **Order Tracking** (NEW):
+
 - ✅ getOrders() → [LINK_ORDERS_WITH_TOKEN]
 - ✅ getOrder(orderId) - NEW
 - ✅ trackOrder(orderId) - NEW
@@ -51,12 +58,15 @@
 - ✅ repeatLastOrder()
 
 **Product Search**:
+
 - ✅ cartManagementAgent delegation (ONLY CF)
 
 **Customer Support**:
+
 - ✅ contactSupport(message)
 
 **Router**:
+
 - ✅ productSearchAgent
 - ✅ cartManagementAgent
 - ✅ orderTrackingAgent
@@ -64,9 +74,11 @@
 - ✅ handlePushNotifications
 
 **Safety & Translation**:
+
 - ✅ sendAlertEmail(type, severity, message) - NEW
 
 ### Test Plan per ogni CF:
+
 1. Input in italiano
 2. Input in spagnolo
 3. Input in portoghese
@@ -81,6 +93,7 @@
 ### Links verificati:
 
 **Cart Links**:
+
 - ✅ `[LINK_CHECKOUT_WITH_TOKEN]` → `/cart?token=xxx` (route verified line 295)
 - ✅ Centralized service: `LinkGeneratorService.generateCheckoutLink()` (line 51)
 - ✅ Token validation: `SecureTokenService.createToken()` (calling-functions.service.ts line 206)
@@ -88,18 +101,21 @@
 - ✅ URL Shortener: Creates `/s/xxx` short links (UrlShortenerService)
 
 **Order Links**:
+
 - ✅ `[LINK_ORDERS_WITH_TOKEN]` → `/orders-public?token=xxx` (route verified line 201)
 - ✅ Specific order: `/orders-public/:orderCode?token=xxx` (route verified line 215)
 - ✅ Centralized service: `LinkGeneratorService.generateOrdersLink()` (line 66)
 - ✅ Token validation: Same SecureTokenService (calling-functions.service.ts line 173)
 
 **Profile Links**:
+
 - ✅ `[LINK_PROFILE_WITH_TOKEN]` → `/customer-profile?token=xxx`
 - ✅ Centralized service: `LinkGeneratorService.generateProfileLink()` (line 88)
 
 ### Architecture Verified:
 
 **Token Replacement Flow** (llm.service.ts lines 630-730):
+
 1. LLM response contains `[LINK_CHECKOUT_WITH_TOKEN]`
 2. `llm.service.ts` detects token (line 647)
 3. Calls `callingFunctionsService.getCartLink()` (line 200)
@@ -117,16 +133,19 @@
 ### ✅ Centralized Services Verified:
 
 **Link Generation**:
+
 - ✅ `LinkGeneratorService` (application/services/link-generator.service.ts)
 - ✅ Used by ALL link tokens (checkout, orders, profile)
 - ✅ NO duplication found
 
 **Token Management**:
+
 - ✅ `SecureTokenService` (application/services/secure-token.service.ts)
 - ✅ Used consistently everywhere
 - ✅ NO hardcoded tokens found
 
 **Translation/Multi-language - VERIFIED**:
+
 - ✅ **Production uses ONLY `SafetyTranslationAgent`** (database-driven)
   - Main chatbot → `LLMRouterService` → `SafetyTranslationAgent` ✅
   - New users → `LLMService.handleNewUserWelcome()` → `SafetyTranslationAgent` ✅
@@ -136,6 +155,7 @@
   - Hardcoded prompts violate database-first architecture rule
 
 **📋 CLEANUP ACTION ITEMS** (Optional - for code cleanliness):
+
 - [ ] Delete `backend/src/services/translation-security.service.ts` (deprecated)
 - [ ] Delete `LLMService.handleMessage()` method (unused)
 - [ ] Update test files that import `translationSecurityService`
@@ -146,6 +166,7 @@
 **Database in italiano (lingua base)**:
 
 **WhatsApp Message Sending**:
+
 - `MessageSendingService` centralizzato
 - Nessuna logica duplicata in CF
 
@@ -156,16 +177,19 @@
 ### Documenti aggiornati:
 
 **PRD.md** (docs/memory-bank/prd.md):
+
 - ✅ Rimossa sezione QueryAnalyzer (190 righe)
 - ✅ Aggiunta sezione 6-agent architecture
 - ✅ Documentati servizi centralizzati (Link, Token, Translation)
 - ✅ Nota di deprecazione con riferimento storico
 
 **Architecture docs**:
+
 - ✅ `progressive-filtering-system.md`: Aggiunta nota deprecazione QueryAnalyzer
 - ✅ `router-agent-orchestration.md`: Già corretto (solo Safety & Translation)
 
 **Prompts**:
+
 - ✅ translation-agent.md - DELETED
 - ✅ query-analyzer-agent.md - DELETED
 
@@ -176,6 +200,7 @@
 ## ✅ TASK 6: DATABASE SEED CLEANUP - COMPLETED
 
 ### Agents ✅
+
 - **Created**: 6 agents EXACTLY as required
 - **File**: `backend/prisma/data/defaultAgents.ts` (156 lines)
 - ✅ Router (order: 0)
@@ -186,6 +211,7 @@
 - ✅ Safety & Translation (order: 5)
 
 ### Data Counts
+
 - **Products**: 50 (in `data/products.ts`)
 - **Categories**: 9 (target was 5, acceptable)
 - **Offers**: 3 ✅ PERFECT
@@ -197,6 +223,7 @@
 ## ⚠️ TASK 7: PROMPT OPTIMIZATION - PARTIAL
 
 ### Files Cleaned ✅
+
 - ✅ Deleted 6 obsolete/duplicate files:
   - `query-analyzer-agent.md` (obsolete agent)
   - `product-search.md` (duplicate)
@@ -206,6 +233,7 @@
   - `safety-translation.md` (duplicate)
 
 ### Current Prompt Sizes ⚠️
+
 - `product-search-agent.md`: **838 lines** (target: <200)
 - `cart-management-agent.md`: **660 lines** (target: <200)
 - `order-tracking-agent.md`: **628 lines** (target: <200)
@@ -214,13 +242,16 @@
 - `customer-support-agent.md`: **347 lines** (target: <200)
 
 ### Analysis
+
 Prompts are VERBOSE but FUNCTIONAL. They contain:
+
 - Critical rules and templates
 - Extensive examples (product-search has 215 lines of examples alone)
 - Edge case handling
 - Multi-language support
 
-**Recommendation**: 
+**Recommendation**:
+
 - ✅ Files cleaned (duplicates removed)
 - ⚠️ Size optimization DEFERRED - requires careful testing
 - Aggressive reduction could degrade LLM performance
@@ -231,6 +262,7 @@ Prompts are VERBOSE but FUNCTIONAL. They contain:
 ---
 
 ## 🎯 TASK 2: MULTI-LANGUAGE CF TESTING
+
 - 1 workspace default
 - **SOLO 6 agents** (no Translation, no QueryAnalyzer)
 - Verify defaultAgents.ts già pulito
@@ -240,10 +272,12 @@ Prompts are VERBOSE but FUNCTIONAL. They contain:
 ## 🎯 TASK 7: PROMPT OPTIMIZATION
 
 ### Target:
+
 - Specialist agents: <200 righe
 - Router agent: <300 righe
 
 ### Audit per ogni prompt:
+
 1. `router-agent.md` - current lines?
 2. `product-search-agent.md` - current lines?
 3. `cart-management-agent.md` - current lines?
@@ -252,6 +286,7 @@ Prompts are VERBOSE but FUNCTIONAL. They contain:
 6. `safety-translation-agent.md` - current lines?
 
 ### Rimuovere:
+
 - Esempi ridondanti
 - Spiegazioni duplicate
 - Keep SOLO essenziale per funzionamento
@@ -263,6 +298,7 @@ Prompts are VERBOSE but FUNCTIONAL. They contain:
 ### Test end-to-end da creare:
 
 **Cart Flow**:
+
 ```
 User: "aggiungi 2 burrate"
 → Router delegates to ProductSearch
@@ -275,6 +311,7 @@ VERIFY: Link works, leads to checkout page with 2 burrate
 ```
 
 **Order Flow**:
+
 ```
 User: "dove sono i miei ordini?"
 → Router delegates to OrderTracking
@@ -285,6 +322,7 @@ VERIFY: Link works, shows customer orders
 ```
 
 **Multi-language Flow**:
+
 ```
 User (ES): "¿dónde están mis pedidos?"
 → Router detects Spanish
