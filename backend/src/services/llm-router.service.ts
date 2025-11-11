@@ -47,6 +47,7 @@ import { LinkReplacementService } from "../application/services/link-replacement
 import { getFunctionsForRouter } from "../config/agent-functions"
 import { AgentConfigRepository } from "../repositories/agent-config.repository"
 import { FAQRepository } from "../repositories/faq.repository"
+import { websocketService } from "./websocket.service"
 import logger from "../utils/logger"
 import { AgentLoggerService } from "./agent-logger.service"
 import { ConversationManager } from "./conversation-manager.service"
@@ -434,7 +435,9 @@ export class LLMRouterService {
         totalTokens: debugInfo.totalTokens,
       })
 
-      console.log("🟡 CONSOLE: functionCallingLoop completed - about to process tokens")
+      console.log(
+        "🟡 CONSOLE: functionCallingLoop completed - about to process tokens"
+      )
 
       // STEP 5.5: Token Replacement (if any tokens were replaced)
       // Extract link replacement info from last agent step (if present)
@@ -1772,7 +1775,7 @@ export class LLMRouterService {
 
       // 🔧 CRITICAL: Save messages BEFORE returning (same as main flow)
       console.log("🔴🔴🔴 AUTO-DELEGATION: SAVING MESSAGES")
-      
+
       // Save user message (INBOUND)
       await this.conversationManager.saveUserMessage({
         workspaceId: params.workspaceId,
@@ -1787,7 +1790,7 @@ export class LLMRouterService {
       const specialistTimestamp = new Date().toISOString()
       const routerReceiveTimestamp = new Date().toISOString()
       const safetyTimestamp = new Date().toISOString()
-      
+
       const debugInfo: DebugInfoSteps = {
         steps: [
           // Step 1: Router decides to delegate
@@ -1797,10 +1800,10 @@ export class LLMRouterService {
             model: "N/A",
             temperature: 0,
             timestamp: routerDelegateTimestamp,
-            input: { 
+            input: {
               userMessage: query,
             },
-            output: { 
+            output: {
               decision: `Auto-delegate to ${activeAgent}`,
             },
             tokenUsage: {
@@ -1838,10 +1841,12 @@ export class LLMRouterService {
             temperature: 0,
             timestamp: routerReceiveTimestamp,
             input: {
-              specialistResponse: specialistResponse.output.substring(0, 100) + "...",
+              specialistResponse:
+                specialistResponse.output.substring(0, 100) + "...",
             },
             output: {
-              decision: "Response received from specialist - proceed to Safety layer",
+              decision:
+                "Response received from specialist - proceed to Safety layer",
             },
             tokenUsage: {
               promptTokens: 0,
@@ -1878,7 +1883,8 @@ export class LLMRouterService {
             blockedReason: safeResponse.blockedReason,
           },
         ],
-        totalTokens: (specialistResponse.tokensUsed || 0) + (safeResponse.tokensUsed || 0),
+        totalTokens:
+          (specialistResponse.tokensUsed || 0) + (safeResponse.tokensUsed || 0),
         totalCost: 0,
         executionTimeMs,
         timestamp: new Date().toISOString(),
@@ -1894,7 +1900,17 @@ export class LLMRouterService {
         debugInfo: debugInfo,
       })
 
-      // 🔄 State Reset - Check for mission complete (same logic as main flow)
+      // � CRITICAL: Notify WebSocket clients of new message
+      websocketService.notifyNewMessage(params.workspaceId, {
+        id: Date.now().toString(), // Temporary ID (real ID from DB not returned)
+        sessionId: params.conversationId,
+        content: safeResponse.translatedText,
+        sender: "agent",
+        timestamp: new Date().toISOString(),
+        workspaceId: params.workspaceId,
+      })
+
+      // �🔄 State Reset - Check for mission complete (same logic as main flow)
       const missionComplete =
         safeResponse.translatedText.includes("✅") ||
         safeResponse.translatedText.toLowerCase().includes("completat") ||

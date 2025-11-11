@@ -242,21 +242,31 @@ export class MessageRepository {
       const parsedMessages = messages.map((message) => {
         // Convert role (user/assistant/function) to direction (INBOUND/OUTBOUND)
         const direction = message.role === "user" ? "INBOUND" : "OUTBOUND"
-        
+
         let parsed: any = {
           ...message,
           direction, // Add direction field for frontend compatibility
           type: "TEXT", // Default type
+          // ✅ CRITICAL: Add default metadata for bot messages to show as GREEN in frontend
+          metadata: {
+            agentSelected: direction === "OUTBOUND" ? "CHATBOT" : "CUSTOMER",
+            sentBy: direction === "OUTBOUND" ? "AI" : "CUSTOMER",
+            isOperatorMessage: false,
+            isOperatorControl: false,
+          },
         }
 
         // Parse debugInfo if exists (it's stored as JSON string in DB)
-        if (message.debugInfo) {
+        if ((message as any).debugInfo) {
           try {
-            const debugInfoParsed = typeof message.debugInfo === 'string'
-              ? JSON.parse(message.debugInfo)
-              : message.debugInfo
-            
+            const debugInfoParsed =
+              typeof (message as any).debugInfo === "string"
+                ? JSON.parse((message as any).debugInfo)
+                : (message as any).debugInfo
+
+            // Merge with existing metadata
             parsed.metadata = {
+              ...parsed.metadata,
               debugInfo: debugInfoParsed, // Move debugInfo into metadata
             }
           } catch (parseError) {
