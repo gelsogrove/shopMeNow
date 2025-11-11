@@ -188,6 +188,7 @@ export class AgentChatController {
           executionTimeMs: result.executionTimeMs,
           conversationId: finalConversationId,
           messageId,
+          debugInfo: result.debugInfo, // ✅ Include debug information for frontend
         },
       })
     } catch (error) {

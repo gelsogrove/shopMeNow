@@ -71,6 +71,12 @@ const authMiddlewareAsync = async (
       }
     }
 
+    // 🔓 PUBLIC ROUTES: Skip authentication for WhatsApp webhooks (use HMAC signature instead)
+    if (req.path === '/whatsapp/webhook' || req.path.includes('/whatsapp/webhook')) {
+      logger.debug('🔓 Skipping auth for WhatsApp webhook (public endpoint with HMAC validation)');
+      return next();
+    }
+
     // Check for token in cookies
     let token = req.cookies?.auth_token;
     

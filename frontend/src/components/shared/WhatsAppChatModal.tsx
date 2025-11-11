@@ -468,9 +468,14 @@ export function WhatsAppChatModal({
   }
 
   const sendMessage = async () => {
+    console.log("=".repeat(80))
+    console.log("🚀🚀🚀 FRONTEND: sendMessage CALLED! Message:", currentMessage)
+    console.log("=".repeat(80))
+
     logger.info("🚀 FRONTEND DEBUG: sendMessage called with:", currentMessage)
 
     if (!currentMessage.trim() || isLoading) {
+      console.log("❌ BLOCKED: empty message or loading")
       logger.info(
         "❌ FRONTEND DEBUG: sendMessage blocked - empty message or loading"
       )
@@ -480,8 +485,17 @@ export function WhatsAppChatModal({
     // Prevent double execution with simple debounce
     const now = Date.now()
     const lastCall = lastSendRef.current
-    if (now - lastCall < 10000) {
-      // 10 second debounce for testing
+    if (now - lastCall < 1000) {
+      // 1 second debounce (reduced from 10s for testing)
+      console.log(
+        "❌ BLOCKED: debounce (last call:",
+        lastCall,
+        "now:",
+        now,
+        "diff:",
+        now - lastCall,
+        ")"
+      )
       logger.info(
         "❌ FRONTEND DEBUG: sendMessage blocked - too soon after last call"
       )
@@ -556,18 +570,48 @@ export function WhatsAppChatModal({
       )
       logger.info("📥 FRONTEND DEBUG: Response status:", response.status)
 
-      // After sending via webhook, fetch the latest messages from the session
-      // This ensures we get both user message and bot response
+      // ✅ OPTIMIZED: Use response directly from webhook instead of fetching again
+      const webhookData = response.data
+      if (webhookData.success && webhookData.data?.message) {
+        logger.info("✅ Using bot response from webhook directly")
+
+        // Add bot response immediately from webhook
+        const botMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: webhookData.data.message,
+          sender: "bot",
+          timestamp: new Date(),
+          agentName: "AI Assistant",
+          metadata: {
+            isOperatorMessage: false,
+            isOperatorControl: false,
+            agentSelected: "AI",
+            sentBy: "AI",
+            debugInfo: webhookData.debug
+              ? JSON.stringify(webhookData.debug)
+              : undefined, // ✅ Include debug info as JSON string
+          },
+        }
+
+        setMessages((prev) => [...prev, botMessage])
+
+        // Scroll to bottom
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+        }, 100)
+      }
+
+      // ✅ STILL fetch from backend to sync with database (background sync)
+      // This ensures we have the correct IDs and all messages
       const sessionIdToUse = localSelectedChat?.sessionId || sessionId
 
       if (sessionIdToUse) {
         logger.info(
-          "📥 FRONTEND DEBUG: Fetching updated messages for session:",
-          sessionIdToUse
+          "📥 FRONTEND DEBUG: Background sync - fetching messages from database"
         )
 
-        // Small delay to ensure backend has processed the message
-        await new Promise((resolve) => setTimeout(resolve, 500))
+        // Small delay for database to save
+        await new Promise((resolve) => setTimeout(resolve, 300))
 
         try {
           const messagesResponse = await api.get(

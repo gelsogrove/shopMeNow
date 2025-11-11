@@ -31,6 +31,7 @@ export interface SaveMessageParams {
   functionName?: string
   functionArguments?: Record<string, any>
   tokensUsed?: number
+  debugInfo?: any // ✅ Debug information for message flow tracking
 }
 
 export class ConversationManager {

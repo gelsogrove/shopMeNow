@@ -70,27 +70,35 @@ export class WhatsAppWebhookController {
    */
   async receiveMessage(req: Request, res: Response): Promise<void> {
     try {
-      // 🔒 SECURITY STEP 1: Verify HMAC signature
-      const signature = req.headers["x-hub-signature-256"] as string
-      const isValidSignature = verifyWhatsAppSignature(
-        req.body,
-        signature,
-        process.env.WHATSAPP_APP_SECRET || ""
-      )
+      // 🔒 SECURITY STEP 1: Verify HMAC signature (skip in development)
+      const skipHmacInDev =
+        process.env.SKIP_HMAC_VERIFICATION === "true" &&
+        process.env.NODE_ENV !== "production"
 
-      if (!isValidSignature) {
-        logger.error(
-          "[WEBHOOK] ❌ Invalid HMAC signature - potential attack!",
-          {
-            signature: signature?.substring(0, 20) + "...",
-            ip: req.ip,
-          }
+      if (!skipHmacInDev) {
+        const signature = req.headers["x-hub-signature-256"] as string
+        const isValidSignature = verifyWhatsAppSignature(
+          req.body,
+          signature,
+          process.env.WHATSAPP_APP_SECRET || ""
         )
-        res.status(403).json({ error: "Invalid signature" })
-        return
-      }
 
-      logger.info("[WEBHOOK] ✅ HMAC signature verified")
+        if (!isValidSignature) {
+          logger.error(
+            "[WEBHOOK] ❌ Invalid HMAC signature - potential attack!",
+            {
+              signature: signature?.substring(0, 20) + "...",
+              ip: req.ip,
+            }
+          )
+          res.status(403).json({ error: "Invalid signature" })
+          return
+        }
+
+        logger.info("[WEBHOOK] ✅ HMAC signature verified")
+      } else {
+        logger.warn("[WEBHOOK] ⚠️ HMAC verification SKIPPED (development mode)")
+      }
 
       // 🔍 Extract message from WhatsApp payload
       const entry = req.body.entry?.[0]

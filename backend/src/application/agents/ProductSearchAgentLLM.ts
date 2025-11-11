@@ -169,11 +169,29 @@ export class ProductSearchAgentLLM {
         temperature: agentConfig.temperature,
       })
 
+      // ✅ LOAD ACTIVE CATEGORIES from database (for category matching)
+      const { MessageRepository } = await import(
+        "../../repositories/message.repository"
+      )
+      const messageRepo = new MessageRepository()
+      const categoriesText = await messageRepo.getActiveCategories(
+        context.workspaceId
+      )
+
+      // ✅ Inject categories into system prompt
+      const enhancedPrompt = categoriesText
+        ? `${agentConfig.systemPrompt}\n\n## AVAILABLE CATEGORIES\nWhen customer asks for a category (e.g., "formaggi", "latticini"), use the category filter with the corresponding category ID:\n${categoriesText}`
+        : agentConfig.systemPrompt
+
+      logger.info(
+        `✅ Injected ${categoriesText ? "categories" : "no categories"} into prompt`
+      )
+
       // STEP 2: Build messages for LLM (with conversation history if exists)
       const messages: any[] = [
         {
           role: "system" as const,
-          content: agentConfig.systemPrompt, // Use base prompt only
+          content: enhancedPrompt, // ✅ Use enhanced prompt with categories
         },
       ]
 
@@ -301,7 +319,20 @@ export class ProductSearchAgentLLM {
 
         let groupsMetadata = null
 
-        if (shouldGroup && products.length >= 5) {
+        // 🔧 FIX: If showing SINGLE product, save selectedProductCode for cart handoff
+        if (products.length === 1) {
+          const singleProduct = products[0]
+          groupsMetadata = {
+            selectedProductCode: singleProduct.code, // ✅ CRITICAL: Save for cart delegation
+            productName: singleProduct.name,
+            timestamp: new Date().toISOString(),
+          }
+
+          logger.info(`📦 Storing single product selection`, {
+            selectedProductCode: singleProduct.code,
+            productName: singleProduct.name,
+          })
+        } else if (shouldGroup && products.length >= 5) {
           // We showed groups - save products for later drill-down
           // The LLM created groups, but we need to store ALL products
           // so when user selects "1", we can filter by group
@@ -329,18 +360,27 @@ export class ProductSearchAgentLLM {
           lastQuery: context.query,
           lastResponse: finalResponse.substring(0, 500), // Truncate long responses
           metadata: groupsMetadata
-            ? {
-                groups: groupsMetadata,
-                shouldGroup,
-                timestamp: new Date().toISOString(),
-              }
+            ? Array.isArray(groupsMetadata)
+              ? {
+                  groups: groupsMetadata,
+                  shouldGroup,
+                  timestamp: new Date().toISOString(),
+                }
+              : groupsMetadata // Single product metadata
             : null,
         })
 
         logger.info(`💾 Saved conversation to memory`, {
           sessionId: context.sessionId,
-          hasGroups: !!groupsMetadata,
-          productsCount: groupsMetadata?.length || 0,
+          hasGroups: Array.isArray(groupsMetadata),
+          hasSingleProduct: groupsMetadata && !Array.isArray(groupsMetadata),
+          selectedProductCode:
+            groupsMetadata && !Array.isArray(groupsMetadata)
+              ? groupsMetadata.selectedProductCode
+              : undefined,
+          productsCount: Array.isArray(groupsMetadata)
+            ? groupsMetadata.length
+            : 0,
           shouldGroup,
         })
       } catch (memoryError) {

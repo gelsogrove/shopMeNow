@@ -25,6 +25,7 @@ export interface SaveMessageParams {
   functionName?: string
   functionArguments?: any
   tokensUsed?: number
+  debugInfo?: any // ✅ Debug information for message flow tracking
 }
 
 export interface ConversationHistory {
@@ -56,6 +57,9 @@ export class ConversationMessageRepository {
           functionName: params.functionName,
           functionArguments: params.functionArguments,
           tokensUsed: params.tokensUsed,
+          debugInfo: params.debugInfo
+            ? JSON.stringify(params.debugInfo)
+            : undefined, // ✅ Save debug info as JSON string
         },
       })
 

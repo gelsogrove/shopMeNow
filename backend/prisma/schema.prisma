@@ -809,6 +809,7 @@ model ConversationMessage {
   functionName      String? // If role="function", name of function called
   functionArguments Json? // If role="function", arguments passed
   tokensUsed        Int?
+  debugInfo         String? // ✅ Debug information as JSON string (for message flow tracking)
   createdAt         DateTime  @default(now())
   workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   customer          Customers @relation(fields: [customerId], references: [id], onDelete: Cascade)

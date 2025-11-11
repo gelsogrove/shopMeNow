@@ -233,6 +233,7 @@ export class LLMRouterService {
         })
 
         // FAQ found - apply Safety Layer before returning
+        const safetyTimestamp = new Date().toISOString()
         const safeResponse = await this.safetyAgent.process({
           workspaceId: params.workspaceId,
           response: faqResult.faqAnswer!,
@@ -246,6 +247,60 @@ export class LLMRouterService {
           })
         }
 
+        // ✅ BUILD DEBUG INFO for FAQ path
+        const faqDebugInfo: DebugInfoSteps = {
+          steps: [
+            {
+              type: "router",
+              agent: "Router Agent",
+              model: "N/A",
+              temperature: 0,
+              timestamp: new Date().toISOString(),
+              input: {
+                userMessage: params.message,
+              },
+              output: {
+                decision: "FAQ_MATCH",
+                message: faqResult.faqAnswer?.substring(0, 100),
+              },
+              tokenUsage: {
+                promptTokens: 0,
+                completionTokens: 0,
+                totalTokens: 0,
+              },
+            },
+            {
+              type: "safety",
+              agent: "Safety & Translation Agent",
+              model: "openai/gpt-4o-mini",
+              temperature: 0.2,
+              timestamp: safetyTimestamp,
+              tokenUsage: safeResponse.tokensUsed
+                ? {
+                    promptTokens: 0,
+                    completionTokens: safeResponse.tokensUsed,
+                    totalTokens: safeResponse.tokensUsed,
+                  }
+                : undefined,
+              input: {
+                textToValidate: faqResult.faqAnswer!,
+                previousResponse: "FAQ Match",
+              },
+              output: {
+                safe: safeResponse.safe,
+                translatedText: safeResponse.translatedText,
+                decision: "faq_approved",
+              },
+              safe: safeResponse.safe,
+              language: params.customerLanguage || "it",
+            },
+          ],
+          totalTokens: safeResponse.tokensUsed || 0,
+          totalCost: 0,
+          executionTimeMs,
+          timestamp: new Date().toISOString(),
+        }
+
         return {
           response: safeResponse.translatedText,
           agentUsed: "ROUTER",
@@ -254,6 +309,7 @@ export class LLMRouterService {
           executionTimeMs,
           wasFAQ: true,
           faqId: faqResult.faqId,
+          debugInfo: faqDebugInfo, // ✅ CRITICAL: Include debug info for FAQ path
         }
       }
 
@@ -464,6 +520,25 @@ export class LLMRouterService {
       // 🔧 NEW: Collect debug steps from function calling loop
       const debugSteps = result.debugSteps || []
 
+      // 🔧 CRITICAL FIX: Build debugInfo IMMEDIATELY after functionCallingLoop
+      // This ensures it exists even if later steps fail
+      const executionTimeMs = Date.now() - startTime
+      const costPerMillionTokens = 0.15
+      const totalCost = (totalTokens / 1_000_000) * costPerMillionTokens
+
+      let debugInfo: DebugInfoSteps = {
+        steps: debugSteps,
+        totalTokens,
+        totalCost,
+        executionTimeMs,
+        timestamp: new Date().toISOString(),
+      }
+
+      logger.info("🔧 DEBUG: debugInfo constructed early", {
+        stepsCount: debugInfo.steps.length,
+        totalTokens: debugInfo.totalTokens,
+      })
+
       // STEP 5.5: Token Replacement (if any tokens were replaced)
       // Extract link replacement info from last agent step (if present)
       const lastAgentStep = debugSteps.find(
@@ -625,8 +700,9 @@ export class LLMRouterService {
 
       totalTokens += safeResponse.tokensUsed || 0
 
-      // 🔧 NEW: Capture Safety & Translation step with INPUT and OUTPUT
-      debugSteps.push({
+      // 🔧 CRITICAL: Add Safety & Translation step DIRECTLY to debugInfo.steps
+      // (not debugSteps, because debugInfo was already constructed earlier)
+      debugInfo.steps.push({
         type: "safety",
         agent: "Safety & Translation Agent",
         model: routerAgent.model, // Uses same model as router
@@ -692,6 +768,36 @@ export class LLMRouterService {
         )
       }
 
+      logger.info("✅ Message routed successfully", {
+        executionTimeMs: Date.now() - startTime,
+        totalTokens,
+        iterations: result.iterations,
+        linksReplaced: tokensDetected.length,
+        safetyApproved: safeResponse.safe,
+        urlsCleaned: finalCleanResponse !== safeResponse.translatedText,
+      })
+
+      // debugInfo already constructed earlier (line 529)
+      // Just update with final execution time
+      debugInfo.executionTimeMs = Date.now() - startTime
+      debugInfo.totalTokens = totalTokens
+
+      // 🔧 CRITICAL DEBUG: Log debugInfo before return
+      logger.info("🔍 BEFORE RETURN - debugInfo status:", {
+        exists: !!debugInfo,
+        stepsCount: debugInfo?.steps?.length || 0,
+        hasRouterStep:
+          debugInfo?.steps?.some((s) => s.type === "router") || false,
+        hasSafetyStep:
+          debugInfo?.steps?.some((s) => s.type === "safety") || false,
+      })
+
+      // 🔧 CRITICAL: Log FULL debugInfo object before saving
+      logger.info(
+        "🔍 FULL debugInfo before save:",
+        JSON.stringify(debugInfo, null, 2)
+      )
+
       // STEP 6: Save final assistant message (with links replaced and translation applied)
       await this.conversationManager.saveAssistantMessage({
         workspaceId: params.workspaceId,
@@ -700,22 +806,8 @@ export class LLMRouterService {
         content: finalCleanResponse, // ✅ Final response with links + translation + cleanup
         agentType: "ROUTER",
         tokensUsed: totalTokens,
+        debugInfo: debugInfo, // ✅ Save complete debug information for message flow tracking
       })
-
-      const executionTimeMs = Date.now() - startTime
-
-      logger.info("✅ Message routed successfully", {
-        executionTimeMs,
-        totalTokens,
-        iterations: result.iterations,
-        linksReplaced: tokensDetected.length,
-        safetyApproved: safeResponse.safe,
-        urlsCleaned: finalCleanResponse !== safeResponse.translatedText,
-      })
-
-      // 🔧 NEW: Calculate total cost (OpenRouter pricing)
-      const costPerMillionTokens = 0.15 // GPT-4o-mini average cost
-      const totalCost = (totalTokens / 1_000_000) * costPerMillionTokens
 
       // FASE 5: State Reset - Check for mission complete or topic change
       const missionComplete =
@@ -742,18 +834,34 @@ export class LLMRouterService {
         tokensUsed: totalTokens,
         executionTimeMs,
         wasFAQ: false,
-        debugInfo: {
-          steps: debugSteps,
-          totalTokens,
-          totalCost,
-          executionTimeMs, // ✅ Add executionTimeMs to debugInfo for frontend
-          timestamp: new Date().toISOString(),
-        },
+        debugInfo: debugInfo, // ✅ Return same debugInfo object that was saved
       }
     } catch (error) {
       const executionTimeMs = Date.now() - startTime
 
       logger.error("❌ Error routing message", error)
+
+      // 🔧 BUILD DEBUG STEPS FOR ERROR CASE
+      const errorDebugSteps: DebugStep[] = [
+        {
+          type: "router",
+          agent: "Router Agent",
+          model: "N/A",
+          temperature: 0.3,
+          timestamp: new Date().toISOString(),
+          input: {
+            userMessage: params.message,
+          },
+          output: {
+            message: error instanceof Error ? error.message : String(error),
+          },
+          tokenUsage: {
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens: 0,
+          },
+        },
+      ]
 
       // Log error
       await this.loggerService.logAgentInteraction({
@@ -774,6 +882,7 @@ export class LLMRouterService {
       })
 
       // 🔧 Pass generic error message through Safety/Translation layer
+      const safetyTimestamp = new Date().toISOString()
       const errorResponse = await this.safetyAgent.process({
         workspaceId: params.workspaceId,
         response: "System error - please try again",
@@ -781,16 +890,43 @@ export class LLMRouterService {
         customerName: params.customerName,
       })
 
+      // 🔧 ADD SAFETY STEP TO DEBUG
+      errorDebugSteps.push({
+        type: "safety",
+        agent: "Safety & Translation Agent",
+        model: "openai/gpt-4o-mini",
+        temperature: 0.2,
+        timestamp: safetyTimestamp,
+        tokenUsage: errorResponse.tokensUsed
+          ? {
+              promptTokens: 0,
+              completionTokens: errorResponse.tokensUsed,
+              totalTokens: errorResponse.tokensUsed,
+            }
+          : undefined,
+        input: {
+          textToValidate: "System error - please try again",
+          previousResponse: "Error fallback message",
+        },
+        output: {
+          safe: errorResponse.safe,
+          translatedText: errorResponse.translatedText,
+          decision: "error_translation",
+        },
+        safe: errorResponse.safe,
+        language: params.customerLanguage || "it",
+      })
+
       return {
         response: errorResponse.translatedText,
-        tokensUsed: 0,
+        tokensUsed: errorResponse.tokensUsed || 0,
         executionTimeMs,
         agentUsed: "ROUTER" as AgentType,
         confidence: 0,
         wasFAQ: false,
         debugInfo: {
-          steps: [],
-          totalTokens: 0,
+          steps: errorDebugSteps, // ✅ Now includes Router error + Safety translation
+          totalTokens: errorResponse.tokensUsed || 0,
           totalCost: 0,
           executionTimeMs,
           timestamp: new Date().toISOString(),
@@ -1493,6 +1629,17 @@ export class LLMRouterService {
 
       // No function_call - LLM returned final text response
       logger.info("✅ LLM returned final response (no function call)")
+      logger.info(
+        "🔍 DEBUG: About to return from functionCallingLoop with debugSteps",
+        {
+          debugStepsCount: debugSteps.length,
+          debugStepsPreview: debugSteps.map((s) => ({
+            type: s.type,
+            agent: s.agent,
+          })),
+          response: llmResponse.content?.substring(0, 100),
+        }
+      )
       return {
         response:
           llmResponse.content || "Sorry, I couldn't process that request.",
@@ -1506,6 +1653,9 @@ export class LLMRouterService {
 
     // Max iterations reached
     logger.warn("⚠️ Max function calling iterations reached")
+    logger.info("🔍 DEBUG: Max iterations - returning with debugSteps", {
+      debugStepsCount: debugSteps.length,
+    })
     return {
       response:
         "I'm processing your request, but it's taking longer than expected. Can you try rephrasing?",

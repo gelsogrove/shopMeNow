@@ -2689,6 +2689,7 @@ export class MessageRepository {
 
       // Formatta le categorie dal database - SEMPRE in italiano (lingua base)
       // Il Translation Layer si occuperà della traduzione finale
+      // ✅ INCLUDE ID for LLM to use in category filter
       const formattedCategories = categories
         .map((category) => {
           const name = category.name || "Categoria"
@@ -2700,7 +2701,7 @@ export class MessageRepository {
             .substring(0, 80)
             .trim()
 
-          return `**${name}** - ${shortDesc || "Prodotti disponibili"}`
+          return `**${name}** (ID: ${category.id}) - ${shortDesc || "Prodotti disponibili"}`
         })
         .join("\n")
 
