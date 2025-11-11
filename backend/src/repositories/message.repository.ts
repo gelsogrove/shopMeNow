@@ -189,12 +189,28 @@ export class MessageRepository {
         }
       }
 
-      const messages = await this.prisma.message.findMany({
+      // ✅ FIXED: Query conversationMessage table (NEW) instead of message table (OLD)
+      // This fixes the issue where messages saved by LLMRouter were not visible in frontend
+      const messages = await this.prisma.conversationMessage.findMany({
         where: {
-          chatSessionId,
+          conversationId: chatSessionId,
         },
         orderBy: {
           createdAt: "asc",
+        },
+        select: {
+          id: true,
+          createdAt: true,
+          workspaceId: true,
+          customerId: true,
+          conversationId: true,
+          role: true,
+          content: true,
+          agentType: true,
+          tokensUsed: true,
+          functionName: true,
+          functionArguments: true,
+          debugInfo: true, // ✅ Explicitly select debugInfo
         },
       })
 
@@ -222,20 +238,26 @@ export class MessageRepository {
       })
 
       // Parse debugInfo and attach billing data
+      // ✅ Map conversationMessage format to frontend expected format
       const parsedMessages = messages.map((message) => {
-        let parsed = message
+        // Convert role (user/assistant/function) to direction (INBOUND/OUTBOUND)
+        const direction = message.role === "user" ? "INBOUND" : "OUTBOUND"
+        
+        let parsed: any = {
+          ...message,
+          direction, // Add direction field for frontend compatibility
+          type: "TEXT", // Default type
+        }
 
-        // Parse debugInfo and move it into metadata for frontend consumption
+        // Parse debugInfo if exists (it's stored as JSON string in DB)
         if (message.debugInfo) {
           try {
-            const debugInfoParsed = JSON.parse(message.debugInfo as string)
-            parsed = {
-              ...message,
-              metadata: {
-                ...(message.metadata as any),
-                debugInfo: debugInfoParsed, // 🔧 Move debugInfo into metadata
-              },
-              debugInfo: undefined, // Remove top-level debugInfo (redundant)
+            const debugInfoParsed = typeof message.debugInfo === 'string'
+              ? JSON.parse(message.debugInfo)
+              : message.debugInfo
+            
+            parsed.metadata = {
+              debugInfo: debugInfoParsed, // Move debugInfo into metadata
             }
           } catch (parseError) {
             logger.warn(
@@ -259,8 +281,8 @@ export class MessageRepository {
           if (timeDiff >= 5000) return false
 
           // Match billing type to message direction
-          const isInbound = message.direction === "INBOUND"
-          const isOutbound = message.direction === "OUTBOUND"
+          const isInbound = direction === "INBOUND"
+          const isOutbound = direction === "OUTBOUND"
 
           // MESSAGE billing should only attach to INBOUND messages
           if (billing.type === "MESSAGE" && !isInbound) return false

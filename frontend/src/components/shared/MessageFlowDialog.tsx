@@ -166,8 +166,10 @@ export default function MessageFlowDialog({
     (s) => s.type === "router" && !(s as any).isSubAgent
   )
 
-  // Sub-agent step (delegation execution)
-  const subAgentSteps = allSteps.filter((s) => (s as any).isSubAgent)
+  // Sub-agent step (delegation execution) - check BOTH type and flag
+  const subAgentSteps = allSteps.filter(
+    (s) => s.type === "sub_agent" || (s as any).isSubAgent
+  )
 
   // Safety & Translation step
   const safetySteps = allSteps.filter((s) => s.type === "safety")

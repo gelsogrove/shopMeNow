@@ -206,112 +206,10 @@ export class LLMRouterService {
         conversationId: params.conversationId,
       })
 
-      // STEP 1: FAQ Check (fast path - no LLM needed)
-      logger.info("Step 1: FAQ Check")
-      const faqResult = await this.checkFAQ(params.workspaceId, params.message)
-
-      if (faqResult.matched && faqResult.confidence! > 0.75) {
-        const executionTimeMs = Date.now() - startTime
-
-        // Log FAQ response
-        await this.loggerService.logAgentInteraction({
-          workspaceId: params.workspaceId,
-          customerId: params.customerId,
-          conversationId: params.conversationId,
-          messageId: params.messageId,
-          step: 0,
-          agentType: "ROUTER",
-          agentAction: "FAQ_MATCH",
-          inputMessage: params.message,
-          agentPrompt: "FAQ database lookup",
-          llmModel: "N/A",
-          llmResponse: JSON.stringify(faqResult),
-          confidence: faqResult.confidence,
-          reasoning: `Matched FAQ: ${faqResult.faqQuestion}`,
-          tokensUsed: 0,
-          executionTimeMs,
-        })
-
-        // FAQ found - apply Safety Layer before returning
-        const safetyTimestamp = new Date().toISOString()
-        const safeResponse = await this.safetyAgent.process({
-          workspaceId: params.workspaceId,
-          response: faqResult.faqAnswer!,
-          targetLanguage: params.customerLanguage || "it",
-          customerName: params.customerName,
-        })
-
-        if (!safeResponse.safe) {
-          logger.warn("⚠️ FAQ response blocked by safety layer", {
-            reason: safeResponse.blockedReason,
-          })
-        }
-
-        // ✅ BUILD DEBUG INFO for FAQ path
-        const faqDebugInfo: DebugInfoSteps = {
-          steps: [
-            {
-              type: "router",
-              agent: "Router Agent",
-              model: "N/A",
-              temperature: 0,
-              timestamp: new Date().toISOString(),
-              input: {
-                userMessage: params.message,
-              },
-              output: {
-                decision: "FAQ_MATCH",
-                message: faqResult.faqAnswer?.substring(0, 100),
-              },
-              tokenUsage: {
-                promptTokens: 0,
-                completionTokens: 0,
-                totalTokens: 0,
-              },
-            },
-            {
-              type: "safety",
-              agent: "Safety & Translation Agent",
-              model: "openai/gpt-4o-mini",
-              temperature: 0.2,
-              timestamp: safetyTimestamp,
-              tokenUsage: safeResponse.tokensUsed
-                ? {
-                    promptTokens: 0,
-                    completionTokens: safeResponse.tokensUsed,
-                    totalTokens: safeResponse.tokensUsed,
-                  }
-                : undefined,
-              input: {
-                textToValidate: faqResult.faqAnswer!,
-                previousResponse: "FAQ Match",
-              },
-              output: {
-                safe: safeResponse.safe,
-                translatedText: safeResponse.translatedText,
-                decision: "faq_approved",
-              },
-              safe: safeResponse.safe,
-              language: params.customerLanguage || "it",
-            },
-          ],
-          totalTokens: safeResponse.tokensUsed || 0,
-          totalCost: 0,
-          executionTimeMs,
-          timestamp: new Date().toISOString(),
-        }
-
-        return {
-          response: safeResponse.translatedText,
-          agentUsed: "ROUTER",
-          confidence: faqResult.confidence!,
-          tokensUsed: safeResponse.tokensUsed || 0,
-          executionTimeMs,
-          wasFAQ: true,
-          faqId: faqResult.faqId,
-          debugInfo: faqDebugInfo, // ✅ CRITICAL: Include debug info for FAQ path
-        }
-      }
+      // ❌ REMOVED: FAQ Pre-check (lines 209-320)
+      // WHY: FAQ check bypassed Router LLM → Router lost decision control
+      // NEW APPROACH: Router LLM decides FIRST, then can delegate to FAQ agent if needed
+      // TODO: Implement FAQ as delegatable function for Router to call
 
       // STEP 2: Load conversation history
       logger.info("Step 2: Loading conversation history")
@@ -377,13 +275,10 @@ export class LLMRouterService {
         }
       }
 
-      // STEP 3: Save user message
-      await this.conversationManager.saveUserMessage({
-        workspaceId: params.workspaceId,
-        customerId: params.customerId,
-        conversationId: params.conversationId,
-        content: params.message,
-      })
+      // ❌ REMOVED: Save user message (line 279-284)
+      // WHY: Saved TOO EARLY - before LLM processing
+      // If LLM fails → orphan INBOUND message in DB without response
+      // MOVED TO: After safety layer (with OUTBOUND save) for atomic operation
 
       // STEP 4: Get Router Agent config
       const routerAgent = await this.agentConfigRepo.findByType(
@@ -539,6 +434,8 @@ export class LLMRouterService {
         totalTokens: debugInfo.totalTokens,
       })
 
+      console.log("🟡 CONSOLE: functionCallingLoop completed - about to process tokens")
+
       // STEP 5.5: Token Replacement (if any tokens were replaced)
       // Extract link replacement info from last agent step (if present)
       const lastAgentStep = debugSteps.find(
@@ -655,7 +552,8 @@ export class LLMRouterService {
         }
 
         // 🔧 ADD DEBUG STEP: Link Replacement
-        debugSteps.push({
+        // FIXED: Push to debugInfo.steps (not debugSteps) because debugInfo was already constructed
+        debugInfo.steps.push({
           type: "token-replacement",
           agent: "Link Replacement Service",
           model: "N/A", // Not an LLM
@@ -736,6 +634,8 @@ export class LLMRouterService {
         })
       }
 
+      console.log("🟢 CONSOLE: AFTER SAFETY CHECK - continuing to URL cleanup")
+
       // STEP 5.5: Clean up punctuation attached to URLs (Safety may add punctuation)
       // Example: "http://localhost:3000/s/xyz." → "http://localhost:3000/s/xyz ."
       // Example: "http://localhost:3000/s/xyz)." → "http://localhost:3000/s/xyz ."
@@ -768,6 +668,8 @@ export class LLMRouterService {
         )
       }
 
+      console.log("🟢 CONSOLE: AFTER URL CLEANUP - about to log success")
+
       logger.info("✅ Message routed successfully", {
         executionTimeMs: Date.now() - startTime,
         totalTokens,
@@ -776,6 +678,9 @@ export class LLMRouterService {
         safetyApproved: safeResponse.safe,
         urlsCleaned: finalCleanResponse !== safeResponse.translatedText,
       })
+
+      // ⚠️ CRITICAL LOG - Verify we reach this point
+      logger.error("🔴🔴🔴 CHECKPOINT BEFORE SAVE - THIS LOG MUST APPEAR!!!")
 
       // debugInfo already constructed earlier (line 529)
       // Just update with final execution time
@@ -798,7 +703,29 @@ export class LLMRouterService {
         JSON.stringify(debugInfo, null, 2)
       )
 
-      // STEP 6: Save final assistant message (with links replaced and translation applied)
+      // 🚨 CRITICAL DEBUG: Log that we're about to save messages
+      console.log("🔴🔴🔴 CONSOLE.LOG - ABOUT TO SAVE MESSAGES!!!")
+      logger.error(
+        "🚨🚨🚨 ABOUT TO SAVE MESSAGES - THIS SHOULD APPEAR IN LOGS!!!",
+        {
+          workspaceId: params.workspaceId,
+          customerId: params.customerId,
+          conversationId: params.conversationId,
+          messageContent: params.message.substring(0, 50),
+        }
+      )
+
+      // STEP 6a: Save user message (INBOUND) - MOVED HERE from line 279
+      // WHY: Save AFTER LLM processing succeeds, TOGETHER with assistant response
+      // This ensures atomic operation: either BOTH messages saved, or NEITHER
+      await this.conversationManager.saveUserMessage({
+        workspaceId: params.workspaceId,
+        customerId: params.customerId,
+        conversationId: params.conversationId,
+        content: params.message,
+      })
+
+      // STEP 6b: Save final assistant message (OUTBOUND) (with links replaced and translation applied)
       await this.conversationManager.saveAssistantMessage({
         workspaceId: params.workspaceId,
         customerId: params.customerId,
@@ -808,6 +735,26 @@ export class LLMRouterService {
         tokensUsed: totalTokens,
         debugInfo: debugInfo, // ✅ Save complete debug information for message flow tracking
       })
+
+      // ❌ TODO #1: MISSING - WhatsApp Queue Emission
+      // CRITICAL: Messages are saved in DB but NEVER sent via WhatsApp!
+      // REQUIRED:
+      // 1. Create WhatsAppQueueService (backend/src/services/whatsapp-queue.service.ts)
+      // 2. Implement queue.enqueue({ customerId, message, workspaceId })
+      // 3. Create worker to process queue and send via WhatsApp API
+      // 4. Add error handling and retry logic
+      //
+      // TEMPORARY WORKAROUND: Webhook controller handles sending directly
+      // (see whatsapp-webhook.controller.ts line 183+ with messageSendingService)
+      //
+      // UNCOMMENT WHEN WhatsAppQueueService IS IMPLEMENTED:
+      // await whatsappQueueService.enqueue({
+      //   customerId: params.customerId,
+      //   message: finalCleanResponse,
+      //   workspaceId: params.workspaceId,
+      //   customerPhone: customer.phone,
+      //   customerLanguage: params.customerLanguage
+      // })
 
       // FASE 5: State Reset - Check for mission complete or topic change
       const missionComplete =
@@ -837,6 +784,7 @@ export class LLMRouterService {
         debugInfo: debugInfo, // ✅ Return same debugInfo object that was saved
       }
     } catch (error) {
+      console.log("🔴🔴🔴 CATCH BLOCK REACHED - ERROR:", error)
       const executionTimeMs = Date.now() - startTime
 
       logger.error("❌ Error routing message", error)
@@ -1821,6 +1769,148 @@ export class LLMRouterService {
       }
 
       const executionTimeMs = Date.now() - startTime
+
+      // 🔧 CRITICAL: Save messages BEFORE returning (same as main flow)
+      console.log("🔴🔴🔴 AUTO-DELEGATION: SAVING MESSAGES")
+      
+      // Save user message (INBOUND)
+      await this.conversationManager.saveUserMessage({
+        workspaceId: params.workspaceId,
+        customerId: params.customerId,
+        conversationId: params.conversationId,
+        content: params.message,
+      })
+
+      // Save assistant message (OUTBOUND) with debugInfo
+      // ✅ Include ALL 4 steps: Router → Specialist → Router receives → Safety
+      const routerDelegateTimestamp = new Date().toISOString()
+      const specialistTimestamp = new Date().toISOString()
+      const routerReceiveTimestamp = new Date().toISOString()
+      const safetyTimestamp = new Date().toISOString()
+      
+      const debugInfo: DebugInfoSteps = {
+        steps: [
+          // Step 1: Router decides to delegate
+          {
+            type: "router",
+            agent: "LLM Router",
+            model: "N/A",
+            temperature: 0,
+            timestamp: routerDelegateTimestamp,
+            input: { 
+              userMessage: query,
+            },
+            output: { 
+              decision: `Auto-delegate to ${activeAgent}`,
+            },
+            tokenUsage: {
+              promptTokens: 0,
+              completionTokens: 0,
+              totalTokens: 0,
+            },
+          },
+          // Step 2: Specialist (sub-agent) executes query with LLM call
+          {
+            type: "sub_agent",
+            agent: activeAgent,
+            model: "openai/gpt-4o-mini",
+            temperature: 0.7,
+            timestamp: specialistTimestamp,
+            tokenUsage: {
+              promptTokens: 0,
+              completionTokens: specialistResponse.tokensUsed || 0,
+              totalTokens: specialistResponse.tokensUsed || 0,
+            },
+            input: {
+              delegatedFrom: "LLM Router",
+              userMessage: query,
+            },
+            output: {
+              textResponse: specialistResponse.output,
+            },
+            isSubAgent: true, // ✅ Flag for frontend filtering
+          } as any,
+          // Step 3: Router receives response from specialist
+          {
+            type: "router",
+            agent: "LLM Router",
+            model: "N/A",
+            temperature: 0,
+            timestamp: routerReceiveTimestamp,
+            input: {
+              specialistResponse: specialistResponse.output.substring(0, 100) + "...",
+            },
+            output: {
+              decision: "Response received from specialist - proceed to Safety layer",
+            },
+            tokenUsage: {
+              promptTokens: 0,
+              completionTokens: 0,
+              totalTokens: 0,
+            },
+          },
+          // Step 4: Safety validates and translates with LLM call
+          {
+            type: "safety",
+            agent: "Safety & Translation Agent",
+            model: "openai/gpt-4o-mini",
+            temperature: 0.2,
+            timestamp: safetyTimestamp,
+            tokenUsage: safeResponse.tokensUsed
+              ? {
+                  promptTokens: 0,
+                  completionTokens: safeResponse.tokensUsed,
+                  totalTokens: safeResponse.tokensUsed,
+                }
+              : undefined,
+            input: {
+              textToValidate: specialistResponse.output,
+              previousResponse: `${activeAgent} response`,
+            },
+            output: {
+              safe: safeResponse.safe,
+              translatedText: safeResponse.translatedText,
+              decision: safeResponse.safe ? "approved" : "blocked",
+            },
+            safe: safeResponse.safe,
+            language: params.customerLanguage || "it",
+            blocked: !safeResponse.safe,
+            blockedReason: safeResponse.blockedReason,
+          },
+        ],
+        totalTokens: (specialistResponse.tokensUsed || 0) + (safeResponse.tokensUsed || 0),
+        totalCost: 0,
+        executionTimeMs,
+        timestamp: new Date().toISOString(),
+      }
+
+      await this.conversationManager.saveAssistantMessage({
+        workspaceId: params.workspaceId,
+        customerId: params.customerId,
+        conversationId: params.conversationId,
+        content: safeResponse.translatedText,
+        agentType: activeAgent as AgentType,
+        tokensUsed: specialistResponse.tokensUsed || 0,
+        debugInfo: debugInfo,
+      })
+
+      // 🔄 State Reset - Check for mission complete (same logic as main flow)
+      const missionComplete =
+        safeResponse.translatedText.includes("✅") ||
+        safeResponse.translatedText.toLowerCase().includes("completat") ||
+        safeResponse.translatedText.toLowerCase().includes("fatto")
+
+      if (missionComplete) {
+        logger.info(
+          `🔄 State Reset: Mission complete detected for session ${params.conversationId}`
+        )
+        await this.prisma.searchConversations.updateMany({
+          where: { sessionId: params.conversationId },
+          data: {
+            activeAgent: null,
+          } as any,
+        })
+      }
 
       return {
         response: safeResponse.translatedText,

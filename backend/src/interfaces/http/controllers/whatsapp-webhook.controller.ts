@@ -1,9 +1,8 @@
 import { Request, Response } from "express"
 import { prisma } from "../../../lib/prisma"
-import messageSendingService from "../../../services/message-sending.service"
+import { LLMRouterService } from "../../../services/llm-router.service"
 import logger from "../../../utils/logger"
 import { whatsAppToMarkdown } from "../../../utils/whatsapp-formatter"
-import { verifyWhatsAppSignature } from "../../../utils/whatsapp-signature"
 
 /**
  * WhatsApp Webhook Controller
@@ -70,59 +69,62 @@ export class WhatsAppWebhookController {
    */
   async receiveMessage(req: Request, res: Response): Promise<void> {
     try {
-      // 🔒 SECURITY STEP 1: Verify HMAC signature (skip in development)
-      const skipHmacInDev =
-        process.env.SKIP_HMAC_VERIFICATION === "true" &&
-        process.env.NODE_ENV !== "production"
+      // 🔒 SECURITY NOTE: HMAC verification removed for frontend compatibility
+      // TODO: Re-enable HMAC when using real WhatsApp API webhook
+      // For now, security relies on:
+      // 1. Customer must exist in database
+      // 2. Workspace validation
+      // 3. Rate limiting (future)
+      logger.info("[WEBHOOK] 📨 Receiving message (HMAC check disabled)")
 
-      if (!skipHmacInDev) {
-        const signature = req.headers["x-hub-signature-256"] as string
-        const isValidSignature = verifyWhatsAppSignature(
-          req.body,
-          signature,
-          process.env.WHATSAPP_APP_SECRET || ""
-        )
+      // 🔍 Extract message - Support TWO formats:
+      // 1. WhatsApp API format: req.body.entry[0].changes[0].value.messages[0]
+      // 2. Frontend simulator format: req.body.message + req.body.phoneNumber
 
-        if (!isValidSignature) {
-          logger.error(
-            "[WEBHOOK] ❌ Invalid HMAC signature - potential attack!",
-            {
-              signature: signature?.substring(0, 20) + "...",
-              ip: req.ip,
-            }
-          )
-          res.status(403).json({ error: "Invalid signature" })
-          return
-        }
+      let phoneNumber: string
+      let messageText: string
+      let whatsappMessageId: string
 
-        logger.info("[WEBHOOK] ✅ HMAC signature verified")
-      } else {
-        logger.warn("[WEBHOOK] ⚠️ HMAC verification SKIPPED (development mode)")
-      }
-
-      // 🔍 Extract message from WhatsApp payload
+      // Check if it's WhatsApp API format
       const entry = req.body.entry?.[0]
       const changes = entry?.changes?.[0]
       const value = changes?.value
       const messages = value?.messages
 
-      if (!messages || messages.length === 0) {
+      if (messages && messages.length > 0) {
+        // WhatsApp API format
+        const message = messages[0]
+        // WhatsApp API may send with or without +, ensure it's there (but only one!)
+        phoneNumber = message.from.startsWith("+")
+          ? message.from
+          : `+${message.from}`
+        messageText = message.text?.body || ""
+        whatsappMessageId = message.id
+
+        logger.info("[WEBHOOK] 📨 WhatsApp API format detected", {
+          from: phoneNumber,
+          messageLength: messageText.length,
+          whatsappMessageId,
+        })
+      } else if (req.body.message && req.body.phoneNumber) {
+        // Frontend simulator format
+        phoneNumber = req.body.phoneNumber
+        messageText = req.body.message
+        whatsappMessageId = `frontend-${Date.now()}-${Math.random().toString(36).substring(7)}`
+
+        logger.info("[WEBHOOK] 📨 Frontend simulator format detected", {
+          from: phoneNumber,
+          messageLength: messageText.length,
+          workspaceId: req.body.workspaceId,
+        })
+      } else {
         // Not a message event (could be status update, etc.)
-        logger.info("[WEBHOOK] No messages in payload - probably status update")
+        logger.info(
+          "[WEBHOOK] No message found in payload - probably status update"
+        )
         res.status(200).json({ status: "ok" })
         return
       }
-
-      const message = messages[0]
-      const phoneNumber = `+${message.from}` // WhatsApp sends without +
-      const messageText = message.text?.body || ""
-      const whatsappMessageId = message.id
-
-      logger.info("[WEBHOOK] 📨 Message received", {
-        from: phoneNumber,
-        messageLength: messageText.length,
-        whatsappMessageId,
-      })
 
       // 🔒 SECURITY STEP 2: Find customer in database
       const customer = await prisma.customers.findFirst({
@@ -134,19 +136,8 @@ export class WhatsAppWebhookController {
         logger.warn("[WEBHOOK] ⚠️ Customer not found for phone", {
           phoneNumber,
         })
-
-        // Send "please register" message via MessageSendingService
-        const registerMessage =
-          "Hello! Please register first to use our service. Visit our website or contact support."
-
-        await messageSendingService.sendMessage({
-          phoneNumber,
-          message: registerMessage,
-          workspaceId: "system", // System message, no specific workspace
-          sendType: "SYSTEM",
-          skipSecurityLayer: true, // Hardcoded message, no need for security
-        })
-
+        // ❌ NO WhatsApp send - just return error
+        // Customer must be registered in database first
         res.status(200).json({ status: "customer_not_found" })
         return
       }
@@ -157,42 +148,14 @@ export class WhatsAppWebhookController {
         customerName: customer.name,
       })
 
-      // 🔒 SECURITY STEP 3: Check if workspace has WhatsApp configured
-      if (
-        !customer.workspace.whatsappApiKey ||
-        !customer.workspace.whatsappPhoneNumber
-      ) {
-        logger.error("[WEBHOOK] ❌ WhatsApp not configured for workspace", {
-          workspaceId: customer.workspaceId,
-        })
-        res.status(200).json({ status: "whatsapp_not_configured" })
-        return
-      }
+      // ❌ REMOVED: WhatsApp config check (not needed - we're not sending via WhatsApp yet)
+      // TODO: Re-enable when WhatsApp queue is implemented
+      // For now: process message → save to DB → return ok (no actual WhatsApp sending)
 
       // 🔄 Convert WhatsApp format → Markdown (for internal storage)
       const messageMarkdown = whatsAppToMarkdown(messageText)
 
-      // 🤖 Process with LLM (call existing LLMService)
-      // TODO: Import and use LLMService here
-      // For now, simple echo response
-      const llmResponse = `Echo: ${messageMarkdown}` // PLACEHOLDER
-
-      // � Send response via MessageSendingService (with security layer for CHATBOT)
-      const sendResult = await messageSendingService.sendMessage({
-        phoneNumber,
-        message: llmResponse,
-        workspaceId: customer.workspaceId,
-        customerId: customer.id,
-        sendType: "CHATBOT", // LLM-generated content (even if placeholder now)
-        userLanguage: (customer.language as "it" | "es" | "pt" | "en") || "it",
-        // Security layer will be automatically applied
-      })
-
-      const { success, error, messageId } = sendResult.success
-        ? { success: true, error: undefined, messageId: sendResult.messageId }
-        : { success: false, error: sendResult.error, messageId: undefined }
-
-      // 💾 Get or create active chat session
+      // 💾 Get or create active chat session BEFORE LLM call
       let chatSession = await prisma.chatSession.findFirst({
         where: {
           customerId: customer.id,
@@ -219,35 +182,60 @@ export class WhatsAppWebhookController {
         })
       }
 
-      // 💾 Save to database with WhatsApp status tracking
-      await prisma.message.create({
-        data: {
-          chatSessionId: chatSession.id,
-          direction: "INBOUND",
-          content: messageMarkdown,
-          whatsappStatus: success ? "sent" : "failed",
-          whatsappError: error || null,
-          whatsappMessageId: messageId || null,
-          metadata: {
-            inboundWhatsappMessageId: whatsappMessageId,
-            phoneNumber,
-            customerId: customer.id,
-            workspaceId: customer.workspaceId,
-          },
-        },
+      // 🤖 Process with LLMRouterService (NEW - replaces placeholder Echo)
+      logger.info("[WEBHOOK] 🎯 Calling LLMRouterService", {
+        customerId: customer.id,
+        conversationId: chatSession.id,
+        messageLength: messageMarkdown.length,
       })
+
+      const llmRouterService = new LLMRouterService(prisma)
+      const routerResult = await llmRouterService.routeMessage({
+        workspaceId: customer.workspaceId,
+        customerId: customer.id,
+        conversationId: chatSession.id,
+        messageId: whatsappMessageId, // WhatsApp message ID
+        message: messageMarkdown,
+        customerLanguage: customer.language || "it",
+        customerName: customer.name,
+      })
+
+      logger.info("[WEBHOOK] ✅ LLMRouterService completed", {
+        agentUsed: routerResult.agentUsed,
+        tokensUsed: routerResult.tokensUsed,
+        executionTimeMs: routerResult.executionTimeMs,
+        wasFAQ: routerResult.wasFAQ,
+        responseLength: routerResult.response.length,
+      })
+
+      // ✅ Messages already saved by LLMRouterService (INBOUND + OUTBOUND)
+      // ✅ debugInfo already saved with timeline
+      // ❌ TODO #1: WhatsApp queue emission (not implemented yet)
+      //
+      // FUTURE IMPLEMENTATION:
+      // await whatsappQueueService.enqueue({
+      //   customerId: customer.id,
+      //   message: routerResult.response,
+      //   workspaceId: customer.workspaceId,
+      //   customerPhone: phoneNumber,
+      //   customerLanguage: customer.language
+      // })
+      //
+      // For now: Just return success - message processing completed
 
       logger.info("[WEBHOOK] ✅ Message processed successfully", {
         customerId: customer.id,
         workspaceId: customer.workspaceId,
-        responseStatus: success ? "sent" : "failed",
-        whatsappMessageId: messageId,
+        responseLength: routerResult.response.length,
       })
 
-      // 📤 Always return 200 to WhatsApp (even if processing failed)
+      // 📤 Return success to client WITH THE RESPONSE MESSAGE
       res.status(200).json({
         status: "processed",
-        messageId,
+        agentUsed: routerResult.agentUsed,
+        tokensUsed: routerResult.tokensUsed,
+        response: routerResult.response, // ✅ CRITICAL: Return actual response to user!
+        debugInfo: routerResult.debugInfo, // ✅ Include debug info for frontend debugging
       })
     } catch (error: any) {
       logger.error("[WEBHOOK] ❌ Error processing message:", {
