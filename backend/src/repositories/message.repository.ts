@@ -191,9 +191,13 @@ export class MessageRepository {
 
       // ✅ FIXED: Query conversationMessage table (NEW) instead of message table (OLD)
       // This fixes the issue where messages saved by LLMRouter were not visible in frontend
+      // 🚨 CRITICAL: Exclude "function" role messages - they are internal LLM context only!
       const messages = await this.prisma.conversationMessage.findMany({
         where: {
           conversationId: chatSessionId,
+          role: {
+            not: "function", // ✅ Filter out function calls - users should never see these!
+          },
         },
         orderBy: {
           createdAt: "asc",
