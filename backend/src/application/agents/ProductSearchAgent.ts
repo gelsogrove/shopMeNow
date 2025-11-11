@@ -139,8 +139,11 @@ export class ProductSearchAgent {
     customerId?: string
   ) {
     // 💰 STEP 1: Calculate discounted prices if customerId provided
-    let priceMap = new Map<string, { originalPrice: number; finalPrice: number }>()
-    
+    let priceMap = new Map<
+      string,
+      { originalPrice: number; finalPrice: number }
+    >()
+
     if (customerId) {
       try {
         // Get customer discount
@@ -171,9 +174,12 @@ export class ProductSearchAgent {
           ])
         )
 
-        logger.info(`💰 Calculated discounted prices for ${priceMap.size} products`, {
-          customerDiscount,
-        })
+        logger.info(
+          `💰 Calculated discounted prices for ${priceMap.size} products`,
+          {
+            customerDiscount,
+          }
+        )
       } catch (error) {
         logger.error("Error calculating discounted prices:", error)
         // Continue without discounts

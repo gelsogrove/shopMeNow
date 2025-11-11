@@ -497,10 +497,13 @@ export class ProductSearchAgentLLM {
     forceNoGrouping: boolean = false
   ): Promise<any> {
     try {
-      logger.warn(`❌ Function calls disabled - using {{PRODUCTS}} from prompt`, {
-        attemptedFunction: functionName,
-      })
-      
+      logger.warn(
+        `❌ Function calls disabled - using {{PRODUCTS}} from prompt`,
+        {
+          attemptedFunction: functionName,
+        }
+      )
+
       return {
         success: false,
         error: "Function calls disabled - LLM uses {{PRODUCTS}} from prompt",

@@ -1493,26 +1493,29 @@ export class LLMRouterService {
 
       // No function_call - LLM returned final text response
       logger.info("✅ LLM returned final response (no function call)")
-      
+
       // 🧹 CRITICAL FIX: Remove JSON function call echoes from LLM response
       // Sometimes LLM includes previous function calls in final response
       // Examples: {"query":"6"}, {"query":"CONFIRMED: add Peperoni"}
-      let cleanedResponse = llmResponse.content || "Sorry, I couldn't process that request."
-      
+      let cleanedResponse =
+        llmResponse.content || "Sorry, I couldn't process that request."
+
       // Remove JSON objects that look like function arguments
       cleanedResponse = cleanedResponse.replace(/\{"query":[^}]+\}/g, "").trim()
-      cleanedResponse = cleanedResponse.replace(/\{[^}]*"query"[^}]*\}/g, "").trim()
-      
+      cleanedResponse = cleanedResponse
+        .replace(/\{[^}]*"query"[^}]*\}/g, "")
+        .trim()
+
       // Remove any remaining standalone JSON objects
       cleanedResponse = cleanedResponse.replace(/^\{[^}]+\}\s*/gm, "").trim()
-      
+
       if (cleanedResponse !== llmResponse.content) {
         logger.info("🧹 Cleaned function call echoes from response", {
           original: llmResponse.content?.substring(0, 150),
           cleaned: cleanedResponse.substring(0, 150),
         })
       }
-      
+
       logger.info(
         "🔍 DEBUG: About to return from functionCallingLoop with debugSteps",
         {
