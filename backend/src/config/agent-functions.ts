@@ -449,6 +449,26 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
       required: ["alertType", "severity", "description", "conversationId"],
     },
   },
+  // 🔄 RESET_ACTIVE_AGENT: Router decides when to reset context
+  {
+    name: "RESET_ACTIVE_AGENT",
+    description:
+      "Call this function when the user's query is COMPLETELY DIFFERENT from the previous conversation topic. " +
+      "Examples: User was searching products, now asks about orders. User was managing cart, now asks FAQ. " +
+      "This resets the conversation context so the Router can route to the correct specialist agent. " +
+      "DO NOT call if query is a follow-up to the same topic (e.g., 'show me red shoes' after 'show me shoes').",
+    parameters: {
+      type: "object",
+      properties: {
+        reason: {
+          type: "string",
+          description:
+            "Brief explanation of why context reset is needed (e.g., 'Topic changed from product search to order tracking')",
+        },
+      },
+      required: ["reason"],
+    },
+  },
 ]
 
 /**
@@ -472,11 +492,12 @@ export function getFunctionsForAPI() {
 export function getFunctionsForRouter() {
   // Router Agent can call:
   // 1. Delegation functions (productSearchAgent, cartManagementAgent, orderTrackingAgent, customerSupportAgent)
-  // 2. Direct functions (manageNotifications)
+  // 2. Direct functions (manageNotifications, RESET_ACTIVE_AGENT)
   const routerFunctions = AGENT_FUNCTIONS.filter((fn) => {
     return (
       fn.name.endsWith("Agent") || // Delegation to sub-agents
-      fn.name === "manageNotifications" // Direct notification management
+      fn.name === "manageNotifications" || // Direct notification management
+      fn.name === "RESET_ACTIVE_AGENT" // Context reset when topic changes
     )
   })
 
@@ -497,9 +518,12 @@ export function getFunctionsForRouter() {
 export function getFunctionNamesForAgentType(agentType: string): string[] {
   switch (agentType) {
     case "ROUTER":
-      // Router has: delegation functions + manageNotifications
+      // Router has: delegation functions + manageNotifications + RESET_ACTIVE_AGENT
       return AGENT_FUNCTIONS.filter(
-        (fn) => fn.name.endsWith("Agent") || fn.name === "manageNotifications"
+        (fn) =>
+          fn.name.endsWith("Agent") ||
+          fn.name === "manageNotifications" ||
+          fn.name === "RESET_ACTIVE_AGENT"
       ).map((fn) => fn.name)
 
     case "PRODUCT_SEARCH":

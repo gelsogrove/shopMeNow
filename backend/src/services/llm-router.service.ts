@@ -219,62 +219,9 @@ export class LLMRouterService {
         params.conversationId
       )
 
-      // STEP 2.5: STATE-BASED PRE-ROUTING CHECK
-      logger.info("Step 2.5: Checking for active agent state")
-      const searchConversation =
-        await this.prisma.searchConversations.findUnique({
-          where: { sessionId: params.conversationId },
-        })
-
-      // @ts-ignore - activeAgent field exists in runtime (Prisma Client regenerated)
-      if (searchConversation?.activeAgent) {
-        const query = params.message.trim()
-        const isSimpleQuery = /^(sì|si|yes|no|ok|\d+)$/i.test(query)
-
-        // Check if user wants TRUE exit (help/operator only)
-        // ❌ REMOVED: carrello, cart, ordini, orders
-        // WHY: These are NOT out-of-context! SubLLM can handle cart/order operations with history
-        const exitKeywords = ["aiuto", "help", "operatore", "operator"]
-        const isExitQuery = exitKeywords.some((kw) =>
-          query.toLowerCase().includes(kw)
-        )
-
-        if (isExitQuery) {
-          logger.info(
-            `🚪 EXIT KEYWORD detected in delegate mode - letting Router LLM decide`,
-            {
-              activeAgent: (searchConversation as any).activeAgent,
-              query: query.substring(0, 50),
-              exitKeywords: exitKeywords.filter((kw) =>
-                query.toLowerCase().includes(kw)
-              ),
-            }
-          )
-          // Continue to Router LLM below
-        } else {
-          // FORCE delegation to activeAgent for ALL queries (simple OR complex)
-          // This ensures progressive filtering works correctly
-          const cachedCount =
-            (searchConversation as any)?.metadata?.filteredProducts?.length || 0
-          logger.info(
-            `🎯 DELEGATE: Staying in ${(searchConversation as any).activeAgent}`,
-            {
-              activeAgent: (searchConversation as any).activeAgent,
-              query: query.substring(0, 50),
-              cachedProducts: cachedCount,
-              mode: cachedCount > 0 ? "REFINEMENT" : "NEW_SEARCH",
-            }
-          )
-
-          return await this.delegateToActiveAgent({
-            // @ts-ignore
-            activeAgent: (searchConversation as any).activeAgent,
-            query,
-            params,
-            conversationHistory,
-          })
-        }
-      }
+      // ❌ REMOVED: State-based pre-routing (auto-delegation to activeAgent)
+      // WHY: Too complex, causes routing issues when topic changes
+      // NEW APPROACH: ALWAYS go through Router LLM - it decides whether to reset or delegate
 
       // ❌ REMOVED: Save user message (line 279-284)
       // WHY: Saved TOO EARLY - before LLM processing
@@ -762,23 +709,9 @@ export class LLMRouterService {
       //   customerLanguage: params.customerLanguage
       // })
 
-      // FASE 5: State Reset - Check for mission complete or topic change
-      const missionComplete =
-        finalCleanResponse.includes("✅") ||
-        finalCleanResponse.toLowerCase().includes("completat") ||
-        finalCleanResponse.toLowerCase().includes("fatto")
-
-      if (missionComplete) {
-        logger.info(
-          `🔄 State Reset: Mission complete detected for session ${params.conversationId}`
-        )
-        await this.prisma.searchConversations.updateMany({
-          where: { sessionId: params.conversationId },
-          data: {
-            activeAgent: null,
-          } as any, // VSCode Prisma type cache
-        })
-      }
+      // FASE 5: State Reset - Handled by Router's RESET_ACTIVE_AGENT function
+      // No more hardcoded checks for "✅", "completat", "fatto"
+      // Router LLM decides when to reset context based on topic change
 
       return {
         response: finalCleanResponse, // ✅ Return final clean response (links + translation + punctuation fix)
@@ -990,6 +923,26 @@ export class LLMRouterService {
         logger.info(`⚙️ LLM requested function: ${functionName}`, {
           args: functionArgs,
         })
+
+        // 🔄 CRITICAL: Handle RESET_ACTIVE_AGENT immediately
+        if (functionName === "RESET_ACTIVE_AGENT") {
+          logger.info(
+            `🔄 Context Reset requested by Router: ${functionArgs.reason}`
+          )
+
+          // Reset activeAgent in database
+          await this.prisma.searchConversations.updateMany({
+            where: { sessionId: params.conversationId },
+            data: { activeAgent: null } as any,
+          })
+
+          logger.info(
+            `✅ activeAgent reset for session ${params.conversationId}`
+          )
+
+          // Continue to next iteration - Router will re-route with clean context
+          continue
+        }
 
         // Save function call
         await this.conversationManager.saveFunctionCall({
@@ -1762,7 +1715,7 @@ export class LLMRouterService {
 
       // 🔗 STEP 1: Replace [LINK_xxx] tokens with real URLs BEFORE translation
       logger.info("🔗 Applying LinkReplacementService to specialist response")
-      
+
       let responseWithLinks = specialistResponse.output
       const linkResult = await this.linkReplacementService.replaceTokens(
         {
@@ -1774,7 +1727,9 @@ export class LLMRouterService {
 
       if (linkResult.success && linkResult.response) {
         responseWithLinks = linkResult.response
-        logger.info("✅ Link replacement successful - URLs replaced before translation")
+        logger.info(
+          "✅ Link replacement successful - URLs replaced before translation"
+        )
       } else {
         logger.warn("⚠️ Link replacement failed:", linkResult.error)
       }
@@ -1923,7 +1878,7 @@ export class LLMRouterService {
         debugInfo: debugInfo,
       })
 
-      // � CRITICAL: Notify WebSocket clients of new message
+      // 🔔 CRITICAL: Notify WebSocket clients of new message
       websocketService.notifyNewMessage(params.workspaceId, {
         id: Date.now().toString(), // Temporary ID (real ID from DB not returned)
         sessionId: params.conversationId,
@@ -1933,23 +1888,8 @@ export class LLMRouterService {
         workspaceId: params.workspaceId,
       })
 
-      // �🔄 State Reset - Check for mission complete (same logic as main flow)
-      const missionComplete =
-        finalResponse.includes("✅") ||
-        finalResponse.toLowerCase().includes("completat") ||
-        finalResponse.toLowerCase().includes("fatto")
-
-      if (missionComplete) {
-        logger.info(
-          `🔄 State Reset: Mission complete detected for session ${params.conversationId}`
-        )
-        await this.prisma.searchConversations.updateMany({
-          where: { sessionId: params.conversationId },
-          data: {
-            activeAgent: null,
-          } as any,
-        })
-      }
+      // 🔄 State Reset - Handled by Router's RESET_ACTIVE_AGENT function
+      // No more hardcoded checks - Router LLM decides when to reset
 
       return {
         response: finalResponse,
