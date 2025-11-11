@@ -108,48 +108,8 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 
   // ========================================
   // PRODUCT SEARCH AGENT FUNCTIONS
+  // NOTE: searchProducts REMOVED - LLM uses {{PRODUCTS}} from prompt only
   // ========================================
-  {
-    name: "searchProducts",
-    description:
-      "Search for products in the catalog based on keywords, filters, and customer preferences. Use this when customer asks to find, search, or browse products.",
-    parameters: {
-      type: "object",
-      properties: {
-        keywords: {
-          type: "array",
-          items: { type: "string" },
-          description:
-            "Search keywords extracted from customer message (product names, categories, etc.)",
-        },
-        category: {
-          type: "string",
-          description: "Optional category ID to filter by specific category",
-        },
-        minPrice: {
-          type: "number",
-          description: "Optional minimum price filter in EUR",
-        },
-        maxPrice: {
-          type: "number",
-          description: "Optional maximum price filter in EUR",
-        },
-        allergens: {
-          type: "array",
-          items: { type: "string" },
-          description:
-            'Optional allergen filters to EXCLUDE (e.g., ["gluten", "lactose", "nuts"])',
-        },
-        certifications: {
-          type: "array",
-          items: { type: "string" },
-          description:
-            'Optional certification filters to INCLUDE (e.g., ["bio", "halal", "vegan", "vegetarian"])',
-        },
-      },
-      required: ["keywords"],
-    },
-  },
 
   {
     name: "searchProductByCertifications",
@@ -184,14 +144,14 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   {
     name: "addToCart",
     description:
-      "Add a specific product to the customer's cart. Use this when customer explicitly wants to purchase or add a product. Requires product ID from previous search results.",
+      "Add a specific product to the customer's cart. Use this when customer explicitly wants to purchase or add a product. Requires product ID from catalog.",
     parameters: {
       type: "object",
       properties: {
         productId: {
           type: "string",
           description:
-            "Product ID to add (must come from previous searchProducts results)",
+            "Product ID to add (must come from {{PRODUCTS}} catalog)",
         },
         quantity: {
           type: "number",
@@ -527,7 +487,8 @@ export function getFunctionNamesForAgentType(agentType: string): string[] {
       ).map((fn) => fn.name)
 
     case "PRODUCT_SEARCH":
-      return ["searchProducts", "searchProductByCertifications"]
+      // NOTE: searchProducts removed - LLM uses {{PRODUCTS}} from prompt
+      return ["searchProductByCertifications"]
 
     case "CART_MANAGEMENT":
       return [

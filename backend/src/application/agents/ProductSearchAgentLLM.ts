@@ -35,7 +35,7 @@ import { config } from "../../config"
 import { AgentConfigRepository } from "../../repositories/agent-config.repository"
 import { SearchConversationRepository } from "../../repositories/searchConversation.repository"
 import logger from "../../utils/logger"
-import { ProductSearchAgent } from "./ProductSearchAgent"
+// NOTE: ProductSearchAgent removed - LLM uses {{PRODUCTS}} from prompt only
 
 export interface ProductSearchLLMContext {
   workspaceId: string
@@ -60,7 +60,7 @@ export interface ProductSearchLLMResponse {
 
 export class ProductSearchAgentLLM {
   private prisma: PrismaClient
-  private productSearchAgent: ProductSearchAgent
+  // NOTE: productSearchAgent removed - LLM uses {{PRODUCTS}} from prompt only
   private searchConversationRepo: SearchConversationRepository
   private agentConfigRepo: AgentConfigRepository
   private openRouterApiKey: string
@@ -68,7 +68,7 @@ export class ProductSearchAgentLLM {
 
   constructor(prisma: PrismaClient) {
     this.prisma = prisma
-    this.productSearchAgent = new ProductSearchAgent(prisma)
+    // NOTE: ProductSearchAgent instance removed - no database queries needed
     this.searchConversationRepo = new SearchConversationRepository()
     this.agentConfigRepo = new AgentConfigRepository(prisma)
 
@@ -487,6 +487,7 @@ export class ProductSearchAgentLLM {
 
   /**
    * Execute function call via ProductSearchAgent
+   * NOTE: All functions removed - LLM uses {{PRODUCTS}} from prompt only
    */
   private async executeFunction(
     functionName: string,
@@ -496,72 +497,16 @@ export class ProductSearchAgentLLM {
     forceNoGrouping: boolean = false
   ): Promise<any> {
     try {
-      switch (functionName) {
-        case "searchProducts":
-          // 🔬 STEP 1: Check if we have pre-filtered products (group selection)
-          if (preFilteredProducts && preFilteredProducts.length > 0) {
-            logger.info(`📦 Using pre-filtered products from group selection`, {
-              productsCount: preFilteredProducts.length,
-              forceNoGrouping,
-            })
-
-            // Return pre-filtered products with shouldGroup=false
-            return {
-              products: preFilteredProducts,
-              totalFound: preFilteredProducts.length,
-              shouldGroup: false, // CRITICAL: No grouping for drill-down
-              _groupingInstruction:
-                "Show individual products in a numbered list with full details.",
-            }
-          }
-
-          // 🎯 STEP 2: Direct search using provided filters
-          logger.info(`� Direct product search`, {
-            query: args.query || context.query,
-            keywords: args.keywords,
-            category: args.category,
-            certifications: args.certifications,
-          })
-
-          const searchResult = await this.productSearchAgent.search(
-            context.workspaceId,
-            {
-              detectedLanguage: context.customerLanguage || "en",
-              keywords: args.keywords || [],
-              filters: {
-                certifications: args.certifications,
-                category: args.category,
-                minPrice: args.minPrice,
-                maxPrice: args.maxPrice,
-                allergens: args.allergens,
-              },
-            }
-          )
-
-          // 🎯 STEP 3: Return search results (LLM decides grouping via prompt)
-          return {
-            ...searchResult,
-            shouldGroup: false, // LLM handles grouping decision via prompt variable
-            _groupingInstruction:
-              "Show products in a numbered list with full details.",
-          }
-
-        case "getProductDetails":
-          // TODO: Implement if needed
-          return {
-            success: false,
-            error: "Function not implemented yet",
-          }
-
-        default:
-          logger.warn(`Unknown function: ${functionName}`)
-          return {
-            success: false,
-            error: `Unknown function: ${functionName}`,
-          }
+      logger.warn(`❌ Function calls disabled - using {{PRODUCTS}} from prompt`, {
+        attemptedFunction: functionName,
+      })
+      
+      return {
+        success: false,
+        error: "Function calls disabled - LLM uses {{PRODUCTS}} from prompt",
       }
     } catch (error) {
-      logger.error(`Error executing function ${functionName}:`, error)
+      logger.error(`Error in executeFunction:`, error)
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
@@ -571,56 +516,10 @@ export class ProductSearchAgentLLM {
 
   /**
    * Get function definitions for product search
+   * NOTE: searchProducts REMOVED - LLM uses {{PRODUCTS}} from prompt only
    */
   private getProductSearchFunctions() {
-    return [
-      {
-        name: "searchProducts",
-        description:
-          "Search for products by keywords, category, price range, allergens, or certifications",
-        parameters: {
-          type: "object",
-          properties: {
-            keywords: {
-              type: "array",
-              items: { type: "string" },
-              description:
-                "Keywords to search for in product names/descriptions",
-            },
-            filters: {
-              type: "object",
-              properties: {
-                category: {
-                  type: "string",
-                  description: "Product category ID",
-                },
-                minPrice: {
-                  type: "number",
-                  description: "Minimum price filter",
-                },
-                maxPrice: {
-                  type: "number",
-                  description: "Maximum price filter",
-                },
-                allergens: {
-                  type: "array",
-                  items: { type: "string" },
-                  description:
-                    "Filter by allergens (e.g., 'lactose-free', 'gluten-free')",
-                },
-                certifications: {
-                  type: "array",
-                  items: { type: "string" },
-                  description:
-                    "Filter by certifications (e.g., 'organic', 'dop', 'igp')",
-                },
-              },
-            },
-          },
-          required: [],
-        },
-      },
-    ]
+    return []
   }
 
   /**

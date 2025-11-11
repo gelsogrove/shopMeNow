@@ -342,7 +342,7 @@ export class CustomerSupportAgentLLM {
               "Support ticket created successfully. Our team will contact you soon.",
           }
 
-        case "contactSales":
+        case "contactSupport":
           // Get sales agent info from customer
           const customer = await this.prisma.customers.findUnique({
             where: { id: context.customerId },
@@ -355,6 +355,16 @@ export class CustomerSupportAgentLLM {
               error: "No sales agent assigned to this customer",
             }
           }
+
+          // 🔴 CRITICAL: Disable chatbot when customer requests human support
+          await this.prisma.customers.update({
+            where: { id: context.customerId },
+            data: { activeChatbot: false },
+          })
+
+          logger.info(
+            `🚨 Chatbot disabled for customer ${context.customerId} - human support requested`
+          )
 
           return {
             success: true,
@@ -441,7 +451,7 @@ export class CustomerSupportAgentLLM {
         },
       },
       {
-        name: "contactSales",
+        name: "contactSupport",
         description: "Get sales agent contact information for this customer",
         parameters: {
           type: "object",

@@ -80,18 +80,26 @@ export class ConversationMessageRepository {
    * @param workspaceId - Workspace ID (security filter)
    * @param conversationId - Conversation ID
    * @param limit - Max messages to return (default: 20, last 20 messages)
+   * @param excludeFunctionCalls - If true, exclude function messages (default: false for LLM context)
    * @returns Array of messages formatted for LLM
    */
   async getHistory(
     workspaceId: string,
     conversationId: string,
-    limit: number = 20
+    limit: number = 20,
+    excludeFunctionCalls: boolean = false // ✅ NEW: Option to hide function messages
   ): Promise<ConversationHistory[]> {
     try {
       const messages = await this.prisma.conversationMessage.findMany({
         where: {
           workspaceId,
           conversationId,
+          // 🚨 CRITICAL: Filter out "function" role messages if requested
+          ...(excludeFunctionCalls && {
+            role: {
+              not: "function",
+            },
+          }),
         },
         orderBy: {
           createdAt: "asc", // Chronological order

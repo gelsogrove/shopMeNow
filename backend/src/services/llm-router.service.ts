@@ -1253,51 +1253,8 @@ export class LLMRouterService {
           })
 
           // 🔍 EXTRACT QUERY ANALYZER CALLS (if Product Search Agent)
-          // Product Search Agent internally calls QueryAnalyzer (L3) - show as nested step
+          // NOTE: searchProducts removed - no more QueryAnalyzer calls
           const queryAnalyzerCalls: any[] = []
-          if (
-            delegationTarget === "PRODUCT_SEARCH" &&
-            subAgentFunctionCalls &&
-            subAgentFunctionCalls.length > 0
-          ) {
-            // Look for searchProducts function calls which trigger QueryAnalyzer
-            const searchProductsCalls = subAgentFunctionCalls.filter(
-              (fc: any) => fc.name === "searchProducts"
-            )
-
-            if (searchProductsCalls.length > 0) {
-              // QueryAnalyzer was called for each searchProducts
-              searchProductsCalls.forEach((fc: any) => {
-                queryAnalyzerCalls.push({
-                  type: "sub_agent",
-                  agent: "Query Analyzer Agent", // L3 - sub-sub-agent
-                  timestamp: new Date().toISOString(),
-                  input: {
-                    delegatedFrom: "PRODUCT_SEARCH",
-                    query: delegationQuery,
-                    keywords: fc.arguments?.keywords || [],
-                  },
-                  output: {
-                    filters: fc.result?.filters || {},
-                    reasoning: fc.result?.reasoning || "",
-                  },
-                  tokenUsage: {
-                    promptTokens: 0,
-                    completionTokens: 0, // QueryAnalyzer tokens already included in ProductSearch total
-                    totalTokens: 0,
-                  },
-                  isSubAgent: true,
-                  isNested: true, // 🆕 Flag for nested/indented display
-                  parentAgent: "PRODUCT_SEARCH",
-                  subAgentType: "QUERY_ANALYZER",
-                })
-              })
-
-              logger.info(
-                `🔬 Found ${queryAnalyzerCalls.length} QueryAnalyzer call(s) to show as nested steps`
-              )
-            }
-          }
 
           // � MAIN DEBUG STEP: Show what Router delegated and what Sub-Agent returned
           debugSteps.push({
@@ -1536,6 +1493,26 @@ export class LLMRouterService {
 
       // No function_call - LLM returned final text response
       logger.info("✅ LLM returned final response (no function call)")
+      
+      // 🧹 CRITICAL FIX: Remove JSON function call echoes from LLM response
+      // Sometimes LLM includes previous function calls in final response
+      // Examples: {"query":"6"}, {"query":"CONFIRMED: add Peperoni"}
+      let cleanedResponse = llmResponse.content || "Sorry, I couldn't process that request."
+      
+      // Remove JSON objects that look like function arguments
+      cleanedResponse = cleanedResponse.replace(/\{"query":[^}]+\}/g, "").trim()
+      cleanedResponse = cleanedResponse.replace(/\{[^}]*"query"[^}]*\}/g, "").trim()
+      
+      // Remove any remaining standalone JSON objects
+      cleanedResponse = cleanedResponse.replace(/^\{[^}]+\}\s*/gm, "").trim()
+      
+      if (cleanedResponse !== llmResponse.content) {
+        logger.info("🧹 Cleaned function call echoes from response", {
+          original: llmResponse.content?.substring(0, 150),
+          cleaned: cleanedResponse.substring(0, 150),
+        })
+      }
+      
       logger.info(
         "🔍 DEBUG: About to return from functionCallingLoop with debugSteps",
         {
@@ -1544,12 +1521,11 @@ export class LLMRouterService {
             type: s.type,
             agent: s.agent,
           })),
-          response: llmResponse.content?.substring(0, 100),
+          response: cleanedResponse.substring(0, 100),
         }
       )
       return {
-        response:
-          llmResponse.content || "Sorry, I couldn't process that request.",
+        response: cleanedResponse,
         tokensUsed: totalTokens,
         iterations,
         agentUsed,

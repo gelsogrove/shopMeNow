@@ -15,7 +15,7 @@
 
 import { PrismaClient } from "@prisma/client"
 import { CartManagementAgent } from "../application/agents/CartManagementAgent"
-import { ProductSearchAgent } from "../application/agents/ProductSearchAgent"
+// NOTE: ProductSearchAgent removed - LLM uses {{PRODUCTS}} from prompt only
 import { CartRepository } from "../repositories/cart.repository"
 import { OrderRepository } from "../repositories/order.repository"
 import { ProductRepository } from "../repositories/product.repository"
@@ -36,7 +36,7 @@ export interface FunctionResult {
 }
 
 export class FunctionExecutor {
-  private productSearchAgent: ProductSearchAgent
+  // NOTE: productSearchAgent removed - LLM uses {{PRODUCTS}} from prompt only
   private cartManagementAgent: CartManagementAgent
   private productRepo: ProductRepository
   private cartRepo: CartRepository
@@ -49,7 +49,7 @@ export class FunctionExecutor {
     this.orderRepo = new OrderRepository()
 
     // Initialize agents
-    this.productSearchAgent = new ProductSearchAgent(prisma)
+    // NOTE: ProductSearchAgent removed - no database search needed
     this.cartManagementAgent = new CartManagementAgent(
       this.cartRepo,
       this.productRepo,
@@ -103,9 +103,7 @@ export class FunctionExecutor {
           break
 
         // Direct function calls (Sub-Agents)
-        case "searchProducts":
-          result = await this.searchProducts(args, context)
-          break
+        // NOTE: searchProducts removed - LLM uses {{PRODUCTS}} from prompt
 
         case "addToCart":
           result = await this.addToCart(args, context)
@@ -170,40 +168,7 @@ export class FunctionExecutor {
     }
   }
 
-  /**
-   * Search products in catalog
-   */
-  private async searchProducts(
-    args: Record<string, any>,
-    context: ExecutionContext
-  ): Promise<any> {
-    // Validate required parameters
-    if (!args.keywords || !Array.isArray(args.keywords)) {
-      throw new Error("searchProducts requires 'keywords' array")
-    }
-
-    // Build search context
-    const searchContext = {
-      detectedLanguage: context.customerLanguage || "it",
-      keywords: args.keywords,
-      filters: {
-        category: args.category,
-        minPrice: args.minPrice,
-        maxPrice: args.maxPrice,
-        allergens: args.allergens,
-        certifications: args.certifications,
-      },
-      urgency: "medium" as "medium" | "low" | "high",
-    }
-
-    // Execute search via ProductSearchAgent
-    const result = await this.productSearchAgent.search(
-      context.workspaceId,
-      searchContext
-    )
-
-    return result
-  }
+  // NOTE: searchProducts method removed - LLM uses {{PRODUCTS}} from prompt only
 
   /**
    * Add product to cart
@@ -456,14 +421,7 @@ export class FunctionExecutor {
   ): { valid: boolean; error?: string } {
     // Basic validation - can be extended with Zod schemas
     switch (functionName) {
-      case "searchProducts":
-        if (!args.keywords || !Array.isArray(args.keywords)) {
-          return {
-            valid: false,
-            error: "searchProducts requires 'keywords' array",
-          }
-        }
-        break
+      // NOTE: searchProducts validation removed - function disabled
 
       case "addToCart":
         if (!args.productId) {

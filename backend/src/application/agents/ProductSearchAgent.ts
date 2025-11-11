@@ -60,8 +60,10 @@ export interface ProductSearchResult {
 
 export class ProductSearchAgent {
   private productRepo: ProductRepository
+  private prisma: PrismaClient // ✅ Add prisma for price calculation
 
   constructor(prisma: PrismaClient) {
+    this.prisma = prisma // ✅ Store prisma instance
     this.productRepo = new ProductRepository()
   }
 
@@ -74,7 +76,8 @@ export class ProductSearchAgent {
    */
   async search(
     workspaceId: string,
-    context: ProductSearchContext
+    context: ProductSearchContext,
+    customerId?: string // ✅ Optional customerId for discount calculation
   ): Promise<ProductSearchResult> {
     try {
       logger.info(
@@ -94,11 +97,12 @@ export class ProductSearchAgent {
 
       logger.info(`ProductSearchAgent: Found ${products.length} products`)
 
-      // Format results for customer language
+      // Format results for customer language WITH DISCOUNT PRICES
       const formattedProducts = await this.formatProducts(
         products,
         context.detectedLanguage,
-        workspaceId
+        workspaceId,
+        customerId // ✅ Pass customerId for price calculation
       )
 
       // Generate human-readable message
@@ -126,25 +130,79 @@ export class ProductSearchAgent {
   }
 
   /**
-   * Format products for customer language
+   * Format products for customer language WITH DISCOUNT CALCULATION
    */
   private async formatProducts(
     products: any[],
     language: string,
-    workspaceId: string
+    workspaceId: string,
+    customerId?: string
   ) {
-    return products.map((product) => ({
-      id: product.id,
-      name: product.name,
-      description: product.description || "",
-      price: product.price,
-      currency: "EUR",
-      category: product.category?.name || "Uncategorized",
-      imageUrl: product.image || undefined,
-      available: product.stock > 0,
-      allergens: product.allergens || [], // Use database field
-      certifications: product.certifications || [], // Use database field
-    }))
+    // 💰 STEP 1: Calculate discounted prices if customerId provided
+    let priceMap = new Map<string, { originalPrice: number; finalPrice: number }>()
+    
+    if (customerId) {
+      try {
+        // Get customer discount
+        const customer = await this.prisma.customers.findUnique({
+          where: { id: customerId },
+          select: { discount: true },
+        })
+
+        const customerDiscount = customer?.discount || 0
+
+        // Calculate prices with discounts
+        const { PriceCalculationService } = await import(
+          "../services/price-calculation.service"
+        )
+        const priceService = new PriceCalculationService(this.prisma)
+        const productIds = products.map((p) => p.id)
+        const priceResult = await priceService.calculatePricesWithDiscounts(
+          workspaceId,
+          productIds,
+          customerDiscount
+        )
+
+        // Build price map
+        priceMap = new Map(
+          priceResult.products.map((p) => [
+            p.id,
+            { originalPrice: p.originalPrice, finalPrice: p.finalPrice },
+          ])
+        )
+
+        logger.info(`💰 Calculated discounted prices for ${priceMap.size} products`, {
+          customerDiscount,
+        })
+      } catch (error) {
+        logger.error("Error calculating discounted prices:", error)
+        // Continue without discounts
+      }
+    }
+
+    // STEP 2: Format products with prices
+    return products.map((product) => {
+      const priceData = priceMap.get(product.id)
+      const originalPrice = priceData?.originalPrice || product.price
+      const finalPrice = priceData?.finalPrice || product.price
+
+      return {
+        id: product.id,
+        code: product.productCode, // ✅ Include product code
+        name: product.name,
+        description: product.description || "",
+        price: finalPrice, // ✅ Use discounted price
+        originalPrice: originalPrice, // ✅ Include original price for comparison
+        hasDiscount: originalPrice !== finalPrice, // ✅ Flag if discount applied
+        currency: "EUR",
+        category: product.category?.name || "Uncategorized",
+        imageUrl: product.image || undefined,
+        available: product.stock > 0,
+        stock: product.stock || 0, // ✅ Include stock quantity
+        allergens: product.allergens || [],
+        certifications: product.certifications || [],
+      }
+    })
   }
 
   /**
