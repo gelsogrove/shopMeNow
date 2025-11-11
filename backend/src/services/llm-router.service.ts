@@ -47,11 +47,11 @@ import { LinkReplacementService } from "../application/services/link-replacement
 import { getFunctionsForRouter } from "../config/agent-functions"
 import { AgentConfigRepository } from "../repositories/agent-config.repository"
 import { FAQRepository } from "../repositories/faq.repository"
-import { websocketService } from "./websocket.service"
 import logger from "../utils/logger"
 import { AgentLoggerService } from "./agent-logger.service"
 import { ConversationManager } from "./conversation-manager.service"
 import { FunctionExecutor } from "./function-executor.service"
+import { websocketService } from "./websocket.service"
 
 export interface RouteMessageParams {
   workspaceId: string
@@ -601,6 +601,9 @@ export class LLMRouterService {
 
       totalTokens += safeResponse.tokensUsed || 0
 
+      // ✅ Define finalResponse from translated text
+      const finalResponse = safeResponse.translatedText
+
       // 🔧 CRITICAL: Add Safety & Translation step DIRECTLY to debugInfo.steps
       // (not debugSteps, because debugInfo was already constructed earlier)
       debugInfo.steps.push({
@@ -622,7 +625,7 @@ export class LLMRouterService {
         },
         output: {
           safe: safeResponse.safe,
-          translatedText: safeResponse.translatedText,
+          translatedText: finalResponse,
           decision: safeResponse.safe ? "approved" : "blocked",
         },
         safe: safeResponse.safe,
@@ -642,7 +645,7 @@ export class LLMRouterService {
       // STEP 5.5: Clean up punctuation attached to URLs (Safety may add punctuation)
       // Example: "http://localhost:3000/s/xyz." → "http://localhost:3000/s/xyz ."
       // Example: "http://localhost:3000/s/xyz)." → "http://localhost:3000/s/xyz ."
-      let finalCleanResponse = safeResponse.translatedText
+      let finalCleanResponse = finalResponse
 
       // Regex to find URLs ending with short paths (like /s/xxx) followed by punctuation
       // This avoids matching domain dots like "localhost:3000"
@@ -679,7 +682,7 @@ export class LLMRouterService {
         iterations: result.iterations,
         linksReplaced: tokensDetected.length,
         safetyApproved: safeResponse.safe,
-        urlsCleaned: finalCleanResponse !== safeResponse.translatedText,
+        urlsCleaned: finalCleanResponse !== finalResponse,
       })
 
       // ⚠️ CRITICAL LOG - Verify we reach this point
@@ -1757,10 +1760,29 @@ export class LLMRouterService {
         return await this.handleDelegationHandoff(specialistResponse, options)
       }
 
-      // Apply Safety & Translation Layer
+      // 🔗 STEP 1: Replace [LINK_xxx] tokens with real URLs BEFORE translation
+      logger.info("🔗 Applying LinkReplacementService to specialist response")
+      
+      let responseWithLinks = specialistResponse.output
+      const linkResult = await this.linkReplacementService.replaceTokens(
+        {
+          response: specialistResponse.output,
+        },
+        params.customerId,
+        params.workspaceId
+      )
+
+      if (linkResult.success && linkResult.response) {
+        responseWithLinks = linkResult.response
+        logger.info("✅ Link replacement successful - URLs replaced before translation")
+      } else {
+        logger.warn("⚠️ Link replacement failed:", linkResult.error)
+      }
+
+      // 🔒 STEP 2: Apply Safety & Translation Layer to response with links
       const safeResponse = await this.safetyAgent.process({
         workspaceId: params.workspaceId,
-        response: specialistResponse.output,
+        response: responseWithLinks, // ✅ Use response with replaced links
         targetLanguage: params.customerLanguage || "it",
         customerName: params.customerName,
       })
@@ -1771,6 +1793,7 @@ export class LLMRouterService {
         })
       }
 
+      const finalResponse = safeResponse.translatedText
       const executionTimeMs = Date.now() - startTime
 
       // 🔧 CRITICAL: Save messages BEFORE returning (same as main flow)
@@ -1874,7 +1897,7 @@ export class LLMRouterService {
             },
             output: {
               safe: safeResponse.safe,
-              translatedText: safeResponse.translatedText,
+              translatedText: finalResponse,
               decision: safeResponse.safe ? "approved" : "blocked",
             },
             safe: safeResponse.safe,
@@ -1894,7 +1917,7 @@ export class LLMRouterService {
         workspaceId: params.workspaceId,
         customerId: params.customerId,
         conversationId: params.conversationId,
-        content: safeResponse.translatedText,
+        content: finalResponse,
         agentType: activeAgent as AgentType,
         tokensUsed: specialistResponse.tokensUsed || 0,
         debugInfo: debugInfo,
@@ -1904,7 +1927,7 @@ export class LLMRouterService {
       websocketService.notifyNewMessage(params.workspaceId, {
         id: Date.now().toString(), // Temporary ID (real ID from DB not returned)
         sessionId: params.conversationId,
-        content: safeResponse.translatedText,
+        content: finalResponse,
         sender: "agent",
         timestamp: new Date().toISOString(),
         workspaceId: params.workspaceId,
@@ -1912,9 +1935,9 @@ export class LLMRouterService {
 
       // �🔄 State Reset - Check for mission complete (same logic as main flow)
       const missionComplete =
-        safeResponse.translatedText.includes("✅") ||
-        safeResponse.translatedText.toLowerCase().includes("completat") ||
-        safeResponse.translatedText.toLowerCase().includes("fatto")
+        finalResponse.includes("✅") ||
+        finalResponse.toLowerCase().includes("completat") ||
+        finalResponse.toLowerCase().includes("fatto")
 
       if (missionComplete) {
         logger.info(
@@ -1929,7 +1952,7 @@ export class LLMRouterService {
       }
 
       return {
-        response: safeResponse.translatedText,
+        response: finalResponse,
         agentUsed: activeAgent as AgentType,
         tokensUsed: specialistResponse.tokensUsed || 0,
         executionTimeMs,
