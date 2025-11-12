@@ -1011,9 +1011,413 @@ const invoiceUrl = `${process.env.FRONTEND_URL}/invoice-public?orderId=${order.i
 
 ---
 
-## Dependencies
+## FR-13: Repeat Last Order (One-Click Reorder)
 
-### External Dependencies
+**Priority**: HIGH  
+**Status**: ✅ IMPLEMENTED  
+**Effort**: 13 story points  
+**Branch**: `122-rag-con-product`  
+**Related**: FR-4 (Order Tracking Agent)
+
+### Description
+
+Enable customers to instantly repeat their last delivered order through a conversational flow, reducing friction and increasing repeat purchase rate. The system shows order summary, asks for confirmation, then adds all items to cart and provides checkout link.
+
+### Requirements
+
+**MUST-1: Three-Step Confirmation Flow**
+
+Multi-turn conversation with confirmation before execution:
+
+1. **STEP 1 - Show Last Order Summary**
+   - Customer triggers: "voglio ripetere ultimo ordine", "repeat order", "riordina"
+   - System shows: Order details (items, quantities, prices, total, delivery date)
+   - Question: "Vuoi ripetere questo ordine? 🔄"
+
+2. **STEP 2 - Await Confirmation**
+   - System waits for explicit confirmation: "si", "yes", "ok", "conferma"
+   - Negative response: "no", "annulla" → Cancel operation
+   - Ambiguous response: Request clarification
+
+3. **STEP 3 - Execute & Provide Checkout**
+   - Call `repeatOrder()` function (no parameters needed)
+   - Add all order items to customer's cart
+   - Generate checkout link with `?step=2` parameter (cart review step)
+   - Return link: "✅ Ordine aggiunto al carrello! {CHECKOUT_LINK}"
+
+**MUST-2: Only Last DELIVERED Order**
+
+- Query: `ORDER BY createdAt DESC WHERE status = 'DELIVERED' LIMIT 1`
+- Rationale: Avoid confusion with pending/cancelled orders
+- Error handling: No delivered orders → "Non hai ancora ordini consegnati"
+
+**MUST-3: Cart Management**
+
+- Clear existing cart items before adding repeat order
+- Preserve product prices from original order (ignore current catalog prices)
+- Apply current customer discount to total
+- Verify product availability:
+  - If product deleted/inactive → Skip item with warning
+  - If stock insufficient → Add available quantity with note
+
+**MUST-4: Workspace Isolation**
+
+- ALL queries filtered by `workspaceId` AND `customerId`
+- Pattern:
+  ```typescript
+  where: {
+    workspaceId,
+    customerId,
+    status: 'DELIVERED'
+  }
+  orderBy: { createdAt: 'desc' }
+  ```
+
+**MUST-5: Router Agent Awareness**
+
+Router must recognize confirmation context:
+
+- Track conversation state: "Did Order Tracking Agent just show order summary?"
+- Recognize "si" after order summary as confirmation for FR-13
+- Delegate to Order Tracking with `CONFIRMED: ripeti ultimo ordine` prefix
+
+### Technical Implementation
+
+**New Domain Function**:
+
+`RepeatOrder.ts` (`backend/src/domain/calling-functions/RepeatOrder.ts`)
+
+```typescript
+export async function RepeatOrder(request: {
+  customerId: string
+  workspaceId: string
+  orderCode?: string // Optional - uses last delivered if omitted
+}): Promise<{
+  success: boolean
+  message: string
+  cartCode?: string
+  orderCode?: string
+  productsAdded?: number
+  cartUrl?: string
+  expiresAt?: string
+}> {
+  // 1. Query last DELIVERED order
+  const lastOrder = await prisma.orders.findFirst({
+    where: {
+      workspaceId,
+      customerId,
+      status: "DELIVERED",
+    },
+    orderBy: { createdAt: "desc" },
+    include: { items: true },
+  })
+
+  if (!lastOrder) {
+    return {
+      success: false,
+      message: "Non hai ancora ordini consegnati.",
+    }
+  }
+
+  // 2. Clear existing cart
+  await prisma.cartItems.deleteMany({
+    where: {
+      cart: { customerId, workspaceId },
+    },
+  })
+
+  // 3. Add order items to cart
+  let productsAdded = 0
+  for (const item of lastOrder.items) {
+    const product = await prisma.products.findUnique({
+      where: { id: item.productId },
+    })
+
+    if (product && product.isActive) {
+      await prisma.cartItems.create({
+        data: {
+          cartId: cart.id,
+          productId: item.productId,
+          quantity: item.quantity,
+          price: item.price, // Preserve original price
+        },
+      })
+      productsAdded++
+    }
+  }
+
+  // 4. Generate checkout link with ?step=2
+  const token = await secureTokenService.generateToken({
+    customerId,
+    workspaceId,
+    type: "checkout",
+  })
+
+  const cartUrl = `${process.env.FRONTEND_URL}/checkout?token=${token}&step=2`
+
+  return {
+    success: true,
+    message: `✅ ${productsAdded} prodotti aggiunti al carrello!`,
+    cartCode: cart.cartCode,
+    orderCode: lastOrder.orderCode,
+    productsAdded,
+    cartUrl,
+    expiresAt: token.expiresAt,
+  }
+}
+```
+
+**OrderTrackingAgentLLM Integration**:
+
+Add `repeatOrder` to available functions list:
+
+```typescript
+// backend/src/application/agents/OrderTrackingAgentLLM.ts
+getOrderTrackingFunctions() {
+  return [
+    // ... existing functions
+    {
+      name: "repeatOrder",
+      description: "Repeat the customer's last delivered order by adding all items to cart. Use after customer confirms they want to repeat their last order. Returns checkout link with step=2 parameter.",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+    },
+  ]
+}
+```
+
+Add case handler in function execution switch:
+
+```typescript
+case "repeatOrder":
+  const { RepeatOrder } = require("../../domain/calling-functions/RepeatOrder")
+  return await RepeatOrder({
+    customerId: context.customerId,
+    workspaceId: context.workspaceId,
+    orderCode: args.orderCode,
+  })
+```
+
+**Router Agent Prompt Update**:
+
+Add to `docs/prompts/router-agent.md`:
+
+```markdown
+**SCENARIO 1B - User confirms after Order Tracking shows last order (FR-13)**:
+
+- User says: "si", "yes", "ok", "conferma" (short affirmative)
+- Check conversation history: Did previous assistant message come from Order Tracking and show last order details?
+- Signs: Previous message contains "Vuoi ripetere l'operazione?" and shows order summary
+- **ACTION**: Delegate to Order Tracking to execute RepeatOrder():
+  ```
+  orderTrackingAgent("CONFIRMED: ripeti ultimo ordine")
+  ```
+
+**SCENARIO 4 - Repeat order request (FR-13)**:
+
+- Customer says: "ripeti ultimo ordine", "repeat order", "voglio ripetere ordine"
+- **ACTION**: Delegate to Order Tracking Agent:
+  ```
+  orderTrackingAgent("ripeti ultimo ordine")
+  ```
+- Order Tracking will:
+  1. Show last DELIVERED order summary
+  2. Ask confirmation: "Vuoi ripetere questo ordine?"
+  3. Wait for Router to delegate back with "CONFIRMED: ..."
+  4. Call RepeatOrder() function
+  5. Return checkout link with ?step=2
+```
+
+**Order Tracking Agent Prompt Update**:
+
+Add to `docs/prompts/order-tracking-agent.md`:
+
+```markdown
+## SPECIAL SCENARIO: FR-13 - Repeat Last Order
+
+**STEP 1: SHOW ORDER SUMMARY**
+
+When user requests: "ripeti ordine", "repeat order", "voglio ripetere ultimo ordine":
+
+1. Call `getOrderDetails()` WITHOUT orderCode → Returns last DELIVERED order
+2. Show formatted summary:
+   ```
+   📦 Here is your last delivered order: {orderCode}!
+
+   You ordered:
+   - {qty} x {product} (€{price})
+   - {qty} x {product} (€{price})
+
+   **Total Amount:** €{total}
+   **Delivery Date:** {date}
+   **Status:** Delivered
+
+   Do you want to repeat this order? 🔄
+   ```
+3. **STOP HERE** - DO NOT call RepeatOrder() yet! Wait for confirmation.
+
+**STEP 2: AWAIT CONFIRMATION FROM ROUTER**
+
+Router will send back query with prefix `CONFIRMED: ripeti ultimo ordine`
+
+**STEP 3: EXECUTE REPEAT ORDER**
+
+- Only after receiving "CONFIRMED" prefix, call RepeatOrder()
+- Do NOT pass orderCode parameter (function uses last delivered automatically)
+- Function calling:
+  ```json
+  {
+    "name": "RepeatOrder",
+    "arguments": {}
+  }
+  ```
+- Format response with checkout link:
+  ```
+  ✅ Your order has been added to the cart!
+
+  {CHECKOUT_LINK}
+
+  You can review and confirm your order. The cart is ready for checkout! 🛒
+  ```
+```
+
+### Architecture
+
+**New Files**:
+
+1. `backend/src/domain/calling-functions/RepeatOrder.ts` - Domain function
+2. Updated: `backend/src/application/agents/OrderTrackingAgentLLM.ts` - Add function
+3. Updated: `docs/prompts/router-agent.md` - Confirmation flow
+4. Updated: `docs/prompts/order-tracking-agent.md` - 3-step flow
+
+**Database Access Pattern**:
+
+```typescript
+// Last delivered order (workspace-isolated)
+const lastOrder = await prisma.orders.findFirst({
+  where: {
+    workspaceId,
+    customerId,
+    status: "DELIVERED",
+  },
+  orderBy: { createdAt: "desc" },
+  include: { items: { include: { product: true } } },
+})
+```
+
+**Function Calling Iterations**:
+
+- Iteration 1: Router → OrderTracking("ripeti ultimo ordine")
+- Iteration 2: OrderTracking → getOrderDetails() → Show summary
+- Iteration 3: Router contextualizes response
+- **User confirms "si"**
+- Iteration 4: Router → OrderTracking("CONFIRMED: ripeti ultimo ordine")
+- Iteration 5: OrderTracking → repeatOrder() → Return checkout link
+- Iteration 6: Router contextualizes final response
+
+**Total iterations**: 6-7 (required `maxFunctionIterations = 8`)
+
+### Acceptance Criteria
+
+**AC-1: Successful Repeat Order Flow**
+
+- GIVEN customer has 1+ delivered orders
+- WHEN customer says "voglio ripetere ultimo ordine"
+- THEN system shows order summary with confirmation question
+- WHEN customer confirms "si"
+- THEN all order items added to cart
+- AND checkout link provided with `?step=2` parameter
+- AND link expires in 15 minutes
+
+**AC-2: Cart Replacement (Not Merge)**
+
+- GIVEN customer has existing cart with 2 products
+- WHEN customer repeats order with 3 products
+- THEN cart is CLEARED first
+- AND only 3 products from repeated order remain
+- AND previous cart items are GONE
+
+**AC-3: Price Preservation**
+
+- GIVEN repeated order had product at €10.00
+- AND current catalog price is €12.00
+- WHEN order is repeated
+- THEN cart shows €10.00 (original price preserved)
+- AND customer discount applied on top
+
+**AC-4: Inactive Product Handling**
+
+- GIVEN repeated order contains 3 products
+- AND 1 product is now deleted/inactive
+- WHEN order is repeated
+- THEN 2 active products added to cart
+- AND warning shown: "1 prodotto non più disponibile"
+
+**AC-5: No Delivered Orders**
+
+- GIVEN customer has only PENDING orders
+- WHEN customer requests repeat order
+- THEN system responds: "Non hai ancora ordini consegnati"
+- AND no cart modification occurs
+
+**AC-6: Workspace Isolation**
+
+- GIVEN Workspace W1 customer repeats order
+- THEN ONLY W1 orders are queried
+- AND ONLY W1 products are added to cart
+- AND W2 data is NEVER accessible
+
+### Testing Strategy
+
+**Unit Tests** (`backend/__tests__/unit/RepeatOrder.test.ts`):
+
+- ✅ Test successful repeat with all items active
+- ✅ Test cart clearing before adding items
+- ✅ Test inactive product filtering
+- ✅ Test no delivered orders error
+- ✅ Test workspace isolation
+
+**Integration Tests** (`backend/__tests__/integration/fr13-repeat-order.test.ts`):
+
+- ✅ Test complete 3-step flow (show → confirm → execute)
+- ✅ Test Router delegation with "CONFIRMED" prefix
+- ✅ Test OrderTrackingAgentLLM calling repeatOrder()
+- ✅ Test checkout link generation with ?step=2
+- ✅ Test price preservation from original order
+
+**Manual Testing** (WhatsApp UI):
+
+- ✅ Test "voglio ripetere ultimo ordine" → summary shown
+- ✅ Test "si" → cart updated + link provided
+- ✅ Test "no" → operation cancelled
+- ✅ Test link opens checkout at step 2 (cart review)
+
+### Bug Fixes During Implementation
+
+**Bug #1: Function Not Recognized**
+
+- **Issue**: LLM called `repeatOrder()` but got `Unknown function: repeatOrder`
+- **Root Cause**: Missing `case "repeatOrder":` in OrderTrackingAgentLLM switch statement
+- **Fix**: Added case handler to call RepeatOrder domain function
+
+**Bug #2: Max Iterations Reached**
+
+- **Issue**: Flow timed out with "Sto elaborando..." after 5 iterations
+- **Root Cause**: `maxFunctionIterations = 5` insufficient for 6-7 iteration flow
+- **Fix**: Increased to `maxFunctionIterations = 8` in llm-router.service.ts
+
+**Bug #3: Module Cache Not Refreshing**
+
+- **Issue**: Code changes not reflected after backend restart
+- **Root Cause**: ts-node-dev module cache persisting old code
+- **Fix**: Touch both llm-router.service.ts and OrderTrackingAgentLLM.ts to force reload
+
+---
+
+## Dependencies
 
 1. **OpenRouter API** - LLM calls (GPT-4-mini)
 
