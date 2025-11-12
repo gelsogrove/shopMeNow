@@ -1030,11 +1030,13 @@ Enable customers to instantly repeat their last delivered order through a conver
 Multi-turn conversation with confirmation before execution:
 
 1. **STEP 1 - Show Last Order Summary**
+
    - Customer triggers: "voglio ripetere ultimo ordine", "repeat order", "riordina"
    - System shows: Order details (items, quantities, prices, total, delivery date)
    - Question: "Vuoi ripetere questo ordine? 🔄"
 
 2. **STEP 2 - Await Confirmation**
+
    - System waits for explicit confirmation: "si", "yes", "ok", "conferma"
    - Negative response: "no", "annulla" → Cancel operation
    - Ambiguous response: Request clarification
@@ -1212,23 +1214,27 @@ Add to `docs/prompts/router-agent.md`:
 - Check conversation history: Did previous assistant message come from Order Tracking and show last order details?
 - Signs: Previous message contains "Vuoi ripetere l'operazione?" and shows order summary
 - **ACTION**: Delegate to Order Tracking to execute RepeatOrder():
-  ```
-  orderTrackingAgent("CONFIRMED: ripeti ultimo ordine")
-  ```
+```
+
+orderTrackingAgent("CONFIRMED: ripeti ultimo ordine")
+
+```
 
 **SCENARIO 4 - Repeat order request (FR-13)**:
 
 - Customer says: "ripeti ultimo ordine", "repeat order", "voglio ripetere ordine"
 - **ACTION**: Delegate to Order Tracking Agent:
-  ```
-  orderTrackingAgent("ripeti ultimo ordine")
-  ```
+```
+
+orderTrackingAgent("ripeti ultimo ordine")
+
+```
 - Order Tracking will:
-  1. Show last DELIVERED order summary
-  2. Ask confirmation: "Vuoi ripetere questo ordine?"
-  3. Wait for Router to delegate back with "CONFIRMED: ..."
-  4. Call RepeatOrder() function
-  5. Return checkout link with ?step=2
+1. Show last DELIVERED order summary
+2. Ask confirmation: "Vuoi ripetere questo ordine?"
+3. Wait for Router to delegate back with "CONFIRMED: ..."
+4. Call RepeatOrder() function
+5. Return checkout link with ?step=2
 ```
 
 **Order Tracking Agent Prompt Update**:
@@ -1244,19 +1250,22 @@ When user requests: "ripeti ordine", "repeat order", "voglio ripetere ultimo ord
 
 1. Call `getOrderDetails()` WITHOUT orderCode → Returns last DELIVERED order
 2. Show formatted summary:
-   ```
-   📦 Here is your last delivered order: {orderCode}!
+```
 
-   You ordered:
-   - {qty} x {product} (€{price})
-   - {qty} x {product} (€{price})
+📦 Here is your last delivered order: {orderCode}!
 
-   **Total Amount:** €{total}
-   **Delivery Date:** {date}
-   **Status:** Delivered
+You ordered:
 
-   Do you want to repeat this order? 🔄
-   ```
+- {qty} x {product} (€{price})
+- {qty} x {product} (€{price})
+
+**Total Amount:** €{total}
+**Delivery Date:** {date}
+**Status:** Delivered
+
+Do you want to repeat this order? 🔄
+
+````
 3. **STOP HERE** - DO NOT call RepeatOrder() yet! Wait for confirmation.
 
 **STEP 2: AWAIT CONFIRMATION FROM ROUTER**
@@ -1268,13 +1277,15 @@ Router will send back query with prefix `CONFIRMED: ripeti ultimo ordine`
 - Only after receiving "CONFIRMED" prefix, call RepeatOrder()
 - Do NOT pass orderCode parameter (function uses last delivered automatically)
 - Function calling:
-  ```json
-  {
-    "name": "RepeatOrder",
-    "arguments": {}
-  }
-  ```
+```json
+{
+ "name": "RepeatOrder",
+ "arguments": {}
+}
+````
+
 - Format response with checkout link:
+
   ```
   ✅ Your order has been added to the cart!
 
@@ -1282,7 +1293,8 @@ Router will send back query with prefix `CONFIRMED: ripeti ultimo ordine`
 
   You can review and confirm your order. The cart is ready for checkout! 🛒
   ```
-```
+
+````
 
 ### Architecture
 
@@ -1306,7 +1318,7 @@ const lastOrder = await prisma.orders.findFirst({
   orderBy: { createdAt: "desc" },
   include: { items: { include: { product: true } } },
 })
-```
+````
 
 **Function Calling Iterations**:
 
