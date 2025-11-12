@@ -44,8 +44,35 @@ export const workspaceValidationMiddleware = async (
       }
     }
 
-    const workspaceId =
+    let workspaceId =
       workspaceIdFromParams || workspaceIdFromQuery || workspaceIdFromHeaders
+
+    // 🆕 NEW: If still no workspaceId, try to extract from user's workspaces (JWT context)
+    if (!workspaceId || workspaceId.trim() === "") {
+      const user = (req as any).user
+      const userWorkspaces = (req as any).userWorkspaces
+
+      logger.info(
+        `🔍 No workspaceId in params/query/headers - checking user context`,
+        {
+          user: user?.email || "no user",
+          workspacesCount: userWorkspaces?.length || 0,
+        }
+      )
+
+      // If user has only ONE workspace, use it automatically
+      if (userWorkspaces && userWorkspaces.length === 1) {
+        workspaceId = userWorkspaces[0].id
+        logger.info(
+          `✅ Auto-selected single workspace for user: ${workspaceId}`
+        )
+      } else if (userWorkspaces && userWorkspaces.length > 1) {
+        // Multiple workspaces - cannot auto-select
+        logger.warn(
+          `⚠️ User has ${userWorkspaces.length} workspaces - cannot auto-select`
+        )
+      }
+    }
 
     if (!workspaceId || workspaceId.trim() === "") {
       // Create debug response with all the information

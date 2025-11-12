@@ -72,6 +72,23 @@ System uses LLM reasoning to choose the most sensible grouping strategy based on
 
 ---
 
+### User Story 5 - Service Selection & Cart Addition (Priority: P1)
+
+Customer can discover available services (gift wrapping, delivery), view service details, and add services to cart for order completion.
+
+**Why this priority**: Core checkout enhancement - services increase average order value and improve customer satisfaction.
+
+**Independent Test**: Customer asks "che servizi avete?" → System shows numbered list (1. Gift Wrapping - €5.00, 2. Shipping - €8.00) → Customer says "1" → System shows full details (description, price, code, availability) → Customer says "sì" → Service added to cart with quantity=1. Deliverable: Complete service flow with addService integration.
+
+**Acceptance Scenarios**:
+
+1. **Given** customer asks "che servizi avete?", **When** workspace has active services, **Then** shows numbered list with service name and price (e.g., "1. Gift Wrapping - €5.00")
+2. **Given** customer sees service list, **When** selects number (e.g., "1"), **Then** shows 5-field detailed view: Nome, Descrizione, Prezzo, Codice, Disponibilità
+3. **Given** customer viewing service details, **When** says "sì" or "aggiungi", **Then** immediately adds service to cart with quantity=1 (NO quantity question for services)
+4. **Given** service added to cart, **When** operation succeeds, **Then** returns confirmation message with cart link
+
+---
+
 ### Edge Cases
 
 - **Empty Search Results**: Customer searches "caviale" but catalog has none → System responds "Non abbiamo caviale al momento. Posso suggerirti prodotti simili come salmone affumicato?"
@@ -80,6 +97,8 @@ System uses LLM reasoning to choose the most sensible grouping strategy based on
 - **Out of Stock**: Selected product is out of stock → System shows "Prodotto esaurito. Ti interessa un'alternativa simile?" with similar products
 - **Invalid Quantity**: Customer says "ne voglio -5" or "ne voglio mille" → System responds "Quantità non valida. Specifica un numero tra 1 e 100"
 - **Search Timeout**: Customer starts search but doesn't respond to grouping → After 10 minutes, conversation expires (standard session timeout)
+- **Service Not Available**: Customer selects service but it becomes inactive → System responds "Servizio non disponibile al momento. Posso suggerirti un'alternativa?"
+- **Service Already in Cart**: Customer tries to add same service twice → System responds "Servizio già presente nel carrello. Vuoi modificare la quantità?" (Note: services always qty=1, so this is edge case handling)
 
 ---
 
@@ -95,30 +114,37 @@ System uses LLM reasoning to choose the most sensible grouping strategy based on
 - **FR-006**: System MUST show both original price and customer-specific discounted price for each product (discount from workspace customer profile)
 - **FR-007**: System MUST support direct cart addition via "sì lo voglio" or "aggiungi al carrello" commands with quantity=1 default
 - **FR-008**: System MUST extract explicit quantity from customer message (e.g., "ne voglio 5") and pass to addToCart function
-- **FR-009**: System MUST delegate cart addition to CartManagementAgent via Router (no direct addToCart from ProductSearchAgent)
+- **FR-009**: System MUST delegate cart addition to CartManagementAgent via Router using "CONFIRMED: add [PRODUCT-CODE]" message format (no direct addToCart from ProductSearchAgent)
 - **FR-010**: System MUST return secure cart link after successful product addition
-- **FR-011**: System MUST handle product certifications display (isDOP, isBio, isHalal, isIntegrale flags from database)
-- **FR-012**: System MUST maintain conversation context across multiple filtering steps (Router maintains history)
-- **FR-013**: ProductSearchAgent prompt MUST use {{PRODUCTS}} variable populated with workspace product catalog including certifications
-- **FR-014**: System MUST handle empty search results with helpful alternatives suggestion
-- **FR-015**: System MUST skip grouping when only 1 product matches search criteria and show details directly
+- **FR-011**: System MUST maintain conversation context across multiple filtering steps (Router maintains history)
+- **FR-012**: ProductSearchAgent prompt MUST use {{PRODUCTS}} variable populated with workspace product catalog including certifications
+- **FR-013**: System MUST handle empty search results with helpful alternatives suggestion
+- **FR-014**: System MUST skip grouping when only 1 product matches search criteria and show details directly
+- **FR-015**: System MUST support service discovery via "che servizi avete?" query
+- **FR-016**: System MUST display services as numbered list with name and price (format from {{SERVICES}} variable)
+- **FR-017**: System MUST show service details including: Nome, Descrizione, Prezzo, Codice, Disponibilità (5-field format)
+- **FR-018**: System MUST add services to cart with quantity=1 automatically (NO quantity question for services)
+- **FR-019**: System MUST call addService() function immediately after customer confirms service addition
 
 ### Non-Functional Requirements
 
 - **NFR-001**: Product search response time MUST be under 3 seconds for initial grouping
-- **NFR-002**: LLM grouping logic MUST be deterministic for same query with same product set (testable)
+- **NFR-002**: LLM grouping logic MUST be consistent for 90%+ of repeated queries with same product set (testable via 10 iteration test)
 - **NFR-003**: ProductSearchAgent prompt MUST fit within GPT-4o-mini token limit (128k context, aim for <50k with {{PRODUCTS}})
 - **NFR-004**: System MUST log all search queries and grouping decisions for analytics
 - **NFR-005**: Cart link generated MUST expire after 15 minutes (standard secure token TTL)
+- **NFR-006**: Service list format MUST come from database via {{SERVICES}} variable with structured format: numbered list including name, description, price, code, availability (no hardcoded service display)
 
 ## Key Entities
 
 - **Product**: Catalog items with attributes (name, description, price, discount, category, certifications, origin, weight, isActive, stock)
 - **ProductCertification**: Flags on product (isDOP, isBio, isHalal, isIntegrale) for filtering and display
+- **Service**: Additional services available for orders (gift wrapping, shipping) with attributes (name, description, price, code, isActive)
 - **CustomerDiscount**: Workspace-level discount applied to base product price
 - **SearchQuery**: Customer input processed by ProductSearchAgent LLM
 - **ProductGroup**: Dynamic collection of products grouped by LLM-chosen characteristic
 - **CartItem**: Product + quantity added to customer cart via addToCart calling function
+- **ServiceItem**: Service added to customer cart via addService calling function (always quantity=1)
 
 ---
 

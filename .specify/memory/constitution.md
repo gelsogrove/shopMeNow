@@ -1,28 +1,31 @@
 <!--
   SYNC IMPACT REPORT
-  
-  Version Change: 1.0.0 → 1.1.0 (MINOR)
-  Rationale: Added new principle "360-Degree Thinking" - materially expanded development guidance
+
+  Version Change: 1.1.0 → 1.2.0 (MINOR)
+  Rationale: Added new principle "Chat Isolation & Concurrency Safety" - critical for multi-customer WhatsApp system
   Date: 2025-11-12
-  
+
   Modified Principles:
   - NONE (existing principles unchanged)
-  
+
   Added Sections:
-  - Principle V: 360-Degree Thinking (Full-Stack Change Analysis)
-  
+  - Principle VI: Chat Isolation & Concurrency Safety (MUST - NON-NEGOTIABLE)
+
   Removed Sections:
   - NONE
-  
+
   Templates Requiring Updates:
-  - ✅ plan-template.md: Constitution Check section updated with all 5 principles + detailed checklist
-  - ✅ spec-template.md: User Stories now include 360-Degree Validation checklist (8 categories)
-  - ✅ tasks-template.md: Task descriptions include 360-degree impact notes (FE/BE/DB/Security/Tests layers)
-  - ✅ .github/copilot-instructions.md: Added Rule #9 "360-Degree Thinking" with complete checklist reference
-  
+  - ✅ plan-template.md: Constitution Check section updated with Principle VI (transaction usage, customer locking)
+  - ✅ spec-template.md: 360-Degree Validation checklist includes concurrency validation
+  - ✅ tasks-template.md: Task format includes Concurrency layer, added T014 (unique constraint) and T023 (concurrency tests)
+  - ✅ .github/copilot-instructions.md: Added Rule #10 "Chat Isolation & Concurrency Safety" with implementation patterns
+
   Follow-up TODOs:
-  - Consider adding 360-degree checklist to PR template
-  - Update code review guidelines to enforce full-stack validation
+  - Implement Prisma transaction wrappers for critical operations
+  - Add Redis-based distributed locking for multi-instance deployments
+  - Create integration tests for concurrent message scenarios
+  - Add database indexes on (customerId, status) for chat session queries
+  - Consider message queue system (Bull/BullMQ) for WhatsApp webhook processing
 -->
 
 # ShopME Constitution
@@ -197,6 +200,7 @@ const prompt = `Categorie disponibili: ${categories.join(", ")}`
 
 ```markdown
 ## Frontend Changes
+
 - [ ] Component receives correct props/parameters
 - [ ] API service calls match backend endpoint signature
 - [ ] Error handling for all API failure cases
@@ -204,6 +208,7 @@ const prompt = `Categorie disponibili: ${categories.join(", ")}`
 - [ ] Form validation matches backend validation rules
 
 ## Backend API Changes
+
 - [ ] Route uses correct HTTP method (GET/POST/PUT/DELETE)
 - [ ] Middleware stack complete (auth → session → workspace validation)
 - [ ] Controller extracts workspaceId from middleware
@@ -211,18 +216,21 @@ const prompt = `Categorie disponibili: ${categories.join(", ")}`
 - [ ] Request/response types match frontend expectations
 
 ## Service Layer Changes
+
 - [ ] Business logic uses workspace-isolated repositories
 - [ ] Error handling with proper error types
 - [ ] LLM calls use database prompts (no hardcoded)
 - [ ] Variable replacement before LLM calls
 
 ## Repository/Database Changes
+
 - [ ] ALL queries filter by workspaceId
 - [ ] Migration created for schema changes (npx prisma migrate dev)
 - [ ] Seed script updated if new tables/fields
 - [ ] Prisma client regenerated (npx prisma generate)
 
 ## Testing Changes
+
 - [ ] Unit tests for business logic (npm run test:unit)
 - [ ] Security tests for workspace isolation (npm run test:security)
 - [ ] Integration tests for API endpoints (npm run test:integration)
@@ -337,6 +345,254 @@ When touching database schema, ALWAYS execute this mental checklist:
 - PR description MUST list all affected layers (FE/BE/DB)
 - CI pipeline MUST verify migrations, tests, swagger generation
 - Never approve PR with TODO comments like "// Add backend endpoint later"
+
+---
+
+### VI. Chat Isolation & Concurrency Safety (MUST - NON-NEGOTIABLE)
+
+**EVERY backend operation MUST prevent race conditions when multiple customers write simultaneously.**
+
+**Requirements**:
+
+- ✅ **Session-Level Isolation**: Each customer's chat session is independent (no shared state)
+- ✅ **Atomic Operations**: Database writes MUST use transactions for multi-step operations
+- ✅ **Customer-Based Locking**: Prevent concurrent processing of messages from SAME customer
+- ✅ **Workspace Isolation**: Concurrent requests from DIFFERENT workspaces NEVER interfere
+- ❌ **NO global locks**: Locking ONLY per customer (or per session), never system-wide
+
+**Critical Scenarios Requiring Protection**:
+
+1. **Session Creation**: `findOrCreateChatSession()` - Two messages arrive simultaneously for NEW customer
+
+   - ❌ **Risk**: Duplicate session creation (two active sessions for same customer)
+   - ✅ **Solution**: Prisma transaction with `upsert` or `findFirst` + retry logic
+
+2. **Message Saving**: `saveMessage()` - Multiple WhatsApp messages arrive in rapid succession
+
+   - ❌ **Risk**: Messages saved to wrong session, out-of-order timestamps
+   - ✅ **Solution**: Queue messages per customer, process sequentially
+
+3. **Cart Operations**: `addProduct()` while another message is processing
+
+   - ❌ **Risk**: Lost cart updates, duplicate additions, race conditions
+   - ✅ **Solution**: Transaction-based cart updates with optimistic locking
+
+4. **LLM Processing**: Two messages from same customer trigger parallel LLM calls
+   - ❌ **Risk**: Context confusion, lost conversation history, duplicate responses
+   - ✅ **Solution**: In-memory lock per `customerId` (or message queue)
+
+**Implementation Patterns**:
+
+**Pattern 1: Transaction-Based Session Creation** (MANDATORY for `findOrCreateChatSession`)
+
+```typescript
+// ❌ WRONG - Race condition possible
+async findOrCreateChatSession(workspaceId: string, customerId: string) {
+  let session = await prisma.chatSession.findFirst({
+    where: { customerId, status: "active" }
+  })
+
+  if (!session) {
+    // ⚠️ Another request might create session HERE (race!)
+    session = await prisma.chatSession.create({
+      data: { workspaceId, customerId, status: "active" }
+    })
+  }
+  return session
+}
+
+// ✅ CORRECT - Atomic upsert with unique constraint
+async findOrCreateChatSession(workspaceId: string, customerId: string) {
+  return await prisma.$transaction(async (tx) => {
+    // Try to find active session
+    let session = await tx.chatSession.findFirst({
+      where: { customerId, status: "active" },
+      orderBy: { startedAt: "desc" }
+    })
+
+    if (!session) {
+      try {
+        // Atomic create with unique constraint on (customerId, status="active")
+        session = await tx.chatSession.create({
+          data: { workspaceId, customerId, status: "active" }
+        })
+      } catch (error) {
+        // If duplicate, retry findFirst (another request created it)
+        if (error.code === "P2002") { // Unique constraint violation
+          session = await tx.chatSession.findFirst({
+            where: { customerId, status: "active" }
+          })
+        } else {
+          throw error
+        }
+      }
+    }
+
+    return session
+  })
+}
+```
+
+**Pattern 2: In-Memory Customer Lock** (RECOMMENDED for LLM processing)
+
+```typescript
+// Global in-memory lock map (per process)
+const customerLocks = new Map<string, Promise<void>>()
+
+// ✅ Acquire lock before processing message
+async function processCustomerMessage(customerId: string, message: string) {
+  const lockKey = `customer:${customerId}`
+
+  // Wait for any existing processing to finish
+  while (customerLocks.has(lockKey)) {
+    await customerLocks.get(lockKey)
+  }
+
+  // Acquire lock (create promise that will be resolved when done)
+  let releaseLock: () => void
+  const lockPromise = new Promise<void>((resolve) => {
+    releaseLock = resolve
+  })
+  customerLocks.set(lockKey, lockPromise)
+
+  try {
+    // Process message (LLM call, database writes, etc.)
+    await llmRouterService.routeMessage({ customerId, message, ... })
+  } finally {
+    // Release lock
+    customerLocks.delete(lockKey)
+    releaseLock!()
+  }
+}
+```
+
+**Pattern 3: Message Queue System** (BEST for production scalability)
+
+```typescript
+// Using Bull/BullMQ for Redis-based message queue
+import { Queue, Worker } from "bullmq"
+
+const messageQueue = new Queue("whatsapp-messages", {
+  connection: { host: "localhost", port: 6379 },
+})
+
+// ✅ Enqueue message from webhook (non-blocking)
+app.post("/webhooks/whatsapp", async (req, res) => {
+  const { customerId, message, workspaceId } = req.body
+
+  await messageQueue.add(
+    "process-message",
+    {
+      customerId,
+      message,
+      workspaceId,
+      timestamp: Date.now(),
+    },
+    {
+      // Ensure messages from same customer are processed in order
+      jobId: `${customerId}-${Date.now()}`,
+      removeOnComplete: true,
+      removeOnFail: false,
+    }
+  )
+
+  return res.status(200).json({ status: "queued" })
+})
+
+// ✅ Worker processes messages sequentially per customer
+const worker = new Worker(
+  "whatsapp-messages",
+  async (job) => {
+    const { customerId, message, workspaceId } = job.data
+
+    // Process with full isolation (no concurrent execution per customer)
+    await llmRouterService.routeMessage({ customerId, message, workspaceId })
+  },
+  {
+    connection: { host: "localhost", port: 6379 },
+    concurrency: 10, // Max 10 different customers processed in parallel
+  }
+)
+```
+
+**Database Schema Requirements**:
+
+```prisma
+// ✅ Add unique constraint to prevent duplicate active sessions
+model ChatSession {
+  id          String   @id @default(cuid())
+  workspaceId String
+  customerId  String
+  status      String   @default("active") // "active" | "closed"
+  startedAt   DateTime @default(now())
+
+  @@unique([customerId, status]) // CRITICAL: Only ONE active session per customer
+  @@index([customerId, status])   // Performance optimization for findFirst
+  @@index([workspaceId])          // Workspace isolation
+}
+```
+
+**Testing Requirements**:
+
+```typescript
+// ✅ Integration test for concurrent session creation
+describe("Chat Isolation & Concurrency", () => {
+  it("MUST NOT create duplicate sessions for concurrent requests", async () => {
+    const customerId = "customer-123"
+    const workspaceId = "workspace-456"
+
+    // Simulate 5 concurrent requests from same customer
+    const promises = Array.from({ length: 5 }, () =>
+      messageRepository.findOrCreateChatSession(workspaceId, customerId)
+    )
+
+    const sessions = await Promise.all(promises)
+
+    // Verify only ONE session was created
+    const uniqueSessionIds = new Set(sessions.map((s) => s.id))
+    expect(uniqueSessionIds.size).toBe(1)
+
+    // Verify no duplicate sessions in database
+    const allSessions = await prisma.chatSession.findMany({
+      where: { customerId, status: "active" },
+    })
+    expect(allSessions.length).toBe(1)
+  })
+
+  it("MUST process messages sequentially for same customer", async () => {
+    const customerId = "customer-789"
+    const messages = ["msg1", "msg2", "msg3"]
+    const results: string[] = []
+
+    // Simulate 3 concurrent messages from same customer
+    const promises = messages.map((msg) =>
+      processCustomerMessage(customerId, msg).then(() => {
+        results.push(msg)
+      })
+    )
+
+    await Promise.all(promises)
+
+    // Verify messages were processed in order (not concurrent)
+    expect(results).toEqual(["msg1", "msg2", "msg3"])
+  })
+})
+```
+
+**Rationale**:
+
+- WhatsApp webhooks can send multiple messages simultaneously (user sends 3 quick messages)
+- Without isolation: duplicate sessions, lost messages, context confusion, race conditions
+- Multi-tenant system: customer A and customer B MUST NEVER interfere with each other
+- Production scalability: single process can handle 10-100 concurrent customers safely
+
+**Enforcement**:
+
+- Code reviews MUST verify transaction usage for session creation
+- Integration tests MUST include concurrent request scenarios
+- Database MUST have unique constraint on `(customerId, status="active")`
+- Load tests MUST verify no race conditions under high concurrency
+- Consider Redis-based distributed locking for multi-instance deployments
 
 ---
 
@@ -547,4 +803,4 @@ describe("Workspace Isolation", () => {
 
 ---
 
-**Version**: 1.1.0 | **Ratified**: 2025-11-12 | **Last Amended**: 2025-11-12
+**Version**: 1.2.0 | **Ratified**: 2025-11-12 | **Last Amended**: 2025-11-12

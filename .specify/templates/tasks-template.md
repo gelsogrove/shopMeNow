@@ -1,5 +1,4 @@
 ---
-
 description: "Task list template for feature implementation"
 ---
 
@@ -17,7 +16,7 @@ description: "Task list template for feature implementation"
 - **[P]**: Can run in parallel (different files, no dependencies)
 - **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
 - Include exact file paths in descriptions
-- **360-Degree Impact**: Note affected layers (FE/BE/DB/Security/Tests)
+- **360-Degree Impact**: Note affected layers (FE/BE/DB/Security/Tests/Concurrency)
 
 ## Path Conventions
 
@@ -26,21 +25,21 @@ description: "Task list template for feature implementation"
 - **Mobile**: `api/src/`, `ios/src/` or `android/src/`
 - Paths shown below assume single project - adjust based on plan.md structure
 
-<!-- 
+<!--
   ============================================================================
   IMPORTANT: The tasks below are SAMPLE TASKS for illustration purposes only.
-  
+
   The /speckit.tasks command MUST replace these with actual tasks based on:
   - User stories from spec.md (with their priorities P1, P2, P3...)
   - Feature requirements from plan.md
   - Entities from data-model.md
   - Endpoints from contracts/
-  
+
   Tasks MUST be organized by user story so each story can be:
   - Implemented independently
   - Tested independently
   - Delivered as an MVP increment
-  
+
   DO NOT keep these sample tasks in the generated tasks.md file.
   ============================================================================
 -->
@@ -84,27 +83,30 @@ Examples of foundational tasks (adjust based on your project):
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T010 [P] [US1] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T011 [P] [US1] Integration test for [user journey] in tests/integration/test_[name].py
+- [ ] T010 [P] [US1] Contract test for [endpoint] in tests/contract/test\_[name].py
+- [ ] T011 [P] [US1] Integration test for [user journey] in tests/integration/test\_[name].py
 
 ### Implementation for User Story 1
 
 - [ ] T012 [P] [US1] **[DB]** Create migration for [Entity1] table: `npx prisma migrate dev --name add_entity1`
 - [ ] T013 [P] [US1] **[DB]** Update seed script with [Entity1] test data: `prisma/seed.ts`
-- [ ] T014 [P] [US1] **[BE/Repository]** Create [Entity1] repository: `backend/src/repositories/[entity1].repository.ts` (MUST filter by workspaceId)
-- [ ] T015 [P] [US1] **[BE/Service]** Implement [Service] business logic: `backend/src/application/services/[service].service.ts`
-- [ ] T016 [US1] **[BE/Controller]** Create controller: `backend/src/interfaces/http/controllers/[entity].controller.ts` (extract workspaceId from middleware)
-- [ ] T017 [US1] **[BE/Routes]** Add route with middleware stack: `backend/src/interfaces/http/routes/[entity].routes.ts` (auth → session → workspace)
-- [ ] T018 [US1] **[BE/Swagger]** Add @swagger JSDoc tags to controller methods
-- [ ] T019 [P] [US1] **[FE/Service]** Create API service: `frontend/src/services/[entity]Api.ts`
-- [ ] T020 [P] [US1] **[FE/Component]** Create UI component: `frontend/src/components/[EntityList].tsx`
-- [ ] T021 [US1] **[Tests/Unit]** Unit tests for service logic: `backend/__tests__/unit/services/[service].test.ts`
+- [ ] T014 [P] [US1] **[DB]** Add unique constraint for concurrency safety if needed: `@@unique([customerId, status])`
+- [ ] T015 [P] [US1] **[BE/Repository]** Create [Entity1] repository: `backend/src/repositories/[entity1].repository.ts` (MUST filter by workspaceId)
+- [ ] T016 [P] [US1] **[BE/Service]** Implement [Service] business logic: `backend/src/application/services/[service].service.ts`
+- [ ] T017 [US1] **[BE/Controller]** Create controller: `backend/src/interfaces/http/controllers/[entity].controller.ts` (extract workspaceId from middleware)
+- [ ] T018 [US1] **[BE/Routes]** Add route with middleware stack: `backend/src/interfaces/http/routes/[entity].routes.ts` (auth → session → workspace)
+- [ ] T019 [US1] **[BE/Swagger]** Add @swagger JSDoc tags to controller methods
+- [ ] T020 [P] [US1] **[FE/Service]** Create API service: `frontend/src/services/[entity]Api.ts`
+- [ ] T021 [P] [US1] **[FE/Component]** Create UI component: `frontend/src/components/[EntityList].tsx`
+- [ ] T022 [US1] **[Tests/Unit]** Unit tests for service logic: `backend/__tests__/unit/services/[service].test.ts`
+- [ ] T023 [US1] **[Tests/Concurrency]** Test concurrent requests: `backend/__tests__/integration/concurrency/[entity].test.ts`
 - [ ] T022 [US1] **[Tests/Security]** Workspace isolation test: `backend/__tests__/security/[entity]-isolation.test.ts`
 - [ ] T023 [US1] **[Tests/Integration]** API endpoint integration test: `backend/__tests__/integration/[entity].test.ts`
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
 **360-Degree Validation**:
+
 - [ ] Database: Migration created, seed updated, Prisma client regenerated
 - [ ] Repository: All queries filter by `workspaceId`
 - [ ] Service: Business logic workspace-isolated, proper error handling
@@ -124,8 +126,8 @@ Examples of foundational tasks (adjust based on your project):
 
 ### Tests for User Story 2 (OPTIONAL - only if tests requested) ⚠️
 
-- [ ] T018 [P] [US2] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T019 [P] [US2] Integration test for [user journey] in tests/integration/test_[name].py
+- [ ] T018 [P] [US2] Contract test for [endpoint] in tests/contract/test\_[name].py
+- [ ] T019 [P] [US2] Integration test for [user journey] in tests/integration/test\_[name].py
 
 ### Implementation for User Story 2
 
@@ -146,8 +148,8 @@ Examples of foundational tasks (adjust based on your project):
 
 ### Tests for User Story 3 (OPTIONAL - only if tests requested) ⚠️
 
-- [ ] T024 [P] [US3] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T025 [P] [US3] Integration test for [user journey] in tests/integration/test_[name].py
+- [ ] T024 [P] [US3] Contract test for [endpoint] in tests/contract/test\_[name].py
+- [ ] T025 [P] [US3] Integration test for [user journey] in tests/integration/test\_[name].py
 
 ### Implementation for User Story 3
 

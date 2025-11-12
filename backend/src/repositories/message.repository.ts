@@ -354,16 +354,24 @@ export class MessageRepository {
   /**
    * Find an active chat session or create a new one
    *
+   * 🔒 CONCURRENCY SAFE: Uses Prisma transaction to prevent race conditions
+   * when multiple messages arrive simultaneously for the same customer.
+   *
+   * Pattern: Transaction-based session creation with unique constraint retry
+   * - Atomic findFirst + create operation within transaction
+   * - Handles P2002 (unique constraint violation) with retry logic
+   * - Ensures only ONE active session per customer
+   *
    * @param workspaceId The workspace ID
    * @param customerId The customer ID
    * @returns The chat session
    */
   async findOrCreateChatSession(workspaceId: string, customerId: string) {
     try {
-      // Try to find an active session
-      let session
-      try {
-        session = await this.prisma.chatSession.findFirst({
+      // 🔒 TRANSACTION: Atomic operation to prevent duplicate session creation
+      return await this.prisma.$transaction(async (tx) => {
+        // Try to find existing active session
+        let session = await tx.chatSession.findFirst({
           where: {
             customerId: customerId,
             status: "active",
@@ -374,23 +382,63 @@ export class MessageRepository {
         })
 
         if (!session) {
-          session = await this.prisma.chatSession.create({
-            data: {
-              workspaceId: workspaceId,
-              customerId: customerId,
-              status: "active",
-            },
-          })
-          logger.info(`Created new chat session: ${session.id}`)
-        }
-      } catch (error) {
-        logger.error("Error finding or creating chat session:", error)
-        throw new Error("Failed to find or create chat session")
-      }
+          try {
+            // Atomic create with unique constraint on (customerId, status="active")
+            session = await tx.chatSession.create({
+              data: {
+                workspaceId: workspaceId,
+                customerId: customerId,
+                status: "active",
+              },
+            })
+            logger.info(
+              `✅ Created new chat session: ${session.id} for customer ${customerId}`
+            )
+          } catch (error: any) {
+            // Handle race condition: another request created session simultaneously
+            if (error.code === "P2002") {
+              // Unique constraint violation - retry findFirst
+              logger.warn(
+                `⚠️ Race condition detected for customer ${customerId} - retrying findFirst`
+              )
+              session = await tx.chatSession.findFirst({
+                where: {
+                  customerId: customerId,
+                  status: "active",
+                },
+                orderBy: {
+                  startedAt: "desc",
+                },
+              })
 
-      return session
+              if (!session) {
+                // Should never happen, but throw if still not found
+                throw new Error(
+                  `Failed to find session after P2002 for customer ${customerId}`
+                )
+              }
+
+              logger.info(
+                `✅ Retrieved existing session after race: ${session.id}`
+              )
+            } else {
+              // Other error - rethrow
+              throw error
+            }
+          }
+        } else {
+          logger.info(
+            `✅ Found existing active session: ${session.id} for customer ${customerId}`
+          )
+        }
+
+        return session
+      })
     } catch (error) {
-      logger.error("Error finding or creating chat session:", error)
+      logger.error(
+        `❌ Error in findOrCreateChatSession for customer ${customerId}:`,
+        error
+      )
       throw new Error("Failed to find or create chat session")
     }
   }
@@ -1106,7 +1154,7 @@ export class MessageRepository {
   /**
    * Recupera i servizi attivi dal database e li formatta per il prompt.
    * @param workspaceId L'ID del workspace.
-   * @returns Una stringa con i servizi formattati.
+   * @returns Una stringa con i servizi formattati in lista numerata.
    */
   async getActiveServices(workspaceId: string): Promise<string> {
     try {
@@ -1124,13 +1172,21 @@ export class MessageRepository {
         return "" // Nessun servizio attivo
       }
 
-      // Formatta i servizi come stringa per il prompt
+      // Formatta i servizi come lista numerata con tutti i dettagli
       const formattedServices = services
-        .map(
-          (service) =>
-            `🔧 ${service.name}: ${service.description || "Servizio disponibile"}`
-        )
-        .join("\n")
+        .map((service, index) => {
+          const price = service.price ? `€${service.price.toFixed(2)}` : "Prezzo da definire"
+          const description = service.description || "Servizio disponibile"
+          const code = service.code || `SRV-${String(index + 1).padStart(3, "0")}`
+          
+          return [
+            `${index + 1}. **${service.name}** - ${price}`,
+            `   📝 Descrizione: ${description}`,
+            `   📋 Codice: ${code}`,
+            `   ⏰ Disponibilità: Sempre disponibile`
+          ].join("\n")
+        })
+        .join("\n\n")
 
       return `\n\n${formattedServices}`
     } catch (error) {

@@ -211,6 +211,7 @@ Se Product Search ha GIÀ chiesto conferma → NON chiedere di nuovo, AGGIUNGI S
 → Conferma già data dal Router! Aggiungi SUBITO senza chiedere altro!
 
 **🔧 PARSING CONFIRMED FORMAT**:
+
 - Input format: `"CONFIRMED: add PRODUCT-CODE"` (example: `"CONFIRMED: add FORMAG-001"`)
 - Extract productCode: Take the **last token** after "add" keyword
 - Examples:

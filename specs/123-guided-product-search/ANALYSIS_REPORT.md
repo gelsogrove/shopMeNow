@@ -397,6 +397,7 @@ export async function AddService(request: AddServiceRequest): Promise<AddService
 ### ✅ COMPLETED TASKS
 
 **Bug Fix**: Router ProductCode Extraction (2025-11-12)
+
 - File: `docs/prompts/router-agent.md:226-235`
 - Issue: Router extracted product NAME instead of productCode → AddProduct failed with "non disponibile"
 - Fix: Updated prompt to extract productCode from `• PRODUCT-CODE Name...` format
@@ -405,16 +406,19 @@ export async function AddService(request: AddServiceRequest): Promise<AddService
 - Status: ✅ FIXED
 
 **Task C2**: Add Supplier & Region to {{PRODUCTS}}
+
 - File: `backend/src/repositories/message.repository.ts`
 - Action: Completed in Feature 123 Phase 1-4 (360-degree refactor)
 - Status: ✅ COMPLETED
 
 **Task M1**: Create AddService Calling Function
+
 - File: `backend/src/domain/calling-functions/AddService.ts`
 - Action: Implemented service-to-cart functionality
 - Status: ✅ COMPLETED
 
 **Task M2**: Update Documentation
+
 - File: `docs/prompts/product-search-agent.md`
 - Action: Documented conversational memory, number selection
 - Status: ✅ COMPLETED
@@ -424,6 +428,7 @@ export async function AddService(request: AddServiceRequest): Promise<AddService
 ### ⚠️ DEFERRED TASKS (Priority: P2 - Performance Optimization)
 
 **Task C1**: Add Token Count Monitoring
+
 - File: `backend/src/repositories/message.repository.ts:1280`
 - Action: Log {{PRODUCTS}} token count, warn if >50k
 - Effort: 15 minutes
@@ -431,6 +436,7 @@ export async function AddService(request: AddServiceRequest): Promise<AddService
 - Status: ⚠️ DEFERRED
 
 **Task P1**: Execute Pending Token Measurements
+
 - T003: Measure baseline token count (100 products)
 - T014: Implement token logging (depends on C1)
 - T048: Measure token count (500 products)
@@ -438,6 +444,7 @@ export async function AddService(request: AddServiceRequest): Promise<AddService
 - Status: ⚠️ DEFERRED
 
 **Task P2**: Performance Benchmarking
+
 - Measure response times for grouping (<3s)
 - Measure total flow (<5s)
 - Status: ⚠️ DEFERRED
@@ -447,6 +454,7 @@ export async function AddService(request: AddServiceRequest): Promise<AddService
 ### ⚠️ DEFERRED TASKS (Priority: P1 - Test Coverage)
 
 **Task C3**: Create Integration Tests
+
 - File: `tests/integration/agents/ProductSearchAgentLLM.test.ts`
 - Action: Test full grouping flow (generic → groups → selection → list → single → cart)
 - Effort: 45 minutes

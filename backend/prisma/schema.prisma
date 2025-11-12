@@ -384,6 +384,11 @@ model ChatSession {
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
   messages    Message[]
 
+  // 🔒 CONCURRENCY SAFETY: Unique constraint prevents duplicate active sessions
+  // Only ONE active session allowed per customer at any time
+  @@unique([customerId, status], name: "unique_active_session")
+  @@index([customerId, status], name: "idx_customer_status")
+  @@index([workspaceId], name: "idx_workspace")
   @@map("chat_sessions")
 }
 

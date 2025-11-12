@@ -294,6 +294,48 @@ describe('Cart integration', () => {
 })
 ```
 
+### Phase 6: Service Selection & Cart Addition (Priority: P1) 🎯 COMPLETED
+
+**Goal**: Enable customers to discover services, view details, and add to cart with quantity=1 (no quantity prompt for services).
+
+**Status**: ✅ **IMPLEMENTED** (2025-11-12)
+
+**Independent Test**: Customer asks "che servizi avete?" → Sees numbered list → Says "1" → Views 5-field details → Says "sì" → Service added to cart.
+
+#### Implementation Summary (Already Complete)
+
+- ✅ T030 [US5] Updated Router Agent prompt (`docs/prompts/router-agent.md`):
+  - Added SERVICE SELECTION FLOW section with 3-step process
+  - Added addService() function documentation (Function #2)
+  - Added examples with numbered list → details → confirmation
+  - **CRITICAL**: Services always quantity=1 (no "Quanti ne vuoi?" question)
+
+- ✅ T031 [US5] Updated `getActiveServices()` in `backend/src/repositories/message.repository.ts`:
+  - Changed format from simple text to structured numbered list
+  - 5-field format: Name, Description, Price, Code, Availability
+  - Returns formatted string for {{SERVICES}} variable
+
+- ✅ T032 [US5] Verified `addService()` calling function exists (`backend/src/domain/calling-functions/AddService.ts`):
+  - Accepts serviceCode and quantity parameters
+  - Integrates with CallingFunctionsService.addServiceToCart()
+  - Returns cart link after successful addition
+
+- ✅ T033 [US5] Updated all agent prompts in database via `npm run update-all-agent-prompts`
+  - Router Agent: Service flow with numbered list
+  - All 6 agents synchronized
+
+- ✅ T034 [US5] Build verification: `npm run build` successful
+  - TypeScript compilation passed
+  - Prisma client regenerated
+  - No lint errors
+
+#### Key Design Decisions
+
+1. **No Quantity Question**: Services ALWAYS have quantity=1 (unlike products where quantity varies)
+2. **5-Field Format**: Simpler than products (no certifications, origin, weight)
+3. **Immediate Addition**: After "sì" confirmation, service added without quantity prompt
+4. **Router Handles Flow**: No delegation to specialist agent (simpler than product flow)
+
 ### Manual Testing (WhatsApp UI)
 
 **Note**: WhatsApp testing is FUTURE feature - not available yet. For now, manual testing via backend API endpoints only.
@@ -304,6 +346,7 @@ describe('Cart integration', () => {
 2. **Dietary Search**: Customer sends "prodotti halal" → Receives certification-based groups
 3. **Direct Purchase**: Customer sends "Parmigiano Reggiano DOP" → Receives product details → Says "sì lo voglio" → Receives cart link
 4. **Quantity Specification**: Customer says "ne voglio 10" → Cart contains 10 units → Checkout link shows correct total
+5. **Service Addition** (NEW): Customer sends "che servizi avete?" → Receives numbered list → Says "1" → Views details → Says "sì" → Service added to cart with qty=1
 
 ---
 

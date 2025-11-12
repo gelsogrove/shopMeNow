@@ -9,6 +9,7 @@
 ## 🎯 Quick Summary
 
 **✅ CORE FUNCTIONALITY**: 100% Working
+
 - Dynamic grouping with LLM
 - Progressive filtering
 - Numbered selection
@@ -17,6 +18,7 @@
 - **BUG FIXED**: Router now extracts productCode correctly
 
 **⚠️ DEFERRED**: 10% (Performance optimization + Test coverage)
+
 - Token count monitoring (P2 - not blocking)
 - Integration tests (P1 - manual testing preferred for now)
 - Performance benchmarking (P2 - optimization phase)
@@ -158,19 +160,19 @@
 
 ## 📊 Overall Task Status
 
-| Phase | Total Tasks | Completed | Deferred | Status |
-|-------|------------|-----------|----------|--------|
-| Phase 1: Setup | 4 | 3 | 1 (T003) | 75% |
-| Phase 2: Database | 5 | 5 | 0 | 100% ✅ |
-| Phase 3: US1 | 6 | 5 | 1 (T014) | 83% |
-| Phase 4: US2 | 5 | 5 | 0 | 100% ✅ |
-| Phase 5: US3 | 7 | 5 | 2 (T021, T027) | 71% |
-| Phase 6: US4 | 4 | 4 | 0 | 100% ✅ |
-| Phase 7: Edge Cases | 6 | 6 | 0 | 100% ✅ |
-| Phase 8: Integration Tests | 10 | 0 | 10 | 0% (DEFERRED) |
-| Phase 9: Performance | 6 | 5 | 1 (T048) | 83% |
-| Phase 10: Documentation | 6 | 6 | 0 | 100% ✅ |
-| **TOTAL** | **59** | **44** | **15** | **75%** |
+| Phase                      | Total Tasks | Completed | Deferred       | Status        |
+| -------------------------- | ----------- | --------- | -------------- | ------------- |
+| Phase 1: Setup             | 4           | 3         | 1 (T003)       | 75%           |
+| Phase 2: Database          | 5           | 5         | 0              | 100% ✅       |
+| Phase 3: US1               | 6           | 5         | 1 (T014)       | 83%           |
+| Phase 4: US2               | 5           | 5         | 0              | 100% ✅       |
+| Phase 5: US3               | 7           | 5         | 2 (T021, T027) | 71%           |
+| Phase 6: US4               | 4           | 4         | 0              | 100% ✅       |
+| Phase 7: Edge Cases        | 6           | 6         | 0              | 100% ✅       |
+| Phase 8: Integration Tests | 10          | 0         | 10             | 0% (DEFERRED) |
+| Phase 9: Performance       | 6           | 5         | 1 (T048)       | 83%           |
+| Phase 10: Documentation    | 6           | 6         | 0              | 100% ✅       |
+| **TOTAL**                  | **59**      | **44**    | **15**         | **75%**       |
 
 **Functional Completion**: 44/59 tasks = **75% by task count**  
 **Core Functionality**: **100% working** (all MVP user stories complete)  
@@ -183,6 +185,7 @@
 ### ✅ COMPLETED
 
 1. **Router ProductCode Extraction Bug** (CRITICAL)
+
    - Issue: Router extracted product NAME instead of productCode
    - Impact: AddProduct always failed with "non disponibile"
    - Fix: Updated `docs/prompts/router-agent.md:226-235`
@@ -190,6 +193,7 @@
    - Status: ✅ FIXED (2025-11-12)
 
 2. **Supplier & Region in {{PRODUCTS}}** (HIGH)
+
    - Issue: Missing supplier/region data in product listings
    - Fix: Added to message.repository.ts:1160-1175, 1260
    - Status: ✅ COMPLETED (Feature 123 Phase 1-4)
@@ -214,6 +218,7 @@
 ### Priority: P1 (Test Coverage)
 
 2. **Integration Tests** (T038-T047)
+
    - Purpose: Automated testing of agent flows
    - Impact: Medium - Manual testing covers functionality
    - Reason: Backend has hot-reload, manual WhatsApp testing more practical
@@ -230,6 +235,7 @@
 ## 🎯 Recommended Next Steps
 
 ### Option 1: Deploy to Production (RECOMMENDED)
+
 - ✅ All core functionality working
 - ✅ Bug fixed (Router productCode extraction)
 - ✅ Database seeded with test data
@@ -241,6 +247,7 @@
 ---
 
 ### Option 2: Complete Deferred Items
+
 1. Add token count monitoring (30 min)
 2. Create integration tests (4-5 hours)
 3. Add unit tests for AddProduct (30 min)
@@ -250,6 +257,7 @@
 ---
 
 ### Option 3: Minimal Completion (FASTEST)
+
 1. Add token count monitoring (T003, T014, T048) - 30 min
 2. Skip integration tests (use manual WhatsApp testing)
 3. Deploy to production
@@ -261,6 +269,7 @@
 ## 📝 Notes for Andrea
 
 ### What's Working Perfectly ✅
+
 - Dynamic grouping (LLM analyzes intent, chooses strategy)
 - Progressive filtering (continue until ≤3 products)
 - Numbered selection (customer picks from list)
@@ -270,11 +279,13 @@
 - **Router productCode extraction** (BUG FIXED 2025-11-12)
 
 ### What's Deferred ⚠️
+
 - Token count monitoring (T003, T014, T048) - Performance optimization
 - Integration tests (T038-T047) - Test coverage
 - Unit tests (T021, T027) - Test coverage
 
 ### What Was Fixed 🔧
+
 - **CRITICAL BUG**: Router now extracts productCode (e.g., "FORMAG-002") instead of product name
 - Before: `cartManagementAgent("CONFIRMED: add Parmigiano Reggiano DOP 24 mesi")` → NOT FOUND
 - After: `cartManagementAgent("CONFIRMED: add FORMAG-002")` → ✅ FOUND
