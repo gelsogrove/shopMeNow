@@ -172,7 +172,7 @@ export class LLMRouterService {
   private linkReplacementService: LinkReplacementService
   private openRouterApiKey: string
   private openRouterBaseUrl = "https://openrouter.ai/api/v1"
-  private maxFunctionIterations = 5
+  private maxFunctionIterations = 8 // FR-13: Increased from 5 to support repeat order confirmation flow (6-7 iterations needed)
 
   constructor(private prisma: PrismaClient) {
     this.agentConfigRepo = new AgentConfigRepository(prisma)

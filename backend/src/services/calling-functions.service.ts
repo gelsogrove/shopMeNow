@@ -216,9 +216,11 @@ export class CallingFunctionsService {
       logger.info("🔧 Token created successfully:", token)
 
       // Use the injected linkGeneratorService instance
+      // FR-13: Pass step parameter to generateCheckoutLink
       const linkUrl = await this.linkGeneratorService.generateCheckoutLink(
         token,
-        request.workspaceId
+        request.workspaceId,
+        request.step // Pass step parameter (undefined if not provided)
       )
 
       return {
@@ -679,12 +681,14 @@ export class CallingFunctionsService {
         )
 
         // Genera short URL del carrello
+        // FR-13: AddProduct always uses step=2 (skip cart review, go to address)
         const {
           linkGeneratorService,
         } = require("../application/services/link-generator.service")
         const cartUrl = await linkGeneratorService.generateCheckoutLink(
           token,
-          request.workspaceId
+          request.workspaceId,
+          2 // FR-13: Skip cart review step
         )
 
         await prisma.$disconnect()

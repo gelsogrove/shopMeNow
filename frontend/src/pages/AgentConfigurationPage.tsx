@@ -98,9 +98,10 @@ const AGENT_CALL_FUNCTIONS: Record<string, string[]> = {
     "clearCart", // Removed: removeFromCart, updateCartQuantity
   ],
   order_tracking: [
-    "getOrders",
-    "getOrder",
-    "trackOrder",
+    "getOrderHistory",
+    "getLastOrders",
+    "getOrderDetails",
+    "trackOrderStatus",
     "sendInvoice",
     "repeatLastOrder",
   ],

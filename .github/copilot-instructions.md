@@ -67,6 +67,19 @@ ShopME is a **WhatsApp-based e-commerce platform** with AI chatbot integration. 
 - Integration tests require backend running (`npm run dev`)
 - If tests fail: verify backend (port 3001), database, seed
 
+### 8. **WhatsApp Testing Policy**
+
+- **NEVER** test features directly via WhatsApp during development
+- WhatsApp testing is a FUTURE feature - not available yet
+- For now: ALL WhatsApp messages go to a queue system (not processed)
+- When implementing features that mention "WhatsApp test" or "manual WhatsApp flow":
+  - ✅ DO: Implement the backend logic, calling functions, and database operations
+  - ✅ DO: Create unit tests and integration tests
+  - ❌ DON'T: Attempt to send real WhatsApp messages
+  - ❌ DON'T: Test via WhatsApp UI
+  - 📝 NOTE: Mark as "WhatsApp integration pending" in test documentation
+- Exception: Only test WhatsApp when Andrea explicitly asks for it
+
 ---
 
 ## 🏗️ Architecture Patterns
@@ -517,3 +530,9 @@ NON DEVI FARE COMMIT CI PENSa L'UTENTE !!!!
 
 USA SEMPRE COME CONTESTO 
 docs/memory-bank/PRD.md
+
+## Active Technologies
+- TypeScript 5.x (Node.js 18+) (122-rag-con-prodcuct)
+
+## Recent Changes
+- 122-rag-con-prodcuct: Added TypeScript 5.x (Node.js 18+)

@@ -180,11 +180,13 @@ export class LinkReplacementService {
           )
 
           // Generate checkout link with step=confirm parameter
+          // Note: step parameter expects number (1 or 2), not string
+          // TODO: Clarify if "confirm" should be step 3 or remove parameter
           const finalCartConfirmLink =
             await linkGeneratorService.generateCheckoutLink(
               cartToken,
-              workspaceId,
-              "confirm" // Pass step parameter to include in short URL
+              workspaceId
+              // Removed "confirm" parameter - generateCheckoutLink expects number (1 or 2)
             )
 
           // Smart replace: handle multiple formats (same as LINK_CHECKOUT_WITH_TOKEN)

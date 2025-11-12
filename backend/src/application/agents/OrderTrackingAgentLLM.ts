@@ -415,6 +415,15 @@ export class OrderTrackingAgentLLM {
             status: trackedOrder?.status || "NOT_FOUND",
           }
 
+        case "repeatOrder":
+          // Call RepeatOrder domain function directly
+          const { RepeatOrder } = require("../../domain/calling-functions/RepeatOrder")
+          return await RepeatOrder({
+            customerId: context.customerId,
+            workspaceId: context.workspaceId,
+            orderCode: args.orderCode, // Optional - uses last order if not provided
+          })
+
         default:
           logger.warn(`Unknown function: ${functionName}`)
           return {
@@ -494,6 +503,16 @@ export class OrderTrackingAgentLLM {
             },
           },
           required: ["orderCode"],
+        },
+      },
+      {
+        name: "repeatOrder",
+        description:
+          "Repeat the customer's last delivered order by adding all items to cart. Use after customer confirms they want to repeat their last order. Returns checkout link with step=2 parameter.",
+        parameters: {
+          type: "object",
+          properties: {},
+          required: [],
         },
       },
     ]

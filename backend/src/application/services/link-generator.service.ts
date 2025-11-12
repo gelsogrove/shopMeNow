@@ -47,12 +47,20 @@ export class LinkGeneratorService {
 
   /**
    * Generate checkout/cart link with token
+   * @param token JWT token for checkout
+   * @param workspaceId Workspace ID
+   * @param step Optional step parameter (1 or 2) - FR-13 Repeat Order
    */
   async generateCheckoutLink(
     token: string,
     workspaceId: string,
-    step?: string
+    step?: number
   ): Promise<string> {
+    // Validate step parameter if provided
+    if (step !== undefined && (step < 1 || step > 2)) {
+      throw new Error("Invalid step parameter: must be 1 or 2")
+    }
+
     let originalUrl = `${config.frontendUrl}/cart?token=${token}`
     if (step) {
       originalUrl += `&step=${step}`

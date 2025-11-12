@@ -249,21 +249,16 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
 
   {
-    name: "getOrders",
+    name: "getOrderHistory",
     description:
-      "Retrieve customer's order history with status, tracking info, and invoices. Use when customer asks about their orders, delivery status, or invoices.",
+      "Retrieve customer's complete order history with status, tracking info, and invoices. Use when customer asks about 'all orders' or 'order history'.",
     parameters: {
       type: "object",
       properties: {
-        orderId: {
-          type: "string",
-          description:
-            "Optional specific order ID to retrieve details for one order",
-        },
         limit: {
           type: "number",
           description:
-            "Optional number of recent orders to return (default: 10, max: 50)",
+            "Optional number of orders to return (default: 10, max: 50)",
         },
       },
       required: [],
@@ -271,25 +266,42 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
 
   {
-    name: "getOrder",
+    name: "getLastOrders",
     description:
-      "Retrieve detailed information about a specific order by order code or ID. Use when customer asks about a specific order.",
+      "Get last N orders with summary details (orderCode, date, total, status). Use when customer asks for 'recent orders' or 'last orders' with a specific number.",
+    parameters: {
+      type: "object",
+      properties: {
+        limit: {
+          type: "number",
+          description: "Number of orders to return (default: 3, max: 10)",
+        },
+      },
+      required: [],
+    },
+  },
+
+  {
+    name: "getOrderDetails",
+    description:
+      "Get detailed information about a specific order by order code, or get last order if no code provided. Use when customer asks about a specific order or 'last order'.",
     parameters: {
       type: "object",
       properties: {
         orderCode: {
           type: "string",
-          description: "Order code or order ID to retrieve",
+          description:
+            "Order code (e.g., 'ORD-048-2025-9'). Optional: if empty, returns last order",
         },
       },
-      required: ["orderCode"],
+      required: [],
     },
   },
 
   {
-    name: "trackOrder",
+    name: "trackOrderStatus",
     description:
-      "Get real-time tracking information for an order including shipping status, carrier info, and estimated delivery. Use when customer asks 'where is my order' or tracking status.",
+      "Track the current status of a specific order. Use when customer asks 'where is my order' or wants to check order status.",
     parameters: {
       type: "object",
       properties: {
@@ -503,9 +515,10 @@ export function getFunctionNamesForAgentType(agentType: string): string[] {
 
     case "ORDER_TRACKING":
       return [
-        "getOrders",
-        "getOrder",
-        "trackOrder",
+        "getOrderHistory",
+        "getLastOrders",
+        "getOrderDetails",
+        "trackOrderStatus",
         "sendInvoice",
         "repeatLastOrder",
       ]

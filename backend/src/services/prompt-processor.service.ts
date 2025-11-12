@@ -1,7 +1,10 @@
 import fs from "fs"
 import path from "path"
+import { PrismaClient } from "@prisma/client"
 import { MessageRepository } from "../repositories/message.repository"
 import logger from "../utils/logger"
+
+const prisma = new PrismaClient()
 
 export class PromptProcessorService {
   private messageRepository: MessageRepository
@@ -90,6 +93,18 @@ export class PromptProcessorService {
       )
     }
 
+    // Sostituzione {{LAST_ORDER}} - FR-13 Repeat Order
+    if (processedPrompt.includes("{{LAST_ORDER}}")) {
+      const lastOrderSummary = await this.getLastOrderVariable(
+        customerData.id,
+        workspaceId
+      )
+      processedPrompt = processedPrompt.replace(
+        /\{\{LAST_ORDER\}\}/g,
+        lastOrderSummary
+      )
+    }
+
     // Remove duplicate CATEGORIES check since it's already handled above
 
     // DEBUG: Salva il prompt finale per debugging
@@ -168,6 +183,89 @@ export class PromptProcessorService {
 
     // Se non è iscritto, mostra invito semplice (in inglese - translation layer traduce)
     return "💡 Want to receive exclusive offers and updates via WhatsApp? Let me know!"
+  }
+
+  /**
+   * FR-13: Ottiene il sommario dell'ultimo ordine DELIVERED del cliente.
+   * Formatta i dettagli dell'ordine in italiano per il prompt dell'agent.
+   * @param customerId ID del cliente
+   * @param workspaceId ID del workspace
+   * @returns Sommario formattato dell'ultimo ordine o messaggio di nessun ordine disponibile
+   */
+  private async getLastOrderVariable(
+    customerId: string,
+    workspaceId: string
+  ): Promise<string> {
+    try {
+      // Query ultimo ordine DELIVERED del cliente
+      const lastOrder = await prisma.orders.findFirst({
+        where: {
+          customerId: customerId,
+          workspaceId: workspaceId,
+          status: "DELIVERED",
+        },
+        include: {
+          items: {
+            include: {
+              product: true,
+              service: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      })
+
+      // Nessun ordine trovato
+      if (!lastOrder) {
+        return "Nessun ordine precedente disponibile."
+      }
+
+      // Formatta data in italiano (es: "15 ottobre 2025")
+      const orderDate = new Date(lastOrder.createdAt)
+      const formattedDate = orderDate.toLocaleDateString("it-IT", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+
+      // Formatta lista prodotti
+      const itemsText = lastOrder.items
+        .map((item) => {
+          const name = item.product?.name || item.service?.name || "Prodotto"
+          const code =
+            item.product?.productCode || item.service?.code || "N/A"
+          const qty = item.quantity
+          const price = parseFloat(item.unitPrice.toString())
+          const total = qty * price
+
+          return `- ${code} ${name} x${qty} (${price.toFixed(2)}€ cad.) = ${total.toFixed(2)}€`
+        })
+        .join("\n")
+
+      // Totale ordine
+      const totalAmount = parseFloat(lastOrder.totalAmount.toString())
+
+      // Formato finale per il prompt (in italiano)
+      const summary = `Ultimo ordine: ${lastOrder.orderCode} del ${formattedDate}
+Prodotti ordinati:
+${itemsText}
+Totale ordine: ${totalAmount.toFixed(2)}€
+Stato: ${lastOrder.status}`
+
+      logger.info(
+        `[PromptProcessor] Last order variable generated for customer ${customerId}: ${lastOrder.orderCode}`
+      )
+
+      return summary
+    } catch (error) {
+      logger.error(
+        `[PromptProcessor] Error getting last order for customer ${customerId}:`,
+        error
+      )
+      return "Nessun ordine precedente disponibile."
+    }
   }
 
   /**

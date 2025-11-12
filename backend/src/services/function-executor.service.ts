@@ -129,8 +129,39 @@ export class FunctionExecutor {
           result = await this.repeatLastOrder(context)
           break
 
+        // Order Tracking Functions (aligned naming)
+        case "getOrderHistory":
+          result = await this.getOrderHistory(args, context)
+          break
+
+        case "getLastOrders":
+          result = await this.getLastOrders(args, context)
+          break
+
+        case "getOrderDetails":
+          result = await this.getOrderDetails(args, context)
+          break
+
+        case "trackOrderStatus":
+          result = await this.trackOrderStatus(args, context)
+          break
+
+        // Backward compatibility aliases (deprecated)
         case "getOrders":
-          result = await this.getOrders(args, context)
+          logger.warn("⚠️ DEPRECATED: Use getOrderHistory instead of getOrders")
+          result = await this.getOrderHistory(args, context)
+          break
+
+        case "getOrder":
+          logger.warn("⚠️ DEPRECATED: Use getOrderDetails instead of getOrder")
+          result = await this.getOrderDetails(args, context)
+          break
+
+        case "trackOrder":
+          logger.warn(
+            "⚠️ DEPRECATED: Use trackOrderStatus instead of trackOrder"
+          )
+          result = await this.trackOrderStatus(args, context)
           break
 
         case "contactSupport":
@@ -324,56 +355,149 @@ export class FunctionExecutor {
   }
 
   /**
-   * Get customer orders
+   * Get customer complete order history
    */
-  private async getOrders(
+  private async getOrderHistory(
     args: Record<string, any>,
     context: ExecutionContext
   ): Promise<any> {
-    // If specific order requested
-    if (args.orderId) {
-      const order = await this.orderRepo.findById(
-        context.workspaceId,
-        args.orderId
-      )
-
-      if (!order) {
-        return {
-          success: false,
-          message: `Order ${args.orderId} not found`,
-        }
-      }
-
-      // Check order belongs to customer (security)
-      if (order.customerId !== context.customerId) {
-        return {
-          success: false,
-          message: "Unauthorized access to order",
-        }
-      }
-
-      return {
-        success: true,
-        orders: [order],
-        totalCount: 1,
-      }
-    }
-
-    // Get recent orders (all for customer)
+    const limit = args.limit || 10
     const orders = await this.orderRepo.findByCustomerId(
       context.customerId,
       context.workspaceId
     )
 
-    // Limit results if requested
-    const limit = args.limit || 10
-    const limitedOrders = orders.slice(0, limit)
+    // Return limited orders
+    const limitedOrders = orders.slice(0, Math.min(limit, 50))
 
     return {
       success: true,
       orders: limitedOrders,
-      totalCount: orders.length,
+      total: orders.length,
+      limit: limitedOrders.length,
     }
+  }
+
+  /**
+   * Get last N orders with summary details
+   */
+  private async getLastOrders(
+    args: Record<string, any>,
+    context: ExecutionContext
+  ): Promise<any> {
+    const limit = args.limit || 3
+    const orders = await this.orderRepo.findByCustomerId(
+      context.customerId,
+      context.workspaceId
+    )
+
+    // Return only the first N orders (already sorted by date DESC)
+    const limitedOrders = orders.slice(0, Math.min(limit, 10))
+
+    return limitedOrders.map((order: any) => ({
+      orderCode: order.orderCode,
+      createdAt: order.createdAt,
+      totalPrice: order.totalPrice,
+      status: order.status,
+      itemCount: order.items?.length || 0,
+    }))
+  }
+
+  /**
+   * Get detailed information about a specific order
+   */
+  private async getOrderDetails(
+    args: Record<string, any>,
+    context: ExecutionContext
+  ): Promise<any> {
+    let order = null
+
+    // If orderCode provided, get specific order
+    if (args.orderCode) {
+      order = await this.orderRepo.findByOrderCode(
+        args.orderCode,
+        context.workspaceId
+      )
+    } else {
+      // If no orderCode, get last order
+      const orders = await this.orderRepo.findByCustomerId(
+        context.customerId,
+        context.workspaceId
+      )
+      order = orders && orders.length > 0 ? orders[0] : null
+    }
+
+    if (!order) {
+      return {
+        success: false,
+        message: args.orderCode
+          ? `Ordine ${args.orderCode} non trovato`
+          : "Nessun ordine trovato",
+      }
+    }
+
+    return {
+      success: true,
+      order: order,
+    }
+  }
+
+  /**
+   * Track order status
+   */
+  private async trackOrderStatus(
+    args: Record<string, any>,
+    context: ExecutionContext
+  ): Promise<any> {
+    if (!args.orderCode) {
+      return {
+        success: false,
+        error: "Order code required",
+        message: "Fornisci il codice ordine per il tracking",
+      }
+    }
+
+    const order = await this.orderRepo.findByOrderCode(
+      args.orderCode,
+      context.workspaceId
+    )
+
+    if (!order) {
+      return {
+        success: false,
+        error: "Order not found",
+        message: `Ordine ${args.orderCode} non trovato`,
+      }
+    }
+
+    return {
+      success: true,
+      order: order,
+      status: order.status,
+      trackingNumber: order.trackingNumber || null,
+    }
+  }
+
+  /**
+   * Get customer orders (DEPRECATED - use getOrderHistory)
+   * @deprecated Use getOrderHistory, getLastOrders, or getOrderDetails instead
+   */
+  private async getOrders(
+    args: Record<string, any>,
+    context: ExecutionContext
+  ): Promise<any> {
+    // Backward compatibility: delegate to new methods
+    logger.warn(
+      "⚠️ DEPRECATED METHOD CALLED: getOrders - use getOrderHistory instead"
+    )
+
+    if (args.orderId) {
+      // Single order request → use getOrderDetails
+      return this.getOrderDetails({ orderCode: args.orderId }, context)
+    }
+
+    // Multiple orders → use getOrderHistory
+    return this.getOrderHistory(args, context)
   }
 
   /**
@@ -458,6 +582,28 @@ export class FunctionExecutor {
       case "viewCart":
       case "clearCart":
       case "repeatLastOrder":
+      case "getOrderHistory":
+      case "getLastOrders":
+      case "getOrderDetails":
+        // Optional arguments only
+        break
+
+      case "trackOrderStatus":
+        if (!args.orderCode) {
+          return {
+            valid: false,
+            error: "trackOrderStatus requires 'orderCode'",
+          }
+        }
+        break
+
+      // Deprecated functions (backward compatibility)
+      case "getOrders":
+      case "getOrder":
+      case "trackOrder":
+        // Allow deprecated functions but log warning
+        logger.warn(`⚠️ DEPRECATED FUNCTION: ${functionName}`)
+        break
       case "getOrders":
         break
 

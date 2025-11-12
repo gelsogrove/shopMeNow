@@ -260,6 +260,26 @@ const CheckoutPage: React.FC = () => {
     }
   }, [valid, tokenData])
 
+  // FR-13: Handle step parameter from URL (for repeat order flow)
+  useEffect(() => {
+    // Only process step parameter after initial loading is complete
+    if (initialLoading) return
+
+    const stepParam = searchParams.get("step")
+    if (stepParam === "2") {
+      if (prodotti.length > 0) {
+        setCurrentStep(2)
+        logger.info("FR-13: Navigated to step 2 from URL (repeat order flow)")
+      } else {
+        logger.warn(
+          "FR-13: Cannot navigate to step 2 - cart is empty, staying at step 1"
+        )
+        // Note: We don't show error toast - just stay at step 1 silently
+        // User will see empty cart message in Step 1
+      }
+    }
+  }, [searchParams, prodotti.length, initialLoading])
+
   // Calculate total using discounted prices (only for products, not services)
   const calculateTotal = () => {
     return prodotti.reduce((sum, prodotto) => {

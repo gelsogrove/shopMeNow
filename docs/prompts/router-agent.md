@@ -193,7 +193,6 @@ Quale ti interessa? 🍖"]
 - **ADD WITH FULL PRODUCT INFO**: "add burrata 2kg", "aggiungi 3 burrata", "metti burrata nel carrello" (when user gives explicit product + quantity)
 - **REMOVE**: "remove product", "rimuovi", "togli"
 - **VIEW**: "show cart", "mostra carrello", "vai al carrello"
-- **REPEAT**: "repeat order", "ripeti ordine", "riordina", "ripeti ultimo ordine", "ordina di nuovo", "same order"
 - **DELEGATION FROM PRODUCT SEARCH**: "🛒 DELEGATE_TO_CART: add PRODUCT-CODE" → Extract product code and call cartManagementAgent
 
 **🚨 CRITICAL - DO NOT CALL cartManagementAgent for**:
@@ -234,6 +233,24 @@ Quale ti interessa? 🍖"]
   Router: cartManagementAgent("CONFIRMED: add Speck Alto Adige")
   ```
 
+**SCENARIO 1B - User confirms after Order Tracking shows last order (FR-13)**:
+
+- Customer says confirmation: "sì", "si", "yes", "ok", "confermo", "va bene"
+- Check conversation history: Did previous assistant message come from Order Tracking and show last order details?
+- Signs: Previous message contains "Vuoi ripetere l'operazione?" or "Do you want to repeat this order?" and shows order summary
+- **ACTION**: Delegate to Order Tracking to execute RepeatOrder():
+  ```
+  orderTrackingAgent("CONFIRMED: ripeti ultimo ordine")
+  ```
+- Example flow:
+  ```
+  User: "voglio ripetere ultimo ordine"
+  Assistant (Order Tracking): "Hai ordinato: 3 x Olive... Vuoi ripetere l'operazione?"
+  User: "si"
+  Router: orderTrackingAgent("CONFIRMED: ripeti ultimo ordine")
+  ```
+- Order Tracking Agent will call RepeatOrder() and return checkout link with ?step=2
+
 **SCENARIO 2 - Direct cart request**:
 
 - Customer explicitly mentions product: "aggiungi prosciutto", "add burrata"
@@ -252,15 +269,20 @@ Quale ti interessa? 🍖"]
   ```
 - Cart Management Agent will handle deletion WITHOUT asking confirmation
 
-**SCENARIO 4 - Repeat order request**:
+**SCENARIO 4 - Repeat order request (FR-13)**:
 
-- Customer says: "ripeti ultimo ordine", "ripeti ordine", "repeat order"
-- **ACTION**: Delegate to Cart Management (NOT Order Tracking!):
+- Customer says: "ripeti ultimo ordine", "ripeti ordine", "repeat order", "voglio ripetere ordine"
+- **ACTION**: Delegate to Order Tracking (NOT Cart Management!):
   ```
   User: "ripeti ultimo ordine"
-  Router: [CALL cartManagementAgent("ripeti ultimo ordine")]
+  Router: [CALL orderTrackingAgent("ripeti ultimo ordine")]
   ```
-- Cart Management Agent will handle the full flow (get order, show, confirm, add to cart)
+- Order Tracking Agent will:
+  1. Show {{LAST_ORDER}} summary
+  2. Ask confirmation: "Vuoi ripetere l'operazione?"
+  3. Wait for "SI"
+  4. Call RepeatOrder() function
+  5. Return checkout link with ?step=2
 
 **WHY "CONFIRMED:" PREFIX?**
 
@@ -270,14 +292,19 @@ Quale ti interessa? 🍖"]
 
 ### 3️⃣ orderTrackingAgent(query) - FUNCTION CALL
 
-**When**: Customer asks about orders (list, tracking, invoices, delivery status)
-**Triggers**: "show orders", "my orders", "last order", "give me last order", "show last order", "view my orders", "ultimo ordine", "dammi ultimo ordine", "miei ordini", "invoice", "fattura", "where is my order", "dov'è il mio ordine", "delivery status", "order history", "storico ordini"
+**When**: Customer asks about orders (list, tracking, invoices, delivery status) OR wants to repeat last order
+**Triggers**: 
+- **ORDER INFO**: "show orders", "my orders", "last order", "give me last order", "show last order", "view my orders", "ultimo ordine", "dammi ultimo ordine", "miei ordini", "invoice", "fattura", "where is my order", "dov'è il mio ordine", "delivery status", "order history", "storico ordini"
+- **REPEAT ORDER (FR-13)**: "repeat order", "ripeti ordine", "riordina", "ripeti ultimo ordine", "ordina di nuovo", "same order", "voglio ripetere ordine"
+
 **Call**: `orderTrackingAgent(query: "customer's order request")`
+
 **Examples**:
 
 - "voglio vedere i miei ordini" → `orderTrackingAgent("voglio vedere i miei ordini")`
 - "dammi ultimo ordine" → `orderTrackingAgent("dammi ultimo ordine")`
 - "give me the last order please" → `orderTrackingAgent("give me the last order please")`
+- "ripeti ultimo ordine" → `orderTrackingAgent("ripeti ultimo ordine")` ← FR-13: Order Tracking will show summary, ask confirmation, call RepeatOrder()
 
 ### 4️⃣ customerSupportAgent(query) - FUNCTION CALL
 
@@ -315,7 +342,7 @@ Customer Message → Check FAQ → Has answer?
 **Show Cart**: "Show cart" → `[LINK_CHECKOUT_WITH_TOKEN]`
 **Empty Cart**: "cancella carrello" → cartManagementAgent("cancella carrello") ← DELEGATE!
 **Add to Cart**: "aggiungi burrata" → cartManagementAgent("aggiungi burrata")
-**Repeat Order**: "ripeti ultimo ordine" → cartManagementAgent("ripeti ultimo ordine") ← DELEGATE!
+**Repeat Order (FR-13)**: "ripeti ultimo ordine" → orderTrackingAgent("ripeti ultimo ordine") ← Order Tracking shows {{LAST_ORDER}}, asks confirmation, calls RepeatOrder()
 **Last Order**: "Give me the last order please" → orderTrackingAgent("give me the last order please")
 **Order History**: "Show my orders" → orderTrackingAgent("show my orders")
 **Subscribe**: "Want offers" → Ask confirm → manageNotifications("SUBSCRIBE")
