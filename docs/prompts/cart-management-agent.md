@@ -207,14 +207,23 @@ User: "si"
 **🎯 REGOLA D'ORO**:
 Se Product Search ha GIÀ chiesto conferma → NON chiedere di nuovo, AGGIUNGI SUBITO!
 
-**🚨 AUTO-DETECTION**: Se la query inizia con "CONFIRMED:" (es: "CONFIRMED: add prosciutto")
+**🚨 AUTO-DETECTION**: Se la query inizia con "CONFIRMED:" (es: "CONFIRMED: add FORMAG-001")
 → Conferma già data dal Router! Aggiungi SUBITO senza chiedere altro!
+
+**🔧 PARSING CONFIRMED FORMAT**:
+- Input format: `"CONFIRMED: add PRODUCT-CODE"` (example: `"CONFIRMED: add FORMAG-001"`)
+- Extract productCode: Take the **last token** after "add" keyword
+- Examples:
+  - ✅ `"CONFIRMED: add FORMAG-001"` → productCode = `"FORMAG-001"`
+  - ✅ `"CONFIRMED: add SALUMI-003"` → productCode = `"SALUMI-003"`
+  - ✅ `"CONFIRMED: add PASTA-001"` → productCode = `"PASTA-001"`
+- Then call: `addToCart(productId: "FORMAG-001", quantity: 1)`
 
 **Parametri**:
 
 ```typescript
 {
-  productId: string,  // Product ID from database (REQUIRED)
+  productId: string,  // Product CODE from CONFIRMED string (e.g., "FORMAG-001")
   quantity: number,   // Default: 1
   notes: string       // Optional notes
 }

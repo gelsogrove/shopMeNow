@@ -111,42 +111,137 @@ export class ProductSearchAgentLLM {
       // 🧠 CONVERSATIONAL MEMORY: Pre-filter products if group selection
       let preFilteredProducts: any[] | null = null
       let forceNoGrouping = false
+      let selectedProductFromList: any = null
 
       if (conversation?.metadata?.shouldGroup && conversation.metadata.groups) {
-        const groupSelectionMatch = context.query.match(/^(\d+)$/)
+        const numberSelectionMatch = context.query.match(/^(\d+)$/)
 
-        if (groupSelectionMatch) {
-          const groupNumber = parseInt(groupSelectionMatch[1])
+        if (numberSelectionMatch) {
+          const selectedNumber = parseInt(numberSelectionMatch[1])
           const allProducts = conversation.metadata.groups
           const lastResponse = conversation.lastResponse || ""
 
-          logger.info(`🎯 Group selection detected`, {
+          logger.info(`🎯 Number selection detected`, {
             sessionId: context.sessionId,
-            groupNumber,
+            selectedNumber,
             productsTotal: allProducts.length,
           })
 
-          // 🔍 Extract group text from LLM response
-          const groupText = this.extractGroupText(lastResponse, groupNumber)
+          // Check if last response shows GROUPS or PRODUCT LIST
+          const isProductList = lastResponse.match(/\d+\.\s.*-\s*€\d/)
 
-          if (groupText) {
-            // 🎯 Filter products by group keywords
-            preFilteredProducts = this.filterByGroupKeywords(
-              allProducts,
-              groupText
-            )
-            forceNoGrouping = true
+          if (isProductList) {
+            // 📦 USER SELECTED PRODUCT NUMBER FROM LIST
+            // Extract products from last response and map to number
+            const productLines = lastResponse.match(/^\d+\.\s.+$/gm) || []
 
-            logger.info(`📦 Filtered products for group ${groupNumber}`, {
-              groupText: groupText.substring(0, 50),
-              originalCount: allProducts.length,
-              filteredCount: preFilteredProducts.length,
-            })
+            if (selectedNumber > 0 && selectedNumber <= productLines.length) {
+              // Find matching product by name from line
+              const selectedLine = productLines[selectedNumber - 1]
+              const productNameMatch = selectedLine.match(
+                /^\d+\.\s(.+?)\s*-\s*€/
+              )
+
+              logger.info(`🔍 Parsing product selection`, {
+                selectedNumber,
+                selectedLine,
+                productLines: productLines.length,
+              })
+
+              if (productNameMatch) {
+                const productName = productNameMatch[1].trim()
+
+                logger.info(`🔍 Extracted product name from selection`, {
+                  extractedName: productName,
+                  selectedLine,
+                })
+
+                // 🔧 Feature 123: Search product DIRECTLY in database by name
+                // Don't rely on memory (which may contain old groups)
+                const fullProduct = await this.prisma.products.findFirst({
+                  where: {
+                    workspaceId: context.workspaceId,
+                    isActive: true,
+                    name: {
+                      contains: productName.split(" ")[0], // Use first word for matching (e.g., "Parmigiano")
+                      mode: "insensitive",
+                    },
+                  },
+                })
+
+                if (fullProduct) {
+                  logger.info(`✅ Found product in database`, {
+                    productCode: fullProduct.productCode,
+                    productName: fullProduct.name,
+                  })
+
+                  // Get supplier and category names
+                  const supplier = fullProduct.supplierId
+                    ? await this.prisma.suppliers.findUnique({
+                        where: { id: fullProduct.supplierId },
+                      })
+                    : null
+
+                  const category = fullProduct.categoryId
+                    ? await this.prisma.categories.findUnique({
+                        where: { id: fullProduct.categoryId },
+                      })
+                    : null
+
+                  selectedProductFromList = {
+                    code: fullProduct.productCode,
+                    name: fullProduct.name,
+                    price: fullProduct.price,
+                    description: fullProduct.description,
+                    stock: fullProduct.stock,
+                    supplierName: supplier?.companyName || "N/A",
+                    region: fullProduct.region || "N/A",
+                    formato: fullProduct.formato || "",
+                    allergens: fullProduct.allergens || [],
+                    categoryName: category?.name || "N/A",
+                    certifications: fullProduct.certifications || [],
+                  }
+
+                  logger.info(`📦 Enriched product with full details`, {
+                    productCode: fullProduct.productCode,
+                    stock: fullProduct.stock,
+                    supplier: supplier?.companyName,
+                  })
+                } else {
+                  logger.warn(`⚠️ Product not found in memory`, {
+                    searchedName: productName,
+                    availableCount: allProducts.length,
+                  })
+                }
+              }
+            }
           } else {
-            // Fallback if parsing fails
-            preFilteredProducts = allProducts
-            forceNoGrouping = true
-            logger.warn(`⚠️ Could not parse group, using all products`)
+            // 🎯 USER SELECTED GROUP NUMBER
+            // Extract group text from LLM response
+            const groupText = this.extractGroupText(
+              lastResponse,
+              selectedNumber
+            )
+
+            if (groupText) {
+              // 🎯 Filter products by group keywords
+              preFilteredProducts = this.filterByGroupKeywords(
+                allProducts,
+                groupText
+              )
+              forceNoGrouping = true
+
+              logger.info(`📦 Filtered products for group ${selectedNumber}`, {
+                groupText: groupText.substring(0, 50),
+                originalCount: allProducts.length,
+                filteredCount: preFilteredProducts.length,
+              })
+            } else {
+              // Fallback if parsing fails
+              preFilteredProducts = allProducts
+              forceNoGrouping = true
+              logger.warn(`⚠️ Could not parse group, using all products`)
+            }
           }
         }
       }
@@ -208,6 +303,49 @@ export class ProductSearchAgentLLM {
         logger.info(`🧠 Added conversation history to context`, {
           lastQuery: conversation.lastQuery.substring(0, 50),
           lastResponse: conversation.lastResponse.substring(0, 50),
+        })
+      }
+
+      // Feature 123: If user selected product from list, inject product details
+      if (selectedProductFromList) {
+        const productDetails = `
+✅ USER SELECTED PRODUCT #${context.query} from previous list.
+
+📦 FULL PRODUCT DETAILS:
+   Code: ${selectedProductFromList.code}
+   Name: ${selectedProductFromList.name}
+   Formato: ${selectedProductFromList.formato || "N/A"}
+   Price: €${selectedProductFromList.price}
+   Description: ${selectedProductFromList.description || "N/A"}
+   Stock: ${selectedProductFromList.stock || 0} units
+   Supplier: ${selectedProductFromList.supplierName || "N/A"}
+   Region: ${selectedProductFromList.region || "N/A"}
+   Category: ${selectedProductFromList.categoryName || selectedProductFromList.category || "N/A"}
+   Certifications: ${selectedProductFromList.certifications?.join(", ") || "None"}
+   Allergens: ${selectedProductFromList.allergens?.join(", ") || "None"}
+
+⚠️ CRITICAL: Show ALL details using Format C template (8-field mandatory):
+
+**[CATEGORY]**
+• ${selectedProductFromList.code} ${selectedProductFromList.name} ${selectedProductFromList.formato || ""}
+  📝 ${selectedProductFromList.description || "N/A"}
+  � Prezzo: ~€[ORIGINAL]~ → €${selectedProductFromList.price} (con sconto {{discountUser}}%)
+  📦 Stock: ${selectedProductFromList.stock > 10 ? "✅" : selectedProductFromList.stock > 0 ? "⚠️" : "❌"} ${selectedProductFromList.stock} disponibili
+  🏷️ Fornitore: ${selectedProductFromList.supplierName || "N/A"}
+  🌍 Regione: ${selectedProductFromList.region || "N/A"}
+  🔖 Certificazioni: ${selectedProductFromList.certifications?.join(", ") || "None"}
+
+Then ask: "Vuoi aggiungerlo al carrello? 🛒"
+`
+        messages.push({
+          role: "system" as const,
+          content: productDetails,
+        })
+
+        logger.info(`📦 Injected full product details into conversation`, {
+          productCode: selectedProductFromList.code,
+          productName: selectedProductFromList.name,
+          stock: selectedProductFromList.stock,
         })
       }
 
@@ -317,10 +455,39 @@ export class ProductSearchAgentLLM {
         const shouldGroup = searchFunctionCall?.result?.shouldGroup
         const products = searchFunctionCall?.result?.products || []
 
+        // Feature 123: Log grouping decision analytics
+        if (searchFunctionCall) {
+          const groupingDecision = this.analyzeGroupingStrategy(
+            finalResponse,
+            products
+          )
+          logger.info(`[ProductSearch] Grouping Decision Analytics`, {
+            sessionId: context.sessionId,
+            productsCount: products.length,
+            shouldGroup,
+            strategy: groupingDecision.strategy,
+            groupsDetected: groupingDecision.groupCount,
+            responsePreview: finalResponse.substring(0, 150),
+          })
+        }
+
         let groupsMetadata = null
 
+        // Feature 123: If user selected product from list, save for cart
+        if (selectedProductFromList) {
+          groupsMetadata = {
+            selectedProductCode: selectedProductFromList.code,
+            productName: selectedProductFromList.name,
+            timestamp: new Date().toISOString(),
+          }
+
+          logger.info(`📦 Storing user-selected product from list`, {
+            selectedProductCode: selectedProductFromList.code,
+            productName: selectedProductFromList.name,
+          })
+        }
         // 🔧 FIX: If showing SINGLE product, save selectedProductCode for cart handoff
-        if (products.length === 1) {
+        else if (products.length === 1) {
           const singleProduct = products[0]
           groupsMetadata = {
             selectedProductCode: singleProduct.code, // ✅ CRITICAL: Save for cart delegation
@@ -711,5 +878,70 @@ export class ProductSearchAgentLLM {
       .filter((word) => word.length > 3 && !stopWords.includes(word))
 
     return keywords
+  }
+
+  /**
+   * Analyze LLM response to detect grouping strategy used
+   * Feature 123: Analytics for dynamic grouping intelligence
+   */
+  private analyzeGroupingStrategy(
+    response: string,
+    products: any[]
+  ): { strategy: string; groupCount: number } {
+    const responseLower = response.toLowerCase()
+
+    // Detect strategy based on keywords in response
+    let strategy = "unknown"
+    let groupCount = 0
+
+    // Count numbered groups (1., 2., 3., etc.)
+    const groupMatches = response.match(/^\d+\.\s/gm)
+    groupCount = groupMatches ? groupMatches.length : 0
+
+    // Detect strategy type
+    if (
+      responseLower.includes("dop") ||
+      responseLower.includes("halal") ||
+      responseLower.includes("bio") ||
+      responseLower.includes("certificazioni")
+    ) {
+      strategy = "certification-based"
+    } else if (
+      responseLower.includes("prezzo") ||
+      responseLower.includes("€") ||
+      responseLower.includes("fascia")
+    ) {
+      strategy = "price-based"
+    } else if (
+      responseLower.includes("regione") ||
+      responseLower.includes("sicilian") ||
+      responseLower.includes("sardi")
+    ) {
+      strategy = "region-based"
+    } else if (
+      responseLower.includes("aperitivo") ||
+      responseLower.includes("colazione") ||
+      responseLower.includes("cena")
+    ) {
+      strategy = "use-case"
+    } else if (
+      responseLower.includes("stagionat") ||
+      responseLower.includes("piccante") ||
+      responseLower.includes("dolce")
+    ) {
+      strategy = "attribute-based"
+    } else if (
+      responseLower.includes("tipo") ||
+      responseLower.includes("categor") ||
+      groupCount > 0
+    ) {
+      strategy = "category-based"
+    } else if (products.length <= 3) {
+      strategy = "direct-list"
+    } else if (products.length === 1) {
+      strategy = "single-product"
+    }
+
+    return { strategy, groupCount }
   }
 }

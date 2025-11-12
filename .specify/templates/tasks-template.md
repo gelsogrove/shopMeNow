@@ -17,6 +17,7 @@ description: "Task list template for feature implementation"
 - **[P]**: Can run in parallel (different files, no dependencies)
 - **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
 - Include exact file paths in descriptions
+- **360-Degree Impact**: Note affected layers (FE/BE/DB/Security/Tests)
 
 ## Path Conventions
 
@@ -88,14 +89,30 @@ Examples of foundational tasks (adjust based on your project):
 
 ### Implementation for User Story 1
 
-- [ ] T012 [P] [US1] Create [Entity1] model in src/models/[entity1].py
-- [ ] T013 [P] [US1] Create [Entity2] model in src/models/[entity2].py
-- [ ] T014 [US1] Implement [Service] in src/services/[service].py (depends on T012, T013)
-- [ ] T015 [US1] Implement [endpoint/feature] in src/[location]/[file].py
-- [ ] T016 [US1] Add validation and error handling
-- [ ] T017 [US1] Add logging for user story 1 operations
+- [ ] T012 [P] [US1] **[DB]** Create migration for [Entity1] table: `npx prisma migrate dev --name add_entity1`
+- [ ] T013 [P] [US1] **[DB]** Update seed script with [Entity1] test data: `prisma/seed.ts`
+- [ ] T014 [P] [US1] **[BE/Repository]** Create [Entity1] repository: `backend/src/repositories/[entity1].repository.ts` (MUST filter by workspaceId)
+- [ ] T015 [P] [US1] **[BE/Service]** Implement [Service] business logic: `backend/src/application/services/[service].service.ts`
+- [ ] T016 [US1] **[BE/Controller]** Create controller: `backend/src/interfaces/http/controllers/[entity].controller.ts` (extract workspaceId from middleware)
+- [ ] T017 [US1] **[BE/Routes]** Add route with middleware stack: `backend/src/interfaces/http/routes/[entity].routes.ts` (auth → session → workspace)
+- [ ] T018 [US1] **[BE/Swagger]** Add @swagger JSDoc tags to controller methods
+- [ ] T019 [P] [US1] **[FE/Service]** Create API service: `frontend/src/services/[entity]Api.ts`
+- [ ] T020 [P] [US1] **[FE/Component]** Create UI component: `frontend/src/components/[EntityList].tsx`
+- [ ] T021 [US1] **[Tests/Unit]** Unit tests for service logic: `backend/__tests__/unit/services/[service].test.ts`
+- [ ] T022 [US1] **[Tests/Security]** Workspace isolation test: `backend/__tests__/security/[entity]-isolation.test.ts`
+- [ ] T023 [US1] **[Tests/Integration]** API endpoint integration test: `backend/__tests__/integration/[entity].test.ts`
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
+
+**360-Degree Validation**:
+- [ ] Database: Migration created, seed updated, Prisma client regenerated
+- [ ] Repository: All queries filter by `workspaceId`
+- [ ] Service: Business logic workspace-isolated, proper error handling
+- [ ] Controller: Extracts `workspaceId` from middleware (set by validateWorkspaceOperation)
+- [ ] Routes: Middleware stack complete (authMiddleware → sessionValidationMiddleware → validateWorkspaceOperation)
+- [ ] Swagger: API documentation updated with @swagger tags, `npm run build` executed
+- [ ] Frontend: API calls match backend signature, error handling, loading states
+- [ ] Tests: Unit (business logic), Security (workspace isolation), Integration (API endpoints)
 
 ---
 

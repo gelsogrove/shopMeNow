@@ -47,6 +47,7 @@ import { LinkReplacementService } from "../application/services/link-replacement
 import { getFunctionsForRouter } from "../config/agent-functions"
 import { AgentConfigRepository } from "../repositories/agent-config.repository"
 import { FAQRepository } from "../repositories/faq.repository"
+import { SearchConversationRepository } from "../repositories/searchConversation.repository"
 import logger from "../utils/logger"
 import { AgentLoggerService } from "./agent-logger.service"
 import { ConversationManager } from "./conversation-manager.service"
@@ -170,6 +171,7 @@ export class LLMRouterService {
   private functionExecutor: FunctionExecutor
   private safetyAgent: SafetyTranslationAgent
   private linkReplacementService: LinkReplacementService
+  private searchConversationRepo: SearchConversationRepository
   private openRouterApiKey: string
   private openRouterBaseUrl = "https://openrouter.ai/api/v1"
   private maxFunctionIterations = 8 // FR-13: Increased from 5 to support repeat order confirmation flow (6-7 iterations needed)
@@ -182,6 +184,7 @@ export class LLMRouterService {
     this.functionExecutor = new FunctionExecutor(prisma)
     this.safetyAgent = new SafetyTranslationAgent(prisma)
     this.linkReplacementService = new LinkReplacementService()
+    this.searchConversationRepo = new SearchConversationRepository()
 
     this.openRouterApiKey = process.env.OPENROUTER_API_KEY || ""
     if (!this.openRouterApiKey) {
@@ -1152,6 +1155,29 @@ export class LLMRouterService {
                 .filter((msg: any) => msg.role !== "system")
                 .slice(-3) // Last 3 messages
 
+              // 🔧 Feature 123: Load product search memory for selectedProductCode
+              const sessionId = `${params.workspaceId}-${params.customerId}`
+              const searchMemory =
+                await this.searchConversationRepo.findBySessionId(
+                  sessionId,
+                  params.workspaceId
+                )
+
+              const selectedProductCode =
+                searchMemory?.metadata?.selectedProductCode
+
+              if (selectedProductCode) {
+                logger.info(`📦 Found selectedProductCode in search memory`, {
+                  selectedProductCode,
+                  productName: searchMemory?.metadata?.productName,
+                })
+              } else {
+                logger.warn(`⚠️ No selectedProductCode in search memory`, {
+                  hasSearchMemory: !!searchMemory,
+                  metadata: searchMemory?.metadata,
+                })
+              }
+
               logger.info(`📜 Passing conversation history to CartManagement`, {
                 historyLength: recentHistory.length,
                 messages: recentHistory.map((m: any) => ({
@@ -1167,6 +1193,7 @@ export class LLMRouterService {
                 customerLanguage: params.customerLanguage,
                 query: delegationQuery,
                 conversationHistory: recentHistory, // ✅ Pass conversation context
+                selectedProductCode, // 🔧 Feature 123: Pass product code from search memory
               })
               break
             }

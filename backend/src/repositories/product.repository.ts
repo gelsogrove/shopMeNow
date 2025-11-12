@@ -266,12 +266,9 @@ export class ProductRepository implements IProductRepository {
         slug: product.slug,
         categoryId: product.categoryId,
         supplierId: product.supplierId,
-        isWholeGrain: product.isWholeGrain,
-        isOrganic: product.isOrganic,
-        isHalal: product.isHalal,
-        isVegan: product.isVegan,
-        isGlutenFree: product.isGlutenFree,
+        certifications: product.certifications, // ✅ Use certifications array instead of boolean fields
         transportType: product.transportType,
+        region: product.region,
       }
 
       // Add imageUrl if provided
@@ -516,47 +513,51 @@ export class ProductRepository implements IProductRepository {
 
       // Certifications filter - search ONLY boolean fields
       // This is a SEPARATE search from keywords - don't mix them
+      // ✅ Use certifications array with hasSome operator
       if (filters.certifications && filters.certifications.length > 0) {
-        filters.certifications.forEach((cert) => {
-          const certLower = cert.toLowerCase().trim()
-
-          // Map certification names to boolean fields ONLY
-          // Accept both "halal" and "isHalal" formats from QueryAnalyzer
-          if (
-            certLower === "halal" ||
-            certLower === "ishalal" ||
-            certLower === "hallal" ||
-            certLower === "allal"
-          ) {
-            where.isHalal = true
-          } else if (
-            certLower === "bio" ||
-            certLower === "isorganic" ||
-            certLower === "organic" ||
-            certLower === "biologico"
-          ) {
-            where.isOrganic = true
-          } else if (
-            certLower === "vegan" ||
-            certLower === "isvegan" ||
-            certLower === "vegano"
-          ) {
-            where.isVegan = true
-          } else if (
-            certLower === "gluten-free" ||
-            certLower === "isglutenfree" ||
-            certLower === "senza glutine"
-          ) {
-            where.isGlutenFree = true
-          } else if (
-            certLower === "whole-grain" ||
-            certLower === "iswholegrain" ||
-            certLower === "integrali" ||
-            certLower === "integrale"
-          ) {
-            where.isWholeGrain = true
-          }
-        })
+        where.certifications = {
+          hasSome: filters.certifications.map((cert) => {
+            const certLower = cert.toLowerCase().trim()
+            // Normalize certification names to match array values
+            if (
+              certLower === "halal" ||
+              certLower === "ishalal" ||
+              certLower === "hallal" ||
+              certLower === "allal"
+            ) {
+              return "halal"
+            } else if (
+              certLower === "bio" ||
+              certLower === "isorganic" ||
+              certLower === "organic" ||
+              certLower === "biologico"
+            ) {
+              return "bio"
+            } else if (
+              certLower === "vegan" ||
+              certLower === "isvegan" ||
+              certLower === "vegano"
+            ) {
+              return "vegan"
+            } else if (
+              certLower === "gluten-free" ||
+              certLower === "isglutenfree" ||
+              certLower === "senza glutine"
+            ) {
+              return "gluten-free"
+            } else if (
+              certLower === "whole-grain" ||
+              certLower === "iswholegrain" ||
+              certLower === "integrali" ||
+              certLower === "integrale"
+            ) {
+              return "whole-grain"
+            } else if (certLower === "dop") {
+              return "DOP"
+            }
+            return cert // Return original if no mapping
+          }),
+        }
       }
 
       const products = await this.prisma.products.findMany({
@@ -585,7 +586,7 @@ export class ProductRepository implements IProductRepository {
     return new Product({
       id: data.id,
       name: data.name,
-      productCode: data.productCode, // Fixed: was data.ProductCode
+      productCode: data.productCode,
       description: data.description,
       formato: data.formato,
       price: data.price,
@@ -597,12 +598,9 @@ export class ProductRepository implements IProductRepository {
       supplierId: data.supplierId,
       workspaceId: data.workspaceId,
       imageUrl: data.imageUrl || [],
-      isWholeGrain: data.isWholeGrain ?? false,
-      isOrganic: data.isOrganic ?? false,
-      isHalal: data.isHalal ?? false,
-      isVegan: data.isVegan ?? false,
-      isGlutenFree: data.isGlutenFree ?? false,
+      certifications: data.certifications || [], // ✅ Use certifications array
       transportType: data.transportType || "Temperatura ambiente",
+      region: data.region, // ✅ Add region field
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
       category: data.category,

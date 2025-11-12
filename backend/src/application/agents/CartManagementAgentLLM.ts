@@ -46,6 +46,7 @@ export interface CartLLMContext {
   customerLanguage?: string
   query: string
   conversationHistory?: Array<{ role: string; content: string }> // Last 2-3 messages for context
+  selectedProductCode?: string // Feature 123: Product code from search memory
 }
 
 export interface CartLLMResponse {
@@ -130,6 +131,27 @@ export class CartManagementAgentLLM {
           content: agentConfig.systemPrompt,
         },
       ]
+
+      // 🔧 Feature 123: If we have selectedProductCode from search, inject it
+      if (context.selectedProductCode) {
+        messages.push({
+          role: "system" as const,
+          content: `⚠️ IMPORTANT: The user just selected a product from the catalog.
+Product Code: ${context.selectedProductCode}
+
+When the user says "yes" or "sì" or confirms they want to add the product to cart, 
+you MUST call addToCart() with this EXACT product code: "${context.selectedProductCode}"
+
+DO NOT use product names - ALWAYS use the product code provided above.`,
+        })
+
+        logger.info(
+          `📦 Injected selectedProductCode into CartManagementAgent`,
+          {
+            selectedProductCode: context.selectedProductCode,
+          }
+        )
+      }
 
       // Add conversation history if provided (for context awareness)
       if (

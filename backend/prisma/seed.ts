@@ -309,6 +309,13 @@ async function main() {
       prod.name.toLowerCase().includes("integrale") ||
       prod.name.toLowerCase().includes("integral")
 
+    // DOP certification (Protected Designation of Origin) - Feature 123
+    // ✅ Check ONLY if "DOP", "IGP", or "IGT" is explicitly in the product name
+    const isDOP =
+      prod.name.toLowerCase().includes("dop") ||
+      prod.name.toLowerCase().includes("igp") || // Indicazione Geografica Protetta
+      prod.name.toLowerCase().includes("igt") // Indicazione Geografica Tipica
+
     // Build certifications array based on boolean fields
     const certifications: string[] = []
     if (isOrganic) certifications.push("bio")
@@ -316,153 +323,11 @@ async function main() {
     if (isGlutenFree) certifications.push("gluten-free")
     if (isHalal) certifications.push("halal")
     if (isWholeGrain) certifications.push("whole-grain")
+    if (isDOP) certifications.push("DOP")
 
-    // Assign transport type based on product category and characteristics
-    let transportType = "Temperatura ambiente" // Default for most products
-
-    // Refrigerated products (fresh meats, cheeses, dairy)
-    if (
-      prod.categoryName === "Cured Meats" ||
-      prod.categoryName === "Cheeses" ||
-      prod.name.toLowerCase().includes("burrata") ||
-      prod.name.toLowerCase().includes("prosciutto") ||
-      prod.name.toLowerCase().includes("guanciale") ||
-      prod.name.toLowerCase().includes("pancetta") ||
-      prod.name.toLowerCase().includes("ricotta")
-    ) {
-      transportType = "Trasporto refrigerato"
-    }
-
-    // Frozen products (gelato, arancini, frozen pasta)
-    if (
-      prod.name.toLowerCase().includes("gelato") ||
-      prod.name.toLowerCase().includes("arancini") ||
-      prod.name.toLowerCase().includes("frozen") ||
-      prod.name.toLowerCase().includes("congelat")
-    ) {
-      transportType = "Trasporto congelato"
-    }
-
-    // Assign Italian region based on product name (English region names)
-    let region: string | null = null
-    const prodNameLower = prod.name.toLowerCase()
-
-    // Map products to regions (20 Italian regions in English)
-    if (
-      prodNameLower.includes("parmigiano") ||
-      prodNameLower.includes("parma") ||
-      prodNameLower.includes("modena")
-    ) {
-      region = "Emilia-Romagna"
-    } else if (
-      prodNameLower.includes("romano") ||
-      prodNameLower.includes("roma")
-    ) {
-      region = "Lazio"
-    } else if (
-      prodNameLower.includes("sardo") ||
-      prodNameLower.includes("pecorino sardo") ||
-      prodNameLower.includes("sardinia")
-    ) {
-      region = "Sardinia"
-    } else if (
-      prodNameLower.includes("mozzarella") ||
-      prodNameLower.includes("buffalo") ||
-      prodNameLower.includes("napoli") ||
-      prodNameLower.includes("sorrento")
-    ) {
-      region = "Campania"
-    } else if (
-      prodNameLower.includes("gorgonzola") ||
-      prodNameLower.includes("milan") ||
-      prodNameLower.includes("panettone")
-    ) {
-      region = "Lombardy"
-    } else if (
-      prodNameLower.includes("toscano") ||
-      prodNameLower.includes("tuscan") ||
-      prodNameLower.includes("chianti") ||
-      prodNameLower.includes("florence")
-    ) {
-      region = "Tuscany"
-    } else if (
-      prodNameLower.includes("sicilian") ||
-      prodNameLower.includes("sicilia") ||
-      prodNameLower.includes("etna") ||
-      prodNameLower.includes("arancini")
-    ) {
-      region = "Sicily"
-    } else if (
-      prodNameLower.includes("piedmont") ||
-      prodNameLower.includes("barolo") ||
-      prodNameLower.includes("alba") ||
-      prodNameLower.includes("tartufo")
-    ) {
-      region = "Piedmont"
-    } else if (
-      prodNameLower.includes("venice") ||
-      prodNameLower.includes("veneto") ||
-      prodNameLower.includes("prosecco")
-    ) {
-      region = "Veneto"
-    } else if (
-      prodNameLower.includes("puglia") ||
-      prodNameLower.includes("apulia") ||
-      prodNameLower.includes("orecchiette")
-    ) {
-      region = "Apulia"
-    } else if (
-      prodNameLower.includes("calabria") ||
-      prodNameLower.includes("calabrese") ||
-      prodNameLower.includes("bergamot")
-    ) {
-      region = "Calabria"
-    } else if (
-      prodNameLower.includes("liguria") ||
-      prodNameLower.includes("genoa") ||
-      prodNameLower.includes("pesto")
-    ) {
-      region = "Liguria"
-    } else if (
-      prodNameLower.includes("marche") ||
-      prodNameLower.includes("ancona")
-    ) {
-      region = "Marche"
-    } else if (
-      prodNameLower.includes("abruzzo") ||
-      prodNameLower.includes("montepulciano d'abruzzo")
-    ) {
-      region = "Abruzzo"
-    } else if (
-      prodNameLower.includes("friuli") ||
-      prodNameLower.includes("venezia giulia")
-    ) {
-      region = "Friuli-Venezia Giulia"
-    } else if (
-      prodNameLower.includes("trentino") ||
-      prodNameLower.includes("alto adige") ||
-      prodNameLower.includes("south tyrol")
-    ) {
-      region = "Trentino-South Tyrol"
-    } else if (
-      prodNameLower.includes("umbria") ||
-      prodNameLower.includes("perugia") ||
-      prodNameLower.includes("norcia")
-    ) {
-      region = "Umbria"
-    } else if (
-      prodNameLower.includes("basilicata") ||
-      prodNameLower.includes("matera")
-    ) {
-      region = "Basilicata"
-    } else if (prodNameLower.includes("molise")) {
-      region = "Molise"
-    } else if (
-      prodNameLower.includes("aosta") ||
-      prodNameLower.includes("valle d'aosta")
-    ) {
-      region = "Aosta Valley"
-    }
+    // ✅ Read region and transportType from source data (products.ts)
+    const region = prod.region || null
+    const transportType = prod.transportType || "Temperatura ambiente"
 
     await prisma.products.create({
       data: {
@@ -478,14 +343,9 @@ async function main() {
         supplierId: supplierId,
         workspaceId: workspace.id,
         imageUrl: prod.imageUrl || [],
-        isOrganic: isOrganic,
-        isVegan: isVegan,
-        isGlutenFree: isGlutenFree,
-        isHalal: isHalal,
-        isWholeGrain: isWholeGrain,
         transportType: transportType,
         region: region,
-        certifications: certifications,
+        certifications: certifications, // Array: ["bio", "vegan", "gluten-free", "halal", "whole-grain", "DOP"]
       },
     })
   }

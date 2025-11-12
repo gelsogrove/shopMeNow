@@ -18,7 +18,6 @@ const PROMPTS = {
   ORDER_TRACKING: loadPrompt("order-tracking-agent.md"),
   CUSTOMER_SUPPORT: loadPrompt("customer-support-agent.md"),
   SAFETY_TRANSLATION: loadPrompt("safety-translation-agent.md"),
-  QUERY_ANALYZER: loadPrompt("query-analyzer-agent.md"),
 }
 
 async function updateAllAgentPrompts() {
@@ -72,7 +71,6 @@ async function updateAllAgentPrompts() {
     console.log("   4. Order Tracking Agent - GetLinkOrderByCode, fatture")
     console.log("   5. Customer Support Agent - contactOperator, frustrazione")
     console.log("   6. Safety & Translation Agent - sendAlertEmail, sicurezza")
-    console.log("   7. Query Analyzer Agent - Multi-language query analysis")
   } catch (error) {
     console.error("❌ Errore durante aggiornamento:", error)
     throw error

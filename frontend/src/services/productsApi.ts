@@ -24,11 +24,7 @@ export interface Product {
   supplierId: string | null
   region: string | null // Italian region in English
   imageUrl: string[] | null
-  isWholeGrain: boolean
-  isOrganic: boolean
-  isHalal: boolean
-  isVegan: boolean
-  isGlutenFree: boolean
+  certifications?: string[] // Array of certifications: "bio", "vegan", "gluten-free", "halal", "whole-grain", "DOP"
   transportType: string
   category?: {
     id: string
@@ -60,11 +56,7 @@ export interface CreateProductData {
   supplierId?: string
   region?: string
   isActive?: boolean
-  isWholeGrain?: boolean
-  isOrganic?: boolean
-  isHalal?: boolean
-  isVegan?: boolean
-  isGlutenFree?: boolean
+  certifications?: string[] // Array: ["bio", "vegan", "gluten-free", "halal", "whole-grain", "DOP"]
   transportType?: string
 }
 
@@ -80,11 +72,7 @@ export interface UpdateProductData {
   supplierId?: string
   region?: string
   isActive?: boolean
-  isWholeGrain?: boolean
-  isOrganic?: boolean
-  isHalal?: boolean
-  isVegan?: boolean
-  isGlutenFree?: boolean
+  certifications?: string[] // Array: ["bio", "vegan", "gluten-free", "halal", "whole-grain", "DOP"]
   transportType?: string
 }
 

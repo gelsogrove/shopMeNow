@@ -80,6 +80,21 @@ ShopME is a **WhatsApp-based e-commerce platform** with AI chatbot integration. 
   - 📝 NOTE: Mark as "WhatsApp integration pending" in test documentation
 - Exception: Only test WhatsApp when Andrea explicitly asks for it
 
+### 9. **360-Degree Thinking**
+
+- **ALWAYS** think full-stack when making changes: FE → API → Middleware → Controller → Service → Repository → Database
+- **Before committing**, verify the complete change checklist:
+  - ✅ **Frontend**: Component, API service, error handling, loading states
+  - ✅ **Backend API**: Route, middleware stack (auth/session/workspace), controller, Swagger docs
+  - ✅ **Service Layer**: Business logic, workspace isolation, error handling
+  - ✅ **Repository**: Database queries with `workspaceId` filter
+  - ✅ **Database**: Migration, seed update, Prisma generate
+  - ✅ **Security**: 3-layer middleware (authMiddleware → sessionValidationMiddleware → validateWorkspaceOperation)
+  - ✅ **Tests**: Unit tests, security tests (workspace isolation), integration tests
+- **NEVER** partial implementations: Cannot merge FE without BE, or API without security
+- **Database Trigger**: When touching schema → migration → seed → repository → entity → service → API → frontend → tests
+- See `.specify/memory/constitution.md` Principle V for complete checklist
+
 ---
 
 ## 🏗️ Architecture Patterns

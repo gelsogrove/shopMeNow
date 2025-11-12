@@ -1163,10 +1163,18 @@ export class MessageRepository {
           description: true, // Aggiungi description per il prompt
           formato: true, // Aggiungi formato per il prompt
           stock: true, // Aggiungi stock per disponibilità
-          certifications: true, // Aggiungi certifications per filtri
+          certifications: true, // Array: ["bio", "vegan", "gluten-free", "halal", "whole-grain", "DOP"]
+          region: true, // ✅ Feature 123 - C2: Add region for single product details
+          transportType: true, // ✅ Bonus: Temperature info for product search
           category: {
             select: {
               name: true,
+            },
+          },
+          supplier: {
+            // ✅ Feature 123 - C2: Add supplier for single product details
+            select: {
+              companyName: true,
             },
           },
         },
@@ -1237,19 +1245,80 @@ export class MessageRepository {
           else if (p.stock < 5) stockIcon = "⚠️"
           const stockStr = ` | Stock: ${stockIcon} ${p.stock}`
 
-          // Certifications
+          // Feature 123: Certification badges from certifications array
+          const certMap: Record<string, string> = {
+            DOP: "DOP",
+            bio: "Bio",
+            halal: "Halal",
+            "whole-grain": "Integrale",
+            vegan: "Vegan",
+            "gluten-free": "Senza Glutine",
+          }
+
+          const certBadges: string[] =
+            p.certifications
+              ?.map((c: string) => certMap[c] || c)
+              .filter(Boolean) || []
+
           const certificationsStr =
-            p.certifications && p.certifications.length > 0
-              ? ` | 🔖 ${p.certifications.join(", ")}`
-              : ""
+            certBadges.length > 0 ? ` | 🔖 ${certBadges.join(", ")}` : ""
+
+          // ✅ Feature 123 - C2: Add supplier and region to formatted output
+          const supplierStr = p.supplier?.companyName
+            ? ` | 🏷️ ${p.supplier.companyName}`
+            : ""
+          const regionStr = p.region ? ` | 🌍 ${p.region}` : ""
+          const transportStr = p.transportType
+            ? ` | ${
+                p.transportType === "Trasporto refrigerato"
+                  ? "❄️"
+                  : p.transportType === "Trasporto congelato"
+                    ? "🧊"
+                    : "📦"
+              } ${p.transportType}`
+            : ""
 
           // WhatsApp strikethrough: ~text~ (single tilde at start and end)
-          // Format: [CODICE] NOME formato ~€originalPrice~ → €finalPrice - description | Stock: ✅ N | 🔖 CERT1, CERT2
+          // Format: [CODICE] NOME formato ~€originalPrice~ → €finalPrice - description | Stock: ✅ N | 🔖 Certifications | 🏷️ Supplier | 🌍 Region | ❄️ Transport
           // Se productCode è null/undefined, non mostrarlo
           const productCode = p.productCode ? `${p.productCode} ` : ""
-          formattedProducts += `• ${productCode}${p.name}${formatoStr} ~€${originalPrice}~ → €${finalPrice}${description}${stockStr}${certificationsStr}\n`
+          formattedProducts += `• ${productCode}${p.name}${formatoStr} ~€${originalPrice}~ → €${finalPrice}${description}${stockStr}${certificationsStr}${supplierStr}${regionStr}${transportStr}\n`
         })
         formattedProducts += "\n"
+      }
+
+      // ✅ Feature 123 - C1: Token count monitoring
+      // Estimate token count (rough approximation: 1 token ≈ 4 characters)
+      const tokenCount = Math.ceil(formattedProducts.length / 4)
+      const tokenLimit = 50000
+
+      logger.info(`📊 {{PRODUCTS}} token estimation`, {
+        workspaceId,
+        productsCount: products.length,
+        charactersCount: formattedProducts.length,
+        estimatedTokens: tokenCount,
+        tokenLimit,
+        utilizationPercent: ((tokenCount / tokenLimit) * 100).toFixed(1),
+      })
+
+      if (tokenCount > tokenLimit) {
+        logger.warn(
+          `⚠️ {{PRODUCTS}} exceeds recommended token limit: ${tokenCount} tokens (limit: ${tokenLimit})`,
+          {
+            workspaceId,
+            productsCount: products.length,
+            recommendation:
+              "Consider implementing pagination or reducing product count",
+          }
+        )
+      } else if (tokenCount > tokenLimit * 0.8) {
+        logger.info(
+          `ℹ️ {{PRODUCTS}} approaching token limit: ${tokenCount} tokens (80%+ of ${tokenLimit})`,
+          {
+            workspaceId,
+            productsCount: products.length,
+          }
+        )
       }
 
       return formattedProducts
@@ -2723,11 +2792,10 @@ export class MessageRepository {
 
       if (categories.length === 0) return ""
 
-      // Formatta le categorie dal database - SEMPRE in italiano (lingua base)
-      // Il Translation Layer si occuperà della traduzione finale
-      // ✅ INCLUDE ID for LLM to use in category filter
+      // Feature 123: Format categories with numbers for easy selection
+      // Format: 1. Category Name - Description
       const formattedCategories = categories
-        .map((category) => {
+        .map((category, index) => {
           const name = category.name || "Categoria"
           const description = category.description || ""
 
@@ -2737,7 +2805,7 @@ export class MessageRepository {
             .substring(0, 80)
             .trim()
 
-          return `**${name}** (ID: ${category.id}) - ${shortDesc || "Prodotti disponibili"}`
+          return `${index + 1}. **${name}** - ${shortDesc || "Prodotti disponibili"}`
         })
         .join("\n")
 

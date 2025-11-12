@@ -21,7 +21,7 @@ const prisma = new PrismaClient()
 // Mapping from filename to AgentType
 const AGENT_TYPE_MAP = {
   "router-agent.md": "ROUTER",
-  "product-search.md": "PRODUCT_SEARCH",
+  "product-search-agent.md": "PRODUCT_SEARCH",
   "cart-management.md": "CART_MANAGEMENT",
   "order-tracking.md": "ORDER_TRACKING",
   "customer-support.md": "CUSTOMER_SUPPORT",

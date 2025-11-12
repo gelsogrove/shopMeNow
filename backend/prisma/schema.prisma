@@ -147,15 +147,10 @@ model Products {
   slug           String        @unique
   status         ProductStatus @default(ACTIVE)
   imageUrl       String[]      @default([])
-  isWholeGrain   Boolean       @default(false)
-  isOrganic      Boolean       @default(false)
-  isHalal        Boolean       @default(false)
-  isVegan        Boolean       @default(false)
-  isGlutenFree   Boolean       @default(false)
   transportType  String        @default("Temperatura ambiente")
   region         String?
   allergens      String[]      @default([])
-  certifications String[]      @default([])
+  certifications String[]      @default([]) // Array: ["bio", "vegan", "gluten-free", "halal", "whole-grain", "DOP"]
   cartItems      CartItems[]
   orderItems     OrderItems[]
   category       Categories?   @relation(fields: [categoryId], references: [id])

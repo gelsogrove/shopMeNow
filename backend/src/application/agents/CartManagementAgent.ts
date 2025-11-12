@@ -169,10 +169,10 @@ export class CartManagementAgent {
         context.customerId
       )
 
-      // Add item to cart
+      // Add item to cart (use product.id, NOT productId which is productCode)
       await this.cartRepo.addItem(cart.id, {
         itemType: "PRODUCT",
-        productId,
+        productId: product.id, // ← FIX: Use UUID from product object, not productCode
         quantity,
         notes,
       })

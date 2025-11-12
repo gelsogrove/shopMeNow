@@ -1,3 +1,30 @@
+<!--
+  SYNC IMPACT REPORT
+  
+  Version Change: 1.0.0 → 1.1.0 (MINOR)
+  Rationale: Added new principle "360-Degree Thinking" - materially expanded development guidance
+  Date: 2025-11-12
+  
+  Modified Principles:
+  - NONE (existing principles unchanged)
+  
+  Added Sections:
+  - Principle V: 360-Degree Thinking (Full-Stack Change Analysis)
+  
+  Removed Sections:
+  - NONE
+  
+  Templates Requiring Updates:
+  - ✅ plan-template.md: Constitution Check section updated with all 5 principles + detailed checklist
+  - ✅ spec-template.md: User Stories now include 360-Degree Validation checklist (8 categories)
+  - ✅ tasks-template.md: Task descriptions include 360-degree impact notes (FE/BE/DB/Security/Tests layers)
+  - ✅ .github/copilot-instructions.md: Added Rule #9 "360-Degree Thinking" with complete checklist reference
+  
+  Follow-up TODOs:
+  - Consider adding 360-degree checklist to PR template
+  - Update code review guidelines to enforce full-stack validation
+-->
+
 # ShopME Constitution
 
 ## Core Principles
@@ -150,6 +177,169 @@ const prompt = `Categorie disponibili: ${categories.join(", ")}`
 
 ---
 
+### V. 360-Degree Thinking (MUST - NON-NEGOTIABLE)
+
+**EVERY change MUST consider the complete stack: FE → API → Middleware → Controller → Service → Repository → Database.**
+
+**Requirements**:
+
+- ✅ **Frontend-Backend Contract**: API parameter names, types, validation rules MUST match
+- ✅ **Security Layer Verification**: Protected endpoints MUST have 3-layer middleware stack
+  - `authMiddleware` (JWT validation)
+  - `sessionValidationMiddleware` (x-session-id header)
+  - `validateWorkspaceOperation` (x-workspace-id + param match)
+- ✅ **HTTP Method Consistency**: GET (read), POST (create), PUT (update), DELETE (remove)
+- ✅ **Database Impact Analysis**: Schema changes → migration → seed → repository → tests
+- ✅ **Workspace Isolation Check**: ALL database queries MUST filter by `workspaceId`
+- ❌ **NO partial implementations**: Cannot merge FE without BE, or API without security
+
+**360-Degree Checklist** (MUST validate before committing):
+
+```markdown
+## Frontend Changes
+- [ ] Component receives correct props/parameters
+- [ ] API service calls match backend endpoint signature
+- [ ] Error handling for all API failure cases
+- [ ] Loading states for async operations
+- [ ] Form validation matches backend validation rules
+
+## Backend API Changes
+- [ ] Route uses correct HTTP method (GET/POST/PUT/DELETE)
+- [ ] Middleware stack complete (auth → session → workspace validation)
+- [ ] Controller extracts workspaceId from middleware
+- [ ] Swagger documentation updated with @swagger JSDoc tags
+- [ ] Request/response types match frontend expectations
+
+## Service Layer Changes
+- [ ] Business logic uses workspace-isolated repositories
+- [ ] Error handling with proper error types
+- [ ] LLM calls use database prompts (no hardcoded)
+- [ ] Variable replacement before LLM calls
+
+## Repository/Database Changes
+- [ ] ALL queries filter by workspaceId
+- [ ] Migration created for schema changes (npx prisma migrate dev)
+- [ ] Seed script updated if new tables/fields
+- [ ] Prisma client regenerated (npx prisma generate)
+
+## Testing Changes
+- [ ] Unit tests for business logic (npm run test:unit)
+- [ ] Security tests for workspace isolation (npm run test:security)
+- [ ] Integration tests for API endpoints (npm run test:integration)
+- [ ] Manual test via MCP server or curl if LLM-related
+```
+
+**Examples**:
+
+```typescript
+// ❌ WRONG - Only implemented frontend
+// frontend/src/services/productApi.ts
+export const deleteProduct = async (productId: string) => {
+  await api.delete(`/products/${productId}`) // Backend endpoint doesn't exist!
+}
+
+// ✅ CORRECT - Full stack implementation
+// 1. Database migration
+// prisma/migrations/add_deleted_at/migration.sql
+ALTER TABLE products ADD COLUMN deleted_at TIMESTAMP;
+
+// 2. Repository layer
+// backend/src/repositories/product.repository.ts
+async softDelete(productId: string, workspaceId: string) {
+  return this.prisma.products.update({
+    where: { id: productId, workspaceId }, // Workspace isolation
+    data: { deletedAt: new Date() }
+  })
+}
+
+// 3. Service layer
+// backend/src/application/services/product.service.ts
+async deleteProduct(productId: string, workspaceId: string) {
+  const product = await this.productRepo.findById(productId, workspaceId)
+  if (!product) throw new NotFoundError("Product not found")
+  return this.productRepo.softDelete(productId, workspaceId)
+}
+
+// 4. Controller
+// backend/src/interfaces/http/controllers/product.controller.ts
+async deleteProduct(req: Request, res: Response) {
+  const workspaceId = (req as any).workspaceId // From middleware
+  const { productId } = req.params
+  await this.productService.deleteProduct(productId, workspaceId)
+  return res.json({ success: true })
+}
+
+// 5. Route with security
+// backend/src/interfaces/http/routes/product.routes.ts
+/**
+ * @swagger
+ * /api/workspaces/{workspaceId}/products/{productId}:
+ *   delete:
+ *     summary: Soft delete a product
+ *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.delete(
+  "/:productId",
+  authMiddleware, // JWT validation
+  sessionValidationMiddleware, // Session check
+  validateWorkspaceOperation, // Workspace isolation
+  controller.deleteProduct.bind(controller)
+)
+
+// 6. Frontend service
+// frontend/src/services/productApi.ts
+export const deleteProduct = async (workspaceId: string, productId: string) => {
+  const { data } = await api.delete(
+    `/workspaces/${workspaceId}/products/${productId}`
+  )
+  return data
+}
+
+// 7. Frontend component
+// frontend/src/components/ProductList.tsx
+const handleDelete = async (productId: string) => {
+  try {
+    await productApi.deleteProduct(currentWorkspace.id, productId)
+    toast.success("Product deleted")
+    refetch() // Reload list
+  } catch (error) {
+    toast.error("Failed to delete product")
+  }
+}
+```
+
+**Database Change Trigger** (CRITICAL):
+
+When touching database schema, ALWAYS execute this mental checklist:
+
+1. **Migration**: `npx prisma migrate dev --name descriptive_name`
+2. **Seed Update**: Add/modify test data in `prisma/seed.ts`
+3. **Repository Layer**: Update queries with new fields/tables
+4. **Entity/DTO**: Update TypeScript interfaces
+5. **Service Layer**: Handle new fields in business logic
+6. **API Validation**: Update request/response validation schemas
+7. **Frontend Types**: Regenerate API types or update manually
+8. **Tests**: Update fixtures, mocks, and assertions
+9. **Swagger Docs**: Update API documentation with new fields
+
+**Rationale**:
+
+- 80% of bugs come from frontend-backend mismatches (wrong parameter names, missing validation)
+- Security vulnerabilities arise from incomplete middleware stacks
+- Database changes without migrations break production deployments
+- Partial implementations create technical debt and integration issues
+
+**Enforcement**:
+
+- Code reviews MUST verify 360-degree checklist completed
+- PR description MUST list all affected layers (FE/BE/DB)
+- CI pipeline MUST verify migrations, tests, swagger generation
+- Never approve PR with TODO comments like "// Add backend endpoint later"
+
+---
+
 ## Multi-Agent Architecture Constraints
 
 ### Multi-LLM Call Pattern (CRITICAL)
@@ -214,6 +404,66 @@ router.post(
   controller.createOrder
 )
 ```
+
+---
+
+## Operational Configuration
+
+### Debug Mode (SHOULD - RECOMMENDED)
+
+**Workspace `debugMode` flag controls logging verbosity and usage tracking.**
+
+**Requirements**:
+
+- ✅ **When `debugMode = true`** (Development/Testing):
+  - Skip usage tracking (`usageService.trackUsage()` NOT called)
+  - Skip billing (`BillingService.trackMessage()` NOT called)
+  - Enhanced LLM logging (prompt debug files in `backend/logs/`)
+  - Disable rate limiting for testing
+- ✅ **When `debugMode = false`** (Production):
+  - Full usage tracking (€0.15 per message)
+  - Full billing records (message + channel + push campaigns)
+  - Standard LLM logging only
+  - Rate limiting enforced
+
+**Code Reference**: `backend/src/repositories/message.repository.ts:900-920`
+
+```typescript
+const workspace = await this.prisma.workspace.findUnique({
+  where: { id: workspaceId },
+  select: { debugMode: true },
+})
+
+if (!(workspace?.debugMode ?? true)) {
+  // debugMode is false → Track usage
+  await usageService.trackUsage({ ... })
+  await billingService.trackMessage({ ... })
+} else {
+  // debugMode is true → Skip tracking
+  logger.info("[DEBUG MODE] Skipping usage/billing tracking")
+}
+```
+
+**Impact Analysis**:
+
+| Feature                 | debugMode=true      | debugMode=false        |
+| ----------------------- | ------------------- | ---------------------- |
+| Usage Tracking          | ❌ Skipped          | ✅ Tracked (€0.15/msg) |
+| Billing Records         | ❌ Skipped          | ✅ Created             |
+| LLM Prompt Logs         | ✅ Full debug files | ⚠️ Standard logs only  |
+| Token Monitoring        | ✅ Enabled          | ✅ Enabled             |
+| Rate Limiting           | ❌ Disabled         | ✅ Enforced            |
+| WebSocket Notifications | ✅ Enabled          | ✅ Enabled             |
+
+**Default Behavior**: If `workspace.debugMode` is NULL, defaults to `true` (development-friendly).
+
+**Rationale**: Development workspaces should not accumulate billing costs during testing. Production workspaces need full tracking for analytics and invoicing.
+
+**Enforcement**:
+
+- Environment variable `NODE_ENV=production` SHOULD set `debugMode=false` for all workspaces
+- Seed script SHOULD create test workspaces with `debugMode=true`
+- Admin UI SHOULD display debug mode status prominently
 
 ---
 
@@ -297,4 +547,4 @@ describe("Workspace Isolation", () => {
 
 ---
 
-**Version**: 1.0.0 | **Ratified**: 2025-11-12 | **Last Amended**: 2025-11-12
+**Version**: 1.1.0 | **Ratified**: 2025-11-12 | **Last Amended**: 2025-11-12

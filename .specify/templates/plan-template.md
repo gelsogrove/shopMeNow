@@ -31,7 +31,52 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+**Principle I - Database-First**:
+- [ ] No hardcoded prompts, configurations, or translations
+- [ ] All dynamic content from database (agentConfig, products, categories)
+- [ ] Proper error handling if database data missing (no fallback defaults)
+
+**Principle II - Workspace Isolation**:
+- [ ] All database queries filter by `workspaceId`
+- [ ] Middleware stack extracts workspace from JWT token
+- [ ] No cross-workspace data access (security tests required)
+
+**Principle III - Variable Replacement**:
+- [ ] Agent prompts use template syntax: `{{variable}}`
+- [ ] Runtime replacement via `replaceAllVariables()` before LLM calls
+- [ ] Base language Italian, LLM handles translation
+
+**Principle IV - No Static Translations**:
+- [ ] Product/category names in Italian only (database)
+- [ ] LLM Translation Layer for customer language
+- [ ] No translation mapping dictionaries
+
+**Principle V - 360-Degree Thinking**:
+- [ ] Frontend-backend contract validated (parameter names, types)
+- [ ] Security middleware stack complete (auth → session → workspace)
+- [ ] Database migration + seed + repository + tests all updated
+- [ ] HTTP methods consistent (GET/POST/PUT/DELETE)
+- [ ] Full-stack implementation (no partial FE-only or BE-only changes)
+
+**Multi-Agent Architecture**:
+- [ ] Router → Specialist → Router → Safety flow preserved
+- [ ] Router maintains full conversation history (10 minutes)
+- [ ] Specialists use limited context (last 3 messages)
+
+**Security Requirements**:
+- [ ] Protected endpoints use 3-layer middleware
+- [ ] Public access via SecureTokenService with time-limited tokens
+- [ ] HMAC signature verification for webhooks
+
+**Testing Standards**:
+- [ ] Unit tests for business logic (>80% coverage on critical paths)
+- [ ] Security tests for auth and workspace isolation
+- [ ] Integration tests for API endpoints
+
+**Operational Configuration**:
+- [ ] Workspace `debugMode` flag controls usage tracking
+- [ ] Debug mode skips billing, enhances logging
+- [ ] Production mode enables full tracking and rate limiting
 
 ## Project Structure
 

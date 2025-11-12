@@ -221,16 +221,19 @@ Quale ti interessa? 🍖"]
 - Customer says generic confirmation: "sì", "si", "yes", "ok", "va bene", "perfetto", "lo voglio"
 - Check conversation history: Did previous assistant message come from Product Search and mention a product?
 - Signs: Previous message shows product details (code, price, name) and asks "Vuoi aggiungerlo?" or similar
-- **ACTION**: Extract product name from previous message and call:
+- **ACTION**: Extract **productCode** (NOT product name) from previous message and call:
   ```
-  cartManagementAgent("CONFIRMED: add [product name from previous message]")
+  cartManagementAgent("CONFIRMED: add [PRODUCT-CODE from previous message]")
   ```
+- **🚨 CRITICAL**: Product lists use format `• PRODUCT-CODE Name...` (e.g., `• FORMAG-002 Parmigiano Reggiano DOP...`)
+  - ✅ **CORRECT**: Extract code → `cartManagementAgent("CONFIRMED: add FORMAG-002")`
+  - ❌ **WRONG**: Extract name → `cartManagementAgent("CONFIRMED: add Parmigiano Reggiano DOP 24 mesi")` ← Product not found!
 - Example flow:
   ```
   User: "hai lo speck?"
   Assistant (Product Search): "Abbiamo **Speck Alto Adige** SALUMI-003... Vuoi aggiungerlo?"
   User: "si"
-  Router: cartManagementAgent("CONFIRMED: add Speck Alto Adige")
+  Router: cartManagementAgent("CONFIRMED: add SALUMI-003")
   ```
 
 **SCENARIO 1B - User confirms after Order Tracking shows last order (FR-13)**:
