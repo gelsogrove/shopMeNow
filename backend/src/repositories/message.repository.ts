@@ -1175,15 +1175,18 @@ export class MessageRepository {
       // Formatta i servizi come lista numerata con tutti i dettagli
       const formattedServices = services
         .map((service, index) => {
-          const price = service.price ? `€${service.price.toFixed(2)}` : "Prezzo da definire"
+          const price = service.price
+            ? `€${service.price.toFixed(2)}`
+            : "Prezzo da definire"
           const description = service.description || "Servizio disponibile"
-          const code = service.code || `SRV-${String(index + 1).padStart(3, "0")}`
-          
+          const code =
+            service.code || `SRV-${String(index + 1).padStart(3, "0")}`
+
           return [
             `${index + 1}. **${service.name}** - ${price}`,
             `   📝 Descrizione: ${description}`,
             `   📋 Codice: ${code}`,
-            `   ⏰ Disponibilità: Sempre disponibile`
+            `   ⏰ Disponibilità: Sempre disponibile`,
           ].join("\n")
         })
         .join("\n\n")

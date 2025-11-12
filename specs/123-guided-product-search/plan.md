@@ -305,22 +305,26 @@ describe('Cart integration', () => {
 #### Implementation Summary (Already Complete)
 
 - ✅ T030 [US5] Updated Router Agent prompt (`docs/prompts/router-agent.md`):
+
   - Added SERVICE SELECTION FLOW section with 3-step process
   - Added addService() function documentation (Function #2)
   - Added examples with numbered list → details → confirmation
   - **CRITICAL**: Services always quantity=1 (no "Quanti ne vuoi?" question)
 
 - ✅ T031 [US5] Updated `getActiveServices()` in `backend/src/repositories/message.repository.ts`:
+
   - Changed format from simple text to structured numbered list
   - 5-field format: Name, Description, Price, Code, Availability
   - Returns formatted string for {{SERVICES}} variable
 
 - ✅ T032 [US5] Verified `addService()` calling function exists (`backend/src/domain/calling-functions/AddService.ts`):
+
   - Accepts serviceCode and quantity parameters
   - Integrates with CallingFunctionsService.addServiceToCart()
   - Returns cart link after successful addition
 
 - ✅ T033 [US5] Updated all agent prompts in database via `npm run update-all-agent-prompts`
+
   - Router Agent: Service flow with numbered list
   - All 6 agents synchronized
 
