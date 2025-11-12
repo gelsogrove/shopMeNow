@@ -1,19 +1,19 @@
 /**
  * FR-13: Repeat Order with Confirmation Flow - Integration Test
- * 
+ *
  * Tests the complete flow:
  * 1. {{LAST_ORDER}} variable replacement with real order data
  * 2. AddProduct CF generates checkout link with ?step=2
  * 3. Cart is created with correct items
- * 
+ *
  * NOTE: WhatsApp integration is NOT tested (feature pending)
  * This test validates backend logic only
  */
 
 import { PrismaClient } from "@prisma/client"
-import { PromptProcessorService } from "../../src/services/prompt-processor.service"
-import { CallingFunctionsService } from "../../src/services/calling-functions.service"
 import { LinkGeneratorService } from "../../src/application/services/link-generator.service"
+import { CallingFunctionsService } from "../../src/services/calling-functions.service"
+import { PromptProcessorService } from "../../src/services/prompt-processor.service"
 
 const prisma = new PrismaClient()
 
@@ -127,9 +127,9 @@ describe("FR-13: Repeat Order Flow Integration", () => {
       const promptProcessor = new PromptProcessorService()
 
       // Call the private method via reflection (test-only access)
-      const getLastOrderVariable = (promptProcessor as any).getLastOrderVariable.bind(
-        promptProcessor
-      )
+      const getLastOrderVariable = (
+        promptProcessor as any
+      ).getLastOrderVariable.bind(promptProcessor)
 
       const result = await getLastOrderVariable(customerId, workspaceId)
 
@@ -163,9 +163,9 @@ describe("FR-13: Repeat Order Flow Integration", () => {
         },
       })
 
-      const getLastOrderVariable = (promptProcessor as any).getLastOrderVariable.bind(
-        promptProcessor
-      )
+      const getLastOrderVariable = (
+        promptProcessor as any
+      ).getLastOrderVariable.bind(promptProcessor)
 
       const result = await getLastOrderVariable(newCustomer.id, workspaceId)
 
@@ -311,9 +311,9 @@ describe("FR-13: Repeat Order Flow Integration", () => {
     it("should complete full repeat order flow (without WhatsApp)", async () => {
       // STEP 1: Verify {{LAST_ORDER}} variable works
       const promptProcessor = new PromptProcessorService()
-      const getLastOrderVariable = (promptProcessor as any).getLastOrderVariable.bind(
-        promptProcessor
-      )
+      const getLastOrderVariable = (
+        promptProcessor as any
+      ).getLastOrderVariable.bind(promptProcessor)
 
       const lastOrderSummary = await getLastOrderVariable(
         customerId,

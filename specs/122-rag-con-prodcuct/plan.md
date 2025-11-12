@@ -108,6 +108,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 > **NOT REQUIRED** - No constitution violations to justify
 
 This feature is fully compliant with all constitution principles:
+
 - Database-first architecture maintained
 - Workspace isolation preserved
 - Variable replacement extended correctly
@@ -116,6 +117,7 @@ This feature is fully compliant with all constitution principles:
 **Complexity Score**: 8 story points (Medium complexity)
 
 **Breakdown**:
+
 - Backend (5 SP): PromptProcessor variable, LinkGenerator step param, AddProduct update
 - Frontend (2 SP): CheckoutPage step navigation
 - Testing (1 SP): Unit + integration tests
@@ -129,6 +131,7 @@ This feature is fully compliant with all constitution principles:
 ✅ **COMPLETED** - See [research.md](./research.md)
 
 **Key Decisions**:
+
 1. Reuse existing `AddProduct` CF (supports arrays)
 2. URL parameter `?step=2` for direct navigation
 3. Formatted order summary in Italian (Markdown)
@@ -147,6 +150,7 @@ This feature is fully compliant with all constitution principles:
 **Generated Artifacts**:
 
 1. ✅ [data-model.md](./data-model.md) - Data structures and DB queries
+
    - LastOrderSummary interface
    - AddProductsRequest mapping
    - CheckoutLinkParams extension
@@ -154,6 +158,7 @@ This feature is fully compliant with all constitution principles:
    - Performance optimization (indexes, caching)
 
 2. ✅ [contracts/link-generator-step-parameter.md](./contracts/link-generator-step-parameter.md)
+
    - Method signature extension
    - Input/output specification
    - Usage examples (3 scenarios)
@@ -161,6 +166,7 @@ This feature is fully compliant with all constitution principles:
    - Backward compatibility verification
 
 3. ✅ [contracts/prompt-processor-lastorder.md](./contracts/prompt-processor-lastorder.md)
+
    - {{LAST_ORDER}} variable format
    - Database query specification
    - Implementation code
@@ -183,12 +189,14 @@ This feature is fully compliant with all constitution principles:
 **NOT COVERED BY `/speckit.plan`** - Use `/speckit.tasks` command
 
 Phase 2 will generate:
+
 - `tasks.md` - Detailed task breakdown with subtasks
 - Story point estimates per task
 - Dependencies and sequencing
 - Acceptance criteria per task
 
 **Command to run**:
+
 ```bash
 # From repo root
 /speckit.tasks
@@ -201,6 +209,7 @@ Phase 2 will generate:
 **Plan Status**: ✅ COMPLETE (Phases 0-1)
 
 **Deliverables**:
+
 - ✅ Technical context documented
 - ✅ Constitution gates passed (all 4 principles)
 - ✅ Research completed (6 decisions)
@@ -215,6 +224,7 @@ Phase 2 will generate:
 **Estimated Effort**: 8 story points (~1-2 days for experienced developer)
 
 **Risk Level**: 🟢 LOW
+
 - All components already exist (modifications only)
 - Backward compatible changes
 - Constitution compliant

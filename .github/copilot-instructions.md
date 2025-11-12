@@ -208,6 +208,7 @@ cd frontend && npm test
 ### Backend Design Patterns
 
 #### 1. **Clean Architecture / DDD Pattern**
+
 ```
 backend/src/
 ├── application/services/    # Business logic orchestration
@@ -219,7 +220,9 @@ backend/src/
 ```
 
 #### 2. **Dependency Injection**
+
 Controllers ALWAYS use constructor injection:
+
 ```typescript
 export class ProductController {
   constructor(
@@ -230,19 +233,23 @@ export class ProductController {
 ```
 
 #### 3. **Repository Pattern**
+
 Database access ONLY through repositories:
+
 ```typescript
 export class ProductRepository {
   async findByWorkspace(workspaceId: string) {
     return prisma.products.findMany({
-      where: { workspaceId, isActive: true }
+      where: { workspaceId, isActive: true },
     })
   }
 }
 ```
 
 #### 4. **Import Organization (MANDATORY)**
+
 ALL files MUST have imports organized at the top:
+
 ```typescript
 // 1. External dependencies (node_modules)
 import { PrismaClient } from "@prisma/client"
@@ -266,13 +273,15 @@ import { productRoutes } from "../routes/product.routes"
 ```
 
 #### 5. **Security Pattern (3-Layer)**
+
 ALL protected endpoints MUST use this middleware stack:
+
 ```typescript
 router.post(
   "/workspaces/:workspaceId/resource",
-  authMiddleware,              // JWT token validation
+  authMiddleware, // JWT token validation
   sessionValidationMiddleware, // x-session-id header
-  validateWorkspaceOperation,  // x-workspace-id + param validation
+  validateWorkspaceOperation, // x-workspace-id + param validation
   controller.action
 )
 ```
@@ -280,6 +289,7 @@ router.post(
 ### Frontend Design Patterns
 
 #### 1. **Component Structure**
+
 ```
 frontend/src/
 ├── pages/           # Route components (one per URL)
@@ -294,7 +304,9 @@ frontend/src/
 ```
 
 #### 2. **shadcn/ui Pattern**
+
 ALWAYS use shadcn/ui components for consistency:
+
 ```typescript
 import { Button } from "@/components/ui/button"
 import { Dialog } from "@/components/ui/dialog"
@@ -302,11 +314,13 @@ import { Input } from "@/components/ui/input"
 ```
 
 #### 3. **Slide Panel Pattern (NEW)**
+
 For edit forms, use slide panel from right:
+
 ```typescript
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 
-<Sheet open={isOpen} onOpenChange={setIsOpen}>
+;<Sheet open={isOpen} onOpenChange={setIsOpen}>
   <SheetContent side="right" className="w-[600px]">
     {/* Edit form here */}
   </SheetContent>
@@ -314,19 +328,21 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 ```
 
 #### 4. **API Client Pattern**
+
 ```typescript
 // services/productApi.ts
 export const productApi = {
   async getAll(workspaceId: string) {
     const { data } = await api.get(`/workspaces/${workspaceId}/products`)
     return data
-  }
+  },
 }
 ```
 
 ### Code Quality Standards
 
 #### Cleanliness Rules
+
 - ✅ **Imports at top**: ALWAYS organize imports in logical sections
 - ✅ **No duplicates**: Check for duplicate imports/functions
 - ✅ **Delete unused**: Remove commented code and unused imports
@@ -334,6 +350,7 @@ export const productApi = {
 - ✅ **File size**: Keep files under 500 lines (extract if larger)
 
 #### Testing Requirements
+
 - ✅ **Unit tests**: `npm run test:unit` for business logic
 - ✅ **Security tests**: `npm run test:security` for auth/access control
 - ✅ **Integration tests**: `npm run test:integration` for API endpoints
@@ -528,11 +545,13 @@ const userId = (req as any).user.id // Set by authMiddleware
 IMPORTANTE !!!
 NON DEVI FARE COMMIT CI PENSa L'UTENTE !!!!
 
-USA SEMPRE COME CONTESTO 
+USA SEMPRE COME CONTESTO
 docs/memory-bank/PRD.md
 
 ## Active Technologies
+
 - TypeScript 5.x (Node.js 18+) (122-rag-con-prodcuct)
 
 ## Recent Changes
+
 - 122-rag-con-prodcuct: Added TypeScript 5.x (Node.js 18+)

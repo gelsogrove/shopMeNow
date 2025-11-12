@@ -293,7 +293,8 @@ Quale ti interessa? 🍖"]
 ### 3️⃣ orderTrackingAgent(query) - FUNCTION CALL
 
 **When**: Customer asks about orders (list, tracking, invoices, delivery status) OR wants to repeat last order
-**Triggers**: 
+**Triggers**:
+
 - **ORDER INFO**: "show orders", "my orders", "last order", "give me last order", "show last order", "view my orders", "ultimo ordine", "dammi ultimo ordine", "miei ordini", "invoice", "fattura", "where is my order", "dov'è il mio ordine", "delivery status", "order history", "storico ordini"
 - **REPEAT ORDER (FR-13)**: "repeat order", "ripeti ordine", "riordina", "ripeti ultimo ordine", "ordina di nuovo", "same order", "voglio ripetere ordine"
 

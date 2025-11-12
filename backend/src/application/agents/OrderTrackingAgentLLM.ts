@@ -417,7 +417,9 @@ export class OrderTrackingAgentLLM {
 
         case "repeatOrder":
           // Call RepeatOrder domain function directly
-          const { RepeatOrder } = require("../../domain/calling-functions/RepeatOrder")
+          const {
+            RepeatOrder,
+          } = require("../../domain/calling-functions/RepeatOrder")
           return await RepeatOrder({
             customerId: context.customerId,
             workspaceId: context.workspaceId,

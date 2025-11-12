@@ -1,6 +1,6 @@
+import { PrismaClient } from "@prisma/client"
 import fs from "fs"
 import path from "path"
-import { PrismaClient } from "@prisma/client"
 import { MessageRepository } from "../repositories/message.repository"
 import logger from "../utils/logger"
 
@@ -234,8 +234,7 @@ export class PromptProcessorService {
       const itemsText = lastOrder.items
         .map((item) => {
           const name = item.product?.name || item.service?.name || "Prodotto"
-          const code =
-            item.product?.productCode || item.service?.code || "N/A"
+          const code = item.product?.productCode || item.service?.code || "N/A"
           const qty = item.quantity
           const price = parseFloat(item.unitPrice.toString())
           const total = qty * price

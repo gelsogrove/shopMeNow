@@ -2,7 +2,7 @@
 
 **Feature**: Repeat Order with User Confirmation  
 **Estimated Time**: 3-4 hours  
-**Complexity**: Medium (8 story points)  
+**Complexity**: Medium (8 story points)
 
 ---
 
@@ -24,6 +24,7 @@
 **Tasks**:
 
 1. **Add `getLastOrderVariable` method** (40 min)
+
    ```typescript
    private async getLastOrderVariable(
      customerId: string,
@@ -60,38 +61,40 @@
      )
 
      return `Ultimo ordine: ${order.orderCode} del ${orderDate}
+   ```
 
 Prodotti ordinati:
 ${itemsText}
 
 Totale ordine: ${totalPrice.toFixed(2)}€
 Stato: ${order.status}`
-   }
-   ```
+}
+
+````
 
 2. **Update `replaceAllVariables` method** (20 min)
-   ```typescript
-   async replaceAllVariables(
-     prompt: string,
-     context: ExecutionContext
-   ): Promise<string> {
-     let processedPrompt = prompt
+```typescript
+async replaceAllVariables(
+  prompt: string,
+  context: ExecutionContext
+): Promise<string> {
+  let processedPrompt = prompt
 
-     // Existing variables (nome, email, etc.)
-     // ... keep existing code ...
+  // Existing variables (nome, email, etc.)
+  // ... keep existing code ...
 
-     // NEW: {{LAST_ORDER}} replacement
-     if (processedPrompt.includes('{{LAST_ORDER}}')) {
-       const lastOrder = await this.getLastOrderVariable(
-         context.customerId,
-         context.workspaceId
-       )
-       processedPrompt = processedPrompt.replace(/\{\{LAST_ORDER\}\}/g, lastOrder)
-     }
+  // NEW: {{LAST_ORDER}} replacement
+  if (processedPrompt.includes('{{LAST_ORDER}}')) {
+    const lastOrder = await this.getLastOrderVariable(
+      context.customerId,
+      context.workspaceId
+    )
+    processedPrompt = processedPrompt.replace(/\{\{LAST_ORDER\}\}/g, lastOrder)
+  }
 
-     return processedPrompt
-   }
-   ```
+  return processedPrompt
+}
+````
 
 3. **Add unit tests** (30 min)
    - Create `backend/__tests__/unit/prompt-processor-lastorder.test.ts`
@@ -99,6 +102,7 @@ Stato: ${order.status}`
    - Run: `npm run test:unit -- prompt-processor-lastorder`
 
 **Verification**:
+
 ```bash
 # Test variable replacement
 npm run test:unit -- prompt-processor-lastorder
@@ -116,6 +120,7 @@ npm run test:unit -- prompt-processor-lastorder
 **Tasks**:
 
 1. **Add {{LAST_ORDER}} section to Order Agent prompt** (20 min)
+
    ```typescript
    // Find Order Tracking Agent config update
    const orderAgentPrompt = `
@@ -123,7 +128,7 @@ npm run test:unit -- prompt-processor-lastorder
    Tu sei l'Order Tracking Agent di ShopME. Gestisci tracking ordini.
 
    ## Ultimo Ordine Cliente
-   
+
    {{LAST_ORDER}}
 
    ## Available Functions
@@ -146,24 +151,27 @@ npm run test:unit -- prompt-processor-lastorder
 
    **Example Dialog**:
    ```
+
    👤 User: "Voglio ripetere l'ultimo ordine"
-   
+
    🤖 You: "Ciao Andrea! Il tuo ultimo ordine era ORD-2024-001:
+
    - 4x Tagliatelle fresche (14.00€)
    - 12x Salame Toscano (33.60€)
-   Totale: 47.60€
-   
+     Totale: 47.60€
+
    Vuoi ripetere l'operazione? 🛒"
-   
+
    👤 User: "SI"
-   
+
    🤖 You: [CALL repeatLastOrder()]
-   
+
    📦 Function returns: {cartUrl: "...?step=2", ...}
-   
+
    🤖 You: "✅ Ho aggiunto i prodotti al carrello!
    Procedi al checkout: [LINK]
    ⏰ Link valido per 15 minuti"
+
    ```
    `
 
@@ -184,6 +192,7 @@ npm run test:unit -- prompt-processor-lastorder
    ```
 
 **Verification**:
+
 ```bash
 # Check database
 npx prisma studio
@@ -200,6 +209,7 @@ npx prisma studio
 **Tasks**:
 
 1. **Update method signature** (15 min)
+
    ```typescript
    async generateCheckoutLink(
      token: string,
@@ -218,7 +228,7 @@ npx prisma studio
      })
 
      // Build base URL
-     const baseUrl = workspace?.customDomain 
+     const baseUrl = workspace?.customDomain
        ? `https://${workspace.customDomain}/checkout-public`
        : `${process.env.FRONTEND_URL}/checkout-public`
 
@@ -235,9 +245,10 @@ npx prisma studio
    ```
 
 2. **Update CallingFunctionsService.getCartLink** (20 min)
+
    ```typescript
    // backend/src/services/calling-functions.service.ts
-   
+
    public async getCartLink(request: {
      customerId: string
      workspaceId: string
@@ -262,6 +273,7 @@ npx prisma studio
    - Run: `npm run test:unit -- link-generator-step`
 
 **Verification**:
+
 ```bash
 npm run test:unit -- link-generator-step
 # Expected: ✅ 4/4 tests passing
@@ -276,6 +288,7 @@ npm run test:unit -- link-generator-step
 **Tasks**:
 
 1. **Modify link generation call** (20 min)
+
    ```typescript
    // Around line 140-170 in AddProduct.ts
 
@@ -283,19 +296,20 @@ npm run test:unit -- link-generator-step
    const cartLinkResult = await callingFunctionsService.getCartLink({
      customerId: request.customerId,
      workspaceId: request.workspaceId,
-     step: 2  // NEW: Skip cart review, go to address
+     step: 2, // NEW: Skip cart review, go to address
    })
 
    if (!cartLinkResult.success || !cartLinkResult.linkUrl) {
      // ... error handling ...
    }
 
-   const cartUrl = cartLinkResult.linkUrl  // Now includes ?step=2
+   const cartUrl = cartLinkResult.linkUrl // Now includes ?step=2
    const token = cartLinkResult.token
    const expiresAt = cartLinkResult.expiresAt
    ```
 
 2. **Test AddProduct CF** (10 min)
+
    ```bash
    # Integration test
    npm run test:integration -- add-product
@@ -305,6 +319,7 @@ npm run test:unit -- link-generator-step
    ```
 
 **Verification**:
+
 ```bash
 # Check generated URL
 console.log(cartUrl)
@@ -320,6 +335,7 @@ console.log(cartUrl)
 **Tasks**:
 
 1. **Add URL parameter detection** (30 min)
+
    ```typescript
    // At top of component
    import { useSearchParams } from 'react-router-dom'
@@ -332,7 +348,7 @@ console.log(cartUrl)
      // NEW: Detect step parameter on mount
      useEffect(() => {
        const stepParam = searchParams.get('step')
-       
+
        if (stepParam === '2' && cart && cart.items.length > 0) {
          // Only go to step 2 if cart has items
          setCurrentStep(2)
@@ -347,15 +363,16 @@ console.log(cartUrl)
    ```
 
 2. **Add auto-focus for address step** (20 min)
+
    ```typescript
    // In Step2Address.tsx
-   
+
    useEffect(() => {
      // If arriving from repeat order (step=2), auto-focus first field
      const urlParams = new URLSearchParams(window.location.search)
-     if (urlParams.get('step') === '2') {
+     if (urlParams.get("step") === "2") {
        // Focus street address input
-       document.getElementById('street-address')?.focus()
+       document.getElementById("street-address")?.focus()
      }
    }, [])
    ```
@@ -366,6 +383,7 @@ console.log(cartUrl)
    - Run: `npm test -- checkout-step-navigation`
 
 **Verification**:
+
 ```bash
 # Manual test
 # 1. Open: http://localhost:3000/checkout-public?token=xxx&step=2
@@ -386,17 +404,19 @@ console.log(cartUrl)
 **Options**:
 
 **Option A**: Keep RepeatOrder.ts as-is (RECOMMENDED)
+
 - LLM handles confirmation in conversation
 - RepeatOrder still adds items when called
 - No code changes needed
 
 **Option B**: Add confirmation parameter
+
 ```typescript
 export interface RepeatOrderRequest {
   customerId: string
   workspaceId: string
   orderCode?: string
-  confirmed?: boolean  // NEW
+  confirmed?: boolean // NEW
 }
 
 // In RepeatOrder function
@@ -404,7 +424,7 @@ if (!request.confirmed) {
   return {
     success: false,
     error: "CONFIRMATION_REQUIRED",
-    message: "Please confirm order before repeating"
+    message: "Please confirm order before repeating",
   }
 }
 ```
@@ -420,25 +440,26 @@ if (!request.confirmed) {
 **Tasks**:
 
 1. **Create end-to-end test** (40 min)
+
    ```typescript
-   describe('Repeat Order Confirmation Flow', () => {
-     it('should complete full repeat order flow', async () => {
+   describe("Repeat Order Confirmation Flow", () => {
+     it("should complete full repeat order flow", async () => {
        // 1. Create test order
        const order = await createTestOrder({
          customerId: testCustomer.id,
          workspaceId: testWorkspace.id,
-         status: 'DELIVERED',
+         status: "DELIVERED",
          items: [
-           { productCode: 'A001', quantity: 4 },
-           { productCode: 'A002', quantity: 12 }
-         ]
+           { productCode: "A001", quantity: 4 },
+           { productCode: "A002", quantity: 12 },
+         ],
        })
 
        // 2. Simulate OrderTrackingAgent call
        const context = {
          customerId: testCustomer.id,
          workspaceId: testWorkspace.id,
-         customerName: 'Andrea'
+         customerName: "Andrea",
        }
 
        // 3. Replace {{LAST_ORDER}} variable
@@ -447,22 +468,22 @@ if (!request.confirmed) {
        const result = await promptProcessor.replaceAllVariables(prompt, context)
 
        expect(result).toContain(order.orderCode)
-       expect(result).toContain('A001')
-       expect(result).toContain('A002')
+       expect(result).toContain("A001")
+       expect(result).toContain("A002")
 
        // 4. Call repeatLastOrder (simulating LLM confirmation)
        const addResult = await AddProduct({
          customerId: testCustomer.id,
          workspaceId: testWorkspace.id,
          products: [
-           { productCode: 'A001', quantity: 4 },
-           { productCode: 'A002', quantity: 12 }
-         ]
+           { productCode: "A001", quantity: 4 },
+           { productCode: "A002", quantity: 12 },
+         ],
        })
 
        expect(addResult.success).toBe(true)
-       expect(addResult.cartUrl).toContain('?token=')
-       expect(addResult.cartUrl).toContain('&step=2')
+       expect(addResult.cartUrl).toContain("?token=")
+       expect(addResult.cartUrl).toContain("&step=2")
        expect(addResult.totalAdded).toBe(2)
      })
    })
@@ -474,6 +495,7 @@ if (!request.confirmed) {
    ```
 
 **Verification**:
+
 ```bash
 # All tests should pass
 ✅ Backend build successful
@@ -532,17 +554,20 @@ if (!request.confirmed) {
 If issues occur, rollback in this order:
 
 1. **Revert seed.ts** (remove {{LAST_ORDER}} from Order Agent prompt)
+
    ```bash
    git checkout backend/prisma/seed.ts
    npm run seed
    ```
 
 2. **Revert PromptProcessorService** (remove getLastOrderVariable)
+
    ```bash
    git checkout backend/src/services/prompt-processor.service.ts
    ```
 
 3. **Revert LinkGeneratorService** (remove step parameter)
+
    ```bash
    git checkout backend/src/services/link-generator.service.ts
    git checkout backend/src/services/calling-functions.service.ts
@@ -588,16 +613,16 @@ If issues occur, rollback in this order:
 
 ## Estimated Timeline
 
-| Step | Time | Status |
-|------|------|--------|
-| 1. PromptProcessor {{LAST_ORDER}} | 90 min | ⏳ |
-| 2. Update Order Agent Prompt | 30 min | ⏳ |
-| 3. LinkGenerator Step Parameter | 45 min | ⏳ |
-| 4. AddProduct CF Update | 30 min | ⏳ |
-| 5. Frontend Step Detection | 60 min | ⏳ |
-| 6. RepeatOrder Logic (Optional) | 30 min | ⏳ |
-| 7. Integration Testing | 60 min | ⏳ |
-| **TOTAL** | **345 min (5.75h)** | ⏳ |
+| Step                              | Time                | Status |
+| --------------------------------- | ------------------- | ------ |
+| 1. PromptProcessor {{LAST_ORDER}} | 90 min              | ⏳     |
+| 2. Update Order Agent Prompt      | 30 min              | ⏳     |
+| 3. LinkGenerator Step Parameter   | 45 min              | ⏳     |
+| 4. AddProduct CF Update           | 30 min              | ⏳     |
+| 5. Frontend Step Detection        | 60 min              | ⏳     |
+| 6. RepeatOrder Logic (Optional)   | 30 min              | ⏳     |
+| 7. Integration Testing            | 60 min              | ⏳     |
+| **TOTAL**                         | **345 min (5.75h)** | ⏳     |
 
 **Recommendation**: Implement over 2 sessions (3h + 3h) with testing breaks
 
@@ -606,23 +631,27 @@ If issues occur, rollback in this order:
 ## Success Criteria
 
 ✅ **Functionality**:
+
 - [ ] {{LAST_ORDER}} variable shows correct order details
 - [ ] Agent asks for confirmation before adding
 - [ ] Checkout link includes ?step=2 parameter
 - [ ] Frontend loads directly to address step
 
 ✅ **Performance**:
+
 - [ ] Variable replacement: <50ms
 - [ ] AddProduct CF: <300ms
 - [ ] Checkout page load: <2s
 
 ✅ **Constitution Compliance**:
+
 - [ ] Database-first (no hardcoded data)
 - [ ] Workspace isolation (all queries filtered)
 - [ ] Variable replacement (runtime dynamic)
 - [ ] No static translations (Italian base → LLM)
 
 ✅ **Testing**:
+
 - [ ] All unit tests passing (7/7)
 - [ ] Integration test passing (1/1)
 - [ ] Manual WhatsApp flow works end-to-end
