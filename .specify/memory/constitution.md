@@ -35,11 +35,35 @@
   - Add automated test: Script checks response doesn't contain example product names
 ```
   - Add ESLint rule to detect hardcoded agent responses (violation of Database-First principle)
+
+  Version Change: 1.5.1 → 1.6.0 (MINOR)
+  Rationale: Added Principle VIII "Conversational Memory Invalidation" - critical fix for LLM showing incomplete product lists due to stale cache
+  Date: 2025-11-13
+
+  Modified Principles:
+  - ADDED Principle VIII: Conversational Memory Invalidation
+    - Memory cache in searchConversations table must be cleared when returning stale/incomplete data
+    - Root cause discovery: LLM showed 4/5 DOP cheeses because searchConversations cached old filter results
+    - Solution: Clear session memory before re-querying to force fresh product lookup
+
+  Added Sections:
+  - Principle VIII: Conversational Memory Invalidation (CRITICAL)
+    - When to invalidate: Incomplete lists, count mismatch, stale data symptoms
+    - How to invalidate: `searchConversations.deleteMany({ where: { sessionId } })`
+    - Testing: test-cheese-count.ts validates count accuracy after memory clear
+    - Prevention: Consider TTL expiration or product version tracking
+
+  Follow-up TODOs:
+  - ✅ Verified solution: Clearing searchConversations fixes 4/5 → 5/5 DOP cheese display
+  - ✅ Test passed: test-cheese-count.ts shows all 5 products including Taleggio
+  - Consider: Automatic cache invalidation on product updates
+  - Consider: TTL-based expiration (currently 10 minutes)
+  - Consider: Version tracking (invalidate if product catalog version changes)
 -->
 
 # ShopME Constitution
 
-**Version**: 1.5.1 (PATCH - LLM Hallucination Prevention)  
+**Version**: 1.6.0 (MINOR - Conversational Memory Invalidation)  
 **Last Updated**: 2025-11-13
 
 ## Core Principles
@@ -212,11 +236,11 @@ Prodotti in catalogo: {{PRODUCTS}}
 // Validation function (MUST be added to PromptProcessorService)
 private validatePromptVariables(prompt: string): void {
   const largeVariables = ["PRODUCTS", "OFFERS", "SERVICES", "CATEGORIES"]
-  
+
   for (const variable of largeVariables) {
     const regex = new RegExp(`\\{\\{${variable}\\}\\}`, "g")
     const matches = prompt.match(regex)
-    
+
     if (matches && matches.length > 1) {
       logger.warn(
         `[PromptValidation] ⚠️ Variable {{${variable}}} appears ${matches.length} times in prompt. Only first occurrence will be replaced.`
@@ -238,7 +262,7 @@ public async replaceAllVariables(
 ): Promise<string> {
   // STEP 1: Validate prompt before replacement
   this.validatePromptVariables(promptContent)
-  
+
   // STEP 2: Replace variables (existing logic)
   let processedPrompt = promptContent
   // ... rest of replacement logic
@@ -279,21 +303,27 @@ Examples like "Parmigiano Reggiano", "Salame Toscano" are NOT in your catalog.
 ---
 
 ## Your Role
+
 You help customers find products...
 
 ### Example Format (⚠️ Names are FAKE):
 ```
+
 1. **[PRODUCT_NAME] [SIZE]** €[PRICE]
 2. **[PRODUCT_NAME] [SIZE]** €[PRICE]
+
 ```
+
 ```
 
 **Why This Matters**:
+
 - LLMs have training data with real product names (Parmigiano, Mozzarella, etc.)
 - If prompt examples use realistic names → LLM assumes they exist → hallucination
 - Customer tries to select invented product → error (product not found in database)
 
 **Testing**:
+
 - Manual: Ask "avete salami?" and verify response only contains products from `{{PRODUCTS}}`
 - Automated: Script `validate-agent-prompts.ts` checks for suspicious patterns
 
@@ -780,13 +810,13 @@ export class ProductService {
     // Old implementation that no longer works
     // const products = await this.oldMethod()
     // return products.filter(p => p.active)
-    
+
     // New implementation
     return await prisma.products.findMany({
-      where: { workspaceId, isActive: true }
+      where: { workspaceId, isActive: true },
     })
   }
-  
+
   // Unused method - REMOVE
   // async oldMethod() {
   //   return await prisma.products.findMany()
@@ -799,7 +829,7 @@ import { PrismaClient } from "@prisma/client"
 export class ProductService {
   async getProducts(workspaceId: string) {
     return await prisma.products.findMany({
-      where: { workspaceId, isActive: true }
+      where: { workspaceId, isActive: true },
     })
   }
 }
@@ -810,24 +840,24 @@ export class ProductService {
 ```typescript
 // ❌ WRONG - Duplicated validation logic
 // In productController.ts
-if (!workspaceId || typeof workspaceId !== 'string') {
+if (!workspaceId || typeof workspaceId !== "string") {
   return res.status(400).json({ error: "Invalid workspace ID" })
 }
 
 // In orderController.ts
-if (!workspaceId || typeof workspaceId !== 'string') {
+if (!workspaceId || typeof workspaceId !== "string") {
   return res.status(400).json({ error: "Invalid workspace ID" })
 }
 
 // In customerController.ts
-if (!workspaceId || typeof workspaceId !== 'string') {
+if (!workspaceId || typeof workspaceId !== "string") {
   return res.status(400).json({ error: "Invalid workspace ID" })
 }
 
 // ✅ CORRECT - Extracted to shared utility
 // utils/validators.ts
 export function validateWorkspaceId(workspaceId: any): string {
-  if (!workspaceId || typeof workspaceId !== 'string') {
+  if (!workspaceId || typeof workspaceId !== "string") {
     throw new ValidationError("Invalid workspace ID")
   }
   return workspaceId
@@ -901,74 +931,91 @@ If codebase already has technical debt:
 **Requirements**:
 
 **1. Output Language Standardization**:
+
 - ✅ All agents (except Safety & Translation) output **ENGLISH ONLY**
 - ✅ Safety & Translation Agent translates final response to customer's language
 - ❌ SubLLMs (ProductSearch, Cart, OrderTracking, Support) MUST NOT produce non-English responses
 
 **2. Final Response Responsibility**:
+
 - ✅ **Router Agent ONLY** formats final user-facing response (has full conversation history)
 - ❌ Other agents return **raw data/content only** (no formatting, no narrative, no customer-facing text)
 
 **3. Single Responsibility Principle**:
+
 - ✅ Each LLM has **ONE purpose**: Cart operations, Order tracking, Product search, Customer support
 - ❌ Executing tasks outside designated domain is **strictly prohibited**
 
 **4. Single Delegation Rule**:
+
 - ✅ If request falls under another agent's domain → **delegate via Function Call**
 - ❌ **Never answer directly** for another agent's domain (Router MUST NOT search products)
 
 **5. Integrity of Delegated Responses**:
+
 - ✅ Responses from delegated agents copied **EXACTLY as returned** (no modification)
 - ❌ No summaries, no rewording, no commentary on delegated content
 
 **6. Context Variable Limit**:
+
 - ✅ **ONE dynamic variable per category** per prompt ({{PRODUCTS}} OR {{PRODUCT_DETAILS}}, not both)
 - ❌ Multiple similar variables create ambiguity and prompt confusion
 - ✅ **Router MUST NOT have {{PRODUCTS}} or {{CATEGORIES}}** (ProductSearch only)
 
 **7. Single Source of Truth**:
+
 - ✅ Crucial rules/logic appear **ONCE** in the system
 - ❌ Duplicated rules across agents prohibited (leads to inconsistency)
 
 **8. Prompt Structure & Logical Grouping**:
+
 - ✅ Content organized in **coherent, self-contained sections**
 - ❌ Dispersing related concepts across prompt prohibited
 
 **9. Example & Simulation Labeling (Anti-Leakage)**:
+
 - ✅ Training content labeled with **"example"** or **"simulation"**
 - ❌ Agents treat as **fictional** (not operational facts to act upon)
 
 **10. Structured Reasoning (Chain-of-Thought)**:
+
 - ✅ Complex decisions use **internal reasoning** (not user-visible)
 - ❌ Skip reasoning for simple/obvious tasks (efficiency)
 
 **11. Fallback Mechanism**:
+
 - ✅ Unclear intent → delegate to `customerSupportAgent` (don't guess)
 - ❌ Never guess or invent actions when user intent is ambiguous
 
 **12. Function Atomicity**:
+
 - ✅ One Function Call = **one intent** (search products, add to cart)
 - ❌ Chaining multiple intents prohibited (e.g., search + add in one call)
 
 **13. Limited Context Window**:
+
 - ✅ Decisions prioritize **last 3 conversation iterations** (specialists)
 - ✅ Router uses **full 10-minute conversation history** (contextualization)
 - ❌ Older data doesn't drive Function Calls (prevents stale actions)
 
 **14. No Fabricated Function Calls**:
+
 - ✅ Only use **explicitly defined Functions** in agent schema
 - ❌ Never invent/assume Functions not in specification
 
 **15. Communication Role — Router Only**:
+
 - ✅ **Router handles**: tone, style, formatting, customer-facing narrative
 - ❌ **SubLLMs return**: raw data only (product lists, cart state, order info)
 
 **16. Function Call Documentation & Example Clarity**:
+
 - ✅ Each Function includes: **input params, output format, purpose**
 - ✅ Examples labeled **"example"/"simulation"** (anti-leakage)
 - ❌ Self-explanatory, testable in isolation
 
 **17. Prompt Context Integrity (No Thematic Overlap)**:
+
 - ✅ Sections remain **self-contained** (no cross-referencing)
 - ❌ No overlap/blending between unrelated sections
 
@@ -981,9 +1028,11 @@ const processedRouterPrompt = await promptProcessor.preProcessPrompt(
   workspaceId,
   customerData,
   {
-    faqs, services, offers,
+    faqs,
+    services,
+    offers,
     categories, // ← Router shouldn't have this
-    products    // ← Router shouldn't have this
+    products, // ← Router shouldn't have this
   }
 )
 
@@ -996,7 +1045,7 @@ const processedRouterPrompt = await promptProcessor.preProcessPrompt(
     faqs: faqs || "",
     services: services || "",
     offers: offers || "",
-    subscribeMessage: subscribeMessage || ""
+    subscribeMessage: subscribeMessage || "",
     // NO categories, NO products - ProductSearchAgent only!
   }
 )
@@ -1006,16 +1055,16 @@ const processedRouterPrompt = await promptProcessor.preProcessPrompt(
 // ❌ WRONG - ProductSearch returning narrative (Rule #2 violation)
 return {
   response: "Ciao! Ecco i salumi disponibili: 1. Prosciutto...",
-  agent: "ProductSearch"
+  agent: "ProductSearch",
 }
 
 // ✅ CORRECT - ProductSearch returns raw data only
 return {
   products: [
-    { id: "SALUMI-001", name: "Prosciutto di Parma DOP 100g", price: 8.50 },
-    { id: "SALUMI-004", name: "Salame Milano 200g", price: 6.80 }
+    { id: "SALUMI-001", name: "Prosciutto di Parma DOP 100g", price: 8.5 },
+    { id: "SALUMI-004", name: "Salame Milano 200g", price: 6.8 },
   ],
-  agent: "ProductSearch"
+  agent: "ProductSearch",
 }
 // Router contextualizes this into customer-facing response
 ```
@@ -1031,7 +1080,7 @@ if (message.includes("salami")) {
   const result = await this.productSearchAgent.searchProducts({
     query: message,
     workspaceId,
-    customerId
+    customerId,
   })
   return this.contextualizeResponse(result) // Router only contextualizes
 }
@@ -1039,14 +1088,14 @@ if (message.includes("salami")) {
 
 **Agent Responsibility Matrix**:
 
-| Agent              | Domain                     | Has {{PRODUCTS}} | Has {{CATEGORIES}} | Outputs Language |
-| ------------------ | -------------------------- | ---------------- | ------------------ | ---------------- |
-| Router             | Routing + Contextualization | ❌ NO            | ❌ NO              | English          |
-| ProductSearch      | Product queries            | ✅ YES           | ✅ YES             | English          |
-| Cart               | Cart operations            | ❌ NO            | ❌ NO              | English          |
-| OrderTracking      | Order status/history       | ❌ NO            | ❌ NO              | English          |
-| CustomerSupport    | Complex issues             | ❌ NO            | ❌ NO              | English          |
-| Safety & Translation | Validation + Translation  | ❌ NO            | ❌ NO              | Customer's language |
+| Agent                | Domain                      | Has {{PRODUCTS}} | Has {{CATEGORIES}} | Outputs Language    |
+| -------------------- | --------------------------- | ---------------- | ------------------ | ------------------- |
+| Router               | Routing + Contextualization | ❌ NO            | ❌ NO              | English             |
+| ProductSearch        | Product queries             | ✅ YES           | ✅ YES             | English             |
+| Cart                 | Cart operations             | ❌ NO            | ❌ NO              | English             |
+| OrderTracking        | Order status/history        | ❌ NO            | ❌ NO              | English             |
+| CustomerSupport      | Complex issues              | ❌ NO            | ❌ NO              | English             |
+| Safety & Translation | Validation + Translation    | ❌ NO            | ❌ NO              | Customer's language |
 
 **Rationale**:
 
@@ -1132,6 +1181,148 @@ router.post(
 
 ---
 
+### VIII. Conversational Memory Invalidation (MUST - CRITICAL)
+
+**SearchConversations cache MUST be cleared when showing incomplete/stale product lists.**
+
+**Problem**: The `searchConversations` table caches LLM filter results (e.g., "DOP cheeses") for performance. When product data changes or LLM returns incomplete lists, stale cache causes wrong results.
+
+**Root Cause Discovery** (Session 2025-11-13):
+
+- User query: "avete i formaggi?" → LLM grouped by certification
+- User selects: "1" (Formaggi DOP - 5 products)
+- **Bug**: LLM showed only 4 of 5 DOP cheeses (missing Taleggio DOP)
+- **Investigation**:
+  - ✅ Database confirmed: 5 DOP cheeses exist (Gorgonzola, Parmigiano, Mozzarella, Pecorino, Taleggio)
+  - ✅ MessageRepository.getActiveProducts(): All 5 in formatted output
+  - ✅ PromptProcessorService: {{PRODUCTS}} includes all 5 (verified in logs/prompt-debug files)
+  - ❌ **LLM output**: Only 4 shown consistently (Taleggio missing)
+- **Root Cause**: `searchConversations` table cached first response with 4 products, LLM reused cache instead of re-filtering from fresh {{PRODUCTS}}
+- **Solution**: Clear `searchConversations.deleteMany({ where: { sessionId } })` before re-query → **Test passed**: All 5 products shown including Taleggio
+
+**Requirements**:
+
+- ✅ **When to invalidate** (symptoms of stale cache):
+
+  - Count mismatch: LLM says "(N prodotti)" but shows fewer than N
+  - Missing products: Database has X items, LLM shows X-1 or fewer
+  - Stale data: Product updated/added but LLM shows old version
+  - Filter changes: User switches category but LLM shows previous category results
+
+- ✅ **How to invalidate**:
+
+  ```typescript
+  // Clear session memory to force fresh lookup
+  await prisma.searchConversations.deleteMany({
+    where: { sessionId },
+  })
+  ```
+
+- ✅ **Prevention strategies**:
+  - **TTL expiration**: Already implemented (10-minute expiry in `expiresAt`)
+  - **Product version tracking**: Consider adding `catalogVersion` to workspace, invalidate on increment
+  - **Automatic invalidation**: On product CRUD operations, clear related sessions
+  - **Test validation**: `test-cheese-count.ts` verifies count accuracy after memory clear
+
+**Examples**:
+
+```typescript
+// ❌ WRONG - Trusting stale cache
+async function handleProductQuery(sessionId: string, query: string) {
+  const cached = await searchConversationRepo.findBySession(sessionId)
+  if (cached) {
+    return cached.lastResponse // May be stale/incomplete
+  }
+  return await productSearchAgent.query(query)
+}
+
+// ✅ CORRECT - Clear cache when stale data detected
+async function handleProductQuery(sessionId: string, query: string) {
+  const products = await messageRepo.getActiveProducts(workspaceId)
+  const cached = await searchConversationRepo.findBySession(sessionId)
+
+  // If cache exists but product count doesn't match, invalidate
+  if (cached && cached.productsCount !== products.length) {
+    logger.warn(
+      `Stale cache detected: expected ${products.length}, cached ${cached.productsCount}`
+    )
+    await prisma.searchConversations.deleteMany({ where: { sessionId } })
+  }
+
+  return await productSearchAgent.query(query)
+}
+
+// ✅ CORRECT - Clear cache on product updates
+async function updateProduct(productId: string, data: ProductUpdateDto) {
+  const product = await prisma.products.update({
+    where: { id: productId },
+    data,
+  })
+
+  // Invalidate all sessions for this workspace
+  await prisma.searchConversations.deleteMany({
+    where: {
+      workspaceId: product.workspaceId,
+      // Only clear if cache contains this product's category
+      lastQuery: { contains: product.category },
+    },
+  })
+
+  return product
+}
+```
+
+**Test Case** (from `test-cheese-count.ts`):
+
+```typescript
+// Step 1: Clear session memory
+await prisma.searchConversations.deleteMany({
+  where: { sessionId: testSessionId },
+})
+
+// Step 2: Query "avete i formaggi?"
+const response1 = await productSearchAgent.query({
+  sessionId: testSessionId,
+  query: "avete i formaggi?",
+})
+// Expected: Groups shown (DOP, Freschi, Stagionati)
+
+// Step 3: User selects "1" (DOP group)
+const response2 = await productSearchAgent.query({
+  sessionId: testSessionId,
+  query: "1",
+})
+
+// Step 4: Validate ALL 5 DOP cheeses shown
+const expectedProducts = [
+  "Gorgonzola Dolce DOP",
+  "Parmigiano Reggiano DOP 24 mesi",
+  "Mozzarella di Bufala Campana DOP",
+  "Pecorino Romano DOP",
+  "Taleggio DOP", // ← Previously missing due to stale cache
+]
+
+for (const product of expectedProducts) {
+  expect(response2).toContain(product)
+}
+```
+
+**Rationale**:
+
+- **Performance vs Accuracy tradeoff**: Caching improves response time but risks showing incomplete data
+- **User trust impact**: Saying "5 prodotti" but showing 4 damages credibility
+- **Inventory accuracy**: Missing products = lost sales opportunities
+- **Testing requirement**: Integration tests MUST clear memory before assertions
+
+**Enforcement**:
+
+- Code reviews MUST verify cache invalidation on product CRUD operations
+- Integration tests MUST clear `searchConversations` before product query tests
+- Monitoring MUST alert on count mismatches (claimed vs shown)
+- Consider: Automatic background job to detect and clear stale caches
+
+---
+
 ## Operational Configuration
 
 ### Debug Mode (SHOULD - RECOMMENDED)
@@ -1184,11 +1375,13 @@ if (!effectiveDebugMode) {
 | WebSocket Notifications | ✅ Enabled          | ✅ Enabled             |
 
 **Default Behavior**: If `workspace.debugMode` is NULL, uses environment-based fallback:
+
 - `NODE_ENV=production` → defaults to `false` (full tracking enabled)
 - `NODE_ENV=development` → defaults to `true` (skip billing/usage tracking)
 - `NODE_ENV` not set → defaults to `true` (safe default for local development)
 
 **Implementation Pattern**:
+
 ```typescript
 // Compliant with Principle I (Database-First) - uses environment context when DB value is NULL
 const effectiveDebugMode = workspace?.debugMode ?? (process.env.NODE_ENV === 'production' ? false : true)
@@ -1291,4 +1484,4 @@ describe("Workspace Isolation", () => {
 
 ---
 
-**Version**: 1.5.0 | **Ratified**: 2025-11-12 | **Last Amended**: 2025-11-13
+**Version**: 1.6.0 | **Ratified**: 2025-11-12 | **Last Amended**: 2025-11-13

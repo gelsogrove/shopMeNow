@@ -86,11 +86,21 @@ async function main() {
     console.log("   ✅ Format C (8 fields) shown correctly!")
   } else {
     console.log("   ❌ Format C missing or incomplete!")
-    console.log(`      - Has 📝 Description: ${response2.output.includes("📝")}`)
-    console.log(`      - Has 💰 Prezzo: ${response2.output.includes("💰 Prezzo:")}`)
-    console.log(`      - Has 📦 Stock: ${response2.output.includes("📦 Stock:")}`)
-    console.log(`      - Has 🏷️ Fornitore: ${response2.output.includes("🏷️ Fornitore:")}`)
-    console.log(`      - Has 🌍 Regione: ${response2.output.includes("🌍 Regione:")}`)
+    console.log(
+      `      - Has 📝 Description: ${response2.output.includes("📝")}`
+    )
+    console.log(
+      `      - Has 💰 Prezzo: ${response2.output.includes("💰 Prezzo:")}`
+    )
+    console.log(
+      `      - Has 📦 Stock: ${response2.output.includes("📦 Stock:")}`
+    )
+    console.log(
+      `      - Has 🏷️ Fornitore: ${response2.output.includes("🏷️ Fornitore:")}`
+    )
+    console.log(
+      `      - Has 🌍 Regione: ${response2.output.includes("🌍 Regione:")}`
+    )
   }
 
   console.log()

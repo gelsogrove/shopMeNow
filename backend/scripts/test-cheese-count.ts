@@ -105,7 +105,9 @@ async function main() {
 
   // Check for Taleggio specifically
   const hasTaleggio = response2.output.includes("Taleggio")
-  console.log(`   🔍 Contains Taleggio DOP: ${hasTaleggio ? "YES ✅" : "NO ❌"}`)
+  console.log(
+    `   🔍 Contains Taleggio DOP: ${hasTaleggio ? "YES ✅" : "NO ❌"}`
+  )
   console.log()
 
   // Verdict

@@ -487,6 +487,7 @@ Quale ti interessa? (scrivi il numero) 🛒
 ```
 
 **🚨 CRITICAL COUNTING RULE**:
+
 - ✅ **SHOW ALL PRODUCTS** - if you filtered 5 products, show ALL 5 in numbered list
 - ❌ **NEVER skip products** - don't show only 4 when you found 5
 - ✅ **COUNT MATCHES HEADER** - if header says "(5 prodotti)", list MUST have 5 items
@@ -1318,8 +1319,8 @@ Ti interessa uno di questi? 💡
 9. **Skip greeting** - always say "Ciao {{nameUser}}!" (in their language)
 10. **Hide original price** - when discount exists, ALWAYS show `~€original~ → €final`
 11. **Forget discount explanation** - always mention {{discountUser}}% or "offerta"
-11. **Force artificial grouping** - if 5-8 products are all different, show them all!
-12. **Show only 3 products** - you can show up to 8 if they don't need grouping
+12. **Force artificial grouping** - if 5-8 products are all different, show them all!
+13. **Show only 3 products** - you can show up to 8 if they don't need grouping
 
 ---
 
