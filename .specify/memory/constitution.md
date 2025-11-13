@@ -1363,27 +1363,48 @@ for (const product of expectedProducts) {
 **Critical Requirements**:
 
 1. **1:1 Mapping Rule**:
+
    - ✅ Every LLM call (Router, ProductSearch, Cart, OrderTracking, CustomerSupport, Safety) = ONE `debugSteps.push()`
    - ❌ Zero shortcuts - no response can skip timeline tracking
    - ❌ Zero hardcoded responses - ALL responses through LLM with full debug data
 
 2. **Zero Hardcoded Responses**:
+
    - ❌ **NEVER** return responses without LLM processing: `return { output: "Mi dispiace..." }` ← PROHIBITED
    - ✅ **ALWAYS** delegate to specialist agent with LLM call and `systemPrompt` tracking
    - ❌ **NEVER** skip delegation based on heuristics (e.g., "category doesn't exist" → hardcoded response)
 
 3. **systemPrompt Tracking**:
+
    - ✅ Every specialist agent MUST return `systemPrompt` in response interface
    - ✅ Router MUST include `systemPrompt: specialistResponse.systemPrompt` in debugStep
    - ✅ Frontend MUST display 📄 PROMPT (System) section for ALL specialist steps
 
 4. **Timeline Structure** (4-step pattern for specialist delegation):
+
    ```typescript
    debugSteps = [
-     { type: "router", agent: "Router Agent", output: { decision: "delegate to PRODUCT_SEARCH" } },
-     { type: "sub_agent", agent: "PRODUCT_SEARCH Agent", systemPrompt: "...", output: { responseText: "..." } },
-     { type: "router", agent: "Router Agent", output: { decision: "received response from specialist" } },
-     { type: "safety", agent: "Safety & Translation Agent", output: { translatedText: "..." } }
+     {
+       type: "router",
+       agent: "Router Agent",
+       output: { decision: "delegate to PRODUCT_SEARCH" },
+     },
+     {
+       type: "sub_agent",
+       agent: "PRODUCT_SEARCH Agent",
+       systemPrompt: "...",
+       output: { responseText: "..." },
+     },
+     {
+       type: "router",
+       agent: "Router Agent",
+       output: { decision: "received response from specialist" },
+     },
+     {
+       type: "safety",
+       agent: "Safety & Translation Agent",
+       output: { translatedText: "..." },
+     },
    ]
    ```
 
@@ -1498,6 +1519,7 @@ describe("Message Flow Timeline", () => {
 **Critical Requirements**:
 
 1. **Validation-Only Method**:
+
    - ✅ Create `validateSubAgentResponse()` method with if/else rules (NO LLM call)
    - ✅ Validate response completeness: length >50 chars, contains expected content
    - ✅ Agent-specific rules:
@@ -1507,6 +1529,7 @@ describe("Message Flow Timeline", () => {
      - `CUSTOMER_SUPPORT`: Has support message OR agent contact info
 
 2. **Flow Decision Tree**:
+
    ```typescript
    Sub-Agent returns response
    ↓
@@ -1520,6 +1543,7 @@ describe("Message Flow Timeline", () => {
    ```
 
 3. **Debug Timeline Transparency**:
+
    - ✅ Validation-only path MUST add Router debugStep with `tokenUsage: 0`
    - ✅ Step label: "Router Agent (validation-only)" to distinguish from LLM calls
    - ✅ Output decision: "Response validated - approved for Safety layer (no LLM call)"
@@ -1637,8 +1661,10 @@ describe("Validation-Only Router Pattern", () => {
       customerId,
     })
 
-    const routerSteps = response.debugInfo.steps.filter((s) => s.type === "router")
-    const validationOnlyStep = routerSteps.find((s) => 
+    const routerSteps = response.debugInfo.steps.filter(
+      (s) => s.type === "router"
+    )
+    const validationOnlyStep = routerSteps.find((s) =>
       s.agent.includes("validation-only")
     )
 
@@ -1648,11 +1674,13 @@ describe("Validation-Only Router Pattern", () => {
 
   it("MUST call Router LLM when sub-agent response is invalid", async () => {
     // Mock invalid response (too short)
-    jest.spyOn(ProductSearchAgentLLM.prototype, "handleQuery").mockResolvedValue({
-      success: true,
-      output: "ok", // ❌ Invalid: <50 chars
-      tokensUsed: 100,
-    })
+    jest
+      .spyOn(ProductSearchAgentLLM.prototype, "handleQuery")
+      .mockResolvedValue({
+        success: true,
+        output: "ok", // ❌ Invalid: <50 chars
+        tokensUsed: 100,
+      })
 
     const response = await llmRouter.routeMessage({
       message: "avete salami?",
@@ -1660,9 +1688,12 @@ describe("Validation-Only Router Pattern", () => {
       customerId,
     })
 
-    const routerSteps = response.debugInfo.steps.filter((s) => s.type === "router")
-    const reformulationStep = routerSteps.find((s) => 
-      s.tokenUsage.totalTokens > 0 && !s.agent.includes("validation-only")
+    const routerSteps = response.debugInfo.steps.filter(
+      (s) => s.type === "router"
+    )
+    const reformulationStep = routerSteps.find(
+      (s) =>
+        s.tokenUsage.totalTokens > 0 && !s.agent.includes("validation-only")
     )
 
     expect(reformulationStep).toBeDefined() // ✅ Router LLM called
@@ -1672,6 +1703,7 @@ describe("Validation-Only Router Pattern", () => {
 ```
 
 **See Also**:
+
 - `docs/architecture/MULTI_AGENT_FLOW.md` - Complete flow documentation
 - `backend/src/services/llm-router.service.ts:validateSubAgentResponse()` - Implementation
 

@@ -103,6 +103,7 @@ ShopME uses a **multi-agent architecture** with Router Agent orchestrating speci
 Router makes LLM call #3 when:
 
 1. **Validation Fails**: `validateSubAgentResponse()` returns `isValid: false`
+
    - Response too short (<50 chars)
    - Missing expected content (e.g., PRODUCT_SEARCH without product list)
    - Generic/unclear response needing reformulation
@@ -112,6 +113,7 @@ Router makes LLM call #3 when:
    - Response quality issues detected
 
 **Example (Invalid Response)**:
+
 ```typescript
 // Sub-agent returns: "ok"
 const validationResult = validateSubAgentResponse({
@@ -128,6 +130,7 @@ const validationResult = validateSubAgentResponse({
 Router skips LLM call when:
 
 1. **Validation Passes**: `validateSubAgentResponse()` returns `isValid: true`
+
    - Response length >50 chars ✅
    - Contains expected content ✅
    - Agent-specific checks pass ✅
@@ -138,6 +141,7 @@ Router skips LLM call when:
    - Reduces API costs by $0.001875 per message
 
 **Example (Valid Response)**:
+
 ```typescript
 // Sub-agent returns: "Ciao Mario! Ecco i salumi: 1. **Prosciutto di Parma DOP** €8.50..."
 const validationResult = validateSubAgentResponse({
@@ -163,17 +167,22 @@ if (expectedAgent === "PRODUCT_SEARCH") {
   const hasNoProducts = /non\s+(ho|abbiamo)|no\s+products?/i.test(response)
 
   if (!hasProducts && !hasCategories && !hasNoProducts) {
-    return { isValid: false, reason: "Missing product list or 'no products' message" }
+    return {
+      isValid: false,
+      reason: "Missing product list or 'no products' message",
+    }
   }
 }
 ```
 
 **Valid Examples**:
+
 - ✅ "Ecco i salumi: 1. **Prosciutto** €8.50, 2. **Salame** €12.00"
 - ✅ "Abbiamo 3 categorie: Salumi, Formaggi, Dolci"
 - ✅ "Mi dispiace, non abbiamo dolci al momento"
 
 **Invalid Examples**:
+
 - ❌ "ok" (too short, no products)
 - ❌ "Posso aiutarti con qualcos'altro?" (no product info)
 
@@ -181,7 +190,9 @@ if (expectedAgent === "PRODUCT_SEARCH") {
 
 ```typescript
 if (expectedAgent === "CART_MANAGEMENT") {
-  const hasCartAction = /aggiunt|rimoss|carrell|cart|added|removed/i.test(response)
+  const hasCartAction = /aggiunt|rimoss|carrell|cart|added|removed/i.test(
+    response
+  )
   if (!hasCartAction) {
     return { isValid: false, reason: "Missing cart action confirmation" }
   }
@@ -189,10 +200,12 @@ if (expectedAgent === "CART_MANAGEMENT") {
 ```
 
 **Valid Examples**:
+
 - ✅ "✅ Ho aggiunto 2 x Prosciutto al tuo carrello!"
 - ✅ "Removed 1 x Salame from cart"
 
 **Invalid Examples**:
+
 - ❌ "Done" (no cart action mentioned)
 
 ### ORDER_TRACKING Validation
@@ -207,6 +220,7 @@ if (expectedAgent === "ORDER_TRACKING") {
 ```
 
 **Valid Examples**:
+
 - ✅ "Il tuo ordine ORD-048-2025-9 è stato spedito!"
 - ✅ "Your order status: In Transit"
 
@@ -228,7 +242,10 @@ if (expectedAgent === "ORDER_TRACKING") {
       "systemPrompt": "# 🔀 ROUTER AGENT...", // ✅ Processed prompt
       "tokenUsage": { "totalTokens": 5234 },
       "input": { "userMessage": "avete salami?" },
-      "output": { "decision": "call_function", "functionCall": "callProductSearchAgent" }
+      "output": {
+        "decision": "call_function",
+        "functionCall": "callProductSearchAgent"
+      }
     },
     {
       "type": "sub_agent",
@@ -237,7 +254,9 @@ if (expectedAgent === "ORDER_TRACKING") {
       "systemPrompt": "# Product Search Agent...", // ✅ With {{PRODUCTS}} replaced
       "tokenUsage": { "totalTokens": 8120 },
       "input": { "query": "avete salami?" },
-      "output": { "responseText": "Ciao Mario! Ecco i salumi: 1. **Prosciutto..." }
+      "output": {
+        "responseText": "Ciao Mario! Ecco i salumi: 1. **Prosciutto..."
+      }
     },
     {
       "type": "router",
@@ -247,7 +266,9 @@ if (expectedAgent === "ORDER_TRACKING") {
       "timestamp": "2025-11-13T18:40:11.250Z",
       "tokenUsage": { "totalTokens": 0 }, // ⬅️ ZERO tokens - no LLM call!
       "input": { "specialistResponse": "Ciao Mario! Ecco i salumi..." },
-      "output": { "decision": "Response validated - approved for Safety layer (no LLM call)" }
+      "output": {
+        "decision": "Response validated - approved for Safety layer (no LLM call)"
+      }
     },
     {
       "type": "token-replacement",
@@ -276,12 +297,14 @@ if (expectedAgent === "ORDER_TRACKING") {
 ### Timeline Integrity Checks
 
 ✅ **MUST have**:
+
 1. Router step (LLM call #1) with `systemPrompt`
 2. Sub-agent step with `systemPrompt`
 3. Router validation step (validation-only OR LLM call) - distinguishable by `tokenUsage`
 4. Safety step with `systemPrompt`
 
 ❌ **MUST NOT have**:
+
 1. Missing `systemPrompt` in any agent step
 2. Steps without timestamp
 3. Zero-token steps without "(validation-only)" label
@@ -294,6 +317,7 @@ if (expectedAgent === "ORDER_TRACKING") {
 ### ⚠️ WHEN MODIFYING MULTI-AGENT FLOW
 
 **BEFORE** making ANY changes to:
+
 - `llm-router.service.ts`
 - Specialist agents (ProductSearchAgentLLM, CartManagementAgentLLM, etc.)
 - `functionCallingLoop()` method
@@ -378,21 +402,23 @@ debugSteps.push({ type: "safety", ... }) // ⬅️ Push here!
 
 ### Token Usage Breakdown
 
-| Step | Agent | Tokens | Cost | Can Skip? |
-|------|-------|--------|------|-----------|
-| 1 | Router LLM call | ~5000 | $0.00188 | ❌ Never |
-| 2 | Specialist LLM call | ~8000 | $0.00300 | ❌ Never |
-| 3 | Router validation | **0** (validation-only) | **$0** | ✅ If valid |
-| 3 | Router reformulation | ~5000 | $0.00188 | ⚠️ If invalid |
-| 4 | Token replacement | 0 (backend) | $0 | ❌ Never |
-| 5 | Safety LLM call | ~3000 | $0.00113 | ❌ Never |
+| Step | Agent                | Tokens                  | Cost     | Can Skip?     |
+| ---- | -------------------- | ----------------------- | -------- | ------------- |
+| 1    | Router LLM call      | ~5000                   | $0.00188 | ❌ Never      |
+| 2    | Specialist LLM call  | ~8000                   | $0.00300 | ❌ Never      |
+| 3    | Router validation    | **0** (validation-only) | **$0**   | ✅ If valid   |
+| 3    | Router reformulation | ~5000                   | $0.00188 | ⚠️ If invalid |
+| 4    | Token replacement    | 0 (backend)             | $0       | ❌ Never      |
+| 5    | Safety LLM call      | ~3000                   | $0.00113 | ❌ Never      |
 
 **Total (Validation-Only Path)**:
+
 - Tokens: ~16,000
 - Cost: ~$0.006 per message
 - Latency: ~2.5s
 
 **Total (Reformulation Path)**:
+
 - Tokens: ~21,000 (+31% more)
 - Cost: ~$0.0079 (+32% more)
 - Latency: ~3.3s (+32% slower)
@@ -442,9 +468,9 @@ describe("Multi-Agent Flow", () => {
 
     // Check timeline structure
     expect(response.debugInfo.steps).toHaveLength(5) // Router → Sub → Router(val) → Token → Safety
-    
-    const validationStep = response.debugInfo.steps.find(s => 
-      s.type === "router" && s.agent.includes("validation-only")
+
+    const validationStep = response.debugInfo.steps.find(
+      (s) => s.type === "router" && s.agent.includes("validation-only")
     )
     expect(validationStep).toBeDefined()
     expect(validationStep.tokenUsage.totalTokens).toBe(0) // No LLM call!

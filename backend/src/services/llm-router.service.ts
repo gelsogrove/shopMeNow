@@ -197,14 +197,14 @@ export class LLMRouterService {
 
   /**
    * 🆕 Validation-Only Router Pattern - Validate sub-agent response without LLM call
-   * 
+   *
    * This method checks if a specialist agent's response is valid and complete
    * without making an expensive LLM call to the Router. This saves ~5000 tokens
    * per request (25% token reduction) when validation passes.
-   * 
+   *
    * @param options - Validation parameters
    * @returns Validation result with reason if invalid
-   * 
+   *
    * @see Constitution v1.8.0 Principle X: Validation-Only Router Pattern
    * @see docs/architecture/MULTI_AGENT_FLOW.md for complete flow documentation
    */
@@ -246,8 +246,9 @@ export class LLMRouterService {
 
     // Rule 4: CART_MANAGEMENT must contain cart action confirmation
     if (expectedAgent === "CART_MANAGEMENT") {
-      const hasCartAction =
-        /aggiunt|rimoss|carrell|cart|added|removed/i.test(response)
+      const hasCartAction = /aggiunt|rimoss|carrell|cart|added|removed/i.test(
+        response
+      )
       if (!hasCartAction) {
         return {
           isValid: false,
@@ -1955,12 +1956,13 @@ export class LLMRouterService {
 
       // Save assistant message (OUTBOUND) with debugInfo
       // ✅ Include ALL 4 steps: Router → Specialist → Router receives → Safety
-      
+
       // 🔍 DEBUG: Log systemPrompt status
       logger.error("🔍🔍🔍 DEBUG: specialistResponse.systemPrompt", {
         exists: !!specialistResponse.systemPrompt,
         length: specialistResponse.systemPrompt?.length || 0,
-        preview: specialistResponse.systemPrompt?.substring(0, 150) || "❌ MISSING"
+        preview:
+          specialistResponse.systemPrompt?.substring(0, 150) || "❌ MISSING",
       })
 
       const routerDelegateTimestamp = new Date().toISOString()
