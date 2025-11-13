@@ -378,25 +378,6 @@ export class LLMRouterService {
         ])
 
       // Helper function to get language display name
-      const getLanguageDisplayName = (
-        languageCode: string | null | undefined
-      ): string => {
-        if (!languageCode || languageCode.trim() === "") {
-          return "ITALIANO"
-        }
-        const languageMap: Record<string, string> = {
-          it: "ITALIANO",
-          en: "ENGLISH",
-          es: "ESPAÑOL",
-          pt: "PORTUGUÊS",
-          IT: "ITALIANO",
-          ENG: "ENGLISH",
-          ESP: "ESPAÑOL",
-          PRT: "PORTUGUÊS",
-        }
-        return languageMap[languageCode] || "ITALIANO"
-      }
-
       // Build customerData object with all variables
       const customerData = {
         nameUser: customer.name || "",
@@ -405,7 +386,7 @@ export class LLMRouterService {
         discountUser: customer.discount || 0,
         companyName: customer.company || "",
         lastordercode: lastOrder?.orderCode || "",
-        languageUser: getLanguageDisplayName(
+        languageUser: this.getLanguageDisplayName(
           customer.language || workspace?.language || "it"
         ),
         agentName: customer.sales
@@ -669,7 +650,11 @@ export class LLMRouterService {
       // CRITICAL FIX: Variables from calling functions (RepeatOrder.ts, ResetCart.ts)
       // were not being replaced in LLM responses, showing {{discountUser}} to customers
       // This fixes Constitution Principle I violation (no hardcoded values)
-      // @see specs/124-customer-variables-replacement/spec.md FR-1, FR-3
+      //
+      // CENTRALIZED REPLACEMENT: replaceCustomerVariables() is the SINGLE SOURCE OF TRUTH
+      // for ALL variable replacements (prompts AND responses)
+      //
+      // @see specs/124-customer-variables-replacement/spec.md FR-1, FR-2, FR-3
       // @see MULTI_AGENT_FLOW.md Step 4.6
       const customerVarsData = {
         nome: params.customerName,
@@ -681,6 +666,11 @@ export class LLMRouterService {
           : "Non assegnato",
         agentPhone: customer.sales?.phone || "N/A",
         agentEmail: customer.sales?.email || "N/A",
+        companyName: customer.company || "L'Altra Italia",
+        languageUser: this.getLanguageDisplayName(
+          customer.language || workspace?.language || "it"
+        ),
+        lastordercode: lastOrder?.orderCode || "",
       }
 
       responseWithLinks = this.promptProcessor.replaceCustomerVariables(
@@ -692,8 +682,10 @@ export class LLMRouterService {
         nameUser: customerVarsData.nome,
         discountUser: customerVarsData.discountUser,
         agentName: customerVarsData.agentName,
+        companyName: customerVarsData.companyName,
         hasEmail: !!customerVarsData.email,
         hasPhone: !!customerVarsData.phone,
+        hasLastOrder: !!customerVarsData.lastordercode,
         responseLength: responseWithLinks.length,
         responsePreview: responseWithLinks.substring(0, 150),
       })
@@ -1188,33 +1180,13 @@ export class LLMRouterService {
             }),
           ])
 
-          // Helper function to get language display name
-          const getLanguageDisplayName = (
-            languageCode: string | null | undefined
-          ): string => {
-            if (!languageCode || languageCode.trim() === "") {
-              return "ITALIANO"
-            }
-            const languageMap: Record<string, string> = {
-              it: "ITALIANO",
-              en: "ENGLISH",
-              es: "ESPAÑOL",
-              pt: "PORTUGUÊS",
-              IT: "ITALIANO",
-              ENG: "ENGLISH",
-              ESP: "ESPAÑOL",
-              PRT: "PORTUGUÊS",
-            }
-            return languageMap[languageCode] || "ITALIANO"
-          }
-
           // Build customerData object with all variables
           const customerData = {
             nameUser: customer.name || "",
             discountUser: customer.discount || 0,
             companyName: customer.company || "",
             lastordercode: lastOrder?.orderCode || "",
-            languageUser: getLanguageDisplayName(
+            languageUser: this.getLanguageDisplayName(
               customer.language || workspace.language || "it"
             ),
             agentName: customer.sales
@@ -2263,6 +2235,34 @@ export class LLMRouterService {
       default:
         throw new Error(`Unknown agent type: ${agentType}`)
     }
+  }
+
+  /**
+   * Get human-readable language display name from language code
+   * @param languageCode - Language code (e.g., "it", "en", "IT", "ENG")
+   * @returns Language display name (e.g., "ITALIANO", "ENGLISH")
+   * @example
+   * getLanguageDisplayName("it") => "ITALIANO"
+   * getLanguageDisplayName("ENG") => "ENGLISH"
+   * getLanguageDisplayName("") => "ITALIANO" (default)
+   */
+  private getLanguageDisplayName(
+    languageCode: string | null | undefined
+  ): string {
+    if (!languageCode || languageCode.trim() === "") {
+      return "ITALIANO"
+    }
+    const languageMap: Record<string, string> = {
+      it: "ITALIANO",
+      en: "ENGLISH",
+      es: "ESPAÑOL",
+      pt: "PORTUGUÊS",
+      IT: "ITALIANO",
+      ENG: "ENGLISH",
+      ESP: "ESPAÑOL",
+      PRT: "PORTUGUÊS",
+    }
+    return languageMap[languageCode] || "ITALIANO"
   }
 
   /**

@@ -683,6 +683,57 @@ async function main() {
         createdAt: new Date(Date.now() - 1000 * 60 * 4), // 4 minutes ago
       },
     })
+
+    // 💬 Create conversation messages for chat history
+    await prisma.conversationMessage.createMany({
+      data: [
+        {
+          conversationId: chatSession1.id,
+          workspaceId: workspace.id,
+          customerId: italianCustomer.id,
+          role: "user",
+          content: "Ciao! Vorrei sapere quali formaggi avete disponibili",
+          createdAt: new Date(Date.now() - 1000 * 60 * 10),
+        },
+        {
+          conversationId: chatSession1.id,
+          workspaceId: workspace.id,
+          customerId: italianCustomer.id,
+          role: "assistant",
+          content:
+            "Ciao! Abbiamo una vasta selezione di formaggi italiani:\n\n🧀 **Parmigiano Reggiano DOP** - €18.50/kg\n🧀 **Pecorino Romano DOP** - €16.90/kg\n🧀 **Gorgonzola Dolce** - €14.50/kg\n\nVuoi aggiungere qualcosa al carrello?",
+          debugInfo: JSON.stringify({
+            agentSelected: "PRODUCT_SEARCH",
+            steps: [
+              { agentType: "Router", decision: "PRODUCT_SEARCH" },
+              { agentType: "PRODUCT_SEARCH", response: "..." },
+            ],
+          }),
+          createdAt: new Date(Date.now() - 1000 * 60 * 9),
+        },
+        {
+          conversationId: chatSession1.id,
+          workspaceId: workspace.id,
+          customerId: italianCustomer.id,
+          role: "user",
+          content: "Sì, vorrei 1kg di Parmigiano Reggiano",
+          createdAt: new Date(Date.now() - 1000 * 60 * 8),
+        },
+        {
+          conversationId: chatSession1.id,
+          workspaceId: workspace.id,
+          customerId: italianCustomer.id,
+          role: "assistant",
+          content:
+            "✅ Perfetto! Ho aggiunto al carrello:\n\n**Parmigiano Reggiano DOP**\nQuantità: 1 kg\nPrezzo: €18.50\n\nVuoi procedere con l'ordine?",
+          debugInfo: JSON.stringify({
+            agentSelected: "CART",
+            functionCalled: "AddToCart",
+          }),
+          createdAt: new Date(Date.now() - 1000 * 60 * 7),
+        },
+      ],
+    })
   } else {
     console.log(`   ⚠️  Italian customer not found!`)
   }
@@ -730,6 +781,32 @@ async function main() {
         },
         createdAt: new Date(), // Now
       },
+    })
+
+    // 💬 Create conversation messages
+    await prisma.conversationMessage.createMany({
+      data: [
+        {
+          conversationId: chatSession2.id,
+          workspaceId: workspace.id,
+          customerId: spanishCustomer.id,
+          role: "user",
+          content: "Hola, ¿dónde está mi pedido?",
+          createdAt: new Date(Date.now() - 1000 * 60 * 15),
+        },
+        {
+          conversationId: chatSession2.id,
+          workspaceId: workspace.id,
+          customerId: spanishCustomer.id,
+          role: "assistant",
+          content:
+            "¡Hola! Tu pedido está en tránsito 🚚\n\n📦 **Pedido #ORD-001**\nEstado: En camino\nEntrega estimada: Mañana\n\n¿Necesitas algo más?",
+          debugInfo: JSON.stringify({
+            agentSelected: "ORDER_TRACKING",
+          }),
+          createdAt: new Date(Date.now() - 1000 * 60 * 14),
+        },
+      ],
     })
   } else {
     console.log(`   ⚠️  Spanish customer not found!`)
@@ -779,6 +856,32 @@ async function main() {
         createdAt: new Date(Date.now() - 1000 * 15), // 15 seconds ago
       },
     })
+
+    // 💬 Create conversation messages
+    await prisma.conversationMessage.createMany({
+      data: [
+        {
+          conversationId: chatSession3.id,
+          workspaceId: workspace.id,
+          customerId: portugueseCustomer.id,
+          role: "user",
+          content: "Olá! Tem alguma promoção hoje?",
+          createdAt: new Date(Date.now() - 1000 * 60 * 20),
+        },
+        {
+          conversationId: chatSession3.id,
+          workspaceId: workspace.id,
+          customerId: portugueseCustomer.id,
+          role: "assistant",
+          content:
+            "Olá! Sim, temos ofertas especiais:\n\n🎉 **Oferta da Semana**:\n- Azeite Toscano: -20%\n- Prosciutto di Parma: -15%\n\nQuer aproveitar?",
+          debugInfo: JSON.stringify({
+            agentSelected: "PRODUCT_SEARCH",
+          }),
+          createdAt: new Date(Date.now() - 1000 * 60 * 19),
+        },
+      ],
+    })
   } else {
     console.log(`   ⚠️  Portuguese customer not found!`)
   }
@@ -827,13 +930,39 @@ async function main() {
         createdAt: new Date(Date.now() - 1000 * 60 * 1), // 1 minute ago
       },
     })
+
+    // 💬 Create conversation messages
+    await prisma.conversationMessage.createMany({
+      data: [
+        {
+          conversationId: chatSession4.id,
+          workspaceId: workspace.id,
+          customerId: englishCustomer.id,
+          role: "user",
+          content: "Hello! Do you ship internationally?",
+          createdAt: new Date(Date.now() - 1000 * 60 * 5),
+        },
+        {
+          conversationId: chatSession4.id,
+          workspaceId: workspace.id,
+          customerId: englishCustomer.id,
+          role: "assistant",
+          content:
+            "Hello! Yes, we ship worldwide! 🌍\n\n**Shipping options**:\n- Europe: 3-5 days (€9.90)\n- USA/Canada: 7-10 days (€19.90)\n\nWould you like to order?",
+          debugInfo: JSON.stringify({
+            agentSelected: "GENERAL_INQUIRY",
+          }),
+          createdAt: new Date(Date.now() - 1000 * 60 * 4),
+        },
+      ],
+    })
   } else {
     console.log(`   ⚠️  English customer not found!`)
   }
 
   console.log(`✅ Created chat sessions with welcome messages`)
 
-  // �📦 CREATE HISTORICAL ORDERS (1 year of data)
+  //  CREATE HISTORICAL ORDERS (1 year of data)
   console.log("\n📦 Creating historical orders...")
 
   const customersList = await prisma.customers.findMany({

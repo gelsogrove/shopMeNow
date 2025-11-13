@@ -691,7 +691,7 @@ export function ChatPage() {
       const chatSessionId = chat.sessionId || chat.id
       // Call API to mark messages as read
       api
-        .post(`/chat/${chatSessionId}/read`)
+        .post(`/chat/${chatSessionId}/mark-read`)
         .then((response) => {
           if (response.data.success) {
             // Invalidate chat queries to refresh unread counts
