@@ -197,6 +197,33 @@
 
 ---
 
+## Phase 8B: User Story 5 Implementation & Tests (Service Flow) 🎯 COMPLETED ✅
+
+**Purpose**: Document completed service selection and cart addition feature
+
+**Status**: ✅ **IMPLEMENTED** (2025-11-12)
+
+- [x] T048 [US5] Update Router Agent prompt `docs/prompts/router-agent.md`:
+  - Added SERVICE SELECTION FLOW section (3 steps: numbered list → details → confirmation → addService)
+  - Added addService() function as Function #2 (after manageNotifications)
+  - Documented 5-field service details format
+  - **CRITICAL**: Services always quantity=1 (NO "Quanti ne vuoi?" question)
+- [x] T049 [US5] Update `getActiveServices()` in `backend/src/repositories/message.repository.ts`:
+  - Changed format from `🔧 Name: Description` to numbered list with 5 fields
+  - Format: `1. **Name** - €Price\n   📝 Descrizione\n   📋 Codice\n   ⏰ Disponibilità`
+  - Returns structured string for {{SERVICES}} variable
+- [x] T050 [US5] Verified `addService()` calling function in `backend/src/domain/calling-functions/AddService.ts`:
+  - Function accepts serviceCode and quantity parameters
+  - Integrates with CallingFunctionsService.addServiceToCart()
+  - Returns cart link with expiration after successful addition
+- [x] T051 [US5] Updated all agent prompts in database: `cd backend && npm run update-all-agent-prompts` (Router + 5 others)
+- [x] T052 [US5] Build verification: `cd backend && npm run build` - TypeScript compilation + Prisma generation successful
+- [ ] T053 [P] [US5] Manual test: "che servizi avete?" → numbered list → "1" → details → "sì" → service added to cart (PENDING - requires WhatsApp or MCP client testing)
+
+**Checkpoint**: User Story 5 complete - Service flow implemented and documented
+
+---
+
 ## Phase 9: Performance Validation & Risk Mitigation
 
 **Purpose**: Ensure system meets performance targets and mitigates identified risks
