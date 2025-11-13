@@ -330,21 +330,45 @@ export class LLMRouterService {
         require("./prompt-processor.service").PromptProcessorService
       const promptProcessor = new PromptProcessorService()
 
-      const processedRouterPrompt = await promptProcessor.preProcessPrompt(
-        routerAgent.systemPrompt,
-        params.workspaceId,
-        customerData,
-        {
-          faqs: faqs || "",
-          products: products || "",
-          categories: categories || "",
-          services: services || "",
-          offers: offers || "",
-        },
-        workspace?.url
+      // 🔒 CRITICAL: Router MUST NOT have product/category data (Principle VIII Rule #4, #6)
+      // Products/Categories ONLY for ProductSearchAgent - prevents hallucination & context contamination
+      let processedRouterPrompt: string
+      try {
+        processedRouterPrompt = await promptProcessor.preProcessPrompt(
+          routerAgent.systemPrompt,
+          params.workspaceId,
+          customerData,
+          {
+            faqs: faqs || "",
+            services: services || "",
+            offers: offers || "",
+            // ❌ NO products - Router delegates to ProductSearchAgent
+            // ❌ NO categories - Router delegates to ProductSearchAgent
+          },
+          workspace?.url
+        )
+      } catch (error: any) {
+        // Handle PromptValidationError (duplicate variables)
+        if (error.name === "PromptValidationError") {
+          logger.error(`[Router] Prompt validation failed: ${error.message}`)
+          throw new Error(
+            `Invalid Router prompt configuration: ${error.message}. Please contact system administrator.`
+          )
+        }
+        // Re-throw other errors
+        throw error
+      }
+
+      logger.info(
+        "✅ Router prompt processed with variables replaced (no products/categories)"
       )
 
-      logger.info("✅ Router prompt processed with variables replaced")
+      // 🔍 DEBUG: Print FULL Router prompt to console
+      console.log("\n" + "=".repeat(100))
+      console.log("🔍 ROUTER AGENT - FULL SYSTEM PROMPT")
+      console.log("=".repeat(100))
+      console.log(processedRouterPrompt)
+      console.log("=".repeat(100) + "\n")
 
       // Create processed router agent with replaced prompt
       const processedRouterAgent = {
@@ -1134,7 +1158,59 @@ export class LLMRouterService {
 
           switch (delegationTarget) {
             case "PRODUCT_SEARCH": {
+              // 🔒 PRE-CHECK: Verify products exist before delegating
+              // Prevents LLM from inventing non-existent products
+              const queryLower = params.message.toLowerCase()
+              const searchTerms = [
+                "dolci",
+                "dolce",
+                "tiramisu",
+                "cannoli",
+                "panettone",
+                "dessert",
+                "sweet",
+              ]
+
+              // Check if query mentions categories we don't have
+              const mentionsNonExistentCategory = searchTerms.some((term) =>
+                queryLower.includes(term)
+              )
+
+              if (mentionsNonExistentCategory) {
+                // Check if we actually have products matching the query
+                const hasMatchingProducts = products
+                  .toLowerCase()
+                  .includes(queryLower.split(" ")[0])
+
+                if (!hasMatchingProducts) {
+                  // Return immediate response without delegating
+                  logger.warn(
+                    `⚠️ Query mentions non-existent category, skipping delegation`,
+                    {
+                      query: params.message,
+                      detectedTerms: searchTerms.filter((t) =>
+                        queryLower.includes(t)
+                      ),
+                    }
+                  )
+
+                  subAgentResponse = {
+                    success: true,
+                    output: `Mi dispiace ${params.customerName || ""}! Non abbiamo ${queryLower.includes("dolci") || queryLower.includes("dolce") ? "dolci" : "questi prodotti"} al momento. 😔\n\nPosso aiutarti con:\n• Formaggi freschi e stagionati 🧀\n• Salumi artigianali 🥓\n• Pasta fresca 🍝\n• Condimenti tradizionali 🫒\n\nCosa ti interessa?`,
+                    tokensUsed: 0,
+                    executionTimeMs: 0,
+                    functionCalls: [],
+                  }
+                  break // Skip delegation
+                }
+              }
+
               const productSearchAgent = new ProductSearchAgentLLM(this.prisma)
+
+              console.log("\n" + "🔵".repeat(50))
+              console.log("🔵 ROUTER IS DELEGATING TO PRODUCT SEARCH AGENT")
+              console.log("🔵".repeat(50) + "\n")
+
               subAgentResponse = await productSearchAgent.handleQuery({
                 workspaceId: params.workspaceId,
                 customerId: params.customerId,

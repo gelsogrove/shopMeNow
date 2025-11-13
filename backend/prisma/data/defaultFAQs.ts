@@ -15,7 +15,7 @@ export const defaultFAQs = (
   workspaceId: string
 ): Array<DefaultFAQ & { workspaceId: string }> => [
   // ====================================================================
-  // CATEGORY: Orders (6 FAQs) - Order-related questions
+  // CATEGORY: Orders (7 FAQs) - Order-related questions
   // ====================================================================
   {
     workspaceId,
@@ -37,12 +37,31 @@ export const defaultFAQs = (
   },
   {
     workspaceId,
+    question: "I want to place an order",
+    answer:
+      'Of course! To place an order, tell me which product or service you would like to purchase and I will add it directly to your cart. For example, you can say:\n- "I want cheese"\n- "Add wine to cart"\n- "I need gift wrapping service"\n\nWhat would you like to order?',
+    keywords: [
+      "want order",
+      "place order",
+      "make order",
+      "new order",
+      "create order",
+      "order",
+      "buy",
+      "purchase",
+    ],
+    category: "Orders",
+    order: 2,
+    isActive: true,
+  },
+  {
+    workspaceId,
     question: "What is the minimum order amount?",
     answer:
       "The minimum order is €50.00 for standard shipping. For orders below this amount, a €5.00 handling fee applies.",
     keywords: ["minimum order", "minimum", "minimum amount", "min spend"],
     category: "Orders",
-    order: 2,
+    order: 3,
     isActive: true,
   },
   {
@@ -52,7 +71,7 @@ export const defaultFAQs = (
       "You can modify an order within 30 minutes of placing it by contacting us immediately. After this time, the order enters processing and can no longer be modified.",
     keywords: ["modify order", "change order", "edit", "update order"],
     category: "Orders",
-    order: 3,
+    order: 4,
     isActive: true,
   },
   {
@@ -62,7 +81,7 @@ export const defaultFAQs = (
       'You can easily repeat a previous order! Write "repeat last order" or "repeat order #[code]". I will show you the details and you can confirm.',
     keywords: ["repeat order", "same order", "reorder", "order again"],
     category: "Orders",
-    order: 4,
+    order: 5,
     isActive: true,
   },
   {
@@ -72,7 +91,7 @@ export const defaultFAQs = (
       'You can cancel an order within 1 hour of placing it if it is still in "Pending confirmation" status. Once confirmed and in processing, cancellation is no longer possible. Contact us for assistance.',
     keywords: ["cancel", "cancel order", "cancellation", "abort", "stop order"],
     category: "Orders",
-    order: 5,
+    order: 6,
     isActive: true,
   },
   {
@@ -82,7 +101,7 @@ export const defaultFAQs = (
       "Yes! You will receive immediate confirmation via WhatsApp with:\n- Order code\n- Product summary\n- Total and payment method\n- Estimated delivery times\n\nYou will also receive updates on preparation and shipping.",
     keywords: ["confirmation", "receipt", "order confirmation", "notification"],
     category: "Orders",
-    order: 6,
+    order: 7,
     isActive: true,
   },
 
@@ -102,7 +121,7 @@ export const defaultFAQs = (
       "shipping time",
     ],
     category: "Shipping",
-    order: 7,
+    order: 8,
     isActive: true,
   },
   {
@@ -118,7 +137,7 @@ export const defaultFAQs = (
       "delivery fee",
     ],
     category: "Shipping",
-    order: 8,
+    order: 9,
     isActive: true,
   },
   {
@@ -135,7 +154,7 @@ export const defaultFAQs = (
       "track order",
     ],
     category: "Shipping",
-    order: 9,
+    order: 10,
     isActive: true,
   },
   {
@@ -151,7 +170,7 @@ export const defaultFAQs = (
       "when deliver",
     ],
     category: "Shipping",
-    order: 10,
+    order: 11,
     isActive: true,
   },
 
@@ -173,7 +192,7 @@ export const defaultFAQs = (
       "payment methods",
     ],
     category: "Payments",
-    order: 11,
+    order: 12,
     isActive: true,
   },
   {
@@ -183,7 +202,7 @@ export const defaultFAQs = (
       'Certainly! You can request an invoice:\n1. During checkout (provide VAT/Tax ID)\n2. After ordering by writing "invoice order #[code]"\n\nYou will receive the PDF via WhatsApp within 24 hours of the order.',
     keywords: ["invoice", "receipt", "tax receipt", "VAT", "bill"],
     category: "Payments",
-    order: 12,
+    order: 13,
     isActive: true,
   },
   {
@@ -193,7 +212,7 @@ export const defaultFAQs = (
       "With card/PayPal: immediate charge upon order confirmation.\nWith bank transfer: order confirmed upon payment receipt (send receipt via WhatsApp).\nCash on delivery: payment upon delivery.",
     keywords: ["charge", "when pay", "payment", "charged", "debit"],
     category: "Payments",
-    order: 13,
+    order: 14,
     isActive: true,
   },
   {
@@ -210,7 +229,7 @@ export const defaultFAQs = (
       "safe payment",
     ],
     category: "Payments",
-    order: 14,
+    order: 15,
     isActive: true,
   },
 
@@ -224,7 +243,7 @@ export const defaultFAQs = (
       "All our products are very fresh! We work with local producers and goods are shipped within 24 hours of production. We use refrigerated packaging to maintain the cold chain.",
     keywords: ["fresh", "freshness", "quality", "production", "local"],
     category: "Products",
-    order: 15,
+    order: 16,
     isActive: true,
   },
   {
@@ -244,7 +263,7 @@ export const defaultFAQs = (
       "allergy",
     ],
     category: "Products",
-    order: 16,
+    order: 17,
     isActive: true,
   },
   {
@@ -260,7 +279,7 @@ export const defaultFAQs = (
       "container",
     ],
     category: "Products",
-    order: 17,
+    order: 18,
     isActive: true,
   },
   {
@@ -279,7 +298,7 @@ export const defaultFAQs = (
       "ingredients",
     ],
     category: "Products",
-    order: 18,
+    order: 19,
     isActive: true,
   },
 
@@ -299,7 +318,7 @@ export const defaultFAQs = (
       "how register",
     ],
     category: "Account",
-    order: 19,
+    order: 20,
     isActive: true,
   },
   {
@@ -317,7 +336,7 @@ export const defaultFAQs = (
       "edit profile",
     ],
     category: "Account",
-    order: 20,
+    order: 21,
     isActive: true,
   },
   {
@@ -334,7 +353,7 @@ export const defaultFAQs = (
       "data privacy",
     ],
     category: "Account",
-    order: 21,
+    order: 22,
     isActive: true,
   },
 ]

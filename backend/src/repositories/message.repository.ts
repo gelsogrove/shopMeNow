@@ -1014,7 +1014,16 @@ export class MessageRepository {
               select: { debugMode: true },
             })
 
-            if (!(workspace?.debugMode ?? true)) {
+            // Environment-based fallback (Constitution v1.5.0 Principle I compliance)
+            // - If debugMode is NULL:
+            //   - NODE_ENV=production → false (billing enabled)
+            //   - NODE_ENV=development → true (billing disabled)
+            //   - NODE_ENV undefined → true (safe default for local dev)
+            const effectiveDebugMode =
+              workspace?.debugMode ??
+              (process.env.NODE_ENV === "production" ? false : true)
+
+            if (!effectiveDebugMode) {
               // debugMode is false AND customer not blacklisted, track usage normally
               // 💰 UNIFIED BILLING: €0.15 per message in BOTH systems
               const messagePrice = 0.15

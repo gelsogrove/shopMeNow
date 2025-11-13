@@ -5,6 +5,33 @@
 **Status**: Draft  
 **Input**: User wants guided product search with dynamic grouping, progressive filtering, and direct cart integration
 
+---
+
+## 🎯 Design Philosophy: Chatbot as Link Generator
+
+**IMPORTANT ARCHITECTURAL DECISION**: The chatbot's primary role is to **generate secure links** that redirect users to the web interface for complex operations.
+
+**Chatbot Scope** (Direct in chat):
+
+- ✅ Product discovery & search
+- ✅ Cart addition (products/services)
+- ✅ Order information & tracking
+- ✅ Generate cart/order/profile links
+
+**Web Interface Scope** (Via generated links):
+
+- ✅ Cart modifications (quantities, item removal)
+- ✅ New order creation & checkout
+- ✅ Profile management
+
+**Impact on This Feature**:
+
+- No need for `RemoveProduct` or `UpdateCartItem` Calling Functions
+- Customer asks "dammi il carrello" → Bot generates cart link → Customer modifies via web
+- Focus: Discovery & addition in chat, modifications & checkout in web
+
+---
+
 ## User Scenarios & Testing
 
 ### User Story 1 - Generic Search with Dynamic Grouping (Priority: P1)

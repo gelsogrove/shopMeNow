@@ -228,22 +228,26 @@
 
 **Purpose**: Ensure system meets performance targets and mitigates identified risks
 
-- [ ] T048 Measure {{PRODUCTS}} token count with 500 test products in seed database (target: <50k tokens)
-- [ ] T049 Add product count check in ProductSearchAgent:
+- [ ] T054 Measure {{PRODUCTS}} token count with 500 test products in seed database (target: <50k tokens)
+- [ ] T055 Add product count check in ProductSearchAgent:
   - If >500 products, use category-based pre-filtering before sending to LLM
   - Log warning if approaching token limit
-- [ ] T050 Test LLM grouping response time with 500 products (target: <3 seconds)
-- [ ] T051 Review grouping decision logs (check analytics for quality patterns):
+- [ ] T056 Test LLM grouping response time with 500 products (target: <3 seconds)
+- [ ] T057 Review grouping decision logs (check analytics for quality patterns):
   - Verify 90%+ groupings use meaningful Italian names (not "Group 1", "Group 2")
   - Check for inconsistent groupings (same query → different groups)
-- [ ] T052 Add A/B testing tracking (optional):
+- [ ] T058 Add A/B testing tracking (optional):
   - Log grouping strategy used (dynamic vs. fallback category-based)
   - Track conversion rate for each strategy
-- [ ] T053 Verify function calling iterations stay ≤6 (max 8 allowed):
+- [ ] T059 Verify function calling iterations stay ≤6 (max 8 allowed):
   - Check Router logs for iteration counts
   - Ensure ProductSearchAgent doesn't cause iteration loops
 
 **Checkpoint**: Performance validated - System meets all targets
+
+---
+
+## Phase 10: Documentation & Knowledge Base
 
 ---
 
@@ -252,15 +256,17 @@
 **Purpose**: Prepare for production deployment
 
 - [ ] T054 [P] Update `docs/memory-bank/PRD.md` with Feature 123 summary:
-  - Add section: "Feature 123: Guided Progressive Product Search"
-  - Document: Dynamic grouping, max 3 products, quantity support, prompt engineering approach
+  - Add section: "Feature 123: Guided Progressive Product Search + Service Selection (US5)"
+  - Document: Dynamic grouping, max 3 products, quantity support, service flow (US5), prompt engineering approach
+  - Include {{SERVICES}} variable format documentation
 - [ ] T055 [P] Create deployment checklist in this file (see below)
 - [ ] T056 [P] Update CHANGELOG.md with Feature 123 entry
 - [ ] T057 Run full test suite: `cd backend && npm run test:unit && npm run test:integration`
 - [ ] T058 Verify backend auto-restart works (ts-node-dev should reload prompt changes)
 - [ ] T059 Create manual testing plan for WhatsApp (when integration ready):
-  - Document test cases for all 4 user stories
+  - Document test cases for all 5 user stories (US1-US5 including service flow)
   - Include edge cases and error scenarios
+  - Add service-specific test: "che servizi avete?" → "1" → "sì" flow
 
 **Checkpoint**: Feature 123 ready for deployment
 
@@ -395,12 +401,15 @@
 - **Phase 6 (US4)**: 4 tasks
 - **Phase 7 (Edge Cases)**: 6 tasks
 - **Phase 8 (Integration Tests)**: 10 tasks
+- **Phase 8B (US5 - Service Flow)**: 6 tasks ✅ COMPLETED
 - **Phase 9 (Performance)**: 6 tasks
 - **Phase 10 (Documentation)**: 6 tasks
 
-**Total**: 59 tasks
+**Total**: 65 tasks (59 original + 6 service flow)
+
+**Completed**: 5 tasks (T048-T052 for service implementation)
 
 **Estimated Time**:
 
-- MVP (Phases 1-5): 3-4 days (1 developer) or 1-2 days (3 developers parallel)
+- MVP (Phases 1-5 + 8B): 3-4 days (1 developer) or 1-2 days (3 developers parallel)
 - Full Feature (Phases 1-10): 6-8 days (1 developer) or 3-4 days (3 developers parallel)

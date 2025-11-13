@@ -48,6 +48,8 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 - [ ] Agent prompts use template syntax: `{{variable}}`
 - [ ] Runtime replacement via `replaceAllVariables()` before LLM calls
 - [ ] Base language Italian, LLM handles translation
+- [ ] **Variable Uniqueness**: `{{PRODUCTS}}`, `{{OFFERS}}`, `{{SERVICES}}`, `{{CATEGORIES}}` appear at most ONCE per prompt
+- [ ] Prompt validation prevents duplicate large variables (token explosion prevention)
 
 **Principle IV - No Static Translations**:
 
@@ -70,6 +72,14 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 - [ ] Database unique constraint on `(customerId, status="active")`
 - [ ] Integration tests verify concurrent request handling
 - [ ] NO global locks (only per-customer or per-session isolation)
+
+**Principle VII - Code Cleanliness & Technical Debt Prevention**:
+
+- [ ] No temporary scripts or backup files in repository (*.backup, *.old, *.tmp)
+- [ ] No unused code (commented-out functions, unused imports, dead code)
+- [ ] No code duplication (extract shared logic to utilities/services)
+- [ ] Pre-commit hook validates cleanliness (rejects temp files, unused imports)
+- [ ] Files under 500 lines (extract if larger)
 
 **Multi-Agent Architecture**:
 

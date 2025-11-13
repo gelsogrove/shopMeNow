@@ -93,6 +93,7 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] T014 [P] [US1] **[DB]** Add unique constraint for concurrency safety if needed: `@@unique([customerId, status])`
 - [ ] T015 [P] [US1] **[BE/Repository]** Create [Entity1] repository: `backend/src/repositories/[entity1].repository.ts` (MUST filter by workspaceId)
 - [ ] T016 [P] [US1] **[BE/Service]** Implement [Service] business logic: `backend/src/application/services/[service].service.ts`
+- [ ] T016a [P] [US1] **[BE/Validation]** If using LLM prompts, validate no duplicate {{PRODUCTS}}/{{OFFERS}}/{{SERVICES}}/{{CATEGORIES}} variables
 - [ ] T017 [US1] **[BE/Controller]** Create controller: `backend/src/interfaces/http/controllers/[entity].controller.ts` (extract workspaceId from middleware)
 - [ ] T018 [US1] **[BE/Routes]** Add route with middleware stack: `backend/src/interfaces/http/routes/[entity].routes.ts` (auth → session → workspace)
 - [ ] T019 [US1] **[BE/Swagger]** Add @swagger JSDoc tags to controller methods
@@ -174,6 +175,10 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] TXXX Performance optimization across all stories
 - [ ] TXXX [P] Additional unit tests (if requested) in tests/unit/
 - [ ] TXXX Security hardening
+- [ ] TXXX **[Cleanup]** Remove temporary files (*.backup, *.old, *.tmp, temp.*, test-*.js)
+- [ ] TXXX **[Cleanup]** Remove unused imports and dead code (run `npm run lint`)
+- [ ] TXXX **[Cleanup]** Eliminate code duplication (extract to shared utilities)
+- [ ] TXXX **[Cleanup]** Verify all files <500 lines (extract if larger)
 - [ ] TXXX Run quickstart.md validation
 
 ---

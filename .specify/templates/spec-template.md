@@ -44,6 +44,8 @@
 - [ ] Testing: Unit tests, security tests, integration tests
 - [ ] Documentation: Swagger/OpenAPI updated with @swagger tags
 - [ ] Concurrency: Transaction usage, customer-level locking, race condition tests
+- [ ] Prompt Variables: `{{PRODUCTS}}`, `{{OFFERS}}`, `{{SERVICES}}`, `{{CATEGORIES}}` used at most once per prompt
+- [ ] Code Cleanliness: No temp files, no unused code, no duplication, files <500 lines
 
 ---
 

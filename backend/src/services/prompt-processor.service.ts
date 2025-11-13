@@ -3,6 +3,7 @@ import fs from "fs"
 import path from "path"
 import { MessageRepository } from "../repositories/message.repository"
 import logger from "../utils/logger"
+import { PromptValidationError } from "../utils/PromptValidationError"
 
 const prisma = new PrismaClient()
 
@@ -11,6 +12,39 @@ export class PromptProcessorService {
 
   constructor() {
     this.messageRepository = new MessageRepository()
+  }
+
+  /**
+   * Validate prompt variables to prevent duplicate large variables
+   * Constitution v1.5.0 Principle III Compliance
+   *
+   * MUST throw error if {{PRODUCTS}}, {{OFFERS}}, {{SERVICES}}, or {{CATEGORIES}}
+   * appear more than once in the same prompt (prevents 100k+ token prompts)
+   *
+   * STRATEGY: Only count variables that appear ALONE on a line (actual placeholders),
+   * ignore those in instructional text, examples, or inline documentation.
+   *
+   * @param prompt Prompt content to validate
+   * @throws PromptValidationError if duplicate large variables detected
+   */
+  private validatePromptVariables(prompt: string): void {
+    const largeVariables = ["PRODUCTS", "OFFERS", "SERVICES", "CATEGORIES"]
+
+    for (const variable of largeVariables) {
+      // Match ONLY when variable appears alone or at start/end of line
+      // This excludes instructional text like "scroll to {{PRODUCTS}}"
+      const standaloneRegex = new RegExp(
+        `^\\s*\\{\\{${variable}\\}\\}\\s*$`,
+        "gm"
+      )
+      const matches = prompt.match(standaloneRegex)
+
+      if (matches && matches.length > 1) {
+        const errorMessage = `Variable {{${variable}}} can only appear once per prompt. Found ${matches.length} occurrences.`
+        logger.error(`[PromptValidation] ${errorMessage}`)
+        throw new PromptValidationError(errorMessage)
+      }
+    }
   }
 
   /**
@@ -41,6 +75,10 @@ export class PromptProcessorService {
     },
     workspaceUrl?: string
   ): Promise<string> {
+    // 🔒 STEP 1: Validate prompt BEFORE replacement (Constitution v1.5.0 Principle III)
+    // Fail-fast pattern: prevents 100k+ token prompts from duplicate variables
+    this.validatePromptVariables(promptContent)
+
     let processedPrompt = promptContent
 
     // Sostituzione URL workspace (PRIMA di altre sostituzioni)

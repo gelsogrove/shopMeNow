@@ -153,6 +153,72 @@ ShopME is a **WhatsApp-based e-commerce platform** with AI chatbot integration. 
 - **NO global locks**: Only per-customer or per-session isolation
 - See `.specify/memory/constitution.md` Principle VI for complete details
 
+### 11. **Variable Uniqueness Constraint**
+
+- **ALWAYS** ensure `{{PRODUCTS}}`, `{{OFFERS}}`, `{{SERVICES}}`, `{{CATEGORIES}}` appear at most ONCE per prompt
+- **Critical Reason**: Each variable can inject 50k+ tokens → duplicate usage causes 100k+ token prompts → LLM API failure
+- **Implementation Requirements**:
+  - ✅ **Validation on Save**: Admin UI MUST validate prompts before saving to `agentConfig` table
+  - ✅ **Runtime Detection**: `PromptProcessorService.replaceAllVariables()` SHOULD log warnings if duplicates detected
+  - ✅ **Seed Validation**: `npm run validate-prompts` checks all default prompts comply
+  - ❌ **NO duplicate usage**: Never use same large variable twice in one prompt template
+- **Implementation Pattern**:
+
+  ```typescript
+  // Validation function in PromptProcessorService
+  private validatePromptVariables(prompt: string): void {
+    const largeVariables = ["PRODUCTS", "OFFERS", "SERVICES", "CATEGORIES"]
+    
+    for (const variable of largeVariables) {
+      const regex = new RegExp(`\\{\\{${variable}\\}\\}`, "g")
+      const matches = prompt.match(regex)
+      
+      if (matches && matches.length > 1) {
+        throw new ValidationError(
+          `Variable {{${variable}}} can only appear once per prompt. Found ${matches.length} occurrences.`
+        )
+      }
+    }
+  }
+
+  // Call before replacement
+  public async replaceAllVariables(promptContent: string, ...) {
+    this.validatePromptVariables(promptContent) // Validate FIRST
+    // ... continue with replacement
+  }
+  ```
+
+- **Examples**:
+  - ❌ **WRONG**: `"Prodotti: {{PRODUCTS}} ... Vedi anche: {{PRODUCTS}}"` → 100k+ tokens
+  - ✅ **CORRECT**: `"Prodotti: {{PRODUCTS}}"` → ~50k tokens
+  - ✅ **CORRECT**: `"Categorie: {{CATEGORIES}}\nOfferte: {{OFFERS}}\nProdotti: {{PRODUCTS}}"` → Multiple different variables OK
+- See `.specify/memory/constitution.md` Principle III (Variable Uniqueness Constraint) for complete details
+
+### 12. **Code Cleanliness & Technical Debt Prevention**
+
+- **ALWAYS** maintain clean codebase free of temporary files, unused code, and duplication
+- **Critical Requirements**:
+  - ❌ **NO temporary scripts**: Never commit `test.js`, `temp.ts`, `backup-old.sql` files
+  - ❌ **NO backup files**: Never commit `.backup`, `.old`, `.tmp` files (use git history)
+  - ❌ **NO unused code**: Remove commented-out code, unused imports, dead functions
+  - ❌ **NO code duplication**: Extract shared logic to utilities, services, or base classes
+  - ✅ **Immediate cleanup**: Delete temporary files before commit
+  - ✅ **File size limits**: Keep files under 500 lines (extract if larger)
+- **Pre-Commit Checklist**:
+  - [ ] No temporary/backup files in `git status`
+  - [ ] All imports are used (no IDE warnings)
+  - [ ] No commented-out code (use git history instead)
+  - [ ] No duplicate logic across files
+  - [ ] All files under 500 lines (extract if larger)
+- **Examples**:
+  - ❌ **WRONG**: Unused imports, commented code, backup files
+  - ✅ **CORRECT**: Clean imports, no dead code, extracted utilities for shared logic
+- **Enforcement**:
+  - Pre-commit hook rejects `*.backup`, `*.old`, `*.tmp`, `temp.*`, `test-*.js`
+  - ESLint catches unused imports/variables
+  - Code reviews verify no duplication or dead code
+- See `.specify/memory/constitution.md` Principle VII for complete details
+
 ---
 
 ## 🏗️ Architecture Patterns

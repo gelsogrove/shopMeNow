@@ -1,34 +1,46 @@
 <!--
   SYNC IMPACT REPORT
 
-  Version Change: 1.1.0 → 1.2.0 (MINOR)
-  Rationale: Added new principle "Chat Isolation & Concurrency Safety" - critical for multi-customer WhatsApp system
-  Date: 2025-11-12
+  Version Change: 1.5.0 → 1.5.1 (PATCH)
+  Rationale: Added "Example Products Prevention" rule to Principle III - prevents LLM hallucination by warning against copying fake product names from prompt examples
+  Date: 2025-11-13
 
   Modified Principles:
-  - NONE (existing principles unchanged)
+  - Principle III: Variable Replacement
+    - Added new sub-section "Example Products Prevention (MUST - NON-NEGOTIABLE)"
+    - Critical fix for production issue: LLMs were inventing products by copying example names from prompts
 
   Added Sections:
-  - Principle VI: Chat Isolation & Concurrency Safety (MUST - NON-NEGOTIABLE)
+  - Principle III.4: Example Products Prevention
+    - Warning requirement: ALL agent prompts need "⚠️ EXAMPLE PRODUCTS ARE FAKE" header
+    - Generic placeholders: Use [PRODUCT_NAME] instead of real-looking names
+    - "Maximum 5" clarification: It's a limit, not a target (show what exists, don't invent)
+    - Testing: validate-agent-prompts.ts checks for suspicious patterns
 
   Removed Sections:
   - NONE
 
   Templates Requiring Updates:
-  - ✅ plan-template.md: Constitution Check section updated with Principle VI (transaction usage, customer locking)
-  - ✅ spec-template.md: 360-Degree Validation checklist includes concurrency validation
-  - ✅ tasks-template.md: Task format includes Concurrency layer, added T014 (unique constraint) and T023 (concurrency tests)
-  - ✅ .github/copilot-instructions.md: Added Rule #10 "Chat Isolation & Concurrency Safety" with implementation patterns
+  - ⚠️ ALL agent prompts (docs/prompts/*.md): Add warning box at top
+  - ⚠️ plan-template.md: Add LLM hallucination prevention section
+  - ⚠️ spec-template.md: Add "Example validation" acceptance criteria
+  - ⚠️ tasks-template.md: Add prompt example sanitization tasks
 
   Follow-up TODOs:
-  - Implement Prisma transaction wrappers for critical operations
-  - Add Redis-based distributed locking for multi-instance deployments
-  - Create integration tests for concurrent message scenarios
-  - Add database indexes on (customerId, status) for chat session queries
-  - Consider message queue system (Bull/BullMQ) for WhatsApp webhook processing
+  - ✅ Update ProductSearchAgent prompt with warning box
+  - ✅ Replace fake examples (Salame Toscano) with placeholders ([PRODUCT_NAME])
+  - ✅ Add explicit instruction: "NEVER copy from examples"
+  - ✅ Update database with corrected prompts
+  - Manual test: Verify "avete salami?" returns only real products from database
+  - Add automated test: Script checks response doesn't contain example product names
+```
+  - Add ESLint rule to detect hardcoded agent responses (violation of Database-First principle)
 -->
 
 # ShopME Constitution
+
+**Version**: 1.5.1 (PATCH - LLM Hallucination Prevention)  
+**Last Updated**: 2025-11-13
 
 ## Core Principles
 
@@ -68,7 +80,7 @@ const prompt = agentConfig.systemPrompt
 
 ### II. Workspace Isolation (MUST - NON-NEGOTIABLE)
 
-**EVERY database query MUST filter by `workspaceId` for multi-tenant security.**
+**ALL database queries MUST filter by `workspaceId` for multi-tenant security.**
 
 **Requirements**:
 
@@ -112,6 +124,7 @@ const products = await prisma.products.findMany({
 - ✅ **Runtime replacement**: `replaceAllVariables(prompt, context)` BEFORE LLM call
 - ✅ **Base language: Italian** - Variables replaced with Italian text from database
 - ✅ **LLM translation layer** - Final output translated to customer language (IT/ES/PT/FR/EN)
+- ✅ **Variable Uniqueness Constraint** (CRITICAL) - See sub-section below
 
 **Examples**:
 
@@ -137,6 +150,152 @@ const prompt = replaceAllVariables(dbPrompt, {
 - `PromptProcessorService.replaceAllVariables()` MUST be called before LLM
 - Code reviews MUST verify variable replacement
 - NO static prompts in code - only in database `agentConfig` table
+
+---
+
+#### Variable Uniqueness Constraint (MUST - NON-NEGOTIABLE)
+
+**The variables `{{PRODUCTS}}`, `{{OFFERS}}`, `{{SERVICES}}`, `{{CATEGORIES}}` MUST appear at most ONCE per prompt.**
+
+**Requirements**:
+
+- ❌ **ZERO duplicate usage** - Each large variable (PRODUCTS/OFFERS/SERVICES/CATEGORIES) can only appear ONCE in the same prompt
+- ✅ **Token explosion prevention** - Prevents accidental duplication that causes 50k+ token prompts
+- ✅ **Validation on save** - Admin UI MUST validate prompts before saving to `agentConfig`
+- ✅ **Runtime detection** - `PromptProcessorService` MUST throw error if duplicates detected (prevents LLM API failure)
+
+**Examples**:
+
+```typescript
+// ❌ WRONG - Duplicate {{PRODUCTS}} variable
+const badPrompt = `
+Ecco i nostri prodotti: {{PRODUCTS}}
+...
+Se vuoi vedere di nuovo, ecco i prodotti: {{PRODUCTS}}
+`
+// Result: Products list injected TWICE → 100k+ tokens → API failure
+
+// ✅ CORRECT - Single usage of {{PRODUCTS}}
+const goodPrompt = `
+Ecco il nostro catalogo completo: {{PRODUCTS}}
+Puoi chiedermi dettagli su qualsiasi prodotto.
+`
+// Result: Products list injected ONCE → ~50k tokens → works properly
+
+// ✅ CORRECT - Multiple DIFFERENT variables allowed
+const mixedPrompt = `
+Categorie disponibili: {{CATEGORIES}}
+Offerte attive: {{OFFERS}}
+Prodotti in catalogo: {{PRODUCTS}}
+`
+// Result: Each variable used once → valid prompt
+```
+
+**Rationale**:
+
+- `{{PRODUCTS}}` can contain 1000+ products → ~50k tokens per injection
+- Duplicate usage → 100k+ tokens → exceeds LLM context window (128k for GPT-4-mini)
+- Prevents accidental duplication in prompt templates
+- Reduces API costs (fewer tokens = lower billing)
+
+**Enforcement**:
+
+- Admin UI prompt editor MUST validate before saving
+- `PromptProcessorService.replaceAllVariables()` MUST throw error on duplicates (fail-fast pattern)
+- Seed script validation: `npm run validate-prompts` checks all default prompts
+- Integration tests MUST verify prompt validation rejects duplicates
+- Code reviews MUST verify no manual prompt construction with duplicates
+
+**Implementation Pattern**:
+
+```typescript
+// Validation function (MUST be added to PromptProcessorService)
+private validatePromptVariables(prompt: string): void {
+  const largeVariables = ["PRODUCTS", "OFFERS", "SERVICES", "CATEGORIES"]
+  
+  for (const variable of largeVariables) {
+    const regex = new RegExp(`\\{\\{${variable}\\}\\}`, "g")
+    const matches = prompt.match(regex)
+    
+    if (matches && matches.length > 1) {
+      logger.warn(
+        `[PromptValidation] ⚠️ Variable {{${variable}}} appears ${matches.length} times in prompt. Only first occurrence will be replaced.`
+      )
+      // Optionally: throw error in production to prevent invalid prompts
+      throw new ValidationError(
+        `Variable {{${variable}}} can only appear once per prompt. Found ${matches.length} occurrences.`
+      )
+    }
+  }
+}
+
+// Usage in replaceAllVariables()
+public async replaceAllVariables(
+  promptContent: string,
+  customerData: any,
+  workspaceId: string,
+  dynamicContent: { ... }
+): Promise<string> {
+  // STEP 1: Validate prompt before replacement
+  this.validatePromptVariables(promptContent)
+  
+  // STEP 2: Replace variables (existing logic)
+  let processedPrompt = promptContent
+  // ... rest of replacement logic
+}
+```
+
+---
+
+#### Example Products Prevention (MUST - NON-NEGOTIABLE)
+
+**LLMs MUST NOT copy product names from prompt examples - only from `{{PRODUCTS}}` variable.**
+
+**Problem**: Agent prompts contain examples with fake product names (e.g., "Salame Toscano", "Parmigiano Reggiano 24 mesi"). LLMs can hallucinate and copy these examples instead of reading actual catalog data.
+
+**Requirements**:
+
+- ✅ **Warning at prompt start**: ALL agent prompts MUST have warning box: "⚠️ EXAMPLE PRODUCTS ARE FAKE - DON'T COPY THEM"
+- ✅ **Generic placeholders**: Use `[PRODUCT_NAME]`, `[CATEGORY]` instead of real-looking names in examples
+- ✅ **Explicit instruction**: "NEVER copy product names from examples - extract from {{PRODUCTS}} only"
+- ✅ **"Maximum 5" clarification**: "Maximum 5 is a LIMIT (not a target) - if catalog has 2 products, show 2"
+- ❌ **NO realistic fake examples**: Never use "Salame Milano 200g €6.80" in examples (LLM will copy it)
+
+**Implementation Pattern**:
+
+```markdown
+# ProductSearchAgent Prompt
+
+## ⚠️⚠️⚠️ CRITICAL WARNING ⚠️⚠️⚠️
+
+**ALL EXAMPLE PRODUCTS IN THIS PROMPT ARE FAKE!**
+
+Examples like "Parmigiano Reggiano", "Salame Toscano" are NOT in your catalog.
+
+🚨 NEVER copy product names from examples
+✅ ONLY use exact names from {{PRODUCTS}} variable
+✅ IF catalog has 2 salami → show 2 (not 5 invented)
+
+---
+
+## Your Role
+You help customers find products...
+
+### Example Format (⚠️ Names are FAKE):
+```
+1. **[PRODUCT_NAME] [SIZE]** €[PRICE]
+2. **[PRODUCT_NAME] [SIZE]** €[PRICE]
+```
+```
+
+**Why This Matters**:
+- LLMs have training data with real product names (Parmigiano, Mozzarella, etc.)
+- If prompt examples use realistic names → LLM assumes they exist → hallucination
+- Customer tries to select invented product → error (product not found in database)
+
+**Testing**:
+- Manual: Ask "avete salami?" and verify response only contains products from `{{PRODUCTS}}`
+- Automated: Script `validate-agent-prompts.ts` checks for suspicious patterns
 
 ---
 
@@ -182,7 +341,7 @@ const prompt = `Categorie disponibili: ${categories.join(", ")}`
 
 ### V. 360-Degree Thinking (MUST - NON-NEGOTIABLE)
 
-**EVERY change MUST consider the complete stack: FE → API → Middleware → Controller → Service → Repository → Database.**
+**ALL changes MUST consider the complete stack: FE → API → Middleware → Controller → Service → Repository → Database.**
 
 **Requirements**:
 
@@ -350,7 +509,7 @@ When touching database schema, ALWAYS execute this mental checklist:
 
 ### VI. Chat Isolation & Concurrency Safety (MUST - NON-NEGOTIABLE)
 
-**EVERY backend operation MUST prevent race conditions when multiple customers write simultaneously.**
+**ALL backend operations MUST prevent race conditions when multiple customers write simultaneously.**
 
 **Requirements**:
 
@@ -596,6 +755,316 @@ describe("Chat Isolation & Concurrency", () => {
 
 ---
 
+### VII. Code Cleanliness & Technical Debt Prevention (MUST - NON-NEGOTIABLE)
+
+**ALL commits MUST maintain clean, maintainable codebase free of temporary files, unused code, and duplication.**
+
+**Requirements**:
+
+- ❌ **ZERO temporary scripts** - No `test.js`, `temp.ts`, `backup-old.sql` files in repository
+- ❌ **ZERO backup files** - No `.backup`, `.old`, `.tmp` files committed (use git history instead)
+- ❌ **ZERO unused code** - Remove commented-out code, unused imports, dead functions
+- ❌ **ZERO code duplication** - Extract shared logic into utilities, services, or base classes
+- ✅ **Immediate cleanup** - Delete temporary files created during development/testing before commit
+
+**Examples**:
+
+```typescript
+// ❌ WRONG - Unused imports and commented code
+import { PrismaClient } from "@prisma/client"
+import { SomethingNeverUsed } from "./utils" // REMOVE
+// import { OldImplementation } from "./legacy" // REMOVE commented imports
+
+export class ProductService {
+  async getProducts(workspaceId: string) {
+    // Old implementation that no longer works
+    // const products = await this.oldMethod()
+    // return products.filter(p => p.active)
+    
+    // New implementation
+    return await prisma.products.findMany({
+      where: { workspaceId, isActive: true }
+    })
+  }
+  
+  // Unused method - REMOVE
+  // async oldMethod() {
+  //   return await prisma.products.findMany()
+  // }
+}
+
+// ✅ CORRECT - Clean, no dead code
+import { PrismaClient } from "@prisma/client"
+
+export class ProductService {
+  async getProducts(workspaceId: string) {
+    return await prisma.products.findMany({
+      where: { workspaceId, isActive: true }
+    })
+  }
+}
+```
+
+**Duplication Example**:
+
+```typescript
+// ❌ WRONG - Duplicated validation logic
+// In productController.ts
+if (!workspaceId || typeof workspaceId !== 'string') {
+  return res.status(400).json({ error: "Invalid workspace ID" })
+}
+
+// In orderController.ts
+if (!workspaceId || typeof workspaceId !== 'string') {
+  return res.status(400).json({ error: "Invalid workspace ID" })
+}
+
+// In customerController.ts
+if (!workspaceId || typeof workspaceId !== 'string') {
+  return res.status(400).json({ error: "Invalid workspace ID" })
+}
+
+// ✅ CORRECT - Extracted to shared utility
+// utils/validators.ts
+export function validateWorkspaceId(workspaceId: any): string {
+  if (!workspaceId || typeof workspaceId !== 'string') {
+    throw new ValidationError("Invalid workspace ID")
+  }
+  return workspaceId
+}
+
+// In all controllers
+const validWorkspaceId = validateWorkspaceId(workspaceId)
+```
+
+**File Organization**:
+
+```bash
+# ❌ WRONG - Temporary files in repository
+backend/
+├── src/
+├── test-script.js          # REMOVE
+├── backup-schema.prisma    # REMOVE
+├── old-implementation.ts.bak  # REMOVE
+└── debug-temp.log          # REMOVE
+
+# ✅ CORRECT - Clean structure
+backend/
+├── src/
+├── prisma/
+└── __tests__/
+```
+
+**Rationale**:
+
+- Temporary files clutter repository and confuse developers
+- Unused code increases maintenance burden and cognitive load
+- Code duplication leads to inconsistent behavior and harder refactoring
+- Clean codebase accelerates development and reduces bugs
+- Git provides version history - no need for `.backup` or `.old` files
+
+**Enforcement**:
+
+- **Pre-commit hook** MUST reject commits with:
+  - Files matching `*.backup`, `*.old`, `*.tmp`, `temp.*`, `test-*.js`
+  - Commented-out imports (lines starting with `// import`)
+  - Excessive commented code blocks (>10 consecutive comment lines)
+- **Code reviews** MUST verify:
+  - No unused imports (check with `eslint` or IDE warnings)
+  - No dead code or commented-out functions
+  - No duplicated logic (suggest refactoring to shared utilities)
+- **CI/CD** pipeline MUST run:
+  - `npm run lint` - Catch unused variables/imports
+  - `npm run test:coverage` - Identify untested (likely unused) code
+- **Cleanup checklist** before PR:
+  - [ ] No temporary/backup files in `git status`
+  - [ ] All imports are used (no IDE warnings)
+  - [ ] No commented-out code (use git history instead)
+  - [ ] No duplicate logic across files
+  - [ ] All files under 500 lines (extract if larger)
+
+**Migration for Existing Code**:
+
+If codebase already has technical debt:
+
+1. Create cleanup task: "Refactor [area] - remove unused code"
+2. Add to technical debt backlog with priority
+3. New code MUST NOT add more debt (enforce immediately)
+4. Gradual cleanup during feature work in affected areas
+
+---
+
+### VIII. Multi-Agent Architecture Rules (MUST - NON-NEGOTIABLE)
+
+**ALL agents MUST follow strict separation of responsibilities and delegation protocols.**
+
+**Requirements**:
+
+**1. Output Language Standardization**:
+- ✅ All agents (except Safety & Translation) output **ENGLISH ONLY**
+- ✅ Safety & Translation Agent translates final response to customer's language
+- ❌ SubLLMs (ProductSearch, Cart, OrderTracking, Support) MUST NOT produce non-English responses
+
+**2. Final Response Responsibility**:
+- ✅ **Router Agent ONLY** formats final user-facing response (has full conversation history)
+- ❌ Other agents return **raw data/content only** (no formatting, no narrative, no customer-facing text)
+
+**3. Single Responsibility Principle**:
+- ✅ Each LLM has **ONE purpose**: Cart operations, Order tracking, Product search, Customer support
+- ❌ Executing tasks outside designated domain is **strictly prohibited**
+
+**4. Single Delegation Rule**:
+- ✅ If request falls under another agent's domain → **delegate via Function Call**
+- ❌ **Never answer directly** for another agent's domain (Router MUST NOT search products)
+
+**5. Integrity of Delegated Responses**:
+- ✅ Responses from delegated agents copied **EXACTLY as returned** (no modification)
+- ❌ No summaries, no rewording, no commentary on delegated content
+
+**6. Context Variable Limit**:
+- ✅ **ONE dynamic variable per category** per prompt ({{PRODUCTS}} OR {{PRODUCT_DETAILS}}, not both)
+- ❌ Multiple similar variables create ambiguity and prompt confusion
+- ✅ **Router MUST NOT have {{PRODUCTS}} or {{CATEGORIES}}** (ProductSearch only)
+
+**7. Single Source of Truth**:
+- ✅ Crucial rules/logic appear **ONCE** in the system
+- ❌ Duplicated rules across agents prohibited (leads to inconsistency)
+
+**8. Prompt Structure & Logical Grouping**:
+- ✅ Content organized in **coherent, self-contained sections**
+- ❌ Dispersing related concepts across prompt prohibited
+
+**9. Example & Simulation Labeling (Anti-Leakage)**:
+- ✅ Training content labeled with **"example"** or **"simulation"**
+- ❌ Agents treat as **fictional** (not operational facts to act upon)
+
+**10. Structured Reasoning (Chain-of-Thought)**:
+- ✅ Complex decisions use **internal reasoning** (not user-visible)
+- ❌ Skip reasoning for simple/obvious tasks (efficiency)
+
+**11. Fallback Mechanism**:
+- ✅ Unclear intent → delegate to `customerSupportAgent` (don't guess)
+- ❌ Never guess or invent actions when user intent is ambiguous
+
+**12. Function Atomicity**:
+- ✅ One Function Call = **one intent** (search products, add to cart)
+- ❌ Chaining multiple intents prohibited (e.g., search + add in one call)
+
+**13. Limited Context Window**:
+- ✅ Decisions prioritize **last 3 conversation iterations** (specialists)
+- ✅ Router uses **full 10-minute conversation history** (contextualization)
+- ❌ Older data doesn't drive Function Calls (prevents stale actions)
+
+**14. No Fabricated Function Calls**:
+- ✅ Only use **explicitly defined Functions** in agent schema
+- ❌ Never invent/assume Functions not in specification
+
+**15. Communication Role — Router Only**:
+- ✅ **Router handles**: tone, style, formatting, customer-facing narrative
+- ❌ **SubLLMs return**: raw data only (product lists, cart state, order info)
+
+**16. Function Call Documentation & Example Clarity**:
+- ✅ Each Function includes: **input params, output format, purpose**
+- ✅ Examples labeled **"example"/"simulation"** (anti-leakage)
+- ❌ Self-explanatory, testable in isolation
+
+**17. Prompt Context Integrity (No Thematic Overlap)**:
+- ✅ Sections remain **self-contained** (no cross-referencing)
+- ❌ No overlap/blending between unrelated sections
+
+**Examples**:
+
+```typescript
+// ❌ WRONG - Router has product data (architectural violation)
+const processedRouterPrompt = await promptProcessor.preProcessPrompt(
+  routerAgent.systemPrompt,
+  workspaceId,
+  customerData,
+  {
+    faqs, services, offers,
+    categories, // ← Router shouldn't have this
+    products    // ← Router shouldn't have this
+  }
+)
+
+// ✅ CORRECT - Router only has routing/contextualization data
+const processedRouterPrompt = await promptProcessor.preProcessPrompt(
+  routerAgent.systemPrompt,
+  workspaceId,
+  customerData,
+  {
+    faqs: faqs || "",
+    services: services || "",
+    offers: offers || "",
+    subscribeMessage: subscribeMessage || ""
+    // NO categories, NO products - ProductSearchAgent only!
+  }
+)
+```
+
+```typescript
+// ❌ WRONG - ProductSearch returning narrative (Rule #2 violation)
+return {
+  response: "Ciao! Ecco i salumi disponibili: 1. Prosciutto...",
+  agent: "ProductSearch"
+}
+
+// ✅ CORRECT - ProductSearch returns raw data only
+return {
+  products: [
+    { id: "SALUMI-001", name: "Prosciutto di Parma DOP 100g", price: 8.50 },
+    { id: "SALUMI-004", name: "Salame Milano 200g", price: 6.80 }
+  ],
+  agent: "ProductSearch"
+}
+// Router contextualizes this into customer-facing response
+```
+
+```typescript
+// ❌ WRONG - Router answering product question directly (Rule #4 violation)
+if (message.includes("salami")) {
+  return "Abbiamo 5 tipi di salami disponibili..." // Router inventing products!
+}
+
+// ✅ CORRECT - Router delegates to ProductSearchAgent
+if (message.includes("salami")) {
+  const result = await this.productSearchAgent.searchProducts({
+    query: message,
+    workspaceId,
+    customerId
+  })
+  return this.contextualizeResponse(result) // Router only contextualizes
+}
+```
+
+**Agent Responsibility Matrix**:
+
+| Agent              | Domain                     | Has {{PRODUCTS}} | Has {{CATEGORIES}} | Outputs Language |
+| ------------------ | -------------------------- | ---------------- | ------------------ | ---------------- |
+| Router             | Routing + Contextualization | ❌ NO            | ❌ NO              | English          |
+| ProductSearch      | Product queries            | ✅ YES           | ✅ YES             | English          |
+| Cart               | Cart operations            | ❌ NO            | ❌ NO              | English          |
+| OrderTracking      | Order status/history       | ❌ NO            | ❌ NO              | English          |
+| CustomerSupport    | Complex issues             | ❌ NO            | ❌ NO              | English          |
+| Safety & Translation | Validation + Translation  | ❌ NO            | ❌ NO              | Customer's language |
+
+**Rationale**:
+
+- Router contamination with product data (discovered in Session 123) caused hallucinations despite temperature 0.0
+- Without strict boundaries: context leakage, invented data, architectural violations
+- Multi-agent systems require clear separation: Router = orchestration, Specialists = domain execution
+- Variable isolation prevents prompt bloat (Router with {{PRODUCTS}} = 50k+ unnecessary tokens)
+
+**Enforcement**:
+
+- Code reviews MUST verify agent domain separation (Router ≠ ProductSearch variables)
+- Integration tests MUST validate delegation flow (Router → Specialist → Router → Safety)
+- Prompt audits MUST check variable isolation (`grep "{{PRODUCTS}}" docs/prompts/*.md`)
+- Load tests MUST verify no cross-agent contamination
+- Pre-commit hook MUST reject prompts with duplicate large variables
+
+---
+
 ## Multi-Agent Architecture Constraints
 
 ### Multi-LLM Call Pattern (CRITICAL)
@@ -690,7 +1159,10 @@ const workspace = await this.prisma.workspace.findUnique({
   select: { debugMode: true },
 })
 
-if (!(workspace?.debugMode ?? true)) {
+// Environment-based fallback when debugMode is NULL (compliant with Database-First)
+const effectiveDebugMode = workspace?.debugMode ?? (process.env.NODE_ENV === 'production' ? false : true)
+
+if (!effectiveDebugMode) {
   // debugMode is false → Track usage
   await usageService.trackUsage({ ... })
   await billingService.trackMessage({ ... })
@@ -711,15 +1183,31 @@ if (!(workspace?.debugMode ?? true)) {
 | Rate Limiting           | ❌ Disabled         | ✅ Enforced            |
 | WebSocket Notifications | ✅ Enabled          | ✅ Enabled             |
 
-**Default Behavior**: If `workspace.debugMode` is NULL, defaults to `true` (development-friendly).
+**Default Behavior**: If `workspace.debugMode` is NULL, uses environment-based fallback:
+- `NODE_ENV=production` → defaults to `false` (full tracking enabled)
+- `NODE_ENV=development` → defaults to `true` (skip billing/usage tracking)
+- `NODE_ENV` not set → defaults to `true` (safe default for local development)
 
-**Rationale**: Development workspaces should not accumulate billing costs during testing. Production workspaces need full tracking for analytics and invoicing.
+**Implementation Pattern**:
+```typescript
+// Compliant with Principle I (Database-First) - uses environment context when DB value is NULL
+const effectiveDebugMode = workspace?.debugMode ?? (process.env.NODE_ENV === 'production' ? false : true)
+
+if (!effectiveDebugMode) {
+  await usageService.trackUsage({ ... })
+  await billingService.trackMessage({ ... })
+} else {
+  logger.info("[DEBUG MODE] Skipping usage/billing tracking")
+}
+```
+
+**Rationale**: Development workspaces should not accumulate billing costs during testing. Production workspaces need full tracking for analytics and invoicing. Environment-based fallback respects Database-First principle (no hardcoded values) while providing safe defaults.
 
 **Enforcement**:
 
-- Environment variable `NODE_ENV=production` SHOULD set `debugMode=false` for all workspaces
-- Seed script SHOULD create test workspaces with `debugMode=true`
-- Admin UI SHOULD display debug mode status prominently
+- Seed script MUST create test workspaces with explicit `debugMode=true`
+- Production deployment MUST set `NODE_ENV=production` environment variable
+- Admin UI SHOULD display debug mode status prominently with indication if using fallback
 
 ---
 
@@ -803,4 +1291,4 @@ describe("Workspace Isolation", () => {
 
 ---
 
-**Version**: 1.2.0 | **Ratified**: 2025-11-12 | **Last Amended**: 2025-11-12
+**Version**: 1.5.0 | **Ratified**: 2025-11-12 | **Last Amended**: 2025-11-13

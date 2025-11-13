@@ -156,16 +156,33 @@ export class ProductSearchAgentLLM {
                   selectedLine,
                 })
 
-                // 🔧 Feature 123: Search product DIRECTLY in database by name
-                // Don't rely on memory (which may contain old groups)
+                // 🔧 Feature 123: Search product DIRECTLY in database by FULL name
+                // ⚠️ CRITICAL: Match by full name to avoid wrong product selection
+                // Example: "Provolone Valpadana DOP 400g" → Don't match "Provolone Piccante"
                 const fullProduct = await this.prisma.products.findFirst({
                   where: {
                     workspaceId: context.workspaceId,
                     isActive: true,
-                    name: {
-                      contains: productName.split(" ")[0], // Use first word for matching (e.g., "Parmigiano")
-                      mode: "insensitive",
-                    },
+                    OR: [
+                      {
+                        // Try exact match first (name + formato)
+                        name: {
+                          equals: productName,
+                          mode: "insensitive",
+                        },
+                      },
+                      {
+                        // Fallback: Match first 2-3 significant words (not just first word)
+                        // Extract first 3 words for better precision
+                        name: {
+                          contains: productName
+                            .split(" ")
+                            .slice(0, 3)
+                            .join(" "),
+                          mode: "insensitive",
+                        },
+                      },
+                    ],
                   },
                 })
 
@@ -264,29 +281,77 @@ export class ProductSearchAgentLLM {
         temperature: agentConfig.temperature,
       })
 
-      // ✅ LOAD ACTIVE CATEGORIES from database (for category matching)
+      // 🔴 CRITICAL: Replace {{PRODUCTS}} with real data from database
+      const { PromptProcessorService } = await import(
+        "../../services/prompt-processor.service"
+      )
       const { MessageRepository } = await import(
         "../../repositories/message.repository"
       )
+      const promptProcessor = new PromptProcessorService()
       const messageRepo = new MessageRepository()
+
+      logger.info(
+        `🔄 Loading products and categories for variable replacement...`
+      )
+
+      // Get customer data
+      const customer = await this.prisma.customers.findUnique({
+        where: { id: context.customerId },
+      })
+
+      // Load dynamic content (products, categories, etc.)
+      const productsText = await messageRepo.getActiveProducts(
+        context.workspaceId
+      )
       const categoriesText = await messageRepo.getActiveCategories(
         context.workspaceId
       )
+      const offersText = await messageRepo.getActiveOffers(context.workspaceId)
 
-      // ✅ Inject categories into system prompt
-      const enhancedPrompt = categoriesText
-        ? `${agentConfig.systemPrompt}\n\n## AVAILABLE CATEGORIES\nWhen customer asks for a category (e.g., "formaggi", "latticini"), use the category filter with the corresponding category ID:\n${categoriesText}`
-        : agentConfig.systemPrompt
+      logger.info(`📦 Loaded dynamic content`, {
+        productsLength: productsText.length,
+        categoriesLength: categoriesText.length,
+        offersLength: offersText.length,
+      })
 
-      logger.info(
-        `✅ Injected ${categoriesText ? "categories" : "no categories"} into prompt`
+      // Replace ALL variables ({{PRODUCTS}}, {{CATEGORIES}}, {{nameUser}}, etc.)
+      const processedPrompt = await promptProcessor.preProcessPrompt(
+        agentConfig.systemPrompt,
+        context.workspaceId,
+        customer || {}, // Customer data for {{nameUser}}, {{emailUser}}, etc.
+        {
+          faqs: "", // Not used in product search
+          products: productsText,
+          categories: categoriesText,
+          services: "", // Not used in product search
+          offers: offersText,
+        }
       )
+
+      logger.info(`✅ Prompt variables replaced`, {
+        originalLength: agentConfig.systemPrompt.length,
+        processedLength: processedPrompt.length,
+        hasProducts:
+          processedPrompt.includes("SALUMI-") ||
+          processedPrompt.includes("FOR-"),
+      })
+
+      // 🔍 DEBUG: Print FULL prompt to console
+      console.log("\n" + "=".repeat(100))
+      console.log(
+        "🔍 PRODUCT SEARCH AGENT - FULL SYSTEM PROMPT (WITH REAL PRODUCTS)"
+      )
+      console.log("=".repeat(100))
+      console.log(processedPrompt.substring(0, 5000)) // First 5000 chars to avoid overflow
+      console.log("...")
+      console.log("=".repeat(100) + "\n")
 
       // STEP 2: Build messages for LLM (with conversation history if exists)
       const messages: any[] = [
         {
           role: "system" as const,
-          content: enhancedPrompt, // ✅ Use enhanced prompt with categories
+          content: processedPrompt, // ✅ Use processed prompt with ALL variables replaced
         },
       ]
 
