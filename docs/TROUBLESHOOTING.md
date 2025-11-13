@@ -26,6 +26,7 @@
 **Root Cause**: Stale cache in `searchConversations` table
 
 **Discovery** (2025-11-13):
+
 - User query: "avete i formaggi?" → LLM grouped by certification (DOP, Freschi, Stagionati)
 - User selects: "1" (Formaggi DOP - 5 products)
 - **Bug**: LLM consistently showed only 4 of 5 DOP cheeses, missing Taleggio DOP
@@ -41,7 +42,7 @@
 ```typescript
 // Clear session memory before re-querying
 await prisma.searchConversations.deleteMany({
-  where: { sessionId }
+  where: { sessionId },
 })
 ```
 
@@ -57,26 +58,28 @@ Expected output: All 5 DOP cheeses shown including Taleggio
 **Prevention**:
 
 1. **Automatic cache invalidation** on product CRUD operations:
+
    ```typescript
    async function updateProduct(productId: string, data: ProductUpdateDto) {
      const product = await prisma.products.update({
        where: { id: productId },
-       data
+       data,
      })
-     
+
      // Invalidate related sessions
      await prisma.searchConversations.deleteMany({
-       where: { 
+       where: {
          workspaceId: product.workspaceId,
-         lastQuery: { contains: product.category }
-       }
+         lastQuery: { contains: product.category },
+       },
      })
-     
+
      return product
    }
    ```
 
 2. **Product version tracking**:
+
    - Add `catalogVersion` column to `workspace` table
    - Increment on product add/update/delete
    - Store version in `searchConversations`, invalidate on mismatch
@@ -84,6 +87,7 @@ Expected output: All 5 DOP cheeses shown including Taleggio
 3. **TTL expiration**: Already implemented (10-minute expiry via `expiresAt`)
 
 **References**:
+
 - Constitution: [Principle VIII - Conversational Memory Invalidation](../.specify/memory/constitution.md#viii-conversational-memory-invalidation-must---critical)
 - Test script: `backend/scripts/test-cheese-count.ts`
 
@@ -100,22 +104,24 @@ Expected output: All 5 DOP cheeses shown including Taleggio
 ```typescript
 // Clear stale cache
 await prisma.searchConversations.deleteMany({
-  where: { sessionId }
+  where: { sessionId },
 })
 ```
 
 **Verification**:
 
 1. Check database count:
+
    ```sql
-   SELECT COUNT(*) FROM "Products" 
-   WHERE "workspaceId" = 'xxx' 
-   AND "isActive" = true 
+   SELECT COUNT(*) FROM "Products"
+   WHERE "workspaceId" = 'xxx'
+   AND "isActive" = true
    AND "category" = 'Formaggi'
    AND "certifications" ? 'DOP';
    ```
 
 2. Check LLM prompt debug file:
+
    ```bash
    tail -100 backend/logs/prompt-debug-*.txt | grep "FORMAG-"
    ```
@@ -162,6 +168,7 @@ npx ts-node scripts/test-salame-query.ts
 Expected: LLM shows "Salame Milano" (real product), NOT "Salame Napoli" (fake)
 
 **References**:
+
 - Constitution: [Principle III.4 - Example Products Prevention](../.specify/memory/constitution.md#iii-variable-replacement-must---non-negotiable)
 - Prompt: `docs/prompts/product-search-agent.md` (lines 1-35, warning box)
 
@@ -210,16 +217,17 @@ npm run test:security
 ```typescript
 // ❌ WRONG - No workspace filter
 const products = await prisma.products.findMany({
-  where: { isActive: true }
+  where: { isActive: true },
 })
 
 // ✅ CORRECT - Workspace isolated
 const products = await prisma.products.findMany({
-  where: { workspaceId, isActive: true }
+  where: { workspaceId, isActive: true },
 })
 ```
 
 **References**:
+
 - Constitution: [Principle II - Workspace Isolation](../.specify/memory/constitution.md#ii-workspace-isolation-must---non-negotiable)
 
 ---
@@ -307,11 +315,13 @@ logger.info(`Query time: ${Date.now() - start}ms`)
 **Solutions**:
 
 1. **Reduce product count**: Archive inactive products
+
    ```sql
    UPDATE "Products" SET "isActive" = false WHERE "lastSold" < NOW() - INTERVAL '6 months';
    ```
 
 2. **Optimize query**: Add database indexes
+
    ```sql
    CREATE INDEX idx_products_workspace_active ON "Products"("workspaceId", "isActive");
    ```
@@ -328,7 +338,7 @@ logger.info(`Query time: ${Date.now() - start}ms`)
 
 ```bash
 # Check usage tracking
-SELECT 
+SELECT
   DATE(timestamp),
   SUM("inputTokens") as total_input,
   SUM("outputTokens") as total_output,
@@ -343,16 +353,16 @@ LIMIT 30;
 **Solutions**:
 
 1. **Enable debugMode** to skip billing during testing:
+
    ```sql
    UPDATE "Workspace" SET "debugMode" = true WHERE id = 'xxx';
    ```
 
 2. **Reduce {{PRODUCTS}} size**: Remove unnecessary fields
+
    ```typescript
    // Before: ~13,851 chars (3,463 tokens)
-   `• ${code} ${name} ${formato} ~€${originalPrice}~ → €${finalPrice} - ${description} | Stock: ${icon} | ${certs} | ${supplier} | ${region} | ${transport}`
-   
-   // After: ~8,500 chars (2,125 tokens) - 39% reduction
+   ;`• ${code} ${name} ${formato} ~€${originalPrice}~ → €${finalPrice} - ${description} | Stock: ${icon} | ${certs} | ${supplier} | ${region} | ${transport}`// After: ~8,500 chars (2,125 tokens) - 39% reduction
    `• ${code} ${name} ${formato} €${finalPrice} | ${certs}`
    ```
 
@@ -361,8 +371,8 @@ LIMIT 30;
    const messageCount = await prisma.messages.count({
      where: {
        customerId,
-       timestamp: { gte: new Date(Date.now() - 3600000) } // Last hour
-     }
+       timestamp: { gte: new Date(Date.now() - 3600000) }, // Last hour
+     },
    })
    if (messageCount > 20) {
      throw new Error("Rate limit exceeded")
@@ -434,7 +444,7 @@ npm run test:security -- --testNamePattern="workspace"
 
 ```sql
 -- Count products by category
-SELECT "category", COUNT(*) FROM "Products" 
+SELECT "category", COUNT(*) FROM "Products"
 WHERE "workspaceId" = 'cm9hjgq9v00014qk8fsdy4ujv' AND "isActive" = true
 GROUP BY "category";
 
@@ -443,7 +453,7 @@ SELECT "code", "name", "certifications" FROM "Products"
 WHERE "certifications" ? 'DOP' AND "isActive" = true;
 
 -- Find cached conversations
-SELECT "sessionId", "lastQuery", "productsCount", "expiresAt" 
+SELECT "sessionId", "lastQuery", "productsCount", "expiresAt"
 FROM "SearchConversations"
 WHERE "workspaceId" = 'cm9hjgq9v00014qk8fsdy4ujv'
 ORDER BY "updatedAt" DESC;
