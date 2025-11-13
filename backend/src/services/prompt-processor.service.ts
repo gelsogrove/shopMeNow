@@ -222,23 +222,23 @@ export class PromptProcessorService {
 
   /**
    * 🆕 PUBLIC METHOD: Replace customer-specific variables in ANY text (prompts or LLM responses)
-   * 
+   *
    * CRITICAL FIX (Feature 124): Variables from calling functions (RepeatOrder.ts, ResetCart.ts)
    * were not being replaced in LLM responses, showing {{discountUser}} to customers.
-   * 
+   *
    * Handles:
    * - Customer data: {{nameUser}}, {{email}}, {{phone}}, {{discountUser}}
    * - Sales agent data: {{agentName}}, {{agentPhone}}, {{agentEmail}}
    * - System data: {{TOKEN_DURATION}}
-   * 
+   *
    * @param text - Text with potential {{variables}} (from LLM response or prompt)
    * @param customerData - Customer data from database
    * @returns Text with all variables replaced
-   * 
+   *
    * @see Constitution Principle I - Database-First Architecture (no hardcoded values)
    * @see specs/124-customer-variables-replacement/spec.md FR-1, FR-2
    * @see MULTI_AGENT_FLOW.md Step 4.6 - Variable Replacement
-   * 
+   *
    * @example
    * const input = "Hello {{nameUser}}, you have {{discountUser}}% discount! Contact {{agentName}}"
    * const output = replaceCustomerVariables(input, { nome: "Mario", discountUser: 15, agentName: "Giovanni", ... })
@@ -275,7 +275,7 @@ export class PromptProcessorService {
   /**
    * Format token duration from environment variable
    * Examples: "15m" → "15 minutes", "1h" → "1 hour", "2h" → "2 hours"
-   * 
+   *
    * @param duration - Duration string from env (e.g., "15m", "1h")
    * @returns Human-readable duration string
    */

@@ -9,6 +9,7 @@ Implement centralized customer variable replacement in `PromptProcessorService` 
 ## Tech Stack
 
 **Existing Stack** (no new dependencies):
+
 - **Backend**: Node.js 18+, TypeScript 5.x
 - **Framework**: Express.js
 - **ORM**: Prisma
@@ -16,6 +17,7 @@ Implement centralized customer variable replacement in `PromptProcessorService` 
 - **Architecture**: Clean Architecture / DDD
 
 **Modified Services**:
+
 - `PromptProcessorService` (add new method)
 - `LLMRouterService` (integrate replacement call)
 
@@ -24,6 +26,7 @@ Implement centralized customer variable replacement in `PromptProcessorService` 
 ## Architecture
 
 ### Current Flow (BROKEN)
+
 ```
 User Message → Router → Specialist Agent → [response with {{variables}}]
                                                 ↓
@@ -33,6 +36,7 @@ User Message → Router → Specialist Agent → [response with {{variables}}]
 ```
 
 ### New Flow (FIXED)
+
 ```
 User Message → Router → Specialist Agent → [response with {{variables}}]
                                                 ↓
@@ -69,12 +73,13 @@ backend/src/
 ## Data Model
 
 ### CustomerData Interface
+
 ```typescript
 interface CustomerData {
-  nome: string          // → {{nameUser}}
-  email: string         // → {{email}}
-  phone: string         // → {{phone}}
-  discountUser: number  // → {{discountUser}}
+  nome: string // → {{nameUser}}
+  email: string // → {{email}}
+  phone: string // → {{phone}}
+  discountUser: number // → {{discountUser}}
 }
 ```
 
@@ -89,14 +94,15 @@ interface CustomerData {
 **File**: `backend/src/services/prompt-processor.service.ts`
 
 **New Method**:
+
 ```typescript
 /**
  * Replace customer-specific variables in ANY text (prompts or responses)
- * 
+ *
  * @param text - Text with potential {{variables}}
  * @param customerData - Customer data from database
  * @returns Text with all variables replaced
- * 
+ *
  * @example
  * const input = "Hello {{nameUser}}, you have {{discountUser}}% discount!"
  * const output = replaceCustomerVariables(input, { nome: "Mario", discountUser: 15 })
@@ -125,18 +131,19 @@ public replaceCustomerVariables(
 private formatTokenDuration(duration: string): string {
   const match = duration.match(/^(\d+)([mh])$/)
   if (!match) return "15 minutes"
-  
+
   const value = parseInt(match[1])
   const unit = match[2]
-  
+
   if (unit === 'm') return value === 1 ? "1 minute" : `${value} minutes`
   if (unit === 'h') return value === 1 ? "1 hour" : `${value} hours`
-  
+
   return "15 minutes"
 }
 ```
 
 **Why in PromptProcessorService?**
+
 - Already handles variable replacement for prompts
 - Centralized location for all template processing
 - Easy to extend with new variables
@@ -150,6 +157,7 @@ private formatTokenDuration(duration: string): string {
 **Location**: After line 664 (after `{{TOKEN_DURATION}}` replacement, before Safety layer)
 
 **Changes**:
+
 ```typescript
 // STEP 4.5: Replace {{TOKEN_DURATION}} variable
 const tokenDuration = this.formatTokenDuration(
@@ -187,6 +195,7 @@ logger.info("✅ Replaced customer variables", {
 ```
 
 **Dependencies**:
+
 - `customer` object already loaded (line ~390)
 - `params.customerName` already available
 - `this.promptProcessor` already injected in constructor
@@ -196,6 +205,7 @@ logger.info("✅ Replaced customer variables", {
 ### 3. Calling Functions Audit
 
 **Files to Check**:
+
 - `RepeatOrder.ts` - Uses `{{discountUser}}` (line 335) ✅ CONFIRMED
 - `ResetCart.ts` - Uses `{{discountUser}}` (line 211) ✅ CONFIRMED
 - `AddToCart.ts` - Check for variables
@@ -214,17 +224,20 @@ logger.info("✅ Replaced customer variables", {
 **File**: `backend/__tests__/unit/prompt-processor.test.ts`
 
 **Test Cases**:
+
 ```typescript
-describe('PromptProcessorService.replaceCustomerVariables', () => {
-  it('should replace {{nameUser}} with customer name', () => {
-    const result = service.replaceCustomerVariables(
-      "Hello {{nameUser}}!",
-      { nome: "Mario", email: "", phone: "", discountUser: 0 }
-    )
+describe("PromptProcessorService.replaceCustomerVariables", () => {
+  it("should replace {{nameUser}} with customer name", () => {
+    const result = service.replaceCustomerVariables("Hello {{nameUser}}!", {
+      nome: "Mario",
+      email: "",
+      phone: "",
+      discountUser: 0,
+    })
     expect(result).toBe("Hello Mario!")
   })
 
-  it('should replace {{discountUser}} with discount value', () => {
+  it("should replace {{discountUser}} with discount value", () => {
     const result = service.replaceCustomerVariables(
       "You have {{discountUser}}% discount",
       { nome: "", email: "", phone: "", discountUser: 15 }
@@ -232,7 +245,7 @@ describe('PromptProcessorService.replaceCustomerVariables', () => {
     expect(result).toBe("You have 15% discount")
   })
 
-  it('should replace ALL occurrences of same variable', () => {
+  it("should replace ALL occurrences of same variable", () => {
     const result = service.replaceCustomerVariables(
       "{{nameUser}}, your discount is {{discountUser}}%. Thanks {{nameUser}}!",
       { nome: "Mario", email: "", phone: "", discountUser: 10 }
@@ -240,7 +253,7 @@ describe('PromptProcessorService.replaceCustomerVariables', () => {
     expect(result).toBe("Mario, your discount is 10%. Thanks Mario!")
   })
 
-  it('should handle missing discount (use 0)', () => {
+  it("should handle missing discount (use 0)", () => {
     const result = service.replaceCustomerVariables(
       "Discount: {{discountUser}}%",
       { nome: "", email: "", phone: "", discountUser: 0 }
@@ -248,7 +261,7 @@ describe('PromptProcessorService.replaceCustomerVariables', () => {
     expect(result).toBe("Discount: 0%")
   })
 
-  it('should replace {{TOKEN_DURATION}} from env', () => {
+  it("should replace {{TOKEN_DURATION}} from env", () => {
     process.env.TOKEN_EXPIRATION = "15m"
     const result = service.replaceCustomerVariables(
       "Link valid for {{TOKEN_DURATION}}",
@@ -266,12 +279,13 @@ describe('PromptProcessorService.replaceCustomerVariables', () => {
 **File**: `backend/__tests__/integration/customer-variables.test.ts`
 
 **Test Case**:
+
 ```typescript
-describe('Multi-Agent Flow - Customer Variables', () => {
-  it('should replace {{discountUser}} in repeat order flow', async () => {
+describe("Multi-Agent Flow - Customer Variables", () => {
+  it("should replace {{discountUser}} in repeat order flow", async () => {
     // Setup: Customer with 15% discount
     const customer = await createTestCustomer({ discount: 15 })
-    
+
     // Action: Send "repeat last order" message
     const response = await llmRouter.routeMessage({
       message: "I want to repeat my last order",
@@ -280,7 +294,7 @@ describe('Multi-Agent Flow - Customer Variables', () => {
       customerName: customer.nome,
       customerLanguage: "en",
     })
-    
+
     // Assert: Response has actual discount, not {{discountUser}}
     expect(response.finalResponse).toContain("15%")
     expect(response.finalResponse).not.toContain("{{discountUser}}")
@@ -329,6 +343,7 @@ If issues arise after deployment:
 4. **Fix Forward**: Add error handling around replacement call
 
 **Rollback Code**:
+
 ```typescript
 // TEMPORARY ROLLBACK: Comment this block if replacement causes issues
 // responseWithLinks = this.promptProcessor.replaceCustomerVariables(
@@ -372,6 +387,7 @@ If issues arise after deployment:
 ## Dependencies
 
 **No new packages required** - uses existing:
+
 - `@prisma/client` (already installed)
 - Built-in `String.prototype.replace()`
 
@@ -382,6 +398,7 @@ If issues arise after deployment:
 ### Breaking Changes
 
 **NONE** - This is an additive change:
+
 - New method added to PromptProcessorService
 - Existing `replaceAllVariables()` unchanged
 - No changes to public API or database schema

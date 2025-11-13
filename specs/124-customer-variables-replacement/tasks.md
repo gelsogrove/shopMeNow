@@ -3,6 +3,7 @@
 ## Phase 1: Setup & Audit
 
 ### Task 1.1: Audit All Variable Usage
+
 **Type**: Analysis  
 **Priority**: CRITICAL  
 **Dependencies**: None  
@@ -11,16 +12,19 @@
 **Description**: Search entire codebase for ALL customer variable usage to ensure complete replacement coverage.
 
 **Files**:
+
 - `backend/src/domain/calling-functions/*.ts`
 - `backend/src/services/*.service.ts`
 
 **Actions**:
+
 1. Grep search for `{{nameUser}}`, `{{email}}`, `{{phone}}`, `{{discountUser}}`, `{{TOKEN_DURATION}}`
 2. Document all locations where variables are used
 3. Verify variable names are consistent
 4. Identify any unknown/undocumented variables
 
 **Acceptance Criteria**:
+
 - [ ] Complete list of all variables used in codebase
 - [ ] No duplicate or inconsistent variable names
 - [ ] All variables documented in plan.md
@@ -30,6 +34,7 @@
 ---
 
 ### Task 1.2: Load Current Customer Data Structure
+
 **Type**: Analysis  
 **Priority**: HIGH  
 **Dependencies**: None  
@@ -38,15 +43,18 @@
 **Description**: Verify customer data structure in llm-router.service.ts to ensure all required fields are available.
 
 **Files**:
+
 - `backend/src/services/llm-router.service.ts` (line ~390-420)
 
 **Actions**:
+
 1. Check `customer` object loading from database
 2. Verify fields: `nome`, `email`, `phone`, `discount`
 3. Confirm `params.customerName` availability
 4. Document data flow for replacement
 
 **Acceptance Criteria**:
+
 - [ ] Customer object has all required fields
 - [ ] Data available before replacement call site (line 665)
 - [ ] No additional database queries needed
@@ -58,6 +66,7 @@
 ## Phase 2: Core Implementation
 
 ### Task 2.1: Implement replaceCustomerVariables() Method
+
 **Type**: Development  
 **Priority**: CRITICAL  
 **Dependencies**: Task 1.1, Task 1.2  
@@ -66,18 +75,20 @@
 **Description**: Add new method to PromptProcessorService for replacing customer-specific variables in any text.
 
 **Files**:
+
 - `backend/src/services/prompt-processor.service.ts`
 
 **Implementation**:
+
 ```typescript
 /**
  * Replace customer-specific variables in ANY text (prompts or responses)
  * Handles: {{nameUser}}, {{email}}, {{phone}}, {{discountUser}}, {{TOKEN_DURATION}}
- * 
+ *
  * @param text - Text with potential {{variables}}
  * @param customerData - Customer data from database
  * @returns Text with all variables replaced
- * 
+ *
  * @see Constitution Principle I - Database-First Architecture
  * @see spec.md FR-2 - Centralized Replacement Logic
  */
@@ -108,18 +119,19 @@ public replaceCustomerVariables(
 private formatTokenDuration(duration: string): string {
   const match = duration.match(/^(\d+)([mh])$/)
   if (!match) return "15 minutes"
-  
+
   const value = parseInt(match[1])
   const unit = match[2]
-  
+
   if (unit === "m") return value === 1 ? "1 minute" : `${value} minutes`
   if (unit === "h") return value === 1 ? "1 hour" : `${value} hours`
-  
+
   return "15 minutes"
 }
 ```
 
 **Acceptance Criteria**:
+
 - [ ] Method signature matches plan.md specification
 - [ ] All 5 variables handled (nameUser, email, phone, discountUser, TOKEN_DURATION)
 - [ ] Global regex flag `/g` used (replaces ALL occurrences)
@@ -132,6 +144,7 @@ private formatTokenDuration(duration: string): string {
 ---
 
 ### Task 2.2: Integrate Replacement into Multi-Agent Flow
+
 **Type**: Development  
 **Priority**: CRITICAL  
 **Dependencies**: Task 2.1  
@@ -140,9 +153,11 @@ private formatTokenDuration(duration: string): string {
 **Description**: Call `replaceCustomerVariables()` in llm-router.service.ts after specialist response, before Safety layer.
 
 **Files**:
+
 - `backend/src/services/llm-router.service.ts` (line 665-670)
 
 **Implementation**:
+
 ```typescript
 // STEP 4.5: Replace {{TOKEN_DURATION}} variable (EXISTING)
 const tokenDuration = this.formatTokenDuration(
@@ -186,6 +201,7 @@ logger.info("Step 5: Applying Safety & Translation Layer")
 ```
 
 **Acceptance Criteria**:
+
 - [ ] Replacement called AFTER specialist response (after link replacement)
 - [ ] Replacement called BEFORE Safety layer
 - [ ] Customer data object correctly constructed from `customer` and `params`
@@ -200,6 +216,7 @@ logger.info("Step 5: Applying Safety & Translation Layer")
 ## Phase 3: Testing
 
 ### Task 3.1: Write Unit Tests for replaceCustomerVariables()
+
 **Type**: Testing  
 **Priority**: HIGH  
 **Dependencies**: Task 2.1  
@@ -208,9 +225,11 @@ logger.info("Step 5: Applying Safety & Translation Layer")
 **Description**: Comprehensive unit tests for the new method covering all variables and edge cases.
 
 **Files**:
+
 - `backend/__tests__/unit/prompt-processor.test.ts` (NEW or add to existing)
 
 **Test Cases**:
+
 ```typescript
 describe("PromptProcessorService.replaceCustomerVariables", () => {
   let service: PromptProcessorService
@@ -316,6 +335,7 @@ describe("PromptProcessorService.replaceCustomerVariables", () => {
 ```
 
 **Acceptance Criteria**:
+
 - [ ] 10+ test cases covering all variables
 - [ ] Edge cases tested (missing data, invalid format, multiple occurrences)
 - [ ] All tests pass with `npm run test:unit`
@@ -326,6 +346,7 @@ describe("PromptProcessorService.replaceCustomerVariables", () => {
 ---
 
 ### Task 3.2: Integration Test - Repeat Order Flow
+
 **Type**: Testing  
 **Priority**: CRITICAL  
 **Dependencies**: Task 2.2  
@@ -334,9 +355,11 @@ describe("PromptProcessorService.replaceCustomerVariables", () => {
 **Description**: End-to-end test verifying variables are replaced in actual multi-agent flow.
 
 **Files**:
+
 - `backend/__tests__/integration/customer-variables.test.ts` (NEW)
 
 **Test Implementation**:
+
 ```typescript
 import { PrismaClient } from "@prisma/client"
 import { LLMRouterService } from "../../src/services/llm-router.service"
@@ -407,6 +430,7 @@ describe("Multi-Agent Flow - Customer Variables Replacement", () => {
 ```
 
 **Acceptance Criteria**:
+
 - [ ] Test creates real customer with discount
 - [ ] Test calls actual llmRouter.routeMessage()
 - [ ] Response verified to have no `{{variables}}`
@@ -419,6 +443,7 @@ describe("Multi-Agent Flow - Customer Variables Replacement", () => {
 ## Phase 4: Validation & Polish
 
 ### Task 4.1: Manual E2E Test
+
 **Type**: Testing  
 **Priority**: CRITICAL  
 **Dependencies**: Task 2.2  
@@ -427,6 +452,7 @@ describe("Multi-Agent Flow - Customer Variables Replacement", () => {
 **Description**: Manual test with real backend to verify complete flow works as expected.
 
 **Test Procedure**:
+
 1. Restart backend: `cd backend && npm run dev`
 2. Open frontend: http://localhost:3000
 3. Login as admin
@@ -441,6 +467,7 @@ describe("Multi-Agent Flow - Customer Variables Replacement", () => {
 8. Check backend logs for "✅ Replaced customer variables"
 
 **Acceptance Criteria**:
+
 - [ ] No `{{variables}}` visible in final response
 - [ ] Discount shows correct percentage from database
 - [ ] Message Flow Timeline clean (no validation-only Router step)
@@ -452,6 +479,7 @@ describe("Multi-Agent Flow - Customer Variables Replacement", () => {
 ---
 
 ### Task 4.2: Verify TypeScript Compilation
+
 **Type**: Validation  
 **Priority**: HIGH  
 **Dependencies**: Task 2.1, Task 2.2  
@@ -460,12 +488,14 @@ describe("Multi-Agent Flow - Customer Variables Replacement", () => {
 **Description**: Ensure all TypeScript changes compile without errors.
 
 **Commands**:
+
 ```bash
 cd backend
 npm run build
 ```
 
 **Acceptance Criteria**:
+
 - [ ] TypeScript compilation succeeds
 - [ ] No type errors or warnings
 - [ ] Prisma client generated successfully
@@ -476,6 +506,7 @@ npm run build
 ---
 
 ### Task 4.3: Update Documentation
+
 **Type**: Documentation  
 **Priority**: MEDIUM  
 **Dependencies**: Task 4.1  
@@ -484,16 +515,19 @@ npm run build
 **Description**: Document the new variable replacement pattern in architecture docs.
 
 **Files**:
+
 - `docs/architecture/MULTI_AGENT_FLOW.md` (UPDATE - add variable replacement step)
 - `.specify/memory/constitution.md` (VERIFY - Principle I compliance documented)
 
 **Changes to MULTI_AGENT_FLOW.md**:
+
 ```markdown
 ## Step 4: Token & Variable Replacement (NEW - v1.8.1)
 
 **Purpose**: Replace placeholders with actual values BEFORE Safety layer validation.
 
 **Sub-Steps**:
+
 1. **Link Token Replacement**: Replace `[LINK_XXX]` with actual URLs (JWT-secured)
 2. **Customer Variables**: Replace `{{nameUser}}`, `{{discountUser}}`, etc. with database values
 3. **Duration Tokens**: Replace `{{TOKEN_DURATION}}` with formatted expiration time
@@ -502,14 +536,17 @@ npm run build
 
 **Example**:
 ```
-INPUT:  "Hi {{nameUser}}, you have {{discountUser}}% off! Link: [LINK_CART]"
+
+INPUT: "Hi {{nameUser}}, you have {{discountUser}}% off! Link: [LINK_CART]"
 OUTPUT: "Hi Mario Rossi, you have 15% off! Link: http://localhost:3000/s/abc123"
+
 ```
 
 **Why Before Safety?**: Safety layer needs to validate actual content, not placeholder tokens.
 ```
 
 **Acceptance Criteria**:
+
 - [ ] MULTI_AGENT_FLOW.md updated with Step 4 details
 - [ ] Constitution references verified (Principle I)
 - [ ] Examples added for clarity
@@ -522,6 +559,7 @@ OUTPUT: "Hi Mario Rossi, you have 15% off! Link: http://localhost:3000/s/abc123"
 ## Phase 5: Completion
 
 ### Task 5.1: Mark Tasks as Complete
+
 **Type**: Housekeeping  
 **Priority**: LOW  
 **Dependencies**: All previous tasks  
@@ -530,9 +568,11 @@ OUTPUT: "Hi Mario Rossi, you have 15% off! Link: http://localhost:3000/s/abc123"
 **Description**: Update tasks.md to mark all completed tasks with [X].
 
 **Files**:
+
 - `specs/124-customer-variables-replacement/tasks.md`
 
 **Acceptance Criteria**:
+
 - [ ] All completed tasks marked [X]
 - [ ] Any blocked/pending tasks documented
 - [ ] Final status summary added
@@ -542,6 +582,7 @@ OUTPUT: "Hi Mario Rossi, you have 15% off! Link: http://localhost:3000/s/abc123"
 ---
 
 ### Task 5.2: Final Verification Checklist
+
 **Type**: Validation  
 **Priority**: CRITICAL  
 **Dependencies**: All previous tasks  
@@ -550,6 +591,7 @@ OUTPUT: "Hi Mario Rossi, you have 15% off! Link: http://localhost:3000/s/abc123"
 **Description**: Complete pre-PR checklist to ensure all requirements met.
 
 **Checklist**:
+
 - [ ] Unit tests pass (`npm run test:unit`)
 - [ ] Integration tests pass (`npm run test:integration`)
 - [ ] TypeScript compiles (`npm run build`)
@@ -573,6 +615,7 @@ OUTPUT: "Hi Mario Rossi, you have 15% off! Link: http://localhost:3000/s/abc123"
 **Parallel Tasks**: 3 (Task 1.2, 3.1, 4.2, 4.3)
 
 **Risk Assessment**:
+
 - **LOW RISK**: Changes are localized to PromptProcessorService and one call site
 - **HIGH IMPACT**: Fixes critical Constitution violation (Principle I)
 - **BLOCKING**: Must be completed before PR for v1.8.0 (Validation-Only Router Pattern)
