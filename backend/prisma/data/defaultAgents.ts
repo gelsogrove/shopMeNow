@@ -70,7 +70,7 @@ export const defaultAgents = (
       "Specialist in product search, filters, certifications, and catalog navigation",
     systemPrompt: loadPrompt("product-search-agent.md"),
     model: "openai/gpt-4o-mini",
-    temperature: 0.0, // ✅ Zero temperature for exact product details (no creativity/hallucination)
+    temperature: 0.3, // ✅ Increased from 0.0 to 0.3 for better semantic matching (dolci=desserts)
     maxTokens: 2048,
     order: 1,
     isActive: true,

@@ -24,6 +24,7 @@ export interface SafetyResult {
   blockedReason?: string
   tokensUsed?: number
   executionTimeMs?: number
+  systemPrompt?: string
 }
 
 export interface ProcessOptions {
@@ -201,6 +202,7 @@ export class SafetyTranslationAgent {
         blockedReason,
         tokensUsed,
         executionTimeMs,
+        systemPrompt, // ✅ Add processed system prompt for debugging
       }
     } catch (error) {
       const executionTimeMs = Date.now() - startTime

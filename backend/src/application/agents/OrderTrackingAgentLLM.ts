@@ -57,6 +57,7 @@ export interface OrderTrackingLLMResponse {
     arguments: any
     result: any
   }>
+  systemPrompt?: string // 🆕 Processed system prompt for debugging
 }
 
 export class OrderTrackingAgentLLM {
@@ -248,6 +249,7 @@ export class OrderTrackingAgentLLM {
         tokensUsed: totalTokens,
         executionTimeMs,
         functionCalls,
+        systemPrompt, // 🆕 Include processed prompt for debugging
       }
     } catch (error) {
       const executionTimeMs = Date.now() - startTime

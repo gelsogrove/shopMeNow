@@ -393,11 +393,24 @@ export default function MessageFlowDialog({
 
                   {/* Card Body */}
                   <div className="space-y-3">
+                    {/* 🆕 PROMPT - System Prompt with all variables replaced */}
+                    {/* ⬆️ MOVED UP: PROMPT defines behavior BEFORE processing input */}
+                    {(step as any).systemPrompt && (
+                      <details className="group">
+                        <summary className="cursor-pointer text-sm font-semibold text-purple-600 hover:text-purple-700">
+                          � PROMPT (System)
+                        </summary>
+                        <pre className="mt-2 text-xs bg-purple-50 p-3 rounded overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap break-words font-mono">
+                          {(step as any).systemPrompt}
+                        </pre>
+                      </details>
+                    )}
+
                     {/* Input */}
                     {step.input && (
                       <details className="group">
                         <summary className="cursor-pointer text-sm font-semibold text-blue-600 hover:text-blue-700">
-                          📥 INPUT
+                          � INPUT
                         </summary>
                         <pre className="mt-2 text-xs bg-blue-50 p-3 rounded overflow-x-auto max-h-60 overflow-y-auto">
                           {formatJSON(step.input)}

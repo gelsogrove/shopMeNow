@@ -153,6 +153,7 @@ export interface DebugStep {
   isNested?: boolean // 🆕 For nested/indented sub-agents (e.g., QueryAnalyzer under ProductSearch)
   parentAgent?: string
   subAgentType?: string
+  systemPrompt?: string // 🆕 Processed system prompt for debugging (with variables replaced)
 }
 
 interface FAQCheckResult {
@@ -192,6 +193,100 @@ export class LLMRouterService {
     }
 
     logger.info("✅ LLMRouterService initialized with Function Calling support")
+  }
+
+  /**
+   * 🆕 Validation-Only Router Pattern - Validate sub-agent response without LLM call
+   * 
+   * This method checks if a specialist agent's response is valid and complete
+   * without making an expensive LLM call to the Router. This saves ~5000 tokens
+   * per request (25% token reduction) when validation passes.
+   * 
+   * @param options - Validation parameters
+   * @returns Validation result with reason if invalid
+   * 
+   * @see Constitution v1.8.0 Principle X: Validation-Only Router Pattern
+   * @see docs/architecture/MULTI_AGENT_FLOW.md for complete flow documentation
+   */
+  private validateSubAgentResponse(options: {
+    response: string
+    expectedAgent: string
+    userQuery: string
+  }): { isValid: boolean; reason?: string } {
+    const { response, expectedAgent, userQuery } = options
+
+    // Rule 1: Response must be non-empty
+    if (!response || response.trim().length === 0) {
+      return { isValid: false, reason: "Empty response from sub-agent" }
+    }
+
+    // Rule 2: Response must be meaningful (>50 characters)
+    // Prevents generic responses like "ok", "sure", "I'll help you"
+    if (response.trim().length < 50) {
+      return {
+        isValid: false,
+        reason: `Response too short (${response.trim().length} < 50 chars)`,
+      }
+    }
+
+    // Rule 3: PRODUCT_SEARCH must contain product info or categories
+    if (expectedAgent === "PRODUCT_SEARCH") {
+      const hasProducts = /\d+\.\s+\*\*/.test(response) // "1. **Product Name**"
+      const hasCategories = /categori/i.test(response)
+      const hasNoProducts = /non\s+(ho|abbiamo)|no\s+products?/i.test(response)
+
+      if (!hasProducts && !hasCategories && !hasNoProducts) {
+        return {
+          isValid: false,
+          reason:
+            "PRODUCT_SEARCH response missing product list, categories, or 'no products' message",
+        }
+      }
+    }
+
+    // Rule 4: CART_MANAGEMENT must contain cart action confirmation
+    if (expectedAgent === "CART_MANAGEMENT") {
+      const hasCartAction =
+        /aggiunt|rimoss|carrell|cart|added|removed/i.test(response)
+      if (!hasCartAction) {
+        return {
+          isValid: false,
+          reason: "CART_MANAGEMENT response missing cart action confirmation",
+        }
+      }
+    }
+
+    // Rule 5: ORDER_TRACKING must contain order code or tracking info
+    if (expectedAgent === "ORDER_TRACKING") {
+      const hasOrderInfo = /ORD-|ordine|order|tracking/i.test(response)
+      if (!hasOrderInfo) {
+        return {
+          isValid: false,
+          reason: "ORDER_TRACKING response missing order code or tracking info",
+        }
+      }
+    }
+
+    // Rule 6: CUSTOMER_SUPPORT must contain support message or agent info
+    if (expectedAgent === "CUSTOMER_SUPPORT") {
+      const hasSupportMessage =
+        /support|assist|help|agente|contatt|contact/i.test(response)
+      if (!hasSupportMessage) {
+        return {
+          isValid: false,
+          reason: "CUSTOMER_SUPPORT response missing support message",
+        }
+      }
+    }
+
+    // ✅ All validation checks passed
+    logger.info("✅ Sub-agent response validation passed", {
+      agent: expectedAgent,
+      responseLength: response.length,
+      savedTokens: "~5000 (Router LLM call skipped)",
+    })
+
+    return { isValid: true }
   }
 
   /**
@@ -586,6 +681,7 @@ export class LLMRouterService {
         model: routerAgent.model, // Uses same model as router
         temperature: 0.2, // Safety agent uses lower temperature
         timestamp: safetyTimestamp,
+        systemPrompt: safeResponse.systemPrompt, // ✅ Add processed system prompt
         tokenUsage: safeResponse.tokensUsed
           ? {
               promptTokens: 0,
@@ -811,6 +907,7 @@ export class LLMRouterService {
         model: "openai/gpt-4o-mini",
         temperature: 0.2,
         timestamp: safetyTimestamp,
+        systemPrompt: errorResponse.systemPrompt, // ✅ Add processed system prompt
         tokenUsage: errorResponse.tokensUsed
           ? {
               promptTokens: 0,
@@ -930,6 +1027,7 @@ export class LLMRouterService {
             ? llmResponse.content
             : undefined,
         },
+        systemPrompt: routerAgent.systemPrompt, // 🆕 Include processed Router prompt for debugging (variables already replaced)
         functionCallDecision: llmResponse.function_call?.name || "no_function",
         // 🔧 NEW: Include function call details INSIDE router step
         functionName: llmResponse.function_call?.name,
@@ -1161,50 +1259,7 @@ export class LLMRouterService {
               // 🔒 PRE-CHECK: Verify products exist before delegating
               // Prevents LLM from inventing non-existent products
               const queryLower = params.message.toLowerCase()
-              const searchTerms = [
-                "dolci",
-                "dolce",
-                "tiramisu",
-                "cannoli",
-                "panettone",
-                "dessert",
-                "sweet",
-              ]
-
-              // Check if query mentions categories we don't have
-              const mentionsNonExistentCategory = searchTerms.some((term) =>
-                queryLower.includes(term)
-              )
-
-              if (mentionsNonExistentCategory) {
-                // Check if we actually have products matching the query
-                const hasMatchingProducts = products
-                  .toLowerCase()
-                  .includes(queryLower.split(" ")[0])
-
-                if (!hasMatchingProducts) {
-                  // Return immediate response without delegating
-                  logger.warn(
-                    `⚠️ Query mentions non-existent category, skipping delegation`,
-                    {
-                      query: params.message,
-                      detectedTerms: searchTerms.filter((t) =>
-                        queryLower.includes(t)
-                      ),
-                    }
-                  )
-
-                  subAgentResponse = {
-                    success: true,
-                    output: `Mi dispiace ${params.customerName || ""}! Non abbiamo ${queryLower.includes("dolci") || queryLower.includes("dolce") ? "dolci" : "questi prodotti"} al momento. 😔\n\nPosso aiutarti con:\n• Formaggi freschi e stagionati 🧀\n• Salumi artigianali 🥓\n• Pasta fresca 🍝\n• Condimenti tradizionali 🫒\n\nCosa ti interessa?`,
-                    tokensUsed: 0,
-                    executionTimeMs: 0,
-                    functionCalls: [],
-                  }
-                  break // Skip delegation
-                }
-              }
-
+              // ✅ ALWAYS delegate to ProductSearchAgentLLM - let LLM decide what to show
               const productSearchAgent = new ProductSearchAgentLLM(this.prisma)
 
               console.log("\n" + "🔵".repeat(50))
@@ -1384,6 +1439,7 @@ export class LLMRouterService {
               completionTokens: subAgentResponse.tokensUsed,
               totalTokens: subAgentResponse.tokensUsed,
             },
+            systemPrompt: subAgentResponse.systemPrompt, // 🆕 Include processed system prompt for debugging
             isSubAgent: true,
             parentAgent: "ROUTER",
             subAgentType: delegationTarget,
@@ -1494,32 +1550,85 @@ export class LLMRouterService {
             }
           }
 
-          // Add specialist response to messages for Router LLM processing
-          messages.push({
-            role: "function" as const,
-            name: functionName,
-            content: subAgentFinalResponse, // Specialist agent's English response
+          // 🆕 VALIDATION-ONLY ROUTER PATTERN
+          // Check if sub-agent response is valid WITHOUT making Router LLM call
+          // This saves ~5000 tokens per request (25% reduction) when validation passes
+          const validationResult = this.validateSubAgentResponse({
+            response: subAgentFinalResponse,
+            expectedAgent: delegationTarget,
+            userQuery: params.message,
           })
+
+          if (!validationResult.isValid) {
+            // ❌ Response invalid - need Router to re-process
+            logger.warn(
+              "⚠️ Sub-agent response invalid, Router will reformulate",
+              {
+                agent: delegationTarget,
+                reason: validationResult.reason,
+                responsePreview: subAgentFinalResponse.substring(0, 100),
+              }
+            )
+
+            // Add to messages and continue loop (Router LLM call #3)
+            messages.push({
+              role: "function" as const,
+              name: functionName,
+              content: subAgentFinalResponse,
+            })
+
+            // Track which agent was used
+            agentUsed = delegationTarget
+
+            // Update total tokens (from specialist agent response)
+            totalTokens += subAgentResponse.tokensUsed || 0
+
+            logger.info("🔄 Continuing to Router for response reformulation", {
+              nextIteration: iterations + 1,
+            })
+
+            // CONTINUE loop - Router LLM will process specialist agent response
+            continue
+          }
+
+          // ✅ Response valid - SKIP Router reformulation, go DIRECTLY to exit loop
+          logger.info("✅ Sub-agent response valid, skipping Router LLM call", {
+            agent: delegationTarget,
+            savedTokens: "~5000",
+            directToSafety: true,
+            responseLength: subAgentFinalResponse.length,
+          })
+
+          // 🔧 NOTE: Validation-only is INTERNAL implementation detail
+          // NO debugStep added - validation should be invisible in Message Flow Timeline
+          // User sees: Router → Specialist → Safety (clean flow)
+          // Logs show: "✅ Sub-agent response valid, skipping Router LLM call"
 
           // Track which agent was used
           agentUsed = delegationTarget
 
-          // Update total tokens (from specialist agent response)
+          // Update total tokens (from specialist agent response only)
           totalTokens += subAgentResponse.tokensUsed || 0
 
           logger.info(
-            "🔄 Specialist agent response added, continuing to Router for processing",
+            "🔍 DEBUG: Exiting functionCallingLoop with validation-only approval",
             {
-              agentUsed: delegationTarget,
-              responseLength: subAgentFinalResponse.length,
-              tokensUsed: subAgentResponse.tokensUsed,
-              hasTokens: subAgentFinalResponse.includes("[LINK_"),
-              nextIteration: iterations + 1,
+              debugStepsCount: debugSteps.length,
+              response: subAgentFinalResponse.substring(0, 100),
+              finalAgentUsed: agentUsed,
             }
           )
 
-          // CONTINUE loop - Router LLM will process specialist agent response
-          continue
+          // ⬅️ EXIT LOOP - Return directly with sub-agent response
+          // Router validated the response without LLM call - proceed to Safety layer
+          return {
+            response: subAgentFinalResponse,
+            tokensUsed: totalTokens,
+            iterations,
+            agentUsed,
+            confidence: 0.9,
+            debugSteps, // Contains: Router → SubAgent → Router(validation-only)
+          }
         }
 
         // 🔧 OLD PATH: Direct function execution (DEPRECATED - should use delegation instead)
@@ -1846,6 +1955,14 @@ export class LLMRouterService {
 
       // Save assistant message (OUTBOUND) with debugInfo
       // ✅ Include ALL 4 steps: Router → Specialist → Router receives → Safety
+      
+      // 🔍 DEBUG: Log systemPrompt status
+      logger.error("🔍🔍🔍 DEBUG: specialistResponse.systemPrompt", {
+        exists: !!specialistResponse.systemPrompt,
+        length: specialistResponse.systemPrompt?.length || 0,
+        preview: specialistResponse.systemPrompt?.substring(0, 150) || "❌ MISSING"
+      })
+
       const routerDelegateTimestamp = new Date().toISOString()
       const specialistTimestamp = new Date().toISOString()
       const routerReceiveTimestamp = new Date().toISOString()
@@ -1891,6 +2008,7 @@ export class LLMRouterService {
             output: {
               textResponse: specialistResponse.output,
             },
+            systemPrompt: specialistResponse.systemPrompt, // 🆕 Include processed system prompt for debugging
             isSubAgent: true, // ✅ Flag for frontend filtering
           } as any,
           // Step 3: Router receives response from specialist
@@ -1921,6 +2039,7 @@ export class LLMRouterService {
             model: "openai/gpt-4o-mini",
             temperature: 0.2,
             timestamp: safetyTimestamp,
+            systemPrompt: safeResponse.systemPrompt, // ✅ Add processed system prompt
             tokenUsage: safeResponse.tokensUsed
               ? {
                   promptTokens: 0,

@@ -59,6 +59,7 @@ export interface CartLLMResponse {
     arguments: any
     result: any
   }>
+  systemPrompt?: string // 🆕 Processed system prompt for debugging
 }
 
 export class CartManagementAgentLLM {
@@ -124,11 +125,14 @@ export class CartManagementAgentLLM {
         model: agentConfig.model,
       })
 
+      // Store the processed system prompt for debugging
+      const systemPrompt = agentConfig.systemPrompt
+
       // STEP 2: Build messages for LLM (with conversation history for context)
       const messages: any[] = [
         {
           role: "system" as const,
-          content: agentConfig.systemPrompt,
+          content: systemPrompt,
         },
       ]
 
@@ -329,6 +333,7 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
         tokensUsed: totalTokens,
         executionTimeMs,
         functionCalls,
+        systemPrompt, // 🆕 Include processed prompt for debugging
       }
     } catch (error) {
       const executionTimeMs = Date.now() - startTime

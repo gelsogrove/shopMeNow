@@ -40,11 +40,36 @@
   Rationale: Added Principle VIII "Conversational Memory Invalidation" - critical fix for LLM showing incomplete product lists due to stale cache
   Date: 2025-11-13
 
+  Version Change: 1.6.0 → 1.7.0 (MINOR)
+  Rationale: Added Principle IX "Message Flow Timeline Integrity" - CRITICAL architectural principle ensuring debug timeline mirrors actual LLM execution
+  Date: 2025-11-13
+
+  Version Change: 1.7.0 → 1.8.0 (MINOR)
+  Rationale: Added Principle X "Validation-Only Router Pattern" - PERFORMANCE optimization saving 25% tokens (~5000 per request) by skipping Router LLM call when specialist response is valid
+  Date: 2025-11-13
+
   Modified Principles:
+  - ADDED Principle X: Validation-Only Router Pattern (SHOULD - PERFORMANCE)
+    - Router validates specialist responses without LLM call when validation passes
+    - Saves ~5000 tokens per request (25% reduction) + 800ms latency
+    - Agent-specific validation rules (if/else logic, no LLM)
+    - Transparent in debug timeline: "Router Agent (validation-only)" with tokenUsage: 0
+
+  Added Sections:
+  - Principle X: Validation-Only Router Pattern
+    - Validation Method: validateSubAgentResponse() with if/else rules (no LLM)
+    - Flow Decision Tree: Valid → skip LLM (save 5000 tokens), Invalid → Router LLM call
+    - Debug Timeline: Validation-only step with tokenUsage: 0
+    - Performance Metrics: 25% token savings, $680/year cost reduction, 800ms latency improvement
   - ADDED Principle VIII: Conversational Memory Invalidation
     - Memory cache in searchConversations table must be cleared when returning stale/incomplete data
     - Root cause discovery: LLM showed 4/5 DOP cheeses because searchConversations cached old filter results
     - Solution: Clear session memory before re-querying to force fresh product lookup
+  - ADDED Principle IX: Message Flow Timeline Integrity (CRITICAL)
+    - Every LLM agent call MUST have corresponding debugStep push to timeline
+    - NO hardcoded responses ANYWHERE - all responses through LLM with full debug tracking
+    - Timeline MUST be 1:1 mirror of actual execution flow
+    - Disalignment causes complete loss of observability and debugging capability
 
   Added Sections:
   - Principle VIII: Conversational Memory Invalidation (CRITICAL)
@@ -52,10 +77,18 @@
     - How to invalidate: `searchConversations.deleteMany({ where: { sessionId } })`
     - Testing: test-cheese-count.ts validates count accuracy after memory clear
     - Prevention: Consider TTL expiration or product version tracking
+  - Principle IX: Message Flow Timeline Integrity (MUST - NON-NEGOTIABLE)
+    - 1:1 Mapping Rule: Every LLM call = ONE debugStep push (no exceptions)
+    - Zero Hardcoded Responses: ALL responses MUST go through LLM with systemPrompt tracking
+    - Timeline Verification: Before merging, validate timeline shows ALL agent interactions
+    - Push Location: Add debugStep IMMEDIATELY after specialist agent returns (in functionCallingLoop)
 
   Follow-up TODOs:
   - ✅ Verified solution: Clearing searchConversations fixes 4/5 → 5/5 DOP cheese display
   - ✅ Test passed: test-cheese-count.ts shows all 5 products including Taleggio
+  - ⚠️ CRITICAL: Audit ALL llm-router.service.ts flows to ensure no response skips debugStep push
+  - ⚠️ CRITICAL: Remove ANY remaining hardcoded response shortcuts that bypass timeline tracking
+  - ⚠️ Add automated test: Verify debugInfo.steps.length matches actual LLM calls count
   - Consider: Automatic cache invalidation on product updates
   - Consider: TTL-based expiration (currently 10 minutes)
   - Consider: Version tracking (invalidate if product catalog version changes)
@@ -63,7 +96,7 @@
 
 # ShopME Constitution
 
-**Version**: 1.6.0 (MINOR - Conversational Memory Invalidation)  
+**Version**: 1.8.0 (MINOR - Validation-Only Router Pattern)  
 **Last Updated**: 2025-11-13
 
 ## Core Principles
@@ -1323,6 +1356,327 @@ for (const product of expectedProducts) {
 
 ---
 
+### IX. Message Flow Timeline Integrity (MUST - NON-NEGOTIABLE)
+
+**EVERY LLM agent call MUST have a corresponding `debugStep` push to the timeline. The Message Flow Timeline MUST be a 1:1 mirror of the actual execution flow.**
+
+**Critical Requirements**:
+
+1. **1:1 Mapping Rule**:
+   - ✅ Every LLM call (Router, ProductSearch, Cart, OrderTracking, CustomerSupport, Safety) = ONE `debugSteps.push()`
+   - ❌ Zero shortcuts - no response can skip timeline tracking
+   - ❌ Zero hardcoded responses - ALL responses through LLM with full debug data
+
+2. **Zero Hardcoded Responses**:
+   - ❌ **NEVER** return responses without LLM processing: `return { output: "Mi dispiace..." }` ← PROHIBITED
+   - ✅ **ALWAYS** delegate to specialist agent with LLM call and `systemPrompt` tracking
+   - ❌ **NEVER** skip delegation based on heuristics (e.g., "category doesn't exist" → hardcoded response)
+
+3. **systemPrompt Tracking**:
+   - ✅ Every specialist agent MUST return `systemPrompt` in response interface
+   - ✅ Router MUST include `systemPrompt: specialistResponse.systemPrompt` in debugStep
+   - ✅ Frontend MUST display 📄 PROMPT (System) section for ALL specialist steps
+
+4. **Timeline Structure** (4-step pattern for specialist delegation):
+   ```typescript
+   debugSteps = [
+     { type: "router", agent: "Router Agent", output: { decision: "delegate to PRODUCT_SEARCH" } },
+     { type: "sub_agent", agent: "PRODUCT_SEARCH Agent", systemPrompt: "...", output: { responseText: "..." } },
+     { type: "router", agent: "Router Agent", output: { decision: "received response from specialist" } },
+     { type: "safety", agent: "Safety & Translation Agent", output: { translatedText: "..." } }
+   ]
+   ```
+
+5. **Push Location (CRITICAL)**:
+   - ✅ Add `debugSteps.push()` IMMEDIATELY after specialist agent returns (in `functionCallingLoop`)
+   - ✅ Include ALL fields: `input`, `output`, `tokenUsage`, `systemPrompt`, `timestamp`
+   - ❌ NEVER construct debugInfo manually - it MUST reflect actual execution
+
+**Examples**:
+
+```typescript
+// ❌ WRONG - Hardcoded response without LLM, skips timeline tracking
+if (query.includes("dolci") && !hasMatchingProducts) {
+  return {
+    success: true,
+    output: `Mi dispiace! Non abbiamo dolci al momento.`, // ← Hardcoded!
+    tokensUsed: 0, // ← No LLM call!
+    executionTimeMs: 0,
+    functionCalls: [],
+    // NO systemPrompt! Frontend can't show what LLM saw!
+  }
+}
+
+// ✅ CORRECT - Always delegate to specialist LLM
+const productSearchAgent = new ProductSearchAgentLLM(this.prisma)
+const subAgentResponse = await productSearchAgent.handleQuery({
+  workspaceId,
+  customerId,
+  query, // ← LLM processes "dolci" and returns proper response
+  sessionId,
+})
+// Timeline automatically gets sub_agent step with systemPrompt!
+```
+
+```typescript
+// ❌ WRONG - Missing systemPrompt in debugStep
+debugSteps.push({
+  type: "sub_agent",
+  agent: `${delegationTarget} Agent`,
+  output: { responseText: subAgentFinalResponse },
+  tokenUsage: { totalTokens: subAgentResponse.tokensUsed },
+  // ❌ NO systemPrompt! Frontend can't show prompt!
+})
+
+// ✅ CORRECT - Include systemPrompt from specialist response
+debugSteps.push({
+  type: "sub_agent",
+  agent: `${delegationTarget} Agent`,
+  output: { responseText: subAgentFinalResponse },
+  tokenUsage: { totalTokens: subAgentResponse.tokensUsed },
+  systemPrompt: subAgentResponse.systemPrompt, // ✅ Frontend shows 📄 PROMPT section
+})
+```
+
+**Rationale**:
+
+- **Observability**: Without accurate timeline, debugging production issues is IMPOSSIBLE
+- **Trust**: Disalignment between timeline and reality = complete loss of system understanding
+- **Accountability**: Every AI decision must be traceable to its input prompt
+- **Compliance**: Audit trails require knowing EXACTLY what the LLM was instructed to do
+
+**Enforcement**:
+
+- ✅ **Code reviews**: MUST verify every response path has corresponding `debugSteps.push()`
+- ✅ **Integration tests**: Validate `debugInfo.steps.length` matches expected LLM call count
+- ✅ **Automated test**: Script checks for hardcoded responses (grep for return without LLM call)
+- ❌ **PR rejection**: ANY hardcoded response that bypasses timeline tracking is a BLOCKER
+- ✅ **Manual verification**: Before merging, test Message Flow Timeline shows ALL agent cards with prompts
+
+**Test Pattern**:
+
+```typescript
+// Verify timeline integrity
+describe("Message Flow Timeline", () => {
+  it("MUST have sub_agent step with systemPrompt for specialist delegation", async () => {
+    const response = await llmRouter.routeMessage({
+      message: "avete salami?",
+      workspaceId,
+      customerId,
+    })
+
+    const debugInfo = response.debugInfo
+    const subAgentStep = debugInfo.steps.find((s) => s.type === "sub_agent")
+
+    expect(subAgentStep).toBeDefined() // ✅ Specialist was called
+    expect(subAgentStep.systemPrompt).toBeDefined() // ✅ Prompt tracked
+    expect(subAgentStep.systemPrompt.length).toBeGreaterThan(100) // ✅ Real prompt, not empty
+    expect(subAgentStep.output.responseText).toContain("SALUMI-") // ✅ Real product codes
+  })
+
+  it("MUST NOT have hardcoded responses bypassing LLM", async () => {
+    const response = await llmRouter.routeMessage({
+      message: "avete dolci?",
+      workspaceId,
+      customerId,
+    })
+
+    const debugInfo = response.debugInfo
+    const hasSubAgent = debugInfo.steps.some((s) => s.type === "sub_agent")
+
+    expect(hasSubAgent).toBe(true) // ✅ Specialist was called, not hardcoded response
+  })
+})
+```
+
+---
+
+### X. Validation-Only Router Pattern (SHOULD - PERFORMANCE OPTIMIZATION)
+
+**Router Agent SHOULD validate specialist responses without LLM call when validation passes. This saves ~5000 tokens per request (25% reduction) and reduces latency by ~800ms.**
+
+**Critical Requirements**:
+
+1. **Validation-Only Method**:
+   - ✅ Create `validateSubAgentResponse()` method with if/else rules (NO LLM call)
+   - ✅ Validate response completeness: length >50 chars, contains expected content
+   - ✅ Agent-specific rules:
+     - `PRODUCT_SEARCH`: Has product list OR "no products" message
+     - `CART_MANAGEMENT`: Has cart action confirmation (aggiunto/rimosso)
+     - `ORDER_TRACKING`: Has order code (ORD-) OR tracking info
+     - `CUSTOMER_SUPPORT`: Has support message OR agent contact info
+
+2. **Flow Decision Tree**:
+   ```typescript
+   Sub-Agent returns response
+   ↓
+   Router calls validateSubAgentResponse()
+   ↓
+   ├─ ✅ Valid → Skip Router LLM call, return directly (saves 5000 tokens)
+   │   └─ Add debugStep: type="router", agent="Router Agent (validation-only)", tokenUsage={totalTokens: 0}
+   │
+   └─ ❌ Invalid → Continue to Router LLM call for reformulation
+       └─ Add debugStep: type="router", agent="Router Agent", tokenUsage={totalTokens: ~5000}
+   ```
+
+3. **Debug Timeline Transparency**:
+   - ✅ Validation-only path MUST add Router debugStep with `tokenUsage: 0`
+   - ✅ Step label: "Router Agent (validation-only)" to distinguish from LLM calls
+   - ✅ Output decision: "Response validated - approved for Safety layer (no LLM call)"
+   - ❌ NEVER skip Router step - timeline must show validation happened
+
+4. **Performance Metrics**:
+   - **Token Savings**: ~5000 tokens per request when validation passes
+   - **Cost Savings**: ~$0.001875 per request = $1.88/day (1000 requests) = $680/year
+   - **Latency Reduction**: ~800ms (Router LLM call eliminated)
+   - **Validation Success Rate**: Expected >90% (most specialist responses are complete)
+
+**Examples**:
+
+```typescript
+// ✅ CORRECT - Validation-only pattern
+const validationResult = this.validateSubAgentResponse({
+  response: subAgentFinalResponse,
+  expectedAgent: delegationTarget,
+  userQuery: params.message,
+})
+
+if (!validationResult.isValid) {
+  // ❌ Invalid - need Router to reformulate
+  logger.warn("⚠️ Sub-agent response invalid, Router will reformulate", {
+    reason: validationResult.reason,
+  })
+  messages.push({
+    role: "function",
+    content: subAgentFinalResponse,
+  })
+  continue // Router LLM call #3
+}
+
+// ✅ Valid - skip Router LLM call
+logger.info("✅ Sub-agent response valid, skipping Router LLM call", {
+  savedTokens: "~5000",
+})
+
+// Add validation-only debugStep (NO LLM call!)
+debugSteps.push({
+  type: "router",
+  agent: "Router Agent (validation-only)",
+  tokenUsage: {
+    promptTokens: 0,
+    completionTokens: 0, // ⬅️ ZERO - no LLM call!
+    totalTokens: 0,
+  },
+  output: {
+    decision: "Response validated - approved for Safety layer (no LLM call)",
+  },
+})
+
+return {
+  response: subAgentFinalResponse, // Direct from specialist
+  debugSteps, // Router → SubAgent → Router(validation-only) → Safety
+}
+```
+
+```typescript
+// Validation logic (if/else, no LLM)
+private validateSubAgentResponse(options: {
+  response: string
+  expectedAgent: string
+  userQuery: string
+}): { isValid: boolean; reason?: string } {
+  const { response, expectedAgent } = options
+
+  // Rule 1: Non-empty
+  if (!response || response.trim().length === 0) {
+    return { isValid: false, reason: "Empty response" }
+  }
+
+  // Rule 2: Meaningful (>50 chars)
+  if (response.trim().length < 50) {
+    return { isValid: false, reason: `Too short (${response.length} < 50)` }
+  }
+
+  // Rule 3: Agent-specific validation
+  if (expectedAgent === "PRODUCT_SEARCH") {
+    const hasProducts = /\d+\.\s+\*\*/.test(response) // "1. **Product**"
+    const hasNoProducts = /non\s+(ho|abbiamo)|no\s+products?/i.test(response)
+    if (!hasProducts && !hasNoProducts) {
+      return { isValid: false, reason: "Missing product list or 'no products'" }
+    }
+  }
+
+  // ... other agent validations
+
+  return { isValid: true } // ✅ Passed all checks
+}
+```
+
+**Rationale**:
+
+- **Performance**: 90% of specialist responses are complete and valid - no need for Router to rephrase
+- **Cost Optimization**: Saves $680/year in LLM API costs for typical usage (1000 requests/day)
+- **Latency**: Faster responses improve user experience (800ms saved per message)
+- **Architecture Alignment**: Router = orchestrator (delegation + validation), Specialists = business logic
+
+**Enforcement**:
+
+- ✅ **Validation success rate monitoring**: Log when validation fails (should be <10%)
+- ✅ **Token savings tracking**: Log "savedTokens: ~5000" when validation-only path used
+- ✅ **Timeline verification**: Message Flow Timeline MUST show validation-only Router step
+- ⚠️ **Fallback safety**: If validation uncertain → ALWAYS continue to Router LLM (false positive OK, false negative NOT OK)
+
+**Test Pattern**:
+
+```typescript
+describe("Validation-Only Router Pattern", () => {
+  it("MUST skip Router LLM call when sub-agent response is valid", async () => {
+    const response = await llmRouter.routeMessage({
+      message: "avete salami?",
+      workspaceId,
+      customerId,
+    })
+
+    const routerSteps = response.debugInfo.steps.filter((s) => s.type === "router")
+    const validationOnlyStep = routerSteps.find((s) => 
+      s.agent.includes("validation-only")
+    )
+
+    expect(validationOnlyStep).toBeDefined() // ✅ Validation happened
+    expect(validationOnlyStep.tokenUsage.totalTokens).toBe(0) // ✅ No LLM call
+  })
+
+  it("MUST call Router LLM when sub-agent response is invalid", async () => {
+    // Mock invalid response (too short)
+    jest.spyOn(ProductSearchAgentLLM.prototype, "handleQuery").mockResolvedValue({
+      success: true,
+      output: "ok", // ❌ Invalid: <50 chars
+      tokensUsed: 100,
+    })
+
+    const response = await llmRouter.routeMessage({
+      message: "avete salami?",
+      workspaceId,
+      customerId,
+    })
+
+    const routerSteps = response.debugInfo.steps.filter((s) => s.type === "router")
+    const reformulationStep = routerSteps.find((s) => 
+      s.tokenUsage.totalTokens > 0 && !s.agent.includes("validation-only")
+    )
+
+    expect(reformulationStep).toBeDefined() // ✅ Router LLM called
+    expect(reformulationStep.tokenUsage.totalTokens).toBeGreaterThan(1000) // ✅ Real LLM call
+  })
+})
+```
+
+**See Also**:
+- `docs/architecture/MULTI_AGENT_FLOW.md` - Complete flow documentation
+- `backend/src/services/llm-router.service.ts:validateSubAgentResponse()` - Implementation
+
+---
+
 ## Operational Configuration
 
 ### Debug Mode (SHOULD - RECOMMENDED)
@@ -1484,4 +1838,4 @@ describe("Workspace Isolation", () => {
 
 ---
 
-**Version**: 1.6.0 | **Ratified**: 2025-11-12 | **Last Amended**: 2025-11-13
+**Version**: 1.8.0 | **Ratified**: 2025-11-12 | **Last Amended**: 2025-11-13

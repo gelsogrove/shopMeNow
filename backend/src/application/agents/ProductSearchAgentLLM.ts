@@ -56,6 +56,7 @@ export interface ProductSearchLLMResponse {
     arguments: any
     result: any
   }>
+  systemPrompt?: string // 🆕 Processed system prompt for debugging
 }
 
 export class ProductSearchAgentLLM {
@@ -633,6 +634,7 @@ Then ask: "Vuoi aggiungerlo al carrello? 🛒"
         tokensUsed: totalTokens,
         executionTimeMs,
         functionCalls,
+        systemPrompt: processedPrompt, // 🆕 Include processed prompt for debugging
       }
     } catch (error) {
       const executionTimeMs = Date.now() - startTime
