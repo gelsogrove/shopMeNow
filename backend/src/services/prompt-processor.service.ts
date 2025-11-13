@@ -221,6 +221,78 @@ export class PromptProcessorService {
   }
 
   /**
+   * 🆕 PUBLIC METHOD: Replace customer-specific variables in ANY text (prompts or LLM responses)
+   * 
+   * CRITICAL FIX (Feature 124): Variables from calling functions (RepeatOrder.ts, ResetCart.ts)
+   * were not being replaced in LLM responses, showing {{discountUser}} to customers.
+   * 
+   * Handles:
+   * - Customer data: {{nameUser}}, {{email}}, {{phone}}, {{discountUser}}
+   * - Sales agent data: {{agentName}}, {{agentPhone}}, {{agentEmail}}
+   * - System data: {{TOKEN_DURATION}}
+   * 
+   * @param text - Text with potential {{variables}} (from LLM response or prompt)
+   * @param customerData - Customer data from database
+   * @returns Text with all variables replaced
+   * 
+   * @see Constitution Principle I - Database-First Architecture (no hardcoded values)
+   * @see specs/124-customer-variables-replacement/spec.md FR-1, FR-2
+   * @see MULTI_AGENT_FLOW.md Step 4.6 - Variable Replacement
+   * 
+   * @example
+   * const input = "Hello {{nameUser}}, you have {{discountUser}}% discount! Contact {{agentName}}"
+   * const output = replaceCustomerVariables(input, { nome: "Mario", discountUser: 15, agentName: "Giovanni", ... })
+   * // → "Hello Mario, you have 15% discount! Contact Giovanni"
+   */
+  public replaceCustomerVariables(
+    text: string,
+    customerData: {
+      nome: string
+      email: string
+      phone: string
+      discountUser: number
+      agentName?: string
+      agentPhone?: string
+      agentEmail?: string
+    }
+  ): string {
+    if (!text) return text
+
+    return text
+      .replace(/\{\{nameUser\}\}/g, customerData.nome || "Cliente")
+      .replace(/\{\{email\}\}/g, customerData.email || "")
+      .replace(/\{\{phone\}\}/g, customerData.phone || "")
+      .replace(/\{\{discountUser\}\}/g, String(customerData.discountUser || 0))
+      .replace(/\{\{agentName\}\}/g, customerData.agentName || "Non assegnato")
+      .replace(/\{\{agentPhone\}\}/g, customerData.agentPhone || "N/A")
+      .replace(/\{\{agentEmail\}\}/g, customerData.agentEmail || "N/A")
+      .replace(
+        /\{\{TOKEN_DURATION\}\}/g,
+        this.formatTokenDuration(process.env.TOKEN_EXPIRATION || "1h")
+      )
+  }
+
+  /**
+   * Format token duration from environment variable
+   * Examples: "15m" → "15 minutes", "1h" → "1 hour", "2h" → "2 hours"
+   * 
+   * @param duration - Duration string from env (e.g., "15m", "1h")
+   * @returns Human-readable duration string
+   */
+  private formatTokenDuration(duration: string): string {
+    const match = duration.match(/^(\d+)([mh])$/)
+    if (!match) return "15 minutes" // Fallback for invalid format
+
+    const value = parseInt(match[1])
+    const unit = match[2]
+
+    if (unit === "m") return value === 1 ? "1 minute" : `${value} minutes`
+    if (unit === "h") return value === 1 ? "1 hour" : `${value} hours`
+
+    return "15 minutes"
+  }
+
+  /**
    * Genera il messaggio di invito alla sottoscrizione push notifications.
    * Se l'utente è già iscritto (push_notifications_consent = true), ritorna stringa vuota.
    * Se non è iscritto, ritorna il messaggio di invito.

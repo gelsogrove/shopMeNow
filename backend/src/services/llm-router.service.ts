@@ -52,6 +52,7 @@ import logger from "../utils/logger"
 import { AgentLoggerService } from "./agent-logger.service"
 import { ConversationManager } from "./conversation-manager.service"
 import { FunctionExecutor } from "./function-executor.service"
+import { PromptProcessorService } from "./prompt-processor.service" // 🆕 Feature 124: Customer variables replacement
 import { websocketService } from "./websocket.service"
 
 export interface RouteMessageParams {
@@ -173,6 +174,7 @@ export class LLMRouterService {
   private safetyAgent: SafetyTranslationAgent
   private linkReplacementService: LinkReplacementService
   private searchConversationRepo: SearchConversationRepository
+  private promptProcessor: PromptProcessorService // 🆕 Feature 124: Customer variables replacement
   private openRouterApiKey: string
   private openRouterBaseUrl = "https://openrouter.ai/api/v1"
   private maxFunctionIterations = 8 // FR-13: Increased from 5 to support repeat order confirmation flow (6-7 iterations needed)
@@ -186,6 +188,7 @@ export class LLMRouterService {
     this.safetyAgent = new SafetyTranslationAgent(prisma)
     this.linkReplacementService = new LinkReplacementService()
     this.searchConversationRepo = new SearchConversationRepository()
+    this.promptProcessor = new PromptProcessorService() // 🆕 Feature 124: Inject for variable replacement
 
     this.openRouterApiKey = process.env.OPENROUTER_API_KEY || ""
     if (!this.openRouterApiKey) {
@@ -397,6 +400,8 @@ export class LLMRouterService {
       // Build customerData object with all variables
       const customerData = {
         nameUser: customer.name || "",
+        email: customer.email || "",
+        phone: customer.phone || "",
         discountUser: customer.discount || 0,
         companyName: customer.company || "",
         lastordercode: lastOrder?.orderCode || "",
@@ -413,6 +418,8 @@ export class LLMRouterService {
 
       logger.info("📦 Customer data and dynamic content loaded for Router", {
         nameUser: customerData.nameUser,
+        email: customerData.email,
+        phone: customerData.phone,
         discount: customerData.discountUser,
         hasProducts: !!products,
         hasCategories: !!categories,
@@ -658,8 +665,41 @@ export class LLMRouterService {
       )
       logger.info(`✅ Replaced {{TOKEN_DURATION}} with: ${tokenDuration}`)
 
+      // 🆕 STEP 4.6: Replace customer-specific variables (Feature 124)
+      // CRITICAL FIX: Variables from calling functions (RepeatOrder.ts, ResetCart.ts)
+      // were not being replaced in LLM responses, showing {{discountUser}} to customers
+      // This fixes Constitution Principle I violation (no hardcoded values)
+      // @see specs/124-customer-variables-replacement/spec.md FR-1, FR-3
+      // @see MULTI_AGENT_FLOW.md Step 4.6
+      const customerVarsData = {
+        nome: params.customerName,
+        email: customer.email,
+        phone: customer.phone,
+        discountUser: customer.discount || 0,
+        agentName: customer.sales
+          ? `${customer.sales.firstName} ${customer.sales.lastName}`.trim()
+          : "Non assegnato",
+        agentPhone: customer.sales?.phone || "N/A",
+        agentEmail: customer.sales?.email || "N/A",
+      }
+
+      responseWithLinks = this.promptProcessor.replaceCustomerVariables(
+        responseWithLinks,
+        customerVarsData
+      )
+
+      logger.info("✅ Replaced customer variables in response", {
+        nameUser: customerVarsData.nome,
+        discountUser: customerVarsData.discountUser,
+        agentName: customerVarsData.agentName,
+        hasEmail: !!customerVarsData.email,
+        hasPhone: !!customerVarsData.phone,
+        responseLength: responseWithLinks.length,
+        responsePreview: responseWithLinks.substring(0, 150),
+      })
+
       // STEP 5: Apply Safety & Translation Layer
-      // Now processes the response WITH actual URLs (not tokens)
+      // Now processes the response WITH actual URLs AND customer variables replaced
       logger.info("Step 5: Applying Safety & Translation Layer")
       const safetyTimestamp = new Date().toISOString()
       const safeResponse = await this.safetyAgent.process({
