@@ -1,18 +1,21 @@
 /**
  * LLM Router Service - Priority Flow UNIT Tests
- * 
+ *
  * Test UNITARI con MOCK di Prisma - nessun database reale
- * 
+ *
  * Andrea's Requirements:
  * 1. ✅ Test customer bloccato (isBlacklisted=true) - P1
  * 2. ✅ Test WIP message quando challenge disabled (P2)
  * 3. ✅ Test workspace isolation
- * 
+ *
  * UNIT TEST = MOCK di database, NO connessioni reali
  */
 
 import { PrismaClient } from "@prisma/client"
-import { LLMRouterService, RouteMessageParams } from "../../../src/services/llm-router.service"
+import {
+  LLMRouterService,
+  RouteMessageParams,
+} from "../../../src/services/llm-router.service"
 
 // Mock Prisma Client
 jest.mock("@prisma/client", () => ({
@@ -50,7 +53,9 @@ describe("LLM Router Service - Priority Flow UNIT Tests", () => {
     }
 
     // Create service with mocked Prisma
-    llmRouterService = new LLMRouterService(mockPrisma as unknown as PrismaClient)
+    llmRouterService = new LLMRouterService(
+      mockPrisma as unknown as PrismaClient
+    )
   })
 
   afterEach(() => {
@@ -89,7 +94,7 @@ describe("LLM Router Service - Priority Flow UNIT Tests", () => {
       expect(response.isBlocked).toBe(true)
       expect(response.tokensUsed).toBe(0)
       expect(response.response).toBe("")
-      
+
       // Verifica che abbiamo controllato il customer
       expect(mockPrisma.customers.findUnique).toHaveBeenCalledWith({
         where: { id: "customer-123" },
@@ -197,7 +202,7 @@ describe("LLM Router Service - Priority Flow UNIT Tests", () => {
       expect(response.response).toBe("Servizio in manutenzione") // Italian WIP
       expect(response.tokensUsed).toBe(0) // ZERO tokens - no LLM
       expect(response.agentUsed).toBe("ROUTER")
-      
+
       // Verifica che abbiamo controllato workspace (almeno 1 volta)
       expect(mockPrisma.workspace.findUnique).toHaveBeenCalled()
     })
@@ -350,7 +355,7 @@ describe("LLM Router Service - Priority Flow UNIT Tests", () => {
       expect(response.isBlocked).toBe(true)
       expect(response.response).toBe("") // NO WIP message
       expect(response.tokensUsed).toBe(0)
-      
+
       // P2 check NON dovrebbe essere chiamato (P1 blocca prima)
       expect(mockPrisma.workspace.findUnique).not.toHaveBeenCalled()
     })
@@ -368,7 +373,7 @@ describe("LLM Router Service - Priority Flow UNIT Tests", () => {
         name: "New Customer",
         workspaceId: "workspace-123",
       })
-      
+
       mockPrisma.customers.findFirst.mockResolvedValue({
         id: "customer-new",
         name: "New Customer",
@@ -415,7 +420,7 @@ describe("LLM Router Service - Priority Flow UNIT Tests", () => {
       // Assert: Deve contenere welcome message (o processato da LLM)
       expect(response.response).toBeDefined()
       expect(response.tokensUsed).toBeGreaterThanOrEqual(0)
-      
+
       // Verifica che abbiamo loggato l'interazione
       expect(mockPrisma.agentConversationLog.create).toHaveBeenCalled()
     })
@@ -441,7 +446,7 @@ describe("LLM Router Service - Priority Flow UNIT Tests", () => {
 
       // Act & Assert: DEVE bloccare tutto con errore
       await expect(llmRouterService.routeMessage(params)).rejects.toThrow()
-      
+
       // conversationMessage.create NON deve essere chiamato
       expect(mockPrisma.conversationMessage.create).not.toHaveBeenCalled()
     })
@@ -455,7 +460,7 @@ describe("LLM Router Service - Priority Flow UNIT Tests", () => {
       // NOTE: Questo test verifica che il service CHIAMI il safety layer
       // Non possiamo mockare SafetyTranslationAgent qui perché non è iniettato
       // Ma possiamo verificare che i messaggi vengano salvati correttamente
-      
+
       // Arrange
       mockPrisma.customers.findUnique.mockResolvedValue({
         id: "customer-123",
@@ -525,7 +530,7 @@ describe("LLM Router Service - Priority Flow UNIT Tests", () => {
       // Assert: Response contiene debug info (se implementato)
       expect(response).toBeDefined()
       expect(response.agentUsed).toBe("ROUTER")
-      
+
       // Timeline salvata in conversationMessage (verificato da mock call)
       expect(mockPrisma.conversationMessage.create).toHaveBeenCalled()
     })
@@ -538,7 +543,7 @@ describe("LLM Router Service - Priority Flow UNIT Tests", () => {
     it("should replace [LINK_ORDER_xxx] tokens in response", async () => {
       // NOTE: LinkReplacementService è esterno e viene chiamato DOPO routeMessage
       // Questo test verifica che il response contenga il formato corretto
-      
+
       // Arrange
       mockPrisma.customers.findUnique.mockResolvedValue({
         id: "customer-123",
@@ -548,8 +553,8 @@ describe("LLM Router Service - Priority Flow UNIT Tests", () => {
       mockPrisma.workspace.findUnique.mockResolvedValue({
         id: "workspace-123",
         challengeStatus: false,
-        wipMessage: { 
-          it: "Servizio in manutenzione. Vedi ordini: [LINK_ORDER_123]" 
+        wipMessage: {
+          it: "Servizio in manutenzione. Vedi ordini: [LINK_ORDER_123]",
         },
       })
 
@@ -567,7 +572,7 @@ describe("LLM Router Service - Priority Flow UNIT Tests", () => {
 
       // Assert: Response contiene token [LINK_ORDER_xxx]
       expect(response.response).toContain("[LINK_ORDER_123]")
-      
+
       // Il replacement effettivo avviene nel LinkReplacementService
       // dopo il return di routeMessage (nella chiamata da webhook)
     })
