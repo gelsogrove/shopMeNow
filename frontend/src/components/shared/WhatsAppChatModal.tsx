@@ -454,6 +454,12 @@ export function WhatsAppChatModal({
     } catch (error) {
       logger.error("Error calling message API:", error)
 
+      // 🚫 P1: Handle 410 Gone (blocked customer) - Silent block
+      if ((error as any).response?.status === 410) {
+        logger.warn("🚫 Customer is blocked (410 Gone) - silent block")
+        return // Exit silently - no message displayed
+      }
+
       // Add an error message to the chat in case of exception
       const errorMessage: Message = {
         id: (Date.now() + 200).toString(),
@@ -676,6 +682,13 @@ export function WhatsAppChatModal({
       setIsLoading(false)
     } catch (error) {
       logger.error("Error calling message API:", error)
+
+      // 🚫 P1: Handle 410 Gone (blocked customer) - Silent block
+      if ((error as any).response?.status === 410) {
+        logger.warn("🚫 Customer is blocked (410 Gone) - silent block")
+        setIsLoading(false)
+        return // Exit silently - no message displayed
+      }
 
       // Add an error message to the chat in case of exception
       const errorMessage: Message = {

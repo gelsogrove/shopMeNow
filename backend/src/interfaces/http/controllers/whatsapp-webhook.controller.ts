@@ -206,7 +206,21 @@ export class WhatsAppWebhookController {
         executionTimeMs: routerResult.executionTimeMs,
         wasFAQ: routerResult.wasFAQ,
         responseLength: routerResult.response.length,
+        isBlocked: routerResult.isBlocked, // 🆕 P1: Log if customer was blocked
       })
+
+      // 🚫 P1: If customer is blocked, return 410 Gone WITHOUT sending message
+      if (routerResult.isBlocked) {
+        logger.warn("[WEBHOOK] 🚫 P1: Customer blocked - returning 410 Gone", {
+          customerId: customer.id,
+        })
+
+        res.status(410).json({
+          status: "blocked",
+          message: "Customer is blocked",
+        })
+        return
+      }
 
       // ✅ Messages already saved by LLMRouterService (INBOUND + OUTBOUND)
       // ✅ debugInfo already saved with timeline

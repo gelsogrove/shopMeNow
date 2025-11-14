@@ -225,11 +225,9 @@ export function WorkspaceSelectionPage() {
               >
                 <div className="space-y-2 min-w-0 w-full">
                   <div className="text-lg font-semibold truncate flex items-center justify-between">
-                    <span className={workspace.isActive ? "" : "text-gray-500"}>
-                      {workspace.name}
-                    </span>
-                    {!workspace.isActive && (
-                      <span className="text-sm font-normal text-red-500 bg-red-50 px-2 py-1 rounded">
+                    <span>{workspace.name}</span>
+                    {!workspace.challengeStatus && (
+                      <span className="text-sm font-normal text-orange-600 bg-orange-50 px-2 py-1 rounded">
                         Disabled
                       </span>
                     )}

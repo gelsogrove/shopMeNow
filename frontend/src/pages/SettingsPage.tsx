@@ -28,7 +28,7 @@ interface WorkspaceData {
   whatsappApiKey: string
   adminEmail: string
   url: string
-  isActive: boolean
+  challengeStatus: boolean // 🆕 Feature 126: Chatbot enabled/disabled (true=enabled, false=WIP mode)
   debugMode: boolean
   welcomeMessage: string
   wipMessage: string
@@ -50,7 +50,7 @@ export default function SettingsPage() {
     whatsappApiKey: "",
     adminEmail: "",
     url: "http://localhost:3000",
-    isActive: true,
+    challengeStatus: true, // 🆕 Default: chatbot enabled
     debugMode: true,
     welcomeMessage: defaultWelcomeMessage,
     wipMessage: defaultWipMessage,
@@ -68,7 +68,7 @@ export default function SettingsPage() {
       whatsappApiKey: workspace.whatsappApiKey || "",
       adminEmail: workspace.adminEmail || "",
       url: workspace.url || "http://localhost:3000",
-      isActive: workspace.isActive ?? true,
+      challengeStatus: workspace.challengeStatus ?? true, // 🆕 Default to enabled if not set
       debugMode: workspace.debugMode ?? true,
       welcomeMessage: workspace.welcomeMessage || defaultWelcomeMessage,
       wipMessage: workspace.wipMessage || defaultWipMessage,
@@ -156,7 +156,7 @@ export default function SettingsPage() {
       whatsappApiKey: formData.whatsappApiKey,
       adminEmail: formData.adminEmail,
       url: formData.url || "http://localhost:3000",
-      isActive: formData.isActive,
+      challengeStatus: formData.challengeStatus, // 🆕 Feature 126: Chatbot enabled/disabled
       debugMode: formData.debugMode,
       welcomeMessage: formData.welcomeMessage,
       wipMessage: formData.wipMessage,
@@ -220,11 +220,13 @@ export default function SettingsPage() {
             <span>General Settings</span>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Active</span>
+                <span className="text-sm text-muted-foreground">
+                  Chatbot Enabled
+                </span>
                 <Switch
-                  checked={formData.isActive}
+                  checked={formData.challengeStatus}
                   onCheckedChange={(checked) =>
-                    handleFieldChange("isActive", checked)
+                    handleFieldChange("challengeStatus", checked)
                   }
                 />
               </div>

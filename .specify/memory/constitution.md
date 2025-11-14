@@ -143,11 +143,40 @@
   - Consider: Automatic cache invalidation on product updates
   - Consider: TTL-based expiration (currently 10 minutes)
   - Consider: Version tracking (invalidate if product catalog version changes)
+
+  Version Change: 1.9.1 → 1.10.0 (MINOR)
+  Rationale: Added Principle XII "Server Auto-Restart Prevention" - CRITICAL operational rule preventing AI from manually restarting dev servers (hot-reload handles this automatically)
+  Date: 2025-11-14
+
+  Modified Principles:
+  - ADDED Principle XII: Server Auto-Restart Prevention (MUST - NON-NEGOTIABLE)
+    - AI MUST NEVER run commands like `npm run dev`, `pkill -f`, or restart backend/frontend
+    - Hot-reload automatically detects file changes (ts-node-dev for backend, Vite for frontend)
+    - Manual restarts create race conditions, duplicate processes, port conflicts
+    - Only exception: Database container restart if connection fails
+
+  Added Sections:
+  - Principle XII: Server Auto-Restart Prevention
+    - Forbidden Commands: `npm run dev`, `npm start`, `pkill`, process kill commands
+    - Hot-Reload Tools: ts-node-dev (backend), Vite (frontend) - automatic file watching
+    - Exception Handling: Database issues only - verify with `docker ps` first
+    - Verification: Check `lsof -i :PORT` before assuming server down
+
+  Templates Requiring Updates:
+  - ⚠️ `.github/copilot-instructions.md` - Add "Server Auto-Restart" critical rule #3
+  - ⚠️ `.specify/templates/plan-template.md` - Add "Server management" anti-pattern warning
+  - ⚠️ `.github/prompts/` - All command prompts should warn against manual server restarts
+
+  Follow-up TODOs:
+  - Update `.github/copilot-instructions.md` with explicit "MAI riavviare server" warning
+  - Add to common mistakes section: Manual restart loops, port conflicts, duplicate processes
+  - Consider: Add ESLint comment blocker for terminal commands containing "npm run dev"
+  - Document hot-reload behavior: Backend ~2s compile, Frontend instant HMR
 -->
 
 # ShopME Constitution
 
-**Version**: 1.9.1 (PATCH - Task Closure Checklist Enhancement)  
+**Version**: 1.10.0 (MINOR - Server Auto-Restart Prevention)  
 **Last Updated**: 2025-11-14
 
 ## Core Principles

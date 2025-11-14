@@ -74,6 +74,7 @@ export interface RouteMessageResponse {
   wasFAQ: boolean
   faqId?: string
   debugInfo?: DebugInfoSteps // 🔧 NEW: Debug information with execution chain
+  isBlocked?: boolean // 🆕 Feature 126: P1 flag - webhook should NOT send message if true
 }
 
 // 🔧 NEW: Debug Info Structure for Message Flow
@@ -294,6 +295,60 @@ export class LLMRouterService {
   }
 
   /**
+   * 🆕 Feature 126: Check if customer is blocked (P1 - Security Layer)
+   *
+   * This is the HIGHEST priority check - runs BEFORE any LLM processing.
+   * Blocked customers get 410 Gone response with ZERO LLM tokens used.
+   *
+   * @param customerId - Customer ID to check
+   * @returns true if customer is blocked, false otherwise
+   */
+  private async checkBlockedUser(customerId: string): Promise<boolean> {
+    const customer = await this.prisma.customers.findUnique({
+      where: { id: customerId },
+      select: { isBlacklisted: true, name: true },
+    })
+
+    if (customer?.isBlacklisted) {
+      logger.warn("🚫 P1: Blocked customer attempted to send message", {
+        customerId,
+        customerName: customer.name,
+      })
+      return true
+    }
+
+    return false
+  }
+
+  /**
+   * 🆕 Feature 126: Check if workspace chatbot is disabled (P2 - Maintenance Mode)
+   *
+   * When challengeStatus = false, chatbot is DISABLED → return WIP message.
+   * This is second priority check (after blocked user check).
+   *
+   * @param workspaceId - Workspace ID to check
+   * @returns true if chatbot is disabled, false if active
+   */
+  private async getChallengeDisabled(workspaceId: string): Promise<boolean> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { challengeStatus: true, name: true },
+    })
+
+    // challengeStatus = true → Chatbot ATTIVO (normale)
+    // challengeStatus = false → Chatbot DISATTIVO (manda WIP)
+    if (workspace?.challengeStatus === false) {
+      logger.info("🚧 P2: Workspace chatbot disabled (maintenance mode)", {
+        workspaceId,
+        workspaceName: workspace.name,
+      })
+      return true
+    }
+
+    return false
+  }
+
+  /**
    * Main entry point - Route message through multi-agent system
    */
   async routeMessage(
@@ -308,6 +363,85 @@ export class LLMRouterService {
         customerId: params.customerId,
         conversationId: params.conversationId,
       })
+
+      // 🆕 Feature 126: PRIORITY CHECKS (P1 → P2) - Run BEFORE any LLM processing
+      // These checks save tokens by bypassing expensive LLM calls when not needed
+
+      // P1: Check if customer is blocked (SECURITY - HIGHEST PRIORITY)
+      const isBlocked = await this.checkBlockedUser(params.customerId)
+      if (isBlocked) {
+        const executionTimeMs = Date.now() - startTime
+
+        logger.warn("🚫 P1: Blocked customer - NO response, NO DB save", {
+          customerId: params.customerId,
+          executionTimeMs,
+        })
+
+        // 🚫 CRITICAL: DO NOT SAVE ANYTHING - blocked user is completely ignored
+        // Return 410 Gone immediately - webhook will NOT send message
+        return {
+          response: "",
+          agentUsed: "ROUTER" as AgentType,
+          confidence: 1.0,
+          tokensUsed: 0,
+          executionTimeMs,
+          wasFAQ: false,
+          isBlocked: true, // 🚫 Flag for webhook to NOT send message
+        }
+      }
+
+      // P2: Check if workspace chatbot is disabled (MAINTENANCE MODE)
+      const isChallengeDisabled = await this.getChallengeDisabled(
+        params.workspaceId
+      )
+      if (isChallengeDisabled) {
+        const executionTimeMs = Date.now() - startTime
+
+        // Get WIP message from workspace settings
+        const workspace = await this.prisma.workspace.findUnique({
+          where: { id: params.workspaceId },
+          select: { wipMessage: true },
+        })
+
+        const wipMessages = (workspace?.wipMessage as any) || {}
+        const wipMessage =
+          wipMessages[params.customerLanguage?.toLowerCase() || "en"] ||
+          wipMessages.en ||
+          "Work in progress. Please contact us later."
+
+        logger.info("🚧 P2: Sending WIP message (chatbot disabled)", {
+          workspaceId: params.workspaceId,
+          language: params.customerLanguage,
+          executionTimeMs,
+        })
+
+        // Save user message (INBOUND)
+        await this.conversationManager.saveUserMessage({
+          workspaceId: params.workspaceId,
+          customerId: params.customerId,
+          conversationId: params.conversationId,
+          content: params.message,
+        })
+
+        // Save WIP response (OUTBOUND)
+        await this.conversationManager.saveAssistantMessage({
+          workspaceId: params.workspaceId,
+          customerId: params.customerId,
+          conversationId: params.conversationId,
+          content: wipMessage,
+        })
+
+        return {
+          response: wipMessage,
+          agentUsed: "ROUTER" as AgentType,
+          confidence: 1.0,
+          tokensUsed: 0,
+          executionTimeMs,
+          wasFAQ: false,
+        }
+      }
+
+      // ✅ Priority checks passed - proceeding to normal LLM router flow
 
       // ❌ REMOVED: FAQ Pre-check (lines 209-320)
       // WHY: FAQ check bypassed Router LLM → Router lost decision control
