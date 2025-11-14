@@ -1001,6 +1001,7 @@ backend/
 **Task Closure Checklist** (MANDATORY - execute EVERY time a task is completed):
 
 1. **Code Cleanup** (Principle VII):
+
    - [ ] Delete all `.backup`, `.old`, `.tmp`, `temp.*` files
    - [ ] Delete temporary scripts in `backend/scripts/` (not in package.json)
    - [ ] Delete obsolete test files (`test-*.ts`, `check-*.ts` in scripts/)
@@ -1008,17 +1009,20 @@ backend/
    - [ ] Verify: All scripts in `backend/scripts/` referenced in `package.json`
 
 2. **Constitution Update** (if new principle/pattern added):
+
    - [ ] Follow `.github/prompts/speckit.constitution.prompt.md` instructions
    - [ ] Version bump (MAJOR/MINOR/PATCH based on change type)
    - [ ] Add Sync Impact Report at top of constitution.md
    - [ ] Update `LAST_AMENDED_DATE` to current date
 
 3. **Documentation**:
+
    - [ ] Create/update spec documentation (`specs/{feature-number}/`)
    - [ ] Update README if feature is user-facing
    - [ ] Create PR_SUMMARY.md and GIT_COMMIT_MESSAGE.md
 
 4. **Verification**:
+
    - [ ] Backend builds without errors: `npm run build`
    - [ ] No TypeScript errors: check IDE or `tsc --noEmit`
    - [ ] All tests pass: `npm run test:unit` and `npm run test:integration`

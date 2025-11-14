@@ -36,7 +36,7 @@ Operators had to manually refresh to see updated chat previews.
 - PLAN.md: 7-phase progressive enhancement
 - COMPLETED.md: Feature summary
 - PR_SUMMARY.md: Complete PR documentation
-- Constitution v1.8.0 → v1.9.1: 
+- Constitution v1.8.0 → v1.9.1:
   - v1.9.0: Added Principle XI (Real-Time WebSocket Communication)
   - v1.9.1: Enhanced Principle VII with Task Closure Checklist (MANDATORY)
 
