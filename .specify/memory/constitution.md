@@ -80,6 +80,38 @@
     - Frontend Pattern: useWebSocket hook + React Query invalidation
     - Chat List Synchronization: Page reload on WhatsApp popup close (guarantees fresh data)
     - Room Architecture: workspace:${workspaceId} isolation
+
+  Version Change: 1.9.0 → 1.9.1 (PATCH)
+  Rationale: Enhanced Principle VII "Code Cleanliness" with MANDATORY Task Closure Checklist - ensures cleanup executed EVERY time a task completes (not optional)
+  Date: 2025-11-14
+
+  Modified Principles:
+  - ENHANCED Principle VII: Code Cleanliness & Technical Debt Prevention
+    - Added "Task Closure Checklist" section (5-step mandatory workflow)
+    - Pre-commit hook now rejects `check-*.ts` temporary scripts
+    - Explicit requirement: ALL scripts in `backend/scripts/` MUST be in package.json
+    - Added verification commands: `find . -name "*.backup*"` must return empty
+
+  Modified Sections:
+  - Principle VII: Enforcement
+    - Added `check-*.ts` to pre-commit hook rejection patterns
+    - Added requirement: temporary scripts in `backend/scripts/` not in package.json
+    - New subsection: "Task Closure Checklist" (MANDATORY workflow)
+      - 5 steps: Code Cleanup → Constitution Update → Documentation → Verification → Commit Prep
+      - Explicit command examples for verification
+      - DO NOT PUSH reminder (user does manually)
+
+  Templates Requiring Updates:
+  - ✅ `.github/prompts/speckit.constitution.prompt.md` - Already references task closure workflow
+  - ⚠️ `.specify/templates/tasks-template.md` - Add final task: "Execute Task Closure Checklist"
+  - ⚠️ `docs/CONTRIBUTING.md` - Add task closure workflow documentation (if file exists)
+
+  Follow-up TODOs:
+  - ✅ Deleted 20 temporary scripts from backend/scripts/ (test-*.ts, check-*.ts)
+  - ✅ Verified: Only 5 production scripts remain (all in package.json)
+  - ✅ Constitution v1.9.1 enforces this cleanup EVERY task completion
+  - Consider: Add pre-commit hook to automatically reject temporary files
+  - Consider: GitHub Actions workflow to validate scripts/ directory on PR
   - ADDED Principle VIII: Conversational Memory Invalidation
     - Memory cache in searchConversations table must be cleared when returning stale/incomplete data
     - Root cause discovery: LLM showed 4/5 DOP cheeses because searchConversations cached old filter results
@@ -115,7 +147,7 @@
 
 # ShopME Constitution
 
-**Version**: 1.9.0 (MINOR - Real-Time WebSocket Communication)  
+**Version**: 1.9.1 (PATCH - Task Closure Checklist Enhancement)  
 **Last Updated**: 2025-11-14
 
 ## Core Principles
@@ -948,7 +980,8 @@ backend/
 **Enforcement**:
 
 - **Pre-commit hook** MUST reject commits with:
-  - Files matching `*.backup`, `*.old`, `*.tmp`, `temp.*`, `test-*.js`
+  - Files matching `*.backup`, `*.old`, `*.tmp`, `temp.*`, `test-*.js`, `check-*.ts`
+  - Temporary scripts in `backend/scripts/` not referenced in `package.json`
   - Commented-out imports (lines starting with `// import`)
   - Excessive commented code blocks (>10 consecutive comment lines)
 - **Code reviews** MUST verify:
@@ -964,6 +997,38 @@ backend/
   - [ ] No commented-out code (use git history instead)
   - [ ] No duplicate logic across files
   - [ ] All files under 500 lines (extract if larger)
+
+**Task Closure Checklist** (MANDATORY - execute EVERY time a task is completed):
+
+1. **Code Cleanup** (Principle VII):
+   - [ ] Delete all `.backup`, `.old`, `.tmp`, `temp.*` files
+   - [ ] Delete temporary scripts in `backend/scripts/` (not in package.json)
+   - [ ] Delete obsolete test files (`test-*.ts`, `check-*.ts` in scripts/)
+   - [ ] Verify: `find . -name "*.backup*" -o -name "*.old" -o -name "*.tmp"` returns empty
+   - [ ] Verify: All scripts in `backend/scripts/` referenced in `package.json`
+
+2. **Constitution Update** (if new principle/pattern added):
+   - [ ] Follow `.github/prompts/speckit.constitution.prompt.md` instructions
+   - [ ] Version bump (MAJOR/MINOR/PATCH based on change type)
+   - [ ] Add Sync Impact Report at top of constitution.md
+   - [ ] Update `LAST_AMENDED_DATE` to current date
+
+3. **Documentation**:
+   - [ ] Create/update spec documentation (`specs/{feature-number}/`)
+   - [ ] Update README if feature is user-facing
+   - [ ] Create PR_SUMMARY.md and GIT_COMMIT_MESSAGE.md
+
+4. **Verification**:
+   - [ ] Backend builds without errors: `npm run build`
+   - [ ] No TypeScript errors: check IDE or `tsc --noEmit`
+   - [ ] All tests pass: `npm run test:unit` and `npm run test:integration`
+
+5. **Commit Preparation** (DO NOT PUSH - user does manually):
+   - [ ] `git add .`
+   - [ ] `git commit -F specs/{feature-number}/GIT_COMMIT_MESSAGE.md`
+   - [ ] Notify user: "Ready for review and push"
+
+**Rationale**: Consistent task closure prevents technical debt accumulation and ensures all governance requirements met before code merge.
 
 **Migration for Existing Code**:
 
@@ -2136,4 +2201,4 @@ describe("Workspace Isolation", () => {
 
 ---
 
-**Version**: 1.9.0 | **Ratified**: 2025-11-12 | **Last Amended**: 2025-11-14
+**Version**: 1.9.1 | **Ratified**: 2025-11-12 | **Last Amended**: 2025-11-14

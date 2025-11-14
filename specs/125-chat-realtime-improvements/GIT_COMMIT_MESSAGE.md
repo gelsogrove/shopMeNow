@@ -1,11 +1,13 @@
 # Git Commit Message
 
 ## Title
+
 ```
-feat: real-time chat updates via WebSocket (Feature 125) + Constitution v1.9.0
+feat: real-time chat updates + cleanup + Constitution v1.9.1 (Feature 125)
 ```
 
 ## Body
+
 ```
 ### Problem
 Chat list not updating in real-time when sending messages from WhatsApp popup.
@@ -34,12 +36,18 @@ Operators had to manually refresh to see updated chat previews.
 - PLAN.md: 7-phase progressive enhancement
 - COMPLETED.md: Feature summary
 - PR_SUMMARY.md: Complete PR documentation
-- Constitution v1.8.0 → v1.9.0: Added Principle XI (Real-Time WebSocket Communication)
+- Constitution v1.8.0 → v1.9.1: 
+  - v1.9.0: Added Principle XI (Real-Time WebSocket Communication)
+  - v1.9.1: Enhanced Principle VII with Task Closure Checklist (MANDATORY)
 
-### Code Cleanup
-- Deleted 4 backup files (.backup files removed)
+### Code Cleanup (Principle VII Compliance)
+- Deleted 24 files total:
+  - 4 backup files (.backup files)
+  - 20 temporary scripts (test-*.ts, check-*.ts, obsolete one-offs)
+- Remaining: Only 5 production scripts (all in package.json)
 - Fixed TypeScript error (WhatsAppChatModal.tsx line 600)
 - No unused imports, no commented code
+- Verification: find . -name "*.backup*" returns empty
 
 ### Testing
 ✅ Backend compiles successfully
@@ -64,7 +72,7 @@ NONE - Hot-reload handles changes
 ✅ Principle II (Workspace Isolation): Room-based broadcasting
 ✅ Principle V (360-Degree Thinking): Full stack implementation
 ✅ Principle VI (Chat Isolation): Events after DB commits
-✅ Principle VII (Code Cleanliness): Cleanup complete
+✅ Principle VII (Code Cleanliness): 24 temporary files deleted + Task Closure Checklist added
 ✅ Principle XI (ADDED): Real-Time WebSocket Communication
 
 ### Ready for Production
@@ -72,6 +80,7 @@ All acceptance criteria met, tests passing, documentation complete.
 ```
 
 ## Files Changed Summary
+
 ```
 Backend (5 files):
   M backend/src/services/websocket.service.ts
@@ -99,8 +108,9 @@ Total: 14 files changed
 
 ---
 
-**Note to Andrea**: 
+**Note to Andrea**:
 DO NOT commit yet - review files first. When ready:
+
 ```bash
 git add .
 git commit -F specs/125-chat-realtime-improvements/GIT_COMMIT_MESSAGE.md
