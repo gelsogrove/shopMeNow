@@ -1,4 +1,5 @@
 import { logger } from "@/lib/logger"
+import { toast } from "@/lib/toast"
 import { useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
 import { io, Socket } from "socket.io-client"
@@ -136,6 +137,19 @@ export function useWebSocket(options: UseWebSocketOptions) {
       queryClient.invalidateQueries({
         queryKey: ["recent-chats", sessionId],
       })
+
+      // 🔔 Show toast for messages in non-active chats
+      // Check if message is for currently selected chat
+      const currentChatSessionId = sessionStorage.getItem(
+        "currentChatSessionId"
+      )
+      if (
+        message.sessionId !== currentChatSessionId &&
+        message.sender === "customer"
+      ) {
+        // New message from customer in different chat
+        toast.info("New message received", { duration: 2000 })
+      }
     })
 
     // Chat list updated (new chat, status change, etc.)
@@ -154,6 +168,86 @@ export function useWebSocket(options: UseWebSocketOptions) {
         queryKey: ["recent-chats", sessionId],
       })
     })
+
+    // User blocked event
+    socket.on(
+      "user-blocked",
+      (data: {
+        customerId: string
+        customerName: string
+        customerPhone: string
+        timestamp: string
+      }) => {
+        logger.info("[WebSocket] User blocked:", data)
+        const sessionId = sessionStorage.getItem("sessionId")
+
+        // Invalidate customer-related queries
+        queryClient.invalidateQueries({
+          queryKey: ["customers"],
+        })
+        queryClient.invalidateQueries({
+          queryKey: ["chats", sessionId],
+        })
+
+        // Show warning toast
+        toast.warning(`Customer ${data.customerName} has been blocked`)
+      }
+    )
+
+    // User unblocked event
+    socket.on(
+      "user-unblocked",
+      (data: {
+        customerId: string
+        customerName: string
+        customerPhone: string
+        timestamp: string
+      }) => {
+        logger.info("[WebSocket] User unblocked:", data)
+        const sessionId = sessionStorage.getItem("sessionId")
+
+        // Invalidate customer-related queries
+        queryClient.invalidateQueries({
+          queryKey: ["customers"],
+        })
+        queryClient.invalidateQueries({
+          queryKey: ["chats", sessionId],
+        })
+
+        // Show success toast
+        toast.success(`Customer ${data.customerName} has been unblocked`)
+      }
+    )
+
+    // New customer event
+    socket.on(
+      "new-customer",
+      (data: {
+        customerId: string
+        sessionId: string
+        customerName: string
+        customerPhone: string
+        language?: string
+        timestamp: string
+      }) => {
+        logger.info("[WebSocket] New customer:", data)
+        const sessionId = sessionStorage.getItem("sessionId")
+
+        // Invalidate chat list and customer queries
+        queryClient.invalidateQueries({
+          queryKey: ["chats", sessionId],
+        })
+        queryClient.invalidateQueries({
+          queryKey: ["recent-chats", sessionId],
+        })
+        queryClient.invalidateQueries({
+          queryKey: ["customers"],
+        })
+
+        // Show info toast
+        toast.info(`New customer: ${data.customerName || data.customerPhone}`)
+      }
+    )
 
     // Workspace changed - invalidate ALL cached data
     socket.on("workspace-changed", (data: { workspaceId: string }) => {
@@ -179,6 +273,9 @@ export function useWebSocket(options: UseWebSocketOptions) {
       socket.off("workspace-joined")
       socket.off("new-message")
       socket.off("chat-updated")
+      socket.off("user-blocked")
+      socket.off("user-unblocked")
+      socket.off("new-customer")
       socket.off("workspace-changed")
       socket.disconnect()
       socketRef.current = null

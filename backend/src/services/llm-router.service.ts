@@ -2103,7 +2103,19 @@ export class LLMRouterService {
         workspaceId: params.workspaceId,
       })
 
-      // 🔄 State Reset - Handled by Router's RESET_ACTIVE_AGENT function
+      // � CRITICAL: Also notify chat list update (for last message preview)
+      websocketService.notifyChatUpdated(params.workspaceId, {
+        sessionId: params.conversationId,
+        lastMessage: finalResponse.substring(0, 100), // Preview text
+        lastMessageAt: new Date().toISOString(),
+        customerId: params.customerId,
+      })
+
+      logger.info(
+        `[LLM-ROUTER] 🔔 WebSocket notifications sent (new-message + chat-updated)`
+      )
+
+      // �🔄 State Reset - Handled by Router's RESET_ACTIVE_AGENT function
       // No more hardcoded checks - Router LLM decides when to reset
 
       return {

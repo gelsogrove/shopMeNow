@@ -76,6 +76,7 @@ interface Chat {
 interface WhatsAppChatModalProps {
   isOpen: boolean
   onClose: () => void
+  onMessageSent?: () => void
   channelName?: string
   phoneNumber?: string
   workspaceId?: string
@@ -85,6 +86,7 @@ interface WhatsAppChatModalProps {
 export function WhatsAppChatModal({
   isOpen,
   onClose,
+  onMessageSent,
   channelName = "L'Altra Italia",
   phoneNumber = "",
   workspaceId = "",
@@ -105,6 +107,14 @@ export function WhatsAppChatModal({
   // 📱 Device preview state - unified with CartIframePopup
   const [showCartPopup, setShowCartPopup] = useState(false)
   const [cartPopupUrl, setCartPopupUrl] = useState<string>("")
+
+  // 🔄 Handle modal close with chat list refresh
+  const handleClose = () => {
+    logger.info("[WhatsApp Modal] 🔄 Forcing page reload on close")
+
+    // 🔄 BRUTALE MA FUNZIONA: Reload della pagina
+    window.location.reload()
+  }
 
   // Render component logic
 
@@ -582,14 +592,14 @@ export function WhatsAppChatModal({
           sender: "bot",
           timestamp: new Date(),
           agentName: "AI Assistant",
+          debugInfo: webhookData.debug
+            ? JSON.stringify(webhookData.debug)
+            : undefined,
           metadata: {
             isOperatorMessage: false,
             isOperatorControl: false,
             agentSelected: "AI",
             sentBy: "AI",
-            debugInfo: webhookData.debug
-              ? JSON.stringify(webhookData.debug)
-              : undefined, // ✅ Include debug info as JSON string
           },
         }
 
@@ -648,6 +658,10 @@ export function WhatsAppChatModal({
 
             // Replace all messages with fresh data from backend
             setMessages(allMessages)
+
+            // 🔄 CRITICAL: Call parent to refresh chat list
+            onMessageSent?.()
+            logger.info("[WhatsApp Modal] 🔄 Chat list refresh triggered")
 
             // Scroll to bottom
             setTimeout(() => {
@@ -718,7 +732,7 @@ export function WhatsAppChatModal({
       onOpenChange={(open) => {
         // Allow closing by clicking outside
         if (!open) {
-          onClose()
+          handleClose()
         }
       }}
     >
@@ -741,7 +755,7 @@ export function WhatsAppChatModal({
 
         {/* Close Button - Positioned at top right of DialogContent */}
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="fixed top-[calc(50%-45vh)] right-[calc(50%-585px)] flex items-center justify-center w-10 h-10 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors z-50 shadow-lg"
           aria-label="Close"
         >

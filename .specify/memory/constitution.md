@@ -61,6 +61,25 @@
     - Flow Decision Tree: Valid → skip LLM (save 5000 tokens), Invalid → Router LLM call
     - Debug Timeline: Validation-only step with tokenUsage: 0
     - Performance Metrics: 25% token savings, $680/year cost reduction, 800ms latency improvement
+
+  Version Change: 1.8.0 → 1.9.0 (MINOR)
+  Rationale: Added Principle XI "Real-Time WebSocket Communication" - CRITICAL architectural enhancement enabling instant chat updates, customer blocking notifications, and new session alerts
+  Date: 2025-11-14
+
+  Modified Principles:
+  - ADDED Principle XI: Real-Time WebSocket Communication (MUST - CRITICAL)
+    - All chat operations emit WebSocket events to workspace room
+    - Frontend invalidates React Query cache on WebSocket events
+    - Toast notifications for background events (new messages, blocking)
+    - Connection status indicator for user awareness
+
+  Added Sections:
+  - Principle XI: Real-Time WebSocket Communication
+    - Event Types: new-message, chat-updated, user-blocked, user-unblocked, new-customer
+    - Backend Emit Pattern: websocketService.notifyNewMessage() after DB save
+    - Frontend Pattern: useWebSocket hook + React Query invalidation
+    - Chat List Synchronization: Page reload on WhatsApp popup close (guarantees fresh data)
+    - Room Architecture: workspace:${workspaceId} isolation
   - ADDED Principle VIII: Conversational Memory Invalidation
     - Memory cache in searchConversations table must be cleared when returning stale/incomplete data
     - Root cause discovery: LLM showed 4/5 DOP cheeses because searchConversations cached old filter results
@@ -96,8 +115,8 @@
 
 # ShopME Constitution
 
-**Version**: 1.8.0 (MINOR - Validation-Only Router Pattern)  
-**Last Updated**: 2025-11-13
+**Version**: 1.9.0 (MINOR - Real-Time WebSocket Communication)  
+**Last Updated**: 2025-11-14
 
 ## Core Principles
 
@@ -1709,6 +1728,253 @@ describe("Validation-Only Router Pattern", () => {
 
 ---
 
+### XI. Real-Time WebSocket Communication (MUST - CRITICAL)
+
+**ALL chat operations MUST emit WebSocket events to enable instant UI updates across operator sessions and devices.**
+
+**Critical Requirements**:
+
+1. **Event-Driven Architecture**:
+
+   - ✅ EVERY database operation affecting chat state MUST emit WebSocket event
+   - ✅ Events broadcast to workspace room: `workspace:${workspaceId}`
+   - ✅ Frontend invalidates React Query cache on event reception
+   - ❌ NO polling - WebSocket events ONLY for real-time updates
+
+2. **Event Types** (5 core events):
+
+   - `new-message`: New message saved (customer/operator/AI)
+   - `chat-updated`: Chat list state changed (new message, status update)
+   - `user-blocked`: Customer blocked (isBlacklisted=true)
+   - `user-unblocked`: Customer unblocked (isBlacklisted=false)
+   - `new-customer`: New chat session created (first message from new customer)
+
+3. **Backend Emit Pattern**:
+
+   ```typescript
+   // ✅ CORRECT - Emit AFTER database save
+   const message = await prisma.conversationMessage.create({ data })
+   await websocketService.notifyNewMessage(workspaceId, {
+     sessionId: message.sessionId,
+     customerId: message.customerId,
+     message: message.content,
+   })
+   await websocketService.notifyChatUpdated(workspaceId, sessionId)
+   ```
+
+4. **Frontend Pattern** (useWebSocket hook):
+
+   ```typescript
+   // ✅ Listen to events and invalidate cache
+   socket.on("new-message", (data) => {
+     queryClient.invalidateQueries({
+       queryKey: ["chatMessages", data.sessionId],
+     })
+     queryClient.invalidateQueries({ queryKey: ["chatList"] })
+     if (data.sessionId !== activeSessionId) {
+       toast.info("Nuovo messaggio ricevuto")
+     }
+   })
+
+   socket.on("chat-updated", () => {
+     queryClient.invalidateQueries({ queryKey: ["chatList"] })
+   })
+   ```
+
+5. **Chat List Synchronization** (WhatsApp Popup):
+
+   - ✅ Page reload (`window.location.reload()`) on popup close
+   - ✅ Guarantees fresh chat list data after operator sends messages
+   - ⚠️ Fallback pattern when React Query invalidation insufficient
+   - Rationale: React Query cache timing issues require guaranteed refresh
+
+6. **Connection Status Indicator**:
+   - ✅ Visual indicator shows WebSocket connection state (connected/disconnected)
+   - ✅ Auto-reconnection on disconnect
+   - ✅ User awareness: if disconnected, real-time updates are paused
+
+**Implementation Locations**:
+
+**Backend Emitters**:
+
+- `backend/src/interfaces/http/controllers/chat.controller.ts` (Lines 357-376)
+  - Operator messages emit `new-message` + `chat-updated`
+- `backend/src/interfaces/http/controllers/customers.controller.ts` (Lines 258-273)
+  - Customer blocking emits `user-blocked` / `user-unblocked`
+- `backend/src/repositories/message.repository.ts` (Lines 442-460)
+  - New session creation emits `new-customer`
+- `backend/src/services/llm-router.service.ts` (Lines 2097-2115)
+  - AI responses emit `chat-updated` (alongside existing `new-message`)
+
+**Frontend Listeners**:
+
+- `frontend/src/hooks/useWebSocket.ts` (Lines 144-221)
+  - Event listeners + toast notifications
+  - React Query invalidation
+- `frontend/src/components/shared/WhatsAppChatModal.tsx` (Lines 111-116)
+  - Page reload on popup close
+
+**WebSocket Service**:
+
+- `backend/src/services/websocket.service.ts` (Lines 113-151)
+  - `notifyUserBlocked()`, `notifyNewCustomer()` methods
+
+**Examples**:
+
+```typescript
+// ❌ WRONG - No WebSocket emit after operator message
+async sendOperatorMessage(req: Request, res: Response) {
+  const message = await prisma.conversationMessage.create({
+    data: {
+      sessionId,
+      sender: "operator",
+      content: messageText,
+    },
+  })
+  return res.json({ success: true, message })
+  // ❌ Missing: websocketService.notifyNewMessage()
+  // Result: Other operators don't see message until refresh
+}
+
+// ✅ CORRECT - Emit WebSocket events
+async sendOperatorMessage(req: Request, res: Response) {
+  const message = await prisma.conversationMessage.create({
+    data: {
+      sessionId,
+      sender: "operator",
+      content: messageText,
+    },
+  })
+
+  // Emit to workspace room
+  await this.websocketService.notifyNewMessage(workspaceId, {
+    sessionId: message.sessionId,
+    customerId: session.customerId,
+    message: message.content,
+    sender: "operator",
+  })
+  await this.websocketService.notifyChatUpdated(workspaceId, sessionId)
+
+  return res.json({ success: true, message })
+}
+```
+
+```typescript
+// ❌ WRONG - Frontend doesn't listen to WebSocket events
+useEffect(() => {
+  // No socket listeners - UI only updates on manual refresh
+  loadChatList()
+}, [])
+
+// ✅ CORRECT - Frontend invalidates cache on events
+useEffect(() => {
+  const socket = io(WEBSOCKET_URL)
+
+  socket.on("new-message", (data) => {
+    queryClient.invalidateQueries({
+      queryKey: ["chatMessages", data.sessionId],
+    })
+    queryClient.invalidateQueries({ queryKey: ["chatList"] })
+    toast.info("Nuovo messaggio ricevuto")
+  })
+
+  socket.on("chat-updated", () => {
+    queryClient.invalidateQueries({ queryKey: ["chatList"] })
+  })
+
+  return () => socket.disconnect()
+}, [])
+```
+
+```typescript
+// ✅ CORRECT - Page reload fallback for WhatsApp popup
+const handleClose = useCallback(() => {
+  onClose() // Close modal
+  window.location.reload() // Force chat list refresh
+}, [onClose])
+
+// Called after sending message from popup
+<Button onClick={handleSendMessage}>Invia</Button>
+```
+
+**Workspace Isolation** (CRITICAL):
+
+- ✅ WebSocket rooms MUST be workspace-scoped: `workspace:${workspaceId}`
+- ❌ NEVER broadcast to all clients (security violation)
+- ✅ Operator joins room on login: `socket.join(`workspace:${user.workspaceId}`)`
+
+**Testing Requirements**:
+
+```typescript
+describe("Real-Time WebSocket Events", () => {
+  it("MUST emit new-message after operator sends message", async () => {
+    const mockEmit = jest.spyOn(websocketService, "notifyNewMessage")
+
+    await chatController.sendOperatorMessage(req, res)
+
+    expect(mockEmit).toHaveBeenCalledWith(workspaceId, {
+      sessionId: expect.any(String),
+      customerId: expect.any(String),
+      message: "Test message",
+      sender: "operator",
+    })
+  })
+
+  it("MUST invalidate chat list on chat-updated event", async () => {
+    const invalidateSpy = jest.spyOn(queryClient, "invalidateQueries")
+
+    socket.emit("chat-updated", { workspaceId })
+
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ["chatList"],
+    })
+  })
+})
+```
+
+**Rationale**:
+
+- **User Experience**: Instant updates improve operator productivity (no manual refresh)
+- **Multi-Device**: Operators can monitor chats from multiple devices simultaneously
+- **Collaboration**: Multiple operators see same chat state in real-time
+- **Accuracy**: Prevents stale data, race conditions, duplicate responses
+- **Scalability**: Event-driven architecture scales better than polling (reduced server load)
+
+**Performance Considerations**:
+
+- ✅ WebSocket events lightweight (~200 bytes per event)
+- ✅ Room-based broadcasting limits network traffic (only workspace members receive)
+- ⚠️ Page reload fallback adds ~500ms UX delay (acceptable for critical data accuracy)
+- ⚠️ React Query invalidation may have timing issues (reload guarantees consistency)
+
+**Enforcement**:
+
+- Code reviews MUST verify WebSocket emit after database writes
+- Integration tests MUST verify events broadcast to correct workspace room
+- Manual testing MUST verify chat list updates without refresh
+- Monitor WebSocket connection health (reconnection rate, event latency)
+- Consider: Redis adapter for multi-instance Socket.io deployments (production scalability)
+
+**Migration Path**:
+
+If implementing WebSocket for existing features:
+
+1. Add `websocketService.notify*()` calls after database operations
+2. Add frontend event listeners in `useWebSocket` hook
+3. Add React Query invalidation for affected queries
+4. Test multi-operator scenarios (same workspace, different sessions)
+5. Document event schema in `backend/src/services/websocket.service.ts`
+
+**See Also**:
+
+- `specs/125-chat-realtime-improvements/COMPLETED.md` - Implementation documentation
+- `specs/125-chat-realtime-improvements/AUDIT.md` - Problem analysis
+- `specs/125-chat-realtime-improvements/PLAN.md` - Progressive enhancement strategy
+- `backend/src/services/websocket.service.ts` - WebSocket service implementation
+- `frontend/src/hooks/useWebSocket.ts` - Frontend WebSocket hook
+
+---
+
 ## Operational Configuration
 
 ### Debug Mode (SHOULD - RECOMMENDED)
@@ -1870,4 +2136,4 @@ describe("Workspace Isolation", () => {
 
 ---
 
-**Version**: 1.8.0 | **Ratified**: 2025-11-12 | **Last Amended**: 2025-11-13
+**Version**: 1.9.0 | **Ratified**: 2025-11-12 | **Last Amended**: 2025-11-14

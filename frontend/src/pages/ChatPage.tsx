@@ -221,6 +221,7 @@ export function ChatPage() {
     chats,
     isLoading: isLoadingChats,
     updateActiveChatbot,
+    refetch: refetchChats,
   } = useChatList()
 
   const [hasToggledChatbot, setHasToggledChatbot] = useState(false)
@@ -668,6 +669,8 @@ export function ChatPage() {
     // 💾 Salva l'ID della chat selezionata in sessionStorage
     if (chat?.sessionId) {
       sessionStorage.setItem("selectedChatId", chat.sessionId)
+      // 🔔 Store current chat sessionId for WebSocket toast notifications
+      sessionStorage.setItem("currentChatSessionId", chat.sessionId)
       logger.info(
         "[ChatPage] Saved selectedChatId to sessionStorage:",
         chat.sessionId
@@ -1648,6 +1651,7 @@ export function ChatPage() {
       <WhatsAppChatModal
         isOpen={showPlaygroundDialog}
         onClose={handleClosePlayground}
+        onMessageSent={refetchChats}
         channelName="WhatsApp Chat"
         workspaceId={workspace?.id}
         selectedChat={selectedChat as any}

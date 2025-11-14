@@ -6,6 +6,7 @@ import {
 } from "@prisma/client"
 import * as dotenv from "dotenv"
 import OpenAI from "openai"
+import { websocketService } from "../services/websocket.service"
 import logger from "../utils/logger"
 
 /**
@@ -368,8 +369,10 @@ export class MessageRepository {
    */
   async findOrCreateChatSession(workspaceId: string, customerId: string) {
     try {
+      let isNewSession = false
+
       // 🔒 TRANSACTION: Atomic operation to prevent duplicate session creation
-      return await this.prisma.$transaction(async (tx) => {
+      const session = await this.prisma.$transaction(async (tx) => {
         // Try to find existing active session
         let session = await tx.chatSession.findFirst({
           where: {
@@ -391,6 +394,7 @@ export class MessageRepository {
                 status: "active",
               },
             })
+            isNewSession = true
             logger.info(
               `✅ Created new chat session: ${session.id} for customer ${customerId}`
             )
@@ -434,6 +438,30 @@ export class MessageRepository {
 
         return session
       })
+
+      // 🔔 CRITICAL: Emit WebSocket event AFTER transaction commit for new sessions
+      if (isNewSession) {
+        // Fetch customer details for event payload
+        const customer = await this.prisma.customers.findUnique({
+          where: { id: customerId },
+          select: { name: true, phone: true, language: true },
+        })
+
+        websocketService.notifyNewCustomer(workspaceId, {
+          customerId: customerId,
+          sessionId: session.id,
+          customerName: customer?.name || "Unknown",
+          customerPhone: customer?.phone || "",
+          language: customer?.language || undefined,
+          timestamp: new Date().toISOString(),
+        })
+
+        logger.info(
+          `[NEW-SESSION] 🔔 WebSocket new-customer event sent for session ${session.id}`
+        )
+      }
+
+      return session
     } catch (error) {
       logger.error(
         `❌ Error in findOrCreateChatSession for customer ${customerId}:`,

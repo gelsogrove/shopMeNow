@@ -3,6 +3,7 @@ import { Request, Response } from "express"
 import { config } from "../../../config"
 import { MessageRepository } from "../../../repositories/message.repository"
 import { usageService } from "../../../services/usage.service"
+import { websocketService } from "../../../services/websocket.service"
 import logger from "../../../utils/logger"
 
 export class ChatController {
@@ -353,7 +354,33 @@ export class ChatController {
         `[CHAT-SEND] ✅ Operator message saved to database successfully`
       )
 
-      // 🛡️ IMPORTANT: Pass operator message through Safety & Translation
+      // 🔔 CRITICAL: Notify WebSocket clients of new operator message
+      websocketService.notifyNewMessage(workspaceId, {
+        id: savedMessage.id,
+        sessionId: sessionId,
+        content: content,
+        sender: "agent", // Operator message appears as agent message
+        timestamp: savedMessage.createdAt.toISOString(),
+        workspaceId: workspaceId,
+        metadata: {
+          isOperatorMessage: true,
+          sentBy: "HUMAN_OPERATOR",
+        },
+      })
+
+      // 🔔 CRITICAL: Also notify chat list update (for last message preview)
+      websocketService.notifyChatUpdated(workspaceId, {
+        sessionId: sessionId,
+        lastMessage: content.substring(0, 100), // Preview text
+        lastMessageAt: savedMessage.createdAt.toISOString(),
+        customerId: chatSession.customerId,
+      })
+
+      logger.info(
+        `[CHAT-SEND] 🔔 WebSocket notifications sent (new-message + chat-updated)`
+      )
+
+      // �🛡️ IMPORTANT: Pass operator message through Safety & Translation
       // This ensures security validation even for manual messages
       let finalMessage = content
       try {
