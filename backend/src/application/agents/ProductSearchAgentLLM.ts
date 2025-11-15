@@ -103,7 +103,28 @@ export class ProductSearchAgentLLM {
         query: context.query.substring(0, 100),
       })
 
-      // STEP 0: Check conversational memory FIRST
+      // 📊 STEP 0.1: Save search query for analytics (statistics tracking)
+      // This is NON-BLOCKING and happens BEFORE any product search logic
+      // If it fails, it won't block the user's search experience
+      try {
+        const { CallingFunctionsService } = require("../../services/calling-functions.service")
+        const callingFunctions = new CallingFunctionsService()
+        
+        await callingFunctions.searchProductForStatistics({
+          workspaceId: context.workspaceId,
+          customerId: context.customerId,
+          query: context.query,
+        })
+        
+        logger.debug("📊 Product search statistics saved", {
+          query: context.query.substring(0, 30),
+        })
+      } catch (statError) {
+        // Non-critical error - log but don't block search
+        logger.warn("⚠️ Failed to save search statistics (non-critical):", statError)
+      }
+
+      // STEP 0.2: Check conversational memory FIRST
       const conversation = await this.searchConversationRepo.findBySessionId(
         context.sessionId,
         context.workspaceId

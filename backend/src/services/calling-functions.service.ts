@@ -1066,4 +1066,67 @@ export class CallingFunctionsService {
       }
     }
   }
+
+  /**
+   * 📊 Save product search for analytics (statistics tracking)
+   *
+   * Called AUTOMATICALLY by ProductSearchAgent every time a user searches for products.
+   * Tracks all search attempts (successful or not) for analytics purposes.
+   *
+   * Data retention: 6 months (cleaned up by scheduler cron job)
+   *
+   * @param request - Search details with workspaceId, customerId, query
+   * @returns Success confirmation
+   */
+  public async searchProductForStatistics(request: {
+    workspaceId: string
+    customerId: string
+    query: string
+  }): Promise<StandardResponse> {
+    try {
+      const { workspaceId, customerId, query } = request
+
+      logger.info("📊 Saving product search for statistics", {
+        workspaceId,
+        customerId,
+        query: query.substring(0, 50), // Limit log size
+      })
+
+      const { PrismaClient } = require("@prisma/client")
+      const prisma = new PrismaClient()
+
+      try {
+        await prisma.productSearch.create({
+          data: {
+            workspaceId,
+            customerId,
+            query: query.trim(),
+          },
+        })
+
+        logger.info("✅ Product search saved successfully", {
+          workspaceId,
+          query: query.substring(0, 30),
+        })
+
+        return {
+          success: true,
+          message: `Ricerca "${query.substring(0, 30)}..." registrata per statistiche`,
+          timestamp: new Date().toISOString(),
+        }
+      } finally {
+        await prisma.$disconnect()
+      }
+    } catch (error) {
+      logger.error("❌ Error saving product search statistics:", error)
+
+      // Non bloccare il flusso principale - statistiche sono opzionali
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        message: "Errore nel salvataggio statistiche (non critico)",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
 }

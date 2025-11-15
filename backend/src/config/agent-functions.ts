@@ -142,6 +142,23 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
 
   {
+    name: "searchProductForStatistics",
+    description:
+      "Save customer's product search query for analytics tracking. Called automatically by ProductSearchAgentLLM. Data retained for 6 months with automatic cleanup. DO NOT call manually - internal use only.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description:
+            "The product search query entered by customer (e.g., 'pasta bio', 'vino rosso')",
+        },
+      },
+      required: ["query"],
+    },
+  },
+
+  {
     name: "addToCart",
     description:
       "Add a specific product to the customer's cart. Use this when customer explicitly wants to purchase or add a product. Requires product ID from catalog.",
@@ -500,7 +517,7 @@ export function getFunctionNamesForAgentType(agentType: string): string[] {
 
     case "PRODUCT_SEARCH":
       // NOTE: searchProducts removed - LLM uses {{PRODUCTS}} from prompt
-      return ["searchProductByCertifications"]
+      return ["searchProductByCertifications", "searchProductForStatistics"]
 
     case "CART_MANAGEMENT":
       return [

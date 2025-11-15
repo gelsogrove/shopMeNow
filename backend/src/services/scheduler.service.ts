@@ -11,6 +11,7 @@ export class SchedulerService {
   private readonly CHECK_INTERVAL = 5 * 60 * 1000 // 5 minuti
   private readonly URL_CLEANUP_INTERVAL = 60 * 60 * 1000 // 1 ora
   private readonly BILLING_CHECK_INTERVAL = 24 * 60 * 60 * 1000 // 24 ore
+  private readonly ANALYTICS_CLEANUP_INTERVAL = 7 * 24 * 60 * 60 * 1000 // 7 giorni (weekly cleanup)
 
   constructor() {
     this.prisma = new PrismaClient()
@@ -125,6 +126,37 @@ export class SchedulerService {
   }
 
   /**
+   * 📊 Cleanup old product search analytics data (older than 6 months)
+   * 
+   * Runs weekly to maintain database performance and comply with data retention policy.
+   * Deletes ProductSearch records older than 6 months while maintaining workspace isolation.
+   */
+  private async cleanupOldAnalytics(): Promise<void> {
+    try {
+      const sixMonthsAgo = new Date()
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+
+      const result = await this.prisma.productSearch.deleteMany({
+        where: {
+          createdAt: {
+            lt: sixMonthsAgo,
+          },
+        },
+      })
+
+      if (result.count > 0) {
+        logger.info(
+          `📊 Analytics cleanup: removed ${result.count} product search records older than 6 months`
+        )
+      } else {
+        logger.debug("📊 Analytics cleanup: no old records to remove")
+      }
+    } catch (error) {
+      logger.error("❌ Error cleaning up old analytics data:", error)
+    }
+  }
+
+  /**
    * Inizia il processo di aggiornamento periodico
    */
   public startScheduledTasks(): void {
@@ -132,6 +164,7 @@ export class SchedulerService {
     this.updateExpiredOffers()
     this.cleanupUrls()
     this.trackMonthlyChannelCost()
+    this.cleanupOldAnalytics() // 🆕 Cleanup analytics on startup
 
     // Imposta gli intervalli per le esecuzioni successive
     setInterval(() => {
@@ -147,11 +180,16 @@ export class SchedulerService {
       this.trackMonthlyChannelCost()
     }, this.BILLING_CHECK_INTERVAL)
 
+    // 📊 Cleanup analytics settimanale (ogni 7 giorni)
+    setInterval(() => {
+      this.cleanupOldAnalytics()
+    }, this.ANALYTICS_CLEANUP_INTERVAL)
+
     // Start campaign scheduler (runs daily at 10:00 AM)
     this.campaignScheduler.start()
 
     logger.info(
-      "Scheduler service started - managing offers, URLs cleanup, monthly billing, and campaign scheduler"
+      "Scheduler service started - managing offers, URLs cleanup, monthly billing, analytics cleanup (6 months), and campaign scheduler"
     )
   }
 }
