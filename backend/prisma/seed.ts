@@ -129,13 +129,16 @@ async function main() {
       businessType: "ECOMMERCE",
       description: "Italian Gourmet Food E-commerce",
       url: workspaceSettings.url || "https://altrogusto.com",
+      challengeStatus: true, // ✅ Feature 126: Chatbot enabled by default
       debugMode:
         workspaceSettings.debugMode !== undefined
           ? workspaceSettings.debugMode
           : true,
-      welcomeMessage: workspaceSettings.welcomeMessages,
-      wipMessage: workspaceSettings.wipMessages,
-      afterRegistrationMessages: workspaceSettings.afterRegistrationMessages,
+      welcomeMessage: workspaceSettings.welcomeMessages, // ✅ Simple string, no JSON.stringify()
+      wipMessage: workspaceSettings.wipMessages, // ✅ Simple string, no JSON.stringify()
+      afterRegistrationMessages: JSON.stringify(
+        workspaceSettings.afterRegistrationMessages
+      ),
     },
   })
 

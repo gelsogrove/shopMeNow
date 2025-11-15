@@ -36,6 +36,7 @@ import { AgentConfigRepository } from "../../repositories/agent-config.repositor
 import { CartRepository } from "../../repositories/cart.repository"
 import { OrderRepository } from "../../repositories/order.repository"
 import { ProductRepository } from "../../repositories/product.repository"
+import { ServiceRepository } from "../../repositories/service.repository"
 import logger from "../../utils/logger"
 import { CartManagementAgent } from "./CartManagementAgent"
 
@@ -75,10 +76,12 @@ export class CartManagementAgentLLM {
     // Initialize CartManagementAgent with repositories
     const cartRepo = new CartRepository()
     const productRepo = new ProductRepository()
+    const serviceRepo = new ServiceRepository()
     const orderRepo = new OrderRepository()
     this.cartManagementAgent = new CartManagementAgent(
       cartRepo,
       productRepo,
+      serviceRepo,
       orderRepo
     )
 
@@ -438,12 +441,47 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
         case "viewCart":
           return await this.cartManagementAgent.getCart(agentContext)
 
-        case "addToCart":
-          return await this.cartManagementAgent.addToCart(agentContext, {
-            productId: args.productId,
-            quantity: args.quantity,
-            notes: args.notes,
-          })
+        case "addToCart": {
+          // Support new format (items array) and legacy format (productId)
+          const items = args.items || [
+            {
+              code: args.productId,
+              quantity: args.quantity || 1,
+              type: "PRODUCT", // Legacy format assumes PRODUCT
+              notes: args.notes,
+            },
+          ]
+
+          // Process each item
+          const results = []
+          for (const item of items) {
+            const result = await this.cartManagementAgent.addToCart(
+              agentContext,
+              {
+                productId: item.code, // Backend expects productId field (but it's actually a code)
+                quantity: item.quantity || 1,
+                notes: item.notes,
+                type: item.type || "PRODUCT", // Pass type: PRODUCT or SERVICE
+              }
+            )
+            results.push({
+              code: item.code,
+              type: item.type,
+              ...result,
+            })
+          }
+
+          // If all succeeded, return success
+          const allSucceeded = results.every((r) => r.success)
+          return {
+            success: allSucceeded,
+            data: {
+              itemsAdded: results.filter((r) => r.success).length,
+              itemsFailed: results.filter((r) => !r.success).length,
+              results,
+            },
+          }
+        }
 
         case "removeFromCart":
           // TODO: Implement removeFromCart in CartManagementAgent
@@ -607,24 +645,42 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
       },
       {
         name: "addToCart",
-        description: "Add a product to the cart with specified quantity",
+        description:
+          "Add products or services to cart. Supports both PRODUCT and SERVICE types. Use AFTER customer confirmation.",
         parameters: {
           type: "object",
           properties: {
-            productId: {
-              type: "string",
-              description: "Product ID to add to cart",
-            },
-            quantity: {
-              type: "number",
-              description: "Quantity to add",
-            },
-            notes: {
-              type: "string",
-              description: "Optional notes for this item",
+            items: {
+              type: "array",
+              description:
+                "Array of items to add. For single item, use array with 1 element.",
+              items: {
+                type: "object",
+                properties: {
+                  code: {
+                    type: "string",
+                    description:
+                      "Product or service code (e.g., 'BUR-001', 'SRV-001')",
+                  },
+                  quantity: {
+                    type: "number",
+                    description: "Quantity (default: 1, must be >= 1)",
+                  },
+                  type: {
+                    type: "string",
+                    enum: ["PRODUCT", "SERVICE"],
+                    description: "PRODUCT for products, SERVICE for services",
+                  },
+                  notes: {
+                    type: "string",
+                    description: "Optional notes for this item",
+                  },
+                },
+                required: ["code", "type"],
+              },
             },
           },
-          required: ["productId", "quantity"],
+          required: ["items"],
         },
       },
       {

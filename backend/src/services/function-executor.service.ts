@@ -19,6 +19,7 @@ import { CartManagementAgent } from "../application/agents/CartManagementAgent"
 import { CartRepository } from "../repositories/cart.repository"
 import { OrderRepository } from "../repositories/order.repository"
 import { ProductRepository } from "../repositories/product.repository"
+import { ServiceRepository } from "../repositories/service.repository"
 import logger from "../utils/logger"
 
 export interface ExecutionContext {
@@ -39,12 +40,14 @@ export class FunctionExecutor {
   // NOTE: productSearchAgent removed - LLM uses {{PRODUCTS}} from prompt only
   private cartManagementAgent: CartManagementAgent
   private productRepo: ProductRepository
+  private serviceRepo: ServiceRepository
   private cartRepo: CartRepository
   private orderRepo: OrderRepository
 
   constructor(private prisma: PrismaClient) {
     // Initialize repositories
     this.productRepo = new ProductRepository()
+    this.serviceRepo = new ServiceRepository()
     this.cartRepo = new CartRepository()
     this.orderRepo = new OrderRepository()
 
@@ -53,6 +56,7 @@ export class FunctionExecutor {
     this.cartManagementAgent = new CartManagementAgent(
       this.cartRepo,
       this.productRepo,
+      this.serviceRepo,
       this.orderRepo
     )
 

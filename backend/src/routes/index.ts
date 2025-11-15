@@ -19,13 +19,11 @@
 // ============================================================================
 import { PrismaClient } from "@prisma/client"
 import { NextFunction, Request, Response, Router } from "express"
-import { config } from "../config"
 import logger from "../utils/logger"
 
 // ============================================================================
 // 2. MIDDLEWARE IMPORTS
 // ============================================================================
-import { webhookLimiter } from "../config/rate-limiters"
 import { authMiddleware } from "../interfaces/http/middlewares/auth.middleware"
 import { sessionValidationMiddleware } from "../interfaces/http/middlewares/session-validation.middleware"
 import { workspaceValidationMiddleware } from "../interfaces/http/middlewares/workspace-validation.middleware"
@@ -33,13 +31,11 @@ import { workspaceValidationMiddleware } from "../interfaces/http/middlewares/wo
 // ============================================================================
 // 3. SERVICE IMPORTS
 // ============================================================================
-import { SafetyTranslationAgent } from "../application/agents/SafetyTranslationAgent"
 import { OtpService } from "../application/services/otp.service"
 import { PasswordResetService } from "../application/services/password-reset.service"
 import { RegistrationAttemptsService } from "../application/services/registration-attempts.service"
 import { SecureTokenService } from "../application/services/secure-token.service"
 import { UserService } from "../application/services/user.service"
-import { LLMRouterService } from "../services/llm-router.service"
 
 // ============================================================================
 // 4. CONTROLLER IMPORTS
@@ -66,6 +62,7 @@ import { MessageRepository } from "../repositories/message.repository"
 // 6. ROUTER IMPORTS (Feature-specific routes)
 // ============================================================================
 // Agent & AI
+import agentConfigRoutes from "../interfaces/http/routes/agent-config.routes"
 import { createAgentRouter } from "../interfaces/http/routes/agent.routes"
 import agentChatRoutes from "./agentChatRoutes"
 
@@ -118,7 +115,6 @@ import { createTokenRouter } from "./token"
 // ============================================================================
 // 7. TYPE IMPORTS
 // ============================================================================
-import { LLMRequest } from "../types/whatsapp.types"
 
 /**
  * 🔒 BLACKLIST CHECK HELPER
@@ -555,6 +551,14 @@ router.use("/chat", chatRouter(chatController))
 router.use("/agent-chat", agentChatRoutes)
 logger.info(
   "✅ Registered multi-agent chat routes (/api/agent-chat, /api/agent-chat/metrics, /api/agent-chat/history/:customerId)"
+)
+
+// ========================================
+// ⚙️ AGENT CONFIGURATION API
+// ========================================
+router.use("/", agentConfigRoutes)
+logger.info(
+  "✅ Registered agent config routes (/api/workspaces/:workspaceId/agent-config)"
 )
 
 // Removed messages, push-messaging, and push-testing routes (not used by frontend)

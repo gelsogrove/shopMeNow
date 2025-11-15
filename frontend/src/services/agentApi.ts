@@ -178,3 +178,43 @@ export async function exportDatabase(
 
   return response.data
 }
+
+/**
+ * Get agent configurations with real availableFunctions from database
+ * This replaces hardcoded functions with actual data
+ */
+export async function getAgentConfigs(workspaceId: string): Promise<{
+  agents: Array<{
+    id: string
+    name: string
+    type: string
+    description: string
+    icon: string
+    systemPrompt: string
+    model: string
+    temperature: number
+    maxTokens: number
+    order: number
+    isActive: boolean
+    availableFunctions: string[] | null
+  }>
+}> {
+  logger.info(`Fetching agent configs for workspace ${workspaceId}`)
+
+  try {
+    const url = `/workspaces/${workspaceId}/agent-config`
+    logger.info(`GET request URL: ${url}`)
+
+    const response = await api.get(url, {
+      headers: {
+        "x-workspace-id": workspaceId,
+      },
+    })
+
+    logger.info(`Agent configs response:`, response.data)
+    return response.data
+  } catch (error) {
+    logger.error("Error fetching agent configs:", error)
+    throw error
+  }
+}

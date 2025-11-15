@@ -15,6 +15,7 @@
 import { CartRepository } from "../../repositories/cart.repository"
 import { OrderRepository } from "../../repositories/order.repository"
 import { ProductRepository } from "../../repositories/product.repository"
+import { ServiceRepository } from "../../repositories/service.repository"
 import logger from "../../utils/logger"
 
 export interface CartAgentContext {
@@ -28,6 +29,7 @@ export interface AddToCartParams {
   productId: string
   quantity: number
   notes?: string
+  type?: "PRODUCT" | "SERVICE" // Default: "PRODUCT" for backward compatibility
 }
 
 export interface UpdateQuantityParams {
@@ -42,15 +44,18 @@ export interface RepeatOrderParams {
 export class CartManagementAgent {
   private cartRepo: CartRepository
   private productRepo: ProductRepository
+  private serviceRepo: ServiceRepository
   private orderRepo: OrderRepository
 
   constructor(
     cartRepo: CartRepository,
     productRepo: ProductRepository,
+    serviceRepo: ServiceRepository,
     orderRepo: OrderRepository
   ) {
     this.cartRepo = cartRepo
     this.productRepo = productRepo
+    this.serviceRepo = serviceRepo
     this.orderRepo = orderRepo
   }
 
@@ -115,11 +120,11 @@ export class CartManagementAgent {
   }
 
   /**
-   * Add product to cart
+   * Add product or service to cart
    */
   async addToCart(context: CartAgentContext, params: AddToCartParams) {
     try {
-      const { productId, quantity, notes } = params
+      const { productId, quantity, notes, type = "PRODUCT" } = params
 
       // Validate quantity
       if (quantity <= 0) {
@@ -130,37 +135,76 @@ export class CartManagementAgent {
         }
       }
 
-      // 🔍 CRITICAL FIX: productId is actually a productCode (e.g., "SALUMI-006")
-      // Search by productCode instead of UUID
-      const product = await this.productRepo.findByProductCode(
-        productId, // This is actually productCode like "SALUMI-006"
-        context.workspaceId
-      )
+      // 🔍 CRITICAL FIX: productId is actually a code (e.g., "SALUMI-006" or "GFT001")
+      // Search in appropriate repository based on type
+      let item: any = null
+      let itemName: string = ""
+      let itemPrice: number = 0
+      let itemId: string = ""
 
-      if (!product) {
-        return {
-          success: false,
-          error: "PRODUCT_NOT_FOUND",
-          message: `Product with code ${productId} not found`,
-        }
-      }
+      if (type === "PRODUCT") {
+        const product = await this.productRepo.findByProductCode(
+          productId, // This is actually productCode like "SALUMI-006"
+          context.workspaceId
+        )
 
-      if (!product.isActive) {
-        return {
-          success: false,
-          error: "PRODUCT_UNAVAILABLE",
-          message: `Product "${product.name}" is currently unavailable`,
+        if (!product) {
+          return {
+            success: false,
+            error: "PRODUCT_NOT_FOUND",
+            message: `Product with code ${productId} not found`,
+          }
         }
-      }
 
-      // Check stock availability
-      if (product.stock !== null && product.stock < quantity) {
-        return {
-          success: false,
-          error: "INSUFFICIENT_STOCK",
-          message: `Only ${product.stock} units available for "${product.name}"`,
-          availableStock: product.stock,
+        if (!product.isActive) {
+          return {
+            success: false,
+            error: "PRODUCT_UNAVAILABLE",
+            message: `Product "${product.name}" is currently unavailable`,
+          }
         }
+
+        // Check stock availability (only for products)
+        if (product.stock !== null && product.stock < quantity) {
+          return {
+            success: false,
+            error: "INSUFFICIENT_STOCK",
+            message: `Only ${product.stock} units available for "${product.name}"`,
+            availableStock: product.stock,
+          }
+        }
+
+        item = product
+        itemName = product.name
+        itemPrice = product.price
+        itemId = product.id
+      } else if (type === "SERVICE") {
+        const service = await this.serviceRepo.findByServiceCode(
+          productId, // For services, this is serviceCode like "GFT001"
+          context.workspaceId
+        )
+
+        if (!service) {
+          return {
+            success: false,
+            error: "SERVICE_NOT_FOUND",
+            message: `Service with code ${productId} not found`,
+          }
+        }
+
+        if (!service.isActive) {
+          return {
+            success: false,
+            error: "SERVICE_UNAVAILABLE",
+            message: `Service "${service.name}" is currently unavailable`,
+          }
+        }
+
+        // Services don't have stock checks
+        item = service
+        itemName = service.name
+        itemPrice = service.price
+        itemId = service.id
       }
 
       // Get or create cart
@@ -169,10 +213,10 @@ export class CartManagementAgent {
         context.customerId
       )
 
-      // Add item to cart (use product.id, NOT productId which is productCode)
+      // Add item to cart with correct type
       await this.cartRepo.addItem(cart.id, {
-        itemType: "PRODUCT",
-        productId: product.id, // ← FIX: Use UUID from product object, not productCode
+        itemType: type, // "PRODUCT" or "SERVICE"
+        productId: itemId, // Use UUID from item object
         quantity,
         notes,
       })
@@ -180,21 +224,23 @@ export class CartManagementAgent {
       // Return updated cart
       const updatedCart = await this.getCart(context)
 
-      logger.info("Product added to cart:", {
+      logger.info(`${type} added to cart:`, {
         workspaceId: context.workspaceId,
         customerId: context.customerId,
-        productId,
+        code: productId,
+        type,
         quantity,
       })
 
       return {
         success: true,
-        message: `Added ${quantity}x "${product.name}" to cart`,
-        product: {
-          id: product.id,
-          name: product.name,
-          price: product.price,
+        message: `Added ${quantity}x "${itemName}" to cart`,
+        item: {
+          id: itemId,
+          name: itemName,
+          price: itemPrice,
           quantity,
+          type,
         },
         cart: updatedCart.cart,
       }

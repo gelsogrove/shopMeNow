@@ -148,6 +148,72 @@
   Rationale: Added Principle XII "Server Auto-Restart Prevention" - CRITICAL operational rule preventing AI from manually restarting dev servers (hot-reload handles this automatically)
   Date: 2025-11-14
 
+  Version Change: 1.10.0 → 2.0.0 (MAJOR)
+  Rationale: Added Principle XIII "LLM Message Flow Priority System" - CRITICAL architectural foundation consolidating Andrea's 12 core rules into constitution authority. This is a MAJOR version because it fundamentally redefines LLM architecture requirements.
+  Date: 2025-11-15
+
+  Modified Principles:
+  - ADDED Principle XIII: LLM Message Flow Priority System (MUST - CRITICAL)
+    - Rule 1: Blocked User Gate (P1) - isBlocked=true → zero response
+    - Rule 2: Channel Disabled Gate (P2) - challengeStatus=false → WIP message
+    - Rule 3: New Customer Welcome (P3) - first message → welcome message
+    - Rule 4: Router Orchestration (P4) - delegation to specialist agents
+    - Rule 5: Router Conversation History - full session context
+    - Rule 6: Product + Services Unified - single agent for both
+    - Rule 7: Variable Uniqueness - enforces Principle III (no duplication)
+    - Rule 8: Router Pure Orchestration - NO dialogue logic (3,500 token target)
+    - Rule 9: Security Gate FIRST - validation BEFORE priorities
+    - Rule 10: Timeline Integrity - enforces Principle IX (debug observability)
+    - Rule 11: Single Product Display - all fields mandatory
+    - Rule 12: addToCart(PRODUCT/SERVICE) - unified cart handling
+
+  Added Sections:
+  - Principle XIII: Complete 12-rule framework with:
+    - Priority flow diagram (Security → P1 → P2 → P3 → P4)
+    - Implementation patterns for each rule
+    - Test coverage requirements
+    - Compliance checklist (pre-deployment validation)
+    - Cross-references to existing principles (III, VIII, IX)
+
+  Removed Sections:
+  - NONE
+
+  Templates Requiring Updates:
+  - ⚠️ `docs/prompts/router-agent.md` - Remove {{SERVICES}}, strip to 3k tokens (Rule 7, 8)
+  - ⚠️ `docs/prompts/product-search-agent.md` - Rename to `product-services-search-agent.md` (Rule 6)
+  - ⚠️ `backend/src/interfaces/http/controllers/whatsapp-webhook.controller.ts` - Add Security Gate (Rule 9)
+  - ⚠️ `backend/prisma/data/defaultAgents.ts` - Fix agent name (Rule 6)
+  - ⚠️ `backend/src/__tests__/unit/services/llm-router-priorities.spec.ts` - Add welcome message test (Rule 3)
+
+  Follow-up TODOs:
+  - ❌ **CRITICAL**: Fix {{SERVICES}} duplication (Rule 7) - currently in Router + ProductSearch
+  - ❌ **CRITICAL**: Strip Router from 8k to 3k tokens (Rule 8) - remove tone/examples
+  - ❌ **CRITICAL**: Rename agent "Product & Services Search Agent" (Rule 6)
+  - ❌ **CRITICAL**: Add Security Gate BEFORE priorities (Rule 9) - SQL/XSS validation
+  - ⚠️ **HIGH**: Add welcome message unit test (Rule 3)
+  - ⚠️ **HIGH**: Verify addToCart SERVICE handling in backend (Rule 12)
+  - ⚠️ **MEDIUM**: Add product display field validation (Rule 11)
+  - Manual test: Verify all 12 rules enforced in production deployment
+  - Update PRD.md to reference Principle XIII as source of truth for LLM architecture
+
+  Breaking Changes:
+  - Router Agent role fundamentally redefined (orchestration only, NOT dialogue)
+  - Product Search Agent becomes "Product & Services Search" (name change)
+  - Security validation now MANDATORY first step (architecture change)
+  - {{SERVICES}} variable MUST be removed from Router (breaks existing prompts)
+
+  Migration Plan:
+  - Phase 1: Update constitution (✅ completed in this version)
+  - Phase 2: Create detailed implementation plan with code analysis
+  - Phase 3: Execute changes (prompt refactoring, security gate, tests)
+  - Phase 4: Validate with checklist + deploy
+
+---
+
+# Project Constitution
+
+**Version**: 2.0.0 | **Ratified**: 2025-11-12 | **Last Amended**: 2025-11-15
+
   Modified Principles:
   - ADDED Principle XII: Server Auto-Restart Prevention (MUST - NON-NEGOTIABLE)
     - AI MUST NEVER run commands like `npm run dev`, `pkill -f`, or restart backend/frontend
@@ -2073,6 +2139,969 @@ If implementing WebSocket for existing features:
 
 ---
 
+### XII. Server Auto-Restart Prevention (MUST - OPERATIONAL)
+
+**AI agents MUST NEVER manually restart development servers - hot-reload handles this automatically.**
+
+**Requirements**:
+
+- ❌ **NO manual server restarts** - Backend/frontend have hot-reload via `ts-node-dev` and `vite`
+- ❌ **NO opening new terminals** - Use existing terminal sessions
+- ✅ **Watch compilation output** - Monitor existing terminal for errors
+- ✅ **Inform user of changes** - "Changes saved, server will auto-reload"
+
+**Rationale**: Development servers auto-restart on file changes. Manual restarts waste time and create unnecessary terminal sessions.
+
+**Enforcement**:
+
+- AI agents instructed via `.github/copilot-instructions.md` Rule #3
+- Do NOT run `npm run dev` or `npm start` unless servers are stopped
+- Watch for compilation errors in terminal output instead
+
+---
+
+### XIII. LLM Message Flow Priority System (MUST - CRITICAL)
+
+**ALL incoming messages MUST follow strict priority-based flow to ensure security, channel control, and proper routing.**
+
+This principle consolidates Andrea's 12 architectural rules into constitution authority.
+
+---
+
+#### Rule 1: Blocked User Gate (P1 - HIGHEST PRIORITY)
+
+**Blocked customers (isBlocked=true) receive ZERO responses and NO database saves.**
+
+**Requirements**:
+
+- ✅ **Priority**: P1 (checked FIRST, before any other processing)
+- ✅ **Detection**: Query `customers.isBlocked` field
+- ✅ **Action**: Return empty response `{ finalResponse: "", isBlocked: true }`
+- ✅ **Token usage**: ZERO (no LLM call)
+- ✅ **Database**: NO message save (blocked customer messages discarded)
+- ✅ **Webhook**: `isBlocked: true` flag prevents WhatsApp API send
+
+**Implementation**:
+
+```typescript
+// llm-router.service.ts - FIRST gate
+private async checkBlockedUser(customerId: string): Promise<boolean> {
+  const customer = await this.prisma.customers.findUnique({
+    where: { id: customerId },
+    select: { isBlocked: true }
+  })
+  return customer?.isBlocked || false
+}
+
+async routeMessage(params: RouterParams): Promise<RouterResult> {
+  // P1: Blocked user check (BEFORE everything else)
+  const isBlocked = await this.checkBlockedUser(params.customerId)
+  if (isBlocked) {
+    logger.warn("🚫 P1: Blocked customer - NO response, NO DB save")
+    return {
+      finalResponse: "",
+      isBlocked: true,
+      tokenUsage: { total: 0 }
+    }
+  }
+  
+  // ... continue with P2, P3, P4
+}
+```
+
+**Test Coverage**:
+
+```typescript
+// __tests__/unit/services/llm-router-priorities.spec.ts
+it("should return empty response for blocked customer", async () => {
+  const blockedCustomer = await createCustomer({ isBlocked: true })
+  const result = await llmRouterService.routeMessage({
+    customerId: blockedCustomer.id,
+    message: "Test message",
+  })
+  
+  expect(result.finalResponse).toBe("")
+  expect(result.isBlocked).toBe(true)
+  expect(result.tokenUsage.total).toBe(0)
+})
+```
+
+**Rationale**: Blocked customers are spam, abusive, or fraudulent. Zero tolerance policy prevents system abuse and reduces costs.
+
+**Enforcement**:
+
+- ✅ MUST be first check in `llm-router.service.ts:routeMessage()`
+- ✅ MUST have unit test coverage
+- ✅ MUST log block attempt with customer ID
+- ❌ NO exceptions - even admin cannot bypass block
+
+---
+
+#### Rule 2: Channel Disabled Gate (P2 - HIGH PRIORITY)
+
+**When workspace channel is disabled (challengeStatus=false), return WIP message from workspace settings.**
+
+**Requirements**:
+
+- ✅ **Priority**: P2 (after P1 blocked check)
+- ✅ **Detection**: Query `workspaces.challengeStatus` field
+- ✅ **Source**: `workspaces.wipMessage` (multilanguage JSON: `{en: "...", it: "...", es: "..."}`)
+- ✅ **Language selection**: `customerLanguage` → `en` (fallback)
+- ✅ **Token usage**: ZERO (no LLM call)
+- ✅ **Database**: Message saved with WIP response
+- ❌ **NO hardcoded fallback** - MUST come from database (Principle I: Database-First)
+
+**Implementation**:
+
+```typescript
+// llm-router.service.ts - P2 gate
+const workspace = await this.prisma.workspaces.findUnique({
+  where: { id: params.workspaceId },
+  select: { challengeStatus: true, wipMessage: true }
+})
+
+if (!workspace?.challengeStatus) {
+  const wipMessages = (workspace?.wipMessage as any) || {}
+  const wipMessage = wipMessages[params.customerLanguage?.toLowerCase() || "en"]
+    || wipMessages.en
+    || "We are currently working on improvements. Please try again later."
+  
+  logger.info("🚧 P2: Channel disabled - sending WIP message")
+  
+  await this.prisma.chatMessages.create({
+    data: {
+      sessionId: session.id,
+      role: "assistant",
+      content: wipMessage,
+      timestamp: new Date()
+    }
+  })
+  
+  return {
+    finalResponse: wipMessage,
+    content: wipMessage,
+    tokenUsage: { total: 0 }
+  }
+}
+```
+
+**Schema**:
+
+```prisma
+model Workspaces {
+  id               String  @id @default(cuid())
+  challengeStatus  Boolean @default(true)  // false = channel disabled
+  wipMessage       Json?   // {en: "...", it: "...", es: "..."}
+  // ...
+}
+```
+
+**Test Coverage**:
+
+```typescript
+it("should return WIP message when channel disabled", async () => {
+  await updateWorkspace({ 
+    challengeStatus: false,
+    wipMessage: { en: "Service under maintenance", it: "Servizio in manutenzione" }
+  })
+  
+  const result = await llmRouterService.routeMessage({
+    customerLanguage: "en",
+    message: "Hello"
+  })
+  
+  expect(result.finalResponse).toBe("Service under maintenance")
+  expect(result.tokenUsage.total).toBe(0)
+})
+```
+
+**Rationale**: Allows operators to disable chatbot during maintenance, product updates, or business hours restrictions without deploying code.
+
+**Enforcement**:
+
+- ✅ MUST be second check (after P1)
+- ✅ WIP message MUST come from database (no hardcoded strings)
+- ✅ MUST support multilanguage (Italian base + customer language)
+- ✅ MUST have unit test coverage
+
+---
+
+#### Rule 3: New Customer Welcome (P3 - MEDIUM PRIORITY)
+
+**New customers (first message ever) receive welcome message from workspace settings.**
+
+**Requirements**:
+
+- ✅ **Priority**: P3 (after P1, P2)
+- ✅ **Detection**: Check if `chatSessions` exists for customer OR message count = 0
+- ✅ **Source**: `workspaces.welcomeMessage` (multilanguage JSON)
+- ✅ **Language selection**: `customerLanguage` → `en` (fallback)
+- ✅ **Token usage**: ZERO (no LLM call for welcome)
+- ✅ **Database**: Save welcome message + create chat session
+- ❌ **NO hardcoded fallback** - MUST come from database
+
+**Implementation**:
+
+```typescript
+// llm-router.service.ts - P3 gate
+const existingMessages = await this.prisma.chatMessages.count({
+  where: { 
+    session: { customerId: params.customerId }
+  }
+})
+
+if (existingMessages === 0) {
+  const workspace = await this.prisma.workspaces.findUnique({
+    where: { id: params.workspaceId },
+    select: { welcomeMessage: true }
+  })
+  
+  const welcomeMessages = (workspace?.welcomeMessage as any) || {}
+  const welcomeMessage = welcomeMessages[params.customerLanguage?.toLowerCase() || "en"]
+    || welcomeMessages.en
+    || "Welcome! How can I help you today?"
+  
+  logger.info("👋 P3: New customer - sending welcome message")
+  
+  await this.prisma.chatMessages.create({
+    data: {
+      sessionId: session.id,
+      role: "assistant",
+      content: welcomeMessage,
+      timestamp: new Date()
+    }
+  })
+  
+  return {
+    finalResponse: welcomeMessage,
+    content: welcomeMessage,
+    tokenUsage: { total: 0 }
+  }
+}
+```
+
+**Schema**:
+
+```prisma
+model Workspaces {
+  id             String  @id @default(cuid())
+  welcomeMessage Json?   // {en: "Welcome!", it: "Benvenuto!", es: "¡Bienvenido!"}
+  // ...
+}
+```
+
+**Test Coverage** (⚠️ MISSING - needs to be added):
+
+```typescript
+it("should return welcome message for new customer", async () => {
+  const newCustomer = await createCustomer({ phone: "+1234567890" })
+  
+  const result = await llmRouterService.routeMessage({
+    customerId: newCustomer.id,
+    message: "Hello"
+  })
+  
+  expect(result.finalResponse).toContain("Welcome")
+  expect(result.tokenUsage.total).toBe(0)
+  
+  const savedMessage = await prisma.chatMessages.findFirst({
+    where: { session: { customerId: newCustomer.id } }
+  })
+  expect(savedMessage.content).toBe(result.finalResponse)
+})
+```
+
+**Rationale**: First impression matters. Welcome message sets tone, explains capabilities, builds customer trust.
+
+**Enforcement**:
+
+- ✅ MUST be third check (after P1, P2)
+- ✅ Welcome message MUST come from database
+- ✅ MUST support multilanguage
+- ⚠️ **MUST add unit test** (currently missing)
+
+---
+
+#### Rule 4: Normal Flow - Router Agent Orchestration (P4 - STANDARD)
+
+**For enabled customers with existing sessions, Router Agent decides message routing to specialist agents.**
+
+**Requirements**:
+
+- ✅ **Priority**: P4 (after P1, P2, P3)
+- ✅ **Router role**: Pure orchestration (delegation ONLY)
+- ✅ **Router has**: Conversation history (full chat session)
+- ✅ **Router decides**: Which specialist agent to call (productSearchAgent, cartManagementAgent, etc.)
+- ✅ **Router delegates**: Passes customer query to chosen specialist
+- ❌ **Router does NOT**: Respond directly, have tone rules, format answers
+
+**Implementation**:
+
+```typescript
+// llm-router.service.ts - P4 normal flow
+const routerPrompt = await this.promptProcessor.buildRouterPrompt({
+  workspaceId: params.workspaceId,
+  customerLanguage: params.customerLanguage,
+  conversationHistory: chatHistory
+})
+
+const routerDecision = await this.llmService.chat({
+  systemPrompt: routerPrompt,
+  messages: conversationHistory,
+  functions: routerFunctions,  // Delegation functions only
+  temperature: 0.3
+})
+
+if (routerDecision.tool_calls) {
+  const functionName = routerDecision.tool_calls[0].function.name
+  const args = JSON.parse(routerDecision.tool_calls[0].function.arguments)
+  
+  // Delegate to specialist agent
+  if (functionName === "productSearchAgent") {
+    return await this.callProductSearchAgent(args.query, params)
+  } else if (functionName === "cartManagementAgent") {
+    return await this.callCartManagementAgent(args.query, params)
+  }
+  // ... other agents
+}
+```
+
+**Router Functions** (delegation only):
+
+```typescript
+// agent-functions.config.ts - Router ONLY has delegation
+export const ROUTER_FUNCTIONS: FunctionDefinition[] = [
+  {
+    type: "function",
+    function: {
+      name: "productSearchAgent",
+      description: "Delega al Product & Services Search Agent per ricerca prodotti/servizi",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Query di ricerca del cliente" }
+        },
+        required: ["query"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "cartManagementAgent",
+      description: "Delega al Cart Management Agent per operazioni carrello",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Richiesta carrello del cliente" }
+        },
+        required: ["query"]
+      }
+    }
+  },
+  // ... other delegation functions
+]
+```
+
+**Rationale**: Router is traffic cop, not customer service. Separation of concerns (Principle VIII: Multi-Agent Architecture).
+
+**Enforcement**:
+
+- ✅ Router prompt ≤ 3,500 tokens (pure orchestration)
+- ❌ Router MUST NOT have tone rules ("warm", "friendly", emojis)
+- ❌ Router MUST NOT have dialogue examples
+- ❌ Router MUST NOT respond to customer directly
+- ✅ MUST have conversation history (all previous messages)
+
+---
+
+#### Rule 5: Router Maintains Conversation History
+
+**Router Agent MUST have access to FULL conversation history for context-aware delegation.**
+
+**Requirements**:
+
+- ✅ **History source**: `chatMessages` table (sessionId filter)
+- ✅ **History format**: Array of `{role: "user" | "assistant", content: string, timestamp: Date}`
+- ✅ **Order**: Chronological (oldest first)
+- ✅ **Scope**: Current session only (workspace-isolated)
+- ✅ **Passed to**: Router LLM call (provides context for delegation decision)
+
+**Implementation**:
+
+```typescript
+const conversationHistory = await this.prisma.chatMessages.findMany({
+  where: { sessionId: session.id },
+  orderBy: { timestamp: 'asc' },
+  select: {
+    role: true,
+    content: true,
+    timestamp: true
+  }
+})
+
+const routerDecision = await this.llmService.chat({
+  systemPrompt: routerPrompt,
+  messages: conversationHistory,  // ✅ Full history passed
+  functions: routerFunctions
+})
+```
+
+**Schema**:
+
+```prisma
+model ChatMessages {
+  id        String   @id @default(cuid())
+  sessionId String
+  role      String   // "user" | "assistant" | "system"
+  content   String   @db.Text
+  timestamp DateTime @default(now())
+  // ...
+}
+```
+
+**Rationale**: Context enables better delegation decisions (e.g., "add that to cart" requires knowing "that" = last product discussed).
+
+**Enforcement**:
+
+- ✅ MUST query full session history before Router LLM call
+- ✅ MUST order chronologically (oldest first)
+- ✅ MUST include in Router LLM messages array
+
+---
+
+#### Rule 6: Product + Services Unified Agent
+
+**Product Search Agent MUST handle BOTH products AND services in a single unified agent.**
+
+**Requirements**:
+
+- ✅ **Agent name**: "Product & Services Search Agent" (NOT "Product Search Agent")
+- ✅ **Handles**: Product discovery + service discovery (unified flow)
+- ✅ **Variables**: `{{PRODUCTS}}`, `{{SERVICES}}`, `{{CATEGORIES}}`, `{{OFFERS}}` (all in ONE agent)
+- ❌ **NO separation**: Services NOT handled by Router or separate agent
+- ✅ **Tone**: Warm, enthusiastic, highlights discounts, uses customer name
+
+**Current State** (WRONG):
+
+```typescript
+// ❌ Agent name wrong
+agentType: "PRODUCT_SEARCH"
+name: "Product Search Agent"
+
+// ❌ Services flow split between Router and ProductSearch
+```
+
+**Target State** (CORRECT):
+
+```typescript
+// ✅ Correct name
+agentType: "PRODUCT_SEARCH"
+name: "Product & Services Search Agent"
+
+// ✅ Unified handling
+// docs/prompts/product-services-search-agent.md:
+// - Handles {{PRODUCTS}} AND {{SERVICES}}
+// - Unified numbered list (products + services together)
+// - Same confirmation flow for both
+```
+
+**Rationale**: Products and services are similar shopping entities. Unified agent provides consistent UX and simpler architecture.
+
+**Enforcement**:
+
+- ✅ Rename agent in `defaultAgents.ts`
+- ✅ Rename prompt file: `product-search-agent.md` → `product-services-search-agent.md`
+- ✅ Update database seed with correct name
+- ✅ Verify {{SERVICES}} variable in this agent prompt (not Router)
+
+---
+
+#### Rule 7: Variable Uniqueness - One Usage Per Prompt
+
+**Large variables ({{PRODUCTS}}, {{SERVICES}}, {{CATEGORIES}}, {{OFFERS}}) MUST appear at most ONCE per agent prompt.**
+
+**Requirements**:
+
+- ✅ **Already defined**: See Principle III: Variable Uniqueness Constraint
+- ✅ **Enforcement**: Validation in `PromptProcessorService.replaceAllVariables()`
+- ✅ **Current violations**:
+  - ❌ {{SERVICES}} in Router prompt (8,000 tokens)
+  - ❌ {{SERVICES}} in ProductSearch prompt (55,000 tokens)
+  - = 5,000+ token waste per request
+- ✅ **Target state**:
+  - Router: {{FAQ}} ONLY (3,000 tokens)
+  - Product & Services Search: {{PRODUCTS}}, {{SERVICES}}, {{CATEGORIES}}, {{OFFERS}} (60,000 tokens)
+
+**Remediation**:
+
+```markdown
+<!-- docs/prompts/router-agent.md - REMOVE {{SERVICES}} -->
+<!-- Target: 3,000 tokens (orchestration only) -->
+
+<!-- docs/prompts/product-services-search-agent.md - KEEP {{SERVICES}} -->
+<!-- Has: {{PRODUCTS}}, {{SERVICES}}, {{CATEGORIES}}, {{OFFERS}} -->
+```
+
+**Rationale**: See Principle III - prevents 50k+ token duplication, reduces API costs, prevents LLM context overflow.
+
+**Enforcement**:
+
+- ✅ Remove {{SERVICES}} from Router prompt (Issue A1 in audit report)
+- ✅ Add validation test in `validate-agent-prompts.ts`
+- ✅ Constitution Principle III already mandates this
+
+---
+
+#### Rule 8: Router Pure Orchestration (No Dialogue Logic)
+
+**Router Agent prompt MUST contain ONLY intent classification and delegation logic - NO tone rules, NO examples, NO dialogue formatting.**
+
+**Requirements**:
+
+- ✅ **Router prompt contents**:
+  - Intent classification rules
+  - Delegation function descriptions
+  - Edge case handling (5-10 examples MAX)
+  - {{FAQ}} variable (small, <1000 tokens)
+- ❌ **Router MUST NOT have**:
+  - Tone rules ("warm", "friendly", "use emojis")
+  - Customer name usage rules
+  - Response formatting rules
+  - Dialogue examples (>10 examples)
+  - Service flow with confirmations
+- ✅ **Target token count**: ≤ 3,500 tokens (from current 8,000)
+
+**Current State** (WRONG):
+
+```markdown
+<!-- docs/prompts/router-agent.md (8,000 tokens) -->
+
+## Tone
+
+- Warm and friendly
+- Use customer name
+- Add emojis 😊
+- Highlight discounts
+
+## Examples (100+ lines)
+
+User: "hai burrata?"
+Router: "Ciao Andrea! 😊 Sì abbiamo..."
+```
+
+**Target State** (CORRECT):
+
+```markdown
+<!-- docs/prompts/router-agent.md (3,000 tokens) -->
+
+## Role
+
+You route customer messages to specialist agents. NO direct responses.
+
+## Delegation Functions
+
+- productSearchAgent(query) - Product/service search
+- cartManagementAgent(query) - Cart operations
+- orderTrackingAgent(query) - Order info/repeat
+  ...
+
+## Edge Cases (5 examples)
+
+- Ambiguous: "aggiungi quello" → delegate to productSearchAgent (needs context)
+- ...
+```
+
+**Specialist agents have tone**:
+
+```markdown
+<!-- docs/prompts/product-services-search-agent.md -->
+
+## Tone
+
+- Warm, enthusiastic 😊
+- Use customer name: {{nome}}
+- Highlight discounts 💰
+- Add product emojis 🍖🧀🍷
+```
+
+**Rationale**: Router never responds to customer - specialists do. Tone rules in Router are dead code (11,000+ token waste).
+
+**Enforcement**:
+
+- ✅ Strip Router prompt from 8k to 3k tokens (Issue A3 in audit report)
+- ✅ Move tone/examples to specialist agents
+- ✅ Verify Router only has delegation logic
+- ✅ Update constitution Principle VIII to forbid Router dialogue
+
+---
+
+#### Rule 9: Security Gate BEFORE Message Processing
+
+**ALL incoming messages MUST pass through Security & Translation Agent BEFORE Router processing.**
+
+**Requirements**:
+
+- ✅ **Flow order**: WhatsApp → 🛡️ Security Gate → P1-P4 Priorities → Router → Specialist
+- ✅ **Security checks**:
+  - SQL injection patterns (`'; DROP TABLE`, `UNION SELECT`, etc.)
+  - XSS patterns (`<script>`, `javascript:`, etc.)
+  - Offensive content
+  - Data breach attempts
+- ✅ **Translation**:
+  - Language detection
+  - Translation to Italian (base language)
+  - Final translation to customer language (after LLM response)
+- ✅ **Action on threat**: Call `sendAlertEmail(reason, details)` + return safe rejection message
+
+**Current State** (WRONG):
+
+```typescript
+// ❌ Security AFTER Router
+WhatsApp → Priorities (P1-P4) → Router LLM → Specialist → Safety (if needed)
+```
+
+**Target State** (CORRECT):
+
+```typescript
+// ✅ Security FIRST
+WhatsApp → 🛡️ Security Gate → Priorities → Router → Specialist
+
+// Implementation in whatsapp-webhook.controller.ts
+async handleIncomingMessage(req: Request, res: Response) {
+  const { message, phone } = req.body
+  
+  // STEP 1: Security validation (FIRST!)
+  const securityCheck = await this.securityService.validateMessage(message)
+  if (securityCheck.threat) {
+    await this.securityService.sendAlertEmail({
+      reason: securityCheck.threatType, // "SQL_INJECTION", "XSS", etc.
+      details: message,
+      customerId: customer.id,
+      workspaceId: workspace.id
+    })
+    return res.json({
+      status: "blocked",
+      message: "Invalid request"
+    })
+  }
+  
+  // STEP 2: Language detection + translation to Italian
+  const translatedMessage = await this.translationService.toItalian(message)
+  
+  // STEP 3: Normal flow (priorities → router)
+  const result = await this.llmRouterService.routeMessage({
+    message: translatedMessage,
+    customerLanguage: detectedLanguage,
+    // ...
+  })
+  
+  // STEP 4: Translate response back to customer language
+  const finalResponse = await this.translationService.fromItalian(
+    result.finalResponse,
+    detectedLanguage
+  )
+  
+  return res.json({ message: finalResponse })
+}
+```
+
+**Security Agent Functions**:
+
+```typescript
+// docs/prompts/safety-translation-agent.md
+sendAlertEmail(reason, details) // Notify admin of security threat
+```
+
+**Rationale**: Proactive security layer prevents malicious input from reaching LLM or database. Early detection reduces attack surface.
+
+**Enforcement**:
+
+- ✅ Add Security Gate as FIRST step in `whatsapp-webhook.controller.ts`
+- ✅ Update constitution with Security Gate principle
+- ✅ Add tests for SQL injection, XSS detection
+- ⚠️ **CRITICAL**: Currently missing (Issue A4 in audit report)
+
+---
+
+#### Rule 10: Timeline Integrity
+
+**Message flow timeline (debugInfo.steps[]) MUST be 1:1 mirror of actual LLM execution.**
+
+**Requirements**:
+
+- ✅ **Already defined**: See Principle IX: Message Flow Timeline Integrity
+- ✅ **Every LLM call**: MUST push corresponding debugStep
+- ✅ **No shortcuts**: NO hardcoded responses that bypass timeline
+- ✅ **Observability**: Timeline enables debugging, auditing, performance monitoring
+
+**Implementation**:
+
+```typescript
+// llm-router.service.ts - Push debug steps
+debugInfo.steps.push({
+  timestamp: new Date().toISOString(),
+  agentType: "ROUTER",
+  systemPrompt: routerPrompt.substring(0, 200),
+  input: userMessage,
+  decision: routerDecision,
+  tokenUsage: routerTokens
+})
+
+// Specialist agent also pushes
+debugInfo.steps.push({
+  timestamp: new Date().toISOString(),
+  agentType: "PRODUCT_SEARCH",
+  systemPrompt: specialistPrompt.substring(0, 200),
+  input: query,
+  response: specialistResponse,
+  tokenUsage: specialistTokens
+})
+```
+
+**Rationale**: See Principle IX - timeline misalignment causes complete loss of observability.
+
+**Enforcement**:
+
+- ✅ Constitution Principle IX mandates this
+- ✅ Already implemented and tested
+- ✅ Verify after refactoring that all flows push debug steps
+
+---
+
+#### Rule 11: Single Product Display - All Fields
+
+**When product search returns 1 product, display ALL product fields (name, description, price, code, category, origin, certifications, availability, stock).**
+
+**Requirements**:
+
+- ✅ **Trigger**: Search result = exactly 1 product
+- ✅ **Format**: "Format C: Single Product Details" in ProductSearchAgent prompt
+- ✅ **Mandatory fields**:
+  - Name
+  - Description
+  - Price (with discount if applicable)
+  - Product code
+  - Category
+  - Origin
+  - Certifications (halal, bio, DOP, etc.)
+  - Availability
+  - Stock quantity
+- ✅ **Action**: Ask "Vuoi aggiungerlo al carrello? 🛒"
+- ❌ **NO partial display**: Cannot skip fields (show "N/A" if missing)
+
+**Implementation**:
+
+```markdown
+<!-- docs/prompts/product-services-search-agent.md -->
+
+### Format C: Single Product Details
+
+When search returns 1 product OR customer selects number, show ALL fields:
+
+🍖 **{{productName}}**
+📝 **Descrizione**: {{description}}
+💰 **Prezzo**: ~€{{originalPrice}}~ → €{{discountedPrice}} (sconto {{discount}}%)
+📋 **Codice**: {{productCode}}
+🏷️ **Categoria**: {{category}}
+🌍 **Origine**: {{origin}}
+✅ **Certificazioni**: {{certifications}}
+⏰ **Disponibilità**: {{availability}}
+📦 **Stock**: {{stockQuantity}} disponibili
+
+Vuoi aggiungerlo al carrello? 🛒 (sì/no)
+```
+
+**Rationale**: Customer needs complete information to make purchase decision. Partial details reduce conversion.
+
+**Enforcement**:
+
+- ✅ Defined in ProductSearchAgent prompt (docs/prompts/product-search-agent.md:280-350)
+- ⚠️ **Soft requirement** - LLM could ignore, but examples guide behavior
+- ⚠️ Consider: Add response validation (check all fields present)
+
+---
+
+#### Rule 12: addToCart Supports Products AND Services
+
+**Cart addition function MUST accept both `type: "PRODUCT"` and `type: "SERVICE"` items.**
+
+**Requirements**:
+
+- ✅ **Function signature**: `addToCart(items: Array<{code, quantity, type, notes?}>)`
+- ✅ **Type parameter**: `"PRODUCT" | "SERVICE"`
+- ✅ **Single call supports mixed**: Can add products + services in same call
+- ✅ **Quantity**: Products = user-defined, Services = always 1
+- ✅ **Backend handler**: MUST process both types and save to cart
+
+**Implementation**:
+
+```typescript
+// agent-functions.config.ts - Function definition
+{
+  type: "function",
+  function: {
+    name: "addToCart",
+    description: "Aggiunge prodotti/servizi al carrello. SUPPORTA PRODOTTI E SERVIZI.",
+    parameters: {
+      type: "object",
+      properties: {
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              code: { type: "string", description: "Codice prodotto o servizio" },
+              quantity: { type: "number", description: "Quantità (default: 1)" },
+              type: {
+                type: "string",
+                enum: ["PRODUCT", "SERVICE"],
+                description: "Tipo: PRODUCT per prodotti, SERVICE per servizi"
+              },
+              notes: { type: "string", description: "Note opzionali" }
+            },
+            required: ["code", "type"]
+          }
+        }
+      },
+      required: ["items"]
+    }
+  }
+}
+
+// calling-functions.service.ts - Backend handler
+async addToCart(args: { items: Array<{code: string, quantity?: number, type: "PRODUCT" | "SERVICE", notes?: string}> }) {
+  for (const item of args.items) {
+    if (item.type === "PRODUCT") {
+      const product = await this.prisma.products.findUnique({
+        where: { code: item.code, workspaceId }
+      })
+      // Add product to cart
+    } else if (item.type === "SERVICE") {
+      const service = await this.prisma.services.findUnique({
+        where: { code: item.code, workspaceId }
+      })
+      // Add service to cart
+    }
+  }
+}
+```
+
+**Examples**:
+
+```json
+// Single product
+{ "items": [{ "code": "BUR-001", "type": "PRODUCT", "quantity": 2 }] }
+
+// Single service
+{ "items": [{ "code": "SRV-001", "type": "SERVICE", "quantity": 1 }] }
+
+// Mixed (product + service)
+{
+  "items": [
+    { "code": "PASTA-005", "type": "PRODUCT", "quantity": 3 },
+    { "code": "SRV-001", "type": "SERVICE", "quantity": 1 }
+  ]
+}
+```
+
+**Rationale**: Products and services are both purchasable items. Unified cart flow simplifies UX.
+
+**Enforcement**:
+
+- ✅ Function definition includes `type` parameter (already implemented)
+- ⚠️ **Needs verification**: Backend handler processes both types (Issue B2 in audit report)
+- ⚠️ **Missing tests**: Add test for `addToCart([{type: "SERVICE", ...}])`
+
+---
+
+### Summary: Priority Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────┐
+│  WhatsApp Message Received                          │
+└─────────────────────┬───────────────────────────────┘
+                      ↓
+┌─────────────────────────────────────────────────────┐
+│  🛡️ SECURITY GATE (NEW - Rule 9)                    │
+│  - SQL injection check                              │
+│  - XSS check                                        │
+│  - Language detection                               │
+│  - Translation to Italian (base)                    │
+└─────────────────────┬───────────────────────────────┘
+                      ↓
+┌─────────────────────────────────────────────────────┐
+│  P1: Blocked Customer Check (Rule 1)                │
+│  isBlocked = true?                                  │
+│    YES → Return empty (NO DB, NO LLM, 0 tokens)     │
+│    NO  → Continue to P2                             │
+└─────────────────────┬───────────────────────────────┘
+                      ↓
+┌─────────────────────────────────────────────────────┐
+│  P2: Channel Disabled Check (Rule 2)                │
+│  challengeStatus = false?                           │
+│    YES → Return WIP message (DB source, 0 LLM)      │
+│    NO  → Continue to P3                             │
+└─────────────────────┬───────────────────────────────┘
+                      ↓
+┌─────────────────────────────────────────────────────┐
+│  P3: New Customer Check (Rule 3)                    │
+│  messageCount = 0?                                  │
+│    YES → Return welcome message (DB source, 0 LLM)  │
+│    NO  → Continue to P4                             │
+└─────────────────────┬───────────────────────────────┘
+                      ↓
+┌─────────────────────────────────────────────────────┐
+│  P4: Router Agent Orchestration (Rule 4)            │
+│  - Load conversation history (Rule 5)               │
+│  - Router LLM call (pure orchestration, Rule 8)     │
+│  - Delegation decision                              │
+│  - Push to debugInfo timeline (Rule 10)             │
+└─────────────────────┬───────────────────────────────┘
+                      ↓
+        ┌─────────────┴──────────────┐
+        ↓                            ↓
+┌──────────────────┐    ┌────────────────────────────┐
+│ Product/Service  │    │ Cart / Order / Support     │
+│ Search Agent     │    │ Agents                     │
+│ (Rules 6,11)     │    │ (Rule 12)                  │
+└──────────────────┘    └────────────────────────────┘
+        │                            │
+        └─────────────┬──────────────┘
+                      ↓
+┌─────────────────────────────────────────────────────┐
+│  Translation to Customer Language                   │
+│  Italian (base) → ES/PT/FR/EN                       │
+└─────────────────────┬───────────────────────────────┘
+                      ↓
+┌─────────────────────────────────────────────────────┐
+│  WhatsApp Response Sent                             │
+└─────────────────────────────────────────────────────┘
+```
+
+---
+
+### Compliance Checklist
+
+**Before deploying ANY LLM architecture changes**:
+
+- [ ] **Rule 1**: Blocked customers return empty (test coverage ✅)
+- [ ] **Rule 2**: Channel disabled returns WIP from DB (test coverage ✅)
+- [ ] **Rule 3**: New customers get welcome from DB (⚠️ add test)
+- [ ] **Rule 4**: Router delegates (never responds directly)
+- [ ] **Rule 5**: Router has full conversation history
+- [ ] **Rule 6**: Agent named "Product & Services Search Agent" (❌ wrong name, fix)
+- [ ] **Rule 7**: {{SERVICES}} appears ONCE (❌ duplicated, fix)
+- [ ] **Rule 8**: Router ≤ 3,500 tokens, no tone/examples (❌ 8k tokens, fix)
+- [ ] **Rule 9**: Security Gate BEFORE priorities (❌ missing, add)
+- [ ] **Rule 10**: Timeline has all LLM calls (✅ compliant)
+- [ ] **Rule 11**: Single product shows all fields (⚠️ in prompt, not enforced)
+- [ ] **Rule 12**: addToCart handles PRODUCT/SERVICE (⚠️ verify backend)
+
+**Violations Block Deployment**: Rules 6, 7, 8, 9 are CRITICAL (marked ❌ above).
+
+---
+
 ## Operational Configuration
 
 ### Debug Mode (SHOULD - RECOMMENDED)
@@ -2234,4 +3263,4 @@ describe("Workspace Isolation", () => {
 
 ---
 
-**Version**: 1.9.1 | **Ratified**: 2025-11-12 | **Last Amended**: 2025-11-14
+**Version**: 2.0.0 | **Ratified**: 2025-11-12 | **Last Amended**: 2025-11-15

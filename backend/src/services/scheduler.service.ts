@@ -127,7 +127,7 @@ export class SchedulerService {
 
   /**
    * 📊 Cleanup old product search analytics data (older than 6 months)
-   * 
+   *
    * Runs weekly to maintain database performance and comply with data retention policy.
    * Deletes ProductSearch records older than 6 months while maintaining workspace isolation.
    */

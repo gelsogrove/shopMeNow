@@ -40,6 +40,7 @@ import { toast } from "@/lib/toast"
 import {
   Agent,
   exportDatabase,
+  getAgentConfigs,
   getAgents,
   updateAgent,
 } from "@/services/agentApi"
@@ -76,37 +77,6 @@ interface AgentFormData {
   order: number
   agentType: string
   icon?: string
-}
-
-// Mapping agent types to their available call functions
-const AGENT_CALL_FUNCTIONS: Record<string, string[]> = {
-  router: [
-    // Sub-Agent Delegation Functions
-    "productSearchAgent",
-    "cartManagementAgent",
-    "orderTrackingAgent",
-    "customerSupportAgent",
-    // Direct Utility Functions
-    "handlePushNotifications", // 🔔 SUBSCRIBE/UNSUBSCRIBE push notifications
-  ],
-  product_search: [
-    "cartManagementAgent", // 🛒 ONLY - Delegate to Cart Agent for adding products (removed searchProducts, searchProductByCertifications)
-  ],
-  cart_management: [
-    "addToCart",
-    "viewCart",
-    "clearCart", // Removed: removeFromCart, updateCartQuantity
-  ],
-  order_tracking: [
-    "getOrderHistory",
-    "getLastOrders",
-    "getOrderDetails",
-    "trackOrderStatus",
-    "sendInvoice",
-    "repeatLastOrder",
-  ],
-  customer_support: ["contactSupport"],
-  safety_translation: ["sendAlertEmail"], // Sends alerts for security/policy violations
 }
 
 // Map icon name from database to Lucide icon component
@@ -160,6 +130,9 @@ export function AgentConfigurationPage() {
   const { workspace } = useWorkspace()
   const navigate = useNavigate()
   const [agents, setAgents] = useState<Agent[]>([])
+  const [agentFunctions, setAgentFunctions] = useState<
+    Record<string, string[]>
+  >({}) // ✅ Real functions from API
   const [isLoading, setIsLoading] = useState(true)
   const [editingAgents, setEditingAgents] = useState<
     Record<string, AgentFormData>
@@ -186,11 +159,24 @@ export function AgentConfigurationPage() {
       try {
         setIsLoading(true)
         logger.info("Loading agents for workspace:", workspace.id)
-        const agentsData = await getAgents(workspace.id)
+
+        // ✅ Load agents AND their real available functions from database
+        const [agentsData, configsData] = await Promise.all([
+          getAgents(workspace.id),
+          getAgentConfigs(workspace.id),
+        ])
 
         // Sort by order field (Router Agent first with order=0)
         const sortedAgents = agentsData.sort((a, b) => a.order - b.order)
         setAgents(sortedAgents)
+
+        // ✅ Map availableFunctions from database to agentId
+        const functionsMap: Record<string, string[]> = {}
+        configsData.agents.forEach((config) => {
+          functionsMap[config.id] = config.availableFunctions || []
+        })
+        setAgentFunctions(functionsMap)
+        logger.info("Agent functions loaded from database:", functionsMap)
 
         // Initialize editing state
         const initialEditing: Record<string, AgentFormData> = {}
@@ -477,10 +463,12 @@ export function AgentConfigurationPage() {
                 const formData = editingAgents[agent.id]
                 if (!formData) return null
 
-                // Normalize agent type to lowercase for lookup
-                const normalizedType = formData.agentType.toLowerCase()
-                const callFunctions = AGENT_CALL_FUNCTIONS[normalizedType] || []
+                // ✅ Get real available functions from database
+                const callFunctions = agentFunctions[agent.id] || []
                 const isSaving = savingAgents[agent.id]
+
+                // Normalize agent type to lowercase for display
+                const normalizedType = formData.agentType.toLowerCase()
 
                 // Agent hierarchy levels
                 const isRouter = normalizedType === "router"

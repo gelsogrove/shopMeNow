@@ -67,6 +67,25 @@ export class ServiceRepository implements IServiceRepository {
   }
   
   /**
+   * Find service by service code (e.g., "SRV-001", "GFT001")
+   */
+  async findByServiceCode(code: string, workspaceId: string): Promise<Service | null> {
+    try {
+      const service = await prisma.services.findFirst({
+        where: { 
+          code,
+          workspaceId 
+        }
+      });
+      
+      return service ? new Service(service) : null;
+    } catch (error) {
+      logger.error(`Error finding service by code ${code}:`, error);
+      return null;
+    }
+  }
+  
+  /**
    * Create a new service
    */
   async create(data: Partial<Service>): Promise<Service> {

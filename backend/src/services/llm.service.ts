@@ -1,6 +1,7 @@
 import { SafetyTranslationAgent } from "../application/agents/SafetyTranslationAgent"
 import { LinkGeneratorService } from "../application/services/link-generator.service"
 import { TokenService } from "../application/services/token.service"
+import { getAllFunctions } from "../config/agent-functions.config"
 import { getLLMConfig } from "../config/llm.config"
 import { LLMRequest } from "../types/whatsapp.types"
 import logger from "../utils/logger"
@@ -824,164 +825,9 @@ export class LLMService {
   }
 
   private getAvailableFunctions() {
-    // 🎯 PRIORITY ORDER (highest to lowest):
-    // 1. ContactOperator (🚨 PRIORITY 1 - Frustration, explicit operator request)
-    // 2. GetLinkOrderByCode (🚨 PRIORITY 2 - View specific order)
-    // 3. repeatOrder (⚙️ PRIORITY 3 - Repeat previous order, requires confirmation)
-    // 4. addProduct (⚙️ PRIORITY 4 - Add single product, requires confirmation)
-    // 4.5. manageNotifications (🔔 PRIORITY 4.5 - SUBSCRIBE/UNSUBSCRIBE push notifications)
-    // 5. searchProduct (📊 PRIORITY 5 - BACKGROUND ONLY, non-blocking)
-
-    return [
-      {
-        type: "function",
-        function: {
-          name: "ContactOperator",
-          description:
-            "🚨 PRIORITY 1 - HIGHEST. CHIAMA IMMEDIATAMENTE quando utente: 1) RICHIEDE ESPLICITAMENTE operatore: 'operatore', 'parlare con operatore', 'assistenza umana', 'customer service', 'voglio parlare con', 'operator', 'human'. 2) ESPRIME FRUSTRAZIONE/PROBLEMA CRITICO (🔴 trigger automatico - NO conferma): 'merce scaduta', 'prodotto scaduto', 'scaduto', 'danneggiato', 'rotto', 'difettoso', 'marcio', 'andato a male', 'stufo/a', 'problema grave', 'sempre problemi', 'ogni volta', 'mai funziona', 'pessimo servizio', 'non funziona mai'. Se rilevi UNA di queste parole → ESEGUI SUBITO ContactOperator() senza chiedere conferma! NON rispondere con testo generico, CHIAMA la funzione!",
-          parameters: {
-            type: "object",
-            properties: {},
-            required: [],
-          },
-        },
-      },
-      {
-        type: "function",
-        function: {
-          name: "GetLinkOrderByCode",
-          description:
-            "🚨 PRIORITY 2 - HIGH. Fornisce il link per visualizzare UN SINGOLO ordine specifico tramite codice ordine. Usare quando l'utente vuole: 'vedere ordine specifico', 'dettagli ordine', 'fattura ordine', 'ultimo ordine', 'ordine ORD-123'. Se orderCode non specificato → usa automaticamente lastordercode. IMPORTANTE: Ha PRIORITÀ sulle FAQ per 'ultimo ordine'. NON usare per 'lista tutti gli ordini' (usa [LINK_ORDERS_WITH_TOKEN] token). NON usare per tracking 'dov'è il mio ordine' (tracking fisico).",
-          parameters: {
-            type: "object",
-            properties: {
-              orderCode: {
-                type: "string",
-                description:
-                  "Il codice dell'ordine da visualizzare. Se l'utente dice 'ultimo ordine' usa il lastordercode.",
-              },
-            },
-            required: ["orderCode"],
-          },
-        },
-      },
-      {
-        type: "function",
-        function: {
-          name: "repeatOrder",
-          description:
-            "⚙️ PRIORITY 3 - MEDIUM. Ripete esattamente lo stesso ordine di una volta precedente, aggiungendo TUTTI i prodotti al carrello. Usare quando l'utente dice: 'ripeti ordine', 'ordina di nuovo come prima', 'voglio lo stesso di prima', 'ripeti ultimo ordine', 'voglio rifare l'ultimo ordine', 'rifare ordine', 'come l'ultima volta', 'stesso ordine', 'stessi prodotti', 'ordina stessa cosa'. FLOW OBBLIGATORIO: 1) Mostra contenuto ordine, 2) Chiedi SEMPRE conferma 'Ricreo il tuo ultimo ordine?', 3) Se conferma → chiama repeatOrder(). Svuota carrello esistente e ricomincia pulito. Se orderCode non specificato → usa automaticamente ultimo ordine. Verifica disponibilità e avvisa se prodotti non disponibili. Dopo aggiunta → mostra link carrello. DISAMBIGUAZIONE: 'ripeti ordine'/'rifare ordine' = repeatOrder | 'aggiungi burrata' = addProduct.",
-          parameters: {
-            type: "object",
-            properties: {
-              orderCode: {
-                type: "string",
-                description:
-                  "Codice ordine da ripetere (opzionale). Se non specificato, usa automaticamente l'ultimo ordine del cliente. Es: 'ORD-123'.",
-              },
-            },
-            required: [],
-          },
-        },
-      },
-      {
-        type: "function",
-        function: {
-          name: "resetCart",
-          description:
-            "🗑️ PRIORITY 3.5 - MEDIUM (Richiede SEMPRE conferma). Svuota COMPLETAMENTE il carrello del cliente, eliminando TUTTI i prodotti/servizi. " +
-            "QUANDO USARE: Cliente dice 'cancella carrello', 'svuota carrello', 'elimina tutto dal carrello', 'pulisci carrello', 'ricomincia da capo', 'reset carrello', 'rimuovi tutto'. " +
-            "⚠️ DISAMBIGUAZIONE CRITICA: 'cancella CARRELLO' / 'svuota TUTTO' → resetCart() (elimina TUTTO il carrello) | 'cancella BURRATA' / 'rimuovi PARMIGIANO' → removeProduct() (elimina UN prodotto specifico). " +
-            "🚨 FLOW OBBLIGATORIO: 1) Cliente chiede di svuotare carrello → 2) TU chiedi SEMPRE conferma: 'Vuoi davvero svuotare il carrello? Perderai tutti i prodotti! 🗑️' → 3) Aspetti risposta → 4a) Se conferma ('sì', 'ok', 'procedi', 'conferma') → chiami resetCart() → mostri messaggio successo | 4b) Se rifiuta ('no', 'aspetta', 'annulla') → NON chiami resetCart(), mantieni carrello. " +
-            "❌ NON chiamare se: cliente vuole rimuovere UN prodotto specifico, cliente non ha confermato esplicitamente, carrello già vuoto. " +
-            "DOPO svuotamento: mostra messaggio risultato CF + suggerisci offerte/prodotti per ricominciare.",
-          parameters: {
-            type: "object",
-            properties: {},
-            required: [],
-          },
-        },
-      },
-      {
-        type: "function",
-        function: {
-          name: "addProduct",
-          description:
-            "⚙️ PRIORITY 4 - MEDIUM. Aggiunge uno o più prodotti al carrello del cliente. Usare SOLO DOPO che il cliente ha CONFERMATO di voler aggiungere il/i prodotto/i. FLOW OBBLIGATORIO: 1) Mostra prodotto/i con prezzo e stock, 2) Chiedi 'Vuoi aggiungerlo/i al carrello? 🛒', 3) Se conferma ('sì', 'ok', 'perfetto', 'aggiungi', 'tutti') → chiama addProduct(products), 4) Dopo aggiunta → mostra link carrello. ESEMPI: SINGOLO: [{productCode:'BUR-001',quantity:1}] | MULTIPLI: [{productCode:'PASTA-005',quantity:1},{productCode:'COND-004',quantity:2},{productCode:'FORMAG-002',quantity:1}]. NON chiamare se: cliente non ha confermato, stock insufficiente, productCode mancante, prodotto non trovato, utente sta solo chiedendo info. DISAMBIGUAZIONE: 'hai la burrata?' = searchProduct (BACKGROUND) | 'aggiungi burrata' (DOPO conferma) = addProduct | 'ripeti ordine' = repeatOrder.",
-          parameters: {
-            type: "object",
-            properties: {
-              products: {
-                type: "array",
-                description:
-                  "Array di prodotti da aggiungere. Anche per singolo prodotto, usare array con 1 elemento.",
-                items: {
-                  type: "object",
-                  properties: {
-                    productCode: {
-                      type: "string",
-                      description:
-                        "Codice esatto del prodotto. Es: 'BUR-001', 'PASTA-005', 'COND-004'.",
-                    },
-                    quantity: {
-                      type: "number",
-                      description:
-                        "Quantità (default: 1, intero positivo). Min: 1.",
-                    },
-                    notes: {
-                      type: "string",
-                      description:
-                        "Note opzionali per questo prodotto specifico.",
-                    },
-                  },
-                  required: ["productCode"],
-                },
-              },
-            },
-            required: ["products"],
-          },
-        },
-      },
-      {
-        type: "function",
-        function: {
-          name: "manageNotifications",
-          description:
-            "🔔 PRIORITY 4.5 - MEDIUM. Gestisce sottoscrizione/cancellazione notifiche push WhatsApp. TRIGGER NATURALI (consigliati): Usare quando utente chiede in linguaggio naturale: 'voglio ricevere offerte', 'iscrivimi', 'subscribe me', 'quiero ofertas', 'quero receber', 'non voglio più offerte', 'disiscrivimi', 'unsubscribe', 'cancelar', etc. OPZIONE ALTERNATIVA (avanzata): riconosce keywords esatte 'SUBSCRIBE'/'UNSUBSCRIBE' (uppercase). FLOW OBBLIGATORIO: 1) Utente chiede iscrizione/disiscrizione (linguaggio naturale o keywords), 2) Chiedi conferma semplice: 'Vuoi iscriverti alle notifiche push? 📬' o 'Vuoi disiscriverti? 📭', 3) Se conferma ('sì','yes','si','sí','sim') → chiama manageNotifications(action), 4) Mostra messaggio risultato. {{SUBSCRIBE_MESSAGE}} token mostra invito SOLO se push_notifications_consent=false. NON suggerire mai disiscrizione nel chatbot normale (solo in campagne push). NON chiamare se: utente non ha confermato, contesto ambiguo.",
-          parameters: {
-            type: "object",
-            properties: {
-              action: {
-                type: "string",
-                enum: ["SUBSCRIBE", "UNSUBSCRIBE"],
-                description:
-                  "Azione richiesta: SUBSCRIBE (iscriviti) o UNSUBSCRIBE (disiscriviti). SEMPRE maiuscolo nel parametro.",
-              },
-            },
-            required: ["action"],
-          },
-        },
-      },
-      {
-        type: "function",
-        function: {
-          name: "searchProduct",
-          description:
-            "📊 PRIORITY 5 - BACKGROUND ONLY (non-blocking). Registra la ricerca di un prodotto da parte del cliente per analytics e trend analysis. Usare quando l'utente cerca/chiede di un prodotto alimentare: 'hai la burrata?', 'avete prosciutto?', 'mi serve parmigiano', 'vendete champagne?', 'non trovate tartufo?'. Viene chiamata SIA per prodotti trovati CHE per prodotti NON trovati. ⚠️ BACKGROUND FUNCTION: Il LLM continua a rispondere NORMALMENTE dopo la chiamata, l'utente NON deve sapere della registrazione. NON bloccare il flusso conversazionale con messaggi tecnici tipo 'sto registrando'. La funzione viene eseguita in parallelo alla risposta. NON usare per prodotti non alimentari (software, auto, abbigliamento). NON chiamare due volte per stesso prodotto nella stessa conversazione. DISAMBIGUAZIONE: 'hai burrata?' = searchProduct (BACKGROUND) | 'aggiungi burrata' (DOPO conferma) = addProduct.",
-          parameters: {
-            type: "object",
-            properties: {
-              productName: {
-                type: "string",
-                description:
-                  "Il nome del prodotto cercato dal cliente (obbligatorio, max 255 caratteri). Es: 'burrata', 'prosciutto di parma', 'vino rosso', 'champagne', 'tartufo', 'mozzarella'.",
-              },
-            },
-            required: ["productName"],
-          },
-        },
-      },
-    ]
+    // ✅ SINGLE SOURCE OF TRUTH: Functions loaded from agent-functions.config.ts
+    // This ensures consistency between LLM, database seed, and frontend UI
+    return getAllFunctions()
   }
 
   private async generateLLMResponse(

@@ -48,6 +48,7 @@ import { getFunctionsForRouter } from "../config/agent-functions"
 import { AgentConfigRepository } from "../repositories/agent-config.repository"
 import { FAQRepository } from "../repositories/faq.repository"
 import { SearchConversationRepository } from "../repositories/searchConversation.repository"
+import { SecurityService } from "./security.service"
 import logger from "../utils/logger"
 import { AgentLoggerService } from "./agent-logger.service"
 import { ConversationManager } from "./conversation-manager.service"
@@ -364,10 +365,59 @@ export class LLMRouterService {
         conversationId: params.conversationId,
       })
 
-      // 🆕 Feature 126: PRIORITY CHECKS (P1 → P2) - Run BEFORE any LLM processing
+      // 🆕 SECURITY GATE: Check for malicious patterns FIRST (Constitution Rule 9)
+      // This runs BEFORE P1/P2/P3 to block SQL injection, XSS, etc.
+      const securityCheck = await SecurityService.checkMessage(
+        params.message,
+        params.customerId,
+        params.workspaceId
+      )
+
+      if (!securityCheck.isSafe) {
+        const executionTimeMs = Date.now() - startTime
+
+        logger.error("🚨 SECURITY GATE: Malicious pattern detected", {
+          workspaceId: params.workspaceId,
+          customerId: params.customerId,
+          threatType: securityCheck.threatType,
+          detectedPattern: securityCheck.detectedPattern,
+          severity: securityCheck.severity,
+          executionTimeMs,
+        })
+
+        // Save user message (INBOUND) - for audit trail
+        await this.conversationManager.saveUserMessage({
+          workspaceId: params.workspaceId,
+          customerId: params.customerId,
+          conversationId: params.conversationId,
+          content: params.message,
+        })
+
+        // Save generic security warning (OUTBOUND)
+        await this.conversationManager.saveAssistantMessage({
+          workspaceId: params.workspaceId,
+          customerId: params.customerId,
+          conversationId: params.conversationId,
+          content: securityCheck.message || "Security alert",
+          agentType: "ROUTER" as AgentType,
+        })
+
+        // Return generic security message (don't reveal detection details)
+        return {
+          response: securityCheck.message || "Security alert",
+          agentUsed: "ROUTER" as AgentType,
+          confidence: 1.0,
+          tokensUsed: 0,
+          executionTimeMs,
+          wasFAQ: false,
+          isBlocked: false,
+        }
+      }
+
+      // 🆕 Feature 126: PRIORITY CHECKS (P1 → P2) - Run AFTER security gate
       // These checks save tokens by bypassing expensive LLM calls when not needed
 
-      // P1: Check if customer is blocked (SECURITY - HIGHEST PRIORITY)
+      // P1: Check if customer is blocked (SECURITY - HIGHEST PRIORITY after threats)
       const isBlocked = await this.checkBlockedUser(params.customerId)
       if (isBlocked) {
         const executionTimeMs = Date.now() - startTime

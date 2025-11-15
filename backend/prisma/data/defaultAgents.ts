@@ -1,6 +1,7 @@
 import { AgentType } from "@prisma/client"
 import * as fs from "fs"
 import * as path from "path"
+import { getAgentFunctionNames } from "../../src/config/agent-functions.config"
 
 interface DefaultAgent {
   name: string
@@ -55,7 +56,7 @@ export const defaultAgents = (
     maxTokens: 2048,
     order: 0,
     isActive: true,
-    availableFunctions: null,
+    availableFunctions: getAgentFunctionNames("ROUTER"),
   },
 
   // ====================================================================
@@ -74,7 +75,7 @@ export const defaultAgents = (
     maxTokens: 2048,
     order: 1,
     isActive: true,
-    availableFunctions: null,
+    availableFunctions: getAgentFunctionNames("PRODUCT_SEARCH"),
   },
 
   // ====================================================================
@@ -93,7 +94,7 @@ export const defaultAgents = (
     maxTokens: 2048,
     order: 2,
     isActive: true,
-    availableFunctions: null,
+    availableFunctions: getAgentFunctionNames("CART_MANAGEMENT"),
   },
 
   // ====================================================================
@@ -112,7 +113,7 @@ export const defaultAgents = (
     maxTokens: 2048,
     order: 3,
     isActive: true,
-    availableFunctions: null,
+    availableFunctions: getAgentFunctionNames("ORDER_TRACKING"),
   },
 
   // ====================================================================
@@ -131,7 +132,7 @@ export const defaultAgents = (
     maxTokens: 2048,
     order: 4,
     isActive: true,
-    availableFunctions: null,
+    availableFunctions: getAgentFunctionNames("CUSTOMER_SUPPORT"),
   },
 
   // ====================================================================
@@ -150,6 +151,6 @@ export const defaultAgents = (
     maxTokens: 1024,
     order: 5,
     isActive: true,
-    availableFunctions: null,
+    availableFunctions: getAgentFunctionNames("SAFETY_TRANSLATION"), // Empty array []
   },
 ]

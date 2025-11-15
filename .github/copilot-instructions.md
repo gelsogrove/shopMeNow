@@ -168,11 +168,11 @@ ShopME is a **WhatsApp-based e-commerce platform** with AI chatbot integration. 
   // Validation function in PromptProcessorService
   private validatePromptVariables(prompt: string): void {
     const largeVariables = ["PRODUCTS", "OFFERS", "SERVICES", "CATEGORIES"]
-    
+
     for (const variable of largeVariables) {
       const regex = new RegExp(`\\{\\{${variable}\\}\\}`, "g")
       const matches = prompt.match(regex)
-      
+
       if (matches && matches.length > 1) {
         throw new ValidationError(
           `Variable {{${variable}}} can only appear once per prompt. Found ${matches.length} occurrences.`
@@ -218,6 +218,22 @@ ShopME is a **WhatsApp-based e-commerce platform** with AI chatbot integration. 
   - ESLint catches unused imports/variables
   - Code reviews verify no duplication or dead code
 - See `.specify/memory/constitution.md` Principle VII for complete details
+
+### 13. **NEVER Touch Working Code** (🚨 CRITICAL)
+
+- **RULE**: If a file/import/export pattern is working correctly, **NEVER** modify it without explicit user request
+- **EXAMPLES OF VIOLATIONS**:
+  - ❌ Changing `export function MyComponent()` to `export default function MyComponent()` when it works
+  - ❌ Changing `import { Component }` to `import Component` when it works
+  - ❌ Refactoring working code structure "for consistency" without being asked
+  - ❌ Moving files or renaming exports that are already functioning
+- **WHEN TO MODIFY**:
+  - ✅ User explicitly asks to change export/import pattern
+  - ✅ There's an actual runtime error that needs fixing
+  - ✅ Code is broken and needs repair
+- **ANDREA'S WORDS**: "ma cosa devo fare mi fai impazzire cosi" - when agent breaks working code
+- **CONSEQUENCE**: Breaking working code wastes Andrea's time and creates frustration
+- **VERIFICATION**: Before touching ANY export/import, ask: "Is this currently working? If YES → DON'T TOUCH IT!"
 
 ---
 
