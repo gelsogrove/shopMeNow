@@ -69,7 +69,7 @@ export const defaultAgents = (
     icon: "Search",
     description:
       "Specialist in product search, filters, certifications, and catalog navigation",
-    systemPrompt: loadPrompt("product-search-agent.md"),
+    systemPrompt: loadPrompt("product-services-search-agent-v4-OPTIMIZED.md"),
     model: "openai/gpt-4o-mini",
     temperature: 0.3, // ✅ Increased from 0.0 to 0.3 for better semantic matching (dolci=desserts)
     maxTokens: 2048,
