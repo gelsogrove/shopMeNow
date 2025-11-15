@@ -1,10 +1,10 @@
 /**
  * Update Agent Prompts - PHASE 4: Prompt Architecture Refactoring
- * 
+ *
  * Updates database with new refactored prompts:
  * 1. ROUTER: router-agent.md → router-agent-REFACTORED.md
  * 2. PRODUCT_SEARCH: product-search-agent.md → product-services-search-agent.md
- * 
+ *
  * Other agents remain unchanged.
  */
 
@@ -48,7 +48,9 @@ async function updateRefactoredPrompts() {
       console.log("⚠️  No ROUTER agents found")
     } else {
       console.log(`   Found ${routerAgents.length} ROUTER agents:`)
-      routerAgents.forEach((a) => console.log(`   - ${a.name} (workspace: ${a.workspaceId})`))
+      routerAgents.forEach((a) =>
+        console.log(`   - ${a.name} (workspace: ${a.workspaceId})`)
+      )
 
       const routerResult = await prisma.agentConfig.updateMany({
         where: { type: "ROUTER" },
@@ -56,7 +58,9 @@ async function updateRefactoredPrompts() {
       })
 
       console.log(`   ✅ Updated ${routerResult.count} ROUTER agents`)
-      console.log(`   📊 New size: ${NEW_PROMPTS.ROUTER.length} chars (~2,294 words)\n`)
+      console.log(
+        `   📊 New size: ${NEW_PROMPTS.ROUTER.length} chars (~2,294 words)\n`
+      )
       totalUpdated += routerResult.count
     }
 
@@ -71,7 +75,9 @@ async function updateRefactoredPrompts() {
       console.log("⚠️  No PRODUCT_SEARCH agents found")
     } else {
       console.log(`   Found ${productAgents.length} PRODUCT_SEARCH agents:`)
-      productAgents.forEach((a) => console.log(`   - ${a.name} (workspace: ${a.workspaceId})`))
+      productAgents.forEach((a) =>
+        console.log(`   - ${a.name} (workspace: ${a.workspaceId})`)
+      )
 
       const productResult = await prisma.agentConfig.updateMany({
         where: { type: "PRODUCT_SEARCH" },
@@ -79,7 +85,9 @@ async function updateRefactoredPrompts() {
       })
 
       console.log(`   ✅ Updated ${productResult.count} PRODUCT_SEARCH agents`)
-      console.log(`   📊 New size: ${NEW_PROMPTS.PRODUCT_SEARCH.length} chars (~1,948 words)`)
+      console.log(
+        `   📊 New size: ${NEW_PROMPTS.PRODUCT_SEARCH.length} chars (~1,948 words)`
+      )
       console.log(`   🆕 Now includes: Product & Services unified agent\n`)
       totalUpdated += productResult.count
     }
@@ -87,9 +95,13 @@ async function updateRefactoredPrompts() {
     console.log("─".repeat(60))
     console.log(`🎉 PHASE 4 COMPLETE! Updated ${totalUpdated} agents total\n`)
     console.log("📝 Changes Applied:")
-    console.log("   ✅ ROUTER: Simplified, {{SERVICES}} removed, pure orchestration")
+    console.log(
+      "   ✅ ROUTER: Simplified, {{SERVICES}} removed, pure orchestration"
+    )
     console.log("   ✅ PRODUCT_SEARCH: Renamed to 'Product & Services Search'")
-    console.log("   ✅ SERVICE SELECTION FLOW: Moved from Router to Product agent")
+    console.log(
+      "   ✅ SERVICE SELECTION FLOW: Moved from Router to Product agent"
+    )
     console.log("   ✅ Constitution Principle XIII: Rules 6, 7, 8 implemented")
     console.log("\n💾 Database updated successfully!")
   } catch (error) {

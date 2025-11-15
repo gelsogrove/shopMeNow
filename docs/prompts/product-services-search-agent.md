@@ -584,6 +584,7 @@ Vuoi aggiungerlo al carrello? 🛒
 **Last Updated**: 2025-11-15
 
 **Key Changes from v2.0**:
+
 - ✅ Renamed to "Product & Services Search Agent"
 - ✅ Added SERVICE SELECTION FLOW (3 steps)
 - ✅ Added Format D for service details

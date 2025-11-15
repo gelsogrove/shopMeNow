@@ -48,12 +48,12 @@ import { getFunctionsForRouter } from "../config/agent-functions"
 import { AgentConfigRepository } from "../repositories/agent-config.repository"
 import { FAQRepository } from "../repositories/faq.repository"
 import { SearchConversationRepository } from "../repositories/searchConversation.repository"
-import { SecurityService } from "./security.service"
 import logger from "../utils/logger"
 import { AgentLoggerService } from "./agent-logger.service"
 import { ConversationManager } from "./conversation-manager.service"
 import { FunctionExecutor } from "./function-executor.service"
 import { PromptProcessorService } from "./prompt-processor.service" // 🆕 Feature 124: Customer variables replacement
+import { SecurityService } from "./security.service"
 import { websocketService } from "./websocket.service"
 
 export interface RouteMessageParams {

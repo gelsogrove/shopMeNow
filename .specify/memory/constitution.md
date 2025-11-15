@@ -2204,7 +2204,7 @@ async routeMessage(params: RouterParams): Promise<RouterResult> {
       tokenUsage: { total: 0 }
     }
   }
-  
+
   // ... continue with P2, P3, P4
 }
 ```
@@ -2219,7 +2219,7 @@ it("should return empty response for blocked customer", async () => {
     customerId: blockedCustomer.id,
     message: "Test message",
   })
-  
+
   expect(result.finalResponse).toBe("")
   expect(result.isBlocked).toBe(true)
   expect(result.tokenUsage.total).toBe(0)
@@ -2257,30 +2257,31 @@ it("should return empty response for blocked customer", async () => {
 // llm-router.service.ts - P2 gate
 const workspace = await this.prisma.workspaces.findUnique({
   where: { id: params.workspaceId },
-  select: { challengeStatus: true, wipMessage: true }
+  select: { challengeStatus: true, wipMessage: true },
 })
 
 if (!workspace?.challengeStatus) {
   const wipMessages = (workspace?.wipMessage as any) || {}
-  const wipMessage = wipMessages[params.customerLanguage?.toLowerCase() || "en"]
-    || wipMessages.en
-    || "We are currently working on improvements. Please try again later."
-  
+  const wipMessage =
+    wipMessages[params.customerLanguage?.toLowerCase() || "en"] ||
+    wipMessages.en ||
+    "We are currently working on improvements. Please try again later."
+
   logger.info("🚧 P2: Channel disabled - sending WIP message")
-  
+
   await this.prisma.chatMessages.create({
     data: {
       sessionId: session.id,
       role: "assistant",
       content: wipMessage,
-      timestamp: new Date()
-    }
+      timestamp: new Date(),
+    },
   })
-  
+
   return {
     finalResponse: wipMessage,
     content: wipMessage,
-    tokenUsage: { total: 0 }
+    tokenUsage: { total: 0 },
   }
 }
 ```
@@ -2300,16 +2301,19 @@ model Workspaces {
 
 ```typescript
 it("should return WIP message when channel disabled", async () => {
-  await updateWorkspace({ 
+  await updateWorkspace({
     challengeStatus: false,
-    wipMessage: { en: "Service under maintenance", it: "Servizio in manutenzione" }
+    wipMessage: {
+      en: "Service under maintenance",
+      it: "Servizio in manutenzione",
+    },
   })
-  
+
   const result = await llmRouterService.routeMessage({
     customerLanguage: "en",
-    message: "Hello"
+    message: "Hello",
   })
-  
+
   expect(result.finalResponse).toBe("Service under maintenance")
   expect(result.tokenUsage.total).toBe(0)
 })
@@ -2345,37 +2349,38 @@ it("should return WIP message when channel disabled", async () => {
 ```typescript
 // llm-router.service.ts - P3 gate
 const existingMessages = await this.prisma.chatMessages.count({
-  where: { 
-    session: { customerId: params.customerId }
-  }
+  where: {
+    session: { customerId: params.customerId },
+  },
 })
 
 if (existingMessages === 0) {
   const workspace = await this.prisma.workspaces.findUnique({
     where: { id: params.workspaceId },
-    select: { welcomeMessage: true }
+    select: { welcomeMessage: true },
   })
-  
+
   const welcomeMessages = (workspace?.welcomeMessage as any) || {}
-  const welcomeMessage = welcomeMessages[params.customerLanguage?.toLowerCase() || "en"]
-    || welcomeMessages.en
-    || "Welcome! How can I help you today?"
-  
+  const welcomeMessage =
+    welcomeMessages[params.customerLanguage?.toLowerCase() || "en"] ||
+    welcomeMessages.en ||
+    "Welcome! How can I help you today?"
+
   logger.info("👋 P3: New customer - sending welcome message")
-  
+
   await this.prisma.chatMessages.create({
     data: {
       sessionId: session.id,
       role: "assistant",
       content: welcomeMessage,
-      timestamp: new Date()
-    }
+      timestamp: new Date(),
+    },
   })
-  
+
   return {
     finalResponse: welcomeMessage,
     content: welcomeMessage,
-    tokenUsage: { total: 0 }
+    tokenUsage: { total: 0 },
   }
 }
 ```
@@ -2395,17 +2400,17 @@ model Workspaces {
 ```typescript
 it("should return welcome message for new customer", async () => {
   const newCustomer = await createCustomer({ phone: "+1234567890" })
-  
+
   const result = await llmRouterService.routeMessage({
     customerId: newCustomer.id,
-    message: "Hello"
+    message: "Hello",
   })
-  
+
   expect(result.finalResponse).toContain("Welcome")
   expect(result.tokenUsage.total).toBe(0)
-  
+
   const savedMessage = await prisma.chatMessages.findFirst({
-    where: { session: { customerId: newCustomer.id } }
+    where: { session: { customerId: newCustomer.id } },
   })
   expect(savedMessage.content).toBe(result.finalResponse)
 })
@@ -2442,20 +2447,20 @@ it("should return welcome message for new customer", async () => {
 const routerPrompt = await this.promptProcessor.buildRouterPrompt({
   workspaceId: params.workspaceId,
   customerLanguage: params.customerLanguage,
-  conversationHistory: chatHistory
+  conversationHistory: chatHistory,
 })
 
 const routerDecision = await this.llmService.chat({
   systemPrompt: routerPrompt,
   messages: conversationHistory,
-  functions: routerFunctions,  // Delegation functions only
-  temperature: 0.3
+  functions: routerFunctions, // Delegation functions only
+  temperature: 0.3,
 })
 
 if (routerDecision.tool_calls) {
   const functionName = routerDecision.tool_calls[0].function.name
   const args = JSON.parse(routerDecision.tool_calls[0].function.arguments)
-  
+
   // Delegate to specialist agent
   if (functionName === "productSearchAgent") {
     return await this.callProductSearchAgent(args.query, params)
@@ -2475,15 +2480,19 @@ export const ROUTER_FUNCTIONS: FunctionDefinition[] = [
     type: "function",
     function: {
       name: "productSearchAgent",
-      description: "Delega al Product & Services Search Agent per ricerca prodotti/servizi",
+      description:
+        "Delega al Product & Services Search Agent per ricerca prodotti/servizi",
       parameters: {
         type: "object",
         properties: {
-          query: { type: "string", description: "Query di ricerca del cliente" }
+          query: {
+            type: "string",
+            description: "Query di ricerca del cliente",
+          },
         },
-        required: ["query"]
-      }
-    }
+        required: ["query"],
+      },
+    },
   },
   {
     type: "function",
@@ -2493,11 +2502,14 @@ export const ROUTER_FUNCTIONS: FunctionDefinition[] = [
       parameters: {
         type: "object",
         properties: {
-          query: { type: "string", description: "Richiesta carrello del cliente" }
+          query: {
+            type: "string",
+            description: "Richiesta carrello del cliente",
+          },
         },
-        required: ["query"]
-      }
-    }
+        required: ["query"],
+      },
+    },
   },
   // ... other delegation functions
 ]
@@ -2532,18 +2544,18 @@ export const ROUTER_FUNCTIONS: FunctionDefinition[] = [
 ```typescript
 const conversationHistory = await this.prisma.chatMessages.findMany({
   where: { sessionId: session.id },
-  orderBy: { timestamp: 'asc' },
+  orderBy: { timestamp: "asc" },
   select: {
     role: true,
     content: true,
-    timestamp: true
-  }
+    timestamp: true,
+  },
 })
 
 const routerDecision = await this.llmService.chat({
   systemPrompt: routerPrompt,
-  messages: conversationHistory,  // ✅ Full history passed
-  functions: routerFunctions
+  messages: conversationHistory, // ✅ Full history passed
+  functions: routerFunctions,
 })
 ```
 
@@ -2770,7 +2782,7 @@ WhatsApp → 🛡️ Security Gate → Priorities → Router → Specialist
 // Implementation in whatsapp-webhook.controller.ts
 async handleIncomingMessage(req: Request, res: Response) {
   const { message, phone } = req.body
-  
+
   // STEP 1: Security validation (FIRST!)
   const securityCheck = await this.securityService.validateMessage(message)
   if (securityCheck.threat) {
@@ -2785,23 +2797,23 @@ async handleIncomingMessage(req: Request, res: Response) {
       message: "Invalid request"
     })
   }
-  
+
   // STEP 2: Language detection + translation to Italian
   const translatedMessage = await this.translationService.toItalian(message)
-  
+
   // STEP 3: Normal flow (priorities → router)
   const result = await this.llmRouterService.routeMessage({
     message: translatedMessage,
     customerLanguage: detectedLanguage,
     // ...
   })
-  
+
   // STEP 4: Translate response back to customer language
   const finalResponse = await this.translationService.fromItalian(
     result.finalResponse,
     detectedLanguage
   )
-  
+
   return res.json({ message: finalResponse })
 }
 ```
@@ -2845,7 +2857,7 @@ debugInfo.steps.push({
   systemPrompt: routerPrompt.substring(0, 200),
   input: userMessage,
   decision: routerDecision,
-  tokenUsage: routerTokens
+  tokenUsage: routerTokens,
 })
 
 // Specialist agent also pushes
@@ -2855,7 +2867,7 @@ debugInfo.steps.push({
   systemPrompt: specialistPrompt.substring(0, 200),
   input: query,
   response: specialistResponse,
-  tokenUsage: specialistTokens
+  tokenUsage: specialistTokens,
 })
 ```
 

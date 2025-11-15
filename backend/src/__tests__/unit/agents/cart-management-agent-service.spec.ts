@@ -2,7 +2,7 @@
  * CartManagementAgent - SERVICE Cart Tests
  *
  * Verifies that services can be added to cart correctly.
- * 
+ *
  * Tests:
  * 1. addToCart with type=SERVICE finds service by code
  * 2. Service not found returns error
@@ -14,9 +14,9 @@
 
 import { CartManagementAgent } from "../../../application/agents/CartManagementAgent"
 import { CartRepository } from "../../../repositories/cart.repository"
+import { OrderRepository } from "../../../repositories/order.repository"
 import { ProductRepository } from "../../../repositories/product.repository"
 import { ServiceRepository } from "../../../repositories/service.repository"
-import { OrderRepository } from "../../../repositories/order.repository"
 
 // Mock repositories
 jest.mock("../../../repositories/cart.repository")
@@ -79,10 +79,12 @@ describe("CartManagementAgent - SERVICE Cart", () => {
   describe("addToCart with type=SERVICE", () => {
     it("should find service by code and add to cart", async () => {
       // Mock service found
-      mockServiceRepo.findByServiceCode = jest.fn().mockResolvedValue(mockService)
+      mockServiceRepo.findByServiceCode = jest
+        .fn()
+        .mockResolvedValue(mockService)
       mockCartRepo.getOrCreateCart = jest.fn().mockResolvedValue(mockCart)
       mockCartRepo.addItem = jest.fn().mockResolvedValue(undefined)
-      
+
       // Mock getCart to return updated cart
       const mockUpdatedCart = {
         cart: {
@@ -144,7 +146,9 @@ describe("CartManagementAgent - SERVICE Cart", () => {
 
     it("should return error when service is inactive", async () => {
       const inactiveService = { ...mockService, isActive: false }
-      mockServiceRepo.findByServiceCode = jest.fn().mockResolvedValue(inactiveService)
+      mockServiceRepo.findByServiceCode = jest
+        .fn()
+        .mockResolvedValue(inactiveService)
 
       const result = await agent.addToCart(mockContext, {
         productId: "GFT001",
@@ -159,10 +163,12 @@ describe("CartManagementAgent - SERVICE Cart", () => {
 
     it("should NOT check stock for services (always available)", async () => {
       // Services don't have stock field, so no stock check should happen
-      mockServiceRepo.findByServiceCode = jest.fn().mockResolvedValue(mockService)
+      mockServiceRepo.findByServiceCode = jest
+        .fn()
+        .mockResolvedValue(mockService)
       mockCartRepo.getOrCreateCart = jest.fn().mockResolvedValue(mockCart)
       mockCartRepo.addItem = jest.fn().mockResolvedValue(undefined)
-      
+
       const mockUpdatedCart = {
         cart: {
           id: "cart-123",
@@ -206,10 +212,12 @@ describe("CartManagementAgent - SERVICE Cart", () => {
         stock: 10,
       }
 
-      mockProductRepo.findByProductCode = jest.fn().mockResolvedValue(mockProduct)
+      mockProductRepo.findByProductCode = jest
+        .fn()
+        .mockResolvedValue(mockProduct)
       mockCartRepo.getOrCreateCart = jest.fn().mockResolvedValue(mockCart)
       mockCartRepo.addItem = jest.fn().mockResolvedValue(undefined)
-      
+
       const mockUpdatedCart = {
         cart: {
           id: "cart-123",
@@ -261,10 +269,12 @@ describe("CartManagementAgent - SERVICE Cart", () => {
         stock: 5,
       }
 
-      mockProductRepo.findByProductCode = jest.fn().mockResolvedValue(mockProduct)
+      mockProductRepo.findByProductCode = jest
+        .fn()
+        .mockResolvedValue(mockProduct)
       mockCartRepo.getOrCreateCart = jest.fn().mockResolvedValue(mockCart)
       mockCartRepo.addItem = jest.fn().mockResolvedValue(undefined)
-      
+
       const mockUpdatedCart = {
         cart: {
           id: "cart-123",
