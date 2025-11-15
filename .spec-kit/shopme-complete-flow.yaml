@@ -1,0 +1,1024 @@
+# ShopME - Complete WhatsApp E-Commerce Flow Specification
+# Single Source of Truth for System Architecture
+
+project:
+  name: "ShopME - WhatsApp E-Commerce Platform"
+  description: "Multi-agent AI chatbot for WhatsApp-based product sales with dynamic prompt variables"
+  version: "1.0.0"
+  stack:
+    backend: "Node.js/Express + TypeScript + Prisma ORM"
+    frontend: "React + TypeScript + Vite"
+    database: "PostgreSQL"
+    llm: "OpenRouter API (GPT-4-mini)"
+    messaging: "WhatsApp Business API"
+
+# ============================================================================
+# CRITICAL ARCHITECTURE RULES (Andrea's Requirements)
+# ============================================================================
+architecture:
+  principles:
+    database_first:
+      description: "ALL configuration comes from database - NO hardcoded fallbacks"
+      rules:
+        - "Agent prompts MUST come from agentConfig table"
+        - "NO default values, mock data, or static prompts"
+        - "If data missing: return error, don't invent defaults"
+        - "Categories/offers/products SEMPRE in italiano (lingua base) dal database"
+
+    workspace_isolation:
+      description: "Multi-tenant security - EVERY query filtered by workspaceId"
+      rules:
+        - "Pattern: `where: { workspaceId, ...otherFilters }`"
+        - "CRITICAL for multi-tenant security"
+        - "NO cross-workspace data leakage"
+
+    variable_replacement:
+      description: "Dynamic prompts with database-driven variables"
+      rules:
+        - "{{PRODUCTS}}, {{CATEGORIES}}, {{OFFERS}} in Italian (base language)"
+        - "Translation Layer (LLM) handles final translation to customer language"
+        - "NEVER create translation mappings - let LLM translate dynamically"
+        - "Customer data variables: {{nome}}, {{email}}, {{discount}}, etc."
+
+    no_static_translations:
+      description: "NO hardcoded translations - database + LLM only"
+      rules:
+        - "Methods like getActiveCategories() return Italian text from DB"
+        - "Translation Layer handles final translation to customer's language"
+        - "NEVER create translation mappings (it/es/pt/en)"
+
+# ============================================================================
+# COMPLETE MESSAGE FLOW: WhatsApp → AI Response
+# ============================================================================
+flows:
+  whatsapp_message_processing:
+    name: "WhatsApp Message → AI Response Flow"
+    description: |
+      End-to-end flow from incoming WhatsApp message to AI-generated response
+      
+      🚨 CRITICAL: Multi-LLM Call Architecture
+      - Router LLM called TWICE when delegating to specialists
+      - First call: Router decides to delegate
+      - Specialist executes with OWN LLM
+      - Second call: Router contextualizes specialist response with conversation history
+      - This ensures final response is contextually aware of full conversation (last 10 min)
+
+    flow_summary:
+      1. "WhatsApp Webhook → Customer lookup + Session creation"
+      2. "Router LLM (1st call) → Variable replacement + Delegation decision"
+      3. "Specialist LLM → Execute with OWN prompt (last 3 messages context)"
+      3.5: "Router LLM (2nd call) → Contextualize specialist response (full 10 min history)"
+      4. "Safety & Translation → Validate + Translate to customer language"
+      5. "Link Replacement → Replace [LINK_xxx] tokens with secure URLs"
+      6. "History → Save INBOUND + OUTBOUND messages"
+      7. "Queue → Emit to WhatsApp (DEFERRED - not implemented)"
+    
+    visual_flow:
+      ascii_diagram: |
+        ┌─────────────────────────────────────────────────────────────────────┐
+        │ 1. WhatsApp Webhook (HMAC verify, customer lookup, session create) │
+        └────────────────────────────────┬────────────────────────────────────┘
+                                         │
+        ┌────────────────────────────────▼────────────────────────────────────┐
+        │ 2. Router LLM - FIRST CALL                                          │
+        │    • Replace {{VARIABLES}} (products, categories, customer data)    │
+        │    • Load conversation history (last 10 minutes)                    │
+        │    • Decision: Direct answer OR Delegate to specialist?             │
+        └────────────┬───────────────────────────────────────┬────────────────┘
+                     │                                       │
+           ┌─────────▼─────────┐                            │
+           │  Direct Answer?   │                            │
+           │  (greetings, FAQ) │                            │
+           └─────────┬─────────┘                            │
+                     │                                       │
+                     │                         ┌─────────────▼──────────────┐
+                     │                         │ 3. Specialist Agent        │
+                     │                         │    • OWN LLM call          │
+                     │                         │    • OWN prompt from DB    │
+                     │                         │    • Limited context       │
+                     │                         │      (last 3 messages)     │
+                     │                         │    • Generate [LINK_xxx]   │
+                     │                         └─────────────┬──────────────┘
+                     │                                       │
+                     │              ┌────────────────────────▼───────────────┐
+                     │              │ 3.5 Router LLM - SECOND CALL ✅        │
+                     │              │     • Receive specialist response      │
+                     │              │     • FULL conversation history        │
+                     │              │       (last 10 minutes)                │
+                     │              │     • Contextualize answer             │
+                     │              │     • Generate final response          │
+                     │              └────────────────────────┬───────────────┘
+                     │                                       │
+        ┌────────────▼───────────────────────────────────────▼────────────────┐
+        │ 4. Safety & Translation Agent                                       │
+        │    • Validate content (no PII, profanity, harmful content)          │
+        │    • Translate to customer language (IT/ES/PT/FR/EN)                │
+        │    • Preserve Italian product names                                 │
+        │    • Keep [LINK_xxx] tokens unchanged                               │
+        └────────────────────────────────┬────────────────────────────────────┘
+                                         │
+        ┌────────────────────────────────▼────────────────────────────────────┐
+        │ 5. Link Replacement Service                                         │
+        │    • Find [LINK_xxx] tokens in response                             │
+        │    • Generate secure JWT tokens (24h expiry)                        │
+        │    • Replace with full URLs: https://domain.com/cart?token=xxx      │
+        │    • Optional: URL shortener (fallback to long URL)                 │
+        └────────────────────────────────┬────────────────────────────────────┘
+                                         │
+        ┌────────────────────────────────▼────────────────────────────────────┐
+        │ 6. Message History                                                  │
+        │    • Save INBOUND message (customer query)                          │
+        │    • Save OUTBOUND message (AI response)                            │
+        │    • Include metadata: agentType, tokensUsed, debugInfo             │
+        │    • Filter by workspaceId                                          │
+        └────────────────────────────────┬────────────────────────────────────┘
+                                         │
+        ┌────────────────────────────────▼────────────────────────────────────┐
+        │ 7. WhatsApp Queue (🚧 DEFERRED)                                     │
+        │    • Messages saved to DB but NOT sent via WhatsApp API             │
+        │    • Future: Queue → Worker → WhatsApp API → Status update          │
+        └─────────────────────────────────────────────────────────────────────┘
+
+    steps:
+      # ========================================================================
+      # STEP 1: WhatsApp Webhook Receipt
+      # ========================================================================
+      - id: 1
+        name: "WhatsApp Webhook Receipt"
+        component: "WhatsAppWebhookController.receiveMessage()"
+        file: "backend/src/interfaces/http/controllers/whatsapp-webhook.controller.ts"
+        input:
+          - "WhatsApp webhook payload (POST request)"
+          - "HMAC signature in x-hub-signature-256 header"
+          - "Phone number (with or without + prefix)"
+          - "Message text (WhatsApp format)"
+        process:
+          - "Verify HMAC SHA256 signature (CRITICAL SECURITY!)"
+          - "Extract phone number and normalize (ensure + prefix)"
+          - "Convert WhatsApp format → Markdown (whatsAppToMarkdown())"
+          - "Find customer in database by phone + workspaceId"
+          - "Create or get active chat session"
+        output:
+          - "phoneNumber (normalized with +)"
+          - "messageMarkdown (converted format)"
+          - "customer (from database)"
+          - "chatSession (active conversation)"
+        rules:
+          - "MUST verify HMAC signature - reject if invalid"
+          - "MUST filter by workspaceId"
+          - "MUST check customer exists in database"
+          - "MUST apply rate limiting"
+          - "Only registered customers can chat"
+        security:
+          - "HMAC SHA256 signature verification"
+          - "Rate limiting: 10 messages per minute per customer"
+          - "Workspace isolation enforcement"
+
+      # ========================================================================
+      # STEP 2: Router Agent - First LLM Call
+      # ========================================================================
+      - id: 2
+        name: "Router Agent - Orchestration & Delegation"
+        component: "LLMRouterService.routeMessage()"
+        file: "backend/src/services/llm-router.service.ts"
+        input:
+          - "User message (Markdown format)"
+          - "Conversation history (last 10 minutes)"
+          - "Customer data (name, language, discount, company, etc.)"
+
+        # VARIABLE REPLACEMENT SYSTEM
+        variable_replacement:
+          description: "Replace {{VARIABLES}} in Router prompt with dynamic database content"
+          process:
+            - "Load customer data from database"
+            - "Load dynamic content: products, categories, offers, services, FAQs"
+            - "Call PromptProcessorService.preProcessPrompt()"
+            - "Replace ALL variables in Router systemPrompt"
+          variables:
+            customer_data:
+              - "{{nome}} → customer.name"
+              - "{{email}} → customer.email"
+              - "{{discount}} → customer.discount"
+              - "{{companyName}} → customer.company"
+              - "{{lastordercode}} → last order code"
+              - "{{languageUser}} → ITALIANO/ENGLISH/ESPAÑOL/etc."
+              - "{{agentName}} → sales agent full name"
+              - "{{agentPhone}} → sales agent phone"
+              - "{{agentEmail}} → sales agent email"
+              - "{{push_notifications_consent}} → boolean"
+
+            dynamic_content:
+              - "{{PRODUCTS}} → getActiveProducts(workspaceId, discount) [ITALIAN]"
+              - "{{CATEGORIES}} → getActiveCategories(workspaceId) [ITALIAN]"
+              - "{{OFFERS}} → getActiveOffers(workspaceId) [ITALIAN]"
+              - "{{SERVICES}} → getActiveServices(workspaceId) [ITALIAN]"
+              - "{{FAQS}} → getActiveFaqs(workspaceId) [ITALIAN]"
+
+          rules:
+            - "ALL variables replaced BEFORE Router LLM call"
+            - "Base content ALWAYS in Italian (database language)"
+            - "Translation happens LATER in Safety layer"
+            - "NO hardcoded content - everything from database"
+
+        llm_call:
+          model: "openai/gpt-4o-mini"
+          temperature: 0.3
+          max_tokens: 2048
+          provider: "OpenRouter API"
+          prompt_source: "Database agentConfig table (AgentType.ROUTER)"
+
+        # CALLING FUNCTIONS SYSTEM
+        calling_functions:
+          description: "Router can delegate to specialist agents via function calling"
+          available_functions:
+            - name: "productSearchAgent"
+              description: "Delegate product search/filtering to ProductSearchAgent"
+              parameters:
+                - "query: string (user search query)"
+                - "workspaceId: string"
+                - "customerId: string"
+
+            - name: "cartManagementAgent"
+              description: "Delegate cart operations to CartManagementAgent"
+              parameters:
+                - "action: 'view' | 'clear' | 'add'"
+                - "workspaceId: string"
+                - "customerId: string"
+
+            - name: "orderTrackingAgent"
+              description: "Delegate order tracking to OrderTrackingAgent"
+              parameters:
+                - "action: 'list' | 'track' | 'repeat'"
+                - "orderCode?: string"
+                - "workspaceId: string"
+                - "customerId: string"
+
+            - name: "customerSupportAgent"
+              description: "Escalate to customer support"
+              parameters:
+                - "reason: string"
+                - "urgency: 'low' | 'medium' | 'high' | 'critical'"
+
+            - name: "handlePushNotifications"
+              description: "Manage push notification consent"
+              parameters:
+                - "action: 'enable' | 'disable' | 'status'"
+
+          function_execution_flow:
+            - "Router LLM decides to call function (e.g., productSearchAgent)"
+            - "FunctionExecutor.execute() receives function call"
+            - "FunctionExecutor creates specialist agent instance"
+            - "Specialist agent processes request with OWN LLM call"
+            - "✅ CRITICAL: Result returned to Router LLM for SECOND call (with conversation history)"
+            - "Router LLM processes specialist response + history → final answer"
+            - "Final response goes to Safety layer (Step 4)"
+          
+          why_return_to_router:
+            reason: "Router has FULL conversation history (last 10 minutes)"
+            specialist_limitation: "Specialists only have last 3 messages (no full context)"
+            router_advantage: "Can contextualize specialist response with conversation history"
+            example: |
+              User: "hai la burrata?"
+              Router → ProductSearch → finds burrata
+              ProductSearch returns: "Yes, we have Burrata Pugliese..."
+              ✅ Router receives response + history → can add: "Come ti dicevo prima, abbiamo anche..."
+
+        output:
+          decision_types:
+            - "DIRECT_RESPONSE: Router answers directly (e.g., greetings, FAQs)"
+            - "DELEGATE_TO_SPECIALIST: Router calls specialist agent function"
+
+          if_delegate:
+            - "functionName: string (e.g., 'productSearchAgent')"
+            - "arguments: object (function parameters)"
+            - "Triggers specialist agent execution (Step 3)"
+
+          if_direct:
+            - "response: string (Router's direct answer in English)"
+            - "Skip to Safety layer (Step 4)"
+
+        rules:
+          - "Router NEVER executes business logic - only orchestrates"
+          - "MUST include {{PRODUCTS}}, {{CATEGORIES}}, {{OFFERS}} in Italian"
+          - "MUST support multi-language input (IT/ES/PT/FR/EN)"
+          - "Router prompt loaded from database (NO hardcoded)"
+          - "Variables replaced BEFORE LLM call"
+
+      # ========================================================================
+      # STEP 3: Specialist Agent Execution (if Router delegates)
+      # ========================================================================
+      - id: 3
+        name: "Specialist Agent Execution"
+        component: "ProductSearchAgentLLM | CartManagementAgentLLM | OrderTrackingAgentLLM | CustomerSupportAgentLLM"
+        files:
+          - "backend/src/application/agents/ProductSearchAgentLLM.ts"
+          - "backend/src/application/agents/CartManagementAgentLLM.ts"
+          - "backend/src/application/agents/OrderTrackingAgentLLM.ts"
+          - "backend/src/application/agents/CustomerSupportAgentLLM.ts"
+
+        trigger: "Router calls specialist function via FunctionExecutor"
+
+        input:
+          - "Function call from Router (name + arguments)"
+          - "OWN prompt from database (agentConfig table)"
+          - "{{PRODUCTS}} variable embedded in prompt (ProductSearchAgent)"
+          - "Conversation context (if needed)"
+
+        variable_replacement:
+          description: "Specialist agents also use {{VARIABLES}}"
+          example_product_search:
+            - "Prompt includes: {{PRODUCTS}} with full product catalog"
+            - "Agent filters products autonomously (NO searchProducts function)"
+            - "Smart Parsing: extractGroupText + filterByGroupKeywords"
+          rules:
+            - "{{PRODUCTS}} ALWAYS in Italian from database"
+            - "Agent can filter/search without external function calls"
+
+        llm_call:
+          model: "openai/gpt-4o-mini"
+          temperature: "0.3 (ProductSearch) | varies by agent type"
+          max_tokens: "2048 (ProductSearch) | varies by agent type"
+          prompt_source: "Database agentConfig table (specific AgentType)"
+
+        # SPECIALIST CALLING FUNCTIONS
+        specialist_calling_functions:
+          ProductSearchAgent:
+            - name: "cartManagementAgent"
+              description: "Delegate to cart after product selection"
+              usage: "User says 'add to cart' → calls cartManagementAgent"
+
+          CartManagementAgent:
+            - name: "addToCart"
+              description: "Add product to customer cart"
+              generates_link: true
+              link_type: "[LINK_CART]"
+
+            - name: "viewCart"
+              description: "Show cart contents with checkout link"
+              generates_link: true
+              link_type: "[LINK_CART]"
+
+            - name: "clearCart"
+              description: "Empty customer cart"
+              generates_link: false
+
+          OrderTrackingAgent:
+            - name: "getOrders"
+              description: "List customer orders"
+              generates_link: true
+              link_type: "[LINK_ORDERS]"
+
+            - name: "repeatLastOrder"
+              description: "Recreate cart from last order"
+              generates_link: true
+              link_type: "[LINK_CART]"
+
+          CustomerSupportAgent:
+            - name: "contactSupport"
+              description: "Send notification to support team"
+              generates_link: false
+
+        # LINK TOKEN GENERATION
+        link_token_generation:
+          description: "Specialist agents generate [LINK_xxx] tokens instead of real URLs"
+          process:
+            - "Agent determines link is needed (e.g., cart checkout)"
+            - "Agent includes [LINK_CART] or [LINK_ORDERS] in response"
+            - "LinkReplacementService replaces tokens LATER (Step 5)"
+
+          available_tokens:
+            - "[LINK_CART] → Secure cart checkout link"
+            - "[LINK_ORDERS] → Customer orders list link"
+            - "[LINK_ORDER_{code}] → Specific order details link"
+
+          rules:
+            - "NEVER generate real URLs in agent response"
+            - "ALWAYS use [LINK_xxx] token placeholders"
+            - "Tokens replaced AFTER Safety layer"
+
+        output:
+          - "response: string (English text with [LINK_xxx] tokens)"
+          - "May include product details, cart summary, order info"
+          - "✅ RETURNS TO ROUTER LLM for second call (with history context)"
+          - "Router processes specialist response + conversation history"
+          - "Router generates final contextualized answer → Safety layer"
+
+        rules:
+          - "MUST load prompt from database (NO hardcoded prompts)"
+          - "MUST filter all queries by workspaceId"
+          - "ProductSearchAgent MUST use {{PRODUCTS}} variable (NO searchProducts function)"
+          - "Response MUST be in English for Router processing"
+          - "Use [LINK_xxx] tokens instead of real URLs"
+          - "✅ Specialist response added to Router message history (role: 'function')"
+          - "✅ Router LLM called AGAIN to contextualize with conversation history"
+
+      # ========================================================================
+      # STEP 3.5: Router Second Call (CRITICAL - Process Specialist Response)
+      # ========================================================================
+      - id: 3.5
+        name: "Router Second Call - Contextualize Specialist Response"
+        component: "LLMRouterService.functionCallingLoop() - Second Iteration"
+        file: "backend/src/services/llm-router.service.ts"
+
+        trigger: "Specialist agent returns response"
+
+        input:
+          - "Specialist agent English response (from Step 3)"
+          - "Full conversation history (last 10 minutes)"
+          - "Current user message"
+          - "Previous Router decisions"
+
+        process:
+          description: |
+            Router LLM is called AGAIN with specialist response added to message history.
+            This allows Router to contextualize specialist response with full conversation context.
+          
+          message_structure:
+            - role: "system" (Router prompt with {{VARIABLES}})
+            - role: "user"/"assistant" (conversation history - last 10 min)
+            - role: "user" (current message)
+            - role: "function" (specialist response) ← ✅ NEW MESSAGE ADDED
+          
+          router_task: |
+            Process specialist response considering:
+            - What user asked previously
+            - What was discussed before
+            - User's language and preferences
+            - Add contextual transitions ("Come ti dicevo...", "Tornando a...")
+            - Generate final cohesive answer
+
+        output:
+          - "final_response: string (Router's contextualized answer in English)"
+          - "Goes to Safety layer for translation (Step 4)"
+
+        code_reference:
+          file: "backend/src/services/llm-router.service.ts"
+          lines: "1403-1419"
+          key_code: |
+            // Add specialist response to messages
+            messages.push({
+              role: "function" as const,
+              name: functionName,
+              content: subAgentFinalResponse
+            })
+            
+            // Continue loop - Router LLM called AGAIN
+            continue
+        
+        why_this_step_exists:
+          problem: "Specialist agents only have last 3 messages (limited context)"
+          solution: "Router has full 10-minute conversation history"
+          benefit: "Final response contextually aware of entire conversation"
+          example: |
+            Without Step 3.5:
+              User: "hai la burrata?"
+              Specialist: "Yes, we have Burrata Pugliese €8.50"
+              ❌ No context from previous conversation
+            
+            With Step 3.5:
+              User (5 min ago): "cerco formaggi freschi"
+              Router: "Abbiamo mozzarella, burrata..."
+              User (now): "hai la burrata?"
+              Specialist: "Yes, we have Burrata Pugliese €8.50"
+              Router (2nd call): "Come ti dicevo prima, abbiamo Burrata Pugliese €8.50. Vuoi aggiungerla?"
+              ✅ Contextual, cohesive response
+
+      # ========================================================================
+      # STEP 4: Safety & Translation Agent
+      # ========================================================================
+      - id: 4
+        name: "Safety & Translation Agent"
+        component: "SafetyTranslationAgent.process()"
+        file: "backend/src/application/agents/SafetyTranslationAgent.ts"
+
+        input:
+          - "Response from Router OR specialist (English text with [LINK_xxx] tokens)"
+          - "Customer language (IT/ES/PT/FR/EN)"
+          - "Customer name for personalization"
+          - "Allowed link tokens (for validation)"
+
+        llm_call:
+          model: "openai/gpt-4o-mini"
+          temperature: 0.1
+          max_tokens: 1024
+          prompt_source: "Database agentConfig table (AgentType.SAFETY_TRANSLATION)"
+
+        process:
+          - step: "Load SAFETY_TRANSLATION agent config from database"
+          - step: "Call LLM with safety + translation instructions"
+          - step: "Check for inappropriate content (scams, harassment, etc.)"
+          - step: "Translate to customer's language (IT/ES/PT/FR/EN)"
+          - step: "Preserve Italian product names (Mozzarella, Parmigiano, etc.)"
+          - step: "Keep [LINK_xxx] tokens unchanged"
+
+        output:
+          - "translatedText: string (customer's language with [LINK_xxx] tokens)"
+          - "safe: boolean"
+          - "blockedReason?: string (if unsafe)"
+          - "tokensUsed: number"
+
+        rules:
+          - "MUST check for inappropriate content BEFORE translation"
+          - "MUST preserve Italian product/category names"
+          - "MUST translate to customer's original language"
+          - "MUST keep [LINK_xxx] tokens unchanged for next step"
+          - "If unsafe: block message and return standard warning"
+
+        calling_functions:
+          - name: "sendAlertEmail"
+            description: "Send email alert if inappropriate content detected"
+            status: "TODO #13 - Not yet implemented"
+            parameters:
+              - "alertType: 'INAPPROPRIATE_CONTENT' | 'SCAM_ATTEMPT' | 'HARASSMENT' | 'OTHER'"
+              - "severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'"
+              - "messageContent: string"
+
+      # ========================================================================
+      # STEP 5: Link Token Replacement
+      # ========================================================================
+      - id: 5
+        name: "Link Token Replacement"
+        component: "LinkReplacementService.replaceLinks()"
+        file: "backend/src/application/services/link-replacement.service.ts"
+
+        description: "Replace [LINK_xxx] tokens with real secure URLs"
+
+        input:
+          - "Response text with [LINK_xxx] tokens (from Safety layer)"
+          - "Customer ID, workspace ID"
+
+        process:
+          - step: "Find all [LINK_xxx] tokens in response text"
+            regex: "/\\[LINK_([A-Z_]+)(?:_([^\\]]+))?\\]/g"
+
+          - step: "For each token, generate secure URL"
+            sub_steps:
+              - "Generate time-limited token with SecureTokenService"
+              - "Create full URL with frontend base + route + token"
+              - "Optional: Use URL Shortener (fallback to long URL)"
+
+          - step: "Replace all tokens with real URLs"
+
+        # SECURE TOKEN GENERATION
+        secure_token_generation:
+          component: "SecureTokenService.generateToken()"
+          file: "backend/src/application/services/secure-token.service.ts"
+
+          process:
+            - "Create JWT with payload (customerId, workspaceId, type, expiresAt)"
+            - "Sign with SECURE_TOKEN_SECRET from .env"
+            - "Default expiry: 24 hours"
+
+          token_types:
+            - type: "cart"
+              route: "/cart"
+              url_format: "http://localhost:3000/cart?token={token}"
+
+            - type: "orders"
+              route: "/orders"
+              url_format: "http://localhost:3000/orders?token={token}"
+
+            - type: "order_detail"
+              route: "/order/{orderCode}"
+              url_format: "http://localhost:3000/order/{orderCode}?token={token}"
+
+          rules:
+            - "Tokens MUST be time-limited (security)"
+            - "Tokens MUST include workspaceId (multi-tenant)"
+            - "Tokens MUST include customerId (security)"
+            - "Frontend validates token before showing data"
+
+        # URL SHORTENER
+        url_shortener:
+          component: "UrlShortenerService.createShortUrl()"
+          file: "backend/src/application/services/url-shortener.service.ts"
+
+          process:
+            - "Generate short code (e.g., 'abc123')"
+            - "Save mapping: shortCode → longUrl in database"
+            - "Return short URL: http://localhost:3000/s/abc123"
+
+          fallback:
+            - "If shortener fails → use long URL"
+            - "If shortener disabled → use long URL"
+
+          rules:
+            - "MUST have fallback to long URL"
+            - "Short URLs redirect to long URLs (frontend route)"
+
+        # LINK GENERATION EXAMPLES
+        link_examples:
+          cart_link:
+            input: "[LINK_CART]"
+            process:
+              - "SecureTokenService.generateToken({ customerId, workspaceId, type: 'cart' })"
+              - "LinkGenerator.generateCheckoutLink(customerId, workspaceId)"
+              - "UrlShortener.createShortUrl(longUrl) OR fallback"
+            output: "http://localhost:3000/s/xyz789 OR http://localhost:3000/cart?token=eyJhbG..."
+
+          orders_link:
+            input: "[LINK_ORDERS]"
+            output: "http://localhost:3000/orders?token=eyJhbG..."
+
+          specific_order_link:
+            input: "[LINK_ORDER_ORD-12345]"
+            output: "http://localhost:3000/order/ORD-12345?token=eyJhbG..."
+
+        output:
+          - "Final message with real secure URLs"
+          - "All [LINK_xxx] tokens replaced"
+
+        rules:
+          - "MUST generate time-limited secure tokens"
+          - "URLs MUST include workspaceId in token payload"
+          - "Fallback to long URL if shortener fails"
+          - "Token validation on frontend before showing data"
+
+      # ========================================================================
+      # STEP 6: Save to Message History
+      # ========================================================================
+      - id: 6
+        name: "Save to Message History"
+        component: "ConversationManager.saveAssistantMessage()"
+        file: "backend/src/repositories/message.repository.ts"
+
+        input:
+          - "Final response message (with real URLs)"
+          - "Customer ID, workspace ID, conversation ID"
+          - "Debug info (all agent steps timeline)"
+          - "Tokens used, execution time"
+
+        process:
+          - step: "Save INBOUND message (user message)"
+            role: "user"
+            content: "Original user message"
+
+          - step: "Save OUTBOUND message (assistant response)"
+            role: "assistant"
+            content: "Final response with links"
+            metadata:
+              - "agentType: ROUTER | PRODUCT_SEARCH | CART_MANAGEMENT | etc."
+              - "tokensUsed: number"
+              - "executionTimeMs: number"
+              - "debugInfo: DebugInfoSteps (complete timeline)"
+
+          - step: "Filter role='function' messages from user view"
+            description: "Function call JSON should NOT appear in chat UI"
+            filter: "WHERE role != 'function'"
+
+        # DEBUG INFO STRUCTURE
+        debug_info_structure:
+          description: "Complete timeline of all agent steps for debugging"
+          format:
+            steps:
+              - type: "router | sub_agent | safety | token-replacement | function_call"
+                agent: "Router Agent | ProductSearchAgent | etc."
+                model: "openai/gpt-4o-mini"
+                temperature: 0.3
+                timestamp: "2025-11-11T10:00:00Z"
+                input:
+                  userMessage: "Voglio formaggi DOP"
+                  conversationHistory: []
+                output:
+                  decision: "Delegate to productSearchAgent"
+                  functionCall: "productSearchAgent"
+                tokenUsage:
+                  promptTokens: 1500
+                  completionTokens: 150
+                  totalTokens: 1650
+
+            totalTokens: 3500
+            totalCost: 0.000525
+            executionTimeMs: 2341
+            timestamp: "2025-11-11T10:00:02Z"
+
+        output:
+          - "messageId (INBOUND)"
+          - "messageId (OUTBOUND)"
+          - "Saved to conversation_messages table"
+
+        rules:
+          - "MUST save both INBOUND and OUTBOUND atomically"
+          - "MUST filter role='function' messages from user-visible chat"
+          - "MUST save debugInfo for flow tracking (TODO #1)"
+          - "MUST filter by workspaceId"
+
+      # ========================================================================
+      # STEP 7: WhatsApp Queue Emission (NOT IMPLEMENTED - TODO #1)
+      # ========================================================================
+      - id: 7
+        name: "WhatsApp Queue Emission"
+        component: "WhatsAppQueueService (MISSING)"
+        status: "🚧 DEFERRED TO PRODUCTION - Not implemented yet"
+
+        description: "Messages saved to DB but NOT sent via WhatsApp API yet"
+
+        current_behavior:
+          - "LLMRouterService returns response to webhook controller"
+          - "Response saved to database (Step 6)"
+          - "Response returned to client (frontend simulator)"
+          - "❌ WhatsApp API NOT called - message not sent to user"
+
+        future_implementation:
+          component: "WhatsAppQueueService"
+          file: "backend/src/services/whatsapp-queue.service.ts (TO CREATE)"
+
+          process:
+            - step: "Create queue service (Bull/Redis or simple array)"
+            - step: "Enqueue message for WhatsApp delivery"
+              data:
+                - "customerId: string"
+                - "message: string (final response with URLs)"
+                - "workspaceId: string"
+                - "customerPhone: string"
+                - "customerLanguage: string"
+                - "priority: 'high' | 'normal' | 'low'"
+
+            - step: "Create worker to process queue"
+            - step: "Call WhatsAppApiService.sendToWhatsApp()"
+            - step: "Handle errors and retry logic"
+            - step: "Update message status in database"
+
+        whatsapp_api_integration:
+          component: "WhatsAppApiService.sendToWhatsApp()"
+          file: "backend/src/services/whatsapp-api.service.ts"
+
+          process:
+            - "Get workspace WhatsApp credentials from database"
+            - "Convert Markdown → WhatsApp format (markdownToWhatsApp())"
+            - "Call WhatsApp Business API"
+            - "Return success/error status"
+
+          api_endpoint: "https://graph.facebook.com/v18.0/{phoneNumber}/messages"
+
+          payload_format:
+            messaging_product: "whatsapp"
+            to: "phone_number_without_plus"
+            type: "text"
+            text:
+              body: "message in WhatsApp format"
+
+        rules:
+          - "Queue MUST handle retry on failure"
+          - "MUST update message status (sent/failed)"
+          - "MUST log errors for monitoring"
+          - "Priority queue for urgent messages"
+
+# ============================================================================
+# VALIDATION RULES
+# ============================================================================
+validation:
+  rules:
+    database_first:
+      - "ALL agent prompts MUST come from agentConfig table"
+      - "NO hardcoded prompts, default values, or mock data"
+      - "If data missing: return error, don't invent defaults"
+      - "Variable replacement happens BEFORE LLM call"
+
+    workspace_isolation:
+      - "EVERY database query MUST filter by workspaceId"
+      - "Pattern: `where: { workspaceId, ...otherFilters }`"
+      - "Critical for multi-tenant security"
+      - "NO cross-workspace data access"
+
+    variable_replacement:
+      - "{{PRODUCTS}}, {{CATEGORIES}}, {{OFFERS}} MUST be in Italian (base language)"
+      - "Translation layer handles final translation to customer language"
+      - "NEVER create translation mappings - LLM translates dynamically"
+      - "ALL variables replaced BEFORE LLM call"
+
+    link_token_system:
+      - "Agents MUST use [LINK_xxx] tokens, NOT real URLs"
+      - "LinkReplacementService replaces tokens AFTER Safety layer"
+      - "Tokens MUST be time-limited (security)"
+      - "URLs MUST include workspaceId and customerId in token"
+
+    calling_functions:
+      - "Router delegates via function calling (productSearchAgent, etc.)"
+      - "Specialists can call OWN functions (e.g., addToCart)"
+      - "Function execution via FunctionExecutor service"
+      - "NO circular function calls"
+
+    security:
+      - "WhatsApp webhook MUST verify HMAC signature"
+      - "All API calls MUST use authMiddleware + workspaceValidationMiddleware"
+      - "Secure tokens MUST be time-limited (default: 24 hours)"
+      - "Frontend MUST validate tokens before showing data"
+
+    error_handling:
+      - "ALWAYS log full error stack (never generic 'Error occurred')"
+      - "Return proper HTTP status codes"
+      - "User-facing errors MUST be translated to customer language"
+      - "Safety layer blocks inappropriate content"
+
+# ============================================================================
+# AGENT CONFIGURATION
+# ============================================================================
+agents:
+  router:
+    type: "ROUTER"
+    order: 0
+    temperature: 0.3
+    max_tokens: 2048
+    calling_functions:
+      - "productSearchAgent"
+      - "cartManagementAgent"
+      - "orderTrackingAgent"
+      - "customerSupportAgent"
+      - "handlePushNotifications"
+    variables:
+      - "{{PRODUCTS}} (Italian)"
+      - "{{CATEGORIES}} (Italian)"
+      - "{{OFFERS}} (Italian)"
+      - "{{SERVICES}} (Italian)"
+      - "{{FAQS}} (Italian)"
+      - "{{nome}}, {{email}}, {{discount}}, etc."
+    multi_language: "IT/ES/PT/FR/EN (input + output)"
+
+  product_search:
+    type: "PRODUCT_SEARCH"
+    order: 2
+    temperature: 0.3
+    max_tokens: 2048
+    calling_functions:
+      - "cartManagementAgent (ONLY - removed searchProducts)"
+    variables:
+      - "{{PRODUCTS}} (Italian - embedded in prompt)"
+    features:
+      - "Smart Parsing: extractGroupText + filterByGroupKeywords"
+      - "Direct {{PRODUCTS}} variable (NO QueryAnalyzer)"
+
+  cart_management:
+    type: "CART_MANAGEMENT"
+    order: 3
+    temperature: 0.3
+    max_tokens: 1024
+    calling_functions:
+      - "addToCart (generates [LINK_CART])"
+      - "viewCart (generates [LINK_CART])"
+      - "clearCart"
+
+  order_tracking:
+    type: "ORDER_TRACKING"
+    order: 4
+    temperature: 0.3
+    max_tokens: 1024
+    calling_functions:
+      - "getOrders (generates [LINK_ORDERS])"
+      - "getOrder (TODO #13 - not implemented)"
+      - "trackOrder (TODO #13 - not implemented)"
+      - "sendInvoice (TODO #13 - not implemented)"
+      - "repeatLastOrder (generates [LINK_CART])"
+
+  customer_support:
+    type: "CUSTOMER_SUPPORT"
+    order: 5
+    temperature: 0.3
+    max_tokens: 1024
+    calling_functions:
+      - "contactSupport"
+    
+    # 🚨 CRITICAL BEHAVIOR: contactSupport() disables chatbot
+    contactSupport_behavior:
+      trigger:
+        - "Customer explicitly requests operator: 'voglio parlare con operatore'"
+        - "Customer is frustrated: 'sono stufo', 'sempre danneggiato', 'pessimo servizio'"
+        - "Customer has problem: 'rotto', 'difettoso', 'marcio', 'scaduto'"
+      
+      execution:
+        file: "backend/src/application/agents/CustomerSupportAgentLLM.ts"
+        line: 362
+        action: |
+          await this.prisma.customers.update({
+            where: { id: context.customerId },
+            data: { activeChatbot: false }  // ✅ DISABLES CHATBOT
+          })
+      
+      effect:
+        - "activeChatbot set to false in customers table"
+        - "Returns sales agent info (name, email, phone)"
+        - "Next customer message → webhook checks activeChatbot"
+        - "If activeChatbot = false → NO LLM processing (early exit)"
+        - "Message saved to DB but NO bot response sent"
+        - "Operator sees message in ChatPage and responds manually"
+      
+      webhook_check:
+        file: "backend/src/routes/webhooks/whatsapp.routes.ts"
+        line: 607
+        logic: |
+          if (customer && !customer.activeChatbot) {
+            // Save message to DB
+            await messageRepository.saveMessage({ ... })
+            // Return WITHOUT calling LLM
+            return res.json({ message: null, chatbotDisabled: true })
+          }
+      
+      reactivation:
+        - "Operator can re-enable via ChatPage UI (toggle switch)"
+        - "Update: PATCH /workspaces/:workspaceId/customers/:customerId { activeChatbot: true }"
+        - "Once re-enabled → chatbot resumes normal operation"
+
+  safety_translation:
+    type: "SAFETY_TRANSLATION"
+    order: 99
+    temperature: 0.1
+    max_tokens: 1024
+    calling_functions:
+      - "sendAlertEmail (TODO #13 - not implemented)"
+    features:
+      - "Inappropriate content detection"
+      - "Multi-language translation (IT/ES/PT/FR/EN)"
+      - "Preserve Italian product names"
+      - "Keep [LINK_xxx] tokens unchanged"
+
+# ============================================================================
+# REMOVED AGENTS
+# ============================================================================
+removed_agents:
+  - type: "TRANSLATION"
+    order: -1
+    reason: "Replaced by Router multi-language + Safety translation"
+    removed_date: "2025-11-10"
+
+  - type: "QUERY_ANALYZER"
+    order: 6
+    reason: "Replaced by {{PRODUCTS}} variable direct strategy"
+    removed_date: "2025-11-10"
+
+# ============================================================================
+# DEPENDENCIES
+# ============================================================================
+dependencies:
+  external:
+    - name: "OpenRouter API"
+      purpose: "LLM calls (GPT-4-mini)"
+      endpoint: "https://openrouter.ai/api/v1"
+      authentication: "OPENROUTER_API_KEY in .env"
+
+    - name: "WhatsApp Business API"
+      purpose: "Send messages to customers"
+      endpoint: "https://graph.facebook.com/v18.0"
+      authentication: "Workspace-specific API key in database"
+      status: "Queue implementation pending (TODO #1)"
+
+    - name: "PostgreSQL"
+      purpose: "Database (Prisma ORM)"
+      schema: "backend/prisma/schema.prisma"
+
+    - name: "Redis (Optional)"
+      purpose: "Caching, queue management (future)"
+      status: "Not yet implemented"
+
+  internal:
+    - "Prisma ORM (database access)"
+    - "Express.js (HTTP server)"
+    - "TypeScript (type safety)"
+    - "JWT (secure token generation)"
+    - "Crypto (HMAC signature verification)"
+
+# ============================================================================
+# TODO LIST (From Andrea's Requirements)
+# ============================================================================
+todo:
+  high_priority:
+    - id: "TODO-1"
+      title: "Message Flow Tracking - Complete Debug Trail"
+      description: "Track EVERY step through agents for debugging"
+      status: "pending"
+
+    - id: "TODO-2"
+      title: "Router Agent - Verify Calling Functions"
+      description: "Ensure Router has ALL CF configured correctly"
+      status: "pending"
+
+    - id: "TODO-4"
+      title: "Router Agent - Panic Mode & Customer Support Escalation"
+      description: "Detect user frustration and escalate to support"
+      status: "pending"
+
+    - id: "TODO-6"
+      title: "Cart Link Generation - Verify Correctness"
+      description: "Test cart links end-to-end (backend + frontend)"
+      status: "pending"
+
+    - id: "TODO-13"
+      title: "Audit Complete Calling Functions"
+      description: "Implement missing CF (getOrder, trackOrder, sendInvoice, sendAlertEmail)"
+      status: "pending"
+
+  deferred:
+    - id: "TODO-WhatsApp-Queue"
+      title: "WhatsApp Queue Emission (Step 7)"
+      description: "Implement queue system for sending messages via WhatsApp API"
+      status: "deferred to production"
+      reason: "Andrea: 'INVIEREMO A WHATSAPP SOLO QUANDO ANDREMO ONLINE'"
+
+# ============================================================================
+# NOTES
+# ============================================================================
+notes:
+  - "This spec is the SINGLE SOURCE OF TRUTH for ShopME architecture"
+  - "spec-kit will validate code against this specification"
+  - "Update this file when architecture changes"
+  - "NO documentation outside this spec (code + database as truth)"
+  - "Andrea's rule: Database-first, NO hardcoded values, workspace isolation"

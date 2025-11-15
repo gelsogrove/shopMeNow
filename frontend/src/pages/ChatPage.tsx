@@ -2,6 +2,7 @@ import { CartIframePopup } from "@/components/CartIframePopup"
 import { PageLayout } from "@/components/layout/PageLayout"
 import { ClientSheet } from "@/components/shared/ClientSheet"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
+import MessageFlowDialog from "@/components/shared/MessageFlowDialog"
 import { MessageRenderer } from "@/components/shared/MessageRenderer"
 import { WhatsAppChatModal } from "@/components/shared/WhatsAppChatModal"
 import { WhatsAppIcon } from "@/components/shared/WhatsAppIcon"
@@ -19,6 +20,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   Ban,
   Bot,
+  Eye,
   Loader2,
   Lock,
   Pencil,
@@ -159,6 +161,9 @@ export function ChatPage() {
   const [showCartPopup, setShowCartPopup] = useState(false)
   const [cartPopupUrl, setCartPopupUrl] = useState<string>("") // URL to display in CartIframePopup
   const [isLoadingCartToken, setIsLoadingCartToken] = useState(false)
+  const [showFlowDialog, setShowFlowDialog] = useState(false)
+  const [selectedFlowMessage, setSelectedFlowMessage] =
+    useState<Message | null>(null)
 
   // Function to get cart token for current customer
   const getCartToken = async (
@@ -216,6 +221,7 @@ export function ChatPage() {
     chats,
     isLoading: isLoadingChats,
     updateActiveChatbot,
+    refetch: refetchChats,
   } = useChatList()
 
   const [hasToggledChatbot, setHasToggledChatbot] = useState(false)
@@ -663,6 +669,8 @@ export function ChatPage() {
     // 💾 Salva l'ID della chat selezionata in sessionStorage
     if (chat?.sessionId) {
       sessionStorage.setItem("selectedChatId", chat.sessionId)
+      // 🔔 Store current chat sessionId for WebSocket toast notifications
+      sessionStorage.setItem("currentChatSessionId", chat.sessionId)
       logger.info(
         "[ChatPage] Saved selectedChatId to sessionStorage:",
         chat.sessionId
@@ -686,7 +694,7 @@ export function ChatPage() {
       const chatSessionId = chat.sessionId || chat.id
       // Call API to mark messages as read
       api
-        .post(`/chat/${chatSessionId}/read`)
+        .post(`/chat/${chatSessionId}/mark-read`)
         .then((response) => {
           if (response.data.success) {
             // Invalidate chat queries to refresh unread counts
@@ -1428,16 +1436,23 @@ export function ChatPage() {
 
                           <div className="flex justify-end items-center mt-1">
                             <div className="flex items-center gap-1">
-                              {/* 🤖 AI Agent Badge */}
+                              {/* � View Flow Button - ONLY for bot messages with debugInfo */}
                               {isAgentMessage &&
-                                message.agentName &&
-                                !isOperatorMessage && (
-                                  <span className="text-[10px] font-medium bg-green-200 text-green-800 px-2 py-0.5 rounded ml-2">
-                                    🤖 {message.agentName}
-                                  </span>
+                                message.metadata?.debugInfo && (
+                                  <button
+                                    onClick={() => {
+                                      setSelectedFlowMessage(message)
+                                      setShowFlowDialog(true)
+                                    }}
+                                    className="text-[10px] font-medium bg-purple-100 hover:bg-purple-200 text-purple-800 px-2 py-0.5 rounded flex items-center gap-1 transition-colors"
+                                    title="View message flow through multi-agent system"
+                                  >
+                                    <Eye className="w-3 h-3" />
+                                    View Flow
+                                  </button>
                                 )}
 
-                              {/* 👨‍💼 Operator Badge */}
+                              {/* �👨‍💼 Operator Badge */}
                               {isOperatorMessage && (
                                 <span className="text-[10px] font-medium bg-blue-200 text-blue-800 px-2 py-0.5 rounded ml-2">
                                   👨‍💼 Human Operator
@@ -1636,6 +1651,7 @@ export function ChatPage() {
       <WhatsAppChatModal
         isOpen={showPlaygroundDialog}
         onClose={handleClosePlayground}
+        onMessageSent={refetchChats}
         channelName="WhatsApp Chat"
         workspaceId={workspace?.id}
         selectedChat={selectedChat as any}
@@ -1647,6 +1663,19 @@ export function ChatPage() {
           isOpen={showCartPopup}
           onClose={() => setShowCartPopup(false)}
           iframeSrc={cartPopupUrl}
+        />
+      )}
+
+      {/* Message Flow Dialog */}
+      {selectedFlowMessage?.metadata?.debugInfo && (
+        <MessageFlowDialog
+          isOpen={showFlowDialog}
+          onClose={() => setShowFlowDialog(false)}
+          debugInfo={
+            typeof selectedFlowMessage.metadata.debugInfo === "string"
+              ? JSON.parse(selectedFlowMessage.metadata.debugInfo)
+              : selectedFlowMessage.metadata.debugInfo
+          }
         />
       )}
     </PageLayout>

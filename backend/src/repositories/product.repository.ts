@@ -161,6 +161,40 @@ export class ProductRepository implements IProductRepository {
     }
   }
 
+  /**
+   * Find product by productCode (e.g., "SALUMI-006")
+   * Used by CartManagementAgent to add products to cart
+   */
+  async findByProductCode(
+    productCode: string,
+    workspaceId: string
+  ): Promise<Product | null> {
+    try {
+      const product = await this.prisma.products.findFirst({
+        where: {
+          productCode,
+          workspaceId,
+          isActive: true, // Only active products can be added to cart
+        },
+        include: {
+          category: true,
+        },
+      })
+
+      if (!product) {
+        logger.warn(
+          `Product not found: ${productCode} in workspace ${workspaceId}`
+        )
+        return null
+      }
+
+      return this.mapToDomainEntity(product)
+    } catch (error) {
+      logger.error(`Error in findByProductCode for ${productCode}:`, error)
+      return null
+    }
+  }
+
   async findByCategory(
     categoryId: string,
     workspaceId: string
@@ -232,12 +266,9 @@ export class ProductRepository implements IProductRepository {
         slug: product.slug,
         categoryId: product.categoryId,
         supplierId: product.supplierId,
-        isWholeGrain: product.isWholeGrain,
-        isOrganic: product.isOrganic,
-        isHalal: product.isHalal,
-        isVegan: product.isVegan,
-        isGlutenFree: product.isGlutenFree,
+        certifications: product.certifications, // ✅ Use certifications array instead of boolean fields
         transportType: product.transportType,
+        region: product.region,
       }
 
       // Add imageUrl if provided
@@ -382,11 +413,180 @@ export class ProductRepository implements IProductRepository {
     }
   }
 
+  /**
+   * Search products with advanced filters for Agent system
+   * Used by ProductSearchAgent for customer queries
+   *
+   * @param workspaceId - Workspace ID (security filter)
+   * @param filters - Search filters
+   * @returns Array of matching products with category relations
+   */
+  async searchProducts(
+    workspaceId: string,
+    filters: {
+      keywords?: string[]
+      categoryId?: string
+      supplierIds?: string[]
+      regions?: string[]
+      minPrice?: number
+      maxPrice?: number
+      allergens?: string[]
+      certifications?: string[]
+      limit?: number
+    }
+  ) {
+    try {
+      const where: Prisma.ProductsWhereInput = {
+        workspaceId,
+        isActive: true, // Only active products
+      }
+
+      // Keywords search (name, productCode, transportType, formato, supplier.companyName)
+      // 🔧 CRITICAL: If categoryId is provided, keywords become OPTIONAL (OR)
+      // This allows "formaggi?" to match category WITHOUT requiring "formaggi" in product name
+      if (filters.keywords && filters.keywords.length > 0) {
+        const orConditions: Prisma.ProductsWhereInput[] = []
+
+        filters.keywords.forEach((keyword) => {
+          // Search in: name, productCode, transportType, formato, region, supplier companyName (case-insensitive)
+          orConditions.push(
+            { name: { contains: keyword, mode: "insensitive" } },
+            { productCode: { contains: keyword, mode: "insensitive" } },
+            { transportType: { contains: keyword, mode: "insensitive" } },
+            { formato: { contains: keyword, mode: "insensitive" } },
+            { region: { contains: keyword, mode: "insensitive" } },
+            {
+              supplier: {
+                is: {
+                  companyName: { contains: keyword, mode: "insensitive" },
+                },
+              },
+            }
+          )
+        })
+
+        // 🆕 If categoryId is present, keywords are OPTIONAL (enhance search)
+        // Otherwise, keywords are REQUIRED (OR match)
+        if (!filters.categoryId) {
+          where.OR = orConditions
+        }
+        // When categoryId exists, don't apply OR - category is the primary filter
+      }
+
+      // Category filter (single or multiple)
+      // 🎯 Primary filter when user asks "formaggi?" - matches category, not product name
+      if (filters.categoryId) {
+        where.categoryId = filters.categoryId
+      }
+
+      // Supplier filter (array of supplier IDs)
+      if (filters.supplierIds && filters.supplierIds.length > 0) {
+        where.supplierId = {
+          in: filters.supplierIds,
+        }
+      }
+
+      // Regions filter (array of Italian region names)
+      if (filters.regions && filters.regions.length > 0) {
+        where.region = {
+          in: filters.regions,
+        }
+      }
+
+      // Price range filter
+      if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
+        where.price = {}
+        if (filters.minPrice !== undefined) {
+          where.price.gte = filters.minPrice
+        }
+        if (filters.maxPrice !== undefined) {
+          where.price.lte = filters.maxPrice
+        }
+      }
+
+      // Allergens filter - use dedicated array field
+      if (filters.allergens && filters.allergens.length > 0) {
+        where.allergens = {
+          hasSome: filters.allergens,
+        }
+      }
+
+      // Certifications filter - search ONLY boolean fields
+      // This is a SEPARATE search from keywords - don't mix them
+      // ✅ Use certifications array with hasSome operator
+      if (filters.certifications && filters.certifications.length > 0) {
+        where.certifications = {
+          hasSome: filters.certifications.map((cert) => {
+            const certLower = cert.toLowerCase().trim()
+            // Normalize certification names to match array values
+            if (
+              certLower === "halal" ||
+              certLower === "ishalal" ||
+              certLower === "hallal" ||
+              certLower === "allal"
+            ) {
+              return "halal"
+            } else if (
+              certLower === "bio" ||
+              certLower === "isorganic" ||
+              certLower === "organic" ||
+              certLower === "biologico"
+            ) {
+              return "bio"
+            } else if (
+              certLower === "vegan" ||
+              certLower === "isvegan" ||
+              certLower === "vegano"
+            ) {
+              return "vegan"
+            } else if (
+              certLower === "gluten-free" ||
+              certLower === "isglutenfree" ||
+              certLower === "senza glutine"
+            ) {
+              return "gluten-free"
+            } else if (
+              certLower === "whole-grain" ||
+              certLower === "iswholegrain" ||
+              certLower === "integrali" ||
+              certLower === "integrale"
+            ) {
+              return "whole-grain"
+            } else if (certLower === "dop") {
+              return "DOP"
+            }
+            return cert // Return original if no mapping
+          }),
+        }
+      }
+
+      const products = await this.prisma.products.findMany({
+        where,
+        include: {
+          category: true, // Include category for name/translations
+          supplier: true, // Include supplier for companyName search
+        },
+        orderBy: {
+          createdAt: "desc", // Newest first
+        },
+        take: filters.limit || 20, // Default 20 results
+      })
+
+      logger.info(
+        `ProductRepository.searchProducts: Found ${products.length} products`
+      )
+      return products
+    } catch (error) {
+      logger.error("Error searching products:", error)
+      throw error
+    }
+  }
+
   private mapToDomainEntity(data: any): Product {
     return new Product({
       id: data.id,
       name: data.name,
-      productCode: data.productCode, // Fixed: was data.ProductCode
+      productCode: data.productCode,
       description: data.description,
       formato: data.formato,
       price: data.price,
@@ -398,12 +598,9 @@ export class ProductRepository implements IProductRepository {
       supplierId: data.supplierId,
       workspaceId: data.workspaceId,
       imageUrl: data.imageUrl || [],
-      isWholeGrain: data.isWholeGrain ?? false,
-      isOrganic: data.isOrganic ?? false,
-      isHalal: data.isHalal ?? false,
-      isVegan: data.isVegan ?? false,
-      isGlutenFree: data.isGlutenFree ?? false,
+      certifications: data.certifications || [], // ✅ Use certifications array
       transportType: data.transportType || "Temperatura ambiente",
+      region: data.region, // ✅ Add region field
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
       category: data.category,

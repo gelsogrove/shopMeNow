@@ -140,6 +140,28 @@ cd backend && npm run db:migrate
 cd backend && npm run seed
 ```
 
+### Agent Prompts Management
+
+**Multi-Agent System**: ShopME uses 6 specialized agents (ROUTER, PRODUCT_SEARCH, CART_MANAGEMENT, ORDER_TRACKING, CUSTOMER_SUPPORT, SAFETY_TRANSLATION).
+
+```bash
+# Export prompts from database to markdown files
+cd backend && npm run export:prompts
+
+# Update database from markdown files
+cd backend && npm run update:prompts
+```
+
+**Workflow**:
+
+1. Edit prompts in UI (`/agent` page) or modify `.md` files in `docs/prompts/`
+2. Export changes: `npm run export:prompts` (Database → .md files)
+3. Review exported files in `docs/prompts/`
+4. Commit changes to Git
+5. To restore: `npm run update:prompts` (.md files → Database)
+
+**Files**: `docs/prompts/router-agent.md`, `product-search.md`, `cart-management.md`, `order-tracking.md`, `customer-support.md`, `safety-translation.md`
+
 ### Pricing Management
 
 **⚠️ IMPORTANT**: All pricing changes preserve historical billing records.
@@ -172,6 +194,41 @@ The platform uses OpenRouter for AI processing:
 - **Intent Classification**: Understanding user requests
 - **Response Generation**: Natural language responses
 - **Function Calling**: Dynamic API calls based on user intent
+
+### 🎯 Design Philosophy: Chatbot as Link Generator
+
+**IMPORTANT ARCHITECTURAL DECISION**: The chatbot's primary role is to **generate secure links** that redirect users to the web interface for complex operations.
+
+**Chatbot Capabilities** (Direct in chat):
+
+- ✅ Product discovery & search
+- ✅ Cart addition (products/services)
+- ✅ Order information & tracking
+- ✅ Customer support & operator contact
+- ✅ Generate cart/order/profile links
+
+**Web Interface Capabilities** (Via generated links):
+
+- ✅ Cart modifications (quantities, item removal)
+- ✅ New order creation
+- ✅ Checkout & payment
+- ✅ Profile management
+- ✅ Order history
+
+**Why This Approach**:
+
+1. **User Experience**: Complex UI operations (quantity changes, multi-step forms) are better handled in web interface
+2. **Security**: Temporary authenticated tokens allow seamless transition without re-login
+3. **Simplicity**: Chatbot focuses on conversational discovery, web handles transactional complexity
+4. **Maintenance**: No need for duplicate cart modification logic (RemoveProduct/UpdateCartItem CF not needed)
+
+**Example Flow**:
+
+```
+User: "dammi il carrello"
+Bot: "Ecco il tuo carrello 🛒 [LINK]"
+User: [clicks link] → Web interface with full cart editing capabilities
+```
 
 ## 🔐 Security Features
 

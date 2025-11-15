@@ -3,6 +3,7 @@ import { NextFunction, Request, Response } from "express"
 import { BillingService } from "../../../application/services/billing.service"
 import { CustomerService } from "../../../application/services/customer.service"
 import { pushMessagingService } from "../../../services/push-messaging.service"
+import { websocketService } from "../../../services/websocket.service"
 import logger from "../../../utils/logger"
 
 const prisma = new PrismaClient()
@@ -250,6 +251,25 @@ export class CustomersController {
         workspaceId,
         customerData
       )
+
+      // 🔔 CRITICAL: Notify WebSocket clients if customer blocked/unblocked
+      if (
+        isBlacklisted !== undefined &&
+        originalCustomer.isBlacklisted !== isBlacklisted
+      ) {
+        const eventName = isBlacklisted ? "user-blocked" : "user-unblocked"
+        websocketService.notifyUserBlocked(workspaceId, {
+          customerId: id,
+          customerName: updatedCustomer.name || "Unknown",
+          customerPhone: updatedCustomer.phone || "",
+          isBlacklisted: isBlacklisted,
+          timestamp: new Date().toISOString(),
+        })
+
+        logger.info(
+          `[CUSTOMER-UPDATE] 🔔 WebSocket ${eventName} event sent for customer ${id}`
+        )
+      }
 
       // Handle automatic push messages for relevant changes
       await this.handleAutomaticPushMessages(originalCustomer, updatedCustomer)

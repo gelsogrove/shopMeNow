@@ -65,31 +65,20 @@ export class LinkReplacementService {
         return { success: false, response }
       }
 
-      const hasCartToken = response.includes("[LINK_CHECKOUT_WITH_TOKEN]")
-      const hasProfileToken = response.includes("[LINK_PROFILE_WITH_TOKEN]")
-      const hasOrdersToken = response.includes("[LINK_ORDERS_WITH_TOKEN]")
-      const hasTrackingToken = response.includes("[LINK_TRACKING_WITH_TOKEN]")
-      const hasCheckoutToken = response.includes("[LINK_CHECKOUT_WITH_TOKEN]")
-      const hasCatalogToken = response.includes("[LINK_CATALOG]")
-      const hasUserDiscountToken = response.includes("[USER_DISCOUNT]")
-      const hasListOffersToken = response.includes("[LIST_OFFERS]")
-      const hasListActiveOffersToken = response.includes("[LIST_ACTIVE_OFFERS]")
-      // [LIST_ALL_PRODUCTS] is handled by GetAllProducts() in FormatterService, not here
-      const hasListServicesToken = response.includes("[LIST_SERVICES]")
-      const hasListCategoriesToken = response.includes("[LIST_CATEGORIES]")
+      // Active tokens only (deprecated tokens removed)
+      // Support both plain [TOKEN] and Markdown (TOKEN) formats
+      const hasCartToken = response.includes("LINK_CHECKOUT_WITH_TOKEN")
+      const hasCartConfirmToken = response.includes("LINK_CHECKOUT_CONFIRM")
+      const hasProfileToken = response.includes("LINK_PROFILE_WITH_TOKEN")
+      const hasOrdersToken = response.includes("LINK_ORDERS_WITH_TOKEN")
+      const hasCatalogToken = response.includes("LINK_CATALOG")
 
       if (
         !hasCartToken &&
+        !hasCartConfirmToken &&
         !hasProfileToken &&
         !hasOrdersToken &&
-        !hasTrackingToken &&
-        !hasCheckoutToken &&
-        !hasCatalogToken &&
-        !hasUserDiscountToken &&
-        !hasListOffersToken &&
-        !hasListActiveOffersToken &&
-        !hasListServicesToken &&
-        !hasListCategoriesToken
+        !hasCatalogToken
       ) {
         return {
           success: false,
@@ -131,8 +120,35 @@ export class LinkReplacementService {
             workspaceId
           )
 
+          // Smart replace: handle multiple formats
+          // 1. Markdown with square brackets + trailing punctuation: [text]([LINK_CHECKOUT_WITH_TOKEN]).
           replacedResponse = replacedResponse.replace(
-            /\[LINK_CHECKOUT_WITH_TOKEN\]/g,
+            /\[([^\]]+)\]\(\[LINK_CHECKOUT_WITH_TOKEN\]\)([\.!?,;:]?)/g,
+            (match, text, punctuation) =>
+              `[${text}](${finalCartLink})${punctuation}`
+          )
+
+          // 2. Markdown WITHOUT square brackets + trailing punctuation: [text](LINK_CHECKOUT_WITH_TOKEN).
+          replacedResponse = replacedResponse.replace(
+            /\[([^\]]+)\]\(LINK_CHECKOUT_WITH_TOKEN\)([\.!?,;:]?)/g,
+            (match, text, punctuation) =>
+              `[${text}](${finalCartLink})${punctuation}`
+          )
+
+          // 3. Plain token with optional punctuation: [LINK_CHECKOUT_WITH_TOKEN]
+          replacedResponse = replacedResponse.replace(
+            /\[LINK_CHECKOUT_WITH_TOKEN\]([\)\.]?[\.!?,]?)/g,
+            (match, suffix) => {
+              const cleanSuffix = suffix.replace(/\)/g, "")
+              return cleanSuffix
+                ? `${finalCartLink}${cleanSuffix}`
+                : finalCartLink
+            }
+          )
+
+          // 4. Bare token: LINK_CHECKOUT_WITH_TOKEN
+          replacedResponse = replacedResponse.replace(
+            /LINK_CHECKOUT_WITH_TOKEN/g,
             finalCartLink
           )
         } catch (error) {
@@ -140,6 +156,75 @@ export class LinkReplacementService {
           replacedResponse = replacedResponse.replace(
             /\[LINK_CHECKOUT_WITH_TOKEN\]/g,
             "Link del carrello non disponibile"
+          )
+        }
+      }
+
+      // Handle cart confirm token (checkout with step=confirm parameter)
+      if (hasCartConfirmToken) {
+        try {
+          const {
+            SecureTokenService,
+          } = require("../../application/services/secure-token.service")
+          const secureTokenService = new SecureTokenService()
+
+          const cartToken = await secureTokenService.createToken(
+            "cart",
+            workspaceId,
+            { customerId, workspaceId },
+            undefined, // Uses TOKEN_EXPIRATION from env
+            undefined,
+            undefined,
+            undefined,
+            customerId
+          )
+
+          // Generate checkout link with step=confirm parameter
+          // Note: step parameter expects number (1 or 2), not string
+          // TODO: Clarify if "confirm" should be step 3 or remove parameter
+          const finalCartConfirmLink =
+            await linkGeneratorService.generateCheckoutLink(
+              cartToken,
+              workspaceId
+              // Removed "confirm" parameter - generateCheckoutLink expects number (1 or 2)
+            )
+
+          // Smart replace: handle multiple formats (same as LINK_CHECKOUT_WITH_TOKEN)
+          // 1. Markdown with square brackets
+          replacedResponse = replacedResponse.replace(
+            /\[([^\]]+)\]\(\[LINK_CHECKOUT_CONFIRM\]\)([\.!?,;:]?)/g,
+            (match, text, punctuation) =>
+              `[${text}](${finalCartConfirmLink})${punctuation}`
+          )
+
+          // 2. Markdown WITHOUT square brackets
+          replacedResponse = replacedResponse.replace(
+            /\[([^\]]+)\]\(LINK_CHECKOUT_CONFIRM\)([\.!?,;:]?)/g,
+            (match, text, punctuation) =>
+              `[${text}](${finalCartConfirmLink})${punctuation}`
+          )
+
+          // 3. Plain token with optional punctuation
+          replacedResponse = replacedResponse.replace(
+            /\[LINK_CHECKOUT_CONFIRM\]([\)\.]?[\.!?,]?)/g,
+            (match, suffix) => {
+              const cleanSuffix = suffix.replace(/\)/g, "")
+              return cleanSuffix
+                ? `${finalCartConfirmLink}${cleanSuffix}`
+                : finalCartConfirmLink
+            }
+          )
+
+          // 4. Bare token
+          replacedResponse = replacedResponse.replace(
+            /LINK_CHECKOUT_CONFIRM/g,
+            finalCartConfirmLink
+          )
+        } catch (error) {
+          logger.error("❌ Error generating cart confirm link:", error)
+          replacedResponse = replacedResponse.replace(
+            /\[LINK_CHECKOUT_CONFIRM\]/g,
+            "Link di conferma non disponibile"
           )
         }
       }
@@ -170,8 +255,35 @@ export class LinkReplacementService {
               workspaceId
             )
 
+          // Smart replace: handle multiple formats
+          // 1. Markdown with square brackets + trailing punctuation: [text]([LINK_PROFILE_WITH_TOKEN]).
           replacedResponse = replacedResponse.replace(
-            /\[LINK_PROFILE_WITH_TOKEN\]/g,
+            /\[([^\]]+)\]\(\[LINK_PROFILE_WITH_TOKEN\]\)([\.!?,;:]?)/g,
+            (match, text, punctuation) =>
+              `[${text}](${finalProfileLink})${punctuation}`
+          )
+
+          // 2. Markdown WITHOUT square brackets + trailing punctuation: [text](LINK_PROFILE_WITH_TOKEN).
+          replacedResponse = replacedResponse.replace(
+            /\[([^\]]+)\]\(LINK_PROFILE_WITH_TOKEN\)([\.!?,;:]?)/g,
+            (match, text, punctuation) =>
+              `[${text}](${finalProfileLink})${punctuation}`
+          )
+
+          // 3. Plain token with optional punctuation: [LINK_PROFILE_WITH_TOKEN]
+          replacedResponse = replacedResponse.replace(
+            /\[LINK_PROFILE_WITH_TOKEN\]([\)\.]?[\.!?,]?)/g,
+            (match, suffix) => {
+              const cleanSuffix = suffix.replace(/\)/g, "")
+              return cleanSuffix
+                ? `${finalProfileLink}${cleanSuffix}`
+                : finalProfileLink
+            }
+          )
+
+          // 4. Bare token: LINK_PROFILE_WITH_TOKEN
+          replacedResponse = replacedResponse.replace(
+            /LINK_PROFILE_WITH_TOKEN/g,
             finalProfileLink
           )
         } catch (error) {
@@ -217,14 +329,49 @@ export class LinkReplacementService {
           }
 
           // Use centralized link generator
+          logger.info(`🔗 Generating orders link with:`, {
+            ordersToken: ordersToken.substring(0, 20) + "...",
+            workspaceId,
+            orderCodeParam,
+          })
+
           const finalOrdersLink = await linkGeneratorService.generateOrdersLink(
             ordersToken,
             workspaceId,
             orderCodeParam
           )
 
+          logger.info(`✅ Generated final orders link: ${finalOrdersLink}`)
+
+          // Smart replace: handle multiple formats
+          // 1. Markdown with square brackets + trailing punctuation: [text]([LINK_ORDERS_WITH_TOKEN]).
           replacedResponse = replacedResponse.replace(
-            /\[LINK_ORDERS_WITH_TOKEN\]/g,
+            /\[([^\]]+)\]\(\[LINK_ORDERS_WITH_TOKEN\]\)([\.!?,;:]?)/g,
+            (match, text, punctuation) =>
+              `[${text}](${finalOrdersLink})${punctuation}`
+          )
+
+          // 2. Markdown WITHOUT square brackets + trailing punctuation: [text](LINK_ORDERS_WITH_TOKEN).
+          replacedResponse = replacedResponse.replace(
+            /\[([^\]]+)\]\(LINK_ORDERS_WITH_TOKEN\)([\.!?,;:]?)/g,
+            (match, text, punctuation) =>
+              `[${text}](${finalOrdersLink})${punctuation}`
+          )
+
+          // 3. Plain token with optional punctuation: [LINK_ORDERS_WITH_TOKEN]
+          replacedResponse = replacedResponse.replace(
+            /\[LINK_ORDERS_WITH_TOKEN\]([\)\.]?[\.!?,]?)/g,
+            (match, suffix) => {
+              const cleanSuffix = suffix.replace(/\)/g, "")
+              return cleanSuffix
+                ? `${finalOrdersLink}${cleanSuffix}`
+                : finalOrdersLink
+            }
+          )
+
+          // 4. Bare token without brackets: LINK_ORDERS_WITH_TOKEN
+          replacedResponse = replacedResponse.replace(
+            /LINK_ORDERS_WITH_TOKEN/g,
             finalOrdersLink
           )
         } catch (error) {
@@ -232,84 +379,6 @@ export class LinkReplacementService {
           replacedResponse = replacedResponse.replace(
             /\[LINK_ORDERS_WITH_TOKEN\]/g,
             "Link degli ordini non disponibile"
-          )
-        }
-      }
-
-      // Handle tracking token
-      if (hasTrackingToken) {
-        try {
-          const {
-            SecureTokenService,
-          } = require("../../application/services/secure-token.service")
-          const secureTokenService = new SecureTokenService()
-
-          const trackingToken = await secureTokenService.createToken(
-            "orders",
-            workspaceId,
-            { customerId, workspaceId },
-            undefined, // Uses TOKEN_EXPIRATION from env
-            undefined,
-            undefined,
-            undefined,
-            customerId
-          )
-
-          // Use centralized link generator
-          const finalTrackingLink =
-            await linkGeneratorService.generateTrackingLink(
-              trackingToken,
-              workspaceId
-            )
-
-          replacedResponse = replacedResponse.replace(
-            /\[LINK_TRACKING_WITH_TOKEN\]/g,
-            finalTrackingLink
-          )
-        } catch (error) {
-          logger.error("❌ Error generating tracking link:", error)
-          replacedResponse = replacedResponse.replace(
-            /\[LINK_TRACKING_WITH_TOKEN\]/g,
-            "Link di tracking non disponibile"
-          )
-        }
-      }
-
-      // Handle checkout token
-      if (hasCheckoutToken) {
-        try {
-          const {
-            SecureTokenService,
-          } = require("../../application/services/secure-token.service")
-          const secureTokenService = new SecureTokenService()
-
-          const checkoutToken = await secureTokenService.createToken(
-            "checkout",
-            workspaceId,
-            { customerId, workspaceId },
-            undefined, // Uses TOKEN_EXPIRATION from env
-            undefined,
-            undefined,
-            undefined,
-            customerId
-          )
-
-          // Use centralized link generator
-          const finalCheckoutLink =
-            await linkGeneratorService.generateCheckoutLink(
-              checkoutToken,
-              workspaceId
-            )
-
-          replacedResponse = replacedResponse.replace(
-            /\[LINK_CHECKOUT_WITH_TOKEN\]/g,
-            finalCheckoutLink
-          )
-        } catch (error) {
-          logger.error("❌ Error generating checkout link:", error)
-          replacedResponse = replacedResponse.replace(
-            /\[LINK_CHECKOUT_WITH_TOKEN\]/g,
-            "Link di checkout non disponibile"
           )
         }
       }
@@ -326,8 +395,35 @@ export class LinkReplacementService {
             workspaceId
           )
 
+          // Smart replace: handle multiple formats
+          // 1. Markdown with square brackets + trailing punctuation: [text]([LINK_CATALOG]).
           replacedResponse = replacedResponse.replace(
-            /\[LINK_CATALOG\]/g,
+            /\[([^\]]+)\]\(\[LINK_CATALOG\]\)([\.!?,;:]?)/g,
+            (match, text, punctuation) =>
+              `[${text}](${finalCatalogLink})${punctuation}`
+          )
+
+          // 2. Markdown WITHOUT square brackets + trailing punctuation: [text](LINK_CATALOG).
+          replacedResponse = replacedResponse.replace(
+            /\[([^\]]+)\]\(LINK_CATALOG\)([\.!?,;:]?)/g,
+            (match, text, punctuation) =>
+              `[${text}](${finalCatalogLink})${punctuation}`
+          )
+
+          // 3. Plain token with optional punctuation: [LINK_CATALOG]
+          replacedResponse = replacedResponse.replace(
+            /\[LINK_CATALOG\]([\)\.]?[\.!?,]?)/g,
+            (match, suffix) => {
+              const cleanSuffix = suffix.replace(/\)/g, "")
+              return cleanSuffix
+                ? `${finalCatalogLink}${cleanSuffix}`
+                : finalCatalogLink
+            }
+          )
+
+          // 4. Bare token: LINK_CATALOG
+          replacedResponse = replacedResponse.replace(
+            /LINK_CATALOG/g,
             finalCatalogLink
           )
         } catch (error) {
@@ -337,210 +433,6 @@ export class LinkReplacementService {
             "https://laltrait.com/wp-content/uploads/LAltra-Italia-Catalogo-Agosto-2024-v2.pdf"
           )
         }
-      }
-
-      // Handle discount, offers, services and categories tokens (LIST_ALL_PRODUCTS handled by GetAllProducts in FormatterService)
-      if (
-        hasUserDiscountToken ||
-        hasListOffersToken ||
-        hasListActiveOffersToken ||
-        hasListServicesToken ||
-        hasListCategoriesToken
-      ) {
-        let userDiscount = "0%"
-        if (hasUserDiscountToken) {
-          try {
-            const { PrismaClient } = require("@prisma/client")
-            const prisma = new PrismaClient()
-
-            const customer = await prisma.customers.findFirst({
-              where: {
-                id: customerId,
-                workspaceId: workspaceId,
-              },
-              select: {
-                id: true,
-                name: true,
-                discount: true,
-              },
-            })
-
-            if (customer && customer.discount > 0) {
-              userDiscount = `${customer.discount}%`
-            } else {
-              userDiscount = "0%"
-            }
-
-            await prisma.$disconnect()
-          } catch (error) {
-            logger.error("❌ Error getting customer discount:", error)
-            userDiscount = "0%"
-          }
-        }
-
-        let listOffers = "Nessuna offerta attiva al momento"
-        let listActiveOffers = "Nessuna offerta attiva al momento"
-        // listAllProducts removed - handled by GetAllProducts in FormatterService
-        let listServices = "Nessun servizio disponibile al momento"
-        let listCategories = "Nessuna categoria disponibile al momento"
-
-        if (hasListCategoriesToken) {
-          try {
-            const { PrismaClient } = require("@prisma/client")
-            const prisma = new PrismaClient()
-
-            const categories = await prisma.categories.findMany({
-              where: {
-                workspaceId: workspaceId,
-              },
-              select: {
-                name: true,
-                description: true,
-              },
-              take: 10,
-            })
-
-            if (categories.length > 0) {
-              listCategories = categories
-                .map(
-                  (category) =>
-                    `• ${category.name}${category.description ? ` - ${category.description}` : ""}`
-                )
-                .join("\n")
-            } else {
-              listCategories = "Nessuna categoria disponibile al momento"
-            }
-
-            await prisma.$disconnect()
-          } catch (error) {
-            logger.error("❌ Error getting categories:", error)
-            listCategories = "Nessuna categoria disponibile al momento"
-          }
-        }
-
-        if (hasListServicesToken) {
-          try {
-            const { PrismaClient } = require("@prisma/client")
-            const prisma = new PrismaClient()
-
-            const services = await prisma.services.findMany({
-              where: {
-                workspaceId: workspaceId,
-              },
-              select: {
-                name: true,
-                description: true,
-                price: true,
-                currency: true,
-              },
-              take: 5,
-            })
-
-            if (services.length > 0) {
-              listServices = services
-                .map(
-                  (service) =>
-                    `• ${service.name}: ${service.price} ${service.currency} - ${service.description}`
-                )
-                .join("\n")
-            } else {
-              listServices = "Nessun servizio disponibile al momento"
-            }
-
-            await prisma.$disconnect()
-          } catch (error) {
-            logger.error("❌ Error getting services:", error)
-            listServices = "Nessun servizio disponibile al momento"
-          }
-        }
-
-        // [LIST_ALL_PRODUCTS] token removed - handled by GetAllProducts in FormatterService
-
-        if (hasListActiveOffersToken) {
-          try {
-            const { PrismaClient } = require("@prisma/client")
-            const prisma = new PrismaClient()
-
-            // Get active offers
-            const activeOffers = await prisma.offers.findMany({
-              where: {
-                workspaceId: workspaceId,
-                isActive: true,
-                startDate: { lte: new Date() },
-                endDate: { gte: new Date() },
-              },
-              select: {
-                name: true,
-                description: true,
-                discountPercent: true,
-              },
-              take: 5,
-            })
-
-            if (activeOffers.length > 0) {
-              listActiveOffers = activeOffers
-                .map(
-                  (offer) =>
-                    `• ${offer.name}: ${offer.discountPercent}% di sconto - ${offer.description}`
-                )
-                .join("\n")
-            } else {
-              listActiveOffers = "Nessuna offerta attiva al momento"
-            }
-
-            await prisma.$disconnect()
-          } catch (error) {
-            logger.error("❌ Error getting active offers:", error)
-            listActiveOffers = "Nessuna offerta attiva al momento"
-          }
-        }
-
-        if (hasListOffersToken) {
-          try {
-            const { PrismaClient } = require("@prisma/client")
-            const prisma = new PrismaClient()
-
-            // Get offers (default behavior)
-            const activeOffers = await prisma.offers.findMany({
-              where: {
-                workspaceId: workspaceId,
-                isActive: true,
-                startDate: { lte: new Date() },
-                endDate: { gte: new Date() },
-              },
-              select: {
-                name: true,
-                description: true,
-                discountPercent: true,
-              },
-              take: 3,
-            })
-
-            if (activeOffers.length > 0) {
-              listOffers = activeOffers
-                .map((offer) => `• ${offer.name}`)
-                .join("\n")
-            } else {
-              listOffers = "Nessuna offerta attiva al momento"
-            }
-
-            await prisma.$disconnect()
-          } catch (error) {
-            logger.error("❌ Error getting data:", error)
-            listOffers =
-              context === "services"
-                ? "Nessun servizio disponibile al momento"
-                : "Nessuna offerta attiva al momento"
-          }
-        }
-
-        replacedResponse = replacedResponse
-          .replace(/\[USER_DISCOUNT\]/g, userDiscount)
-          .replace(/\[LIST_OFFERS\]/g, listOffers)
-          .replace(/\[LIST_ACTIVE_OFFERS\]/g, listActiveOffers)
-          // [LIST_ALL_PRODUCTS] handled by GetAllProducts in FormatterService
-          .replace(/\[LIST_SERVICES\]/g, listServices)
-          .replace(/\[LIST_CATEGORIES\]/g, listCategories)
       }
 
       return {

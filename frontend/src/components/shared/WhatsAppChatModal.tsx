@@ -14,7 +14,7 @@ import { getWorkspaceId } from "@/config/workspace.config"
 import { logger } from "@/lib/logger"
 import { api } from "@/services/api"
 import axios from "axios"
-import { Code, MessageCircle, Send, Settings, X } from "lucide-react"
+import { MessageCircle, Send, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { MessageRenderer } from "./MessageRenderer"
 
@@ -76,6 +76,7 @@ interface Chat {
 interface WhatsAppChatModalProps {
   isOpen: boolean
   onClose: () => void
+  onMessageSent?: () => void
   channelName?: string
   phoneNumber?: string
   workspaceId?: string
@@ -85,6 +86,7 @@ interface WhatsAppChatModalProps {
 export function WhatsAppChatModal({
   isOpen,
   onClose,
+  onMessageSent,
   channelName = "L'Altra Italia",
   phoneNumber = "",
   workspaceId = "",
@@ -105,6 +107,14 @@ export function WhatsAppChatModal({
   // 📱 Device preview state - unified with CartIframePopup
   const [showCartPopup, setShowCartPopup] = useState(false)
   const [cartPopupUrl, setCartPopupUrl] = useState<string>("")
+
+  // 🔄 Handle modal close with chat list refresh
+  const handleClose = () => {
+    logger.info("[WhatsApp Modal] 🔄 Forcing page reload on close")
+
+    // 🔄 BRUTALE MA FUNZIONA: Reload della pagina
+    window.location.reload()
+  }
 
   // Render component logic
 
@@ -291,7 +301,12 @@ export function WhatsAppChatModal({
   // Auto-scroll to the latest message
   useEffect(() => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
+      const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+      }
+      // Scroll immediately and after a short delay to ensure content is rendered
+      scrollToBottom()
+      setTimeout(scrollToBottom, 100)
     }
   }, [messages, isLoading])
 
@@ -439,6 +454,12 @@ export function WhatsAppChatModal({
     } catch (error) {
       logger.error("Error calling message API:", error)
 
+      // 🚫 P1: Handle 410 Gone (blocked customer) - Silent block
+      if ((error as any).response?.status === 410) {
+        logger.warn("🚫 Customer is blocked (410 Gone) - silent block")
+        return // Exit silently - no message displayed
+      }
+
       // Add an error message to the chat in case of exception
       const errorMessage: Message = {
         id: (Date.now() + 200).toString(),
@@ -463,9 +484,14 @@ export function WhatsAppChatModal({
   }
 
   const sendMessage = async () => {
+    console.log("=".repeat(80))
+    console.log("🚀🚀🚀 FRONTEND: sendMessage CALLED! Message:", currentMessage)
+    console.log("=".repeat(80))
+
     logger.info("🚀 FRONTEND DEBUG: sendMessage called with:", currentMessage)
 
     if (!currentMessage.trim() || isLoading) {
+      console.log("❌ BLOCKED: empty message or loading")
       logger.info(
         "❌ FRONTEND DEBUG: sendMessage blocked - empty message or loading"
       )
@@ -475,8 +501,17 @@ export function WhatsAppChatModal({
     // Prevent double execution with simple debounce
     const now = Date.now()
     const lastCall = lastSendRef.current
-    if (now - lastCall < 10000) {
-      // 10 second debounce for testing
+    if (now - lastCall < 1000) {
+      // 1 second debounce (reduced from 10s for testing)
+      console.log(
+        "❌ BLOCKED: debounce (last call:",
+        lastCall,
+        "now:",
+        now,
+        "diff:",
+        now - lastCall,
+        ")"
+      )
       logger.info(
         "❌ FRONTEND DEBUG: sendMessage blocked - too soon after last call"
       )
@@ -515,7 +550,7 @@ export function WhatsAppChatModal({
     setIsLoading(true)
 
     try {
-      // Call the API to process the message - LLM SYSTEM
+      // Call the webhook API (same as real WhatsApp messages)
       const apiUrl = `${
         import.meta.env.VITE_API_URL || "http://localhost:3001"
       }/api/whatsapp/webhook`
@@ -523,7 +558,7 @@ export function WhatsAppChatModal({
       // Use provided workspaceId or get from config
       const currentWorkspaceId = getWorkspaceId(workspaceId)
 
-      logger.info("🔄 FRONTEND DEBUG: Making API call to LLM SYSTEM:", apiUrl)
+      logger.info("🔄 FRONTEND DEBUG: Making API call to webhook:", apiUrl)
       const response = await axios.post(apiUrl, {
         entry: [
           {
@@ -538,96 +573,122 @@ export function WhatsAppChatModal({
                       },
                     },
                   ],
+                  workspaceId: currentWorkspaceId,
                 },
               },
             ],
           },
         ],
       })
-      logger.info("📥 FRONTEND DEBUG: API response received:", response.data)
-      logger.info("📥 FRONTEND DEBUG: Response status:", response.status)
       logger.info(
-        "📥 FRONTEND DEBUG: Response success field:",
-        response.data.success
+        "📥 FRONTEND DEBUG: Webhook response received:",
+        response.data
       )
+      logger.info("📥 FRONTEND DEBUG: Response status:", response.status)
 
-      if (response.data.success) {
-        // DUAL LLM SYSTEM response format
-        const botResponse = response.data.data.message
+      // ✅ OPTIMIZED: Use response directly from webhook instead of fetching again
+      const webhookData = response.data
+      if (webhookData.success && webhookData.data?.message) {
+        logger.info("✅ Using bot response from webhook directly")
 
-        // Handle blacklisted customer - don't show any response
-        if (botResponse === "EVENT_RECEIVED_CUSTOMER_BLACKLISTED") {
-          logger.info("🚫 Customer is blacklisted - ignoring message")
-          return
-        }
-
-        if (botResponse && botResponse.trim() !== "") {
-          // Create the bot message from the API response
-          const botMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            content: botResponse,
-            sender: "bot",
-            timestamp: new Date(),
-            agentName: "AI Assistant",
-            // Debug fields from API response
-            translatedQuery: response.data.debug?.translatedQuery,
-            processedPrompt: response.data.debug?.processedPrompt,
-            processingSource: response.data.debug?.processingSource || "LLM", // 🔧 NEW: Source info
-            functionCalls: response.data.debug?.functionCalls || [],
-            // 💰 Cost tracking info
-            debugInfo: response.data.debug?.costInfo
-              ? JSON.stringify(
-                  {
-                    currentCallCost:
-                      response.data.debug.costInfo.currentCallCost,
-                    previousTotalUsage:
-                      response.data.debug.costInfo.previousTotalUsage,
-                    newTotalUsage: response.data.debug.costInfo.newTotalUsage,
-                    costTimestamp: response.data.debug.costInfo.costTimestamp,
-                  },
-                  null,
-                  2
-                )
-              : undefined,
-            metadata: {
-              isOperatorMessage: false,
-              isOperatorControl: false,
-              agentSelected: "CHATBOT",
-              sentBy: "AI",
-            },
-          }
-
-          // Add bot response to chat history
-          setMessages((prev) => [...prev, botMessage])
-        } else {
-          logger.info(
-            "Empty response from DUAL LLM SYSTEM, not adding bot message"
-          )
-        }
-      } else {
-        // Handle API error response
-        logger.error("API Error:", response.data.error)
-
-        // Add an error message to the chat
-        const errorMessage: Message = {
+        // Add bot response immediately from webhook
+        const botMessage: Message = {
           id: (Date.now() + 1).toString(),
-          content:
-            "Sorry, there was an error processing your message. Please try again later.",
+          content: webhookData.data.message,
           sender: "bot",
           timestamp: new Date(),
-          agentName: "System",
+          agentName: "AI Assistant",
+          debugInfo: webhookData.debug
+            ? JSON.stringify(webhookData.debug)
+            : undefined,
           metadata: {
             isOperatorMessage: false,
             isOperatorControl: false,
-            agentSelected: "SYSTEM_ERROR",
-            sentBy: "SYSTEM",
+            agentSelected: "AI",
+            sentBy: "AI",
           },
         }
 
-        setMessages((prev) => [...prev, errorMessage])
+        setMessages((prev) => [...prev, botMessage])
+
+        // Scroll to bottom
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+        }, 100)
       }
+
+      // ✅ STILL fetch from backend to sync with database (background sync)
+      // This ensures we have the correct IDs and all messages
+      const sessionIdToUse = localSelectedChat?.sessionId || sessionId
+
+      if (sessionIdToUse) {
+        logger.info(
+          "📥 FRONTEND DEBUG: Background sync - fetching messages from database"
+        )
+
+        // Small delay for database to save
+        await new Promise((resolve) => setTimeout(resolve, 300))
+
+        try {
+          const messagesResponse = await api.get(
+            `/chat/${sessionIdToUse}/messages`
+          )
+
+          if (messagesResponse.data.success) {
+            const allMessages = messagesResponse.data.data.map(
+              (message: any) => ({
+                id: message.id,
+                content: message.content,
+                sender: message.direction === "INBOUND" ? "customer" : "bot",
+                timestamp: new Date(message.createdAt),
+                agentName:
+                  message.agentName ||
+                  (message.direction === "OUTBOUND"
+                    ? "AI Assistant"
+                    : undefined),
+                debugInfo: message.debugInfo,
+                metadata: {
+                  isOperatorMessage: message.isOperatorMessage || false,
+                  isOperatorControl: message.isOperatorControl || false,
+                  agentSelected: message.agentName || "AI",
+                  sentBy: message.direction === "INBOUND" ? "CUSTOMER" : "AI",
+                },
+              })
+            )
+
+            logger.info(
+              "📥 FRONTEND DEBUG: Fetched",
+              allMessages.length,
+              "messages from backend"
+            )
+
+            // Replace all messages with fresh data from backend
+            setMessages(allMessages)
+
+            // 🔄 CRITICAL: Call parent to refresh chat list
+            onMessageSent?.()
+            logger.info("[WhatsApp Modal] 🔄 Chat list refresh triggered")
+
+            // Scroll to bottom
+            setTimeout(() => {
+              messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+            }, 100)
+          }
+        } catch (fetchError) {
+          logger.error("Error fetching messages after webhook:", fetchError)
+        }
+      }
+
+      setIsLoading(false)
     } catch (error) {
       logger.error("Error calling message API:", error)
+
+      // 🚫 P1: Handle 410 Gone (blocked customer) - Silent block
+      if ((error as any).response?.status === 410) {
+        logger.warn("🚫 Customer is blocked (410 Gone) - silent block")
+        setIsLoading(false)
+        return // Exit silently - no message displayed
+      }
 
       // Add an error message to the chat in case of exception
       const errorMessage: Message = {
@@ -684,7 +745,7 @@ export function WhatsAppChatModal({
       onOpenChange={(open) => {
         // Allow closing by clicking outside
         if (!open) {
-          onClose()
+          handleClose()
         }
       }}
     >
@@ -707,7 +768,7 @@ export function WhatsAppChatModal({
 
         {/* Close Button - Positioned at top right of DialogContent */}
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="fixed top-[calc(50%-45vh)] right-[calc(50%-585px)] flex items-center justify-center w-10 h-10 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors z-50 shadow-lg"
           aria-label="Close"
         >
@@ -729,28 +790,7 @@ export function WhatsAppChatModal({
                 {userPhoneNumber || channelName}
               </span>
             </div>
-            <div className="flex gap-2 items-center">
-              <button
-                onClick={() => setShowFunctionCalls(!showFunctionCalls)}
-                className={`text-white hover:bg-green-600 rounded-full p-2 transition ${
-                  showFunctionCalls ? "bg-green-600" : ""
-                }`}
-                aria-label="Toggle Function Calls Debug"
-                title="Show/Hide Function Calls Debug"
-              >
-                <Code className="h-5 w-5" />
-              </button>
-              <button
-                onClick={() => setShowProcessedPrompt(!showProcessedPrompt)}
-                className={`text-white hover:bg-green-600 rounded-full p-2 transition ${
-                  showProcessedPrompt ? "bg-green-600" : ""
-                }`}
-                aria-label="Toggle Complete Debug Info"
-                title="Show/Hide Complete Debug Information"
-              >
-                <Settings className="h-5 w-5" />
-              </button>
-            </div>
+            {/* Icons removed as requested */}
           </div>
 
           {/* Chat Content Area - Flex layout: header top, messages flex-1, input bottom */}

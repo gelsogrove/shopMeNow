@@ -216,9 +216,11 @@ export class CallingFunctionsService {
       logger.info("🔧 Token created successfully:", token)
 
       // Use the injected linkGeneratorService instance
+      // FR-13: Pass step parameter to generateCheckoutLink
       const linkUrl = await this.linkGeneratorService.generateCheckoutLink(
         token,
-        request.workspaceId
+        request.workspaceId,
+        request.step // Pass step parameter (undefined if not provided)
       )
 
       return {
@@ -353,6 +355,133 @@ export class CallingFunctionsService {
         success: false,
         message:
           "An error occurred while updating your notification preferences. Please try again later.",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  /**
+   * Delegate to Product Search Agent
+   * This triggers a sub-agent call in the LLM orchestration layer
+   */
+  public async productSearchAgent(request: {
+    query: string
+    customerId: string
+    workspaceId: string
+  }): Promise<StandardResponse> {
+    try {
+      logger.info("🔍 Router delegating to Product Search Agent:", request)
+
+      // This function is called by Router Agent to delegate to Product Search Agent
+      // The actual delegation happens in llm-router.service.ts
+      // We return a signal that tells the router to call the sub-agent
+      return {
+        success: true,
+        message: `DELEGATE_TO_AGENT:PRODUCT_SEARCH:${request.query}`,
+        timestamp: new Date().toISOString(),
+        data: {
+          agentType: "PRODUCT_SEARCH",
+          query: request.query,
+        },
+      }
+    } catch (error) {
+      logger.error("❌ Error in productSearchAgent:", error)
+      return {
+        success: false,
+        message: "Error delegating to Product Search Agent",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  /**
+   * Delegate to Cart Management Agent
+   * This triggers a sub-agent call in the LLM orchestration layer
+   */
+  public async cartManagementAgent(request: {
+    query: string
+    customerId: string
+    workspaceId: string
+  }): Promise<StandardResponse> {
+    try {
+      logger.info("🛒 Router delegating to Cart Management Agent:", request)
+
+      return {
+        success: true,
+        message: `DELEGATE_TO_AGENT:CART_MANAGEMENT:${request.query}`,
+        timestamp: new Date().toISOString(),
+        data: {
+          agentType: "CART_MANAGEMENT",
+          query: request.query,
+        },
+      }
+    } catch (error) {
+      logger.error("❌ Error in cartManagementAgent:", error)
+      return {
+        success: false,
+        message: "Error delegating to Cart Management Agent",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  /**
+   * Delegate to Order Tracking Agent
+   * This triggers a sub-agent call in the LLM orchestration layer
+   */
+  public async orderTrackingAgent(request: {
+    query: string
+    customerId: string
+    workspaceId: string
+  }): Promise<StandardResponse> {
+    try {
+      logger.info("📦 Router delegating to Order Tracking Agent:", request)
+
+      return {
+        success: true,
+        message: `DELEGATE_TO_AGENT:ORDER_TRACKING:${request.query}`,
+        timestamp: new Date().toISOString(),
+        data: {
+          agentType: "ORDER_TRACKING",
+          query: request.query,
+        },
+      }
+    } catch (error) {
+      logger.error("❌ Error in orderTrackingAgent:", error)
+      return {
+        success: false,
+        message: "Error delegating to Order Tracking Agent",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  /**
+   * Delegate to Customer Support Agent
+   * This triggers a sub-agent call in the LLM orchestration layer
+   */
+  public async customerSupportAgent(request: {
+    query: string
+    customerId: string
+    workspaceId: string
+  }): Promise<StandardResponse> {
+    try {
+      logger.info("💬 Router delegating to Customer Support Agent:", request)
+
+      return {
+        success: true,
+        message: `DELEGATE_TO_AGENT:CUSTOMER_SUPPORT:${request.query}`,
+        timestamp: new Date().toISOString(),
+        data: {
+          agentType: "CUSTOMER_SUPPORT",
+          query: request.query,
+        },
+      }
+    } catch (error) {
+      logger.error("❌ Error in customerSupportAgent:", error)
+      return {
+        success: false,
+        message: "Error delegating to Customer Support Agent",
         timestamp: new Date().toISOString(),
       }
     }
@@ -552,12 +681,14 @@ export class CallingFunctionsService {
         )
 
         // Genera short URL del carrello
+        // FR-13: AddProduct always uses step=2 (skip cart review, go to address)
         const {
           linkGeneratorService,
         } = require("../application/services/link-generator.service")
         const cartUrl = await linkGeneratorService.generateCheckoutLink(
           token,
-          request.workspaceId
+          request.workspaceId,
+          2 // FR-13: Skip cart review step
         )
 
         await prisma.$disconnect()
@@ -586,6 +717,180 @@ export class CallingFunctionsService {
         success: false,
         error: error instanceof Error ? error.message : "Errore interno",
         message: "Impossibile aggiungere il prodotto al carrello.",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  /**
+   * Aggiungi servizio al carrello
+   * Feature 123 - M1: AddService support
+   */
+  public async addServiceToCart(request: {
+    customerId: string
+    workspaceId: string
+    serviceCode: string
+    quantity: number
+    notes?: string
+  }): Promise<any> {
+    try {
+      logger.info("🛠️ Calling addServiceToCart with:", request)
+      const { PrismaClient } = require("@prisma/client")
+      const prisma = new PrismaClient()
+
+      try {
+        // Trova il cliente
+        const customer = await prisma.customers.findFirst({
+          where: {
+            id: request.customerId,
+            workspaceId: request.workspaceId,
+          },
+        })
+
+        if (!customer) {
+          logger.error("❌ Customer not found in addServiceToCart")
+          return {
+            success: false,
+            error: "Cliente non trovato",
+            message: "Non riesco a trovare il tuo account.",
+            timestamp: new Date().toISOString(),
+          }
+        }
+
+        // Trova il servizio per serviceCode o per nome (fallback)
+        let service = await prisma.services.findFirst({
+          where: {
+            code: request.serviceCode,
+            workspaceId: request.workspaceId,
+            isActive: true,
+          },
+        })
+
+        // Se non trovato per code, cerca per nome (case-insensitive)
+        if (!service) {
+          logger.info(
+            `🔍 ServiceCode not found, searching by name: ${request.serviceCode}`
+          )
+          service = await prisma.services.findFirst({
+            where: {
+              name: {
+                contains: request.serviceCode,
+                mode: "insensitive",
+              },
+              workspaceId: request.workspaceId,
+              isActive: true,
+            },
+          })
+        }
+
+        if (!service) {
+          logger.error("❌ Service not found:", request.serviceCode)
+          return {
+            success: false,
+            error: "Servizio non trovato",
+            message: `Il servizio "${request.serviceCode}" non è disponibile.`,
+            timestamp: new Date().toISOString(),
+          }
+        }
+
+        // Trova o crea il carrello del cliente
+        let cart = await prisma.carts.findFirst({
+          where: {
+            customerId: request.customerId,
+            workspaceId: request.workspaceId,
+          },
+        })
+
+        if (!cart) {
+          cart = await prisma.carts.create({
+            data: {
+              customerId: request.customerId,
+              workspaceId: request.workspaceId,
+            },
+          })
+          logger.info("✅ Created new cart for customer:", request.customerId)
+        }
+
+        // Controlla se il servizio è già nel carrello
+        const existingCartItem = await prisma.cartItems.findFirst({
+          where: {
+            cartId: cart.id,
+            serviceId: service.id,
+          },
+        })
+
+        if (existingCartItem) {
+          // Se esiste già, aggiorna la quantità
+          await prisma.cartItems.update({
+            where: { id: existingCartItem.id },
+            data: {
+              quantity: existingCartItem.quantity + request.quantity,
+            },
+          })
+          logger.info(
+            "✅ Updated existing cart item for service:",
+            request.serviceCode
+          )
+        } else {
+          // Altrimenti, crea un nuovo item
+          await prisma.cartItems.create({
+            data: {
+              cartId: cart.id,
+              serviceId: service.id,
+              quantity: request.quantity,
+              itemType: "SERVICE",
+              notes: request.notes || "",
+            },
+          })
+          logger.info("✅ Added service to cart:", request.serviceCode)
+        }
+
+        // Genera token per accesso al carrello
+        const token = await this.secureTokenService.createToken(
+          "cart",
+          request.workspaceId,
+          { customerId: request.customerId },
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          request.customerId
+        )
+
+        // Genera short URL del carrello
+        const {
+          linkGeneratorService,
+        } = require("../application/services/link-generator.service")
+        const cartUrl = await linkGeneratorService.generateCheckoutLink(
+          token,
+          request.workspaceId,
+          2 // Skip cart review step
+        )
+
+        await prisma.$disconnect()
+
+        return {
+          success: true,
+          message: `✅ Ho aggiunto ${request.quantity} x "${service.name}" al carrello!\n\n🛒 Vedi il tuo carrello: ${cartUrl}\n\n⏰ Link valido per 15 minuti`,
+          serviceName: service.name,
+          quantity: request.quantity,
+          cartCode: cart.id,
+          cartUrl: cartUrl,
+          token: token,
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          timestamp: new Date().toISOString(),
+        }
+      } catch (error) {
+        logger.error("❌ Error in addServiceToCart database operations:", error)
+        await prisma.$disconnect()
+        throw error
+      }
+    } catch (error) {
+      logger.error("❌ Error in addServiceToCart:", error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Errore interno",
+        message: "Impossibile aggiungere il servizio al carrello.",
         timestamp: new Date().toISOString(),
       }
     }
@@ -623,6 +928,203 @@ export class CallingFunctionsService {
       return {
         success: false,
         message: "Errore nel registrare la ricerca.",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  /**
+   * Get specific order details by order ID or code
+   */
+  public async getOrder(request: {
+    customerId: string
+    workspaceId: string
+    orderId: string
+  }): Promise<any> {
+    try {
+      logger.info("📦 Calling getOrder with:", request)
+      const { getOrder } = require("../domain/calling-functions/GetOrder")
+
+      const result = await getOrder({
+        customerId: request.customerId,
+        workspaceId: request.workspaceId,
+        orderId: request.orderId,
+      })
+
+      logger.info("✅ GetOrder result:", result)
+      return result
+    } catch (error) {
+      logger.error("❌ Error in getOrder:", error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        message: "Errore nel recupero dell'ordine.",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  /**
+   * Track order shipment status
+   */
+  public async trackOrder(request: {
+    customerId: string
+    workspaceId: string
+    orderId: string
+  }): Promise<any> {
+    try {
+      logger.info("📍 Calling trackOrder with:", request)
+      const { trackOrder } = require("../domain/calling-functions/TrackOrder")
+
+      const result = await trackOrder({
+        customerId: request.customerId,
+        workspaceId: request.workspaceId,
+        orderId: request.orderId,
+      })
+
+      logger.info("✅ TrackOrder result:", result)
+      return result
+    } catch (error) {
+      logger.error("❌ Error in trackOrder:", error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        message: "Errore nel tracking dell'ordine.",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  /**
+   * Send invoice PDF via email
+   */
+  public async sendInvoice(request: {
+    customerId: string
+    workspaceId: string
+    orderId: string
+    email?: string
+  }): Promise<any> {
+    try {
+      logger.info("📧 Calling sendInvoice with:", request)
+      const { sendInvoice } = require("../domain/calling-functions/SendInvoice")
+
+      const result = await sendInvoice({
+        customerId: request.customerId,
+        workspaceId: request.workspaceId,
+        orderId: request.orderId,
+        email: request.email,
+      })
+
+      logger.info("✅ SendInvoice result:", result)
+      return result
+    } catch (error) {
+      logger.error("❌ Error in sendInvoice:", error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        message: "Errore nell'invio della fattura.",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  /**
+   * Send security alert email to workspace admins
+   */
+  public async sendAlertEmail(request: {
+    workspaceId: string
+    customerId: string
+    alertType: string
+    messageContent: string
+    severity: string
+    additionalInfo?: string
+  }): Promise<any> {
+    try {
+      logger.warn("🚨 Calling sendAlertEmail with:", request)
+      const {
+        sendAlertEmail,
+      } = require("../domain/calling-functions/SendAlertEmail")
+
+      const result = await sendAlertEmail({
+        workspaceId: request.workspaceId,
+        customerId: request.customerId,
+        alertType: request.alertType as any,
+        messageContent: request.messageContent,
+        severity: request.severity as any,
+        additionalInfo: request.additionalInfo,
+      })
+
+      logger.warn("✅ SendAlertEmail result:", result)
+      return result
+    } catch (error) {
+      logger.error("❌ Error in sendAlertEmail:", error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        message: "Errore nell'invio dell'alert.",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  /**
+   * 📊 Save product search for analytics (statistics tracking)
+   *
+   * Called AUTOMATICALLY by ProductSearchAgent every time a user searches for products.
+   * Tracks all search attempts (successful or not) for analytics purposes.
+   *
+   * Data retention: 6 months (cleaned up by scheduler cron job)
+   *
+   * @param request - Search details with workspaceId, customerId, query
+   * @returns Success confirmation
+   */
+  public async searchProductForStatistics(request: {
+    workspaceId: string
+    customerId: string
+    query: string
+  }): Promise<StandardResponse> {
+    try {
+      const { workspaceId, customerId, query } = request
+
+      logger.info("📊 Saving product search for statistics", {
+        workspaceId,
+        customerId,
+        query: query.substring(0, 50), // Limit log size
+      })
+
+      const { PrismaClient } = require("@prisma/client")
+      const prisma = new PrismaClient()
+
+      try {
+        await prisma.productSearch.create({
+          data: {
+            workspaceId,
+            customerId,
+            query: query.trim(),
+          },
+        })
+
+        logger.info("✅ Product search saved successfully", {
+          workspaceId,
+          query: query.substring(0, 30),
+        })
+
+        return {
+          success: true,
+          message: `Ricerca "${query.substring(0, 30)}..." registrata per statistiche`,
+          timestamp: new Date().toISOString(),
+        }
+      } finally {
+        await prisma.$disconnect()
+      }
+    } catch (error) {
+      logger.error("❌ Error saving product search statistics:", error)
+
+      // Non bloccare il flusso principale - statistiche sono opzionali
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        message: "Errore nel salvataggio statistiche (non critico)",
         timestamp: new Date().toISOString(),
       }
     }

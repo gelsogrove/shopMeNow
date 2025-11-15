@@ -23,8 +23,8 @@ export interface WorkspaceProps {
   url?: string | null
   assistantPhone?: string | null
   businessType: string
-  welcomeMessages?: any
-  wipMessages?: any
+  welcomeMessage?: any
+  wipMessage?: any
   afterRegistrationMessages?: any
   debugMode: boolean
   adminEmail?: string | null
@@ -123,12 +123,12 @@ export class Workspace extends Entity<WorkspaceProps> {
     return this.props.businessType
   }
 
-  get welcomeMessages(): any {
-    return this.props.welcomeMessages
+  get welcomeMessage(): any {
+    return this.props.welcomeMessage
   }
 
-  get wipMessages(): any {
-    return this.props.wipMessages
+  get wipMessage(): any {
+    return this.props.wipMessage
   }
 
   get afterRegistrationMessages(): any {

@@ -20,7 +20,10 @@ module.exports = {
   },
   testEnvironment: "node",
   coveragePathIgnorePatterns: ["/node_modules/", "/dist/", "/src/utils/"],
-  testMatch: ["**/src/__tests__/unit/**/*.spec.ts"],
+  testMatch: [
+    "**/src/__tests__/unit/**/*.spec.ts",
+    "**/__tests__/unit/**/*.spec.ts", // 🆕 Support root __tests__ folder
+  ],
   testPathIgnorePatterns: [
     "/node_modules/",
     "/dist/",

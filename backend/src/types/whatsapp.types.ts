@@ -42,6 +42,7 @@ export interface GetShipmentTrackingLinkRequest {
 export interface GetCartLinkRequest {
   customerId: string
   workspaceId: string
+  step?: number // FR-13: Optional step parameter (1 or 2)
 }
 
 export interface GetShipmentTrackingLinkResponse extends StandardResponse {

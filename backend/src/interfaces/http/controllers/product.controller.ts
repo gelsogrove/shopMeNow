@@ -211,17 +211,20 @@ export class ProductController {
         productData.isActive = productData.isActive === "true"
       }
 
-      // Convert checkbox values (HTML checkboxes send "on" when checked, undefined when unchecked)
-      productData.isWholeGrain =
-        productData.isWholeGrain === "on" || productData.isWholeGrain === true
-      productData.isOrganic =
-        productData.isOrganic === "on" || productData.isOrganic === true
-      productData.isHalal =
-        productData.isHalal === "on" || productData.isHalal === true
-      productData.isVegan =
-        productData.isVegan === "on" || productData.isVegan === true
-      productData.isGlutenFree =
-        productData.isGlutenFree === "on" || productData.isGlutenFree === true
+      // Parse certifications array from JSON string (sent from frontend)
+      if (
+        productData.certifications &&
+        typeof productData.certifications === "string"
+      ) {
+        try {
+          productData.certifications = JSON.parse(productData.certifications)
+        } catch (error) {
+          logger.error("Failed to parse certifications JSON:", error)
+          productData.certifications = []
+        }
+      } else if (!productData.certifications) {
+        productData.certifications = []
+      }
 
       // Handle supplierId: convert empty string to null
       if (productData.supplierId === "" || productData.supplierId === "none") {
@@ -345,17 +348,20 @@ export class ProductController {
         productData.isActive = productData.isActive === "true"
       }
 
-      // Convert checkbox values (HTML checkboxes send "on" when checked, undefined when unchecked)
-      productData.isWholeGrain =
-        productData.isWholeGrain === "on" || productData.isWholeGrain === true
-      productData.isOrganic =
-        productData.isOrganic === "on" || productData.isOrganic === true
-      productData.isHalal =
-        productData.isHalal === "on" || productData.isHalal === true
-      productData.isVegan =
-        productData.isVegan === "on" || productData.isVegan === true
-      productData.isGlutenFree =
-        productData.isGlutenFree === "on" || productData.isGlutenFree === true
+      // Parse certifications array from JSON string (sent from frontend)
+      if (
+        productData.certifications &&
+        typeof productData.certifications === "string"
+      ) {
+        try {
+          productData.certifications = JSON.parse(productData.certifications)
+        } catch (error) {
+          logger.error("Failed to parse certifications JSON:", error)
+          productData.certifications = []
+        }
+      } else if (!productData.certifications) {
+        productData.certifications = []
+      }
 
       // Handle supplierId: convert empty string to null
       if (productData.supplierId === "" || productData.supplierId === "none") {

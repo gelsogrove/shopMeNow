@@ -60,6 +60,7 @@ export class ShortUrlController {
         logger.info(
           `📎 PDF detected, opening in new window: ${result.originalUrl}`
         )
+        // ✅ SECURITY FIX: Use safe DOM manipulation instead of innerHTML
         res.send(`
           <!DOCTYPE html>
           <html>
@@ -67,11 +68,30 @@ export class ShortUrlController {
             <meta charset="UTF-8">
             <title>Opening PDF...</title>
             <script>
-              // Open PDF in new window/tab and close redirect page
-              window.open('${result.originalUrl}', '_blank');
-              // Redirect current page to a confirmation or close
+              // Open PDF in new window/tab
+              const pdfUrl = ${JSON.stringify(result.originalUrl)};
+              window.open(pdfUrl, '_blank');
+              
+              // Show confirmation message using safe DOM methods
               setTimeout(() => {
-                document.body.innerHTML = '<div style="font-family: Arial; text-align: center; margin-top: 50px;"><h2>PDF aperto in una nuova finestra</h2><p>Puoi chiudere questa scheda.</p></div>';
+                // Clear body safely
+                while (document.body.firstChild) {
+                  document.body.removeChild(document.body.firstChild);
+                }
+                
+                // Create elements safely (no innerHTML)
+                const container = document.createElement('div');
+                container.style.cssText = 'font-family: Arial; text-align: center; margin-top: 50px';
+                
+                const title = document.createElement('h2');
+                title.textContent = 'PDF aperto in una nuova finestra';
+                
+                const message = document.createElement('p');
+                message.textContent = 'Puoi chiudere questa scheda.';
+                
+                container.appendChild(title);
+                container.appendChild(message);
+                document.body.appendChild(container);
               }, 100);
             </script>
           </head>

@@ -29,8 +29,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       currency: data.currency,
       messageLimit: data.messageLimit,
       blocklist: data.blocklist,
-      welcomeMessages: data.welcomeMessages,
-      wipMessages: data.wipMessages,
+      welcomeMessage: data.welcomeMessage,
+      wipMessage: data.wipMessage,
       challengeStatus: data.challengeStatus,
       isActive: data.isActive,
       isDelete: data.isDelete,
@@ -62,8 +62,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       currency: workspace.currency,
       messageLimit: workspace.messageLimit,
       blocklist: workspace.blocklist,
-      welcomeMessages: workspace.welcomeMessages,
-      wipMessages: workspace.wipMessages,
+      welcomeMessage: workspace.welcomeMessage,
+      wipMessage: workspace.wipMessage,
       challengeStatus: workspace.challengeStatus,
       isActive: workspace.isActive,
       isDelete: workspace.isDelete,
@@ -149,8 +149,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
             blocklist: "",
             url: null,
             businessType: "ECOMMERCE",
-            welcomeMessages: null,
-            wipMessages: null,
+            welcomeMessage: null,
+            wipMessage: null,
             afterRegistrationMessages: null,
             debugMode: true,
             adminEmail: null,
@@ -311,13 +311,13 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
 
       // Handle JSON fields - ensure they are properly formatted
       if (
-        dbData.welcomeMessages &&
-        typeof dbData.welcomeMessages === "object"
+        dbData.welcomeMessage &&
+        typeof dbData.welcomeMessage === "object"
       ) {
-        dbData.welcomeMessages = dbData.welcomeMessages
+        dbData.welcomeMessage = dbData.welcomeMessage
       }
-      if (dbData.wipMessages && typeof dbData.wipMessages === "object") {
-        dbData.wipMessages = dbData.wipMessages
+      if (dbData.wipMessage && typeof dbData.wipMessage === "object") {
+        dbData.wipMessage = dbData.wipMessage
       }
 
       logger.debug(
@@ -413,8 +413,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
             blocklist: "",
             url: null,
             businessType: "ECOMMERCE",
-            welcomeMessages: null,
-            wipMessages: null,
+            welcomeMessage: null,
+            wipMessage: null,
             afterRegistrationMessages: null,
             debugMode: true,
             adminEmail: null,

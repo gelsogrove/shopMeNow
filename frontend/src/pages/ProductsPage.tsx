@@ -56,6 +56,7 @@ export function ProductsPage() {
   const [filterGlutenFree, setFilterGlutenFree] = useState(false)
   const [filterHalal, setFilterHalal] = useState(false)
   const [filterWholeGrain, setFilterWholeGrain] = useState(false)
+  const [filterDOP, setFilterDOP] = useState(false)
 
   // Load filters from localStorage or use defaults
   const [filterCategory, setFilterCategory] = useState<string>("all")
@@ -201,19 +202,26 @@ export function ProductsPage() {
 
     // Filter by certifications
     if (filterOrganic) {
-      filtered = filtered.filter((p) => p.isOrganic)
+      filtered = filtered.filter((p) => p.certifications?.includes("bio"))
     }
     if (filterVegan) {
-      filtered = filtered.filter((p) => p.isVegan)
+      filtered = filtered.filter((p) => p.certifications?.includes("vegan"))
     }
     if (filterGlutenFree) {
-      filtered = filtered.filter((p) => p.isGlutenFree)
+      filtered = filtered.filter((p) =>
+        p.certifications?.includes("gluten-free")
+      )
     }
     if (filterHalal) {
-      filtered = filtered.filter((p) => p.isHalal)
+      filtered = filtered.filter((p) => p.certifications?.includes("halal"))
     }
     if (filterWholeGrain) {
-      filtered = filtered.filter((p) => p.isWholeGrain)
+      filtered = filtered.filter((p) =>
+        p.certifications?.includes("whole-grain")
+      )
+    }
+    if (filterDOP) {
+      filtered = filtered.filter((p) => p.certifications?.includes("DOP"))
     }
 
     logger.info("🔍 After certification filters:", filtered.length)
@@ -241,6 +249,7 @@ export function ProductsPage() {
     filterGlutenFree,
     filterHalal,
     filterWholeGrain,
+    filterDOP,
   ])
 
   const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -255,6 +264,24 @@ export function ProductsPage() {
 
     // Set product code from state
     formData.set("code", productCode)
+
+    // Build certifications array from checkboxes
+    const certifications: string[] = []
+    if (formData.get("cert-whole-grain")) certifications.push("whole-grain")
+    if (formData.get("cert-bio")) certifications.push("bio")
+    if (formData.get("cert-halal")) certifications.push("halal")
+    if (formData.get("cert-vegan")) certifications.push("vegan")
+    if (formData.get("cert-gluten-free")) certifications.push("gluten-free")
+    if (formData.get("cert-DOP")) certifications.push("DOP")
+
+    // Remove old checkbox fields and add certifications array
+    formData.delete("cert-whole-grain")
+    formData.delete("cert-bio")
+    formData.delete("cert-halal")
+    formData.delete("cert-vegan")
+    formData.delete("cert-gluten-free")
+    formData.delete("cert-DOP")
+    formData.set("certifications", JSON.stringify(certifications))
 
     try {
       const newProduct = await productsApi.create(workspace.id, formData)
@@ -330,6 +357,24 @@ export function ProductsPage() {
     formData.set("code", productCode) // Use .set() instead of .append()
     formData.set("isActive", productIsActive.toString())
 
+    // Build certifications array from checkboxes
+    const certifications: string[] = []
+    if (formData.get("cert-whole-grain")) certifications.push("whole-grain")
+    if (formData.get("cert-bio")) certifications.push("bio")
+    if (formData.get("cert-halal")) certifications.push("halal")
+    if (formData.get("cert-vegan")) certifications.push("vegan")
+    if (formData.get("cert-gluten-free")) certifications.push("gluten-free")
+    if (formData.get("cert-DOP")) certifications.push("DOP")
+
+    // Remove old checkbox fields and add certifications array
+    formData.delete("cert-whole-grain")
+    formData.delete("cert-bio")
+    formData.delete("cert-halal")
+    formData.delete("cert-vegan")
+    formData.delete("cert-gluten-free")
+    formData.delete("cert-DOP")
+    formData.set("certifications", JSON.stringify(certifications))
+
     // Make sure categoryId is set correctly if "none" is selected
     const catId = formData.get("categoryId")
     if (catId === "none") {
@@ -348,6 +393,7 @@ export function ProductsPage() {
     logger.info("Form data being sent for product update")
     logger.info("CategoryId:", formData.get("categoryId"))
     logger.info("SupplierId:", formData.get("supplierId"))
+    logger.info("Certifications:", certifications)
 
     try {
       const updatedProduct = await productsApi.update(
@@ -640,6 +686,19 @@ export function ProductsPage() {
           />
         </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="region">Italian Region</Label>
+          <Input
+            id="region"
+            name="region"
+            placeholder="e.g., Sardinia, Sicily, Emilia-Romagna"
+            defaultValue={product?.region || ""}
+          />
+          <p className="text-xs text-gray-500">
+            Region of origin or production (optional, in English)
+          </p>
+        </div>
+
         {/* Certifications Section */}
         <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
           <Label className="text-base font-semibold">Certifications</Label>
@@ -650,8 +709,10 @@ export function ProductsPage() {
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
-                name="isWholeGrain"
-                defaultChecked={product?.isWholeGrain}
+                name="cert-whole-grain"
+                defaultChecked={product?.certifications?.includes(
+                  "whole-grain"
+                )}
                 className="rounded border-gray-300"
               />
               <span className="text-sm">🌾 Integrale</span>
@@ -659,8 +720,8 @@ export function ProductsPage() {
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
-                name="isOrganic"
-                defaultChecked={product?.isOrganic}
+                name="cert-bio"
+                defaultChecked={product?.certifications?.includes("bio")}
                 className="rounded border-gray-300"
               />
               <span className="text-sm">🌿 Biologico</span>
@@ -668,8 +729,8 @@ export function ProductsPage() {
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
-                name="isHalal"
-                defaultChecked={product?.isHalal}
+                name="cert-halal"
+                defaultChecked={product?.certifications?.includes("halal")}
                 className="rounded border-gray-300"
               />
               <span className="text-sm">🕌 Halal</span>
@@ -677,8 +738,8 @@ export function ProductsPage() {
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
-                name="isVegan"
-                defaultChecked={product?.isVegan}
+                name="cert-vegan"
+                defaultChecked={product?.certifications?.includes("vegan")}
                 className="rounded border-gray-300"
               />
               <span className="text-sm">🌱 Vegan</span>
@@ -686,11 +747,22 @@ export function ProductsPage() {
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
-                name="isGlutenFree"
-                defaultChecked={product?.isGlutenFree}
+                name="cert-gluten-free"
+                defaultChecked={product?.certifications?.includes(
+                  "gluten-free"
+                )}
                 className="rounded border-gray-300"
               />
               <span className="text-sm">🌾 Senza Glutine</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                name="cert-DOP"
+                defaultChecked={product?.certifications?.includes("DOP")}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm">🏛️ DOP/IGP/IGT</span>
             </label>
           </div>
         </div>
@@ -845,6 +917,15 @@ export function ProductsPage() {
             />
             <span className="text-sm">🌾 Senza Glutine</span>
           </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filterDOP}
+              onChange={(e) => setFilterDOP(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            <span className="text-sm">🏛️ DOP/IGP/IGT</span>
+          </label>
         </div>
 
         {/* Grid View */}
@@ -914,6 +995,11 @@ export function ProductsPage() {
                       {product.category && (
                         <p className="text-xs text-muted-foreground">
                           {product.category.name}
+                        </p>
+                      )}
+                      {product.region && (
+                        <p className="text-xs text-muted-foreground">
+                          📍 {product.region}
                         </p>
                       )}
                     </div>

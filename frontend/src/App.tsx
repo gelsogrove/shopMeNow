@@ -5,7 +5,7 @@ import { Toaster } from "sonner"
 import { Layout } from "./components/layout/Layout"
 import { ProtectedRoute } from "./components/ProtectedRoute"
 import { ChatProvider } from "./contexts/ChatContext"
-import { AgentPage } from "./pages/AgentPage"
+import { AgentConfigurationPage } from "./pages/AgentConfigurationPage"
 import { AnalyticsPage } from "./pages/AnalyticsPage"
 import SignupPage from "./pages/auth/SignupPage"
 import { ChatPage } from "./pages/ChatPage"
@@ -38,6 +38,7 @@ import { ChannelTypesPage } from "./pages/settings/ChannelTypesPage"
 import { LanguagesPage } from "./pages/settings/LanguagesPage"
 import { SuppliersPage } from "./pages/SuppliersPage"
 
+import { ProductSearchDebug } from "./pages/debug/ProductSearchDebug"
 import { ProductsPage as SettingsProductsPage } from "./pages/settings/ProductsPage"
 
 import { Suspense, lazy } from "react"
@@ -98,8 +99,8 @@ export function App() {
                 <Route path="/analytics" element={<Layout />}>
                   <Route index element={<AnalyticsPage />} />
                 </Route>
-                <Route path="/agent" element={<Layout />}>
-                  <Route index element={<AgentPage />} />
+                <Route path="/agents" element={<Layout />}>
+                  <Route index element={<AgentConfigurationPage />} />
                 </Route>
                 <Route path="/clients" element={<Layout />}>
                   <Route index element={<ClientsPage />} />
@@ -157,6 +158,11 @@ export function App() {
                 {/* Campaign routes */}
                 <Route path="/campaigns" element={<Layout />}>
                   <Route index element={<CampaignsPage />} />
+                </Route>
+
+                {/* Debug Search routes */}
+                <Route path="/debug/search" element={<Layout />}>
+                  <Route index element={<ProductSearchDebug />} />
                 </Route>
               </Route>
 

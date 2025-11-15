@@ -23,8 +23,8 @@ export interface Workspace {
   debugMode?: boolean
   currency?: string
   language?: string
-  welcomeMessages?: any
-  wipMessages?: any
+  welcomeMessage?: string
+  wipMessage?: string
   afterRegistrationMessages?: any
   messageLimit?: number
   blocklist?: string

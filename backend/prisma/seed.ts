@@ -20,6 +20,8 @@ import { PrismaClient } from "@prisma/client"
 import * as bcrypt from "bcrypt"
 import { campaigns } from "./data/campaigns"
 import { categories } from "./data/categories"
+import { defaultAgents } from "./data/defaultAgents"
+import { defaultFAQs } from "./data/defaultFAQs"
 import { faqs } from "./data/faqs"
 import { offers } from "./data/offers"
 import { pricingConfigData } from "./data/pricingConfig"
@@ -75,6 +77,7 @@ async function main() {
   await prisma.gdprContent.deleteMany()
   await prisma.whatsappSettings.deleteMany()
   await prisma.paymentDetails.deleteMany()
+  await prisma.searchConversations.deleteMany() // 🆕 Delete before workspace
 
   // Delete user-related tables
   await prisma.userWorkspace.deleteMany()
@@ -126,13 +129,16 @@ async function main() {
       businessType: "ECOMMERCE",
       description: "Italian Gourmet Food E-commerce",
       url: workspaceSettings.url || "https://altrogusto.com",
+      challengeStatus: true, // ✅ Feature 126: Chatbot enabled by default
       debugMode:
         workspaceSettings.debugMode !== undefined
           ? workspaceSettings.debugMode
           : true,
-      welcomeMessages: workspaceSettings.welcomeMessages,
-      wipMessages: workspaceSettings.wipMessages,
-      afterRegistrationMessages: workspaceSettings.afterRegistrationMessages,
+      welcomeMessage: workspaceSettings.welcomeMessages, // ✅ Simple string, no JSON.stringify()
+      wipMessage: workspaceSettings.wipMessages, // ✅ Simple string, no JSON.stringify()
+      afterRegistrationMessages: JSON.stringify(
+        workspaceSettings.afterRegistrationMessages
+      ),
     },
   })
 
@@ -294,48 +300,42 @@ async function main() {
       prod.name.toLowerCase().includes("organic") ||
       prod.name.toLowerCase().includes("bio")
     const isVegan =
-      prod.categoryName === "Pasta" ||
-      prod.categoryName === "Condiments" ||
-      prod.name.toLowerCase().includes("vegan")
+      prod.name.toLowerCase().includes("vegan") ||
+      prod.name.toLowerCase().includes("vegano")
     const isGlutenFree =
       prod.name.toLowerCase().includes("gluten-free") ||
+      prod.name.toLowerCase().includes("senza glutine") ||
       prod.name.toLowerCase().includes("rice")
     const isHalal = prod.categoryName === "Cured Meats" && prod.stock > 30 // Some meats are halal certified
     const isWholeGrain =
-      prod.categoryName === "Pasta" ||
       prod.name.toLowerCase().includes("whole") ||
-      prod.name.toLowerCase().includes("integrale")
+      prod.name.toLowerCase().includes("integrale") ||
+      prod.name.toLowerCase().includes("integral")
 
-    // Assign transport type based on product category and characteristics
-    let transportType = "Temperatura ambiente" // Default for most products
+    // DOP certification (Protected Designation of Origin) - Feature 123
+    // ✅ Check ONLY if "DOP", "IGP", or "IGT" is explicitly in the product name
+    const isDOP =
+      prod.name.toLowerCase().includes("dop") ||
+      prod.name.toLowerCase().includes("igp") || // Indicazione Geografica Protetta
+      prod.name.toLowerCase().includes("igt") // Indicazione Geografica Tipica
 
-    // Refrigerated products (fresh meats, cheeses, dairy)
-    if (
-      prod.categoryName === "Cured Meats" ||
-      prod.categoryName === "Cheeses" ||
-      prod.name.toLowerCase().includes("burrata") ||
-      prod.name.toLowerCase().includes("prosciutto") ||
-      prod.name.toLowerCase().includes("guanciale") ||
-      prod.name.toLowerCase().includes("pancetta") ||
-      prod.name.toLowerCase().includes("ricotta")
-    ) {
-      transportType = "Trasporto refrigerato"
-    }
+    // Build certifications array based on boolean fields
+    const certifications: string[] = []
+    if (isOrganic) certifications.push("bio")
+    if (isVegan) certifications.push("vegan")
+    if (isGlutenFree) certifications.push("gluten-free")
+    if (isHalal) certifications.push("halal")
+    if (isWholeGrain) certifications.push("whole-grain")
+    if (isDOP) certifications.push("DOP")
 
-    // Frozen products (gelato, arancini, frozen pasta)
-    if (
-      prod.name.toLowerCase().includes("gelato") ||
-      prod.name.toLowerCase().includes("arancini") ||
-      prod.name.toLowerCase().includes("frozen") ||
-      prod.name.toLowerCase().includes("congelat")
-    ) {
-      transportType = "Trasporto congelato"
-    }
+    // ✅ Read region and transportType from source data (products.ts)
+    const region = prod.region || null
+    const transportType = prod.transportType || "Temperatura ambiente"
 
     await prisma.products.create({
       data: {
         name: prod.name,
-        productCode: prod.productCode || `PROD-${Date.now()}`,
+        productCode: prod.ProductCode || `PROD-${Date.now()}`,
         description: prod.description,
         formato: prod.formato,
         price: prod.price,
@@ -346,12 +346,9 @@ async function main() {
         supplierId: supplierId,
         workspaceId: workspace.id,
         imageUrl: prod.imageUrl || [],
-        isOrganic: isOrganic,
-        isVegan: isVegan,
-        isGlutenFree: isGlutenFree,
-        isHalal: isHalal,
-        isWholeGrain: isWholeGrain,
         transportType: transportType,
+        region: region,
+        certifications: certifications, // Array: ["bio", "vegan", "gluten-free", "halal", "whole-grain", "DOP"]
       },
     })
   }
@@ -419,20 +416,25 @@ async function main() {
 
   console.log(`✅ Created ${offers.length} offers`)
 
-  // 10. Create FAQs
+  // 10. Create FAQs (from defaultFAQs with keywords + category)
   console.log("❓ Creating FAQs...")
 
-  for (const faq of faqs) {
+  const defaultFaqList = defaultFAQs(workspace.id)
+  for (const faq of defaultFaqList) {
     await prisma.fAQ.create({
       data: {
+        workspaceId: faq.workspaceId,
         question: faq.question,
         answer: faq.answer,
-        workspaceId: workspace.id,
+        keywords: faq.keywords,
+        category: faq.category,
+        order: faq.order,
+        isActive: faq.isActive,
       },
     })
   }
 
-  console.log(`✅ Created ${faqs.length} FAQs`)
+  console.log(`✅ Created ${defaultFaqList.length} FAQs (5 categories)`)
 
   // 10. Create Campaigns
   console.log("📢 Creating campaigns...")
@@ -456,49 +458,36 @@ async function main() {
 
   console.log(`✅ Created ${campaigns.length} campaigns`)
 
-  // 12. Create Prompt (for LLM Service)
-  console.log("🤖 Creating prompt...")
+  // 12. Create Agent Configurations (Multi-Agent System)
+  // Agents load their prompts from docs/prompts/*.md via defaultAgents()
+  console.log("🤖 Creating agent configurations...") // Use defaultAgents from data file (includes all 6 agents with prompts)
+  const agentConfigs = defaultAgents(workspace.id)
+  console.log(
+    `📄 Preparing ${agentConfigs.length} agents (ROUTER + 5 specialists + SAFETY)`
+  )
 
-  // 📖 Read prompt from docs/prompt_agent.md
-  const fs = require("fs")
-  const path = require("path")
-  const promptPath = path.join(__dirname, "../../docs/prompt_agent.md")
-
-  let agentPrompt =
-    "You are a helpful AI assistant for an Italian gourmet food e-commerce store."
-
-  try {
-    if (fs.existsSync(promptPath)) {
-      agentPrompt = fs.readFileSync(promptPath, "utf8")
-      console.log(
-        `  ✅ Loaded prompt from docs/prompt_agent.md (${agentPrompt.length} chars)`
-      )
-    } else {
-      console.warn(
-        `  ⚠️  File not found: ${promptPath} - using placeholder prompt`
-      )
-    }
-  } catch (error: any) {
-    console.warn(
-      `  ⚠️  Error reading prompt file: ${error.message} - using placeholder`
-    )
+  for (const config of agentConfigs) {
+    await prisma.agentConfig.create({
+      data: {
+        workspaceId: config.workspaceId,
+        name: config.name,
+        type: config.type,
+        description: config.description,
+        icon: config.icon,
+        systemPrompt: config.systemPrompt,
+        model: config.model,
+        temperature: config.temperature,
+        maxTokens: config.maxTokens,
+        order: config.order,
+        isActive: config.isActive,
+        availableFunctions: config.availableFunctions || null,
+      },
+    })
   }
 
-  // Create AgentConfig (CRITICAL: Required for LLM to work!)
-  console.log("🤖 Creating agent configuration...")
-
-  await prisma.agentConfig.create({
-    data: {
-      workspaceId: workspace.id,
-      model: "openai/gpt-4o-mini",
-      temperature: 0.2,
-      maxTokens: 1000,
-      prompt: agentPrompt, // ✅ CORRECT: Field is 'prompt' in schema, not 'systemPrompt'
-      isActive: true,
-    },
-  })
-
-  console.log("✅ Agent configuration created")
+  console.log(
+    `✅ Created ${agentConfigs.length} agents (ROUTER + specialists + SAFETY)`
+  )
 
   // 13. Create Sales Representatives
   console.log("👔 Creating sales representatives...")
@@ -697,6 +686,57 @@ async function main() {
         createdAt: new Date(Date.now() - 1000 * 60 * 4), // 4 minutes ago
       },
     })
+
+    // 💬 Create conversation messages for chat history
+    await prisma.conversationMessage.createMany({
+      data: [
+        {
+          conversationId: chatSession1.id,
+          workspaceId: workspace.id,
+          customerId: italianCustomer.id,
+          role: "user",
+          content: "Ciao! Vorrei sapere quali formaggi avete disponibili",
+          createdAt: new Date(Date.now() - 1000 * 60 * 10),
+        },
+        {
+          conversationId: chatSession1.id,
+          workspaceId: workspace.id,
+          customerId: italianCustomer.id,
+          role: "assistant",
+          content:
+            "Ciao! Abbiamo una vasta selezione di formaggi italiani:\n\n🧀 **Parmigiano Reggiano DOP** - €18.50/kg\n🧀 **Pecorino Romano DOP** - €16.90/kg\n🧀 **Gorgonzola Dolce** - €14.50/kg\n\nVuoi aggiungere qualcosa al carrello?",
+          debugInfo: JSON.stringify({
+            agentSelected: "PRODUCT_SEARCH",
+            steps: [
+              { agentType: "Router", decision: "PRODUCT_SEARCH" },
+              { agentType: "PRODUCT_SEARCH", response: "..." },
+            ],
+          }),
+          createdAt: new Date(Date.now() - 1000 * 60 * 9),
+        },
+        {
+          conversationId: chatSession1.id,
+          workspaceId: workspace.id,
+          customerId: italianCustomer.id,
+          role: "user",
+          content: "Sì, vorrei 1kg di Parmigiano Reggiano",
+          createdAt: new Date(Date.now() - 1000 * 60 * 8),
+        },
+        {
+          conversationId: chatSession1.id,
+          workspaceId: workspace.id,
+          customerId: italianCustomer.id,
+          role: "assistant",
+          content:
+            "✅ Perfetto! Ho aggiunto al carrello:\n\n**Parmigiano Reggiano DOP**\nQuantità: 1 kg\nPrezzo: €18.50\n\nVuoi procedere con l'ordine?",
+          debugInfo: JSON.stringify({
+            agentSelected: "CART",
+            functionCalled: "AddToCart",
+          }),
+          createdAt: new Date(Date.now() - 1000 * 60 * 7),
+        },
+      ],
+    })
   } else {
     console.log(`   ⚠️  Italian customer not found!`)
   }
@@ -744,6 +784,32 @@ async function main() {
         },
         createdAt: new Date(), // Now
       },
+    })
+
+    // 💬 Create conversation messages
+    await prisma.conversationMessage.createMany({
+      data: [
+        {
+          conversationId: chatSession2.id,
+          workspaceId: workspace.id,
+          customerId: spanishCustomer.id,
+          role: "user",
+          content: "Hola, ¿dónde está mi pedido?",
+          createdAt: new Date(Date.now() - 1000 * 60 * 15),
+        },
+        {
+          conversationId: chatSession2.id,
+          workspaceId: workspace.id,
+          customerId: spanishCustomer.id,
+          role: "assistant",
+          content:
+            "¡Hola! Tu pedido está en tránsito 🚚\n\n📦 **Pedido #ORD-001**\nEstado: En camino\nEntrega estimada: Mañana\n\n¿Necesitas algo más?",
+          debugInfo: JSON.stringify({
+            agentSelected: "ORDER_TRACKING",
+          }),
+          createdAt: new Date(Date.now() - 1000 * 60 * 14),
+        },
+      ],
     })
   } else {
     console.log(`   ⚠️  Spanish customer not found!`)
@@ -793,6 +859,32 @@ async function main() {
         createdAt: new Date(Date.now() - 1000 * 15), // 15 seconds ago
       },
     })
+
+    // 💬 Create conversation messages
+    await prisma.conversationMessage.createMany({
+      data: [
+        {
+          conversationId: chatSession3.id,
+          workspaceId: workspace.id,
+          customerId: portugueseCustomer.id,
+          role: "user",
+          content: "Olá! Tem alguma promoção hoje?",
+          createdAt: new Date(Date.now() - 1000 * 60 * 20),
+        },
+        {
+          conversationId: chatSession3.id,
+          workspaceId: workspace.id,
+          customerId: portugueseCustomer.id,
+          role: "assistant",
+          content:
+            "Olá! Sim, temos ofertas especiais:\n\n🎉 **Oferta da Semana**:\n- Azeite Toscano: -20%\n- Prosciutto di Parma: -15%\n\nQuer aproveitar?",
+          debugInfo: JSON.stringify({
+            agentSelected: "PRODUCT_SEARCH",
+          }),
+          createdAt: new Date(Date.now() - 1000 * 60 * 19),
+        },
+      ],
+    })
   } else {
     console.log(`   ⚠️  Portuguese customer not found!`)
   }
@@ -841,13 +933,39 @@ async function main() {
         createdAt: new Date(Date.now() - 1000 * 60 * 1), // 1 minute ago
       },
     })
+
+    // 💬 Create conversation messages
+    await prisma.conversationMessage.createMany({
+      data: [
+        {
+          conversationId: chatSession4.id,
+          workspaceId: workspace.id,
+          customerId: englishCustomer.id,
+          role: "user",
+          content: "Hello! Do you ship internationally?",
+          createdAt: new Date(Date.now() - 1000 * 60 * 5),
+        },
+        {
+          conversationId: chatSession4.id,
+          workspaceId: workspace.id,
+          customerId: englishCustomer.id,
+          role: "assistant",
+          content:
+            "Hello! Yes, we ship worldwide! 🌍\n\n**Shipping options**:\n- Europe: 3-5 days (€9.90)\n- USA/Canada: 7-10 days (€19.90)\n\nWould you like to order?",
+          debugInfo: JSON.stringify({
+            agentSelected: "GENERAL_INQUIRY",
+          }),
+          createdAt: new Date(Date.now() - 1000 * 60 * 4),
+        },
+      ],
+    })
   } else {
     console.log(`   ⚠️  English customer not found!`)
   }
 
   console.log(`✅ Created chat sessions with welcome messages`)
 
-  // �📦 CREATE HISTORICAL ORDERS (1 year of data)
+  //  CREATE HISTORICAL ORDERS (1 year of data)
   console.log("\n📦 Creating historical orders...")
 
   const customersList = await prisma.customers.findMany({

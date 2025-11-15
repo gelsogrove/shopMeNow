@@ -6,6 +6,7 @@ import {
 } from "@prisma/client"
 import * as dotenv from "dotenv"
 import OpenAI from "openai"
+import { websocketService } from "../services/websocket.service"
 import logger from "../utils/logger"
 
 /**
@@ -189,12 +190,32 @@ export class MessageRepository {
         }
       }
 
-      const messages = await this.prisma.message.findMany({
+      // ✅ FIXED: Query conversationMessage table (NEW) instead of message table (OLD)
+      // This fixes the issue where messages saved by LLMRouter were not visible in frontend
+      // 🚨 CRITICAL: Exclude "function" role messages - they are internal LLM context only!
+      const messages = await this.prisma.conversationMessage.findMany({
         where: {
-          chatSessionId,
+          conversationId: chatSessionId,
+          role: {
+            not: "function", // ✅ Filter out function calls - users should never see these!
+          },
         },
         orderBy: {
           createdAt: "asc",
+        },
+        select: {
+          id: true,
+          createdAt: true,
+          workspaceId: true,
+          customerId: true,
+          conversationId: true,
+          role: true,
+          content: true,
+          agentType: true,
+          tokensUsed: true,
+          functionName: true,
+          functionArguments: true,
+          debugInfo: true, // ✅ Explicitly select debugInfo
         },
       })
 
@@ -222,15 +243,36 @@ export class MessageRepository {
       })
 
       // Parse debugInfo and attach billing data
+      // ✅ Map conversationMessage format to frontend expected format
       const parsedMessages = messages.map((message) => {
-        let parsed = message
+        // Convert role (user/assistant/function) to direction (INBOUND/OUTBOUND)
+        const direction = message.role === "user" ? "INBOUND" : "OUTBOUND"
 
-        // Parse debugInfo
-        if (message.debugInfo) {
+        let parsed: any = {
+          ...message,
+          direction, // Add direction field for frontend compatibility
+          type: "TEXT", // Default type
+          // ✅ CRITICAL: Add default metadata for bot messages to show as GREEN in frontend
+          metadata: {
+            agentSelected: direction === "OUTBOUND" ? "CHATBOT" : "CUSTOMER",
+            sentBy: direction === "OUTBOUND" ? "AI" : "CUSTOMER",
+            isOperatorMessage: false,
+            isOperatorControl: false,
+          },
+        }
+
+        // Parse debugInfo if exists (it's stored as JSON string in DB)
+        if ((message as any).debugInfo) {
           try {
-            parsed = {
-              ...message,
-              debugInfo: JSON.parse(message.debugInfo as string),
+            const debugInfoParsed =
+              typeof (message as any).debugInfo === "string"
+                ? JSON.parse((message as any).debugInfo)
+                : (message as any).debugInfo
+
+            // Merge with existing metadata
+            parsed.metadata = {
+              ...parsed.metadata,
+              debugInfo: debugInfoParsed, // Move debugInfo into metadata
             }
           } catch (parseError) {
             logger.warn(
@@ -254,8 +296,8 @@ export class MessageRepository {
           if (timeDiff >= 5000) return false
 
           // Match billing type to message direction
-          const isInbound = message.direction === "INBOUND"
-          const isOutbound = message.direction === "OUTBOUND"
+          const isInbound = direction === "INBOUND"
+          const isOutbound = direction === "OUTBOUND"
 
           // MESSAGE billing should only attach to INBOUND messages
           if (billing.type === "MESSAGE" && !isInbound) return false
@@ -313,16 +355,26 @@ export class MessageRepository {
   /**
    * Find an active chat session or create a new one
    *
+   * 🔒 CONCURRENCY SAFE: Uses Prisma transaction to prevent race conditions
+   * when multiple messages arrive simultaneously for the same customer.
+   *
+   * Pattern: Transaction-based session creation with unique constraint retry
+   * - Atomic findFirst + create operation within transaction
+   * - Handles P2002 (unique constraint violation) with retry logic
+   * - Ensures only ONE active session per customer
+   *
    * @param workspaceId The workspace ID
    * @param customerId The customer ID
    * @returns The chat session
    */
   async findOrCreateChatSession(workspaceId: string, customerId: string) {
     try {
-      // Try to find an active session
-      let session
-      try {
-        session = await this.prisma.chatSession.findFirst({
+      let isNewSession = false
+
+      // 🔒 TRANSACTION: Atomic operation to prevent duplicate session creation
+      const session = await this.prisma.$transaction(async (tx) => {
+        // Try to find existing active session
+        let session = await tx.chatSession.findFirst({
           where: {
             customerId: customerId,
             status: "active",
@@ -333,23 +385,88 @@ export class MessageRepository {
         })
 
         if (!session) {
-          session = await this.prisma.chatSession.create({
-            data: {
-              workspaceId: workspaceId,
-              customerId: customerId,
-              status: "active",
-            },
-          })
-          logger.info(`Created new chat session: ${session.id}`)
+          try {
+            // Atomic create with unique constraint on (customerId, status="active")
+            session = await tx.chatSession.create({
+              data: {
+                workspaceId: workspaceId,
+                customerId: customerId,
+                status: "active",
+              },
+            })
+            isNewSession = true
+            logger.info(
+              `✅ Created new chat session: ${session.id} for customer ${customerId}`
+            )
+          } catch (error: any) {
+            // Handle race condition: another request created session simultaneously
+            if (error.code === "P2002") {
+              // Unique constraint violation - retry findFirst
+              logger.warn(
+                `⚠️ Race condition detected for customer ${customerId} - retrying findFirst`
+              )
+              session = await tx.chatSession.findFirst({
+                where: {
+                  customerId: customerId,
+                  status: "active",
+                },
+                orderBy: {
+                  startedAt: "desc",
+                },
+              })
+
+              if (!session) {
+                // Should never happen, but throw if still not found
+                throw new Error(
+                  `Failed to find session after P2002 for customer ${customerId}`
+                )
+              }
+
+              logger.info(
+                `✅ Retrieved existing session after race: ${session.id}`
+              )
+            } else {
+              // Other error - rethrow
+              throw error
+            }
+          }
+        } else {
+          logger.info(
+            `✅ Found existing active session: ${session.id} for customer ${customerId}`
+          )
         }
-      } catch (error) {
-        logger.error("Error finding or creating chat session:", error)
-        throw new Error("Failed to find or create chat session")
+
+        return session
+      })
+
+      // 🔔 CRITICAL: Emit WebSocket event AFTER transaction commit for new sessions
+      if (isNewSession) {
+        // Fetch customer details for event payload
+        const customer = await this.prisma.customers.findUnique({
+          where: { id: customerId },
+          select: { name: true, phone: true, language: true },
+        })
+
+        websocketService.notifyNewCustomer(workspaceId, {
+          customerId: customerId,
+          sessionId: session.id,
+          customerName: customer?.name || "Unknown",
+          customerPhone: customer?.phone || "",
+          language: customer?.language || undefined,
+          timestamp: new Date().toISOString(),
+        })
+
+        logger.info(
+          `[NEW-SESSION] 🔔 WebSocket new-customer event sent for session ${session.id}`
+        )
       }
 
       return session
     } catch (error) {
-      logger.error("Error finding or creating chat session:", error)
+      logger.error(
+        `❌ Error in findOrCreateChatSession for customer ${customerId}:`,
+        error
+      )
       throw new Error("Failed to find or create chat session")
     }
   }
@@ -925,7 +1042,16 @@ export class MessageRepository {
               select: { debugMode: true },
             })
 
-            if (!(workspace?.debugMode ?? true)) {
+            // Environment-based fallback (Constitution v1.5.0 Principle I compliance)
+            // - If debugMode is NULL:
+            //   - NODE_ENV=production → false (billing enabled)
+            //   - NODE_ENV=development → true (billing disabled)
+            //   - NODE_ENV undefined → true (safe default for local dev)
+            const effectiveDebugMode =
+              workspace?.debugMode ??
+              (process.env.NODE_ENV === "production" ? false : true)
+
+            if (!effectiveDebugMode) {
               // debugMode is false AND customer not blacklisted, track usage normally
               // 💰 UNIFIED BILLING: €0.15 per message in BOTH systems
               const messagePrice = 0.15
@@ -1065,7 +1191,7 @@ export class MessageRepository {
   /**
    * Recupera i servizi attivi dal database e li formatta per il prompt.
    * @param workspaceId L'ID del workspace.
-   * @returns Una stringa con i servizi formattati.
+   * @returns Una stringa con i servizi formattati in lista numerata.
    */
   async getActiveServices(workspaceId: string): Promise<string> {
     try {
@@ -1083,13 +1209,24 @@ export class MessageRepository {
         return "" // Nessun servizio attivo
       }
 
-      // Formatta i servizi come stringa per il prompt
+      // Formatta i servizi come lista numerata con tutti i dettagli
       const formattedServices = services
-        .map(
-          (service) =>
-            `🔧 ${service.name}: ${service.description || "Servizio disponibile"}`
-        )
-        .join("\n")
+        .map((service, index) => {
+          const price = service.price
+            ? `€${service.price.toFixed(2)}`
+            : "Prezzo da definire"
+          const description = service.description || "Servizio disponibile"
+          const code =
+            service.code || `SRV-${String(index + 1).padStart(3, "0")}`
+
+          return [
+            `${index + 1}. **${service.name}** - ${price}`,
+            `   📝 Descrizione: ${description}`,
+            `   📋 Codice: ${code}`,
+            `   ⏰ Disponibilità: Sempre disponibile`,
+          ].join("\n")
+        })
+        .join("\n\n")
 
       return `\n\n${formattedServices}`
     } catch (error) {
@@ -1121,9 +1258,19 @@ export class MessageRepository {
           price: true,
           description: true, // Aggiungi description per il prompt
           formato: true, // Aggiungi formato per il prompt
+          stock: true, // Aggiungi stock per disponibilità
+          certifications: true, // Array: ["bio", "vegan", "gluten-free", "halal", "whole-grain", "DOP"]
+          region: true, // ✅ Feature 123 - C2: Add region for single product details
+          transportType: true, // ✅ Bonus: Temperature info for product search
           category: {
             select: {
               name: true,
+            },
+          },
+          supplier: {
+            // ✅ Feature 123 - C2: Add supplier for single product details
+            select: {
+              companyName: true,
             },
           },
         },
@@ -1181,20 +1328,93 @@ export class MessageRepository {
         // Mostra tutti i prodotti della categoria
         const productsToShow = productList
 
-        // Formato: ogni prodotto su una riga separata con descrizione
+        // Formato: ogni prodotto su una riga separata con description, stock, certifications
         productsToShow.forEach((p) => {
           const originalPrice = Number(p.originalPrice).toFixed(2)
           const finalPrice = Number(p.finalPrice).toFixed(2)
           const description = p.description ? ` - ${p.description}` : ""
           const formatoStr = p.formato ? ` ${p.formato}` : ""
 
+          // Stock indicator
+          let stockIcon = "✅"
+          if (p.stock === 0) stockIcon = "❌"
+          else if (p.stock < 5) stockIcon = "⚠️"
+          const stockStr = ` | Stock: ${stockIcon} ${p.stock}`
+
+          // Feature 123: Certification badges from certifications array
+          const certMap: Record<string, string> = {
+            DOP: "DOP",
+            bio: "Bio",
+            halal: "Halal",
+            "whole-grain": "Integrale",
+            vegan: "Vegan",
+            "gluten-free": "Senza Glutine",
+          }
+
+          const certBadges: string[] =
+            p.certifications
+              ?.map((c: string) => certMap[c] || c)
+              .filter(Boolean) || []
+
+          const certificationsStr =
+            certBadges.length > 0 ? ` | 🔖 ${certBadges.join(", ")}` : ""
+
+          // ✅ Feature 123 - C2: Add supplier and region to formatted output
+          const supplierStr = p.supplier?.companyName
+            ? ` | 🏷️ ${p.supplier.companyName}`
+            : ""
+          const regionStr = p.region ? ` | 🌍 ${p.region}` : ""
+          const transportStr = p.transportType
+            ? ` | ${
+                p.transportType === "Trasporto refrigerato"
+                  ? "❄️"
+                  : p.transportType === "Trasporto congelato"
+                    ? "🧊"
+                    : "📦"
+              } ${p.transportType}`
+            : ""
+
           // WhatsApp strikethrough: ~text~ (single tilde at start and end)
-          // Format: [CODICE] NOME formato ~€originalPrice~ → €finalPrice - description
+          // Format: [CODICE] NOME formato ~€originalPrice~ → €finalPrice - description | Stock: ✅ N | 🔖 Certifications | 🏷️ Supplier | 🌍 Region | ❄️ Transport
           // Se productCode è null/undefined, non mostrarlo
           const productCode = p.productCode ? `${p.productCode} ` : ""
-          formattedProducts += `• ${productCode}${p.name}${formatoStr} ~€${originalPrice}~ → €${finalPrice}${description}\n`
+          formattedProducts += `• ${productCode}${p.name}${formatoStr} ~€${originalPrice}~ → €${finalPrice}${description}${stockStr}${certificationsStr}${supplierStr}${regionStr}${transportStr}\n`
         })
         formattedProducts += "\n"
+      }
+
+      // ✅ Feature 123 - C1: Token count monitoring
+      // Estimate token count (rough approximation: 1 token ≈ 4 characters)
+      const tokenCount = Math.ceil(formattedProducts.length / 4)
+      const tokenLimit = 50000
+
+      logger.info(`📊 {{PRODUCTS}} token estimation`, {
+        workspaceId,
+        productsCount: products.length,
+        charactersCount: formattedProducts.length,
+        estimatedTokens: tokenCount,
+        tokenLimit,
+        utilizationPercent: ((tokenCount / tokenLimit) * 100).toFixed(1),
+      })
+
+      if (tokenCount > tokenLimit) {
+        logger.warn(
+          `⚠️ {{PRODUCTS}} exceeds recommended token limit: ${tokenCount} tokens (limit: ${tokenLimit})`,
+          {
+            workspaceId,
+            productsCount: products.length,
+            recommendation:
+              "Consider implementing pagination or reducing product count",
+          }
+        )
+      } else if (tokenCount > tokenLimit * 0.8) {
+        logger.info(
+          `ℹ️ {{PRODUCTS}} approaching token limit: ${tokenCount} tokens (80%+ of ${tokenLimit})`,
+          {
+            workspaceId,
+            productsCount: products.length,
+          }
+        )
       }
 
       return formattedProducts
@@ -2287,74 +2507,74 @@ export class MessageRepository {
   }
 
   /**
-   * Get WIP message from database - NO HARDCODE
+   * Get WIP message from database - NO HARDCODE (English only)
    * @param workspaceId Workspace ID
-   * @param language Customer language
-   * @returns WIP message from database
+   * @returns WIP message from database (will be translated by Safety & Translation layer)
    */
-  async getWipMessage(workspaceId: string, language: string): Promise<string> {
+  async getWipMessage(workspaceId: string): Promise<string> {
     try {
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { wipMessages: true },
+        select: { wipMessage: true },
       })
 
-      if (!workspace?.wipMessages) {
-        logger.warn(`No WIP messages found for workspace ${workspaceId}`)
-        return "Service temporarily unavailable. We will be back soon!"
+      if (!workspace?.wipMessage) {
+        logger.error(
+          `❌ NO WIP MESSAGE in database for workspace ${workspaceId} - THIS SHOULD NOT HAPPEN`
+        )
+        throw new Error("WIP message not configured in database")
       }
 
-      const wipMessages = workspace.wipMessages as Record<string, string>
-      return (
-        wipMessages[language] ||
-        wipMessages["en"] ||
-        "Service temporarily unavailable. We will be back soon!"
-      )
+      // wipMessage is Json (multilingual), extract English version
+      const wipMessageObj = workspace.wipMessage as {
+        en: string
+        es: string
+        it: string
+        pt: string
+      }
+      return wipMessageObj.en || JSON.stringify(workspace.wipMessage)
     } catch (error) {
       logger.error(
         `Error getting WIP message for workspace ${workspaceId}:`,
         error
       )
-      return "Service temporarily unavailable. We will be back soon!"
+      throw error // Don't use hardcoded fallback - throw to ensure proper configuration
     }
   }
 
   /**
-   * Get welcome message from database - NO HARDCODE
+   * Get welcome message from database - NO HARDCODE (English only)
    * @param workspaceId Workspace ID
-   * @param language Customer language
-   * @returns Welcome message from database
+   * @returns Welcome message from database (will be translated by Safety & Translation layer)
    */
-  async getWelcomeMessage(
-    workspaceId: string,
-    language: string
-  ): Promise<string> {
+  async getWelcomeMessage(workspaceId: string): Promise<string> {
     try {
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { welcomeMessages: true },
+        select: { welcomeMessage: true },
       })
 
-      if (!workspace?.welcomeMessages) {
-        logger.warn(`No welcome messages found for workspace ${workspaceId}`)
-        return "Welcome! Please register to continue:"
+      if (!workspace?.welcomeMessage) {
+        logger.error(
+          `❌ NO WELCOME MESSAGE in database for workspace ${workspaceId} - THIS SHOULD NOT HAPPEN`
+        )
+        throw new Error("Welcome message not configured in database")
       }
 
-      const welcomeMessages = workspace.welcomeMessages as Record<
-        string,
-        string
-      >
-      return (
-        welcomeMessages[language] ||
-        welcomeMessages["en"] ||
-        "Welcome! Please register to continue:"
-      )
+      // welcomeMessage is Json (multilingual), extract English version
+      const welcomeMessageObj = workspace.welcomeMessage as {
+        en: string
+        es: string
+        it: string
+        pt: string
+      }
+      return welcomeMessageObj.en || JSON.stringify(workspace.welcomeMessage)
     } catch (error) {
       logger.error(
         `Error getting welcome message for workspace ${workspaceId}:`,
         error
       )
-      return "Welcome! Please register to continue:"
+      throw error // Don't use hardcoded fallback - throw to ensure proper configuration
     }
   }
 
@@ -2407,40 +2627,39 @@ export class MessageRepository {
   }
 
   /**
-   * Get error message from database - NO HARDCODE
-   * Uses wipMessages as fallback for error messages
+   * Get error message from database - NO HARDCODE (English only)
+   * Uses wipMessage as fallback for error messages
    * @param workspaceId Workspace ID
-   * @param language Customer language
-   * @returns Error message from database
+   * @returns Error message from database (will be translated by Safety & Translation layer)
    */
-  async getErrorMessage(
-    workspaceId: string,
-    language: string
-  ): Promise<string> {
+  async getErrorMessage(workspaceId: string): Promise<string> {
     try {
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { wipMessages: true },
+        select: { wipMessage: true },
       })
 
-      if (!workspace?.wipMessages) {
-        logger.warn(`No error messages found for workspace ${workspaceId}`)
-        return "Sorry, I'm having technical difficulties. Please try again later."
+      if (!workspace?.wipMessage) {
+        logger.error(
+          `❌ NO WIP MESSAGE in database for workspace ${workspaceId} - THIS SHOULD NOT HAPPEN`
+        )
+        throw new Error("Error message not configured in database")
       }
 
-      // Use WIP messages as error messages fallback
-      const wipMessages = workspace.wipMessages as Record<string, string>
-      return (
-        wipMessages[language] ||
-        wipMessages["en"] ||
-        "Sorry, I'm having technical difficulties. Please try again later."
-      )
+      // wipMessage is Json (multilingual), extract English version
+      const wipMessageObj = workspace.wipMessage as {
+        en: string
+        es: string
+        it: string
+        pt: string
+      }
+      return wipMessageObj.en || JSON.stringify(workspace.wipMessage)
     } catch (error) {
       logger.error(
         `Error getting error message for workspace ${workspaceId}:`,
         error
       )
-      return "Sorry, I'm having technical difficulties. Please try again later."
+      throw error // Don't use hardcoded fallback
     }
   }
 
@@ -2471,7 +2690,7 @@ export class MessageRepository {
       }
 
       return {
-        prompt: agentConfig.prompt || "", // ✅ CORRECT: Field is 'prompt' in schema
+        prompt: agentConfig.systemPrompt || "", // ✅ CORRECT: Field is 'systemPrompt' in schema
         model: agentConfig.model || "openai/gpt-4o-mini",
         temperature: agentConfig.temperature || 0.0, // Default to 0 temperature
         maxTokens: agentConfig.maxTokens || 5000,
@@ -2669,10 +2888,10 @@ export class MessageRepository {
 
       if (categories.length === 0) return ""
 
-      // Formatta le categorie dal database - SEMPRE in italiano (lingua base)
-      // Il Translation Layer si occuperà della traduzione finale
+      // Feature 123: Format categories with numbers for easy selection
+      // Format: 1. Category Name - Description
       const formattedCategories = categories
-        .map((category) => {
+        .map((category, index) => {
           const name = category.name || "Categoria"
           const description = category.description || ""
 
@@ -2682,7 +2901,7 @@ export class MessageRepository {
             .substring(0, 80)
             .trim()
 
-          return `**${name}** - ${shortDesc || "Prodotti disponibili"}`
+          return `${index + 1}. **${name}** - ${shortDesc || "Prodotti disponibili"}`
         })
         .join("\n")
 

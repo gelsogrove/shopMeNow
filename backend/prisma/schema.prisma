@@ -26,14 +26,16 @@ model Workspace {
   messageLimit              Int               @default(50)
   url                       String?
   businessType              BusinessType      @default(ECOMMERCE)
-  welcomeMessages           Json?             @default("{\"en\": \"Welcome!\", \"es\": \"¡Bienvenido!\", \"it\": \"Benvenuto!\"}")
-  wipMessages               Json?             @default("{\"en\": \"Work in progress. Please contact us later.\", \"es\": \"Trabajos en curso. Por favor, contáctenos más tarde.\", \"it\": \"Lavori in corso. Contattaci più tardi.\", \"pt\": \"Em manutenção. Por favor, contacte-nos mais tarde.\"}")
+  welcomeMessage            Json?             @default("{\"en\": \"Welcome! I'm SofiA, your digital assistant. I can help you discover Italian gourmet products, answer questions, and manage orders. How can I help you today?\", \"es\": \"¡Bienvenido! Soy SofiA, tu asistente digital. Puedo ayudarte a descubrir productos gourmet italianos, responder preguntas y gestionar pedidos. ¿Cómo puedo ayudarte hoy?\", \"it\": \"Benvenuto! Sono SofiA, il tuo assistente digitale. Posso aiutarti a scoprire prodotti gourmet italiani, rispondere alle tue domande e gestire ordini. Come posso aiutarti oggi?\", \"pt\": \"Bem-vindo! Sou a SofiA, a sua assistente digital. Posso ajudá-lo a descobrir produtos gourmet italianos, responder perguntas e gerir encomendas. Como posso ajudá-lo hoje?\"}")
+  wipMessage                Json?             @default("{\"en\": \"Work in progress. Please contact us later.\", \"es\": \"Trabajos en curso. Por favor, contáctenos más tarde.\", \"it\": \"Lavori in corso. Contattaci più tardi.\", \"pt\": \"Em manutenção. Por favor, contacte-nos mais tarde.\"}")
   afterRegistrationMessages Json?             @default("{\"de\": \"Danke für Ihre Registrierung, [nome]! Wie kann ich Ihnen heute helfen? Möchten Sie Ihre Bestellungen sehen? Die Angebote? Oder benötigen Sie andere Informationen?\", \"en\": \"Thank you for registering, [nome]! How can I help you today? Would you like to see your orders? The offers? Or do you need other information?\", \"es\": \"¡Gracias por registrarte, [nome]! ¿Cómo puedo ayudarte hoy? ¿Quieres ver tus pedidos? ¿Las ofertas? ¿O necesitas otra información?\", \"fr\": \"Merci de vous être inscrit, [nome] ! Comment puis-je vous aider aujourd'hui ? Voulez-vous voir vos commandes ? Les offres ? Ou avez-vous besoin d'autres informations ?\", \"it\": \"Grazie per esserti registrato, [nome]! Come ti posso aiutare oggi? Vuoi vedere i tuoi ordini? Le offerte? O hai bisogno di altre informazioni?\", \"pt\": \"Obrigado por se registrar, [nome]! Como posso ajudá-lo hoje? Quer ver seus pedidos? As ofertas? Ou precisa de outras informações?\"}")
   debugMode                 Boolean           @default(true)
   apiKey                    String?
   metadata                  Json?
   users                     UserWorkspace[]
   agentConfigs              AgentConfig[]
+  agentConversationLogs     AgentConversationLog[]
+  conversationMessages      ConversationMessage[]
   carts                     Carts[]
   categories                Categories[]
   chatSessions              ChatSession[]
@@ -56,6 +58,7 @@ model Workspace {
   adminSessions             AdminSession[]
   campaigns                 Campaign[]
   productSearches           ProductSearch[]
+  searchConversations       SearchConversations[]
 }
 
 model Categories {
@@ -144,18 +147,18 @@ model Products {
   slug           String        @unique
   status         ProductStatus @default(ACTIVE)
   imageUrl       String[]      @default([])
-  isWholeGrain   Boolean       @default(false)
-  isOrganic      Boolean       @default(false)
-  isHalal        Boolean       @default(false)
-  isVegan        Boolean       @default(false)
-  isGlutenFree   Boolean       @default(false)
   transportType  String        @default("Temperatura ambiente")
+  region         String?
+  allergens      String[]      @default([])
+  certifications String[]      @default([]) // Array: ["bio", "vegan", "gluten-free", "halal", "whole-grain", "DOP"]
   cartItems      CartItems[]
   orderItems     OrderItems[]
   category       Categories?   @relation(fields: [categoryId], references: [id])
   supplier       Suppliers?    @relation(fields: [supplierId], references: [id])
   workspace      Workspace     @relation(fields: [workspaceId], references: [id])
 
+  @@index([allergens])
+  @@index([certifications])
   @@map("products")
 }
 
@@ -190,12 +193,36 @@ model Customers {
   orders                        Orders[]
   usage                         Usage[]
   billings                      Billing[]
+  agentConversationLogs         AgentConversationLog[]
+  conversationMessages          ConversationMessage[]
   campaignSends                 CampaignSent[]
   feedbacks                     CustomerFeedback[]
   productSearches               ProductSearch[]
 
   @@index([phone])
   @@map("customers")
+}
+
+model SearchConversations {
+  id            String   @id @default(uuid())
+  sessionId     String   @unique // WhatsApp session ID or chat session ID
+  workspaceId   String
+  customerId    String
+  state         SearchConversationState @default(ACTIVE)
+  activeAgent   AgentType? // Current agent in control (null = Router decides)
+  lastQuery     String?  // Last search query from customer
+  lastResponse  String?  // Last response summary
+  metadata      Json?    // Additional context (filters, results count, etc.)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  expiresAt     DateTime // Auto-expire after 10 minutes of inactivity
+  
+  workspace     Workspace @relation(fields: [workspaceId], references: [id])
+  
+  @@index([sessionId])
+  @@index([customerId])
+  @@index([expiresAt])
+  @@map("search_conversations")
 }
 
 model Orders {
@@ -357,6 +384,11 @@ model ChatSession {
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
   messages    Message[]
 
+  // 🔒 CONCURRENCY SAFETY: Unique constraint prevents duplicate active sessions
+  // Only ONE active session allowed per customer at any time
+  @@unique([customerId, status], name: "unique_active_session")
+  @@index([customerId, status], name: "idx_customer_status")
+  @@index([workspaceId], name: "idx_workspace")
   @@map("chat_sessions")
 }
 
@@ -481,14 +513,20 @@ model Services {
 
 model FAQ {
   id          String    @id @default(cuid())
-  question    String
-  answer      String
-  isActive    Boolean   @default(true)
   workspaceId String
+  question    String
+  answer      String    @db.Text
+  keywords    String[]  // Array for keyword matching
+  category    String?   // Optional grouping: "Ordini", "Spedizioni", etc.
+  order       Int       @default(0) // Display/priority order
+  isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  @@index([workspaceId, isActive])
+  @@index([keywords])
+  @@index([category])
   @@map("faqs")
 }
 
@@ -532,17 +570,26 @@ model Documents {
 }
 
 model AgentConfig {
-  id          String    @id @default(uuid())
-  workspaceId String
-  prompt      String    @default("You are a helpful assistant.")
-  model       String    @default("openai/gpt-4o-mini")
-  temperature Float     @default(0.7)
-  maxTokens   Int       @default(1000)
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  id                 String    @id @default(uuid())
+  workspaceId        String
+  name               String    // Display name: "Product Search Agent"
+  type               AgentType // Enum type
+  description        String?   // User-friendly description
+  icon               String?   // Lucide icon name (e.g., "Search", "ShoppingCart", "MessageCircle")
+  systemPrompt       String    @db.Text // Agent-specific prompt (was "prompt")
+  model              String    @default("openai/gpt-4o-mini")
+  temperature        Float     @default(0.7)
+  maxTokens          Int       @default(4096) // Increased from 1000
+  order              Int       @default(0) // Execution order (0=Router, 99=Safety)
+  isActive           Boolean   @default(true)
+  availableFunctions Json?     // Array of Calling Function names
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  workspace          Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  @@unique([workspaceId, type]) // One agent per type per workspace
+  @@index([workspaceId, isActive])
+  @@index([order])
   @@map("agent_configs")
 }
 
@@ -718,6 +765,61 @@ model Billing {
   @@index([createdAt])
 }
 
+model AgentConversationLog {
+  id              String     @id @default(cuid())
+  workspaceId     String     // SECURITY: multi-tenant isolation
+  customerId      String     // SECURITY: customer isolation
+  conversationId  String     // Group messages: "conv_123"
+  messageId       String     // Original message ID
+  step            Int        // Execution order: 1, 2, 3... (Router=1, Agent=2, Safety=3)
+  agentType       String     // "ROUTER", "PRODUCT_SEARCH", etc.
+  agentAction     String     // "classify_intent", "search_products", "translate"
+  inputMessage    String     @db.Text // Input to this agent
+  agentPrompt     String?    @db.Text // Complete prompt used (optional, can be large)
+  llmModel        String?    // "openai/gpt-4o-mini"
+  llmResponse     String     @db.Text // Raw LLM output
+  confidence      Float?     // 0.0-1.0 confidence score
+  reasoning       String?    @db.Text // Agent's reasoning (if provided)
+  tokensUsed      Int?       // Total tokens (input + output)
+  executionTimeMs Int?       // Latency in milliseconds
+  functionsCalled Json?      // Array: [{name, params, result}]
+  hasError        Boolean    @default(false)
+  errorMessage    String?    @db.Text
+  createdAt       DateTime   @default(now())
+  workspace       Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer        Customers  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, customerId])
+  @@index([conversationId])
+  @@index([createdAt])
+  @@index([agentType])
+  @@index([hasError])
+  @@map("agent_conversation_logs")
+}
+
+// Conversation Messages - Complete history for LLM Router context
+model ConversationMessage {
+  id                String    @id @default(cuid())
+  workspaceId       String
+  customerId        String
+  conversationId    String
+  role              String // "user", "assistant", "function", "system"
+  content           String    @db.Text
+  agentType         String? // "ROUTER", "PRODUCT_SEARCH", etc.
+  functionName      String? // If role="function", name of function called
+  functionArguments Json? // If role="function", arguments passed
+  tokensUsed        Int?
+  debugInfo         String? // ✅ Debug information as JSON string (for message flow tracking)
+  createdAt         DateTime  @default(now())
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer          Customers @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@index([workspaceId, customerId])
+  @@index([createdAt])
+  @@map("conversation_messages")
+}
+
 enum BillingType {
   MONTHLY_CHANNEL // €19.00 - Monthly subscription cost
   MESSAGE // €0.15 - Per message/interaction cost (LLM responses)
@@ -859,4 +961,23 @@ enum PricingType {
   PLAN      // Monthly subscription plans (€0, €29, €59, €199)
   USAGE     // Per-action costs (€0.15/message, €1.50/customer, etc.)
   THRESHOLD // Free tier limits (200 messages, 50 products, etc.)
+}
+
+enum AgentType {
+  ROUTER                // order: 0 - Intent classification + FAQ
+  PRODUCT_SEARCH        // order: 2 - Product search specialist
+  CART_MANAGEMENT       // order: 3 - Cart operations
+  ORDER_TRACKING        // order: 4 - Order viewing
+  CUSTOMER_SUPPORT      // order: 5 - Support & escalation
+  PROFILE_MANAGEMENT    // order: 6 - Profile modifications
+  NOTIFICATIONS         // order: 7 - Push notifications
+  SAFETY_TRANSLATION    // order: 99 - Safety + translation
+  CUSTOM                // order: 1, 8-98 - Custom agents
+}
+
+enum SearchConversationState {
+  ACTIVE      // Conversation is ongoing
+  COMPLETED   // Customer finished successfully
+  ABANDONED   // Customer left without completing
+  EXPIRED     // Session expired (>10 min inactivity)
 }

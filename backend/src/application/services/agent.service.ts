@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client"
+import { getFunctionsForAgentType } from "../../config/agent-function-mapping"
 import logger from "../../utils/logger"
 
 /**
@@ -57,15 +58,20 @@ export class AgentService {
       // 🔄 MAPPING: Trasforma agentConfig per il frontend
       const mappedAgents = agents.map((agent) => ({
         id: agent.id,
-        name: agent.id, // Temporaneo - potremmo aggiungere un campo name
-        content: agent.prompt, // ← MAPPING: prompt → content
+        name: agent.name,
+        content: agent.systemPrompt, // Backward compatibility
+        systemPrompt: agent.systemPrompt, // Standard
         workspaceId: agent.workspaceId,
         temperature: agent.temperature,
         model: agent.model,
-        max_tokens: agent.maxTokens, // ← MAPPING: maxTokens → max_tokens
+        maxTokens: agent.maxTokens, // ✅ STANDARD: camelCase
+        order: agent.order,
+        agentType: agent.type, // ✅ FIX: Database field is "type" not "agentType"
+        isActive: agent.isActive,
+        icon: agent.icon, // 🎨 Icon name from database
+        functions: getFunctionsForAgentType(agent.type), // ✅ FIX: Use "type" field
         createdAt: agent.createdAt,
         updatedAt: agent.updatedAt,
-        isActive: agent.isActive,
       }))
 
       logger.info("🔄 MAPPED agents for frontend:", mappedAgents)
@@ -167,20 +173,19 @@ export class AgentService {
       }
 
       // Map frontend fields to database fields (frontend → backend)
-      // Frontend sends: content, max_tokens
-      // Database expects: prompt, maxTokens
       const updateData: any = {}
 
       // 🔒 CRITICAL: Only allow prompt updates from verified admin users
-      if (data.prompt !== undefined) updateData.prompt = data.prompt
-      if (data.content !== undefined) updateData.prompt = data.content // Map content → prompt
+      if (data.prompt !== undefined) updateData.systemPrompt = data.prompt
+      if (data.content !== undefined) updateData.systemPrompt = data.content
+      if (data.systemPrompt !== undefined)
+        updateData.systemPrompt = data.systemPrompt
 
       // These fields can be updated by any authenticated user
       if (data.model !== undefined) updateData.model = data.model
       if (data.temperature !== undefined)
         updateData.temperature = data.temperature
       if (data.maxTokens !== undefined) updateData.maxTokens = data.maxTokens
-      if (data.max_tokens !== undefined) updateData.maxTokens = data.max_tokens // Map max_tokens → maxTokens
       if (data.isActive !== undefined) updateData.isActive = data.isActive
 
       logger.info("🛠️ Prepared update data:", updateData)
@@ -200,15 +205,12 @@ export class AgentService {
       logger.info("🌡️  Temperature after update:", updatedAgent.temperature)
 
       // Map database fields back to frontend format (backend → frontend)
-      // Database has: prompt, maxTokens
-      // Frontend expects: content, max_tokens
       const mappedAgent = {
         ...updatedAgent,
-        content: updatedAgent.prompt, // Map prompt → content
-        max_tokens: updatedAgent.maxTokens, // Map maxTokens → max_tokens
-        name: updatedAgent.prompt
-          ? `Agent-${updatedAgent.workspaceId}`
-          : "Unnamed Agent",
+        content: updatedAgent.systemPrompt, // Backward compatibility
+        systemPrompt: updatedAgent.systemPrompt, // Standard
+        maxTokens: updatedAgent.maxTokens, // ✅ STANDARD: camelCase
+        name: updatedAgent.name || `Agent-${updatedAgent.workspaceId}`,
         createdAt: updatedAgent.createdAt?.toISOString(),
         updatedAt: updatedAgent.updatedAt?.toISOString(),
       }

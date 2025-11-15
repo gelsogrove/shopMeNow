@@ -15,10 +15,10 @@ interface CreateWorkspaceData {
   language?: string
   messageLimit?: number
   challengeStatus?: boolean
-  wipMessages?: any // multilingua
+  wipMessage?: string // English only
   blocklist?: string
   url?: string
-  welcomeMessages?: any
+  welcomeMessage?: string // English only
 }
 
 interface UpdateWorkspaceData {
@@ -33,10 +33,10 @@ interface UpdateWorkspaceData {
   language?: string
   messageLimit?: number
   challengeStatus?: boolean
-  wipMessages?: any // multilingua
+  wipMessage?: string // English only
   blocklist?: string
   url?: string
-  welcomeMessages?: any
+  welcomeMessage?: string // English only
 }
 
 export const workspaceService = {
@@ -60,10 +60,10 @@ export const workspaceService = {
         language: true,
         messageLimit: true,
         challengeStatus: true,
-        wipMessages: true,
+        wipMessage: true,
         // blocklist: true, // REMOVED: field no longer exists
         url: true,
-        welcomeMessages: true,
+        welcomeMessage: true,
       },
     })
   },
@@ -87,10 +87,10 @@ export const workspaceService = {
         language: true,
         messageLimit: true,
         challengeStatus: true,
-        wipMessages: true,
+        wipMessage: true,
         // blocklist: true, // REMOVED: field no longer exists
         url: true,
-        welcomeMessages: true,
+        welcomeMessage: true,
       },
     })
 
@@ -107,7 +107,7 @@ export const workspaceService = {
         model: true,
         temperature: true,
         maxTokens: true,
-        prompt: true,
+        systemPrompt: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -155,10 +155,10 @@ export const workspaceService = {
         language: true,
         messageLimit: true,
         challengeStatus: true,
-        wipMessages: true,
+        wipMessage: true,
         // blocklist: true, // REMOVED: field no longer exists
         url: true,
-        welcomeMessages: true,
+        welcomeMessage: true,
       },
     })
   },
@@ -206,10 +206,10 @@ export const workspaceService = {
         language: true,
         messageLimit: true,
         challengeStatus: true,
-        wipMessages: true,
+        wipMessage: true,
         // blocklist: true, // REMOVED: field no longer exists
         url: true,
-        welcomeMessages: true,
+        welcomeMessage: true,
       },
     })
 
@@ -270,7 +270,7 @@ export const workspaceService = {
       where: { workspaceId, isActive: true },
       orderBy: { createdAt: "desc" },
     })
-    return agentConfig?.prompt || null
+    return agentConfig?.systemPrompt || null
   },
 
   /**

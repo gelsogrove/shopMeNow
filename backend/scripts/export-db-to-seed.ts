@@ -12,12 +12,43 @@
  * ATTENZIONE: Questo SOVRASCRIVE i file TypeScript e le immagini!
  */
 
-import { PrismaClient } from "@prisma/client"
+import { AgentType, PrismaClient } from "@prisma/client"
 import * as fs from "fs"
 import * as fse from "fs-extra"
 import * as path from "path"
 
 const prisma = new PrismaClient()
+
+// Mapping from AgentType to filename
+const AGENT_FILENAME_MAP: Partial<Record<AgentType, string>> = {
+  ROUTER: "router-agent.md",
+  PRODUCT_SEARCH: "product-search.md",
+  CART_MANAGEMENT: "cart-management.md",
+  ORDER_TRACKING: "order-tracking.md",
+  CUSTOMER_SUPPORT: "customer-support.md",
+  PROFILE_MANAGEMENT: "profile-management.md",
+  NOTIFICATIONS: "notifications.md",
+  SAFETY_TRANSLATION: "safety-translation.md",
+}
+
+const AGENT_DESCRIPTIONS: Partial<Record<AgentType, string>> = {
+  ROUTER:
+    "Router Agent - Handles FAQ matching and intent classification to route messages to specialist agents",
+  PRODUCT_SEARCH:
+    "Product Search Agent - Handles product searches with QueryPlanner and semantic matching",
+  CART_MANAGEMENT:
+    "Cart Management Agent - Handles add to cart, remove, view cart, and checkout operations",
+  ORDER_TRACKING:
+    "Order Tracking Agent - Handles order viewing, tracking, and status updates",
+  CUSTOMER_SUPPORT:
+    "Customer Support Agent - Handles frustration detection and escalation to human operators",
+  PROFILE_MANAGEMENT:
+    "Profile Management Agent - Handles customer profile updates and preferences",
+  NOTIFICATIONS:
+    "Notifications Agent - Handles notification preferences and delivery",
+  SAFETY_TRANSLATION:
+    "Safety & Translation Agent - Filters inappropriate content and translates to customer language",
+}
 
 function formatValue(value: any): string {
   if (value === null || value === undefined) {
@@ -40,6 +71,96 @@ function formatValue(value: any): string {
     return `new Date("${value.toISOString()}")`
   }
   return JSON.stringify(value)
+}
+
+/**
+ * Export agent prompts to markdown files
+ */
+async function exportPromptsToMarkdown(workspaceId: string): Promise<void> {
+  const promptsDir = path.join(__dirname, "../../docs/prompts")
+
+  // Ensure directory exists
+  if (!fs.existsSync(promptsDir)) {
+    fs.mkdirSync(promptsDir, { recursive: true })
+  }
+
+  const agentTypes: AgentType[] = [
+    "ROUTER",
+    "PRODUCT_SEARCH",
+    "CART_MANAGEMENT",
+    "ORDER_TRACKING",
+    "CUSTOMER_SUPPORT",
+    "PROFILE_MANAGEMENT",
+    "NOTIFICATIONS",
+    "SAFETY_TRANSLATION",
+  ]
+
+  let exportCount = 0
+
+  for (const agentType of agentTypes) {
+    const agent = await prisma.agentConfig.findFirst({
+      where: {
+        workspaceId,
+        type: agentType,
+        isActive: true,
+      },
+    })
+
+    if (!agent) {
+      console.log(`   ⚠️  Agent ${agentType} not found, skipping...`)
+      continue
+    }
+
+    const filename = AGENT_FILENAME_MAP[agentType]
+    if (!filename) {
+      console.log(`   ⚠️  No filename mapping for ${agentType}, skipping...`)
+      continue
+    }
+
+    const filePath = path.join(promptsDir, filename)
+
+    // Format markdown content
+    const mdContent = `# ${agent.name}
+
+**Type**: ${agent.type}  
+**Model**: ${agent.model}  
+**Temperature**: ${agent.temperature}  
+**Max Tokens**: ${agent.maxTokens}  
+**Order**: ${agent.order}  
+**Last Updated**: ${new Date().toISOString()}
+
+---
+
+## Description
+
+${agent.description || AGENT_DESCRIPTIONS[agentType] || "No description available"}
+
+---
+
+## System Prompt
+
+${agent.systemPrompt}
+
+---
+
+## Available Functions
+
+${agent.availableFunctions ? "```json\n" + JSON.stringify(agent.availableFunctions, null, 2) + "\n```" : "_No functions defined_"}
+
+---
+
+_This file is auto-generated from the database. To update:_
+1. _Modify the prompt in the UI (AgentPage) or via API_
+2. _Run \`npm run db:export\` to sync this file_
+3. _Commit the updated .md file to Git_
+`
+
+    fs.writeFileSync(filePath, mdContent, "utf-8")
+    console.log(`   ✅ ${filename}`)
+    exportCount++
+  }
+
+  console.log(`   📝 Exported ${exportCount} agent prompts`)
 }
 
 async function exportToSeed() {
@@ -557,7 +678,11 @@ export const agentPrompt: AgentPromptData = {
     }
 
     console.log("\n" + "=".repeat(50))
-    console.log("✅ EXPORT COMPLETED SUCCESSFULLY!")
+    // ==================== EXPORT AGENT PROMPTS TO MARKDOWN ====================
+    console.log("\n📝 Exporting agent prompts to markdown files...")
+    await exportPromptsToMarkdown(mainWorkspace.id)
+
+    console.log("\n✅ EXPORT COMPLETED SUCCESSFULLY!")
     console.log("\n📁 Files updated in: prisma/data/")
     console.log("   - categories.ts")
     console.log("   - suppliers.ts")
@@ -569,6 +694,13 @@ export const agentPrompt: AgentPromptData = {
     console.log("   - salesReps.ts")
     console.log("   - workspaceSettings.ts")
     console.log("   - agentPrompt.ts")
+    console.log("\n📁 Prompts exported to: docs/prompts/")
+    console.log("   - router-agent.md")
+    console.log("   - product-search.md")
+    console.log("   - cart-management.md")
+    console.log("   - order-tracking.md")
+    console.log("   - customer-support.md")
+    console.log("   - safety-translation.md")
     console.log("\n📁 Images backed up in: prisma/uploads-backup/")
     console.log("   - products/")
     console.log("   - services/")

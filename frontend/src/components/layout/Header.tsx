@@ -219,10 +219,10 @@ export function Header() {
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="p-4 text-lg cursor-pointer"
-                onClick={() => navigate("/agent")}
+                onClick={() => navigate("/agents")}
               >
                 <Bot className="mr-3 h-5 w-5" />
-                <span>Agent Configuration</span>
+                <span>Agents Configuration</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem

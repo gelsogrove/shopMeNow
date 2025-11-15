@@ -23,6 +23,7 @@ export interface Message {
     agentSelected?: string
     sentBy?: string
     operatorId?: string
+    debugInfo?: string // 🆕 JSON string with debug information
     functionCalls?: Array<{
       functionName: string
       arguments: Record<string, any>

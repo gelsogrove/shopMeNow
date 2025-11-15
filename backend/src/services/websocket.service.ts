@@ -118,6 +118,63 @@ export class WebSocketService {
   }
 
   /**
+   * Broadcast customer blocked/unblocked event to workspace
+   */
+  notifyUserBlocked(
+    workspaceId: string,
+    data: {
+      customerId: string
+      customerName: string
+      customerPhone: string
+      isBlacklisted: boolean
+      timestamp: string
+    }
+  ): void {
+    if (!this.io) {
+      logger.warn("[WebSocket] Cannot notify, server not initialized")
+      return
+    }
+
+    const roomName = `workspace:${workspaceId}`
+    const eventName = data.isBlacklisted ? "user-blocked" : "user-unblocked"
+
+    this.io.to(roomName).emit(eventName, data)
+
+    logger.info(`[WebSocket] Broadcasted ${eventName} to ${roomName}`, {
+      customerId: data.customerId,
+      customerName: data.customerName,
+    })
+  }
+
+  /**
+   * Broadcast new customer event to workspace
+   */
+  notifyNewCustomer(
+    workspaceId: string,
+    data: {
+      customerId: string
+      sessionId: string
+      customerName: string
+      customerPhone: string
+      language?: string
+      timestamp: string
+    }
+  ): void {
+    if (!this.io) {
+      logger.warn("[WebSocket] Cannot notify, server not initialized")
+      return
+    }
+
+    const roomName = `workspace:${workspaceId}`
+    this.io.to(roomName).emit("new-customer", data)
+
+    logger.info(`[WebSocket] Broadcasted new-customer to ${roomName}`, {
+      customerId: data.customerId,
+      sessionId: data.sessionId,
+    })
+  }
+
+  /**
    * Notify specific client about workspace change
    * This triggers frontend to invalidate all cached data
    */

@@ -1,7 +1,7 @@
-import * as fs from "fs"
-import * as path from "path"
+import { SafetyTranslationAgent } from "../application/agents/SafetyTranslationAgent"
 import { LinkGeneratorService } from "../application/services/link-generator.service"
 import { TokenService } from "../application/services/token.service"
+import { getAllFunctions } from "../config/agent-functions.config"
 import { getLLMConfig } from "../config/llm.config"
 import { LLMRequest } from "../types/whatsapp.types"
 import logger from "../utils/logger"
@@ -65,7 +65,8 @@ export class LLMService {
 
   async handleMessage(
     llmRequest: LLMRequest,
-    customerData?: any
+    customerData?: any,
+    skipTranslation?: boolean // NEW: Skip translation when called from delegation
   ): Promise<any> {
     logger.info(
       "🚀 LLM: handleMessage chiamato per telefono:",
@@ -106,28 +107,79 @@ export class LLMService {
       return await this.NewUser(llmRequest, workspace, messageRepo, debugInfo)
     }
 
-    // 3. Blocca se blacklisted O se chatbot disabilitato - non salvare nulla nello storico
+    // 3. Blocca se blacklisted - NON processare ma SALVARE messaggio in history
     const isBlocked = await messageRepo.isCustomerBlacklisted(
       customer.phone,
       workspace.id
     )
-    // Block if user is blacklisted OR if chatbot is disabled for this customer
-    if (isBlocked || customer.isBlacklisted || !customer.activeChatbot) {
-      debugInfo.stage = "blocked_user_or_chatbot_disabled"
+
+    // Block if user is blacklisted
+    if (isBlocked || customer.isBlacklisted) {
+      debugInfo.stage = "blocked_user"
       return {
         success: false,
-        output:
-          customer.activeChatbot === false
-            ? "❌ Chatbot disabled for this customer"
-            : "❌ User blocked",
+        output: "❌ User blocked",
         debugInfo: JSON.stringify(debugInfo),
       }
     }
 
-    // 4. Get prompt
-    const prompt = await workspaceService.getActivePromptByWorkspaceId(
-      workspace.id
-    )
+    // 3b. Se chatbot disabilitato, SALVA messaggio ma NON processare con LLM
+    if (!customer.activeChatbot) {
+      debugInfo.stage = "chatbot_disabled_save_only"
+
+      // Salva messaggio cliente in history
+      await messageRepo.saveMessage({
+        customerId: customer.id,
+        workspaceId: workspace.id,
+        direction: "INBOUND",
+        content: llmRequest.chatInput,
+        type: "TEXT",
+        aiGenerated: false,
+        metadata: {
+          chatbotDisabled: true,
+          savedAt: new Date().toISOString(),
+        },
+      })
+
+      logger.info("✅ Message saved to history (chatbot disabled)", {
+        customerId: customer.id,
+        messageLength: llmRequest.chatInput.length,
+      })
+
+      return {
+        success: true,
+        output:
+          "Message saved to history (chatbot disabled - no LLM processing)",
+        debugInfo: JSON.stringify(debugInfo),
+        chatbotDisabled: true, // Flag per sapere che non deve inviare risposta
+      }
+    }
+
+    // 4. Get prompt - SPECIFIC AGENT if agentType provided, otherwise Router
+    const agentType = (llmRequest as any).agentType || "ROUTER"
+    let prompt: string | null = null
+
+    if (agentType && agentType !== "ROUTER") {
+      // Get specific agent prompt from database
+      const prisma = new (require("@prisma/client").PrismaClient)()
+      const agentConfig = await prisma.agentConfig.findFirst({
+        where: {
+          workspaceId: workspace.id,
+          type: agentType,
+          isActive: true,
+        },
+      })
+      prompt = agentConfig?.systemPrompt || null
+      await prisma.$disconnect()
+
+      logger.info(`🤖 Loading prompt for specific agent: ${agentType}`, {
+        found: !!prompt,
+        promptLength: prompt?.length || 0,
+      })
+    } else {
+      // Default: get Router agent prompt
+      prompt = await workspaceService.getActivePromptByWorkspaceId(workspace.id)
+    }
 
     if (!prompt) {
       debugInfo.stage = "no_prompt"
@@ -145,25 +197,44 @@ export class LLMService {
     const userLanguage = customer.language || workspace.language || "it"
     const faqs = await messageRepo.getActiveFaqs(workspace.id)
     const services = await messageRepo.getActiveServices(workspace.id)
-    const categories = await messageRepo.getActiveCategories(workspace.id)
-    const offers = await messageRepo.getActiveOffers(workspace.id)
+
+    // Use customerData if provided (from delegation), otherwise fetch from DB
+    const categories =
+      customerData?.CATEGORIES ||
+      (await messageRepo.getActiveCategories(workspace.id))
+    const offers =
+      customerData?.OFFERS || (await messageRepo.getActiveOffers(workspace.id))
     const customerDiscount = customer.discount || 0
     const products =
+      customerData?.PRODUCTS ||
       (await messageRepo.getActiveProducts(workspace.id, customerDiscount)) ||
       ""
 
+    // 🔍 DEBUG: Log catalog data
+    logger.info("📦 Catalog data for LLM", {
+      hasProducts: !!products,
+      productsLength: products?.length || 0,
+      productsPreview: products?.substring(0, 200),
+      hasCategories: !!categories,
+      hasOffers: !!offers,
+      usingCustomerData: !!customerData?.PRODUCTS,
+    })
+
     const userInfo = {
-      nameUser: customer.name || "",
-      discountUser: customer.discount || 0,
-      companyName: customer.company || "",
+      nameUser: customerData?.nameUser || customer.name || "",
+      discountUser: customerData?.discountUser || customer.discount || 0,
+      companyName: customerData?.companyName || customer.company || "",
       lastordercode:
         customerData?.lastordercode || customer.lastOrderCode || "",
-      languageUser: this.getLanguageDisplayName(userLanguage),
-      agentName: customer.sales
-        ? `${customer.sales.firstName} ${customer.sales.lastName}`.trim()
-        : "Non assegnato",
-      agentPhone: customer.sales?.phone || "N/A",
-      agentEmail: customer.sales?.email || "N/A",
+      languageUser:
+        customerData?.languageUser || this.getLanguageDisplayName(userLanguage),
+      agentName:
+        customerData?.agentName ||
+        (customer.sales
+          ? `${customer.sales.firstName} ${customer.sales.lastName}`.trim()
+          : "Non assegnato"),
+      agentPhone: customerData?.agentPhone || customer.sales?.phone || "N/A",
+      agentEmail: customerData?.agentEmail || customer.sales?.email || "N/A",
       push_notifications_consent: customer.push_notifications_consent || false,
     }
 
@@ -192,6 +263,15 @@ export class LLMService {
     // Get workspace URL for {{URL}} replacement
     const workspaceUrl = workspace.url || "http://localhost:3000"
 
+    // 🔍 DEBUG: Check prompt BEFORE replacement (for PRODUCT_SEARCH only)
+    if ((llmRequest as any).agentType === "PRODUCT_SEARCH") {
+      logger.info("🔍 BEFORE replacement", {
+        promptLength: prompt.length,
+        hasPlaceholder: prompt.includes("{{PRODUCTS}}"),
+        placeholderCount: (prompt.match(/\{\{PRODUCTS\}\}/g) || []).length,
+      })
+    }
+
     let promptWithVars = prompt
       .replace("{{FAQ}}", faqs)
       .replace("{{SERVICES}}", services)
@@ -209,21 +289,34 @@ export class LLMService {
       .replace(/\{\{agentEmail\}\}/g, userInfo.agentEmail) // Replace ALL occurrences
       .replace(/\{\{TOKEN_DURATION\}\}/g, tokenDuration) // Replace ALL occurrences
 
-    // Save processed prompt for debugging
-    try {
-      const promptPath = path.join(process.cwd(), "prompt.txt")
-      fs.writeFileSync(
-        promptPath,
-        `=== PROMPT GENERATO ${new Date().toISOString()} ===\n\n${promptWithVars}\n\n=== FINE PROMPT ===\n`
-      )
-    } catch (error) {
-      logger.info("❌ Errore salvando prompt:", error.message)
-    }
+    // ❌ REMOVED: prompt.txt generation (obsolete - use AgentConversationLog for debugging)
+    // Old code wrote to prompt.txt file for debugging
+    // New multi-agent system logs everything to database via AgentLoggerService
 
     debugInfo.promptInfo = {
       originalLength: prompt.length,
       processedLength: promptWithVars.length,
       userMessageLength: llmRequest.chatInput.length,
+    }
+
+    // 🔍 DEBUG: Check if {{PRODUCTS}} was replaced
+    if ((llmRequest as any).agentType === "PRODUCT_SEARCH") {
+      const hasProductsPlaceholder = promptWithVars.includes("{{PRODUCTS}}")
+      const hasProductsContent = promptWithVars.includes("Panettone Classico")
+      const hasDolciCategory = promptWithVars.includes("**DESSERTS**")
+      const productsHasPanettone =
+        products?.includes("Panettone Classico") || false
+      const productsHasDesserts = products?.includes("**DESSERTS**") || false
+
+      logger.info("🔍 PRODUCT_SEARCH prompt check", {
+        hasPlaceholder: hasProductsPlaceholder,
+        hasProductContentInPrompt: hasProductsContent,
+        hasDolciCategoryInPrompt: hasDolciCategory,
+        hasProductContentInSource: productsHasPanettone,
+        hasDolciCategoryInSource: productsHasDesserts,
+        promptLength: promptWithVars.length,
+        productsSourceLength: products?.length || 0,
+      })
     }
 
     // 6.5 Get conversation history (last 5 minutes for context)
@@ -277,59 +370,65 @@ export class LLMService {
     debugInfo.linkReplacements = linkReplacements
 
     // 8. 🔒 TRANSLATION & SECURITY LAYER - Final filter before sending to customer
-    try {
-      // 🔧 Get LLM config to use same model/provider as agent
-      const agentConfig = (workspace as any).agentConfigs?.[0]
-      const agentModel = agentConfig?.model
-      const llmConfig = getLLMConfig(agentModel)
+    // 🚨 SKIP if called from delegation (Router will handle translation)
+    if (skipTranslation) {
+      logger.info("⏭️ Skipping Translation & Security Layer (delegation mode)")
+      debugInfo.translationSkipped = true
+    } else {
+      try {
+        // 🔧 Get LLM config to use same model/provider as agent
+        const agentConfig = (workspace as any).agentConfigs?.[0]
+        const agentModel = agentConfig?.model
+        const llmConfig = getLLMConfig(agentModel)
 
-      logger.info("🔒 Applying Translation & Security Layer", {
-        customerId: customer.id,
-        language: userLanguage,
-        usingAgentModel: agentModel, // 📊 Same model as agent
-        usingProvider: llmConfig.useLocal
-          ? "Ollama (local)"
-          : "OpenRouter (cloud)",
-      })
-
-      // Build list of allowed system links (all other links will be blocked)
-      const workspaceUrl = workspace.url || "http://localhost:3000"
-      const allowedLinks = [
-        workspaceUrl, // Base workspace URL
-        `${workspaceUrl}/s/`, // Short URLs (secure with token)
-        `${workspaceUrl}/orders-public`, // Public orders (secure with token)
-        `${workspaceUrl}/register`, // Registration page
-        `${workspaceUrl}/api/`, // API endpoints
-        "https://wa.me/", // WhatsApp official links
-      ]
-
-      // 🚨 SECURITY: /orders and /checkout are NOT allowed!
-      // They must use short URLs with tokens generated by auto-fix
-
-      const translationResult =
-        await translationSecurityService.processResponse(
-          finalResponse,
-          userLanguage,
-          allowedLinks,
-          llmConfig.model, // Use same model as agent
-          llmConfig.baseURL, // Use same baseURL as agent (Ollama or OpenRouter)
-          llmConfig.apiKey // Use same API key as agent
-        )
-
-      if (translationResult.blocked) {
-        logger.warn("⚠️ SECURITY: Blocked inappropriate content", {
+        logger.info("🔒 Applying Translation & Security Layer", {
           customerId: customer.id,
-          reason: translationResult.reason,
-          originalLength: finalResponse.length,
+          language: userLanguage,
+          usingAgentModel: agentModel, // 📊 Same model as agent
+          usingProvider: llmConfig.useLocal
+            ? "Ollama (local)"
+            : "OpenRouter (cloud)",
         })
-      }
 
-      finalResponse = translationResult.translatedText
-      debugInfo.translationBlocked = translationResult.blocked
-      debugInfo.translationReason = translationResult.reason
-    } catch (error) {
-      logger.error("❌ Translation & Security Layer failed", error)
-      // Continue with original response if translation fails
+        // Build list of allowed system links (all other links will be blocked)
+        const workspaceUrl = workspace.url || "http://localhost:3000"
+        const allowedLinks = [
+          workspaceUrl, // Base workspace URL
+          `${workspaceUrl}/s/`, // Short URLs (secure with token)
+          `${workspaceUrl}/orders-public`, // Public orders (secure with token)
+          `${workspaceUrl}/register`, // Registration page
+          `${workspaceUrl}/api/`, // API endpoints
+          "https://wa.me/", // WhatsApp official links
+        ]
+
+        // 🚨 SECURITY: /orders and /checkout are NOT allowed!
+        // They must use short URLs with tokens generated by auto-fix
+
+        const translationResult =
+          await translationSecurityService.processResponse(
+            finalResponse,
+            userLanguage,
+            allowedLinks,
+            llmConfig.model, // Use same model as agent
+            llmConfig.baseURL, // Use same baseURL as agent (Ollama or OpenRouter)
+            llmConfig.apiKey // Use same API key as agent
+          )
+
+        if (translationResult.blocked) {
+          logger.warn("⚠️ SECURITY: Blocked inappropriate content", {
+            customerId: customer.id,
+            reason: translationResult.reason,
+            originalLength: finalResponse.length,
+          })
+        }
+
+        finalResponse = translationResult.translatedText
+        debugInfo.translationBlocked = translationResult.blocked
+        debugInfo.translationReason = translationResult.reason
+      } catch (error) {
+        logger.error("❌ Translation & Security Layer failed", error)
+        // Continue with original response if translation fails
+      }
     }
 
     // 🔧 DEBUG: Complete debug information
@@ -414,6 +513,110 @@ export class LLMService {
     }
 
     return "1 ora" // Fallback
+  }
+
+  /**
+   * 🆕 Handle new user welcome message flow
+   *
+   * This is the ONLY entry point for new user messages.
+   * Ensures ALL messages go through Safety & Translation layer.
+   *
+   * @param phone - Customer phone number
+   * @param workspaceId - Workspace ID
+   * @param messageContent - Original message from customer
+   * @returns Object with welcome message, registration link, and debug info
+   */
+  async handleNewUserWelcome(
+    phone: string,
+    workspaceId: string,
+    messageContent: string
+  ): Promise<{
+    success: boolean
+    message: string
+    debugInfo: any
+  }> {
+    const startTime = Date.now()
+
+    logger.info(`🆕 handleNewUserWelcome called for new user`, {
+      phone,
+      workspaceId,
+    })
+
+    try {
+      const messageRepo =
+        new (require("../repositories/message.repository").MessageRepository)()
+      const { workspaceService } = require("../services/workspace.service")
+
+      // 1. Get workspace
+      const workspace = await workspaceService.getById(workspaceId)
+      if (!workspace) {
+        throw new Error(`Workspace not found: ${workspaceId}`)
+      }
+
+      // 2. Get welcome message from database (English)
+      const welcomeMessageEnglish =
+        await messageRepo.getWelcomeMessage(workspaceId)
+      if (!welcomeMessageEnglish) {
+        throw new Error("Welcome message not configured in database")
+      }
+
+      // 3. Detect customer language
+      const {
+        detectLanguageFromPhonePrefix,
+      } = require("../utils/language-detector")
+      const detectedLanguage = detectLanguageFromPhonePrefix(phone)
+
+      // 4. Translate through Safety & Translation layer (MANDATORY)
+      const welcomeMessageTranslated = await this.translateSystemMessage(
+        welcomeMessageEnglish,
+        workspaceId,
+        detectedLanguage,
+        undefined,
+        "new_user_welcome"
+      )
+
+      // 5. Generate registration link
+      const registrationLink = await this.generateRegistrationLink(
+        phone,
+        workspaceId
+      )
+
+      // 6. Build complete message with link
+      const { getRegistrationText } = require("../utils/language-detector")
+      const registrationText = getRegistrationText(detectedLanguage)
+      const completeMessage = `${welcomeMessageTranslated}\n\n🔗 **${registrationText.link}:**\n${registrationLink}\n\n⏰ ${registrationText.validity}`
+
+      const executionTimeMs = Date.now() - startTime
+
+      const debugInfo = {
+        stage: "new_user_welcome",
+        translationLayerPassed: true,
+        detectedLanguage,
+        executionTimeMs,
+        timestamp: new Date().toISOString(),
+      }
+
+      logger.info(`✅ handleNewUserWelcome completed`, {
+        phone,
+        workspaceId,
+        detectedLanguage,
+        executionTimeMs,
+      })
+
+      return {
+        success: true,
+        message: completeMessage,
+        debugInfo,
+      }
+    } catch (error) {
+      logger.error(`❌ handleNewUserWelcome failed`, {
+        phone,
+        workspaceId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+
+      throw error // Don't send message if translation/safety failed
+    }
   }
 
   /**
@@ -622,164 +825,9 @@ export class LLMService {
   }
 
   private getAvailableFunctions() {
-    // 🎯 PRIORITY ORDER (highest to lowest):
-    // 1. ContactOperator (🚨 PRIORITY 1 - Frustration, explicit operator request)
-    // 2. GetLinkOrderByCode (🚨 PRIORITY 2 - View specific order)
-    // 3. repeatOrder (⚙️ PRIORITY 3 - Repeat previous order, requires confirmation)
-    // 4. addProduct (⚙️ PRIORITY 4 - Add single product, requires confirmation)
-    // 4.5. manageNotifications (🔔 PRIORITY 4.5 - SUBSCRIBE/UNSUBSCRIBE push notifications)
-    // 5. searchProduct (📊 PRIORITY 5 - BACKGROUND ONLY, non-blocking)
-
-    return [
-      {
-        type: "function",
-        function: {
-          name: "ContactOperator",
-          description:
-            "🚨 PRIORITY 1 - HIGHEST. CHIAMA IMMEDIATAMENTE quando utente: 1) RICHIEDE ESPLICITAMENTE operatore: 'operatore', 'parlare con operatore', 'assistenza umana', 'customer service', 'voglio parlare con', 'operator', 'human'. 2) ESPRIME FRUSTRAZIONE/PROBLEMA CRITICO (🔴 trigger automatico - NO conferma): 'merce scaduta', 'prodotto scaduto', 'scaduto', 'danneggiato', 'rotto', 'difettoso', 'marcio', 'andato a male', 'stufo/a', 'problema grave', 'sempre problemi', 'ogni volta', 'mai funziona', 'pessimo servizio', 'non funziona mai'. Se rilevi UNA di queste parole → ESEGUI SUBITO ContactOperator() senza chiedere conferma! NON rispondere con testo generico, CHIAMA la funzione!",
-          parameters: {
-            type: "object",
-            properties: {},
-            required: [],
-          },
-        },
-      },
-      {
-        type: "function",
-        function: {
-          name: "GetLinkOrderByCode",
-          description:
-            "🚨 PRIORITY 2 - HIGH. Fornisce il link per visualizzare UN SINGOLO ordine specifico tramite codice ordine. Usare quando l'utente vuole: 'vedere ordine specifico', 'dettagli ordine', 'fattura ordine', 'ultimo ordine', 'ordine ORD-123'. Se orderCode non specificato → usa automaticamente lastordercode. IMPORTANTE: Ha PRIORITÀ sulle FAQ per 'ultimo ordine'. NON usare per 'lista tutti gli ordini' (usa [LINK_ORDERS_WITH_TOKEN] token). NON usare per tracking 'dov'è il mio ordine' (tracking fisico).",
-          parameters: {
-            type: "object",
-            properties: {
-              orderCode: {
-                type: "string",
-                description:
-                  "Il codice dell'ordine da visualizzare. Se l'utente dice 'ultimo ordine' usa il lastordercode.",
-              },
-            },
-            required: ["orderCode"],
-          },
-        },
-      },
-      {
-        type: "function",
-        function: {
-          name: "repeatOrder",
-          description:
-            "⚙️ PRIORITY 3 - MEDIUM. Ripete esattamente lo stesso ordine di una volta precedente, aggiungendo TUTTI i prodotti al carrello. Usare quando l'utente dice: 'ripeti ordine', 'ordina di nuovo come prima', 'voglio lo stesso di prima', 'ripeti ultimo ordine', 'voglio rifare l'ultimo ordine', 'rifare ordine', 'come l'ultima volta', 'stesso ordine', 'stessi prodotti', 'ordina stessa cosa'. FLOW OBBLIGATORIO: 1) Mostra contenuto ordine, 2) Chiedi SEMPRE conferma 'Ricreo il tuo ultimo ordine?', 3) Se conferma → chiama repeatOrder(). Svuota carrello esistente e ricomincia pulito. Se orderCode non specificato → usa automaticamente ultimo ordine. Verifica disponibilità e avvisa se prodotti non disponibili. Dopo aggiunta → mostra link carrello. DISAMBIGUAZIONE: 'ripeti ordine'/'rifare ordine' = repeatOrder | 'aggiungi burrata' = addProduct.",
-          parameters: {
-            type: "object",
-            properties: {
-              orderCode: {
-                type: "string",
-                description:
-                  "Codice ordine da ripetere (opzionale). Se non specificato, usa automaticamente l'ultimo ordine del cliente. Es: 'ORD-123'.",
-              },
-            },
-            required: [],
-          },
-        },
-      },
-      {
-        type: "function",
-        function: {
-          name: "resetCart",
-          description:
-            "🗑️ PRIORITY 3.5 - MEDIUM (Richiede SEMPRE conferma). Svuota COMPLETAMENTE il carrello del cliente, eliminando TUTTI i prodotti/servizi. " +
-            "QUANDO USARE: Cliente dice 'cancella carrello', 'svuota carrello', 'elimina tutto dal carrello', 'pulisci carrello', 'ricomincia da capo', 'reset carrello', 'rimuovi tutto'. " +
-            "⚠️ DISAMBIGUAZIONE CRITICA: 'cancella CARRELLO' / 'svuota TUTTO' → resetCart() (elimina TUTTO il carrello) | 'cancella BURRATA' / 'rimuovi PARMIGIANO' → removeProduct() (elimina UN prodotto specifico). " +
-            "🚨 FLOW OBBLIGATORIO: 1) Cliente chiede di svuotare carrello → 2) TU chiedi SEMPRE conferma: 'Vuoi davvero svuotare il carrello? Perderai tutti i prodotti! 🗑️' → 3) Aspetti risposta → 4a) Se conferma ('sì', 'ok', 'procedi', 'conferma') → chiami resetCart() → mostri messaggio successo | 4b) Se rifiuta ('no', 'aspetta', 'annulla') → NON chiami resetCart(), mantieni carrello. " +
-            "❌ NON chiamare se: cliente vuole rimuovere UN prodotto specifico, cliente non ha confermato esplicitamente, carrello già vuoto. " +
-            "DOPO svuotamento: mostra messaggio risultato CF + suggerisci offerte/prodotti per ricominciare.",
-          parameters: {
-            type: "object",
-            properties: {},
-            required: [],
-          },
-        },
-      },
-      {
-        type: "function",
-        function: {
-          name: "addProduct",
-          description:
-            "⚙️ PRIORITY 4 - MEDIUM. Aggiunge uno o più prodotti al carrello del cliente. Usare SOLO DOPO che il cliente ha CONFERMATO di voler aggiungere il/i prodotto/i. FLOW OBBLIGATORIO: 1) Mostra prodotto/i con prezzo e stock, 2) Chiedi 'Vuoi aggiungerlo/i al carrello? 🛒', 3) Se conferma ('sì', 'ok', 'perfetto', 'aggiungi', 'tutti') → chiama addProduct(products), 4) Dopo aggiunta → mostra link carrello. ESEMPI: SINGOLO: [{productCode:'BUR-001',quantity:1}] | MULTIPLI: [{productCode:'PASTA-005',quantity:1},{productCode:'COND-004',quantity:2},{productCode:'FORMAG-002',quantity:1}]. NON chiamare se: cliente non ha confermato, stock insufficiente, productCode mancante, prodotto non trovato, utente sta solo chiedendo info. DISAMBIGUAZIONE: 'hai la burrata?' = searchProduct (BACKGROUND) | 'aggiungi burrata' (DOPO conferma) = addProduct | 'ripeti ordine' = repeatOrder.",
-          parameters: {
-            type: "object",
-            properties: {
-              products: {
-                type: "array",
-                description:
-                  "Array di prodotti da aggiungere. Anche per singolo prodotto, usare array con 1 elemento.",
-                items: {
-                  type: "object",
-                  properties: {
-                    productCode: {
-                      type: "string",
-                      description:
-                        "Codice esatto del prodotto. Es: 'BUR-001', 'PASTA-005', 'COND-004'.",
-                    },
-                    quantity: {
-                      type: "number",
-                      description:
-                        "Quantità (default: 1, intero positivo). Min: 1.",
-                    },
-                    notes: {
-                      type: "string",
-                      description:
-                        "Note opzionali per questo prodotto specifico.",
-                    },
-                  },
-                  required: ["productCode"],
-                },
-              },
-            },
-            required: ["products"],
-          },
-        },
-      },
-      {
-        type: "function",
-        function: {
-          name: "manageNotifications",
-          description:
-            "🔔 PRIORITY 4.5 - MEDIUM. Gestisce sottoscrizione/cancellazione notifiche push WhatsApp. TRIGGER NATURALI (consigliati): Usare quando utente chiede in linguaggio naturale: 'voglio ricevere offerte', 'iscrivimi', 'subscribe me', 'quiero ofertas', 'quero receber', 'non voglio più offerte', 'disiscrivimi', 'unsubscribe', 'cancelar', etc. OPZIONE ALTERNATIVA (avanzata): riconosce keywords esatte 'SUBSCRIBE'/'UNSUBSCRIBE' (uppercase). FLOW OBBLIGATORIO: 1) Utente chiede iscrizione/disiscrizione (linguaggio naturale o keywords), 2) Chiedi conferma semplice: 'Vuoi iscriverti alle notifiche push? 📬' o 'Vuoi disiscriverti? 📭', 3) Se conferma ('sì','yes','si','sí','sim') → chiama manageNotifications(action), 4) Mostra messaggio risultato. {{SUBSCRIBE_MESSAGE}} token mostra invito SOLO se push_notifications_consent=false. NON suggerire mai disiscrizione nel chatbot normale (solo in campagne push). NON chiamare se: utente non ha confermato, contesto ambiguo.",
-          parameters: {
-            type: "object",
-            properties: {
-              action: {
-                type: "string",
-                enum: ["SUBSCRIBE", "UNSUBSCRIBE"],
-                description:
-                  "Azione richiesta: SUBSCRIBE (iscriviti) o UNSUBSCRIBE (disiscriviti). SEMPRE maiuscolo nel parametro.",
-              },
-            },
-            required: ["action"],
-          },
-        },
-      },
-      {
-        type: "function",
-        function: {
-          name: "searchProduct",
-          description:
-            "📊 PRIORITY 5 - BACKGROUND ONLY (non-blocking). Registra la ricerca di un prodotto da parte del cliente per analytics e trend analysis. Usare quando l'utente cerca/chiede di un prodotto alimentare: 'hai la burrata?', 'avete prosciutto?', 'mi serve parmigiano', 'vendete champagne?', 'non trovate tartufo?'. Viene chiamata SIA per prodotti trovati CHE per prodotti NON trovati. ⚠️ BACKGROUND FUNCTION: Il LLM continua a rispondere NORMALMENTE dopo la chiamata, l'utente NON deve sapere della registrazione. NON bloccare il flusso conversazionale con messaggi tecnici tipo 'sto registrando'. La funzione viene eseguita in parallelo alla risposta. NON usare per prodotti non alimentari (software, auto, abbigliamento). NON chiamare due volte per stesso prodotto nella stessa conversazione. DISAMBIGUAZIONE: 'hai burrata?' = searchProduct (BACKGROUND) | 'aggiungi burrata' (DOPO conferma) = addProduct.",
-          parameters: {
-            type: "object",
-            properties: {
-              productName: {
-                type: "string",
-                description:
-                  "Il nome del prodotto cercato dal cliente (obbligatorio, max 255 caratteri). Es: 'burrata', 'prosciutto di parma', 'vino rosso', 'champagne', 'tartufo', 'mozzarella'.",
-              },
-            },
-            required: ["productName"],
-          },
-        },
-      },
-    ]
+    // ✅ SINGLE SOURCE OF TRUTH: Functions loaded from agent-functions.config.ts
+    // This ensures consistency between LLM, database seed, and frontend UI
+    return getAllFunctions()
   }
 
   private async generateLLMResponse(
@@ -1417,6 +1465,77 @@ export class LLMService {
     }
   }
 
+  /**
+   * Translate system message (welcome/WIP) through Safety & Translation layer
+   * @param message - System message in English
+   * @param workspaceId - Workspace ID
+   * @param targetLanguage - Customer's language (it/es/en/pt)
+   * @param customerName - Optional customer name for context
+   * @param messageType - Type of message for debug logging
+   * @returns Translated and safety-checked message
+   */
+  private async translateSystemMessage(
+    message: string,
+    workspaceId: string,
+    targetLanguage: string,
+    customerName?: string,
+    messageType: string = "system_message"
+  ): Promise<string> {
+    const startTime = Date.now()
+
+    try {
+      logger.info(
+        `🌐 Translating ${messageType} through Safety & Translation layer`,
+        {
+          workspaceId,
+          targetLanguage,
+          messageType,
+          originalLength: message.length,
+        }
+      )
+
+      const { PrismaClient } = require("@prisma/client")
+      const prisma = new PrismaClient()
+      const safetyAgent = new SafetyTranslationAgent(prisma)
+      const result = await safetyAgent.process({
+        workspaceId,
+        response: message,
+        targetLanguage,
+        customerName,
+        allowedLinks: [], // System messages don't have dynamic links
+      })
+
+      const executionTimeMs = Date.now() - startTime
+
+      if (!result.safe) {
+        logger.error(`❌ ${messageType} BLOCKED by Safety & Translation`, {
+          workspaceId,
+          blockedReason: result.blockedReason,
+          messageType,
+        })
+        // BLOCK: Don't send if safety check fails
+        throw new Error(`System message blocked: ${result.blockedReason}`)
+      }
+
+      logger.info(`✅ ${messageType} translated successfully`, {
+        workspaceId,
+        targetLanguage,
+        tokensUsed: result.tokensUsed,
+        executionTimeMs,
+        messageType,
+      })
+
+      return result.translatedText
+    } catch (error) {
+      logger.error(`❌ Failed to translate ${messageType}`, {
+        workspaceId,
+        error: error instanceof Error ? error.message : String(error),
+        messageType,
+      })
+      throw error // BLOCK: Don't fall back to untranslated message
+    }
+  }
+
   // Funzione che gestisce il flusso per un nuovo utente e ritorna direttamente l'oggetto di risposta
   private async NewUser(
     llmRequest: LLMRequest,
@@ -1424,23 +1543,74 @@ export class LLMService {
     messageRepo: any,
     debugInfo?: any
   ): Promise<any> {
-    let welcomeMessage = await messageRepo.getWelcomeMessage(
-      workspace.id,
-      workspace.language || "it"
-    )
-    welcomeMessage =
-      welcomeMessage ||
-      "👋 Benvenuto! Devi prima registrarti per utilizzare i nostri servizi."
+    const startTime = Date.now()
 
+    // 1. Get welcome message from database (English only)
+    const welcomeMessageEnglish = await messageRepo.getWelcomeMessage(
+      workspace.id
+    )
+
+    if (!welcomeMessageEnglish) {
+      throw new Error(
+        "Welcome message not configured in database - this should not happen"
+      )
+    }
+
+    // 2. Detect customer language
+    const {
+      detectLanguageFromPhonePrefix,
+    } = require("../utils/language-detector")
+    const detectedLanguage = detectLanguageFromPhonePrefix(llmRequest.phone)
+
+    logger.info(
+      `🌐 NewUser: Detected language ${detectedLanguage} for phone ${llmRequest.phone}`
+    )
+
+    // 3. Translate welcome message through Safety & Translation layer
+    let welcomeMessage: string
+    try {
+      welcomeMessage = await this.translateSystemMessage(
+        welcomeMessageEnglish,
+        workspace.id,
+        detectedLanguage,
+        undefined, // No customer name yet (new user)
+        "welcome_message"
+      )
+
+      debugInfo = {
+        ...debugInfo,
+        stage: "new_user_welcome",
+        translationLayerPassed: true,
+        detectedLanguage,
+        translationTimeMs: Date.now() - startTime,
+      }
+    } catch (translationError) {
+      // BLOCK: If translation fails, don't send message
+      logger.error("❌ NewUser: Translation layer BLOCKED welcome message", {
+        error:
+          translationError instanceof Error
+            ? translationError.message
+            : String(translationError),
+        workspaceId: workspace.id,
+        phone: llmRequest.phone,
+      })
+
+      throw new Error(
+        `Welcome message translation failed: ${translationError instanceof Error ? translationError.message : "Unknown error"}`
+      )
+    }
+
+    // 4. Generate registration link and build final message
     const output = await this.newUserLink(
       llmRequest.phone,
       workspace.id,
       welcomeMessage
     )
+
     return {
       success: false,
       output,
-      debugInfo: JSON.stringify(debugInfo || { stage: "new_user" }),
+      debugInfo: JSON.stringify(debugInfo),
     }
   }
 

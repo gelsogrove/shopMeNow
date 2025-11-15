@@ -14,6 +14,7 @@ type ChatListContextType = {
   chats: Chat[]
   updateChat: (chatId: string, updates: Partial<Chat>) => void
   updateActiveChatbot: (chatId: string, isActive: boolean) => void
+  refetch: () => Promise<void>
   isLoading: boolean
   isError: boolean
   error: Error | null
@@ -49,7 +50,11 @@ export function ChatListProvider({ children }: { children: ReactNode }) {
   // Use React Query to handle chat list fetching
   // 🚀 WEBSOCKET: No polling - updates via WebSocket events
   // 🔑 KEY FIX: Include sessionId in query key to isolate cache per login session!
-  const { data: chats = [], isLoading } = useQuery({
+  const {
+    data: chats = [],
+    isLoading,
+    refetch: queryRefetch,
+  } = useQuery({
     queryKey: ["chats", sessionId], // 🚨 FIX: sessionId nella key!
     queryFn: async () => {
       try {
@@ -126,12 +131,19 @@ export function ChatListProvider({ children }: { children: ReactNode }) {
     [updateChat]
   )
 
+  // Wrapper for refetch that returns Promise<void>
+  const refetch = useCallback(async () => {
+    logger.info("[ChatListContext] 🔄 Manual refetch triggered")
+    await queryRefetch()
+  }, [queryRefetch])
+
   return (
     <ChatListContext.Provider
       value={{
         chats: chats || [],
         updateChat,
         updateActiveChatbot,
+        refetch,
         isLoading,
         isError: !!error,
         error,

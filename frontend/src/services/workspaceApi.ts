@@ -19,8 +19,8 @@ export interface Workspace {
   whatsappApiKey?: string
   adminEmail?: string
   debugMode?: boolean
-  welcomeMessages?: any
-  wipMessages?: any
+  welcomeMessage?: string
+  wipMessage?: string
   createdAt: string
   updatedAt: string
 }
@@ -42,8 +42,8 @@ export interface UpdateWorkspaceData {
   adminEmail?: string
   url?: string
   debugMode?: boolean
-  welcomeMessages?: any
-  wipMessages?: any
+  welcomeMessage?: string
+  wipMessage?: string
 }
 
 const workspaceApi = {
