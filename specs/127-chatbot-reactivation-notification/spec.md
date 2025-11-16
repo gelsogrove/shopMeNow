@@ -20,11 +20,13 @@ When an admin enables a customer's chatbot from the ChatPage, a dialog appears a
 ### Backend Components
 
 1. **`PushController`** (`backend/src/interfaces/http/controllers/push.controller.ts`)
+
    - Endpoint: `POST /api/workspaces/:workspaceId/push/chatbot-reactivated`
    - Validates workspace + customer IDs
    - Calls LLM Router with `isSystemMessage: true` flag
 
 2. **`LLMRouterService` Fast-Path** (`backend/src/services/llm-router.service.ts`)
+
    - Skips Router Agent + SubLLM when `isSystemMessage=true`
    - Goes directly to Safety & Translation Agent
    - Performance: ~20k → ~2k tokens (90% reduction), $0.030 → $0.003, ~3000ms → ~1425ms
@@ -36,6 +38,7 @@ When an admin enables a customer's chatbot from the ChatPage, a dialog appears a
 ### Frontend Components
 
 1. **`ChatPage.tsx`** (`frontend/src/pages/ChatPage.tsx`)
+
    - Fixed request body: removed `workspaceId` (comes from URL params)
    - Implemented `window.location.reload()` after notification sent
    - Nuclear option but 100% reliable for chat list refresh
@@ -48,10 +51,12 @@ When an admin enables a customer's chatbot from the ChatPage, a dialog appears a
 ### Route Registration
 
 **`backend/src/interfaces/http/routes/push.routes.ts`**:
+
 - Added `Router({ mergeParams: true })` to access parent `:workspaceId` param
 - 3-layer middleware: `authMiddleware` → `sessionValidationMiddleware` → `validateWorkspaceOperation`
 
 **`backend/src/interfaces/http/routes/index.ts`**:
+
 - Mounted `pushRoutes(pushController)` at `/api/workspaces/:workspaceId/push`
 
 ## Context
@@ -181,12 +186,14 @@ When an admin enables a customer's chatbot from the ChatPage, a dialog appears a
 **Decision**: Skip Router + SubLLM agents for system notifications, go directly to Safety & Translation Agent
 
 **Rationale**:
+
 - System notifications don't need routing logic (we know what to send)
 - 90% token savings: ~20k → ~2k tokens
 - 90% cost savings: $0.030 → $0.003
 - 50% time savings: ~3000ms → ~1425ms
 
 **Trade-offs**:
+
 - ✅ Massive performance/cost improvement
 - ✅ Simpler code path
 - ❌ Still requires Safety Agent (Italian → Customer Language translation)
@@ -196,11 +203,13 @@ When an admin enables a customer's chatbot from the ChatPage, a dialog appears a
 **Decision**: Use `window.location.reload()` after notification sent instead of React Query invalidation
 
 **Rationale**:
+
 - Multiple attempts with `invalidateQueries()` and `refetchQueries()` failed
 - Query key mismatch issues between context and component
 - Page reload is 100% reliable - guarantees fresh data from server
 
 **Trade-offs**:
+
 - ✅ 100% reliable, always works
 - ✅ Simple implementation
 - ❌ Loses scroll position and UI state
@@ -212,11 +221,13 @@ When an admin enables a customer's chatbot from the ChatPage, a dialog appears a
 **Decision**: Changed `getRecentChats()` to read from `ConversationMessage` instead of `Message` table
 
 **Rationale**:
+
 - LLM Router saves messages to `ConversationMessage` table
 - Old `Message` table was not updated by new message flow
 - Chat list showed stale data (no new messages appeared)
 
 **Trade-offs**:
+
 - ✅ Shows messages saved by LLM Router
 - ✅ Single source of truth for conversation history
 - ❌ Requires separate query per chat session (N+1 query pattern)
@@ -227,18 +238,22 @@ When an admin enables a customer's chatbot from the ChatPage, a dialog appears a
 ### Backend (5 files)
 
 1. **`backend/src/interfaces/http/controllers/push.controller.ts`** (CREATED)
+
    - Push notification controller with chatbot reactivation endpoint
    - Validates workspace + customer, calls LLM Router
 
 2. **`backend/src/interfaces/http/routes/push.routes.ts`** (CREATED)
+
    - Route registration with `mergeParams: true`
    - 3-layer middleware stack
 
 3. **`backend/src/interfaces/http/routes/index.ts`** (MODIFIED)
+
    - Imported PushController and pushRoutes
    - Mounted push routes at `/api/workspaces/:workspaceId/push`
 
 4. **`backend/src/services/llm-router.service.ts`** (MODIFIED)
+
    - Added System Message Fast-Path (`isSystemMessage` flag)
    - Skip Router/SubLLM, go directly to Safety Agent
    - Enhanced debug step to show "🤖 System Notification (Admin Triggered)"
@@ -250,6 +265,7 @@ When an admin enables a customer's chatbot from the ChatPage, a dialog appears a
 ### Frontend (2 files)
 
 1. **`frontend/src/pages/ChatPage.tsx`** (MODIFIED)
+
    - Fixed request body: removed `workspaceId` (comes from URL params)
    - Added `window.location.reload()` after notification sent
 
@@ -274,6 +290,7 @@ Feature 127 is **FULLY IMPLEMENTED** and **WORKING**. The system now:
 ✅ Reads messages from correct database table (`ConversationMessage`)
 
 **Next Steps** (Future Optimization):
+
 - Replace page reload with WebSocket-based reactive updates (Feature 125)
 - Implement WhatsApp Queue to actually send messages (TODO #1)
 - Add Prisma relation between ChatSession and ConversationMessage for better query performance

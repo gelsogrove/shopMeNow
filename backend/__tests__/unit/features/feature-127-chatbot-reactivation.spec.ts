@@ -77,15 +77,13 @@ describe("Feature 127: Chatbot Reactivation Notification", () => {
       })
 
       // Mock SafetyTranslationAgent
-      jest
-        .spyOn(llmRouterService as any, "safetyAgent")
-        .mockReturnValue({
-          process: jest.fn().mockResolvedValue({
-            translatedText: "Ciao Mario Rossi, il chatbot è ora disponibile...",
-            safe: true,
-            tokensUsed: 2500, // Fast-path should use ~2-3k tokens
-          }),
-        })
+      jest.spyOn(llmRouterService as any, "safetyAgent").mockReturnValue({
+        process: jest.fn().mockResolvedValue({
+          translatedText: "Ciao Mario Rossi, il chatbot è ora disponibile...",
+          safe: true,
+          tokensUsed: 2500, // Fast-path should use ~2-3k tokens
+        }),
+      })
 
       // Act
       const result = await llmRouterService.routeMessage({
@@ -161,7 +159,8 @@ describe("Feature 127: Chatbot Reactivation Notification", () => {
       const normalFlowTokens = 20000
       const fastPathTokens = 2500
 
-      const savings = ((normalFlowTokens - fastPathTokens) / normalFlowTokens) * 100
+      const savings =
+        ((normalFlowTokens - fastPathTokens) / normalFlowTokens) * 100
 
       expect(savings).toBeGreaterThan(85) // Should be ~90%
       expect(savings).toBeLessThan(95)
@@ -182,15 +181,13 @@ describe("Feature 127: Chatbot Reactivation Notification", () => {
         challengeStatus: true,
       })
 
-      jest
-        .spyOn(llmRouterService as any, "safetyAgent")
-        .mockReturnValue({
-          process: jest.fn().mockResolvedValue({
-            translatedText: "Test message",
-            safe: true,
-            tokensUsed: 2500,
-          }),
-        })
+      jest.spyOn(llmRouterService as any, "safetyAgent").mockReturnValue({
+        process: jest.fn().mockResolvedValue({
+          translatedText: "Test message",
+          safe: true,
+          tokensUsed: 2500,
+        }),
+      })
 
       // Act
       const result = await llmRouterService.routeMessage({
