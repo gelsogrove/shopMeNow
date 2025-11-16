@@ -179,19 +179,26 @@ export default function MessageFlowDialog({
     (s) => s.type === "token-replacement"
   )
 
-  // Estrai messaggio utente dal primo step
+  // 🔥 FIX: Check if this is a System Notification (Admin Triggered)
+  const isSystemNotification = routerSteps[0]?.agent?.includes(
+    "System Notification"
+  )
+
+  // Estrai messaggio utente dal primo step (ONLY if NOT system notification)
   const userMessage =
     routerSteps[0]?.input?.userMessage ||
     routerSteps[0]?.input?.conversationHistory?.[0]?.content ||
     "User message"
 
-  // Step iniziale con domanda utente
-  const userStep: DebugStep = {
-    type: "user",
-    agent: "Customer",
-    timestamp: routerSteps[0]?.timestamp || new Date().toISOString(),
-    input: { userMessage },
-  }
+  // Step iniziale con domanda utente (SKIP if system notification)
+  const userStep: DebugStep | null = isSystemNotification
+    ? null
+    : {
+        type: "user",
+        agent: "Customer",
+        timestamp: routerSteps[0]?.timestamp || new Date().toISOString(),
+        input: { userMessage },
+      }
 
   // Estrai il messaggio finale dal Safety Agent o dall'ultimo Router
   const finalMessage =

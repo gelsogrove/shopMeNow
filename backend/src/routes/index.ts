@@ -49,6 +49,7 @@ import { CustomersController } from "../interfaces/http/controllers/customers.co
 import { FaqController } from "../interfaces/http/controllers/faq.controller"
 import { FeedbackController } from "../interfaces/http/controllers/feedback.controller"
 import { ProductController } from "../interfaces/http/controllers/product.controller"
+import { PushController } from "../interfaces/http/controllers/push.controller"
 import { ServicesController } from "../interfaces/http/controllers/services.controller"
 import { SettingsController } from "../interfaces/http/controllers/settings.controller"
 import { UserController } from "../interfaces/http/controllers/user.controller"
@@ -96,6 +97,7 @@ import {
 } from "../interfaces/http/routes/customers.routes"
 import { faqsRouter } from "../interfaces/http/routes/faqs.routes"
 import { feedbackRoutes } from "../interfaces/http/routes/feedback.routes"
+import { pushRoutes } from "../interfaces/http/routes/push.routes"
 
 // Services & Suppliers
 import { servicesRouter } from "../interfaces/http/routes/services.routes"
@@ -488,6 +490,7 @@ const customersController = new CustomersController()
 const servicesController = new ServicesController()
 const campaignController = new CampaignController()
 const feedbackController = new FeedbackController()
+const pushController = new PushController()
 
 const categoryController = new CategoryController()
 
@@ -678,6 +681,10 @@ logger.info("Registered analytics routes for dashboard metrics")
 // Mount debug routes
 router.use("/workspaces/:workspaceId/debug", debugRoutes)
 logger.info("Registered debug routes for testing and analysis")
+
+// Mount push notification routes
+router.use("/workspaces/:workspaceId/push", pushRoutes(pushController))
+logger.info("Registered push notification routes for chatbot reactivation")
 
 // Mount WhatsApp routes
 router.use("/whatsapp", whatsappRoutes)

@@ -64,6 +64,7 @@ export interface RouteMessageParams {
   message: string
   customerLanguage?: string
   customerName?: string
+  isSystemMessage?: boolean // 🆕 Feature 127: If true, skip Router/SubLLM and go direct to Safety+Translation
 }
 
 export interface RouteMessageResponse {
@@ -363,7 +364,145 @@ export class LLMRouterService {
         workspaceId: params.workspaceId,
         customerId: params.customerId,
         conversationId: params.conversationId,
+        isSystemMessage: params.isSystemMessage || false,
       })
+
+      // 🆕 Feature 127: SYSTEM MESSAGE FAST-PATH
+      // If isSystemMessage=true, skip Router/SubLLM and go DIRECTLY to Safety+Translation
+      if (params.isSystemMessage) {
+        logger.info(
+          "🚀 SYSTEM MESSAGE FAST-PATH: Skipping Router/SubLLM, going direct to Safety+Translation"
+        )
+        logger.info("📍 FAST-PATH STEP 1: Calling SafetyTranslationAgent")
+        logger.info("📍 FAST-PATH STEP 1 INPUT:", {
+          workspaceId: params.workspaceId,
+          message: params.message,
+          targetLanguage: params.customerLanguage || "it",
+          customerName: params.customerName,
+        })
+
+        const debugSteps: DebugStep[] = []
+
+        // 🆕 Step 0: Add SYSTEM_NOTIFICATION source step to timeline
+        debugSteps.push({
+          type: "router", // Use "router" type to show as system action
+          agent: "🤖 System Notification (Admin Triggered)",
+          model: "N/A",
+          temperature: 0,
+          timestamp: new Date().toISOString(),
+          input: {
+            // 🔥 DON'T use "userMessage" - that makes it show as "Customer"
+            textToValidate: "Chatbot reactivation notification",
+            previousResponse: `Admin enabled chatbot → Send: "${params.message}"`,
+          },
+          output: {
+            decision: "forward_to_safety_translation",
+            message: params.message,
+          },
+          tokenUsage: {
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens: 0,
+          },
+        })
+
+        // Step 1: Translate with Safety & Translation Agent
+        const safetyResult = await this.safetyAgent.process({
+          workspaceId: params.workspaceId,
+          response: params.message, // Message in Italian (base language)
+          targetLanguage: params.customerLanguage || "it",
+          customerName: params.customerName,
+        })
+
+        totalTokens += safetyResult.tokensUsed || 0
+
+        logger.info(
+          "✅ FAST-PATH STEP 1 SUCCESS: SafetyTranslationAgent completed"
+        )
+        logger.info("📊 FAST-PATH STEP 1 OUTPUT:", {
+          translatedText: safetyResult.translatedText,
+          safe: safetyResult.safe,
+          tokensUsed: safetyResult.tokensUsed,
+        })
+
+        debugSteps.push({
+          type: "safety",
+          agent: "SafetyTranslationAgent",
+          timestamp: new Date().toISOString(),
+          input: {
+            textToValidate: params.message,
+          },
+          output: {
+            translatedText: safetyResult.translatedText,
+            safe: safetyResult.safe,
+          },
+          tokenUsage: {
+            promptTokens: 0,
+            completionTokens: safetyResult.tokensUsed || 0,
+            totalTokens: safetyResult.tokensUsed || 0,
+          },
+          safe: safetyResult.safe,
+        })
+
+        logger.info(
+          "📍 FAST-PATH STEP 2: Saving assistant message to conversation history"
+        )
+        logger.info("📍 FAST-PATH STEP 2 INPUT:", {
+          workspaceId: params.workspaceId,
+          customerId: params.customerId,
+          conversationId: params.conversationId,
+          content: safetyResult.translatedText,
+          agentType: "SYSTEM_NOTIFICATION",
+          tokensUsed: totalTokens,
+        })
+
+        // Step 2: Save as assistant message in history
+        await this.conversationManager.saveAssistantMessage({
+          workspaceId: params.workspaceId,
+          customerId: params.customerId,
+          conversationId: params.conversationId,
+          content: safetyResult.translatedText,
+          agentType: "SYSTEM_NOTIFICATION" as AgentType,
+          tokensUsed: totalTokens,
+          debugInfo: {
+            steps: debugSteps,
+            totalTokens,
+            totalCost: 0,
+            executionTimeMs: Date.now() - startTime,
+            timestamp: new Date().toISOString(),
+          },
+        })
+
+        logger.info(
+          "✅ FAST-PATH STEP 2 SUCCESS: Message saved to conversation history"
+        )
+
+        // Step 3: Return response (will be queued for WhatsApp)
+        const executionTimeMs = Date.now() - startTime
+
+        logger.info(
+          "📍 FAST-PATH STEP 3: Returning response (TODO: WhatsApp queue)"
+        )
+        logger.info(
+          `✅ FAST-PATH COMPLETE: SYSTEM MESSAGE completed in ${executionTimeMs}ms (${totalTokens} tokens)`
+        )
+
+        return {
+          response: safetyResult.translatedText,
+          agentUsed: "SYSTEM_NOTIFICATION" as AgentType,
+          confidence: 1.0,
+          tokensUsed: totalTokens,
+          executionTimeMs,
+          wasFAQ: false,
+          debugInfo: {
+            steps: debugSteps,
+            totalTokens,
+            totalCost: 0,
+            executionTimeMs,
+            timestamp: new Date().toISOString(),
+          },
+        }
+      }
 
       // 🆕 SECURITY GATE: Check for malicious patterns FIRST (Constitution Rule 9)
       // This runs BEFORE P1/P2/P3 to block SQL injection, XSS, etc.

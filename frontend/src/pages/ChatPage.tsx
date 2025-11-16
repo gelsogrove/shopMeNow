@@ -611,27 +611,27 @@ export function ChatPage() {
         // Update context state
         updateActiveChatbot(selectedChat.id, status)
 
-        // Invalidate queries to refresh chat list
-        await queryClient.invalidateQueries({
-          queryKey: ["chats", userSessionId],
-        })
-
         // If enabling chatbot and notification is requested
         if (status && shouldNotify) {
           try {
+            logger.info("📤 Sending push notification to customer...")
             // Send notification
             await api.post(
               `/workspaces/${workspaceId}/push/chatbot-reactivated`,
               {
-                workspaceId,
                 customerIds: [selectedChat.customerId],
               }
             )
+            logger.info("✅ Push notification sent successfully")
           } catch (notifyError) {
-            logger.error("Error sending notification:", notifyError)
+            logger.error("❌ Error sending notification:", notifyError)
             // Don't show error to user as the main action succeeded
           }
         }
+
+        // 🔥 NUCLEAR OPTION: Force window reload to refresh everything
+        logger.info("🔄 Reloading page to refresh chat list...")
+        window.location.reload()
         toast.success(
           `Chatbot ${status ? "enabled" : "disabled"} for ${
             selectedChat.customerName

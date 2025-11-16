@@ -271,6 +271,24 @@ export class CustomersController {
         )
       }
 
+      // 🔔 Feature 127: Notify WebSocket clients if chatbot enabled/disabled
+      if (
+        activeChatbot !== undefined &&
+        originalCustomer.activeChatbot !== activeChatbot
+      ) {
+        // Emit chat-updated event to refresh customer list UI
+        websocketService.notifyChatUpdated(workspaceId, {
+          customerId: id,
+          customerName: updatedCustomer.name || "Unknown",
+          activeChatbot: activeChatbot,
+          timestamp: new Date().toISOString(),
+        })
+
+        logger.info(
+          `[CUSTOMER-UPDATE] 🔔 WebSocket chat-updated event sent for customer ${id} (chatbot: ${activeChatbot})`
+        )
+      }
+
       // Handle automatic push messages for relevant changes
       await this.handleAutomaticPushMessages(originalCustomer, updatedCustomer)
 

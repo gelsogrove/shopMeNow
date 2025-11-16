@@ -158,15 +158,23 @@ export function useWebSocket(options: UseWebSocketOptions) {
       // Get sessionId from sessionStorage
       const sessionId = sessionStorage.getItem("sessionId")
 
-      // Invalidate chat list
+      // 🔥 Force immediate refetch by invalidating AND refetching
       queryClient.invalidateQueries({
+        queryKey: ["chats", sessionId],
+        refetchType: "active", // Only refetch active queries
+      })
+
+      queryClient.invalidateQueries({
+        queryKey: ["recent-chats", sessionId],
+        refetchType: "active",
+      })
+
+      // 🔥 FORCE refetch to ensure UI updates immediately
+      queryClient.refetchQueries({
         queryKey: ["chats", sessionId],
       })
 
-      // Invalidate recent chats
-      queryClient.invalidateQueries({
-        queryKey: ["recent-chats", sessionId],
-      })
+      logger.info("[WebSocket] Chat list refetched after update event")
     })
 
     // User blocked event

@@ -100,13 +100,16 @@ export function ChatListProvider({ children }: { children: ReactNode }) {
     },
     // 🚀 REMOVED: refetchInterval - WebSocket handles real-time updates
     retry: false, // 🔥 FIX: Don't retry on session errors (axios interceptor handles redirect)
-    staleTime: 60000, // Consider data fresh for 1 minute
+    staleTime: 0, // 🔥 FIX: Always consider data stale to allow immediate refetch on invalidation
     gcTime: 300000, // Keep in cache for 5 minutes
+    refetchOnWindowFocus: false, // Don't refetch on window focus (WebSocket handles updates)
   })
 
   const updateChat = useCallback(
     (chatId: string, updates: Partial<Chat>) => {
-      const currentChats = queryClient.getQueryData<Chat[]>(["chats"]) || []
+      // 🔥 FIX: Use same query key as the query (with sessionId)
+      const currentChats =
+        queryClient.getQueryData<Chat[]>(["chats", sessionId]) || []
       const newChats = currentChats.map((chat) => {
         if (chat.id === chatId || chat.sessionId === chatId) {
           return { ...chat, ...updates }
@@ -114,13 +117,13 @@ export function ChatListProvider({ children }: { children: ReactNode }) {
         return chat
       })
 
-      // Update React Query cache
-      queryClient.setQueryData(["chats"], newChats)
+      // Update React Query cache with correct key
+      queryClient.setQueryData(["chats", sessionId], newChats)
 
       // Log per debug
       logger.info(`📝 Chat ${chatId} updated:`, updates)
     },
-    [queryClient]
+    [queryClient, sessionId]
   )
 
   const updateActiveChatbot = useCallback(

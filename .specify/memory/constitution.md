@@ -2205,7 +2205,41 @@ async routeMessage(params: RouterParams): Promise<RouterResult> {
     }
   }
 
-  // ... continue with P2, P3, P4
+  // 🆕 Feature 127: SYSTEM MESSAGE FAST-PATH
+  // If isSystemMessage=true, skip Router/SubLLM and go DIRECTLY to Safety+Translation
+  if (params.isSystemMessage) {
+    logger.info("🚀 SYSTEM MESSAGE: Skipping Router/SubLLM, going direct to Safety+Translation")
+
+    // 1. Translate with SafetyTranslationAgent
+    const safetyResult = await this.safetyAgent.process({
+      workspaceId: params.workspaceId,
+      response: params.message, // Message in Italian (base language)
+      targetLanguage: params.customerLanguage || "it",
+      customerName: params.customerName
+    })
+
+    // 2. Save as assistant message in history
+    await this.conversationManager.saveAssistantMessage({
+      workspaceId: params.workspaceId,
+      customerId: params.customerId,
+      conversationId: params.conversationId,
+      content: safetyResult.translatedText,
+      agentType: "SYSTEM_NOTIFICATION",
+      tokensUsed: safetyResult.tokensUsed
+    })
+
+    // 3. Return response (will be queued for WhatsApp)
+    return {
+      response: safetyResult.translatedText,
+      agentUsed: "SYSTEM_NOTIFICATION",
+      confidence: 1.0,
+      tokensUsed: safetyResult.tokensUsed,
+      executionTimeMs: Date.now() - startTime,
+      wasFAQ: false
+    }
+  }
+
+  // ... continue with P2, P3, P4 (normal user messages)
 }
 ```
 
@@ -3275,4 +3309,124 @@ describe("Workspace Isolation", () => {
 
 ---
 
-**Version**: 2.0.0 | **Ratified**: 2025-11-12 | **Last Amended**: 2025-11-15
+## Feature 127: System Message Fast-Path (Chatbot Reactivation Notification)
+
+**FEATURE**: Admin can send system notifications (e.g., "Chatbot reactivated") that skip Router/SubLLM processing and go directly to Safety+Translation layer.
+
+**Use Case**: When admin enables customer chatbot, optionally send WhatsApp notification "Il chatbot è di nuovo disponibile, come posso aiutarti oggi?"
+
+**Key Innovation**: `isSystemMessage` flag in `routeMessage()` bypasses Router/SubLLM for 90% token savings (18k tokens → 2k tokens).
+
+**Flow Diagram**:
+
+```
+Normal Message (user → system):
+User → Security → P1(Blocked) → Router LLM → SubLLM → Router → Safety → History → WhatsApp
+                                  (~5k tokens)  (~10k)   (~3k)   (~2k)
+
+System Message (system → user):
+Admin → Security → P1(Blocked) → [SKIP Router] → [SKIP SubLLM] → Safety → History → WhatsApp
+                                                                    (~2k tokens only)
+```
+
+**Implementation**:
+
+```typescript
+// RouteMessageParams interface
+export interface RouteMessageParams {
+  workspaceId: string
+  customerId: string
+  conversationId: string
+  messageId: string
+  message: string
+  customerLanguage?: string
+  customerName?: string
+  isSystemMessage?: boolean // 🆕 If true, skip Router/SubLLM
+}
+
+// llm-router.service.ts
+async routeMessage(params: RouteMessageParams): Promise<RouteMessageResponse> {
+  // P1: Blocked user check
+  if (await this.checkBlockedUser(params.customerId)) {
+    return { response: "", isBlocked: true, tokensUsed: 0 }
+  }
+
+  // 🆕 P1.5: SYSTEM MESSAGE FAST-PATH
+  if (params.isSystemMessage) {
+    logger.info("🚀 SYSTEM MESSAGE: Skip Router/SubLLM → Safety+Translation")
+
+    // 1. Translate (Italian → customer language)
+    const safetyResult = await this.safetyAgent.process({
+      workspaceId: params.workspaceId,
+      response: params.message, // Italian base
+      targetLanguage: params.customerLanguage || "it",
+      customerName: params.customerName,
+    })
+
+    // 2. Save as assistant message in history
+    await this.conversationManager.saveAssistantMessage({
+      workspaceId: params.workspaceId,
+      customerId: params.customerId,
+      conversationId: params.conversationId,
+      content: safetyResult.translatedText,
+      agentType: "SYSTEM_NOTIFICATION",
+      tokensUsed: safetyResult.tokensUsed,
+    })
+
+    // 3. Return (queued for WhatsApp)
+    return {
+      response: safetyResult.translatedText,
+      agentUsed: "SYSTEM_NOTIFICATION",
+      tokensUsed: safetyResult.tokensUsed || 0,
+      executionTimeMs: Date.now() - startTime,
+      wasFAQ: false,
+    }
+  }
+
+  // Normal flow continues...
+}
+```
+
+**Usage Example**:
+
+```typescript
+// push.controller.ts
+const result = await llmRouterService.routeMessage({
+  workspaceId,
+  customerId: customer.id,
+  conversationId: chatSession.id,
+  messageId: `system-notify-${Date.now()}`,
+  message: `🤖 Ciao ${customer.name}, il chatbot è ora disponibile, come posso aiutarti oggi?`,
+  customerLanguage: customer.language,
+  customerName: customer.name,
+  isSystemMessage: true, // 🚀 Fast-path enabled
+})
+```
+
+**Performance Impact**:
+
+| Metric      | Normal Message                  | System Message  | Savings |
+| ----------- | ------------------------------- | --------------- | ------- |
+| Tokens Used | ~20,000                         | ~2,000          | 90%     |
+| API Cost    | $0.030                          | $0.003          | $0.027  |
+| Latency     | ~3000ms                         | ~500ms          | 83%     |
+| LLM Calls   | 4 (Router x2 + SubLLM + Safety) | 1 (Safety only) | 75%     |
+
+**Enforcement**:
+
+- ✅ MUST add `isSystemMessage?: boolean` to `RouteMessageParams`
+- ✅ MUST check `isSystemMessage` AFTER P1 blocked check, BEFORE Router LLM
+- ✅ MUST save with `agentType: "SYSTEM_NOTIFICATION"` for tracking
+- ✅ MUST pass through SafetyTranslationAgent (security + translation mandatory)
+- ✅ MUST save as `role: "assistant"` in `conversation_messages` table
+- ✅ MUST have unit test coverage (token usage, history, translation)
+
+**See Also**:
+
+- `specs/127-chatbot-reactivation-notification/spec.md`
+- `backend/src/services/llm-router.service.ts:363-447` (implementation)
+- `backend/src/interfaces/http/controllers/push.controller.ts` (usage)
+
+---
+
+**Version**: 2.0.0 | **Ratified**: 2025-11-12 | **Last Amended**: 2025-11-16

@@ -1432,17 +1432,11 @@ export class MessageRepository {
    */
   async getRecentChats(limit = 20, workspaceId?: string) {
     try {
-      // Get all chat sessions with their most recent message
+      // Get all chat sessions
       const chatSessions = await this.prisma.chatSession.findMany({
         take: limit,
         include: {
           customer: true,
-          messages: {
-            orderBy: {
-              createdAt: "desc",
-            },
-            take: 1,
-          },
         },
         orderBy: {
           updatedAt: "desc",
@@ -1452,25 +1446,41 @@ export class MessageRepository {
         },
       })
 
-      // Format the results to include last message information
-      return chatSessions.map((session) => {
-        const lastMessage = session.messages[0]
-        return {
-          sessionId: session.id,
-          customerId: session.customerId,
-          customerName: session.customer.name,
-          customerPhone: session.customer.phone,
-          companyName: session.customer.company || null,
-          lastMessage: lastMessage ? lastMessage.content : null,
-          lastMessageTime: lastMessage
-            ? lastMessage.createdAt
-            : session.updatedAt,
-          status: session.status,
-          unreadCount: 0, // Will be updated later
-          workspaceId: session.workspaceId, // Add workspaceId to the returned object
-          activeChatbot: session.customer?.activeChatbot ?? true, // Add activeChatbot for chat list icon
-        }
-      })
+      // 🔥 FIX: Get last message from ConversationMessage table (not Message table)
+      const sessionsWithMessages = await Promise.all(
+        chatSessions.map(async (session) => {
+          // Get most recent conversation message (exclude function calls)
+          const lastMessage = await this.prisma.conversationMessage.findFirst({
+            where: {
+              conversationId: session.id,
+              role: {
+                not: "function", // Exclude function calls
+              },
+            },
+            orderBy: {
+              createdAt: "desc",
+            },
+          })
+
+          return {
+            sessionId: session.id,
+            customerId: session.customerId,
+            customerName: session.customer.name,
+            customerPhone: session.customer.phone,
+            companyName: session.customer.company || null,
+            lastMessage: lastMessage ? lastMessage.content : null,
+            lastMessageTime: lastMessage
+              ? lastMessage.createdAt
+              : session.updatedAt,
+            status: session.status,
+            unreadCount: 0, // Will be updated later
+            workspaceId: session.workspaceId,
+            activeChatbot: session.customer?.activeChatbot ?? true,
+          }
+        })
+      )
+
+      return sessionsWithMessages
     } catch (error) {
       logger.error("Error getting recent chats:", error)
       throw new Error("Failed to get recent chats")
