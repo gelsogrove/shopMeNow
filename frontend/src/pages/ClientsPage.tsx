@@ -1,4 +1,4 @@
-import { ClientSheet } from "@/components/shared/ClientSheet"
+import { ChangeDetection, ClientSheet } from "@/components/shared/ClientSheet"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
 import { DataTable } from "@/components/shared/DataTable"
 import { PageHeader } from "@/components/shared/PageHeader"
@@ -16,6 +16,7 @@ import { useWorkspace } from "@/hooks/use-workspace"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
+import { pushNotificationService } from "@/services/pushNotificationService"
 import { getLanguages, Language } from "@/services/workspaceApi"
 import { commonStyles } from "@/styles/common"
 import { useQuery } from "@tanstack/react-query"
@@ -72,6 +73,7 @@ export interface Client {
   activeChatbot?: boolean
   invoiceAddress?: InvoiceAddress
   isBlacklisted?: boolean
+  isActive?: boolean // 🚨 CRITICAL: Campo per rilevare account activation (era 'enabled')
   feedback?: {
     rating: number
     comment?: string
@@ -98,7 +100,6 @@ const parseAddress = (addressStr?: string | null): ShippingAddress => {
     }
   } catch (e) {
     // Se non è JSON, lo trattiamo come indirizzo semplice
-    logger.warn("Failed to parse address as JSON:", addressStr)
   }
 
   // Default o fallback se il parsing fallisce
@@ -123,22 +124,10 @@ export default function ClientsPage(): JSX.Element {
   const [selectedClient, setSelectedClient] = useState<Client | null>(() => {
     const savedClientId = sessionStorage.getItem("selectedClientId")
 
-    // 🚨 LOG PER DEBUG INIZIALIZZAZIONE
-    logger.info(
-      "🚨🚨🚨 INIT STATE - sessionStorage ha:",
-      savedClientId || "NULL"
-    )
-    logger.info("🚨🚨🚨 sessionStorage completo:", sessionStorage)
     if (savedClientId) {
-      logger.info("✅ Inizializzo selectedClient con ID:", savedClientId)
-      logger.info(
-        "🔍 Inizializzo selectedClient con ID da sessionStorage:",
-        savedClientId
-      )
       // Ritorna un oggetto parziale temporaneo - verrà aggiornato dall'useEffect
       return { id: savedClientId } as Client
     }
-    logger.info("❌ Nessun ID in sessionStorage, ritorno NULL")
     return null
   })
 
@@ -159,7 +148,21 @@ export default function ClientsPage(): JSX.Element {
   const { chats: allChats } = useChatList()
   const [showPlayground, setShowPlayground] = useState(false)
 
-  // Fetch available languages
+  // 🆕 State for notification dialog
+  const [showNotificationDialog, setShowNotificationDialog] = useState(false)
+  const [notificationChanges, setNotificationChanges] = useState<{
+    discountChanged: boolean
+    chatbotActivated: boolean
+    accountActivated: boolean
+    oldDiscount: number
+    newDiscount: number
+  } | null>(null)
+  const [pendingUpdate, setPendingUpdate] = useState<{
+    clientId: string
+    changes: ChangeDetection
+  } | null>(null)
+
+  // Convert Language[] to string[] (names only) for ClientSheet
   const { data: availableLanguagesData = [] } = useQuery<Language[]>({
     queryKey: ["languages", workspace?.id],
     queryFn: async () => getLanguages(),
@@ -206,6 +209,7 @@ export default function ClientsPage(): JSX.Element {
           customer.activeChatbot !== undefined ? customer.activeChatbot : true,
         invoiceAddress: customer.invoiceAddress || undefined,
         isBlacklisted: customer.isBlacklisted || false,
+        isActive: customer.isActive !== undefined ? customer.isActive : true, // 🚨 CRITICAL: Campo per rilevare account activation
         feedback:
           customer.feedbacks && customer.feedbacks.length > 0
             ? {
@@ -242,7 +246,6 @@ export default function ClientsPage(): JSX.Element {
       )
 
       if (clientToEdit) {
-        logger.info("Opening client edit form for:", clientToEdit.name)
         setSelectedClient(clientToEdit)
         setClientSheetMode("edit")
         setClientSheetOpen(true)
@@ -252,37 +255,11 @@ export default function ClientsPage(): JSX.Element {
 
   // 🔥 Gestione selezione cliente: completa i dati da sessionStorage
   useEffect(() => {
-    // 🚨 LOG PER DEBUG
-    logger.info("🔵🔵🔵 useEffect ATTIVATO")
-    logger.info("   - clients.length:", clients.length)
-    logger.info("   - isLoadingClients:", isLoadingClients)
-    logger.info("   - selectedClient:", selectedClient)
-    logger.info("   - hasRestoredRef:", hasRestoredRef.current)
-    if (selectedClient) {
-      logger.info("   - selectedClient.id:", selectedClient.id)
-      logger.info(
-        "   - selectedClient.name:",
-        selectedClient.name || "MANCANTE"
-      )
-    }
-
-    logger.info(
-      "🔵 useEffect ATTIVATO - clients.length:",
-      clients.length,
-      "isLoadingClients:",
-      isLoadingClients,
-      "hasRestoredRef:",
-      hasRestoredRef.current,
-      "selectedClient:",
-      selectedClient
-    )
-
     // Aspetta che i dati siano caricati
     if (clients.length === 0 || isLoadingClients) return
 
     // Evita aggiornamenti multipli
     if (hasRestoredRef.current) {
-      logger.info("🟡 Già processato, skip")
       return
     }
 
@@ -290,36 +267,17 @@ export default function ClientsPage(): JSX.Element {
     if (selectedClient?.id && !selectedClient.name) {
       const fullClient = clients.find((c) => c.id === selectedClient.id)
       if (fullClient) {
-        logger.info(
-          "✅ Completo selectedClient con dati da API:",
-          fullClient.name
-        )
         setSelectedClient(fullClient)
         hasRestoredRef.current = true
         return
-      } else {
-        logger.warn(
-          "❌ Cliente con ID",
-          selectedClient.id,
-          "non trovato nella lista!"
-        )
       }
     }
 
     // Se selectedClient ha già tutti i dati (nome presente), non fare nulla
     if (selectedClient?.name) {
-      logger.info("✅ selectedClient già completo:", selectedClient.name)
       hasRestoredRef.current = true
       return
     }
-
-    // 🔴 COMMENTATO PER DEBUG: Se arriviamo qui → selectedClient era null → seleziona il primo
-    // if (clients.length > 0) {
-    //   logger.info("📌 Nessun cliente in sessionStorage, seleziono il primo:", clients[0].name)
-    //   setSelectedClient(clients[0])
-    //   sessionStorage.setItem("selectedClientId", clients[0].id)
-    //   hasRestoredRef.current = true
-    // }
   }, [clients, isLoadingClients, selectedClient])
 
   // Use isLoading and clients from useQuery for rendering and filtering
@@ -356,43 +314,77 @@ export default function ClientsPage(): JSX.Element {
   }
 
   // Handle client form submission (create or update)
-  const handleClientSubmit = (customerData: any, clientId?: string) => {
+  const handleClientSubmit = async (
+    customerData: any,
+    clientId?: string,
+    changes?: ChangeDetection
+  ) => {
     if (clientId) {
-      // Edit existing client
-      handleUpdateClient(customerData, clientId)
+      await handleUpdateClient(customerData, clientId, changes)
     } else {
-      // Create new client
-      handleCreateClient(customerData)
+      await handleCreateClient(customerData)
     }
   }
 
   // Handle update client
-  const handleUpdateClient = async (customerData: any, clientId: string) => {
-    if (!workspace?.id) return
+  const handleUpdateClient = async (
+    customerData: any,
+    clientId: string,
+    changes?: ChangeDetection
+  ) => {
+    if (!workspace?.id) {
+      toast.error("No workspace selected")
+      return
+    }
 
     try {
-      logger.info("=== FRONTEND UPDATE DEBUG ===")
-      logger.info("customerData.salesId:", customerData.salesId)
-      logger.info("Full customerData:", customerData)
-      logger.info("============================")
-      logger.info("Updating customer with data:", customerData)
-      logger.info("Customer ID:", clientId)
-      logger.info("Workspace ID:", workspace.id)
-
-      // Import the API functions
       const { update } = await import("@/services/clientsApi")
-
-      // Update client using the clientsApi
       const updatedCustomer = await update(clientId, workspace.id, customerData)
 
-      logger.info("Response from update API:", updatedCustomer)
-
       if (updatedCustomer) {
-        // 🎯 SOLUZIONE SEMPLICE: Chiudi il form senza fare refetch!
-        // I dati nella lista verranno aggiornati al prossimo caricamento naturale
-        toast.success("Client updated successfully", { duration: 1000 })
-        setClientSheetOpen(false)
-        // selectedClient rimane com'è, nessun refresh!
+        toast.success("Client updated successfully", { duration: 2000 })
+
+        // 🔍 Detect changes by comparing with original data
+        if (originalClientData) {
+          const oldDiscount = originalClientData.discount || 0
+          const newDiscount = parseFloat(customerData.discount) || 0
+          const discountChanged = oldDiscount !== newDiscount
+
+          const oldChatbot =
+            originalClientData.activeChatbot !== undefined
+              ? originalClientData.activeChatbot
+              : true
+          const newChatbot =
+            customerData.activeChatbot !== undefined
+              ? customerData.activeChatbot
+              : true
+          const chatbotActivated = !oldChatbot && newChatbot
+
+          // Show notification dialog if there are relevant changes
+          if (discountChanged || chatbotActivated) {
+            const detectedChanges: ChangeDetection = {
+              hasChanges: true,
+              discountChanged,
+              chatbotActivated,
+              oldDiscount,
+              newDiscount,
+              oldChatbot,
+              newChatbot,
+            }
+
+            // Wait a moment for toast to be visible, then show dialog
+            setTimeout(() => {
+              setPendingUpdate({ clientId, changes: detectedChanges })
+              setShowNotificationDialog(true)
+            }, 500)
+
+            // NON chiudere il Sheet qui - lo chiuderà handleNotificationConfirm
+          } else {
+            setClientSheetOpen(false)
+          }
+        } else {
+          setClientSheetOpen(false)
+        }
       }
     } catch (error: any) {
       logger.error("Error updating client:", error)
@@ -400,6 +392,55 @@ export default function ClientsPage(): JSX.Element {
         error instanceof Error ? error.message : "Failed to update client",
         { duration: 1000 }
       )
+    }
+  }
+
+  // 🆕 Handle notification dialog confirm/cancel
+  const handleNotificationConfirm = async (shouldNotify: boolean) => {
+    setShowNotificationDialog(false)
+
+    if (!shouldNotify || !pendingUpdate || !workspace?.id) {
+      setClientSheetOpen(false) // Close immediately if not notifying
+      setPendingUpdate(null)
+      return
+    }
+
+    const { clientId, changes } = pendingUpdate
+
+    try {
+      // Send discount change notification
+      if (changes.discountChanged) {
+        await pushNotificationService.sendDiscountChange(
+          workspace.id,
+          [clientId],
+          changes.newDiscount
+        )
+        toast.success(`Discount notification sent (${changes.newDiscount}%)`, {
+          duration: 2000,
+        })
+      }
+
+      // Send chatbot activation notification
+      if (changes.chatbotActivated) {
+        await pushNotificationService.sendChatbotReactivation(workspace.id, [
+          clientId,
+        ])
+        toast.success("Chatbot activation notification sent", {
+          duration: 2000,
+        })
+      }
+
+      // ⏱️ Wait 2 seconds to let user see the success toast, then close sheet
+      setTimeout(() => {
+        setClientSheetOpen(false)
+      }, 2000)
+    } catch (error) {
+      logger.error("Error sending notification:", error)
+      toast.error("Failed to send notification", { duration: 2000 })
+      // Close sheet immediately on error
+      setClientSheetOpen(false)
+    } finally {
+      setPendingUpdate(null)
     }
   }
 
@@ -425,7 +466,6 @@ export default function ClientsPage(): JSX.Element {
     // ✅ Salva in sessionStorage SOLO se è diverso da quello già salvato
     const currentSavedId = sessionStorage.getItem("selectedClientId")
     if (currentSavedId !== client.id) {
-      logger.info("� Salvo nuovo cliente in sessionStorage:", client.id)
       sessionStorage.setItem("selectedClientId", client.id)
     }
     setClientSheetMode("edit")
@@ -438,7 +478,6 @@ export default function ClientsPage(): JSX.Element {
     // ✅ Salva in sessionStorage SOLO se è diverso da quello già salvato
     const currentSavedId = sessionStorage.getItem("selectedClientId")
     if (currentSavedId !== client.id) {
-      logger.info("� Salvo nuovo cliente in sessionStorage:", client.id)
       sessionStorage.setItem("selectedClientId", client.id)
     }
     setClientSheetMode("view")

@@ -1,12 +1,14 @@
 /**
  * Push Controller Unit Tests
- * 
- * Tests chatbot reactivation notification flow:
- * Admin clicks "Yes, notify user" → Backend sends WhatsApp message to customer
+ *
+ * Tests system notification flow (unified):
+ * - CHATBOT_REACTIVATED
+ * - ACCOUNT_ACTIVATED
+ * - DISCOUNT_CHANGED
  */
 
-import { Request, Response } from "express"
 import { PrismaClient } from "@prisma/client"
+import { Request, Response } from "express"
 import { PushController } from "../../../src/interfaces/http/controllers/push.controller"
 
 // Mock dependencies
@@ -14,7 +16,7 @@ jest.mock("@prisma/client")
 jest.mock("../../../src/services/llm-router.service")
 jest.mock("../../../src/utils/logger")
 
-describe("PushController - sendChatbotReactivated", () => {
+describe("PushController - sendSystemNotification", () => {
   let pushController: PushController
   let mockPrisma: jest.Mocked<PrismaClient>
   let mockRequest: Partial<Request>
@@ -38,7 +40,9 @@ describe("PushController - sendChatbotReactivated", () => {
     }
 
     // Mock LLMRouterService constructor
-    const { LLMRouterService } = require("../../../src/services/llm-router.service")
+    const {
+      LLMRouterService,
+    } = require("../../../src/services/llm-router.service")
     LLMRouterService.mockImplementation(() => mockLLMRouterService)
 
     pushController = new PushController()
@@ -48,6 +52,7 @@ describe("PushController - sendChatbotReactivated", () => {
         workspaceId: "workspace-123",
       },
       body: {
+        type: "CHATBOT_REACTIVATED",
         workspaceId: "workspace-123",
         customerIds: ["customer-456"],
       },
@@ -81,7 +86,8 @@ describe("PushController - sendChatbotReactivated", () => {
       }
 
       const mockRouterResponse = {
-        response: "🤖 ¡Hola Maria Garcia, el chatbot ya está disponible, ¿cómo puedo ayudarte hoy?",
+        response:
+          "🤖 ¡Hola Maria Garcia, el chatbot ya está disponible, ¿cómo puedo ayudarte hoy?",
         agentUsed: "SYSTEM_NOTIFICATION",
         tokensUsed: 2000,
         executionTimeMs: 500,
@@ -126,7 +132,8 @@ describe("PushController - sendChatbotReactivated", () => {
           customerId: "customer-456",
           conversationId: "session-789",
           messageId: expect.stringContaining("system-notify-"),
-          message: "🤖 Ciao Maria Garcia, il chatbot è ora disponibile, come posso aiutarti oggi?",
+          message:
+            "🤖 Ciao Maria Garcia, il chatbot è ora disponibile, come posso aiutarti oggi?",
           customerLanguage: "ESP",
           customerName: "Maria Garcia",
           isSystemMessage: true, // 🚀 Fast-path: Skip Router/SubLLM
@@ -161,7 +168,8 @@ describe("PushController - sendChatbotReactivated", () => {
 
       // Router returns SPANISH translation
       const mockRouterResponse = {
-        response: "🤖 ¡Hola Maria Garcia, el chatbot ya está disponible, ¿cómo puedo ayudarte hoy?",
+        response:
+          "🤖 ¡Hola Maria Garcia, el chatbot ya está disponible, ¿cómo puedo ayudarte hoy?",
         agentUsed: "SYSTEM_NOTIFICATION",
         tokensUsed: 2000,
         executionTimeMs: 500,

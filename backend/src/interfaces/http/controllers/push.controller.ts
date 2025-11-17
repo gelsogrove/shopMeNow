@@ -7,51 +7,84 @@ const prisma = new PrismaClient()
 const llmRouterService = new LLMRouterService(prisma)
 
 /**
+ * System notification types
+ */
+export enum SystemNotificationType {
+  CHATBOT_REACTIVATED = "CHATBOT_REACTIVATED",
+  ACCOUNT_ACTIVATED = "ACCOUNT_ACTIVATED",
+  DISCOUNT_CHANGED = "DISCOUNT_CHANGED",
+}
+
+/**
+ * Notification message templates (Italian base language)
+ * Will be translated by SafetyTranslationAgent to customer's language
+ */
+const NOTIFICATION_TEMPLATES: Record<
+  SystemNotificationType,
+  (data: any) => string
+> = {
+  [SystemNotificationType.CHATBOT_REACTIVATED]: (data) =>
+    `🤖 Ciao ${data.customerName}, il chatbot è ora disponibile, come posso aiutarti oggi?`,
+
+  [SystemNotificationType.ACCOUNT_ACTIVATED]: (data) =>
+    `👋 Benvenuto ${data.customerName}! Il tuo account è ora attivo. Puoi iniziare a fare acquisti.`,
+
+  [SystemNotificationType.DISCOUNT_CHANGED]: (data) =>
+    `💸 Ciao ${data.customerName}! Da oggi puoi usufruire del ${data.discountPercentage}% di sconto sui nostri prodotti.`,
+}
+
+/**
  * Controller for push notification operations
  */
 export class PushController {
   /**
-   * Send chatbot reactivation notification to customers
+   * Send system notification to customers
    *
-   * @route POST /workspaces/:workspaceId/push/chatbot-reactivated
-   * @param req - Express request with workspaceId in params, customerIds in body
+   * Unified endpoint for all system notifications:
+   * - CHATBOT_REACTIVATED: When admin enables chatbot
+   * - ACCOUNT_ACTIVATED: When admin activates a new customer
+   * - DISCOUNT_CHANGED: When admin changes customer discount percentage
+   *
+   * @route POST /workspaces/:workspaceId/push/system-notification
+   * @param req - Express request with workspaceId in params, type, customerIds, templateData in body
    * @param res - Express response
    * @returns Success response with sent/failed counts
    */
-  async sendChatbotReactivated(req: Request, res: Response) {
+  async sendSystemNotification(req: Request, res: Response) {
     try {
       const { workspaceId } = req.params
-      const { customerIds } = req.body
-
-      // 🔍 DEBUG: Log EVERYTHING we received
-      logger.info("[PUSH-CONTROLLER] 🔍 Full request details:", {
-        url: req.url,
-        method: req.method,
-        params: req.params,
-        body: req.body,
-        paramsWorkspaceId: workspaceId,
-        bodyCustomerIds: customerIds,
-        bodyKeys: Object.keys(req.body || {}),
-        isArray: Array.isArray(customerIds),
-      })
+      const { type, customerIds, templateData = {} } = req.body
 
       // Validation
-      if (!workspaceId || !customerIds || !Array.isArray(customerIds)) {
-        logger.error("[PUSH-CONTROLLER] ❌ Validation failed:", {
+      if (
+        !workspaceId ||
+        !type ||
+        !customerIds ||
+        !Array.isArray(customerIds)
+      ) {
+        logger.error("[PUSH-CONTROLLER] Validation failed", {
           hasWorkspaceId: !!workspaceId,
+          hasType: !!type,
           hasCustomerIds: !!customerIds,
           isArray: Array.isArray(customerIds),
-          bodyType: typeof req.body,
-          bodyValue: req.body,
         })
         return res.status(400).json({
           error: "Invalid request",
-          message: "workspaceId and customerIds array are required",
+          message: "workspaceId, type, and customerIds array are required",
+        })
+      }
+
+      // Validate notification type
+      if (!Object.values(SystemNotificationType).includes(type)) {
+        logger.error(`[PUSH-CONTROLLER] Invalid notification type: ${type}`)
+        return res.status(400).json({
+          error: "Invalid notification type",
+          message: `Type must be one of: ${Object.values(SystemNotificationType).join(", ")}`,
         })
       }
 
       logger.info(
-        `[PUSH-CONTROLLER] 🚀 Sending chatbot reactivation notification to ${customerIds.length} customer(s) in workspace ${workspaceId}`
+        `[PUSH-CONTROLLER] 🚀 Sending ${type} notification to ${customerIds.length} customer(s) in workspace ${workspaceId}`
       )
 
       const results = {
@@ -63,13 +96,9 @@ export class PushController {
       // Send notification to each customer
       for (const customerId of customerIds) {
         try {
-          logger.info(
-            `[PUSH-CONTROLLER] 📍 STEP 1: Fetching customer ${customerId}`
-          )
-
           // Fetch customer data with workspace isolation
           const customer = await prisma.customers.findUnique({
-            where: { id: customerId, workspaceId }, // ✅ Workspace isolation (Constitution Principle I)
+            where: { id: customerId, workspaceId },
             select: {
               id: true,
               phone: true,
@@ -82,14 +111,10 @@ export class PushController {
             results.failed++
             results.errors.push(`Customer ${customerId}: Not found`)
             logger.warn(
-              `[PUSH-CONTROLLER] ❌ STEP 1 FAILED: Customer ${customerId} not found in workspace ${workspaceId}`
+              `[PUSH-CONTROLLER] Customer ${customerId} not found in workspace ${workspaceId}`
             )
             continue
           }
-
-          logger.info(
-            `[PUSH-CONTROLLER] ✅ STEP 1 SUCCESS: Customer found - ${customer.name} (${customer.phone})`
-          )
 
           if (!customer.phone) {
             results.failed++
@@ -97,14 +122,10 @@ export class PushController {
               `Customer ${customer.name}: Missing phone number`
             )
             logger.warn(
-              `[PUSH-CONTROLLER] ❌ Customer ${customer.name} (${customerId}) has no phone number`
+              `[PUSH-CONTROLLER] Customer ${customer.name} has no phone number`
             )
             continue
           }
-
-          logger.info(
-            `[PUSH-CONTROLLER] 📍 STEP 2: Getting/creating chat session`
-          )
 
           // Get or create chat session
           let chatSession = await prisma.chatSession.findFirst({
@@ -124,53 +145,25 @@ export class PushController {
                 context: {},
               },
             })
-            logger.info(
-              `[PUSH-CONTROLLER] ✅ STEP 2 SUCCESS: Created new chat session ${chatSession.id}`
-            )
-          } else {
-            logger.info(
-              `[PUSH-CONTROLLER] ✅ STEP 2 SUCCESS: Using existing chat session ${chatSession.id}`
-            )
           }
 
-          // Send chatbot reactivation notification via Router with isSystemMessage flag
-          logger.info(
-            `[PUSH-CONTROLLER] � STEP 3: Calling llmRouterService.routeMessage()`
-          )
-
-          // Message in Italian (base language) - will be translated by SafetyTranslationAgent
-          const notificationMessage = `🤖 Ciao ${customer.name}, il chatbot è ora disponibile, come posso aiutarti oggi?`
-
-          logger.info(`[PUSH-CONTROLLER] 📍 STEP 3 PARAMS:`, {
-            workspaceId,
-            customerId: customer.id,
-            conversationId: chatSession.id,
-            messageId: `system-notify-${Date.now()}`,
-            message: notificationMessage,
-            customerLanguage: customer.language,
+          // Generate message from template (Italian base language)
+          const messageTemplate =
+            NOTIFICATION_TEMPLATES[type as SystemNotificationType]
+          const notificationMessage = messageTemplate({
             customerName: customer.name,
-            isSystemMessage: true,
+            ...templateData,
           })
 
           const result = await llmRouterService.routeMessage({
             workspaceId,
             customerId: customer.id,
             conversationId: chatSession.id,
-            messageId: `system-notify-${Date.now()}`,
+            messageId: `system-${type.toLowerCase()}-${Date.now()}`,
             message: notificationMessage,
             customerLanguage: customer.language,
             customerName: customer.name,
-            isSystemMessage: true, // 🆕 Skip Router/SubLLM, go direct to Safety+Translation
-          })
-
-          logger.info(
-            `[PUSH-CONTROLLER] ✅ STEP 3 SUCCESS: LLM Router returned response`
-          )
-          logger.info(`[PUSH-CONTROLLER] 📊 STEP 3 RESULT:`, {
-            response: result.response,
-            agentUsed: result.agentUsed,
-            tokensUsed: result.tokensUsed,
-            executionTimeMs: result.executionTimeMs,
+            isSystemMessage: true,
           })
 
           if (result.isBlocked) {
@@ -179,17 +172,14 @@ export class PushController {
               `Customer ${customer.name}: Message blocked by security`
             )
             logger.warn(
-              `[PUSH-CONTROLLER] ⚠️ Notification blocked for ${customer.name}`
+              `[PUSH-CONTROLLER] Notification blocked for ${customer.name}`
             )
           } else {
             results.sent++
-            logger.info(
-              `[PUSH-CONTROLLER] ✅ Notification sent to ${customer.name} (${customer.phone})`
-            )
           }
         } catch (error) {
           logger.error(
-            `[PUSH-CONTROLLER] ❌ Error processing customer ${customerId}:`,
+            `[PUSH-CONTROLLER] Error processing customer ${customerId}:`,
             error
           )
           results.failed++
@@ -199,11 +189,6 @@ export class PushController {
         }
       }
 
-      // Return results
-      logger.info(
-        `[PUSH-CONTROLLER] 📊 Results: ${results.sent} sent, ${results.failed} failed`
-      )
-
       return res.status(200).json({
         success: true,
         sent: results.sent,
@@ -211,10 +196,7 @@ export class PushController {
         errors: results.errors,
       })
     } catch (error) {
-      logger.error(
-        "[PUSH-CONTROLLER] ❌ Error in sendChatbotReactivated:",
-        error
-      )
+      logger.error("[PUSH-CONTROLLER] Error in sendSystemNotification:", error)
       return res.status(500).json({
         error: "Internal server error",
         message: error instanceof Error ? error.message : "Unknown error",

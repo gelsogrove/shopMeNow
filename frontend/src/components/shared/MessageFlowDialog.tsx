@@ -94,6 +94,10 @@ export default function MessageFlowDialog({
     // Customer
     if (type === "user") return <User className="w-5 h-5" />
 
+    // 🆕 System Notification (Admin Triggered) - NO robot icon, use Settings
+    if (agent?.includes("System Notification"))
+      return <Settings className="w-5 h-5" />
+
     // Router Agent
     if (type === "router" || agent?.includes("Router"))
       return <GitBranch className="w-5 h-5" />
@@ -319,7 +323,7 @@ export default function MessageFlowDialog({
           <VerticalTimeline lineColor="#E5E7EB">
             {timelineSequence.map((step, index) => {
               const color = getAgentColor(step.type, step.agent)
-              const icon = getAgentIcon(step.type)
+              const icon = getAgentIcon(step.type, step.agent)
 
               return (
                 <VerticalTimelineElement

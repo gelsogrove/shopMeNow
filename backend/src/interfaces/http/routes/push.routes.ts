@@ -14,10 +14,14 @@ export const pushRoutes = (controller: PushController): Router => {
 
   /**
    * @swagger
-   * /workspaces/{workspaceId}/push/chatbot-reactivated:
+   * /workspaces/{workspaceId}/push/system-notification:
    *   post:
-   *     summary: Send chatbot reactivation notification
-   *     description: Send WhatsApp notification to customers when chatbot is re-enabled
+   *     summary: Send system notification to customers
+   *     description: |
+   *       Unified endpoint for all system notifications:
+   *       - CHATBOT_REACTIVATED: When admin enables chatbot
+   *       - ACCOUNT_ACTIVATED: When admin activates a new customer
+   *       - DISCOUNT_CHANGED: When admin changes customer discount percentage
    *     tags: [Push Notifications]
    *     security:
    *       - bearerAuth: []
@@ -47,7 +51,25 @@ export const pushRoutes = (controller: PushController): Router => {
    *           schema:
    *             type: object
    *             required:
-   *               - workspaceId
+   *               - type
+   *               - customerIds
+   *             properties:
+   *               type:
+   *                 type: string
+   *                 enum: [CHATBOT_REACTIVATED, ACCOUNT_ACTIVATED, DISCOUNT_CHANGED]
+   *                 description: Type of system notification
+   *               customerIds:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                 description: Array of customer UUIDs to notify
+   *               templateData:
+   *                 type: object
+   *                 description: Optional template data (e.g., discountPercentage for DISCOUNT_CHANGED)
+   *                 properties:
+   *                   discountPercentage:
+   *                     type: number
+   *                     description: New discount percentage (required for DISCOUNT_CHANGED)
    *               - customerIds
    *             properties:
    *               workspaceId:
@@ -114,8 +136,8 @@ export const pushRoutes = (controller: PushController): Router => {
    *                   type: string
    */
   router.post(
-    "/chatbot-reactivated",
-    controller.sendChatbotReactivated.bind(controller)
+    "/system-notification",
+    controller.sendSystemNotification.bind(controller)
   )
 
   return router

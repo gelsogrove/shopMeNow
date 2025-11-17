@@ -4,10 +4,12 @@ import { ClientSheet } from "@/components/shared/ClientSheet"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
 import MessageFlowDialog from "@/components/shared/MessageFlowDialog"
 import { MessageRenderer } from "@/components/shared/MessageRenderer"
+import { NotificationDialog } from "@/components/shared/NotificationDialog"
 import { WhatsAppChatModal } from "@/components/shared/WhatsAppChatModal"
 import { WhatsAppIcon } from "@/components/shared/WhatsAppIcon"
 import { useChat } from "@/contexts/ChatContext"
 import { useChatList } from "@/contexts/ChatListContext"
+import { useCustomerEdit } from "@/contexts/CustomerEditContext"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { useChatSync } from "@/hooks/useChatSync"
 import { useCurrentChatMessages } from "@/hooks/useCurrentChatMessages"
@@ -15,6 +17,7 @@ import { useWebSocket } from "@/hooks/useWebSocket"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
+import { pushNotificationService } from "@/services/pushNotificationService"
 import { getLanguages, Language } from "@/services/workspaceApi"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
@@ -97,6 +100,11 @@ const getLanguageFlag = (language?: string): string => {
 export function ChatPage() {
   // ChatPage loaded
   const { workspace, loading: isWorkspaceLoading } = useWorkspace()
+  const {
+    saveOriginalCustomerData,
+    getOriginalCustomerData,
+    clearOriginalCustomerData,
+  } = useCustomerEdit()
 
   // Get sessionId from sessionStorage (unique per browser session)
   const userSessionId = sessionStorage.getItem("sessionId")
@@ -228,6 +236,19 @@ export function ChatPage() {
   const [isBlocking, setIsBlocking] = useState(false)
   const { isChatbotActive, setIsChatbotActive } = useChatList()
 
+  // 🆕 Clean previous chat data when selectedChat changes
+  const prevSelectedChatIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (selectedChat?.id !== prevSelectedChatIdRef.current) {
+      // Clear previous chat's original data
+      if (prevSelectedChatIdRef.current) {
+        clearOriginalCustomerData(prevSelectedChatIdRef.current)
+      }
+      // Update ref
+      prevSelectedChatIdRef.current = selectedChat?.id || null
+    }
+  }, [selectedChat?.id, clearOriginalCustomerData])
+
   // Keep chatbot state in sync with selected chat
   useEffect(() => {
     if (selectedChat) {
@@ -238,6 +259,17 @@ export function ChatPage() {
   const [showActiveChatbotDialog, setShowActiveChatbotDialog] = useState(false)
   const [showActiveChatbotNotifyDialog, setShowActiveChatbotNotifyDialog] =
     useState(false)
+
+  // 🆕 State for unified notification dialog (discount + chatbot + account changes)
+  const [showNotificationDialog, setShowNotificationDialog] = useState(false)
+  const [notificationChanges, setNotificationChanges] = useState<{
+    discountChanged: boolean
+    chatbotActivated: boolean
+    accountActivated: boolean
+    oldDiscount: number
+    newDiscount: number
+  } | null>(null)
+
   const navigate = useNavigate()
   const [showPlaygroundDialog, setShowPlaygroundDialog] = useState(false)
   const queryClient = useQueryClient()
@@ -542,12 +574,18 @@ export function ChatPage() {
 
       const chatbotStatus = customerData.activeChatbot !== false // Default to true if undefined
 
+      // 🆕 SAVE ORIGINAL DATA to Context for change detection
+      if (customerData) {
+        saveOriginalCustomerData(customerId, {
+          discount: customerData.discount || 0,
+          activeChatbot: chatbotStatus,
+          isBlacklisted: customerData.isBlacklisted || false,
+        })
+      }
+
       // 🔧 FIX: Update BOTH context and local state
       updateActiveChatbot(selectedChat.id, chatbotStatus)
       setIsChatbotActive(chatbotStatus) // Update local state immediately
-
-      // 🔧 FIX: Invalidate chats to refresh the list
-      queryClient.invalidateQueries({ queryKey: ["chats", userSessionId] })
     } catch (error) {
       logger.error("Error fetching customer details:", error)
     }
@@ -563,9 +601,21 @@ export function ChatPage() {
       return
     }
 
-    // If turning on the chatbot, show notification confirmation dialog
+    // 🆕 If turning on the chatbot, SEMPRE show notification popup
     if (checked) {
-      setShowActiveChatbotNotifyDialog(true)
+      const originalData = getOriginalCustomerData(selectedChat.customerId)
+
+      // SEMPRE mostra popup quando si attiva il chatbot (OFF → ON)
+      setNotificationChanges({
+        discountChanged: false,
+        chatbotActivated: true,
+        accountActivated: false,
+        oldDiscount: originalData?.discount || 0,
+        newDiscount: originalData?.discount || 0,
+      })
+      setShowNotificationDialog(true)
+      // Store the action to complete after notification
+      ;(window as any).__pendingChatbotToggle = checked
       return
     }
 
@@ -583,6 +633,73 @@ export function ChatPage() {
   const handleActiveChatbotNotifyConfirm = async (shouldNotify: boolean) => {
     setShowActiveChatbotNotifyDialog(false)
     await updateActiveChatbotStatus(true, shouldNotify)
+  }
+
+  // 🆕 Unified notification handler (for both discount and chatbot changes)
+  const handleNotificationConfirm = async (shouldNotify: boolean) => {
+    setShowNotificationDialog(false)
+
+    if (!shouldNotify || !selectedChat || !workspaceId) {
+      // User clicked "Skip" - still reload to show updated data
+      window.location.reload()
+      return
+    }
+
+    const customerId = selectedChat.customerId
+
+    try {
+      // Send discount notification if changed
+      if (notificationChanges?.discountChanged) {
+        await pushNotificationService.sendDiscountChange(
+          workspaceId,
+          [customerId],
+          notificationChanges.newDiscount
+        )
+        toast.success(
+          `Discount notification sent (${notificationChanges.newDiscount}%)`,
+          { duration: 2000 }
+        )
+      }
+
+      // Send chatbot activation notification if activated
+      if (notificationChanges?.chatbotActivated) {
+        await pushNotificationService.sendChatbotReactivation(workspaceId, [
+          customerId,
+        ])
+        toast.success("Chatbot activation notification sent", {
+          duration: 2000,
+        })
+      }
+
+      // Send account activation notification if unblocked
+      if (notificationChanges?.accountActivated) {
+        await pushNotificationService.sendAccountActivation(workspaceId, [
+          customerId,
+        ])
+        toast.success("Account activation notification sent", {
+          duration: 2000,
+        })
+      }
+
+      // Complete pending chatbot toggle if exists
+      if ((window as any).__pendingChatbotToggle !== undefined) {
+        await updateActiveChatbotStatus(
+          (window as any).__pendingChatbotToggle,
+          false
+        ) // Already notified
+        delete (window as any).__pendingChatbotToggle
+      }
+
+      // NO FETCH HERE - data already updated by handleSaveCustomer!
+      // Calling fetchCustomerDetails here causes infinite loop because it triggers re-render
+    } catch (error) {
+      logger.error("Error sending notification:", error)
+      toast.error("Failed to send notification", { duration: 2000 })
+    } finally {
+      setNotificationChanges(null)
+      // Reload page to show updated data
+      window.location.reload()
+    }
   }
 
   // Function to update the activeChatbot status in the backend
@@ -614,30 +731,29 @@ export function ChatPage() {
         // If enabling chatbot and notification is requested
         if (status && shouldNotify) {
           try {
-            logger.info("📤 Sending push notification to customer...")
-            // Send notification
-            await api.post(
-              `/workspaces/${workspaceId}/push/chatbot-reactivated`,
-              {
-                customerIds: [selectedChat.customerId],
-              }
+            logger.info("📤 Sending chatbot reactivation notification...")
+            // Send notification using centralized service
+            await pushNotificationService.sendChatbotReactivation(workspaceId, [
+              selectedChat.customerId,
+            ])
+            logger.info(
+              "✅ Chatbot reactivation notification sent successfully"
             )
-            logger.info("✅ Push notification sent successfully")
           } catch (notifyError) {
             logger.error("❌ Error sending notification:", notifyError)
             // Don't show error to user as the main action succeeded
           }
         }
 
-        // 🔥 NUCLEAR OPTION: Force window reload to refresh everything
-        logger.info("🔄 Reloading page to refresh chat list...")
-        window.location.reload()
+        // ✅ Show success toast
         toast.success(
           `Chatbot ${status ? "enabled" : "disabled"} for ${
             selectedChat.customerName
           }`,
-          { duration: 1000 }
+          { duration: 2000 }
         )
+
+        logger.info("✅ Chatbot status updated successfully")
       } else {
         // Log error for debugging
         logger.error("Failed to update chatbot status:", {
@@ -765,7 +881,11 @@ export function ChatPage() {
   }
 
   // Handle customer save after edit
-  const handleSaveCustomer = async (customerData: any, clientId?: string) => {
+  const handleSaveCustomer = async (
+    customerData: any,
+    clientId?: string,
+    changes?: any
+  ) => {
     if ((!selectedChat?.customerId && !clientId) || !workspaceId) return
 
     try {
@@ -781,10 +901,29 @@ export function ChatPage() {
       const response = await api.put(endpoint, customerData)
 
       if (response.status === 200) {
-        toast.success("Customer updated successfully", { duration: 1000 })
+        // ✅ Show success toast
+        toast.success("Customer updated successfully", { duration: 2000 })
 
-        // 🔄 REFRESH COMPLETO - Ricarica la pagina per mostrare i dati aggiornati
-        window.location.reload()
+        // 🆕 Show notification popup if changes detected by ClientSheet
+        if (
+          changes &&
+          (changes.discountChanged ||
+            changes.chatbotActivated ||
+            changes.accountActivated)
+        ) {
+          setNotificationChanges({
+            discountChanged: changes.discountChanged,
+            chatbotActivated: changes.chatbotActivated,
+            accountActivated: changes.accountActivated,
+            oldDiscount: changes.oldDiscount,
+            newDiscount: changes.newDiscount,
+          })
+          setTimeout(() => {
+            setShowNotificationDialog(true)
+          }, 500) // Wait for toast to appear first
+        }
+
+        logger.info("✅ Customer updated successfully")
       } else {
         toast.error(
           "Failed to update customer: " +
@@ -800,6 +939,7 @@ export function ChatPage() {
       )
     } finally {
       setLoading(false)
+      // Flag will be reset in handleNotificationConfirm when dialog closes
     }
   }
 
@@ -1579,6 +1719,36 @@ export function ChatPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 🆕 Unified Notification Dialog (Discount + Chatbot changes) */}
+      <NotificationDialog
+        open={showNotificationDialog}
+        onOpenChange={setShowNotificationDialog}
+        title="Send Notification?"
+        description={(() => {
+          const changes = []
+          if (notificationChanges?.discountChanged) {
+            changes.push(`new discount (${notificationChanges.newDiscount}%)`)
+          }
+          if (notificationChanges?.chatbotActivated) {
+            changes.push("chatbot activation")
+          }
+          if (notificationChanges?.accountActivated) {
+            changes.push("account reactivation")
+          }
+
+          if (changes.length === 0) {
+            return "Send notification to customer?"
+          }
+
+          const changesText = changes.join(" and ")
+          return `Would you like to notify ${selectedChat?.customerName} about the ${changesText}?`
+        })()}
+        confirmText="Yes, notify user"
+        cancelText="No, just save"
+        onConfirm={() => handleNotificationConfirm(true)}
+        onCancel={() => handleNotificationConfirm(false)}
+      />
 
       {/* Block User Dialog */}
       <AlertDialog open={showBlockDialog} onOpenChange={setShowBlockDialog}>

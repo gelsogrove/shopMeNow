@@ -45,11 +45,26 @@ interface ExtendedClient extends Client {
   invoiceAddress?: InvoiceAddress
 }
 
+// 🆕 Change detection result interface
+export interface ChangeDetection {
+  hasChanges: boolean
+  discountChanged: boolean
+  chatbotActivated: boolean
+  oldDiscount: number
+  newDiscount: number
+  oldChatbot: boolean
+  newChatbot: boolean
+}
+
 interface ClientSheetProps {
   client: ExtendedClient | string | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSubmit: (data: any, clientId?: string) => void
+  onSubmit: (
+    data: any,
+    clientId?: string,
+    changes?: ChangeDetection
+  ) => Promise<void>
   mode: "view" | "edit"
   availableLanguages: string[]
 }
@@ -140,9 +155,17 @@ export function ClientSheet({
   const [loadingClient, setLoadingClient] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
 
+  // 🆕 Store original client data for change detection
+  const [originalClient, setOriginalClient] = useState<ExtendedClient | null>(
+    null
+  )
+
   // Reset form when client changes
   useEffect(() => {
     if (fetchedClient) {
+      // 🆕 Store deep copy of original client for change detection
+      setOriginalClient({ ...fetchedClient })
+
       setName(fetchedClient.name || "")
       setEmail(fetchedClient.email || "")
       setCompany(fetchedClient.company || "")
@@ -330,15 +353,68 @@ export function ClientSheet({
     }
   }, [client, open, mode])
 
+  // 🆕 Detect changes for notification logic
+  const detectChanges = (newData: any) => {
+    console.log("� DETECT CHANGES CALLED", { originalClient, newData })
+
+    if (!originalClient) {
+      console.log("❌ NO originalClient - returning no changes")
+      return {
+        hasChanges: false,
+        discountChanged: false,
+        chatbotActivated: false,
+        accountActivated: false,
+        oldDiscount: 0,
+        newDiscount: 0,
+        oldChatbot: false,
+        newChatbot: false,
+        oldBlacklisted: false,
+        newBlacklisted: false,
+      }
+    }
+
+    const oldDiscount = originalClient.discount || 0
+    const newDiscount = parseFloat(newData.discount) || 0
+    const discountChanged = oldDiscount !== newDiscount
+
+    const oldChatbot =
+      originalClient.activeChatbot !== undefined
+        ? originalClient.activeChatbot
+        : true
+    const newChatbot =
+      newData.activeChatbot !== undefined ? newData.activeChatbot : true
+    const chatbotActivated = !oldChatbot && newChatbot
+
+    const oldBlacklisted = originalClient.isBlacklisted || false
+    const newBlacklisted = newData.isBlacklisted || false
+    const accountActivated = oldBlacklisted && !newBlacklisted
+
+    const result = {
+      hasChanges: discountChanged || chatbotActivated || accountActivated,
+      discountChanged,
+      chatbotActivated,
+      accountActivated,
+      oldDiscount,
+      newDiscount,
+      oldChatbot,
+      newChatbot,
+      oldBlacklisted,
+      newBlacklisted,
+    }
+
+    return result
+  }
+
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    e.stopPropagation()
+
     const customerData = {
       name,
       email,
       company,
       phone,
-      // Convert language name back to code for storage
       language: convertLanguageNameToCode(language),
       discount: parseFloat(discount),
       notes,
@@ -361,19 +437,17 @@ export function ClientSheet({
     }
     const clientId = typeof client === "string" ? client : fetchedClient?.id
 
-    // Debug log
-    logger.info("=== CLIENT SUBMIT DEBUG ===")
-    logger.info("salesId state:", salesId)
-    logger.info("customerData.salesId:", customerData.salesId)
-    logger.info("clientId:", clientId)
-    logger.info("Full customerData:", customerData)
-    logger.info("=========================")
+    // 🆕 Detect changes for notification
+    const changes = detectChanges(customerData)
+    console.log("� Changes detected:", changes)
+
     try {
-      await onSubmit(customerData, clientId)
-      // ✅ Il toast è già gestito in ClientsPage.tsx
-      onOpenChange(false)
-      // ❌ RIMOSSO: window.location.reload() causava refresh indesiderato
+      const result = await onSubmit(customerData, clientId, changes)
+      console.log("✅ onSubmit completed successfully")
+      // ❌ NON chiudere qui - ClientsPage chiude dopo API success
+      // onOpenChange(false)
     } catch (err) {
+      console.error("❌ Error in handleSubmit:", err)
       toast.error("Error updating client")
     }
   }
@@ -423,7 +497,7 @@ export function ClientSheet({
             </Button>
           </div>
         ) : mode === "edit" ? (
-          <form onSubmit={handleSubmit} className="flex flex-col h-full">
+          <div className="flex flex-col h-full">
             <SheetHeader className="px-6 pt-6 pb-2">
               <SheetTitle>{title}</SheetTitle>
               <SheetDescription>{description}</SheetDescription>
@@ -843,8 +917,15 @@ export function ClientSheet({
                   Cancel
                 </Button>
                 <Button
-                  type="submit"
+                  type="button"
                   className="bg-green-600 hover:bg-green-700"
+                  onClick={async (e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    alert("🔥 Before handleSubmit in onClick")
+                    await handleSubmit(e as any)
+                    alert("🔥 After handleSubmit in onClick - NO REFRESH YET!")
+                  }}
                 >
                   {(fetchedClient as ExtendedClient | null)?.id
                     ? "Save Changes"
@@ -852,7 +933,7 @@ export function ClientSheet({
                 </Button>
               </div>
             </SheetFooter>
-          </form>
+          </div>
         ) : (
           <div className="flex flex-col h-full">
             <SheetHeader className="px-6 pt-6 pb-2">

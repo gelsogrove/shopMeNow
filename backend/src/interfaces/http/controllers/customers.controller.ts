@@ -301,48 +301,15 @@ export class CustomersController {
 
   /**
    * Handle automatic push messages when customer data changes
+   *
+   * 🚨 DISABLED: Discount notifications now handled via /push/system-notification
+   *    with frontend confirmation popup (Feature 127)
    */
   private async handleAutomaticPushMessages(
     originalCustomer: any,
     updatedCustomer: any
   ) {
     try {
-      // Check if discount changed
-      if (originalCustomer.discount !== updatedCustomer.discount) {
-        logger.info(
-          `Customer discount changed from ${originalCustomer.discount}% to ${updatedCustomer.discount}%`,
-          {
-            customerId: updatedCustomer.id,
-            workspaceId: updatedCustomer.workspaceId,
-          }
-        )
-
-        // 💰 BILLING: Track PUSH_CAMPAIGN when discount changes (€1.00)
-        try {
-          await this.billingService.trackPushCampaign(
-            updatedCustomer.workspaceId,
-            updatedCustomer.id,
-            `Discount changed from ${originalCustomer.discount}% to ${updatedCustomer.discount}%`
-          )
-          logger.info(
-            `[BILLING] 💰 Push message cost for discount change: €1.00 charged for customer-${updatedCustomer.id}`
-          )
-        } catch (billingError) {
-          logger.error(
-            `[BILLING] ❌ Failed to track push message billing for customer-${updatedCustomer.id}:`,
-            billingError
-          )
-          // Don't fail the update operation if billing fails
-        }
-
-        await this.pushMessagingService.sendDiscountUpdate(
-          updatedCustomer.id,
-          updatedCustomer.phone,
-          updatedCustomer.workspaceId,
-          updatedCustomer.discount
-        )
-      }
-
       // Check if chatbot status changed
       if (originalCustomer.activeChatbot !== updatedCustomer.activeChatbot) {
         logger.info(

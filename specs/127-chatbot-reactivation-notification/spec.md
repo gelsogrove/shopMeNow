@@ -1,35 +1,65 @@
-# Feature Specification: Chatbot Reactivation Notification
+# Feature Specification: System Push Notifications (Unified)
 
-**Feature ID**: 127-chatbot-reactivation-notification  
-**Status**: ✅ COMPLETED  
-**Priority**: HIGH (Bug Fix + Feature Completion)  
+**Feature ID**: 127-system-notifications-unified  
+**Original Feature**: 127-chatbot-reactivation-notification  
+**Status**: ✅ COMPLETED (Extended + Unified)  
+**Priority**: HIGH (Bug Fix + Feature Completion + Extension)  
 **Created**: 2025-11-16  
-**Completed**: 2025-11-16  
+**Extended**: 2025-01-15  
+**Completed**: 2025-11-17  
 **Author**: Andrea
+
+---
+
+## 🎉 FEATURE COMPLETED
+
+This feature has been successfully implemented, tested, and deployed.
+
+**See**: `IMPLEMENTATION_SUMMARY.md` for complete implementation details, bug fixes, and testing results.
+
+---
 
 ## Overview
 
-When an admin enables a customer's chatbot from the ChatPage, a dialog appears asking "Would you like to notify [Customer] that the chatbot is now active?". If the admin confirms, the system sends a WhatsApp notification to the customer informing them that the chatbot is available again.
+When an admin performs certain actions (enabling chatbot, activating customer account, changing discount), a dialog appears asking if they want to notify the customer. If confirmed, the system sends a WhatsApp notification using the **System Message Fast-Path** architecture (90% token savings).
 
-**Previous State**: Frontend dialog existed but backend endpoint was missing (404 error).
+**Original Feature (127)**: Chatbot reactivation notification  
+**Extension**: Unified system to support 3 notification types:
 
-**Current State**: ✅ Fully implemented with System Message Fast-Path architecture (90% token savings).
+1. **CHATBOT_REACTIVATED**: When admin enables chatbot from ChatPage
+2. **ACCOUNT_ACTIVATED**: When admin activates a new customer account
+3. **DISCOUNT_CHANGED**: When admin changes customer discount percentage
+
+**Previous State**: Separate endpoints would require code duplication  
+**Current State**: ✅ ONE unified endpoint with type parameter + centralized frontend service
 
 ## Implementation Summary
 
 ### Backend Components
 
-1. **`PushController`** (`backend/src/interfaces/http/controllers/push.controller.ts`)
+1. **`PushController` (UNIFIED)** (`backend/src/interfaces/http/controllers/push.controller.ts`)
 
-   - Endpoint: `POST /api/workspaces/:workspaceId/push/chatbot-reactivated`
-   - Validates workspace + customer IDs
+   - **Endpoint**: `POST /api/workspaces/:workspaceId/push/system-notification`
+   - **Request Body**:
+     ```typescript
+     {
+       type: "CHATBOT_REACTIVATED" | "ACCOUNT_ACTIVATED" | "DISCOUNT_CHANGED",
+       customerIds: string[],
+       templateData?: { discountPercentage?: number }
+     }
+     ```
+   - **Message Templates** (Italian base language):
+     - `CHATBOT_REACTIVATED`: "🤖 Ciao {customerName}, il chatbot è ora disponibile..."
+     - `ACCOUNT_ACTIVATED`: "👋 Benvenuto {customerName}! Il tuo account è ora attivo..."
+     - `DISCOUNT_CHANGED`: "💸 Ciao {customerName}! Da oggi puoi usufruire del {discountPercentage}% di sconto..."
+   - Validates workspace + customer IDs + notification type
    - Calls LLM Router with `isSystemMessage: true` flag
 
 2. **`LLMRouterService` Fast-Path** (`backend/src/services/llm-router.service.ts`)
 
    - Skips Router Agent + SubLLM when `isSystemMessage=true`
    - Goes directly to Safety & Translation Agent
-   - Performance: ~20k → ~2k tokens (90% reduction), $0.030 → $0.003, ~3000ms → ~1425ms
+   - **Performance**: ~20k → ~2k tokens (90% reduction), $0.030 → $0.003, ~3000ms → ~1425ms
 
 3. **`MessageRepository` Fix** (`backend/src/repositories/message.repository.ts`)
    - Changed `getRecentChats()` to read from `ConversationMessage` table instead of `Message` table
@@ -37,13 +67,41 @@ When an admin enables a customer's chatbot from the ChatPage, a dialog appears a
 
 ### Frontend Components
 
-1. **`ChatPage.tsx`** (`frontend/src/pages/ChatPage.tsx`)
+1. **`pushNotificationService` (NEW - CENTRALIZED)** (`frontend/src/services/pushNotificationService.ts`)
 
-   - Fixed request body: removed `workspaceId` (comes from URL params)
-   - Implemented `window.location.reload()` after notification sent
+   - **Single source of truth** for all push notification calls
+   - **Exports**:
+     - `SystemNotificationType` enum
+     - `sendNotification()` - generic method
+     - `sendChatbotReactivation()` - wrapper for chatbot reactivation
+     - `sendAccountActivation()` - wrapper for account activation
+     - `sendDiscountChange()` - wrapper with discountPercentage parameter
+   - **Benefits**:
+     - Type-safe API calls
+     - Consistent error handling
+     - Easy to add new notification types
+     - No code duplication
+
+2. **`ChatPage.tsx` (UPDATED)** (`frontend/src/pages/ChatPage.tsx`)
+
+   - **Changed from**: Direct `api.post()` call
+   - **Changed to**: `pushNotificationService.sendChatbotReactivation(workspaceId, [customerId])`
+   - Implements `window.location.reload()` after notification sent
    - Nuclear option but 100% reliable for chat list refresh
 
-2. **`MessageFlowDialog.tsx`** (`frontend/src/components/shared/MessageFlowDialog.tsx`)
+3. **`ClientsPage.tsx` (UPDATED)** (`frontend/src/pages/ClientsPage.tsx`)
+
+   - **Detects changes** in `handleUpdateClient()`:
+     - Account activation: `enabled` changed from `false` → `true`
+     - Discount change: `discount` percentage changed
+   - **Shows confirmation popups** before sending notifications:
+     - "Account activated for {name}. Do you want to send a notification?"
+     - "Discount changed from {old}% to {new}%. Do you want to notify the customer?"
+   - **Calls centralized service**:
+     - `pushNotificationService.sendAccountActivation(workspaceId, [customerId])`
+     - `pushNotificationService.sendDiscountChange(workspaceId, [customerId], discountPercentage)`
+
+4. **`MessageFlowDialog.tsx`** (`frontend/src/components/shared/MessageFlowDialog.tsx`)
    - Detects System Notification by checking `agent` name
    - Skips creating "Customer" step when `isSystemNotification=true`
    - Timeline now correctly shows "🤖 System Notification (Admin Triggered)"
