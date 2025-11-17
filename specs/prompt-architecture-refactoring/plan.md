@@ -375,7 +375,7 @@ wc -w docs/prompts/router-agent.md
 
 ### Objectives
 
-1. Rename agent: "Product Search Agent" → "Product & Services Search Agent"
+1. Rename agent: "Product and Services Agent" → "Product & Services Search Agent"
 2. Add {{SERVICES}} variable
 3. Add service discovery flow (same as products)
 4. Add {{OFFERS}} variable (if not present)
@@ -406,7 +406,7 @@ mv product-search-agent.md product-services-search-agent.md
 **Change**:
 
 ```markdown
-# Product Search Agent - System Prompt v2.0
+# Product and Services Agent - System Prompt v2.0
 ```
 
 **To**:

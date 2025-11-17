@@ -43,24 +43,26 @@ export const defaultAgents = (
   // ====================================================================
   // ROUTER AGENT (order: 0) - Entry point, FAQ + Intent Classification
   // ====================================================================
+  // ROUTER AGENT (order: 0) - Pure orchestration + context interpretation
+  // ====================================================================
   {
     workspaceId,
     name: "Router Agent",
     type: "ROUTER" as AgentType,
     icon: "GitBranch",
     description:
-      "Entry point & orchestrator - handles FAQ, services, offers, and delegates to specialist agents",
+      "Pure orchestration: intent classification, context interpretation for short responses (with CONFERMA keyword), and FAQ handling",
     systemPrompt: loadPrompt("router-agent.md"),
     model: "openai/gpt-4o-mini",
-    temperature: 0.3,
-    maxTokens: 2048,
+    temperature: 0.2, // ✅ Deterministic routing
+    maxTokens: 500, // ✅ JSON response only
     order: 0,
     isActive: true,
     availableFunctions: getAgentFunctionNames("ROUTER"),
   },
 
   // ====================================================================
-  // PRODUCT SEARCH AGENT (order: 1) - Product catalog expert
+  // PRODUCT SEARCH AGENT (order: 1) - Product catalog expert with progressive filtering
   // ====================================================================
   {
     workspaceId,
@@ -68,10 +70,10 @@ export const defaultAgents = (
     type: "PRODUCT_SEARCH" as AgentType,
     icon: "Search",
     description:
-      "Specialist in product search, filters, certifications, and catalog navigation",
-    systemPrompt: loadPrompt("product-services-search-agent-v4-OPTIMIZED.md"),
+      "Specialist in product search with progressive filtering strategy (Regola 11): guides customers from categories to specific products",
+    systemPrompt: loadPrompt("product-search-agent.md"),
     model: "openai/gpt-4o-mini",
-    temperature: 0.3, // ✅ Increased from 0.0 to 0.3 for better semantic matching (dolci=desserts)
+    temperature: 0.3, // ✅ Increased for better semantic matching
     maxTokens: 2048,
     order: 1,
     isActive: true,
@@ -136,7 +138,26 @@ export const defaultAgents = (
   },
 
   // ====================================================================
-  // SAFETY & TRANSLATION AGENT (order: 5) - Final security layer
+  // PROFILE MANAGEMENT AGENT (order: 6) - Customer profile & notifications
+  // ====================================================================
+  {
+    workspaceId,
+    name: "Profile Management Agent",
+    type: "PROFILE_MANAGEMENT" as AgentType,
+    icon: "User",
+    description:
+      "Specialist in managing customer profile information and notification preferences (enable/disable push notifications)",
+    systemPrompt: loadPrompt("profile-management-agent.md"),
+    model: "openai/gpt-4o-mini",
+    temperature: 0.4,
+    maxTokens: 500,
+    order: 6,
+    isActive: true,
+    availableFunctions: getAgentFunctionNames("PROFILE_MANAGEMENT"),
+  },
+
+  // ====================================================================
+  // SAFETY & TRANSLATION AGENT (order: 99) - Final security layer
   // ====================================================================
   {
     workspaceId,
@@ -149,7 +170,7 @@ export const defaultAgents = (
     model: "openai/gpt-4o-mini", // Can use Claude Sonnet if preferred
     temperature: 0.1, // Very low for consistency
     maxTokens: 1024,
-    order: 5,
+    order: 99, // ✅ Changed from 5 to 99 (last agent in pipeline)
     isActive: true,
     availableFunctions: getAgentFunctionNames("SAFETY_TRANSLATION"), // Empty array []
   },

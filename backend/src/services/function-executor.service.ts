@@ -106,6 +106,10 @@ export class FunctionExecutor {
           result = await this.delegateToCustomerSupport(args, context)
           break
 
+        case "profileManagementAgent":
+          result = await this.delegateToProfileManagement(args, context)
+          break
+
         // Direct function calls (Sub-Agents)
         // NOTE: searchProducts removed - LLM uses {{PRODUCTS}} from prompt
 
@@ -616,6 +620,7 @@ export class FunctionExecutor {
       case "cartManagementAgent":
       case "orderTrackingAgent":
       case "customerSupportAgent":
+      case "profileManagementAgent":
         if (!args.query) {
           return {
             valid: false,
@@ -640,13 +645,16 @@ export class FunctionExecutor {
     args: Record<string, any>,
     context: ExecutionContext
   ): Promise<any> {
-    logger.info("🔍 Delegating to Product Search Agent", { args, context })
+    logger.info("🔍 Delegating to Product and Services Agent", {
+      args,
+      context,
+    })
 
-    // Return a special response that signals llm-router.service.ts to call Product Search Agent
+    // Return a special response that signals llm-router.service.ts to call Product and Services Agent
     return {
       delegateTo: "PRODUCT_SEARCH",
       query: args.query,
-      message: `Delegating to Product Search Agent for: ${args.query}`,
+      message: `Delegating to Product and Services Agent for: ${args.query}`,
     }
   }
 
@@ -686,6 +694,19 @@ export class FunctionExecutor {
       delegateTo: "CUSTOMER_SUPPORT",
       query: args.query,
       message: `Delegating to Customer Support Agent for: ${args.query}`,
+    }
+  }
+
+  private async delegateToProfileManagement(
+    args: Record<string, any>,
+    context: ExecutionContext
+  ): Promise<any> {
+    logger.info("👤 Delegating to Profile Management Agent", { args, context })
+
+    return {
+      delegateTo: "PROFILE_MANAGEMENT",
+      query: args.query,
+      message: `Delegating to Profile Management Agent for: ${args.query}`,
     }
   }
 }

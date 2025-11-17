@@ -216,7 +216,7 @@ Parliamo con calma, come posso aiutarti? 😊
 **EXAMPLE FLOW**:
 
 ```
-Product Search Agent (English):
+Product and Services Agent (English):
 "Hi {{nameUser}}! Yes, we have fresh burrata! 🧀
 FOR-BUR-001 Buffalo Burrata 250g ~€8.50~ → €7.65
 Would you like to add it to cart?"

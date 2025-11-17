@@ -239,6 +239,8 @@ export class PromptProcessorService {
       companyName?: string
       languageUser?: string
       lastordercode?: string
+      pushNotificationsConsent?: boolean
+      pushNotificationsConsentAt?: Date | null
     }
   ): string {
     if (!text) return text
@@ -260,6 +262,16 @@ export class PromptProcessorService {
       .replace(
         /\{\{TOKEN_DURATION\}\}/g,
         this.formatTokenDuration(process.env.TOKEN_EXPIRATION || "1h")
+      )
+      .replace(
+        /\{\{pushNotificationsConsent\}\}/g,
+        customerData.pushNotificationsConsent === true ? "true" : "false"
+      )
+      .replace(
+        /\{\{pushNotificationsConsentAt\}\}/g,
+        customerData.pushNotificationsConsentAt
+          ? new Date(customerData.pushNotificationsConsentAt).toISOString()
+          : "Mai modificato"
       )
   }
 
@@ -289,6 +301,8 @@ export class PromptProcessorService {
       companyName: customerData.companyName,
       languageUser: customerData.languageUser,
       lastordercode: customerData.lastordercode,
+      pushNotificationsConsent: customerData.push_notifications_consent,
+      pushNotificationsConsentAt: customerData.push_notifications_consent_at,
     })
   } /**
    * Format token duration from environment variable

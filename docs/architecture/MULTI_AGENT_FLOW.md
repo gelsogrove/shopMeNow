@@ -251,7 +251,7 @@ if (expectedAgent === "ORDER_TRACKING") {
       "type": "sub_agent",
       "agent": "PRODUCT_SEARCH Agent",
       "timestamp": "2025-11-13T18:40:11.200Z",
-      "systemPrompt": "# Product Search Agent...", // ✅ With {{PRODUCTS}} replaced
+      "systemPrompt": "# Product and Services Agent...", // ✅ With {{PRODUCTS}} replaced
       "tokenUsage": { "totalTokens": 8120 },
       "input": { "query": "avete salami?" },
       "output": {

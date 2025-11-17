@@ -1,25 +1,25 @@
 /**
- * ProductSearchAgentLLM
+ * ProductSearchAgentLLM - Product and Services Agent
  *
  * ✅ SPECIALIST AGENT with OWN LLM - Clean Architecture
  *
  * Responsibilities:
- * 1. Handle product search queries with dedicated LLM
- * 2. Execute function calls for product search/filtering
- * 3. Return English response with [LINK_xxx] tokens
+ * 1. Handle product/service search queries with dedicated LLM
+ * 2. Respond with exact data from variables (NO function calls)
+ * 3. Return direct response in customer's language
  *
  * Architecture:
  * - Own LLM instance (OpenRouter + GPT-4o-mini)
  * - Own system prompt from database (agentConfig.PRODUCT_SEARCH)
- * - Function execution via ProductSearchAgent
- * - Returns English ONLY (Router handles translation via SafetyTranslationAgent)
+ * - Variables replaced: {{PRODUCTS}}, {{CATEGORIES}}, {{OFFERS}}, {{nameUser}}, etc.
+ * - Returns direct Italian response (no translation needed)
  *
  * Flow:
- * 1. Router delegates query → ProductSearchAgentLLM
+ * 1. Router delegates query → Product and Services Agent
  * 2. Load system prompt from database (agentType: PRODUCT_SEARCH)
- * 3. Call LLM with product search functions
- * 4. Execute functions via ProductSearchAgent
- * 5. Return English response with tokens → Router
+ * 3. Replace all variables with real data
+ * 4. Call LLM with customer query
+ * 5. Return direct response → Router
  *
  * Security:
  * - ALL queries filtered by workspaceId
@@ -327,6 +327,17 @@ export class ProductSearchAgentLLM {
         where: { id: context.customerId },
       })
 
+      // Map customer DB fields to prompt processor expected format
+      const customerData = customer
+        ? {
+            nameUser: customer.name || "Cliente",
+            email: customer.email || "",
+            phone: customer.phone || "",
+            discountUser: customer.discount || 0,
+            languageUser: customer.language || "ITALIANO",
+          }
+        : {}
+
       // Load dynamic content (products, categories, etc.)
       const productsText = await messageRepo.getActiveProducts(
         context.workspaceId
@@ -340,13 +351,14 @@ export class ProductSearchAgentLLM {
         productsLength: productsText.length,
         categoriesLength: categoriesText.length,
         offersLength: offersText.length,
+        offersContent: offersText, // 🔍 DEBUG: Log actual offers content
       })
 
       // Replace ALL variables ({{PRODUCTS}}, {{CATEGORIES}}, {{nameUser}}, etc.)
       const processedPrompt = await promptProcessor.preProcessPrompt(
         agentConfig.systemPrompt,
         context.workspaceId,
-        customer || {}, // Customer data for {{nameUser}}, {{emailUser}}, etc.
+        customerData, // Mapped customer data for variable replacement
         {
           faqs: "", // Not used in product search
           products: productsText,
@@ -367,7 +379,7 @@ export class ProductSearchAgentLLM {
       // 🔍 DEBUG: Print FULL prompt to console
       console.log("\n" + "=".repeat(100))
       console.log(
-        "🔍 PRODUCT SEARCH AGENT - FULL SYSTEM PROMPT (WITH REAL PRODUCTS)"
+        "🔍 PRODUCT AND SERVICES AGENT - FULL SYSTEM PROMPT (WITH REAL PRODUCTS)"
       )
       console.log("=".repeat(100))
       console.log(processedPrompt.substring(0, 5000)) // First 5000 chars to avoid overflow
@@ -726,7 +738,7 @@ Then ask: "Vuoi aggiungerlo al carrello? 🛒"
             Authorization: `Bearer ${this.openRouterApiKey}`,
             "Content-Type": "application/json",
             "HTTP-Referer": config.appUrl,
-            "X-Title": "ShopME - Product Search Agent",
+            "X-Title": "ShopME - Product and Services Agent",
           },
         }
       )

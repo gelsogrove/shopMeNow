@@ -25,9 +25,9 @@
 
 ---
 
-### 2. Product Search Agent (Order: 1)
+### 2. Product and Services Agent (Order: 1)
 
-- **Name**: "Product Search Agent" ⚠️ NEEDS RENAME
+- **Name**: "Product and Services Agent" ⚠️ NEEDS RENAME
 - **Type**: PRODUCT_SEARCH
 - **Model**: openai/gpt-4o-mini
 - **Temperature**: 0.3 ✅ (already set!)
@@ -39,7 +39,7 @@
 **Notes**:
 
 - ✅ Temperature already set to 0.3 (Andrea's requirement already met!)
-- ❌ Name needs update: "Product Search Agent" → "Product & Services Search Agent"
+- ❌ Name needs update: "Product and Services Agent" → "Product & Services Search Agent"
 - ❌ Prompt file needs rename: product-search-agent.md → product-services-search-agent.md
 - Comment mentions: "Increased from 0.0 to 0.3 for better semantic matching (dolci=desserts)"
 
@@ -177,7 +177,7 @@
 
 ```typescript
 {
-  name: "Product Search Agent",
+  name: "Product and Services Agent",
   type: "PRODUCT_SEARCH" as AgentType,
   // ...
 }

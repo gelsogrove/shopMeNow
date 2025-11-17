@@ -75,7 +75,10 @@ export function MessageRenderer({
         )
       }
       // Altrimenti è testo normale - gestisci formattazione
-      const formatted = part
+      // 🔥 FIX: Remove markdown code blocks (```json, ```, etc.)
+      let formatted = part
+        .replace(/```json\s*/g, "") // Remove ```json opening
+        .replace(/```\s*/g, "") // Remove ``` opening/closing
         .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
         .replace(/\*(.*?)\*/g, "<em>$1</em>")
         .replace(

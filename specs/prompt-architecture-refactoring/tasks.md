@@ -427,7 +427,7 @@ Increment Router prompt version to v3.0 after major refactoring.
 
 ## 🔄 PHASE 2: Product & Services Search Agent Unification (3-4 hours)
 
-### Task 2.1: Rename Product Search Agent File
+### Task 2.1: Rename Product and Services Agent File
 
 **ID**: `PROMPT-2.1`  
 **Status**: ⬜ NOT STARTED  
@@ -474,11 +474,11 @@ Update agent header to reflect unified role.
 **Change**:
 
 ```markdown
-# Product Search Agent - System Prompt v2.0
+# Product and Services Agent - System Prompt v2.0
 
 ## 🎯 YOUR ROLE
 
-You are the **Product Search Agent** for {{workspaceName}}.
+You are the **Product and Services Agent** for {{workspaceName}}.
 ```
 
 **To**:
@@ -733,7 +733,7 @@ Increment version after major refactoring (services added, tone added).
 **Change**:
 
 ```markdown
-# Product Search Agent - System Prompt v2.0
+# Product and Services Agent - System Prompt v2.0
 ```
 
 **To**:
@@ -954,7 +954,7 @@ const AGENT_FILENAME_MAP: Partial<Record<AgentType, string>> = {
 **Estimated Time**: 5 min
 
 **Description**:  
-Change agent name from "Product Search Agent" to "Product & Services Search Agent".
+Change agent name from "Product and Services Agent" to "Product & Services Search Agent".
 
 **File**: `backend/prisma/data/defaultAgents.ts`
 
@@ -962,7 +962,7 @@ Change agent name from "Product Search Agent" to "Product & Services Search Agen
 
 ```typescript
 {
-  name: "Product Search Agent", // ❌ OLD
+  name: "Product and Services Agent", // ❌ OLD
   type: "PRODUCT_SEARCH" as AgentType,
   systemPrompt: loadPrompt("product-search-agent.md"),
   triggerKeywords: [...],
@@ -1071,7 +1071,7 @@ const AGENT_DESCRIPTIONS: Partial<Record<AgentType, string>> = {
   ROUTER:
     "Router Agent - Intent classification and delegation to specialist agents",
   PRODUCT_SEARCH:
-    "Product Search Agent - Product discovery with intelligent grouping", // ❌ OLD
+    "Product and Services Agent - Product discovery with intelligent grouping", // ❌ OLD
   CART_MANAGEMENT:
     "Cart Management Agent - Cart operations (add/remove/clear/view)",
   ORDER_TRACKING:

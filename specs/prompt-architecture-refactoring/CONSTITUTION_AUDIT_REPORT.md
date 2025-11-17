@@ -296,7 +296,7 @@ model ChatMessages {
 ```typescript
 // ❌ CURRENT (wrong name in database):
 agentType: "PRODUCT_SEARCH"
-name: "Product Search Agent"
+name: "Product and Services Agent"
 
 // ✅ TARGET (correct name):
 agentType: "PRODUCT_SEARCH"
@@ -509,7 +509,7 @@ model ChatMessages {
 **Verifica Constitution**:
 
 - ⚠️ **NON MENZIONATO** - Constitution non ha principio specifico per product display
-- Suggerimento: Aggiungere a **Best Practices** o Product Search Agent spec
+- Suggerimento: Aggiungere a **Best Practices** o Product and Services Agent spec
 
 **Verifica Implementazione**:
 
@@ -663,7 +663,7 @@ addService(serviceCode, quantity) // Always quantity=1 for services
 
 **Impact**:
 
-- Agent name mismatch: "Product Search Agent" vs "Product & Services Search Agent"
+- Agent name mismatch: "Product and Services Agent" vs "Product & Services Search Agent"
 - Services flow split between Router and ProductSearch
 - Confused responsibility boundaries
 
@@ -844,7 +844,7 @@ Add to Constitution Principle I (Database-First):
 
 **Recommendation**:
 
-1. Add to Product Search Agent prompt:
+1. Add to Product and Services Agent prompt:
    ```markdown
    ⚠️ MANDATORY FIELDS (CANNOT SKIP):
 

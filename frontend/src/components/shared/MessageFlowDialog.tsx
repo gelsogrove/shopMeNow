@@ -81,11 +81,12 @@ export default function MessageFlowDialog({
     if (agent?.includes("Save to History")) return "#F59E0B" // Orange/Amber for database save
     if (agent?.includes("WhatsApp Queue")) return "#0EA5E9" // Sky blue for queue
 
-    // 🆕 6 AGENTS ARCHITECTURE (no QueryAnalyzer, no Translation)
-    if (agent?.includes("Product Search")) return "#3B82F6" // Blue
+    // 🆕 7 AGENTS ARCHITECTURE (Router + 5 specialists + Profile Management + Safety)
+    if (agent?.includes("Product")) return "#3B82F6" // Blue (Product & Services Search)
     if (agent?.includes("Cart Management")) return "#10B981" // Green
     if (agent?.includes("Order Tracking")) return "#F97316" // Orange
     if (agent?.includes("Customer Support")) return "#EC4899" // Pink
+    if (agent?.includes("Profile Management")) return "#64748B" // Slate (includes notifications)
 
     return "#3B82F6" // Blue for generic sub-agents
   }
@@ -110,14 +111,16 @@ export default function MessageFlowDialog({
     )
       return <Shield className="w-5 h-5" />
 
-    // 🆕 6 AGENTS ARCHITECTURE - Specialist agents
-    if (agent?.includes("Product Search")) return <Search className="w-5 h-5" />
+    // 🆕 7 AGENTS ARCHITECTURE - Specialist agents
+    if (agent?.includes("Product")) return <Search className="w-5 h-5" /> // Product & Services Search
     if (agent?.includes("Cart Management"))
       return <ShoppingCart className="w-5 h-5" />
     if (agent?.includes("Order Tracking"))
       return <Package className="w-5 h-5" />
     if (agent?.includes("Customer Support"))
       return <Headphones className="w-5 h-5" />
+    if (agent?.includes("Profile Management"))
+      return <User className="w-5 h-5" /> // Profile + Notifications
 
     // Infrastructure steps
     if (agent?.includes("Save to History"))

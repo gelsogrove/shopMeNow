@@ -922,9 +922,8 @@ export function ClientSheet({
                   onClick={async (e) => {
                     e.preventDefault()
                     e.stopPropagation()
-                    alert("🔥 Before handleSubmit in onClick")
+
                     await handleSubmit(e as any)
-                    alert("🔥 After handleSubmit in onClick - NO REFRESH YET!")
                   }}
                 >
                   {(fetchedClient as ExtendedClient | null)?.id

@@ -24,7 +24,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   {
     name: "productSearchAgent",
     description:
-      "Delegate to Product Search Agent for product search, catalog browsing, certification filters. Use when customer asks about products, prices, stock, categories.",
+      "Delegate to Product and Services Agent for product search, catalog browsing, certification filters. Use when customer asks about products, prices, stock, categories.",
     parameters: {
       type: "object",
       properties: {
@@ -85,13 +85,49 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     },
   },
 
+  {
+    name: "profileManagementAgent",
+    description:
+      "Delegate to Profile Management Agent for email updates, notification preferences, profile data changes. Use when customer wants to change email, manage notifications, or update personal info.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Customer's profile-related request",
+        },
+      },
+      required: ["query"],
+    },
+  },
+
   // ========================================
-  // ROUTER DIRECT FUNCTIONS
+  // PROFILE MANAGEMENT AGENT FUNCTIONS
+  // ========================================
+  {
+    name: "handlePushNotifications",
+    description:
+      "Enable or disable push notifications for customer. Use when customer explicitly confirms notification preference change. ALWAYS ask confirmation BEFORE calling this function.",
+    parameters: {
+      type: "object",
+      properties: {
+        value: {
+          type: "boolean",
+          description:
+            "true to enable push notifications, false to disable them",
+        },
+      },
+      required: ["value"],
+    },
+  },
+
+  // ========================================
+  // DEPRECATED - OLD FUNCTIONS (to be removed)
   // ========================================
   {
     name: "manageNotifications",
     description:
-      "Subscribe or unsubscribe customer from promotional notifications. MUST ask for confirmation before calling!",
+      "⚠️ DEPRECATED - Use profileManagementAgent instead. Subscribe or unsubscribe customer from promotional notifications.",
     parameters: {
       type: "object",
       properties: {
@@ -107,7 +143,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
 
   // ========================================
-  // PRODUCT SEARCH AGENT FUNCTIONS
+  // PRODUCT AND SERVICES AGENT FUNCTIONS
   // NOTE: searchProducts REMOVED - LLM uses {{PRODUCTS}} from prompt only
   // ========================================
 
@@ -542,6 +578,12 @@ export function getFunctionNamesForAgentType(agentType: string): string[] {
 
     case "CUSTOMER_SUPPORT":
       return ["contactSupport"]
+
+    case "NOTIFICATIONS":
+      return ["manageNotifications"]
+
+    case "PROFILE_MANAGEMENT":
+      return [] // Profile agent uses context variables only (no function calls yet)
 
     case "SAFETY_TRANSLATION":
       return ["sendAlertEmail"]

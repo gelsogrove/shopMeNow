@@ -361,7 +361,7 @@ export class CallingFunctionsService {
   }
 
   /**
-   * Delegate to Product Search Agent
+   * Delegate to Product and Services Agent
    * This triggers a sub-agent call in the LLM orchestration layer
    */
   public async productSearchAgent(request: {
@@ -370,9 +370,9 @@ export class CallingFunctionsService {
     workspaceId: string
   }): Promise<StandardResponse> {
     try {
-      logger.info("🔍 Router delegating to Product Search Agent:", request)
+      logger.info("🔍 Router delegating to Product and Services Agent:", request)
 
-      // This function is called by Router Agent to delegate to Product Search Agent
+      // This function is called by Router Agent to delegate to Product and Services Agent
       // The actual delegation happens in llm-router.service.ts
       // We return a signal that tells the router to call the sub-agent
       return {
@@ -388,7 +388,7 @@ export class CallingFunctionsService {
       logger.error("❌ Error in productSearchAgent:", error)
       return {
         success: false,
-        message: "Error delegating to Product Search Agent",
+        message: "Error delegating to Product and Services Agent",
         timestamp: new Date().toISOString(),
       }
     }

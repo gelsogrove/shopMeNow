@@ -111,7 +111,7 @@
 ### Baseline (Before Refactoring)
 
 - **Router Agent**: 2,830 words (~3,678 tokens)
-- **Product Search Agent**: 1,283 words (~1,668 tokens)
+- **Product and Services Agent**: 1,283 words (~1,668 tokens)
 - **Total**: 4,113 words (~5,346 tokens)
 
 ### After Refactoring

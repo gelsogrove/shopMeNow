@@ -46,6 +46,7 @@ import {
 } from "@/services/agentApi"
 import { api } from "@/services/api"
 import {
+  Bell,
   Bot,
   Brain,
   ChevronRight,
@@ -62,6 +63,7 @@ import {
   Shield,
   ShoppingCart,
   Upload,
+  User,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
@@ -90,6 +92,8 @@ const iconMap: Record<string, LucideIcon> = {
   Brain,
   Settings,
   Bot,
+  User,
+  Bell,
 }
 
 // Get icon component from database icon name with colorful background
@@ -108,6 +112,7 @@ const getAgentIcon = (iconName: string | undefined, agentType: string) => {
     cart_management: { bg: "bg-green-600" }, // Green
     order_tracking: { bg: "bg-orange-600" }, // Orange
     customer_support: { bg: "bg-pink-600" }, // Pink
+    profile_management: { bg: "bg-slate-600" }, // Slate for profile + notifications
     safety_translation: { bg: "bg-red-600" }, // Red like timeline
   }
 

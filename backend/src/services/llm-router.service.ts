@@ -42,6 +42,7 @@ import { CartManagementAgentLLM } from "../application/agents/CartManagementAgen
 import { CustomerSupportAgentLLM } from "../application/agents/CustomerSupportAgentLLM"
 import { OrderTrackingAgentLLM } from "../application/agents/OrderTrackingAgentLLM"
 import { ProductSearchAgentLLM } from "../application/agents/ProductSearchAgentLLM"
+import { ProfileManagementAgentLLM } from "../application/agents/ProfileManagementAgentLLM"
 import { SafetyTranslationAgent } from "../application/agents/SafetyTranslationAgent"
 import { LinkReplacementService } from "../application/services/link-replacement.service"
 import { getFunctionsForRouter } from "../config/agent-functions"
@@ -214,88 +215,6 @@ export class LLMRouterService {
    * @see Constitution v1.8.0 Principle X: Validation-Only Router Pattern
    * @see docs/architecture/MULTI_AGENT_FLOW.md for complete flow documentation
    */
-  private validateSubAgentResponse(options: {
-    response: string
-    expectedAgent: string
-    userQuery: string
-  }): { isValid: boolean; reason?: string } {
-    const { response, expectedAgent, userQuery } = options
-
-    // Rule 1: Response must be non-empty
-    if (!response || response.trim().length === 0) {
-      return { isValid: false, reason: "Empty response from sub-agent" }
-    }
-
-    // Rule 2: Response must be meaningful (>50 characters)
-    // Prevents generic responses like "ok", "sure", "I'll help you"
-    if (response.trim().length < 50) {
-      return {
-        isValid: false,
-        reason: `Response too short (${response.trim().length} < 50 chars)`,
-      }
-    }
-
-    // Rule 3: PRODUCT_SEARCH must contain product info or categories
-    if (expectedAgent === "PRODUCT_SEARCH") {
-      const hasProducts = /\d+\.\s+\*\*/.test(response) // "1. **Product Name**"
-      const hasCategories = /categori/i.test(response)
-      const hasNoProducts = /non\s+(ho|abbiamo)|no\s+products?/i.test(response)
-
-      if (!hasProducts && !hasCategories && !hasNoProducts) {
-        return {
-          isValid: false,
-          reason:
-            "PRODUCT_SEARCH response missing product list, categories, or 'no products' message",
-        }
-      }
-    }
-
-    // Rule 4: CART_MANAGEMENT must contain cart action confirmation
-    if (expectedAgent === "CART_MANAGEMENT") {
-      const hasCartAction = /aggiunt|rimoss|carrell|cart|added|removed/i.test(
-        response
-      )
-      if (!hasCartAction) {
-        return {
-          isValid: false,
-          reason: "CART_MANAGEMENT response missing cart action confirmation",
-        }
-      }
-    }
-
-    // Rule 5: ORDER_TRACKING must contain order code or tracking info
-    if (expectedAgent === "ORDER_TRACKING") {
-      const hasOrderInfo = /ORD-|ordine|order|tracking/i.test(response)
-      if (!hasOrderInfo) {
-        return {
-          isValid: false,
-          reason: "ORDER_TRACKING response missing order code or tracking info",
-        }
-      }
-    }
-
-    // Rule 6: CUSTOMER_SUPPORT must contain support message or agent info
-    if (expectedAgent === "CUSTOMER_SUPPORT") {
-      const hasSupportMessage =
-        /support|assist|help|agente|contatt|contact/i.test(response)
-      if (!hasSupportMessage) {
-        return {
-          isValid: false,
-          reason: "CUSTOMER_SUPPORT response missing support message",
-        }
-      }
-    }
-
-    // ✅ All validation checks passed
-    logger.info("✅ Sub-agent response validation passed", {
-      agent: expectedAgent,
-      responseLength: response.length,
-      savedTokens: "~5000 (Router LLM call skipped)",
-    })
-
-    return { isValid: true }
-  }
-
   /**
    * 🆕 Feature 126: Check if customer is blocked (P1 - Security Layer)
    *
@@ -1547,6 +1466,64 @@ export class LLMRouterService {
             previousAgent === "PRODUCT_SEARCH" &&
             delegationTarget !== "PRODUCT_SEARCH"
 
+          // 🆕 ADD ROUTER CONTEXT INTERPRETATION STEP (if short response detected)
+          const isShortResponse = userMessage.trim().length <= 5
+          const shortResponsePatterns = /^(si|sì|no|ok|yes|1|2|3|4|5|6|7|8|9)$/i
+
+          if (
+            isShortResponse &&
+            shortResponsePatterns.test(userMessage.trim())
+          ) {
+            // Extract context from conversation history
+            const recentMessages = conversationHistory
+              .filter((msg: any) => msg.role !== "system")
+              .slice(-3)
+
+            const lastAssistantMessage = recentMessages
+              .reverse()
+              .find((msg: any) => msg.role === "assistant")
+
+            debugSteps.push({
+              type: "router_context" as any,
+              agent: "Router Agent - Context Interpretation",
+              model: routerAgent.model,
+              temperature: routerAgent.temperature,
+              timestamp: new Date().toISOString(),
+              input: {
+                userMessage: userMessage.trim(),
+                conversationHistory: recentMessages,
+              },
+              output: {
+                decision: `Contextualized: ${delegationQuery.substring(0, 100)}...`,
+                message: `Pattern: ${
+                  lastAssistantMessage?.content?.includes("Vuoi")
+                    ? "Confirmation"
+                    : lastAssistantMessage?.content?.match(/\d+\)/)
+                      ? "List selection"
+                      : "Short response"
+                } | Switch: ${
+                  previousAgent && previousAgent !== delegationTarget
+                    ? `${previousAgent} → ${delegationTarget}`
+                    : "No switch"
+                }`,
+              },
+              tokenUsage: {
+                promptTokens: 0,
+                completionTokens: 0,
+                totalTokens: 0,
+              },
+            } as any)
+
+            logger.info(
+              "✅ Router Context Interpretation step added to timeline",
+              {
+                userMessage: userMessage.trim(),
+                contextualizedMessage: delegationQuery,
+                agentSwitch: previousAgent !== delegationTarget,
+              }
+            )
+          }
+
           // 🧹 RESET filteredProducts when leaving PRODUCT_SEARCH context
           let updatedMetadata: any = currentConversation?.metadata || {}
           if (isLeavingProductSearch) {
@@ -1592,14 +1569,34 @@ export class LLMRouterService {
 
           switch (delegationTarget) {
             case "PRODUCT_SEARCH": {
-              // 🔒 PRE-CHECK: Verify products exist before delegating
+              // � ADD DELEGATION DEBUG STEP (Router → Product)
+              debugSteps.push({
+                type: "delegation" as any,
+                timestamp: new Date().toISOString(),
+                fromAgent: "ROUTER",
+                toAgent: "PRODUCT_SEARCH",
+                reason: "Router detected product/catalog inquiry",
+                delegationQuery: params.message,
+                detectedPattern:
+                  functionName === "PRODUCT_SEARCH"
+                    ? "Direct function call"
+                    : "Intent classification",
+              } as any)
+
+              logger.info("✅ Added delegation debug step (Router → Product)", {
+                toAgent: "PRODUCT_SEARCH",
+              })
+
+              // �🔒 PRE-CHECK: Verify products exist before delegating
               // Prevents LLM from inventing non-existent products
               const queryLower = params.message.toLowerCase()
               // ✅ ALWAYS delegate to ProductSearchAgentLLM - let LLM decide what to show
               const productSearchAgent = new ProductSearchAgentLLM(this.prisma)
 
               console.log("\n" + "🔵".repeat(50))
-              console.log("🔵 ROUTER IS DELEGATING TO PRODUCT SEARCH AGENT")
+              console.log(
+                "🔵 ROUTER IS DELEGATING TO PRODUCT AND SERVICES AGENT"
+              )
               console.log("🔵".repeat(50) + "\n")
 
               subAgentResponse = await productSearchAgent.handleQuery({
@@ -1613,6 +1610,24 @@ export class LLMRouterService {
               break
             }
             case "CART_MANAGEMENT": {
+              // 🔗 ADD DELEGATION DEBUG STEP (Router → Cart)
+              debugSteps.push({
+                type: "delegation" as any,
+                timestamp: new Date().toISOString(),
+                fromAgent: "ROUTER",
+                toAgent: "CART_MANAGEMENT",
+                reason: "Router detected cart operation",
+                delegationQuery: delegationQuery,
+                detectedPattern:
+                  functionName === "CART_MANAGEMENT"
+                    ? "Direct function call"
+                    : "Intent classification",
+              } as any)
+
+              logger.info("✅ Added delegation debug step (Router → Cart)", {
+                toAgent: "CART_MANAGEMENT",
+              })
+
               const cartManagementAgent = new CartManagementAgentLLM(
                 this.prisma
               )
@@ -1665,6 +1680,24 @@ export class LLMRouterService {
               break
             }
             case "ORDER_TRACKING": {
+              // 🔗 ADD DELEGATION DEBUG STEP (Router → Orders)
+              debugSteps.push({
+                type: "delegation" as any,
+                timestamp: new Date().toISOString(),
+                fromAgent: "ROUTER",
+                toAgent: "ORDER_TRACKING",
+                reason: "Router detected order inquiry",
+                delegationQuery: delegationQuery,
+                detectedPattern:
+                  functionName === "ORDER_TRACKING"
+                    ? "Direct function call"
+                    : "Intent classification",
+              } as any)
+
+              logger.info("✅ Added delegation debug step (Router → Orders)", {
+                toAgent: "ORDER_TRACKING",
+              })
+
               const orderTrackingAgent = new OrderTrackingAgentLLM(this.prisma)
               subAgentResponse = await orderTrackingAgent.handleQuery({
                 workspaceId: params.workspaceId,
@@ -1677,6 +1710,24 @@ export class LLMRouterService {
               break
             }
             case "CUSTOMER_SUPPORT": {
+              // 🔗 ADD DELEGATION DEBUG STEP (Router → Support)
+              debugSteps.push({
+                type: "delegation" as any,
+                timestamp: new Date().toISOString(),
+                fromAgent: "ROUTER",
+                toAgent: "CUSTOMER_SUPPORT",
+                reason: "Router detected support inquiry",
+                delegationQuery: delegationQuery,
+                detectedPattern:
+                  functionName === "CUSTOMER_SUPPORT"
+                    ? "Direct function call"
+                    : "Intent classification",
+              } as any)
+
+              logger.info("✅ Added delegation debug step (Router → Support)", {
+                toAgent: "CUSTOMER_SUPPORT",
+              })
+
               const customerSupportAgent = new CustomerSupportAgentLLM(
                 this.prisma
               )
@@ -1686,6 +1737,55 @@ export class LLMRouterService {
                 customerName: params.customerName,
                 customerLanguage: params.customerLanguage,
                 query: delegationQuery,
+              })
+              break
+            }
+            case "PROFILE_MANAGEMENT": {
+              // 🔗 ADD DELEGATION DEBUG STEP (Router → Profile)
+              debugSteps.push({
+                type: "delegation" as any,
+                timestamp: new Date().toISOString(),
+                fromAgent: "ROUTER",
+                toAgent: "PROFILE_MANAGEMENT",
+                reason: "Router detected profile/notification inquiry",
+                delegationQuery: delegationQuery,
+                detectedPattern:
+                  functionName === "PROFILE_MANAGEMENT"
+                    ? "Direct function call"
+                    : "Intent classification",
+              } as any)
+
+              logger.info("✅ Added delegation debug step (Router → Profile)", {
+                toAgent: "PROFILE_MANAGEMENT",
+              })
+
+              const profileManagementAgent = new ProfileManagementAgentLLM(
+                this.prisma
+              )
+
+              // Extract last 3 messages for context (excluding system prompt)
+              const recentHistory = conversationHistory
+                .filter((msg: any) => msg.role !== "system")
+                .slice(-3) // Last 3 messages
+
+              logger.info(
+                `📜 Passing conversation history to ProfileManagement`,
+                {
+                  historyLength: recentHistory.length,
+                  messages: recentHistory.map((m: any) => ({
+                    role: m.role,
+                    contentPreview: m.content?.substring(0, 50),
+                  })),
+                }
+              )
+
+              subAgentResponse = await profileManagementAgent.handleQuery({
+                workspaceId: params.workspaceId,
+                customerId: params.customerId,
+                customerName: params.customerName,
+                customerLanguage: params.customerLanguage,
+                query: delegationQuery,
+                conversationHistory: recentHistory, // ✅ Pass conversation context
               })
               break
             }
@@ -1746,7 +1846,7 @@ export class LLMRouterService {
             currentDebugStepsCount: debugSteps.length,
           })
 
-          // 🔍 EXTRACT QUERY ANALYZER CALLS (if Product Search Agent)
+          // 🔍 EXTRACT QUERY ANALYZER CALLS (if Product and Services Agent)
           // NOTE: searchProducts removed - no more QueryAnalyzer calls
           const queryAnalyzerCalls: any[] = []
 
@@ -1799,7 +1899,7 @@ export class LLMRouterService {
             hasNestedQueryAnalyzer: queryAnalyzerCalls.length > 0,
           })
 
-          // � CHECK IF PRODUCT SEARCH AGENT IS REQUESTING CART DELEGATION
+          // � CHECK IF PRODUCT AND SERVICES AGENT IS REQUESTING CART DELEGATION
           // Pattern: "🛒 DELEGATE_TO_CART: add [PRODUCT_NAME]"
           if (
             delegationTarget === "PRODUCT_SEARCH" &&
@@ -1817,14 +1917,36 @@ export class LLMRouterService {
                 originalResponse: subAgentFinalResponse,
               })
 
+              // Extract recent conversation history FIRST
+              const recentHistory = conversationHistory
+                .filter((msg: any) => msg.role !== "system")
+                .slice(-3)
+
+              // 🔗 ADD DELEGATION DEBUG STEP (shows Product → Cart handoff)
+              debugSteps.push({
+                type: "delegation" as any,
+                timestamp: new Date().toISOString(),
+                fromAgent: "PRODUCT_SEARCH",
+                toAgent: "CART_MANAGEMENT",
+                reason: "Product agent detected user wants to add item to cart",
+                delegationQuery: cartQuery,
+                contextFromHistory: recentHistory
+                  .map((msg: any) => `${msg.role}: ${msg.content}`)
+                  .join("\n"),
+                detectedPattern:
+                  "🛒 DELEGATE_TO_CART: pattern in Product response",
+              } as any)
+
+              logger.info("✅ Added delegation debug step (Product → Cart)", {
+                fromAgent: "PRODUCT_SEARCH",
+                toAgent: "CART_MANAGEMENT",
+                delegationQuery: cartQuery,
+              })
+
               // Call Cart Management Agent with the extracted query
               const cartManagementAgent = new CartManagementAgentLLM(
                 this.prisma
               )
-
-              const recentHistory = conversationHistory
-                .filter((msg: any) => msg.role !== "system")
-                .slice(-3)
 
               const cartResponse = await cartManagementAgent.handleQuery({
                 workspaceId: params.workspaceId,
@@ -1886,59 +2008,17 @@ export class LLMRouterService {
             }
           }
 
-          // 🆕 VALIDATION-ONLY ROUTER PATTERN
-          // Check if sub-agent response is valid WITHOUT making Router LLM call
-          // This saves ~5000 tokens per request (25% reduction) when validation passes
-          const validationResult = this.validateSubAgentResponse({
-            response: subAgentFinalResponse,
-            expectedAgent: delegationTarget,
-            userQuery: params.message,
-          })
-
-          if (!validationResult.isValid) {
-            // ❌ Response invalid - need Router to re-process
-            logger.warn(
-              "⚠️ Sub-agent response invalid, Router will reformulate",
-              {
-                agent: delegationTarget,
-                reason: validationResult.reason,
-                responsePreview: subAgentFinalResponse.substring(0, 100),
-              }
-            )
-
-            // Add to messages and continue loop (Router LLM call #3)
-            messages.push({
-              role: "function" as const,
-              name: functionName,
-              content: subAgentFinalResponse,
-            })
-
-            // Track which agent was used
-            agentUsed = delegationTarget
-
-            // Update total tokens (from specialist agent response)
-            totalTokens += subAgentResponse.tokensUsed || 0
-
-            logger.info("🔄 Continuing to Router for response reformulation", {
-              nextIteration: iterations + 1,
-            })
-
-            // CONTINUE loop - Router LLM will process specialist agent response
-            continue
-          }
-
-          // ✅ Response valid - SKIP Router reformulation, go DIRECTLY to exit loop
-          logger.info("✅ Sub-agent response valid, skipping Router LLM call", {
-            agent: delegationTarget,
-            savedTokens: "~5000",
-            directToSafety: true,
-            responseLength: subAgentFinalResponse.length,
-          })
-
-          // 🔧 NOTE: Validation-only is INTERNAL implementation detail
-          // NO debugStep added - validation should be invisible in Message Flow Timeline
-          // User sees: Router → Specialist → Safety (clean flow)
-          // Logs show: "✅ Sub-agent response valid, skipping Router LLM call"
+          // ✅ DIRECT EXIT - Trust specialist agent response
+          // If prompts are well-written, LLM responds correctly!
+          // No validation needed - just return specialist agent response
+          logger.info(
+            "✅ Specialist agent completed, returning response directly",
+            {
+              agent: delegationTarget,
+              responseLength: subAgentFinalResponse.length,
+              directToSafety: true,
+            }
+          )
 
           // Track which agent was used
           agentUsed = delegationTarget
@@ -1947,7 +2027,7 @@ export class LLMRouterService {
           totalTokens += subAgentResponse.tokensUsed || 0
 
           logger.info(
-            "🔍 DEBUG: Exiting functionCallingLoop with validation-only approval",
+            "🔍 DEBUG: Exiting functionCallingLoop with specialist response",
             {
               debugStepsCount: debugSteps.length,
               response: subAgentFinalResponse.substring(0, 100),
@@ -1956,14 +2036,14 @@ export class LLMRouterService {
           )
 
           // ⬅️ EXIT LOOP - Return directly with sub-agent response
-          // Router validated the response without LLM call - proceed to Safety layer
+          // Proceed to Safety & Translation layer
           return {
             response: subAgentFinalResponse,
             tokensUsed: totalTokens,
             iterations,
             agentUsed,
             confidence: 0.9,
-            debugSteps, // Contains: Router → SubAgent → Router(validation-only)
+            debugSteps, // Contains: Router → SubAgent
           }
         }
 
@@ -1977,7 +2057,7 @@ export class LLMRouterService {
           lowerFunctionName.includes("search") ||
           lowerFunctionName.includes("product")
         )
-          subAgentName = "Product Search Agent"
+          subAgentName = "Product and Services Agent"
         else if (lowerFunctionName.includes("cart"))
           subAgentName = "Cart Management Agent"
         else if (lowerFunctionName.includes("order"))

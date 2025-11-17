@@ -35,7 +35,7 @@ const AGENT_DESCRIPTIONS: Partial<Record<AgentType, string>> = {
   ROUTER:
     "Router Agent - Handles FAQ matching and intent classification to route messages to specialist agents",
   PRODUCT_SEARCH:
-    "Product Search Agent - Handles product searches with QueryPlanner and semantic matching",
+    "Product and Services Agent - Handles product searches with QueryPlanner and semantic matching",
   CART_MANAGEMENT:
     "Cart Management Agent - Handles add to cart, remove, view cart, and checkout operations",
   ORDER_TRACKING:

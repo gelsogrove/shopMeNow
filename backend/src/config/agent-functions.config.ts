@@ -32,26 +32,6 @@ export const ROUTER_FUNCTIONS: FunctionDefinition[] = [
   {
     type: "function",
     function: {
-      name: "manageNotifications",
-      description:
-        "🔔 PRIORITY 4.5 - MEDIUM. Gestisce sottoscrizione/cancellazione notifiche push WhatsApp. TRIGGER NATURALI (consigliati): Usare quando utente chiede in linguaggio naturale: 'voglio ricevere offerte', 'iscrivimi', 'subscribe me', 'quiero ofertas', 'quero receber', 'non voglio più offerte', 'disiscrivimi', 'unsubscribe', 'cancelar', etc. OPZIONE ALTERNATIVA (avanzata): riconosce keywords esatte 'SUBSCRIBE'/'UNSUBSCRIBE' (uppercase). FLOW OBBLIGATORIO: 1) Utente chiede iscrizione/disiscrizione (linguaggio naturale o keywords), 2) Chiedi conferma semplice: 'Vuoi iscriverti alle notifiche push? 📬' o 'Vuoi disiscriverti? 📭', 3) Se conferma ('sì','yes','si','sí','sim') → chiama manageNotifications(action), 4) Mostra messaggio risultato. {{SUBSCRIBE_MESSAGE}} token mostra invito SOLO se push_notifications_consent=false. NON suggerire mai disiscrizione nel chatbot normale (solo in campagne push). NON chiamare se: utente non ha confermato, contesto ambiguo.",
-      parameters: {
-        type: "object",
-        properties: {
-          action: {
-            type: "string",
-            enum: ["SUBSCRIBE", "UNSUBSCRIBE"],
-            description:
-              "Azione richiesta: SUBSCRIBE (iscriviti) o UNSUBSCRIBE (disiscriviti). SEMPRE maiuscolo nel parametro.",
-          },
-        },
-        required: ["action"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
       name: "productSearchAgent",
       description:
         "🔍 Delega al Product & Services Search Agent. Usare quando cliente cerca prodotti/servizi, categorie, filtri, certificazioni, o seleziona numero da lista.",
@@ -121,6 +101,24 @@ export const ROUTER_FUNCTIONS: FunctionDefinition[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "profileManagementAgent",
+      description:
+        "👤 Delega al Profile Management Agent. Usare quando cliente vuole gestire profilo (modifica dati, preferenze) o notifiche push (attiva/disattiva).",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: "Richiesta profilo/notifiche del cliente",
+          },
+        },
+        required: ["query"],
+      },
+    },
+  },
 ]
 
 /**
@@ -130,9 +128,9 @@ export const PRODUCT_SEARCH_FUNCTIONS: FunctionDefinition[] = [
   {
     type: "function",
     function: {
-      name: "searchProduct",
+      name: "searchProductForStatistic",
       description:
-        "📊 PRIORITY 5 - BACKGROUND ONLY (non-blocking). Registra la ricerca di un prodotto da parte del cliente per analytics e trend analysis. Usare quando l'utente cerca/chiede di un prodotto alimentare: 'hai la burrata?', 'avete prosciutto?', 'mi serve parmigiano', 'vendete champagne?', 'non trovate tartufo?'. Viene chiamata SIA per prodotti trovati CHE per prodotti NON trovati. ⚠️ BACKGROUND FUNCTION: Il LLM continua a rispondere NORMALMENTE dopo la chiamata, l'utente NON deve sapere della registrazione. NON bloccare il flusso conversazionale con messaggi tecnici tipo 'sto registrando'. La funzione viene eseguita in parallelo alla risposta. NON usare per prodotti non alimentari (software, auto, abbigliamento). NON chiamare due volte per stesso prodotto nella stessa conversazione. DISAMBIGUAZIONE: 'hai burrata?' = searchProduct (BACKGROUND) | 'aggiungi burrata' (DOPO conferma) = addProduct.",
+        "📊 PRIORITY 5 - BACKGROUND ONLY (non-blocking). Registra la ricerca di un prodotto da parte del cliente per analytics e trend analysis. Usare quando l'utente cerca/chiede di un prodotto alimentare: 'hai la burrata?', 'avete prosciutto?', 'mi serve parmigiano', 'vendete champagne?', 'non trovate tartufo?'. Viene chiamata SIA per prodotti trovati CHE per prodotti NON trovati. ⚠️ BACKGROUND FUNCTION: Il LLM continua a rispondere NORMALMENTE dopo la chiamata, l'utente NON deve sapere della registrazione. NON bloccare il flusso conversazionale con messaggi tecnici tipo 'sto registrando'. La funzione viene eseguita in parallelo alla risposta. NON usare per prodotti non alimentari (software, auto, abbigliamento). NON chiamare due volte per stesso prodotto nella stessa conversazione. DISAMBIGUAZIONE: 'hai burrata?' = searchProductForStatistic (BACKGROUND) | 'aggiungi burrata' (DOPO conferma) = addProduct.",
       parameters: {
         type: "object",
         properties: {
@@ -289,6 +287,44 @@ export const CUSTOMER_SUPPORT_FUNCTIONS: FunctionDefinition[] = [
 ]
 
 /**
+ * Profile Management Agent Functions
+ */
+export const PROFILE_MANAGEMENT_FUNCTIONS: FunctionDefinition[] = [
+  {
+    type: "function",
+    function: {
+      name: "handlePushNotifications",
+      description:
+        "🔔 Gestisce sottoscrizione/cancellazione notifiche push. Usare quando cliente vuole attivare o disattivare notifiche promozionali. FLOW OBBLIGATORIO: 1) Mostra stato attuale (iscritto SI/NO), 2) Spiega cosa cambia, 3) Chiedi conferma esplicita, 4) SOLO dopo 'SI' → chiama handlePushNotifications(value). ESEMPI: 'voglio ricevere offerte' → value: true | 'disattiva notifiche' → value: false. NON chiamare senza conferma esplicita.",
+      parameters: {
+        type: "object",
+        properties: {
+          value: {
+            type: "boolean",
+            description:
+              "true = attiva notifiche push (SUBSCRIBE), false = disattiva notifiche push (UNSUBSCRIBE).",
+          },
+        },
+        required: ["value"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "getProfileLink",
+      description:
+        "🔗 Genera link sicuro al profilo cliente. Usare quando cliente vuole modificare dati personali (email, telefono, indirizzo) o vedere preferenze. Link ha validità limitata e include token JWT. Dopo chiamata, mostrare link al cliente.",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+    },
+  },
+]
+
+/**
  * Get all available functions for a specific agent type
  */
 export function getAgentFunctions(
@@ -305,6 +341,8 @@ export function getAgentFunctions(
       return ORDER_TRACKING_FUNCTIONS
     case "CUSTOMER_SUPPORT":
       return CUSTOMER_SUPPORT_FUNCTIONS
+    case "PROFILE_MANAGEMENT":
+      return PROFILE_MANAGEMENT_FUNCTIONS
     case "SAFETY_TRANSLATION":
       return [] // Safety agent doesn't call functions
     default:
@@ -323,6 +361,7 @@ export function getAllFunctions(): FunctionDefinition[] {
     ...CART_MANAGEMENT_FUNCTIONS,
     ...ORDER_TRACKING_FUNCTIONS,
     ...CUSTOMER_SUPPORT_FUNCTIONS,
+    ...PROFILE_MANAGEMENT_FUNCTIONS,
   ]
 }
 

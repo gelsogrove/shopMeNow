@@ -106,7 +106,7 @@ npx ts-node scripts/update-all-agent-prompts.ts
 ```
 ✅ Aggiornati 6 agent in totale!
    1. Router Agent - FAQ, servizi, offerte, delegation
-   2. Product Search Agent - searchProducts, certificazioni
+   2. Product and Services Agent - searchProducts, certificazioni
    3. Cart Management Agent - addProduct, resetCart, repeatOrder
    4. Order Tracking Agent - GetLinkOrderByCode, fatture
    5. Customer Support Agent - contactOperator, frustrazione

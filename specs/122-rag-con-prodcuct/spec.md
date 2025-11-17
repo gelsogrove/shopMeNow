@@ -181,7 +181,7 @@ continue
 
 **Agents**:
 
-#### Product Search Agent (order: 2)
+#### Product and Services Agent (order: 2)
 
 - **Calling Functions**: `cartManagementAgent` ONLY
 - **Variables**: `{{PRODUCTS}}` embedded in prompt (Italian)

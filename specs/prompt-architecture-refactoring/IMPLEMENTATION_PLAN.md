@@ -213,7 +213,7 @@ IF (subscribe/unsubscribe) → manageNotifications
 **Current State** (WRONG):
 
 ```markdown
-# Product Search Agent (55,000 tokens)
+# Product and Services Agent (55,000 tokens)
 
 ## Variables
 
@@ -297,7 +297,7 @@ export const defaultAgents: Omit<AgentConfig, "id" | "createdAt" | "updatedAt">[
   },
   {
     agentType: "PRODUCT_SEARCH",
-    name: "Product Search Agent",  ❌ WRONG NAME (Rule 6)
+    name: "Product and Services Agent",  ❌ WRONG NAME (Rule 6)
     systemPrompt: fs.readFileSync(
       path.join(__dirname, "../../../docs/prompts/product-search-agent.md"),  ❌ WRONG PATH
       "utf-8"
@@ -339,7 +339,7 @@ export const defaultAgents: Omit<AgentConfig, "id" | "createdAt" | "updatedAt">[
 
 **Changes Required**:
 
-- ✅ Update agent name: "Product Search Agent" → "Product & Services Search Agent"
+- ✅ Update agent name: "Product and Services Agent" → "Product & Services Search Agent"
 - ✅ Update file path: `product-search-agent.md` → `product-services-search-agent.md`
 
 ---
@@ -872,7 +872,7 @@ diff token-baseline.txt <(wc -w docs/prompts/*.md)
 ### BREAKING CHANGES
 
 - Router Agent stripped to pure orchestration (8k → 3k tokens)
-- Product Search Agent renamed to "Product & Services Search Agent"
+- Product and Services Agent renamed to "Product & Services Search Agent"
 - Security Gate added as mandatory first validation step
 - {{SERVICES}} variable removed from Router (appears ONLY in Product & Services)
 
