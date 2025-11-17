@@ -1288,12 +1288,13 @@ Vuoi aggiungerla al carrello? 🛒
 ❌ **WRONG** (discount repeated on each line):
 
 ```markdown
-1. Torrone (DOLCI-004) €8.90 → €8.10 (10% DI SCONTO)  ← NO! Troppo verboso!
-2. Pandoro (DOLCI-005) €18.50 → €16.70 (10% DI SCONTO)  ← NO! Ripetizione inutile!
-3. Panettone (DOLCI-001) €22.00 → €19.80 (10% DI SCONTO)  ← NO! Già chiaro dal prezzo scontato!
+1. Torrone (DOLCI-004) €8.90 → €8.10 (10% DI SCONTO) ← NO! Troppo verboso!
+2. Pandoro (DOLCI-005) €18.50 → €16.70 (10% DI SCONTO) ← NO! Ripetizione inutile!
+3. Panettone (DOLCI-001) €22.00 → €19.80 (10% DI SCONTO) ← NO! Già chiaro dal prezzo scontato!
 ```
 
-**WHY WRONG**: 
+**WHY WRONG**:
+
 - Cliente vede già `~€8.90~ → €8.10` = prezzo scontato chiaro
 - "(10% DI SCONTO)" ripetuto 3-5-10 volte = ridondante e fastidioso
 - Lista diventa troppo lunga e difficile da leggere
@@ -1301,14 +1302,15 @@ Vuoi aggiungerla al carrello? 🛒
 ✅ **CORRECT** (discount shown once at the end):
 
 ```markdown
-1. Torrone (DOLCI-004) ~€8.90~ → €8.10  ← Prezzo chiaro, no testo ripetuto
+1. Torrone (DOLCI-004) ~€8.90~ → €8.10 ← Prezzo chiaro, no testo ripetuto
 2. Pandoro (DOLCI-005) ~€18.50~ → €16.70
 3. Panettone (DOLCI-001) ~€22.00~ → €19.80
 
-💰 Prezzi con sconto del 10% già applicato!  ← Una nota UNICA
+💰 Prezzi con sconto del 10% già applicato! ← Una nota UNICA
 ```
 
 **WHY CORRECT**:
+
 - ✅ Lista pulita e leggibile
 - ✅ Cliente vede sconto dai prezzi barrati (~€8.90~ → €8.10)
 - ✅ Una nota finale basta per ricordare lo sconto
