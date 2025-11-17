@@ -117,10 +117,14 @@ export class PriceCalculationService {
 
         // Calculate final price
         const originalPrice = product.price
-        const finalPrice =
+        let finalPrice =
           appliedDiscount > 0
             ? originalPrice * (1 - appliedDiscount / 100)
             : originalPrice
+
+        // 🔴 CRITICAL: Round UP to nearest 10 cents (€8.01 → €8.10, €8.11 → €8.20)
+        // Andrea's requirement: arrotondamento per eccesso ai 10 centesimi
+        finalPrice = Math.ceil(finalPrice * 10) / 10
 
         return {
           ...product,

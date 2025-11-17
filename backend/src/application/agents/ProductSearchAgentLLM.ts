@@ -338,9 +338,11 @@ export class ProductSearchAgentLLM {
           }
         : {}
 
-      // Load dynamic content (products, categories, etc.)
+      // Load dynamic content (products, categories, etc.) with customer discount applied
+      const customerDiscount = customer?.discount || 0
       const productsText = await messageRepo.getActiveProducts(
-        context.workspaceId
+        context.workspaceId,
+        customerDiscount // 🔴 CRITICAL: Pass customer discount to calculate prices correctly
       )
       const categoriesText = await messageRepo.getActiveCategories(
         context.workspaceId
