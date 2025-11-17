@@ -173,7 +173,7 @@ export class OrderService {
 
       const createdOrder = await this.orderRepository.create(order)
 
-      // 💰 BILLING: If order is created as CONFIRMED, track NEW_ORDER billing (€1.50)
+      // 💰 BILLING: If order is created as CONFIRMED, track NEW_ORDER billing (€1.00)
       if (createdOrder.status === OrderStatus.CONFIRMED) {
         try {
           await this.billingService.trackNewOrder(
@@ -182,7 +182,7 @@ export class OrderService {
             `Order ${createdOrder.orderCode} confirmed at creation`
           )
           logger.info(
-            `[BILLING] 💰 New order created as CONFIRMED: €1.50 charged for order ${createdOrder.orderCode} (customer: ${createdOrder.customerId})`
+            `[BILLING] 💰 New order created as CONFIRMED: €1.00 charged for order ${createdOrder.orderCode} (customer: ${createdOrder.customerId})`
           )
         } catch (billingError) {
           logger.error(
@@ -327,7 +327,7 @@ export class OrderService {
       if (updatedOrder) {
         await this.stockService.handleOrderStatusChange(id, oldStatus, status)
 
-        // 💰 BILLING: Track NEW_ORDER when status becomes CONFIRMED (€1.50)
+        // 💰 BILLING: Track NEW_ORDER when status becomes CONFIRMED (€1.00)
         if (
           status === OrderStatus.CONFIRMED &&
           oldStatus !== OrderStatus.CONFIRMED
@@ -341,7 +341,7 @@ export class OrderService {
                 `Order ${updatedOrder.orderCode} confirmed`
               )
               logger.info(
-                `[BILLING] 💰 New order confirmed: €1.50 charged for order ${updatedOrder.orderCode} (customer: ${customerId})`
+                `[BILLING] 💰 New order confirmed: €1.00 charged for order ${updatedOrder.orderCode} (customer: ${customerId})`
               )
             } else {
               logger.warn(

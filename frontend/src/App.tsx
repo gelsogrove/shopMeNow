@@ -38,7 +38,6 @@ import { ChannelTypesPage } from "./pages/settings/ChannelTypesPage"
 import { LanguagesPage } from "./pages/settings/LanguagesPage"
 import { SuppliersPage } from "./pages/SuppliersPage"
 
-import { ProductSearchDebug } from "./pages/debug/ProductSearchDebug"
 import { ProductsPage as SettingsProductsPage } from "./pages/settings/ProductsPage"
 
 import { Suspense, lazy } from "react"
@@ -172,11 +171,6 @@ export function App() {
                   {/* Campaign routes */}
                   <Route path="/campaigns" element={<Layout />}>
                     <Route index element={<CampaignsPage />} />
-                  </Route>
-
-                  {/* Debug Search routes */}
-                  <Route path="/debug/search" element={<Layout />}>
-                    <Route index element={<ProductSearchDebug />} />
                   </Route>
                 </Route>
 

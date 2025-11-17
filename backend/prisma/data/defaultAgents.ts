@@ -54,7 +54,7 @@ export const defaultAgents = (
       "Pure orchestration: intent classification, context interpretation for short responses (with CONFERMA keyword), and FAQ handling",
     systemPrompt: loadPrompt("router-agent.md"),
     model: "openai/gpt-4o-mini",
-    temperature: 0.2, // ✅ Deterministic routing
+    temperature: 0, // ✅ Zero temperature = fully deterministic routing (no creativity needed)
     maxTokens: 500, // ✅ JSON response only
     order: 0,
     isActive: true,
@@ -72,8 +72,8 @@ export const defaultAgents = (
     description:
       "Specialist in product search with progressive filtering strategy (Regola 11): guides customers from categories to specific products",
     systemPrompt: loadPrompt("product-search-agent.md"),
-    model: "openai/gpt-4o-mini",
-    temperature: 0.3, // ✅ Increased for better semantic matching
+    model: "google/gemini-2.0-flash-001",
+    temperature: 0, // ✅ Zero temperature = deterministic, reads exact data from {{PRODUCTS}} (no hallucination)
     maxTokens: 2048,
     order: 1,
     isActive: true,

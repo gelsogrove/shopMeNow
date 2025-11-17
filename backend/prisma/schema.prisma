@@ -241,6 +241,7 @@ model Orders {
   discountAmount  Float?          @default(0)
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
+  billedAt        DateTime?       // 🔴 BILLING: Timestamp when NEW_ORDER billing (€1.00) was applied - prevents double-billing
   customerId      String
   workspaceId     String
   trackingNumber  String?

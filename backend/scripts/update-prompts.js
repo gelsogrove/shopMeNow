@@ -22,9 +22,10 @@ const prisma = new PrismaClient()
 const AGENT_TYPE_MAP = {
   "router-agent.md": "ROUTER",
   "product-search-agent.md": "PRODUCT_SEARCH",
-  "cart-management.md": "CART_MANAGEMENT",
-  "order-tracking.md": "ORDER_TRACKING",
-  "customer-support.md": "CUSTOMER_SUPPORT",
+  "cart-management-agent.md": "CART_MANAGEMENT",
+  "order-tracking-agent.md": "ORDER_TRACKING",
+  "customer-support-agent.md": "CUSTOMER_SUPPORT",
+  "profile-management-agent.md": "PROFILE_MANAGEMENT",
 }
 
 async function loadPromptFromFile(filename) {

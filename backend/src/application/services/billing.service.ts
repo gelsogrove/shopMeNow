@@ -129,6 +129,7 @@ export class BillingService {
 
   /**
    * Track usage cost for new order
+   * 🔴 DOUBLE-BILLING PROTECTION: Checks if order already billed via billedAt timestamp
    */
   async trackNewOrder(
     workspaceId: string,
@@ -136,11 +137,46 @@ export class BillingService {
     orderCode: string
   ): Promise<void> {
     try {
-      // Get current price from database
-      const newOrderCost =
-        (await this.pricingRepository.getValue("NEW_ORDER")) ?? 1.5
+      // 🔴 STEP 1: Check if order already billed (PROTECTION AGAINST DOUBLE-BILLING)
+      const existingOrder = await this.prisma.orders.findFirst({
+        where: {
+          orderCode,
+          workspaceId,
+        },
+        select: {
+          id: true,
+          billedAt: true,
+          status: true,
+        },
+      })
 
-      // Get current total for this customer
+      if (existingOrder?.billedAt) {
+        logger.warn(
+          `[BILLING] ⚠️ Order ${orderCode} already billed at ${existingOrder.billedAt.toISOString()} - SKIPPING duplicate billing`,
+          {
+            workspaceId,
+            customerId,
+            orderCode,
+            orderId: existingOrder.id,
+            billedAt: existingOrder.billedAt,
+          }
+        )
+        return // Skip duplicate billing
+      }
+
+      if (!existingOrder) {
+        logger.error(
+          `[BILLING] ❌ Order ${orderCode} not found in database - cannot bill`,
+          { workspaceId, customerId, orderCode }
+        )
+        throw new Error(`Order ${orderCode} not found`)
+      }
+
+      // STEP 2: Get current price from database
+      const newOrderCost =
+        (await this.pricingRepository.getValue("NEW_ORDER")) ?? 1.0
+
+      // STEP 3: Get current total for this customer
       const previousTotal = await this.getCurrentTotalForCustomer(
         workspaceId,
         customerId
@@ -148,18 +184,29 @@ export class BillingService {
       const currentCharge = newOrderCost
       const newTotal = previousTotal + currentCharge
 
-      await this.prisma.billing.create({
-        data: {
-          workspaceId,
-          customerId,
-          amount: currentCharge,
-          type: BillingType.NEW_ORDER,
-          description: `New order: ${orderCode}`,
-          previousTotal,
-          currentCharge,
-          newTotal,
-        },
+      // STEP 4: Create billing record and mark order as billed (ATOMIC TRANSACTION)
+      await this.prisma.$transaction(async (tx) => {
+        // 4a. Create billing record
+        await tx.billing.create({
+          data: {
+            workspaceId,
+            customerId,
+            amount: currentCharge,
+            type: BillingType.NEW_ORDER,
+            description: `New order: ${orderCode}`,
+            previousTotal,
+            currentCharge,
+            newTotal,
+          },
+        })
+
+        // 4b. Mark order as billed with timestamp
+        await tx.orders.update({
+          where: { id: existingOrder.id },
+          data: { billedAt: new Date() },
+        })
       })
+
       logger.info(
         `[BILLING] 💰 New Order: €${previousTotal.toFixed(2)} + €${currentCharge.toFixed(2)} = €${newTotal.toFixed(2)} (workspace: ${workspaceId}, customer: ${customerId}, order: ${orderCode})`
       )

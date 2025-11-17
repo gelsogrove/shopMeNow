@@ -1414,6 +1414,3 @@ Prima di implementare, verificare:
 ✅ **YES**: Mostrare nota sconto UNA VOLTA alla fine: "💰 Prezzi con sconto del X% già applicato!" (REGOLA XV)
 
 ---
-
-**Last Updated**: 2025-11-17  
-**Next Review**: Dopo implementazione REGOLA XV (discount display format) in Product Search Agent

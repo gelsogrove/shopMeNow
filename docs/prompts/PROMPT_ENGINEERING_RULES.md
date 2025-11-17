@@ -1,10 +1,5 @@
 # ShopME LLM Prompt Engineering Rules
 
-**Version**: 3.0.0  
-**Date**: 2025-11-17  
-**Authority**: Andrea's Core Architectural Principles
-**Updates**: Added Rules 16 (Pricing Display), 17 (Promotional Messaging), 18 (Numbered Lists)
-
 ---
 
 ## 🎯 PURPOSE
@@ -2249,8 +2244,6 @@ addToCart({ code: "PARM-001" }) // ❌ Product Agent doesn't have this function!
 - `docs/prompts/*.md` - Individual agent prompts
 
 ---
-
-**End of Prompt Engineering Rules v1.0.0**
 
 ## 16. Pricing Display Strategy
 

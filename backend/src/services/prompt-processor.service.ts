@@ -106,7 +106,7 @@ export class PromptProcessorService {
     if (processedPrompt.includes("{{PRODUCTS}}")) {
       // Feature 123: Log token count for {{PRODUCTS}} variable
       const productsTokenCount = this.estimateTokenCount(
-        dynamicContent.products
+        dynamicContent.products || ""
       )
       logger.info(
         `[ProductSearch] {{PRODUCTS}} token count: ${productsTokenCount}`
@@ -120,7 +120,7 @@ export class PromptProcessorService {
 
       processedPrompt = processedPrompt.replace(
         "{{PRODUCTS}}",
-        dynamicContent.products
+        dynamicContent.products || ""
       )
     }
 
@@ -430,6 +430,9 @@ Stato: ${lastOrder.status}`
    * @returns Numero stimato di token
    */
   private estimateTokenCount(text: string): number {
+    // Null/undefined safety
+    if (!text) return 0
+
     // Euristica: 1 token ≈ 4 caratteri (più accurato per GPT-4)
     // Include overhead per whitespace e punteggiatura
     return Math.ceil(text.length / 4)

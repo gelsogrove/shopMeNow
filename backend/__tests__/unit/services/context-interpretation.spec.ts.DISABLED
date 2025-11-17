@@ -11,7 +11,7 @@
  */
 
 import { PrismaClient } from "@prisma/client"
-import { LLMRouterService } from "../../src/application/services/llm-router.service"
+import { LLMRouterService } from "../../../src/services/llm-router.service"
 
 const prisma = new PrismaClient()
 

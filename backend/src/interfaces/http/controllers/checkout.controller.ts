@@ -474,23 +474,9 @@ export class CheckoutController {
         `[CHECKOUT] Order created: ${orderCode} for customer ${customerId}`
       )
 
-      // 💰 BILLING: Track NEW_ORDER (€1.50) - order created as CONFIRMED
-      try {
-        await this.billingService.trackNewOrder(
-          workspaceId,
-          customerId,
-          `Order ${orderCode} confirmed via checkout`
-        )
-        logger.info(
-          `[BILLING] 💰 New order confirmed via checkout: €1.50 charged for order ${orderCode} (customer: ${customerId})`
-        )
-      } catch (billingError) {
-        logger.error(
-          `[BILLING] ❌ Failed to track new order billing for order ${orderCode}:`,
-          billingError
-        )
-        // Don't fail the order if billing fails
-      }
+      // 💰 BILLING: Billing handled by OrderService.createOrder() - REMOVED DUPLICATE CALL
+      // OrderService automatically calls trackNewOrder() when order created as CONFIRMED
+      // This prevents double-billing (was charging €2.00 instead of €1.00)
 
       // Send notifications
       await this.sendNotifications(order, customer, workspace)
