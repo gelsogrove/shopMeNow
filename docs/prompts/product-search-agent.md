@@ -84,7 +84,7 @@ Vuoi aggiungerla al carrello? 🛒
 Ciao Mario! Ecco cosa abbiamo:
 
 **Mozzarella di Bufala Campana DOP 250g** (MOZZ-001)
-~€8.00~ **€7.80** 💰 (10% sconto)
+~€8.00~ **€7.80** 💰
 Stock: ✅ 25 disponibili
 
 Mozzarella fresca di latte di bufala dalla Campania, bianca porcellana con un interno cremoso.
@@ -94,6 +94,7 @@ Mozzarella fresca di latte di bufala dalla Campania, bianca porcellana con un in
 • Certificazioni: DOP
 • Allergeni: Latte
 
+💰 Prezzo con sconto del 10% già applicato!
 Vuoi aggiungerla al carrello? 🛒
 ```
 
@@ -222,11 +223,12 @@ Parmigiano Reggiano DOP 1kg
 **Format**:
 
 ```markdown
-1. **Parmigiano Reggiano DOP 1kg** - ~~€25.00~~ **€20.00** 💰 (20% OFF)
+1. **Parmigiano Reggiano DOP 1kg** (PARM-001) - ~~€25.00~~ **€20.00**
    Fresh from Parma, aged 24 months
-2. **Grana Padano DOP 1kg** - ~~€22.00~~ **€17.60** 💰 (20% OFF)
+2. **Grana Padano DOP 1kg** (GRAN-001) - ~~€22.00~~ **€17.60**
    Mild and versatile
 
+💰 Prezzi con sconto del 20% già applicato!
 Which one would you like? (Reply with 1 or 2)
 ```
 
@@ -284,13 +286,16 @@ Agent: "Ciao Mario! Ecco cosa abbiamo:
 
 **Mozzarella di Bufala Campana DOP 250g**
 • Codice: (MOZZ-001)
-• Prezzo: ~€8.00~ → €7.80 💰 (sconto 10%)
+• Prezzo: ~€8.00~ → €7.80 💰
 • Stock: ✅ 25 disponibili
 • Descrizione: Mozzarella fresca di latte di bufala dalla Campania, bianca porcellana con un interno cremoso
 • Fornitore: Caseificio Rossi
 • Regione: Campania
 • Certificazioni: DOP
 • Allergeni: Latte
+
+💰 Prezzo con sconto del 10% già applicato!
+Vuoi aggiungerla al carrello? 🛒"
 
 Vuoi aggiungerla al carrello? 🛒" ← CORRECT! All 8 fields shown + cart question!
 ```
@@ -845,18 +850,20 @@ Quale tipo ti interessa? 🛍️
 ```
 Ecco i [CATEGORY] disponibili:
 
-1. **[NAME] [SIZE]** ~€[ORIG]~ → €[DISC]
-2. **[NAME] [SIZE]** €[PRICE]
-3. **[NAME] [SIZE]** €[PRICE]
+1. **[NAME] [SIZE]** ([CODE]) ~€[ORIG]~ → €[DISC]
+2. **[NAME] [SIZE]** ([CODE]) €[PRICE]
+3. **[NAME] [SIZE]** ([CODE]) €[PRICE]
 
-💰 Prezzi con il tuo sconto del {{discountUser}}%!
+💰 Prezzi con sconto del {{discountUser}}% già applicato!
 Quale ti interessa? (scrivi il numero) 🛒
 ```
 
 **Critical**:
 
 - ✅ Show ALL filtered products
-- ✅ Use `~€orig~ → €final` when discount
+- ✅ Use `~€orig~ → €final` when discount applied
+- ✅ Include product code ([CODE]) next to product name
+- ✅ **DO NOT** repeat "(X% sconto)" or "(X% OFF)" on each line - show discount note ONCE at the end
 - ❌ Never skip products
 
 ### Format C: Single Product (Step 4)

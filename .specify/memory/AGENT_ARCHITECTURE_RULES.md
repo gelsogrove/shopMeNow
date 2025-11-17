@@ -1245,6 +1245,91 @@ Use: "(FORMAG-003) Mozzarella..." ← Real code!
 
 ---
 
+## 🏛️ REGOLA XV: Discount Display Format (Clean Price Lists)
+
+**RULE**: Quando Product Search Agent mostra liste di prodotti con sconto, NON ripetere "(X% sconto)" o "(X% OFF)" su ogni riga. Mostrare la nota di sconto UNA SOLA VOLTA alla fine della lista.
+
+**RATIONALE**: Ripetere "(10% DI SCONTO)" su ogni prodotto rende la lista verbosa e difficile da leggere. Il cliente sa già che ha uno sconto - basta ricordarglielo una volta alla fine.
+
+**MANDATORY PATTERN**:
+
+### Product Lists (2+ products):
+
+```markdown
+Ecco i [CATEGORY] disponibili:
+
+1. **Torrone di Cremona IGP 200g** (DOLCI-004) ~€8.90~ → €8.10
+2. **Pandoro Veronese 750g** (DOLCI-005) ~€18.50~ → €16.70
+3. **Panettone Classico 1kg** (DOLCI-001) ~€22.00~ → €19.80
+
+💰 Prezzi con sconto del {{discountUser}}% già applicato!
+Quale ti interessa? (scrivi il numero) 🛒
+```
+
+### Single Product (Format C):
+
+```markdown
+**Mozzarella di Bufala Campana DOP 250g**
+• Codice: (FORMAG-003)
+• Prezzo: ~€8.00~ → €7.20 💰
+• Stock: ✅ 25 disponibili
+• Descrizione: Mozzarella fresca di latte di bufala...
+• Fornitore: Caseificio Rossi
+• Regione: Campania
+• Certificazioni: DOP
+• Allergeni: Latte
+
+💰 Prezzo con sconto del 10% già applicato!
+Vuoi aggiungerla al carrello? 🛒
+```
+
+**FORBIDDEN PATTERNS**:
+
+❌ **WRONG** (discount repeated on each line):
+
+```markdown
+1. Torrone (DOLCI-004) €8.90 → €8.10 (10% DI SCONTO)  ← NO! Troppo verboso!
+2. Pandoro (DOLCI-005) €18.50 → €16.70 (10% DI SCONTO)  ← NO! Ripetizione inutile!
+3. Panettone (DOLCI-001) €22.00 → €19.80 (10% DI SCONTO)  ← NO! Già chiaro dal prezzo scontato!
+```
+
+**WHY WRONG**: 
+- Cliente vede già `~€8.90~ → €8.10` = prezzo scontato chiaro
+- "(10% DI SCONTO)" ripetuto 3-5-10 volte = ridondante e fastidioso
+- Lista diventa troppo lunga e difficile da leggere
+
+✅ **CORRECT** (discount shown once at the end):
+
+```markdown
+1. Torrone (DOLCI-004) ~€8.90~ → €8.10  ← Prezzo chiaro, no testo ripetuto
+2. Pandoro (DOLCI-005) ~€18.50~ → €16.70
+3. Panettone (DOLCI-001) ~€22.00~ → €19.80
+
+💰 Prezzi con sconto del 10% già applicato!  ← Una nota UNICA
+```
+
+**WHY CORRECT**:
+- ✅ Lista pulita e leggibile
+- ✅ Cliente vede sconto dai prezzi barrati (~€8.90~ → €8.10)
+- ✅ Una nota finale basta per ricordare lo sconto
+- ✅ Risparmio tokens (importante con liste lunghe!)
+
+**IMPLEMENTATION**:
+
+- ✅ Update Format B in Product Search Agent prompt
+- ✅ Update Format C in Product Search Agent prompt
+- ✅ Remove all "(X% sconto)" or "(X% OFF)" from product lines
+- ✅ Add single note at end: "💰 Prezzi con sconto del {{discountUser}}% già applicato!"
+- ❌ NO exceptions - apply to ALL product lists
+
+**ENFORCEMENT**:
+
+- Prompt validation checks for repeated discount text
+- Seed validation rejects prompts with "(X% sconto)" on product lines
+- Code review verifies discount note appears ONCE at end
+
+---
+
 ## 📋 UPDATED IMPLEMENTATION CHECKLIST
 
 Prima di implementare, verificare:
@@ -1323,7 +1408,10 @@ Prima di implementare, verificare:
 ❌ **NO**: Assumere che LLM capisca "è solo un esempio"  
 ✅ **YES**: Esplicitare con warning banner e label inline su OGNI dato fake (REGOLA XIV)
 
+❌ **NO**: Ripetere "(X% sconto)" o "(X% OFF)" su ogni riga di prodotto  
+✅ **YES**: Mostrare nota sconto UNA VOLTA alla fine: "💰 Prezzi con sconto del X% già applicato!" (REGOLA XV)
+
 ---
 
 **Last Updated**: 2025-11-17  
-**Next Review**: Dopo implementazione REGOLA XIV in tutti i prompt agent
+**Next Review**: Dopo implementazione REGOLA XV (discount display format) in Product Search Agent
