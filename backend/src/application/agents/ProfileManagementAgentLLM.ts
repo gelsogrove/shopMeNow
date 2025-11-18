@@ -14,7 +14,7 @@
 
 import { PrismaClient } from "@prisma/client"
 import axios from "axios"
-import { AGENT_FUNCTIONS } from "../../config/agent-functions"
+import { PROFILE_MANAGEMENT_FUNCTIONS } from "../../config/agent-functions.config"
 import { PromptProcessorService } from "../../services/prompt-processor.service"
 import logger from "../../utils/logger"
 
@@ -112,9 +112,8 @@ export class ProfileManagementAgentLLM {
       logger.info(`📄 Profile Management Agent - Prompt processed`)
 
       // Get available functions for Profile Management Agent
-      const profileFunctions = AGENT_FUNCTIONS.filter((fn) =>
-        fn.name.includes("handlePushNotifications")
-      )
+      // Use PROFILE_MANAGEMENT_FUNCTIONS which includes both handlePushNotifications and getProfileLink
+      const profileFunctions = PROFILE_MANAGEMENT_FUNCTIONS
 
       // Build messages array with conversation history
       const messages: Array<{ role: string; content: string }> = [
@@ -275,6 +274,30 @@ export class ProfileManagementAgentLLM {
         }
       }
 
+      if (functionName === "getProfileLink") {
+        // Generate secure profile link with token
+        const { CallingFunctionsService } = require("../../services/calling-functions.service")
+        const callingFunctions = new CallingFunctionsService()
+
+        const result = await callingFunctions.getProfileLink({
+          customerId: context.customerId,
+          workspaceId: context.workspaceId,
+        })
+
+        logger.info("✅ Profile link generated", {
+          customerId: context.customerId,
+          tokenGenerated: !!result.token,
+        })
+
+        return {
+          success: true,
+          token: result.token,
+          link: result.link,
+          expiresAt: result.expiresAt,
+          message: "Profile link generated successfully",
+        }
+      }
+
       return {
         success: false,
         message: `Unknown function: ${functionName}`,
@@ -303,11 +326,9 @@ export class ProfileManagementAgentLLM {
     tokensUsed: number
   }> {
     try {
-      // Convert functions to tools format (OpenRouter new API)
-      const tools = options.functions.map((fn) => ({
-        type: "function",
-        function: fn,
-      }))
+      // Functions already come in correct tools format from PROFILE_MANAGEMENT_FUNCTIONS
+      // No need to wrap them again - they already have { type: "function", function: {...} }
+      const tools = options.functions
 
       const response = await axios.post(
         `${this.openRouterBaseUrl}/chat/completions`,

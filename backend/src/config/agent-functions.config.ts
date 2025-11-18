@@ -295,7 +295,7 @@ export const PROFILE_MANAGEMENT_FUNCTIONS: FunctionDefinition[] = [
     function: {
       name: "handlePushNotifications",
       description:
-        "🔔 Gestisce sottoscrizione/cancellazione notifiche push. Usare quando cliente vuole attivare o disattivare notifiche promozionali. FLOW OBBLIGATORIO: 1) Mostra stato attuale (iscritto SI/NO), 2) Spiega cosa cambia, 3) Chiedi conferma esplicita, 4) SOLO dopo 'SI' → chiama handlePushNotifications(value). ESEMPI: 'voglio ricevere offerte' → value: true | 'disattiva notifiche' → value: false. NON chiamare senza conferma esplicita.",
+        "🔔 PRIORITY 2 - HIGH. Gestisce SOLO sottoscrizione/cancellazione notifiche push promozionali. QUANDO USARE: Cliente vuole attivare/disattivare ESCLUSIVAMENTE notifiche/offerte/messaggi promozionali. ESEMPI: 'attiva notifiche', 'voglio ricevere offerte', 'disattiva messaggi', 'stop promozioni'. FLOW OBBLIGATORIO: 1) Mostra stato attuale, 2) Spiega cosa cambia, 3) Chiedi conferma esplicita 'SI', 4) SOLO dopo 'SI' → chiama handlePushNotifications(value). NON usare per modifiche dati profilo (email/telefono/indirizzo → usa getProfileLink invece).",
       parameters: {
         type: "object",
         properties: {
@@ -314,7 +314,7 @@ export const PROFILE_MANAGEMENT_FUNCTIONS: FunctionDefinition[] = [
     function: {
       name: "getProfileLink",
       description:
-        "🔗 Genera link sicuro al profilo cliente. Usare quando cliente vuole modificare dati personali (email, telefono, indirizzo) o vedere preferenze. Link ha validità limitata e include token JWT. Dopo chiamata, mostrare link al cliente.",
+        "🔗 PRIORITY 1 - HIGHEST. Genera link sicuro per modificare dati profilo cliente. QUANDO USARE: Cliente vuole modificare/cambiare/aggiornare QUALSIASI dato personale: 📦 indirizzo spedizione, 📧 email, 📞 telefono, 👤 nome. ESEMPI TRIGGER: 'cambia indirizzo', 'modifica email', 'aggiorna telefono', 'voglio cambiare nome', 'aggiorna profilo', 'modifica dati'. Link ha validità 1 ora con token JWT. IMPORTANTE: NON usare per notifiche push (usa handlePushNotifications). NON usare per vedere profilo senza modifiche (mostra info direttamente). DOPO chiamata: mostrare SEMPRE [LINK_PROFILE_WITH_TOKEN] token nel response.",
       parameters: {
         type: "object",
         properties: {},
