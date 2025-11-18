@@ -2,10 +2,13 @@
  * Pricing Configuration Data
  *
  * SINGLE SOURCE OF TRUTH for all pricing in the application.
- * Change values here and both BE + FE will update automatically.
+ * Values come from BillingPrices enum.
+ * Change values in enum and both BE + FE will update automatically.
  *
  * Historical billing records preserve the price at transaction time.
  */
+
+import { BillingPrices } from "../../src/domain/enums/billing-prices.enum"
 
 export const pricingConfigData = [
   // ============================================================================
@@ -14,7 +17,7 @@ export const pricingConfigData = [
   {
     type: "PLAN" as const,
     key: "FREE_MONTHLY",
-    value: 0,
+    value: BillingPrices.FREE_MONTHLY,
     description:
       "Free plan - €0/month for 14 days trial with €29 credit included",
     isActive: true,
@@ -22,28 +25,28 @@ export const pricingConfigData = [
   {
     type: "PLAN" as const,
     key: "BASIC_MONTHLY",
-    value: 29,
+    value: BillingPrices.BASIC_MONTHLY,
     description: "Basic plan - €29/month for growing businesses",
     isActive: true,
   },
   {
     type: "PLAN" as const,
     key: "PREMIUM_MONTHLY",
-    value: 59,
+    value: BillingPrices.PREMIUM_MONTHLY,
     description: "Premium plan - €59/month for established businesses",
     isActive: true,
   },
   {
     type: "PLAN" as const,
     key: "ENTERPRISE_MONTHLY",
-    value: 149,
-    description: "Enterprise plan - €149/month for large scale operations",
+    value: BillingPrices.ENTERPRISE_MONTHLY,
+    description: "Enterprise plan - €299/month for large scale operations",
     isActive: true,
   },
   {
     type: "PLAN" as const,
     key: "MONTHLY_CHANNEL_COST",
-    value: 59,
+    value: BillingPrices.MONTHLY_CHANNEL_COST,
     description: "Monthly WhatsApp channel cost (included in all paid plans)",
     isActive: true,
   },
@@ -54,29 +57,29 @@ export const pricingConfigData = [
   {
     type: "USAGE" as const,
     key: "MESSAGE",
-    value: 0.2,
+    value: BillingPrices.MESSAGE,
     description:
       "Cost per message (AI-powered responses, including support conversations)",
     isActive: true,
   },
   {
     type: "USAGE" as const,
-    key: "NEW_CUSTOMER",
-    value: 1.0,
-    description: "Cost per new customer registration",
+    key: "WELCOME_MESSAGE",
+    value: BillingPrices.WELCOME_MESSAGE,
+    description: "Cost per new customer registration (welcome message)",
     isActive: true,
   },
   {
     type: "USAGE" as const,
     key: "NEW_ORDER",
-    value: 1.0,
+    value: BillingPrices.NEW_ORDER,
     description: "Cost per new order completed",
     isActive: true,
   },
   {
     type: "USAGE" as const,
     key: "PUSH_CAMPAIGN",
-    value: 1.0,
+    value: BillingPrices.PUSH_CAMPAIGN,
     description: "Cost per push notification sent (promotional messages)",
     isActive: true,
   },
@@ -88,7 +91,7 @@ export const pricingConfigData = [
     type: "THRESHOLD" as const,
     key: "FREE_MESSAGES",
     value: 200,
-    description: "Free messages included in trial (after this, €0.20/message)",
+    description: "Free messages included in trial (after this, €0.15/message)",
     isActive: true,
   },
   {

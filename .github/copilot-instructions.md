@@ -703,6 +703,8 @@ USA SEMPRE COME CONTESTO
 docs/memory-bank/PRD.md
 
 ## Active Technologies
+- TypeScript 5.x, Node.js 18+ (174-router)
+- PostgreSQL with Prisma ORM (174-router)
 
 - TypeScript 5.x (Node.js 18+) (122-rag-con-prodcuct)
 

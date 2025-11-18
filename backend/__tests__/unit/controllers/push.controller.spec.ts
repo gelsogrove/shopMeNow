@@ -7,18 +7,16 @@
  * - DISCOUNT_CHANGED
  */
 
-import { PrismaClient } from "@prisma/client"
 import { Request, Response } from "express"
 import { PushController } from "../../../src/interfaces/http/controllers/push.controller"
 
 // Mock dependencies
 jest.mock("@prisma/client")
-jest.mock("../../../src/services/llm-router.service")
 jest.mock("../../../src/utils/logger")
 
 describe("PushController - sendSystemNotification", () => {
   let pushController: PushController
-  let mockPrisma: jest.Mocked<PrismaClient>
+  let mockPrisma: any
   let mockRequest: Partial<Request>
   let mockResponse: Partial<Response>
   let mockLLMRouterService: any
@@ -39,13 +37,8 @@ describe("PushController - sendSystemNotification", () => {
       routeMessage: jest.fn(),
     }
 
-    // Mock LLMRouterService constructor
-    const {
-      LLMRouterService,
-    } = require("../../../src/services/llm-router.service")
-    LLMRouterService.mockImplementation(() => mockLLMRouterService)
-
-    pushController = new PushController()
+    // Create controller with mocked dependencies
+    pushController = new PushController(mockPrisma, mockLLMRouterService)
 
     mockRequest = {
       params: {
@@ -53,7 +46,6 @@ describe("PushController - sendSystemNotification", () => {
       },
       body: {
         type: "CHATBOT_REACTIVATED",
-        workspaceId: "workspace-123",
         customerIds: ["customer-456"],
       },
     }
@@ -131,7 +123,7 @@ describe("PushController - sendSystemNotification", () => {
           workspaceId: "workspace-123",
           customerId: "customer-456",
           conversationId: "session-789",
-          messageId: expect.stringContaining("system-notify-"),
+          messageId: expect.stringContaining("system-chatbot_reactivated-"),
           message:
             "🤖 Ciao Maria Garcia, il chatbot è ora disponibile, come posso aiutarti oggi?",
           customerLanguage: "ESP",
@@ -431,7 +423,7 @@ describe("PushController - sendSystemNotification", () => {
       expect(mockResponse.status).toHaveBeenCalledWith(400)
       expect(mockResponse.json).toHaveBeenCalledWith({
         error: "Invalid request",
-        message: "workspaceId and customerIds array are required",
+        message: "workspaceId, type, and customerIds array are required",
       })
     })
 
@@ -449,7 +441,7 @@ describe("PushController - sendSystemNotification", () => {
       expect(mockResponse.status).toHaveBeenCalledWith(400)
       expect(mockResponse.json).toHaveBeenCalledWith({
         error: "Invalid request",
-        message: "workspaceId and customerIds array are required",
+        message: "workspaceId, type, and customerIds array are required",
       })
     })
   })

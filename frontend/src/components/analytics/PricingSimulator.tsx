@@ -1,42 +1,53 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { usePricing } from "@/hooks/usePricing"
 import {
   Calculator,
   MessageSquare,
-  Package,
   Send,
   ShoppingCart,
   UserPlus,
 } from "lucide-react"
 import { useState } from "react"
 
-// Pricing constants from billing-prices.enum.ts
-const PRICES = {
-  MONTHLY_CHANNEL: 59.0,
-  MESSAGE: 0.15,
-  NEW_CUSTOMER: 1.5,
-  NEW_ORDER: 1.5,
-  PUSH_CAMPAIGN: 1.0,
-  HUMAN_SUPPORT: 1,
-}
-
 export function PricingSimulator() {
+  // Fetch pricing from API (centralized)
+  const { usage, isLoading } = usePricing()
+
   const [messages, setMessages] = useState(100)
   const [customers, setCustomers] = useState(10)
   const [orders, setOrders] = useState(20)
   const [pushCampaigns, setPushCampaigns] = useState(10)
-  const [humanSupport, setHumanSupport] = useState(3)
 
-  // Calculate costs
-  const messageCost = messages * PRICES.MESSAGE
-  const customerCost = customers * PRICES.NEW_CUSTOMER
-  const orderCost = orders * PRICES.NEW_ORDER
-  const pushCampaignCost = pushCampaigns * PRICES.PUSH_CAMPAIGN
-  const humanSupportCost = humanSupport * PRICES.HUMAN_SUPPORT
+  // Show loading state
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calculator className="h-5 w-5" />
+            Simulatore Costi
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-gray-500">
+            Caricamento prezzi...
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Calculate costs using API prices
+  const messageCost = messages * (usage.MESSAGE ?? 0.1)
+  const customerCost = customers * (usage.WELCOME_MESSAGE ?? 1.0)
+  const orderCost = orders * (usage.NEW_ORDER ?? 1.0)
+  const pushCampaignCost = pushCampaigns * (usage.PUSH_CAMPAIGN ?? 1.0)
 
   const totalVariableCost =
-    messageCost + customerCost + orderCost + pushCampaignCost + humanSupportCost
+    messageCost + customerCost + orderCost + pushCampaignCost
 
-  const totalMonthlyCost = PRICES.MONTHLY_CHANNEL + totalVariableCost
+  const totalMonthlyCost =
+    (usage.MONTHLY_CHANNEL_COST ?? 59.0) + totalVariableCost
 
   const sliders = [
     {
@@ -47,7 +58,7 @@ export function PricingSimulator() {
       setValue: setMessages,
       max: 1000,
       step: 10,
-      unitCost: PRICES.MESSAGE,
+      unitCost: usage.MESSAGE ?? 0.1,
       cost: messageCost,
       color: "text-blue-600",
       bgColor: "bg-blue-100",
@@ -60,7 +71,7 @@ export function PricingSimulator() {
       setValue: setCustomers,
       max: 100,
       step: 1,
-      unitCost: PRICES.NEW_CUSTOMER,
+      unitCost: usage.WELCOME_MESSAGE ?? 1.0,
       cost: customerCost,
       color: "text-green-600",
       bgColor: "bg-green-100",
@@ -73,7 +84,7 @@ export function PricingSimulator() {
       setValue: setOrders,
       max: 200,
       step: 1,
-      unitCost: PRICES.NEW_ORDER,
+      unitCost: usage.NEW_ORDER ?? 1.0,
       cost: orderCost,
       color: "text-purple-600",
       bgColor: "bg-purple-100",
@@ -86,23 +97,10 @@ export function PricingSimulator() {
       setValue: setPushCampaigns,
       max: 100,
       step: 1,
-      unitCost: PRICES.PUSH_CAMPAIGN,
+      unitCost: usage.PUSH_CAMPAIGN ?? 1.0,
       cost: pushCampaignCost,
       color: "text-pink-600",
       bgColor: "bg-pink-100",
-    },
-    {
-      icon: Package,
-      label: "Human Support",
-      description: "Manual interventions",
-      value: humanSupport,
-      setValue: setHumanSupport,
-      max: 50,
-      step: 1,
-      unitCost: PRICES.HUMAN_SUPPORT,
-      cost: humanSupportCost,
-      color: "text-red-600",
-      bgColor: "bg-red-100",
     },
   ]
 
@@ -187,7 +185,7 @@ export function PricingSimulator() {
                 <div className="flex items-center justify-between text-sm pb-2 border-b border-gray-300">
                   <span className="text-gray-700 font-medium">Fixed Cost</span>
                   <span className="font-bold text-orange-600">
-                    €{PRICES.MONTHLY_CHANNEL.toFixed(2)}
+                    €{(usage.MONTHLY_CHANNEL_COST ?? 59.0).toFixed(2)}
                   </span>
                 </div>
 
@@ -218,12 +216,6 @@ export function PricingSimulator() {
                     <span className="text-gray-600">Push</span>
                     <span className="font-semibold text-pink-600">
                       €{pushCampaignCost.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-600">Support</span>
-                    <span className="font-semibold text-red-600">
-                      €{humanSupportCost.toFixed(2)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm font-medium pt-1">

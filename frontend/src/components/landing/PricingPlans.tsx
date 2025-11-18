@@ -32,7 +32,7 @@ export function PricingPlans() {
   // Use pricing from database (with fallbacks for safety)
   const PRICES = {
     MONTHLY_CHANNEL: usage.MONTHLY_CHANNEL_COST ?? 59.0,
-    MESSAGE: usage.MESSAGE ?? 0.2,
+    MESSAGE: usage.MESSAGE ?? 0.1,
     NEW_CUSTOMER: usage.NEW_CUSTOMER ?? 1.0,
     NEW_ORDER: usage.NEW_ORDER ?? 1.0,
     PUSH_CAMPAIGN: usage.PUSH_CAMPAIGN ?? 1.0,

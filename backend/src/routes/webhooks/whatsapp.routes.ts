@@ -250,6 +250,34 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
     const routerService = new LLMRouterService(prisma)
     const messageRepository = new MessageRepository()
 
+    // ✅ FIX: Extract message from weird frontend format
+    // Frontend sends: { "Ciao": { phoneNumber, workspaceId } }
+    let extractedMessage: string | undefined
+    let extractedData: any = req.body
+
+    if (req.body && typeof req.body === "object") {
+      const keys = Object.keys(req.body)
+      // Check if first key looks like a message (not standard fields)
+      if (
+        keys.length > 0 &&
+        ![
+          "message",
+          "phoneNumber",
+          "workspaceId",
+          "chatInput",
+          "entry",
+        ].includes(keys[0])
+      ) {
+        extractedMessage = keys[0] // "Ciao"
+        extractedData = req.body[keys[0]] // { phoneNumber, workspaceId, ... }
+        logger.info(
+          `📝 [WEBHOOK] Extracted message from key: "${extractedMessage}"`
+        )
+      }
+    }
+
+    const data = extractedData
+
     // WhatsApp verification (GET request)
     if (req.method === "GET") {
       const mode = req.query["hub.mode"]
@@ -281,7 +309,6 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
       return
     }
 
-    const data = req.body
     let phoneNumber, messageContent, workspaceId, customerId
 
     // Detect format: WhatsApp vs Frontend vs Test
@@ -341,9 +368,9 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
         if (handled) return
       }
     } else if (data.message && data.phoneNumber && data.workspaceId) {
-      // Frontend format
+      // Frontend format (standard)
       messageContent = data.message
-      phoneNumber = data.phoneNumber
+      phoneNumber = data.phoneNumber.trim()
       workspaceId = data.workspaceId
 
       const customer = await prisma.customers.findFirst({
@@ -377,13 +404,75 @@ router.post("/whatsapp/webhook", webhookLimiter, async (req, res) => {
         }
 
         customerId = customer.id
+        ;(req as any).customerData = customer
       } else {
+        logger.info(
+          `🆕 [WEBHOOK] Customer not found, calling handleNewUserWelcomeFlow for phone: ${phoneNumber}`
+        )
         const handled = await handleNewUserWelcomeFlow(
           phoneNumber,
           workspaceId,
           messageContent,
           res,
           "TEST"
+        )
+        logger.info(
+          `🆕 [WEBHOOK] handleNewUserWelcomeFlow returned: ${handled}`
+        )
+        if (handled) return
+      }
+    } else if (extractedMessage && data.phoneNumber && data.workspaceId) {
+      // Frontend format (weird: message as key)
+      messageContent = extractedMessage
+      phoneNumber = data.phoneNumber.trim()
+      workspaceId = data.workspaceId
+      logger.info(`📝 [WEBHOOK] Using extracted message: "${messageContent}"`)
+
+      const customer = await prisma.customers.findFirst({
+        where: {
+          phone: phoneNumber.replace(/\s+/g, ""),
+          workspaceId,
+          isActive: true,
+        },
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          company: true,
+          discount: true,
+          language: true,
+          isBlacklisted: true,
+        },
+      })
+
+      if (customer) {
+        if (customer.isBlacklisted) {
+          logger.info(`🚫 Customer ${phoneNumber} is blacklisted`)
+          res.status(200).json({
+            success: true,
+            data: {
+              sessionId: null,
+              message: "EVENT_RECEIVED_CUSTOMER_BLACKLISTED",
+            },
+          })
+          return
+        }
+
+        customerId = customer.id
+        ;(req as any).customerData = customer
+      } else {
+        logger.info(
+          `🆕 [WEBHOOK] Customer not found, calling handleNewUserWelcomeFlow for phone: ${phoneNumber}`
+        )
+        const handled = await handleNewUserWelcomeFlow(
+          phoneNumber,
+          workspaceId,
+          messageContent,
+          res,
+          "TEST"
+        )
+        logger.info(
+          `🆕 [WEBHOOK] handleNewUserWelcomeFlow returned: ${handled}`
         )
         if (handled) return
       }

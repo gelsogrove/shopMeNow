@@ -6,6 +6,7 @@ import {
 } from "@prisma/client"
 import * as dotenv from "dotenv"
 import OpenAI from "openai"
+import { BillingPrices } from "../domain/enums/billing-prices.enum"
 import { websocketService } from "../services/websocket.service"
 import logger from "../utils/logger"
 
@@ -1053,8 +1054,8 @@ export class MessageRepository {
 
             if (!effectiveDebugMode) {
               // debugMode is false AND customer not blacklisted, track usage normally
-              // 💰 UNIFIED BILLING: €0.15 per message in BOTH systems
-              const messagePrice = 0.15
+              // 💰 UNIFIED BILLING: Price from BillingPrices enum (SINGLE SOURCE OF TRUTH)
+              const messagePrice = BillingPrices.MESSAGE
 
               // Track in legacy usage system (for Analytics)
               const { usageService } = await import("../services/usage.service")

@@ -1,6 +1,7 @@
 import { Request, Response } from "express"
 import { PriceCalculationService } from "../../../application/services/price-calculation.service"
 import { SecureTokenService } from "../../../application/services/secure-token.service"
+import { BillingPrices } from "../../../domain/enums/billing-prices.enum"
 import { prisma } from "../../../lib/prisma"
 import logger from "../../../utils/logger"
 
@@ -1325,17 +1326,19 @@ export class CartController {
         where: { cartId: cart.id },
       })
 
-      // Track complete order cost (€1.50: order + push notification)
+      // Track complete order cost (from BillingPrices enum)
       try {
         await prisma.usage.create({
           data: {
             workspaceId: validation.data.workspaceId,
             clientId: cart.customerId,
-            price: 1.5, // Complete order cost including push notification
+            price: BillingPrices.NEW_ORDER, // Centralized pricing
           },
         })
 
-        logger.info(`Order cost tracked: €1.50 for customer ${cart.customerId}`)
+        logger.info(
+          `Order cost tracked: €${BillingPrices.NEW_ORDER.toFixed(2)} for customer ${cart.customerId}`
+        )
       } catch (error) {
         logger.error(
           `Error tracking order cost for customer ${cart.customerId}:`,

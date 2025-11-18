@@ -87,6 +87,7 @@ export class RegistrationService {
 
   /**
    * Send an after-registration message to a newly registered customer
+   * ✅ USES Security & Translation layer (MANDATORY)
    *
    * @param customerId The customer ID
    * @returns True if message was sent successfully
@@ -124,31 +125,49 @@ export class RegistrationService {
         return false
       }
 
-      // Get the after-registration message from workspace settings
+      // Get the after-registration message from workspace settings (ENGLISH ONLY)
       const afterRegistrationMessages =
         ((workspaceSettings as any).afterRegistrationMessages as Record<
           string,
           string
         >) || {}
 
-      // Normalize the language code for lookup
-      const normalizedLanguage = this.normalizeLanguageCode(customerLanguage)
+      // Get ENGLISH message from database
+      let afterRegistrationMessageEnglish = afterRegistrationMessages["en"]
 
-      // Get message in customer's language or fall back to English
-      let afterRegistrationMessage =
-        afterRegistrationMessages[normalizedLanguage] ||
-        afterRegistrationMessages["en"]
-
-      // If no message found in workspace settings, use default
-      if (!afterRegistrationMessage) {
-        afterRegistrationMessage =
-          this.getDefaultAfterRegistrationMessage(normalizedLanguage)
+      // If no message found in workspace settings, use default ENGLISH
+      if (!afterRegistrationMessageEnglish) {
+        afterRegistrationMessageEnglish =
+          this.getDefaultAfterRegistrationMessage("en")
       }
 
-      // Replace placeholders
-      afterRegistrationMessage = afterRegistrationMessage.replace(
+      // Replace placeholders in ENGLISH message
+      afterRegistrationMessageEnglish = afterRegistrationMessageEnglish.replace(
         /\[nome\]/gi,
         firstName
+      )
+
+      // ✅ TRANSLATE via Security & Translation layer (MANDATORY)
+      const { LLMService } = require("../../services/llm.service")
+      const llmService = new LLMService()
+
+      const normalizedLanguage = this.normalizeLanguageCode(customerLanguage)
+
+      const afterRegistrationMessage = await llmService.translateSystemMessage(
+        afterRegistrationMessageEnglish,
+        customer.workspaceId,
+        normalizedLanguage,
+        undefined,
+        "registration_confirmation" // stage name for Safety layer
+      )
+
+      logger.info(
+        `✅ After-registration message translated via Security & Translation layer`,
+        {
+          customerId,
+          language: normalizedLanguage,
+          stage: "registration_confirmation",
+        }
       )
 
       // Send the message
@@ -168,17 +187,50 @@ export class RegistrationService {
           }
 
           // 2. Save the outgoing message to history (even if WhatsApp failed)
-          await this.messageRepository.saveMessage({
-            workspaceId: customer.workspaceId,
-            phoneNumber: customer.phone,
-            message: "", // No incoming message
-            response: afterRegistrationMessage,
-            direction: "OUTBOUND",
-            agentSelected: "CHATBOT", // Mark this message as coming from the CHATBOT agent
+          // 🔧 CRITICAL: Use conversationMessage table (NEW) not message table (OLD)
+          // This ensures messages appear in frontend (same as welcome message flow)
+
+          // Get or create chat session
+          let chatSession = await this.prisma.chatSession.findFirst({
+            where: {
+              customerId: customer.id,
+              workspaceId: customer.workspaceId,
+              status: "active",
+            },
+          })
+
+          if (!chatSession) {
+            chatSession = await this.prisma.chatSession.create({
+              data: {
+                customerId: customer.id,
+                workspaceId: customer.workspaceId,
+                status: "active",
+              },
+            })
+          }
+
+          // Save to conversationMessage table (NEW format)
+          await this.prisma.conversationMessage.create({
+            data: {
+              workspaceId: customer.workspaceId,
+              customerId: customer.id,
+              conversationId: chatSession.id,
+              role: "assistant", // Bot response
+              content: afterRegistrationMessage,
+              agentType: "REGISTRATION_CONFIRMATION",
+              tokensUsed: 0, // No LLM tokens (static message + translation)
+              debugInfo: JSON.stringify({
+                stage: "registration_confirmation",
+                translatedViaSecurityLayer: true,
+                language: normalizedLanguage,
+                firstName: firstName,
+                timestamp: new Date().toISOString(),
+              }),
+            },
           })
 
           logger.info(
-            `After-registration message ${whatsappSent ? "sent" : "saved"} for customer ${customerId}`
+            `✅ After-registration message ${whatsappSent ? "sent" : "saved"} for customer ${customerId} (translated via Security layer, saved to conversationMessage)`
           )
           return whatsappSent
         } catch (error) {
@@ -240,21 +292,21 @@ export class RegistrationService {
    */
   private getDefaultAfterRegistrationMessage(languageCode: string): string {
     if (languageCode === "it") {
-      return "Grazie per esserti registrato, [nome]! Come ti posso aiutare oggi? Vuoi vedere i tuoi ordini? Le offerte? O hai bisogno di altre informazioni?"
+      return "Grazie, ti sei registrato con successo! Ti ricontatteremo a breve."
     }
     if (languageCode === "es") {
-      return "¡Gracias por registrarte, [nome]! ¿Cómo puedo ayudarte hoy? ¿Quieres ver tus pedidos? ¿Las ofertas? ¿O necesitas otra información?"
+      return "¡Gracias, te has registrado con éxito! Te contactaremos pronto."
     }
     if (languageCode === "fr") {
-      return "Merci de vous être inscrit, [nome] ! Comment puis-je vous aider aujourd'hui ? Voulez-vous voir vos commandes ? Les offres ? Ou avez-vous besoin d'autres informations ?"
+      return "Merci, vous vous êtes inscrit avec succès ! Nous vous recontacterons bientôt."
     }
     if (languageCode === "de") {
-      return "Danke für Ihre Registrierung, [nome]! Wie kann ich Ihnen heute helfen? Möchten Sie Ihre Bestellungen sehen? Die Angebote? Oder benötigen Sie andere Informationen?"
+      return "Danke, Sie haben sich erfolgreich registriert! Wir werden uns bald bei Ihnen melden."
     }
     if (languageCode === "pt") {
-      return "Obrigado por se registrar, [nome]! Como posso ajudá-lo hoje? Quer ver seus pedidos? As ofertas? Ou precisa de outras informações?"
+      return "Obrigado, você se registrou com sucesso! Entraremos em contato em breve."
     }
     // Default English
-    return "Thank you for registering, [nome]! How can I help you today? Would you like to see your orders? The offers? Or do you need other information?"
+    return "Thank you, you have successfully registered! We will get back to you shortly."
   }
 }

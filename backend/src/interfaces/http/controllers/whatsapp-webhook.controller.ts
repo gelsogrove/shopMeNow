@@ -1,6 +1,13 @@
 import { Request, Response } from "express"
+import { SecureTokenService } from "../../../application/services/secure-token.service"
+import { UrlShortenerService } from "../../../application/services/url-shortener.service"
+import { BillingPrices } from "../../../domain/enums/billing-prices.enum"
 import { prisma } from "../../../lib/prisma"
 import { LLMRouterService } from "../../../services/llm-router.service"
+import {
+  detectLanguageFromPhonePrefix,
+  getRegistrationText,
+} from "../../../utils/language-detector"
 import logger from "../../../utils/logger"
 import { whatsAppToMarkdown } from "../../../utils/whatsapp-formatter"
 
@@ -77,16 +84,46 @@ export class WhatsAppWebhookController {
       // 3. Rate limiting (future)
       logger.info("[WEBHOOK] 📨 Receiving message (HMAC check disabled)")
 
-      // 🔍 Extract message - Support TWO formats:
+      // ✅ FIX: Extract message from weird frontend format
+      // Frontend sends: { "Ciao": { phoneNumber, workspaceId } }
+      let extractedMessage: string | undefined
+      let extractedData: any = req.body
+
+      if (req.body && typeof req.body === "object") {
+        const keys = Object.keys(req.body)
+        // Check if first key looks like a message (not standard fields)
+        if (
+          keys.length > 0 &&
+          ![
+            "message",
+            "phoneNumber",
+            "workspaceId",
+            "chatInput",
+            "entry",
+          ].includes(keys[0])
+        ) {
+          extractedMessage = keys[0] // "Ciao"
+          extractedData = req.body[keys[0]] // { phoneNumber, workspaceId, ... }
+          logger.info(
+            `📝 [WEBHOOK CONTROLLER] Extracted message from key: "${extractedMessage}"`
+          )
+        }
+      }
+
+      const data = extractedData
+
+      // 🔍 Extract message - Support THREE formats:
       // 1. WhatsApp API format: req.body.entry[0].changes[0].value.messages[0]
-      // 2. Frontend simulator format: req.body.message + req.body.phoneNumber
+      // 2. Frontend simulator format (standard): req.body.message + req.body.phoneNumber
+      // 3. Frontend simulator format (weird): message as object key
 
       let phoneNumber: string
       let messageText: string
       let whatsappMessageId: string
+      let workspaceId: string | undefined
 
       // Check if it's WhatsApp API format
-      const entry = req.body.entry?.[0]
+      const entry = data.entry?.[0]
       const changes = entry?.changes?.[0]
       const value = changes?.value
       const messages = value?.messages
@@ -96,26 +133,44 @@ export class WhatsAppWebhookController {
         const message = messages[0]
         // WhatsApp API may send with or without +, ensure it's there (but only one!)
         phoneNumber = message.from.startsWith("+")
-          ? message.from
-          : `+${message.from}`
+          ? message.from.trim()
+          : `+${message.from.trim()}`
         messageText = message.text?.body || ""
         whatsappMessageId = message.id
+        workspaceId = value.workspaceId // ✅ Extract workspaceId from WhatsApp format
 
         logger.info("[WEBHOOK] 📨 WhatsApp API format detected", {
           from: phoneNumber,
           messageLength: messageText.length,
           whatsappMessageId,
+          workspaceId,
         })
-      } else if (req.body.message && req.body.phoneNumber) {
-        // Frontend simulator format
-        phoneNumber = req.body.phoneNumber
-        messageText = req.body.message
+      } else if (data.message && data.phoneNumber) {
+        // Frontend simulator format (standard)
+        phoneNumber = data.phoneNumber.trim() // ✅ Remove leading/trailing spaces
+        messageText = data.message
         whatsappMessageId = `frontend-${Date.now()}-${Math.random().toString(36).substring(7)}`
+        workspaceId = data.workspaceId // ✅ Extract workspaceId from standard format
 
-        logger.info("[WEBHOOK] 📨 Frontend simulator format detected", {
+        logger.info(
+          "[WEBHOOK] 📨 Frontend simulator format (standard) detected",
+          {
+            from: phoneNumber,
+            messageLength: messageText.length,
+            workspaceId: data.workspaceId,
+          }
+        )
+      } else if (extractedMessage && data.phoneNumber) {
+        // Frontend simulator format (weird: message as key)
+        phoneNumber = data.phoneNumber.trim() // ✅ Remove leading/trailing spaces
+        messageText = extractedMessage
+        whatsappMessageId = `frontend-${Date.now()}-${Math.random().toString(36).substring(7)}`
+        workspaceId = data.workspaceId // ✅ Extract workspaceId from weird format
+
+        logger.info("[WEBHOOK] 📨 Frontend simulator format (weird) detected", {
           from: phoneNumber,
           messageLength: messageText.length,
-          workspaceId: req.body.workspaceId,
+          workspaceId: data.workspaceId,
         })
       } else {
         // Not a message event (could be status update, etc.)
@@ -126,19 +181,184 @@ export class WhatsAppWebhookController {
         return
       }
 
-      // 🔒 SECURITY STEP 2: Find customer in database
+      // 🔒 SECURITY STEP 2: Find customer in database OR handle new user
+      // workspaceId already extracted above based on format
+
+      if (!workspaceId) {
+        logger.error("[WEBHOOK] ⚠️ No workspaceId provided in request")
+        res.status(400).json({ error: "workspaceId required" })
+        return
+      }
+
       const customer = await prisma.customers.findFirst({
-        where: { phone: phoneNumber },
+        where: {
+          phone: phoneNumber,
+          workspaceId, // Ensure we search in correct workspace
+        },
         include: { workspace: true },
       })
 
       if (!customer) {
-        logger.warn("[WEBHOOK] ⚠️ Customer not found for phone", {
-          phoneNumber,
+        logger.info(
+          "[WEBHOOK] 🆕 New user detected - sending welcome message",
+          {
+            phoneNumber,
+            workspaceId,
+          }
+        )
+
+        // Get workspace to retrieve welcome message
+        const workspace = await prisma.workspace.findUnique({
+          where: { id: workspaceId },
+          select: {
+            id: true,
+            name: true,
+            welcomeMessage: true,
+          },
         })
-        // ❌ NO WhatsApp send - just return error
-        // Customer must be registered in database first
-        res.status(200).json({ status: "customer_not_found" })
+
+        if (!workspace) {
+          logger.error("[WEBHOOK] ⚠️ Workspace not found", { workspaceId })
+          res.status(404).json({ error: "Workspace not found" })
+          return
+        }
+
+        // Detect language from phone number
+        const detectedLanguage = detectLanguageFromPhonePrefix(phoneNumber)
+        logger.info("[WEBHOOK] 📱 Detected language from phone", {
+          phoneNumber,
+          language: detectedLanguage,
+        })
+
+        // Generate registration link with secure token
+        const secureTokenService = new SecureTokenService()
+        const urlShortenerService = new UrlShortenerService()
+
+        // Create secure token for registration (24 hours validity)
+        const registrationToken = await secureTokenService.createToken(
+          "registration",
+          workspaceId,
+          { phoneNumber, language: detectedLanguage },
+          "24h",
+          undefined, // userId - not yet created
+          phoneNumber,
+          undefined, // ipAddress
+          undefined // customerId - not yet created (registration)
+        )
+
+        const registrationUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/register?token=${registrationToken}`
+
+        // Create short URL that expires in 24 hours
+        const expiresAt = new Date()
+        expiresAt.setHours(expiresAt.getHours() + 24)
+
+        const shortUrl = await urlShortenerService.createShortUrl(
+          registrationUrl,
+          workspaceId,
+          expiresAt
+        )
+
+        const registrationLink = `${process.env.FRONTEND_URL || "http://localhost:3000"}/s/${shortUrl.shortCode}`
+
+        // Get localized registration texts
+        const registrationTexts = getRegistrationText(detectedLanguage)
+
+        // Build final message with registration link
+        const welcomeMessage =
+          workspace.welcomeMessage || "Welcome! How can I help you?"
+        const finalMessage = `${welcomeMessage}\n\n${registrationTexts.link}: ${registrationLink}\n${registrationTexts.validity}`
+
+        // ✅ CREATE TEMPORARY CUSTOMER RECORD (will be updated after registration)
+        // This allows us to save the welcome message in chat history
+        const tempCustomer = await prisma.customers.create({
+          data: {
+            phone: phoneNumber,
+            workspaceId: workspaceId,
+            name: "New Customer", // Temporary name
+            email: `temp_${phoneNumber.replace(/[^0-9]/g, "")}@pending.com`, // Temporary email (required field)
+            language: detectedLanguage,
+            isActive: false, // Mark as inactive until registration complete
+          },
+        })
+
+        // ✅ CREATE CHAT SESSION
+        const chatSession = await prisma.chatSession.create({
+          data: {
+            customerId: tempCustomer.id,
+            workspaceId: workspaceId,
+            status: "active",
+          },
+        })
+
+        // ✅ SAVE WELCOME MESSAGE IN CHAT HISTORY
+        // 🔧 CRITICAL: Use conversationMessage table (NEW) not message table (OLD)
+        // This ensures messages appear in frontend (getChatSessionMessages queries conversationMessage)
+        await prisma.conversationMessage.create({
+          data: {
+            workspaceId: workspaceId,
+            customerId: tempCustomer.id,
+            conversationId: chatSession.id,
+            role: "assistant", // Bot response
+            content: finalMessage,
+            agentType: "REGISTRATION_FLOW",
+            tokensUsed: 0, // No LLM tokens used (static message)
+            debugInfo: JSON.stringify({
+              source: "whatsapp-webhook",
+              type: "welcome_new_user",
+              language: detectedLanguage,
+              registrationLink: registrationLink,
+              timestamp: new Date().toISOString(),
+              flow: "new_user_registration",
+              messagePrice: BillingPrices.WELCOME_MESSAGE, // From centralized enum
+            }),
+          },
+        })
+
+        // 💰 Track welcome message cost (from BillingPrices enum)
+        try {
+          const { BillingService } = await import(
+            "../../../application/services/billing.service"
+          )
+          const billingService = new BillingService(prisma)
+
+          await billingService.trackMessage(
+            workspaceId,
+            tempCustomer.id,
+            "Welcome message - New user registration",
+            finalMessage
+          )
+
+          logger.info(
+            `[WEBHOOK] 💰 Welcome message cost tracked: €${BillingPrices.WELCOME_MESSAGE.toFixed(2)} for customer ${tempCustomer.id}`
+          )
+        } catch (billingError) {
+          logger.error(
+            `[WEBHOOK] ❌ Failed to track welcome message billing:`,
+            billingError
+          )
+          // Don't fail the flow if billing fails
+        }
+
+        // Send welcome message (for now just return it - WhatsApp sending not implemented yet)
+        logger.info(
+          "[WEBHOOK] ✅ Welcome message prepared and saved to chat history",
+          {
+            message: finalMessage,
+            language: detectedLanguage,
+            registrationLink,
+            customerId: tempCustomer.id,
+            sessionId: chatSession.id,
+          }
+        )
+
+        res.status(200).json({
+          status: "new_user_welcomed",
+          message: finalMessage,
+          language: detectedLanguage,
+          registrationLink,
+          customerId: tempCustomer.id,
+          sessionId: chatSession.id,
+        })
         return
       }
 

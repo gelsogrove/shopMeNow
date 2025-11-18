@@ -1,12 +1,18 @@
+import { usePricing } from "@/hooks/usePricing"
 import { useState } from "react"
 
 export function PricingCalculator() {
+  const { usage, isLoading } = usePricing()
   const [channels, setChannels] = useState(1)
   const [messages, setMessages] = useState(100)
 
-  const MONTHLY_CHANNEL_COST = 59.0
-  const MESSAGE_COST = 0.15
+  const MONTHLY_CHANNEL_COST = usage.MONTHLY_CHANNEL_COST ?? 59.0
+  const MESSAGE_COST = usage.MESSAGE ?? 0.1
   const FREE_MESSAGES_PER_CHANNEL = 100
+
+  if (isLoading) {
+    return <div className="text-center py-4">Caricamento prezzi...</div>
+  }
 
   const calculatePrice = () => {
     const subscriptionCost = channels * MONTHLY_CHANNEL_COST

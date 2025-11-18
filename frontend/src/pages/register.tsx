@@ -237,14 +237,18 @@ const RegisterPage = () => {
     })
 
     try {
+      // Use phone and workspaceId from tokenData (not query params)
+      const phoneFromToken = tokenData?.phoneNumber || phone
+      const workspaceIdFromToken = tokenData?.workspaceId || workspaceId
+
       const response = await tokenApi.post("/registration/register", {
         token,
         first_name: formData.firstName,
         last_name: formData.lastName,
         company: formData.company,
         email: formData.email,
-        phone,
-        workspace_id: workspaceId,
+        phone: phoneFromToken,
+        workspace_id: workspaceIdFromToken,
         language: formData.language,
         currency: formData.currency,
         gdpr_consent: formData.gdprConsent,
@@ -564,7 +568,6 @@ const RegisterPage = () => {
                 className={`h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${
                   formErrors.gdprConsent ? "border-red-500" : ""
                 }`}
-                required
               />
             </div>
             <div className="ml-3 text-sm">

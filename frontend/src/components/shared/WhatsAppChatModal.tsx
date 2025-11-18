@@ -384,7 +384,25 @@ export function WhatsAppChatModal({
         isNewConversation: true, // Add flag to indicate new conversation
       })
 
-      if (response.data.success) {
+      // Handle both success formats: { success: true, data: {...} } and { status: "new_user_welcomed", message: "..." }
+      if (
+        response.data.success ||
+        response.data.status === "new_user_welcomed"
+      ) {
+        // Handle new user welcome message
+        if (response.data.status === "new_user_welcomed") {
+          const welcomeMessage: Message = {
+            id: `bot-${Date.now()}`,
+            content: response.data.message,
+            sender: "bot",
+            timestamp: new Date(),
+          }
+          setMessages((prev) => [...prev, welcomeMessage])
+          setIsLoading(false)
+          return
+        }
+
+        // Handle existing user flow
         // Save sessionId if provided in the response
         if (response.data.data.sessionId) {
           logger.info("Setting new session ID:", response.data.data.sessionId)
@@ -586,8 +604,26 @@ export function WhatsAppChatModal({
       )
       logger.info("📥 FRONTEND DEBUG: Response status:", response.status)
 
-      // ✅ OPTIMIZED: Use response directly from webhook instead of fetching again
+      // ✅ Handle both response formats: existing user vs new user
       const webhookData = response.data
+
+      // Handle new user welcome message
+      if (webhookData.status === "new_user_welcomed") {
+        logger.info("✅ New user welcomed - showing welcome message")
+        const botMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: webhookData.message,
+          sender: "bot",
+          timestamp: new Date(),
+          agentName: "AI Assistant",
+        }
+        setMessages((prev) => [...prev, botMessage])
+        setIsLoading(false)
+        return
+      }
+
+      // Handle existing user flow
+      // ✅ OPTIMIZED: Use response directly from webhook instead of fetching again
       if (webhookData.success && webhookData.data?.message) {
         logger.info("✅ Using bot response from webhook directly")
 

@@ -1,16 +1,30 @@
-import { PrismaClient } from "@prisma/client"
-import { BillingPrices } from "../domain/enums/billing-prices.enum"
+MESSAGE_PRICESimport { PrismaClient } from "@prisma/client"
+import { config } from "../config"
 import logger from "../utils/logger"
 import { usageService } from "./usage.service"
 
 const prisma = new PrismaClient()
 
 /**
- * 📱 PUSH MESSAGING SERVICE - Sistema Centralizzato
+ * 💰 PRICING CONFIGURATION - Centralized message costs
+ * Update these values to change pricing globally
+ */
+export const MESSAGE_PRICES = {
+  WELCOME_MESSAGE: 1.0,           // €1.00 - Primo messaggio a nuovo utente
+  REGISTRATION_CONFIRMATION: 0.0, // €0.00 - Gratis
+  CHATBOT_REACTIVATED: 0.2,       // €0.20 - Quando admin abilita chatbot
+  DISCOUNT_NOTIFICATION: 0.0,     // €0.00 - Gratis
+  ORDER_CONFIRMED: 0.0,           // €0.00 - Gratis (già nel costo ordine €1.50)
+  CAMPAIGN_MESSAGE: 1.0,          // €1.00 - Campagne marketing
+  DEFAULT_PUSH: 0.2,              // €1.00 - Default altri messaggi
+} as const
+
+/**
+ * �📱 PUSH MESSAGING SERVICE - Sistema Centralizzato
  *
  * Gestisce tutti i push messaging WhatsApp con:
  * - 🌍 Supporto multilingua automatico
- * - 💰 Tracking costi da BillingPrices enum (SINGLE SOURCE OF TRUTH)
+ * - 💰 Tracking costi configurabili per tipo messaggio
  * - 📊 Integrazione analytics
  * - 🔄 Template messaging unificati
  *
@@ -173,7 +187,7 @@ export const pushMessagingService = {
 
       // 7. 💰 Track usage cost based on message type (using centralized pricing)
       const messagePrice = this.getMessagePrice(data.type)
-
+      
       if (messagePrice > 0) {
         await this.trackPushCost(
           data.workspaceId,
@@ -326,10 +340,8 @@ export const pushMessagingService = {
    */
   getMessagePrice(type: PushMessageType): number {
     const priceMap: Record<PushMessageType, number> = {
-      [PushMessageType.CHATBOT_REACTIVATED]:
-        BillingPrices.PUSH_CHATBOT_REACTIVATED,
-      [PushMessageType.DISCOUNT_UPDATED]:
-        BillingPrices.PUSH_DISCOUNT_NOTIFICATION,
+      [PushMessageType.CHATBOT_REACTIVATED]: BillingPrices.PUSH_CHATBOT_REACTIVATED,
+      [PushMessageType.DISCOUNT_UPDATED]: BillingPrices.PUSH_DISCOUNT_NOTIFICATION,
       [PushMessageType.ORDER_CONFIRMED]: BillingPrices.PUSH_ORDER_CONFIRMED,
       [PushMessageType.USER_REGISTERED]: BillingPrices.WELCOME_MESSAGE,
       [PushMessageType.NEW_OFFER]: BillingPrices.PUSH_CAMPAIGN,

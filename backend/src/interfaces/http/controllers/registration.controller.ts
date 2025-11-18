@@ -75,6 +75,23 @@ export class RegistrationController {
         push_notifications_consent,
       } = req.body
 
+      // 🔍 DEBUG: Log all received parameters
+      logger.info("[REGISTRATION] 📝 Received registration request:", {
+        token: token ? `${token.substring(0, 20)}...` : "MISSING",
+        first_name,
+        last_name,
+        company,
+        email,
+        phone,
+        workspace_id,
+        language,
+        currency,
+        gdpr_consent: gdpr_consent,
+        gdpr_consent_type: typeof gdpr_consent,
+        push_notifications_consent,
+        all_body_keys: Object.keys(req.body),
+      })
+
       // Validate required fields
       if (
         !token ||
@@ -84,8 +101,19 @@ export class RegistrationController {
         !email ||
         !phone ||
         !workspace_id ||
-        !gdpr_consent
+        gdpr_consent !== true // ✅ Must be explicitly true
       ) {
+        logger.error("[REGISTRATION] ❌ Validation failed:", {
+          has_token: !!token,
+          has_first_name: !!first_name,
+          has_last_name: !!last_name,
+          has_company: !!company,
+          has_email: !!email,
+          has_phone: !!phone,
+          has_workspace_id: !!workspace_id,
+          gdpr_consent_value: gdpr_consent,
+          gdpr_consent_check: gdpr_consent !== true,
+        })
         return res.status(400).json({ error: "Missing required fields" })
       }
 
@@ -180,7 +208,7 @@ export class RegistrationController {
               : null,
             isActive: true, // CRITICAL: Activate the customer after registration!
             isBlacklisted: true, // 🚨 NEW USERS ARE BLOCKED until admin approval!
-            activeChatbot: true, // New users have chatbot enabled to handle registration requests
+            activeChatbot: false, // 🚨 CHATBOT DISABLED after registration (admin must enable)
           },
         })
       } else {
@@ -203,7 +231,7 @@ export class RegistrationController {
                 : null,
               isActive: true,
               isBlacklisted: true, // 🚨 NEW USERS ARE BLOCKED until admin approval!
-              activeChatbot: true, // New users have chatbot enabled to handle registration requests
+              activeChatbot: false, // 🚨 CHATBOT DISABLED after registration (admin must enable)
             },
           })
         } catch (createError: any) {
@@ -289,8 +317,11 @@ export class RegistrationController {
       )
       await registrationAttemptsService.clearAttempts(phone, workspace_id)
 
-      // Track registration cost (1€)
-      await this.trackRegistrationCost(workspace_id, customer.id)
+      // 💰 NOTE: Registration cost (€1.00) is already tracked in welcome message
+      // No additional charge for registration form submission
+      logger.info(
+        `[REGISTRATION] ✅ Registration completed for ${customer.id} - cost already tracked in welcome message`
+      )
 
       // Send welcome message asynchronously
       this.welcomeService

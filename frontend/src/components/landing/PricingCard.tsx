@@ -1,24 +1,31 @@
-import {
-  Bell,
-  Check,
-  Headphones,
-  MessageSquare,
-  ShoppingCart,
-  Users,
-} from "lucide-react"
-
-// Pricing from backend BillingPrices enum
-const PRICES = {
-  MONTHLY_CHANNEL: 59.0,
-  MESSAGE: 0.15,
-  NEW_CUSTOMER: 1.5,
-  NEW_ORDER: 1.5,
-  PUSH_CAMPAIGN: 1.0,
-  HUMAN_SUPPORT: 1.0,
-  FREE_MESSAGES: 100,
-}
+import { usePricing } from "@/hooks/usePricing"
+import { Bell, Check, MessageSquare, ShoppingCart, Users } from "lucide-react"
 
 export function PricingCard() {
+  // Fetch pricing from API (centralized)
+  const { usage, plans, isLoading } = usePricing()
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="bg-gradient-to-br from-blue-50 to-green-50 rounded-2xl border-2 border-blue-200 p-6 lg:p-8">
+        <div className="text-center py-8 text-gray-500">
+          Caricamento prezzi...
+        </div>
+      </div>
+    )
+  }
+
+  // Use API prices with fallbacks
+  const PRICES = {
+    MONTHLY_CHANNEL: usage.MONTHLY_CHANNEL_COST ?? 59.0,
+    MESSAGE: usage.MESSAGE ?? 0.1,
+    WELCOME_MESSAGE: usage.WELCOME_MESSAGE ?? 1.0,
+    NEW_ORDER: usage.NEW_ORDER ?? 1.0,
+    PUSH_CAMPAIGN: usage.PUSH_CAMPAIGN ?? 1.0,
+    FREE_MESSAGES: 100,
+  }
+
   return (
     <div className="bg-gradient-to-br from-blue-50 to-green-50 rounded-2xl border-2 border-blue-200 p-6 lg:p-8">
       <div className="text-center mb-6">
@@ -60,7 +67,7 @@ export function PricingCard() {
             </span>
           </div>
           <span className="text-lg lg:text-xl font-bold text-blue-600">
-            €{PRICES.NEW_CUSTOMER.toFixed(2)}
+            €{PRICES.WELCOME_MESSAGE.toFixed(2)}
           </span>
         </div>
 
@@ -106,21 +113,6 @@ export function PricingCard() {
           </div>
           <span className="text-lg lg:text-xl font-bold text-green-600">
             €{PRICES.MESSAGE.toFixed(2)}
-          </span>
-        </div>
-
-        {/* Human Support */}
-        <div className="bg-white/60 rounded-lg p-3 border border-gray-200 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-red-100 p-1.5 rounded-lg">
-              <Headphones className="h-4 w-4 lg:h-5 lg:w-5 text-red-600" />
-            </div>
-            <span className="text-sm lg:text-base font-medium text-gray-900">
-              Human Support
-            </span>
-          </div>
-          <span className="text-lg lg:text-xl font-bold text-red-600">
-            €{PRICES.HUMAN_SUPPORT.toFixed(2)}
           </span>
         </div>
       </div>

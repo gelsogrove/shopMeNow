@@ -1,24 +1,32 @@
+import { usePricing } from "@/hooks/usePricing"
 import { Calculator, ShoppingCart, Users } from "lucide-react"
 import { useState } from "react"
 
-// Pricing constants
-const PRICES = {
-  MONTHLY_CHANNEL: 59.0,
-  MESSAGE: 0.15,
-  FREE_MESSAGES: 100,
-}
-
 export function SimplePricingSimulator() {
+  // Fetch pricing from API (centralized)
+  const { usage, isLoading } = usePricing()
+
   const [channels, setChannels] = useState(1)
   const [messages, setMessages] = useState(100)
   const [orders, setOrders] = useState(50)
   const [newCustomers, setNewCustomers] = useState(20)
 
-  // Calculate costs
-  const subscriptionCost = channels * PRICES.MONTHLY_CHANNEL
-  const freeMessages = channels * PRICES.FREE_MESSAGES
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="bg-gradient-to-br from-blue-50 to-green-50 rounded-2xl border-2 border-blue-200 p-6">
+        <div className="text-center py-8 text-gray-500">
+          Caricamento prezzi...
+        </div>
+      </div>
+    )
+  }
+
+  // Calculate costs using API prices
+  const subscriptionCost = channels * (usage.MONTHLY_CHANNEL_COST ?? 59.0)
+  const freeMessages = channels * 100 // Free messages per channel
   const billableMessages = Math.max(0, messages - freeMessages)
-  const messagesCost = billableMessages * PRICES.MESSAGE
+  const messagesCost = billableMessages * (usage.MESSAGE ?? 0.1)
   const totalCost = subscriptionCost + messagesCost
 
   return (
@@ -137,7 +145,8 @@ export function SimplePricingSimulator() {
         <div className="bg-white/60 rounded-lg p-4 space-y-3 border border-gray-200">
           <div className="flex justify-between text-sm">
             <span className="text-gray-600">
-              Subscription ({channels} × €{PRICES.MONTHLY_CHANNEL})
+              Subscription ({channels} × €
+              {(usage.MONTHLY_CHANNEL_COST ?? 59.0).toFixed(0)})
             </span>
             <span className="font-semibold text-gray-900">
               €{subscriptionCost.toFixed(2)}
@@ -145,7 +154,8 @@ export function SimplePricingSimulator() {
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-gray-600">
-              Messages ({billableMessages} × €{PRICES.MESSAGE})
+              Messages ({billableMessages} × €
+              {(usage.MESSAGE ?? 0.1).toFixed(2)})
             </span>
             <span className="font-semibold text-gray-900">
               €{messagesCost.toFixed(2)}
@@ -183,7 +193,7 @@ export function SimplePricingSimulator() {
 
         {/* Info */}
         <div className="text-xs text-gray-600 text-center">
-          💡 First {PRICES.FREE_MESSAGES} messages/month are free per channel
+          💡 First 100 messages/month are free per channel
         </div>
       </div>
     </div>

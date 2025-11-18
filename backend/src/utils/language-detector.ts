@@ -52,21 +52,25 @@ const REGISTRATION_TEXTS: Record<string, RegistrationText> = {
  * @returns Language code (it, es, pt, en, etc.) - defaults to "en"
  */
 export function detectLanguageFromPhonePrefix(phone: string): string {
+  // Clean phone number (remove spaces, dashes, etc.)
+  const cleanPhone = phone.replace(/[\s\-()]/g, "")
+
   // Extract prefix (first 1-4 digits after +)
-  const prefixMatch = phone.match(/^(\+\d{1,4})/)
+  const prefixMatch = cleanPhone.match(/^(\+\d{1,4})/)
   if (!prefixMatch) {
     return "en" // Default to English
   }
 
   const prefix = prefixMatch[1]
 
-  // Try exact match first
+  // Try exact match first (e.g., +39, +34, +351)
   if (PHONE_PREFIX_TO_LANGUAGE[prefix]) {
     return PHONE_PREFIX_TO_LANGUAGE[prefix]
   }
 
-  // Try shorter prefixes (e.g., +351 before +35)
-  for (let len = prefix.length; len >= 2; len--) {
+  // Try shorter prefixes (e.g., +351 before +35, then +3)
+  // Start from longest to shortest
+  for (let len = Math.min(prefix.length, 4); len >= 2; len--) {
     const shortPrefix = prefix.substring(0, len)
     if (PHONE_PREFIX_TO_LANGUAGE[shortPrefix]) {
       return PHONE_PREFIX_TO_LANGUAGE[shortPrefix]

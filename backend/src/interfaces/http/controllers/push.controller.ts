@@ -3,9 +3,6 @@ import { Request, Response } from "express"
 import { LLMRouterService } from "../../../services/llm-router.service"
 import logger from "../../../utils/logger"
 
-const prisma = new PrismaClient()
-const llmRouterService = new LLMRouterService(prisma)
-
 /**
  * System notification types
  */
@@ -37,6 +34,14 @@ const NOTIFICATION_TEMPLATES: Record<
  * Controller for push notification operations
  */
 export class PushController {
+  private prisma: PrismaClient
+  private llmRouterService: LLMRouterService
+
+  constructor(prisma?: PrismaClient, llmRouterService?: LLMRouterService) {
+    this.prisma = prisma || new PrismaClient()
+    this.llmRouterService =
+      llmRouterService || new LLMRouterService(this.prisma)
+  }
   /**
    * Send system notification to customers
    *
@@ -97,7 +102,7 @@ export class PushController {
       for (const customerId of customerIds) {
         try {
           // Fetch customer data with workspace isolation
-          const customer = await prisma.customers.findUnique({
+          const customer = await this.prisma.customers.findUnique({
             where: { id: customerId, workspaceId },
             select: {
               id: true,
@@ -128,7 +133,7 @@ export class PushController {
           }
 
           // Get or create chat session
-          let chatSession = await prisma.chatSession.findFirst({
+          let chatSession = await this.prisma.chatSession.findFirst({
             where: {
               customerId: customer.id,
               workspaceId,
@@ -137,7 +142,7 @@ export class PushController {
           })
 
           if (!chatSession) {
-            chatSession = await prisma.chatSession.create({
+            chatSession = await this.prisma.chatSession.create({
               data: {
                 customerId: customer.id,
                 workspaceId,
@@ -155,7 +160,7 @@ export class PushController {
             ...templateData,
           })
 
-          const result = await llmRouterService.routeMessage({
+          const result = await this.llmRouterService.routeMessage({
             workspaceId,
             customerId: customer.id,
             conversationId: chatSession.id,

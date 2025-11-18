@@ -3,9 +3,14 @@
  *
  * PUBLIC endpoint for pricing configuration.
  * No authentication required - pricing is public information.
+ *
+ * 💰 PRICING STRATEGY:
+ * 1. Primary: Database pricing (dynamic, can be changed by admin)
+ * 2. Fallback: BillingPrices enum (hardcoded defaults)
  */
 
 import { Request, Response } from "express"
+import { getAllBillingPrices } from "../../../domain/enums/billing-prices.enum"
 import { prisma } from "../../../lib/prisma"
 import { PricingRepository } from "../../../repositories/pricing.repository"
 import logger from "../../../utils/logger"
@@ -63,15 +68,38 @@ export class PricingController {
     try {
       logger.info("[PricingController] Fetching pricing configuration")
 
-      const grouped = await this.pricingRepository.getAllGrouped()
+      // Try database first, fallback to enum
+      const dbPricing = await this.pricingRepository.getAllGrouped()
+      const enumPricing = getAllBillingPrices()
+
+      // Merge: DB overrides enum (if DB has value, use it, otherwise use enum)
+      const merged = {
+        plans: { ...dbPricing.plans },
+        usage: { ...dbPricing.usage },
+        thresholds: { ...dbPricing.thresholds },
+      }
+
+      // Add enum values as fallback for missing DB entries
+      for (const [key, value] of Object.entries(enumPricing)) {
+        if (key.includes("MONTHLY") || key.includes("PLAN")) {
+          if (!(key in merged.plans)) {
+            merged.plans[key] = value
+          }
+        } else {
+          if (!(key in merged.usage)) {
+            merged.usage[key] = value
+          }
+        }
+      }
 
       logger.info("[PricingController] Pricing configuration retrieved", {
-        planCount: Object.keys(grouped.plans).length,
-        usageCount: Object.keys(grouped.usage).length,
-        thresholdCount: Object.keys(grouped.thresholds).length,
+        planCount: Object.keys(merged.plans).length,
+        usageCount: Object.keys(merged.usage).length,
+        thresholdCount: Object.keys(merged.thresholds).length,
+        source: "DB + Enum fallback",
       })
 
-      return res.status(200).json(grouped)
+      return res.status(200).json(merged)
     } catch (error) {
       logger.error(
         "[PricingController] Failed to fetch pricing configuration:",
