@@ -557,15 +557,7 @@ export function AgentSettingsPage() {
           <HelpCircle className="w-5 h-5" />
           Database Commands
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-          <div>
-            <code className="bg-background px-2 py-1 rounded">
-              npm run db:export
-            </code>
-            <p className="text-muted-foreground mt-1">
-              Export all data to seed files
-            </p>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <div>
             <code className="bg-background px-2 py-1 rounded">
               npm run seed

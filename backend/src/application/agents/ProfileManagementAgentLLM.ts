@@ -276,7 +276,9 @@ export class ProfileManagementAgentLLM {
 
       if (functionName === "getProfileLink") {
         // Generate secure profile link with token
-        const { CallingFunctionsService } = require("../../services/calling-functions.service")
+        const {
+          CallingFunctionsService,
+        } = require("../../services/calling-functions.service")
         const callingFunctions = new CallingFunctionsService()
 
         const result = await callingFunctions.getProfileLink({

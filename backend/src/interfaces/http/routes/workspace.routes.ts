@@ -7,8 +7,6 @@ import { authMiddleware } from '../middlewares/auth.middleware';
 export const workspaceRouter = (): Router => {
   const router = Router();
   const workspaceController = new WorkspaceController();
-  
-  logger.info('Setting up workspace routes');
 
   // Apply auth middleware to all routes
   router.use(authMiddleware);
@@ -27,8 +25,7 @@ export const workspaceRouter = (): Router => {
   
   // Delete a workspace
   router.delete('/:id', asyncHandler(workspaceController.deleteWorkspace));
-  
-  logger.info('Workspace routes setup complete');
+
   return router;
 };
 

@@ -8,15 +8,12 @@ import { asyncHandler } from "../middlewares/async.middleware";
  */
 export const registrationRouter = (controller: RegistrationController): Router => {
   const router = Router();
-  
-  logger.info("Setting up registration routes");
-  
+
   // Registration routes
   router.get("/token/:token", asyncHandler(controller.validateToken.bind(controller)));
   router.post("/register", asyncHandler(controller.register.bind(controller)));
   router.get("/data-protection", asyncHandler(controller.getDataProtectionInfo.bind(controller)));
-  
-  logger.info("Registration routes setup complete");
+
   return router;
 };
 

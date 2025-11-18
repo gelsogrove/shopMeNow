@@ -262,15 +262,7 @@ export function WhatsAppChatModal({
           processedPrompt: message.processedPrompt,
           processingSource: message.processingSource, // 🔧 NEW: Source information
           functionCalls: message.functionCallsDebug
-            ? (() => {
-                console.log(
-                  "🔧 Raw functionCallsDebug:",
-                  message.functionCallsDebug
-                )
-                const parsed = JSON.parse(message.functionCallsDebug)
-                console.log("🔧 Parsed functionCalls:", parsed)
-                return parsed
-              })()
+            ? JSON.parse(message.functionCallsDebug)
             : [],
           metadata: {
             isOperatorMessage: message.metadata?.isOperatorMessage || false,
@@ -502,17 +494,7 @@ export function WhatsAppChatModal({
   }
 
   const sendMessage = async () => {
-    console.log("=".repeat(80))
-    console.log("🚀🚀🚀 FRONTEND: sendMessage CALLED! Message:", currentMessage)
-    console.log("=".repeat(80))
-
-    logger.info("🚀 FRONTEND DEBUG: sendMessage called with:", currentMessage)
-
     if (!currentMessage.trim() || isLoading) {
-      console.log("❌ BLOCKED: empty message or loading")
-      logger.info(
-        "❌ FRONTEND DEBUG: sendMessage blocked - empty message or loading"
-      )
       return
     }
 
@@ -520,19 +502,6 @@ export function WhatsAppChatModal({
     const now = Date.now()
     const lastCall = lastSendRef.current
     if (now - lastCall < 1000) {
-      // 1 second debounce (reduced from 10s for testing)
-      console.log(
-        "❌ BLOCKED: debounce (last call:",
-        lastCall,
-        "now:",
-        now,
-        "diff:",
-        now - lastCall,
-        ")"
-      )
-      logger.info(
-        "❌ FRONTEND DEBUG: sendMessage blocked - too soon after last call"
-      )
       return
     }
     lastSendRef.current = now
@@ -542,11 +511,6 @@ export function WhatsAppChatModal({
       alert("No workspace available. Please select a workspace first.")
       return
     }
-
-    logger.info(
-      "✅ FRONTEND DEBUG: sendMessage proceeding with message:",
-      currentMessage
-    )
 
     // Add user message
     const userMessage: Message = {
@@ -770,7 +734,6 @@ export function WhatsAppChatModal({
 
   // Handle link clicks to open preview in device
   const handleLinkClick = (url: string, e: React.MouseEvent) => {
-    console.log("🔗 Link clicked:", url)
     setCartPopupUrl(url)
     setShowCartPopup(true)
   }

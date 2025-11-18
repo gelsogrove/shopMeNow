@@ -39,7 +39,6 @@ import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
 import {
   Agent,
-  exportDatabase,
   getAgentConfigs,
   getAgents,
   updateAgent,
@@ -50,7 +49,6 @@ import {
   Bot,
   Brain,
   ChevronRight,
-  Database,
   Edit,
   GitBranch,
   Headphones,
@@ -62,7 +60,6 @@ import {
   Settings,
   Shield,
   ShoppingCart,
-  Upload,
   User,
 } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -143,8 +140,6 @@ export function AgentConfigurationPage() {
     Record<string, AgentFormData>
   >({})
   const [savingAgents, setSavingAgents] = useState<Record<string, boolean>>({})
-  const [isExporting, setIsExporting] = useState(false)
-  const [isImporting, setIsImporting] = useState(false)
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null)
   const [isSlideOpen, setIsSlideOpen] = useState(false)
 
@@ -313,67 +308,6 @@ export function AgentConfigurationPage() {
     }))
   }
 
-  const handleExportDatabase = async () => {
-    if (!workspace?.id) return
-
-    try {
-      setIsExporting(true)
-      logger.info("Starting database export...")
-
-      const result = await exportDatabase(workspace.id)
-
-      logger.info("Export result:", result)
-      toast.success(
-        "Database export started in background! Check logs for completion."
-      )
-    } catch (error) {
-      logger.error("Failed to export database:", error)
-      toast.error("Failed to start database export")
-    } finally {
-      setIsExporting(false)
-    }
-  }
-
-  const handleImportDatabase = async () => {
-    if (!workspace?.id) return
-
-    // Conferma azione pericolosa
-    const confirmed = window.confirm(
-      "⚠️ WARNING: This will RESTORE the database from the latest backup and OVERWRITE current data. Continue?"
-    )
-
-    if (!confirmed) return
-
-    try {
-      setIsImporting(true)
-      logger.info("Starting database import from latest backup...")
-
-      // Qui chiameremo l'API di import
-      const response = await api.post(
-        `/workspaces/${workspace.id}/database/import`,
-        {},
-        {
-          headers: {
-            "x-workspace-id": workspace.id,
-          },
-        }
-      )
-
-      logger.info("Import result:", response.data)
-      toast.success("Database restored successfully! Reloading page...")
-
-      // Ricarica la pagina dopo 2 secondi per vedere i nuovi dati
-      setTimeout(() => {
-        window.location.reload()
-      }, 2000)
-    } catch (error) {
-      logger.error("Failed to import database:", error)
-      toast.error("Failed to restore database from backup")
-    } finally {
-      setIsImporting(false)
-    }
-  }
-
   if (isLoading) {
     return (
       <PageLayout>
@@ -409,44 +343,6 @@ export function AgentConfigurationPage() {
             }
             description="Configure your multi-agent LLM system"
           />
-          <div className="flex gap-2">
-            <Button
-              onClick={handleImportDatabase}
-              disabled={isImporting || isExporting}
-              className="bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-400"
-              title="Restore workspace from latest backup (⚠️ Destructive operation)"
-            >
-              {isImporting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Restoring...
-                </>
-              ) : (
-                <>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Import Backup
-                </>
-              )}
-            </Button>
-            <Button
-              onClick={handleExportDatabase}
-              disabled={isExporting || isImporting}
-              className="bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-400"
-              title="Create backup of current workspace data"
-            >
-              {isExporting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Exporting...
-                </>
-              ) : (
-                <>
-                  <Database className="mr-2 h-4 w-4" />
-                  Export Database
-                </>
-              )}
-            </Button>
-          </div>
         </div>
 
         {agents.length === 0 ? (
@@ -529,8 +425,13 @@ export function AgentConfigurationPage() {
 
                           {/* CENTER: Call Functions or Routing Badge */}
                           <div className="flex items-center gap-1.5 flex-wrap mx-4">
-                            {callFunctions.length > 0 ? (
-                              // Show CF badges for function-calling agents
+                            {agent.agentType === "ROUTER" ? (
+                              // Router Agent: Show only routing badge (hide CF list)
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-200 rounded-full text-xs font-medium text-blue-700">
+                                🔀 Routes to sub-agents
+                              </span>
+                            ) : callFunctions.length > 0 ? (
+                              // Other agents: Show CF badges
                               callFunctions.map((func) => (
                                 <span
                                   key={func}
@@ -540,9 +441,8 @@ export function AgentConfigurationPage() {
                                   {func}
                                 </span>
                               ))
-                            ) : agent.name === "router" ||
-                              agent.name === "safety_translation" ? (
-                              // Show routing badge for Router/Safety agents
+                            ) : agent.name === "safety_translation" ? (
+                              // Safety Agent: Show routing badge
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-200 rounded-full text-xs font-medium text-blue-700">
                                 🔀 Routes to sub-agents
                               </span>

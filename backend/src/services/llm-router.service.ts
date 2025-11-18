@@ -198,8 +198,6 @@ export class LLMRouterService {
     if (!this.openRouterApiKey) {
       logger.warn("⚠️ OPENROUTER_API_KEY not set - LLM calls will fail")
     }
-
-    logger.info("✅ LLMRouterService initialized with Function Calling support")
   }
 
   /**
@@ -289,15 +287,8 @@ export class LLMRouterService {
       // 🆕 Feature 127: SYSTEM MESSAGE FAST-PATH
       // If isSystemMessage=true, skip Router/SubLLM and go DIRECTLY to Safety+Translation
       if (params.isSystemMessage) {
-        logger.info(
-          "🚀 SYSTEM MESSAGE FAST-PATH: Skipping Router/SubLLM, going direct to Safety+Translation"
-        )
-        logger.info("📍 FAST-PATH STEP 1: Calling SafetyTranslationAgent")
-        logger.info("📍 FAST-PATH STEP 1 INPUT:", {
+        logger.info("[FAST-PATH] System message - skipping Router", {
           workspaceId: params.workspaceId,
-          message: params.message,
-          targetLanguage: params.customerLanguage || "it",
-          customerName: params.customerName,
         })
 
         const debugSteps: DebugStep[] = []
@@ -335,15 +326,6 @@ export class LLMRouterService {
 
         totalTokens += safetyResult.tokensUsed || 0
 
-        logger.info(
-          "✅ FAST-PATH STEP 1 SUCCESS: SafetyTranslationAgent completed"
-        )
-        logger.info("📊 FAST-PATH STEP 1 OUTPUT:", {
-          translatedText: safetyResult.translatedText,
-          safe: safetyResult.safe,
-          tokensUsed: safetyResult.tokensUsed,
-        })
-
         debugSteps.push({
           type: "safety",
           agent: "SafetyTranslationAgent",
@@ -363,18 +345,6 @@ export class LLMRouterService {
           safe: safetyResult.safe,
         })
 
-        logger.info(
-          "📍 FAST-PATH STEP 2: Saving assistant message to conversation history"
-        )
-        logger.info("📍 FAST-PATH STEP 2 INPUT:", {
-          workspaceId: params.workspaceId,
-          customerId: params.customerId,
-          conversationId: params.conversationId,
-          content: safetyResult.translatedText,
-          agentType: "SYSTEM_NOTIFICATION",
-          tokensUsed: totalTokens,
-        })
-
         // Step 2: Save as assistant message in history
         await this.conversationManager.saveAssistantMessage({
           workspaceId: params.workspaceId,
@@ -392,19 +362,8 @@ export class LLMRouterService {
           },
         })
 
-        logger.info(
-          "✅ FAST-PATH STEP 2 SUCCESS: Message saved to conversation history"
-        )
-
         // Step 3: Return response (will be queued for WhatsApp)
         const executionTimeMs = Date.now() - startTime
-
-        logger.info(
-          "📍 FAST-PATH STEP 3: Returning response (TODO: WhatsApp queue)"
-        )
-        logger.info(
-          `✅ FAST-PATH COMPLETE: SYSTEM MESSAGE completed in ${executionTimeMs}ms (${totalTokens} tokens)`
-        )
 
         return {
           response: safetyResult.translatedText,
@@ -557,7 +516,6 @@ export class LLMRouterService {
       // TODO: Implement FAQ as delegatable function for Router to call
 
       // STEP 2: Load conversation history
-      logger.info("Step 2: Loading conversation history")
       const conversationHistory = await this.conversationManager.loadHistory(
         params.workspaceId,
         params.conversationId
@@ -585,7 +543,6 @@ export class LLMRouterService {
       }
 
       // STEP 4.5: Load customer data and dynamic content for Router prompt
-      logger.info("Step 4.5: Loading customer data and dynamic content")
       const customer = await this.prisma.customers.findUnique({
         where: { id: params.customerId },
         include: { sales: true },
@@ -703,7 +660,6 @@ export class LLMRouterService {
       }
 
       // STEP 5: Function Calling Loop
-      logger.info("Step 3: Starting Function Calling loop")
       const result = await this.functionCallingLoop({
         routerAgent: processedRouterAgent,
         conversationHistory,
@@ -755,7 +711,6 @@ export class LLMRouterService {
 
       // STEP 4: Replace tokens BEFORE Safety & Translation
       // This ensures Safety agent receives actual URLs, not tokens
-      logger.info("Step 4: Replacing tokens in response (BEFORE Safety)")
       const linkReplacementTimestamp = new Date().toISOString()
 
       let responseWithLinks = result.response
@@ -934,7 +889,6 @@ export class LLMRouterService {
 
       // STEP 5: Apply Safety & Translation Layer
       // Now processes the response WITH actual URLs AND customer variables replaced
-      logger.info("Step 5: Applying Safety & Translation Layer")
       const safetyTimestamp = new Date().toISOString()
       const safeResponse = await this.safetyAgent.process({
         workspaceId: params.workspaceId,
@@ -1583,11 +1537,7 @@ export class LLMRouterService {
                     : "Intent classification",
               } as any)
 
-              logger.info("✅ Added delegation debug step (Router → Product)", {
-                toAgent: "PRODUCT_SEARCH",
-              })
-
-              // �🔒 PRE-CHECK: Verify products exist before delegating
+              // 🔒 PRE-CHECK: Verify products exist before delegating
               // Prevents LLM from inventing non-existent products
               const queryLower = params.message.toLowerCase()
               // ✅ ALWAYS delegate to ProductSearchAgentLLM - let LLM decide what to show
