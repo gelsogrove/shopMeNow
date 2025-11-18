@@ -314,6 +314,121 @@ ShopMe - La tua piattaforma e-commerce di fiducia
     `
   }
 
+  /**
+   * Generic email sending function
+   * @param params.type - 'customer' or 'agent' - determines email lookup
+   * @param params.to - customerId or agentId (userId)
+   * @param params.subject - Email subject
+   * @param params.body - Email body (HTML or plain text)
+   * @param params.cc - Optional CC recipients (string or array)
+   * @param params.workspaceId - Workspace ID for database lookup
+   * @returns Promise<boolean> - true if sent successfully, false otherwise
+   */
+  async sendMail(params: {
+    type: "customer" | "agent"
+    to: string // customerId or agentId
+    subject: string
+    body: string
+    cc?: string | string[]
+    workspaceId: string
+  }): Promise<boolean> {
+    try {
+      const { type, to, subject, body, cc, workspaceId } = params
+
+      // Import PrismaClient dynamically to avoid circular dependency
+      const { PrismaClient } = await import("@prisma/client")
+      const prisma = new PrismaClient()
+
+      let recipientEmail: string | null = null
+      let recipientName: string | null = null
+
+      try {
+        if (type === "customer") {
+          // Lookup customer email
+          const customer = await prisma.customers.findUnique({
+            where: { id: to },
+            select: { email: true, name: true },
+          })
+
+          if (!customer || !customer.email) {
+            logger.error(`Customer ${to} not found or has no email`)
+            return false
+          }
+
+          recipientEmail = customer.email
+          recipientName = customer.name || "Customer"
+        } else if (type === "agent") {
+          // Lookup agent (user) email
+          const agent = await prisma.user.findUnique({
+            where: { id: to },
+            select: { email: true, firstName: true, lastName: true },
+          })
+
+          if (!agent || !agent.email) {
+            logger.error(`Agent ${to} not found or has no email`)
+            return false
+          }
+
+          recipientEmail = agent.email
+          recipientName =
+            `${agent.firstName || ""} ${agent.lastName || ""}`.trim()
+        } else {
+          logger.error(`Invalid type: ${type}. Must be 'customer' or 'agent'`)
+          return false
+        }
+
+        // Fetch workspace admin email for FROM address
+        const workspace = await prisma.workspace.findUnique({
+          where: { id: workspaceId },
+          select: {
+            name: true,
+            whatsappSettings: {
+              select: { adminEmail: true },
+            },
+          },
+        })
+
+        if (!workspace || !workspace.whatsappSettings?.adminEmail) {
+          logger.error(
+            `Workspace ${workspaceId} not found or has no admin email in whatsappSettings`
+          )
+          return false
+        }
+
+        const fromEmail = workspace.whatsappSettings.adminEmail
+        const fromName = workspace.name || "ShopMe"
+
+        // Build email options
+        const mailOptions: nodemailer.SendMailOptions = {
+          from: `"${fromName}" <${fromEmail}>`,
+          to: recipientEmail,
+          subject: subject,
+          html: body,
+          text: body.replace(/<[^>]*>/g, ""), // Strip HTML tags for plain text fallback
+        }
+
+        // Add CC if provided
+        if (cc) {
+          mailOptions.cc = Array.isArray(cc) ? cc.join(", ") : cc
+        }
+
+        // Send email
+        const info = await this.transporter.sendMail(mailOptions)
+
+        logger.info(
+          `Email sent successfully to ${type} ${recipientName} (${recipientEmail}). MessageID: ${info.messageId}`
+        )
+
+        return true
+      } finally {
+        await prisma.$disconnect()
+      }
+    } catch (error) {
+      logger.error("Failed to send email via sendMail():", error)
+      return false
+    }
+  }
+
   async verifyConnection(): Promise<boolean> {
     try {
       await this.transporter.verify()

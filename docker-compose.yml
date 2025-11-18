@@ -20,31 +20,10 @@ services:
       timeout: 10s
       retries: 3
 
-  # 🤖 LOCAL LLM - Ollama
-  ollama:
-    image: ollama/ollama:latest
-    container_name: shop_ollama
-    restart: always
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    networks:
-      - shopme_network
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-
 networks:
   shopme_network:
     driver: bridge
 
 volumes:
   postgres_data:
-    driver: local
-  ollama_data:
     driver: local

@@ -29,6 +29,7 @@
     "update-pricing": "ts-node scripts/update-pricing.ts",
     "update:prompts": "node scripts/update-prompts.js",
     "update:all-prompts": "ts-node scripts/update-all-agent-prompts.ts",
+    "test:smtp": "ts-node scripts/test-smtp.ts",
     "quick-seed": "ts-node scripts/quick-seed.ts",
     "view-pricing": "ts-node scripts/view-pricing.ts",
     "start:prod": "node dist/src/index.js",

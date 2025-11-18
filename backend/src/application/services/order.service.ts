@@ -191,6 +191,116 @@ export class OrderService {
           )
           // Don't fail the order creation if billing fails
         }
+
+        // 📧 SEND EMAIL TO CUSTOMER with order confirmation
+        try {
+          const { EmailService } = require("./email.service")
+          const emailService = new EmailService()
+
+          // Get workspace for admin email (for CC)
+          const { PrismaClient } = require("@prisma/client")
+          const prisma = new PrismaClient()
+
+          const workspace = await prisma.workspace.findUnique({
+            where: { id: createdOrder.workspaceId },
+            select: {
+              name: true,
+              whatsappSettings: {
+                select: { adminEmail: true },
+              },
+            },
+          })
+
+          await prisma.$disconnect()
+
+          // Format order items for email
+          const itemsList = createdOrder.items
+            .map((item: any, idx: number) => {
+              return `${idx + 1}. ${item.name} - Quantità: ${item.quantity} - Prezzo: €${item.price.toFixed(2)}`
+            })
+            .join("\n")
+
+          const emailSubject = `✅ Conferma Ordine ${createdOrder.orderCode}`
+          const emailBody = `
+<h2>✅ Ordine Confermato!</h2>
+
+<p>Gentile cliente,</p>
+
+<p>Il tuo ordine è stato confermato con successo.</p>
+
+<hr>
+
+<h3>📦 Dettagli Ordine</h3>
+
+<table style="width: 100%; border-collapse: collapse;">
+  <tr>
+    <td style="padding: 8px; border: 1px solid #ddd;"><strong>Codice Ordine:</strong></td>
+    <td style="padding: 8px; border: 1px solid #ddd;">${createdOrder.orderCode}</td>
+  </tr>
+  <tr>
+    <td style="padding: 8px; border: 1px solid #ddd;"><strong>Data:</strong></td>
+    <td style="padding: 8px; border: 1px solid #ddd;">${new Date(createdOrder.createdAt).toLocaleString("it-IT")}</td>
+  </tr>
+  <tr>
+    <td style="padding: 8px; border: 1px solid #ddd;"><strong>Stato:</strong></td>
+    <td style="padding: 8px; border: 1px solid #ddd;">${createdOrder.status}</td>
+  </tr>
+</table>
+
+<h3>🛍️ Prodotti</h3>
+
+<pre style="background-color: #f5f5f5; padding: 15px; border-radius: 5px;">
+${itemsList}
+</pre>
+
+<h3>💰 Totali</h3>
+
+<table style="width: 100%; border-collapse: collapse;">
+  <tr>
+    <td style="padding: 8px; border: 1px solid #ddd;"><strong>Subtotale:</strong></td>
+    <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">€${(createdOrder.totalAmount - (createdOrder.shippingAmount || 0) - (createdOrder.taxAmount || 0)).toFixed(2)}</td>
+  </tr>
+  ${createdOrder.shippingAmount ? `<tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Spedizione:</strong></td><td style="padding: 8px; border: 1px solid #ddd; text-align: right;">€${createdOrder.shippingAmount.toFixed(2)}</td></tr>` : ""}
+  ${createdOrder.taxAmount ? `<tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>IVA:</strong></td><td style="padding: 8px; border: 1px solid #ddd; text-align: right;">€${createdOrder.taxAmount.toFixed(2)}</td></tr>` : ""}
+  ${createdOrder.discountAmount ? `<tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Sconto:</strong></td><td style="padding: 8px; border: 1px solid #ddd; text-align: right;">-€${createdOrder.discountAmount.toFixed(2)}</td></tr>` : ""}
+  <tr style="background-color: #f0f0f0;">
+    <td style="padding: 12px; border: 1px solid #ddd;"><strong>TOTALE:</strong></td>
+    <td style="padding: 12px; border: 1px solid #ddd; text-align: right; font-size: 18px;"><strong>€${createdOrder.totalAmount.toFixed(2)}</strong></td>
+  </tr>
+</table>
+
+<hr>
+
+<p>Grazie per il tuo acquisto!</p>
+
+<p style="color: #666; font-size: 12px;">
+Email generata automaticamente dal sistema ShopMe<br>
+${workspace?.name || "ShopMe"}
+</p>
+          `
+
+          // Send email to customer with CC to admin
+          await emailService.sendMail({
+            type: "customer",
+            to: createdOrder.customerId,
+            subject: emailSubject,
+            body: emailBody,
+            cc: workspace?.whatsappSettings?.adminEmail || undefined,
+            workspaceId: createdOrder.workspaceId,
+          })
+
+          logger.info(
+            "✅ Order confirmation email sent to customer:",
+            createdOrder.customerId,
+            "with CC to admin"
+          )
+        } catch (emailError) {
+          logger.error(
+            "❌ Failed to send order confirmation email:",
+            emailError
+          )
+          // Don't fail the order creation if email fails
+        }
       }
 
       return createdOrder
