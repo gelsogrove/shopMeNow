@@ -16,17 +16,18 @@ This document describes all available variables that can be used in agent prompt
 
 Variables related to customer information (from `customers` table):
 
-| Variable | Type | Description | Example Output | Source |
-|----------|------|-------------|----------------|--------|
-| `{{nameUser}}` | String | Customer's name | `"Mario Rossi"` | `customers.nome` |
-| `{{email}}` | String | Customer's email address | `"mario@example.com"` | `customers.email` |
-| `{{phone}}` | String | Customer's phone number | `"+39 123 456 7890"` | `customers.phone` |
-| `{{telefono}}` | String | Alias for `{{phone}}` | `"+39 123 456 7890"` | `customers.phone` |
-| `{{nome}}` | String | Alias for `{{nameUser}}` | `"Mario Rossi"` | `customers.nome` |
-| `{{discountUser}}` | Number | Customer's discount percentage | `"15"` | `customers.discountUser` |
-| `{{languageUser}}` | String | Customer's language preference | `"ITALIANO"` | `customers.languageUser` |
+| Variable           | Type   | Description                    | Example Output        | Source                   |
+| ------------------ | ------ | ------------------------------ | --------------------- | ------------------------ |
+| `{{nameUser}}`     | String | Customer's name                | `"Mario Rossi"`       | `customers.nome`         |
+| `{{email}}`        | String | Customer's email address       | `"mario@example.com"` | `customers.email`        |
+| `{{phone}}`        | String | Customer's phone number        | `"+39 123 456 7890"`  | `customers.phone`        |
+| `{{telefono}}`     | String | Alias for `{{phone}}`          | `"+39 123 456 7890"`  | `customers.phone`        |
+| `{{nome}}`         | String | Alias for `{{nameUser}}`       | `"Mario Rossi"`       | `customers.nome`         |
+| `{{discountUser}}` | Number | Customer's discount percentage | `"15"`                | `customers.discountUser` |
+| `{{languageUser}}` | String | Customer's language preference | `"ITALIANO"`          | `customers.languageUser` |
 
 **Fallbacks**:
+
 - `{{nameUser}}` / `{{nome}}` → `"Cliente"` if missing
 - `{{email}}` / `{{phone}}` → `""` (empty string) if missing
 - `{{discountUser}}` → `"0"` if missing
@@ -38,14 +39,15 @@ Variables related to customer information (from `customers` table):
 
 Variables related to workspace configuration:
 
-| Variable | Type | Description | Example Output | Source |
-|----------|------|-------------|----------------|--------|
-| `{{companyName}}` | String | Company/workspace name | `"L'Altra Italia"` | `workspace.companyName` |
-| `{{workspaceId}}` | String | Workspace unique ID | `"cm9hjgq9v00014qk8..."` | `workspace.id` |
-| `{{workspaceName}}` | String | Alias for `{{companyName}}` | `"L'Altra Italia"` | `workspace.companyName` |
-| `{{URL}}` | String | Workspace public URL | `"https://shop.example.com"` | `workspace.url` |
+| Variable            | Type   | Description                 | Example Output               | Source                  |
+| ------------------- | ------ | --------------------------- | ---------------------------- | ----------------------- |
+| `{{companyName}}`   | String | Company/workspace name      | `"L'Altra Italia"`           | `workspace.companyName` |
+| `{{workspaceId}}`   | String | Workspace unique ID         | `"cm9hjgq9v00014qk8..."`     | `workspace.id`          |
+| `{{workspaceName}}` | String | Alias for `{{companyName}}` | `"L'Altra Italia"`           | `workspace.companyName` |
+| `{{URL}}`           | String | Workspace public URL        | `"https://shop.example.com"` | `workspace.url`         |
 
 **Fallbacks**:
+
 - `{{companyName}}` / `{{workspaceName}}` → `"L'Altra Italia"` if missing
 
 ---
@@ -54,13 +56,14 @@ Variables related to workspace configuration:
 
 Variables related to assigned sales agent (from `salesAgents` table):
 
-| Variable | Type | Description | Example Output | Source |
-|----------|------|-------------|----------------|--------|
-| `{{agentName}}` | String | Sales agent's full name | `"Giovanni Bianchi"` | `salesAgents.nome` |
-| `{{agentPhone}}` | String | Sales agent's phone number | `"+39 987 654 3210"` | `salesAgents.phone` |
+| Variable         | Type   | Description                 | Example Output          | Source              |
+| ---------------- | ------ | --------------------------- | ----------------------- | ------------------- |
+| `{{agentName}}`  | String | Sales agent's full name     | `"Giovanni Bianchi"`    | `salesAgents.nome`  |
+| `{{agentPhone}}` | String | Sales agent's phone number  | `"+39 987 654 3210"`    | `salesAgents.phone` |
 | `{{agentEmail}}` | String | Sales agent's email address | `"giovanni@shopme.com"` | `salesAgents.email` |
 
 **Fallbacks**:
+
 - `{{agentName}}` → `"Non assegnato"` if missing
 - `{{agentPhone}}` / `{{agentEmail}}` → `"N/A"` if missing
 
@@ -70,25 +73,28 @@ Variables related to assigned sales agent (from `salesAgents` table):
 
 Variables related to customer's order history:
 
-| Variable | Type | Description | Example Output | Source |
-|----------|------|-------------|----------------|--------|
-| `{{lastordercode}}` | String | Most recent order code | `"ORD-2025-001234"` | `orders.code` (latest) |
-| `{{LAST_ORDER}}` | Markdown | Complete last order summary | See below | Database query + formatting |
+| Variable            | Type     | Description                 | Example Output      | Source                      |
+| ------------------- | -------- | --------------------------- | ------------------- | --------------------------- |
+| `{{lastordercode}}` | String   | Most recent order code      | `"ORD-2025-001234"` | `orders.code` (latest)      |
+| `{{LAST_ORDER}}`    | Markdown | Complete last order summary | See below           | Database query + formatting |
 
 **`{{LAST_ORDER}}` Format**:
 
 ```markdown
 📦 ULTIMO ORDINE CONSEGNATO:
+
 - Codice: ORD-2025-001234
 - Data: 15/11/2025
 - Totale: €45.50
 
 PRODOTTI:
+
 1. Pasta di Gragnano IGP (€8.50 x 2) = €17.00
 2. Olio EVO Toscano (€12.00 x 1) = €12.00
 ```
 
 **Fallbacks**:
+
 - `{{lastordercode}}` → `"N/A"` if no orders
 - `{{LAST_ORDER}}` → `"Nessun ordine consegnato disponibile"` if no delivered orders
 
@@ -98,11 +104,12 @@ PRODOTTI:
 
 Variables for displaying secure link expiration times:
 
-| Variable | Type | Description | Example Output | Source |
-|----------|------|-------------|----------------|--------|
+| Variable             | Type   | Description                         | Example Output             | Source                         |
+| -------------------- | ------ | ----------------------------------- | -------------------------- | ------------------------------ |
 | `{{TOKEN_DURATION}}` | String | Human-readable link validity period | `"1 hour"`, `"30 minutes"` | `process.env.TOKEN_EXPIRATION` |
 
 **Format Conversion**:
+
 - `"15m"` → `"15 minutes"`
 - `"30m"` → `"30 minutes"`
 - `"1h"` → `"1 hour"`
@@ -122,20 +129,22 @@ Variables for displaying secure link expiration times:
 
 Variables that inject large amounts of data (catalogs, FAQs, etc.):
 
-| Variable | Type | Description | Token Count | Source |
-|----------|------|-------------|-------------|--------|
-| `{{PRODUCTS}}` | Markdown | Complete product catalog | ~50k tokens | Database query + formatting |
-| `{{CATEGORIES}}` | Markdown | Product categories list | ~5k tokens | Database query + formatting |
-| `{{SERVICES}}` | Markdown | Available services list | ~3k tokens | Database query + formatting |
-| `{{OFFERS}}` | Markdown | Active offers/promotions | ~8k tokens | Database query + formatting |
-| `{{FAQ}}` | Markdown | Frequently asked questions | ~2k tokens | Database query + formatting |
+| Variable         | Type     | Description                | Token Count | Source                      |
+| ---------------- | -------- | -------------------------- | ----------- | --------------------------- |
+| `{{PRODUCTS}}`   | Markdown | Complete product catalog   | ~50k tokens | Database query + formatting |
+| `{{CATEGORIES}}` | Markdown | Product categories list    | ~5k tokens  | Database query + formatting |
+| `{{SERVICES}}`   | Markdown | Available services list    | ~3k tokens  | Database query + formatting |
+| `{{OFFERS}}`     | Markdown | Active offers/promotions   | ~8k tokens  | Database query + formatting |
+| `{{FAQ}}`        | Markdown | Frequently asked questions | ~2k tokens  | Database query + formatting |
 
 **⚠️ CRITICAL CONSTRAINT** (Constitution v1.5.0 Principle III):
+
 - Each large variable (`{{PRODUCTS}}`, `{{OFFERS}}`, `{{SERVICES}}`, `{{CATEGORIES}}`) can appear **AT MOST ONCE** per prompt
 - Duplicate usage causes 100k+ token prompts → OpenRouter API failure
 - Validation happens in `PromptProcessorService.validatePromptVariables()` before replacement
 
 **Example Valid Usage**:
+
 ```markdown
 Available products:
 {{PRODUCTS}}
@@ -145,12 +154,13 @@ Current offers:
 ```
 
 **Example INVALID Usage** (duplicate):
+
 ```markdown
 Top products:
 {{PRODUCTS}}
 
 Also check:
-{{PRODUCTS}}  ❌ ERROR: Variable can only appear once
+{{PRODUCTS}} ❌ ERROR: Variable can only appear once
 ```
 
 ---
@@ -159,22 +169,25 @@ Also check:
 
 Variables related to push notification consent:
 
-| Variable | Type | Description | Example Output | Source |
-|----------|------|-------------|----------------|--------|
-| `{{pushNotificationsConsent}}` | Boolean | Consent status (true/false) | `"true"` or `"false"` | `customers.pushNotificationsConsent` |
-| `{{pushNotificationsConsentAt}}` | ISO Date | Consent timestamp | `"2025-11-18T10:30:00.000Z"` | `customers.pushNotificationsConsentAt` |
-| `{{SUBSCRIBE_MESSAGE}}` | String | Push subscription invitation | See below | Conditional logic |
+| Variable                         | Type     | Description                  | Example Output               | Source                                 |
+| -------------------------------- | -------- | ---------------------------- | ---------------------------- | -------------------------------------- |
+| `{{pushNotificationsConsent}}`   | Boolean  | Consent status (true/false)  | `"true"` or `"false"`        | `customers.pushNotificationsConsent`   |
+| `{{pushNotificationsConsentAt}}` | ISO Date | Consent timestamp            | `"2025-11-18T10:30:00.000Z"` | `customers.pushNotificationsConsentAt` |
+| `{{SUBSCRIBE_MESSAGE}}`          | String   | Push subscription invitation | See below                    | Conditional logic                      |
 
 **`{{SUBSCRIBE_MESSAGE}}` Logic**:
+
 - If `pushNotificationsConsent === true`: Returns `""` (empty string - user already subscribed)
 - If `pushNotificationsConsent === false`: Returns invitation message
 
 **Invitation Message**:
+
 ```
 💡 Want to receive exclusive offers and updates via WhatsApp? Let me know!
 ```
 
 **Fallbacks**:
+
 - `{{pushNotificationsConsent}}` → `"false"` if missing
 - `{{pushNotificationsConsentAt}}` → `"Mai modificato"` if null
 
@@ -184,13 +197,14 @@ Variables related to push notification consent:
 
 Template control structures for conditional content:
 
-| Syntax | Description | Example |
-|--------|-------------|---------|
-| `{{#if pushNotificationsConsent}}` | Start conditional block | Shows content only if consent is true |
-| `{{else}}` | Else clause | Shows alternative content if condition is false |
-| `{{/if}}` | End conditional block | Closes the if statement |
+| Syntax                             | Description             | Example                                         |
+| ---------------------------------- | ----------------------- | ----------------------------------------------- |
+| `{{#if pushNotificationsConsent}}` | Start conditional block | Shows content only if consent is true           |
+| `{{else}}`                         | Else clause             | Shows alternative content if condition is false |
+| `{{/if}}`                          | End conditional block   | Closes the if statement                         |
 
 **Example Usage**:
+
 ```markdown
 {{#if pushNotificationsConsent}}
 ✅ You're subscribed to notifications!
@@ -223,11 +237,13 @@ Variables are replaced in this sequence (see `PromptProcessorService.preProcessP
 To add a new variable to the system:
 
 1. **Add to `replaceCustomerVariables()` method** in `PromptProcessorService`:
+
    ```typescript
    .replace(/\{\{YOUR_VARIABLE\}\}/g, customerData.yourField || "default")
    ```
 
 2. **Document in this file** with:
+
    - Variable name
    - Type and description
    - Example output
@@ -235,6 +251,7 @@ To add a new variable to the system:
    - Fallback value
 
 3. **Update TypeScript types** if needed:
+
    ```typescript
    customerData: {
      // ... existing fields
@@ -258,24 +275,28 @@ To add a new variable to the system:
 ## Common Mistakes to Avoid
 
 ❌ **Using wrong variable names**:
+
 - Use `{{TOKEN_DURATION}}` NOT `{{TOKEN_EXPIRATION}}`
 - Use `{{nameUser}}` NOT `{{name}}` or `{{customerName}}`
 
 ❌ **Duplicating large variables**:
+
 ```markdown
 Products: {{PRODUCTS}}
-Also: {{PRODUCTS}}  ❌ Causes 100k+ token error
+Also: {{PRODUCTS}} ❌ Causes 100k+ token error
 ```
 
 ❌ **Typos in variable names**:
+
 ```markdown
-{{nmae}}  ❌ Won't be replaced (shows as {{nmae}} to customer)
-{{nameUser}}  ✅ Correct
+{{nmae}} ❌ Won't be replaced (shows as {{nmae}} to customer)
+{{nameUser}} ✅ Correct
 ```
 
 ❌ **Using variables not yet in database**:
+
 ```markdown
-{{customerBirthday}}  ❌ Field doesn't exist in customers table
+{{customerBirthday}} ❌ Field doesn't exist in customers table
 ```
 
 ---
@@ -302,8 +323,8 @@ Enable debug mode to see prompt BEFORE and AFTER replacement:
 
 ```typescript
 // In PromptProcessorService.preProcessPrompt()
-logger.debug('PROMPT BEFORE:', promptContent)
-logger.debug('PROMPT AFTER:', processedPrompt)
+logger.debug("PROMPT BEFORE:", promptContent)
+logger.debug("PROMPT AFTER:", processedPrompt)
 ```
 
 Or check debug logs: `backend/logs/prompt-debug-*.txt`
@@ -322,6 +343,6 @@ Or check debug logs: `backend/logs/prompt-debug-*.txt`
 
 ## Version History
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0 | 2025-11-18 | Initial documentation with all current variables |
+| Version | Date       | Changes                                          |
+| ------- | ---------- | ------------------------------------------------ |
+| 1.0     | 2025-11-18 | Initial documentation with all current variables |
