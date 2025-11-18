@@ -101,7 +101,7 @@ async function sendTestEmail(config: SmtpConfig): Promise<void> {
     from: `"ShopME Test" <${config.from}>`,
     to: "getprono@gmail.com",
     subject: "✅ SMTP Test - ShopME Email System",
-    text: `Questo è un test del sistema email di ShopME.
+    text: `Questo è un test del sistema email di ShopME....
 
 Data/Ora: ${testDate}
 Server SMTP: ${config.host}:${config.port}
