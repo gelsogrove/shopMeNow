@@ -64,9 +64,16 @@ api.interceptors.request.use(
       }
     )
 
-    // Note: JWT token is sent automatically via HTTP-only cookies
-    // No need to manually add Authorization header
-    logger.info(`🔐 Using HTTP-only cookie for authentication`)
+    // 🆕 ADD AUTHORIZATION HEADER (JWT token from localStorage - proxy-safe)
+    const token = localStorage.getItem("token")
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+      logger.info(`🔐 Added Authorization header with JWT token`)
+    } else {
+      logger.info(
+        `🔐 No JWT token in localStorage - using HTTP-only cookie fallback`
+      )
+    }
 
     // 🆕 ADD X-SESSION-ID HEADER (except for exempt routes)
     const url = config.url || ""

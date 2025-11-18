@@ -117,6 +117,14 @@ export function LoginPage() {
           throw new Error("No sessionId in login response")
         }
 
+        // 🆕 SAVE JWT TOKEN for Authorization header (proxy-safe)
+        if (response.data.token) {
+          localStorage.setItem("token", response.data.token)
+          logger.info(`✅ JWT token saved to localStorage`)
+        } else {
+          logger.warn("⚠️ No JWT token in login response (cookie-only mode)")
+        }
+
         // Save user data
         localStorage.setItem("user", JSON.stringify(response.data.user))
 

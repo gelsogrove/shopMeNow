@@ -50,7 +50,7 @@ export const workspaceValidationMiddleware = async (
     // 🆕 NEW: If still no workspaceId, try to extract from user's workspaces (JWT context)
     if (!workspaceId || workspaceId.trim() === "") {
       const user = (req as any).user
-      const userWorkspaces = (req as any).userWorkspaces
+      const userWorkspaces = user?.workspaces || (req as any).userWorkspaces // 🔧 FIX: Check both locations
 
       logger.info(
         `🔍 No workspaceId in params/query/headers - checking user context`,

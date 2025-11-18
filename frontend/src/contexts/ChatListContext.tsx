@@ -56,6 +56,7 @@ export function ChatListProvider({ children }: { children: ReactNode }) {
     refetch: queryRefetch,
   } = useQuery({
     queryKey: ["chats", sessionId], // 🚨 FIX: sessionId nella key!
+    enabled: !!(workspaceId && sessionId), // 🔥 Only run if we have both IDs
     queryFn: async () => {
       try {
         if (!workspaceId) {

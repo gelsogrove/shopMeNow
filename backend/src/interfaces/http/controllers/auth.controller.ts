@@ -121,12 +121,6 @@ export class AuthController {
       throw new AppError(401, "Invalid credentials")
     }
 
-    // Generate JWT token
-    const jwtToken = this.generateToken(user)
-
-    // Set the token as an HTTP-only cookie
-    this.setTokenCookie(res, jwtToken)
-
     // 🆕 CREATE ADMIN SESSION
     const sessionId = await adminSessionService.createSession(
       user.id,
@@ -139,7 +133,13 @@ export class AuthController {
       `✅ User ${user.email} logged in with sessionId: ${sessionId.substring(0, 8)}...`
     )
 
-    // Return success response with user info AND sessionId
+    // Generate JWT token
+    const jwtToken = this.generateToken(user)
+
+    // Set the token as an HTTP-only cookie (for browser compatibility)
+    this.setTokenCookie(res, jwtToken)
+
+    // Return success response with user info, sessionId AND token (for proxy compatibility)
     res.status(200).json({
       user: {
         id: user.id,
@@ -148,7 +148,8 @@ export class AuthController {
         lastName: user.lastName,
         role: user.role,
       },
-      sessionId, // 🆕 NEW FIELD - frontend will save in localStorage
+      sessionId, // 🆕 NEW FIELD - frontend will save in sessionStorage
+      token: jwtToken, // 🆕 NEW FIELD - frontend will use in Authorization header (proxy-safe)
     })
   }
 
@@ -192,12 +193,12 @@ export class AuthController {
     }
 
     // Generate JWT token
-    const jwtToken = this.generateToken(user)
+    const jwtToken2FA = this.generateToken(user)
 
-    // Set the token as an HTTP-only cookie
-    this.setTokenCookie(res, jwtToken)
+    // Set the token as an HTTP-only cookie (for browser compatibility)
+    this.setTokenCookie(res, jwtToken2FA)
 
-    // Return success response with user info (without token in body)
+    // Return success response with user info AND token (for proxy compatibility)
     res.status(200).json({
       user: {
         id: user.id,
@@ -206,6 +207,7 @@ export class AuthController {
         lastName: user.lastName,
         role: user.role,
       },
+      token: jwtToken2FA, // 🆕 NEW FIELD - frontend will use in Authorization header (proxy-safe)
     })
   }
 

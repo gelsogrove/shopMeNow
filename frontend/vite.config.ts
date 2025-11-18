@@ -34,6 +34,8 @@ export default defineConfig({
         target: "http://localhost:3001",
         changeOrigin: true,
         secure: false,
+        cookieDomainRewrite: "localhost", // 🍪 Forward cookies correctly
+        cookiePathRewrite: "/", // 🍪 Ensure cookies work across all paths
         configure: (proxy, _options) => {
           proxy.on("error", (err, _req, _res) => {
             // Production: Silent error handling

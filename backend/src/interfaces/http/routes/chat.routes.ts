@@ -1,6 +1,4 @@
 import express from "express"
-import { recentChatsRateLimiter } from "../../../middlewares/rateLimiter"
-import logger from "../../../utils/logger"
 import { ChatController } from "../controllers/chat.controller"
 import { asyncHandler } from "../middlewares/async.middleware"
 import { authMiddleware } from "../middlewares/auth.middleware"
@@ -138,25 +136,26 @@ export const chatRouter = (chatController: ChatController): express.Router => {
    */
   router.get(
     "/recent",
-    (req, res, next) => {
-      const identifier = req.ip || req.socket.remoteAddress || "unknown"
-      if (!recentChatsRateLimiter.isAllowed(identifier)) {
-        const timeToReset = recentChatsRateLimiter.getTimeToReset(identifier)
-        const currentCount = recentChatsRateLimiter.getCurrentCount(identifier)
+    // TEMPORARILY DISABLED: Rate limiter causing issues with Vite proxy
+    // (req, res, next) => {
+    //   const identifier = req.ip || req.socket.remoteAddress || "unknown"
+    //   if (!recentChatsRateLimiter.isAllowed(identifier)) {
+    //     const timeToReset = recentChatsRateLimiter.getTimeToReset(identifier)
+    //     const currentCount = recentChatsRateLimiter.getCurrentCount(identifier)
 
-        logger.info(
-          `🚫 Rate limit exceeded for ${identifier}: ${currentCount} requests, reset in ${Math.ceil(timeToReset / 1000)}s`
-        )
+    //     logger.info(
+    //       `🚫 Rate limit exceeded for ${identifier}: ${currentCount} requests, reset in ${Math.ceil(timeToReset / 1000)}s`
+    //     )
 
-        return res.status(429).json({
-          success: false,
-          error: "Too many requests to /chat/recent",
-          message: `Rate limit exceeded. Try again in ${Math.ceil(timeToReset / 1000)} seconds.`,
-          retryAfter: Math.ceil(timeToReset / 1000),
-        })
-      }
-      next()
-    },
+    //     return res.status(429).json({
+    //       success: false,
+    //       error: "Too many requests to /chat/recent",
+    //       message: `Rate limit exceeded. Try again in ${Math.ceil(timeToReset / 1000)} seconds.`,
+    //       retryAfter: Math.ceil(timeToReset / 1000),
+    //     })
+    //   }
+    //   next()
+    // },
     asyncHandler(chatController.getRecentChats.bind(chatController))
   )
 
