@@ -43,7 +43,6 @@ import {
   getAgents,
   updateAgent,
 } from "@/services/agentApi"
-import { api } from "@/services/api"
 import {
   Bell,
   Bot,
