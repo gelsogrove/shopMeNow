@@ -355,7 +355,10 @@ export function ClientSheet({
 
   // 🆕 Detect changes for notification logic
   const detectChanges = (newData: any) => {
+    console.log("� DETECT CHANGES CALLED", { originalClient, newData })
+
     if (!originalClient) {
+      console.log("❌ NO originalClient - returning no changes")
       return {
         hasChanges: false,
         discountChanged: false,
@@ -436,9 +439,11 @@ export function ClientSheet({
 
     // 🆕 Detect changes for notification
     const changes = detectChanges(customerData)
+    console.log("� Changes detected:", changes)
 
     try {
       const result = await onSubmit(customerData, clientId, changes)
+      console.log("✅ onSubmit completed successfully")
       // ❌ NON chiudere qui - ClientsPage chiude dopo API success
       // onOpenChange(false)
     } catch (err) {

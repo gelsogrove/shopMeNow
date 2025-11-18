@@ -12,6 +12,8 @@ export const createUserRouter = (): Router => {
   const router = Router();
   const userService = new UserService();
   const userController = new UserController(userService);
+  
+  logger.info('Setting up user routes');
 
   router.use(authMiddleware);
 
@@ -42,5 +44,6 @@ export const createUserRouter = (): Router => {
   // Delete a user (admin only)
   router.delete('/:id', asyncHandler(userController.deleteUser));
 
+  logger.info('User routes setup complete');
   return router;
 }; 

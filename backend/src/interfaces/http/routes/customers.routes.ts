@@ -7,8 +7,10 @@ import { authMiddleware } from "../middlewares/auth.middleware"
 export const customersRouter = (controller: CustomersController): Router => {
   const router = Router()
 
-  // 🔒 SECURITY: All routes require authentication
+  // � SECURITY: All routes require authentication
   router.use(authMiddleware)
+
+  logger.info("Setting up customers routes")
 
   // Routes for customers - adjust paths to work with the router mounting
   router.get(
@@ -70,6 +72,7 @@ export const customersRouter = (controller: CustomersController): Router => {
     return controller.countUnknownCustomers(req, res, next)
   })
 
+  logger.info("Customers routes setup complete")
   return router
 }
 
@@ -81,6 +84,8 @@ export const workspaceCustomersRouter = (
 
   // All routes require authentication
   router.use(authMiddleware)
+
+  logger.info("Setting up workspace customers routes")
 
   // Routes for customers under workspaces path - prefix è già /workspaces
   router.get(
@@ -130,5 +135,6 @@ export const workspaceCustomersRouter = (
     controller.countUnknownCustomers.bind(controller)
   )
 
+  logger.info("Workspace customers routes setup complete")
   return router
 }

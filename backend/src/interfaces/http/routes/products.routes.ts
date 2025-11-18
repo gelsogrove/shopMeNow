@@ -81,6 +81,8 @@ export default function setupProductRoutes(): Router {
   const router = Router({ mergeParams: true }) // Enable mergeParams to inherit workspaceId
   const productController = new ProductController()
 
+  logger.info("Setting up product routes")
+
   // All routes require authentication
   router.use(authMiddleware)
 

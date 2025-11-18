@@ -28,6 +28,8 @@ import { authMiddleware } from '../middlewares/auth.middleware';
 export const createLanguagesRouter = (): Router => {
   const router = Router();
   const languageController = new LanguageController();
+  
+  logger.info('Setting up languages routes');
 
   /**
    * @swagger
@@ -63,5 +65,6 @@ export const createLanguagesRouter = (): Router => {
    */
   router.get('/', authMiddleware, asyncHandler(languageController.getAllLanguages));
 
+  logger.info('Languages routes setup complete');
   return router;
 }; 
