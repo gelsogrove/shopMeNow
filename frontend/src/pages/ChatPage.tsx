@@ -921,6 +921,11 @@ export function ChatPage() {
           setTimeout(() => {
             setShowNotificationDialog(true)
           }, 500) // Wait for toast to appear first
+          // ✅ Close edit sheet AFTER showing notification dialog
+          setShowEditSheet(false)
+        } else {
+          // ✅ No changes detected - close sheet immediately
+          setShowEditSheet(false)
         }
 
         logger.info("✅ Customer updated successfully")
@@ -930,6 +935,8 @@ export function ChatPage() {
             (response.data?.error || "Unknown error"),
           { duration: 1000 }
         )
+        // ✅ Close sheet even on error
+        setShowEditSheet(false)
       }
     } catch (error) {
       logger.error("Error updating customer:", error)
@@ -937,6 +944,8 @@ export function ChatPage() {
         error instanceof Error ? error.message : "Failed to update customer",
         { duration: 1000 }
       )
+      // ✅ Close sheet on error
+      setShowEditSheet(false)
     } finally {
       setLoading(false)
       // Flag will be reset in handleNotificationConfirm when dialog closes
