@@ -109,14 +109,17 @@ shop/
 ### Available Scripts
 
 ```bash
-# Start all services
-npm run dev
+# Development (with hot-reload)
+npm run dev                    # Start all services
+cd backend && npm run dev      # Backend only (port 3001)
+cd frontend && npm run dev     # Frontend only (port 3000)
 
-# Backend only
-cd backend && npm run dev
-
-# Frontend only
-cd frontend && npm run dev
+# Production (with PM2 auto-restart)
+cd backend && npm start        # Start backend with PM2
+cd backend && npm stop         # Stop backend
+cd backend && npm restart      # Restart backend
+cd backend && npm run logs     # View backend logs
+cd backend && npm run status   # Check backend status
 
 # Database operations
 cd backend && npm run db:reset
