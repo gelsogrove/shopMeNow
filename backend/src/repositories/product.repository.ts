@@ -89,6 +89,17 @@ export class ProductRepository implements IProductRepository {
         where.isActive = true
       }
 
+      // Filtro per certificazioni (many-to-many)
+      if (filters?.certificationIds && filters.certificationIds.length > 0) {
+        where.productCertifications = {
+          some: {
+            certificationId: {
+              in: filters.certificationIds,
+            },
+          },
+        }
+      }
+
       const page = filters?.page || 1
       const limit = filters?.limit || 1000 // No limit - show all products
       const skip = (page - 1) * limit
@@ -111,9 +122,7 @@ export class ProductRepository implements IProductRepository {
       // Otteniamo i prodotti filtrati e paginati
       const productsData = await this.prisma.products.findMany({
         where,
-        include: {
-          category: true,
-        },
+        include: this.getIncludeWithCertifications(),
         orderBy: {
           updatedAt: "desc",
         },
@@ -205,9 +214,7 @@ export class ProductRepository implements IProductRepository {
           categoryId,
           workspaceId,
         },
-        include: {
-          category: true,
-        },
+        include: this.getIncludeWithCertifications(),
         orderBy: {
           updatedAt: "desc",
         },
@@ -391,9 +398,7 @@ export class ProductRepository implements IProductRepository {
           isActive: true,
           status: "ACTIVE",
         },
-        include: {
-          category: true,
-        },
+        include: this.getIncludeWithCertifications(),
       })
 
       const domainProducts = products.map((p) => this.mapToDomainEntity(p))
@@ -511,52 +516,61 @@ export class ProductRepository implements IProductRepository {
         }
       }
 
-      // Certifications filter - search ONLY boolean fields
-      // This is a SEPARATE search from keywords - don't mix them
-      // ✅ Use certifications array with hasSome operator
+      // Certifications filter - search in certification names via relation
       if (filters.certifications && filters.certifications.length > 0) {
-        where.certifications = {
-          hasSome: filters.certifications.map((cert) => {
-            const certLower = cert.toLowerCase().trim()
-            // Normalize certification names to match array values
-            if (
-              certLower === "halal" ||
-              certLower === "ishalal" ||
-              certLower === "hallal" ||
-              certLower === "allal"
-            ) {
-              return "halal"
-            } else if (
-              certLower === "bio" ||
-              certLower === "isorganic" ||
-              certLower === "organic" ||
-              certLower === "biologico"
-            ) {
-              return "bio"
-            } else if (
-              certLower === "vegan" ||
-              certLower === "isvegan" ||
-              certLower === "vegano"
-            ) {
-              return "vegan"
-            } else if (
-              certLower === "gluten-free" ||
-              certLower === "isglutenfree" ||
-              certLower === "senza glutine"
-            ) {
-              return "gluten-free"
-            } else if (
-              certLower === "whole-grain" ||
-              certLower === "iswholegrain" ||
-              certLower === "integrali" ||
-              certLower === "integrale"
-            ) {
-              return "whole-grain"
-            } else if (certLower === "dop") {
-              return "DOP"
-            }
-            return cert // Return original if no mapping
-          }),
+        where.productCertifications = {
+          some: {
+            certification: {
+              name: {
+                in: filters.certifications.map((cert) => {
+                  const certLower = cert.toLowerCase().trim()
+                  // Normalize certification names
+                  if (
+                    certLower === "halal" ||
+                    certLower === "ishalal" ||
+                    certLower === "hallal" ||
+                    certLower === "allal"
+                  ) {
+                    return "Halal"
+                  } else if (
+                    certLower === "bio" ||
+                    certLower === "isorganic" ||
+                    certLower === "organic" ||
+                    certLower === "biologico"
+                  ) {
+                    return "Organic"
+                  } else if (
+                    certLower === "vegan" ||
+                    certLower === "isvegan" ||
+                    certLower === "vegano"
+                  ) {
+                    return "Vegan"
+                  } else if (
+                    certLower === "gluten-free" ||
+                    certLower === "isglutenfree" ||
+                    certLower === "senza glutine"
+                  ) {
+                    return "Gluten-Free"
+                  } else if (
+                    certLower === "whole-grain" ||
+                    certLower === "iswholegrain" ||
+                    certLower === "integrali" ||
+                    certLower === "integrale"
+                  ) {
+                    return "Whole-Grain"
+                  } else if (certLower === "dop") {
+                    return "DOP"
+                  } else if (certLower === "igp") {
+                    return "IGP"
+                  } else if (certLower === "igt") {
+                    return "IGT"
+                  }
+                  return cert // Return original if no mapping
+                }),
+                mode: "insensitive",
+              },
+            },
+          },
         }
       }
 
@@ -565,6 +579,11 @@ export class ProductRepository implements IProductRepository {
         include: {
           category: true, // Include category for name/translations
           supplier: true, // Include supplier for companyName search
+          productCertifications: {
+            include: {
+              certification: true,
+            },
+          },
         },
         orderBy: {
           createdAt: "desc", // Newest first
@@ -582,8 +601,53 @@ export class ProductRepository implements IProductRepository {
     }
   }
 
+  /**
+   * Helper to get include clause with certifications
+   */
+  private getIncludeWithCertifications() {
+    return {
+      category: true,
+      productCertifications: {
+        include: {
+          certification: true,
+        },
+      },
+    }
+  }
+
+  /**
+   * Sync product certifications (delete old + create new)
+   */
+  async syncProductCertifications(
+    productId: string,
+    certificationIds: string[]
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      // Delete existing certifications
+      await tx.productCertification.deleteMany({
+        where: { productId },
+      })
+
+      // Create new certifications
+      if (certificationIds.length > 0) {
+        await tx.productCertification.createMany({
+          data: certificationIds.map((certificationId) => ({
+            productId,
+            certificationId,
+          })),
+        })
+      }
+    })
+  }
+
   private mapToDomainEntity(data: any): Product {
-    return new Product({
+    // Extract certification names from productCertifications relation
+    const certificationNames =
+      data.productCertifications?.map(
+        (pc: any) => pc.certification.name
+      ) || data.certifications || []
+
+    const product = new Product({
       id: data.id,
       name: data.name,
       productCode: data.productCode,
@@ -598,13 +662,18 @@ export class ProductRepository implements IProductRepository {
       supplierId: data.supplierId,
       workspaceId: data.workspaceId,
       imageUrl: data.imageUrl || [],
-      certifications: data.certifications || [], // ✅ Use certifications array
+      certifications: certificationNames, // Use relation data or fallback to array
       transportType: data.transportType || "Temperatura ambiente",
-      region: data.region, // ✅ Add region field
+      region: data.region,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
       category: data.category,
     })
+
+    // Add productCertifications relation to the product object (for frontend use)
+    ;(product as any).productCertifications = data.productCertifications || []
+
+    return product
   }
 
   // Sales performance calculation method removed - no longer needed

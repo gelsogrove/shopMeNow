@@ -291,6 +291,34 @@ async function main() {
 
   console.log(`✅ Created ${suppliers.length} suppliers`)
 
+  // 6.5 Create Certifications (Feature 178)
+  console.log("🔖 Creating certifications...")
+
+  const certificationNames = [
+    "Bio",
+    "Vegan",
+    "Gluten-Free",
+    "Halal",
+    "Whole-Grain",
+    "DOP",
+    "IGP",
+    "IGT",
+  ]
+
+  const certificationMap = new Map<string, string>()
+
+  for (const certName of certificationNames) {
+    const certification = await prisma.certification.create({
+      data: {
+        name: certName,
+        workspaceId: workspace.id,
+      },
+    })
+    certificationMap.set(certName, certification.id)
+  }
+
+  console.log(`✅ Created ${certificationNames.length} certifications`)
+
   // Mapping: category name → supplier company name
   const categoryToSupplier: Record<string, string> = {
     Pasta: "Pastificio Gragnano",
@@ -347,19 +375,20 @@ async function main() {
       prod.name.toLowerCase().includes("igt") // Indicazione Geografica Tipica
 
     // Build certifications array based on boolean fields
-    const certifications: string[] = []
-    if (isOrganic) certifications.push("bio")
-    if (isVegan) certifications.push("vegan")
-    if (isGlutenFree) certifications.push("gluten-free")
-    if (isHalal) certifications.push("halal")
-    if (isWholeGrain) certifications.push("whole-grain")
-    if (isDOP) certifications.push("DOP")
+    const certificationNames: string[] = []
+    if (isOrganic) certificationNames.push("Bio")
+    if (isVegan) certificationNames.push("Vegan")
+    if (isGlutenFree) certificationNames.push("Gluten-Free")
+    if (isHalal) certificationNames.push("Halal")
+    if (isWholeGrain) certificationNames.push("Whole-Grain")
+    if (isDOP) certificationNames.push("DOP")
 
     // ✅ Read region and transportType from source data (products.ts)
     const region = prod.region || null
     const transportType = prod.transportType || "Temperatura ambiente"
 
-    await prisma.products.create({
+    // ✅ Feature 178: Create product with many-to-many certifications
+    const product = await prisma.products.create({
       data: {
         name: prod.name,
         productCode: prod.ProductCode || `PROD-${Date.now()}`,
@@ -375,9 +404,22 @@ async function main() {
         imageUrl: prod.imageUrl || [],
         transportType: transportType,
         region: region,
-        certifications: certifications, // Array: ["bio", "vegan", "gluten-free", "halal", "whole-grain", "DOP"]
+        certifications: [], // ⚠️ DEPRECATED: Keep empty array for backward compatibility
       },
     })
+
+    // ✅ Feature 178: Create ProductCertification pivot records
+    for (const certName of certificationNames) {
+      const certificationId = certificationMap.get(certName)
+      if (certificationId) {
+        await prisma.productCertification.create({
+          data: {
+            productId: product.id,
+            certificationId: certificationId,
+          },
+        })
+      }
+    }
   }
 
   console.log(`✅ Created ${products.length} products`)

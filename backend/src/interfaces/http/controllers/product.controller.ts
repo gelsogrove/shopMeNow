@@ -211,20 +211,24 @@ export class ProductController {
         productData.isActive = productData.isActive === "true"
       }
 
-      // Parse certifications array from JSON string (sent from frontend)
+      // Parse certificationIds array from JSON string (sent from frontend)
+      let certificationIds: string[] = []
       if (
-        productData.certifications &&
-        typeof productData.certifications === "string"
+        productData.certificationIds &&
+        typeof productData.certificationIds === "string"
       ) {
         try {
-          productData.certifications = JSON.parse(productData.certifications)
+          certificationIds = JSON.parse(productData.certificationIds)
         } catch (error) {
-          logger.error("Failed to parse certifications JSON:", error)
-          productData.certifications = []
+          logger.error("Failed to parse certificationIds JSON:", error)
+          certificationIds = []
         }
-      } else if (!productData.certifications) {
-        productData.certifications = []
+      } else if (Array.isArray(productData.certificationIds)) {
+        certificationIds = productData.certificationIds
       }
+
+      // Remove certificationIds from productData (handled separately)
+      delete productData.certificationIds
 
       // Handle supplierId: convert empty string to null
       if (productData.supplierId === "" || productData.supplierId === "none") {
@@ -283,7 +287,10 @@ export class ProductController {
       productData.imageUrl = allImageUrls
       logger.info(`Total images for product:`, allImageUrls)
 
-      const product = await this.productService.createProduct(productData)
+      const product = await this.productService.createProduct(
+        productData,
+        certificationIds
+      )
 
       // Map backend 'ProductCode' field to frontend 'code' field
       const responseProduct = {
@@ -348,20 +355,24 @@ export class ProductController {
         productData.isActive = productData.isActive === "true"
       }
 
-      // Parse certifications array from JSON string (sent from frontend)
+      // Parse certificationIds array from JSON string (sent from frontend)
+      let certificationIds: string[] = []
       if (
-        productData.certifications &&
-        typeof productData.certifications === "string"
+        productData.certificationIds &&
+        typeof productData.certificationIds === "string"
       ) {
         try {
-          productData.certifications = JSON.parse(productData.certifications)
+          certificationIds = JSON.parse(productData.certificationIds)
         } catch (error) {
-          logger.error("Failed to parse certifications JSON:", error)
-          productData.certifications = []
+          logger.error("Failed to parse certificationIds JSON:", error)
+          certificationIds = []
         }
-      } else if (!productData.certifications) {
-        productData.certifications = []
+      } else if (Array.isArray(productData.certificationIds)) {
+        certificationIds = productData.certificationIds
       }
+
+      // Remove certificationIds from productData (handled separately)
+      delete productData.certificationIds
 
       // Handle supplierId: convert empty string to null
       if (productData.supplierId === "" || productData.supplierId === "none") {
@@ -464,7 +475,8 @@ export class ProductController {
       const updatedProduct = await this.productService.updateProduct(
         id,
         productData,
-        workspaceId
+        workspaceId,
+        certificationIds
       )
       if (!updatedProduct) {
         return res.status(404).json({ message: "Product not found" })

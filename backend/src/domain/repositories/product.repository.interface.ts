@@ -5,6 +5,7 @@ export type ProductFilters = {
   search?: string
   categoryId?: string
   supplierIds?: string[] // Array of supplier IDs for QueryAnalyzerAgent
+  certificationIds?: string[] // Array of certification IDs for filtering
   status?: string
   page?: number
   limit?: number
@@ -47,4 +48,8 @@ export interface IProductRepository {
     workspaceId: string,
     customerDiscount?: number
   ): Promise<Product[]>
+  syncProductCertifications(
+    productId: string,
+    certificationIds: string[]
+  ): Promise<void>
 }

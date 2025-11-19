@@ -59,6 +59,7 @@ model Workspace {
   campaigns                 Campaign[]
   productSearches           ProductSearch[]
   searchConversations       SearchConversations[]
+  certifications            Certification[]
 }
 
 model Categories {
@@ -131,35 +132,62 @@ model Suppliers {
 }
 
 model Products {
-  id             String        @id @default(uuid())
-  name           String
-  productCode    String?
-  description    String?
-  formato        String?
-  price          Float
-  stock          Int           @default(0)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  isActive       Boolean       @default(true)
-  workspaceId    String
-  categoryId     String?
-  supplierId     String?
-  slug           String        @unique
-  status         ProductStatus @default(ACTIVE)
-  imageUrl       String[]      @default([])
-  transportType  String        @default("Temperatura ambiente")
-  region         String?
-  allergens      String[]      @default([])
-  certifications String[]      @default([]) // Array: ["bio", "vegan", "gluten-free", "halal", "whole-grain", "DOP"]
-  cartItems      CartItems[]
-  orderItems     OrderItems[]
-  category       Categories?   @relation(fields: [categoryId], references: [id])
-  supplier       Suppliers?    @relation(fields: [supplierId], references: [id])
-  workspace      Workspace     @relation(fields: [workspaceId], references: [id])
+  id                    String                  @id @default(uuid())
+  name                  String
+  productCode           String?
+  description           String?
+  formato               String?
+  price                 Float
+  stock                 Int                     @default(0)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  isActive              Boolean                 @default(true)
+  workspaceId           String
+  categoryId            String?
+  supplierId            String?
+  slug                  String                  @unique
+  status                ProductStatus           @default(ACTIVE)
+  imageUrl              String[]                @default([])
+  transportType         String                  @default("Temperatura ambiente")
+  region                String?
+  allergens             String[]                @default([])
+  certifications        String[]                @default([]) // DEPRECATED: Use ProductCertification relation instead
+  cartItems             CartItems[]
+  orderItems            OrderItems[]
+  productCertifications ProductCertification[]
+  category              Categories?             @relation(fields: [categoryId], references: [id])
+  supplier              Suppliers?              @relation(fields: [supplierId], references: [id])
+  workspace             Workspace               @relation(fields: [workspaceId], references: [id])
 
   @@index([allergens])
   @@index([certifications])
   @@map("products")
+}
+
+model Certification {
+  id                    String                  @id @default(uuid())
+  name                  String
+  workspaceId           String
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  workspace             Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  productCertifications ProductCertification[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
+  @@map("Certification")
+}
+
+model ProductCertification {
+  productId       String
+  certificationId String
+  createdAt       DateTime      @default(now())
+  product         Products      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  certification   Certification @relation(fields: [certificationId], references: [id], onDelete: Cascade)
+
+  @@id([productId, certificationId])
+  @@index([certificationId])
+  @@map("ProductCertification")
 }
 
 model Customers {

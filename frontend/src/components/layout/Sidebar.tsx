@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils"
 import {
+  Award,
   BarChart3,
   Building2,
   HelpCircle,
@@ -106,6 +107,11 @@ export function Sidebar() {
       href: "/sales",
       label: "Sales",
       icon: UserCircle,
+    },
+    {
+      href: "/certifications",
+      label: "Certifications",
+      icon: Award,
     },
     {
       href: "/campaigns",

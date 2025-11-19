@@ -80,6 +80,7 @@ import workspaceRoutesLegacy from "./workspace.routes"
 // E-commerce
 import { cartRouter } from "../interfaces/http/routes/cart.routes"
 import { categoriesRouter } from "../interfaces/http/routes/categories.routes"
+import certificationRoutes from "../interfaces/http/routes/certification.routes"
 import { chatRouter } from "../interfaces/http/routes/chat.routes"
 import { checkoutRouter } from "../interfaces/http/routes/checkout.routes"
 import { offersRouter } from "../interfaces/http/routes/offers.routes"
@@ -629,6 +630,10 @@ const salesRouterInstance = salesRouter()
 router.use("/workspaces/:workspaceId/sales", salesRouterInstance)
 router.use("/sales", salesRouterInstance)
 logger.info("Registered sales router with workspace routes")
+
+// Mount certification routes
+router.use("/workspaces/:workspaceId/certifications", certificationRoutes)
+logger.info("Registered certification router with workspace routes")
 
 // Mount suppliers routes
 router.use("/workspaces/:workspaceId/suppliers", supplierRoutes)

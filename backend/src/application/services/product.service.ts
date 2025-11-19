@@ -5,6 +5,8 @@ import {
   ProductFilters,
 } from "../../domain/repositories/product.repository.interface"
 import { ProductRepository } from "../../repositories/product.repository"
+import { CertificationService } from "../../services/certification.service"
+import { prisma } from "../../lib/prisma"
 import logger from "../../utils/logger"
 
 // Definizione dell'interfaccia Offer
@@ -25,9 +27,15 @@ interface Offer {
 
 export class ProductService {
   private productRepository: IProductRepository
+  private certificationService: CertificationService
 
-  constructor(productRepository?: IProductRepository) {
+  constructor(
+    productRepository?: IProductRepository,
+    certificationService?: CertificationService
+  ) {
     this.productRepository = productRepository || new ProductRepository()
+    this.certificationService =
+      certificationService || new CertificationService(prisma)
   }
 
   async getAllProducts(workspaceId: string, filters?: ProductFilters) {
@@ -84,7 +92,10 @@ export class ProductService {
     }
   }
 
-  async createProduct(productData: Partial<Product>): Promise<Product> {
+  async createProduct(
+    productData: Partial<Product>,
+    certificationIds?: string[]
+  ): Promise<Product> {
     try {
       if (!productData.name) {
         throw new Error("Product name is required")
@@ -97,6 +108,14 @@ export class ProductService {
 
       if (!productData.workspaceId) {
         throw new Error("WorkspaceId is required")
+      }
+
+      // Validate certificationIds if provided
+      if (certificationIds && certificationIds.length > 0) {
+        await this.certificationService.validateCertificationIds(
+          certificationIds,
+          productData.workspaceId
+        )
       }
 
       // Generate slug if not provided
@@ -119,7 +138,23 @@ export class ProductService {
       // Create a proper domain entity
       const product = new Product(productData)
 
-      return await this.productRepository.create(product)
+      const createdProduct = await this.productRepository.create(product)
+
+      // Sync certifications if provided
+      if (certificationIds && certificationIds.length > 0) {
+        await this.productRepository.syncProductCertifications(
+          createdProduct.id,
+          certificationIds
+        )
+      }
+
+      // Re-fetch product with certifications
+      return (
+        (await this.productRepository.findById(
+          createdProduct.id,
+          productData.workspaceId
+        )) || createdProduct
+      )
     } catch (error) {
       logger.error("Error in product service createProduct:", error)
       throw new Error(`Failed to create product: ${(error as Error).message}`)
@@ -129,7 +164,8 @@ export class ProductService {
   async updateProduct(
     id: string,
     productData: Partial<Product>,
-    workspaceId: string
+    workspaceId: string,
+    certificationIds?: string[]
   ): Promise<Product | null> {
     try {
       // Check if price is valid when provided
@@ -137,8 +173,31 @@ export class ProductService {
         throw new Error("Product price must be a non-negative number")
       }
 
+      // Validate certificationIds if provided
+      if (certificationIds && certificationIds.length > 0) {
+        await this.certificationService.validateCertificationIds(
+          certificationIds,
+          workspaceId
+        )
+      }
+
       // Update the product
-      return await this.productRepository.update(id, productData, workspaceId)
+      const updatedProduct = await this.productRepository.update(
+        id,
+        productData,
+        workspaceId
+      )
+
+      // Sync certifications (even if empty array to clear all)
+      if (certificationIds !== undefined) {
+        await this.productRepository.syncProductCertifications(
+          id,
+          certificationIds
+        )
+      }
+
+      // Re-fetch product with certifications
+      return await this.productRepository.findById(id, workspaceId)
     } catch (error) {
       logger.error(
         `Error in product service updateProduct for product ${id}:`,

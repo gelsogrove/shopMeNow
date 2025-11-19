@@ -23,8 +23,11 @@ export const validateWorkspaceOperation = (
       return
     }
 
-    // 2. Validate workspaceId (from route params or body)
-    const workspaceId = req.params.id || req.body.id
+    // 2. Validate workspaceId (prioritize header, then route params, then body)
+    const workspaceId = 
+      (req.headers["x-workspace-id"] as string) ||
+      req.params.workspaceId || 
+      req.body.id
 
     if (!workspaceId || workspaceId.trim() === "") {
       logger.warn("Workspace operation rejected: missing workspaceId")

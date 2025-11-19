@@ -1352,7 +1352,16 @@ export class MessageRepository {
           description: true, // Aggiungi description per il prompt
           formato: true, // Aggiungi formato per il prompt
           stock: true, // Aggiungi stock per disponibilità
-          certifications: true, // Array: ["bio", "vegan", "gluten-free", "halal", "whole-grain", "DOP"]
+          productCertifications: {
+            // ✅ Feature 178: Many-to-many certifications from database
+            select: {
+              certification: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
           region: true, // ✅ Feature 123 - C2: Add region for single product details
           transportType: true, // ✅ Bonus: Temperature info for product search
           category: {
@@ -1434,20 +1443,14 @@ export class MessageRepository {
           else if (p.stock < 5) stockIcon = "⚠️"
           const stockStr = ` | Stock: ${stockIcon} ${p.stock}`
 
-          // Feature 123: Certification badges from certifications array
-          const certMap: Record<string, string> = {
-            DOP: "DOP",
-            bio: "Bio",
-            halal: "Halal",
-            "whole-grain": "Integrale",
-            vegan: "Vegan",
-            "gluten-free": "Senza Glutine",
-          }
+          // ✅ Feature 178: Extract certification names from many-to-many relation
+          const certificationNames: string[] =
+            p.productCertifications?.map(
+              (pc: any) => pc.certification.name
+            ) || []
 
-          const certBadges: string[] =
-            p.certifications
-              ?.map((c: string) => certMap[c] || c)
-              .filter(Boolean) || []
+          // Display certifications directly from database (already in Italian)
+          const certBadges: string[] = certificationNames.filter(Boolean)
 
           const certificationsStr =
             certBadges.length > 0 ? ` | 🔖 ${certBadges.join(", ")}` : ""

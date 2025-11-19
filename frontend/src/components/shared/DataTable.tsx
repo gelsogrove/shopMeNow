@@ -54,6 +54,7 @@ interface DataTableProps<TData> {
   renderSubComponent?: (props: { row: Row<TData> }) => React.ReactElement
   onEdit?: (item: TData) => void
   onDelete?: (item: TData) => void
+  canDelete?: (item: TData) => boolean
   renderActions?: (item: TData) => React.ReactElement
   actionButtons?: (record: TData) => ReactNode
   searchKey?: string
@@ -71,6 +72,7 @@ export function DataTable<TData>({
   renderSubComponent,
   onEdit,
   onDelete,
+  canDelete,
   renderActions,
   actionButtons,
   searchKey,
@@ -139,7 +141,8 @@ export function DataTable<TData>({
                         e.preventDefault()
                         handleDelete(row)
                       }}
-                      className="h-8 w-8 p-0 flex items-center justify-center hover:bg-red-50"
+                      disabled={canDelete ? !canDelete(row.original) : false}
+                      className="h-8 w-8 p-0 flex items-center justify-center hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                       <Trash2
                         className={commonStyles.actionIcon + " text-red-600"}
@@ -147,7 +150,7 @@ export function DataTable<TData>({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Delete</p>
+                    <p>{canDelete && !canDelete(row.original) ? "Cannot delete (in use)" : "Delete"}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -157,7 +160,7 @@ export function DataTable<TData>({
       })
     }
     return cols
-  }, [columns, onEdit, onDelete, actionButtons, renderActions])
+  }, [columns, onEdit, onDelete, canDelete, actionButtons, renderActions])
 
   const table = useReactTable({
     data,

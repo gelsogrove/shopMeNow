@@ -20,6 +20,8 @@ import { useWorkspace } from "@/hooks/use-workspace"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
 import { categoriesApi } from "@/services/categoriesApi"
+import * as certificationsApi from "@/services/certificationsApi"
+import { type Certification } from "@/services/certificationsApi"
 import { productsApi, type Product } from "@/services/productsApi"
 import { supplierApi, type Supplier } from "@/services/supplier"
 import { commonStyles } from "@/styles/common"
@@ -35,6 +37,11 @@ export function ProductsPage() {
     Array<{ id: string; name: string }>
   >([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
+  const [certifications, setCertifications] = useState<Certification[]>([])
+  const [selectedCertificationIds, setSelectedCertificationIds] = useState<
+    string[]
+  >([])
+  const [formCertificationIds, setFormCertificationIds] = useState<string[]>([])
   const [showAddSheet, setShowAddSheet] = useState(false)
   const [showEditSheet, setShowEditSheet] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
@@ -49,16 +56,6 @@ export function ProductsPage() {
   const [reorderedImageUrls, setReorderedImageUrls] = useState<string[] | null>(
     null
   )
-
-  // Certification filters
-  const [filterOrganic, setFilterOrganic] = useState(false)
-  const [filterVegan, setFilterVegan] = useState(false)
-  const [filterGlutenFree, setFilterGlutenFree] = useState(false)
-  const [filterHalal, setFilterHalal] = useState(false)
-  const [filterWholeGrain, setFilterWholeGrain] = useState(false)
-  const [filterDOP, setFilterDOP] = useState(false)
-  const [filterIGP, setFilterIGP] = useState(false)
-  const [filterIGT, setFilterIGT] = useState(false)
 
   // Load filters from localStorage or use defaults
   const [filterCategory, setFilterCategory] = useState<string>("all")
@@ -132,6 +129,33 @@ export function ProductsPage() {
     loadCategories()
   }, [workspace?.id])
 
+  // Fetch certifications when workspace changes
+  useEffect(() => {
+    logger.info("🔖 useEffect CERTIFICATIONS triggered, workspace:", workspace?.id)
+    
+    const loadCertifications = async () => {
+      if (!workspace?.id) {
+        logger.info("🔖 No workspace ID, skipping certifications load")
+        return
+      }
+
+      logger.info("🔖 About to call certificationsApi.getAllForWorkspace")
+      try {
+        const certificationsData = await certificationsApi.getAllForWorkspace(
+          workspace.id
+        )
+        logger.info("🔖 Certifications loaded:", certificationsData)
+        logger.info(`🔖 Total certifications: ${certificationsData.length}`)
+        setCertifications(certificationsData)
+      } catch (error) {
+        logger.error("🔖 Failed to load certifications:", error)
+        toast.error("Failed to load certifications")
+      }
+    }
+
+    loadCertifications()
+  }, [workspace?.id])
+
   // Fetch suppliers when workspace changes
   useEffect(() => {
     const loadSuppliers = async () => {
@@ -169,13 +193,7 @@ export function ProductsPage() {
       filterCategory,
       searchValue,
       sortBy,
-      certifications: {
-        organic: filterOrganic,
-        vegan: filterVegan,
-        glutenFree: filterGlutenFree,
-        halal: filterHalal,
-        wholeGrain: filterWholeGrain,
-      },
+      selectedCertificationIds,
     })
 
     // Filter by search
@@ -202,34 +220,16 @@ export function ProductsPage() {
       )
     }
 
-    // Filter by certifications
-    if (filterOrganic) {
-      filtered = filtered.filter((p) => p.certifications?.includes("bio"))
-    }
-    if (filterVegan) {
-      filtered = filtered.filter((p) => p.certifications?.includes("vegan"))
-    }
-    if (filterGlutenFree) {
-      filtered = filtered.filter((p) =>
-        p.certifications?.includes("gluten-free")
+    // Filter by selected certifications (dynamic from database)
+    if (selectedCertificationIds.length > 0) {
+      filtered = filtered.filter((product) =>
+        selectedCertificationIds.every((certId) =>
+          product.certifications?.some((certName) => {
+            const cert = certifications.find((c) => c.id === certId)
+            return cert && certName === cert.name
+          })
+        )
       )
-    }
-    if (filterHalal) {
-      filtered = filtered.filter((p) => p.certifications?.includes("halal"))
-    }
-    if (filterWholeGrain) {
-      filtered = filtered.filter((p) =>
-        p.certifications?.includes("whole-grain")
-      )
-    }
-    if (filterDOP) {
-      filtered = filtered.filter((p) => p.certifications?.includes("DOP"))
-    }
-    if (filterIGP) {
-      filtered = filtered.filter((p) => p.certifications?.includes("IGP"))
-    }
-    if (filterIGT) {
-      filtered = filtered.filter((p) => p.certifications?.includes("IGT"))
     }
 
     logger.info("🔍 After certification filters:", filtered.length)
@@ -252,14 +252,8 @@ export function ProductsPage() {
     searchValue,
     filterCategory,
     sortBy,
-    filterOrganic,
-    filterVegan,
-    filterGlutenFree,
-    filterHalal,
-    filterWholeGrain,
-    filterDOP,
-    filterIGP,
-    filterIGT,
+    selectedCertificationIds,
+    certifications,
   ])
 
   const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -275,27 +269,8 @@ export function ProductsPage() {
     // Set product code from state
     formData.set("code", productCode)
 
-    // Build certifications array from checkboxes
-    const certifications: string[] = []
-    if (formData.get("cert-whole-grain")) certifications.push("whole-grain")
-    if (formData.get("cert-bio")) certifications.push("bio")
-    if (formData.get("cert-halal")) certifications.push("halal")
-    if (formData.get("cert-vegan")) certifications.push("vegan")
-    if (formData.get("cert-gluten-free")) certifications.push("gluten-free")
-    if (formData.get("cert-DOP")) certifications.push("DOP")
-    if (formData.get("cert-IGP")) certifications.push("IGP")
-    if (formData.get("cert-IGT")) certifications.push("IGT")
-
-    // Remove old checkbox fields and add certifications array
-    formData.delete("cert-whole-grain")
-    formData.delete("cert-bio")
-    formData.delete("cert-halal")
-    formData.delete("cert-vegan")
-    formData.delete("cert-gluten-free")
-    formData.delete("cert-DOP")
-    formData.delete("cert-IGP")
-    formData.delete("cert-IGT")
-    formData.set("certifications", JSON.stringify(certifications))
+    // Send certificationIds array to backend
+    formData.set("certificationIds", JSON.stringify(formCertificationIds))
 
     try {
       const newProduct = await productsApi.create(workspace.id, formData)
@@ -307,6 +282,7 @@ export function ProductsPage() {
       setProductCode("")
       setSelectedCategoryId("none")
       setSelectedSupplierId("none")
+      setFormCertificationIds([])
 
       toast.success(
         "Product created successfully. Edit it to add details and images."
@@ -320,11 +296,21 @@ export function ProductsPage() {
   }
 
   const handleEdit = (product: Product) => {
+    logger.info("🔖 handleEdit - Full product object:", product)
+    logger.info("🔖 handleEdit - productCertifications:", (product as any).productCertifications)
+    
     setSelectedProduct(product)
     setSelectedCategoryId(product.categoryId || "none")
     setSelectedSupplierId(product.supplierId || "none")
     setProductIsActive(product.isActive ?? true)
     setProductCode(product.code || "")
+
+    // Load product's certification IDs from productCertifications relation
+    const certIds = (product as any).productCertifications?.map(
+      (pc: any) => pc.certificationId
+    ) || []
+    logger.info("🔖 handleEdit - Extracted certificationIds:", certIds)
+    setFormCertificationIds(certIds)
 
     const imageUrls = Array.isArray(product.imageUrl)
       ? product.imageUrl
@@ -337,6 +323,7 @@ export function ProductsPage() {
       productName: product.name,
       imageUrls: imageUrls,
       imageCount: imageUrls.length,
+      certificationIds: certIds,
     })
 
     setCurrentImageUrls(imageUrls)
@@ -371,27 +358,8 @@ export function ProductsPage() {
     formData.set("code", productCode) // Use .set() instead of .append()
     formData.set("isActive", productIsActive.toString())
 
-    // Build certifications array from checkboxes
-    const certifications: string[] = []
-    if (formData.get("cert-whole-grain")) certifications.push("whole-grain")
-    if (formData.get("cert-bio")) certifications.push("bio")
-    if (formData.get("cert-halal")) certifications.push("halal")
-    if (formData.get("cert-vegan")) certifications.push("vegan")
-    if (formData.get("cert-gluten-free")) certifications.push("gluten-free")
-    if (formData.get("cert-DOP")) certifications.push("DOP")
-    if (formData.get("cert-IGP")) certifications.push("IGP")
-    if (formData.get("cert-IGT")) certifications.push("IGT")
-
-    // Remove old checkbox fields and add certifications array
-    formData.delete("cert-whole-grain")
-    formData.delete("cert-bio")
-    formData.delete("cert-halal")
-    formData.delete("cert-vegan")
-    formData.delete("cert-gluten-free")
-    formData.delete("cert-DOP")
-    formData.delete("cert-IGP")
-    formData.delete("cert-IGT")
-    formData.set("certifications", JSON.stringify(certifications))
+    // Send certificationIds array to backend
+    formData.set("certificationIds", JSON.stringify(formCertificationIds))
 
     // Make sure categoryId is set correctly if "none" is selected
     const catId = formData.get("categoryId")
@@ -411,7 +379,7 @@ export function ProductsPage() {
     logger.info("Form data being sent for product update")
     logger.info("CategoryId:", formData.get("categoryId"))
     logger.info("SupplierId:", formData.get("supplierId"))
-    logger.info("Certifications:", certifications)
+    logger.info("CertificationIds:", formCertificationIds)
 
     try {
       const updatedProduct = await productsApi.update(
@@ -420,6 +388,7 @@ export function ProductsPage() {
         formData
       )
 
+      // Update product in list with fresh data from backend
       setProducts((prev) =>
         prev.map((product) =>
           product.id === selectedProduct.id ? updatedProduct : product
@@ -432,6 +401,14 @@ export function ProductsPage() {
       setImageFiles([]) // Reset image files
       setCurrentImageUrls([]) // Reset current image URLs
       setReorderedImageUrls(null) // Reset reordered image URLs
+      setFormCertificationIds([]) // Reset certification IDs
+      
+      // Force reload to get fresh productCertifications
+      const response = await productsApi.getAllForWorkspace(workspace.id)
+      if (response && Array.isArray(response.products)) {
+        setProducts(response.products)
+      }
+      
       toast.success("Product updated successfully")
     } catch (error) {
       logger.error("Failed to update product:", error)
@@ -470,6 +447,7 @@ export function ProductsPage() {
   }
 
   const renderCreateForm = () => {
+    logger.info("🎨 renderCreateForm - certifications:", certifications.length)
     return (
       <div className="space-y-4">
         <div className="space-y-2">
@@ -548,6 +526,40 @@ export function ProductsPage() {
           />
         </div>
 
+        {/* Dynamic Certifications Section */}
+        {certifications.length > 0 && (
+          <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
+            <Label className="text-base font-semibold">Certifications</Label>
+            <p className="text-xs text-gray-500 mb-3">
+              Select applicable certifications for this product
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {certifications.map((cert) => (
+                <label
+                  key={cert.id}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={formCertificationIds.includes(cert.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setFormCertificationIds([...formCertificationIds, cert.id])
+                      } else {
+                        setFormCertificationIds(
+                          formCertificationIds.filter((id) => id !== cert.id)
+                        )
+                      }
+                    }}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="text-sm">{cert.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
           <p className="text-sm text-blue-800">
             ℹ️ The product will be created as <strong>inactive</strong>. You can
@@ -559,6 +571,8 @@ export function ProductsPage() {
   }
 
   const renderFormFields = (product: Product | null) => {
+    logger.info("🎨 renderFormFields - certifications:", certifications.length)
+    logger.info("🎨 renderFormFields - formCertificationIds:", formCertificationIds)
     return (
       <div className="space-y-6">
         {/* Product Images */}
@@ -717,91 +731,39 @@ export function ProductsPage() {
           </p>
         </div>
 
-        {/* Certifications Section */}
-        <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
-          <Label className="text-base font-semibold">Certifications</Label>
-          <p className="text-xs text-gray-500 mb-3">
-            Select applicable certifications for this product
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                name="cert-whole-grain"
-                defaultChecked={product?.certifications?.includes(
-                  "whole-grain"
-                )}
-                className="rounded border-gray-300"
-              />
-              <span className="text-sm">🌾 Integrale</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                name="cert-bio"
-                defaultChecked={product?.certifications?.includes("bio")}
-                className="rounded border-gray-300"
-              />
-              <span className="text-sm">🌿 Biologico</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                name="cert-halal"
-                defaultChecked={product?.certifications?.includes("halal")}
-                className="rounded border-gray-300"
-              />
-              <span className="text-sm">🕌 Halal</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                name="cert-vegan"
-                defaultChecked={product?.certifications?.includes("vegan")}
-                className="rounded border-gray-300"
-              />
-              <span className="text-sm">🌱 Vegan</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                name="cert-gluten-free"
-                defaultChecked={product?.certifications?.includes(
-                  "gluten-free"
-                )}
-                className="rounded border-gray-300"
-              />
-              <span className="text-sm">🌾 Senza Glutine</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                name="cert-DOP"
-                defaultChecked={product?.certifications?.includes("DOP")}
-                className="rounded border-gray-300"
-              />
-              <span className="text-sm">🏛️ DOP</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                name="cert-IGP"
-                defaultChecked={product?.certifications?.includes("IGP")}
-                className="rounded border-gray-300"
-              />
-              <span className="text-sm">🏛️ IGP</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                name="cert-IGT"
-                defaultChecked={product?.certifications?.includes("IGT")}
-                className="rounded border-gray-300"
-              />
-              <span className="text-sm">🏛️ IGT</span>
-            </label>
+        {/* Dynamic Certifications Section */}
+        {certifications.length > 0 && (
+          <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
+            <Label className="text-base font-semibold">Certifications</Label>
+            <p className="text-xs text-gray-500 mb-3">
+              Select applicable certifications for this product
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {certifications.map((cert) => (
+                <label
+                  key={cert.id}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={formCertificationIds.includes(cert.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setFormCertificationIds([...formCertificationIds, cert.id])
+                      } else {
+                        setFormCertificationIds(
+                          formCertificationIds.filter((id) => id !== cert.id)
+                        )
+                      }
+                    }}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="text-sm">{cert.name}</span>
+                </label>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="space-y-2">
           <Label htmlFor="transportType" className="text-sm font-medium">
@@ -903,83 +865,44 @@ export function ProductsPage() {
           </Select>
         </div>
 
-        {/* Certification Filters */}
+        {/* Certification Filters - Dynamic from Database */}
         <div className="flex flex-wrap gap-3 items-center bg-gray-50 p-3 rounded-lg">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.location.href = '/certifications'}
+            className="text-xs"
+          >
+            🏆 Manage Certifications
+          </Button>
           <span className="text-sm font-medium text-gray-700">
             Certifications:
           </span>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={filterWholeGrain}
-              onChange={(e) => setFilterWholeGrain(e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            <span className="text-sm">🌾 Integrale</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={filterOrganic}
-              onChange={(e) => setFilterOrganic(e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            <span className="text-sm">🌿 Biologico</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={filterHalal}
-              onChange={(e) => setFilterHalal(e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            <span className="text-sm">🕌 Halal</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={filterVegan}
-              onChange={(e) => setFilterVegan(e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            <span className="text-sm">🌱 Vegan</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={filterGlutenFree}
-              onChange={(e) => setFilterGlutenFree(e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            <span className="text-sm">🌾 Senza Glutine</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={filterDOP}
-              onChange={(e) => setFilterDOP(e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            <span className="text-sm">🏛️ DOP</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={filterIGP}
-              onChange={(e) => setFilterIGP(e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            <span className="text-sm">🏛️ IGP</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={filterIGT}
-              onChange={(e) => setFilterIGT(e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            <span className="text-sm">🏛️ IGT</span>
-          </label>
+          {certifications.map((cert) => (
+            <label
+              key={cert.id}
+              className="flex items-center gap-2 cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                checked={selectedCertificationIds.includes(cert.id)}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedCertificationIds([
+                      ...selectedCertificationIds,
+                      cert.id,
+                    ])
+                  } else {
+                    setSelectedCertificationIds(
+                      selectedCertificationIds.filter((id) => id !== cert.id)
+                    )
+                  }
+                }}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm">{cert.name}</span>
+            </label>
+          ))}
         </div>
 
         {/* Grid View */}
@@ -1055,6 +978,21 @@ export function ProductsPage() {
                         <p className="text-xs text-muted-foreground">
                           📍 {product.region}
                         </p>
+                      )}
+                      {/* Certification Badges */}
+                      {(product as any).productCertifications?.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {(product as any).productCertifications.map(
+                            (pc: any) => (
+                              <span
+                                key={pc.certificationId}
+                                className="text-xs px-2 py-0.5 bg-green-100 text-green-800 rounded-full"
+                              >
+                                {pc.certification?.name}
+                              </span>
+                            )
+                          )}
+                        </div>
                       )}
                     </div>
 
