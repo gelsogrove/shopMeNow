@@ -28,7 +28,6 @@ interface DebugStep {
     | "safety"
     | "sub_agent"
     | "summary_agent"
-    | "whatsapp_delivery"
     | "user"
     | "token-replacement"
   agent?: string
@@ -79,7 +78,6 @@ export default function MessageFlowDialog({
     if (type === "user" || agent === "Customer") return "#6B7280" // Gray
     if (type === "router") return "#9333EA" // Purple
     if (type === "safety") return "#DC2626" // Red
-    if (type === "whatsapp_delivery") return "#16A34A" // Green
     if (agent?.includes("Save to History")) return "#F59E0B" // Orange/Amber for database save
     if (agent?.includes("WhatsApp Queue")) return "#0EA5E9" // Sky blue for queue
 
@@ -130,8 +128,6 @@ export default function MessageFlowDialog({
     if (agent?.includes("Save to History"))
       return <Database className="w-5 h-5" />
     if (agent?.includes("WhatsApp Queue")) return <Send className="w-5 h-5" />
-    if (type === "whatsapp_delivery")
-      return <MessageSquare className="w-5 h-5" />
 
     // Default
     return <Settings className="w-5 h-5" />
@@ -262,19 +258,6 @@ export default function MessageFlowDialog({
     },
   }
 
-  // 📱 Step: WhatsApp API Send (actual delivery with TRUE/FALSE)
-  const whatsappStep: DebugStep = {
-    type: "whatsapp_delivery",
-    agent: "WhatsApp API",
-    timestamp: new Date(
-      new Date(safetySteps[0]?.timestamp || new Date()).getTime() + 200
-    ).toISOString(),
-    output: {
-      result: "✅ TRUE - Message sent successfully", // Mock TRUE (success)
-      textResponse: finalMessage,
-    },
-  }
-
   // 🆕 TIMELINE COMPLETA: Mostra OGNI SINGOLO STEP in ordine
   const timelineSequence = [
     userStep, // STEP 1: User message
@@ -285,8 +268,7 @@ export default function MessageFlowDialog({
     linkReplacementSteps[0], // STEP 5: Link Replacement (BEFORE Safety) ✅
     safetySteps[0], // STEP 6: Safety & Translation (AFTER Link Replacement) ✅
     saveToHistoryStep, // STEP 7: Save to history
-    queueStep, // STEP 8: Queue message
-    whatsappStep, // STEP 9: WhatsApp send
+    queueStep, // STEP 8: Queue message (final step)
   ].filter(Boolean) // Rimuovi undefined
 
   return (
