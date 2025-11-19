@@ -16,6 +16,9 @@
   for (const campaign of campaigns) {y db:export)
  */
 
+import { config } from "dotenv"
+config() // Load environment variables from .env file
+
 import { PrismaClient } from "@prisma/client"
 import * as bcrypt from "bcrypt"
 import { campaigns } from "./data/campaigns"
