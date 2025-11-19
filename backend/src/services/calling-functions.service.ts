@@ -314,7 +314,9 @@ export class CallingFunctionsService {
         // 🔧 Passa le informazioni del Summary Agent per il debug
         summaryAgentExecuted: result.summaryAgentExecuted,
         summaryEmailSent: result.summaryEmailSent,
-        ticketId: result.ticketId
+        ticketId: result.ticketId,
+        generatedSummary: result.generatedSummary, // 📧 Riassunto per debug timeline
+        conversationMessages: result.conversationMessages // 📧 Messaggi per debug timeline
       }
     } catch (error) {
       logger.error("❌ Error in contactOperator:", error)

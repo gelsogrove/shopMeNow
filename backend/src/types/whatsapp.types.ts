@@ -102,6 +102,8 @@ export interface StandardResponse<T = any> {
   summaryAgentExecuted?: boolean
   summaryEmailSent?: boolean
   ticketId?: string
+  generatedSummary?: string // 📧 Il riassunto completo generato dal Summary Agent
+  conversationMessages?: any[] // 📧 I messaggi della conversazione inviati al Summary Agent
 }
 
 export interface ErrorResponse {

@@ -1738,6 +1738,65 @@ export class LLMRouterService {
                 customerLanguage: params.customerLanguage,
                 query: delegationQuery,
               })
+
+              // 📧 ADD CUSTOMER SUPPORT AGENT DEBUG STEP
+              debugSteps.push({
+                type: "customer_support" as any,
+                agent: "Customer Support Agent",
+                model: "gpt-4o-mini",
+                temperature: 0.7,
+                timestamp: new Date().toISOString(),
+                input: {
+                  userMessage: delegationQuery,
+                  customerLanguage: params.customerLanguage || "en"
+                },
+                output: {
+                  decision: "support_assistance_provided",
+                  message: subAgentResponse.output,
+                  functionCalls: subAgentResponse.functionCalls || []
+                },
+                tokensUsed: subAgentResponse.tokensUsed || 0,
+                executionTimeMs: subAgentResponse.executionTimeMs || 0,
+                containsTokens: false
+              } as any)
+
+              // 📧 CHECK: If contactSupport was called, add Summary Agent debug step
+              if (subAgentResponse.functionCalls?.some(fc => fc.name === "contactSupport")) {
+                logger.info("📧 contactSupport detected - adding Summary Agent debug step")
+                
+                // 📧 Extract real data from ContactOperator function call result
+                const contactFunctionCall = subAgentResponse.functionCalls?.find(fc => fc.name === "contactSupport")
+                const contactResult = contactFunctionCall?.result || {}
+                
+                // 📧 Use real conversation messages and generated summary
+                const realMessages = contactResult.conversationMessages || []
+                const realSummary = contactResult.generatedSummary || "No summary available"
+                
+                debugSteps.push({
+                  type: "summary_agent" as any,
+                  agent: "Summary Agent",
+                  model: "gpt-4o-mini",
+                  temperature: 0.2,
+                  timestamp: new Date().toISOString(),
+                  input: {
+                    userMessage: "Conversation messages for summary generation",
+                    conversationMessages: realMessages.map(msg => `${msg.role}: ${msg.content}`).join('\n'),
+                    messageCount: realMessages.length
+                  },
+                  output: {
+                    decision: "summary_generated",
+                    message: realSummary,
+                    emailSent: contactResult.summaryEmailSent || false,
+                    ticketId: contactResult.ticketId
+                  },
+                  tokensUsed: 500, // Estimated, could be tracked from SummaryAgent
+                  executionTimeMs: 2000, // Estimated
+                  containsTokens: false
+                } as any)
+                
+                logger.info("✅ Added Summary Agent debug step with real data to timeline")
+              }
+              
               break
             }
             case "PROFILE_MANAGEMENT": {

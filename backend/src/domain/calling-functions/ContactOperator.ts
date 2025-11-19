@@ -24,6 +24,8 @@ export interface ContactOperatorResult {
   error?: string
   summaryAgentExecuted?: boolean
   summaryEmailSent?: boolean
+  generatedSummary?: string // 📧 Il riassunto completo generato dal Summary Agent
+  conversationMessages?: any[] // 📧 I messaggi della conversazione inviati al Summary Agent
 }
 
 /**
@@ -41,6 +43,10 @@ export async function ContactOperator(
   
   // 📧 Track email sending status (accessible in all scopes)
   let emailSentSuccessfully = false
+  
+  // 📧 Track Summary Agent data for debug timeline
+  let generatedSummary = ""
+  let conversationMessages: any[] = []
 
   try {
     logger.info("📞 ContactOperator called with:", {
@@ -77,10 +83,6 @@ export async function ContactOperator(
             "1. ✅ Rimborso completo entro 24 ore\n" +
             "2. 📦 Sostituzione gratuita del prodotto\n" +
             "3. 📞 Contatto diretto con il tuo agente per assistenza immediata\n\n" +
-            "Il tuo agente di riferimento è:\n" +
-            "• {{agentName}}\n" +
-            "• 📞 {{agentPhone}}\n" +
-            "• ✉️ {{agentEmail}}\n\n" +
             "L'agente ti contatterà il prima possibile per risolvere la situazione.\n\n" +
             "**Da questo momento disattiviamo il chatbot e aspettiamo che si colleghi l'agente.** 🤝\n\n" +
             "Grazie per la pazienza! 😊",
@@ -125,6 +127,13 @@ export async function ContactOperator(
             customerId: customer.id,
             sessionId: session.id,
           })
+
+          // 📧 Store messages for debug timeline
+          conversationMessages = messages.map((msg) => ({
+            role: msg.role,
+            content: msg.content,
+            createdAt: msg.createdAt
+          }))
 
           // Generate summary using SummaryAgentLLM
           let chatSummary: string
@@ -193,6 +202,9 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
 📋 Riassunto conversazione (ultima ora - ${messages.length} messaggi):
 ${safetyResult.translatedText || summaryResult.summary}
                 `.trim()
+
+                // 📧 Store generated summary for debug timeline
+                generatedSummary = chatSummary
 
                 logger.info(
                   "✅ [ContactOperator] Summary processed and translated"
@@ -414,17 +426,15 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
           "1. ✅ Rimborso completo entro 24 ore\n" +
           "2. 📦 Sostituzione gratuita del prodotto\n" +
           "3. 📞 Contatto diretto con il tuo agente per assistenza immediata\n\n" +
-          "Il tuo agente di riferimento è:\n" +
-          "• {{agentName}}\n" +
-          "• 📞 {{agentPhone}}\n" +
-          "• ✉️ {{agentEmail}}\n\n" +
           "L'agente ti contatterà il prima possibile per risolvere la situazione.\n\n" +
           "**Da questo momento disattiviamo il chatbot e aspettiamo che si colleghi l'agente.** 🤝\n\n" +
           "Grazie per la pazienza! 😊",
         timestamp: new Date().toISOString(),
         ticketId,
         summaryAgentExecuted: true, // Indica che il Summary Agent è stato eseguito
-        summaryEmailSent: emailSentSuccessfully // Indica se l'email di riepilogo è stata inviata
+        summaryEmailSent: emailSentSuccessfully, // Indica se l'email di riepilogo è stata inviata
+        generatedSummary, // 📧 Il riassunto completo per debug timeline
+        conversationMessages // 📧 I messaggi della conversazione per debug timeline
       }
     } catch (dbError) {
       logger.error("❌ Database error in ContactOperator:", dbError)
@@ -440,16 +450,14 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
           "1. ✅ Rimborso completo entro 24 ore\n" +
           "2. 📦 Sostituzione gratuita del prodotto\n" +
           "3. 📞 Contatto diretto con il tuo agente per assistenza immediata\n\n" +
-          "Il tuo agente di riferimento è:\n" +
-          "• {{agentName}}\n" +
-          "• 📞 {{agentPhone}}\n" +
-          "• ✉️ {{agentEmail}}\n\n" +
           "L'agente ti contatterà il prima possibile per risolvere la situazione.\n\n" +
           "**Da questo momento disattiviamo il chatbot e aspettiamo che si colleghi l'agente.** 🤝\n\n" +
           "Grazie per la pazienza! 😊",
         timestamp: new Date().toISOString(),
         summaryAgentExecuted: false, // Summary Agent non eseguito in caso di errore DB
-        summaryEmailSent: false
+        summaryEmailSent: false,
+        generatedSummary: "", // Nessun riassunto in caso di errore
+        conversationMessages: [] // Nessun messaggio in caso di errore
       }
     }
   } catch (error) {
