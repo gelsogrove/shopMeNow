@@ -43,33 +43,62 @@ A comprehensive WhatsApp e-commerce platform with AI-powered chatbot, simplified
 
    ```bash
    git clone <repository-url>
-   cd shop
+   cd shopME
    ```
 
-2. **Install dependencies**
+2. **Start database (Docker)**
 
    ```bash
-   # Backend dependencies
-   cd backend && npm install
-
-   # Frontend dependencies
-   cd ../frontend && npm install
+   docker compose up -d
    ```
 
-3. **Environment setup**
+3. **Install backend dependencies**
 
    ```bash
-   # Copy environment files
-   cp backend/.env.example backend/.env
-
-   # Configure your environment variables
-   # See backend/.env.example for required variables
+   cd backend
+   npm install
    ```
 
-4. **Start the application**
+4. **Install frontend dependencies**
+
    ```bash
-   # Start everything with one command
-   npm run dev
+   cd ../frontend
+   npm install
+   ```
+
+5. **Environment setup**
+
+   ```bash
+   cd ../backend
+   cp .env.example .env
+   
+   # Configure your environment variables in .env
+   # Most important: DATABASE_URL is already set for local development
+   ```
+
+6. **Build frontend**
+
+   ```bash
+   cd ../frontend
+   npm run build
+   ```
+
+7. **Setup database**
+
+   ```bash
+   cd ../backend
+   npx prisma migrate deploy
+   npm run seed
+   ```
+
+8. **Start development servers**
+
+   ```bash
+   # Terminal 1: Start frontend
+   cd frontend && npm run dev
+   
+   # Terminal 2: Start backend
+   cd backend && npm run dev
    ```
 
 ### Access Points
@@ -278,17 +307,61 @@ Customers can access their data via secure links:
 
 ## 🧪 Testing
 
-````bash
 ```bash
 # Run unit tests
 cd backend && npm run test:unit
-````
 
 # Frontend tests
-
 cd frontend && npm run test
-
 ```
+
+## 🛠️ Troubleshooting
+
+### Database Connection Issues
+
+**Error**: `Can't reach database server at localhost:5434`
+
+**Solution**:
+```bash
+# Check if PostgreSQL container is running
+docker ps
+
+# If container is restarting, check logs
+docker logs shop_db
+
+# For PostgreSQL 18+ compatibility issues, recreate the volume:
+docker-compose down
+docker volume rm shopme_postgres_data
+docker-compose up -d
+
+# Wait for database to be ready, then migrate
+cd backend
+npx prisma migrate deploy
+npm run seed
+```
+
+### Missing Environment Variables
+
+**Error**: `Environment variable not found: DATABASE_URL`
+
+**Solution**:
+```bash
+cd backend
+cp .env.example .env
+# Edit .env file with your settings
+```
+
+### SMTP Configuration (Optional)
+
+For email functionality, configure these variables in `backend/.env`:
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+```
+
+**Note**: If SMTP is not configured, the system will use test accounts in development.
 
 ## 📚 Documentation
 
