@@ -58,6 +58,7 @@ Il riassunto DEVE seguire questa struttura:
 ### Esempio 1: Richiesta Prodotto
 
 **Conversazione**:
+
 ```
 Cliente: Buongiorno, cerco olio extravergine biologico
 Assistente: Certo! Abbiamo diverse opzioni...
@@ -67,6 +68,7 @@ Cliente: Ok aggiungi al carrello. Quanto costa la spedizione?
 ```
 
 **Riassunto**:
+
 ```
 **Cliente**: Mario Rossi
 
@@ -83,7 +85,7 @@ Cliente: Ok aggiungi al carrello. Quanto costa la spedizione?
 
 **Urgenza**: Bassa - conversazione fluida, nessuna fretta espressa
 
-**Azioni consigliate**: 
+**Azioni consigliate**:
 1. Fornire info spedizione e tempi di consegna
 2. Proporre offerte su quantità maggiori
 ```
@@ -91,6 +93,7 @@ Cliente: Ok aggiungi al carrello. Quanto costa la spedizione?
 ### Esempio 2: Reclamo Urgente
 
 **Conversazione**:
+
 ```
 Cliente: Mi è arrivata la merce scaduta!
 Assistente: Mi dispiace molto! Può indicarmi quale prodotto?
@@ -100,6 +103,7 @@ Cliente: Voglio parlare con un responsabile
 ```
 
 **Riassunto**:
+
 ```
 **Cliente**: Mario Rossi
 
@@ -116,7 +120,7 @@ Cliente: Voglio parlare con un responsabile
 
 **Urgenza**: ALTA - cliente insoddisfatto, merce non conforme
 
-**Azioni consigliate**: 
+**Azioni consigliate**:
 1. Contattare immediatamente per scuse formali
 2. Organizzare rimborso completo + sostituzione gratuita
 ```
@@ -124,6 +128,7 @@ Cliente: Voglio parlare con un responsabile
 ### Esempio 3: Domanda Semplice
 
 **Conversazione**:
+
 ```
 Cliente: Ciao, fate consegne in Sardegna?
 Assistente: Sì, consegniamo in tutta Italia inclusa Sardegna
@@ -131,6 +136,7 @@ Cliente: Perfetto grazie!
 ```
 
 **Riassunto**:
+
 ```
 **Cliente**: Mario Rossi
 
@@ -145,13 +151,14 @@ Cliente: Perfetto grazie!
 
 **Urgenza**: Bassa - informazione ottenuta
 
-**Azioni consigliate**: 
+**Azioni consigliate**:
 1. Follow-up se non procede all'ordine entro 48h
 ```
 
 ## 🔧 Variabili Disponibili
 
 Usa queste variabili nel tuo riassunto:
+
 - **{{customerName}}**: Nome del cliente (es. "Mario Rossi")
 - **{{agentName}}**: Nome dell'agente di vendita assegnato (da includere nel riassunto se rilevante)
 - **{{conversationHistory}}**: Array di messaggi dell'ultima ora
@@ -175,6 +182,7 @@ Usa queste variabili nel tuo riassunto:
 ## 🎯 Obiettivo Finale
 
 L'agente di vendita che leggerà il tuo riassunto deve poter:
+
 - ✅ Capire in 30 secondi la situazione del cliente
 - ✅ Sapere esattamente cosa fare come prima azione
 - ✅ Avere il contesto completo senza leggere tutta la conversazione

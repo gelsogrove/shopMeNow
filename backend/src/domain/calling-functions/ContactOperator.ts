@@ -227,7 +227,10 @@ ${messageList || "Nessun messaggio disponibile"}
             }
           } else {
             // No messages in last hour
-            logger.warn("⚠️ No messages found in last hour for customer:", customer.id)
+            logger.warn(
+              "⚠️ No messages found in last hour for customer:",
+              customer.id
+            )
             chatSummary = `
 Cliente: ${customer.name}
 Telefono: ${customer.phone}
@@ -373,7 +376,10 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
           }
         }
       } catch (emailError) {
-        logger.error("❌ [ContactOperator] Failed to send email to agent:", emailError)
+        logger.error(
+          "❌ [ContactOperator] Failed to send email to agent:",
+          emailError
+        )
         // Don't fail the entire operation if email fails
       }
 

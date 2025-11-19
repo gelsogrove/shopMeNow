@@ -14,11 +14,11 @@
  * @architecture Utility Service (not stored in agentConfigs table)
  */
 
-import logger from "../utils/logger"
-import { PromptProcessorService } from "./prompt-processor.service"
-import { getLLMConfig } from "../config/llm.config"
 import fs from "fs"
 import path from "path"
+import { getLLMConfig } from "../config/llm.config"
+import logger from "../utils/logger"
+import { PromptProcessorService } from "./prompt-processor.service"
 
 export interface SummaryRequest {
   conversationHistory: Array<{
@@ -74,7 +74,10 @@ export class SummaryAgentLLM {
       })
 
       // Check if conversation history is empty
-      if (!request.conversationHistory || request.conversationHistory.length === 0) {
+      if (
+        !request.conversationHistory ||
+        request.conversationHistory.length === 0
+      ) {
         logger.warn("⚠️ [SummaryAgent] No conversation history provided")
         return {
           success: false,
@@ -102,35 +105,41 @@ export class SummaryAgentLLM {
         request.agentName || "Agente"
       )
 
-      logger.info("🤖 [SummaryAgent] Prompt processed, calling OpenRouter API", {
-        promptLength: processedPrompt.length,
-        historyMessages: request.conversationHistory.length,
-      })
+      logger.info(
+        "🤖 [SummaryAgent] Prompt processed, calling OpenRouter API",
+        {
+          promptLength: processedPrompt.length,
+          historyMessages: request.conversationHistory.length,
+        }
+      )
 
       // Call OpenRouter API
       const llmConfig = getLLMConfig()
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${llmConfig.apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "openai/gpt-4o-mini", // Fixed model for summaries
-          messages: [
-            {
-              role: "system",
-              content: processedPrompt,
-            },
-            {
-              role: "user",
-              content: `Genera un riassunto della conversazione con ${request.customerName}. La conversazione contiene ${request.conversationHistory.length} messaggi dell'ultima ora.`,
-            },
-          ],
-          temperature: 0.5, // Balanced between creative and deterministic
-          max_tokens: 500, // ~250 words
-        }),
-      })
+      const response = await fetch(
+        "https://openrouter.ai/api/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${llmConfig.apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "openai/gpt-4o-mini", // Fixed model for summaries
+            messages: [
+              {
+                role: "system",
+                content: processedPrompt,
+              },
+              {
+                role: "user",
+                content: `Genera un riassunto della conversazione con ${request.customerName}. La conversazione contiene ${request.conversationHistory.length} messaggi dell'ultima ora.`,
+              },
+            ],
+            temperature: 0.5, // Balanced between creative and deterministic
+            max_tokens: 500, // ~250 words
+          }),
+        }
+      )
 
       if (!response.ok) {
         const errorText = await response.text()
