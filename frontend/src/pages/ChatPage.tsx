@@ -676,8 +676,8 @@ export function ChatPage() {
           customerId,
         ])
         toast.success("Account activation notification sent", {
-          duration: 2000 }
-        )
+          duration: 2000,
+        })
       }
 
       // Complete pending chatbot toggle if exists

@@ -1206,19 +1206,27 @@ export class LLMService {
             functionResult.message || "",
             {
               nameUser: customerData?.nameUser || customer.name || "Cliente",
-              discountUser: String(customerData?.discountUser || customer.discount || 0),
-              companyName: customerData?.companyName || workspace.name || "Shop",
-              lastordercode: customerData?.lastordercode || customer.lastOrderCode || "",
-              languageUser: customerData?.languageUser || customer.language || language,
+              discountUser: String(
+                customerData?.discountUser || customer.discount || 0
+              ),
+              companyName:
+                customerData?.companyName || workspace.name || "Shop",
+              lastordercode:
+                customerData?.lastordercode || customer.lastOrderCode || "",
+              languageUser:
+                customerData?.languageUser || customer.language || language,
               agentName: customer.sales
                 ? `${customer.sales.firstName} ${customer.sales.lastName}`.trim()
                 : "Alessandro Romano",
               agentPhone: customer.sales?.phone || "+39 333 890 1234",
-              agentEmail: customer.sales?.email || "andrea_gelsomino@hotmail.com",
-              tokenDuration: this.getTokenDurationText(process.env.TOKEN_EXPIRATION || "1h"),
+              agentEmail:
+                customer.sales?.email || "andrea_gelsomino@hotmail.com",
+              tokenDuration: this.getTokenDurationText(
+                process.env.TOKEN_EXPIRATION || "1h"
+              ),
             }
           )
-          
+
           return {
             response: processedMessage,
             tokenUsage,

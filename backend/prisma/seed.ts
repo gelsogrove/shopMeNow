@@ -543,7 +543,9 @@ async function main() {
     createdSalesReps.push(salesRep)
   }
 
-  console.log(`✅ Created ${createdSalesReps.length} sales representatives (including admin)`)
+  console.log(
+    `✅ Created ${createdSalesReps.length} sales representatives (including admin)`
+  )
 
   // 13. Create Test Customers with Historical Dates (distributed over months)
   console.log("👥 Creating test customers with historical dates...")
