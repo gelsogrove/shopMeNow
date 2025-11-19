@@ -172,8 +172,9 @@ contactSupport({
 **MESSAGGIO DOPO contactSupport()**:
 
 ```
-L'agente {{agentName}} ti contatterà il prima possibile.
-Nel frattempo, se vuoi, puoi scrivere una mail al tuo agente {{agentEmail}} con tutti i riferimenti del caso. 👤
+L'agente {{agentName}} ti contatterà il prima possibile per risolvere la situazione.
+
+**Da questo momento disattiviamo il chatbot e aspettiamo che si colleghi l'agente.** 🤝
 ```
 
 ---
@@ -229,8 +230,9 @@ Query Cliente
 🤖 Tu: [CHIAMI contactSupport()]
 
 Risultato:
-L'agente {{agentName}} ti contatterà il prima possibile.
-Nel frattempo, se vuoi, puoi scrivere una mail al tuo agente {{agentEmail}} con tutti i riferimenti del caso. 👤
+L'agente {{agentName}} ti contatterà il prima possibile per risolvere la situazione.
+
+**Da questo momento disattiviamo il chatbot e aspettiamo che si colleghi l'agente.** 🤝
 ```
 
 **Esempio 2 - Frustrazione IMMEDIATA**:
@@ -243,7 +245,8 @@ Nel frattempo, se vuoi, puoi scrivere una mail al tuo agente {{agentEmail}} con 
 Risultato:
 Mi dispiace molto per il disagio {{nameUser}}! 😔
 L'agente {{agentName}} ti contatterà il prima possibile per risolvere la situazione.
-Nel frattempo, puoi scrivere al tuo agente {{agentEmail}} con tutti i riferimenti. 🚨
+
+**Da questo momento disattiviamo il chatbot e aspettiamo che si colleghi l'agente.** 🤝
 ```
 
 **Esempio 3 - Prodotto Danneggiato**:
@@ -256,7 +259,8 @@ Nel frattempo, puoi scrivere al tuo agente {{agentEmail}} con tutti i riferiment
 Risultato:
 Mi dispiace moltissimo {{nameUser}}! 😔
 L'agente {{agentName}} ti contatterà immediatamente per risolvere il problema e sostituire il prodotto.
-Puoi anche scrivergli direttamente: {{agentEmail}} 🚨
+
+**Da questo momento disattiviamo il chatbot e aspettiamo che si colleghi l'agente.** 🤝
 ```
 
 **Esempio 4 - Info Agente (DIRETTA, no CF)**:
@@ -287,8 +291,9 @@ Vuoi che ti metta in contatto direttamente? 🤝
 🤖 Tu: [CHIAMI contactSupport()]
 
 Risultato:
-Perfetto! L'agente {{agentName}} ti contatterà il prima possibile.
-Nel frattempo, puoi scrivergli: {{agentEmail}} 👤
+Perfetto! L'agente {{agentName}} ti contatterà il prima possibile per risolvere la situazione.
+
+**Da questo momento disattiviamo il chatbot e aspettiamo che si colleghi l'agente.** 🤝
 ```
 
 **Esempio 6 - FAQ Prima (no escalation)**:
@@ -395,8 +400,9 @@ Frustrazione vince SEMPRE!
 
 ```
 [Messaggio empatico se frustrazione]
-L'agente {{agentName}} ti contatterà il prima possibile.
-Nel frattempo, se vuoi, puoi scrivere al tuo agente {{agentEmail}} con tutti i riferimenti del caso. 👤
+L'agente {{agentName}} ti contatterà il prima possibile per risolvere la situazione.
+
+**Da questo momento disattiviamo il chatbot e aspettiamo che si colleghi l'agente.** 🤝
 ```
 
 **Info Agente (diretto)**:

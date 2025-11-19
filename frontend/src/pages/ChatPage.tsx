@@ -536,7 +536,13 @@ export function ChatPage() {
           metadata: message.metadata, // 🔧 AGGIUNTO! Ora il metadata viene passato correttamente
         }))
 
-        setMessages(transformedMessages)
+        // 🔧 FIX: Remove duplicate messages by ID before rendering
+        const uniqueMessages = transformedMessages.filter(
+          (message, index, self) =>
+            index === self.findIndex((m) => m.id === message.id)
+        )
+
+        setMessages(uniqueMessages)
       } else {
         toast.error("Failed to load chat messages", { duration: 1000 })
       }
@@ -661,15 +667,8 @@ export function ChatPage() {
         )
       }
 
-      // Send chatbot activation notification if activated
-      if (notificationChanges?.chatbotActivated) {
-        await pushNotificationService.sendChatbotReactivation(workspaceId, [
-          customerId,
-        ])
-        toast.success("Chatbot activation notification sent", {
-          duration: 2000,
-        })
-      }
+      // NOTE: Chatbot reactivation notification sent AUTOMATICALLY by backend
+      // when activeChatbot changes from false -> true in customer update
 
       // Send account activation notification if unblocked
       if (notificationChanges?.accountActivated) {
@@ -677,8 +676,8 @@ export function ChatPage() {
           customerId,
         ])
         toast.success("Account activation notification sent", {
-          duration: 2000,
-        })
+          duration: 2000 }
+        )
       }
 
       // Complete pending chatbot toggle if exists
@@ -728,22 +727,8 @@ export function ChatPage() {
         // Update context state
         updateActiveChatbot(selectedChat.id, status)
 
-        // If enabling chatbot and notification is requested
-        if (status && shouldNotify) {
-          try {
-            logger.info("📤 Sending chatbot reactivation notification...")
-            // Send notification using centralized service
-            await pushNotificationService.sendChatbotReactivation(workspaceId, [
-              selectedChat.customerId,
-            ])
-            logger.info(
-              "✅ Chatbot reactivation notification sent successfully"
-            )
-          } catch (notifyError) {
-            logger.error("❌ Error sending notification:", notifyError)
-            // Don't show error to user as the main action succeeded
-          }
-        }
+        // NOTE: Backend automatically sends chatbot reactivation notification
+        // when activeChatbot changes from false -> true (no manual call needed)
 
         // ✅ Show success toast
         toast.success(
@@ -1078,14 +1063,25 @@ export function ChatPage() {
 
         if (tempMessage) {
           // Replace temp message with actual message from server (AI responses)
-          setMessages((prev) =>
-            prev
-              .filter((msg) => msg.id !== tempMessage.id)
-              .concat(transformedMessages)
-          )
+          setMessages((prev) => {
+            const withoutTemp = prev.filter((msg) => msg.id !== tempMessage.id)
+            const combined = [...withoutTemp, ...transformedMessages]
+            // 🔧 FIX: Remove duplicates by ID
+            return combined.filter(
+              (message, index, self) =>
+                index === self.findIndex((m) => m.id === message.id)
+            )
+          })
         } else {
           // Just add the operator message directly (manual operator mode)
-          setMessages((prev) => [...prev, ...transformedMessages])
+          setMessages((prev) => {
+            const combined = [...prev, ...transformedMessages]
+            // 🔧 FIX: Remove duplicates by ID
+            return combined.filter(
+              (message, index, self) =>
+                index === self.findIndex((m) => m.id === message.id)
+            )
+          })
         }
 
         // Update chat list to reflect new message
