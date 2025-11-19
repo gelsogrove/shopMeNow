@@ -1,5 +1,6 @@
 import { IMG_BASE_URL } from "@/config"
 import { Package } from "lucide-react"
+import { useState } from "react"
 
 interface ProductImageProps {
   imageUrl?: string[]
@@ -27,43 +28,36 @@ export function ProductImage({
   size = "md",
   rounded = true,
 }: ProductImageProps) {
-  const sizeClass = sizeClasses[size]
+  const [imageError, setImageError] = useState(false)
+  
   const roundedClass = rounded ? "rounded-md" : ""
-  const baseClasses = `${sizeClass} ${roundedClass} object-cover border border-gray-200`
-
+  
   // Check if image is available
   const hasImage = imageUrl && imageUrl.length > 0 && imageUrl[0]
 
-  if (hasImage) {
-    const imageSrc = `${IMG_BASE_URL}${imageUrl[0]}`
-
+  // If no image or image failed to load, show placeholder
+  if (!hasImage || imageError) {
+    const sizeClass = sizeClasses[size]
     return (
-      <img
-        src={imageSrc}
-        alt={alt}
-        className={`${baseClasses} ${className}`}
-        onError={(e) => {
-          // On image load error, show placeholder
-          const target = e.target as HTMLImageElement
-          target.style.display = "none"
-          const placeholder = target.nextElementSibling as HTMLElement
-          if (placeholder) {
-            placeholder.style.display = "flex"
-          }
-        }}
-      />
+      <div
+        className={`${sizeClass} ${roundedClass} ${className} flex items-center justify-center bg-gray-100 border border-gray-200`}
+      >
+        <Package
+          className="text-gray-400"
+          size={size === "sm" ? 20 : size === "md" ? 32 : size === "lg" ? 48 : 64}
+        />
+      </div>
     )
   }
 
-  // Placeholder icon when no image is available
+  const imageSrc = `${IMG_BASE_URL}${imageUrl[0]}`
+
   return (
-    <div
-      className={`${baseClasses} ${className} flex items-center justify-center bg-gray-100`}
-    >
-      <Package
-        className="text-gray-400"
-        size={size === "sm" ? 20 : size === "md" ? 32 : size === "lg" ? 48 : 64}
-      />
-    </div>
+    <img
+      src={imageSrc}
+      alt={alt}
+      className={`${roundedClass} object-cover border border-gray-200 ${className}`}
+      onError={() => setImageError(true)}
+    />
   )
 }
