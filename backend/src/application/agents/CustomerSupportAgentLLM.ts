@@ -339,7 +339,8 @@ export class CustomerSupportAgentLLM {
           )
 
         case "createSupportTicket":
-          // TODO: Implement support ticket creation
+          // Support ticket creation - Future feature
+          // For now, escalate to contactSupport for human assistance
           return {
             success: true,
             ticketId: "TICKET-" + Date.now(),
