@@ -123,16 +123,16 @@ return {
 
 Create a new **SUMMARY agent** (order 7) that:
 
-1. **Receives**: Last 15 messages of customer conversation history
-2. **Generates**: Concise <250 word summary of key topics (products, cart, concerns)
+1. **Receives**: All messages from **last hour** of customer conversation (time-based filter)
+2. **Generates**: Concise <250 word text summary of key topics (products, cart, concerns) - **NO calling functions**, only text generation
 3. **Passes through**: Safety Translation Agent for sanitization and language translation
 4. **Delivers**: Email to sales agent with translated, safety-checked summary
 
 **Email Flow**:
 ```
 contactSupport CF → ContactOperator.ts → 
-  Retrieve last 15 messages → 
-  Summary Agent (LLM summary) → 
+  Retrieve messages from last hour (WHERE createdAt >= NOW() - 1 hour) → 
+  Summary Agent (receives array, returns text summary - NO calling functions) → 
   Safety Translation Agent (translate + sanitize) → 
   EmailService (SMTP send) → 
   Sales agent receives email
@@ -176,21 +176,43 @@ contactSupport CF → ContactOperator.ts →
 
 ## 🚀 Next Steps
 
+### ✅ Questions Resolved
+
+Andrea ha risposto a tutte le domande:
+
+1. ~~**Message count**: Should we summarize last **15 messages** or different number?~~  
+   ✅ **ANSWERED**: Usa **ultima ora** (last hour) invece di numero fisso messaggi
+
+2. ~~**Variables**: Need any besides {{conversationHistory}}, {{customerName}}, {{agentName}}?~~  
+   ✅ **ANSWERED**: Vanno bene così
+
+3. ~~**Timestamp filtering**: Use message count OR time range (e.g., last hour)?~~  
+   ✅ **ANSWERED**: Era duplicata - usa **ultima ora**
+
+4. ~~**Calling functions**: Should Summary Agent have calling functions or just generate text?~~  
+   ✅ **ANSWERED**: **NO calling functions** - Summary Agent riceve array di messaggi, genera riassunto testo, ritorna a Safety Translation Agent
+
+**Specification aggiornata con le risposte di Andrea!** ✅
+
+---
+
 ### Immediate (Andrea's Approval)
 
-Andrea, please review the specification:
+Andrea, please review the updated specification:
 
 1. **Read the spec**: `specs/001-email-summary-llm/spec.md`
 2. **Check user stories**: Do P1, P2, P3 match your vision?
 3. **Review requirements**: Are all 15 FRs clear and correct?
 4. **Verify edge cases**: Do the 6 fallback behaviors make sense?
-5. **Confirm assumptions**: Last 15 messages default, Safety Translation handles language, etc.
+
+**Specification updated with your answers**:
+- ✅ Messages from **last hour** (time-based filter, not message count)
+- ✅ Variables: {{conversationHistory}}, {{customerName}}, {{agentName}}
+- ✅ **NO calling functions** for Summary Agent (only text generation)
 
 **Questions for You**:
-- ❓ Should we use last **15 messages** or a different number (10, 20)?
-- ❓ Should Summary Agent have **calling functions** or just generate text?
-- ❓ Should we include **timestamp range** (last hour) or just message count?
-- ❓ Any other **variables** needed in summary prompt besides {{conversationHistory}}, {{customerName}}, {{agentName}}?
+- ❓ Any other changes needed to the specification?
+- ❓ Ready to proceed to `/speckit.plan` (implementation planning)?
 
 ### After Approval
 
@@ -219,13 +241,22 @@ Once you approve, we can:
 
 ## 💬 Andrea, Your Input Needed
 
-The specification is complete and **APPROVED** by quality standards. However, this is **YOUR feature**, so I need your feedback:
+~~The specification is complete and **APPROVED** by quality standards. However, this is **YOUR feature**, so I need your feedback:~~
 
-1. **Does the specification match your vision?**
-2. **Are the priorities correct?** (P1 = email with summary, P2 = admin config, P3 = edge cases)
-3. **Should we adjust any requirements?** (e.g., message count, fallback behaviors)
-4. **Any missing scenarios or edge cases?**
-5. **Ready to proceed to implementation planning?**
+**Specification updated with your answers!** ✅
+
+Changes made based on your feedback:
+- ✅ **Time-based filter**: Messages from last hour (WHERE createdAt >= NOW() - 1 hour) instead of fixed count
+- ✅ **No calling functions**: Summary Agent only receives array and returns text (no function calling)
+- ✅ **Variables confirmed**: {{conversationHistory}}, {{customerName}}, {{agentName}}
+
+~~1. **Does the specification match your vision?**~~  
+~~2. **Are the priorities correct?** (P1 = email with summary, P2 = admin config, P3 = edge cases)~~  
+~~3. **Should we adjust any requirements?** (e.g., message count, fallback behaviors)~~  
+~~4. **Any missing scenarios or edge cases?**~~  
+~~5. **Ready to proceed to implementation planning?**~~
+
+**Next steps**:
 
 Let me know if you want to:
 - ✅ **Approve as-is** and move to `/speckit.plan` (implementation planning)

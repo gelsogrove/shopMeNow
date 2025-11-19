@@ -17,7 +17,7 @@ When a customer escalates to a human operator, the sales agent receives an email
 
 **Acceptance Scenarios**:
 
-1. **Given** customer "Mario Rossi" has 15 messages in chat history, **When** customer requests operator assistance ("voglio parlare con un agente"), **Then** contactSupport function triggers, chatbot disables, and sales agent Alessandro Romano receives email at andrea_gelsomino@hotmail.com with Italian summary of last 10-15 messages
+1. **Given** customer "Mario Rossi" has 15 messages in last hour of chat history, **When** customer requests operator assistance ("voglio parlare con un agente"), **Then** contactSupport function triggers, chatbot disables, and sales agent Alessandro Romano receives email at andrea_gelsomino@hotmail.com with Italian summary of messages from last hour
 2. **Given** customer conversation includes product questions and cart operations, **When** escalation occurs, **Then** email summary includes both product inquiries and cart actions in chronological order
 3. **Given** customer conversation contains profanity or unsafe content, **When** summary is generated, **Then** Safety Translation Agent sanitizes the content before including in email
 4. **Given** sales agent's preferred language is different from customer's language, **When** email is sent, **Then** summary is translated to sales agent's language (Italian default)
@@ -26,8 +26,8 @@ When a customer escalates to a human operator, the sales agent receives an email
 
 - [ ] Frontend: No changes required (backend handles email automatically)
 - [ ] Backend API: contactSupport calling function modified to invoke ContactOperator.ts instead of placeholder response
-- [ ] Service Layer: SummaryAgentLLM service created, integrated into ContactOperator flow
-- [ ] Repository: Retrieve last N messages from ConversationMessages table with workspaceId filter
+- [ ] Service Layer: SummaryAgentLLM service created, integrated into ContactOperator flow (receives array, returns text only - NO calling functions)
+- [ ] Repository: Retrieve messages from last hour (createdAt >= NOW() - 1 hour) with workspaceId filter
 - [ ] Database: Add SUMMARY agent configuration to agentConfigs table via seed
 - [ ] Security: Email sending requires workspace isolation (sales agent must belong to customer's workspace)
 - [ ] Testing: Unit test for summary generation, integration test for full email flow
@@ -89,7 +89,7 @@ The system handles edge cases like empty chat history, very long conversations, 
 - [ ] Frontend: No changes (backend handles all fallbacks)
 - [ ] Backend API: Error handling in contactSupport calling function
 - [ ] Service Layer: SummaryAgentLLM has try/catch with fallback to raw history
-- [ ] Repository: Query limits messages to last 20 (LIMIT 20 ORDER BY createdAt DESC)
+- [ ] Repository: Query filters messages from last hour (WHERE createdAt >= NOW() - INTERVAL '1 hour')
 - [ ] Database: No schema changes needed
 - [ ] Security: Fallback behavior must still respect workspace isolation
 - [ ] Testing: Unit tests for each edge case scenario
@@ -112,7 +112,7 @@ The system handles edge cases like empty chat history, very long conversations, 
   System logs error, falls back to raw conversation history in email. Sales agent receives email with full context even if summary fails.
 
 - **What happens when chat history exceeds token limit (>10k tokens)?**  
-  System retrieves only last 20 messages (configurable) to summarize. Older messages excluded to stay within limits.
+  System retrieves only messages from last hour (time-based filter). If last hour still exceeds token limit, system truncates oldest messages to fit within limit.
 
 - **What happens when sales agent email is missing from customer record?**  
   System falls back to workspace admin email (existing ContactOperator.ts behavior). Email always delivers.
@@ -127,11 +127,11 @@ The system handles edge cases like empty chat history, very long conversations, 
 - **FR-001**: System MUST create a new agent type called SUMMARY that generates concise summaries of conversation history
 - **FR-002**: System MUST store Summary Agent configuration in agentConfigs table with fields: name, type (SUMMARY), systemPrompt, model, temperature, maxTokens, order (7), isActive, availableFunctions (empty array)
 - **FR-003**: System MUST load Summary Agent system prompt from `docs/prompts/summary-agent.md` during database seed
-- **FR-004**: Summary Agent MUST accept conversation history as input and return text summary of last 10-20 customer messages
+- **FR-004**: Summary Agent MUST accept conversation history as input array and return text summary (NO calling functions - only text generation)
 - **FR-005**: System MUST replace variables in summary prompt: {{conversationHistory}}, {{customerName}}, {{agentName}} before sending to LLM
 - **FR-006**: System MUST integrate Summary Agent into email flow: retrieve history → Summary Agent → Safety Translation Agent → Email Service
 - **FR-007**: System MUST modify contactSupport calling function in function-executor.service.ts to invoke ContactOperator.ts instead of returning placeholder response
-- **FR-008**: System MUST retrieve last N messages (default 15) from ConversationMessages table filtered by customerId and workspaceId, ordered by createdAt DESC
+- **FR-008**: System MUST retrieve messages from last hour (createdAt >= NOW() - 1 hour) from ConversationMessages table filtered by customerId and workspaceId
 - **FR-009**: System MUST pass Summary Agent output through Safety Translation Agent to sanitize and translate content
 - **FR-010**: System MUST send final email using EmailService.sendOperatorNotificationEmail method with sales agent email address
 - **FR-011**: System MUST log each step of email generation pipeline with clear markers (📧 for email, 🤖 for LLM)
@@ -142,13 +142,14 @@ The system handles edge cases like empty chat history, very long conversations, 
 
 ### Key Entities _(include if feature involves data)_
 
-- **Agent (SUMMARY type)**: Represents LLM agent configuration for summarizing conversations. Attributes: name, type (SUMMARY enum value), systemPrompt (markdown content from file), model (e.g., "openai/gpt-4o-mini"), temperature (0.5 default), maxTokens (500 default), order (7), isActive (true), availableFunctions (empty array since Summary Agent doesn't call functions), workspaceId
-- **ConversationMessage**: Represents individual messages in customer chat history. Attributes: id, customerId, workspaceId, role (customer/assistant), content (text), createdAt (timestamp). Used as input source for summary generation
+- **Agent (SUMMARY type)**: Represents LLM agent configuration for summarizing conversations. Attributes: name, type (SUMMARY enum value), systemPrompt (markdown content from file), model (e.g., "openai/gpt-4o-mini"), temperature (0.5 default), maxTokens (500 default), order (7), isActive (true), availableFunctions (empty array - Summary Agent only generates text, NO calling functions), workspaceId
+- **ConversationMessage**: Represents individual messages in customer chat history. Attributes: id, customerId, workspaceId, role (customer/assistant), content (text), createdAt (timestamp). Used as input source for summary generation (filtered by last hour: createdAt >= NOW() - 1 hour)
 - **EmailNotification**: Represents email sent to sales agent. Contains: recipient (sales agent email), subject, body (includes summary), chatSummary (LLM-generated or raw history), customerName, timestamp
 
 ### Assumptions
 
-- Summary Agent will summarize last 15 messages by default (configurable via code constant, not database)
+- Summary Agent will summarize messages from **last hour** (createdAt >= NOW() - INTERVAL '1 hour') instead of fixed message count
+- Summary Agent **does NOT have calling functions** - it only receives conversation history array and returns text summary
 - Email implementation follows pattern from working test script `npm test:smtp` (nodemailer with Gmail SMTP)
 - Safety Translation Agent (order 6) already exists and handles language translation + content safety
 - EmailService.sendOperatorNotificationEmail accepts direct email addresses (already modified in previous work)
@@ -160,8 +161,8 @@ The system handles edge cases like empty chat history, very long conversations, 
 ### Measurable Outcomes
 
 - **SC-001**: When contactSupport calling function executes, sales agent MUST receive email within 30 seconds (measured from CF invocation to email delivery confirmation log)
-- **SC-002**: Email summary MUST be under 250 words (approximately 1500 characters) for conversations with 10-20 messages
-- **SC-003**: Summary MUST include key conversation topics: product inquiries, cart operations, customer concerns (verified by human review of 10 test emails)
+- **SC-002**: Email summary MUST be under 250 words (approximately 1500 characters) for conversations with messages from last hour
+- **SC-003**: Summary MUST include key conversation topics: product inquiries, cart operations, customer concerns from last hour (verified by human review of 10 test emails)
 - **SC-004**: System MUST successfully generate summary and send email for 95% of escalations (5% failure rate acceptable for API timeouts, with fallback to raw history)
 - **SC-005**: Summary Agent configuration changes (temperature, maxTokens) MUST affect next email within 1 minute (no caching delays)
 - **SC-006**: Summary MUST pass through Safety Translation Agent and arrive in sales agent's language (Italian default) regardless of customer's original language
