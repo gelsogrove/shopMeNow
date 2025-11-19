@@ -17,6 +17,7 @@ export interface ProductData {
   region?: string // Italian region in English (e.g., "Emilia-Romagna", "Tuscany")
   transportType?: string // "Trasporto refrigerato", "Trasporto congelato", "Temperatura ambiente"
   imageUrl?: string[]
+  certifications?: string[] // Array: ["bio", "vegan", "gluten-free", "halal", "whole-grain", "DOP", "IGP", "IGT"]
 }
 
 export const products: ProductData[] = [
@@ -33,6 +34,7 @@ export const products: ProductData[] = [
     categoryName: "Pasta",
     imageUrl: ["/uploads/products/PASTA001_1760542445348_kufvtm.jpg"],
     region: "Campania",
+    certifications: ["IGP"],
   },
   {
     name: "Penne Rigate1",
@@ -104,6 +106,7 @@ export const products: ProductData[] = [
     imageUrl: ["/uploads/products/SALUMI001_1760561414803_ho7x60.jpg"],
     region: "Emilia-Romagna",
     transportType: "Trasporto refrigerato",
+    certifications: ["DOP"],
   },
   {
     name: "Mortadella Bologna IGP",
@@ -118,6 +121,7 @@ export const products: ProductData[] = [
     categoryName: "Cured Meats",
     imageUrl: ["/uploads/products/SALUMI003_1760557074306_bij2tp.webp"],
     transportType: "Trasporto refrigerato",
+    certifications: ["IGP"],
   },
   {
     name: "Speck Alto Adige IGP",
@@ -133,6 +137,7 @@ export const products: ProductData[] = [
     imageUrl: ["/uploads/products/SALUMI004_1760561954262_q2q4ii.jpg"],
     region: "Trentino-South Tyrol",
     transportType: "Trasporto refrigerato",
+    certifications: ["IGP"],
   },
   {
     name: "Salame Milano",
@@ -161,6 +166,7 @@ export const products: ProductData[] = [
     slug: "bresaola-valtellina-igp-1760539790644-1760541634632-1760541681120-1760542111956-1760542245201-1760543283332-1760544291566-1760544741662-1760544839645-1760561170877-1760562939895-1760565166843-1760565309379-1760565465279-1760565693104-1760655750307-1760715768906",
     categoryName: "Cured Meats",
     imageUrl: ["/uploads/products/SALUMI005_1760565372075_1z8s3v.jpg"],
+    certifications: ["IGP"],
     transportType: "Trasporto refrigerato",
   },
   {
@@ -192,6 +198,7 @@ export const products: ProductData[] = [
     imageUrl: ["/uploads/products/FORMAG002_1760561371143_uv0za8.webp"],
     region: "Lombardy",
     transportType: "Trasporto refrigerato",
+    certifications: ["DOP"],
   },
   {
     name: "Parmigiano Reggiano DOP 24 mesi",
@@ -207,6 +214,7 @@ export const products: ProductData[] = [
     imageUrl: ["/uploads/products/FORMAG001_1760544790018_cseoji.jpg"],
     region: "Emilia-Romagna",
     transportType: "Trasporto refrigerato",
+    certifications: ["DOP"],
   },
   {
     name: "Mozzarella di Bufala Campana DOP",
@@ -222,6 +230,7 @@ export const products: ProductData[] = [
     imageUrl: ["/uploads/products/FORMAG003_1760561901985_j1nh6a.jpg"],
     region: "Campania",
     transportType: "Trasporto refrigerato",
+    certifications: ["DOP"],
   },
   {
     name: "Pecorino Romano DOP",
@@ -237,6 +246,7 @@ export const products: ProductData[] = [
     imageUrl: ["/uploads/products/FORMAG004_1760544997355_qqurf1.webp"],
     region: "Lazio",
     transportType: "Trasporto refrigerato",
+    certifications: ["DOP"],
   },
   {
     name: "Taleggio DOP",
@@ -251,6 +261,7 @@ export const products: ProductData[] = [
     categoryName: "Cheeses",
     imageUrl: ["/uploads/products/FORMAG005_1760562254180_li39w3.jpg"],
     transportType: "Trasporto refrigerato",
+    certifications: ["DOP"],
   },
   {
     name: "Provolone Piccante",
@@ -290,9 +301,10 @@ export const products: ProductData[] = [
     stock: 50,
     status: "ACTIVE",
     slug: "olio-evo-toscano-igp-1760539790663-1760541634654-1760541681140-1760542111989-1760542245236-1760543283375-1760544291640-1760544741692-1760544839672-1760561170901-1760562939946-1760565166869-1760565309407-1760565465301-1760565693128-1760655750337-1760715768926",
-    categoryName: "Condiments",
-    imageUrl: ["/uploads/products/COND001_1760556282011_pgut7d.webp"],
+    categoryName: "Condiments & Oils",
+    imageUrl: ["/uploads/products/COND001_1760542472569_vavlyz.jpg"],
     region: "Tuscany",
+    certifications: ["IGP"],
   },
   {
     name: "Aceto Balsamico di Modena IGP",

@@ -1549,7 +1549,11 @@ export function ChatPage() {
                         }`}
                       >
                         <div
-                          className={`p-3 rounded-lg max-w-[75%] relative ${getMessageStyle()}`}
+                          className={`p-3 rounded-lg max-w-[75%] relative ${
+                            isOperatorMessage || isOperatorControl || isManualOperator 
+                              ? 'pt-6' 
+                              : ''
+                          } ${getMessageStyle()}`}
                         >
                           {/* 🚨 OPERATOR CONTROL BADGE */}
                           {(isOperatorMessage ||
@@ -1596,13 +1600,6 @@ export function ChatPage() {
                                     View Flow
                                   </button>
                                 )}
-
-                              {/* �👨‍💼 Operator Badge */}
-                              {isOperatorMessage && (
-                                <span className="text-[10px] font-medium bg-blue-200 text-blue-800 px-2 py-0.5 rounded ml-2">
-                                  👨‍💼 Human Operator
-                                </span>
-                              )}
 
                               {/* 📋 Manual Control Badge */}
                               {isOperatorControl && (

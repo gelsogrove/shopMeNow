@@ -195,15 +195,114 @@ export class WhatsAppWebhookController {
           phone: phoneNumber,
           workspaceId, // Ensure we search in correct workspace
         },
-        include: { workspace: true },
+        select: {
+          id: true,
+          phone: true,
+          name: true,
+          email: true,
+          language: true,
+          workspaceId: true,
+          isActive: true,
+          activeChatbot: true, // 🔒 CRITICAL: Load chatbot status
+          workspace: {
+            select: {
+              id: true,
+              name: true,
+              welcomeMessage: true,
+            },
+          },
+        },
       })
 
       if (!customer) {
         logger.info(
-          "[WEBHOOK] 🆕 New user detected - sending welcome message",
+          "[WEBHOOK] 🆕 New user detected - checking registration attempts",
           {
             phoneNumber,
             workspaceId,
+          }
+        )
+
+        // 🔒 STEP 1: Check/update RegistrationAttempts (with transaction for concurrency safety)
+        const registrationAttempt = await prisma.$transaction(async (tx) => {
+          // Find or create RegistrationAttempts record
+          let attempt = await tx.registrationAttempts.findUnique({
+            where: {
+              phoneNumber_workspaceId: {
+                phoneNumber: phoneNumber,
+                workspaceId: workspaceId,
+              },
+            },
+          })
+
+          if (!attempt) {
+            // First message - create record with attemptCount=1
+            attempt = await tx.registrationAttempts.create({
+              data: {
+                phoneNumber: phoneNumber,
+                workspaceId: workspaceId,
+                attemptCount: 1,
+                lastAttemptAt: new Date(),
+                isBlocked: false,
+              },
+            })
+            logger.info("[WEBHOOK] 📝 Created RegistrationAttempts record", {
+              phoneNumber,
+              attemptCount: 1,
+            })
+          } else {
+            // Subsequent message - increment attemptCount
+            attempt = await tx.registrationAttempts.update({
+              where: {
+                phoneNumber_workspaceId: {
+                  phoneNumber: phoneNumber,
+                  workspaceId: workspaceId,
+                },
+              },
+              data: {
+                attemptCount: { increment: 1 },
+                lastAttemptAt: new Date(),
+                // Set isBlocked=true when attemptCount reaches 4 (after 3 welcome messages)
+                isBlocked: attempt.attemptCount + 1 >= 4,
+              },
+            })
+            logger.info(
+              "[WEBHOOK] 🔄 Updated RegistrationAttempts record",
+              {
+                phoneNumber,
+                attemptCount: attempt.attemptCount,
+                isBlocked: attempt.isBlocked,
+              }
+            )
+          }
+
+          return attempt
+        })
+
+        // 🚫 STEP 2: Check if user is blocked (attemptCount >= 4)
+        if (registrationAttempt.isBlocked) {
+          logger.warn(
+            "[WEBHOOK] 🚫 User blocked after 3 registration attempts",
+            {
+              phoneNumber,
+              attemptCount: registrationAttempt.attemptCount,
+            }
+          )
+          // Return 200 OK but don't send any message
+          res.status(200).json({
+            status: "blocked",
+            message: "User blocked after exceeding registration attempts",
+            attemptCount: registrationAttempt.attemptCount,
+          })
+          return
+        }
+
+        // ✅ STEP 3: User not blocked - send welcome message (attemptCount <= 3)
+        logger.info(
+          "[WEBHOOK] 📨 Sending welcome message",
+          {
+            phoneNumber,
+            attemptCount: registrationAttempt.attemptCount,
           }
         )
 
@@ -263,12 +362,100 @@ export class WhatsAppWebhookController {
         // Get localized registration texts
         const registrationTexts = getRegistrationText(detectedLanguage)
 
-        // Build final message with registration link
+        // Build welcome message with registration link
         const welcomeMessage =
           workspace.welcomeMessage || "Welcome! How can I help you?"
-        const finalMessage = `${welcomeMessage}\n\n${registrationTexts.link}: ${registrationLink}\n${registrationTexts.validity}`
+        const rawWelcomeMessage = `${welcomeMessage}\n\n${registrationTexts.link}: ${registrationLink}\n${registrationTexts.validity}`
 
-        // ✅ CREATE TEMPORARY CUSTOMER RECORD (will be updated after registration)
+        // 🛡️ STEP 4: Pass welcome message through Safety & Translation Agent
+        let finalMessage = rawWelcomeMessage
+        let safetyTokensUsed = 0
+        const debugSteps: any[] = []
+
+        try {
+          const {
+            SafetyTranslationAgent,
+          } = require("../../../application/agents/SafetyTranslationAgent")
+          const safetyAgent = new SafetyTranslationAgent(prisma)
+
+          debugSteps.push({
+            type: "welcome",
+            agent: "Welcome Message Generator",
+            timestamp: new Date().toISOString(),
+            input: {
+              phoneNumber: phoneNumber,
+              language: detectedLanguage,
+              attemptCount: registrationAttempt.attemptCount,
+            },
+            output: {
+              welcomeMessage: rawWelcomeMessage,
+            },
+            tokenUsage: {
+              totalTokens: 0,
+            },
+          })
+
+          const safetyResult = await safetyAgent.process({
+            workspaceId: workspaceId,
+            response: rawWelcomeMessage,
+            targetLanguage: detectedLanguage,
+            customerName: "New Customer",
+            allowedLinks: [registrationLink], // Allow registration link
+          })
+
+          if (!safetyResult.safe) {
+            logger.error(
+              "[WEBHOOK] ⚠️ Welcome message failed safety check (this should never happen)",
+              {
+                blockedReason: safetyResult.blockedReason,
+              }
+            )
+            // Fallback to raw message if safety check fails
+            finalMessage = rawWelcomeMessage
+          } else {
+            finalMessage = safetyResult.translatedText || rawWelcomeMessage
+            safetyTokensUsed = safetyResult.tokensUsed || 0
+          }
+
+          debugSteps.push({
+            type: "safety",
+            agent: "Safety & Translation",
+            model: "openai/gpt-4o-mini",
+            temperature: 0.2,
+            timestamp: new Date().toISOString(),
+            systemPrompt: safetyResult.systemPrompt || "Safety & Translation Agent",
+            input: {
+              originalMessage: rawWelcomeMessage,
+              targetLanguage: detectedLanguage,
+              customerName: "New Customer",
+            },
+            output: {
+              translatedMessage: finalMessage,
+              safe: safetyResult.safe,
+              blockedReason: safetyResult.blockedReason || null,
+            },
+            tokenUsage: {
+              totalTokens: safetyTokensUsed,
+            },
+          })
+
+          logger.info(
+            "[WEBHOOK] 🛡️ Welcome message passed through Safety & Translation",
+            {
+              tokensUsed: safetyTokensUsed,
+              safe: safetyResult.safe,
+            }
+          )
+        } catch (safetyError) {
+          logger.error(
+            "[WEBHOOK] ❌ Safety agent error - using raw message",
+            safetyError
+          )
+          // Fallback to raw message on error
+          finalMessage = rawWelcomeMessage
+        }
+
+        // ✅ STEP 5: CREATE TEMPORARY CUSTOMER RECORD (will be updated after registration)
         // This allows us to save the welcome message in chat history
         const tempCustomer = await prisma.customers.create({
           data: {
@@ -281,7 +468,7 @@ export class WhatsAppWebhookController {
           },
         })
 
-        // ✅ CREATE CHAT SESSION
+        // ✅ STEP 6: CREATE CHAT SESSION
         const chatSession = await prisma.chatSession.create({
           data: {
             customerId: tempCustomer.id,
@@ -290,7 +477,28 @@ export class WhatsAppWebhookController {
           },
         })
 
-        // ✅ SAVE WELCOME MESSAGE IN CHAT HISTORY
+        // ✅ STEP 7: SAVE debugSteps for Message Flow Timeline
+        debugSteps.push({
+          type: "save",
+          agent: "Database Save",
+          timestamp: new Date().toISOString(),
+          output: {
+            conversationId: chatSession.id,
+            customerId: tempCustomer.id,
+          },
+        })
+
+        debugSteps.push({
+          type: "whatsapp",
+          agent: "WhatsApp Send",
+          timestamp: new Date().toISOString(),
+          output: {
+            status: "queued",
+            recipient: phoneNumber,
+          },
+        })
+
+        // ✅ STEP 8: SAVE WELCOME MESSAGE IN CHAT HISTORY
         // 🔧 CRITICAL: Use conversationMessage table (NEW) not message table (OLD)
         // This ensures messages appear in frontend (getChatSessionMessages queries conversationMessage)
         await prisma.conversationMessage.create({
@@ -301,20 +509,22 @@ export class WhatsAppWebhookController {
             role: "assistant", // Bot response
             content: finalMessage,
             agentType: "REGISTRATION_FLOW",
-            tokensUsed: 0, // No LLM tokens used (static message)
+            tokensUsed: safetyTokensUsed,
             debugInfo: JSON.stringify({
               source: "whatsapp-webhook",
               type: "welcome_new_user",
               language: detectedLanguage,
               registrationLink: registrationLink,
               timestamp: new Date().toISOString(),
-              flow: "new_user_registration",
-              messagePrice: BillingPrices.WELCOME_MESSAGE, // From centralized enum
+              flow: ["welcome", "safety", "save", "whatsapp"],
+              attemptCount: registrationAttempt.attemptCount,
+              messagePrice: BillingPrices.WELCOME_MESSAGE,
+              debugSteps: debugSteps,
             }),
           },
         })
 
-        // 💰 Track welcome message cost (from BillingPrices enum)
+        // 💰 STEP 9: Track welcome message cost (from BillingPrices enum)
         try {
           const { BillingService } = await import(
             "../../../application/services/billing.service"
@@ -339,7 +549,7 @@ export class WhatsAppWebhookController {
           // Don't fail the flow if billing fails
         }
 
-        // Send welcome message (for now just return it - WhatsApp sending not implemented yet)
+        // ✅ STEP 10: Return success response
         logger.info(
           "[WEBHOOK] ✅ Welcome message prepared and saved to chat history",
           {
@@ -348,6 +558,7 @@ export class WhatsAppWebhookController {
             registrationLink,
             customerId: tempCustomer.id,
             sessionId: chatSession.id,
+            attemptCount: registrationAttempt.attemptCount,
           }
         )
 
@@ -358,6 +569,7 @@ export class WhatsAppWebhookController {
           registrationLink,
           customerId: tempCustomer.id,
           sessionId: chatSession.id,
+          attemptCount: registrationAttempt.attemptCount,
         })
         return
       }
@@ -374,6 +586,64 @@ export class WhatsAppWebhookController {
 
       // 🔄 Convert WhatsApp format → Markdown (for internal storage)
       const messageMarkdown = whatsAppToMarkdown(messageText)
+
+      // 🔒 CRITICAL: If chatbot is disabled, ONLY save message - DO NOT process with LLM
+      if (customer && !customer.activeChatbot) {
+        logger.info(
+          `🚫 [WEBHOOK] Chatbot disabled for customer ${customer.id} - saving message without LLM processing`
+        )
+
+        // Get or create chat session
+        let chatSession = await prisma.chatSession.findFirst({
+          where: {
+            customerId: customer.id,
+            workspaceId: customer.workspaceId,
+            status: "active",
+          },
+        })
+
+        if (!chatSession) {
+          chatSession = await prisma.chatSession.create({
+            data: {
+              customerId: customer.id,
+              workspaceId: customer.workspaceId,
+              status: "active",
+              context: {
+                createdBy: "whatsapp-webhook",
+                phoneNumber,
+              },
+            },
+          })
+        }
+
+        // Save customer message to conversationMessage table
+        await prisma.conversationMessage.create({
+          data: {
+            workspaceId: customer.workspaceId,
+            customerId: customer.id,
+            conversationId: chatSession.id,
+            role: "user", // Customer message
+            content: messageMarkdown,
+            agentType: "NONE", // No agent processing
+            tokensUsed: 0,
+            debugInfo: JSON.stringify({
+              chatbotDisabled: true,
+              reason: "activeChatbot = false",
+              timestamp: new Date().toISOString(),
+              source: "whatsapp-webhook",
+            }),
+          },
+        })
+
+        // Return success WITHOUT processing with LLM
+        res.status(200).json({
+          status: "message_saved",
+          message: "Message saved (chatbot disabled)",
+          chatbotDisabled: true,
+          sessionId: chatSession.id,
+        })
+        return
+      }
 
       // 💾 Get or create active chat session BEFORE LLM call
       let chatSession = await prisma.chatSession.findFirst({

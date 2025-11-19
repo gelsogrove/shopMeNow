@@ -57,6 +57,8 @@ export function ProductsPage() {
   const [filterHalal, setFilterHalal] = useState(false)
   const [filterWholeGrain, setFilterWholeGrain] = useState(false)
   const [filterDOP, setFilterDOP] = useState(false)
+  const [filterIGP, setFilterIGP] = useState(false)
+  const [filterIGT, setFilterIGT] = useState(false)
 
   // Load filters from localStorage or use defaults
   const [filterCategory, setFilterCategory] = useState<string>("all")
@@ -223,6 +225,12 @@ export function ProductsPage() {
     if (filterDOP) {
       filtered = filtered.filter((p) => p.certifications?.includes("DOP"))
     }
+    if (filterIGP) {
+      filtered = filtered.filter((p) => p.certifications?.includes("IGP"))
+    }
+    if (filterIGT) {
+      filtered = filtered.filter((p) => p.certifications?.includes("IGT"))
+    }
 
     logger.info("🔍 After certification filters:", filtered.length)
 
@@ -250,6 +258,8 @@ export function ProductsPage() {
     filterHalal,
     filterWholeGrain,
     filterDOP,
+    filterIGP,
+    filterIGT,
   ])
 
   const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -273,6 +283,8 @@ export function ProductsPage() {
     if (formData.get("cert-vegan")) certifications.push("vegan")
     if (formData.get("cert-gluten-free")) certifications.push("gluten-free")
     if (formData.get("cert-DOP")) certifications.push("DOP")
+    if (formData.get("cert-IGP")) certifications.push("IGP")
+    if (formData.get("cert-IGT")) certifications.push("IGT")
 
     // Remove old checkbox fields and add certifications array
     formData.delete("cert-whole-grain")
@@ -281,6 +293,8 @@ export function ProductsPage() {
     formData.delete("cert-vegan")
     formData.delete("cert-gluten-free")
     formData.delete("cert-DOP")
+    formData.delete("cert-IGP")
+    formData.delete("cert-IGT")
     formData.set("certifications", JSON.stringify(certifications))
 
     try {
@@ -365,6 +379,8 @@ export function ProductsPage() {
     if (formData.get("cert-vegan")) certifications.push("vegan")
     if (formData.get("cert-gluten-free")) certifications.push("gluten-free")
     if (formData.get("cert-DOP")) certifications.push("DOP")
+    if (formData.get("cert-IGP")) certifications.push("IGP")
+    if (formData.get("cert-IGT")) certifications.push("IGT")
 
     // Remove old checkbox fields and add certifications array
     formData.delete("cert-whole-grain")
@@ -373,6 +389,8 @@ export function ProductsPage() {
     formData.delete("cert-vegan")
     formData.delete("cert-gluten-free")
     formData.delete("cert-DOP")
+    formData.delete("cert-IGP")
+    formData.delete("cert-IGT")
     formData.set("certifications", JSON.stringify(certifications))
 
     // Make sure categoryId is set correctly if "none" is selected
@@ -762,7 +780,25 @@ export function ProductsPage() {
                 defaultChecked={product?.certifications?.includes("DOP")}
                 className="rounded border-gray-300"
               />
-              <span className="text-sm">🏛️ DOP/IGP/IGT</span>
+              <span className="text-sm">🏛️ DOP</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                name="cert-IGP"
+                defaultChecked={product?.certifications?.includes("IGP")}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm">🏛️ IGP</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                name="cert-IGT"
+                defaultChecked={product?.certifications?.includes("IGT")}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm">🏛️ IGT</span>
             </label>
           </div>
         </div>
@@ -924,7 +960,25 @@ export function ProductsPage() {
               onChange={(e) => setFilterDOP(e.target.checked)}
               className="rounded border-gray-300"
             />
-            <span className="text-sm">🏛️ DOP/IGP/IGT</span>
+            <span className="text-sm">🏛️ DOP</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filterIGP}
+              onChange={(e) => setFilterIGP(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            <span className="text-sm">🏛️ IGP</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filterIGT}
+              onChange={(e) => setFilterIGT(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            <span className="text-sm">🏛️ IGT</span>
           </label>
         </div>
 

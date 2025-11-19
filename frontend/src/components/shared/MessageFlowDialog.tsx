@@ -28,6 +28,7 @@ interface DebugStep {
     | "safety"
     | "sub_agent"
     | "summary_agent"
+    | "operator_message"
     | "user"
     | "token-replacement"
   agent?: string
@@ -76,6 +77,7 @@ export default function MessageFlowDialog({
 
   const getAgentColor = (type: string, agent?: string): string => {
     if (type === "user" || agent === "Customer") return "#6B7280" // Gray
+    if (type === "operator_message") return "#3B82F6" // Blue for operator
     if (type === "router") return "#9333EA" // Purple
     if (type === "safety") return "#DC2626" // Red
     if (agent?.includes("Save to History")) return "#F59E0B" // Orange/Amber for database save
@@ -95,6 +97,9 @@ export default function MessageFlowDialog({
   const getAgentIcon = (type: string, agent?: string): React.ReactNode => {
     // Customer
     if (type === "user") return <User className="w-5 h-5" />
+
+    // 👨‍💼 Human Operator
+    if (type === "operator_message") return <Headphones className="w-5 h-5" />
 
     // 🆕 System Notification (Admin Triggered) - NO robot icon, use Settings
     if (agent?.includes("System Notification"))
@@ -181,6 +186,9 @@ export default function MessageFlowDialog({
   // Summary Agent steps (internal service)
   const summaryAgentSteps = allSteps.filter((s) => s.type === "summary_agent")
 
+  // Operator Message steps (human operator messages)
+  const operatorMessageSteps = allSteps.filter((s) => s.type === "operator_message")
+
   // Safety & Translation step
   const safetySteps = allSteps.filter((s) => s.type === "safety")
 
@@ -194,21 +202,25 @@ export default function MessageFlowDialog({
     "System Notification"
   )
 
-  // Estrai messaggio utente dal primo step (ONLY if NOT system notification)
+  // 🆕 Check if this is an operator message flow
+  const hasOperatorMessage = operatorMessageSteps.length > 0
+
+  // Estrai messaggio utente dal primo step (ONLY if NOT system notification AND NOT operator message)
   const userMessage =
     routerSteps[0]?.input?.userMessage ||
     routerSteps[0]?.input?.conversationHistory?.[0]?.content ||
     "User message"
 
-  // Step iniziale con domanda utente (SKIP if system notification)
-  const userStep: DebugStep | null = isSystemNotification
-    ? null
-    : {
-        type: "user",
-        agent: "Customer",
-        timestamp: routerSteps[0]?.timestamp || new Date().toISOString(),
-        input: { userMessage },
-      }
+  // Step iniziale con domanda utente (SKIP if system notification OR operator message)
+  const userStep: DebugStep | null = 
+    isSystemNotification || hasOperatorMessage
+      ? null
+      : {
+          type: "user",
+          agent: "Customer",
+          timestamp: routerSteps[0]?.timestamp || new Date().toISOString(),
+          input: { userMessage },
+        }
 
   // Estrai il messaggio finale dal Safety Agent o dall'ultimo Router
   const finalMessage =
@@ -260,7 +272,8 @@ export default function MessageFlowDialog({
 
   // 🆕 TIMELINE COMPLETA: Mostra OGNI SINGOLO STEP in ordine
   const timelineSequence = [
-    userStep, // STEP 1: User message
+    userStep, // STEP 1: User message (null if operator message)
+    ...operatorMessageSteps, // STEP 1 (alternative): Operator message input
     routerSteps[0], // STEP 2: Router iteration 1 (delega a sub-agent)
     ...subAgentSteps, // STEP 3: Sub-agent execution
     ...summaryAgentSteps, // STEP 3.5: Summary Agent execution (if present)

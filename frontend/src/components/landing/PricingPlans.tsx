@@ -224,7 +224,7 @@ export function PricingPlans() {
           {t("pricing.usage.title")}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {/* Messages */}
           <div className="bg-white rounded-xl p-6 border border-gray-200 text-center">
             <div className="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -238,34 +238,6 @@ export function PricingPlans() {
             </div>
             <p className="text-xs text-gray-600">
               {t("pricing.usage.message.desc")}
-            </p>
-          </div>
-
-          {/* New Customer */}
-          <div className="bg-white rounded-xl p-6 border border-gray-200 text-center">
-            <div className="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-              <svg
-                className="w-6 h-6 text-blue-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                />
-              </svg>
-            </div>
-            <div className="text-3xl font-bold text-blue-600 mb-1">
-              €{PRICES.NEW_CUSTOMER.toFixed(2)}
-            </div>
-            <div className="text-sm font-medium text-gray-900 mb-2">
-              {t("pricing.usage.customer")}
-            </div>
-            <p className="text-xs text-gray-600">
-              {t("pricing.usage.customer.desc")}
             </p>
           </div>
 

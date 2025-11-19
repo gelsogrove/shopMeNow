@@ -14,7 +14,7 @@ import { getWorkspaceId } from "@/config/workspace.config"
 import { logger } from "@/lib/logger"
 import { api } from "@/services/api"
 import axios from "axios"
-import { MessageCircle, Send, X } from "lucide-react"
+import { Headphones, MessageCircle, Send, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { MessageRenderer } from "./MessageRenderer"
 
@@ -973,13 +973,17 @@ export function WhatsAppChatModal({
                           } mb-3`}
                         >
                           <div
-                            className={`rounded-2xl px-3 py-3 max-w-[85%] sm:max-w-[400px] mb-2 word-wrap break-words overflow-wrap-anywhere relative ${getMessageStyle()}`}
+                            className={`rounded-2xl px-3 py-3 max-w-[85%] sm:max-w-[400px] mb-2 word-wrap break-words overflow-wrap-anywhere relative ${
+                              isOperatorMessage || isOperatorControl || isManualOperator 
+                                ? 'pt-6' 
+                                : ''
+                            } ${getMessageStyle()}`}
                           >
                             {/* 🚨 OPERATOR CONTROL BADGE */}
                             {(isOperatorMessage ||
                               isOperatorControl ||
                               isManualOperator) && (
-                              <div className="absolute -top-2 -right-2">
+                              <div className="absolute -top-2 -right-2 -ml-4">
                                 <span
                                   className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-medium ${
                                     isOperatorMessage
@@ -1542,13 +1546,6 @@ export function WhatsAppChatModal({
                                       🤖 {message.agentName}
                                     </span>
                                   )}
-
-                                {/* 👨‍💼 Operator Badge */}
-                                {isOperatorMessage && (
-                                  <span className="text-[10px] font-medium bg-blue-200 text-blue-800 px-2 py-0.5 rounded ml-2">
-                                    👨‍💼 Human Operator
-                                  </span>
-                                )}
 
                                 {/* 📋 Manual Control Badge */}
                                 {isOperatorControl && (
