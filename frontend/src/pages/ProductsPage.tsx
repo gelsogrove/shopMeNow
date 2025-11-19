@@ -970,7 +970,7 @@ export function ProductsPage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="region">Italian Region</Label>
+          <Label htmlFor="region">Region</Label>
           <Input
             id="region"
             name="region"

@@ -22,7 +22,7 @@ export interface Product {
   workspaceId: string
   categoryId: string | null
   supplierId: string | null
-  region: string | null // Italian region in English
+  region: string | null //  region in English
   imageUrl: string[] | null
   certifications?: string[] // Array of certifications: "bio", "vegan", "gluten-free", "halal", "whole-grain", "DOP"
   productCertifications?: Array<{

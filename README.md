@@ -212,7 +212,7 @@ For detailed pricing management guide, see: [`docs/memory-bank/05-guides/pricing
 
 **Pricing Types**:
 
-- **PLAN**: Monthly subscription costs (€0-€169)
+- **PLAN**: Monthly subscription costs (€0-€149)
 - **USAGE**: Pay-per-use costs (€0.15-€1.50 per action)
 - **THRESHOLD**: Free tier limits (50-200 units)
 
