@@ -1199,6 +1199,42 @@ export class LLMService {
           }
         }
 
+        if (functionName === "ContactOperator") {
+          // 🚨 CRITICAL: Return EXACT message from function - NO LLM reformulation
+          // Operator escalation must use precise, contractual language
+          const processedMessage = this.replaceVariablesInResponse(
+            functionResult.message || "",
+            {
+              nameUser: customerData?.nameUser || customer.name || "Cliente",
+              discountUser: String(
+                customerData?.discountUser || customer.discount || 0
+              ),
+              companyName:
+                customerData?.companyName || workspace.name || "Shop",
+              lastordercode:
+                customerData?.lastordercode || customer.lastOrderCode || "",
+              languageUser:
+                customerData?.languageUser || customer.language || language,
+              agentName: customer.sales
+                ? `${customer.sales.firstName} ${customer.sales.lastName}`.trim()
+                : "Alessandro Romano",
+              agentPhone: customer.sales?.phone || "+39 333 890 1234",
+              agentEmail:
+                customer.sales?.email || "andrea_gelsomino@hotmail.com",
+              tokenDuration: this.getTokenDurationText(
+                process.env.TOKEN_EXPIRATION || "1h"
+              ),
+            }
+          )
+
+          return {
+            response: processedMessage,
+            tokenUsage,
+            costInfo,
+            functionCalls,
+          }
+        }
+
         if (functionName === "GetLinkOrderByCode") {
           // Always return in English - Translation & Security Layer will translate to customer's language
           const tokenDuration = this.getTokenDurationText(

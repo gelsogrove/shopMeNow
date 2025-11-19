@@ -91,7 +91,7 @@ async function main() {
   // 2. Create Admin User
   console.log("👤 Creating admin user...")
 
-  const adminEmail = process.env.ADMIN_EMAIL || "admin@shopme.com"
+  const adminEmail = process.env.ADMIN_EMAIL || "andrea_gelsomino@hotmail.com"
   const adminPassword = process.env.ADMIN_PASSWORD || "Venezia44"
   const hashedPassword = await bcrypt.hash(adminPassword, 10)
 
@@ -99,8 +99,8 @@ async function main() {
     data: {
       email: adminEmail,
       passwordHash: hashedPassword,
-      firstName: "Admin",
-      lastName: "ShopME",
+      firstName: "Alessandro",
+      lastName: "Romano",
       status: "ACTIVE",
       role: "ADMIN",
     },
@@ -143,6 +143,30 @@ async function main() {
   })
 
   console.log(`✅ Workspace created: ${workspace.name} (${workspace.id})`)
+
+  // 3.5. Create WhatsApp Settings
+  console.log("📱 Creating WhatsApp settings...")
+
+  await prisma.whatsappSettings.create({
+    data: {
+      workspaceId: workspace.id,
+      phoneNumber: workspaceSettings.whatsappPhoneNumber || "+34654728753",
+      apiKey: process.env.WHATSAPP_API_KEY || "dummy-api-key",
+      webhookUrl:
+        process.env.WHATSAPP_WEBHOOK_URL || "https://shopme.com/webhook",
+      adminEmail: "andrea_gelsomino@hotmail.com", // ✅ Email per notifiche operatore
+      smtpHost: "smtp.gmail.com",
+      smtpPort: 465,
+      smtpSecure: true,
+      smtpUser: process.env.SMTP_USER || "noreply@shopme.com",
+      smtpPass: process.env.SMTP_PASS || "",
+      smtpFrom: "ShopME <noreply@shopme.com>",
+    },
+  })
+
+  console.log(
+    `✅ WhatsApp settings created with admin email: andrea_gelsomino@hotmail.com`
+  )
 
   // 4. Associate Admin with Workspace
   await prisma.userWorkspace.create({
@@ -492,6 +516,18 @@ async function main() {
   // 13. Create Sales Representatives
   console.log("👔 Creating sales representatives...")
 
+  // First, create admin user as sales rep (Alessandro Romano)
+  const adminSalesRep = await prisma.sales.create({
+    data: {
+      firstName: "Alessandro",
+      lastName: "Romano",
+      email: "andrea_gelsomino@hotmail.com", // Admin email
+      phone: "+39 333 890 1234",
+      workspaceId: workspace.id,
+      isActive: true,
+    },
+  })
+
   const salesReps = [
     {
       firstName: "Marco",
@@ -517,15 +553,9 @@ async function main() {
       email: "francesca.moretti@altrogusto.com",
       phone: "+393334567890",
     },
-    {
-      firstName: "Alessandro",
-      lastName: "Romano",
-      email: "alessandro.romano@altrogusto.com",
-      phone: "+393338901234",
-    },
   ]
 
-  const createdSalesReps = []
+  const createdSalesReps = [adminSalesRep] // Start with admin sales rep
   for (const rep of salesReps) {
     const salesRep = await prisma.sales.create({
       data: {
@@ -537,7 +567,9 @@ async function main() {
     createdSalesReps.push(salesRep)
   }
 
-  console.log(`✅ Created ${createdSalesReps.length} sales representatives`)
+  console.log(
+    `✅ Created ${createdSalesReps.length} sales representatives (including admin)`
+  )
 
   // 13. Create Test Customers with Historical Dates (distributed over months)
   console.log("👥 Creating test customers with historical dates...")

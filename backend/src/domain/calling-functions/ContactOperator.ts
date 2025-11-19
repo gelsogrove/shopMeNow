@@ -33,6 +33,10 @@ export interface ContactOperatorResult {
 export async function ContactOperator(
   request: ContactOperatorRequest
 ): Promise<ContactOperatorResult> {
+  // Import Prisma OUTSIDE try block for proper scope
+  const { PrismaClient } = require("@prisma/client")
+  const prisma = new PrismaClient()
+
   try {
     logger.info("📞 ContactOperator called with:", {
       phoneNumber: request.phoneNumber,
@@ -41,16 +45,15 @@ export async function ContactOperator(
       reason: request.reason,
     })
 
-    // Import Prisma to save escalation request
-    const { PrismaClient } = require("@prisma/client")
-    const prisma = new PrismaClient()
-
     try {
-      // Find customer by phone and workspace
+      // Find customer by phone and workspace WITH sales agent
       const customer = await prisma.customers.findFirst({
         where: {
           phone: request.phoneNumber,
           workspaceId: request.workspaceId,
+        },
+        include: {
+          sales: true, // Include sales agent data (name, email, phone)
         },
       })
 
@@ -63,13 +66,19 @@ export async function ContactOperator(
         return {
           success: true,
           message:
-            "Ciao {{nameUser}}! 👋\n\n" +
-            "Questo è un caso dove abbiamo bisogno di un uomo in carne ed ossa :-) ! Verrai contattato il prima possibile dal nostro agente **{{agentName}}** (📞 {{agentPhone}}).\n\n" +
-            "Nel frattempo, ti invitiamo a scrivere una **mail dettagliata** all'indirizzo:\n" +
-            "📧 **{{agentEmail}}**\n\n" +
-            "Includi eventualmente foto, documenti o qualsiasi allegato utile così da poter analizzare immediatamente la situazione e offrirti la soluzione più rapida! 🚀\n\n" +
-            "Ci scusiamo per il disturbo. La chat ora verrà **disattivata** e passiamo la palla ad un operatore in carne e ossa! 👤\n\n" +
-            "A presto! 😊",
+            "Mi dispiace molto per l'inconveniente! �\n\n" +
+            "Ricevere merce scaduta è inaccettabile e capisco la tua frustrazione.\n\n" +
+            "Ecco cosa faremo IMMEDIATAMENTE:\n" +
+            "1. ✅ Rimborso completo entro 24 ore\n" +
+            "2. 📦 Sostituzione gratuita del prodotto\n" +
+            "3. 📞 Contatto diretto con il tuo agente per assistenza immediata\n\n" +
+            "Il tuo agente di riferimento è:\n" +
+            "• {{agentName}}\n" +
+            "• 📞 {{agentPhone}}\n" +
+            "• ✉️ {{agentEmail}}\n\n" +
+            "L'agente ti contatterà il prima possibile per risolvere la situazione.\n\n" +
+            "**Da questo momento disattiviamo il chatbot e aspettiamo che si colleghi l'agente.** 🤝\n\n" +
+            "Grazie per la pazienza! 😊",
           timestamp: new Date().toISOString(),
         }
       }
@@ -82,10 +91,10 @@ export async function ContactOperator(
 
       logger.info("✅ Chatbot disabled for customer:", customer.id)
 
-      // 📧 SEND EMAIL TO AGENT with last 10 messages
+      // 📧 SEND EMAIL TO AGENT with summary of last hour conversation
       try {
         // Get active chat session
-        const session = await prisma.chatSessions.findFirst({
+        const session = await prisma.chatSession.findFirst({
           where: {
             customerId: customer.id,
             status: "active",
@@ -94,26 +103,146 @@ export async function ContactOperator(
         })
 
         if (session) {
-          // Get last 10 messages
-          const messages = await prisma.chatMessages.findMany({
-            where: { sessionId: session.id },
-            orderBy: { timestamp: "desc" },
-            take: 10,
+          // Get messages from last hour (time-based filter as per spec)
+          const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
+          const messages = await prisma.conversationMessage.findMany({
+            where: {
+              conversationId: session.id,
+              createdAt: {
+                gte: oneHourAgo,
+              },
+            },
+            orderBy: { createdAt: "asc" }, // Chronological order
           })
 
-          // Reverse to chronological order
-          messages.reverse()
+          logger.info("📊 Retrieved messages from last hour:", {
+            count: messages.length,
+            customerId: customer.id,
+            sessionId: session.id,
+          })
 
-          // Format messages for email
-          const messageList = messages
-            .map((msg, idx) => {
-              const role = msg.role === "user" ? "Cliente" : "Bot"
-              const timestamp = new Date(msg.timestamp).toLocaleString("it-IT")
-              return `${idx + 1}. [${timestamp}] ${role}: ${msg.content}`
-            })
-            .join("\n\n")
+          // Generate summary using SummaryAgentLLM
+          let chatSummary: string
 
-          // Get workspace admin (agent) to send email
+          if (messages.length > 0) {
+            try {
+              // Import SummaryAgentLLM
+              const {
+                SummaryAgentLLM,
+              } = require("../../services/summary-agent-llm.service")
+              const summaryAgent = new SummaryAgentLLM()
+
+              // Format messages for summary agent
+              const conversationHistory = messages.map((msg) => ({
+                role: msg.role === "user" ? "customer" : "assistant",
+                content: msg.content,
+                createdAt: msg.timestamp,
+              }))
+
+              // Generate summary
+              logger.info("🤖 [ContactOperator] Calling SummaryAgentLLM", {
+                messageCount: conversationHistory.length,
+                customerName: customer.name,
+              })
+
+              const summaryResult = await summaryAgent.generateSummary({
+                conversationHistory,
+                customerName: customer.name,
+                agentName: customer.sales
+                  ? `${customer.sales.firstName} ${customer.sales.lastName}`
+                  : "Agente",
+              })
+
+              if (summaryResult.success && summaryResult.summary) {
+                logger.info(
+                  "✅ [ContactOperator] Summary generated successfully",
+                  {
+                    summaryLength: summaryResult.summary.length,
+                  }
+                )
+
+                // Pass summary through Safety Translation Agent
+                const {
+                  SafetyTranslationAgent,
+                } = require("../../application/agents/SafetyTranslationAgent")
+                const safetyAgent = new SafetyTranslationAgent(prisma)
+
+                logger.info(
+                  "🛡️ [ContactOperator] Passing summary through Safety Translation Agent"
+                )
+
+                const safetyResult = await safetyAgent.process({
+                  workspaceId: request.workspaceId,
+                  response: summaryResult.summary,
+                  targetLanguage: "it", // Summary already in Italian, just need safety check
+                  customerName: customer.name,
+                })
+
+                chatSummary = `
+Cliente: ${customer.name}
+Telefono: ${customer.phone}
+Email: ${customer.email || "N/A"}
+Data richiesta: ${new Date().toLocaleString("it-IT")}
+${request.reason ? `\nMotivo: ${request.reason}` : ""}
+
+📋 Riassunto conversazione (ultima ora - ${messages.length} messaggi):
+${safetyResult.translatedText || summaryResult.summary}
+                `.trim()
+
+                logger.info(
+                  "✅ [ContactOperator] Summary processed and translated"
+                )
+              } else {
+                throw new Error(
+                  summaryResult.error || "Summary generation failed"
+                )
+              }
+            } catch (summaryError) {
+              // Fallback to raw message list if summary generation fails
+              logger.warn(
+                "⚠️ [ContactOperator] Summary generation failed, falling back to raw history:",
+                summaryError
+              )
+
+              const messageList = messages
+                .map((msg, idx) => {
+                  const role = msg.role === "user" ? "Cliente" : "Bot"
+                  const timestamp = new Date(msg.timestamp).toLocaleString(
+                    "it-IT"
+                  )
+                  return `${idx + 1}. [${timestamp}] ${role}: ${msg.content}`
+                })
+                .join("\n\n")
+
+              chatSummary = `
+Cliente: ${customer.name}
+Telefono: ${customer.phone}
+Email: ${customer.email || "N/A"}
+Data richiesta: ${new Date().toLocaleString("it-IT")}
+${request.reason ? `\nMotivo: ${request.reason}` : ""}
+
+📜 Messaggi conversazione (ultima ora - ${messages.length} messaggi):
+${messageList || "Nessun messaggio disponibile"}
+              `.trim()
+            }
+          } else {
+            // No messages in last hour
+            logger.warn(
+              "⚠️ No messages found in last hour for customer:",
+              customer.id
+            )
+            chatSummary = `
+Cliente: ${customer.name}
+Telefono: ${customer.phone}
+Email: ${customer.email || "N/A"}
+Data richiesta: ${new Date().toLocaleString("it-IT")}
+${request.reason ? `\nMotivo: ${request.reason}` : ""}
+
+ℹ️ Nessuna conversazione recente nell'ultima ora.
+            `.trim()
+          }
+
+          // Get workspace and initialize EmailService
           const workspace = await prisma.workspace.findUnique({
             where: { id: request.workspaceId },
             select: {
@@ -124,6 +253,13 @@ export async function ContactOperator(
             },
           })
 
+          logger.info("🔍 [ContactOperator] Workspace config loaded:", {
+            workspaceId: request.workspaceId,
+            workspaceName: workspace?.name,
+            hasWhatsappSettings: !!workspace?.whatsappSettings,
+            adminEmail: workspace?.whatsappSettings?.adminEmail || "NOT SET",
+          })
+
           if (workspace?.whatsappSettings?.adminEmail) {
             // Import EmailService
             const {
@@ -131,70 +267,119 @@ export async function ContactOperator(
             } = require("../../application/services/email.service")
             const emailService = new EmailService()
 
-            const emailSubject = `🚨 Richiesta Operatore - ${customer.name}`
-            const emailBody = `
-<h2>🚨 Richiesta Assistenza Operatore</h2>
+            // Send email to customer's sales agent (if exists)
+            if (customer.sales?.email) {
+              logger.info(
+                "📧 [ContactOperator] Preparing to send email to sales agent:",
+                customer.sales.email,
+                `(${customer.sales.firstName} ${customer.sales.lastName})`
+              )
 
-<p><strong>Cliente:</strong> ${customer.name}</p>
-<p><strong>Telefono:</strong> ${customer.phone}</p>
-<p><strong>Email:</strong> ${customer.email || "N/A"}</p>
-<p><strong>Data richiesta:</strong> ${new Date().toLocaleString("it-IT")}</p>
+              try {
+                // Customer has assigned sales agent - send to them
+                const emailResult =
+                  await emailService.sendOperatorNotificationEmail({
+                    to: customer.sales.email, // Direct email address
+                    customerName: customer.name,
+                    chatSummary: chatSummary,
+                    chatId: session?.id,
+                    workspaceName: workspace.name,
+                    subject: `🚨 Richiesta Operatore - ${customer.name}`,
+                    fromEmail: workspace.whatsappSettings?.adminEmail,
+                  })
 
-${request.reason ? `<p><strong>Motivo:</strong> ${request.reason}</p>` : ""}
+                logger.info(
+                  "📧 [ContactOperator] Email service returned:",
+                  emailResult
+                )
 
-<hr>
-
-<h3>📜 Ultimi 10 messaggi della conversazione:</h3>
-
-<pre style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; font-size: 12px; line-height: 1.6;">
-${messageList || "Nessun messaggio disponibile"}
-</pre>
-
-<hr>
-
-<p><strong>Azione richiesta:</strong> Contattare il cliente il prima possibile.</p>
-
-<p style="color: #666; font-size: 12px;">
-Email generata automaticamente dal sistema ShopMe<br>
-Workspace: ${workspace.name}
-</p>
-            `
-
-            // Get first admin user as agent
-            const adminUser = await prisma.user.findFirst({
-              where: {
-                role: "ADMIN",
-                workspaces: {
-                  some: { workspaceId: request.workspaceId },
+                if (emailResult) {
+                  logger.info(
+                    "✅ [ContactOperator] Email sent successfully to sales agent:",
+                    customer.sales.email,
+                    `(${customer.sales.firstName} ${customer.sales.lastName})`,
+                    "for customer:",
+                    customer.name
+                  )
+                } else {
+                  logger.error(
+                    "❌ [ContactOperator] Email sending FAILED (returned false) to sales agent:",
+                    customer.sales.email
+                  )
+                }
+              } catch (emailError) {
+                logger.error(
+                  "❌ [ContactOperator] Email sending EXCEPTION:",
+                  emailError
+                )
+              }
+            } else {
+              // No sales agent assigned - fallback to admin user
+              const adminUser = await prisma.user.findFirst({
+                where: {
+                  role: "ADMIN",
+                  workspaces: {
+                    some: { workspaceId: request.workspaceId },
+                  },
                 },
-              },
-            })
-
-            if (adminUser) {
-              await emailService.sendMail({
-                type: "agent",
-                to: adminUser.id,
-                subject: emailSubject,
-                body: emailBody,
-                workspaceId: request.workspaceId,
               })
 
-              logger.info(
-                "✅ Email sent to agent:",
-                adminUser.email,
-                "for customer:",
-                customer.name
-              )
-            } else {
-              logger.warn(
-                "⚠️ No admin user found for workspace:",
-                request.workspaceId
-              )
+              if (adminUser?.email) {
+                logger.info(
+                  "📧 [ContactOperator] No sales agent - sending to admin:",
+                  adminUser.email
+                )
+
+                try {
+                  const emailResult =
+                    await emailService.sendOperatorNotificationEmail({
+                      to: adminUser.email, // Direct email address
+                      customerName: customer.name,
+                      chatSummary: chatSummary,
+                      chatId: session?.id,
+                      workspaceName: workspace.name,
+                      subject: `🚨 Richiesta Operatore - ${customer.name}`,
+                      fromEmail: workspace.whatsappSettings?.adminEmail,
+                    })
+
+                  logger.info(
+                    "📧 [ContactOperator] Email service returned (admin):",
+                    emailResult
+                  )
+
+                  if (emailResult) {
+                    logger.info(
+                      "✅ [ContactOperator] Email sent successfully to admin:",
+                      adminUser.email,
+                      "for customer:",
+                      customer.name
+                    )
+                  } else {
+                    logger.error(
+                      "❌ [ContactOperator] Email sending FAILED (returned false) to admin:",
+                      adminUser.email
+                    )
+                  }
+                } catch (emailError) {
+                  logger.error(
+                    "❌ [ContactOperator] Email sending EXCEPTION (admin):",
+                    emailError
+                  )
+                }
+              } else {
+                logger.warn(
+                  "⚠️ No sales agent or admin user found for workspace:",
+                  request.workspaceId
+                )
+              }
             }
           }
         }
       } catch (emailError) {
-        logger.error("❌ Failed to send email to agent:", emailError)
+        logger.error(
+          "❌ [ContactOperator] Failed to send email to agent:",
+          emailError
+        )
         // Don't fail the entire operation if email fails
       }
 
@@ -216,13 +401,19 @@ Workspace: ${workspace.name}
       return {
         success: true,
         message:
-          "Ciao {{nameUser}}! 👋\n\n" +
-          "Questo è un caso dove abbiamo bisogno di un uomo in carne ed ossa :-) ! Verrai contattato il prima possibile dal nostro agente **{{agentName}}** (📞 {{agentPhone}}).\n\n" +
-          "Nel frattempo, ti invitiamo a scrivere una **mail dettagliata** all'indirizzo:\n" +
-          "📧 **{{agentEmail}}**\n\n" +
-          "Includi eventualmente foto, documenti o qualsiasi allegato utile così da poter analizzare immediatamente la situazione e offrirti la soluzione più rapida! 🚀\n\n" +
-          "Ci scusiamo per il disturbo. La chat ora verrà **disattivata** e passiamo la palla ad un operatore in carne e ossa! 👤\n\n" +
-          "A presto! 😊",
+          "Mi dispiace molto per l'inconveniente! �\n\n" +
+          "Ricevere merce scaduta è inaccettabile e capisco la tua frustrazione.\n\n" +
+          "Ecco cosa faremo IMMEDIATAMENTE:\n" +
+          "1. ✅ Rimborso completo entro 24 ore\n" +
+          "2. 📦 Sostituzione gratuita del prodotto\n" +
+          "3. 📞 Contatto diretto con il tuo agente per assistenza immediata\n\n" +
+          "Il tuo agente di riferimento è:\n" +
+          "• {{agentName}}\n" +
+          "• 📞 {{agentPhone}}\n" +
+          "• ✉️ {{agentEmail}}\n\n" +
+          "L'agente ti contatterà il prima possibile per risolvere la situazione.\n\n" +
+          "**Da questo momento disattiviamo il chatbot e aspettiamo che si colleghi l'agente.** 🤝\n\n" +
+          "Grazie per la pazienza! 😊",
         timestamp: new Date().toISOString(),
         ticketId,
       }
@@ -234,13 +425,19 @@ Workspace: ${workspace.name}
       return {
         success: true,
         message:
-          "Ciao {{nameUser}}! 👋\n\n" +
-          "Questo è un caso dove abbiamo bisogno di un uomo in carne ed ossa :-) ! Verrai contattato il prima possibile dal nostro agente **{{agentName}}** (📞 {{agentPhone}}).\n\n" +
-          "Nel frattempo, ti invitiamo a scrivere una **mail dettagliata** all'indirizzo:\n" +
-          "📧 **{{agentEmail}}**\n\n" +
-          "Includi eventualmente foto, documenti o qualsiasi allegato utile così da poter analizzare immediatamente la situazione e offrirti la soluzione più rapida! 🚀\n\n" +
-          "Ci scusiamo per il disturbo. La chat ora verrà **disattivata** e passiamo la palla ad un operatore in carne e ossa! 👤\n\n" +
-          "A presto! 😊",
+          "Mi dispiace molto per l'inconveniente! �\n\n" +
+          "Ricevere merce scaduta è inaccettabile e capisco la tua frustrazione.\n\n" +
+          "Ecco cosa faremo IMMEDIATAMENTE:\n" +
+          "1. ✅ Rimborso completo entro 24 ore\n" +
+          "2. 📦 Sostituzione gratuita del prodotto\n" +
+          "3. 📞 Contatto diretto con il tuo agente per assistenza immediata\n\n" +
+          "Il tuo agente di riferimento è:\n" +
+          "• {{agentName}}\n" +
+          "• 📞 {{agentPhone}}\n" +
+          "• ✉️ {{agentEmail}}\n\n" +
+          "L'agente ti contatterà il prima possibile per risolvere la situazione.\n\n" +
+          "**Da questo momento disattiviamo il chatbot e aspettiamo che si colleghi l'agente.** 🤝\n\n" +
+          "Grazie per la pazienza! 😊",
         timestamp: new Date().toISOString(),
       }
     }

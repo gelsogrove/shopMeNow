@@ -339,7 +339,8 @@ export class CustomerSupportAgentLLM {
           )
 
         case "createSupportTicket":
-          // TODO: Implement support ticket creation
+          // Support ticket creation - Future feature
+          // For now, escalate to contactSupport for human assistance
           return {
             success: true,
             ticketId: "TICKET-" + Date.now(),
@@ -370,6 +371,25 @@ export class CustomerSupportAgentLLM {
           logger.info(
             `🚨 Chatbot disabled for customer ${context.customerId} - human support requested`
           )
+
+          // 📧 Call ContactOperator to send email with summary
+          const {
+            ContactOperator,
+          } = require("../../domain/calling-functions/ContactOperator")
+
+          logger.info("📧 Calling ContactOperator to send email notification")
+
+          const contactResult = await ContactOperator({
+            phoneNumber: customer.phone,
+            workspaceId: context.workspaceId,
+            customerId: context.customerId,
+            reason: args.reason || "Customer requested operator assistance",
+          })
+
+          logger.info("✅ ContactOperator completed", {
+            success: contactResult.success,
+            customerId: context.customerId,
+          })
 
           return {
             success: true,

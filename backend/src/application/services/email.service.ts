@@ -187,6 +187,10 @@ ShopMe - Your trusted e-commerce platform
     data: OperatorNotificationEmailData
   ): Promise<boolean> {
     try {
+      logger.info(
+        `📧 [EmailService] Preparing operator notification email to: ${data.to}`
+      )
+
       const htmlContent = this.generateOperatorNotificationHTML(data)
       const textContent = this.generateOperatorNotificationText(data)
 
@@ -200,14 +204,21 @@ ShopMe - Your trusted e-commerce platform
         text: textContent,
       }
 
+      logger.info(
+        `📧 [EmailService] Sending email via SMTP to: ${data.to} from: ${mailOptions.from}`
+      )
+
       const info = await this.transporter.sendMail(mailOptions)
 
       logger.info(
-        `Operator notification email sent successfully to: ${data.to}`
+        `✅ [EmailService] Operator notification email sent successfully to: ${data.to}, MessageID: ${info.messageId}`
       )
       return true
     } catch (error) {
-      logger.error("Failed to send operator notification email:", error)
+      logger.error(
+        `❌ [EmailService] Failed to send operator notification email to ${data.to}:`,
+        error
+      )
       return false
     }
   }

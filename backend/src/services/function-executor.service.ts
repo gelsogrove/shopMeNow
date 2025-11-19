@@ -20,6 +20,7 @@ import { CartRepository } from "../repositories/cart.repository"
 import { OrderRepository } from "../repositories/order.repository"
 import { ProductRepository } from "../repositories/product.repository"
 import { ServiceRepository } from "../repositories/service.repository"
+import { ContactOperator } from "../domain/calling-functions/ContactOperator"
 import logger from "../utils/logger"
 
 export interface ExecutionContext {
@@ -515,29 +516,37 @@ export class FunctionExecutor {
     args: Record<string, any>,
     context: ExecutionContext
   ): Promise<any> {
-    // Validate required parameters
-    if (!args.reason) {
-      throw new Error("contactSupport requires 'reason'")
-    }
-    if (!args.urgency) {
-      throw new Error("contactSupport requires 'urgency'")
-    }
-
-    // TODO: Implement support ticket creation
-    // For now, just log and return acknowledgment
-    logger.info("📞 Support ticket created", {
+    logger.info("📞 contactSupport CF called, invoking ContactOperator.ts", {
       workspaceId: context.workspaceId,
       customerId: context.customerId,
       reason: args.reason,
       urgency: args.urgency,
     })
 
-    return {
-      success: true,
-      ticketId: `TICKET-${Date.now()}`, // Temporary ID
-      message: "Support ticket created. An operator will contact you soon.",
-      estimatedResponseTime: args.urgency === "high" ? "15 minutes" : "1 hour",
+    // Get customer phone number to call ContactOperator
+    const customer = await this.prisma.customers.findUnique({
+      where: { id: context.customerId },
+      select: { phone: true },
+    })
+
+    if (!customer) {
+      throw new Error(`Customer not found: ${context.customerId}`)
     }
+
+    // Call the actual ContactOperator function
+    const result = await ContactOperator({
+      phoneNumber: customer.phone,
+      workspaceId: context.workspaceId,
+      customerId: context.customerId,
+      reason: args.reason || "Customer requested operator assistance",
+    })
+
+    logger.info("✅ ContactOperator completed", {
+      success: result.success,
+      customerId: context.customerId,
+    })
+
+    return result
   }
 
   /**

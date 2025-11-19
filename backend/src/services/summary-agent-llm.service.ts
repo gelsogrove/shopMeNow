@@ -1,0 +1,202 @@
+/**
+ * SummaryAgentLLM - Utility Service
+ *
+ * Generates concise summaries of conversation history for email notifications.
+ * This is NOT a database agent - it's a utility function called by ContactOperator.
+ *
+ * Flow:
+ * 1. Receives array of conversation messages from last hour
+ * 2. Loads summary-agent.md prompt
+ * 3. Replaces variables: {{conversationHistory}}, {{customerName}}, {{agentName}}
+ * 4. Calls OpenRouter API
+ * 5. Returns text summary (<250 words)
+ *
+ * @architecture Utility Service (not stored in agentConfigs table)
+ */
+
+import fs from "fs"
+import path from "path"
+import { getLLMConfig } from "../config/llm.config"
+import logger from "../utils/logger"
+import { PromptProcessorService } from "./prompt-processor.service"
+
+export interface SummaryRequest {
+  conversationHistory: Array<{
+    role: string
+    content: string
+    createdAt: Date
+  }>
+  customerName: string
+  agentName?: string
+}
+
+export interface SummaryResult {
+  success: boolean
+  summary?: string
+  error?: string
+}
+
+export class SummaryAgentLLM {
+  private promptProcessorService: PromptProcessorService
+  private summaryPrompt: string
+
+  constructor() {
+    this.promptProcessorService = new PromptProcessorService()
+    this.summaryPrompt = this.loadSummaryPrompt()
+  }
+
+  /**
+   * Load summary-agent.md prompt file
+   */
+  private loadSummaryPrompt(): string {
+    try {
+      const promptPath = path.join(
+        __dirname,
+        "../../docs/prompts/summary-agent.md"
+      )
+      const promptContent = fs.readFileSync(promptPath, "utf-8")
+      logger.info("📄 Summary Agent prompt loaded from file")
+      return promptContent
+    } catch (error) {
+      logger.error("❌ Failed to load summary-agent.md prompt:", error)
+      throw new Error("Summary Agent prompt file not found")
+    }
+  }
+
+  /**
+   * Generate summary from conversation history
+   */
+  async generateSummary(request: SummaryRequest): Promise<SummaryResult> {
+    try {
+      logger.info("🤖 [SummaryAgent] Generating summary for conversation", {
+        messageCount: request.conversationHistory.length,
+        customerName: request.customerName,
+      })
+
+      // Check if conversation history is empty
+      if (
+        !request.conversationHistory ||
+        request.conversationHistory.length === 0
+      ) {
+        logger.warn("⚠️ [SummaryAgent] No conversation history provided")
+        return {
+          success: false,
+          error: "No conversation history available",
+        }
+      }
+
+      // Format conversation history for prompt
+      const formattedHistory = this.formatConversationHistory(
+        request.conversationHistory
+      )
+
+      // Replace variables in prompt
+      let processedPrompt = this.summaryPrompt
+      processedPrompt = processedPrompt.replace(
+        /\{\{conversationHistory\}\}/g,
+        formattedHistory
+      )
+      processedPrompt = processedPrompt.replace(
+        /\{\{customerName\}\}/g,
+        request.customerName || "Cliente"
+      )
+      processedPrompt = processedPrompt.replace(
+        /\{\{agentName\}\}/g,
+        request.agentName || "Agente"
+      )
+
+      logger.info(
+        "🤖 [SummaryAgent] Prompt processed, calling OpenRouter API",
+        {
+          promptLength: processedPrompt.length,
+          historyMessages: request.conversationHistory.length,
+        }
+      )
+
+      // Call OpenRouter API
+      const llmConfig = getLLMConfig()
+      const response = await fetch(
+        "https://openrouter.ai/api/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${llmConfig.apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "openai/gpt-4o-mini", // Fixed model for summaries
+            messages: [
+              {
+                role: "system",
+                content: processedPrompt,
+              },
+              {
+                role: "user",
+                content: `Genera un riassunto della conversazione con ${request.customerName}. La conversazione contiene ${request.conversationHistory.length} messaggi dell'ultima ora.`,
+              },
+            ],
+            temperature: 0.5, // Balanced between creative and deterministic
+            max_tokens: 500, // ~250 words
+          }),
+        }
+      )
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        logger.error("❌ [SummaryAgent] OpenRouter API error:", {
+          status: response.status,
+          error: errorText,
+        })
+        return {
+          success: false,
+          error: `OpenRouter API error: ${response.status}`,
+        }
+      }
+
+      const data = await response.json()
+      const summary = data.choices?.[0]?.message?.content
+
+      if (!summary) {
+        logger.error("❌ [SummaryAgent] No summary generated by LLM")
+        return {
+          success: false,
+          error: "LLM returned empty summary",
+        }
+      }
+
+      logger.info("✅ [SummaryAgent] Summary generated successfully", {
+        summaryLength: summary.length,
+        summaryWords: summary.split(" ").length,
+      })
+
+      return {
+        success: true,
+        summary: summary,
+      }
+    } catch (error) {
+      logger.error("❌ [SummaryAgent] Failed to generate summary:", error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      }
+    }
+  }
+
+  /**
+   * Format conversation history for prompt
+   */
+  private formatConversationHistory(
+    messages: Array<{ role: string; content: string; createdAt: Date }>
+  ): string {
+    return messages
+      .map((msg) => {
+        const timestamp = new Date(msg.createdAt).toLocaleTimeString("it-IT", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+        const role = msg.role === "customer" ? "Cliente" : "Assistente"
+        return `[${timestamp}] ${role}: ${msg.content}`
+      })
+      .join("\n")
+  }
+}
