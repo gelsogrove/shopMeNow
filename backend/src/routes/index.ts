@@ -81,6 +81,7 @@ import workspaceRoutesLegacy from "./workspace.routes"
 import { cartRouter } from "../interfaces/http/routes/cart.routes"
 import { categoriesRouter } from "../interfaces/http/routes/categories.routes"
 import certificationRoutes from "../interfaces/http/routes/certification.routes"
+import transportTypeRoutes from "../interfaces/http/routes/transport-type.routes"
 import { chatRouter } from "../interfaces/http/routes/chat.routes"
 import { checkoutRouter } from "../interfaces/http/routes/checkout.routes"
 import { offersRouter } from "../interfaces/http/routes/offers.routes"
@@ -634,6 +635,10 @@ logger.info("Registered sales router with workspace routes")
 // Mount certification routes
 router.use("/workspaces/:workspaceId/certifications", certificationRoutes)
 logger.info("Registered certification router with workspace routes")
+
+// Mount transport type routes
+router.use("/workspaces/:workspaceId/transport-types", transportTypeRoutes)
+logger.info("Registered transport type router with workspace routes")
 
 // Mount suppliers routes
 router.use("/workspaces/:workspaceId/suppliers", supplierRoutes)

@@ -230,6 +230,25 @@ export class ProductController {
       // Remove certificationIds from productData (handled separately)
       delete productData.certificationIds
 
+      // Parse transportTypeIds array from JSON string (sent from frontend)
+      let transportTypeIds: string[] = []
+      if (
+        productData.transportTypeIds &&
+        typeof productData.transportTypeIds === "string"
+      ) {
+        try {
+          transportTypeIds = JSON.parse(productData.transportTypeIds)
+        } catch (error) {
+          logger.error("Failed to parse transportTypeIds JSON:", error)
+          transportTypeIds = []
+        }
+      } else if (Array.isArray(productData.transportTypeIds)) {
+        transportTypeIds = productData.transportTypeIds
+      }
+
+      // Remove transportTypeIds from productData (handled separately)
+      delete productData.transportTypeIds
+
       // Handle supplierId: convert empty string to null
       if (productData.supplierId === "" || productData.supplierId === "none") {
         productData.supplierId = null
@@ -289,7 +308,8 @@ export class ProductController {
 
       const product = await this.productService.createProduct(
         productData,
-        certificationIds
+        certificationIds,
+        transportTypeIds
       )
 
       // Map backend 'ProductCode' field to frontend 'code' field
@@ -373,6 +393,25 @@ export class ProductController {
 
       // Remove certificationIds from productData (handled separately)
       delete productData.certificationIds
+
+      // Parse transportTypeIds array from JSON string (sent from frontend)
+      let transportTypeIds: string[] = []
+      if (
+        productData.transportTypeIds &&
+        typeof productData.transportTypeIds === "string"
+      ) {
+        try {
+          transportTypeIds = JSON.parse(productData.transportTypeIds)
+        } catch (error) {
+          logger.error("Failed to parse transportTypeIds JSON:", error)
+          transportTypeIds = []
+        }
+      } else if (Array.isArray(productData.transportTypeIds)) {
+        transportTypeIds = productData.transportTypeIds
+      }
+
+      // Remove transportTypeIds from productData (handled separately)
+      delete productData.transportTypeIds
 
       // Handle supplierId: convert empty string to null
       if (productData.supplierId === "" || productData.supplierId === "none") {
@@ -476,7 +515,8 @@ export class ProductController {
         id,
         productData,
         workspaceId,
-        certificationIds
+        certificationIds,
+        transportTypeIds
       )
       if (!updatedProduct) {
         return res.status(404).json({ message: "Product not found" })

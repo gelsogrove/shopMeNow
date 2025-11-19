@@ -14,50 +14,50 @@ import {
 } from "@/components/ui/sheet"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { logger } from "@/lib/logger"
-import * as certificationsApi from "@/services/certificationsApi"
-import { type Certification } from "@/services/certificationsApi"
-import { Award } from "lucide-react"
+import * as transportTypesApi from "@/services/transportTypesApi"
+import { type TransportType } from "@/services/transportTypesApi"
+import { Truck } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "../lib/toast"
 
-export default function CertificationsPage() {
+export default function TransportTypesPage() {
   const { workspace } = useWorkspace()
-  const [certifications, setCertifications] = useState<Certification[]>([])
+  const [transportTypes, setTransportTypes] = useState<TransportType[]>([])
   const [loading, setLoading] = useState(true)
   const [searchValue, setSearchValue] = useState("")
   const [showEditSheet, setShowEditSheet] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [selectedCertification, setSelectedCertification] = useState<Certification | null>(null)
+  const [selectedTransportType, setSelectedTransportType] = useState<TransportType | null>(null)
 
   useEffect(() => {
     if (workspace?.id) {
-      loadCertifications()
+      loadTransportTypes()
     }
   }, [workspace?.id])
 
-  const loadCertifications = async () => {
+  const loadTransportTypes = async () => {
     if (!workspace?.id) return
 
     try {
       setLoading(true)
-      const response = await certificationsApi.getAllForWorkspace(workspace.id)
-      setCertifications(response || [])
+      const response = await transportTypesApi.getAllForWorkspace(workspace.id)
+      setTransportTypes(response || [])
     } catch (error) {
-      logger.error("Error loading certifications:", error)
-      toast.error("Failed to load certifications")
+      logger.error("Error loading transport types:", error)
+      toast.error("Failed to load transport types")
     } finally {
       setLoading(false)
     }
   }
 
-  const filteredCertifications = certifications.filter((cert) =>
-    cert.name?.toLowerCase().includes(searchValue.toLowerCase())
+  const filteredTransportTypes = transportTypes.filter((type) =>
+    type.name?.toLowerCase().includes(searchValue.toLowerCase())
   )
 
   const columns = [
     {
-      header: "Certification Name",
-      accessorKey: "name" as keyof Certification,
+      header: "Transport Type Name",
+      accessorKey: "name" as keyof TransportType,
       size: 300,
     },
   ]
@@ -72,31 +72,31 @@ export default function CertificationsPage() {
     const name = formData.get("name") as string
 
     if (!name || !name.trim()) {
-      toast.error("Certification name is required")
+      toast.error("Transport type name is required")
       return
     }
 
     try {
-      await certificationsApi.create(workspace.id, { name: name.trim() })
+      await transportTypesApi.create(workspace.id, { name: name.trim() })
 
-      toast.success("Certification added successfully")
+      toast.success("Transport type added successfully")
       form.reset()
-      await loadCertifications()
+      await loadTransportTypes()
     } catch (error: any) {
-      logger.error("Error adding certification:", error)
-      const message = error.response?.data?.error || "Failed to add certification"
+      logger.error("Error adding transport type:", error)
+      const message = error.message || "Failed to add transport type"
       toast.error(message)
     }
   }
 
-  const handleEdit = (certification: Certification) => {
-    setSelectedCertification(certification)
+  const handleEdit = (transportType: TransportType) => {
+    setSelectedTransportType(transportType)
     setShowEditSheet(true)
   }
 
   const handleEditSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (!selectedCertification?.id || !workspace?.id) return
+    if (!selectedTransportType?.id || !workspace?.id) return
 
     const form = e.target as HTMLFormElement
     const formData = new FormData(form)
@@ -104,43 +104,43 @@ export default function CertificationsPage() {
     const name = formData.get("name") as string
 
     if (!name || !name.trim()) {
-      toast.error("Certification name is required")
+      toast.error("Transport type name is required")
       return
     }
 
     try {
-      await certificationsApi.update(selectedCertification.id, workspace.id, {
+      await transportTypesApi.update(workspace.id, selectedTransportType.id, {
         name: name.trim(),
       })
 
-      toast.success("Certification updated successfully")
+      toast.success("Transport type updated successfully")
       setShowEditSheet(false)
-      setSelectedCertification(null)
-      await loadCertifications()
+      setSelectedTransportType(null)
+      await loadTransportTypes()
     } catch (error: any) {
-      logger.error("Error updating certification:", error)
-      const message = error.response?.data?.error || "Failed to update certification"
+      logger.error("Error updating transport type:", error)
+      const message = error.message || "Failed to update transport type"
       toast.error(message)
     }
   }
 
-  const handleDelete = async (certification: Certification) => {
-    setSelectedCertification(certification)
+  const handleDelete = async (transportType: TransportType) => {
+    setSelectedTransportType(transportType)
     setShowDeleteDialog(true)
   }
 
   const confirmDelete = async () => {
-    if (!selectedCertification?.id || !workspace?.id) return
+    if (!selectedTransportType?.id || !workspace?.id) return
 
     try {
-      await certificationsApi.remove(workspace.id, selectedCertification.id)
-      toast.success("Certification deleted successfully")
+      await transportTypesApi.remove(workspace.id, selectedTransportType.id)
+      toast.success("Transport type deleted successfully")
       setShowDeleteDialog(false)
-      setSelectedCertification(null)
-      await loadCertifications()
+      setSelectedTransportType(null)
+      await loadTransportTypes()
     } catch (error: any) {
-      logger.error("Error deleting certification:", error)
-      const message = error.response?.data?.error || "Failed to delete certification"
+      logger.error("Error deleting transport type:", error)
+      const message = error.message || "Failed to delete transport type"
       toast.error(message)
     }
   }
@@ -155,24 +155,24 @@ export default function CertificationsPage() {
         {/* List Section */}
         <div className="col-span-8">
           <PageHeader
-            title="Certifications"
-            titleIcon={<Award className="mr-2 h-6 w-6 text-primary" />}
+            title="Transport Types"
+            titleIcon={<Truck className="mr-2 h-6 w-6 text-primary" />}
             searchValue={searchValue}
             onSearch={setSearchValue}
-            searchPlaceholder="Search certifications..."
-            itemCount={filteredCertifications.length}
+            searchPlaceholder="Search transport types..."
+            itemCount={filteredTransportTypes.length}
           />
 
           <div className="mt-6 w-full">
             <DataTable
               columns={columns}
-              data={filteredCertifications}
+              data={filteredTransportTypes}
               onEdit={handleEdit}
               onDelete={handleDelete}
               globalFilter={searchValue}
               canDelete={(row) => {
-                const cert = row as Certification
-                return !cert._count?.productCertifications || cert._count.productCertifications === 0
+                const type = row as TransportType
+                return !type._count?.productTransportTypes || type._count.productTransportTypes === 0
               }}
             />
           </div>
@@ -182,24 +182,24 @@ export default function CertificationsPage() {
         <div className="col-span-4">
           <div className="sticky top-4">
             <div className="border rounded-lg p-6 bg-white shadow-sm">
-              <h2 className="text-lg font-semibold mb-2">Add Certification</h2>
+              <h2 className="text-lg font-semibold mb-2">Add Transport Type</h2>
               <p className="text-sm text-gray-500 mb-6">
-                Create a new product certification
+                Create a new transport type for products
               </p>
               <form onSubmit={handleAdd} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Certification Name *</Label>
+                  <Label htmlFor="name">Transport Type Name *</Label>
                   <Input
                     id="name"
                     name="name"
-                    placeholder="e.g., Bio, DOP, Vegan"
+                    placeholder="e.g., Air, Sea, Land, Rail"
                     required
                     maxLength={50}
                   />
                 </div>
 
                 <Button type="submit" className="w-full">
-                  Add Certification
+                  Add Transport Type
                 </Button>
               </form>
             </div>
@@ -207,24 +207,24 @@ export default function CertificationsPage() {
         </div>
       </div>
 
-      {/* Edit Certification Sheet - Slides over the list */}
+      {/* Edit Transport Type Sheet - Slides over the list */}
       <Sheet open={showEditSheet} onOpenChange={setShowEditSheet}>
         <SheetContent side="right" className="w-[600px]">
           <SheetHeader>
-            <SheetTitle>Edit Certification</SheetTitle>
+            <SheetTitle>Edit Transport Type</SheetTitle>
             <SheetDescription>
-              Update certification information
+              Update transport type information
             </SheetDescription>
           </SheetHeader>
-          {selectedCertification && (
+          {selectedTransportType && (
             <form onSubmit={handleEditSubmit} className="space-y-4 mt-6">
               <div className="space-y-2">
-                <Label htmlFor="edit-name">Certification Name *</Label>
+                <Label htmlFor="edit-name">Transport Type Name *</Label>
                 <Input
                   id="edit-name"
                   name="name"
-                  defaultValue={selectedCertification.name}
-                  placeholder="e.g., Bio, DOP, Vegan"
+                  defaultValue={selectedTransportType.name}
+                  placeholder="e.g., Air, Sea, Land, Rail"
                   required
                   maxLength={50}
                 />
@@ -232,14 +232,14 @@ export default function CertificationsPage() {
 
               <div className="flex gap-2 pt-4">
                 <Button type="submit" className="flex-1">
-                  Update Certification
+                  Update Transport Type
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => {
                     setShowEditSheet(false)
-                    setSelectedCertification(null)
+                    setSelectedTransportType(null)
                   }}
                   className="flex-1"
                 >
@@ -256,12 +256,12 @@ export default function CertificationsPage() {
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
         onConfirm={confirmDelete}
-        title="Delete Certification"
+        title="Delete Transport Type"
         description={
-          selectedCertification
-            ? `Are you sure you want to delete "${selectedCertification.name}"? ${
-                selectedCertification._count?.productCertifications
-                  ? `This certification is used by ${selectedCertification._count.productCertifications} product(s) and cannot be deleted.`
+          selectedTransportType
+            ? `Are you sure you want to delete "${selectedTransportType.name}"? ${
+                selectedTransportType._count?.productTransportTypes
+                  ? `This transport type is used by ${selectedTransportType._count.productTransportTypes} product(s) and cannot be deleted.`
                   : "This action cannot be undone."
               }`
             : ""

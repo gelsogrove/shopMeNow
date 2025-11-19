@@ -70,6 +70,9 @@ async function main() {
   await prisma.fAQ.deleteMany()
   await prisma.offers.deleteMany()
   await prisma.services.deleteMany()
+  // ✅ Feature 179: Delete pivot tables before parent tables
+  await prisma.productTransportType.deleteMany()
+  await prisma.productCertification.deleteMany()
   await prisma.products.deleteMany()
   await prisma.productSearch.deleteMany()
   await prisma.suppliers.deleteMany()
@@ -81,6 +84,9 @@ async function main() {
   await prisma.whatsappSettings.deleteMany()
   await prisma.paymentDetails.deleteMany()
   await prisma.searchConversations.deleteMany() // 🆕 Delete before workspace
+  // ✅ Feature 178 & 179: Delete certification and transport type tables
+  await prisma.certification.deleteMany()
+  await prisma.transportType.deleteMany()
 
   // Delete user-related tables
   await prisma.userWorkspace.deleteMany()
@@ -319,6 +325,29 @@ async function main() {
 
   console.log(`✅ Created ${certificationNames.length} certifications`)
 
+  // 6.6 Create Transport Types (Feature 179)
+  console.log("🚚 Creating transport types...")
+
+  const transportTypeNames = [
+    "Ambient Temperature", // Temperatura ambiente
+    "Refrigerated",        // Refrigerato
+    "Frozen",              // Congelato
+  ]
+
+  const transportTypeMap = new Map<string, string>()
+
+  for (const typeName of transportTypeNames) {
+    const transportType = await prisma.transportType.create({
+      data: {
+        name: typeName,
+        workspaceId: workspace.id,
+      },
+    })
+    transportTypeMap.set(typeName, transportType.id)
+  }
+
+  console.log(`✅ Created ${transportTypeNames.length} transport types`)
+
   // Mapping: category name → supplier company name
   const categoryToSupplier: Record<string, string> = {
     Pasta: "Pastificio Gragnano",
@@ -419,6 +448,28 @@ async function main() {
           },
         })
       }
+    }
+
+    // ✅ Feature 179: Create ProductTransportType pivot record
+    // Map Italian transport types to English
+    const transportTypeMapping: Record<string, string> = {
+      "Temperatura ambiente": "Ambient Temperature",
+      "Trasporto refrigerato": "Refrigerated",
+      "Refrigerato": "Refrigerated",
+      "Trasporto congelato": "Frozen",
+      "Congelato": "Frozen",
+    }
+
+    const englishTransportType = transportTypeMapping[transportType] || "Ambient Temperature"
+    const transportTypeId = transportTypeMap.get(englishTransportType)
+
+    if (transportTypeId) {
+      await prisma.productTransportType.create({
+        data: {
+          productId: product.id,
+          transportTypeId: transportTypeId,
+        },
+      })
     }
   }
 

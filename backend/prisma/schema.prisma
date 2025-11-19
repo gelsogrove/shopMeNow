@@ -60,6 +60,7 @@ model Workspace {
   productSearches           ProductSearch[]
   searchConversations       SearchConversations[]
   certifications            Certification[]
+  transportTypes            TransportType[]
 }
 
 model Categories {
@@ -155,6 +156,7 @@ model Products {
   cartItems             CartItems[]
   orderItems            OrderItems[]
   productCertifications ProductCertification[]
+  productTransportTypes ProductTransportType[]
   category              Categories?             @relation(fields: [categoryId], references: [id])
   supplier              Suppliers?              @relation(fields: [supplierId], references: [id])
   workspace             Workspace               @relation(fields: [workspaceId], references: [id])
@@ -188,6 +190,33 @@ model ProductCertification {
   @@id([productId, certificationId])
   @@index([certificationId])
   @@map("ProductCertification")
+}
+
+model TransportType {
+  id                      String                   @id @default(uuid())
+  name                    String
+  workspaceId             String
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  workspace               Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  productTransportTypes   ProductTransportType[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
+  @@index([name])
+  @@map("TransportType")
+}
+
+model ProductTransportType {
+  productId       String
+  transportTypeId String
+  product         Products      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  transportType   TransportType @relation(fields: [transportTypeId], references: [id], onDelete: Cascade)
+
+  @@id([productId, transportTypeId])
+  @@index([productId])
+  @@index([transportTypeId])
+  @@map("ProductTransportType")
 }
 
 model Customers {

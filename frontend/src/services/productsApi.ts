@@ -25,7 +25,21 @@ export interface Product {
   region: string | null // Italian region in English
   imageUrl: string[] | null
   certifications?: string[] // Array of certifications: "bio", "vegan", "gluten-free", "halal", "whole-grain", "DOP"
+  productCertifications?: Array<{
+    certificationId: string
+    certification: {
+      id: string
+      name: string
+    }
+  }>
   transportType: string
+  productTransportTypes?: Array<{
+    transportTypeId: string
+    transportType: {
+      id: string
+      name: string
+    }
+  }>
   category?: {
     id: string
     name: string

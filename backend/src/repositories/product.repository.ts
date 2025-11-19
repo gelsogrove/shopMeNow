@@ -584,6 +584,11 @@ export class ProductRepository implements IProductRepository {
               certification: true,
             },
           },
+          productTransportTypes: {
+            include: {
+              transportType: true,
+            },
+          },
         },
         orderBy: {
           createdAt: "desc", // Newest first
@@ -602,7 +607,7 @@ export class ProductRepository implements IProductRepository {
   }
 
   /**
-   * Helper to get include clause with certifications
+   * Helper to get include clause with certifications and transport types
    */
   private getIncludeWithCertifications() {
     return {
@@ -610,6 +615,11 @@ export class ProductRepository implements IProductRepository {
       productCertifications: {
         include: {
           certification: true,
+        },
+      },
+      productTransportTypes: {
+        include: {
+          transportType: true,
         },
       },
     }
@@ -640,12 +650,43 @@ export class ProductRepository implements IProductRepository {
     })
   }
 
+  /**
+   * Sync product transport types (delete old + create new)
+   */
+  async syncProductTransportTypes(
+    productId: string,
+    transportTypeIds: string[]
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      // Delete existing transport types
+      await tx.productTransportType.deleteMany({
+        where: { productId },
+      })
+
+      // Create new transport types
+      if (transportTypeIds.length > 0) {
+        await tx.productTransportType.createMany({
+          data: transportTypeIds.map((transportTypeId) => ({
+            productId,
+            transportTypeId,
+          })),
+        })
+      }
+    })
+  }
+
   private mapToDomainEntity(data: any): Product {
     // Extract certification names from productCertifications relation
     const certificationNames =
       data.productCertifications?.map(
         (pc: any) => pc.certification.name
       ) || data.certifications || []
+
+    // Extract transport type names from productTransportTypes relation
+    const transportTypeNames =
+      data.productTransportTypes?.map(
+        (pt: any) => pt.transportType.name
+      ) || []
 
     const product = new Product({
       id: data.id,
@@ -672,6 +713,9 @@ export class ProductRepository implements IProductRepository {
 
     // Add productCertifications relation to the product object (for frontend use)
     ;(product as any).productCertifications = data.productCertifications || []
+    
+    // Add productTransportTypes relation to the product object (for frontend use)
+    ;(product as any).productTransportTypes = data.productTransportTypes || []
 
     return product
   }

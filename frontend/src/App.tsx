@@ -33,6 +33,7 @@ import RegistrationSuccess from "./pages/registration-success"
 import { ResetPasswordPage } from "./pages/ResetPasswordPage"
 import SalesPage from "./pages/SalesPage"
 import CertificationsPage from "./pages/CertificationsPage"
+import TransportTypesPage from "./pages/TransportTypesPage"
 import { ServicesPage } from "./pages/ServicesPage"
 import { CategoriesPage as SettingsCategoriesPage } from "./pages/settings/CategoriesPage"
 import { ChannelTypesPage } from "./pages/settings/ChannelTypesPage"
@@ -122,6 +123,9 @@ export function App() {
                   </Route>
                   <Route path="/certifications" element={<Layout />}>
                     <Route index element={<CertificationsPage />} />
+                  </Route>
+                  <Route path="/transport-types" element={<Layout />}>
+                    <Route index element={<TransportTypesPage />} />
                   </Route>
                   <Route path="/admin/orders" element={<Layout />}>
                     <Route index element={<OrdersPage />} />

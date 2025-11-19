@@ -22,6 +22,8 @@ import { toast } from "@/lib/toast"
 import { categoriesApi } from "@/services/categoriesApi"
 import * as certificationsApi from "@/services/certificationsApi"
 import { type Certification } from "@/services/certificationsApi"
+import * as transportTypesApi from "@/services/transportTypesApi"
+import { type TransportType } from "@/services/transportTypesApi"
 import { productsApi, type Product } from "@/services/productsApi"
 import { supplierApi, type Supplier } from "@/services/supplier"
 import { commonStyles } from "@/styles/common"
@@ -38,10 +40,15 @@ export function ProductsPage() {
   >([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [certifications, setCertifications] = useState<Certification[]>([])
+  const [transportTypes, setTransportTypes] = useState<TransportType[]>([])
   const [selectedCertificationIds, setSelectedCertificationIds] = useState<
     string[]
   >([])
+  const [selectedTransportTypeIds, setSelectedTransportTypeIds] = useState<
+    string[]
+  >([])
   const [formCertificationIds, setFormCertificationIds] = useState<string[]>([])
+  const [formTransportTypeIds, setFormTransportTypeIds] = useState<string[]>([])
   const [showAddSheet, setShowAddSheet] = useState(false)
   const [showEditSheet, setShowEditSheet] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
@@ -156,6 +163,33 @@ export function ProductsPage() {
     loadCertifications()
   }, [workspace?.id])
 
+  // Fetch transport types when workspace changes
+  useEffect(() => {
+    logger.info("🚚 useEffect TRANSPORT TYPES triggered, workspace:", workspace?.id)
+    
+    const loadTransportTypes = async () => {
+      if (!workspace?.id) {
+        logger.info("🚚 No workspace ID, skipping transport types load")
+        return
+      }
+
+      logger.info("🚚 About to call transportTypesApi.getAllForWorkspace")
+      try {
+        const transportTypesData = await transportTypesApi.getAllForWorkspace(
+          workspace.id
+        )
+        logger.info("🚚 Transport types loaded:", transportTypesData)
+        logger.info(`🚚 Total transport types: ${transportTypesData.length}`)
+        setTransportTypes(transportTypesData)
+      } catch (error) {
+        logger.error("🚚 Failed to load transport types:", error)
+        toast.error("Failed to load transport types")
+      }
+    }
+
+    loadTransportTypes()
+  }, [workspace?.id])
+
   // Fetch suppliers when workspace changes
   useEffect(() => {
     const loadSuppliers = async () => {
@@ -194,6 +228,7 @@ export function ProductsPage() {
       searchValue,
       sortBy,
       selectedCertificationIds,
+      selectedTransportTypeIds,
     })
 
     // Filter by search
@@ -234,6 +269,16 @@ export function ProductsPage() {
 
     logger.info("🔍 After certification filters:", filtered.length)
 
+    // Filter by selected transport types (dynamic from database)
+    if (selectedTransportTypeIds.length > 0) {
+      filtered = filtered.filter((product) =>
+        selectedTransportTypeIds.every((typeId) =>
+          product.productTransportTypes?.some((pt) => pt.transportTypeId === typeId)
+        )
+      )
+      logger.info("🔍 After transport type filters:", filtered.length)
+    }
+
     // Sort products
     filtered.sort((a, b) => {
       switch (sortBy) {
@@ -254,6 +299,8 @@ export function ProductsPage() {
     sortBy,
     selectedCertificationIds,
     certifications,
+    selectedTransportTypeIds,
+    transportTypes,
   ])
 
   const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -271,6 +318,9 @@ export function ProductsPage() {
 
     // Send certificationIds array to backend
     formData.set("certificationIds", JSON.stringify(formCertificationIds))
+    
+    // Send transportTypeIds array to backend
+    formData.set("transportTypeIds", JSON.stringify(formTransportTypeIds))
 
     try {
       const newProduct = await productsApi.create(workspace.id, formData)
@@ -283,6 +333,7 @@ export function ProductsPage() {
       setSelectedCategoryId("none")
       setSelectedSupplierId("none")
       setFormCertificationIds([])
+      setFormTransportTypeIds([])
 
       toast.success(
         "Product created successfully. Edit it to add details and images."
@@ -311,6 +362,13 @@ export function ProductsPage() {
     ) || []
     logger.info("🔖 handleEdit - Extracted certificationIds:", certIds)
     setFormCertificationIds(certIds)
+
+    // Load product's transport type IDs from productTransportTypes relation
+    const transportIds = (product as any).productTransportTypes?.map(
+      (pt: any) => pt.transportTypeId
+    ) || []
+    logger.info("🚚 handleEdit - Extracted transportTypeIds:", transportIds)
+    setFormTransportTypeIds(transportIds)
 
     const imageUrls = Array.isArray(product.imageUrl)
       ? product.imageUrl
@@ -360,6 +418,9 @@ export function ProductsPage() {
 
     // Send certificationIds array to backend
     formData.set("certificationIds", JSON.stringify(formCertificationIds))
+    
+    // Send transportTypeIds array to backend
+    formData.set("transportTypeIds", JSON.stringify(formTransportTypeIds))
 
     // Make sure categoryId is set correctly if "none" is selected
     const catId = formData.get("categoryId")
@@ -402,8 +463,9 @@ export function ProductsPage() {
       setCurrentImageUrls([]) // Reset current image URLs
       setReorderedImageUrls(null) // Reset reordered image URLs
       setFormCertificationIds([]) // Reset certification IDs
+      setFormTransportTypeIds([]) // Reset transport type IDs
       
-      // Force reload to get fresh productCertifications
+      // Force reload to get fresh productCertifications and productTransportTypes
       const response = await productsApi.getAllForWorkspace(workspace.id)
       if (response && Array.isArray(response.products)) {
         setProducts(response.products)
@@ -554,6 +616,40 @@ export function ProductsPage() {
                     className="rounded border-gray-300"
                   />
                   <span className="text-sm">{cert.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Dynamic Transport Types Section */}
+        {transportTypes.length > 0 && (
+          <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
+            <Label className="text-base font-semibold">Transport Types</Label>
+            <p className="text-xs text-gray-500 mb-3">
+              Select applicable transport types for this product
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {transportTypes.map((type) => (
+                <label
+                  key={type.id}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={formTransportTypeIds.includes(type.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setFormTransportTypeIds([...formTransportTypeIds, type.id])
+                      } else {
+                        setFormTransportTypeIds(
+                          formTransportTypeIds.filter((id) => id !== type.id)
+                        )
+                      }
+                    }}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="text-sm">{type.name}</span>
                 </label>
               ))}
             </div>
@@ -765,25 +861,39 @@ export function ProductsPage() {
           </div>
         )}
 
-        <div className="space-y-2">
-          <Label htmlFor="transportType" className="text-sm font-medium">
-            🚚 Tipo di Trasporto
-          </Label>
-          <select
-            id="transportType"
-            name="transportType"
-            defaultValue={product?.transportType || "Temperatura ambiente"}
-            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="Temperatura ambiente">
-              🌡️ Temperatura ambiente
-            </option>
-            <option value="Trasporto refrigerato">
-              ❄️ Trasporto refrigerato
-            </option>
-            <option value="Trasporto congelato">🧊 Trasporto congelato</option>
-          </select>
-        </div>
+        {/* Dynamic Transport Types Section */}
+        {transportTypes.length > 0 && (
+          <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
+            <Label className="text-base font-semibold">Transport Types</Label>
+            <p className="text-xs text-gray-500 mb-3">
+              Select applicable transport types for this product
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {transportTypes.map((type) => (
+                <label
+                  key={type.id}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={formTransportTypeIds.includes(type.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setFormTransportTypeIds([...formTransportTypeIds, type.id])
+                      } else {
+                        setFormTransportTypeIds(
+                          formTransportTypeIds.filter((id) => id !== type.id)
+                        )
+                      }
+                    }}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="text-sm">{type.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center justify-between border rounded-lg p-3">
           <div className="space-y-1">
@@ -905,6 +1015,46 @@ export function ProductsPage() {
           ))}
         </div>
 
+        {/* Transport Type Filters - Dynamic from Database */}
+        <div className="flex flex-wrap gap-3 items-center bg-gray-50 p-3 rounded-lg">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.location.href = '/transport-types'}
+            className="text-xs"
+          >
+            🚚 Manage Transport Types
+          </Button>
+          <span className="text-sm font-medium text-gray-700">
+            Transport Types:
+          </span>
+          {transportTypes.map((type) => (
+            <label
+              key={type.id}
+              className="flex items-center gap-2 cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                checked={selectedTransportTypeIds.includes(type.id)}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedTransportTypeIds([
+                      ...selectedTransportTypeIds,
+                      type.id,
+                    ])
+                  } else {
+                    setSelectedTransportTypeIds(
+                      selectedTransportTypeIds.filter((id) => id !== type.id)
+                    )
+                  }
+                }}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm">{type.name}</span>
+            </label>
+          ))}
+        </div>
+
         {/* Grid View */}
         {isLoading ? (
           <div className="text-center py-8 text-muted-foreground">
@@ -989,6 +1139,21 @@ export function ProductsPage() {
                                 className="text-xs px-2 py-0.5 bg-green-100 text-green-800 rounded-full"
                               >
                                 {pc.certification?.name}
+                              </span>
+                            )
+                          )}
+                        </div>
+                      )}
+                      {/* Transport Type Badges */}
+                      {(product as any).productTransportTypes?.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {(product as any).productTransportTypes.map(
+                            (pt: any) => (
+                              <span
+                                key={pt.transportTypeId}
+                                className="text-xs px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full"
+                              >
+                                🚚 {pt.transportType?.name}
                               </span>
                             )
                           )}
