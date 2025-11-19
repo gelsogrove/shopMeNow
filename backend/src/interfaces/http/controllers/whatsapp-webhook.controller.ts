@@ -195,7 +195,23 @@ export class WhatsAppWebhookController {
           phone: phoneNumber,
           workspaceId, // Ensure we search in correct workspace
         },
-        include: { workspace: true },
+        select: {
+          id: true,
+          phone: true,
+          name: true,
+          email: true,
+          language: true,
+          workspaceId: true,
+          isActive: true,
+          activeChatbot: true, // 🔒 CRITICAL: Load chatbot status
+          workspace: {
+            select: {
+              id: true,
+              name: true,
+              welcomeMessage: true,
+            },
+          },
+        },
       })
 
       if (!customer) {
@@ -374,6 +390,64 @@ export class WhatsAppWebhookController {
 
       // 🔄 Convert WhatsApp format → Markdown (for internal storage)
       const messageMarkdown = whatsAppToMarkdown(messageText)
+
+      // 🔒 CRITICAL: If chatbot is disabled, ONLY save message - DO NOT process with LLM
+      if (customer && !customer.activeChatbot) {
+        logger.info(
+          `🚫 [WEBHOOK] Chatbot disabled for customer ${customer.id} - saving message without LLM processing`
+        )
+
+        // Get or create chat session
+        let chatSession = await prisma.chatSession.findFirst({
+          where: {
+            customerId: customer.id,
+            workspaceId: customer.workspaceId,
+            status: "active",
+          },
+        })
+
+        if (!chatSession) {
+          chatSession = await prisma.chatSession.create({
+            data: {
+              customerId: customer.id,
+              workspaceId: customer.workspaceId,
+              status: "active",
+              context: {
+                createdBy: "whatsapp-webhook",
+                phoneNumber,
+              },
+            },
+          })
+        }
+
+        // Save customer message to conversationMessage table
+        await prisma.conversationMessage.create({
+          data: {
+            workspaceId: customer.workspaceId,
+            customerId: customer.id,
+            conversationId: chatSession.id,
+            role: "user", // Customer message
+            content: messageMarkdown,
+            agentType: "NONE", // No agent processing
+            tokensUsed: 0,
+            debugInfo: JSON.stringify({
+              chatbotDisabled: true,
+              reason: "activeChatbot = false",
+              timestamp: new Date().toISOString(),
+              source: "whatsapp-webhook",
+            }),
+          },
+        })
+
+        // Return success WITHOUT processing with LLM
+        res.status(200).json({
+          status: "message_saved",
+          message: "Message saved (chatbot disabled)",
+          chatbotDisabled: true,
+          sessionId: chatSession.id,
+        })
+        return
+      }
 
       // 💾 Get or create active chat session BEFORE LLM call
       let chatSession = await prisma.chatSession.findFirst({

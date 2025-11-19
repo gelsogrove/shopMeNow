@@ -51,7 +51,6 @@ export class PricingController {
    *                   description: Pay-per-use pricing
    *                   example:
    *                     MESSAGE: 0.15
-   *                     NEW_CUSTOMER: 1.00
    *                     NEW_ORDER: 1.50
    *                     PUSH_CAMPAIGN: 1.00
    *                 thresholds:

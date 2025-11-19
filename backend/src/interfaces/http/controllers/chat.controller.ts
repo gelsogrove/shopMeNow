@@ -2,18 +2,20 @@ import { PrismaClient } from "@prisma/client"
 import { Request, Response } from "express"
 import { config } from "../../../config"
 import { MessageRepository } from "../../../repositories/message.repository"
+import { LLMRouterService } from "../../../services/llm-router.service"
 import { usageService } from "../../../services/usage.service"
 import { websocketService } from "../../../services/websocket.service"
 import logger from "../../../utils/logger"
 
 export class ChatController {
-  private messageRepository: MessageRepository
   private prisma: PrismaClient
+  private messageRepository: MessageRepository
+  private llmRouterService: LLMRouterService
 
   constructor() {
-    this.messageRepository = new MessageRepository()
     this.prisma = new PrismaClient()
-    logger.info("ChatController initialized")
+    this.messageRepository = new MessageRepository()
+    this.llmRouterService = new LLMRouterService(this.prisma)
   }
 
   /**
@@ -269,6 +271,26 @@ export class ChatController {
   /**
    * Send a message in a chat session (manual operator mode)
    * This endpoint is used when isActiveChatbot = false
+   * 
+   * 🚨🚨🚨 CRITICAL RULE - MESSAGE FLOW TIMELINE COMPLIANCE 🚨🚨🚨
+   * 
+   * THE MESSAGE FLOW TIMELINE **MUST** ALWAYS REPRESENT THE REAL MESSAGE JOURNEY!
+   * NEVER let the real flow and the UI representation be different!
+   * 
+   * OPERATOR MESSAGE FLOW (MUST be represented in timeline):
+   * 1. 🎧 Human Operator Input
+   * 2. 🛡️ Safety & Translation Agent (MANDATORY - always include in debugSteps)
+   * 3. 📤 WhatsApp Queue (MANDATORY - always include in debugSteps)
+   * 
+   * CRITICAL: Update conversationMessage.debugInfo with COMPLETE debugSteps 
+   * at the END of the process, not at the beginning!
+   * 
+   * IF Safety is skipped → ADD debug step showing it was skipped
+   * IF WhatsApp fails → ADD debug step showing the failure  
+   * IF any step is missing → The timeline representation is WRONG and UNACCEPTABLE
+   * 
+   * This is the HEART of the software - debug steps MUST match reality!
+   * 🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨
    */
   async sendMessage(req: Request, res: Response): Promise<void> {
     try {
@@ -333,12 +355,110 @@ export class ChatController {
         return
       }
 
-      // Save the operator message to chat history with proper metadata
-      // For operator messages, we create only ONE outbound message directly
+      logger.info(
+        `[CHAT-SEND] 📱 Processing operator message: "${content}"`
+      )
+
+      // 🆕 CREATE DEBUG STEPS for Operator Message (for timeline visibility)
+      const debugSteps = []
+      
+      // Step 1: Operator Input
+      const operatorDebugStep = {
+        type: "operator_message",
+        agent: "Human Operator",
+        model: "N/A",
+        temperature: 0,
+        timestamp: new Date().toISOString(),
+        input: {
+          messageContent: content,
+          sessionId: sessionId,
+          customerId: chatSession.customerId,
+        },
+        output: {
+          message: content,
+          messageId: "pending", // Will be updated after save
+        },
+        tokenUsage: {
+          promptTokens: 0,
+          completionTokens: 0,
+          totalTokens: 0,
+        },
+      }
+      
+      debugSteps.push(operatorDebugStep)
+
+      // 🛡️ STEP 2: Safety & Translation FIRST (before saving)
+      let finalMessage = content
+      try {
+        const {
+          SafetyTranslationAgent,
+        } = require("../../../application/agents/SafetyTranslationAgent")
+        const safetyAgent = new SafetyTranslationAgent()
+
+        const safetyResult = await safetyAgent.process({
+          workspaceId: workspaceId,
+          response: content,
+          targetLanguage: chatSession.customer.language || "it",
+          customerName: chatSession.customer.name || "Cliente",
+          allowedLinks: [], // Operator messages typically don't have tokens
+        })
+
+        if (!safetyResult.safe) {
+          logger.warn(
+            `[CHAT-SEND] ⚠️ Operator message failed safety check: ${safetyResult.blockedReason}`
+          )
+          // Block unsafe operator messages
+          res.status(400).json({
+            success: false,
+            error: "Message blocked by safety filter",
+            reason: safetyResult.blockedReason,
+          })
+          return
+        }
+
+        finalMessage = safetyResult.translatedText || content
+        
+        // 🆕 ADD Safety debug step
+        debugSteps.push({
+          type: "safety",
+          agent: "Safety & Translation",
+          model: "openai/gpt-4o-mini",
+          temperature: 0,
+          timestamp: new Date().toISOString(),
+          input: {
+            originalMessage: content,
+            targetLanguage: chatSession.customer.language || "it",
+            customerName: chatSession.customer.name || "Cliente",
+          },
+          output: {
+            translatedMessage: finalMessage,
+            safe: true,
+            blockedReason: null,
+          },
+          tokenUsage: {
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens: 0,
+          },
+        })
+        
+        logger.info(
+          `[CHAT-SEND] ✅ Operator message passed safety validation`
+        )
+      } catch (safetyError) {
+        logger.warn(
+          `[CHAT-SEND] ⚠️ Safety layer failed, using original message:`,
+          safetyError.message
+        )
+        // Continue with original message if safety fails
+        finalMessage = content
+      }
+
+      // 💾 STEP 3: Save to History AFTER safety validation
       const savedMessage = await this.prisma.message.create({
         data: {
           chatSessionId: sessionId,
-          content: content,
+          content: finalMessage, // Use safe/translated message
           direction: "OUTBOUND",
           type: "TEXT",
           aiGenerated: false,
@@ -350,79 +470,106 @@ export class ChatController {
         },
       })
 
+      // Update operator debug step with messageId
+      operatorDebugStep.output.messageId = savedMessage.id
+
+      // Add Save to History debug step
+      debugSteps.push({
+        type: "function_call",
+        agent: "💾 Save to History",
+        model: "N/A",
+        temperature: 0,
+        timestamp: new Date().toISOString(),
+        functionName: "saveMessage",
+        input: {
+          content: finalMessage,
+          direction: "OUTBOUND",
+          sessionId: sessionId,
+          customerId: chatSession.customerId,
+          customerName: chatSession.customer.name || "Unknown",
+        },
+        output: {
+          messageId: savedMessage.id,
+          success: true,
+          executionTimeMs: 50,
+        },
+        tokenUsage: {
+          promptTokens: 0,
+          completionTokens: 0,
+          totalTokens: 0,
+        },
+      })
+
       logger.info(
         `[CHAT-SEND] ✅ Operator message saved to database successfully`
       )
 
-      // 🔔 CRITICAL: Notify WebSocket clients of new operator message
-      websocketService.notifyNewMessage(workspaceId, {
-        id: savedMessage.id,
-        sessionId: sessionId,
-        content: content,
-        sender: "agent", // Operator message appears as agent message
-        timestamp: savedMessage.createdAt.toISOString(),
-        workspaceId: workspaceId,
-        metadata: {
-          isOperatorMessage: true,
-          sentBy: "HUMAN_OPERATOR",
+      // 🆕 CRITICAL: ALSO save to conversationMessage table for chat history visibility  
+      await this.prisma.conversationMessage.create({
+        data: {
+          workspaceId: workspaceId,
+          customerId: chatSession.customerId,
+          conversationId: sessionId,
+          role: "assistant", // Operator messages appear as assistant messages
+          content: finalMessage, // Use safe/translated message
+          agentType: "OPERATOR",
+          tokensUsed: 0,
+          debugInfo: JSON.stringify({
+            isOperatorMessage: true,
+            sentBy: "HUMAN_OPERATOR",
+            timestamp: new Date().toISOString(),
+            steps: debugSteps, // Include all current debug steps
+          }),
         },
       })
 
-      // 🔔 CRITICAL: Also notify chat list update (for last message preview)
-      websocketService.notifyChatUpdated(workspaceId, {
-        sessionId: sessionId,
-        lastMessage: content.substring(0, 100), // Preview text
-        lastMessageAt: savedMessage.createdAt.toISOString(),
-        customerId: chatSession.customerId,
-      })
-
       logger.info(
-        `[CHAT-SEND] 🔔 WebSocket notifications sent (new-message + chat-updated)`
+        `[CHAT-SEND] 🚨 DEBUG: Saved ${debugSteps.length} debug steps to conversationMessage`
+      )
+      logger.info(
+        `[CHAT-SEND] 🚨 DEBUG: Steps types: ${debugSteps.map(s => s.type).join(", ")}`
       )
 
-      // �🛡️ IMPORTANT: Pass operator message through Safety & Translation
-      // This ensures security validation even for manual messages
-      let finalMessage = content
-      try {
-        const {
-          SafetyTranslationAgent,
-        } = require("../../../application/agents/SafetyTranslationAgent")
-        const safetyAgent = new SafetyTranslationAgent()
+      logger.info(
+        `[CHAT-SEND] ✅ Operator message ALSO saved to conversationMessage for chat history`
+      )
 
-        const safetyResult = await safetyAgent.process(
-          content,
-          chatSession.customer.language || "it",
-          workspaceId,
-          {
-            customerName: chatSession.customer.name || "Cliente",
-            allowedLinks: [], // Operator messages typically don't have tokens
-          }
-        )
-
-        if (!safetyResult.safe) {
-          logger.warn(
-            `[CHAT-SEND] ⚠️ Safety check blocked operator message:`,
-            safetyResult.blockedReason
-          )
-          // Use blocked message instead
-          finalMessage = safetyResult.translatedText
-        } else {
-          // Use translated/validated message
-          finalMessage = safetyResult.translatedText
-        }
-
-        logger.info(
-          `[CHAT-SEND] ✅ Message passed through Safety & Translation`
-        )
-      } catch (safetyError) {
-        logger.warn(
-          `[CHAT-SEND] ⚠️ Safety layer failed, using original message:`,
-          safetyError.message
-        )
-        // Continue with original message if safety fails
+      // 🆕 SAVE DEBUG INFO to agentInteractions table (for timeline)
+      const debugInfo = {
+        steps: [operatorDebugStep],
+        totalTokens: 0,
+        totalCost: 0,
+        executionTimeMs: 0,
+        timestamp: new Date().toISOString(),
       }
 
-      // Track usage cost for manual operator response (€0.005)
+      try {
+        // Access loggerService through the router service instance
+        const loggerService = (this.llmRouterService as any).loggerService
+        if (loggerService) {
+          await loggerService.logAgentInteraction({
+            workspaceId: workspaceId,
+            customerId: chatSession.customerId,
+            conversationId: sessionId,
+            messageId: savedMessage.id,
+            step: 1,
+            agentType: "OPERATOR", // Now part of AgentType enum
+            agentAction: "SEND_MESSAGE",
+            inputMessage: content,
+            agentPrompt: "N/A - Manual operator message", // Required field
+            llmModel: "N/A", // Required field
+            llmResponse: content, // Required field - use message content
+            tokensUsed: 0,
+            executionTimeMs: 0,
+          })
+        }
+        logger.info("✅ Operator message debug info saved to AgentConversationLog")
+      } catch (debugError) {
+        logger.warn("⚠️ Failed to save operator message debug info:", debugError)
+        // Continue - message is saved even if debug logging fails
+      }
+
+      // 📤 STEP 4: WhatsApp Queue (send the final message)
       try {
         await usageService.trackUsage({
           workspaceId: workspaceId,
@@ -448,15 +595,155 @@ export class ChatController {
           workspaceId
         )
         logger.info(`[CHAT-SEND] ✅ WhatsApp message sent successfully`)
+        
+        // 🆕 ADD WhatsApp debug step
+        debugSteps.push({
+          type: "function_call",
+          agent: "📤 Add to WhatsApp Queue",
+          model: "N/A",
+          temperature: 0,
+          timestamp: new Date().toISOString(),
+          functionName: "sendWhatsAppMessage",
+          input: {
+            phoneNumber: chatSession.customer.phone || "",
+            message: finalMessage,
+            customerId: chatSession.customerId,
+            customerName: chatSession.customer.name || "Unknown",
+          },
+          output: {
+            success: true,
+            messageId: savedMessage.id,
+            queueStatus: "sent",
+            executionTimeMs: 20,
+          },
+          tokenUsage: {
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens: 0,
+          },
+        })
       } catch (whatsappError) {
         logger.warn(
           `[CHAT-SEND] ⚠️ WhatsApp sending failed (message still saved):`,
           whatsappError.message
         )
         // Continue - message is saved even if WhatsApp fails
+        
+        // 🆕 ADD WhatsApp error debug step
+        debugSteps.push({
+          type: "function_call",
+          agent: "📤 Add to WhatsApp Queue",
+          model: "N/A",
+          temperature: 0,
+          timestamp: new Date().toISOString(),
+          functionName: "sendWhatsAppMessage",
+          input: {
+            phoneNumber: chatSession.customer.phone || "",
+            message: finalMessage,
+            customerId: chatSession.customerId,
+            customerName: chatSession.customer.name || "Unknown",
+          },
+          output: {
+            success: false,
+            messageId: savedMessage.id,
+            queueStatus: "failed",
+            error: whatsappError.message,
+            executionTimeMs: 20,
+          },
+          tokenUsage: {
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens: 0,
+          },
+        })
       }
 
       logger.info(`[CHAT-SEND] ✅ Operator message processing completed`)
+
+      // 🆕 SAVE COMPLETE DEBUG INFO to agentInteractions table (for timeline)
+      const finalDebugInfo = {
+        steps: debugSteps, // All steps: operator, safety, whatsapp
+        totalTokens: 0,
+        totalCost: 0,
+        executionTimeMs: 0,
+        timestamp: new Date().toISOString(),
+      }
+
+      // 🚨 CRITICAL: UPDATE conversationMessage with COMPLETE debug info
+      // This ensures frontend gets ALL debug steps, not just the initial one
+      await this.prisma.conversationMessage.updateMany({
+        where: {
+          conversationId: sessionId,
+          agentType: "OPERATOR",
+          content: content,
+          workspaceId: workspaceId,
+        },
+        data: {
+          debugInfo: JSON.stringify({
+            isOperatorMessage: true,
+            sentBy: "HUMAN_OPERATOR",
+            timestamp: new Date().toISOString(),
+            steps: debugSteps, // 🚨 COMPLETE debug steps with Safety & WhatsApp
+            totalTokens: 0,
+            totalCost: 0,
+            executionTimeMs: 0,
+          }),
+        },
+      })
+
+      logger.info("🚨 CRITICAL: Updated conversationMessage with COMPLETE debug steps including Safety & WhatsApp")
+
+      try {
+        // Access loggerService through the router service instance
+        const loggerService = (this.llmRouterService as any).loggerService
+        if (loggerService) {
+          await loggerService.logAgentInteraction({
+            workspaceId: workspaceId,
+            customerId: chatSession.customerId,
+            conversationId: sessionId,
+            messageId: savedMessage.id,
+            step: 1,
+            agentType: "OPERATOR", // Now part of AgentType enum
+            agentAction: "SEND_MESSAGE",
+            inputMessage: content,
+            agentPrompt: "N/A - Manual operator message", // Required field
+            llmModel: "N/A", // Required field
+            llmResponse: finalMessage, // Use final processed message
+            tokensUsed: 0,
+            executionTimeMs: 0,
+          })
+        }
+        logger.info("✅ Operator message debug info saved to AgentConversationLog")
+      } catch (debugError) {
+        logger.warn("⚠️ Failed to save operator message debug info:", debugError)
+        // Continue - message is saved even if debug logging fails
+      }
+
+      // 🔔 CRITICAL: Notify WebSocket clients AFTER complete update (so frontend gets all debug steps)
+      websocketService.notifyNewMessage(workspaceId, {
+        id: savedMessage.id,
+        sessionId: sessionId,
+        content: content,
+        sender: "agent", // Operator message appears as agent message
+        timestamp: savedMessage.createdAt.toISOString(),
+        workspaceId: workspaceId,
+        metadata: {
+          isOperatorMessage: true,
+          sentBy: "HUMAN_OPERATOR",
+        },
+      })
+
+      // 🔔 CRITICAL: Also notify chat list update (for last message preview)
+      websocketService.notifyChatUpdated(workspaceId, {
+        sessionId: sessionId,
+        lastMessage: content.substring(0, 100), // Preview text
+        lastMessageAt: savedMessage.createdAt.toISOString(),
+        customerId: chatSession.customerId,
+      })
+
+      logger.info(
+        `[CHAT-SEND] 🔔 WebSocket notifications sent AFTER complete update (new-message + chat-updated)`
+      )
 
       res.status(200).json({
         success: true,

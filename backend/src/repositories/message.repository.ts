@@ -155,6 +155,7 @@ export class MessageRepository {
         select: {
           id: true,
           customerId: true,
+          workspaceId: true, // ✅ Add workspaceId to select
           customer: {
             select: {
               isBlacklisted: true,
@@ -243,6 +244,25 @@ export class MessageRepository {
         })
       })
 
+      // Get agent interactions (debug steps) for this conversation
+      const agentInteractions = await this.prisma.agentConversationLog.findMany({
+        where: {
+          conversationId: chatSessionId,
+          workspaceId: workspaceId || session.workspaceId,
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      })
+
+      // Create a map of messageId -> agentInteractions for operator messages
+      const operatorDebugMap = new Map()
+      agentInteractions.forEach((interaction) => {
+        if (interaction.messageId && interaction.agentType === 'OPERATOR') {
+          operatorDebugMap.set(interaction.messageId, interaction)
+        }
+      })
+
       // Parse debugInfo and attach billing data
       // ✅ Map conversationMessage format to frontend expected format
       const parsedMessages = messages.map((message) => {
@@ -262,8 +282,80 @@ export class MessageRepository {
           },
         }
 
-        // Parse debugInfo if exists (it's stored as JSON string in DB)
-        if ((message as any).debugInfo) {
+        // 🆕 OPERATOR DEBUG: Check if this message has operator debug info
+        const operatorDebug = operatorDebugMap.get(message.id)
+        if (operatorDebug) {
+          // Recreate debug info from AgentConversationLog record
+          const operatorDebugInfo = {
+            steps: [{
+              type: "operator_message",
+              agent: "Human Operator",
+              model: "N/A",
+              temperature: 0,
+              timestamp: operatorDebug.createdAt.toISOString(),
+              input: {
+                messageContent: operatorDebug.inputMessage,
+                sessionId: chatSessionId,
+                customerId: operatorDebug.customerId,
+              },
+              output: {
+                message: operatorDebug.llmResponse || operatorDebug.inputMessage,
+                messageId: message.id,
+                safetyProcessed: true,
+                whatsappSent: true,
+                finalMessage: operatorDebug.llmResponse || operatorDebug.inputMessage,
+                whatsappError: "",
+              },
+              tokenUsage: {
+                promptTokens: 0,
+                completionTokens: 0,
+                totalTokens: operatorDebug.tokensUsed || 0,
+              },
+            }],
+            totalTokens: operatorDebug.tokensUsed || 0,
+            totalCost: 0,
+            executionTimeMs: operatorDebug.executionTimeMs || 0,
+            timestamp: operatorDebug.createdAt.toISOString(),
+          }
+
+          // Update metadata for operator messages
+          parsed.metadata = {
+            ...parsed.metadata,
+            agentSelected: "MANUAL_OPERATOR",
+            sentBy: "HUMAN_OPERATOR", 
+            isOperatorMessage: true,
+            debugInfo: operatorDebugInfo,
+          }
+          
+          logger.info(`Found operator debug info for message ${message.id}`)
+        }
+        // 🆕 DIRECT CHECK: If agentType is OPERATOR, mark as operator message
+        else if (message.agentType === "OPERATOR") {
+          // Parse existing debugInfo if available
+          let existingDebugInfo = null
+          if ((message as any).debugInfo) {
+            try {
+              existingDebugInfo = typeof (message as any).debugInfo === "string"
+                ? JSON.parse((message as any).debugInfo)
+                : (message as any).debugInfo
+            } catch (parseError) {
+              logger.warn(`Failed to parse debugInfo for operator message ${message.id}:`, parseError)
+            }
+          }
+
+          // Update metadata for operator messages
+          parsed.metadata = {
+            ...parsed.metadata,
+            agentSelected: "MANUAL_OPERATOR",
+            sentBy: "HUMAN_OPERATOR", 
+            isOperatorMessage: true,
+            debugInfo: existingDebugInfo,
+          }
+          
+          logger.info(`Found OPERATOR agentType for message ${message.id}`)
+        }
+        // Parse regular debugInfo if exists (it's stored as JSON string in DB)
+        else if ((message as any).debugInfo) {
           try {
             const debugInfoParsed =
               typeof (message as any).debugInfo === "string"

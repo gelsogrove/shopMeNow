@@ -966,6 +966,7 @@ enum PricingType {
 
 enum AgentType {
   ROUTER                // order: 0 - Intent classification + FAQ
+  OPERATOR              // order: 0.5 - Human operator manual message
   PRODUCT_SEARCH        // order: 2 - Product search specialist
   CART_MANAGEMENT       // order: 3 - Cart operations
   ORDER_TRACKING        // order: 4 - Order viewing
