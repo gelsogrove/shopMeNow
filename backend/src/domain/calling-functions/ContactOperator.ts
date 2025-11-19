@@ -33,6 +33,10 @@ export interface ContactOperatorResult {
 export async function ContactOperator(
   request: ContactOperatorRequest
 ): Promise<ContactOperatorResult> {
+  // Import Prisma OUTSIDE try block for proper scope
+  const { PrismaClient } = require("@prisma/client")
+  const prisma = new PrismaClient()
+
   try {
     logger.info("📞 ContactOperator called with:", {
       phoneNumber: request.phoneNumber,
@@ -40,10 +44,6 @@ export async function ContactOperator(
       customerId: request.customerId,
       reason: request.reason,
     })
-
-    // Import Prisma to save escalation request
-    const { PrismaClient } = require("@prisma/client")
-    const prisma = new PrismaClient()
 
     try {
       // Find customer by phone and workspace WITH sales agent
@@ -91,10 +91,10 @@ export async function ContactOperator(
 
       logger.info("✅ Chatbot disabled for customer:", customer.id)
 
-      // 📧 SEND EMAIL TO AGENT with last 10 messages
+      // 📧 SEND EMAIL TO AGENT with summary of last hour conversation
       try {
         // Get active chat session
-        const session = await prisma.chatSessions.findFirst({
+        const session = await prisma.chatSession.findFirst({
           where: {
             customerId: customer.id,
             status: "active",
@@ -103,26 +103,143 @@ export async function ContactOperator(
         })
 
         if (session) {
-          // Get last 10 messages
-          const messages = await prisma.chatMessages.findMany({
-            where: { sessionId: session.id },
-            orderBy: { timestamp: "desc" },
-            take: 10,
+          // Get messages from last hour (time-based filter as per spec)
+          const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
+          const messages = await prisma.conversationMessage.findMany({
+            where: {
+              conversationId: session.id,
+              createdAt: {
+                gte: oneHourAgo,
+              },
+            },
+            orderBy: { createdAt: "asc" }, // Chronological order
           })
 
-          // Reverse to chronological order
-          messages.reverse()
+          logger.info("📊 Retrieved messages from last hour:", {
+            count: messages.length,
+            customerId: customer.id,
+            sessionId: session.id,
+          })
 
-          // Format messages for email
-          const messageList = messages
-            .map((msg, idx) => {
-              const role = msg.role === "user" ? "Cliente" : "Bot"
-              const timestamp = new Date(msg.timestamp).toLocaleString("it-IT")
-              return `${idx + 1}. [${timestamp}] ${role}: ${msg.content}`
-            })
-            .join("\n\n")
+          // Generate summary using SummaryAgentLLM
+          let chatSummary: string
 
-          // Get workspace admin (agent) to send email
+          if (messages.length > 0) {
+            try {
+              // Import SummaryAgentLLM
+              const {
+                SummaryAgentLLM,
+              } = require("../../services/summary-agent-llm.service")
+              const summaryAgent = new SummaryAgentLLM()
+
+              // Format messages for summary agent
+              const conversationHistory = messages.map((msg) => ({
+                role: msg.role === "user" ? "customer" : "assistant",
+                content: msg.content,
+                createdAt: msg.timestamp,
+              }))
+
+              // Generate summary
+              logger.info("🤖 [ContactOperator] Calling SummaryAgentLLM", {
+                messageCount: conversationHistory.length,
+                customerName: customer.name,
+              })
+
+              const summaryResult = await summaryAgent.generateSummary({
+                conversationHistory,
+                customerName: customer.name,
+                agentName: customer.sales
+                  ? `${customer.sales.firstName} ${customer.sales.lastName}`
+                  : "Agente",
+              })
+
+              if (summaryResult.success && summaryResult.summary) {
+                logger.info(
+                  "✅ [ContactOperator] Summary generated successfully",
+                  {
+                    summaryLength: summaryResult.summary.length,
+                  }
+                )
+
+                // Pass summary through Safety Translation Agent
+                const {
+                  SafetyTranslationAgent,
+                } = require("../../application/agents/SafetyTranslationAgent")
+                const safetyAgent = new SafetyTranslationAgent(prisma)
+
+                logger.info(
+                  "🛡️ [ContactOperator] Passing summary through Safety Translation Agent"
+                )
+
+                const safetyResult = await safetyAgent.process({
+                  workspaceId: request.workspaceId,
+                  response: summaryResult.summary,
+                  targetLanguage: "it", // Summary already in Italian, just need safety check
+                  customerName: customer.name,
+                })
+
+                chatSummary = `
+Cliente: ${customer.name}
+Telefono: ${customer.phone}
+Email: ${customer.email || "N/A"}
+Data richiesta: ${new Date().toLocaleString("it-IT")}
+${request.reason ? `\nMotivo: ${request.reason}` : ""}
+
+📋 Riassunto conversazione (ultima ora - ${messages.length} messaggi):
+${safetyResult.translatedText || summaryResult.summary}
+                `.trim()
+
+                logger.info(
+                  "✅ [ContactOperator] Summary processed and translated"
+                )
+              } else {
+                throw new Error(
+                  summaryResult.error || "Summary generation failed"
+                )
+              }
+            } catch (summaryError) {
+              // Fallback to raw message list if summary generation fails
+              logger.warn(
+                "⚠️ [ContactOperator] Summary generation failed, falling back to raw history:",
+                summaryError
+              )
+
+              const messageList = messages
+                .map((msg, idx) => {
+                  const role = msg.role === "user" ? "Cliente" : "Bot"
+                  const timestamp = new Date(msg.timestamp).toLocaleString(
+                    "it-IT"
+                  )
+                  return `${idx + 1}. [${timestamp}] ${role}: ${msg.content}`
+                })
+                .join("\n\n")
+
+              chatSummary = `
+Cliente: ${customer.name}
+Telefono: ${customer.phone}
+Email: ${customer.email || "N/A"}
+Data richiesta: ${new Date().toLocaleString("it-IT")}
+${request.reason ? `\nMotivo: ${request.reason}` : ""}
+
+📜 Messaggi conversazione (ultima ora - ${messages.length} messaggi):
+${messageList || "Nessun messaggio disponibile"}
+              `.trim()
+            }
+          } else {
+            // No messages in last hour
+            logger.warn("⚠️ No messages found in last hour for customer:", customer.id)
+            chatSummary = `
+Cliente: ${customer.name}
+Telefono: ${customer.phone}
+Email: ${customer.email || "N/A"}
+Data richiesta: ${new Date().toLocaleString("it-IT")}
+${request.reason ? `\nMotivo: ${request.reason}` : ""}
+
+ℹ️ Nessuna conversazione recente nell'ultima ora.
+            `.trim()
+          }
+
+          // Get workspace and initialize EmailService
           const workspace = await prisma.workspace.findUnique({
             where: { id: request.workspaceId },
             select: {
@@ -133,6 +250,13 @@ export async function ContactOperator(
             },
           })
 
+          logger.info("🔍 [ContactOperator] Workspace config loaded:", {
+            workspaceId: request.workspaceId,
+            workspaceName: workspace?.name,
+            hasWhatsappSettings: !!workspace?.whatsappSettings,
+            adminEmail: workspace?.whatsappSettings?.adminEmail || "NOT SET",
+          })
+
           if (workspace?.whatsappSettings?.adminEmail) {
             // Import EmailService
             const {
@@ -140,50 +264,50 @@ export async function ContactOperator(
             } = require("../../application/services/email.service")
             const emailService = new EmailService()
 
-            // Format chat summary with last messages
-            const chatSummary = `
-Cliente: ${customer.name}
-Telefono: ${customer.phone}
-Email: ${customer.email || "N/A"}
-Data richiesta: ${new Date().toLocaleString("it-IT")}
-${request.reason ? `\nMotivo: ${request.reason}` : ""}
-
-📜 Ultimi 10 messaggi della conversazione:
-${messageList || "Nessun messaggio disponibile"}
-            `.trim()
-
             // Send email to customer's sales agent (if exists)
             if (customer.sales?.email) {
               logger.info(
-                "📧 Preparing to send email to sales agent:",
+                "📧 [ContactOperator] Preparing to send email to sales agent:",
                 customer.sales.email,
                 `(${customer.sales.firstName} ${customer.sales.lastName})`
               )
 
-              // Customer has assigned sales agent - send to them
-              const emailResult =
-                await emailService.sendOperatorNotificationEmail({
-                  to: customer.sales.email, // Direct email address
-                  customerName: customer.name,
-                  chatSummary: chatSummary,
-                  chatId: session?.id,
-                  workspaceName: workspace.name,
-                  subject: `🚨 Richiesta Operatore - ${customer.name}`,
-                  fromEmail: workspace.whatsappSettings?.adminEmail,
-                })
+              try {
+                // Customer has assigned sales agent - send to them
+                const emailResult =
+                  await emailService.sendOperatorNotificationEmail({
+                    to: customer.sales.email, // Direct email address
+                    customerName: customer.name,
+                    chatSummary: chatSummary,
+                    chatId: session?.id,
+                    workspaceName: workspace.name,
+                    subject: `🚨 Richiesta Operatore - ${customer.name}`,
+                    fromEmail: workspace.whatsappSettings?.adminEmail,
+                  })
 
-              if (emailResult) {
                 logger.info(
-                  "✅ Email sent successfully to sales agent:",
-                  customer.sales.email,
-                  `(${customer.sales.firstName} ${customer.sales.lastName})`,
-                  "for customer:",
-                  customer.name
+                  "📧 [ContactOperator] Email service returned:",
+                  emailResult
                 )
-              } else {
+
+                if (emailResult) {
+                  logger.info(
+                    "✅ [ContactOperator] Email sent successfully to sales agent:",
+                    customer.sales.email,
+                    `(${customer.sales.firstName} ${customer.sales.lastName})`,
+                    "for customer:",
+                    customer.name
+                  )
+                } else {
+                  logger.error(
+                    "❌ [ContactOperator] Email sending FAILED (returned false) to sales agent:",
+                    customer.sales.email
+                  )
+                }
+              } catch (emailError) {
                 logger.error(
-                  "❌ Email sending failed to sales agent:",
-                  customer.sales.email
+                  "❌ [ContactOperator] Email sending EXCEPTION:",
+                  emailError
                 )
               }
             } else {
@@ -199,32 +323,44 @@ ${messageList || "Nessun messaggio disponibile"}
 
               if (adminUser?.email) {
                 logger.info(
-                  "📧 No sales agent - sending to admin:",
+                  "📧 [ContactOperator] No sales agent - sending to admin:",
                   adminUser.email
                 )
 
-                const emailResult =
-                  await emailService.sendOperatorNotificationEmail({
-                    to: adminUser.email, // Direct email address
-                    customerName: customer.name,
-                    chatSummary: chatSummary,
-                    chatId: session?.id,
-                    workspaceName: workspace.name,
-                    subject: `🚨 Richiesta Operatore - ${customer.name}`,
-                    fromEmail: workspace.whatsappSettings?.adminEmail,
-                  })
+                try {
+                  const emailResult =
+                    await emailService.sendOperatorNotificationEmail({
+                      to: adminUser.email, // Direct email address
+                      customerName: customer.name,
+                      chatSummary: chatSummary,
+                      chatId: session?.id,
+                      workspaceName: workspace.name,
+                      subject: `🚨 Richiesta Operatore - ${customer.name}`,
+                      fromEmail: workspace.whatsappSettings?.adminEmail,
+                    })
 
-                if (emailResult) {
                   logger.info(
-                    "✅ Email sent successfully to admin:",
-                    adminUser.email,
-                    "for customer:",
-                    customer.name
+                    "📧 [ContactOperator] Email service returned (admin):",
+                    emailResult
                   )
-                } else {
+
+                  if (emailResult) {
+                    logger.info(
+                      "✅ [ContactOperator] Email sent successfully to admin:",
+                      adminUser.email,
+                      "for customer:",
+                      customer.name
+                    )
+                  } else {
+                    logger.error(
+                      "❌ [ContactOperator] Email sending FAILED (returned false) to admin:",
+                      adminUser.email
+                    )
+                  }
+                } catch (emailError) {
                   logger.error(
-                    "❌ Email sending failed to admin:",
-                    adminUser.email
+                    "❌ [ContactOperator] Email sending EXCEPTION (admin):",
+                    emailError
                   )
                 }
               } else {
@@ -237,7 +373,7 @@ ${messageList || "Nessun messaggio disponibile"}
           }
         }
       } catch (emailError) {
-        logger.error("❌ Failed to send email to agent:", emailError)
+        logger.error("❌ [ContactOperator] Failed to send email to agent:", emailError)
         // Don't fail the entire operation if email fails
       }
 

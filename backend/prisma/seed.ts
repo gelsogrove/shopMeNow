@@ -144,6 +144,27 @@ async function main() {
 
   console.log(`✅ Workspace created: ${workspace.name} (${workspace.id})`)
 
+  // 3.5. Create WhatsApp Settings
+  console.log("📱 Creating WhatsApp settings...")
+
+  await prisma.whatsappSettings.create({
+    data: {
+      workspaceId: workspace.id,
+      phoneNumber: workspaceSettings.whatsappPhoneNumber || "+34654728753",
+      apiKey: process.env.WHATSAPP_API_KEY || "dummy-api-key",
+      webhookUrl: process.env.WHATSAPP_WEBHOOK_URL || "https://shopme.com/webhook",
+      adminEmail: "andrea_gelsomino@hotmail.com", // ✅ Email per notifiche operatore
+      smtpHost: "smtp.gmail.com",
+      smtpPort: 465,
+      smtpSecure: true,
+      smtpUser: process.env.SMTP_USER || "noreply@shopme.com",
+      smtpPass: process.env.SMTP_PASS || "",
+      smtpFrom: "ShopME <noreply@shopme.com>",
+    },
+  })
+
+  console.log(`✅ WhatsApp settings created with admin email: andrea_gelsomino@hotmail.com`)
+
   // 4. Associate Admin with Workspace
   await prisma.userWorkspace.create({
     data: {
