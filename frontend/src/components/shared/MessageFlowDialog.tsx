@@ -1,6 +1,7 @@
 import {
   ChevronRight,
   Database,
+  FileText,
   GitBranch,
   Headphones,
   MessageSquare,
@@ -26,6 +27,7 @@ interface DebugStep {
     | "function_result"
     | "safety"
     | "sub_agent"
+    | "summary_agent"
     | "whatsapp_delivery"
     | "user"
     | "token-replacement"
@@ -86,6 +88,7 @@ export default function MessageFlowDialog({
     if (agent?.includes("Cart Management")) return "#10B981" // Green
     if (agent?.includes("Order Tracking")) return "#F97316" // Orange
     if (agent?.includes("Customer Support")) return "#EC4899" // Pink
+    if (agent?.includes("Summary")) return "#F472B6" // Light Pink (sub-agent of Customer Support)
     if (agent?.includes("Profile Management")) return "#64748B" // Slate (includes notifications)
 
     return "#3B82F6" // Blue for generic sub-agents
@@ -119,6 +122,7 @@ export default function MessageFlowDialog({
       return <Package className="w-5 h-5" />
     if (agent?.includes("Customer Support"))
       return <Headphones className="w-5 h-5" />
+    if (agent?.includes("Summary")) return <FileText className="w-5 h-5" /> // ✅ Summary Agent
     if (agent?.includes("Profile Management"))
       return <User className="w-5 h-5" /> // Profile + Notifications
 
@@ -177,6 +181,9 @@ export default function MessageFlowDialog({
   const subAgentSteps = allSteps.filter(
     (s) => s.type === "sub_agent" || (s as any).isSubAgent
   )
+
+  // Summary Agent steps (internal service)
+  const summaryAgentSteps = allSteps.filter((s) => s.type === "summary_agent")
 
   // Safety & Translation step
   const safetySteps = allSteps.filter((s) => s.type === "safety")
@@ -273,6 +280,7 @@ export default function MessageFlowDialog({
     userStep, // STEP 1: User message
     routerSteps[0], // STEP 2: Router iteration 1 (delega a sub-agent)
     ...subAgentSteps, // STEP 3: Sub-agent execution
+    ...summaryAgentSteps, // STEP 3.5: Summary Agent execution (if present)
     routerSteps[1], // STEP 4: Router iteration 2 (riceve risposta)
     linkReplacementSteps[0], // STEP 5: Link Replacement (BEFORE Safety) ✅
     safetySteps[0], // STEP 6: Safety & Translation (AFTER Link Replacement) ✅

@@ -98,6 +98,10 @@ export interface StandardResponse<T = any> {
   message?: string
   details?: string
   timestamp?: string
+  // Summary Agent debug information
+  summaryAgentExecuted?: boolean
+  summaryEmailSent?: boolean
+  ticketId?: string
 }
 
 export interface ErrorResponse {

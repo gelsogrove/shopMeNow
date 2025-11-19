@@ -49,6 +49,7 @@ import {
   Brain,
   ChevronRight,
   Edit,
+  FileText,
   GitBranch,
   Headphones,
   Loader2,
@@ -90,6 +91,7 @@ const iconMap: Record<string, LucideIcon> = {
   Bot,
   User,
   Bell,
+  FileText, // ✅ Summary Agent icon
 }
 
 // Get icon component from database icon name with colorful background
@@ -108,6 +110,7 @@ const getAgentIcon = (iconName: string | undefined, agentType: string) => {
     cart_management: { bg: "bg-green-600" }, // Green
     order_tracking: { bg: "bg-orange-600" }, // Orange
     customer_support: { bg: "bg-pink-600" }, // Pink
+    summary_agent: { bg: "bg-pink-400" }, // ✅ Light pink for sub-agent of Customer Support
     profile_management: { bg: "bg-slate-600" }, // Slate for profile + notifications
     safety_translation: { bg: "bg-red-600" }, // Red like timeline
   }
@@ -365,10 +368,11 @@ export function AgentConfigurationPage() {
                 // Agent hierarchy levels
                 const isRouter = normalizedType === "router"
                 const isSafety = normalizedType === "safety_translation"
+                const isSummaryAgent = normalizedType === "summary_agent"
 
-                // Router (level 0), Specialists (level 1), Safety (level 99)
-                const isSpecialistAgent = !isRouter && !isSafety
-                const indentClass = isSpecialistAgent ? "ml-8" : ""
+                // Router (level 0), Specialists (level 1), Sub-agents (level 2), Safety (level 99)
+                const isSpecialistAgent = !isRouter && !isSafety && !isSummaryAgent
+                const indentClass = isSpecialistAgent ? "ml-8" : isSummaryAgent ? "ml-16" : ""
                 const isProductSearch = normalizedType === "product_search"
 
                 // Check if previous agent was Router (to add vertical line)
@@ -387,9 +391,17 @@ export function AgentConfigurationPage() {
                         <div className="flex items-center justify-between w-full pr-4">
                           {/* LEFT SIDE: Icon + Agent Info */}
                           <div className="flex items-center gap-3 flex-1">
-                            {/* 🌳 Tree connector ONLY for Specialist agents (not Router, not Safety) */}
+                            {/* 🌳 Tree connector for Specialist agents and Summary sub-agent */}
                             {isSpecialistAgent && (
                               <div className="flex items-center text-gray-500">
+                                <div className="w-8 h-0.5 bg-gray-400"></div>
+                                <ChevronRight className="h-5 w-5 -ml-1" />
+                              </div>
+                            )}
+                            {/* 🌳 Double-indented connector for Summary Agent (sub-agent of Customer Support) */}
+                            {isSummaryAgent && (
+                              <div className="flex items-center text-gray-500">
+                                <div className="w-4 h-0.5 bg-gray-300"></div>
                                 <div className="w-8 h-0.5 bg-gray-400"></div>
                                 <ChevronRight className="h-5 w-5 -ml-1" />
                               </div>

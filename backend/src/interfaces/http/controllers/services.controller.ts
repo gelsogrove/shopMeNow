@@ -169,8 +169,8 @@ export class ServicesController {
 
       // Add new uploaded images
       if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-        const newImagePaths = (req.files as Express.Multer.File[]).map(
-          (file) => `/uploads/services/${file.filename}`
+        const newImagePaths = req.files.map(
+          (file: any) => `/uploads/services/${file.filename}`
         )
         allImageUrls = [...allImageUrls, ...newImagePaths]
         logger.info(`New images uploaded:`, newImagePaths)
@@ -291,8 +291,8 @@ export class ServicesController {
 
       // Add new uploaded images
       if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-        const newImagePaths = (req.files as Express.Multer.File[]).map(
-          (file) => `/uploads/services/${file.filename}`
+        const newImagePaths = req.files.map(
+          (file: any) => `/uploads/services/${file.filename}`
         )
         allImageUrls = [...allImageUrls, ...newImagePaths]
         logger.info(`New images uploaded for update:`, newImagePaths)

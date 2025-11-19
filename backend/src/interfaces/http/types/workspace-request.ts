@@ -6,4 +6,5 @@ import { WorkspaceContextDTO } from '../../../application/dtos/workspace-context
  */
 export interface WorkspaceRequest extends Request {
   workspaceContext: WorkspaceContextDTO;
+  files?: Express.Multer.File[];
 } 

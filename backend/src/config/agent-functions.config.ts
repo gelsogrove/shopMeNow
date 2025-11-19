@@ -287,6 +287,15 @@ export const CUSTOMER_SUPPORT_FUNCTIONS: FunctionDefinition[] = [
 ]
 
 /**
+ * Summary Agent Functions
+ * Used for generating conversation summaries for email notifications
+ */
+export const SUMMARY_AGENT_FUNCTIONS: FunctionDefinition[] = [
+  // Summary Agent typically doesn't call functions - it processes existing data
+  // It's used as a utility service by ContactOperator function
+]
+
+/**
  * Profile Management Agent Functions
  */
 export const PROFILE_MANAGEMENT_FUNCTIONS: FunctionDefinition[] = [
@@ -341,6 +350,8 @@ export function getAgentFunctions(
       return ORDER_TRACKING_FUNCTIONS
     case "CUSTOMER_SUPPORT":
       return CUSTOMER_SUPPORT_FUNCTIONS
+    case "SUMMARY_AGENT":
+      return SUMMARY_AGENT_FUNCTIONS
     case "PROFILE_MANAGEMENT":
       return PROFILE_MANAGEMENT_FUNCTIONS
     case "SAFETY_TRANSLATION":
@@ -361,6 +372,7 @@ export function getAllFunctions(): FunctionDefinition[] {
     ...CART_MANAGEMENT_FUNCTIONS,
     ...ORDER_TRACKING_FUNCTIONS,
     ...CUSTOMER_SUPPORT_FUNCTIONS,
+    ...SUMMARY_AGENT_FUNCTIONS,
     ...PROFILE_MANAGEMENT_FUNCTIONS,
   ]
 }

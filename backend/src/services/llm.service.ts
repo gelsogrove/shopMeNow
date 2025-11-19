@@ -1361,11 +1361,24 @@ export class LLMService {
         case "ContactOperator":
           // 🚨 PRIORITY 1 - HIGHEST
           logger.info("📞 ContactOperator called (PRIORITY 1)")
-          return await this.callingFunctionsService.contactOperator({
+          const contactResult = await this.callingFunctionsService.contactOperator({
             customerId: customer.id,
             workspaceId: workspace.id,
             phoneNumber: customer.phone,
           })
+          
+          // 📧 Se il Summary Agent è stato eseguito, logga per debug
+          if (contactResult.summaryAgentExecuted) {
+            logger.info("🤖 Summary Agent executed within ContactOperator", {
+              agentType: "summary_agent",
+              ticketId: contactResult.ticketId,
+              emailSent: contactResult.summaryEmailSent,
+              timestamp: new Date().toISOString(),
+              function: "ContactOperator"
+            })
+          }
+          
+          return contactResult
 
         case "GetLinkOrderByCode":
           // 🚨 PRIORITY 2 - HIGH

@@ -138,7 +138,26 @@ export const defaultAgents = (
   },
 
   // ====================================================================
-  // PROFILE MANAGEMENT AGENT (order: 6) - Customer profile & notifications
+  // SUMMARY AGENT (order: 5) - Conversation summarization for email notifications
+  // ====================================================================
+  {
+    workspaceId,
+    name: "Summary Agent",
+    type: "SUMMARY_AGENT" as AgentType,
+    icon: "FileText",
+    description:
+      "Specialist in creating concise conversation summaries for support team email notifications",
+    systemPrompt: loadPrompt("summary-agent.md"),
+    model: "openai/gpt-4o-mini",
+    temperature: 0.2, // Low temperature for consistent, factual summaries
+    maxTokens: 500,   // 250 words ≈ 350-500 tokens
+    order: 5,
+    isActive: true,
+    availableFunctions: getAgentFunctionNames("SUMMARY_AGENT"),
+  },
+
+  // ====================================================================
+  // PROFILE MANAGEMENT AGENT (order: 7) - Customer profile & notifications
   // ====================================================================
   {
     workspaceId,
@@ -151,7 +170,7 @@ export const defaultAgents = (
     model: "openai/gpt-4o-mini",
     temperature: 0.4,
     maxTokens: 500,
-    order: 6,
+    order: 7, // ✅ Changed from 6 to 7 to make room for Summary Agent
     isActive: true,
     availableFunctions: getAgentFunctionNames("PROFILE_MANAGEMENT"),
   },

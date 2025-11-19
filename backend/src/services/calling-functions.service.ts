@@ -295,12 +295,26 @@ export class CallingFunctionsService {
       })
 
       logger.info("✅ ContactOperator result:", result)
+      
+      // 📧 Se il Summary Agent è stato eseguito, loggalo per il debug timeline
+      if (result.summaryAgentExecuted) {
+        logger.info("📧 Summary Agent executed successfully for email notification", {
+          ticketId: result.ticketId,
+          emailSent: result.summaryEmailSent,
+          timestamp: result.timestamp
+        })
+      }
+      
       return {
         success: true,
         message:
           result.message ||
           "Certo, verrà contattato il prima possibile dal nostro operatore.",
         timestamp: new Date().toISOString(),
+        // 🔧 Passa le informazioni del Summary Agent per il debug
+        summaryAgentExecuted: result.summaryAgentExecuted,
+        summaryEmailSent: result.summaryEmailSent,
+        ticketId: result.ticketId
       }
     } catch (error) {
       logger.error("❌ Error in contactOperator:", error)

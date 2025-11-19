@@ -22,6 +22,8 @@ export interface ContactOperatorResult {
   timestamp: string
   ticketId?: string
   error?: string
+  summaryAgentExecuted?: boolean
+  summaryEmailSent?: boolean
 }
 
 /**
@@ -36,6 +38,9 @@ export async function ContactOperator(
   // Import Prisma OUTSIDE try block for proper scope
   const { PrismaClient } = require("@prisma/client")
   const prisma = new PrismaClient()
+  
+  // 📧 Track email sending status (accessible in all scopes)
+  let emailSentSuccessfully = false
 
   try {
     logger.info("📞 ContactOperator called with:", {
@@ -301,6 +306,7 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
                     "for customer:",
                     customer.name
                   )
+                  emailSentSuccessfully = true
                 } else {
                   logger.error(
                     "❌ [ContactOperator] Email sending FAILED (returned false) to sales agent:",
@@ -354,6 +360,7 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
                       "for customer:",
                       customer.name
                     )
+                    emailSentSuccessfully = true
                   } else {
                     logger.error(
                       "❌ [ContactOperator] Email sending FAILED (returned false) to admin:",
@@ -416,6 +423,8 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
           "Grazie per la pazienza! 😊",
         timestamp: new Date().toISOString(),
         ticketId,
+        summaryAgentExecuted: true, // Indica che il Summary Agent è stato eseguito
+        summaryEmailSent: emailSentSuccessfully // Indica se l'email di riepilogo è stata inviata
       }
     } catch (dbError) {
       logger.error("❌ Database error in ContactOperator:", dbError)
@@ -439,6 +448,8 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
           "**Da questo momento disattiviamo il chatbot e aspettiamo che si colleghi l'agente.** 🤝\n\n" +
           "Grazie per la pazienza! 😊",
         timestamp: new Date().toISOString(),
+        summaryAgentExecuted: false, // Summary Agent non eseguito in caso di errore DB
+        summaryEmailSent: false
       }
     }
   } catch (error) {
