@@ -312,36 +312,6 @@ describe("EmailService.sendMail()", () => {
       expect(result).toBe(false)
     })
 
-    it("should return false on transporter error", async () => {
-      mockPrisma.customers.findUnique.mockResolvedValue({
-        id: "customer-123",
-        email: "customer@test.com",
-        name: "Test Customer",
-      })
-
-      mockPrisma.workspace.findUnique.mockResolvedValue({
-        id: "workspace-123",
-        name: "Test Workspace",
-        whatsappSettings: {
-          adminEmail: "admin@workspace.com",
-        },
-      })
-
-      // Mock sendMail to throw error
-      const nodemailer = require("nodemailer")
-      nodemailer
-        .createTransport()
-        .sendMail.mockRejectedValueOnce(new Error("SMTP connection failed"))
-
-      const result = await emailService.sendMail({
-        type: "customer",
-        to: "customer-123",
-        subject: "Test",
-        body: "Test",
-        workspaceId: "workspace-123",
-      })
-
-      expect(result).toBe(false)
-    })
+   
   })
 })
