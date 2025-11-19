@@ -44,7 +44,7 @@ export class PricingController {
    *                     FREE_MONTHLY: 0
    *                     BASIC_MONTHLY: 29
    *                     PREMIUM_MONTHLY: 59
-   *                     ENTERPRISE_MONTHLY: 199
+   *                     ENTERPRISE_MONTHLY: 169
    *                     MONTHLY_CHANNEL_COST: 59
    *                 usage:
    *                   type: object

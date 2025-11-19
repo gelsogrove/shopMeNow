@@ -109,11 +109,6 @@ export function Sidebar() {
       icon: UserCircle,
     },
     {
-      href: "/certifications",
-      label: "Certifications",
-      icon: Award,
-    },
-    {
       href: "/campaigns",
       label: "Campaigns",
       icon: Megaphone,

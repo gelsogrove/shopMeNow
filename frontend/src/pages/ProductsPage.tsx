@@ -14,6 +14,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { useWorkspace } from "@/hooks/use-workspace"
@@ -28,7 +35,7 @@ import { productsApi, type Product } from "@/services/productsApi"
 import { supplierApi, type Supplier } from "@/services/supplier"
 import { commonStyles } from "@/styles/common"
 import { getCurrencySymbol } from "@/utils/format"
-import { Package, Pencil, Trash2 } from "lucide-react"
+import { Award, Package, Pencil, Trash2, Truck } from "lucide-react"
 import React, { useEffect, useState } from "react"
 
 export function ProductsPage() {
@@ -53,6 +60,8 @@ export function ProductsPage() {
   const [showEditSheet, setShowEditSheet] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showCertificationsPanel, setShowCertificationsPanel] = useState(false)
+  const [showTransportTypesPanel, setShowTransportTypesPanel] = useState(false)
   const [searchValue, setSearchValue] = useState("")
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("none")
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>("none")
@@ -497,6 +506,152 @@ export function ProductsPage() {
     } catch (error) {
       logger.error("Failed to delete product:", error)
       toast.error("Failed to delete product")
+    }
+  }
+
+  // Certifications Panel Management
+  const [certAddFormName, setCertAddFormName] = useState("")
+  const [selectedCert, setSelectedCert] = useState<Certification | null>(null)
+  const [showCertEdit, setShowCertEdit] = useState(false)
+  const [showCertDelete, setShowCertDelete] = useState(false)
+
+  const filteredCerts = certifications
+
+  const handleCertAdd = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!workspace?.id || !certAddFormName.trim()) return
+
+    try {
+      await certificationsApi.create(workspace.id, { name: certAddFormName.trim() })
+      toast.success("Certification added successfully")
+      setCertAddFormName("")
+      const response = await certificationsApi.getAllForWorkspace(workspace.id)
+      setCertifications(response || [])
+    } catch (error: any) {
+      logger.error("Error adding certification:", error)
+      toast.error(error.response?.data?.error || "Failed to add certification")
+    }
+  }
+
+  const handleCertEdit = (cert: Certification) => {
+    setSelectedCert(cert)
+    setShowCertEdit(true)
+  }
+
+  const handleCertEditSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!selectedCert?.id || !workspace?.id) return
+
+    const form = e.target as HTMLFormElement
+    const formData = new FormData(form)
+    const name = formData.get("name") as string
+
+    if (!name?.trim()) return
+
+    try {
+      await certificationsApi.update(selectedCert.id, workspace.id, { name: name.trim() })
+      toast.success("Certification updated successfully")
+      setShowCertEdit(false)
+      setSelectedCert(null)
+      const response = await certificationsApi.getAllForWorkspace(workspace.id)
+      setCertifications(response || [])
+    } catch (error: any) {
+      logger.error("Error updating certification:", error)
+      toast.error(error.response?.data?.error || "Failed to update certification")
+    }
+  }
+
+  const handleCertDelete = (cert: Certification) => {
+    setSelectedCert(cert)
+    setShowCertDelete(true)
+  }
+
+  const confirmCertDelete = async () => {
+    if (!selectedCert?.id || !workspace?.id) return
+
+    try {
+      await certificationsApi.remove(workspace.id, selectedCert.id)
+      toast.success("Certification deleted successfully")
+      setShowCertDelete(false)
+      setSelectedCert(null)
+      const response = await certificationsApi.getAllForWorkspace(workspace.id)
+      setCertifications(response || [])
+    } catch (error: any) {
+      logger.error("Error deleting certification:", error)
+      toast.error(error.response?.data?.error || "Failed to delete certification")
+    }
+  }
+
+  // Transport Types Panel Management
+  const [ttAddFormName, setTtAddFormName] = useState("")
+  const [selectedTt, setSelectedTt] = useState<TransportType | null>(null)
+  const [showTtEdit, setShowTtEdit] = useState(false)
+  const [showTtDelete, setShowTtDelete] = useState(false)
+
+  const filteredTts = transportTypes
+
+  const handleTtAdd = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!workspace?.id || !ttAddFormName.trim()) return
+
+    try {
+      await transportTypesApi.create(workspace.id, { name: ttAddFormName.trim() })
+      toast.success("Transport type added successfully")
+      setTtAddFormName("")
+      const response = await transportTypesApi.getAllForWorkspace(workspace.id)
+      setTransportTypes(response || [])
+    } catch (error: any) {
+      logger.error("Error adding transport type:", error)
+      toast.error(error.message || "Failed to add transport type")
+    }
+  }
+
+  const handleTtEdit = (tt: TransportType) => {
+    setSelectedTt(tt)
+    setShowTtEdit(true)
+  }
+
+  const handleTtEditSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!selectedTt?.id || !workspace?.id) return
+
+    const form = e.target as HTMLFormElement
+    const formData = new FormData(form)
+    const name = formData.get("name") as string
+
+    if (!name?.trim()) return
+
+    try {
+      await transportTypesApi.update(workspace.id, selectedTt.id, { name: name.trim() })
+      toast.success("Transport type updated successfully")
+      setShowTtEdit(false)
+      setSelectedTt(null)
+      const response = await transportTypesApi.getAllForWorkspace(workspace.id)
+      setTransportTypes(response || [])
+    } catch (error: any) {
+      logger.error("Error updating transport type:", error)
+      toast.error(error.message || "Failed to update transport type")
+    }
+  }
+
+  const handleTtDelete = (tt: TransportType) => {
+    setSelectedTt(tt)
+    setShowTtDelete(true)
+  }
+
+  const confirmTtDelete = async () => {
+    if (!selectedTt?.id || !workspace?.id) return
+
+    try {
+      await transportTypesApi.remove(workspace.id, selectedTt.id)
+      toast.success("Transport type deleted successfully")
+      setShowTtDelete(false)
+      setSelectedTt(null)
+      const response = await transportTypesApi.getAllForWorkspace(workspace.id)
+      setTransportTypes(response || [])
+    } catch (error: any) {
+      logger.error("Error deleting transport type:", error)
+      toast.error(error.message || "Failed to delete transport type")
     }
   }
 
@@ -980,7 +1135,7 @@ export function ProductsPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => window.location.href = '/certifications'}
+            onClick={() => setShowCertificationsPanel(true)}
             className="text-xs"
           >
             🏆 Manage Certifications
@@ -1020,7 +1175,7 @@ export function ProductsPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => window.location.href = '/transport-types'}
+            onClick={() => setShowTransportTypesPanel(true)}
             className="text-xs"
           >
             🚚 Manage Transport Types
@@ -1218,6 +1373,288 @@ export function ProductsPage() {
         title="Delete Product"
         description={`Are you sure you want to delete "${selectedProduct?.name}"? This action cannot be undone.`}
         onConfirm={handleDeleteConfirm}
+      />
+
+      {/* Certifications Management Panel */}
+      <Sheet open={showCertificationsPanel} onOpenChange={setShowCertificationsPanel}>
+        <SheetContent side="right" className="w-[800px] sm:max-w-[800px]">
+          <SheetHeader>
+            <SheetTitle>Manage Certifications</SheetTitle>
+            <SheetDescription>
+              Add, edit, or delete product certifications
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="mt-6 space-y-6">
+            {/* Add Form */}
+            <div className="border rounded-lg p-4 bg-gray-50">
+              <h3 className="font-semibold mb-3">Add New Certification</h3>
+              <form onSubmit={handleCertAdd} className="flex gap-2">
+                <Input
+                  placeholder="e.g., Bio, DOP, Vegan"
+                  value={certAddFormName}
+                  onChange={(e) => setCertAddFormName(e.target.value)}
+                  maxLength={50}
+                  required
+                />
+                <Button type="submit">Add</Button>
+              </form>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="font-semibold">
+                Certifications ({filteredCerts.length})
+              </h3>
+              <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                {filteredCerts.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-8">
+                    No certifications found
+                  </p>
+                ) : (
+                  filteredCerts.map((cert) => (
+                    <div
+                      key={cert.id}
+                      className="flex items-center justify-between p-3 border rounded-lg bg-white hover:bg-gray-50"
+                    >
+                      <div className="flex-1">
+                        <p className="font-medium">{cert.name}</p>
+                        {cert._count?.productCertifications !== undefined && (
+                          <p className="text-xs text-gray-500">
+                            Used by {cert._count.productCertifications} product(s)
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleCertEdit(cert)}
+                          className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleCertDelete(cert)}
+                          disabled={
+                            cert._count?.productCertifications &&
+                            cert._count.productCertifications > 0
+                          }
+                          className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Certification Edit Sheet */}
+      <Sheet open={showCertEdit} onOpenChange={setShowCertEdit}>
+        <SheetContent side="right" className="w-[600px]">
+          <SheetHeader>
+            <SheetTitle>Edit Certification</SheetTitle>
+            <SheetDescription>
+              Update certification information
+            </SheetDescription>
+          </SheetHeader>
+          {selectedCert && (
+            <form onSubmit={handleCertEditSubmit} className="space-y-4 mt-6">
+              <div className="space-y-2">
+                <Label htmlFor="cert-edit-name">Certification Name *</Label>
+                <Input
+                  id="cert-edit-name"
+                  name="name"
+                  defaultValue={selectedCert.name}
+                  placeholder="e.g., Bio, DOP, Vegan"
+                  required
+                  maxLength={50}
+                />
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button type="submit" className="flex-1">
+                  Update Certification
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowCertEdit(false)
+                    setSelectedCert(null)
+                  }}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Certification Delete Dialog */}
+      <ConfirmDialog
+        open={showCertDelete}
+        onOpenChange={setShowCertDelete}
+        onConfirm={confirmCertDelete}
+        title="Delete Certification"
+        description={
+          selectedCert
+            ? `Are you sure you want to delete "${selectedCert.name}"? ${
+                selectedCert._count?.productCertifications
+                  ? `This certification is used by ${selectedCert._count.productCertifications} product(s) and cannot be deleted.`
+                  : "This action cannot be undone."
+              }`
+            : ""
+        }
+      />
+
+      {/* Transport Types Management Panel */}
+      <Sheet open={showTransportTypesPanel} onOpenChange={setShowTransportTypesPanel}>
+        <SheetContent side="right" className="w-[800px] sm:max-w-[800px]">
+          <SheetHeader>
+            <SheetTitle>Manage Transport Types</SheetTitle>
+            <SheetDescription>
+              Add, edit, or delete transport types for products
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="mt-6 space-y-6">
+            {/* Add Form */}
+            <div className="border rounded-lg p-4 bg-gray-50">
+              <h3 className="font-semibold mb-3">Add New Transport Type</h3>
+              <form onSubmit={handleTtAdd} className="flex gap-2">
+                <Input
+                  placeholder="e.g., Air, Sea, Land, Rail"
+                  value={ttAddFormName}
+                  onChange={(e) => setTtAddFormName(e.target.value)}
+                  maxLength={50}
+                  required
+                />
+                <Button type="submit">Add</Button>
+              </form>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="font-semibold">
+                Transport Types ({filteredTts.length})
+              </h3>
+              <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                {filteredTts.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-8">
+                    No transport types found
+                  </p>
+                ) : (
+                  filteredTts.map((tt) => (
+                    <div
+                      key={tt.id}
+                      className="flex items-center justify-between p-3 border rounded-lg bg-white hover:bg-gray-50"
+                    >
+                      <div className="flex-1">
+                        <p className="font-medium">{tt.name}</p>
+                        {tt._count?.productTransportTypes !== undefined && (
+                          <p className="text-xs text-gray-500">
+                            Used by {tt._count.productTransportTypes} product(s)
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleTtEdit(tt)}
+                          className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleTtDelete(tt)}
+                          disabled={
+                            tt._count?.productTransportTypes &&
+                            tt._count.productTransportTypes > 0
+                          }
+                          className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Transport Type Edit Sheet */}
+      <Sheet open={showTtEdit} onOpenChange={setShowTtEdit}>
+        <SheetContent side="right" className="w-[600px]">
+          <SheetHeader>
+            <SheetTitle>Edit Transport Type</SheetTitle>
+            <SheetDescription>
+              Update transport type information
+            </SheetDescription>
+          </SheetHeader>
+          {selectedTt && (
+            <form onSubmit={handleTtEditSubmit} className="space-y-4 mt-6">
+              <div className="space-y-2">
+                <Label htmlFor="tt-edit-name">Transport Type Name *</Label>
+                <Input
+                  id="tt-edit-name"
+                  name="name"
+                  defaultValue={selectedTt.name}
+                  placeholder="e.g., Air, Sea, Land, Rail"
+                  required
+                  maxLength={50}
+                />
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button type="submit" className="flex-1">
+                  Update Transport Type
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowTtEdit(false)
+                    setSelectedTt(null)
+                  }}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Transport Type Delete Dialog */}
+      <ConfirmDialog
+        open={showTtDelete}
+        onOpenChange={setShowTtDelete}
+        onConfirm={confirmTtDelete}
+        title="Delete Transport Type"
+        description={
+          selectedTt
+            ? `Are you sure you want to delete "${selectedTt.name}"? ${
+                selectedTt._count?.productTransportTypes
+                  ? `This transport type is used by ${selectedTt._count.productTransportTypes} product(s) and cannot be deleted.`
+                  : "This action cannot be undone."
+              }`
+            : ""
+        }
       />
     </PageLayout>
   )

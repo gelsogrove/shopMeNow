@@ -41,7 +41,7 @@ export enum BillingPrices {
   FREE_MONTHLY = 0.0, // €0.00
   BASIC_MONTHLY = 29.0, // €29.00
   PREMIUM_MONTHLY = 59.0, // €59.00
-  ENTERPRISE_MONTHLY = 299.0, // €299.00
+  ENTERPRISE_MONTHLY = 169.0, // €169.00
 }
 ```
 
