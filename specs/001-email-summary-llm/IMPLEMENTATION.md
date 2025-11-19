@@ -24,10 +24,11 @@ Implemented AI-powered conversation summarization for operator escalation emails
 ### Components Created
 
 #### 1. **Summary Agent Prompt** (`backend/docs/prompts/summary-agent.md`)
+
 - **Type**: Utility prompt (NOT stored in database)
 - **Purpose**: System prompt for conversation summarization LLM
 - **Size**: 280 lines
-- **Variables**: 
+- **Variables**:
   - `{{conversationHistory}}` - Formatted messages from last hour
   - `{{customerName}}` - Customer's full name
   - `{{agentName}}` - Bot agent name (default: "ShopME Assistant")
@@ -47,6 +48,7 @@ Implemented AI-powered conversation summarization for operator escalation emails
   - Focus on actionable information
 
 #### 2. **SummaryAgentLLM Service** (`backend/src/services/summary-agent-llm.service.ts`)
+
 - **Type**: Utility service class
 - **Size**: 203 lines
 - **Key Methods**:
@@ -64,6 +66,7 @@ Implemented AI-powered conversation summarization for operator escalation emails
   - File system (fs, path) - Prompt loading
 
 #### 3. **ContactOperator Function** (`backend/src/domain/calling-functions/ContactOperator.ts`)
+
 - **Modified**: Added complete summary generation flow
 - **Size**: 454 lines total (~200 lines modified)
 - **New Flow**:
@@ -79,6 +82,7 @@ Implemented AI-powered conversation summarization for operator escalation emails
 - **Error Handling**: Fallback to raw message history if summary fails
 
 #### 4. **CustomerSupportAgentLLM** (`backend/src/application/agents/CustomerSupportAgentLLM.ts`)
+
 - **Modified**: `contactSupport` calling function execution
 - **Changes**:
   - Disables chatbot before calling ContactOperator
@@ -92,13 +96,13 @@ Implemented AI-powered conversation summarization for operator escalation emails
       where: { id: context.customerId },
       include: { sales: true },
     })
-    
+
     // 2. Disable chatbot
     await prisma.customers.update({
       where: { id: context.customerId },
       data: { activeChatbot: false },
     })
-    
+
     // 3. Call ContactOperator
     const contactResult = await ContactOperator({
       phoneNumber: customer.phone,
@@ -109,6 +113,7 @@ Implemented AI-powered conversation summarization for operator escalation emails
   ```
 
 #### 5. **Seed Script** (`backend/prisma/seed.ts`)
+
 - **Modified**: Added WhatsappSettings creation
 - **Critical Fix**: Seed was deleting whatsappSettings but never creating it
 - **New Code** (lines ~152-173):
@@ -139,6 +144,7 @@ Implemented AI-powered conversation summarization for operator escalation emails
 ### Database Schema (No Changes Required)
 
 **WhatsappSettings** model already existed with required fields:
+
 ```prisma
 model WhatsappSettings {
   id            String   @id @default(cuid())
@@ -206,41 +212,49 @@ Email delivered to Sales Agent
 ## 🐛 Bugs Fixed During Implementation
 
 ### 1. **Prisma Scope Issue**
+
 - **Problem**: `prisma` instance declared inside try block, inaccessible in nested catch
 - **Fix**: Moved `const prisma = new PrismaClient()` OUTSIDE all try blocks
 - **File**: `ContactOperator.ts` line 37
 
 ### 2. **Wrong Table Name - ChatSession**
+
 - **Problem**: Used `prisma.chatSessions` (plural)
 - **Fix**: Changed to `prisma.chatSession` (singular)
 - **File**: `ContactOperator.ts` line 97
 
 ### 3. **Wrong Table Name - ConversationMessage**
+
 - **Problem**: Used `prisma.chatMessage`
 - **Fix**: Changed to `prisma.conversationMessage`
 - **File**: `ContactOperator.ts` line 107
 
 ### 4. **Wrong Field Name - conversationId**
+
 - **Problem**: Used `sessionId`
 - **Fix**: Changed to `conversationId`
 - **File**: `ContactOperator.ts` line 108
 
 ### 5. **Wrong Field Name - createdAt**
+
 - **Problem**: Used `timestamp`
 - **Fix**: Changed to `createdAt`
 - **File**: `ContactOperator.ts` lines 110-111
 
 ### 6. **SafetyTranslationAgent Wrong Method**
+
 - **Problem**: Called `handleMessage()`
 - **Fix**: Changed to `process()`
 - **File**: `ContactOperator.ts` line 172
 
 ### 7. **SafetyTranslationAgent Missing Constructor**
+
 - **Problem**: Didn't pass `prisma` instance
 - **Fix**: `new SafetyTranslationAgent(prisma)`
 - **File**: `ContactOperator.ts` line 169
 
 ### 8. **WhatsappSettings.adminEmail NULL**
+
 - **Problem**: seed.ts deleted but never created WhatsappSettings
 - **Fix**: Added WhatsappSettings.create() in seed
 - **File**: `seed.ts` lines ~152-173
@@ -255,6 +269,7 @@ Email delivered to Sales Agent
 **Input**: Customer message "merce scaduta"
 
 **Expected Behavior**:
+
 1. Chatbot disabled (`activeChatbot = false`)
 2. Messages from last hour retrieved (42 messages in test)
 3. Summary generated (<250 words)
@@ -279,11 +294,13 @@ Email delivered to Sales Agent
 ```
 
 **Performance**:
+
 - Summary generation: ~1.8 seconds
 - Safety translation: ~1.1 seconds
 - Total flow: ~3.0 seconds end-to-end
 
 **Email Content Verified**:
+
 - ✅ Customer name and phone displayed correctly
 - ✅ Summary <250 words in Italian
 - ✅ Full conversation history included
@@ -309,13 +326,13 @@ Email delivered to Sales Agent
 
 ## 📝 Files Modified Summary
 
-| File | Lines Changed | Status | Description |
-|------|--------------|--------|-------------|
-| `backend/docs/prompts/summary-agent.md` | +280 | NEW | Summary Agent system prompt |
-| `backend/src/services/summary-agent-llm.service.ts` | +203 | NEW | Summary generation utility service |
-| `backend/src/domain/calling-functions/ContactOperator.ts` | ~250 modified | MODIFIED | Added summary flow + email sending |
-| `backend/src/application/agents/CustomerSupportAgentLLM.ts` | ~50 modified | MODIFIED | Added ContactOperator call in contactSupport CF |
-| `backend/prisma/seed.ts` | +20 | MODIFIED | Added WhatsappSettings creation with adminEmail |
+| File                                                        | Lines Changed | Status   | Description                                     |
+| ----------------------------------------------------------- | ------------- | -------- | ----------------------------------------------- |
+| `backend/docs/prompts/summary-agent.md`                     | +280          | NEW      | Summary Agent system prompt                     |
+| `backend/src/services/summary-agent-llm.service.ts`         | +203          | NEW      | Summary generation utility service              |
+| `backend/src/domain/calling-functions/ContactOperator.ts`   | ~250 modified | MODIFIED | Added summary flow + email sending              |
+| `backend/src/application/agents/CustomerSupportAgentLLM.ts` | ~50 modified  | MODIFIED | Added ContactOperator call in contactSupport CF |
+| `backend/prisma/seed.ts`                                    | +20           | MODIFIED | Added WhatsappSettings creation with adminEmail |
 
 **Total**: 2 new files, 3 modified files, ~800 lines total
 
@@ -341,6 +358,7 @@ Email delivered to Sales Agent
 ### For Customers
 
 When customer needs human assistance:
+
 1. Customer sends message like: "voglio parlare con operatore" or "assistenza umana"
 2. CustomerSupportAgent recognizes intent → triggers `contactSupport` function
 3. Chatbot immediately disabled (no more auto-responses)
@@ -350,6 +368,7 @@ When customer needs human assistance:
 ### For Sales Agents
 
 Email received contains:
+
 - **Subject**: "Richiesta operatore - [Customer Name]"
 - **Summary**: AI-generated <250 words in Italian with:
   - Customer info (name, phone, email)
@@ -362,6 +381,7 @@ Email received contains:
 ### For Admins
 
 Monitor escalations via:
+
 - Database: Check `customers.activeChatbot = false` for disabled bots
 - Logs: Search for "📧 ContactOperator" markers
 - Emails: Admin receives CC of all escalation notifications
@@ -373,16 +393,19 @@ Monitor escalations via:
 ### Optional Improvements (NOT in current scope)
 
 1. **Dashboard Integration**:
+
    - Show disabled chatbots in admin panel
    - One-click reactivation button
    - Escalation metrics (count, reasons, response time)
 
 2. **Advanced Summarization**:
+
    - Sentiment analysis (customer angry/satisfied)
    - Product recommendations based on conversation
    - Priority scoring algorithm
 
 3. **Multi-Channel Notifications**:
+
    - SMS alerts for urgent escalations
    - Slack/Teams integration
    - WhatsApp message to sales agent
@@ -401,12 +424,14 @@ Monitor escalations via:
 **Last Updated**: 19 November 2025
 
 **Known Limitations**:
+
 - Summary limited to last hour messages (configurable in ContactOperator.ts)
 - Requires valid SMTP credentials in .env
 - Email delivery depends on Gmail SMTP availability
 - No retry mechanism for failed emails (logs error, continues)
 
 **Monitoring Tips**:
+
 - Watch for "❌ [ContactOperator] Email sending FAILED" in logs
 - Check `workspace.whatsappSettings.adminEmail` is populated
 - Verify SMTP credentials in .env file
