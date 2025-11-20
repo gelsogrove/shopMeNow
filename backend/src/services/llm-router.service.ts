@@ -1058,6 +1058,7 @@ export class LLMRouterService {
         agentType: "ROUTER",
         tokensUsed: totalTokens,
         debugInfo: debugInfo, // ✅ Save complete debug information for message flow tracking
+        deliveryStatus: messageIsBlocked ? "blocked" : undefined, // 🆕 Feature 181: Mark as blocked if Security Agent blocked it
       })
 
       // ❌ TODO #1: MISSING - WhatsApp Queue Emission

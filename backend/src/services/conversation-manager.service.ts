@@ -33,7 +33,7 @@ export interface SaveMessageParams {
   functionArguments?: Record<string, any>
   tokensUsed?: number
   debugInfo?: any // ✅ Debug information for message flow tracking
-  deliveryStatus?: "not_queued" | "pending" | "sent" | "error" // ✅ WhatsApp delivery status
+  deliveryStatus?: "not_queued" | "pending" | "sent" | "error" | "blocked" // ✅ WhatsApp delivery status (blocked = Security Agent blocked it)
 }
 
 export class ConversationManager {
@@ -141,9 +141,17 @@ export class ConversationManager {
     try {
       let deliveryStatus = params.deliveryStatus || "not_queued" // Default: not queued unless enqueueing succeeds
 
+      // 🆕 Feature 181: If message is already marked as blocked, skip enqueueing entirely
+      if (deliveryStatus === "blocked") {
+        logger.warn("🚫 Message is blocked - skipping WhatsApp queue", {
+          customerId: params.customerId,
+          conversationId: params.conversationId,
+        })
+        // Fall through to save with blocked status - don't try to enqueue
+      }
       // 🚫 SKIP ENQUEUEING FOR REGISTRATION FLOW MESSAGES
       // Welcome messages from new user registration should NOT go to WhatsApp queue
-      if (params.agentType !== "REGISTRATION_FLOW") {
+      else if (params.agentType !== "REGISTRATION_FLOW") {
         // 2️⃣ Try to Add to WhatsApp Queue (for sending) - ONLY for regular assistant messages
         try {
           // Get customer phone number
