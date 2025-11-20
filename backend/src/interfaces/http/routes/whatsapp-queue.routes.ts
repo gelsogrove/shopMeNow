@@ -16,14 +16,43 @@ const controller = new WhatsAppQueueController(prisma)
 /**
  * WhatsApp Queue Routes
  * All routes require authentication and workspace validation
+ * 
+ * ⚠️ ORDER MATTERS: Specific routes MUST come before generic :id route
+ * Otherwise /:id will intercept /statistics and /status
  */
 
-// Get all queue messages for workspace
-router.get(
+// ✅ SPECIFIC ROUTES FIRST (before generic :id)
+
+// Clear entire queue (delete all messages)
+router.delete(
   "/workspaces/:workspaceId/whatsapp-queue",
   authMiddleware,
   workspaceValidationMiddleware,
-  controller.getQueueMessages.bind(controller)
+  controller.clearQueue.bind(controller)
+)
+
+// Delete single message by ID (must come before GET /:id)
+router.delete(
+  "/workspaces/:workspaceId/whatsapp-queue/:id",
+  authMiddleware,
+  workspaceValidationMiddleware,
+  controller.deleteQueueMessage.bind(controller)
+)
+
+// Get queue status (enabled/disabled)
+router.get(
+  "/workspaces/:workspaceId/whatsapp-queue/status",
+  authMiddleware,
+  workspaceValidationMiddleware,
+  controller.getQueueStatus.bind(controller)
+)
+
+// Update queue status (enable/disable)
+router.put(
+  "/workspaces/:workspaceId/whatsapp-queue/status",
+  authMiddleware,
+  workspaceValidationMiddleware,
+  controller.updateQueueStatus.bind(controller)
 )
 
 // Get queue statistics
@@ -34,7 +63,17 @@ router.get(
   controller.getStatistics.bind(controller)
 )
 
-// Get single queue message
+// ✅ GENERIC ROUTES LAST
+
+// Get all queue messages for workspace
+router.get(
+  "/workspaces/:workspaceId/whatsapp-queue",
+  authMiddleware,
+  workspaceValidationMiddleware,
+  controller.getQueueMessages.bind(controller)
+)
+
+// Get single queue message (MUST be last - most generic route)
 router.get(
   "/workspaces/:workspaceId/whatsapp-queue/:id",
   authMiddleware,

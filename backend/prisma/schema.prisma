@@ -32,6 +32,7 @@ model Workspace {
   debugMode                 Boolean           @default(true)
   apiKey                    String?
   metadata                  Json?
+  whatsappQueueEnabled      Boolean           @default(true)
   users                     UserWorkspace[]
   agentConfigs              AgentConfig[]
   agentConversationLogs     AgentConversationLog[]

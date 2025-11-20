@@ -172,4 +172,262 @@ export class WhatsAppQueueController {
       })
     }
   }
+
+  /**
+   * @swagger
+   * /api/workspaces/{workspaceId}/whatsapp-queue/{id}:
+   *   delete:
+   *     summary: Delete a single message from queue
+   *     tags: [WhatsApp Queue]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: workspaceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Message ID to delete
+   *     responses:
+   *       200:
+   *         description: Message deleted successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                 message:
+   *                   type: string
+   *       404:
+   *         description: Message not found
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden - Invalid workspace
+   */
+  async deleteQueueMessage(req: Request, res: Response): Promise<Response> {
+    try {
+      const workspaceId = (req as any).workspaceId
+      const { id } = req.params
+
+      logger.info(
+        `[WhatsAppQueueController] Deleting message ${id} from workspace ${workspaceId}`
+      )
+
+      const deleted = await this.service.deleteMessage(id, workspaceId)
+
+      if (!deleted) {
+        return res.status(404).json({
+          success: false,
+          error: "Message not found",
+        })
+      }
+
+      return res.json({
+        success: true,
+        message: "Message deleted successfully",
+      })
+    } catch (error) {
+      logger.error("[WhatsAppQueueController] Error in deleteQueueMessage:", error)
+      return res.status(500).json({
+        success: false,
+        error: "Failed to delete message",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/workspaces/{workspaceId}/whatsapp-queue:
+   *   delete:
+   *     summary: Clear entire queue (delete all messages)
+   *     tags: [WhatsApp Queue]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: workspaceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Queue cleared successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                 deletedCount:
+   *                   type: number
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden - Invalid workspace
+   */
+  async clearQueue(req: Request, res: Response): Promise<Response> {
+    try {
+      const workspaceId = (req as any).workspaceId
+
+      logger.warn(
+        `[WhatsAppQueueController] User requesting to clear entire queue for workspace: ${workspaceId}`
+      )
+
+      const deletedCount = await this.service.clearQueue(workspaceId)
+
+      return res.json({
+        success: true,
+        deletedCount,
+        message: `Deleted ${deletedCount} messages from queue`,
+      })
+    } catch (error) {
+      logger.error("[WhatsAppQueueController] Error in clearQueue:", error)
+      return res.status(500).json({
+        success: false,
+        error: "Failed to clear queue",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/workspaces/{workspaceId}/whatsapp-queue/status:
+   *   get:
+   *     summary: Get queue enabled/disabled status
+   *     tags: [WhatsApp Queue]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: workspaceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Queue status retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                 enabled:
+   *                   type: boolean
+   */
+  async getQueueStatus(req: Request, res: Response): Promise<Response> {
+    try {
+      const workspaceId = (req as any).workspaceId
+
+      logger.info(
+        `[WhatsAppQueueController] Getting queue status for workspace: ${workspaceId}`
+      )
+
+      const result = await this.service.getQueueEnabledStatus(workspaceId)
+
+      return res.json({
+        success: true,
+        ...result,
+      })
+    } catch (error) {
+      logger.error("[WhatsAppQueueController] Error in getQueueStatus:", error)
+      return res.status(500).json({
+        success: false,
+        error: "Failed to get queue status",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/workspaces/{workspaceId}/whatsapp-queue/status:
+   *   put:
+   *     summary: Enable or disable the queue
+   *     tags: [WhatsApp Queue]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: workspaceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               enabled:
+   *                 type: boolean
+   *             required:
+   *               - enabled
+   *     responses:
+   *       200:
+   *         description: Queue status updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                 enabled:
+   *                   type: boolean
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden - Invalid workspace
+   */
+  async updateQueueStatus(req: Request, res: Response): Promise<Response> {
+    try {
+      const workspaceId = (req as any).workspaceId
+      const { enabled } = req.body
+
+      console.log(`🔍 [updateQueueStatus] workspaceId: ${workspaceId}, enabled: ${enabled}`)
+
+      if (typeof enabled !== "boolean") {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid request",
+          message: "enabled must be a boolean",
+        })
+      }
+
+      logger.info(
+        `[WhatsAppQueueController] Updating queue status for workspace ${workspaceId}: ${
+          enabled ? "ENABLED" : "DISABLED"
+        }`
+      )
+
+      const result = await this.service.updateQueueStatus(workspaceId, enabled)
+
+      return res.json({
+        success: true,
+        ...result,
+      })
+    } catch (error) {
+      logger.error("[WhatsAppQueueController] Error in updateQueueStatus:", error)
+      console.error(`🔴 [updateQueueStatus] Error details:`, error)
+      return res.status(500).json({
+        success: false,
+        error: "Failed to update queue status",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
 }

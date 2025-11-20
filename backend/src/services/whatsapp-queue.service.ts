@@ -321,4 +321,128 @@ export class WhatsAppQueueService {
       throw new Error("Failed to get queue statistics")
     }
   }
+
+  /**
+   * Clear all messages from queue for a workspace
+   * @param workspaceId Workspace ID
+   * @returns Number of deleted messages
+   */
+  async clearQueue(workspaceId: string): Promise<number> {
+    try {
+      logger.warn(
+        `[WhatsAppQueueService] Clearing entire queue for workspace: ${workspaceId}`
+      )
+
+      const result = await this.prisma.whatsAppQueue.deleteMany({
+        where: { workspaceId },
+      })
+
+      logger.info(
+        `[WhatsAppQueueService] Deleted ${result.count} messages from queue`
+      )
+
+      return result.count
+    } catch (error) {
+      logger.error(`[WhatsAppQueueService] Error in clearQueue:`, error)
+      throw new Error("Failed to clear queue")
+    }
+  }
+
+  /**
+   * Delete a single message from queue
+   * @param messageId Message ID to delete
+   * @param workspaceId Workspace ID (for isolation)
+   * @returns True if deleted, false if not found
+   */
+  async deleteMessage(messageId: string, workspaceId: string): Promise<boolean> {
+    try {
+      logger.info(
+        `[WhatsAppQueueService] Deleting message ${messageId} from workspace ${workspaceId}`
+      )
+
+      const result = await this.prisma.whatsAppQueue.deleteMany({
+        where: {
+          id: messageId,
+          workspaceId, // Ensure workspace isolation
+        },
+      })
+
+      if (result.count === 0) {
+        logger.warn(
+          `[WhatsAppQueueService] Message ${messageId} not found in workspace ${workspaceId}`
+        )
+        return false
+      }
+
+      logger.info(
+        `[WhatsAppQueueService] Successfully deleted message ${messageId}`
+      )
+      return true
+    } catch (error) {
+      logger.error(`[WhatsAppQueueService] Error in deleteMessage:`, error)
+      throw new Error("Failed to delete message")
+    }
+  }
+
+  /**
+   * Get queue enabled/disabled status for a workspace
+   * @param workspaceId Workspace ID
+   * @returns Queue enabled status
+   */
+  async getQueueEnabledStatus(workspaceId: string): Promise<{ enabled: boolean }> {
+    try {
+      console.log(`🔍 [WhatsAppQueueService.getQueueEnabledStatus] workspaceId: ${workspaceId}`)
+
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { whatsappQueueEnabled: true },
+      })
+
+      if (!workspace) {
+        throw new Error("Workspace not found")
+      }
+
+      console.log(`✅ [WhatsAppQueueService.getQueueEnabledStatus] enabled: ${workspace.whatsappQueueEnabled}`)
+
+      return { enabled: workspace.whatsappQueueEnabled }
+    } catch (error) {
+      console.error(`🔴 [WhatsAppQueueService.getQueueEnabledStatus] Error:`, error)
+      logger.error(`[WhatsAppQueueService] Error in getQueueEnabledStatus:`, error)
+      throw new Error("Failed to get queue status")
+    }
+  }
+
+  /**
+   * Update queue enabled/disabled status for a workspace
+   * @param workspaceId Workspace ID
+   * @param enabled Enable or disable queue
+   * @returns Updated workspace
+   */
+  async updateQueueStatus(
+    workspaceId: string,
+    enabled: boolean
+  ): Promise<{ enabled: boolean }> {
+    try {
+      console.log(`🔍 [WhatsAppQueueService.updateQueueStatus] workspaceId: ${workspaceId}, enabled: ${enabled}`)
+      
+      logger.info(
+        `[WhatsAppQueueService] Updating queue status for workspace ${workspaceId}: ${
+          enabled ? "ENABLED" : "DISABLED"
+        }`
+      )
+
+      const updated = await this.prisma.workspace.update({
+        where: { id: workspaceId },
+        data: { whatsappQueueEnabled: enabled },
+      })
+
+      console.log(`✅ [WhatsAppQueueService.updateQueueStatus] Updated workspace:`, updated.id)
+
+      return { enabled }
+    } catch (error) {
+      console.error(`🔴 [WhatsAppQueueService.updateQueueStatus] Error:`, error)
+      logger.error(`[WhatsAppQueueService] Error in updateQueueStatus:`, error)
+      throw new Error("Failed to update queue status")
+    }
+  }
 }

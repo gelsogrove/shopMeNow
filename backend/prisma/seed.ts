@@ -139,6 +139,7 @@ async function main() {
       description: "Italian Gourmet Food E-commerce",
       url: workspaceSettings.url || "https://altrogusto.com",
       channelStatus: true, // ✅ Feature 126: Chatbot enabled by default
+      whatsappQueueEnabled: true, // ✅ Queue enabled by default
       debugMode:
         workspaceSettings.debugMode !== undefined
           ? workspaceSettings.debugMode

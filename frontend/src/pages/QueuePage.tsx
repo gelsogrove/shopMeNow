@@ -14,7 +14,18 @@ import {
 import { useWorkspace } from "@/hooks/use-workspace"
 import { logger } from "@/lib/logger"
 import { api } from "@/services/api"
-import { ListChecks } from "lucide-react"
+import { toast } from "@/lib/toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Switch } from "@/components/ui/switch"
+import { ListChecks, Trash2, AlertTriangle } from "lucide-react"
 import { useEffect, useState } from "react"
 
 interface QueueMessage {
@@ -38,6 +49,12 @@ export function QueuePage() {
   const [messages, setMessages] = useState<QueueMessage[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
+  const [isQueueEnabled, setIsQueueEnabled] = useState(true)
+  const [filterMode, setFilterMode] = useState<"all" | "pending" | "error">("all")
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [messageToDelete, setMessageToDelete] = useState<QueueMessage | null>(null)
+  const [showDeleteMessageDialog, setShowDeleteMessageDialog] = useState(false)
 
   // Auto-refresh every 5 seconds
   useEffect(() => {
@@ -61,6 +78,27 @@ export function QueuePage() {
     const interval = setInterval(fetchMessages, 5000) // Refresh every 5s
 
     return () => clearInterval(interval)
+  }, [workspace?.id])
+
+  // Load queue enabled status on mount
+  useEffect(() => {
+    if (!workspace?.id) return
+
+    const fetchQueueStatus = async () => {
+      try {
+        const response = await api.get(
+          `/workspaces/${workspace.id}/whatsapp-queue/status`
+        )
+        if (response.data.success) {
+          setIsQueueEnabled(response.data.enabled)
+          logger.info(`Queue status loaded: ${response.data.enabled ? "ENABLED" : "DISABLED"}`)
+        }
+      } catch (error) {
+        logger.error("Failed to fetch queue status:", error)
+      }
+    }
+
+    fetchQueueStatus()
   }, [workspace?.id])
 
   const getStatusBadge = (status: QueueMessage["status"]) => {
@@ -92,13 +130,96 @@ export function QueuePage() {
     }
   }
 
-  // Filter messages by search term
-  const filteredMessages = messages.filter(
-    (msg) =>
+  // Filter messages by search term AND filter mode
+  const filteredMessages = messages.filter((msg) => {
+    const matchesSearch =
       msg.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       msg.phoneNumber.includes(searchTerm) ||
       msg.messageContent.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+
+    if (filterMode === "all") return matchesSearch
+    if (filterMode === "pending") return matchesSearch && msg.status === "pending"
+    if (filterMode === "error") return matchesSearch && msg.status === "error"
+    return matchesSearch
+  })
+
+  // Handle clearing all queue messages
+  const handleClearQueue = async () => {
+    if (!workspace?.id) return
+
+    try {
+      setIsDeleting(true)
+      const response = await api.delete(`/workspaces/${workspace.id}/whatsapp-queue`)
+      
+      if (response.data.success) {
+        setMessages([])
+        toast.success("Queue cleared successfully", { duration: 2000 })
+        setShowDeleteDialog(false)
+      } else {
+        toast.error(response.data.error || "Failed to clear queue", { duration: 1000 })
+      }
+    } catch (error) {
+      logger.error("Error clearing queue:", error)
+      toast.error("Failed to clear queue", { duration: 1000 })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  // Handle toggling queue enabled/disabled
+  const handleToggleQueue = async (enabled: boolean) => {
+    if (!workspace?.id) return
+
+    try {
+      const response = await api.put(`/workspaces/${workspace.id}/whatsapp-queue/status`, {
+        enabled,
+      })
+
+      if (response.data.success) {
+        setIsQueueEnabled(enabled)
+        toast.success(
+          `Queue ${enabled ? "enabled" : "disabled"} successfully`,
+          { duration: 2000 }
+        )
+      } else {
+        toast.error(
+          response.data.error || "Failed to update queue status",
+          { duration: 1000 }
+        )
+        setIsQueueEnabled(!enabled) // Revert on error
+      }
+    } catch (error) {
+      logger.error("Error updating queue status:", error)
+      toast.error("Failed to update queue status", { duration: 1000 })
+      setIsQueueEnabled(!enabled) // Revert on error
+    }
+  }
+
+  // Handle deleting a single message
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!workspace?.id) return
+
+    try {
+      setIsDeleting(true)
+      const response = await api.delete(
+        `/workspaces/${workspace.id}/whatsapp-queue/${messageId}`
+      )
+
+      if (response.data.success) {
+        setMessages(messages.filter((m) => m.id !== messageId))
+        toast.success("Message deleted successfully", { duration: 2000 })
+        setShowDeleteMessageDialog(false)
+        setMessageToDelete(null)
+      } else {
+        toast.error(response.data.error || "Failed to delete message", { duration: 1000 })
+      }
+    } catch (error) {
+      logger.error("Error deleting message:", error)
+      toast.error("Failed to delete message", { duration: 1000 })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   return (
     <PageLayout>
@@ -118,17 +239,70 @@ export function QueuePage() {
               </p>
             </div>
           </div>
+          <div className="flex items-center gap-4">
+            {/* Queue Status Toggle */}
+            <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-lg border">
+              <span className="text-sm font-medium text-gray-700">
+                Queue: {isQueueEnabled ? "Active" : "Disabled"}
+              </span>
+              <Switch
+                checked={isQueueEnabled}
+                onCheckedChange={handleToggleQueue}
+                title={isQueueEnabled ? "Disable queue" : "Enable queue"}
+              />
+            </div>
+
+            {/* Clear Queue Button */}
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setShowDeleteDialog(true)}
+              className="flex items-center gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              Clear Queue
+            </Button>
+          </div>
         </div>
 
-        {/* Search */}
+        {/* Search and Filters */}
         <Card>
-          <CardContent className="pt-6">
-            <Input
-              placeholder="Search by customer, phone, or message..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-md"
-            />
+          <CardContent className="pt-6 space-y-4">
+            <div className="flex gap-4">
+              <Input
+                placeholder="Search by customer, phone, or message..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="flex-1"
+              />
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="flex gap-2">
+              <Button
+                variant={filterMode === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterMode("all")}
+              >
+                All ({messages.length})
+              </Button>
+              <Button
+                variant={filterMode === "pending" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterMode("pending")}
+                className={filterMode === "pending" ? "bg-yellow-600 hover:bg-yellow-700" : ""}
+              >
+                Pending ({messages.filter((m) => m.status === "pending").length})
+              </Button>
+              <Button
+                variant={filterMode === "error" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterMode("error")}
+                className={filterMode === "error" ? "bg-red-600 hover:bg-red-700" : ""}
+              >
+                Error ({messages.filter((m) => m.status === "error").length})
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -154,6 +328,7 @@ export function QueuePage() {
                     <TableHead>Message</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Created</TableHead>
+                    <TableHead className="w-16 text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -200,6 +375,19 @@ export function QueuePage() {
                           })}
                         </div>
                       </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setMessageToDelete(msg)
+                            setShowDeleteMessageDialog(true)
+                          }}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -208,6 +396,69 @@ export function QueuePage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Delete Queue Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <AlertTriangle className="h-6 w-6 text-red-600" />
+              </div>
+              <AlertDialogTitle>Clear Entire Queue?</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="mt-4">
+              This action will permanently delete <strong>all {messages.length} messages</strong> from the queue, including pending and error messages.
+              <br />
+              <br />
+              <strong>⚠️ This cannot be undone.</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleClearQueue}
+            disabled={isDeleting}
+            className="bg-red-600 hover:bg-red-700"
+          >
+            {isDeleting ? "Clearing..." : "Delete All Messages"}
+          </AlertDialogAction>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Single Message Dialog */}
+      <AlertDialog open={showDeleteMessageDialog} onOpenChange={setShowDeleteMessageDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <AlertTriangle className="h-6 w-6 text-red-600" />
+              </div>
+              <AlertDialogTitle>Delete Message?</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="mt-4">
+              {messageToDelete && (
+                <>
+                  You are about to delete the message from <strong>{messageToDelete.customer.name}</strong> ({messageToDelete.phoneNumber}).
+                  <br />
+                  <br />
+                  <div className="bg-gray-50 p-3 rounded-md my-3 text-sm text-gray-700">
+                    "{messageToDelete.messageContent.substring(0, 150)}{messageToDelete.messageContent.length > 150 && "..."}"
+                  </div>
+                  <strong>⚠️ This cannot be undone.</strong>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => messageToDelete && handleDeleteMessage(messageToDelete.id)}
+            disabled={isDeleting}
+            className="bg-red-600 hover:bg-red-700"
+          >
+            {isDeleting ? "Deleting..." : "Delete Message"}
+          </AlertDialogAction>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageLayout>
   )
 }

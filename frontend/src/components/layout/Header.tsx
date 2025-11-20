@@ -14,8 +14,10 @@ import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import {
   ArrowLeftRight,
+  BarChart3,
   Bot,
   CreditCard,
+  ListChecks,
   LogOut,
   Phone,
   Settings,
@@ -217,6 +219,20 @@ export function Header() {
               >
                 <Bot className="mr-3 h-5 w-5" />
                 <span>Agents Configuration</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="p-4 text-lg cursor-pointer"
+                onClick={() => navigate("/analytics")}
+              >
+                <BarChart3 className="mr-3 h-5 w-5" />
+                <span>Analytics</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="p-4 text-lg cursor-pointer"
+                onClick={() => navigate("/queue")}
+              >
+                <ListChecks className="mr-3 h-5 w-5" />
+                <span>WhatsApp Queue</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem

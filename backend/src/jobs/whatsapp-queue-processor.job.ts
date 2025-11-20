@@ -40,14 +40,17 @@ export function startWhatsAppQueueProcessor() {
     const startTime = Date.now()
 
     try {
-      // Get all active workspaces
+      // Get all active workspaces WHERE queue is enabled
       const workspaces = await prisma.workspace.findMany({
-        where: { isActive: true },
+        where: { 
+          isActive: true,
+          whatsappQueueEnabled: true, // ✅ Only process if queue is ENABLED
+        },
         select: { id: true, name: true },
       })
 
       if (workspaces.length === 0) {
-        logger.debug("[WhatsApp Queue Processor] No active workspaces found")
+        logger.debug("[WhatsApp Queue Processor] No active workspaces with queue enabled found")
         return
       }
 
