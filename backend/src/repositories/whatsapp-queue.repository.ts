@@ -45,7 +45,7 @@ export class WhatsAppQueueRepository {
           },
         },
         orderBy: {
-          createdAt: "asc", // FIFO: oldest first
+          createdAt: "desc", // Most recent first (descending order)
         },
       })
     } catch (error) {

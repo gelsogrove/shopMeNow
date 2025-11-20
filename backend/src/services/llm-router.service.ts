@@ -44,7 +44,6 @@ import { OrderTrackingAgentLLM } from "../application/agents/OrderTrackingAgentL
 import { ProductSearchAgentLLM } from "../application/agents/ProductSearchAgentLLM"
 import { ProfileManagementAgentLLM } from "../application/agents/ProfileManagementAgentLLM"
 import { SafetyTranslationAgent } from "../application/agents/SafetyTranslationAgent"
-import { SecurityAgent } from "../application/agents/SecurityAgent"
 import { TranslationAgent } from "../application/agents/TranslationAgent"
 import { LinkReplacementService } from "../application/services/link-replacement.service"
 import { getFunctionsForRouter } from "../config/agent-functions"
@@ -181,7 +180,6 @@ export class LLMRouterService {
   private searchConversationRepo: SearchConversationRepository
   private promptProcessor: PromptProcessorService // 🆕 Feature 124: Customer variables replacement
   private safetyAgent: SafetyTranslationAgent // Kept for backwards compatibility with SAFETY_TRANSLATION
-  private securityAgent: SecurityAgent // 🆕 Feature 181: Security validation
   private translationAgent: TranslationAgent // 🆕 Feature 181: Translation layer
   private openRouterApiKey: string
   private openRouterBaseUrl = "https://openrouter.ai/api/v1"
@@ -194,8 +192,7 @@ export class LLMRouterService {
     this.conversationManager = new ConversationManager(prisma, 10) // 10 minutes window
     this.functionExecutor = new FunctionExecutor(prisma)
     this.safetyAgent = new SafetyTranslationAgent(prisma)
-    this.securityAgent = new SecurityAgent(prisma) // 🆕 Feature 181
-    this.translationAgent = new TranslationAgent(prisma) // 🆕 Feature 181
+    this.translationAgent = new TranslationAgent(prisma) // 🆕 Feature 181: Translation layer in routing
     this.linkReplacementService = new LinkReplacementService()
     this.searchConversationRepo = new SearchConversationRepository()
     this.promptProcessor = new PromptProcessorService() // 🆕 Feature 124: Inject for variable replacement
@@ -938,25 +935,41 @@ export class LLMRouterService {
         responsePreview: responseWithLinks.substring(0, 150),
       })
 
-      // STEP 5: Apply Security & Translation Layer (🆕 Feature 181: Split into 2 agents)
-      logger.info("Step 5: Applying Security & Translation Layer")
-      const securityTranslationResult =
-        await this.processResponseThroughSecurityAndTranslation(params, responseWithLinks)
+      // STEP 5: Apply Translation Layer (🆕 Feature 181: Security moved to WhatsApp Queue only)
+      logger.info("Step 5: Applying Translation Layer")
+      const translationResult = await this.translationAgent.process({
+        workspaceId: params.workspaceId,
+        message: responseWithLinks,
+        targetLanguage: params.customerLanguage || "it",
+        customerName: params.customerName,
+      })
 
-      const finalResponse = securityTranslationResult.finalResponse
-      const messageIsBlocked = securityTranslationResult.isBlocked
+      const finalResponse = translationResult.message
+      const translationTokens = translationResult.tokensUsed || 0
 
-      totalTokens += securityTranslationResult.securityTokens
-      totalTokens += securityTranslationResult.translationTokens
+      totalTokens += translationTokens
 
-      // Add Security + Translation debug steps
-      debugInfo.steps.push(...securityTranslationResult.debugSteps)
-
-      if (messageIsBlocked) {
-        logger.warn("⚠️ Response blocked by Security Agent", {
-          reason: securityTranslationResult.blockedReason,
-        })
-      }
+      // Add Translation debug step
+      const translationTimestamp = new Date().toISOString()
+      debugInfo.steps.push({
+        type: "safety", // Use safety type for translation (post-processing)
+        agent: "Translation Agent",
+        model: "openai/gpt-4o-mini",
+        temperature: 0.1,
+        timestamp: translationTimestamp,
+        input: {
+          previousResponse: responseWithLinks,
+        },
+        output: {
+          translatedText: translationResult.message,
+          decision: "translated",
+        },
+        tokenUsage: {
+          promptTokens: 0,
+          completionTokens: translationTokens,
+          totalTokens: translationTokens,
+        },
+      })
 
       console.log("🟢 CONSOLE: AFTER SECURITY CHECK - continuing to URL cleanup")
 
@@ -999,7 +1012,7 @@ export class LLMRouterService {
         totalTokens,
         iterations: result.iterations,
         linksReplaced: tokensDetected.length,
-        securityApproved: !messageIsBlocked,
+        translated: true,
         urlsCleaned: finalCleanResponse !== finalResponse,
       })
 
@@ -1058,7 +1071,6 @@ export class LLMRouterService {
         agentType: "ROUTER",
         tokensUsed: totalTokens,
         debugInfo: debugInfo, // ✅ Save complete debug information for message flow tracking
-        deliveryStatus: messageIsBlocked ? "blocked" : undefined, // 🆕 Feature 181: Mark as blocked if Security Agent blocked it
       })
 
       // ❌ TODO #1: MISSING - WhatsApp Queue Emission
@@ -1093,7 +1105,6 @@ export class LLMRouterService {
         executionTimeMs,
         wasFAQ: false,
         debugInfo: debugInfo, // ✅ Return same debugInfo object that was saved
-        isBlocked: messageIsBlocked, // 🆕 Feature 181: Flag for blocked messages
       }
     } catch (error) {
       console.log("🔴🔴🔴 CATCH BLOCK REACHED - ERROR:", error)
@@ -2735,127 +2746,5 @@ export class LLMRouterService {
     return "1 ora" // Fallback
   }
 
-  /**
-   * 🆕 Feature 181: Process response through Security + Translation agents
-   * 
-   * Flow:
-   * 1. Security Agent: Check for dangerous content (SQL injection, XSS, offensive language)
-   * 2. If BLOCKED: Return isBlocked=true, don't enqueue
-   * 3. If SAFE: Pass to Translation Agent to translate to customer language
-   * 4. Return final response
-   * 
-   * @param params - Message routing parameters
-   * @param response - Response text to process
-   * @returns Processed response with security + translation applied
-   */
-  private async processResponseThroughSecurityAndTranslation(
-    params: RouteMessageParams,
-    response: string
-  ): Promise<{
-    finalResponse: string
-    isBlocked: boolean
-    blockedReason?: string
-    securityTokens: number
-    translationTokens: number
-    debugSteps: DebugStep[]
-  }> {
-    const debugSteps: DebugStep[] = []
-    let securityTokens = 0
-    let translationTokens = 0
-
-    // STEP 1: Call Security Agent
-    const securityTimestamp = new Date().toISOString()
-    logger.info("🛡️ Step 1: Calling Security Agent")
-    
-    const securityResult = await this.securityAgent.process({
-      workspaceId: params.workspaceId,
-      message: response,
-      customerName: params.customerName,
-      customerId: params.customerId,
-    })
-
-    securityTokens = securityResult.tokensUsed || 0
-
-    debugSteps.push({
-      type: "safety",
-      agent: "Security Agent",
-      timestamp: securityTimestamp,
-      input: {
-        textToValidate: response,
-      },
-      output: {
-        safe: securityResult.safe,
-        decision: securityResult.safe ? "approved" : "blocked",
-      },
-      tokenUsage: {
-        promptTokens: 0,
-        completionTokens: securityTokens,
-        totalTokens: securityTokens,
-      },
-      safe: securityResult.safe,
-      blocked: !securityResult.safe,
-      blockedReason: securityResult.blockedReason,
-    })
-
-    // If BLOCKED, return immediately - don't send, don't translate
-    if (!securityResult.safe) {
-      logger.warn("🚫 Message BLOCKED by Security Agent", {
-        reason: securityResult.blockedReason,
-      })
-      return {
-        finalResponse: securityResult.message, // User-facing message about why blocked
-        isBlocked: true,
-        blockedReason: securityResult.blockedReason,
-        securityTokens,
-        translationTokens: 0,
-        debugSteps,
-      }
-    }
-
-    // STEP 2: If SAFE, call Translation Agent
-    const translationTimestamp = new Date().toISOString()
-    logger.info("🌍 Step 2: Calling Translation Agent")
-
-    const translationResult = await this.translationAgent.process({
-      workspaceId: params.workspaceId,
-      message: response,
-      targetLanguage: params.customerLanguage || "it",
-      customerName: params.customerName,
-    })
-
-    translationTokens = translationResult.tokensUsed || 0
-
-    debugSteps.push({
-      type: "safety", // Use "safety" type for translation as well (both are post-processing)
-      agent: "Translation Agent",
-      timestamp: translationTimestamp,
-      input: {
-        textToValidate: response,
-      },
-      output: {
-        translatedText: translationResult.message,
-        decision: "translated",
-      },
-      tokenUsage: {
-        promptTokens: 0,
-        completionTokens: translationTokens,
-        totalTokens: translationTokens,
-      },
-      language: params.customerLanguage || "it",
-    })
-
-    logger.info("✅ Message processed through Security + Translation", {
-      safe: securityResult.safe,
-      translated: translationResult.translated,
-      tokenCount: securityTokens + translationTokens,
-    })
-
-    return {
-      finalResponse: translationResult.message,
-      isBlocked: false,
-      securityTokens,
-      translationTokens,
-      debugSteps,
-    }
-  }
 }
+

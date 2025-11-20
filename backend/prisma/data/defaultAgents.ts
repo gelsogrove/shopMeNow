@@ -176,26 +176,7 @@ export const defaultAgents = (
   },
 
   // ====================================================================
-  // SECURITY AGENT (order: 98) - Security validation and content moderation
-  // ====================================================================
-  {
-    workspaceId,
-    name: "Security Agent",
-    type: "SECURITY" as AgentType,
-    icon: "Shield",
-    description:
-      "Security validation: detects dangerous content, SQL injection, XSS, offensive language. Blocks unsafe messages completely (no send, shows 🚫 icon)",
-    systemPrompt: loadPrompt("security-agent.md"),
-    model: "openai/gpt-4o-mini",
-    temperature: 0, // Zero temperature = deterministic security checks
-    maxTokens: 500, // Security checks don't need long responses
-    order: 98, // Run BEFORE Translation Agent
-    isActive: true,
-    availableFunctions: getAgentFunctionNames("SECURITY"),
-  },
-
-  // ====================================================================
-  // TRANSLATION AGENT (order: 99) - Translate to customer language
+  // TRANSLATION AGENT (order: 7) - Translate to customer language
   // ====================================================================
   {
     workspaceId,
@@ -208,8 +189,27 @@ export const defaultAgents = (
     model: "openai/gpt-4o-mini",
     temperature: 0.1, // Very low for consistency
     maxTokens: 1024,
-    order: 99, // Last agent in pipeline
+    order: 7, // After Profile Management (6)
     isActive: true,
     availableFunctions: getAgentFunctionNames("TRANSLATION"),
+  },
+
+  // ====================================================================
+  // SECURITY AGENT (order: 99) - Security validation and content moderation
+  // ====================================================================
+  {
+    workspaceId,
+    name: "Security Agent",
+    type: "SECURITY" as AgentType,
+    icon: "Shield",
+    description:
+      "Security validation: detects dangerous content, SQL injection, XSS, offensive language. Blocks unsafe messages completely (no send, shows 🚫 icon)",
+    systemPrompt: loadPrompt("security-agent.md"),
+    model: "openai/gpt-4o-mini",
+    temperature: 0, // Zero temperature = deterministic security checks
+    maxTokens: 500, // Security checks don't need long responses
+    order: 99, // Last - final security check before sending
+    isActive: true,
+    availableFunctions: getAgentFunctionNames("SECURITY"),
   },
 ]
