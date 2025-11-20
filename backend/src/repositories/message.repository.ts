@@ -143,9 +143,16 @@ export class MessageRepository {
    *
    * @param chatSessionId The chat session ID
    * @param workspaceId Optional workspace ID to filter
-   * @returns The messages for the chat session (all messages, blacklist status affects only new message sending)
+   * @param page Page number for pagination (1-based, default: 1)
+   * @param limit Number of messages per page (default: 40)
+   * @returns Paginated messages with metadata (hasMore, total, page, limit)
    */
-  async getChatSessionMessages(chatSessionId: string, workspaceId: string) {
+  async getChatSessionMessages(
+    chatSessionId: string,
+    workspaceId: string,
+    page: number = 1,
+    limit: number = 50
+  ) {
     try {
       // 🔐 SECURITY: workspaceId is MANDATORY for proper isolation
       if (!workspaceId) {
@@ -176,7 +183,13 @@ export class MessageRepository {
         logger.warn(
           `getChatSessionMessages: Chat session ${chatSessionId} not found${workspaceId ? ` in workspace ${workspaceId}` : ""}`
         )
-        return []
+        return {
+          data: [],
+          hasMore: false,
+          total: 0,
+          page,
+          limit,
+        }
       }
 
       // Log blacklist status but still return messages (blacklist only affects new message sending)
@@ -202,6 +215,19 @@ export class MessageRepository {
       // ✅ FIXED: Query conversationMessage table (NEW) instead of message table (OLD)
       // This fixes the issue where messages saved by LLMRouter were not visible in frontend
       // 🚨 CRITICAL: Exclude "function" role messages - they are internal LLM context only!
+      
+      // 📋 PAGINATION: Calculate skip and get total count
+      const skip = (page - 1) * limit
+      
+      const total = await this.prisma.conversationMessage.count({
+        where: {
+          conversationId: chatSessionId,
+          role: {
+            not: "function",
+          },
+        },
+      })
+      
       const messages = await this.prisma.conversationMessage.findMany({
         where: {
           conversationId: chatSessionId,
@@ -210,8 +236,10 @@ export class MessageRepository {
           },
         },
         orderBy: {
-          createdAt: "asc",
+          createdAt: "desc",
         },
+        skip,
+        take: limit,
         select: {
           id: true,
           createdAt: true,
@@ -272,7 +300,9 @@ export class MessageRepository {
 
       // Parse debugInfo and attach billing data
       // ✅ Map conversationMessage format to frontend expected format
-      const parsedMessages = messages.map((message) => {
+      // 🔄 Reverse messages so newest is at bottom (for chat UI)
+      const reversedMessages = messages.reverse()
+      const parsedMessages = reversedMessages.map((message) => {
         // Convert role (user/assistant/function) to direction (INBOUND/OUTBOUND)
         const direction = message.role === "user" ? "INBOUND" : "OUTBOUND"
 
@@ -421,7 +451,16 @@ export class MessageRepository {
         return parsed
       })
 
-      return parsedMessages
+      // 📋 Return paginated response with metadata
+      const hasMore = skip + limit < total
+
+      return {
+        data: parsedMessages,
+        hasMore,
+        total,
+        page,
+        limit,
+      }
     } catch (error) {
       logger.error("Error getting chat session messages:", error)
       throw new Error("Failed to get chat session messages")

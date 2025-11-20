@@ -1062,31 +1062,39 @@ async function main() {
       },
     })
 
-    // 💬 Create conversation messages
+    // 💬 Create conversation messages - WITH 500 MESSAGES FOR TESTING INFINITE SCROLL
+    console.log(`   Creating 500 messages for John Smith to test infinite scroll...`)
+    
+    const messages = []
+    const baseTime = Date.now() - 1000 * 60 * 60 * 24 * 30 // Start from 30 days ago
+    
+    // Generate 500 messages alternating between user and assistant
+    for (let i = 0; i < 500; i++) {
+      const isUserMessage = i % 2 === 0
+      const messageTime = new Date(baseTime + (i * 1000 * 60 * 5)) // Each message 5 minutes apart
+      
+      messages.push({
+        conversationId: chatSession4.id,
+        workspaceId: workspace.id,
+        customerId: englishCustomer.id,
+        role: isUserMessage ? "user" : "assistant",
+        content: isUserMessage 
+          ? `Customer message #${i + 1}: Can I ask a question about your products?`
+          : `Assistant response #${i + 1}: Of course! Feel free to ask me anything. I'm here to help you with product information, shipping details, and more.`,
+        debugInfo: isUserMessage ? undefined : JSON.stringify({
+          agentSelected: "GENERAL_INQUIRY",
+          tokensUsed: Math.floor(Math.random() * 100) + 20,
+        }),
+        createdAt: messageTime,
+      })
+    }
+    
     await prisma.conversationMessage.createMany({
-      data: [
-        {
-          conversationId: chatSession4.id,
-          workspaceId: workspace.id,
-          customerId: englishCustomer.id,
-          role: "user",
-          content: "Hello! Do you ship internationally?",
-          createdAt: new Date(Date.now() - 1000 * 60 * 5),
-        },
-        {
-          conversationId: chatSession4.id,
-          workspaceId: workspace.id,
-          customerId: englishCustomer.id,
-          role: "assistant",
-          content:
-            "Hello! Yes, we ship worldwide! 🌍\n\n**Shipping options**:\n- Europe: 3-5 days (€9.90)\n- USA/Canada: 7-10 days (€19.90)\n\nWould you like to order?",
-          debugInfo: JSON.stringify({
-            agentSelected: "GENERAL_INQUIRY",
-          }),
-          createdAt: new Date(Date.now() - 1000 * 60 * 4),
-        },
-      ],
+      data: messages,
     })
+    
+    console.log(`   ✅ Created 500 messages for John Smith`)
+
   } else {
     console.log(`   ⚠️  English customer not found!`)
   }

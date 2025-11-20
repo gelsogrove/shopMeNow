@@ -537,14 +537,14 @@ export class CustomersController {
 
       // Logging dettagliato per audit
       logger.info(
-        `[TASK3] CHATBOT_CONTROL_CHANGED: customer-${customerId} activeChatbot=${activeChatbot} by user-${req.user?.id || req.user?.userId || "unknown"}`,
+        `[TASK3] CHATBOT_CONTROL_CHANGED: customer-${customerId} activeChatbot=${activeChatbot} by user-${(req as any).user?.id || (req as any).user?.userId || "unknown"}`,
         {
           customerId,
           workspaceId,
           previousState: existingCustomer.activeChatbot,
           newState: activeChatbot,
           reason: reason || "No reason provided",
-          changedBy: req.user?.id || req.user?.userId || "unknown",
+          changedBy: (req as any).user?.id || (req as any).user?.userId || "unknown",
           timestamp: new Date().toISOString(),
         }
       )
@@ -563,7 +563,7 @@ export class CustomersController {
           newState: activeChatbot,
           reason: reason || null,
           changedAt: new Date().toISOString(),
-          changedBy: req.user?.id || req.user?.userId || "unknown",
+          changedBy: (req as any).user?.id || (req as any).user?.userId || "unknown",
         },
         message: activeChatbot
           ? "Chatbot control activated - AI will handle messages"

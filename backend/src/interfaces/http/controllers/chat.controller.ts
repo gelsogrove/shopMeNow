@@ -150,6 +150,7 @@ export class ChatController {
     try {
       const { sessionId } = req.params
       const workspaceId = (req as any).workspaceId
+      const { page = 1, limit = 50 } = req.query
 
       if (!sessionId) {
         res.status(400).json({
@@ -159,13 +160,19 @@ export class ChatController {
         return
       }
 
+      // 📋 Parse and validate pagination params
+      const pageNum = Math.max(1, parseInt(String(page)) || 1)
+      const limitNum = Math.min(100, Math.max(1, parseInt(String(limit)) || 50))
+
       // Pass the workspaceId to the repository method for proper filtering
-      const messages = await this.messageRepository.getChatSessionMessages(
+      const result = await this.messageRepository.getChatSessionMessages(
         sessionId,
-        workspaceId
+        workspaceId,
+        pageNum,
+        limitNum
       )
 
-      if (messages.length === 0 && workspaceId) {
+      if (result.data.length === 0 && workspaceId) {
         // If no messages found and workspace ID was provided, it could mean the chat session doesn't belong to this workspace
         res.status(404).json({
           success: false,
@@ -178,9 +185,14 @@ export class ChatController {
       // Mark messages as read when they are viewed
       await this.messageRepository.markMessagesAsRead(sessionId, workspaceId)
 
+      // 📋 Return paginated response with metadata
       res.status(200).json({
         success: true,
-        data: messages,
+        data: result.data,
+        hasMore: result.hasMore,
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
       })
     } catch (error) {
       logger.error("Error getting chat messages:", error)

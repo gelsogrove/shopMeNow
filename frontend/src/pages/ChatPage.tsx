@@ -13,6 +13,7 @@ import { useCustomerEdit } from "@/contexts/CustomerEditContext"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { useChatSync } from "@/hooks/useChatSync"
 import { useCurrentChatMessages } from "@/hooks/useCurrentChatMessages"
+import { useLoadMoreMessages } from "@/hooks/useLoadMoreMessages"
 import { useWebSocket } from "@/hooks/useWebSocket"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
@@ -329,9 +330,22 @@ export function ChatPage() {
     [searchParams, setSearchParams, queryClient]
   )
 
-  // Polling with messages
-  const { data: polledMessages = [], isLoading: isLoadingMessages } =
-    useCurrentChatMessages(selectedChat?.sessionId || null, !!selectedChat)
+  // 🔄 Use useLoadMoreMessages hook for manual pagination with "Load More" button
+  const {
+    messages: loadMoreMessages = [],
+    hasMore,
+    total,
+    page,
+    limit,
+    isLoading: isLoadingMessages,
+    isFetching,
+    error: messagesError,
+    loadMore,
+    refetch: refetchMessages,
+  } = useLoadMoreMessages(selectedChat?.sessionId || "", !!selectedChat)
+
+  // 🔄 Use loaded messages for display
+  const polledMessages = loadMoreMessages
 
   // Cross-tab sync disabled (using polling lock instead)
   const { notifyOtherTabs } = useChatSync()
@@ -1475,6 +1489,28 @@ export function ChatPage() {
                   backgroundColor: "white",
                 }}
               >
+                {/* 📋 Load Button - Shows when there are more messages available */}
+                {hasMore && messages.length > 0 && (
+                  <div className="flex justify-center mb-4 mt-2">
+                    <Button
+                      onClick={loadMore}
+                      disabled={isFetching}
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                    >
+                      {isFetching ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        `Load (${total} total, page ${page})`
+                      )}
+                    </Button>
+                  </div>
+                )}
+
                 {messages.length > 0 ? (
                   messages.map((message) => {
                     // Using the sender field which is properly mapped from direction

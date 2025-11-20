@@ -206,7 +206,7 @@ export const chatRouter = (chatController: ChatController): express.Router => {
    * @swagger
    * /api/chat/{sessionId}/messages:
    *   get:
-   *     summary: Get messages for a specific chat session
+   *     summary: Get messages for a specific chat session (with pagination)
    *     tags: [Chat]
    *     security:
    *       - bearerAuth: []
@@ -217,6 +217,20 @@ export const chatRouter = (chatController: ChatController): express.Router => {
    *           type: string
    *         required: true
    *         description: ID of the chat session
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *         description: Page number for pagination (1-based)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 40
+   *           minimum: 1
+   *           maximum: 100
+   *         description: Number of messages per page (max 100)
    *       - in: header
    *         name: x-workspace-id
    *         schema:
@@ -225,7 +239,7 @@ export const chatRouter = (chatController: ChatController): express.Router => {
    *         description: ID of the workspace
    *     responses:
    *       200:
-   *         description: List of chat messages
+   *         description: Paginated list of chat messages
    *         content:
    *           application/json:
    *             schema:
@@ -237,6 +251,18 @@ export const chatRouter = (chatController: ChatController): express.Router => {
    *                   type: array
    *                   items:
    *                     $ref: '#/components/schemas/ChatMessage'
+   *                 hasMore:
+   *                   type: boolean
+   *                   description: Whether there are more messages to load
+   *                 total:
+   *                   type: integer
+   *                   description: Total number of messages in the chat
+   *                 page:
+   *                   type: integer
+   *                   description: Current page number
+   *                 limit:
+   *                   type: integer
+   *                   description: Messages per page
    *       400:
    *         description: Session ID is required
    *       500:
