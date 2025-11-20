@@ -112,22 +112,15 @@ export function WorkspaceSelectionPage() {
         language: "en",
       })
 
-      setWorkspaces([...workspaces, newWorkspace])
-      setJustCreatedId(newWorkspace.id)
+      logger.info("✅ Workspace created successfully:", newWorkspace.id)
+      toast.success("Workspace created successfully!")
 
-      // Reset form
-      setNewPhoneNumber("")
-      setAlias("")
-      // selectedType is always "Shop" by default, no need to reset
-      setErrorMessage("")
-
-      // Chiude il dialog se aperto
-      const dialog = document.getElementById(
-        "type-selection-dialog"
-      ) as HTMLDialogElement
-      if (dialog) dialog.close()
+      // 🔄 REFRESH PAGE - Reload workspace-selection to show new workspace with all agents
+      logger.info("🔄 Reloading workspace-selection page...")
+      window.location.reload()
     } catch (error) {
       setErrorMessage("Failed to create workspace")
+      logger.error("❌ Error creating workspace:", error)
     } finally {
       setIsLoading(false)
     }

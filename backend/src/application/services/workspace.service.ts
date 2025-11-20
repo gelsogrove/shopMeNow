@@ -9,6 +9,7 @@ import {
 import { WorkspaceRepositoryInterface } from "../../domain/repositories/workspace.repository.interface"
 import { WorkspaceRepository } from "../../repositories/workspace.repository"
 import logger from "../../utils/logger"
+import { defaultAgents } from "../../../prisma/data/defaultAgents"
 
 export class WorkspaceService {
   private repository: WorkspaceRepositoryInterface
@@ -110,7 +111,7 @@ For privacy inquiries, please contact our support team.`
    * Create a new workspace
    */
   async create(data: WorkspaceProps): Promise<Workspace> {
-    logger.info("Creating new workspace with default settings")
+    logger.info("Creating new workspace with default settings and agents")
 
     // Generate a slug if not provided
     if (!data.slug) {
@@ -128,6 +129,25 @@ For privacy inquiries, please contact our support team.`
       data.id = randomUUID()
     }
 
+    // 🆕 DEFAULT WELCOME AND WIP MESSAGES
+    const defaultWelcomeMessage = {
+      en: "Welcome! I'm SofiA, your digital assistant. I can help you discover Italian gourmet products, answer questions, and manage orders. How can I help you today?",
+      es: "¡Bienvenido! Soy SofiA, tu asistente digital. Puedo ayudarte a descubrir productos gourmet italianos, responder preguntas y gestionar pedidos. ¿Cómo puedo ayudarte hoy?",
+      it: "Benvenuto! Sono SofiA, il tuo assistente digitale. Posso aiutarti a scoprire prodotti gourmet italiani, rispondere alle tue domande e gestire ordini. Come posso aiutarti oggi?",
+      pt: "Bem-vindo! Sou a SofiA, a sua assistente digital. Posso ajudá-lo a descobrir produtos gourmet italianos, responder perguntas e gerir encomendas. Como posso ajudá-lo hoje?",
+    }
+
+    const defaultWipMessage = {
+      en: "Work in progress. Please contact us later.",
+      es: "Trabajos en curso. Por favor, contáctenos más tarde.",
+      it: "Lavori in corso. Contattaci più tardi.",
+      pt: "Em manutenção. Por favor, contacte-nos mais tarde.",
+    }
+
+    // Add messages to workspace data
+    data.welcomeMessage = defaultWelcomeMessage
+    data.wipMessage = defaultWipMessage
+
     // Create workspace entity
     const workspace = Workspace.create(data)
 
@@ -137,7 +157,7 @@ For privacy inquiries, please contact our support team.`
       const createdWorkspace = await this.repository.create(workspace)
 
       logger.info(
-        `Created workspace ${createdWorkspace.id}, now creating default settings`
+        `Created workspace ${createdWorkspace.id}, now importing default agents`
       )
 
       // 2. Create default GDPR settings
@@ -162,26 +182,33 @@ For privacy inquiries, please contact our support team.`
         // Don't fail the entire transaction for GDPR settings
       }
 
-      // 3. Create default agent configuration
+      // 3. 🆕 IMPORT ALL DEFAULT AGENTS (Feature: Import prompts on new workspace)
       try {
-        const defaultAgentContent = await this.getDefaultAgentContent()
-        await tx.agentConfig.create({
-          data: {
-            name: "Default Agent",
-            type: "CUSTOM", // Default type
-            systemPrompt: defaultAgentContent,
-            workspaceId: createdWorkspace.id,
-            model: "openai/gpt-4o-mini",
-            temperature: 0.0, // Zero temperature for deterministic responses
-            maxTokens: 5000,
-          },
-        })
+        const agents = defaultAgents(createdWorkspace.id)
+        for (const agent of agents) {
+          await tx.agentConfig.create({
+            data: {
+              workspaceId: createdWorkspace.id,
+              name: agent.name,
+              type: agent.type,
+              description: agent.description,
+              icon: agent.icon,
+              systemPrompt: agent.systemPrompt,
+              model: agent.model,
+              temperature: agent.temperature,
+              maxTokens: agent.maxTokens,
+              order: agent.order,
+              isActive: agent.isActive,
+              availableFunctions: agent.availableFunctions,
+            },
+          })
+        }
         logger.info(
-          `Created default agent configuration for workspace ${createdWorkspace.id}`
+          `✅ Imported ${agents.length} agents for workspace ${createdWorkspace.id}`
         )
       } catch (error) {
         logger.error(
-          `Error creating agent configuration for workspace ${createdWorkspace.id}:`,
+          `Error importing agents for workspace ${createdWorkspace.id}:`,
           error
         )
         // Don't fail the entire transaction for agent settings
