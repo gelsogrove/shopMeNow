@@ -40,12 +40,15 @@ export class ProductRepository implements IProductRepository {
         filters,
       })
 
-      // Iniziamo con un filtro vuoto
-      const where: Prisma.ProductsWhereInput = {}
+      // 🔐 SECURITY: workspaceId is MANDATORY
+      if (!workspaceId) {
+        logger.error("ProductRepository.findAll: workspaceId is required")
+        throw new Error("workspaceId is mandatory for product retrieval")
+      }
 
-      // Aggiungiamo il workspaceId come filtro obbligatorio
-      if (workspaceId) {
-        where.workspaceId = workspaceId
+      // Iniziamo con il filtro workspaceId obbligatorio
+      const where: Prisma.ProductsWhereInput = {
+        workspaceId: workspaceId,
       }
 
       // Aggiungiamo la ricerca per nome, se presente

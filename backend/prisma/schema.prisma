@@ -21,7 +21,7 @@ model Workspace {
   updatedAt                 DateTime          @updatedAt
   isDelete                  Boolean           @default(false)
   currency                  String            @default("EUR")
-  challengeStatus           Boolean           @default(false)
+  channelStatus             Boolean           @default(false)
   description               String?
   messageLimit              Int               @default(50)
   url                       String?

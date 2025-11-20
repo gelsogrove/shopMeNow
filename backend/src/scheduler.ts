@@ -18,21 +18,40 @@
 
 import cron from "node-cron"
 import { SearchConversationRepository } from "./repositories/searchConversation.repository"
+import { WorkspaceRepository } from "./repositories/workspace.repository"
 import logger from "./utils/logger"
 
 const searchConversationRepo = new SearchConversationRepository()
+const workspaceRepo = new WorkspaceRepository()
 
 /**
  * Job 1: Mark expired search conversations
  * Runs every 5 minutes
  * Changes ACTIVE conversations past expiresAt to EXPIRED
+ * 🔒 SECURITY: Iterates over ALL workspaces to maintain isolation
  */
 const markExpiredConversationsJob = cron.schedule("*/5 * * * *", async () => {
   try {
     logger.info("⏰ Running job: Mark expired search conversations")
-    const count = await searchConversationRepo.markExpired()
-    if (count > 0) {
-      logger.info(`✅ Marked ${count} search conversations as expired`)
+    
+    // 🔒 Get all workspaces and process each one
+    const workspaces = await workspaceRepo.findAll()
+    let totalMarked = 0
+    
+    for (const workspace of workspaces) {
+      try {
+        const count = await searchConversationRepo.markExpired(workspace.id)
+        if (count > 0) {
+          logger.info(`✅ Marked ${count} conversations as expired in workspace ${workspace.id}`)
+          totalMarked += count
+        }
+      } catch (error) {
+        logger.error(`❌ Error marking expired conversations for workspace ${workspace.id}:`, error)
+      }
+    }
+    
+    if (totalMarked > 0) {
+      logger.info(`✅ Total: Marked ${totalMarked} search conversations as expired across all workspaces`)
     }
   } catch (error) {
     logger.error("❌ Error in markExpiredConversationsJob:", error)
@@ -43,13 +62,30 @@ const markExpiredConversationsJob = cron.schedule("*/5 * * * *", async () => {
  * Job 2: Delete old search conversations
  * Runs every Sunday at 3:00 AM
  * Deletes conversations older than 30 days
+ * 🔒 SECURITY: Iterates over ALL workspaces to maintain isolation
  */
 const deleteOldConversationsJob = cron.schedule("0 3 * * 0", async () => {
   try {
     logger.info("⏰ Running job: Delete old search conversations")
-    const count = await searchConversationRepo.deleteOld(30)
-    if (count > 0) {
-      logger.info(`✅ Deleted ${count} search conversations older than 30 days`)
+    
+    // 🔒 Get all workspaces and process each one
+    const workspaces = await workspaceRepo.findAll()
+    let totalDeleted = 0
+    
+    for (const workspace of workspaces) {
+      try {
+        const count = await searchConversationRepo.deleteOld(30, workspace.id)
+        if (count > 0) {
+          logger.info(`✅ Deleted ${count} conversations older than 30 days in workspace ${workspace.id}`)
+          totalDeleted += count
+        }
+      } catch (error) {
+        logger.error(`❌ Error deleting old conversations for workspace ${workspace.id}:`, error)
+      }
+    }
+    
+    if (totalDeleted > 0) {
+      logger.info(`✅ Total: Deleted ${totalDeleted} search conversations across all workspaces`)
     }
   } catch (error) {
     logger.error("❌ Error in deleteOldConversationsJob:", error)

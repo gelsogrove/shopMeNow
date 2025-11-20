@@ -103,8 +103,8 @@ export class Workspace extends Entity<WorkspaceProps> {
     return this.props.currency
   }
 
-  get challengeStatus(): boolean {
-    return this.props.challengeStatus
+  get channelStatus(): boolean {
+    return this.props.channelStatus
   }
 
   get messageLimit(): number {

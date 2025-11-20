@@ -2,6 +2,7 @@ import {
   MessageDirection,
   MessageType,
   OrderStatus,
+  Prisma,
   PrismaClient,
 } from "@prisma/client"
 import * as dotenv from "dotenv"
@@ -144,13 +145,19 @@ export class MessageRepository {
    * @param workspaceId Optional workspace ID to filter
    * @returns The messages for the chat session (all messages, blacklist status affects only new message sending)
    */
-  async getChatSessionMessages(chatSessionId: string, workspaceId?: string) {
+  async getChatSessionMessages(chatSessionId: string, workspaceId: string) {
     try {
+      // 🔐 SECURITY: workspaceId is MANDATORY for proper isolation
+      if (!workspaceId) {
+        logger.error("getChatSessionMessages: workspaceId is required")
+        throw new Error("workspaceId is mandatory for retrieving chat messages")
+      }
+
       // First get the chat session to verify workspace
       const session = await this.prisma.chatSession.findFirst({
         where: {
           id: chatSessionId,
-          ...(workspaceId ? { workspaceId: workspaceId } : {}),
+          workspaceId: workspaceId,
         },
         select: {
           id: true,
@@ -225,7 +232,7 @@ export class MessageRepository {
       const billingRecords = await this.prisma.billing.findMany({
         where: {
           customerId: session.customerId,
-          ...(workspaceId ? { workspaceId } : {}),
+          workspaceId: workspaceId,
         },
         orderBy: {
           createdAt: "asc",
@@ -428,12 +435,20 @@ export class MessageRepository {
    * @param phoneNumber The customer's phone number
    * @returns The customer
    */
-  async findCustomerByPhone(phoneNumber: string) {
+  async findCustomerByPhone(phoneNumber: string, workspaceId?: string) {
     try {
+      // 🔒 SECURITY: Filter by workspace if provided (prevents cross-workspace customer mix)
+      const where: Prisma.CustomersWhereInput = {
+        phone: phoneNumber,
+      }
+
+      // Add workspace filter if provided
+      if (workspaceId) {
+        where.workspaceId = workspaceId
+      }
+
       const customer = await this.prisma.customers.findFirst({
-        where: {
-          phone: phoneNumber,
-        },
+        where,
         include: {
           sales: true, // Include agent data
         },
@@ -573,16 +588,22 @@ export class MessageRepository {
    */
   async isCustomerBlacklisted(
     phoneNumber: string,
-    workspaceId?: string
+    workspaceId: string
   ): Promise<boolean> {
     try {
-      // ✅ BLACKLIST CHECK ENABLED - Check customer blacklist status
-      logger.info(`[BLACKLIST] Checking blacklist status for ${phoneNumber}`)
+      // 🔐 SECURITY: workspaceId is MANDATORY for blacklist checks
+      if (!workspaceId) {
+        logger.error("isCustomerBlacklisted: workspaceId is required")
+        throw new Error("workspaceId is mandatory for blacklist checks")
+      }
+
+      logger.info(`[BLACKLIST] Checking blacklist status for ${phoneNumber} in workspace ${workspaceId}`)
 
       // Check if customer has isBlacklisted flag
       const customer = await this.prisma.customers.findFirst({
         where: {
           phone: phoneNumber,
+          workspaceId: workspaceId,  // ← MANDATORY workspace isolation
         },
         select: {
           isBlacklisted: true,
@@ -593,11 +614,6 @@ export class MessageRepository {
       // If customer is explicitly blacklisted, return true
       if (customer?.isBlacklisted === true) {
         return true
-      }
-
-      // If no workspaceId provided but we found the customer, use their workspaceId
-      if (!workspaceId && customer?.workspaceId) {
-        workspaceId = customer.workspaceId
       }
 
       // Blocklist check is now done via customers.isBlacklisted field
@@ -662,84 +678,28 @@ export class MessageRepository {
       }
 
       // Verify workspace ID
-      let workspaceId = data.workspaceId
-      logger.info(`saveMessage: Using provided workspace ID: ${workspaceId}`)
-
-      // Validate workspace ID using the dedicated method
-      if (workspaceId) {
-        const isValid = await this.validateWorkspaceId(workspaceId)
-        if (!isValid) {
-          logger.warn(
-            `saveMessage: Provided workspace ID ${workspaceId} is invalid, will search for alternative`
-          )
-          workspaceId = ""
-        } else {
-          // Check if workspace is active
-          const workspace = await this.prisma.workspace.findUnique({
-            where: { id: workspaceId },
-            select: { isActive: true },
-          })
-
-          if (!workspace?.isActive) {
-            logger.warn(
-              `saveMessage: Workspace ${workspaceId} exists but is inactive, will search for active workspace`
-            )
-            workspaceId = ""
-          }
-        }
+      // 🔐 SECURITY: workspaceId is MANDATORY
+      if (!data.workspaceId) {
+        logger.error("saveMessage: workspaceId is required but not provided")
+        throw new Error("workspaceId is mandatory for message saving")
       }
 
-      // If no valid workspace ID provided, try to find an existing workspace
-      if (!workspaceId) {
-        // Try to find an active workspace
-        logger.info("saveMessage: Searching for an active workspace")
+      const workspaceId = data.workspaceId
 
-        // First try to get a workspace associated with this phone number
-        let existingCustomer = await this.prisma.customers.findFirst({
-          where: {
-            phone: data.phoneNumber,
-          },
-          include: {
-            workspace: {
-              select: { id: true, isActive: true },
-            },
-          },
-        })
+      // Validate that workspace exists and is active
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { id: true, isActive: true },
+      })
 
-        // If customer exists and has a workspace associated
-        if (existingCustomer?.workspace?.id) {
-          workspaceId = existingCustomer.workspace.id
-          logger.info(
-            `saveMessage: Found workspace ${workspaceId} associated with customer ${existingCustomer.id}`
-          )
-        }
-        // Otherwise look for any active workspace
-        else {
-          const activeWorkspace = await this.prisma.workspace.findFirst({
-            where: { isActive: true },
-            select: { id: true },
-          })
+      if (!workspace) {
+        logger.error(`saveMessage: Workspace ${workspaceId} not found`)
+        throw new Error(`Workspace ${workspaceId} does not exist`)
+      }
 
-          if (activeWorkspace) {
-            workspaceId = activeWorkspace.id
-            logger.info(`saveMessage: Found active workspace: ${workspaceId}`)
-          } else {
-            // If no active workspace, try any workspace
-            const anyWorkspace = await this.prisma.workspace.findFirst({
-              select: { id: true },
-            })
-
-            if (anyWorkspace) {
-              workspaceId = anyWorkspace.id
-              logger.info(
-                `saveMessage: No active workspaces. Using workspace: ${workspaceId}`
-              )
-            } else {
-              logger.error("saveMessage: No workspaces found in the database")
-              throw new Error("No workspace found in the database")
-            }
-          }
-        }
+      if (!workspace.isActive) {
+        logger.warn(`saveMessage: Workspace ${workspaceId} is inactive`)
+        throw new Error(`Workspace ${workspaceId} is not active`)
       }
 
       // Find or create customer
@@ -968,6 +928,14 @@ export class MessageRepository {
               )
             }
 
+            // 🔐 SECURITY: Validate customer belongs to expected workspace
+            if (customer.workspaceId !== workspaceId) {
+              logger.error(
+                `saveMessage: CRITICAL SECURITY BREACH - Customer ${customer.id} workspaceId ${customer.workspaceId} does NOT match expected ${workspaceId}`
+              )
+              throw new Error("Customer workspace mismatch - potential data leakage")
+            }
+
             logger.info(
               `saveMessage: ✅ Race condition handled - using existing customer ${customer.id}`
             )
@@ -987,6 +955,14 @@ export class MessageRepository {
         where: { id: customer.id },
         data: { updatedAt: new Date() },
       })
+
+      // 🔐 SECURITY: Final validation - customer must belong to expected workspace
+      if (customer.workspaceId !== workspaceId) {
+        logger.error(
+          `saveMessage: CRITICAL SECURITY BREACH - Customer ${customer.id} workspaceId ${customer.workspaceId} does NOT match expected ${workspaceId}`
+        )
+        throw new Error("Customer workspace mismatch - potential data leakage")
+      }
 
       // Find or create chat session
       let session = await this.prisma.chatSession.findFirst({
@@ -1538,7 +1514,7 @@ export class MessageRepository {
           updatedAt: "desc",
         },
         where: {
-          ...(workspaceId ? { workspaceId } : {}),
+          workspaceId: workspaceId,
         },
       })
 
@@ -1616,24 +1592,28 @@ export class MessageRepository {
    * @param workspaceId Optional workspace ID to filter
    * @returns Success status
    */
-  async markMessagesAsRead(chatSessionId: string, workspaceId?: string) {
+  async markMessagesAsRead(chatSessionId: string, workspaceId: string) {
     try {
-      // First verify that the chat session belongs to the workspace if workspaceId is provided
-      if (workspaceId) {
-        const session = await this.prisma.chatSession.findFirst({
-          where: {
-            id: chatSessionId,
-            workspaceId,
-          },
-          select: { id: true },
-        })
+      // 🔐 SECURITY: workspaceId is MANDATORY for proper isolation
+      if (!workspaceId) {
+        logger.error("markMessagesAsRead: workspaceId is required")
+        throw new Error("workspaceId is mandatory for marking messages as read")
+      }
 
-        if (!session) {
-          logger.warn(
-            `markMessagesAsRead: Chat session ${chatSessionId} not found in workspace ${workspaceId}`
-          )
-          return false
-        }
+      // First verify that the chat session belongs to the workspace
+      const session = await this.prisma.chatSession.findFirst({
+        where: {
+          id: chatSessionId,
+          workspaceId: workspaceId,
+        },
+        select: { id: true },
+      })
+
+      if (!session) {
+        logger.warn(
+          `markMessagesAsRead: Chat session ${chatSessionId} not found in workspace ${workspaceId}`
+        )
+        return false
       }
 
       await this.prisma.message.updateMany({
@@ -1665,14 +1645,20 @@ export class MessageRepository {
    * @param workspaceId Optional workspace ID to filter sessions
    * @returns Array of chat sessions with unread counts
    */
-  async getChatSessionsWithUnreadCounts(limit = 20, workspaceId?: string) {
+  async getChatSessionsWithUnreadCounts(limit = 20, workspaceId: string) {
     try {
+      // 🔐 SECURITY: workspaceId is MANDATORY for proper isolation
+      if (!workspaceId) {
+        logger.error("getChatSessionsWithUnreadCounts: workspaceId is required")
+        throw new Error("workspaceId is mandatory for retrieving chat sessions")
+      }
+
       // Get all chat sessions, including those with blacklisted customers
       // We want to show all chats but mark blacklisted ones visually
       // @ts-ignore - Prisma types issue
       const chatSessions = await this.prisma.chatSession.findMany({
         where: {
-          ...(workspaceId ? { workspaceId } : {}),
+          workspaceId: workspaceId,
           // Removed isBlacklisted filter - we want to show all chats
         },
         include: {
@@ -1859,10 +1845,15 @@ export class MessageRepository {
    * @param workspaceId Workspace ID to filter by
    * @returns List of products
    */
-  async getProducts(workspaceId?: string) {
+  async getProducts(workspaceId: string) {
     try {
+      // 🔐 SECURITY: workspaceId is MANDATORY for product retrieval
+      if (!workspaceId) {
+        logger.error("getProducts: workspaceId is required")
+        throw new Error("workspaceId is mandatory for product retrieval")
+      }
       const products = await this.prisma.products.findMany({
-        where: workspaceId ? { workspaceId } : {},
+        where: { workspaceId },
         orderBy: {
           name: "asc",
         },
@@ -1879,10 +1870,15 @@ export class MessageRepository {
    * @param workspaceId Workspace ID to filter by
    * @returns List of services
    */
-  async getServices(workspaceId?: string) {
+  async getServices(workspaceId: string) {
     try {
+      // 🔐 SECURITY: workspaceId is MANDATORY for service retrieval
+      if (!workspaceId) {
+        logger.error("getServices: workspaceId is required")
+        throw new Error("workspaceId is mandatory for service retrieval")
+      }
       const services = await this.prisma.services.findMany({
-        where: workspaceId ? { workspaceId } : {},
+        where: { workspaceId },
         orderBy: {
           name: "asc",
         },
@@ -2329,10 +2325,16 @@ export class MessageRepository {
   async getLatesttMessages(
     phoneNumber: string,
     limit = 30,
-    workspaceId?: string
+    workspaceId: string
   ) {
     try {
       logger.info(`[DB] Fetching messages from database for ${phoneNumber}`)
+
+      // 🔐 SECURITY: workspaceId is MANDATORY
+      if (!workspaceId) {
+        logger.error("getLatesttMessages: workspaceId is required")
+        throw new Error("workspaceId is mandatory for retrieving messages")
+      }
 
       // Find customer by phone
       const customer = await this.findCustomerByPhone(phoneNumber)
@@ -2343,7 +2345,7 @@ export class MessageRepository {
         where: {
           customerId: customer.id,
           status: "active",
-          ...(workspaceId ? { workspaceId } : {}),
+          workspaceId: workspaceId,
         },
       })
 
@@ -2369,18 +2371,24 @@ export class MessageRepository {
    * Get recent messages within a time window (for LLM context)
    * @param phoneNumber The phone number
    * @param minutesAgo How many minutes back to look
-   * @param workspaceId Workspace ID to filter by
+   * @param workspaceId Workspace ID to filter by (MANDATORY)
    * @returns Recent chat messages within time window
    */
   async getRecentMessagesByTime(
     phoneNumber: string,
     minutesAgo = 5,
-    workspaceId?: string
+    workspaceId: string
   ) {
     try {
       logger.info(
         `[HISTORY] Fetching messages from last ${minutesAgo} minutes for ${phoneNumber}`
       )
+
+      // 🔐 SECURITY: workspaceId is MANDATORY
+      if (!workspaceId) {
+        logger.error("getRecentMessagesByTime: workspaceId is required")
+        throw new Error("workspaceId is mandatory for retrieving messages")
+      }
 
       // Find customer by phone
       const customer = await this.findCustomerByPhone(phoneNumber)
@@ -2394,7 +2402,7 @@ export class MessageRepository {
         where: {
           customerId: customer.id,
           status: "active",
-          ...(workspaceId ? { workspaceId } : {}),
+          workspaceId: workspaceId,
         },
       })
 

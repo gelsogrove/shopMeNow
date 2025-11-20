@@ -14,7 +14,7 @@ interface CreateWorkspaceData {
   currency?: string
   language?: string
   messageLimit?: number
-  challengeStatus?: boolean
+  channelStatus?: boolean
   wipMessage?: string // English only
   blocklist?: string
   url?: string
@@ -32,7 +32,7 @@ interface UpdateWorkspaceData {
   currency?: string
   language?: string
   messageLimit?: number
-  challengeStatus?: boolean
+  channelStatus?: boolean
   wipMessage?: string // English only
   blocklist?: string
   url?: string
@@ -59,7 +59,7 @@ export const workspaceService = {
         currency: true,
         language: true,
         messageLimit: true,
-        challengeStatus: true,
+        channelStatus: true,
         wipMessage: true,
         // blocklist: true, // REMOVED: field no longer exists
         url: true,
@@ -86,7 +86,7 @@ export const workspaceService = {
         currency: true,
         language: true,
         messageLimit: true,
-        challengeStatus: true,
+        channelStatus: true,
         wipMessage: true,
         // blocklist: true, // REMOVED: field no longer exists
         url: true,
@@ -154,7 +154,7 @@ export const workspaceService = {
         currency: true,
         language: true,
         messageLimit: true,
-        challengeStatus: true,
+        channelStatus: true,
         wipMessage: true,
         // blocklist: true, // REMOVED: field no longer exists
         url: true,
@@ -205,7 +205,7 @@ export const workspaceService = {
         currency: true,
         language: true,
         messageLimit: true,
-        challengeStatus: true,
+        channelStatus: true,
         wipMessage: true,
         // blocklist: true, // REMOVED: field no longer exists
         url: true,

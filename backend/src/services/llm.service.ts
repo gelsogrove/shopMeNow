@@ -85,7 +85,11 @@ export class LLMService {
     }
 
     // 1. Get Data
-    let customer = await messageRepo.findCustomerByPhone(llmRequest.phone)
+    // 🔒 SECURITY: Find customer by phone AND workspace (prevents cross-workspace mix)
+    let customer = await messageRepo.findCustomerByPhone(
+      llmRequest.phone,
+      llmRequest.workspaceId
+    )
     const workspaceId = customer ? customer.workspaceId : llmRequest.workspaceId
     const workspace = await workspaceService.getById(workspaceId)
 

@@ -183,11 +183,53 @@ export class WhatsAppWebhookController {
 
       // 🔒 SECURITY STEP 2: Find customer in database OR handle new user
       // workspaceId already extracted above based on format
+      // If not provided, try to lookup from channel phone number
 
       if (!workspaceId) {
-        logger.error("[WEBHOOK] ⚠️ No workspaceId provided in request")
-        res.status(400).json({ error: "workspaceId required" })
-        return
+        // 🔍 NEW: Try to find workspace from the channel phone number
+        // This allows backend to determine correct workspace when FE sends channel number
+        const channelPhoneNumber = data.channelPhoneNumber || data.whatsappPhoneNumber
+        
+        if (channelPhoneNumber) {
+          logger.info(
+            "[WEBHOOK] 🔍 No workspaceId provided, looking up from channel phone:",
+            channelPhoneNumber
+          )
+          
+          const workspace = await prisma.workspace.findFirst({
+            where: {
+              whatsappPhoneNumber: channelPhoneNumber.trim(),
+              isDelete: false,
+              isActive: true,
+            },
+            select: { id: true, name: true }
+          })
+          
+          if (workspace) {
+            workspaceId = workspace.id
+            logger.info(
+              "[WEBHOOK] ✅ Found workspace from channel phone:",
+              {
+                channelPhone: channelPhoneNumber,
+                workspaceId,
+                workspaceName: workspace.name,
+              }
+            )
+          } else {
+            logger.error(
+              "[WEBHOOK] ❌ No workspace found for channel phone:",
+              channelPhoneNumber
+            )
+          }
+        } else {
+          logger.error("[WEBHOOK] ⚠️ No workspaceId or channel phone provided")
+        }
+
+        if (!workspaceId) {
+          logger.error("[WEBHOOK] ⚠️ Could not determine workspaceId")
+          res.status(400).json({ error: "workspaceId required" })
+          return
+        }
       }
 
       const customer = await prisma.customers.findFirst({

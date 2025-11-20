@@ -195,13 +195,7 @@ export function Header() {
                 <span>Profile</span>
               </DropdownMenuItem>
 
-              <DropdownMenuItem
-                className="p-4 text-lg cursor-not-allowed opacity-50"
-                disabled
-              >
-                <CreditCard className="mr-3 h-5 w-5" />
-                <span>Plans (Coming Soon)</span>
-              </DropdownMenuItem>
+              
 
               <DropdownMenuItem
                 className="p-4 text-lg cursor-pointer"

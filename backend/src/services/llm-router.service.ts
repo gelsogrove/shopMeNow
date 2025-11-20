@@ -247,21 +247,21 @@ export class LLMRouterService {
   /**
    * 🆕 Feature 126: Check if workspace chatbot is disabled (P2 - Maintenance Mode)
    *
-   * When challengeStatus = false, chatbot is DISABLED → return WIP message.
+   * When channelStatus = false, chatbot is DISABLED → return WIP message.
    * This is second priority check (after blocked user check).
    *
    * @param workspaceId - Workspace ID to check
    * @returns true if chatbot is disabled, false if active
    */
-  private async getChallengeDisabled(workspaceId: string): Promise<boolean> {
+  private async getChannelDisabled(workspaceId: string): Promise<boolean> {
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
-      select: { challengeStatus: true, name: true },
+      select: { channelStatus: true, name: true },
     })
 
-    // challengeStatus = true → Chatbot ATTIVO (normale)
-    // challengeStatus = false → Chatbot DISATTIVO (manda WIP)
-    if (workspace?.challengeStatus === false) {
+    // channelStatus = true → Chatbot ATTIVO (normale)
+    // channelStatus = false → Chatbot DISATTIVO (manda WIP)
+    if (workspace?.channelStatus === false) {
       logger.info("🚧 P2: Workspace chatbot disabled (maintenance mode)", {
         workspaceId,
         workspaceName: workspace.name,

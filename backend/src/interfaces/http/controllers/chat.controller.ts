@@ -81,11 +81,21 @@ export class ChatController {
         return
       }
 
+      // 🔐 SECURITY: workspaceId is MANDATORY
+      if (!workspaceId) {
+        logger.error("getChatSession: workspaceId not found in request context")
+        res.status(401).json({
+          success: false,
+          error: "Workspace context required",
+        })
+        return
+      }
+
       // Get chat session details including workspace information
       const chatSession = await this.prisma.chatSession.findFirst({
         where: {
           id: sessionId,
-          ...(workspaceId ? { workspaceId } : {}),
+          workspaceId: workspaceId,
         },
         include: {
           customer: true,
@@ -166,7 +176,7 @@ export class ChatController {
       }
 
       // Mark messages as read when they are viewed
-      await this.messageRepository.markMessagesAsRead(sessionId)
+      await this.messageRepository.markMessagesAsRead(sessionId, workspaceId)
 
       res.status(200).json({
         success: true,

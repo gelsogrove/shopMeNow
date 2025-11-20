@@ -84,6 +84,7 @@ export function startWhatsAppQueueProcessor() {
  *
  * Deletes messages from whatsapp_queue table that are older than 30 days
  * Keeps recent messages for history/audit purposes
+ * 🔒 SECURITY: Iterates per workspace to maintain isolation
  */
 export function startWhatsAppQueueCleanup() {
   logger.info("[WhatsApp Queue Cleanup] Starting cron job (daily at 2 AM)...")
@@ -98,16 +99,42 @@ export function startWhatsAppQueueCleanup() {
         `[WhatsApp Queue Cleanup] Starting cleanup - deleting messages older than ${thirtyDaysAgo.toISOString()}`
       )
 
-      const deleted = await prisma.whatsAppQueue.deleteMany({
-        where: {
-          createdAt: {
-            lt: thirtyDaysAgo,
-          },
-        },
+      // 🔒 Get all active workspaces and cleanup each one
+      const workspaces = await prisma.workspace.findMany({
+        where: { isActive: true },
+        select: { id: true, name: true },
       })
 
+      let totalDeleted = 0
+
+      for (const workspace of workspaces) {
+        try {
+          const deleted = await prisma.whatsAppQueue.deleteMany({
+            where: {
+              workspaceId: workspace.id,
+              createdAt: {
+                lt: thirtyDaysAgo,
+              },
+            },
+          })
+
+          if (deleted.count > 0) {
+            logger.info(
+              `[WhatsApp Queue Cleanup] Workspace ${workspace.id}: deleted ${deleted.count} messages older than 30 days`
+            )
+            totalDeleted += deleted.count
+          }
+        } catch (error) {
+          logger.error(
+            `[WhatsApp Queue Cleanup] Error cleaning workspace ${workspace.id}:`,
+            error
+          )
+          // Continue with next workspace
+        }
+      }
+
       logger.info(
-        `[WhatsApp Queue Cleanup] Cleanup completed - deleted ${deleted.count} messages older than 30 days`
+        `[WhatsApp Queue Cleanup] Cleanup completed - deleted ${totalDeleted} messages across all workspaces`
       )
     } catch (error) {
       logger.error("[WhatsApp Queue Cleanup] Error during cleanup:", error)

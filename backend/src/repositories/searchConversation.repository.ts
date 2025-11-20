@@ -237,18 +237,22 @@ export class SearchConversationRepository {
   /**
    * Mark expired conversations (called by cronjob)
    * Changes state to EXPIRED for sessions past expiresAt
+   * 🔒 SECURITY: workspaceId is MANDATORY
    */
-  async markExpired(workspaceId?: string): Promise<number> {
+  async markExpired(workspaceId: string): Promise<number> {
     try {
+      // 🔒 SECURITY: workspaceId is MANDATORY for isolation
+      if (!workspaceId) {
+        logger.error("markExpired: workspaceId is required")
+        throw new Error("workspaceId is mandatory for marking expired conversations")
+      }
+
       const where: Prisma.SearchConversationsWhereInput = {
         expiresAt: {
           lt: new Date(), // Past expiration
         },
         state: SearchConversationState.ACTIVE, // Only active ones
-      }
-
-      if (workspaceId) {
-        where.workspaceId = workspaceId
+        workspaceId: workspaceId,  // 🔒 Hard requirement
       }
 
       const result = await prisma.searchConversations.updateMany({
@@ -260,7 +264,7 @@ export class SearchConversationRepository {
       })
 
       if (result.count > 0) {
-        logger.info(`✅ Marked ${result.count} conversations as expired`)
+        logger.info(`✅ Marked ${result.count} conversations as expired in workspace ${workspaceId}`)
       }
 
       return result.count
@@ -273,9 +277,16 @@ export class SearchConversationRepository {
   /**
    * Delete old conversations (called by cronjob)
    * Removes conversations older than 30 days
+   * 🔒 SECURITY: workspaceId is MANDATORY
    */
-  async deleteOld(daysOld: number = 30, workspaceId?: string): Promise<number> {
+  async deleteOld(daysOld: number = 30, workspaceId: string): Promise<number> {
     try {
+      // 🔒 SECURITY: workspaceId is MANDATORY for isolation
+      if (!workspaceId) {
+        logger.error("deleteOld: workspaceId is required")
+        throw new Error("workspaceId is mandatory for deleting old conversations")
+      }
+
       const cutoffDate = new Date()
       cutoffDate.setDate(cutoffDate.getDate() - daysOld)
 
@@ -283,10 +294,7 @@ export class SearchConversationRepository {
         createdAt: {
           lt: cutoffDate,
         },
-      }
-
-      if (workspaceId) {
-        where.workspaceId = workspaceId
+        workspaceId: workspaceId,  // 🔒 Hard requirement
       }
 
       const result = await prisma.searchConversations.deleteMany({
@@ -295,7 +303,7 @@ export class SearchConversationRepository {
 
       if (result.count > 0) {
         logger.info(
-          `✅ Deleted ${result.count} conversations older than ${daysOld} days`
+          `✅ Deleted ${result.count} conversations older than ${daysOld} days in workspace ${workspaceId}`
         )
       }
 

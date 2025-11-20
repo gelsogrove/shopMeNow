@@ -39,6 +39,22 @@ const defaultWelcomeMessage =
 
 const defaultWipMessage = "Work in progress. Please contact us later."
 
+/**
+ * Extract English message from JSON object or return default
+ * Messages from backend are objects like { en: "...", es: "...", it: "...", pt: "..." }
+ */
+function extractEnglishMessage(
+  message: string | Record<string, string> | undefined,
+  defaultValue: string
+): string {
+  if (!message) return defaultValue
+  if (typeof message === "string") return message
+  if (typeof message === "object" && "en" in message) {
+    return (message as Record<string, string>).en || defaultValue
+  }
+  return defaultValue
+}
+
 export default function SettingsPage() {
   const navigate = useNavigate()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -66,12 +82,12 @@ export default function SettingsPage() {
       name: workspace.name || "",
       whatsappPhoneNumber: workspace.whatsappPhoneNumber || "",
       whatsappApiKey: workspace.whatsappApiKey || "",
-      adminEmail: workspace.adminEmail || "",
+      adminEmail: workspace.adminEmail || workspace.notificationEmail || "",
       url: workspace.url || "http://localhost:3000",
       challengeStatus: workspace.challengeStatus ?? true, // 🆕 Default to enabled if not set
       debugMode: workspace.debugMode ?? true,
-      welcomeMessage: workspace.welcomeMessage || defaultWelcomeMessage,
-      wipMessage: workspace.wipMessage || defaultWipMessage,
+      welcomeMessage: extractEnglishMessage(workspace.welcomeMessage, defaultWelcomeMessage),
+      wipMessage: extractEnglishMessage(workspace.wipMessage, defaultWipMessage),
     })
   }, [workspace])
 

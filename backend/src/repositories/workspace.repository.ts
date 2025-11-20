@@ -196,6 +196,60 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
   }
 
   /**
+   * Find a workspace by WhatsApp phone number (channel number)
+   * This allows the backend to determine workspace from the incoming message's channel
+   */
+  async findByWhatsAppPhoneNumber(
+    phoneNumber: string
+  ): Promise<Workspace | null> {
+    if (!phoneNumber) {
+      logger.debug("findByWhatsAppPhoneNumber: Empty phone number provided")
+      return null
+    }
+
+    // Normalize phone number (remove spaces, ensure format)
+    const normalizedPhone = phoneNumber.trim()
+
+    logger.debug(
+      `🔍 Finding workspace by WhatsApp phone number: ${normalizedPhone}`
+    )
+
+    try {
+      const workspace = await this.prisma.workspace.findFirst({
+        where: {
+          whatsappPhoneNumber: normalizedPhone,
+          isDelete: false,
+          isActive: true,
+        },
+        include: {
+          whatsappSettings: true,
+          agentConfigs: true,
+        },
+      })
+
+      if (!workspace) {
+        logger.debug(
+          `⚠️ No active workspace found for WhatsApp phone: ${normalizedPhone}`
+        )
+        return null
+      }
+
+      logger.debug(
+        `✅ Found workspace: ${workspace.name} (${workspace.id}) for phone: ${normalizedPhone}`
+      )
+      const domainWorkspace = this.mapToDomain(workspace)
+      ;(domainWorkspace as any).agentConfigs = workspace.agentConfigs || []
+      return domainWorkspace
+    } catch (error) {
+      logger.error(
+        `Error finding workspace by WhatsApp phone ${normalizedPhone}:`,
+        error
+      )
+      throw error
+    }
+  }
+
+  /**
    * Find workspaces by user ID
    */
   async findByUserId(userId: string): Promise<Workspace[]> {
@@ -547,6 +601,51 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
           where: { workspaceId: id },
         })
 
+        // 15b. Delete billing records
+        await tx.billing.deleteMany({
+          where: { workspaceId: id },
+        })
+
+        // 15c. Delete usage records
+        await tx.usage.deleteMany({
+          where: { workspaceId: id },
+        })
+
+        // 15d. Delete campaigns
+        await tx.campaign.deleteMany({
+          where: { workspaceId: id },
+        })
+
+        // 15e. Delete campaign sent records
+        await tx.campaignSent.deleteMany({
+          where: { workspaceId: id },
+        })
+
+        // 15f. Delete agent conversation logs
+        await tx.agentConversationLog.deleteMany({
+          where: { workspaceId: id },
+        })
+
+        // 15g. Delete conversation messages
+        await tx.conversationMessage.deleteMany({
+          where: { workspaceId: id },
+        })
+
+        // 15h. Delete customer feedback
+        await tx.customerFeedback.deleteMany({
+          where: { workspaceId: id },
+        })
+
+        // 15i. Delete short URLs
+        await tx.shortUrls.deleteMany({
+          where: { workspaceId: id },
+        })
+
+        // 15j. Delete WhatsApp queue
+        await tx.whatsAppQueue.deleteMany({
+          where: { workspaceId: id },
+        })
+
         // 16. Delete agent configurations
         await tx.agentConfig.deleteMany({
           where: { workspaceId: id },
@@ -567,7 +666,12 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
           where: { workspaceId: id },
         })
 
-        // 20. Finally delete the workspace itself
+        // 20. Delete secure tokens
+        await tx.secureToken.deleteMany({
+          where: { workspaceId: id },
+        })
+
+        // 21. Finally delete the workspace itself
         await tx.workspace.delete({
           where: { id },
         })

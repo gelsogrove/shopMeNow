@@ -383,6 +383,7 @@ export function WhatsAppChatModal({
         message: userMessage.content,
         phoneNumber: userPhoneNumber,
         workspaceId: currentWorkspaceId,
+        channelPhoneNumber: phoneNumber, // 🔧 NEW: Send channel phone number for workspace lookup
         isNewConversation: true, // Add flag to indicate new conversation
       })
 
@@ -594,6 +595,7 @@ export function WhatsAppChatModal({
                     },
                   ],
                   workspaceId: currentWorkspaceId,
+                  channelPhoneNumber: phoneNumber, // 🔧 NEW: Send channel phone number for workspace lookup
                 },
               },
             ],

@@ -543,12 +543,9 @@ export function ChatPage() {
         )
 
         setMessages(uniqueMessages)
-      } else {
-        toast.error("Failed to load chat messages", { duration: 1000 })
       }
     } catch (error) {
       logger.error("Error loading messages:", error)
-      toast.error("Failed to load chat messages", { duration: 1000 })
     } finally {
       setLoadingChat(false)
     }
@@ -1825,6 +1822,7 @@ export function ChatPage() {
         onClose={handleClosePlayground}
         onMessageSent={refetchChats}
         channelName="WhatsApp Chat"
+        phoneNumber={workspace?.whatsappPhoneNumber}
         workspaceId={workspace?.id}
         selectedChat={selectedChat as any}
       />

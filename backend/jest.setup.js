@@ -21,6 +21,14 @@ if (process.env.NODE_ENV === "test" && !process.env.INTEGRATION_TEST) {
       constructor: jest.fn(),
       $connect: jest.fn(),
       $disconnect: jest.fn(),
+      $transaction: jest.fn((callback) => {
+        // 🔧 NEW: Mock $transaction to execute the callback with mock proxy object
+        // This allows code using $transaction to work in tests
+        if (typeof callback === "function") {
+          return callback(mockPrismaClient)
+        }
+        return callback
+      }),
 
       // Mock all Prisma models with proper methods
       users: {
