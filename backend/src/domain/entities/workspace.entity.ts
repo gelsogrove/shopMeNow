@@ -16,7 +16,7 @@ export interface WorkspaceProps {
   updatedAt: Date
   isDelete: boolean
   currency: string
-  challengeStatus: boolean
+  channelStatus: boolean
   description?: string | null
   messageLimit: number
   blocklist?: string | null

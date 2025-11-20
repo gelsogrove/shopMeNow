@@ -138,7 +138,7 @@ async function main() {
       businessType: "ECOMMERCE",
       description: "Italian Gourmet Food E-commerce",
       url: workspaceSettings.url || "https://altrogusto.com",
-      challengeStatus: true, // ✅ Feature 126: Chatbot enabled by default
+      channelStatus: true, // ✅ Feature 126: Chatbot enabled by default
       debugMode:
         workspaceSettings.debugMode !== undefined
           ? workspaceSettings.debugMode

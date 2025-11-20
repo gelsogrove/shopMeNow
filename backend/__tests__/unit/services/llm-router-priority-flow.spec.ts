@@ -5,7 +5,7 @@
  *
  * Andrea's Requirements:
  * 1. ✅ Test customer bloccato (isBlacklisted=true) - P1
- * 2. ✅ Test WIP message quando challenge disabled (P2)
+ * 2. ✅ Test WIP message quando channel disabled (P2)
  * 3. ✅ Test workspace isolation
  *
  * UNIT TEST = MOCK di database, NO connessioni reali
@@ -127,7 +127,7 @@ describe("LLM Router Service - Priority Flow UNIT Tests", () => {
     })
 
     it("should allow message when customer.isBlacklisted=false", async () => {
-      // Arrange: Customer NON bloccato ma challenge disabled
+      // Arrange: Customer NON bloccato ma channel disabled
       mockPrisma.customers.findUnique.mockResolvedValue({
         id: "customer-123",
         name: "Normal Customer",
@@ -137,7 +137,7 @@ describe("LLM Router Service - Priority Flow UNIT Tests", () => {
       mockPrisma.workspace.findUnique.mockResolvedValue({
         id: "workspace-123",
         name: "Test Workspace",
-        challengeStatus: false, // Challenge disabled → WIP
+        channelStatus: false, // Channel disabled → WIP
         wipMessage: {
           it: "Servizio in manutenzione",
           en: "Service under maintenance",
@@ -164,7 +164,7 @@ describe("LLM Router Service - Priority Flow UNIT Tests", () => {
   })
 
   // ========================================
-  // TEST 2: P2 - WIP MESSAGE (Challenge Disabled)
+  // TEST 2: P2 - WIP MESSAGE (Channel Disabled)
   // ========================================
   describe("P2 - Challenge Disabled WIP Message", () => {
     it("should return WIP message when challengeStatus=false WITHOUT LLM call", async () => {

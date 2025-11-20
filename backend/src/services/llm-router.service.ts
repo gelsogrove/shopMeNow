@@ -502,10 +502,10 @@ export class LLMRouterService {
       }
 
       // P2: Check if workspace chatbot is disabled (MAINTENANCE MODE)
-      const isChallengeDisabled = await this.getChallengeDisabled(
+      const isChannelDisabled = await this.getChannelDisabled(
         params.workspaceId
       )
-      if (isChallengeDisabled) {
+      if (isChannelDisabled) {
         const executionTimeMs = Date.now() - startTime
 
         // Get WIP message from workspace settings

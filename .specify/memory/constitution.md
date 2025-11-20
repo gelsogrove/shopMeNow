@@ -2317,12 +2317,12 @@ it("should return empty response for blocked customer", async () => {
 
 #### Rule 2: Channel Disabled Gate (P2 - HIGH PRIORITY)
 
-**When workspace channel is disabled (challengeStatus=false), return WIP message from workspace settings.**
+**When workspace channel is disabled (channelStatus=false), return WIP message from workspace settings.**
 
 **Requirements**:
 
 - ✅ **Priority**: P2 (after P1 blocked check)
-- ✅ **Detection**: Query `workspaces.challengeStatus` field
+- ✅ **Detection**: Query `workspaces.channelStatus` field
 - ✅ **Source**: `workspaces.wipMessage` (multilanguage JSON: `{en: "...", it: "...", es: "..."}`)
 - ✅ **Language selection**: `customerLanguage` → `en` (fallback)
 - ✅ **Token usage**: ZERO (no LLM call)
@@ -2335,10 +2335,10 @@ it("should return empty response for blocked customer", async () => {
 // llm-router.service.ts - P2 gate
 const workspace = await this.prisma.workspaces.findUnique({
   where: { id: params.workspaceId },
-  select: { challengeStatus: true, wipMessage: true },
+  select: { channelStatus: true, wipMessage: true },
 })
 
-if (!workspace?.challengeStatus) {
+if (!workspace?.channelStatus) {
   const wipMessages = (workspace?.wipMessage as any) || {}
   const wipMessage =
     wipMessages[params.customerLanguage?.toLowerCase() || "en"] ||
@@ -2369,7 +2369,7 @@ if (!workspace?.challengeStatus) {
 ```prisma
 model Workspaces {
   id               String  @id @default(cuid())
-  challengeStatus  Boolean @default(true)  // false = channel disabled
+  channelStatus    Boolean @default(true)  // false = channel disabled
   wipMessage       Json?   // {en: "...", it: "...", es: "..."}
   // ...
 }
@@ -2380,7 +2380,7 @@ model Workspaces {
 ```typescript
 it("should return WIP message when channel disabled", async () => {
   await updateWorkspace({
-    challengeStatus: false,
+    channelStatus: false,
     wipMessage: {
       en: "Service under maintenance",
       it: "Servizio in manutenzione",

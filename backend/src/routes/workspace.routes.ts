@@ -112,7 +112,7 @@ const getCurrentWorkspace: RequestHandler = async (req, res): Promise<void> => {
       blocklist: workspace.blocklist,
       welcomeMessage: workspace.welcomeMessage,
       wipMessage: workspace.wipMessage,
-      challengeStatus: workspace.challengeStatus,
+      channelStatus: workspace.channelStatus,
       isActive: workspace.isActive,
       isDelete: workspace.isDelete,
       url: workspace.url,

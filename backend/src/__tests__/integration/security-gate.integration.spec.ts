@@ -52,7 +52,7 @@ describe("Security Gate - Integration with Priority Flow", () => {
     })
   })
 
-  describe("Security Gate runs BEFORE P2 (challenge disabled)", () => {
+  describe("Security Gate runs BEFORE P2 (channel disabled)", () => {
     it("should block XSS even if chatbot is disabled", async () => {
       // SCENARIO: Workspace chatbot disabled (P2 would normally trigger)
       // BUT Security Gate should catch XSS FIRST
