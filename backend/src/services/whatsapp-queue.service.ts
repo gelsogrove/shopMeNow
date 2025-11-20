@@ -4,6 +4,9 @@ import { PrismaClient, WhatsAppQueue } from "@prisma/client"
 // Internal core
 import logger from "../utils/logger"
 
+// Agents
+import { SecurityAgent } from "../application/agents/SecurityAgent"
+
 // Repositories
 import { WhatsAppQueueRepository } from "../repositories/whatsapp-queue.repository"
 
@@ -21,9 +24,11 @@ export interface ValidateAndSendResult {
 
 export class WhatsAppQueueService {
   private repository: WhatsAppQueueRepository
+  private securityAgent: SecurityAgent // 🆕 Feature 181: Security check before WhatsApp send
 
   constructor(private prisma: PrismaClient) {
     this.repository = new WhatsAppQueueRepository(prisma)
+    this.securityAgent = new SecurityAgent(prisma) // Initialize Security Agent
   }
 
   /**
@@ -197,8 +202,8 @@ export class WhatsAppQueueService {
   }
 
   /**
-   * Validate message fields and simulate sending
-   * (Placeholder - WhatsApp API not yet implemented)
+   * Validate message fields and run through Security Agent
+   * (🆕 Feature 181: Security check before sending to WhatsApp)
    * @param message Queue message
    * @returns Validation result
    */
@@ -225,9 +230,33 @@ export class WhatsAppQueueService {
         return { success: false, error: "Invalid message: empty content" }
       }
 
+      // 🆕 STEP 1: Run message through Security Agent (Feature 181)
+      logger.info("🛡️ Step 1: Running Security Agent before WhatsApp send")
+      const securityResult = await this.securityAgent.process({
+        workspaceId: message.workspaceId,
+        message: message.messageContent,
+        customerId: message.customerId,
+        customerName: "", // Not always available from queue record
+      })
+
+      // If Security Agent blocks the message, don't send
+      if (!securityResult.safe) {
+        logger.warn("🚫 Message BLOCKED by Security Agent before WhatsApp send", {
+          reason: securityResult.blockedReason,
+          customerId: message.customerId,
+          messageId: message.id,
+        })
+        return {
+          success: false,
+          error: `Security check failed: ${securityResult.blockedReason}`,
+        }
+      }
+
+      logger.info("✅ Message passed Security Agent check")
+
       // 🚨 PLACEHOLDER: Console log instead of actual WhatsApp send
       console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-      console.log("📤 SEND MESSAGE WHATSAPP")
+      console.log("📤 SEND MESSAGE WHATSAPP (after Security check)")
       console.log(`   Phone: ${message.phoneNumber}`)
       console.log(`   Customer: ${message.customerId}`)
       console.log(`   Message: ${message.messageContent.substring(0, 100)}${message.messageContent.length > 100 ? "..." : ""}`)

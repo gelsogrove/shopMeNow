@@ -176,21 +176,40 @@ export const defaultAgents = (
   },
 
   // ====================================================================
-  // SAFETY & TRANSLATION AGENT (order: 99) - Final security layer
+  // TRANSLATION AGENT (order: 7) - Translate to customer language
   // ====================================================================
   {
     workspaceId,
-    name: "Safety & Translation Agent",
-    type: "SAFETY_TRANSLATION" as AgentType,
-    icon: "Shield",
+    name: "Translation Agent",
+    type: "TRANSLATION" as AgentType,
+    icon: "Globe",
     description:
-      "Final security layer: checks content safety, translates to customer language, removes sensitive data",
-    systemPrompt: loadPrompt("safety-translation-agent.md"),
-    model: "openai/gpt-4o-mini", // Can use Claude Sonnet if preferred
+      "Translation layer: translates all agent responses to customer language (Italian, Spanish, Portuguese, English)",
+    systemPrompt: loadPrompt("translation-agent.md"),
+    model: "openai/gpt-4o-mini",
     temperature: 0.1, // Very low for consistency
     maxTokens: 1024,
-    order: 99, // ✅ Changed from 5 to 99 (last agent in pipeline)
+    order: 7, // After Profile Management (6)
     isActive: true,
-    availableFunctions: getAgentFunctionNames("SAFETY_TRANSLATION"), // Empty array []
+    availableFunctions: getAgentFunctionNames("TRANSLATION"),
+  },
+
+  // ====================================================================
+  // SECURITY AGENT (order: 99) - Security validation and content moderation
+  // ====================================================================
+  {
+    workspaceId,
+    name: "Security Agent",
+    type: "SECURITY" as AgentType,
+    icon: "Shield",
+    description:
+      "Security validation: detects dangerous content, SQL injection, XSS, offensive language. Blocks unsafe messages completely (no send, shows 🚫 icon)",
+    systemPrompt: loadPrompt("security-agent.md"),
+    model: "openai/gpt-4o-mini",
+    temperature: 0, // Zero temperature = deterministic security checks
+    maxTokens: 500, // Security checks don't need long responses
+    order: 99, // Last - final security check before sending
+    isActive: true,
+    availableFunctions: getAgentFunctionNames("SECURITY"),
   },
 ]

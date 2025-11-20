@@ -26,7 +26,7 @@ export interface SaveMessageParams {
   functionArguments?: any
   tokensUsed?: number
   debugInfo?: any // ✅ Debug information for message flow tracking
-  deliveryStatus?: "not_queued" | "pending" | "sent" | "error" // ✅ WhatsApp delivery status
+  deliveryStatus?: "not_queued" | "pending" | "sent" | "error" | "blocked" // ✅ WhatsApp delivery status (blocked = Security Agent blocked it)
 }
 
 export interface ConversationHistory {

@@ -23,7 +23,7 @@ interface QueueMessage {
   customerId: string
   phoneNumber: string
   messageContent: string
-  status: "pending" | "sent" | "error"
+  status: "pending" | "sent" | "error" | "blocked"
   errorMessage: string | null
   createdAt: string
   deliveredAt: string | null
@@ -81,6 +81,12 @@ export function QueuePage() {
         return (
           <Badge className="bg-red-50 text-red-700 border-red-300">
             ❌ Error
+          </Badge>
+        )
+      case "blocked":
+        return (
+          <Badge className="bg-red-100 text-red-800 border-red-400">
+            🚫 Blocked
           </Badge>
         )
     }

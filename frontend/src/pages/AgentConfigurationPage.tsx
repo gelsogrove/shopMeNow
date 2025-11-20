@@ -112,7 +112,9 @@ const getAgentIcon = (iconName: string | undefined, agentType: string) => {
     customer_support: { bg: "bg-pink-600" }, // Pink
     summary_agent: { bg: "bg-pink-400" }, // ✅ Light pink for sub-agent of Customer Support
     profile_management: { bg: "bg-slate-600" }, // Slate for profile + notifications
-    safety_translation: { bg: "bg-red-600" }, // Red like timeline
+    translation: { bg: "bg-teal-600" }, // Teal for translation
+    security: { bg: "bg-red-600" }, // 🔴 RED for security validation
+    safety_translation: { bg: "bg-red-600" }, // Red like timeline (legacy)
   }
 
   const colors = colorConfig[normalizedType] || { bg: "bg-gray-600" }
@@ -367,11 +369,12 @@ export function AgentConfigurationPage() {
 
                 // Agent hierarchy levels
                 const isRouter = normalizedType === "router"
+                const isSecurity = normalizedType === "security"
                 const isSafety = normalizedType === "safety_translation"
                 const isSummaryAgent = normalizedType === "summary_agent"
 
-                // Router (level 0), Specialists (level 1), Sub-agents (level 2), Safety (level 99)
-                const isSpecialistAgent = !isRouter && !isSafety && !isSummaryAgent
+                // Router (level 0), Specialists (level 1), Sub-agents (level 2), Security (level 99)
+                const isSpecialistAgent = !isRouter && !isSecurity && !isSafety && !isSummaryAgent
                 const indentClass = isSpecialistAgent ? "ml-8" : isSummaryAgent ? "ml-16" : ""
                 const isProductSearch = normalizedType === "product_search"
 

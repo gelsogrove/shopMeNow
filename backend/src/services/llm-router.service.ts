@@ -44,6 +44,7 @@ import { OrderTrackingAgentLLM } from "../application/agents/OrderTrackingAgentL
 import { ProductSearchAgentLLM } from "../application/agents/ProductSearchAgentLLM"
 import { ProfileManagementAgentLLM } from "../application/agents/ProfileManagementAgentLLM"
 import { SafetyTranslationAgent } from "../application/agents/SafetyTranslationAgent"
+import { TranslationAgent } from "../application/agents/TranslationAgent"
 import { LinkReplacementService } from "../application/services/link-replacement.service"
 import { getFunctionsForRouter } from "../config/agent-functions"
 import { AgentConfigRepository } from "../repositories/agent-config.repository"
@@ -175,10 +176,11 @@ export class LLMRouterService {
   private loggerService: AgentLoggerService
   private conversationManager: ConversationManager
   private functionExecutor: FunctionExecutor
-  private safetyAgent: SafetyTranslationAgent
   private linkReplacementService: LinkReplacementService
   private searchConversationRepo: SearchConversationRepository
   private promptProcessor: PromptProcessorService // 🆕 Feature 124: Customer variables replacement
+  private safetyAgent: SafetyTranslationAgent // Kept for backwards compatibility with SAFETY_TRANSLATION
+  private translationAgent: TranslationAgent // 🆕 Feature 181: Translation layer
   private openRouterApiKey: string
   private openRouterBaseUrl = "https://openrouter.ai/api/v1"
   private maxFunctionIterations = 8 // FR-13: Increased from 5 to support repeat order confirmation flow (6-7 iterations needed)
@@ -190,6 +192,7 @@ export class LLMRouterService {
     this.conversationManager = new ConversationManager(prisma, 10) // 10 minutes window
     this.functionExecutor = new FunctionExecutor(prisma)
     this.safetyAgent = new SafetyTranslationAgent(prisma)
+    this.translationAgent = new TranslationAgent(prisma) // 🆕 Feature 181: Translation layer in routing
     this.linkReplacementService = new LinkReplacementService()
     this.searchConversationRepo = new SearchConversationRepository()
     this.promptProcessor = new PromptProcessorService() // 🆕 Feature 124: Inject for variable replacement
@@ -932,60 +935,43 @@ export class LLMRouterService {
         responsePreview: responseWithLinks.substring(0, 150),
       })
 
-      // STEP 5: Apply Safety & Translation Layer
-      // Now processes the response WITH actual URLs AND customer variables replaced
-      logger.info("Step 5: Applying Safety & Translation Layer")
-      const safetyTimestamp = new Date().toISOString()
-      const safeResponse = await this.safetyAgent.process({
+      // STEP 5: Apply Translation Layer (🆕 Feature 181: Security moved to WhatsApp Queue only)
+      logger.info("Step 5: Applying Translation Layer")
+      const translationResult = await this.translationAgent.process({
         workspaceId: params.workspaceId,
-        response: responseWithLinks, // ✅ Pass response with links already replaced
+        message: responseWithLinks,
         targetLanguage: params.customerLanguage || "it",
         customerName: params.customerName,
       })
 
-      totalTokens += safeResponse.tokensUsed || 0
+      const finalResponse = translationResult.message
+      const translationTokens = translationResult.tokensUsed || 0
 
-      // ✅ Define finalResponse from translated text
-      const finalResponse = safeResponse.translatedText
+      totalTokens += translationTokens
 
-      // 🔧 CRITICAL: Add Safety & Translation step DIRECTLY to debugInfo.steps
-      // (not debugSteps, because debugInfo was already constructed earlier)
+      // Add Translation debug step
+      const translationTimestamp = new Date().toISOString()
       debugInfo.steps.push({
-        type: "safety",
-        agent: "Safety & Translation Agent",
-        model: routerAgent.model, // Uses same model as router
-        temperature: 0.2, // Safety agent uses lower temperature
-        timestamp: safetyTimestamp,
-        systemPrompt: safeResponse.systemPrompt, // ✅ Add processed system prompt
-        tokenUsage: safeResponse.tokensUsed
-          ? {
-              promptTokens: 0,
-              completionTokens: safeResponse.tokensUsed,
-              totalTokens: safeResponse.tokensUsed,
-            }
-          : undefined,
+        type: "safety", // Use safety type for translation (post-processing)
+        agent: "Translation Agent",
+        model: "openai/gpt-4o-mini",
+        temperature: 0.1,
+        timestamp: translationTimestamp,
         input: {
-          textToValidate: responseWithLinks, // ✅ Input now has actual URLs
-          previousResponse: "Router generated response (with links replaced)",
+          previousResponse: responseWithLinks,
         },
         output: {
-          safe: safeResponse.safe,
-          translatedText: finalResponse,
-          decision: safeResponse.safe ? "approved" : "blocked",
+          translatedText: translationResult.message,
+          decision: "translated",
         },
-        safe: safeResponse.safe,
-        language: params.customerLanguage || "it",
-        blocked: !safeResponse.safe,
-        blockedReason: safeResponse.blockedReason,
+        tokenUsage: {
+          promptTokens: 0,
+          completionTokens: translationTokens,
+          totalTokens: translationTokens,
+        },
       })
 
-      if (!safeResponse.safe) {
-        logger.warn("⚠️ Response blocked by safety layer", {
-          reason: safeResponse.blockedReason,
-        })
-      }
-
-      console.log("🟢 CONSOLE: AFTER SAFETY CHECK - continuing to URL cleanup")
+      console.log("🟢 CONSOLE: AFTER SECURITY CHECK - continuing to URL cleanup")
 
       // STEP 5.5: Clean up punctuation attached to URLs (Safety may add punctuation)
       // Example: "http://localhost:3000/s/xyz." → "http://localhost:3000/s/xyz ."
@@ -1026,7 +1012,7 @@ export class LLMRouterService {
         totalTokens,
         iterations: result.iterations,
         linksReplaced: tokensDetected.length,
-        safetyApproved: safeResponse.safe,
+        translated: true,
         urlsCleaned: finalCleanResponse !== finalResponse,
       })
 
@@ -2759,4 +2745,6 @@ export class LLMRouterService {
 
     return "1 ora" // Fallback
   }
+
 }
+
