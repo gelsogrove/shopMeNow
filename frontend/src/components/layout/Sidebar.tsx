@@ -4,6 +4,7 @@ import {
   BarChart3,
   Building2,
   HelpCircle,
+  ListChecks,
   LucideIcon,
   Megaphone,
   MessageSquare,
@@ -62,6 +63,11 @@ export function Sidebar() {
       label: "Chat History",
       icon: MessageSquare,
       badge: totalUnreadMessages > 0 ? totalUnreadMessages : undefined,
+    },
+    {
+      href: "/queue",
+      label: "WhatsApp Queue",
+      icon: ListChecks,
     },
     {
       href: "/analytics",

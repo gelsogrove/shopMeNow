@@ -3,6 +3,7 @@ import { Request, Response } from "express"
 import { config } from "../../../config"
 import { MessageRepository } from "../../../repositories/message.repository"
 import { LLMRouterService } from "../../../services/llm-router.service"
+import { WhatsAppQueueService } from "../../../services/whatsapp-queue.service"
 import { usageService } from "../../../services/usage.service"
 import { websocketService } from "../../../services/websocket.service"
 import logger from "../../../utils/logger"
@@ -11,11 +12,13 @@ export class ChatController {
   private prisma: PrismaClient
   private messageRepository: MessageRepository
   private llmRouterService: LLMRouterService
+  private whatsappQueueService: WhatsAppQueueService
 
   constructor() {
     this.prisma = new PrismaClient()
     this.messageRepository = new MessageRepository()
     this.llmRouterService = new LLMRouterService(this.prisma)
+    this.whatsappQueueService = new WhatsAppQueueService(this.prisma)
   }
 
   /**
@@ -504,7 +507,22 @@ export class ChatController {
         `[CHAT-SEND] ✅ Operator message saved to database successfully`
       )
 
-      // 🆕 CRITICAL: ALSO save to conversationMessage table for chat history visibility  
+      // 🆕 CRITICAL: ALSO save to conversationMessage table for chat history visibility
+      let deliveryStatus = "not_queued" // Default: not queued yet
+      try {
+        const customer = await this.prisma.customers.findUnique({
+          where: { id: chatSession.customerId },
+          select: { phone: true },
+        })
+
+        // Tentatively mark as "pending" if customer has phone (will be in queue)
+        if (customer?.phone) {
+          deliveryStatus = "pending"
+        }
+      } catch (e) {
+        // Ignore - default to not_queued
+      }
+
       await this.prisma.conversationMessage.create({
         data: {
           workspaceId: workspaceId,
@@ -514,6 +532,7 @@ export class ChatController {
           content: finalMessage, // Use safe/translated message
           agentType: "OPERATOR",
           tokensUsed: 0,
+          deliveryStatus: deliveryStatus, // ✅ Track delivery status
           debugInfo: JSON.stringify({
             isOperatorMessage: true,
             sentBy: "HUMAN_OPERATOR",
@@ -533,6 +552,29 @@ export class ChatController {
       logger.info(
         `[CHAT-SEND] ✅ Operator message ALSO saved to conversationMessage for chat history`
       )
+
+      // 🆕 Add operator message to WhatsApp Queue
+      try {
+        const customer = await this.prisma.customers.findUnique({
+          where: { id: chatSession.customerId },
+          select: { phone: true },
+        })
+
+        if (customer?.phone) {
+          await this.whatsappQueueService.enqueue({
+            workspaceId: workspaceId,
+            customerId: chatSession.customerId,
+            phoneNumber: customer.phone,
+            messageContent: finalMessage,
+          })
+          logger.info(
+            `[CHAT-SEND] 📤 Operator message added to WhatsApp queue for ${customer.phone}`
+          )
+        }
+      } catch (queueError) {
+        logger.error(`[CHAT-SEND] ❌ Failed to add to WhatsApp queue:`, queueError)
+        // Non-critical - continue
+      }
 
       // 🆕 SAVE DEBUG INFO to agentInteractions table (for timeline)
       const debugInfo = {

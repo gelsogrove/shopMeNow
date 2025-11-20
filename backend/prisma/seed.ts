@@ -1546,6 +1546,83 @@ async function main() {
   console.log(
     `   - Push Campaign Billing: ${pushCampaignCount} sends, €${(pushCampaignCost * pushCampaignCount).toFixed(2)} total`
   )
+
+  // 📬 CREATE WHATSAPP QUEUE TEST MESSAGES
+  console.log("\n📬 Creating WhatsApp queue test messages...")
+
+  // Get first 3 customers for test messages
+  const queueCustomers = allCustomers.slice(0, 3)
+
+  if (queueCustomers.length >= 3) {
+    // 2 pending messages (different customers)
+    await prisma.whatsAppQueue.create({
+      data: {
+        workspaceId: workspace.id,
+        customerId: queueCustomers[0].id,
+        phoneNumber: queueCustomers[0].phone || "+393331234567",
+        messageContent: "Grazie per il tuo ordine! Il tuo pacco sarà spedito entro 24 ore.",
+        status: "pending",
+        createdAt: new Date(Date.now() - 60000), // 1 minute ago
+      },
+    })
+
+    await prisma.whatsAppQueue.create({
+      data: {
+        workspaceId: workspace.id,
+        customerId: queueCustomers[1].id,
+        phoneNumber: queueCustomers[1].phone || "+351912345678",
+        messageContent: "Olá! Seu pedido foi confirmado. Obrigado por comprar conosco!",
+        status: "pending",
+        createdAt: new Date(Date.now() - 30000), // 30 seconds ago
+      },
+    })
+
+    // 1 sent message (with deliveredAt)
+    await prisma.whatsAppQueue.create({
+      data: {
+        workspaceId: workspace.id,
+        customerId: queueCustomers[2].id,
+        phoneNumber: queueCustomers[2].phone || "+34612345678",
+        messageContent: "¡Hola! Tu pedido ha sido enviado con éxito.",
+        status: "sent",
+        deliveredAt: new Date(Date.now() - 120000), // 2 minutes ago
+        createdAt: new Date(Date.now() - 180000), // 3 minutes ago
+      },
+    })
+
+    // 2 error messages
+    await prisma.whatsAppQueue.create({
+      data: {
+        workspaceId: workspace.id,
+        customerId: queueCustomers[0].id,
+        phoneNumber: queueCustomers[0].phone || "+393331234567",
+        messageContent: "Messaggio bloccato per sicurezza",
+        status: "error",
+        errorMessage: "Safety validation failed",
+        createdAt: new Date(Date.now() - 300000), // 5 minutes ago
+      },
+    })
+
+    await prisma.whatsAppQueue.create({
+      data: {
+        workspaceId: workspace.id,
+        customerId: queueCustomers[1].id,
+        phoneNumber: "invalid-phone",
+        messageContent: "Test message with invalid phone",
+        status: "error",
+        errorMessage: "Invalid phone number format",
+        createdAt: new Date(Date.now() - 240000), // 4 minutes ago
+      },
+    })
+
+    console.log("✅ Created 5 WhatsApp queue test messages:")
+    console.log("   - 2 pending messages")
+    console.log("   - 1 sent message (with deliveredAt)")
+    console.log("   - 2 error messages (safety validation + invalid phone)")
+  } else {
+    console.log("⚠️  Not enough customers to create queue messages")
+  }
+
   console.log(`\n✅ Ready to use!`)
 }
 

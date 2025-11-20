@@ -100,6 +100,7 @@ import {
 import { faqsRouter } from "../interfaces/http/routes/faqs.routes"
 import { feedbackRoutes } from "../interfaces/http/routes/feedback.routes"
 import { pushRoutes } from "../interfaces/http/routes/push.routes"
+import { whatsappQueueRoutes } from "../interfaces/http/routes/whatsapp-queue.routes"
 
 // Services & Suppliers
 import { servicesRouter } from "../interfaces/http/routes/services.routes"
@@ -639,6 +640,10 @@ logger.info("Registered certification router with workspace routes")
 // Mount transport type routes
 router.use("/workspaces/:workspaceId/transport-types", transportTypeRoutes)
 logger.info("Registered transport type router with workspace routes")
+
+// Mount WhatsApp queue routes
+router.use(whatsappQueueRoutes)
+logger.info("Registered WhatsApp queue router with workspace routes")
 
 // Mount suppliers routes
 router.use("/workspaces/:workspaceId/suppliers", supplierRoutes)

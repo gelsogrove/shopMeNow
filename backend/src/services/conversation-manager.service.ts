@@ -13,6 +13,7 @@
 
 import { PrismaClient } from "@prisma/client"
 import { ConversationMessageRepository } from "../repositories/conversation-message.repository"
+import { WhatsAppQueueService } from "./whatsapp-queue.service"
 import logger from "../utils/logger"
 
 export interface Message {
@@ -32,10 +33,12 @@ export interface SaveMessageParams {
   functionArguments?: Record<string, any>
   tokensUsed?: number
   debugInfo?: any // ✅ Debug information for message flow tracking
+  deliveryStatus?: "not_queued" | "pending" | "sent" | "error" // ✅ WhatsApp delivery status
 }
 
 export class ConversationManager {
   private conversationRepo: ConversationMessageRepository
+  private whatsappQueueService: WhatsAppQueueService
   private historyWindowMinutes: number
 
   constructor(
@@ -43,6 +46,7 @@ export class ConversationManager {
     historyWindowMinutes: number = 5
   ) {
     this.conversationRepo = new ConversationMessageRepository(prisma)
+    this.whatsappQueueService = new WhatsAppQueueService(prisma)
     this.historyWindowMinutes = historyWindowMinutes
 
     logger.info(
@@ -135,12 +139,62 @@ export class ConversationManager {
     params: Omit<SaveMessageParams, "role">
   ): Promise<void> {
     try {
+      let deliveryStatus = params.deliveryStatus || "not_queued" // Default: not queued unless enqueueing succeeds
+
+      // 🚫 SKIP ENQUEUEING FOR REGISTRATION FLOW MESSAGES
+      // Welcome messages from new user registration should NOT go to WhatsApp queue
+      if (params.agentType !== "REGISTRATION_FLOW") {
+        // 2️⃣ Try to Add to WhatsApp Queue (for sending) - ONLY for regular assistant messages
+        try {
+          // Get customer phone number
+          const customer = await this.prisma.customers.findUnique({
+            where: { id: params.customerId },
+            select: { phone: true },
+          })
+
+          if (customer?.phone) {
+            await this.whatsappQueueService.enqueue({
+              workspaceId: params.workspaceId,
+              customerId: params.customerId,
+              phoneNumber: customer.phone,
+              messageContent: params.content,
+            })
+            deliveryStatus = "pending" // ✅ Successfully enqueued = pending
+            logger.debug("📤 Assistant message added to WhatsApp queue", {
+              customerId: params.customerId,
+              phone: customer.phone,
+              deliveryStatus: "pending",
+            })
+          } else {
+            logger.warn("⚠️  Customer has no phone number, skipping WhatsApp queue", {
+              customerId: params.customerId,
+            })
+            deliveryStatus = "not_queued" // No phone = not queued
+          }
+        } catch (queueError) {
+          // Non-critical: log error but don't fail message save
+          logger.error("❌ Failed to add message to WhatsApp queue:", queueError)
+          deliveryStatus = "not_queued" // Enqueue failed = not queued
+        }
+      } else {
+        logger.info(
+          "🚫 Skipping WhatsApp queue for REGISTRATION_FLOW message (welcome message)",
+          {
+            customerId: params.customerId,
+          }
+        )
+        deliveryStatus = "not_queued" // Registration flow = not queued
+      }
+
+      // 1️⃣ Save to History (conversationMessage) with final deliveryStatus
       await this.conversationRepo.saveMessage({
         ...params,
         role: "assistant",
+        deliveryStatus, // ✅ Pass the final delivery status
       })
-      logger.debug("🤖 Assistant message saved", {
+      logger.debug("🤖 Assistant message saved to history", {
         conversationId: params.conversationId,
+        deliveryStatus: deliveryStatus,
       })
     } catch (error) {
       logger.error("❌ Failed to save assistant message", error)

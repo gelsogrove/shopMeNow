@@ -10,6 +10,7 @@ import { AnalyticsPage } from "./pages/AnalyticsPage"
 import SignupPage from "./pages/auth/SignupPage"
 import { ChatPage } from "./pages/ChatPage"
 import ClientsPage from "./pages/ClientsPage"
+import { QueuePage } from "./pages/QueuePage"
 
 import DataProtectionPage from "./pages/data-protection"
 
@@ -105,6 +106,9 @@ export function App() {
                   {/* Layout con sidebar */}
                   <Route path="/chat" element={<Layout />}>
                     <Route index element={<ChatPage />} />
+                  </Route>
+                  <Route path="/queue" element={<Layout />}>
+                    <Route index element={<QueuePage />} />
                   </Route>
                   <Route path="/analytics" element={<Layout />}>
                     <Route index element={<AnalyticsPage />} />

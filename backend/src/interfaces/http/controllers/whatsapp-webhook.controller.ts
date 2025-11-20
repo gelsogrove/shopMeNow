@@ -501,6 +501,7 @@ export class WhatsAppWebhookController {
         // ✅ STEP 8: SAVE WELCOME MESSAGE IN CHAT HISTORY
         // 🔧 CRITICAL: Use conversationMessage table (NEW) not message table (OLD)
         // This ensures messages appear in frontend (getChatSessionMessages queries conversationMessage)
+        // 🚫 NOTE: deliveryStatus='not_queued' because welcome messages are system messages, NOT sent via WhatsApp queue
         await prisma.conversationMessage.create({
           data: {
             workspaceId: workspaceId,
@@ -510,6 +511,7 @@ export class WhatsAppWebhookController {
             content: finalMessage,
             agentType: "REGISTRATION_FLOW",
             tokensUsed: safetyTokensUsed,
+            deliveryStatus: "not_queued", // 🚫 Welcome messages are NOT sent via WhatsApp queue
             debugInfo: JSON.stringify({
               source: "whatsapp-webhook",
               type: "welcome_new_user",

@@ -26,6 +26,7 @@ export interface SaveMessageParams {
   functionArguments?: any
   tokensUsed?: number
   debugInfo?: any // ✅ Debug information for message flow tracking
+  deliveryStatus?: "not_queued" | "pending" | "sent" | "error" // ✅ WhatsApp delivery status
 }
 
 export interface ConversationHistory {
@@ -57,6 +58,7 @@ export class ConversationMessageRepository {
           functionName: params.functionName,
           functionArguments: params.functionArguments,
           tokensUsed: params.tokensUsed,
+          deliveryStatus: params.deliveryStatus || "pending", // ✅ Default to "pending" if not specified
           debugInfo: params.debugInfo
             ? JSON.stringify(params.debugInfo)
             : undefined, // ✅ Save debug info as JSON string
@@ -64,7 +66,11 @@ export class ConversationMessageRepository {
       })
 
       logger.debug(
-        `Saved conversation message: ${params.role} in ${params.conversationId}`
+        `Saved conversation message: ${params.role} in ${params.conversationId}`,
+        {
+          messageId: message.id,
+          deliveryStatus: message.deliveryStatus,
+        }
       )
 
       return message.id

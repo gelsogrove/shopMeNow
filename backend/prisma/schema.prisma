@@ -61,6 +61,7 @@ model Workspace {
   searchConversations       SearchConversations[]
   certifications            Certification[]
   transportTypes            TransportType[]
+  whatsappQueue             WhatsAppQueue[]
 }
 
 model Categories {
@@ -219,6 +220,26 @@ model ProductTransportType {
   @@map("ProductTransportType")
 }
 
+model WhatsAppQueue {
+  id             String    @id @default(uuid())
+  workspaceId    String
+  customerId     String
+  phoneNumber    String
+  messageContent String    @db.Text
+  status         String    @default("pending") // pending, sent, error
+  errorMessage   String?   @db.Text
+  createdAt      DateTime  @default(now())
+  deliveredAt    DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer  Customers @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status])
+  @@index([customerId])
+  @@index([createdAt])
+  @@map("whatsapp_queue")
+}
+
 model Customers {
   id                            String             @id @default(uuid())
   name                          String
@@ -255,6 +276,7 @@ model Customers {
   campaignSends                 CampaignSent[]
   feedbacks                     CustomerFeedback[]
   productSearches               ProductSearch[]
+  whatsappQueue                 WhatsAppQueue[]
 
   @@index([phone])
   @@map("customers")
@@ -868,6 +890,8 @@ model ConversationMessage {
   functionArguments Json? // If role="function", arguments passed
   tokensUsed        Int?
   debugInfo         String? // ✅ Debug information as JSON string (for message flow tracking)
+  deliveredAt       DateTime? // ✅ WhatsApp delivery timestamp (when message sent via queue)
+  deliveryStatus    String    @default("not_queued") // "not_queued" (never sent), "pending" (in queue), "sent" (delivered), "error" (failed)
   createdAt         DateTime  @default(now())
   workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   customer          Customers @relation(fields: [customerId], references: [id], onDelete: Cascade)

@@ -3,6 +3,7 @@ import "dotenv/config"
 import { createServer } from "http"
 import app from "./app"
 import { startScheduler, stopScheduler } from "./scheduler"
+import { startWhatsAppQueueProcessor, stopWhatsAppQueueProcessor, startWhatsAppQueueCleanup } from "./jobs/whatsapp-queue-processor.job"
 import { websocketService } from "./services/websocket.service"
 import logger from "./utils/logger"
 
@@ -29,12 +30,19 @@ async function startServer() {
 
       // Start background scheduler
       startScheduler()
+
+      // Start WhatsApp queue processor (every 10 minutes)
+      startWhatsAppQueueProcessor()
+
+      // Start WhatsApp queue cleanup (daily at 2 AM)
+      startWhatsAppQueueCleanup()
     })
 
     // Graceful shutdown
     process.on("SIGTERM", async () => {
       logger.info("SIGTERM received, shutting down gracefully")
       stopScheduler()
+      stopWhatsAppQueueProcessor()
       await websocketService.shutdown()
       await prisma.$disconnect()
       process.exit(0)

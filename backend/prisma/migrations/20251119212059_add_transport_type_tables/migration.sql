@@ -36,7 +36,7 @@ CREATE INDEX "ProductTransportType_transportTypeId_idx" ON "ProductTransportType
 ALTER TABLE "TransportType" ADD CONSTRAINT "TransportType_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ProductTransportType" ADD CONSTRAINT "ProductTransportType_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Products"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ProductTransportType" ADD CONSTRAINT "ProductTransportType_productId_fkey" FOREIGN KEY ("productId") REFERENCES "products"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ProductTransportType" ADD CONSTRAINT "ProductTransportType_transportTypeId_fkey" FOREIGN KEY ("transportTypeId") REFERENCES "TransportType"("id") ON DELETE CASCADE ON UPDATE CASCADE;

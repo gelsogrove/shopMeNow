@@ -1,0 +1,127 @@
+// External dependencies
+import cron from "node-cron"
+import { PrismaClient } from "@prisma/client"
+
+// Services
+import { WhatsAppQueueService } from "../services/whatsapp-queue.service"
+
+// Internal core
+import logger from "../utils/logger"
+
+const prisma = new PrismaClient()
+let isProcessing = false // Cron lock to prevent concurrent execution
+
+/**
+ * WhatsApp Queue Processor - Cron Job
+ *
+ * Runs every minute to process pending messages from the queue
+ * - Fetches ONE pending message per workspace per cycle (FIFO order)
+ * - Validates and "sends" message (console.log placeholder)
+ * - Deletes from queue on success OR marks as error on failure
+ * - Marks deliveredAt timestamp in conversation history
+ *
+ * Locking mechanism prevents concurrent runs
+ */
+export function startWhatsAppQueueProcessor() {
+  logger.info("[WhatsApp Queue Processor] Starting cron job (every 10 minutes)...")
+
+  // Schedule: runs every 10 minutes
+  // Format: 0 */10 * * * * = at minute 0,10,20,30,40,50 of every hour
+  cron.schedule("0 */10 * * * *", async () => {
+    // Check lock
+    if (isProcessing) {
+      logger.debug(
+        "[WhatsApp Queue Processor] Skipping - previous job still running"
+      )
+      return
+    }
+
+    isProcessing = true
+    const startTime = Date.now()
+
+    try {
+      // Get all active workspaces
+      const workspaces = await prisma.workspace.findMany({
+        where: { isActive: true },
+        select: { id: true, name: true },
+      })
+
+      if (workspaces.length === 0) {
+        logger.debug("[WhatsApp Queue Processor] No active workspaces found")
+        return
+      }
+
+      // Process each workspace sequentially
+      for (const workspace of workspaces) {
+        try {
+          const service = new WhatsAppQueueService(prisma)
+          await service.processPendingMessages(workspace.id)
+        } catch (error) {
+          logger.error(
+            `[WhatsApp Queue Processor] Error processing workspace ${workspace.id}:`,
+            error
+          )
+          // Continue with next workspace
+        }
+      }
+
+      const duration = Date.now() - startTime
+      logger.debug(
+        `[WhatsApp Queue Processor] Cycle completed in ${duration}ms (processed ${workspaces.length} workspaces)`
+      )
+    } catch (error) {
+      logger.error("[WhatsApp Queue Processor] Cron job error:", error)
+    } finally {
+      isProcessing = false
+    }
+  })
+
+  logger.info("✅ [WhatsApp Queue Processor] Cron job started - processing every minute")
+}
+
+/**
+ * WhatsApp Queue Cleanup - Cron Job (runs daily at 2 AM)
+ *
+ * Deletes messages from whatsapp_queue table that are older than 30 days
+ * Keeps recent messages for history/audit purposes
+ */
+export function startWhatsAppQueueCleanup() {
+  logger.info("[WhatsApp Queue Cleanup] Starting cron job (daily at 2 AM)...")
+
+  // Schedule: runs every day at 2 AM (02:00:00)
+  // Format: 0 0 2 * * * = at 2:00 AM every day
+  cron.schedule("0 0 2 * * *", async () => {
+    try {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+
+      logger.info(
+        `[WhatsApp Queue Cleanup] Starting cleanup - deleting messages older than ${thirtyDaysAgo.toISOString()}`
+      )
+
+      const deleted = await prisma.whatsAppQueue.deleteMany({
+        where: {
+          createdAt: {
+            lt: thirtyDaysAgo,
+          },
+        },
+      })
+
+      logger.info(
+        `[WhatsApp Queue Cleanup] Cleanup completed - deleted ${deleted.count} messages older than 30 days`
+      )
+    } catch (error) {
+      logger.error("[WhatsApp Queue Cleanup] Error during cleanup:", error)
+    }
+  })
+
+  logger.info("✅ [WhatsApp Queue Cleanup] Cron job started - runs daily at 2 AM")
+}
+
+/**
+ * Stop cron job (for graceful shutdown)
+ */
+export function stopWhatsAppQueueProcessor() {
+  logger.info("[WhatsApp Queue Processor] Stopping cron job...")
+  // node-cron doesn't expose stop method directly for schedule
+  // The cron will stop when process exits
+}
