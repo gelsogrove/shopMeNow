@@ -354,8 +354,12 @@ export function getAgentFunctions(
       return SUMMARY_AGENT_FUNCTIONS
     case "PROFILE_MANAGEMENT":
       return PROFILE_MANAGEMENT_FUNCTIONS
+    case "SECURITY":
+      return [] // Security agent calls sendAlertEmail only
+    case "TRANSLATION":
+      return [] // Translation agent doesn't call functions
     case "SAFETY_TRANSLATION":
-      return [] // Safety agent doesn't call functions
+      return [] // Deprecated - kept for backwards compatibility
     default:
       return null
   }

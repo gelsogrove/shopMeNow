@@ -176,21 +176,40 @@ export const defaultAgents = (
   },
 
   // ====================================================================
-  // SAFETY & TRANSLATION AGENT (order: 99) - Final security layer
+  // SECURITY AGENT (order: 98) - Security validation and content moderation
   // ====================================================================
   {
     workspaceId,
-    name: "Safety & Translation Agent",
-    type: "SAFETY_TRANSLATION" as AgentType,
+    name: "Security Agent",
+    type: "SECURITY" as AgentType,
     icon: "Shield",
     description:
-      "Final security layer: checks content safety, translates to customer language, removes sensitive data",
-    systemPrompt: loadPrompt("safety-translation-agent.md"),
-    model: "openai/gpt-4o-mini", // Can use Claude Sonnet if preferred
+      "Security validation: detects dangerous content, SQL injection, XSS, offensive language. Blocks unsafe messages completely (no send, shows 🚫 icon)",
+    systemPrompt: loadPrompt("security-agent.md"),
+    model: "openai/gpt-4o-mini",
+    temperature: 0, // Zero temperature = deterministic security checks
+    maxTokens: 500, // Security checks don't need long responses
+    order: 98, // Run BEFORE Translation Agent
+    isActive: true,
+    availableFunctions: getAgentFunctionNames("SECURITY"),
+  },
+
+  // ====================================================================
+  // TRANSLATION AGENT (order: 99) - Translate to customer language
+  // ====================================================================
+  {
+    workspaceId,
+    name: "Translation Agent",
+    type: "TRANSLATION" as AgentType,
+    icon: "Globe",
+    description:
+      "Translation layer: translates all agent responses to customer language (Italian, Spanish, Portuguese, English)",
+    systemPrompt: loadPrompt("translation-agent.md"),
+    model: "openai/gpt-4o-mini",
     temperature: 0.1, // Very low for consistency
     maxTokens: 1024,
-    order: 99, // ✅ Changed from 5 to 99 (last agent in pipeline)
+    order: 99, // Last agent in pipeline
     isActive: true,
-    availableFunctions: getAgentFunctionNames("SAFETY_TRANSLATION"), // Empty array []
+    availableFunctions: getAgentFunctionNames("TRANSLATION"),
   },
 ]
