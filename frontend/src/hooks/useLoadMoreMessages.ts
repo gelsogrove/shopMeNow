@@ -1,7 +1,7 @@
 import { logger } from "@/lib/logger"
 import { api } from "@/services/api"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 interface Message {
   id: string
@@ -30,11 +30,13 @@ interface LoadMoreMessagesResponse {
  */
 export function useLoadMoreMessages(
   sessionId: string | null,
-  enabled: boolean = true
+  enabled: boolean = true,
+  scrollContainerRef?: React.RefObject<HTMLDivElement>
 ) {
   const [page, setPage] = useState(1)
   const [allMessages, setAllMessages] = useState<Message[]>([])
   const queryClient = useQueryClient()
+  const firstMessageIdRef = useRef<string | null>(null)
 
   // Listen for updates from other tabs via localStorage
   useEffect(() => {
@@ -128,18 +130,57 @@ export function useLoadMoreMessages(
   useEffect(() => {
     if (currentPageData?.messages) {
       // When loading a new page, prepend the new messages to maintain chronological order
-      setAllMessages((prev) => [
-        ...currentPageData.messages,
-        ...prev,
-      ])
+      setAllMessages((prev) => {
+        // Save the ID of the first existing message before adding new ones
+        if (prev.length > 0 && page > 1) {
+          firstMessageIdRef.current = prev[0].id
+        }
+
+        return [
+          ...currentPageData.messages,
+          ...prev,
+        ]
+      })
     }
-  }, [currentPageData?.messages])
+  }, [currentPageData?.messages, page])
+
+  // Scroll to preserve position after new messages are loaded
+  useEffect(() => {
+    if (scrollContainerRef?.current && page > 1) {
+      // When loading more messages (page > 1), scroll to the first message that was visible before
+      // This prevents the chat from jumping to the bottom
+      
+      setTimeout(() => {
+        if (!scrollContainerRef.current) return
+
+        if (firstMessageIdRef.current) {
+          // Find the element of the first old message
+          const element = scrollContainerRef.current.querySelector(
+            `[data-message-id="${firstMessageIdRef.current}"]`
+          )
+
+          if (element) {
+            // Scroll to that element so user stays in context
+            element.scrollIntoView({ behavior: "auto", block: "start" })
+            logger.info(
+              `📍 Scrolled to first old message: ${firstMessageIdRef.current}`
+            )
+          }
+        } else if (allMessages.length > 0) {
+          // If we don't have firstMessageIdRef (first load), scroll to the top boundary
+          // so user can see where the older messages start
+          scrollContainerRef.current.scrollTop = 0
+          logger.info("📍 Scrolled to top after loading older messages")
+        }
+      }, 50) // Reduced delay for faster UI response
+    }
+  }, [allMessages, page, scrollContainerRef])
 
   // Function to load more (previous) messages
-  const loadMore = () => {
+  const loadMore = useCallback(() => {
     logger.info(`Loading more messages - moving to page ${page + 1}`)
     setPage((p) => p + 1)
-  }
+  }, [page])
 
   return {
     messages: allMessages,

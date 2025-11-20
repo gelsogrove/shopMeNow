@@ -137,6 +137,7 @@ export function ChatPage() {
   const [isWorkspaceChanging, setIsWorkspaceChanging] = useState(false) // 🆕 Loading per workspace change
   const [searchParams, setSearchParams] = useSearchParams()
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesScrollContainerRef = useRef<HTMLDivElement>(null) // 📍 Ref for scroll preservation
   const hasCompletedChatDataRef = useRef(false) // 🔥 Traccia se abbiamo completato i dati della chat
   const hasResetOnMountRef = useRef(false) // 🔥 Traccia se abbiamo fatto il reset iniziale
   // 🚨 REMOVED: sessionId from URL - chat selection now managed via React context only
@@ -342,7 +343,7 @@ export function ChatPage() {
     error: messagesError,
     loadMore,
     refetch: refetchMessages,
-  } = useLoadMoreMessages(selectedChat?.sessionId || "", !!selectedChat)
+  } = useLoadMoreMessages(selectedChat?.sessionId || "", !!selectedChat, messagesScrollContainerRef)
 
   // 🔄 Use loaded messages for display
   const polledMessages = loadMoreMessages
@@ -1482,6 +1483,7 @@ export function ChatPage() {
 
               {/* Chat Messages */}
               <div
+                ref={messagesScrollContainerRef}
                 className="chat-scrollbar px-4 py-2"
                 style={{
                   height: "600px",
@@ -1577,6 +1579,7 @@ export function ChatPage() {
                     return (
                       <div
                         key={message.id}
+                        data-message-id={message.id}
                         className={`flex mb-4 ${
                           isAgentMessage ? "justify-end" : "justify-start"
                         }`}
