@@ -168,28 +168,11 @@ export class WhatsAppQueueService {
           message.customerId,
           message.messageContent
         )
-
-        // 📊 ADD TO MESSAGE TIMELINE: "Sent to WhatsApp"
-        await this.addToMessageTimeline(
-          message.customerId,
-          message.workspaceId,
-          "✅ Message sent to WhatsApp successfully",
-          "whatsapp_sent"
-        )
       } else {
         // Error: update status to 'error' with error message
         await this.repository.updateStatus(message.id, "error", result.error)
         logger.error(
           `[WhatsAppQueueService] Message ${message.id} failed: ${result.error}`
-        )
-
-        // 📊 ADD TO MESSAGE TIMELINE: "WhatsApp Error"
-        await this.addToMessageTimeline(
-          message.customerId,
-          message.workspaceId,
-          `❌ WhatsApp Error: ${result.error}`,
-          "whatsapp_error",
-          result.error
         )
       }
     } catch (error) {
@@ -314,68 +297,6 @@ export class WhatsAppQueueService {
     } catch (error) {
       logger.error(
         `[WhatsAppQueueService] Error marking delivered in history:`,
-        error
-      )
-      // Don't throw - this is non-critical
-    }
-  }
-
-  /**
-   * Add timeline entry to message flow (for debugging/tracking)
-   * @param customerId Customer ID
-   * @param workspaceId Workspace ID
-   * @param eventDescription Event description (e.g., "Sent to WhatsApp", "WhatsApp Error")
-   * @param eventType Event type identifier
-   * @param errorMessage Optional error message
-   */
-  private async addToMessageTimeline(
-    customerId: string,
-    workspaceId: string,
-    eventDescription: string,
-    eventType: string,
-    errorMessage?: string
-  ): Promise<void> {
-    try {
-      // Find active chat session for customer
-      const chatSession = await this.prisma.chatSession.findFirst({
-        where: {
-          customerId,
-          workspaceId,
-          status: "active",
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      })
-
-      if (!chatSession) {
-        logger.warn(
-          `[WhatsAppQueueService] No active chat session found for customer ${customerId}`
-        )
-        return
-      }
-
-      // Create timeline entry in conversationMessage
-      await this.prisma.conversationMessage.create({
-        data: {
-          conversationId: chatSession.id,
-          customerId,
-          workspaceId,
-          role: "system", // System message for timeline
-          content: eventDescription,
-          agentType: eventType, // "whatsapp_sent" or "whatsapp_error"
-          debugInfo: errorMessage
-            ? JSON.stringify({ errorMessage, timestamp: new Date().toISOString() })
-            : JSON.stringify({ timestamp: new Date().toISOString() }),
-        },
-      })
-
-      logger.info(
-        `[WhatsAppQueueService] Added timeline entry: ${eventType} for customer ${customerId}`
-      )
-    } catch (error) {
-      logger.error(
-        `[WhatsAppQueueService] Error adding timeline entry:`,
         error
       )
       // Don't throw - this is non-critical

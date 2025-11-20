@@ -11,8 +11,22 @@
  * Total: 17 tests
  */
 
+import { describe, it, expect, beforeEach, jest } from "@jest/globals"
 import { PrismaClient } from "@prisma/client"
 import { WhatsAppQueueService } from "../../src/services/whatsapp-queue.service"
+
+// Mock SecurityAgent (🆕 Feature 181)
+jest.mock("../../src/application/agents/SecurityAgent", () => {
+  return {
+    SecurityAgent: jest.fn().mockImplementation(() => ({
+      process: jest.fn().mockResolvedValue({
+        safe: true, // Default: all messages pass security in these tests
+        message: "Message passed security check",
+        tokensUsed: 100,
+      }),
+    })),
+  }
+})
 
 // Mock PrismaClient
 const mockPrisma = {
