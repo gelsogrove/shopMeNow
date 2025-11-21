@@ -55,6 +55,43 @@ For privacy inquiries, please contact our support team.`
   }
 
   /**
+   * Load default GDPR content in 4 languages from markdown files
+   * @private
+   */
+  private loadDefaultGdprContent(): {
+    gdpr_ita: string
+    gdpr_eng: string
+    gdpr_esp: string
+    gdpr_prt: string
+  } {
+    const gdprDir = path.join(__dirname, "../../../docs/prompts/gdpr")
+    const languages = [
+      { code: "it", key: "gdpr_ita" },
+      { code: "en", key: "gdpr_eng" },
+      { code: "es", key: "gdpr_esp" },
+      { code: "pt", key: "gdpr_prt" },
+    ]
+
+    const result: any = {}
+
+    for (const lang of languages) {
+      const filePath = path.join(gdprDir, `gdpr-${lang.code}.md`)
+      try {
+        const content = fs.readFileSync(filePath, "utf-8")
+        result[lang.key] = content
+        logger.info(`✓ Loaded GDPR content for language: ${lang.code}`)
+      } catch (error) {
+        logger.warn(
+          `⚠️  Could not read GDPR file for language '${lang.code}' at ${filePath}`
+        )
+        result[lang.key] = `# GDPR Content - ${lang.code.toUpperCase()}\n\nContent not available.`
+      }
+    }
+
+    return result
+  }
+
+  /**
    * Get default agent prompt content from file
    * @private
    */
@@ -212,6 +249,29 @@ For privacy inquiries, please contact our support team.`
           error
         )
         // Don't fail the entire transaction for agent settings
+      }
+
+      // 4. 🆕 CREATE DEFAULT GDPR CONTENT (Feature: Auto-create GDPR on new workspace)
+      try {
+        const gdprContent = this.loadDefaultGdprContent()
+        await tx.gdprContent.create({
+          data: {
+            workspaceId: createdWorkspace.id,
+            gdpr_ita: gdprContent.gdpr_ita,
+            gdpr_eng: gdprContent.gdpr_eng,
+            gdpr_esp: gdprContent.gdpr_esp,
+            gdpr_prt: gdprContent.gdpr_prt,
+          },
+        })
+        logger.info(
+          `✅ Created GDPR content in 4 languages for workspace ${createdWorkspace.id}`
+        )
+      } catch (error) {
+        logger.error(
+          `Error creating GDPR content for workspace ${createdWorkspace.id}:`,
+          error
+        )
+        // Don't fail the entire transaction for GDPR content
       }
 
       return createdWorkspace

@@ -1,79 +1,83 @@
-import { prisma } from "../lib/prisma";
-import logger from "../utils/logger";
+import { prisma } from "../lib/prisma"
+import logger from "../utils/logger"
 
 /**
  * Repository for GDPR Content management
+ * Simple structure: One row per workspace with all 4 languages in separate columns
  */
 export class GdprRepository {
+  /**
+   * Get GDPR content for a workspace (all 4 languages)
+   */
+  async getGdprContent(workspaceId: string) {
+    try {
+      logger.info(`[GDPR REPO] Getting GDPR content for workspace: ${workspaceId}`)
+
+      const gdprContent = await prisma.gdprContent.findUnique({
+        where: { workspaceId }
+      })
+
+      if (!gdprContent) {
+        logger.warn(`[GDPR REPO] No GDPR content found for workspace: ${workspaceId}`)
+        return null
+      }
+
+      return gdprContent
+    } catch (error) {
+      logger.error(`[GDPR REPO] Error getting GDPR content: ${error.message}`)
+      throw error
+    }
+  }
   
   /**
-   * Get GDPR content for a workspace, create default if not exists
+   * Update or create GDPR content for a workspace
    */
-  async getGdprContent(workspaceId: string): Promise<string> {
+  async updateGdprContent(
+    workspaceId: string,
+    data: {
+      gdpr_ita: string
+      gdpr_esp: string
+      gdpr_eng: string
+      gdpr_prt: string
+    }
+  ): Promise<any> {
     try {
-      logger.info(`[GDPR REPO] Getting GDPR content for workspace: ${workspaceId}`);
-      
-      // Try to find existing GDPR content
-      let gdprRecord = await prisma.gdprContent.findUnique({
+      logger.info(`[GDPR REPO] Updating GDPR content for workspace: ${workspaceId}`)
+
+      // Try to find existing record
+      const existing = await prisma.gdprContent.findUnique({
         where: { workspaceId }
-      });
-      
-      // If not found, create default GDPR content
-      if (!gdprRecord) {
-        logger.info(`[GDPR REPO] No GDPR content found, creating default for workspace: ${workspaceId}`);
-        
-        const defaultContent = `Informativa sulla Privacy e Trattamento dei Dati Personali
+      })
 
-In conformità al Regolamento Generale sulla Protezione dei Dati (GDPR) UE 2016/679, La informiamo che:
+      let gdprRecord
 
-1. I Suoi dati personali saranno trattati per finalità di assistenza clienti e supporto tecnico
-2. Il trattamento è basato sul consenso da Lei espresso
-3. I dati saranno conservati per il tempo necessario a fornire il servizio richiesto
-4. Ha il diritto di accedere, rettificare, cancellare i Suoi dati e di opporsi al trattamento
-5. Può revocare il consenso in qualsiasi momento
-
-Per esercitare i Suoi diritti o per maggiori informazioni, può contattarci.`;
-        
+      if (existing) {
+        // Update existing record
+        gdprRecord = await prisma.gdprContent.update({
+          where: { workspaceId },
+          data: {
+            ...data,
+            updatedAt: new Date()
+          }
+        })
+        logger.info(`[GDPR REPO] GDPR content updated for workspace: ${workspaceId}`)
+      } else {
+        // Create new record
         gdprRecord = await prisma.gdprContent.create({
           data: {
             workspaceId,
-            content: defaultContent
+            ...data
           }
-        });
-        
-        logger.info(`[GDPR REPO] Default GDPR content created with ID: ${gdprRecord.id}`);
+        })
+        logger.info(`[GDPR REPO] GDPR content created for workspace: ${workspaceId}`)
       }
-      
-      return gdprRecord.content;
+
+      return gdprRecord
     } catch (error) {
-      logger.error(`[GDPR REPO] Error getting GDPR content: ${error.message}`);
-      throw error;
+      logger.error(`[GDPR REPO] Error updating GDPR content: ${error.message}`)
+      throw error
     }
   }
-  
-  /**
-   * Update GDPR content for a workspace, create if not exists
-   */
-  async updateGdprContent(workspaceId: string, content: string): Promise<any> {
-    try {
-      logger.info(`[GDPR REPO] Updating GDPR content for workspace: ${workspaceId}`);
-      
-      // Use upsert to update if exists, create if not
-      const gdprRecord = await prisma.gdprContent.upsert({
-        where: { workspaceId },
-        update: { content },
-        create: {
-          workspaceId,
-          content
-        }
-      });
-      
-      logger.info(`[GDPR REPO] GDPR content updated/created with ID: ${gdprRecord.id}`);
-      
-      return gdprRecord;
-    } catch (error) {
-      logger.error(`[GDPR REPO] Error updating GDPR content: ${error.message}`);
-      throw error;
-    }
-  }
-} 
+}
+
+export const gdprRepository = new GdprRepository()

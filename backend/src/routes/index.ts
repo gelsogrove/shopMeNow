@@ -111,6 +111,7 @@ import analyticsRoutes from "../interfaces/http/routes/analytics.routes"
 import { billingRouter } from "../interfaces/http/routes/billing.routes"
 import debugRoutes from "../interfaces/http/routes/debug.routes"
 import { createLanguagesRouter } from "../interfaces/http/routes/languages.routes"
+import gdprRoutes from "../interfaces/http/routes/gdpr.routes"
 import pricingRoutes from "../interfaces/http/routes/pricing.routes"
 import createSettingsRouter from "../interfaces/http/routes/settings.routes"
 import { shortUrlRoutes } from "../interfaces/http/routes/short-url.routes"
@@ -662,6 +663,11 @@ logger.info("Registered FAQs router with workspace routes")
 
 router.use("/settings", createSettingsRouter())
 router.use("/languages", createLanguagesRouter())
+
+// Mount GDPR routes (with workspace context and without)
+router.use("/workspaces/:workspaceId/gdpr", gdprRoutes)
+router.use("/gdpr", gdprRoutes)
+logger.info("Registered GDPR routes (/api/workspaces/:workspaceId/gdpr, /api/gdpr)")
 
 // Mount billing routes
 router.use("/billing", billingRouter)

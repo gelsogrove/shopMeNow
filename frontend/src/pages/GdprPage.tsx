@@ -1,118 +1,164 @@
-/**
- * GDPR PAGE - VERSIONE FUNZIONANTE
- *
- * ✅ SOLUZIONE TESTATA E FUNZIONANTE
- * Data: 13 Giugno 2025
- *
- * STESSO FIX APPLICATO A GdprSettingsTab:
- * - Endpoint corretto: /api/settings/gdpr
- * - Rimozione logica workspace-specific
- * - Backend gestisce workspace via header x-workspace-id
- *
- * ⚠️ MANTIENI SINCRONIZZATO CON GdprSettingsTab.tsx
- */
-
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Textarea } from "@/components/ui/textarea"
-import { logger } from "@/lib/logger"
-import { api } from "@/services/api"
-import { Loader2, Save, ShieldCheck } from "lucide-react"
 import { useEffect, useState } from "react"
-import { toast } from "../lib/toast"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Textarea } from "@/components/ui/textarea"
+import { toast } from "@/lib/toast"
+import { gdprApi, GdprContent } from "@/services/gdprApi"
+import { Loader2, Save } from "lucide-react"
+import { useWorkspace } from "@/hooks/use-workspace"
+
+interface LanguageConfig {
+  key: keyof GdprContent
+  label: string
+  flag: string
+}
+
+const LANGUAGES: LanguageConfig[] = [
+  { key: "gdpr_ita", label: "Italiano", flag: "🇮🇹" },
+  { key: "gdpr_eng", label: "English", flag: "🇬🇧" },
+  { key: "gdpr_esp", label: "Español", flag: "🇪🇸" },
+  { key: "gdpr_prt", label: "Português", flag: "🇵🇹" },
+]
 
 export default function GdprPage() {
-  const [isLoading, setIsLoading] = useState(false)
-  const [isPageLoading, setIsPageLoading] = useState(true)
-  const [gdprText, setGdprText] = useState("")
-  const [defaultGdpr, setDefaultGdpr] = useState("")
+  const { workspace, loading: isLoadingWorkspace } = useWorkspace()
+  const [gdprContent, setGdprContent] = useState<GdprContent>({
+    gdpr_ita: "",
+    gdpr_eng: "",
+    gdpr_esp: "",
+    gdpr_prt: "",
+  })
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const loadGdprContent = async () => {
-      setIsPageLoading(true)
-      try {
-        const response = await api.get(`/settings/gdpr`)
-        setGdprText(response.data.data?.gdpr || response.data.content || "")
-      } catch (error) {
-        logger.error("Error loading GDPR content:", error)
-        toast.error("Failed to load GDPR content")
-      } finally {
-        setIsPageLoading(false)
-      }
+    if (!isLoadingWorkspace && workspace?.id) {
+      loadGdprContent()
     }
-    loadGdprContent()
-  }, [])
+  }, [workspace?.id, isLoadingWorkspace])
 
-  const handleSave = async () => {
-    setIsLoading(true)
+  const loadGdprContent = async () => {
     try {
-      await api.put(`/settings/gdpr`, { gdpr: gdprText })
-      toast.success("GDPR policy saved successfully")
-    } catch (error) {
-      logger.error("Error saving GDPR policy:", error)
-      toast.error("Failed to save GDPR policy")
+      setIsLoading(true)
+      setError(null)
+
+      if (!workspace?.id) {
+        setError("Workspace not found")
+        return
+      }
+
+      const content = await gdprApi.getContent(workspace.id)
+      if (content) {
+        setGdprContent(content)
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to load GDPR content"
+      setError(errorMessage)
+      toast.error("Failed to load GDPR content")
     } finally {
       setIsLoading(false)
     }
   }
 
-  if (isPageLoading) {
+  const handleTextChange = (key: keyof GdprContent, value: string) => {
+    setGdprContent((prev) => ({
+      ...prev,
+      [key]: value,
+    }))
+  }
+
+  const handleSave = async () => {
+    try {
+      setIsSaving(true)
+
+      if (!workspace?.id) {
+        toast.error("Workspace not found")
+        return
+      }
+
+      await gdprApi.updateContent(workspace.id, gdprContent)
+      toast.success("✅ GDPR content saved!")
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to save GDPR content"
+      toast.error(`❌ ${errorMessage}`)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (isLoadingWorkspace || isLoading) {
     return (
-      <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[50vh]">
-        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <h2 className="text-xl font-medium">Loading GDPR policy...</h2>
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
+          <p className="font-semibold">Error</p>
+          <p className="text-sm mt-1">{error}</p>
+          <Button onClick={loadGdprContent} className="mt-4">
+            Try Again
+          </Button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="container pl-0 pr-4 pt-4 pb-4">
-      <div className="grid grid-cols-12 gap-0">
-        <div className="col-span-11 col-start-1">
-          <div className="flex items-center gap-2 mb-6">
-            <ShieldCheck className="h-6 w-6 text-green-600" />
-            <h1 className="text-xl font-bold text-green-600">
-              Privacy & GDPR Policy
-            </h1>
-          </div>
+    <div className="space-y-6 p-6 max-w-6xl mx-auto">
+      <div>
+        <h1 className="text-3xl font-bold">GDPR Content Manager</h1>
+        <p className="text-gray-600 mt-2">Edit GDPR privacy notice in 4 languages</p>
+      </div>
 
-          <Card>
-            <CardContent className="p-6 space-y-6">
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Edit your privacy policy and GDPR compliance statement that
-                  will be shown to your customers.
-                </p>
-
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {LANGUAGES.map((lang) => (
+          <Card key={lang.key}>
+            <CardHeader>
+              <CardTitle className="text-lg">
+                {lang.flag} {lang.label}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-2">
                 <Textarea
-                  value={gdprText}
-                  onChange={(e) => setGdprText(e.target.value)}
-                  className="min-h-[400px] font-mono text-sm"
+                  value={gdprContent[lang.key]}
+                  onChange={(e) => handleTextChange(lang.key, e.target.value)}
+                  placeholder={`Enter GDPR content for ${lang.label}...`}
+                  className="min-h-[300px] font-mono text-sm"
                 />
-
-                <div className="flex justify-end mt-4">
-                  <Button
-                    onClick={handleSave}
-                    disabled={isLoading}
-                    className="flex items-center gap-2"
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-4 w-4" />
-                        Save Policy
-                      </>
-                    )}
-                  </Button>
+                <div className="text-xs text-gray-500">
+                  {gdprContent[lang.key].length} characters
                 </div>
               </div>
             </CardContent>
           </Card>
-        </div>
+        ))}
+      </div>
+
+      <div className="flex justify-end gap-3">
+        <Button
+          onClick={handleSave}
+          disabled={isSaving}
+          className="bg-green-600 hover:bg-green-700"
+        >
+          {isSaving ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Save className="mr-2 h-4 w-4" />
+              Save All Languages
+            </>
+          )}
+        </Button>
       </div>
     </div>
   )

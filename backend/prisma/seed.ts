@@ -1532,6 +1532,50 @@ async function main() {
   console.log(`   - Unit cost: €${pushCampaignCost.toFixed(2)}/push`)
   console.log(`   - Campaigns: 5 (with ${pushCampaignCount} total sends)`)
 
+  // 10. Create GDPR Content in 4 languages
+  console.log("\n📋 Creating GDPR content in 4 languages...")
+  
+  const fs = require("fs")
+  const path = require("path")
+  const gdprLanguages = ["it", "en", "es", "pt"]
+  const gdprContentMap = new Map<string, string>()
+
+  // Use path relative to backend root (where seed.ts is located)
+  const gdprDir = path.join(__dirname, "..", "docs", "prompts", "gdpr")
+
+  for (const lang of gdprLanguages) {
+    const filePath = path.join(gdprDir, `gdpr-${lang}.md`)
+    try {
+      const content = fs.readFileSync(filePath, "utf-8")
+      gdprContentMap.set(lang, content)
+      console.log(`   ✓ Loaded GDPR content for language: ${lang}`)
+    } catch (error) {
+      console.warn(`⚠️  Could not read GDPR file for language '${lang}' at ${filePath}`)
+      gdprContentMap.set(lang, `# GDPR Content - ${lang.toUpperCase()}\n\nContent not available.`)
+    }
+  }
+
+  // Create GDPR content entry for workspace (one row with all 4 languages)
+  // First delete any existing entry
+  await prisma.gdprContent.deleteMany({
+    where: {
+      workspaceId: workspace.id,
+    },
+  })
+
+  // Create one row with all 4 languages in separate columns
+  await prisma.gdprContent.create({
+    data: {
+      workspaceId: workspace.id,
+      gdpr_ita: gdprContentMap.get("it") || "# GDPR - Italiano\n\nContent not available.",
+      gdpr_eng: gdprContentMap.get("en") || "# GDPR - English\n\nContent not available.",
+      gdpr_esp: gdprContentMap.get("es") || "# GDPR - Español\n\nContent not available.",
+      gdpr_prt: gdprContentMap.get("pt") || "# GDPR - Português\n\nContent not available.",
+    },
+  })
+
+  console.log(`✅ Created GDPR content in 4 languages (it, en, es, pt)`)
+
   console.log("\n🎉 Database seed completed successfully!")
   console.log(`\n📊 Summary:`)
   console.log(`   - Workspace: ${workspace.name}`)

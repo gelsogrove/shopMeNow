@@ -43,7 +43,7 @@ model Workspace {
   customers                 Customers[]
   documents                 Documents[]
   faqs                      FAQ[]
-  gdprContent               GdprContent?
+  gdprContent               GdprContent[]
   languages                 Languages[]
   offers                    Offers[]
   orders                    Orders[]
@@ -675,14 +675,15 @@ model AgentConfig {
 }
 
 model GdprContent {
-  id          String    @id @default(uuid())
+  id          String    @id @default(cuid())
   workspaceId String    @unique
-  content     String
-  version     String    @default("1.0")
-  isActive    Boolean   @default(true)
+  gdpr_ita    String    @db.Text
+  gdpr_esp    String    @db.Text
+  gdpr_eng    String    @db.Text
+  gdpr_prt    String    @db.Text
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@map("gdpr_content")
 }
