@@ -196,6 +196,11 @@ export class EnhancedAuthController {
         throw new AppError(404, 'User not found')
       }
 
+      logger.info('🔍 [verify2FASetup] User fetched from DB:', { 
+        userId: user.id, 
+        email: user.email 
+      })
+
       // ❌ REMOVED: Automatic workspace creation
       // User MUST create workspace manually after registration
       // This allows users to customize workspace name, phone number, etc.
@@ -211,6 +216,19 @@ export class EnhancedAuthController {
       
       // Generate JWT token (user is now fully authenticated)
       const token = this.generateToken(user)
+      
+      // 🔍 DEBUG: Decode token to verify content
+      const decodedToken = jwt.decode(token) as any
+      logger.info('🔍 [verify2FASetup] Token generated for user:', {
+        userId: user.id,
+        email: user.email,
+        tokenPreview: token.substring(0, 20) + '...',
+        decodedToken: {
+          id: decodedToken?.id,
+          email: decodedToken?.email,
+          role: decodedToken?.role,
+        }
+      })
 
       await logAuthAttempt({
         userId,

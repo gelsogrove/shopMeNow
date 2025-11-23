@@ -48,6 +48,7 @@ const SESSION_EXEMPT_ROUTES = [
   "/auth/reset-password",
   "/auth/register",
   "/auth/verify-2fa-setup", // 🔑 CRITICAL: Part of registration flow, uses token from registration
+  "/auth/oauth/google", // 🔑 OAuth Google login/register
   "/health",
   "/session/validate", // 🔑 CRITICAL: Used by LoginPage checkExistingSession
   "/analytics", // Analytics routes (JWT-based only, no sessionId)
@@ -70,6 +71,20 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
       logger.info(`🔐 Added Authorization header with JWT token`)
+      logger.info(`🔍 [DEBUG] Token preview: ${token.substring(0, 50)}...`)
+      
+      // 🔍 DEBUG: Decode token to see content
+      try {
+        const base64Url = token.split('.')[1]
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map((c: string) => {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+        }).join(''))
+        const decoded = JSON.parse(jsonPayload)
+        logger.info(`🔍 [DEBUG] Token decoded:`, decoded)
+      } catch (e) {
+        logger.error('Failed to decode token for debug:', e)
+      }
     } else {
       logger.info(
         `🔐 No JWT token in localStorage - using HTTP-only cookie fallback`

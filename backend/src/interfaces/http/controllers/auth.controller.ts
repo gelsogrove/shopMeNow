@@ -314,10 +314,18 @@ export class AuthController {
     try {
       const { token, newPassword } = req.body
 
+      // Verify token and get userId
       const userId = await this.passwordResetService.verifyResetToken(token)
-      await this.userService.update(userId, { password: newPassword })
+      
+      // Hash the new password
+      const bcrypt = await import('bcryptjs')
+      const passwordHash = await bcrypt.hash(newPassword, 10)
+      
+      // Update user password with hashed version
+      await this.userService.update(userId, { passwordHash })
       await this.passwordResetService.markTokenAsUsed(token)
 
+      logger.info(`✅ Password reset successful for user: ${userId}`)
       res.status(200).json({
         message: "Password reset successful",
       })

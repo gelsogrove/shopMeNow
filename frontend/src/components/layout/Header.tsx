@@ -124,18 +124,24 @@ export function Header() {
     try {
       await api.post("/auth/logout")
 
-      // Clear all localStorage and sessionStorage data
-      localStorage.removeItem("user")
-      sessionStorage.removeItem("sessionId") // 🔒 CRITICAL: Clear sessionId from sessionStorage
-      sessionStorage.removeItem("currentWorkspace")
-      sessionStorage.removeItem("currentWorkspaceName")
-      sessionStorage.removeItem("currentWorkspaceType")
-      localStorage.removeItem("chat-tab-lock") // Clear tab lock
+      // 🛡️ CRITICAL SECURITY: Clear ALL storage on logout
+      logger.info("🧹 [LOGOUT] Clearing ALL storage (localStorage + sessionStorage)")
+      localStorage.clear()
+      sessionStorage.clear()
+      logger.info("✅ [LOGOUT] Storage cleared completely")
 
       navigate("/auth/login")
     } catch (error) {
       logger.error("Error logging out:", error)
+      
+      // Force logout even if API call fails
+      logger.info("🧹 [LOGOUT FORCE] Clearing ALL storage after API error")
+      localStorage.clear()
+      sessionStorage.clear()
+      logger.info("✅ [LOGOUT FORCE] Storage cleared completely")
+      
       toast.error("Failed to logout")
+      navigate("/auth/login")
     }
   }
 

@@ -159,8 +159,12 @@ export class WorkspaceController {
       
       logger.info(`✅ Workspace created: ${workspace.id} for user ${userId}`)
       return res.status(201).json(workspace)
-    } catch (error) {
-      logger.error("Error creating workspace:", error)
+    } catch (error) {      logger.error("❌ Error creating workspace:", {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        userId: (req as any).user?.id,
+        body: req.body,
+      })
       return next(error)
     }
   }

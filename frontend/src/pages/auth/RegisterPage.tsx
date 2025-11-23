@@ -10,7 +10,7 @@
  * DESIGN: Aligned with GdprPage (shadcn/ui + Card)
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 import { Button } from '@/components/ui/button'
@@ -21,11 +21,15 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from '@/lib/toast'
 import { Loader2, Mail, Chrome, Facebook as FacebookIcon, Apple } from 'lucide-react'
 import { api } from '@/services/api'
+import { logger } from '@/lib/logger'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '988195920488-drdmtlruo5s47nkk4g8prui6k9mb0pln.apps.googleusercontent.com'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
+  
+  // ❌ REMOVED: Don't clear storage in useEffect - causes race conditions with OAuth
+  // Storage clearing moved to individual handlers (onSubmitRegister, handleGoogleSuccess)
   
   // Form state
   const [showEmailForm, setShowEmailForm] = useState(false)
@@ -145,16 +149,31 @@ export default function RegisterPage() {
     setLoading(true)
     
     try {
+      // 🔒 SECURITY: Clear ALL storage before OAuth login
+      logger.info('🔄 [RegisterPage] Clearing storage before Google OAuth')
+      localStorage.clear()
+      sessionStorage.clear()
+      
       // Send Google token to backend
       const response = await api.post('/auth/oauth/google', {
         credential: credentialResponse.credential,
       })
       
-      const { user, requiresSetup, qrCode } = response.data
+      logger.info('🔍 [RegisterPage] OAuth Google response:', response.data)
+      
+      const { user, requiresSetup, requires2FA, qrCode } = response.data
+      
+      logger.info('🔍 [RegisterPage] Extracted data:', { user, requiresSetup, requires2FA, qrCode: qrCode ? 'present' : 'missing' })
       
       if (requiresSetup) {
         // New user - setup 2FA
         toast.success('Registration successful! Please setup 2FA.')
+        logger.info('🔍 [RegisterPage] Navigating to setup-2fa with state:', {
+          userId: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          provider: 'google',
+        })
         navigate('/auth/setup-2fa', {
           state: {
             userId: user.id,
@@ -164,8 +183,24 @@ export default function RegisterPage() {
             provider: 'google',
           },
         })
+      } else if (requires2FA) {
+        // Existing user with 2FA - clear ONLY authentication data
+        logger.info('🗑️ [RegisterPage] Clearing authentication data before 2FA verification')
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        localStorage.removeItem('currentWorkspace')
+        sessionStorage.removeItem('sessionId')
+        
+        toast.success('Welcome back! Please verify your 2FA code.')
+        navigate('/auth/verify-2fa', {
+          state: {
+            userId: user.id,
+            email: user.email,
+            provider: 'google',
+          },
+        })
       } else {
-        // Existing user - redirect to 2FA verification
+        // Fallback
         navigate('/auth/verify-2fa', {
           state: {
             userId: user.id,
@@ -175,6 +210,7 @@ export default function RegisterPage() {
         })
       }
     } catch (error: any) {
+      logger.error('❌ [RegisterPage] Google OAuth error:', error)
       toast.error('Google sign-in failed. Please try again.')
     } finally {
       setLoading(false)

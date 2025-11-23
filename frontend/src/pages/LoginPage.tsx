@@ -35,6 +35,14 @@ import { auth, getSessionId, setSessionId, api } from "../services/api"
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '988195920488-drdmtlruo5s47nkk4g8prui6k9mb0pln.apps.googleusercontent.com'
 
+// 🚨 REMOVED MODULE-LEVEL CLEAR - was too aggressive!
+// Storage clear is now done ONLY in specific actions:
+// - onSubmit (login form)
+// - onRegisterSubmit (register form)
+// - handleGoogleSuccess (Google OAuth)
+// - Register button click
+// This prevents clearing token AFTER it's been saved by Google OAuth
+
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
@@ -112,15 +120,25 @@ export function LoginPage() {
   const checkExistingSession = async () => {
     try {
       const sessionId = getSessionId()
+      const token = localStorage.getItem('token')
 
-      // Se NON c'è sessionId, mostra form login
-      if (!sessionId) {
-        logger.info("🔓 No existing sessionId - showing login form")
+      // Se NON c'è sessionId O token, mostra form login
+      if (!sessionId || !token) {
+        logger.info("🔓 No existing sessionId/token - showing login form", { sessionId: !!sessionId, token: !!token })
         setIsValidatingSession(false)
         return
       }
 
-      // Se c'è sessionId, facciamo redirect diretto (ProtectedRoute farà validazione vera)
+      // 🚨 CRITICAL FIX: Non fare redirect automatico se siamo in fase di registrazione
+      // Questo previene il loop: registrazione → storage cleared → checkExistingSession trova sessionId vecchio → redirect
+      const isInAuthFlow = window.location.pathname.includes('/auth/')
+      if (isInAuthFlow) {
+        logger.info("🔒 In auth flow - skipping auto-redirect", { pathname: window.location.pathname })
+        setIsValidatingSession(false)
+        return
+      }
+
+      // Se c'è sessionId e token VALIDI, facciamo redirect
       logger.info(
         `✅ SessionId found: ${sessionId.substring(
           0,
@@ -139,11 +157,11 @@ export function LoginPage() {
     setError("")
     setIsLoading(true)
 
-    // Pulisci la sessionStorage prima del login
-    sessionStorage.removeItem("currentWorkspace")
-    localStorage.removeItem("user")
-    localStorage.removeItem("token") // Remove any old token
-    localStorage.removeItem("chat-tab-lock") // Clear tab lock to prevent blocking
+    // 🛡️ CRITICAL SECURITY: Clear ALL storage to prevent session/workspace leakage
+    logger.info("🧹 [LOGIN] Clearing ALL storage (localStorage + sessionStorage)")
+    localStorage.clear()
+    sessionStorage.clear()
+    logger.info("✅ [LOGIN] Storage cleared completely")
 
     try {
       // Usa await esplicitamente e salva la risposta
@@ -213,10 +231,32 @@ export function LoginPage() {
   }
 
   const onRegisterSubmit = async (data: RegisterForm) => {
+    logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    logger.info('📝 [REGISTER] STEP 1: Form submitted', { email: data.email, firstName: data.firstName, lastName: data.lastName })
+    logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    
     setError("")
     setIsLoading(true)
 
+    // 🛡️ CRITICAL SECURITY: Clear ALL storage to prevent session/workspace leakage
+    logger.info("🧹 [REGISTER] STEP 2: Clearing ALL storage (localStorage + sessionStorage)")
+    const beforeClear = {
+      localStorage: { ...localStorage },
+      sessionStorage: { ...sessionStorage },
+    }
+    logger.info("📦 [REGISTER] Storage BEFORE clear:", beforeClear)
+    
+    localStorage.clear()
+    sessionStorage.clear()
+    
+    const afterClear = {
+      localStorageLength: localStorage.length,
+      sessionStorageLength: sessionStorage.length,
+    }
+    logger.info("✅ [REGISTER] Storage AFTER clear:", afterClear)
+
     try {
+      logger.info('🌐 [REGISTER] STEP 3: Calling POST /auth/register API')
       const response = await api.post('/auth/register', {
         email: data.email,
         password: data.password,
@@ -225,12 +265,24 @@ export function LoginPage() {
         gdprAccepted: data.gdprAccepted,
       })
 
+      logger.info('✅ [REGISTER] STEP 4: Registration API success', {
+        status: response.status,
+        userId: response.data.user?.id,
+        hasQrCode: !!response.data.qrCode,
+      })
+
       const { user, qrCode } = response.data
 
       // 🔒 SECURITY: No sessionId or token from registration
       // User MUST verify 2FA first to get authenticated
 
       toast.success('Account created! Please setup 2FA.')
+      
+      logger.info('🔄 [REGISTER] STEP 5: Navigating to /auth/setup-2fa', {
+        userId: user.id,
+        email: user.email,
+        qrCodeLength: qrCode?.length,
+      })
       
       navigate('/auth/setup-2fa', {
         state: {
@@ -241,8 +293,21 @@ export function LoginPage() {
           provider: 'email',
         },
       })
+      
+      logger.info('✅ [REGISTER] STEP 6: Navigate completed successfully')
     } catch (err: any) {
-      logger.error('Registration error:', err)
+      logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+      logger.error('❌ [REGISTER] ERROR at some step:', err)
+      logger.error('❌ [REGISTER] Full error details:', {
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        data: err.response?.data,
+        message: err.message,
+        stack: err.stack,
+        url: err.config?.url,
+        method: err.config?.method,
+      })
+      logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
 
       const errorMsg =
         err.response?.data?.error ||
@@ -252,32 +317,84 @@ export function LoginPage() {
 
       setError(errorMsg)
       toast.error(errorMsg)
+      
+      logger.info('🔒 [REGISTER] STEP ERROR: Staying on registration page - NO redirect')
     } finally {
       setIsLoading(false)
+      logger.info('🏁 [REGISTER] Flow completed (success or error)')
     }
   }
 
   const handleGoogleSuccess = async (credentialResponse: any) => {
+    logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    logger.info('🔐 [GOOGLE OAUTH] STEP 1: Google credential received')
+    logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    
     setIsLoading(true)
     
+    // 🛡️ CRITICAL SECURITY: Clear ALL storage to prevent session/workspace leakage
+    logger.info("🧹 [GOOGLE OAUTH] STEP 2: Clearing ALL storage (localStorage + sessionStorage)")
+    const beforeClear = {
+      localStorage: { ...localStorage },
+      sessionStorage: { ...sessionStorage },
+    }
+    logger.info("📦 [GOOGLE OAUTH] Storage BEFORE clear:", beforeClear)
+    
+    localStorage.clear()
+    sessionStorage.clear()
+    
+    const afterClear = {
+      localStorageLength: localStorage.length,
+      sessionStorageLength: sessionStorage.length,
+    }
+    logger.info("✅ [GOOGLE OAUTH] Storage AFTER clear:", afterClear)
+    
     try {
+      logger.info('🌐 [GOOGLE OAUTH] STEP 3: Calling POST /auth/oauth/google API')
       const response = await api.post('/auth/oauth/google', {
         credential: credentialResponse.credential,
       })
       
+      logger.info('✅ [GOOGLE OAUTH] STEP 4: API success', {
+        status: response.status,
+        userId: response.data.user?.id,
+        requiresSetup: response.data.requiresSetup,
+        hasQrCode: !!response.data.qrCode,
+        hasSessionId: !!response.data.sessionId,
+        hasToken: !!response.data.token,
+      })
+      
       const { user, requiresSetup, qrCode, sessionId, token } = response.data
       
+      logger.info('💾 [GOOGLE OAUTH] STEP 5: Saving authentication data to storage')
+      
       if (sessionId) {
+        logger.info(`  → SessionId: ${sessionId.substring(0, 8)}...`)
         setSessionId(sessionId)
+      } else {
+        logger.warn('  ⚠️ No sessionId in response!')
       }
       
       if (token) {
+        logger.info(`  → Token: ${token.substring(0, 30)}...`)
         localStorage.setItem('token', token)
+        
+        // Verify save immediately
+        const savedToken = localStorage.getItem('token')
+        if (savedToken === token) {
+          logger.info('  ✅ Token saved and verified')
+        } else {
+          logger.error('  ❌ Token save FAILED - mismatch!')
+        }
+      } else {
+        logger.warn('  ⚠️ No token in response!')
       }
       
+      logger.info(`  → User data saved`)
       localStorage.setItem('user', JSON.stringify(user))
       
       if (requiresSetup) {
+        logger.info('🔄 [GOOGLE OAUTH] STEP 6a: Navigating to /auth/setup-2fa (new user)')
         toast.success('Welcome! Please setup 2FA.')
         navigate('/auth/setup-2fa', {
           state: {
@@ -289,6 +406,7 @@ export function LoginPage() {
           },
         })
       } else {
+        logger.info('🔄 [GOOGLE OAUTH] STEP 6b: Navigating to /auth/verify-2fa (existing user)')
         toast.success('Google login successful! Please enter 2FA code.')
         navigate('/auth/verify-2fa', {
           state: {
@@ -298,10 +416,25 @@ export function LoginPage() {
           },
         })
       }
+      
+      logger.info('✅ [GOOGLE OAUTH] STEP 7: Navigate completed successfully')
     } catch (error: any) {
+      logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+      logger.error('❌ [GOOGLE OAUTH] ERROR at some step:', error)
+      logger.error('❌ [GOOGLE OAUTH] Full error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+        stack: error.stack,
+        url: error.config?.url,
+        method: error.config?.method,
+      })
+      logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
       toast.error('Google login failed. Please try again.')
     } finally {
       setIsLoading(false)
+      logger.info('🏁 [GOOGLE OAUTH] Flow completed (success or error)')
     }
   }
 
@@ -357,6 +490,10 @@ export function LoginPage() {
               <Button
                 size="sm"
                 onClick={() => {
+                  logger.info('🖱️ [SIGN IN BUTTON] Clicked - clearing storage')
+                  localStorage.clear()
+                  sessionStorage.clear()
+                  logger.info('✅ [SIGN IN BUTTON] Storage cleared, opening modal')
                   setActiveTab('signin')
                   setShowLoginModal(true)
                 }}
@@ -368,6 +505,10 @@ export function LoginPage() {
                 size="sm"
                 variant="outline"
                 onClick={() => {
+                  logger.info('🖱️ [REGISTER BUTTON] Clicked - clearing storage')
+                  localStorage.clear()
+                  sessionStorage.clear()
+                  logger.info('✅ [REGISTER BUTTON] Storage cleared, opening modal')
                   setActiveTab('register')
                   setShowLoginModal(true)
                 }}

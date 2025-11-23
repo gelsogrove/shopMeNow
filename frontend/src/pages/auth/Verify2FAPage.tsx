@@ -86,7 +86,12 @@ export default function Verify2FAPage() {
       localStorage.setItem('user', JSON.stringify(user))
       
       toast.success(`Welcome back, ${user.firstName}!`)
-      navigate('/workspace-selection')
+      
+      // 🔄 CRITICAL: Hard reload instead of navigate() to clear axios cache
+      logger.info('🔄 [Verify2FA] Forcing hard reload to /workspace-selection')
+      setTimeout(() => {
+        window.location.href = '/workspace-selection'
+      }, 200)
     } catch (error: any) {
       const errorData = error.response?.data
       const errorMessage = errorData?.message || 'Invalid verification code'
@@ -147,7 +152,11 @@ export default function Verify2FAPage() {
       toast.success(`Welcome back, ${user.firstName}! Recovery code used.`)
       toast.warning('This recovery code is now invalid. You have 9 codes remaining.')
       
-      navigate('/workspace-selection')
+      // 🔄 CRITICAL: Hard reload instead of navigate() to clear axios cache
+      logger.info('🔄 [Verify2FA] Forcing hard reload to /workspace-selection (recovery code)')
+      setTimeout(() => {
+        window.location.href = '/workspace-selection'
+      }, 200)
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Invalid recovery code'
       setError(errorMessage)

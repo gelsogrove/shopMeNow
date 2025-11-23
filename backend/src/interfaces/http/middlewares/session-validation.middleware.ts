@@ -76,6 +76,36 @@ export const sessionValidationMiddleware = async (
       return
     }
 
+    // 🛡️ CRITICAL SECURITY CHECK: Verify session user matches token user
+    const tokenUser = (req as any).user
+    
+    logger.info("🔍 [SECURITY CHECK] Comparing session vs token user", {
+      sessionUserId: validatedUser.id,
+      sessionUserEmail: validatedUser.email,
+      tokenUserId: tokenUser?.id || "NOT_SET",
+      tokenUserEmail: tokenUser?.email || "NOT_SET",
+    })
+    
+    if (tokenUser && tokenUser.id !== validatedUser.id) {
+      logger.error("❌ SECURITY BREACH ATTEMPT: Session user !== Token user", {
+        sessionUserId: validatedUser.id,
+        sessionUserEmail: validatedUser.email,
+        tokenUserId: tokenUser.id,
+        tokenUserEmail: tokenUser.email,
+        url: req.url,
+        method: req.method,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+      })
+      SecureErrorResponses.unauthorized(
+        res,
+        "Session and token user mismatch - please log in again"
+      )
+      return
+    }
+    
+    logger.info("✅ [SECURITY CHECK] Session and token user match")
+
     // Attach session data to request
     ;(req as any).session = validatedSession
     ;(req as any).sessionUser = validatedUser
@@ -86,6 +116,12 @@ export const sessionValidationMiddleware = async (
 
     next()
   } catch (error) {
+    logger.error("❌ [SESSION MIDDLEWARE] Error validating session:", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      url: req.url,
+      method: req.method,
+    })
     SecureErrorResponses.internalError(res, error)
   }
 }

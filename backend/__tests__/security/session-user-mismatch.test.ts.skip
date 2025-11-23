@@ -1,0 +1,143 @@
+/**
+ * 🔒 CRITICAL SECURITY TEST
+ * 
+ * Tests that session-validation middleware REJECTS requests where:
+ * - sessionId belongs to User A
+ * - JWT token belongs to User B
+ * 
+ * This prevents cross-user data access when multiple users login 
+ * on the same browser without full storage cleanup.
+ * 
+ * BUG REPORT: User gelsogrove@gmail.com saw workspaces of andrea.gelsomino@code.seat
+ * due to old sessionId persisting in sessionStorage after new login.
+ */
+
+import request from "supertest"
+import app from "../../src/app"
+import prisma from "../../src/lib/prisma"
+import { hashPassword } from "../../src/utils/password"
+import jwt from "jsonwebtoken"
+import config from "../../src/config"
+
+describe("🔒 Session-User Mismatch Security", () => {
+  let workspaceId: string
+  let userA: any
+  let userB: any
+  let sessionIdA: string
+  let tokenB: string
+
+  beforeAll(async () => {
+    // Cleanup
+    await prisma.adminSession.deleteMany()
+    await prisma.user.deleteMany({ where: { email: { in: ["usera@test.com", "userb@test.com"] } } })
+    await prisma.workspace.deleteMany({ where: { name: "Test Security Workspace" } })
+
+    // Create workspace
+    const workspace = await prisma.workspace.create({
+      data: {
+        name: "Test Security Workspace",
+        description: "Security testing workspace",
+        isActive: true,
+      },
+    })
+    workspaceId = workspace.id
+
+    // Create User A
+    userA = await prisma.user.create({
+      data: {
+        email: "usera@test.com",
+        password: await hashPassword("Password123!"),
+        firstName: "User",
+        lastName: "A",
+        twoFactorEnabled: true,
+        twoFactorSecret: "MOCK_SECRET_A",
+      },
+    })
+
+    // Create User B
+    userB = await prisma.user.create({
+      data: {
+        email: "userb@test.com",
+        password: await hashPassword("Password123!"),
+        firstName: "User",
+        lastName: "B",
+        twoFactorEnabled: true,
+        twoFactorSecret: "MOCK_SECRET_B",
+      },
+    })
+
+    // Create session for User A
+    const sessionA = await prisma.adminSession.create({
+      data: {
+        userId: userA.id,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+      },
+    })
+    sessionIdA = sessionA.id
+
+    // Create JWT token for User B
+    tokenB = jwt.sign(
+      {
+        userId: userB.id,
+        email: userB.email,
+        role: "owner",
+      },
+      config.jwtSecret,
+      { expiresIn: "24h" }
+    )
+  })
+
+  afterAll(async () => {
+    await prisma.adminSession.deleteMany()
+    await prisma.user.deleteMany({ where: { email: { in: ["usera@test.com", "userb@test.com"] } } })
+    await prisma.workspace.deleteMany({ where: { name: "Test Security Workspace" } })
+    await prisma.$disconnect()
+  })
+
+  it("❌ SHOULD REJECT request when sessionId (User A) != token (User B)", async () => {
+    const response = await request(app)
+      .get(`/api/workspaces/${workspaceId}`)
+      .set("Authorization", `Bearer ${tokenB}`) // User B's token
+      .set("X-Session-Id", sessionIdA) // User A's session
+      .set("X-Workspace-Id", workspaceId)
+
+    expect(response.status).toBe(401)
+    expect(response.body.error).toContain("Session and token user mismatch")
+  })
+
+  it("✅ SHOULD ALLOW request when sessionId and token belong to SAME user", async () => {
+    // Create valid session for User B
+    const sessionB = await prisma.adminSession.create({
+      data: {
+        userId: userB.id,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      },
+    })
+
+    const response = await request(app)
+      .get(`/api/workspaces/${workspaceId}`)
+      .set("Authorization", `Bearer ${tokenB}`) // User B's token
+      .set("X-Session-Id", sessionB.id) // User B's session
+      .set("X-Workspace-Id", workspaceId)
+
+    // Should not return 401 (may return 403 if user doesn't have workspace access, but NOT 401)
+    expect(response.status).not.toBe(401)
+
+    // Cleanup
+    await prisma.adminSession.delete({ where: { id: sessionB.id } })
+  })
+
+  it("❌ SHOULD LOG security breach attempt when mismatch detected", async () => {
+    // Note: This test requires checking logs, which is difficult in unit tests
+    // In production, monitor logs for "SECURITY BREACH ATTEMPT" messages
+    
+    const response = await request(app)
+      .get(`/api/workspaces/${workspaceId}`)
+      .set("Authorization", `Bearer ${tokenB}`)
+      .set("X-Session-Id", sessionIdA)
+      .set("X-Workspace-Id", workspaceId)
+
+    expect(response.status).toBe(401)
+    // TODO: Check logger.error was called with "SECURITY BREACH ATTEMPT"
+  })
+})

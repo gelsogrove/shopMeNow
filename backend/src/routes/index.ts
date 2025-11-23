@@ -426,6 +426,7 @@ const SESSION_EXEMPT_ROUTES = [
   "/auth/register",
   "/auth/verify-2fa-setup", // 🔒 User hasn't authenticated yet - just registered
   "/auth/2fa/verify", // 🔒 2FA verification during login (creates sessionId)
+  "/auth/oauth/google", // 🔒 OAuth Google login/register (creates sessionId after 2FA)
   "/health",
   "/session/validate",
   "/whatsapp/webhook",
@@ -577,8 +578,10 @@ router.use("/", customersRouter(customersController))
 // Utilizziamo il router specifico per workspaces
 router.use("/workspaces", workspaceCustomersRouter(customersController))
 // Mount workspace routes (includes the /current endpoint) with authentication FIRST
+// 🔒 SECURITY: Only authMiddleware here - sessionValidationMiddleware applied per-route basis
+// (POST /workspaces for creation doesn't need session, only JWT token)
 router.use("/workspaces", authMiddleware, workspaceRoutesLegacy)
-router.use("/workspaces", workspaceRoutes)
+router.use("/workspaces", authMiddleware, workspaceRoutes)
 
 // Mount campaign routes
 router.use("/workspaces", campaignRoutes(campaignController))

@@ -110,6 +110,35 @@ describe('WORKSPACE ISOLATION - SECURITY TEST', () => {
     }
 
     console.log('✅ User B created:', userB.email)
+    
+    // === CREATE WORKSPACES ===
+    // User A creates workspace A
+    const workspaceAResponse = await request(app)
+      .post('/api/workspaces')
+      .set('Authorization', `Bearer ${userA.token}`)
+      .set('X-Session-Id', userA.sessionId)
+      .send({
+        name: `Workspace A ${Date.now()}`,
+        whatsappPhoneNumber: '+1234567890',
+        language: 'en',
+      })
+    
+    expect(workspaceAResponse.status).toBe(201)
+    console.log('✅ Workspace A created for User A')
+    
+    // User B creates workspace B
+    const workspaceBResponse = await request(app)
+      .post('/api/workspaces')
+      .set('Authorization', `Bearer ${userB.token}`)
+      .set('X-Session-Id', userB.sessionId)
+      .send({
+        name: `Workspace B ${Date.now() + 1000}`,
+        whatsappPhoneNumber: '+9876543210',
+        language: 'es',
+      })
+    
+    expect(workspaceBResponse.status).toBe(201)
+    console.log('✅ Workspace B created for User B')
   })
 
   afterAll(async () => {

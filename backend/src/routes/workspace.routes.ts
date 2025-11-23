@@ -5,6 +5,7 @@ import {
   validateWorkspaceOperation,
   validateWorkspaceUpdateData,
 } from "../middlewares/workspace-validation.middleware"
+import { sessionValidationMiddleware } from "../interfaces/http/middlewares/session-validation.middleware"
 import { wrapController } from "../utils/controller-wrapper"
 import logger from "../utils/logger"
 
@@ -144,10 +145,14 @@ const getCurrentWorkspace: RequestHandler = async (req, res): Promise<void> => {
  *               items:
  *                 $ref: '#/components/schemas/Workspace'
  */
-router.get("/", wrapController(workspaceController.getAllWorkspaces))
+router.get(
+  "/",
+  sessionValidationMiddleware,
+  wrapController(workspaceController.getAllWorkspaces)
+)
 
 // IMPORTANT: /current must come BEFORE /:id to avoid conflict
-router.get("/current", getCurrentWorkspace)
+router.get("/current", sessionValidationMiddleware, getCurrentWorkspace)
 
 /**
  * @swagger
@@ -174,6 +179,7 @@ router.get("/current", getCurrentWorkspace)
  */
 router.get(
   "/:id",
+  sessionValidationMiddleware,
   validateWorkspaceOperation,
   wrapController(workspaceController.getWorkspaceById)
 )
@@ -260,6 +266,7 @@ router.post("/", wrapController(workspaceController.createWorkspace))
  */
 router.put(
   "/:id",
+  sessionValidationMiddleware,
   validateWorkspaceOperation,
   validateWorkspaceUpdateData,
   wrapController(workspaceController.updateWorkspace)
@@ -298,6 +305,10 @@ router.put(
  *       500:
  *         description: Error during deletion process
  */
-router.delete("/:id", wrapController(workspaceController.deleteWorkspace))
+router.delete(
+  "/:id",
+  sessionValidationMiddleware,
+  wrapController(workspaceController.deleteWorkspace)
+)
 
 export default router

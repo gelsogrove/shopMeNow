@@ -3,6 +3,7 @@ import rateLimit from "express-rate-limit"
 import logger from "../../../utils/logger"
 import { AuthController } from "../controllers/auth.controller"
 import { EnhancedAuthController } from "../controllers/enhanced-auth.controller"
+import { OAuthController } from "../controllers/oauth.controller"
 import { asyncHandler } from "../middlewares/async.middleware"
 import { authMiddleware } from "../middlewares/auth.middleware"
 import {
@@ -12,10 +13,10 @@ import {
 
 // Rate limiters
 // 🔒 LOGIN RATE LIMITER (OWASP A07:2021 - Protection against brute force attacks)
-// PRODUCTION SETTINGS: 15 minutes window, max 5 attempts
+// DEVELOPMENT SETTINGS: 15 minutes window, max 50 attempts (increased for testing)
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Max 5 login attempts per IP per 15 minutes
+  max: 50, // Max 50 login attempts per IP per 15 minutes (increased for development)
   message: {
     error: "Too many login attempts",
     message:
@@ -37,7 +38,7 @@ const loginLimiter = rateLimit({
 
 const twoFactorLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 3, // limit each IP to 3 requests per windowMs
+  max: 10, // 🧪 INCREASED for testing (was 3) - CHANGE BACK TO 3 IN PRODUCTION
   message: {
     error: "Too many 2FA verification attempts, please try again later",
   },
@@ -68,6 +69,9 @@ export const createAuthRouter = (authController: AuthController): Router => {
   
   // Initialize enhanced auth controller
   const enhancedAuthController = new EnhancedAuthController()
+  
+  // Initialize OAuth controller
+  const oauthController = new OAuthController()
 
   // ============================================
   // EXISTING ROUTES (Manteniamo compatibilità)
@@ -159,7 +163,16 @@ export const createAuthRouter = (authController: AuthController): Router => {
     asyncHandler(enhancedAuthController.getUserAvatar.bind(enhancedAuthController))
   )
 
-  // OAuth routes will be added separately (Passport.js integration)
+  // ============================================
+  // OAUTH ROUTES (Google, Facebook, Apple)
+  // ============================================
+
+  // Google OAuth - Login/Register
+  router.post(
+    "/oauth/google",
+    loginLimiter, // Same rate limit as regular login
+    asyncHandler(oauthController.googleAuth.bind(oauthController))
+  )
 
   return router
 }
