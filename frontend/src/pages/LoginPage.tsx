@@ -4,11 +4,13 @@ import { PricingSimulatorModal } from "@/components/pricing/PricingSimulatorModa
 import { LanguageSelector } from "@/components/shared/LanguageSelector"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { logger } from "@/lib/logger"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 import {
   AlertTriangle,
   Bell,
@@ -19,20 +21,48 @@ import {
   Phone,
   ShoppingCart,
   Zap,
+  Chrome,
+  Loader2,
+  Eye,
+  EyeOff,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { Link, useNavigate } from "react-router-dom"
 import * as z from "zod"
 import { toast } from "../lib/toast"
-import { auth, getSessionId, setSessionId } from "../services/api"
+import { auth, getSessionId, setSessionId, api } from "../services/api"
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '988195920488-drdmtlruo5s47nkk4g8prui6k9mb0pln.apps.googleusercontent.com'
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
 })
 
+const registerSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number")
+    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
+  confirmPassword: z.string(),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  gdprAccepted: z.boolean(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+}).refine((data) => data.gdprAccepted === true, {
+  message: "You must accept the terms",
+  path: ["gdprAccepted"],
+})
+
 type LoginForm = z.infer<typeof loginSchema>
+type RegisterForm = z.infer<typeof registerSchema>
 
 export function LoginPage() {
   const { t } = useLanguage()
@@ -40,6 +70,14 @@ export function LoginPage() {
   const [error, setError] = useState("")
   const [isValidatingSession, setIsValidatingSession] = useState(true)
   const [showSimulator, setShowSimulator] = useState(false)
+  const [showLoginModal, setShowLoginModal] = useState(false)
+  const [activeTab, setActiveTab] = useState<'signin' | 'register'>('signin')
+  
+  // Password visibility states
+  const [showPassword, setShowPassword] = useState(false)
+  const [showPasswordRegister, setShowPasswordRegister] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  
   const navigate = useNavigate()
 
   // Prefill credentials only in development
@@ -51,6 +89,19 @@ export function LoginPage() {
       email: isDev ? "admin@shopme.com" : "",
       password: isDev ? "Venezia44" : "",
     } as LoginForm,
+  })
+
+  const registerForm = useForm<RegisterForm>({
+    resolver: zodResolver(registerSchema),
+    mode: "onBlur",
+    defaultValues: {
+      email: "",
+      password: "",
+      confirmPassword: "",
+      firstName: "",
+      lastName: "",
+      gdprAccepted: false,
+    },
   })
 
   // 🆕 AUTO-REDIRECT IF SESSION IS ALREADY VALID
@@ -131,10 +182,16 @@ export function LoginPage() {
         // JWT token is automatically saved as HTTP-only cookie by backend
         logger.info("Login successful - JWT token saved as HTTP-only cookie")
 
-        toast.success("Login successful!")
+        toast.success("Credentials verified! Please enter 2FA code.")
 
-        // Navigate WITHOUT setTimeout - sessionId is already saved
-        navigate("/workspace-selection")
+        // Redirect to 2FA verification page
+        navigate("/auth/verify-2fa", {
+          state: {
+            userId: response.data.user.id,
+            email: response.data.user.email,
+            provider: 'email',
+          },
+        })
       } else {
         throw new Error("Invalid response format from the server.")
       }
@@ -153,6 +210,103 @@ export function LoginPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const onRegisterSubmit = async (data: RegisterForm) => {
+    setError("")
+    setIsLoading(true)
+
+    try {
+      const response = await api.post('/auth/register', {
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        gdprAccepted: data.gdprAccepted,
+      })
+
+      const { user, qrCode } = response.data
+
+      // 🔒 SECURITY: No sessionId or token from registration
+      // User MUST verify 2FA first to get authenticated
+
+      toast.success('Account created! Please setup 2FA.')
+      
+      navigate('/auth/setup-2fa', {
+        state: {
+          userId: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          qrCode,
+          provider: 'email',
+        },
+      })
+    } catch (err: any) {
+      logger.error('Registration error:', err)
+
+      const errorMsg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.message ||
+        'Registration failed. Please try again.'
+
+      setError(errorMsg)
+      toast.error(errorMsg)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    setIsLoading(true)
+    
+    try {
+      const response = await api.post('/auth/oauth/google', {
+        credential: credentialResponse.credential,
+      })
+      
+      const { user, requiresSetup, qrCode, sessionId, token } = response.data
+      
+      if (sessionId) {
+        setSessionId(sessionId)
+      }
+      
+      if (token) {
+        localStorage.setItem('token', token)
+      }
+      
+      localStorage.setItem('user', JSON.stringify(user))
+      
+      if (requiresSetup) {
+        toast.success('Welcome! Please setup 2FA.')
+        navigate('/auth/setup-2fa', {
+          state: {
+            userId: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            qrCode,
+            provider: 'google',
+          },
+        })
+      } else {
+        toast.success('Google login successful! Please enter 2FA code.')
+        navigate('/auth/verify-2fa', {
+          state: {
+            userId: user.id,
+            email: user.email,
+            provider: 'google',
+          },
+        })
+      }
+    } catch (error: any) {
+      toast.error('Google login failed. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleGoogleError = () => {
+    toast.error('Google login failed. Please try again.')
   }
 
   const {
@@ -198,45 +352,32 @@ export function LoginPage() {
               </div>
             </div>
 
-            {/* Login Form Inline - Desktop */}
-            <form
-              onSubmit={handleSubmit(onSubmit)}
-              className="hidden lg:flex items-center gap-2"
-            >
-              <Input
-                type="email"
-                placeholder="Email"
-                {...register("email")}
-                disabled={isLoading}
-                autoComplete="username"
-                className={`h-9 w-48 ${
-                  error
-                    ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                    : ""
-                }`}
-              />
-              <Input
-                type="password"
-                placeholder="Password"
-                {...register("password")}
-                disabled={isLoading}
-                autoComplete="current-password"
-                className={`h-9 w-36 ${
-                  error
-                    ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                    : ""
-                }`}
-              />
+            {/* Sign In / Register Buttons - Desktop */}
+            <div className="hidden lg:flex items-center gap-3">
               <Button
-                type="submit"
                 size="sm"
-                disabled={isLoading}
-                className="bg-green-600 hover:bg-green-700"
+                onClick={() => {
+                  setActiveTab('signin')
+                  setShowLoginModal(true)
+                }}
+                className="bg-green-600 hover:bg-green-700 px-6"
               >
-                {isLoading ? "..." : "Sign In"}
+                {t("login.signin")}
               </Button>
-            </form>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setActiveTab('register')
+                  setShowLoginModal(true)
+                }}
+                className="border-green-600 text-green-600 hover:bg-green-50 px-6"
+              >
+                {t("login.register")}
+              </Button>
+            </div>
           </div>
+          
         </div>
       </header>
 
@@ -369,15 +510,25 @@ export function LoginPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="password-mobile">Password</Label>
-                  <Input
-                    id="password-mobile"
-                    type="password"
-                    placeholder="••••••••"
-                    {...register("password")}
-                    disabled={isLoading}
-                    autoComplete="current-password"
-                    className="h-11"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password-mobile"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      {...register("password")}
+                      disabled={isLoading}
+                      autoComplete="current-password"
+                      className="h-11 pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      tabIndex={-1}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                   {errors.password && (
                     <p className="text-sm text-red-500">
                       {errors.password.message}
@@ -396,18 +547,52 @@ export function LoginPage() {
 
                 <Button
                   type="submit"
-                  className="w-full h-11"
+                  className="w-full h-11 bg-green-600 hover:bg-green-700"
                   disabled={isLoading}
                 >
-                  {isLoading ? "Signing in..." : "Sign In"}
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Signing in...
+                    </>
+                  ) : (
+                    "Sign In"
+                  )}
                 </Button>
               </form>
+
+              {/* OAuth Options - Mobile */}
+              <div className="space-y-3">
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-300" />
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="bg-white px-2 text-gray-500">Or continue with</span>
+                  </div>
+                </div>
+
+                <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+                  <div className="flex justify-center">
+                    <GoogleLogin
+                      onSuccess={handleGoogleSuccess}
+                      onError={handleGoogleError}
+                      useOneTap={false}
+                      theme="outline"
+                      size="large"
+                      text="signin_with"
+                      shape="rectangular"
+                      logo_alignment="left"
+                    />
+                  </div>
+                </GoogleOAuthProvider>
+              </div>
 
               <div className="text-center text-sm text-slate-600">
                 Don't have an account?{" "}
                 <Link
-                  to="/signup"
-                  className="text-primary hover:text-primary/80 underline-offset-4 hover:underline font-medium"
+                  to="/auth/register"
+                  className="text-green-600 hover:text-green-700 underline-offset-4 hover:underline font-medium"
                 >
                   Sign up
                 </Link>
@@ -532,6 +717,335 @@ export function LoginPage() {
           Chat with us!
         </span>
       </a>
+
+      {/* Login Modal - Rendered at page level for proper z-index */}
+      {showLoginModal && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
+        >
+          <div 
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto relative"
+          >
+            <div className="p-8">
+              {/* Close Button */}
+              <button
+                onClick={() => setShowLoginModal(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-3xl font-light leading-none w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
+              >
+                ×
+              </button>
+
+              {/* Header */}
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-bold text-slate-900">
+                  {activeTab === 'signin' ? t("login.welcomeBack") : t("register.createAccount")}
+                </h3>
+              </div>
+
+              {/* Error Alert */}
+              {error && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              {/* Sign In Form */}
+              {activeTab === 'signin' && (
+                <>
+                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email-modal">{t("form.email")}</Label>
+                      <Input
+                        id="email-modal"
+                        type="email"
+                        placeholder="your@email.com"
+                        {...register("email")}
+                        disabled={isLoading}
+                        autoComplete="username"
+                        className="h-11"
+                      />
+                      {errors.email && (
+                        <p className="text-sm text-red-500">{errors.email.message}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="password-modal">{t("form.password")}</Label>
+                      <div className="relative">
+                        <Input
+                          id="password-modal"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          {...register("password")}
+                          disabled={isLoading}
+                          autoComplete="current-password"
+                          className="h-11 pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          tabIndex={-1}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      {errors.password && (
+                        <p className="text-sm text-red-500">{errors.password.message}</p>
+                      )}
+                    </div>
+
+                    <div className="flex justify-end">
+                      <Link
+                        to="/auth/forgot-password"
+                        className="text-sm text-green-600 hover:text-green-700 underline-offset-4 hover:underline"
+                        onClick={() => setShowLoginModal(false)}
+                      >
+                        {t("login.forgotPassword")}
+                      </Link>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      className="w-full h-11 bg-green-600 hover:bg-green-700"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {t("login.signingIn")}
+                        </>
+                      ) : (
+                        t("login.signin")
+                      )}
+                    </Button>
+                  </form>
+                </>
+              )}
+
+              {/* Register Form */}
+              {activeTab === 'register' && (
+                <>
+                  <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="firstName">{t("form.firstName")}</Label>
+                        <Input
+                          id="firstName"
+                          type="text"
+                          placeholder="John"
+                          {...registerForm.register("firstName")}
+                          disabled={isLoading}
+                          className="h-11"
+                        />
+                        {registerForm.formState.errors.firstName && (
+                          <p className="text-sm text-red-500">{registerForm.formState.errors.firstName.message}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="lastName">{t("form.lastName")}</Label>
+                        <Input
+                          id="lastName"
+                          type="text"
+                          placeholder="Doe"
+                          {...registerForm.register("lastName")}
+                          disabled={isLoading}
+                          className="h-11"
+                        />
+                        {registerForm.formState.errors.lastName && (
+                          <p className="text-sm text-red-500">{registerForm.formState.errors.lastName.message}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="email-register">{t("form.email")}</Label>
+                      <Input
+                        id="email-register"
+                        type="email"
+                        placeholder="your@email.com"
+                        {...registerForm.register("email")}
+                        disabled={isLoading}
+                        autoComplete="email"
+                        className="h-11"
+                      />
+                      {registerForm.formState.errors.email && (
+                        <p className="text-sm text-red-500">{registerForm.formState.errors.email.message}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="password-register">{t("form.password")}</Label>
+                      <div className="relative">
+                        <Input
+                          id="password-register"
+                          type={showPasswordRegister ? "text" : "password"}
+                          placeholder="••••••••"
+                          {...registerForm.register("password")}
+                          disabled={isLoading}
+                          autoComplete="new-password"
+                          className="h-11 pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPasswordRegister(!showPasswordRegister)}
+                          tabIndex={-1}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        >
+                          {showPasswordRegister ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        {t("register.passwordHint")}
+                      </p>
+                      {registerForm.formState.errors.password && (
+                        <p className="text-sm text-red-500">{registerForm.formState.errors.password.message}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword">{t("form.confirmPassword")}</Label>
+                      <div className="relative">
+                        <Input
+                          id="confirmPassword"
+                          type={showConfirmPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          {...registerForm.register("confirmPassword")}
+                          disabled={isLoading}
+                          autoComplete="new-password"
+                          className="h-11 pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          tabIndex={-1}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        >
+                          {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      {registerForm.formState.errors.confirmPassword && (
+                        <p className="text-sm text-red-500">{registerForm.formState.errors.confirmPassword.message}</p>
+                      )}
+                    </div>
+
+                    <div className="flex items-start gap-2">
+                      <Checkbox 
+                        id="gdpr" 
+                        checked={registerForm.watch("gdprAccepted")}
+                        onCheckedChange={async (checked) => {
+                          registerForm.setValue("gdprAccepted", checked as boolean)
+                          // Force immediate validation
+                          await registerForm.trigger("gdprAccepted")
+                        }}
+                      />
+                      <label 
+                        htmlFor="gdpr" 
+                        className="text-sm text-gray-600 leading-tight cursor-pointer"
+                        onClick={async () => {
+                          const current = registerForm.getValues("gdprAccepted")
+                          registerForm.setValue("gdprAccepted", !current)
+                          // Force immediate validation
+                          await registerForm.trigger("gdprAccepted")
+                        }}
+                      >
+                        {t("register.gdprAccept")}{" "}
+                        <Link to="/privacy" className="text-green-600 hover:underline" onClick={(e) => e.stopPropagation()}>
+                          {t("register.privacyPolicy")}
+                        </Link>{" "}
+                        {t("register.and")}{" "}
+                        <Link to="/terms" className="text-green-600 hover:underline" onClick={(e) => e.stopPropagation()}>
+                          {t("register.termsOfService")}
+                        </Link>
+                      </label>
+                    </div>
+                    {registerForm.formState.errors.gdprAccepted && (
+                      <p className="text-sm text-red-500">{registerForm.formState.errors.gdprAccepted.message}</p>
+                    )}
+
+                    <Button
+                      type="submit"
+                      className="w-full h-11 bg-green-600 hover:bg-green-700"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {t("register.creatingAccount")}
+                        </>
+                      ) : (
+                        t("register.createAccount")
+                      )}
+                    </Button>
+                  </form>
+
+                  {/* Divider */}
+                  <div className="relative my-6">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-300" />
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="bg-white px-2 text-gray-500">{t("login.orContinueWith")}</span>
+                    </div>
+                  </div>
+
+                  {/* OAuth Buttons */}
+                  <div className="space-y-3">
+                    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+                      <div className="flex justify-center">
+                        <GoogleLogin
+                          onSuccess={handleGoogleSuccess}
+                          onError={handleGoogleError}
+                          useOneTap={false}
+                          theme="outline"
+                          size="large"
+                          text="signup_with"
+                          shape="rectangular"
+                          logo_alignment="left"
+                        />
+                      </div>
+                    </GoogleOAuthProvider>
+                  </div>
+                </>
+              )}
+
+              {/* Divider - Only for Sign In */}
+              {activeTab === 'signin' && (
+                <>
+                  <div className="relative my-6">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-300" />
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="bg-white px-2 text-gray-500">{t("login.orContinueWith")}</span>
+                    </div>
+                  </div>
+
+                  {/* OAuth Buttons - Sign In */}
+                  <div className="space-y-3">
+                    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+                      <div className="flex justify-center">
+                        <GoogleLogin
+                          onSuccess={handleGoogleSuccess}
+                          onError={handleGoogleError}
+                          useOneTap={false}
+                          theme="outline"
+                          size="large"
+                          text="signin_with"
+                          shape="rectangular"
+                          logo_alignment="left"
+                        />
+                      </div>
+                    </GoogleOAuthProvider>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

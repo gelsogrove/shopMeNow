@@ -19,7 +19,7 @@ module.exports = {
   },
   testEnvironment: "node",
   coveragePathIgnorePatterns: ["/node_modules/", "/dist/", "/src/utils/"],
-  testMatch: ["**/src/__tests__/security/**/*.test.ts"],
+  testMatch: ["**/__tests__/security/**/*.test.ts"],
   testPathIgnorePatterns: ["/node_modules/", "/dist/"],
   // NO setupFilesAfterEnv - security tests use real DB, no mocks
   verbose: true,

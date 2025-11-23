@@ -384,24 +384,51 @@ model CartItems {
 }
 
 model User {
-  id              String          @id @default(uuid())
-  email           String          @unique
-  passwordHash    String
-  firstName       String?
-  lastName        String?
-  status          UserStatus      @default(ACTIVE)
-  lastLogin       DateTime?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  role            UserRole        @default(MEMBER)
-  twoFactorSecret String?
-  gdprAccepted    DateTime?
-  phoneNumber     String?
-  workspaces      UserWorkspace[]
-  passwordResets  PasswordReset[]
-  adminSessions   AdminSession[]
+  id                 String                   @id @default(uuid())
+  email              String                   @unique
+  passwordHash       String?                  // SECURITY: Nullable for social-only users (Google/Facebook/Apple)
+  firstName          String?
+  lastName           String?
+  status             UserStatus               @default(ACTIVE)
+  lastLogin          DateTime?
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+  role               UserRole                 @default(MEMBER)
+  twoFactorSecret    String?                  // TOTP secret for 2FA
+  twoFactorEnabled   Boolean                  @default(false) // 2FA active flag
+  twoFactorEnabledAt DateTime?                // When 2FA was activated
+  recoveryCodes      String[]                 @default([]) // 10 hashed recovery codes (bcrypt)
+  authProvider       String                   @default("email") // "email" | "google" | "facebook" | "apple" | "multi"
+  profilePicture     String?                  // URL to profile picture (OAuth or NULL for default avatar)
+  linkedProviders    Json?                    @default("[]") // Array: [{provider: 'google', linkedAt: '2025-11-21T...'}]
+  gdprAccepted       DateTime?
+  phoneNumber        String?
+  workspaces         UserWorkspace[]
+  passwordResets     PasswordReset[]
+  adminSessions      AdminSession[]
+  authAttempts       AuthenticationAttempt[] // Security audit trail
 
   @@map("users")
+}
+
+model AuthenticationAttempt {
+  id            String   @id @default(cuid())
+  userId        String?  // NULL if user doesn't exist (failed registration/login)
+  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email         String   // Email attempted (track even if user doesn't exist)
+  attemptType   String   // "registration" | "login" | "2fa" | "password_reset" | "oauth-google" | "oauth-facebook" | "oauth-apple"
+  success       Boolean
+  failureReason String?  // Error message if failed
+  ipAddress     String?  @db.VarChar(45) // IPv4 or IPv6 for rate limiting
+  userAgent     String?  @db.Text // Browser fingerprinting
+  metadata      Json?    // Additional context (OAuth response, etc.)
+  timestamp     DateTime @default(now())
+
+  @@index([email, timestamp]) // Rate limit by email
+  @@index([ipAddress, timestamp]) // Rate limit by IP
+  @@index([attemptType, success]) // Fast failed attempt queries
+  @@index([timestamp]) // Cleanup old logs
+  @@map("authentication_attempts")
 }
 
 model UserWorkspace {

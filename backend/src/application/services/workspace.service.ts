@@ -129,6 +129,53 @@ For privacy inquiries, please contact our support team.`
   }
 
   /**
+   * Get workspaces by user ID (workspace isolation)
+   * SECURITY: Returns ONLY workspaces the user has access to via UserWorkspace relation
+   */
+  async getByUserId(userId: string): Promise<Workspace[]> {
+    logger.info(`Getting workspaces for user: ${userId}`)
+    
+    const workspaces = await this.prisma.workspace.findMany({
+      where: {
+        users: {
+          some: {
+            userId: userId
+          }
+        },
+        isDelete: false
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    })
+
+    // Convert to Workspace entities
+    return workspaces.map(w => new Workspace({
+      id: w.id,
+      name: w.name,
+      slug: w.slug,
+      description: w.description ?? undefined,
+      whatsappPhoneNumber: w.whatsappPhoneNumber ?? undefined,
+      whatsappApiKey: w.whatsappApiKey ?? undefined,
+      webhookUrl: w.webhookUrl ?? undefined,
+      notificationEmail: w.notificationEmail ?? undefined,
+      language: w.language ?? 'it',
+      currency: w.currency ?? 'EUR',
+      messageLimit: w.messageLimit ?? 1000,
+      welcomeMessage: w.welcomeMessage ?? undefined,
+      wipMessage: w.wipMessage ?? undefined,
+      channelStatus: w.channelStatus,
+      isActive: w.isActive,
+      isDelete: w.isDelete,
+      url: w.url ?? undefined,
+      debugMode: w.debugMode ?? false,
+      businessType: w.businessType ?? 'retail',
+      createdAt: w.createdAt,
+      updatedAt: w.updatedAt
+    }))
+  }
+
+  /**
    * Get a workspace by ID
    */
   async getById(id: string): Promise<Workspace | null> {
@@ -146,8 +193,9 @@ For privacy inquiries, please contact our support team.`
 
   /**
    * Create a new workspace
+   * @param data - Workspace data (must include createdBy for UserWorkspace relation)
    */
-  async create(data: WorkspaceProps): Promise<Workspace> {
+  async create(data: WorkspaceProps & { createdBy?: string }): Promise<Workspace> {
     logger.info("Creating new workspace with default settings and agents")
 
     // Generate a slug if not provided
@@ -165,6 +213,11 @@ For privacy inquiries, please contact our support team.`
     if (!data.id) {
       data.id = randomUUID()
     }
+
+    // Extract userId for UserWorkspace relation
+    const createdBy = data.createdBy
+    const workspaceData = { ...data }
+    delete (workspaceData as any).createdBy // Remove from workspace data
 
     // 🆕 DEFAULT WELCOME AND WIP MESSAGES
     const defaultWelcomeMessage = {
@@ -272,6 +325,33 @@ For privacy inquiries, please contact our support team.`
           error
         )
         // Don't fail the entire transaction for GDPR content
+      }
+
+      // 5. 🆕 CREATE USER-WORKSPACE RELATION (CRITICAL for workspace isolation)
+      if (createdBy) {
+        try {
+          await tx.userWorkspace.create({
+            data: {
+              userId: createdBy,
+              workspaceId: createdWorkspace.id,
+              role: 'ADMIN', // Creator is always ADMIN
+            },
+          })
+          logger.info(
+            `✅ Created UserWorkspace relation: user ${createdBy} → workspace ${createdWorkspace.id} (ADMIN)`
+          )
+        } catch (error) {
+          logger.error(
+            `❌ CRITICAL: Failed to create UserWorkspace relation for user ${createdBy}:`,
+            error
+          )
+          // This SHOULD fail the transaction - user must be linked to workspace
+          throw error
+        }
+      } else {
+        logger.warn(
+          `⚠️ No createdBy userId provided - workspace ${createdWorkspace.id} has no owner!`
+        )
       }
 
       return createdWorkspace

@@ -1,5 +1,4 @@
 import { PrismaClient } from "@prisma/client"
-import * as qrcode from "qrcode"
 import * as speakeasy from "speakeasy"
 import { AppError } from "../../interfaces/http/middlewares/error.middleware"
 
@@ -7,10 +6,21 @@ export class OtpService {
   constructor(private readonly prisma: PrismaClient) {}
 
   async setupTwoFactor(userId: string): Promise<string> {
+    // Get user email for QR code label
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    })
+
+    if (!user) {
+      throw new AppError(404, "User not found")
+    }
+
     // Generate secret
     const secret = speakeasy.generateSecret({
-      name: "Shop App",
-      issuer: "Shop App",
+      name: `ShopME:${user.email}`, // Format: "ShopME:email@example.com"
+      issuer: "ShopME", // This is what appears as app name in authenticator
+      length: 32,
     })
 
     // Save secret to user
@@ -19,18 +29,13 @@ export class OtpService {
       data: { twoFactorSecret: secret.base32 },
     })
 
-    // Generate QR code
+    // Return otpauth URL directly (NOT data URL)
     const otpauthUrl = secret.otpauth_url
     if (!otpauthUrl) {
       throw new AppError(500, "Failed to generate OTP auth URL")
     }
 
-    try {
-      const qrCodeUrl = await qrcode.toDataURL(otpauthUrl)
-      return qrCodeUrl
-    } catch (error) {
-      throw new AppError(500, "Failed to generate QR code")
-    }
+    return otpauthUrl
   }
 
   async verifyTwoFactor(userId: string, token: string): Promise<boolean> {

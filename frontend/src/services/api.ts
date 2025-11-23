@@ -47,6 +47,7 @@ const SESSION_EXEMPT_ROUTES = [
   "/auth/forgot-password",
   "/auth/reset-password",
   "/auth/register",
+  "/auth/verify-2fa-setup", // 🔑 CRITICAL: Part of registration flow, uses token from registration
   "/health",
   "/session/validate", // 🔑 CRITICAL: Used by LoginPage checkExistingSession
   "/analytics", // Analytics routes (JWT-based only, no sessionId)

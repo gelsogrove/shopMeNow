@@ -418,12 +418,14 @@ const router = Router()
 // Add logging middleware
 router.use(loggingMiddleware)
 
-// � SESSION VALIDATION MIDDLEWARE (with exceptions)
+// ⚡ SESSION VALIDATION MIDDLEWARE (with exceptions)
 const SESSION_EXEMPT_ROUTES = [
   "/auth/login",
   "/auth/forgot-password",
   "/auth/reset-password",
   "/auth/register",
+  "/auth/verify-2fa-setup", // 🔒 User hasn't authenticated yet - just registered
+  "/auth/2fa/verify", // 🔒 2FA verification during login (creates sessionId)
   "/health",
   "/session/validate",
   "/whatsapp/webhook",

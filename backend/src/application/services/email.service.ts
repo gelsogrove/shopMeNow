@@ -440,6 +440,124 @@ ShopMe - La tua piattaforma e-commerce di fiducia
     }
   }
 
+  async sendWelcomeEmail(data: {
+    to: string
+    firstName: string
+  }): Promise<boolean> {
+    try {
+      const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to ShopME</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 30px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px 8px 0 0;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">Welcome to ShopME! 🎉</h1>
+            </td>
+          </tr>
+          
+          <!-- Body -->
+          <tr>
+            <td style="padding: 40px 30px;">
+              <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #333333;">
+                Hi <strong>${data.firstName}</strong>,
+              </p>
+              
+              <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #333333;">
+                Welcome to <strong>ShopME</strong>! We're excited to have you on board. 🚀
+              </p>
+              
+              <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #333333;">
+                Your account has been successfully created. You can now:
+              </p>
+              
+              <ul style="margin: 0 0 20px; padding-left: 20px; font-size: 16px; line-height: 1.8; color: #333333;">
+                <li>Manage your products and services</li>
+                <li>Handle customer orders via WhatsApp</li>
+                <li>Use AI-powered chatbot for customer support</li>
+                <li>Track analytics and sales</li>
+              </ul>
+              
+              <p style="margin: 0 0 30px; font-size: 16px; line-height: 1.6; color: #333333;">
+                If you have any questions, feel free to reach out to our support team.
+              </p>
+              
+              <div style="text-align: center;">
+                <a href="${process.env.FRONTEND_URL || "http://localhost:3000"}" style="display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">
+                  Get Started
+                </a>
+              </div>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 30px; text-align: center; background-color: #f8f9fa; border-radius: 0 0 8px 8px;">
+              <p style="margin: 0; font-size: 14px; color: #666666;">
+                © 2025 ShopME. All rights reserved.
+              </p>
+              <p style="margin: 10px 0 0; font-size: 12px; color: #999999;">
+                You're receiving this email because you registered for a ShopME account.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`
+
+      const textContent = `
+Welcome to ShopME!
+
+Hi ${data.firstName},
+
+Welcome to ShopME! We're excited to have you on board.
+
+Your account has been successfully created. You can now:
+- Manage your products and services
+- Handle customer orders via WhatsApp
+- Use AI-powered chatbot for customer support
+- Track analytics and sales
+
+Get started: ${process.env.FRONTEND_URL || "http://localhost:3000"}
+
+If you have any questions, feel free to reach out to our support team.
+
+Best regards,
+The ShopME Team
+
+© 2025 ShopME. All rights reserved.
+`
+
+      const mailOptions = {
+        from: `"ShopME" <${process.env.SMTP_FROM || "noreply@shopme.com"}>`,
+        to: data.to,
+        subject: "Welcome to ShopME! 🎉",
+        html: htmlContent,
+        text: textContent,
+      }
+
+      const info = await this.transporter.sendMail(mailOptions)
+      logger.info(`Welcome email sent successfully to: ${data.to}`)
+      return true
+    } catch (error) {
+      logger.error("Failed to send welcome email:", error)
+      return false
+    }
+  }
+
   async verifyConnection(): Promise<boolean> {
     try {
       await this.transporter.verify()

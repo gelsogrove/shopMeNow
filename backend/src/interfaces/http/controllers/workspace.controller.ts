@@ -11,6 +11,7 @@ export class WorkspaceController {
 
   /**
    * Get all workspaces
+   * SECURITY: Returns ONLY workspaces the authenticated user has access to
    */
   getAllWorkspaces = async (
     req: Request,
@@ -18,8 +19,17 @@ export class WorkspaceController {
     next: NextFunction
   ) => {
     try {
-      logger.info("Getting all workspaces")
-      const workspaces = await this.workspaceService.getAll()
+      // CRITICAL SECURITY: Get userId from authenticated request
+      const userId = (req as any).user?.id
+      if (!userId) {
+        logger.error("User ID not found in request - authentication failed")
+        return res.status(401).json({ error: "User not authenticated" })
+      }
+
+      logger.info(`Getting workspaces for user: ${userId}`)
+      
+      // WORKSPACE ISOLATION: Fetch ONLY workspaces this user has access to
+      const workspaces = await this.workspaceService.getByUserId(userId)
 
       // Serialize workspaces to plain objects with all properties
       const serializedWorkspaces = workspaces.map((workspace) => ({
@@ -126,13 +136,28 @@ export class WorkspaceController {
 
   /**
    * Create a new workspace
+   * CRITICAL: Must create UserWorkspace relation for the creator
    */
   createWorkspace = async (req: Request, res: Response, next: NextFunction) => {
     try {
       logger.info("Creating new workspace")
+      
+      // CRITICAL SECURITY: Get userId from authenticated request
+      const userId = (req as any).user?.id
+      if (!userId) {
+        logger.error("User ID not found in request - authentication failed")
+        return res.status(401).json({ error: "User not authenticated" })
+      }
+
       const workspaceData = req.body
 
-      const workspace = await this.workspaceService.create(workspaceData)
+      // Create workspace with user relation
+      const workspace = await this.workspaceService.create({
+        ...workspaceData,
+        createdBy: userId, // Pass userId to service
+      })
+      
+      logger.info(`✅ Workspace created: ${workspace.id} for user ${userId}`)
       return res.status(201).json(workspace)
     } catch (error) {
       logger.error("Error creating workspace:", error)

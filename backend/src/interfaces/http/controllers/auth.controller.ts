@@ -175,11 +175,14 @@ export class AuthController {
   }
 
   async verify2FA(req: Request, res: Response): Promise<void> {
-    const { userId, token } = req.body
+    const { userId, code, token } = req.body
+
+    // Support both 'code' (new) and 'token' (legacy) parameters
+    const verificationCode = code || token
 
     // Validate input
-    if (!userId || !token) {
-      throw new AppError(400, "User ID and token are required")
+    if (!userId || !verificationCode) {
+      throw new AppError(400, "User ID and verification code are required")
     }
 
     const user = await this.userService.getById(userId)
@@ -187,10 +190,22 @@ export class AuthController {
       throw new AppError(404, "User not found")
     }
 
-    const isValidToken = await this.otpService.verifyTwoFactor(userId, token)
+    const isValidToken = await this.otpService.verifyTwoFactor(userId, verificationCode)
     if (!isValidToken) {
-      throw new AppError(401, "Invalid token")
+      throw new AppError(401, "Invalid verification code")
     }
+
+    // 🆕 CREATE ADMIN SESSION (same as login)
+    const sessionId = await adminSessionService.createSession(
+      user.id,
+      null, // workspaceId: null (will be set after workspace selection)
+      req.ip,
+      req.headers["user-agent"]
+    )
+
+    logger.info(
+      `✅ User ${user.email} verified 2FA with sessionId: ${sessionId.substring(0, 8)}...`
+    )
 
     // Generate JWT token
     const jwtToken2FA = this.generateToken(user)
@@ -198,7 +213,7 @@ export class AuthController {
     // Set the token as an HTTP-only cookie (for browser compatibility)
     this.setTokenCookie(res, jwtToken2FA)
 
-    // Return success response with user info AND token (for proxy compatibility)
+    // Return success response with user info, sessionId AND token (for proxy compatibility)
     res.status(200).json({
       user: {
         id: user.id,
@@ -207,6 +222,7 @@ export class AuthController {
         lastName: user.lastName,
         role: user.role,
       },
+      sessionId, // 🆕 NEW FIELD - frontend will save in sessionStorage
       token: jwtToken2FA, // 🆕 NEW FIELD - frontend will use in Authorization header (proxy-safe)
     })
   }

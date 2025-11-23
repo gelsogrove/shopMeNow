@@ -8,6 +8,9 @@ import { ChatProvider } from "./contexts/ChatContext"
 import { AgentConfigurationPage } from "./pages/AgentConfigurationPage"
 import { AnalyticsPage } from "./pages/AnalyticsPage"
 import SignupPage from "./pages/auth/SignupPage"
+import RegisterPage from "./pages/auth/RegisterPage"
+import Setup2FAPage from "./pages/auth/Setup2FAPage"
+import Verify2FAPage from "./pages/auth/Verify2FAPage"
 import { ChatPage } from "./pages/ChatPage"
 import ClientsPage from "./pages/ClientsPage"
 import { QueuePage } from "./pages/QueuePage"
@@ -29,7 +32,6 @@ import OrderSummaryPage from "./pages/OrderSummaryPage"
 import CategoriesPage from "./pages/products/CategoriesPage"
 import { ProductsPage } from "./pages/ProductsPage"
 import ProfilePage from "./pages/ProfilePage"
-import RegisterPage from "./pages/register"
 import RegistrationSuccess from "./pages/registration-success"
 import { ResetPasswordPage } from "./pages/ResetPasswordPage"
 import SalesPage from "./pages/SalesPage"
@@ -70,6 +72,9 @@ export function App() {
                 <Route path="/auth">
                   <Route path="login" element={<LoginPage />} />
                   <Route path="signup" element={<SignupPage />} />
+                  <Route path="register" element={<RegisterPage />} />
+                  <Route path="setup-2fa" element={<Setup2FAPage />} />
+                  <Route path="verify-2fa" element={<Verify2FAPage />} />
                   <Route
                     path="forgot-password"
                     element={<ForgotPasswordPage />}

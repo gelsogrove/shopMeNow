@@ -161,6 +161,28 @@ const translations = {
     "login.button": "Accedi",
     "login.noAccount": "Non hai un account?",
     "login.signup": "Registrati",
+    "login.signin": "Accedi",
+    "login.register": "Registrati",
+    "login.welcomeBack": "Bentornato",
+    "login.forgotPassword": "Password dimenticata?",
+    "login.signingIn": "Accesso in corso...",
+    "login.orContinueWith": "Oppure continua con",
+
+    // Register
+    "register.createAccount": "Crea Account",
+    "register.passwordHint": "Min 8 caratteri, maiuscola, minuscola, numero, carattere speciale",
+    "register.creatingAccount": "Creazione account...",
+    "register.gdprAccept": "Accetto la",
+    "register.privacyPolicy": "Privacy Policy",
+    "register.and": "e i",
+    "register.termsOfService": "Termini di Servizio",
+
+    // Form
+    "form.email": "Email",
+    "form.password": "Password",
+    "form.firstName": "Nome",
+    "form.lastName": "Cognome",
+    "form.confirmPassword": "Conferma Password",
   },
   en: {
     // Header
@@ -305,6 +327,28 @@ const translations = {
     "login.button": "Sign In",
     "login.noAccount": "Don't have an account?",
     "login.signup": "Sign up",
+    "login.signin": "Sign In",
+    "login.register": "Register",
+    "login.welcomeBack": "Welcome Back",
+    "login.forgotPassword": "Forgot password?",
+    "login.signingIn": "Signing in...",
+    "login.orContinueWith": "Or continue with",
+
+    // Register
+    "register.createAccount": "Create Account",
+    "register.passwordHint": "Min 8 characters, uppercase, lowercase, number, special char",
+    "register.creatingAccount": "Creating account...",
+    "register.gdprAccept": "I accept the",
+    "register.privacyPolicy": "Privacy Policy",
+    "register.and": "and",
+    "register.termsOfService": "Terms of Service",
+
+    // Form
+    "form.email": "Email",
+    "form.password": "Password",
+    "form.firstName": "First Name",
+    "form.lastName": "Last Name",
+    "form.confirmPassword": "Confirm Password",
   },
   es: {
     // Header
@@ -447,6 +491,28 @@ const translations = {
     "login.button": "Iniciar Sesión",
     "login.noAccount": "¿No tienes una cuenta?",
     "login.signup": "Regístrate",
+    "login.signin": "Iniciar Sesión",
+    "login.register": "Registrarse",
+    "login.welcomeBack": "Bienvenido de Nuevo",
+    "login.forgotPassword": "¿Olvidaste tu contraseña?",
+    "login.signingIn": "Iniciando sesión...",
+    "login.orContinueWith": "O continúa con",
+
+    // Register
+    "register.createAccount": "Crear Cuenta",
+    "register.passwordHint": "Mín 8 caracteres, mayúscula, minúscula, número, carácter especial",
+    "register.creatingAccount": "Creando cuenta...",
+    "register.gdprAccept": "Acepto la",
+    "register.privacyPolicy": "Política de Privacidad",
+    "register.and": "y los",
+    "register.termsOfService": "Términos de Servicio",
+
+    // Form
+    "form.email": "Correo electrónico",
+    "form.password": "Contraseña",
+    "form.firstName": "Nombre",
+    "form.lastName": "Apellido",
+    "form.confirmPassword": "Confirmar Contraseña",
   },
   pt: {
     // Header
@@ -591,6 +657,28 @@ const translations = {
     "login.button": "Entrar",
     "login.noAccount": "Não tem uma conta?",
     "login.signup": "Cadastre-se",
+    "login.signin": "Entrar",
+    "login.register": "Cadastrar",
+    "login.welcomeBack": "Bem-vindo de Volta",
+    "login.forgotPassword": "Esqueceu a senha?",
+    "login.signingIn": "Entrando...",
+    "login.orContinueWith": "Ou continue com",
+
+    // Register
+    "register.createAccount": "Criar Conta",
+    "register.passwordHint": "Mín 8 caracteres, maiúscula, minúscula, número, caractere especial",
+    "register.creatingAccount": "Criando conta...",
+    "register.gdprAccept": "Aceito a",
+    "register.privacyPolicy": "Política de Privacidade",
+    "register.and": "e os",
+    "register.termsOfService": "Termos de Serviço",
+
+    // Form
+    "form.email": "E-mail",
+    "form.password": "Senha",
+    "form.firstName": "Nome",
+    "form.lastName": "Sobrenome",
+    "form.confirmPassword": "Confirmar Senha",
   },
 }
 

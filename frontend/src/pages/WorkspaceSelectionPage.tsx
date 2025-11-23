@@ -78,11 +78,12 @@ export function WorkspaceSelectionPage() {
     // WorkspaceContext will automatically sync from localStorage
     setCurrentWorkspace(workspace)
 
-    // ✅ NO MORE sessionStorage - only localStorage via context
+    // ✅ Log workspace selection
     logger.info("✅ Workspace selected:", workspace.name, workspace.id)
-    // 🔄 HARD RELOAD - Force page refresh to load new workspace
-    logger.info("🔄 Reloading to /chat")
-    window.location.href = "/chat"
+    
+    // ✅ Navigate using React Router (preserves React state)
+    logger.info("🔄 Navigating to /chat")
+    navigate("/chat")
   }
 
   // Gestisce la creazione di un nuovo workspace

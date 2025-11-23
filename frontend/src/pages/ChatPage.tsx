@@ -309,9 +309,20 @@ export function ChatPage() {
   }, []) // Solo al mount - SEMPRE si esegue quando torni alla pagina
 
   // Redirect to workspace selection if user has no workspace
+  // ⚠️ CRITICAL: Give time for workspace to load from localStorage before redirecting
   useEffect(() => {
     if (!isWorkspaceLoading && !workspace) {
-      navigate("/clients")
+      // 🔍 Check if workspace exists in localStorage (might not be loaded yet)
+      const storedWorkspace = localStorage.getItem("currentWorkspace")
+      
+      if (!storedWorkspace) {
+        // No workspace in localStorage → redirect to selection
+        logger.warn("[ChatPage] ❌ No workspace found, redirecting to workspace selection")
+        navigate("/workspace-selection")
+      } else {
+        // Workspace exists in localStorage but not loaded yet → wait
+        logger.info("[ChatPage] ⏳ Workspace in localStorage, waiting for context to load...")
+      }
     }
   }, [isWorkspaceLoading, workspace, navigate])
 

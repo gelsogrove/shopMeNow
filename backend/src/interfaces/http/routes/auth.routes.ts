@@ -2,6 +2,7 @@ import { Router } from "express"
 import rateLimit from "express-rate-limit"
 import logger from "../../../utils/logger"
 import { AuthController } from "../controllers/auth.controller"
+import { EnhancedAuthController } from "../controllers/enhanced-auth.controller"
 import { asyncHandler } from "../middlewares/async.middleware"
 import { authMiddleware } from "../middlewares/auth.middleware"
 import {
@@ -64,8 +65,14 @@ const passwordResetLimiter = rateLimit({
 
 export const createAuthRouter = (authController: AuthController): Router => {
   const router = Router()
+  
+  // Initialize enhanced auth controller
+  const enhancedAuthController = new EnhancedAuthController()
 
-  // Routes
+  // ============================================
+  // EXISTING ROUTES (Manteniamo compatibilità)
+  // ============================================
+  
   // 🔒 OWASP A07: Brute force protection on login endpoint (max 5 attempts per IP per 15 min)
   router.post(
     "/login",
@@ -85,13 +92,14 @@ export const createAuthRouter = (authController: AuthController): Router => {
     asyncHandler(authController.logout.bind(authController))
   )
 
+  // OLD register route (kept for backwards compatibility)
   router.post(
-    "/register",
+    "/register-old",
     registerLimiter,
     asyncHandler(authController.register.bind(authController))
   )
 
-  // 2FA routes
+  // 2FA routes (existing)
   router.get(
     "/2fa/setup/:userId",
     twoFactorLimiter,
@@ -118,6 +126,40 @@ export const createAuthRouter = (authController: AuthController): Router => {
     validateResetPassword,
     asyncHandler(authController.resetPassword.bind(authController))
   )
+
+  // ============================================
+  // NEW ENHANCED ROUTES (Multi-provider 2FA)
+  // ============================================
+
+  // Email/Password Registration (NEW - with mandatory 2FA)
+  router.post(
+    "/register",
+    registerLimiter,
+    asyncHandler(enhancedAuthController.register.bind(enhancedAuthController))
+  )
+
+  // 2FA Setup Verification (NEW)
+  // 🔒 NO AUTH REQUIRED - User hasn't authenticated yet (just registered)
+  router.post(
+    "/verify-2fa-setup",
+    // Temporarily remove rate limiter to test if it's causing 401
+    asyncHandler(enhancedAuthController.verify2FASetup.bind(enhancedAuthController))
+  )
+
+  // Recovery Code Verification (NEW)
+  router.post(
+    "/verify-recovery-code",
+    twoFactorLimiter,
+    asyncHandler(enhancedAuthController.verifyRecoveryCode.bind(enhancedAuthController))
+  )
+
+  // Get User Avatar (NEW)
+  router.get(
+    "/avatar/:userId",
+    asyncHandler(enhancedAuthController.getUserAvatar.bind(enhancedAuthController))
+  )
+
+  // OAuth routes will be added separately (Passport.js integration)
 
   return router
 }
