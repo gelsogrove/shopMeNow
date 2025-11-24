@@ -8,7 +8,7 @@ A comprehensive WhatsApp e-commerce platform with AI-powered chatbot, simplified
 - **🛍️ E-commerce**: Complete product catalog, cart, and order management
 - **📊 Analytics**: Usage tracking and business insights
 - **🌍 Multi-language**: Native LLM support for Italian, English, Spanish, and Portuguese
-- **🔐 Security**: Token-based authentication and workspace isolation
+- **🔐 Security**: 2FA authentication, token-based auth, and workspace isolation ([Auth Fix Details](docs/AUTH_TOKEN_PERSISTENCE_FIX.md))
 - **📱 Secure Links**: Temporary authenticated access to orders and profiles
 - **⚡ Simplified Architecture**: Direct LLM processing without intermediate layers
 
