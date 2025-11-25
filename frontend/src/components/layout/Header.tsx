@@ -36,6 +36,7 @@ export function Header() {
   const [userName, setUserName] = useState<string>("")
   const [userEmail, setUserEmail] = useState<string>("")
   const [userInitials, setUserInitials] = useState<string>("")
+  const [profilePicture, setProfilePicture] = useState<string | null>(null)
   // Get user data from localStorage instead of API call
   const [userData, setUserData] = useState<any>(null)
 
@@ -85,7 +86,7 @@ export function Header() {
   useEffect(() => {
     // Carica i dati dell'utente
     loadUserProfile()
-  }, [])
+  }, [userData]) // 🆕 Re-run when userData changes
 
   const loadUserProfile = async () => {
     try {
@@ -95,6 +96,13 @@ export function Header() {
 
       setUserName(fullName || "User")
       setUserEmail(userData?.email || "")
+      setProfilePicture(userData?.profilePicture || null)
+
+      logger.info('👤 [Header] User profile loaded:', {
+        fullName,
+        email: userData?.email,
+        profilePicture: userData?.profilePicture,
+      })
 
       // Crea le iniziali per l'avatar
       const initials =
@@ -175,14 +183,35 @@ export function Header() {
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
-                className="relative h-12 w-12 rounded-full focus:ring-2 focus:ring-green-500 focus:outline-none hover:scale-105 transition-transform"
+                className="relative h-12 w-12 rounded-full focus:ring-2 focus:ring-green-500 focus:outline-none hover:scale-105 transition-transform p-0"
+                onClick={() => {
+                  logger.info('🖼️ [Avatar Debug]:', {
+                    profilePicture,
+                    hasProfilePicture: !!profilePicture,
+                    userData,
+                    userDataProfilePicture: userData?.profilePicture,
+                  })
+                }}
               >
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src="/avatars/01.png" alt="User" />
-                  <AvatarFallback className="text-lg font-medium">
+                {profilePicture ? (
+                  <img 
+                    src={profilePicture} 
+                    alt="User"
+                    referrerPolicy="no-referrer"
+                    className="h-full w-full rounded-full object-cover"
+                    onError={(e) => {
+                      logger.error('❌ [Avatar] Image failed to load:', profilePicture)
+                      e.currentTarget.style.display = 'none'
+                    }}
+                    onLoad={() => {
+                      logger.info('✅ [Avatar] Image loaded successfully:', profilePicture)
+                    }}
+                  />
+                ) : (
+                  <div className="h-full w-full rounded-full bg-green-600 flex items-center justify-center text-white text-lg font-medium">
                     {userInitials}
-                  </AvatarFallback>
-                </Avatar>
+                  </div>
+                )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-72" align="end" forceMount>

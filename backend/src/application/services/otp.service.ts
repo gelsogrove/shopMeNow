@@ -42,20 +42,39 @@ export class OtpService {
     // Get user's secret
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { twoFactorSecret: true },
+      select: { twoFactorSecret: true, email: true },
     })
 
     if (!user?.twoFactorSecret) {
       throw new AppError(400, "2FA not set up for this user")
     }
 
-    // Verify token
-    return speakeasy.totp.verify({
+    // 🔍 DEBUG: Log verification attempt
+    console.log('🔐 [2FA Verify] Attempting verification:', {
+      userId,
+      userEmail: user.email,
+      tokenReceived: token,
+      tokenLength: token.length,
+      secretExists: !!user.twoFactorSecret,
+      secretLength: user.twoFactorSecret.length,
+      timestamp: new Date().toISOString(),
+    })
+
+    // Verify token with extended window for debugging
+    const isValid = speakeasy.totp.verify({
       secret: user.twoFactorSecret,
       encoding: "base32",
       token: token,
-      window: 1, // Allow 1 step before/after for time drift
+      window: 2, // 🆕 INCREASED: Allow 2 steps (60 seconds) before/after for time drift
     })
+
+    console.log('🔐 [2FA Verify] Result:', {
+      isValid,
+      token,
+      userEmail: user.email,
+    })
+
+    return isValid
   }
 
   /**

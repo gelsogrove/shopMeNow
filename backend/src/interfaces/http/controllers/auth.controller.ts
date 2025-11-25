@@ -239,6 +239,7 @@ export class AuthController {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
+        profilePicture: user.profilePicture,
       },
       sessionId, // 🆕 NEW FIELD - frontend will save in sessionStorage
       token: jwtToken2FA, // 🆕 NEW FIELD - frontend will use in Authorization header (proxy-safe)

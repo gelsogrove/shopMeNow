@@ -136,12 +136,22 @@ export class OAuthController {
           twoFactorEnabled: true,
           twoFactorSecret: true,
           authProvider: true,
+          profilePicture: true,
         },
       })
 
       // CASE 1: USER EXISTS
       if (existingUser) {
         logger.info(`✅ [OAuth Google] Existing user found: ${email}`)
+
+        // Update profile picture if changed
+        if (picture && picture !== existingUser.profilePicture) {
+          await prisma.user.update({
+            where: { id: existingUser.id },
+            data: { profilePicture: picture },
+          })
+          logger.info(`🖼️ [OAuth Google] Updated profile picture for ${email}`)
+        }
 
         // Check if 2FA is enabled
         if (!existingUser.twoFactorEnabled || !existingUser.twoFactorSecret) {

@@ -1,4 +1,5 @@
 import { NewsUpdates } from "@/components/landing/NewsUpdates"
+import { PricingPlans } from "@/components/landing/PricingPlans"
 import { LanguageSelector } from "@/components/shared/LanguageSelector"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -654,6 +655,11 @@ export function LoginPage() {
 
       {/* News & Updates Section */}
       <NewsUpdates />
+
+      {/* Pricing Section */}
+      <div className="py-16 bg-gradient-to-br from-blue-50 via-white to-green-50">
+        <PricingPlans />
+      </div>
 
       {/* Contact Section */}
       <div className="bg-slate-900 text-white py-12">

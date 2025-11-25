@@ -110,6 +110,16 @@ api.interceptors.response.use(
         return Promise.reject(error)
       }
 
+      // 🆕 SKIP REDIRECT for 2FA verification pages (invalid code should show error, not redirect)
+      const is2FAPage = window.location.pathname === "/auth/verify-2fa" || 
+                        window.location.pathname === "/auth/verify-2fa-setup" ||
+                        window.location.pathname === "/auth/setup-2fa"
+      
+      if (is2FAPage) {
+        // Let the page handle the 401 error (invalid code)
+        return Promise.reject(error)
+      }
+
       // 🆕 CHECK IF IT'S A SESSION ERROR (vs JWT error)
       const errorMessage = error.response?.data?.error || ""
       const isSessionError = errorMessage.toLowerCase().includes("session")

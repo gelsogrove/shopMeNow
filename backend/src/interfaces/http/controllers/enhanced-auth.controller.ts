@@ -189,7 +189,14 @@ export class EnhancedAuthController {
       // Get user info
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { id: true, email: true, role: true, firstName: true, lastName: true },
+        select: { 
+          id: true, 
+          email: true, 
+          role: true, 
+          firstName: true, 
+          lastName: true,
+          profilePicture: true,
+        },
       })
 
       if (!user) {
@@ -241,6 +248,7 @@ export class EnhancedAuthController {
           firstName: user.firstName,
           lastName: user.lastName,
           role: user.role,
+          profilePicture: user.profilePicture,
         },
       })
     } catch (error) {
