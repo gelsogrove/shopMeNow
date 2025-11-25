@@ -8,8 +8,6 @@ import {
   Package2,
   Percent,
   ShoppingCart,
-  Tag,
-  User,
   UserCircle,
   Users,
   Wrench,
@@ -34,16 +32,16 @@ export function Sidebar() {
   const workspace = null
   const location = useLocation()
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({
-    products: false, // Inizialmente chiuso
+    ecommerce: false, // Inizialmente chiuso
   })
 
-  // Controlla se siamo in una pagina che fa parte del sottomenu Products
+  // Controlla se siamo in una pagina che fa parte del sottomenu E-commerce
   useEffect(() => {
-    const productPages = ["/products", "/categories", "/offers"]
-    if (productPages.some((page) => location.pathname.startsWith(page))) {
+    const ecommercePages = ["/products", "/services", "/offers", "/suppliers", "/sales", "/admin/orders"]
+    if (ecommercePages.some((page) => location.pathname.startsWith(page))) {
       setExpandedItems((prev) => ({
         ...prev,
-        products: true,
+        ecommerce: true,
       }))
     }
   }, [location.pathname])
@@ -68,54 +66,51 @@ export function Sidebar() {
       icon: Users,
     },
     {
-      href: "/products",
-      label: "Products",
-      icon: Package2,
-    },
-    {
-      href: "/suppliers",
-      label: "Suppliers",
-      icon: Building2,
-    },
-    {
-      href: "/services",
-      label: "Services",
-      icon: Wrench,
-    },
-    {
-      href: "/categories",
-      label: "Categories",
-      icon: Tag,
-    },
-    {
-      href: "/offers",
-      label: "Offers",
-      icon: Percent,
-    },
-    {
       href: "/faq",
       label: "FAQ",
       icon: HelpCircle,
     },
     {
-      href: "/sales",
-      label: "Sales",
-      icon: UserCircle,
-    },
-    {
-      href: "/profile",
-      label: "Profile",
-      icon: User,
+      label: "E-commerce",
+      icon: ShoppingCart,
+      key: "ecommerce",
+      children: [
+        {
+          href: "/products",
+          label: "Products",
+          icon: Package2,
+        },
+        {
+          href: "/services",
+          label: "Services",
+          icon: Wrench,
+        },
+        {
+          href: "/offers",
+          label: "Offers",
+          icon: Percent,
+        },
+        {
+          href: "/suppliers",
+          label: "Suppliers",
+          icon: Building2,
+        },
+        {
+          href: "/sales",
+          label: "Sales",
+          icon: UserCircle,
+        },
+        {
+          href: "/admin/orders",
+          label: "Orders",
+          icon: ShoppingCart,
+        },
+      ],
     },
     {
       href: "/campaigns",
       label: "Campaigns",
       icon: Megaphone,
-    },
-    {
-      href: "/admin/orders",
-      label: "Orders",
-      icon: ShoppingCart,
     },
   ]
 

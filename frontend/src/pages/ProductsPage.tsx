@@ -594,7 +594,7 @@ export function ProductsPage() {
     if (!selectedCat?.id || !workspace?.id) return
 
     try {
-      await categoriesApi.delete(workspace.id, selectedCat.id)
+      await categoriesApi.delete(selectedCat.id, workspace.id)
       toast.success("Category deleted successfully")
       setShowCatDelete(false)
       setSelectedCat(null)
@@ -1595,7 +1595,7 @@ export function ProductsPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() => handleCertEdit(cert)}
-                          className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -1736,7 +1736,7 @@ export function ProductsPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() => handleTtEdit(tt)}
-                          className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -1872,7 +1872,7 @@ export function ProductsPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() => handleCatEdit(cat)}
-                          className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
