@@ -290,7 +290,7 @@ export class EnhancedAuthController {
           ipAddress,
           userAgent,
         })
-        throw new AppError(401, 'Codice di verifica non valido')
+        throw new AppError(401, 'Invalid verification code')
       }
 
       // TOTP valid - fetch user and create session

@@ -346,7 +346,7 @@ export class AuthController {
       // Reset password using AuthService (handles validation, hashing, token marking)
       await this.authService.resetPassword(token, newPassword)
 
-      logger.info(`✅ Password reset successful for user: ${userId}`)
+      logger.info(`✅ Password reset successful`)
       res.status(200).json({
         message: "Password reset successful",
       })

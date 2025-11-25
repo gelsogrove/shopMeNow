@@ -243,18 +243,19 @@ export class AuthService {
       throw new AppError(400, validation.error!)
     }
 
-    // Hash and update password
+    // Hash and update password + mark token as used in a transaction
     const passwordHash = await bcrypt.hash(newPassword, 10)
-    await this.prisma.user.update({
-      where: { id: resetToken.userId },
-      data: { passwordHash },
-    })
-
-    // Mark token as used
-    await this.prisma.passwordReset.update({
-      where: { id: resetToken.id },
-      data: { usedAt: new Date() },
-    })
+    
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: resetToken.userId },
+        data: { passwordHash },
+      }),
+      this.prisma.passwordReset.update({
+        where: { id: resetToken.id },
+        data: { usedAt: new Date() },
+      }),
+    ])
 
     logger.info(`✅ Password reset successful for user: ${resetToken.userId}`)
   }

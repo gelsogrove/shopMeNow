@@ -5,6 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { LanguageSelector } from "@/components/shared/LanguageSelector"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { Eye, EyeOff } from "lucide-react"
 import { useState, useEffect } from "react"
@@ -105,6 +106,9 @@ export function ResetPasswordPage() {
 
   return (
     <div className="container flex h-screen items-center justify-center">
+      <div className="absolute top-4 right-4">
+        <LanguageSelector />
+      </div>
       <Card className="w-[400px]">
         <CardHeader className="text-center">
           <CardTitle>{t("resetPassword.title")}</CardTitle>

@@ -206,24 +206,24 @@ describe('Email Templates - Multilingual Support', () => {
       expect(lang).toBe('es') // French not supported, Spanish is first supported
     })
 
-    it('should fallback to English when no Accept-Language header provided', () => {
+    it('should fallback to Italian when no Accept-Language header provided', () => {
       const lang = detectLanguageFromHeader(undefined)
-      expect(lang).toBe('en')
+      expect(lang).toBe('it')
     })
 
-    it('should fallback to English when Accept-Language is empty', () => {
+    it('should fallback to Italian when Accept-Language is empty', () => {
       const lang = detectLanguageFromHeader('')
-      expect(lang).toBe('en')
+      expect(lang).toBe('it')
     })
 
-    it('should fallback to English when no supported language in header', () => {
+    it('should fallback to Italian when no supported language in header', () => {
       const lang = detectLanguageFromHeader('fr-FR,de-DE,ja-JP')
-      expect(lang).toBe('en')
+      expect(lang).toBe('it')
     })
 
     it('should handle malformed Accept-Language header gracefully', () => {
       const lang = detectLanguageFromHeader('invalid-header')
-      expect(lang).toBe('en')
+      expect(lang).toBe('it')
     })
 
     it('should be case-insensitive', () => {

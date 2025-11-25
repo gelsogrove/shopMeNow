@@ -184,13 +184,27 @@ export function getEmailTranslation(language?: SupportedLanguage): EmailTranslat
  * Detect language from Accept-Language header
  */
 export function detectLanguageFromHeader(acceptLanguage?: string): SupportedLanguage {
-  if (!acceptLanguage) return 'en'
+  if (!acceptLanguage || acceptLanguage.trim() === '') return 'it' // Default: Italian
   
-  const lower = acceptLanguage.toLowerCase()
+  // Parse Accept-Language header with quality values
+  // Format: "en-US,en;q=0.9,it;q=0.8" → [{lang: 'en', q: 1.0}, {lang: 'en', q: 0.9}, {lang: 'it', q: 0.8}]
+  const languages = acceptLanguage
+    .toLowerCase()
+    .split(',')
+    .map(lang => {
+      const [code, qValue] = lang.trim().split(';q=')
+      const langCode = code.split('-')[0].trim() // Extract base language (en-US → en)
+      const quality = qValue ? parseFloat(qValue) : 1.0
+      return { langCode, quality }
+    })
+    .sort((a, b) => b.quality - a.quality) // Sort by quality (highest first)
   
-  if (lower.includes('it')) return 'it'
-  if (lower.includes('es')) return 'es'
-  if (lower.includes('pt')) return 'pt'
+  // Find first supported language
+  for (const { langCode } of languages) {
+    if (langCode === 'it' || langCode === 'en' || langCode === 'es' || langCode === 'pt') {
+      return langCode as SupportedLanguage
+    }
+  }
   
-  return 'en'
+  return 'it' // Fallback to Italian
 }

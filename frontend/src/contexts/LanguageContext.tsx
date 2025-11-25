@@ -183,6 +183,7 @@ const translations = {
     "form.firstName": "Nome",
     "form.lastName": "Cognome",
     "form.confirmPassword": "Conferma Password",
+    "form.error.invalidEmail": "Indirizzo email non valido",
 
     // Forgot Password
     "forgotPassword.title": "Reimposta Password",
@@ -209,6 +210,13 @@ const translations = {
     "resetPassword.error.mismatch": "Le password non corrispondono",
     "resetPassword.error.minLength": "La password deve essere di almeno 8 caratteri",
     "resetPassword.error.strength": "La password deve contenere almeno una lettera maiuscola, una lettera minuscola, un numero e un carattere speciale",
+
+    // Auth Errors
+    "auth.error.invalid6DigitCode": "Inserisci un codice valido a 6 cifre",
+    "auth.error.invalidRecoveryCode": "Inserisci un codice di recupero valido",
+    "auth.error.invalidVerificationLink": "Link di verifica non valido. Effettua nuovamente il login.",
+    "auth.error.accountLocked": "Account bloccato a causa di troppi tentativi falliti",
+    "auth.error.invalidCode": "Codice di verifica non valido",
 
     // Privacy Policy
     "privacy.title": "Privacy Policy",
@@ -419,6 +427,7 @@ const translations = {
     "form.firstName": "First Name",
     "form.lastName": "Last Name",
     "form.confirmPassword": "Confirm Password",
+    "form.error.invalidEmail": "Invalid email address",
 
     // Forgot Password
     "forgotPassword.title": "Reset Password",
@@ -445,6 +454,13 @@ const translations = {
     "resetPassword.error.mismatch": "Passwords do not match",
     "resetPassword.error.minLength": "Password must be at least 8 characters",
     "resetPassword.error.strength": "Password must contain at least one uppercase letter, one lowercase letter, one number and one special character",
+
+    // Auth Errors
+    "auth.error.invalid6DigitCode": "Please enter a valid 6-digit code",
+    "auth.error.invalidRecoveryCode": "Please enter a valid recovery code",
+    "auth.error.invalidVerificationLink": "Invalid verification link. Please login again.",
+    "auth.error.accountLocked": "Account locked due to too many failed attempts",
+    "auth.error.invalidCode": "Invalid verification code",
 
     // Privacy Policy
     "privacy.title": "Privacy Policy",
@@ -653,6 +669,7 @@ const translations = {
     "form.firstName": "Nombre",
     "form.lastName": "Apellido",
     "form.confirmPassword": "Confirmar Contraseña",
+    "form.error.invalidEmail": "Dirección de correo electrónico no válida",
 
     // Forgot Password
     "forgotPassword.title": "Restablecer Contraseña",
@@ -679,6 +696,13 @@ const translations = {
     "resetPassword.error.mismatch": "Las contraseñas no coinciden",
     "resetPassword.error.minLength": "La contraseña debe tener al menos 8 caracteres",
     "resetPassword.error.strength": "La contraseña debe contener al menos una letra mayúscula, una letra minúscula, un número y un carácter especial",
+
+    // Auth Errors
+    "auth.error.invalid6DigitCode": "Por favor ingrese un código válido de 6 dígitos",
+    "auth.error.invalidRecoveryCode": "Por favor ingrese un código de recuperación válido",
+    "auth.error.invalidVerificationLink": "Enlace de verificación inválido. Por favor inicie sesión nuevamente.",
+    "auth.error.accountLocked": "Cuenta bloqueada debido a demasiados intentos fallidos",
+    "auth.error.invalidCode": "Código de verificación inválido",
 
     // Privacy Policy
     "privacy.title": "Política de Privacidad",
@@ -889,6 +913,7 @@ const translations = {
     "form.firstName": "Nome",
     "form.lastName": "Sobrenome",
     "form.confirmPassword": "Confirmar Senha",
+    "form.error.invalidEmail": "Endereço de e-mail inválido",
 
     // Forgot Password
     "forgotPassword.title": "Redefinir Senha",
@@ -915,6 +940,13 @@ const translations = {
     "resetPassword.error.mismatch": "As senhas não correspondem",
     "resetPassword.error.minLength": "A senha deve ter pelo menos 8 caracteres",
     "resetPassword.error.strength": "A senha deve conter pelo menos uma letra maiúscula, uma letra minúscula, um número e um caractere especial",
+
+    // Auth Errors
+    "auth.error.invalid6DigitCode": "Por favor insira um código válido de 6 dígitos",
+    "auth.error.invalidRecoveryCode": "Por favor insira um código de recuperação válido",
+    "auth.error.invalidVerificationLink": "Link de verificação inválido. Por favor faça login novamente.",
+    "auth.error.accountLocked": "Conta bloqueada devido a muitas tentativas falhadas",
+    "auth.error.invalidCode": "Código de verificação inválido",
 
     // Privacy Policy
     "privacy.title": "Política de Privacidade",
@@ -967,15 +999,33 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [language, setLanguageState] = useState<Language>(() => {
     const saved = localStorage.getItem("language")
-    return (saved as Language) || "it" // 🇮🇹 Default: Italiano
+    console.log(`🌍 LanguageContext: Initializing with saved language:`, saved)
+    
+    // Ensure fallback works correctly (null/undefined → "it")
+    const initialLang = (saved && ["it", "en", "es", "pt"].includes(saved) ? saved : "it") as Language
+    console.log(`🌍 LanguageContext: Initial language set to:`, initialLang)
+    return initialLang
   })
 
   useEffect(() => {
+    console.log(`🌍 LanguageContext: Saving language to localStorage:`, language)
     localStorage.setItem("language", language)
+    
+    // Force re-render of entire app when language changes
+    document.documentElement.lang = language
   }, [language])
 
   const setLanguage = (lang: Language) => {
+    console.log(`🌍 LanguageContext: setLanguage called with:`, lang)
+    console.log(`🌍 LanguageContext: Current language BEFORE change:`, language)
+    
+    // Save to localStorage FIRST
+    localStorage.setItem("language", lang)
+    console.log(`🌍 LanguageContext: Saved to localStorage:`, localStorage.getItem("language"))
+    
+    // Then update state (this triggers useEffect which will re-render all components)
     setLanguageState(lang)
+    console.log(`🌍 LanguageContext: State updated to:`, lang)
   }
 
   const t = (key: string): string => {

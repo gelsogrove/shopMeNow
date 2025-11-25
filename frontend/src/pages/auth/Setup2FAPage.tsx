@@ -20,6 +20,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { LanguageSelector } from '@/components/shared/LanguageSelector'
 import { toast } from '@/lib/toast'
 import { logger } from '@/lib/logger'
 import { Loader2, CheckCircle, AlertCircle, Smartphone, Copy, Download } from 'lucide-react'
@@ -444,6 +445,9 @@ export default function Setup2FAPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
+      <div className="absolute top-4 right-4">
+        <LanguageSelector />
+      </div>
       <div className="w-full max-w-md">
         {/* Step Indicator */}
         <div className="mb-6 flex justify-center items-center gap-2 text-sm text-gray-600">

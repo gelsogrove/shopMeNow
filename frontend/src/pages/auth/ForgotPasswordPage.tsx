@@ -19,19 +19,14 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/ui/use-toast"
+import { LanguageSelector } from "@/components/shared/LanguageSelector"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2 } from "lucide-react"
-import { useState } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { Link } from "react-router-dom"
 import * as z from "zod"
-
-const forgotPasswordSchema = z.object({
-  email: z.string().email("Invalid email address"),
-})
-
-type ForgotPasswordForm = z.infer<typeof forgotPasswordSchema>
 
 export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -40,12 +35,24 @@ export default function ForgotPasswordPage() {
   const { toast } = useToast()
   const { t, language } = useLanguage() // 🌍 Get language from context
 
+  // 🌍 Schema with dynamic translations - recreated when language changes
+  const forgotPasswordSchema = useMemo(() => z.object({
+    email: z.string().email(t("form.error.invalidEmail")),
+  }), [language, t])
+
+  type ForgotPasswordForm = z.infer<typeof forgotPasswordSchema>
+
   const form = useForm<ForgotPasswordForm>({
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: {
       email: "",
     },
   })
+
+  // 🌍 Reset form when language changes to apply new schema
+  useEffect(() => {
+    form.clearErrors()
+  }, [language, form])
 
   const onSubmit = async (data: ForgotPasswordForm) => {
     try {
@@ -71,7 +78,7 @@ export default function ForgotPasswordPage() {
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.message || "Failed to process request")
+        throw new Error(error.message || t("forgotPassword.error"))
       }
 
       setSuccess(true)
@@ -80,7 +87,7 @@ export default function ForgotPasswordPage() {
         description: t("forgotPassword.success"),
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred")
+      setError(err instanceof Error ? err.message : t("forgotPassword.error"))
     } finally {
       setIsLoading(false)
     }
@@ -89,6 +96,9 @@ export default function ForgotPasswordPage() {
   return (
     <div className="auth-background">
       <AuthLogo />
+      <div className="absolute top-4 right-4">
+        <LanguageSelector />
+      </div>
       <div className="container mx-auto px-4 flex items-center justify-center min-h-screen">
         <Card className="w-full max-w-md font-system bg-white/95 backdrop-blur-sm shadow-xl">
           <CardHeader className="space-y-1">

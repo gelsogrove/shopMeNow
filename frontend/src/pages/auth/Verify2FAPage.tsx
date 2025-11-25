@@ -20,14 +20,17 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { LanguageSelector } from '@/components/shared/LanguageSelector'
 import { toast } from '@/lib/toast'
 import { Loader2, Shield, AlertCircle, KeyRound } from 'lucide-react'
 import { api } from '@/services/api'
 import { logger } from '@/lib/logger'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function Verify2FAPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { t } = useLanguage()
   
   // Get state from login
   const { userId, email, provider } = location.state || {}
@@ -44,7 +47,7 @@ export default function Verify2FAPage() {
    */
   useEffect(() => {
     if (!userId || !email) {
-      toast.error('Invalid verification link. Please login again.')
+      toast.error(t('auth.error.invalidVerificationLink'))
       navigate('/auth/login')
     }
   }, [userId, email, navigate])
@@ -54,7 +57,7 @@ export default function Verify2FAPage() {
    */
   const handleVerifyTOTP = async () => {
     if (!code || code.length !== 6) {
-      setError('Please enter a valid 6-digit code')
+      setError(t('auth.error.invalid6DigitCode'))
       return
     }
 
@@ -102,7 +105,7 @@ export default function Verify2FAPage() {
         setAttemptsRemaining(errorData.attemptsRemaining)
         
         if (errorData.attemptsRemaining === 0) {
-          toast.error('Account locked due to too many failed attempts')
+          toast.error(t('auth.error.accountLocked'))
           setTimeout(() => navigate('/auth/login'), 3000)
         }
       }
@@ -116,7 +119,7 @@ export default function Verify2FAPage() {
    */
   const handleVerifyRecoveryCode = async () => {
     if (!code || code.length < 8) {
-      setError('Please enter a valid recovery code')
+      setError(t('auth.error.invalidRecoveryCode'))
       return
     }
 
@@ -200,6 +203,9 @@ export default function Verify2FAPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
+      <div className="absolute top-4 right-4">
+        <LanguageSelector />
+      </div>
       <div className="w-full max-w-md">
         <Card>
           <CardHeader>
@@ -230,6 +236,7 @@ export default function Verify2FAPage() {
                 <Label htmlFor="totpCode">Verification Code</Label>
                 <Input
                   id="totpCode"
+                  name="totp-code"
                   type="text"
                   inputMode="numeric"
                   pattern="[0-9]*"
@@ -245,6 +252,7 @@ export default function Verify2FAPage() {
                   className="text-center text-2xl tracking-widest font-mono"
                   disabled={loading}
                   autoFocus
+                  autoComplete="off"
                 />
                 {error && (
                   <p className="text-sm text-red-600">{error}</p>
@@ -266,6 +274,7 @@ export default function Verify2FAPage() {
                 </Label>
                 <Input
                   id="recoveryCode"
+                  name="recovery-code"
                   type="text"
                   placeholder="Enter recovery code"
                   value={code}
@@ -277,6 +286,7 @@ export default function Verify2FAPage() {
                   className="font-mono"
                   disabled={loading}
                   autoFocus
+                  autoComplete="off"
                 />
                 {error && (
                   <p className="text-sm text-red-600">{error}</p>

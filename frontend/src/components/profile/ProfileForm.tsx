@@ -79,7 +79,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
       } else {
         setAddress(profileData.address || '')
       }
-      setLanguage(profileData.language || 'ENG')
+      setLanguage(profileData.language || 'en')
       setCurrency(profileData.currency || 'EUR')
 
       // Initialize invoice address

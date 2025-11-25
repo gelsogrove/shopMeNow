@@ -28,6 +28,12 @@ jest.mock('@prisma/client', () => {
       user: mockUser,
       passwordReset: mockPasswordResetToken,
       $disconnect: jest.fn(),
+      $transaction: jest.fn((operations) => {
+        if (Array.isArray(operations)) {
+          return Promise.all(operations)
+        }
+        return Promise.resolve(operations())
+      }),
     })),
   }
 })
