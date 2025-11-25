@@ -124,13 +124,16 @@ api.interceptors.response.use(
       const errorMessage = error.response?.data?.error || ""
       const isSessionError = errorMessage.toLowerCase().includes("session")
 
-      // Clear workspace data immediately
+      // 🛡️ CRITICAL: Clear ALL auth data to prevent stale token issues
+      localStorage.removeItem("token")
+      localStorage.removeItem("user")
       localStorage.removeItem("currentWorkspace")
       sessionStorage.removeItem("currentWorkspace")
+      sessionStorage.clear()
 
       // Show appropriate toast message
       toast.error("Sessione scaduta. Effettua nuovamente il login.")
-      logger.warn("🔐 JWT token expired - redirecting to login")
+      logger.warn("🔐 Auth error (401) - cleared all tokens, redirecting to login")
 
       // Redirect immediately to prevent retry loops
       window.location.href = "/auth/login"

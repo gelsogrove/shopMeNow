@@ -11,6 +11,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useCurrentUser } from "@/hooks/useCurrentUser"
+import { useWorkspace } from "@/contexts/WorkspaceContext"
+import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { logger } from "@/lib/logger"
 import {
   UserProfile,
@@ -27,6 +29,8 @@ export default function ProfilePage() {
     isLoading: userLoading,
     isError: userError,
   } = useCurrentUser()
+  const { workspace } = useWorkspace()
+  const { isSuperAdmin } = useWorkspaceRole(workspace?.id)
   const [isLoading, setIsLoading] = useState(false)
   const [showPasswordDialog, setShowPasswordDialog] = useState(false)
   const [user, setUser] = useState<UserProfile & {
@@ -236,68 +240,70 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Billing Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
-              Billing Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="companyName">Company Name</Label>
-              <Input
-                id="companyName"
-                value={user.companyName || ""}
-                onChange={(e) => handleFieldChange("companyName", e.target.value)}
-                placeholder="Your company name"
-              />
-            </div>
+        {/* Billing Information - ONLY for SUPER_ADMIN (Owner) */}
+        {isSuperAdmin && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                Billing Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="companyName">Company Name</Label>
+                <Input
+                  id="companyName"
+                  value={user.companyName || ""}
+                  onChange={(e) => handleFieldChange("companyName", e.target.value)}
+                  placeholder="Your company name"
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="vatNumber">VAT Number</Label>
-              <Input
-                id="vatNumber"
-                value={user.vatNumber || ""}
-                onChange={(e) => handleFieldChange("vatNumber", e.target.value)}
-                placeholder="IT12345678901"
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="vatNumber">VAT Number</Label>
+                <Input
+                  id="vatNumber"
+                  value={user.vatNumber || ""}
+                  onChange={(e) => handleFieldChange("vatNumber", e.target.value)}
+                  placeholder="IT12345678901"
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="website">Website</Label>
-              <Input
-                id="website"
-                type="url"
-                value={user.website || ""}
-                onChange={(e) => handleFieldChange("website", e.target.value)}
-                placeholder="https://www.example.com"
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="website">Website</Label>
+                <Input
+                  id="website"
+                  type="url"
+                  value={user.website || ""}
+                  onChange={(e) => handleFieldChange("website", e.target.value)}
+                  placeholder="https://www.example.com"
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="billingPhone">Phone</Label>
-              <Input
-                id="billingPhone"
-                type="tel"
-                value={user.billingPhone || ""}
-                onChange={(e) => handleFieldChange("billingPhone", e.target.value)}
-                placeholder="+39 123 456 7890"
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="billingPhone">Phone</Label>
+                <Input
+                  id="billingPhone"
+                  type="tel"
+                  value={user.billingPhone || ""}
+                  onChange={(e) => handleFieldChange("billingPhone", e.target.value)}
+                  placeholder="+39 123 456 7890"
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="billingAddress">Address</Label>
-              <Input
-                id="billingAddress"
-                value={user.billingAddress || ""}
-                onChange={(e) => handleFieldChange("billingAddress", e.target.value)}
-                placeholder="Via Roma 1, 00100 Rome, Italy"
-              />
-            </div>
-          </CardContent>
-        </Card>
+              <div className="space-y-2">
+                <Label htmlFor="billingAddress">Address</Label>
+                <Input
+                  id="billingAddress"
+                  value={user.billingAddress || ""}
+                  onChange={(e) => handleFieldChange("billingAddress", e.target.value)}
+                  placeholder="Via Roma 1, 00100 Rome, Italy"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <div className="flex justify-end">

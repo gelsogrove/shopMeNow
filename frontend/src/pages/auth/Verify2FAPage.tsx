@@ -32,8 +32,11 @@ export default function Verify2FAPage() {
   const location = useLocation()
   const { t } = useLanguage()
   
-  // Get state from login
-  const { userId, email, provider } = location.state || {}
+  // Get state from login (including returnUrl for invitation flow)
+  const { userId, email, provider, returnUrl } = location.state || {}
+  
+  // 🔗 Determine final redirect URL (invitation flow or default)
+  const finalRedirectUrl = returnUrl ? decodeURIComponent(returnUrl) : '/workspace-selection'
   
   // Page state
   const [mode, setMode] = useState<'totp' | 'recovery'>('totp')
@@ -89,9 +92,9 @@ export default function Verify2FAPage() {
       toast.success(`Welcome back, ${user.firstName}!`)
       
       // 🔄 CRITICAL: Hard reload instead of navigate() to clear axios cache
-      logger.info('🔄 [Verify2FA] Forcing hard reload to /workspace-selection')
+      logger.info(`🔄 [Verify2FA] Forcing hard reload to ${finalRedirectUrl}`)
       setTimeout(() => {
-        window.location.href = '/workspace-selection'
+        window.location.href = finalRedirectUrl
       }, 200)
     } catch (error: any) {
       const errorData = error.response?.data
@@ -167,9 +170,9 @@ export default function Verify2FAPage() {
       }
       
       // 🔄 CRITICAL: Hard reload instead of navigate() to clear axios cache
-      logger.info('🔄 [Verify2FA] Forcing hard reload to /workspace-selection (recovery code)')
+      logger.info(`🔄 [Verify2FA] Forcing hard reload to ${finalRedirectUrl} (recovery code)`)
       setTimeout(() => {
-        window.location.href = '/workspace-selection'
+        window.location.href = finalRedirectUrl
       }, 500) // Increased delay to allow user to read alert
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Invalid recovery code'

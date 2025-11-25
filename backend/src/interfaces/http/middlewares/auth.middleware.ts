@@ -92,34 +92,30 @@ const authMiddlewareAsync = async (
       return next()
     }
 
-    // Check for token in cookies
-    let token = req.cookies?.auth_token
+    // 🛡️ PRIORITY: Authorization header FIRST, then cookies
+    // This ensures that when frontend clears localStorage and sends new token in header,
+    // we use the new token instead of stale cookie from previous session
+    let token: string | undefined
 
-    // Fallback to Authorization header for backward compatibility
-    if (!token) {
-      logger.info("No token in cookies, checking headers")
-      const authHeader = req.headers.authorization
-      if (!authHeader) {
-        logger.info("No authorization header")
-        throw new AppError(401, "Authentication required")
-      }
-
-      if (!authHeader.startsWith("Bearer ")) {
-        logger.info("Authorization header doesn't start with 'Bearer '")
-        throw new AppError(401, "Invalid authorization format")
-      }
-
+    // Check Authorization header FIRST (priority)
+    const authHeader = req.headers.authorization
+    if (authHeader && authHeader.startsWith("Bearer ")) {
       token = authHeader.split(" ")[1]
-
-      // Check if token is empty after 'Bearer '
-      if (!token || token.trim() === "") {
-        logger.info("Empty token in authorization header")
-        throw new AppError(401, "Empty authorization token")
+      if (token && token.trim() !== "") {
+        logger.info("Using token from Authorization header")
+      } else {
+        token = undefined
       }
     }
 
+    // Fallback to cookies only if no header token
+    if (!token && req.cookies?.auth_token) {
+      token = req.cookies.auth_token
+      logger.info("Using token from cookie (no Authorization header)")
+    }
+
     if (!token) {
-      logger.info("No token found in cookies or headers")
+      logger.info("No token found in headers or cookies")
       throw new AppError(401, "Authentication required")
     }
 

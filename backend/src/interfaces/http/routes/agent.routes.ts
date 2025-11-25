@@ -1,3 +1,4 @@
+import { requireSuperAdmin } from "../../../middlewares/workspace-role.middleware"
 import { Router } from "express"
 import logger from "../../../utils/logger"
 import { AgentController } from "../controllers/agent.controller"
@@ -117,7 +118,8 @@ export const createAgentRouter = (): Router => {
    *       404:
    *         description: Agent not found
    */
-  router.put("/:id", asyncHandler(agentController.update))
+  // Update agent - ONLY SUPER_ADMIN (Owner) can modify agent configuration
+  router.put("/:id", requireSuperAdmin, asyncHandler(agentController.update))
 
   logger.info("Agent routes setup complete")
 

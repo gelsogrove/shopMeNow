@@ -23,15 +23,25 @@ export const authMiddleware = async (
   next: NextFunction
 ): Promise<void | Response> => {
   try {
-    // First try to get token from cookie
-    let token = req.cookies?.auth_token
+    // 🛡️ PRIORITY: Authorization header FIRST, then cookies
+    // This ensures that when frontend clears localStorage and sends new token in header,
+    // we use the new token instead of stale cookie from previous session
+    let token: string | undefined
 
-    // Fallback to Authorization header
-    if (!token) {
-      const authHeader = req.headers?.authorization
-      if (authHeader && authHeader.startsWith("Bearer ")) {
-        token = authHeader.split(" ")[1]
+    // Check Authorization header FIRST (priority)
+    const authHeader = req.headers?.authorization
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const headerToken = authHeader.split(" ")[1]
+      if (headerToken && headerToken.trim() !== "") {
+        token = headerToken
+        logger.info("Using token from Authorization header")
       }
+    }
+
+    // Fallback to cookies only if no header token
+    if (!token && req.cookies?.auth_token) {
+      token = req.cookies.auth_token
+      logger.info("Using token from cookie (no Authorization header)")
     }
 
     if (!token) {

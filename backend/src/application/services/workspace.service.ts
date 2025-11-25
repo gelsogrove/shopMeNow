@@ -327,19 +327,70 @@ For privacy inquiries, please contact our support team.`
         // Don't fail the entire transaction for GDPR content
       }
 
-      // 5. 🆕 CREATE USER-WORKSPACE RELATION (CRITICAL for workspace isolation)
+      // 5. 🆕 CREATE USER-WORKSPACE RELATION AND SET OWNER (Feature 184: Team Management)
       if (createdBy) {
         try {
+          // Set the workspace owner
+          await tx.workspace.update({
+            where: { id: createdWorkspace.id },
+            data: { ownerId: createdBy },
+          })
+          logger.info(
+            `✅ Set workspace owner: ${createdBy} for workspace ${createdWorkspace.id}`
+          )
+
+          // Create UserWorkspace relation with SUPER_ADMIN role
           await tx.userWorkspace.create({
             data: {
               userId: createdBy,
               workspaceId: createdWorkspace.id,
-              role: 'ADMIN', // Creator is always ADMIN
+              role: 'SUPER_ADMIN', // Creator is SUPER_ADMIN (Feature 184)
             },
           })
           logger.info(
-            `✅ Created UserWorkspace relation: user ${createdBy} → workspace ${createdWorkspace.id} (ADMIN)`
+            `✅ Created UserWorkspace relation: user ${createdBy} → workspace ${createdWorkspace.id} (SUPER_ADMIN)`
           )
+
+          // 6. 🆕 AUTO-ADD EXISTING ADMINS (Feature 184: New channel propagation)
+          // Find all workspaces owned by this user and get their ADMINs
+          const existingOwnerWorkspaces = await tx.workspace.findMany({
+            where: {
+              ownerId: createdBy,
+              id: { not: createdWorkspace.id }, // Exclude the new workspace
+            },
+            select: { id: true },
+          })
+
+          if (existingOwnerWorkspaces.length > 0) {
+            // Get all unique ADMINs from owner's other workspaces
+            const existingAdmins = await tx.userWorkspace.findMany({
+              where: {
+                workspaceId: { in: existingOwnerWorkspaces.map(w => w.id) },
+                role: 'ADMIN',
+              },
+              select: { userId: true },
+              distinct: ['userId'],
+            })
+
+            // Add each ADMIN to the new workspace
+            let adminsAdded = 0
+            for (const admin of existingAdmins) {
+              await tx.userWorkspace.create({
+                data: {
+                  userId: admin.userId,
+                  workspaceId: createdWorkspace.id,
+                  role: 'ADMIN',
+                },
+              })
+              adminsAdded++
+            }
+
+            if (adminsAdded > 0) {
+              logger.info(
+                `✅ Auto-added ${adminsAdded} existing ADMINs to new workspace ${createdWorkspace.id}`
+              )
+            }
+          }
         } catch (error) {
           logger.error(
             `❌ CRITICAL: Failed to create UserWorkspace relation for user ${createdBy}:`,

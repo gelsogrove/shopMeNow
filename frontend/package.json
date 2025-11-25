@@ -12,7 +12,8 @@
     "start:mcp": "npx @agentdeskai/browser-tools-server@latest",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "test:unit": "vitest run"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",

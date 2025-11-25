@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
+import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
@@ -32,6 +33,7 @@ export function Header() {
 
   // ✅ FIX: Use WorkspaceContext (single source of truth)
   const { workspace } = useWorkspace()
+  const { isSuperAdmin } = useWorkspaceRole(workspace?.id)
 
   const [userName, setUserName] = useState<string>("")
   const [userEmail, setUserEmail] = useState<string>("")
@@ -234,27 +236,36 @@ export function Header() {
 
               
 
-              <DropdownMenuItem
-                className="p-4 text-lg cursor-pointer"
-                onClick={() => navigate("/settings")}
-              >
-                <Settings className="mr-3 h-5 w-5" />
-                <span>Settings</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="p-4 text-lg cursor-pointer"
-                onClick={() => navigate("/gdpr")}
-              >
-                <ShieldCheck className="mr-3 h-5 w-5" />
-                <span>GDPR Policy</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="p-4 text-lg cursor-pointer"
-                onClick={() => navigate("/agents")}
-              >
-                <Bot className="mr-3 h-5 w-5" />
-                <span>Agents Configuration</span>
-              </DropdownMenuItem>
+              {/* Settings - ONLY for SUPER_ADMIN (Owner) */}
+              {isSuperAdmin && (
+                <DropdownMenuItem
+                  className="p-4 text-lg cursor-pointer"
+                  onClick={() => navigate("/settings")}
+                >
+                  <Settings className="mr-3 h-5 w-5" />
+                  <span>Settings</span>
+                </DropdownMenuItem>
+              )}
+              {/* GDPR Policy - ONLY for SUPER_ADMIN (Owner) */}
+              {isSuperAdmin && (
+                <DropdownMenuItem
+                  className="p-4 text-lg cursor-pointer"
+                  onClick={() => navigate("/gdpr")}
+                >
+                  <ShieldCheck className="mr-3 h-5 w-5" />
+                  <span>GDPR Policy</span>
+                </DropdownMenuItem>
+              )}
+              {/* Agents Configuration - ONLY for SUPER_ADMIN (Owner) */}
+              {isSuperAdmin && (
+                <DropdownMenuItem
+                  className="p-4 text-lg cursor-pointer"
+                  onClick={() => navigate("/agents")}
+                >
+                  <Bot className="mr-3 h-5 w-5" />
+                  <span>Agents Configuration</span>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 className="p-4 text-lg cursor-pointer"
                 onClick={() => navigate("/analytics")}

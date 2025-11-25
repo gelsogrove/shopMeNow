@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express"
 import { gdprController } from "../controllers/gdpr.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"
 import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
+import { requireSuperAdmin } from "../../../middlewares/workspace-role.middleware"
 
 const router = Router({ mergeParams: true })
 
@@ -48,11 +49,12 @@ const router = Router({ mergeParams: true })
 // GET: Retrieve GDPR content (public, no auth required)
 router.get("/", (req: Request, res: Response) => gdprController.getGdpr(req, res))
 
-// PUT: Update GDPR content (requires auth + workspace validation)
+// PUT: Update GDPR content (requires auth + workspace validation + SUPER_ADMIN only)
 router.put(
   "/",
   authMiddleware,
   workspaceValidationMiddleware,
+  requireSuperAdmin,
   (req: Request, res: Response) => gdprController.updateGdpr(req, res)
 )
 

@@ -25,13 +25,18 @@ import { toast } from '@/lib/toast'
 import { logger } from '@/lib/logger'
 import { Loader2, CheckCircle, AlertCircle, Smartphone, Copy, Download } from 'lucide-react'
 import { api } from '@/services/api'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function Setup2FAPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { t } = useLanguage()
   
-  // Get state from registration
-  const { userId, email, firstName, qrCode, provider } = location.state || {}
+  // Get state from registration (including returnUrl for invitation flow)
+  const { userId, email, firstName, qrCode, provider, returnUrl } = location.state || {}
+  
+  // 🔗 Determine final redirect URL (invitation flow or default)
+  const finalRedirectUrl = returnUrl ? decodeURIComponent(returnUrl) : '/workspace-selection'
   
   // Page state
   const [step, setStep] = useState<'scan' | 'verify' | 'codes'>('scan')
@@ -87,43 +92,18 @@ export default function Setup2FAPage() {
       // 🛡️ CRITICAL SECURITY: Clear ALL storage before saving new credentials
       logger.info('🧹 [Setup2FA] Clearing ALL storage (localStorage + sessionStorage)')
       
-      // 🔍 DEBUG: Log OLD token before clearing
-      const oldToken = localStorage.getItem('token')
-      logger.warn(`🔍 [Setup2FA] OLD token in storage: ${oldToken?.substring(0, 30)}...`)
-      
       localStorage.clear()
       sessionStorage.clear()
       logger.info('✅ [Setup2FA] Storage cleared completely')
       
-      // 🔍 DEBUG: Verify storage is actually empty
-      const checkToken = localStorage.getItem('token')
-      if (checkToken) {
-        logger.error('❌ [Setup2FA] CRITICAL: localStorage.clear() FAILED - token still exists!')
-        alert('CRITICAL BUG: localStorage not clearing! Check console.')
-        return
-      }
-      logger.info('✅ [Setup2FA] Verified: storage is empty')
-      
-      logger.info(`🔍 [Setup2FA] NEW token to be saved: ${token.substring(0, 30)}...`)
-      
-      // Decode and log NEW token details
-      const newTokenDecoded = JSON.parse(atob(token.split('.')[1]))
-      logger.warn(`🔍 [Setup2FA] NEW token decoded:`, newTokenDecoded)
-      logger.warn(`   Email in new token: ${newTokenDecoded.email}`)
-      logger.warn(`   User ID in new token: ${newTokenDecoded.id}`)
-      
       // Save new authentication data (ONLY token - no sessionId)
       localStorage.setItem('token', token)
-      
-      // 🔥 ALERT for debugging - REMOVE after testing
-      alert(`✅ NEW TOKEN SAVED!\nEmail: ${newTokenDecoded.email}\nID: ${newTokenDecoded.id}`)
+      logger.info(`✅ [Setup2FA] NEW token saved`)
       
       // Verify immediately that the token was saved correctly
       const savedToken = localStorage.getItem('token')
       if (savedToken !== token) {
         logger.error('❌ [Setup2FA] Token mismatch after save!')
-        logger.error(`Expected: ${token.substring(0, 30)}...`)
-        logger.error(`Got: ${savedToken?.substring(0, 30)}...`)
         toast.error('Token save failed')
         return
       }
@@ -149,10 +129,12 @@ export default function Setup2FAPage() {
         setStep('codes')
         toast.success('2FA enabled successfully! Please save your recovery codes.')
       } else {
-        // No recovery codes - go directly to workspace
+        // No recovery codes - go directly to workspace or returnUrl
         toast.success('2FA enabled successfully!')
+        // 🔄 CRITICAL: Hard reload to ensure axios reads fresh token from localStorage
+        logger.info(`🔄 [Setup2FA] Forcing hard reload to ${finalRedirectUrl}`)
         setTimeout(() => {
-          navigate('/workspace-selection')
+          window.location.href = finalRedirectUrl
         }, 200)
       }
     } catch (error: any) {
@@ -228,14 +210,10 @@ export default function Setup2FAPage() {
     
     logger.info(`✅ [Setup2FA COMPLETE] Token verified: ${existingToken.substring(0, 30)}...`)
     
-    // CRITICAL: Log token details for debugging
-    logger.warn(`🔍 [Setup2FA COMPLETE] Token in localStorage:`)
-    logger.warn(`   Full token: ${existingToken}`)
-    logger.warn(`   Decoded (manual): ${JSON.stringify(parseJwt(existingToken))}`)
-    
-    // Navigate to workspace selection
-    logger.info('🔄 [Setup2FA] Navigating to /workspace-selection')
-    navigate('/workspace-selection')
+    // 🔄 CRITICAL: Hard reload to ensure axios reads fresh token from localStorage
+    // Using window.location.href instead of navigate() to force a clean slate
+    logger.info(`🔄 [Setup2FA] Forcing hard reload to ${finalRedirectUrl}`)
+    window.location.href = finalRedirectUrl
   }
 
   // Helper to decode JWT (for debugging)
@@ -255,10 +233,10 @@ export default function Setup2FAPage() {
       <CardHeader>
         <CardTitle className="text-2xl flex items-center gap-2">
           <Smartphone className="w-6 h-6 text-green-600" />
-          Setup Two-Factor Authentication
+          {t('setup2fa.title')}
         </CardTitle>
         <CardDescription>
-          Scan the QR code with your authenticator app
+          {t('setup2fa.scanDescription')}
         </CardDescription>
       </CardHeader>
       
@@ -271,21 +249,21 @@ export default function Setup2FAPage() {
           
           <Alert>
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Use an authenticator app</AlertTitle>
+            <AlertTitle>{t('setup2fa.useAuthenticatorApp')}</AlertTitle>
             <AlertDescription>
-              Recommended: <strong>Google Authenticator</strong>, Microsoft Authenticator, or Authy
+              {t('setup2fa.recommended')}
             </AlertDescription>
           </Alert>
         </div>
 
         {/* Instructions */}
         <div className="space-y-3 text-sm text-gray-600">
-          <p className="font-semibold text-gray-900">How to setup:</p>
+          <p className="font-semibold text-gray-900">{t('setup2fa.howToSetup')}</p>
           <ol className="list-decimal list-inside space-y-2">
-            <li>Open your authenticator app</li>
-            <li>Tap "+" or "Add account"</li>
-            <li>Scan this QR code</li>
-            <li>Enter the 6-digit code below</li>
+            <li>{t('setup2fa.step1')}</li>
+            <li>{t('setup2fa.step2')}</li>
+            <li>{t('setup2fa.step3')}</li>
+            <li>{t('setup2fa.step4')}</li>
           </ol>
         </div>
       </CardContent>
@@ -295,7 +273,7 @@ export default function Setup2FAPage() {
           onClick={() => setStep('verify')} 
           className="w-full bg-green-600 hover:bg-green-700"
         >
-          I've scanned the code
+          {t('setup2fa.scannedButton')}
         </Button>
       </CardFooter>
     </Card>
@@ -307,16 +285,16 @@ export default function Setup2FAPage() {
   const renderVerifyStep = () => (
     <Card className="w-full max-w-md">
       <CardHeader>
-        <CardTitle className="text-2xl">Verify Your Setup</CardTitle>
+        <CardTitle className="text-2xl">{t('setup2fa.verifyTitle')}</CardTitle>
         <CardDescription>
-          Enter the 6-digit code from your authenticator app
+          {t('setup2fa.verifyDescription')}
         </CardDescription>
       </CardHeader>
       
       <CardContent className="space-y-4">
         {/* Verification Code Input */}
         <div className="space-y-2">
-          <Label htmlFor="verificationCode">Verification Code</Label>
+          <Label htmlFor="verificationCode">{t('setup2fa.verificationCode')}</Label>
           <Input
             id="verificationCode"
             type="text"
@@ -342,7 +320,7 @@ export default function Setup2FAPage() {
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            The code refreshes every 30 seconds. Enter the current code from your app.
+            {t('setup2fa.codeRefreshes')}
           </AlertDescription>
         </Alert>
       </CardContent>
@@ -356,10 +334,10 @@ export default function Setup2FAPage() {
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Verifying...
+              {t('setup2fa.verifying')}
             </>
           ) : (
-            'Verify and Continue'
+            t('setup2fa.verifyAndContinue')
           )}
         </Button>
         
@@ -369,7 +347,7 @@ export default function Setup2FAPage() {
           disabled={loading}
           className="w-full"
         >
-          Back to QR Code
+          {t('setup2fa.backToQR')}
         </Button>
       </CardFooter>
     </Card>
@@ -383,19 +361,19 @@ export default function Setup2FAPage() {
       <CardHeader>
         <CardTitle className="text-2xl flex items-center gap-2">
           <CheckCircle className="w-6 h-6 text-green-600" />
-          Save Your Recovery Codes
+          {t('setup2fa.saveRecoveryTitle')}
         </CardTitle>
         <CardDescription>
-          Store these codes in a safe place. You'll need them to access your account if you lose your authenticator device.
+          {t('setup2fa.saveRecoveryDescription')}
         </CardDescription>
       </CardHeader>
       
       <CardContent className="space-y-4">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Important!</AlertTitle>
+          <AlertTitle>{t('setup2fa.important')}</AlertTitle>
           <AlertDescription>
-            Each recovery code can only be used once. After using a code, it will be invalidated.
+            {t('setup2fa.recoveryCodeWarning')}
           </AlertDescription>
         </Alert>
 
@@ -418,7 +396,7 @@ export default function Setup2FAPage() {
             className="flex-1"
           >
             <Copy className="mr-2 h-4 w-4" />
-            {codesCopied ? 'Copied!' : 'Copy Codes'}
+            {codesCopied ? t('setup2fa.copied') : t('setup2fa.copyCodes')}
           </Button>
           
           <Button
@@ -427,7 +405,7 @@ export default function Setup2FAPage() {
             className="flex-1"
           >
             <Download className="mr-2 h-4 w-4" />
-            Download
+            {t('setup2fa.download')}
           </Button>
         </div>
       </CardContent>
@@ -437,12 +415,11 @@ export default function Setup2FAPage() {
           onClick={handleContinueToWorkspace}
           className="w-full bg-green-600 hover:bg-green-700"
         >
-          I've Saved My Codes - Continue
+          {t('setup2fa.savedContinue')}
         </Button>
       </CardFooter>
     </Card>
   )
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
       <div className="absolute top-4 right-4">
@@ -455,7 +432,7 @@ export default function Setup2FAPage() {
             <span className={`w-6 h-6 rounded-full flex items-center justify-center border-2 ${step === 'scan' ? 'bg-green-600 text-white border-green-600' : step === 'verify' || step === 'codes' ? 'bg-green-600 text-white border-green-600' : 'border-gray-300'}`}>
               {step === 'verify' || step === 'codes' ? <CheckCircle className="w-4 h-4" /> : '1'}
             </span>
-            Scan
+            {t('setup2fa.stepScan')}
           </div>
           
           <div className="w-8 h-0.5 bg-gray-300" />
@@ -464,7 +441,7 @@ export default function Setup2FAPage() {
             <span className={`w-6 h-6 rounded-full flex items-center justify-center border-2 ${step === 'verify' ? 'bg-green-600 text-white border-green-600' : step === 'codes' ? 'bg-green-600 text-white border-green-600' : 'border-gray-300'}`}>
               {step === 'codes' ? <CheckCircle className="w-4 h-4" /> : '2'}
             </span>
-            Verify
+            {t('setup2fa.stepVerify')}
           </div>
           
           <div className="w-8 h-0.5 bg-gray-300" />
@@ -473,7 +450,7 @@ export default function Setup2FAPage() {
             <span className={`w-6 h-6 rounded-full flex items-center justify-center border-2 ${step === 'codes' ? 'bg-green-600 text-white border-green-600' : 'border-gray-300'}`}>
               3
             </span>
-            Save Codes
+            {t('setup2fa.stepSaveCodes')}
           </div>
         </div>
 
@@ -485,7 +462,7 @@ export default function Setup2FAPage() {
         {/* Footer */}
         <div className="mt-6 text-center text-sm text-gray-600">
           <Link to="/auth/login" className="text-green-600 hover:text-green-700 hover:underline">
-            Skip and login later
+            {t('setup2fa.skipLogin')}
           </Link>
         </div>
       </div>

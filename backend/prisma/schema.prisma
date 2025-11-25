@@ -33,7 +33,13 @@ model Workspace {
   apiKey                    String?
   metadata                  Json?
   whatsappQueueEnabled      Boolean           @default(true)
+  
+  // Team management: ownerId groups all channels belonging to same owner
+  ownerId                   String?
+  owner                     User?             @relation("OwnedWorkspaces", fields: [ownerId], references: [id])
+  
   users                     UserWorkspace[]
+  invitations               WorkspaceInvitation[]
   agentConfigs              AgentConfig[]
   agentConversationLogs     AgentConversationLog[]
   conversationMessages      ConversationMessage[]
@@ -63,6 +69,8 @@ model Workspace {
   certifications            Certification[]
   transportTypes            TransportType[]
   whatsappQueue             WhatsAppQueue[]
+
+  @@index([ownerId])
 }
 
 model Categories {
@@ -412,6 +420,8 @@ model User {
   billingAddress     String?                  // Indirizzo completo
   
   workspaces         UserWorkspace[]
+  ownedWorkspaces    Workspace[]              @relation("OwnedWorkspaces") // Workspaces where user is owner/SUPER_ADMIN
+  invitationsSent    WorkspaceInvitation[]    @relation("InvitedBy") // Invitations sent by this user
   passwordResets     PasswordReset[]
   adminSessions      AdminSession[]
   authAttempts       AuthenticationAttempt[] // Security audit trail
@@ -442,9 +452,10 @@ model AuthenticationAttempt {
 model UserWorkspace {
   userId      String
   workspaceId String
-  role        String
-  user        User      @relation(fields: [userId], references: [id])
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  role        String        @default("ADMIN") // Values: "SUPER_ADMIN" | "ADMIN"
+  createdAt   DateTime      @default(now())
+  user        User          @relation(fields: [userId], references: [id])
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id])
 
   @@id([userId, workspaceId])
 }
@@ -827,6 +838,35 @@ enum UserRole {
   ADMIN
   OWNER
   MEMBER
+}
+
+// Status of a workspace invitation
+enum InvitationStatus {
+  PENDING   // Waiting for user to accept
+  ACCEPTED  // User accepted the invitation
+  CANCELLED // SUPER_ADMIN cancelled the invitation
+  EXPIRED   // Token expired (>7 days)
+}
+
+// Workspace invitation for team management
+model WorkspaceInvitation {
+  id          String           @id @default(cuid())
+  email       String           // Email of the invited user (lowercase normalized)
+  workspaceId String
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tokenHash   String           @unique // SHA-256 hash of the invitation token
+  invitedById String
+  invitedBy   User             @relation("InvitedBy", fields: [invitedById], references: [id])
+  status      InvitationStatus @default(PENDING)
+  expiresAt   DateTime         // Token expiry (7 days from creation)
+  createdAt   DateTime         @default(now())
+  acceptedAt  DateTime?        // When the invitation was accepted
+
+  @@index([workspaceId])
+  @@index([email])
+  @@index([status])
+  @@index([tokenHash])
+  @@map("workspace_invitations")
 }
 
 model ShortUrls {

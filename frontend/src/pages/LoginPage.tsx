@@ -26,7 +26,7 @@ import {
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import * as z from "zod"
 import { toast } from "../lib/toast"
 import { auth, api } from "../services/api"
@@ -78,6 +78,11 @@ export function LoginPage() {
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [activeTab, setActiveTab] = useState<'signin' | 'register'>('signin')
   
+  // 🔗 Extract returnUrl from query params (for invitation flow)
+  const [searchParams] = useSearchParams()
+  const returnUrl = searchParams.get('returnUrl')
+  const actionParam = searchParams.get('action') // 🆕 For auto-opening register modal
+  
   // Password visibility states
   const [showPassword, setShowPassword] = useState(false)
   const [showPasswordRegister, setShowPasswordRegister] = useState(false)
@@ -117,6 +122,15 @@ export function LoginPage() {
     sessionStorage.clear()
     logger.info('✅ [LOGIN PAGE LOAD] Storage cleared - ready for fresh login')
   }, []) // Run only once on mount
+
+  // 🆕 AUTO-OPEN REGISTER MODAL if ?action=register parameter is present
+  useEffect(() => {
+    if (actionParam === 'register') {
+      logger.info('🎯 [AUTO-OPEN] Detected ?action=register - opening registration modal')
+      setShowLoginModal(true)
+      setActiveTab('register')
+    }
+  }, [actionParam])
 
   // 🆕 AUTO-REDIRECT IF SESSION IS ALREADY VALID
   useEffect(() => {
@@ -185,6 +199,7 @@ export function LoginPage() {
             userId: response.data.userId,
             email: response.data.email,
             provider: 'email',
+            returnUrl, // 🔗 Pass returnUrl for invitation flow
           },
         })
         return
@@ -265,6 +280,7 @@ export function LoginPage() {
           firstName: user.firstName,
           qrCode,
           provider: 'email',
+          returnUrl, // 🔗 Pass returnUrl for invitation flow
         },
       })
     } catch (err: any) {
@@ -306,12 +322,12 @@ export function LoginPage() {
       
       const { user, requiresSetup, qrCode, token } = response.data
       
-      // Save authentication data
-      if (token) {
-        localStorage.setItem('token', token)
-        logger.info('✅ [GOOGLE OAUTH] Token saved')
-      }
+      // 🛡️ SECURITY: Do NOT save token here - it will be saved after 2FA verification
+      // The token returned here is a pre-2FA token that should not be stored
+      // Verify2FAPage or Setup2FAPage will handle token storage after 2FA completion
+      logger.info('🔐 [GOOGLE OAUTH] Token received but NOT saved (awaiting 2FA completion)')
       
+      // Only save user info for the 2FA pages to use
       localStorage.setItem('user', JSON.stringify(user))
       
       if (requiresSetup) {
@@ -324,6 +340,7 @@ export function LoginPage() {
             firstName: user.firstName,
             qrCode,
             provider: 'google',
+            returnUrl, // 🔗 Pass returnUrl for invitation flow
           },
         })
       } else {
@@ -334,6 +351,7 @@ export function LoginPage() {
             userId: user.id,
             email: user.email,
             provider: 'google',
+            returnUrl, // 🔗 Pass returnUrl for invitation flow
           },
         })
       }

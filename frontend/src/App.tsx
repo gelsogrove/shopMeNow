@@ -5,6 +5,7 @@ import { Toaster } from "sonner"
 import { Layout } from "./components/layout/Layout"
 import { ProtectedRoute } from "./components/ProtectedRoute"
 import { ChatProvider } from "./contexts/ChatContext"
+import { AcceptInvitePage } from "./pages/AcceptInvitePage"
 import { AgentConfigurationPage } from "./pages/AgentConfigurationPage"
 import { AnalyticsPage } from "./pages/AnalyticsPage"
 import SignupPage from "./pages/auth/SignupPage"
@@ -95,6 +96,8 @@ export function App() {
                   path="/forgot-password"
                   element={<ForgotPasswordPage />}
                 />
+                {/* Accept Invite - public route for team invitation acceptance */}
+                <Route path="/accept-invite" element={<AcceptInvitePage />} />
 
                 {/* Short URL redirect handler - must be before protected routes */}
                 <Route path="/s/:code" element={<ShortUrlRedirect />} />

@@ -89,6 +89,7 @@ async function main() {
   await prisma.transportType.deleteMany()
 
   // Delete user-related tables
+  await prisma.workspaceInvitation.deleteMany() // Must delete before users (foreign key)
   await prisma.userWorkspace.deleteMany()
   await prisma.user.deleteMany()
 
@@ -161,6 +162,7 @@ async function main() {
       afterRegistrationMessages: JSON.stringify(
         workspaceSettings.afterRegistrationMessages
       ),
+      ownerId: adminUser.id, // ✅ Feature 184: Set workspace owner for team management
     },
   })
 
@@ -195,11 +197,11 @@ async function main() {
     data: {
       userId: adminUser.id,
       workspaceId: workspace.id,
-      role: "OWNER",
+      role: "SUPER_ADMIN", // ✅ Feature 184: Creator is SUPER_ADMIN
     },
   })
 
-  console.log("✅ Admin associated with workspace")
+  console.log("✅ Admin associated with workspace as SUPER_ADMIN")
 
   // 5. Create Languages
   console.log("🌐 Creating languages...")
@@ -1570,29 +1572,6 @@ async function main() {
   const queueCustomers = allCustomers.slice(0, 3)
 
   if (queueCustomers.length >= 3) {
-    // 2 pending messages (different customers)
-    await prisma.whatsAppQueue.create({
-      data: {
-        workspaceId: workspace.id,
-        customerId: queueCustomers[0].id,
-        phoneNumber: queueCustomers[0].phone || "+393331234567",
-        messageContent: "Grazie per il tuo ordine! Il tuo pacco sarà spedito entro 24 ore.",
-        status: "pending",
-        createdAt: new Date(Date.now() - 60000), // 1 minute ago
-      },
-    })
-
-    await prisma.whatsAppQueue.create({
-      data: {
-        workspaceId: workspace.id,
-        customerId: queueCustomers[1].id,
-        phoneNumber: queueCustomers[1].phone || "+351912345678",
-        messageContent: "Olá! Seu pedido foi confirmado. Obrigado por comprar conosco!",
-        status: "pending",
-        createdAt: new Date(Date.now() - 30000), // 30 seconds ago
-      },
-    })
-
     // 1 sent message (with deliveredAt)
     await prisma.whatsAppQueue.create({
       data: {
@@ -1631,8 +1610,7 @@ async function main() {
       },
     })
 
-    console.log("✅ Created 5 WhatsApp queue test messages:")
-    console.log("   - 2 pending messages")
+    console.log("✅ Created 3 WhatsApp queue test messages:")
     console.log("   - 1 sent message (with deliveredAt)")
     console.log("   - 2 error messages (safety validation + invalid phone)")
   } else {

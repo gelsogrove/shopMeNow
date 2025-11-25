@@ -3,6 +3,8 @@ import logger from '../../../utils/logger';
 import { WorkspaceController } from '../controllers/workspace.controller';
 import { asyncHandler } from '../middlewares/async.middleware';
 import { authMiddleware } from '../middlewares/auth.middleware';
+import { requireSuperAdmin } from '../../../middlewares/workspace-role.middleware';
+import { validateWorkspaceOperation } from '../../../middlewares/workspace-validation.middleware';
 
 export const workspaceRouter = (): Router => {
   const router = Router();
@@ -19,14 +21,14 @@ export const workspaceRouter = (): Router => {
   // Get a specific workspace
   router.get('/:id', asyncHandler(workspaceController.getWorkspaceById));
   
-  // Create a new workspace
+  // Create a new workspace (protection in controller - checks canUserCreateWorkspace)
   router.post('/', asyncHandler(workspaceController.createWorkspace));
   
-  // Update a workspace
-  router.put('/:id', asyncHandler(workspaceController.updateWorkspace));
+  // Update a workspace - ONLY SUPER_ADMIN (Owner)
+  router.put('/:id', validateWorkspaceOperation, requireSuperAdmin, asyncHandler(workspaceController.updateWorkspace));
   
-  // Delete a workspace
-  router.delete('/:id', asyncHandler(workspaceController.deleteWorkspace));
+  // Delete a workspace - ONLY SUPER_ADMIN (Owner) (additional protection in controller)
+  router.delete('/:id', validateWorkspaceOperation, requireSuperAdmin, asyncHandler(workspaceController.deleteWorkspace));
   
   logger.info('Workspace routes setup complete');
   return router;

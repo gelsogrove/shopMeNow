@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express"
 import { WorkspaceService } from "../../../application/services/workspace.service"
+import { workspaceMemberService } from "../../../application/services/workspace-member.service"
 import logger from "../../../utils/logger"
 
 export class WorkspaceController {
@@ -137,6 +138,7 @@ export class WorkspaceController {
   /**
    * Create a new workspace
    * CRITICAL: Must create UserWorkspace relation for the creator
+   * SECURITY: Only SUPER_ADMIN (owners) or first-time users can create workspaces
    */
   createWorkspace = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -148,6 +150,20 @@ export class WorkspaceController {
         logger.error("User ID not found in request - authentication failed")
         return res.status(401).json({ error: "User not authenticated" })
       }
+
+      // 🔒 SECURITY CHECK: Verify user can create workspaces
+      // Only SUPER_ADMIN (owners) or first-time users can create channels
+      const { canCreate, reason, isFirstTimeOwner } = await workspaceMemberService.canUserCreateWorkspace(userId)
+      
+      if (!canCreate) {
+        logger.warn(`❌ User ${userId} attempted to create workspace but is not authorized: ${reason}`)
+        return res.status(403).json({ 
+          error: "Not authorized to create channels",
+          message: reason 
+        })
+      }
+
+      logger.info(`✅ User ${userId} authorized to create workspace (firstTimeOwner: ${isFirstTimeOwner})`)
 
       const workspaceData = req.body
 
@@ -243,12 +259,33 @@ export class WorkspaceController {
 
   /**
    * Delete a workspace
+   * SECURITY: Only the workspace owner (SUPER_ADMIN) can delete a channel
    */
   deleteWorkspace = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params
 
-      logger.info(`Deleting workspace ${id}`)
+      // CRITICAL SECURITY: Get userId from authenticated request
+      const userId = (req as any).user?.id
+      if (!userId) {
+        logger.error("User ID not found in request - authentication failed")
+        return res.status(401).json({ error: "User not authenticated" })
+      }
+
+      logger.info(`User ${userId} attempting to delete workspace ${id}`)
+
+      // 🔒 SECURITY CHECK: Only SUPER_ADMIN (owner) can delete workspace
+      const isSuperAdmin = await workspaceMemberService.isSuperAdmin(id, userId)
+      
+      if (!isSuperAdmin) {
+        logger.warn(`❌ User ${userId} attempted to delete workspace ${id} but is not the owner`)
+        return res.status(403).json({ 
+          error: "Not authorized to delete this channel",
+          message: "Only workspace owners (SUPER_ADMIN) can delete channels" 
+        })
+      }
+
+      logger.info(`✅ User ${userId} authorized to delete workspace ${id} (is owner)`)
 
       const result = await this.workspaceService.delete(id)
 
@@ -256,6 +293,7 @@ export class WorkspaceController {
         return res.status(404).json({ message: "Workspace not found" })
       }
 
+      logger.info(`✅ Workspace ${id} deleted by owner ${userId}`)
       return res.status(204).send()
     } catch (error) {
       logger.error(`Error deleting workspace ${req.params.id}:`, error)

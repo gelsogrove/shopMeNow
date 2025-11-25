@@ -2,8 +2,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { TeamMembersTable } from "@/components/workspace/TeamMembersTable"
 import type { Workspace } from "@/hooks/use-workspace"
 import { useWorkspace } from "@/hooks/use-workspace"
+import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
 import { LogOut, PlusCircle } from "lucide-react"
@@ -29,6 +31,49 @@ export function WorkspaceSelectionPage() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
+  // 🔍 DEBUG: Log ALL localStorage keys on mount
+  useEffect(() => {
+    logger.info('🔍 [WorkspaceSelectionPage] MOUNT - Checking localStorage:')
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key) {
+        const value = localStorage.getItem(key)
+        logger.info(`  - ${key}: ${value?.substring(0, 50)}...`)
+      }
+    }
+    
+    // Decode token if present
+    const token = localStorage.getItem('token')
+    if (token) {
+      try {
+        const base64Url = token.split('.')[1]
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map((c: string) => {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+        }).join(''))
+        const decoded = JSON.parse(jsonPayload)
+        logger.info('🔍 [WorkspaceSelectionPage] Token decoded:', decoded)
+      } catch (e) {
+        logger.error('Failed to decode token:', e)
+      }
+    }
+  }, [])
+
+  // Get first workspace ID for role check (all workspaces share the same owner)
+  const firstWorkspaceId = workspaces.length > 0 ? workspaces[0].id : null
+  const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstWorkspaceId)
+
+  // 🔍 DEBUG: Log role info
+  useEffect(() => {
+    logger.info('🔍 [WorkspaceSelectionPage] Role check:', {
+      firstWorkspaceId,
+      isSuperAdmin,
+      isRoleLoading,
+      role,
+      workspacesCount: workspaces.length
+    })
+  }, [firstWorkspaceId, isSuperAdmin, isRoleLoading, role, workspaces.length])
+
   // Carica i workspace all'avvio
   useEffect(() => {
     loadWorkspaces()
@@ -42,6 +87,21 @@ export function WorkspaceSelectionPage() {
         "🔍 [WorkspaceSelectionPage] Token in localStorage:",
         token ? token.substring(0, 20) + "..." : "NULL"
       )
+
+      // 🔍 DEBUG: Decode token to see who it belongs to
+      if (token) {
+        try {
+          const base64Url = token.split('.')[1]
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+          const jsonPayload = decodeURIComponent(atob(base64).split('').map((c: string) => {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+          }).join(''))
+          const decoded = JSON.parse(jsonPayload)
+          logger.info('🔍 [WorkspaceSelectionPage] Token belongs to:', decoded.email || decoded.id)
+        } catch (e) {
+          logger.error('Failed to decode token:', e)
+        }
+      }
 
       if (!token) {
         logger.error(
@@ -156,8 +216,6 @@ export function WorkspaceSelectionPage() {
     
     navigate("/")
   }
-    sessionStorage.removeItem("selectedClientId")
-    sessionStorage.removeItem("selectedChatId")
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -258,21 +316,24 @@ export function WorkspaceSelectionPage() {
             </Card>
           ))}
 
-          {/* Card per aggiungere un nuovo workspace */}
-          <Card
-            className="hover:shadow-md transition-shadow cursor-pointer border border-dashed flex flex-col items-center justify-center h-full"
-            onClick={() => {
-              const dialog = document.getElementById(
-                "type-selection-dialog"
-              ) as HTMLDialogElement
-              if (dialog) dialog.showModal()
-            }}
-          >
-            <CardContent className="p-6 flex flex-col items-center justify-center">
-              <PlusCircle className="h-12 w-12 text-gray-400 mb-2" />
-              <div className="text-gray-500 font-medium">Add new channel</div>
-            </CardContent>
-          </Card>
+          {/* Card per aggiungere un nuovo workspace - ONLY for SUPER_ADMIN (Owner) */}
+          {/* Only show if role is loaded AND user is SUPER_ADMIN */}
+          {!isRoleLoading && isSuperAdmin && (
+            <Card
+              className="hover:shadow-md transition-shadow cursor-pointer border border-dashed flex flex-col items-center justify-center h-full"
+              onClick={() => {
+                const dialog = document.getElementById(
+                  "type-selection-dialog"
+                ) as HTMLDialogElement
+                if (dialog) dialog.showModal()
+              }}
+            >
+              <CardContent className="p-6 flex flex-col items-center justify-center">
+                <PlusCircle className="h-12 w-12 text-gray-400 mb-2" />
+                <div className="text-gray-500 font-medium">Add new channel</div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Dialog per la selezione del tipo di attività */}
@@ -293,6 +354,7 @@ export function WorkspaceSelectionPage() {
                   value={newPhoneNumber}
                   onChange={(e) => setNewPhoneNumber(e.target.value)}
                   className="mt-2"
+                  autoComplete="off"
                 />
               </div>
 
@@ -305,6 +367,7 @@ export function WorkspaceSelectionPage() {
                   value={alias}
                   onChange={(e) => setAlias(e.target.value)}
                   className="mt-2"
+                  autoComplete="off"
                 />
               </div>
 
@@ -336,6 +399,14 @@ export function WorkspaceSelectionPage() {
             </div>
           </div>
         </dialog>
+
+        {/* Team Members Section - Show below channels */}
+        {firstWorkspaceId && !isRoleLoading && (
+          <TeamMembersTable
+            workspaceId={firstWorkspaceId}
+            isSuperAdmin={isSuperAdmin}
+          />
+        )}
       </div>
     </div>
   )

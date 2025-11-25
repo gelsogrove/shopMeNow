@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
+import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
 import { deleteWorkspace, updateWorkspace } from "@/services/workspaceApi"
@@ -72,6 +73,7 @@ export default function SettingsPage() {
     wipMessage: defaultWipMessage,
   })
   const { workspace, loading, setCurrentWorkspace } = useWorkspace()
+  const { isSuperAdmin } = useWorkspaceRole(workspace?.id)
 
   useEffect(() => {
     if (!workspace) return
@@ -384,17 +386,20 @@ export default function SettingsPage() {
             </p>
           </div>
           <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button
-              variant="destructive"
-              onClick={() => setShowDeleteDialog(true)}
-              disabled={
-                deleteWorkspaceMutation.isPending ||
-                saveSettingsMutation.isPending
-              }
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete Workspace
-            </Button>
+            {/* Delete button - ONLY for SUPER_ADMIN (Owner) */}
+            {isSuperAdmin && (
+              <Button
+                variant="destructive"
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={
+                  deleteWorkspaceMutation.isPending ||
+                  saveSettingsMutation.isPending
+                }
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Workspace
+              </Button>
+            )}
             <Button
               onClick={handleSave}
               disabled={saveSettingsMutation.isPending}

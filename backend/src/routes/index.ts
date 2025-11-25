@@ -75,6 +75,11 @@ import { createUserRouter } from "../interfaces/http/routes/user.routes"
 // Workspace
 import { workspaceRoutes } from "../interfaces/http/routes/workspace.routes"
 import workspaceRoutesLegacy from "./workspace.routes"
+import {
+  invitationRoutes,
+  publicInvitationRoutes,
+} from "../interfaces/http/routes/invitation.routes"
+import { memberRoutes } from "../interfaces/http/routes/member.routes"
 
 // E-commerce
 import { cartRouter } from "../interfaces/http/routes/cart.routes"
@@ -574,6 +579,14 @@ logger.info(
 // ========================================
 // ⚙️ AGENT CONFIGURATION API
 // ========================================
+// ========================================
+// 🔓 PUBLIC TEAM INVITATION ROUTES (NO AUTH REQUIRED)
+// ========================================
+// IMPORTANT: These MUST be mounted BEFORE any router that uses router.use(authMiddleware)
+// to prevent the auth middleware from intercepting public requests
+router.use("/invitations", publicInvitationRoutes)
+logger.info("✅ Registered PUBLIC invitation routes: /api/invitations (validate, accept)")
+
 router.use("/", agentConfigRoutes)
 logger.info(
   "✅ Registered agent config routes (/api/workspaces/:workspaceId/agent-config)"
@@ -590,6 +603,14 @@ router.use("/workspaces", workspaceCustomersRouter(customersController))
 // (POST /workspaces for creation doesn't need session, only JWT token)
 router.use("/workspaces", authMiddleware, workspaceRoutesLegacy)
 router.use("/workspaces", authMiddleware, workspaceRoutes)
+
+// Mount invitation and member routes for workspace team management (Feature 184)
+// Workspace-scoped routes (require workspaceId in path)
+router.use("/workspaces/:workspaceId/invitations", invitationRoutes)
+router.use("/workspaces/:workspaceId/members", memberRoutes)
+logger.info(
+  "✅ Registered PROTECTED team management routes: /api/workspaces/:workspaceId/invitations, /api/workspaces/:workspaceId/members"
+)
 
 // Mount campaign routes
 router.use("/workspaces", campaignRoutes(campaignController))
