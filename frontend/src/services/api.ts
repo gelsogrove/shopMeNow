@@ -8,24 +8,6 @@ export const api = axios.create({
   withCredentials: true, // Importante: invia i cookie con le richieste
 })
 
-// 🆕 SESSION ID HELPERS (sessionStorage management)
-// NOTE: Using sessionStorage - session expires when browser/tab closes (OWASP compliant)
-export const getSessionId = (): string | null => {
-  return sessionStorage.getItem("sessionId")
-}
-
-export const setSessionId = (sessionId: string): void => {
-  sessionStorage.setItem("sessionId", sessionId)
-  logger.info(
-    `✅ SessionID saved to sessionStorage: ${sessionId.substring(0, 8)}...`
-  )
-}
-
-export const clearSessionId = (): void => {
-  sessionStorage.removeItem("sessionId")
-  logger.info("🗑️ SessionID cleared from sessionStorage")
-}
-
 // Helper function to get current workspace ID from local storage
 const getCurrentWorkspaceId = (): string | null => {
   const workspaceData = localStorage.getItem("currentWorkspace")
@@ -39,20 +21,6 @@ const getCurrentWorkspaceId = (): string | null => {
   }
   return null
 }
-
-// 🔒 SESSION ID EXEMPT ROUTES (no sessionId required)
-// NOTE: These are RELATIVE paths (without /api prefix) because axios uses baseURL
-const SESSION_EXEMPT_ROUTES = [
-  "/auth/login",
-  "/auth/forgot-password",
-  "/auth/reset-password",
-  "/auth/register",
-  "/auth/verify-2fa-setup", // 🔑 CRITICAL: Part of registration flow, uses token from registration
-  "/auth/oauth/google", // 🔑 OAuth Google login/register
-  "/health",
-  "/session/validate", // 🔑 CRITICAL: Used by LoginPage checkExistingSession
-  "/analytics", // Analytics routes (JWT-based only, no sessionId)
-]
 
 // Add a request interceptor to handle authentication
 api.interceptors.request.use(
@@ -86,40 +54,7 @@ api.interceptors.request.use(
         logger.error('Failed to decode token for debug:', e)
       }
     } else {
-      logger.info(
-        `🔐 No JWT token in localStorage - using HTTP-only cookie fallback`
-      )
-    }
-
-    // 🆕 ADD X-SESSION-ID HEADER (except for exempt routes)
-    const url = config.url || ""
-    const isExemptRoute = SESSION_EXEMPT_ROUTES.some((route) =>
-      url.startsWith(route)
-    )
-
-    if (!isExemptRoute) {
-      const sessionId = getSessionId()
-      logger.info(
-        `🔍 [INTERCEPTOR] URL: ${url}, sessionId from localStorage: ${
-          sessionId || "NULL"
-        }`
-      )
-
-      if (sessionId) {
-        config.headers["X-Session-Id"] = sessionId
-        logger.info(
-          `🔒 Added X-Session-Id header: ${sessionId.substring(0, 8)}...`
-        )
-      } else {
-        logger.error(
-          `❌ CRITICAL: No sessionId in localStorage for URL: ${url}`
-        )
-        logger.error(
-          `❌ localStorage contents: ${JSON.stringify(localStorage)}`
-        )
-      }
-    } else {
-      logger.debug(`🔓 SessionID skipped for exempt route: ${url}`)
+      logger.warn(`⚠️ No JWT token in localStorage - request may fail authentication`)
     }
 
     // Add x-workspace-id header if not already present and we have a workspace ID
@@ -183,73 +118,15 @@ api.interceptors.response.use(
       localStorage.removeItem("currentWorkspace")
       sessionStorage.removeItem("currentWorkspace")
 
-      // 🆕 CLEAR SESSION ID
-      clearSessionId()
-
       // Show appropriate toast message
-      if (isSessionError) {
-        toast.error(
-          "Sessione scaduta o invalida. Effettua nuovamente il login."
-        )
-        logger.warn("🔒 Session expired or invalid - redirecting to login")
-      } else {
-        toast.error("Sessione scaduta. Effettua nuovamente il login.")
-        logger.warn("🔐 JWT token expired - redirecting to login")
-      }
+      toast.error("Sessione scaduta. Effettua nuovamente il login.")
+      logger.warn("🔐 JWT token expired - redirecting to login")
 
       // Redirect immediately to prevent retry loops
       window.location.href = "/auth/login"
 
       // Prevent further retries by throwing an error that won't be retried
       throw new Error("Authentication expired")
-    }
-
-    // 🆕 HANDLE SESSION ID MISSING (400)
-    if (error.response && error.response.status === 400) {
-      const errorMessage = error.response?.data?.error || ""
-      if (errorMessage.toLowerCase().includes("sessionid")) {
-        logger.error(
-          "❌ SessionID is missing - clearing and redirecting to login"
-        )
-
-        // Clear all auth data
-        localStorage.removeItem("currentWorkspace")
-        sessionStorage.removeItem("currentWorkspace")
-        clearSessionId()
-
-        toast.error("SessionID mancante. Effettua nuovamente il login.")
-        window.location.href = "/auth/login"
-
-        throw new Error("SessionID required")
-      }
-    }
-
-    // 🔥 HANDLE SESSION VALIDATION ERRORS (500)
-    if (error.response && error.response.status === 500) {
-      const errorMessage = error.response?.data?.error || ""
-      const isSessionError =
-        errorMessage.toLowerCase().includes("session") ||
-        errorMessage.toLowerCase().includes("validation failed")
-
-      if (isSessionError) {
-        logger.error(
-          "❌ Session validation failed (500) - clearing and redirecting to login"
-        )
-
-        // Clear all auth data IMMEDIATELY to stop the loop
-        localStorage.removeItem("currentWorkspace")
-        sessionStorage.removeItem("currentWorkspace")
-        localStorage.removeItem("token")
-        localStorage.removeItem("user")
-        clearSessionId()
-
-        toast.error("Sessione non valida. Effettua nuovamente il login.")
-
-        // IMMEDIATE redirect to stop retry loop
-        window.location.href = "/auth/login"
-
-        throw new Error("Session validation failed")
-      }
     }
 
     return Promise.reject(error)
@@ -262,14 +139,11 @@ export const auth = {
     // Pulisci la localStorage prima del login
     localStorage.removeItem("currentWorkspace")
     sessionStorage.removeItem("currentWorkspace")
-    clearSessionId() // 🆕 Clear old sessionId
 
     // Ora tenta il login con stato pulito
     return api.post("/auth/login", credentials)
   },
   logout: () => {
-    // 🆕 Clear sessionId before logout
-    clearSessionId()
     return api.post("/auth/logout")
   },
 }

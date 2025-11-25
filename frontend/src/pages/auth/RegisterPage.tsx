@@ -131,11 +131,20 @@ export default function RegisterPage() {
         },
       })
     } catch (error: any) {
-      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Registration failed'
-      toast.error(errorMessage)
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Registrazione fallita'
       
       if (error.response?.status === 409) {
-        setErrors({ email: 'Email already registered' })
+        // User already exists - redirect to login
+        toast.error('Utente già presente. Verrai reindirizzato al login...')
+        setErrors({ email: 'Email già registrata' })
+        
+        setTimeout(() => {
+          navigate('/auth/login', {
+            state: { email: email.toLowerCase().trim() },
+          })
+        }, 2000)
+      } else {
+        toast.error(errorMessage)
       }
     } finally {
       setLoading(false)

@@ -25,14 +25,13 @@ import logger from "../utils/logger"
 // 2. MIDDLEWARE IMPORTS
 // ============================================================================
 import { authMiddleware } from "../interfaces/http/middlewares/auth.middleware"
-import { sessionValidationMiddleware } from "../interfaces/http/middlewares/session-validation.middleware"
 import { workspaceValidationMiddleware } from "../interfaces/http/middlewares/workspace-validation.middleware"
 
 // ============================================================================
 // 3. SERVICE IMPORTS
 // ============================================================================
+import { AuthService } from "../application/services/auth.service"
 import { OtpService } from "../application/services/otp.service"
-import { PasswordResetService } from "../application/services/password-reset.service"
 import { RegistrationAttemptsService } from "../application/services/registration-attempts.service"
 import { SecureTokenService } from "../application/services/secure-token.service"
 import { UserService } from "../application/services/user.service"
@@ -425,6 +424,8 @@ const SESSION_EXEMPT_ROUTES = [
   "/auth/reset-password",
   "/auth/register",
   "/auth/verify-2fa-setup", // 🔒 User hasn't authenticated yet - just registered
+  "/auth/verify-2fa", // 🔒 2FA verification during login (creates sessionId)
+  "/auth/verify-recovery-code", // 🔒 Recovery code verification (creates sessionId)
   "/auth/2fa/verify", // 🔒 2FA verification during login (creates sessionId)
   "/auth/oauth/google", // 🔒 OAuth Google login/register (creates sessionId after 2FA)
   "/health",
@@ -452,13 +453,20 @@ router.use((req: Request, res: Response, next: NextFunction) => {
     return next()
   }
 
-  // Apply sessionId validation for all other routes
-  logger.debug(`🔒 SessionID validation REQUIRED for: ${path}`)
-  return sessionValidationMiddleware(req, res, next)
-})
-logger.info("✅ Session validation middleware registered with exceptions")
+  // NOTE: SessionId validation removed - using JWT-only authentication
+  // All protected routes use authMiddleware which validates JWT token
 
-// �🛒 Cart Token Routes (for support interface)
+  // Skip sessionId validation for internal routes (JWT-based)
+  if (path.startsWith("/internal/")) {
+    logger.debug(`🔓 Internal route (JWT-based): ${path}`)
+    return next()
+  }
+
+  return next()
+})
+logger.info("✅ Route middleware configured for JWT-only authentication")
+
+// 🛒 Cart Token Routes (for support interface)
 router.post("/cart-tokens", (req, res) =>
   cartTokenController.getCartToken(req, res)
 )
@@ -486,9 +494,9 @@ logger.info("Registered WhatsApp webhook routes (public, no authentication)")
 const prisma = new PrismaClient()
 
 // Initialize services
+const authService = new AuthService(prisma)
 const userService = new UserService(prisma)
 const otpService = new OtpService(prisma)
-const passwordResetService = new PasswordResetService(prisma)
 // billingService removed - billing is now handled by message.repository.ts
 
 // Create controllers in advance
@@ -506,9 +514,9 @@ const chatController = new ChatController()
 const productController = new ProductController()
 const userController = new UserController(userService)
 const authController = new AuthController(
+  authService,
   userService,
-  otpService,
-  passwordResetService
+  otpService
 )
 const faqController = new FaqController()
 // Removed whatsappController

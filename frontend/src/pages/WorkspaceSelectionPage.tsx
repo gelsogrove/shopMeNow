@@ -9,7 +9,6 @@ import { toast } from "@/lib/toast"
 import { LogOut, PlusCircle } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { clearSessionId } from "../services/api"
 import {
   createWorkspace,
   getWorkspaces,
@@ -37,27 +36,24 @@ export function WorkspaceSelectionPage() {
 
   const loadWorkspaces = async () => {
     try {
-      // 🆕 CRITICAL: Verify sessionId exists before making API call
-      const sessionId = sessionStorage.getItem("sessionId")
+      // Verify token exists before making API call
+      const token = localStorage.getItem("token")
       logger.info(
-        "🔍 [WorkspaceSelectionPage] SessionId in sessionStorage:",
-        sessionId ? sessionId.substring(0, 8) + "..." : "NULL"
+        "🔍 [WorkspaceSelectionPage] Token in localStorage:",
+        token ? token.substring(0, 20) + "..." : "NULL"
       )
 
-      if (!sessionId) {
+      if (!token) {
         logger.error(
-          "❌ [WorkspaceSelectionPage] CRITICAL: No sessionId found, redirecting to login"
+          "❌ [WorkspaceSelectionPage] CRITICAL: No token found, redirecting to login"
         )
         setErrorMessage("Session expired, please login again")
-        // Don't call API without sessionId
+        navigate('/auth/login')
         return
       }
 
       setIsLoading(true)
-      logger.info(
-        "🔍 [WorkspaceSelectionPage] Calling getWorkspaces() with sessionId:",
-        sessionId.substring(0, 8) + "..."
-      )
+      logger.info("🔍 [WorkspaceSelectionPage] Calling getWorkspaces()")
       const workspaces = await getWorkspaces()
       // Set workspaces without filtering for isDelete
       setWorkspaces(workspaces)

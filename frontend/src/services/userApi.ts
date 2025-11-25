@@ -6,12 +6,22 @@ export interface UserProfile {
   firstName: string
   lastName: string
   email: string
+  companyName?: string
+  vatNumber?: string
+  website?: string
+  billingPhone?: string
+  billingAddress?: string
 }
 
 export interface UpdateProfileData {
   firstName?: string
   lastName?: string
   email?: string
+  companyName?: string
+  vatNumber?: string
+  website?: string
+  billingPhone?: string
+  billingAddress?: string
 }
 
 export interface ChangePasswordData {

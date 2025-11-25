@@ -28,6 +28,8 @@ import NotFoundPage from "./pages/not-found"
 import { OffersPage } from "./pages/OffersPage"
 import OrdersPage from "./pages/OrdersPage"
 import OrderSummaryPage from "./pages/OrderSummaryPage"
+import { PrivacyPage } from "./pages/PrivacyPage"
+import { TermsPage } from "./pages/TermsPage"
 
 import CategoriesPage from "./pages/products/CategoriesPage"
 import { ProductsPage } from "./pages/ProductsPage"
@@ -47,7 +49,6 @@ import { Suspense, lazy } from "react"
 import { ChatListProvider } from "./contexts/ChatListContext"
 import { CustomerEditProvider } from "./contexts/CustomerEditContext"
 import { WorkspaceProvider } from "./contexts/WorkspaceContext"
-import PricingSimulator from "./pages/PricingSimulator"
 import ShortUrlRedirect from "./pages/ShortUrlRedirect"
 import { VerifyOtpPage } from "./pages/VerifyOtpPage"
 import { WorkspacePage } from "./pages/WorkspacePage"
@@ -85,16 +86,14 @@ export function App() {
                   />
                   <Route path="verify-otp" element={<VerifyOtpPage />} />
                 </Route>
+
+                {/* Public Legal Pages */}
+                <Route path="/privacy" element={<PrivacyPage />} />
+                <Route path="/terms" element={<TermsPage />} />
                 {/* Direct route for /forgot-password to avoid 404 */}
                 <Route
                   path="/forgot-password"
                   element={<ForgotPasswordPage />}
-                />
-
-                {/* Pricing Simulator - Public route (no auth required) */}
-                <Route
-                  path="/pricing-simulator"
-                  element={<PricingSimulator />}
                 />
 
                 {/* Short URL redirect handler - must be before protected routes */}

@@ -1,15 +1,13 @@
 import { Router } from "express"
 import { PushController } from "../controllers/push.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"
-import { sessionValidationMiddleware } from "../middlewares/session-validation.middleware"
 import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
 
 export const pushRoutes = (controller: PushController): Router => {
   const router = Router({ mergeParams: true }) // 🔧 FIX: Merge params from parent router
 
-  // All routes require full authentication stack
+  // All routes require authentication (JWT-only)
   router.use(authMiddleware)
-  router.use(sessionValidationMiddleware)
   router.use(workspaceValidationMiddleware)
 
   /**

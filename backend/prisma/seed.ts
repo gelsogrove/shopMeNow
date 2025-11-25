@@ -112,10 +112,22 @@ async function main() {
       lastName: "Romano",
       status: "ACTIVE",
       role: "ADMIN",
+      twoFactorEnabled: false, // ❌ 2FA disabled by default - enable via Settings UI
+      twoFactorEnabledAt: null,
+      recoveryCodes: [], // Recovery codes generated when 2FA is enabled
+      // 🧾 Billing Information (Andrea's requirement - sample data)
+      companyName: "ShopME Italia S.r.l.",
+      vatNumber: "IT12345678901",
+      website: "https://www.shopme.it",
+      billingPhone: "+39 06 1234567",
+      billingAddress: "Via Roma 123, 00100 Roma, Italia",
     },
   })
 
   console.log(`✅ Admin user created: ${adminEmail}`)
+  console.log(`📧 Email: ${adminEmail}`)
+  console.log(`🔑 Password: ${adminPassword}`)
+  console.log(`⚙️  2FA: Disabled (enable via Settings UI)\n`)
 
   // 3. Create Main Workspace
   console.log("🏢 Creating workspace...")
@@ -1158,22 +1170,8 @@ async function main() {
         }
       }
 
-      // 💰 BILLING: Track NEW_ORDER if status is CONFIRMED (€1.50)
-      if (status === "CONFIRMED" || status === "DELIVERED") {
-        const newOrderCost =
-          pricingConfigData.find((p) => p.key === "NEW_ORDER")?.value ?? 1.5
-
-        await prisma.billing.create({
-          data: {
-            workspaceId: workspace.id,
-            customerId: customerId,
-            amount: newOrderCost,
-            type: "NEW_ORDER",
-            description: `Order ${orderCode} confirmed`,
-            createdAt: date, // Use same date as order for historical data
-          },
-        })
-      }
+      // 💰 BILLING: Removed from seed - workspaces start at €0.00
+      // Real billing will be created when users actually use the system
 
       return order
     }
@@ -1357,16 +1355,9 @@ async function main() {
           )
           const totalCost = numMessages * messageCost
 
-          await prisma.billing.create({
-            data: {
-              workspaceId: workspace.id,
-              customerId: customer.id,
-              amount: totalCost,
-              type: "MESSAGE",
-              description: `${numMessages} LLM messages (€${messageCost.toFixed(2)} each)`,
-              createdAt: billingDate,
-            },
-          })
+          // 💰 BILLING: Removed from seed - workspaces start at €0.00
+          // await prisma.billing.create(...)
+          
           messageBillingRecords++
           totalMessages += numMessages
         }
@@ -1374,16 +1365,12 @@ async function main() {
     }
   }
 
-  console.log(`✅ Created ${messageBillingRecords} message billing records`)
-  console.log(`   - Total messages: ${totalMessages} messages`)
-  console.log(
-    `   - Total message costs: €${(messageCost * totalMessages).toFixed(2)}`
-  )
-  console.log(`   - Unit cost: €${messageCost.toFixed(2)}/message`)
-  console.log(`   - Average: ~${Math.round(totalMessages / 7)} messages/month`)
+  console.log(`⚠️  Billing records skipped in seed (workspaces start at €0.00)`)
+  console.log(`   - Message billing: ${messageBillingRecords} records (would be €${(messageCost * totalMessages).toFixed(2)})`)
+  console.log(`   - Real billing will be created when users actually use the system`)
 
-  // 9. Create MONTHLY_CHANNEL billing (€59/month) for each month
-  console.log("\n💳 Creating monthly channel billing...")
+  // 9. Monthly channel billing - skipped in seed
+  console.log("\n💳 Skipping monthly channel billing (workspaces start at €0.00)...")
 
   const monthlyChannelCost =
     pricingConfigData.find((p) => p.key === "MONTHLY_CHANNEL_COST")?.value ?? 59
@@ -1401,29 +1388,19 @@ async function main() {
   ]
 
   for (const monthData of billingMonths) {
+    // 💰 BILLING: Removed from seed - workspaces start at €0.00
     // Create MONTHLY_CHANNEL billing on the 1st day of each month
     const channelDate = new Date(monthData.year, monthData.month - 1, 1)
 
-    await prisma.billing.create({
-      data: {
-        workspaceId: workspace.id,
-        amount: monthlyChannelCost,
-        type: "MONTHLY_CHANNEL",
-        description: `Monthly channel subscription cost - ${monthData.year}-${String(monthData.month).padStart(2, "0")}`,
-        createdAt: channelDate,
-      },
-    })
+    // await prisma.billing.create(...)
 
     channelBillingCount++
   }
 
-  console.log(
-    `✅ Created ${channelBillingCount} monthly channel billing records`
-  )
-  console.log(
-    `   - Total channel costs: €${(monthlyChannelCost * channelBillingCount).toFixed(2)} (${channelBillingCount} months)`
-  )
-  console.log(`   - Monthly rate: €${monthlyChannelCost.toFixed(2)}/month`)
+  console.log(`⚠️  Monthly channel billing SKIPPED (workspaces start at €0.00)`)
+  console.log(`   - Would create: ${channelBillingCount} records over ${channelBillingCount} months`)
+  console.log(`   - Would cost: €${(monthlyChannelCost * channelBillingCount).toFixed(2)} total`)
+  console.log(`   - Real billing starts when workspace is activated`)
 
   // 10. Create PUSH_CAMPAIGN billing (€1.00) for advertising push notifications
   console.log("\n� Creating push campaign billing (advertising)...")
@@ -1510,27 +1487,17 @@ async function main() {
         campaign.day
       )
       for (const customerId of campaign.customers) {
-        await prisma.billing.create({
-          data: {
-            workspaceId: workspace.id,
-            customerId: customerId,
-            amount: pushCampaignCost,
-            type: "PUSH_CAMPAIGN",
-            description: `Campaign push: ${campaign.campaign}`,
-            createdAt: campaignDate,
-          },
-        })
+        // 💰 BILLING: Removed from seed - workspaces start at €0.00
+        // await prisma.billing.create(...)
+        
         pushCampaignCount++
       }
     }
   }
 
-  console.log(`✅ Created ${pushCampaignCount} push campaign billing records`)
-  console.log(
-    `   - Total push campaign costs: €${(pushCampaignCost * pushCampaignCount).toFixed(2)}`
-  )
-  console.log(`   - Unit cost: €${pushCampaignCost.toFixed(2)}/push`)
-  console.log(`   - Campaigns: 5 (with ${pushCampaignCount} total sends)`)
+  console.log(`⚠️  Skipped ${pushCampaignCount} push campaign billing records`)
+  console.log(`   - Would be: €${(pushCampaignCost * pushCampaignCount).toFixed(2)}`)
+  console.log(`   - Real billing created when campaigns are sent`)
 
   // 10. Create GDPR Content in 4 languages
   console.log("\n📋 Creating GDPR content in 4 languages...")
@@ -1590,15 +1557,11 @@ async function main() {
   console.log(`   - Test Customers: 4 (distributed Apr-Jul 2025)`)
   console.log(`   - Historical Orders: ~48 orders (Apr-Sep 2025)`)
   console.log(`   - Product Searches: 855 searches (Top 10 products)`)
-  console.log(
-    `   - Message Billing: ${messageBillingRecords} records, ${totalMessages} messages, €${(messageCost * totalMessages).toFixed(2)} total`
-  )
-  console.log(
-    `   - Channel Billing: ${channelBillingCount} months, €${(monthlyChannelCost * channelBillingCount).toFixed(2)} total`
-  )
-  console.log(
-    `   - Push Campaign Billing: ${pushCampaignCount} sends, €${(pushCampaignCost * pushCampaignCount).toFixed(2)} total`
-  )
+  console.log(`   - 💰 Billing: SKIPPED (workspaces start at €0.00)`)
+  console.log(`       • Would track: ${messageBillingRecords} message records (€${(messageCost * totalMessages).toFixed(2)})`)
+  console.log(`       • Would track: ${channelBillingCount} channel months (€${(monthlyChannelCost * channelBillingCount).toFixed(2)})`)
+  console.log(`       • Would track: ${pushCampaignCount} push campaigns (€${(pushCampaignCost * pushCampaignCount).toFixed(2)})`)
+  console.log(`       • Real billing starts when workspace is used in production`)
 
   // 📬 CREATE WHATSAPP QUEUE TEST MESSAGES
   console.log("\n📬 Creating WhatsApp queue test messages...")

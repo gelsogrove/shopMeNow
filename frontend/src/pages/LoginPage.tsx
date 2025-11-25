@@ -1,6 +1,4 @@
 import { NewsUpdates } from "@/components/landing/NewsUpdates"
-import { PricingPlans } from "@/components/landing/PricingPlans"
-import { PricingSimulatorModal } from "@/components/pricing/PricingSimulatorModal"
 import { LanguageSelector } from "@/components/shared/LanguageSelector"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -14,7 +12,6 @@ import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 import {
   AlertTriangle,
   Bell,
-  Calculator,
   Globe,
   Mail,
   MapPin,
@@ -31,7 +28,7 @@ import { useForm } from "react-hook-form"
 import { Link, useNavigate } from "react-router-dom"
 import * as z from "zod"
 import { toast } from "../lib/toast"
-import { auth, getSessionId, setSessionId, api } from "../services/api"
+import { auth, api } from "../services/api"
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '988195920488-drdmtlruo5s47nkk4g8prui6k9mb0pln.apps.googleusercontent.com'
 
@@ -77,7 +74,6 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [isValidatingSession, setIsValidatingSession] = useState(true)
-  const [showSimulator, setShowSimulator] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [activeTab, setActiveTab] = useState<'signin' | 'register'>('signin')
   
@@ -112,6 +108,15 @@ export function LoginPage() {
     },
   })
 
+  // 🔥 CRITICAL FIX: Clear storage IMMEDIATELY on page load
+  // This prevents old tokens from previous users staying in localStorage
+  useEffect(() => {
+    logger.info('🧹 [LOGIN PAGE LOAD] Auto-clearing ALL storage to prevent token leakage')
+    localStorage.clear()
+    sessionStorage.clear()
+    logger.info('✅ [LOGIN PAGE LOAD] Storage cleared - ready for fresh login')
+  }, []) // Run only once on mount
+
   // 🆕 AUTO-REDIRECT IF SESSION IS ALREADY VALID
   useEffect(() => {
     checkExistingSession()
@@ -119,12 +124,11 @@ export function LoginPage() {
 
   const checkExistingSession = async () => {
     try {
-      const sessionId = getSessionId()
       const token = localStorage.getItem('token')
 
-      // Se NON c'è sessionId O token, mostra form login
-      if (!sessionId || !token) {
-        logger.info("🔓 No existing sessionId/token - showing login form", { sessionId: !!sessionId, token: !!token })
+      // Se NON c'è token, mostra form login
+      if (!token) {
+        logger.info("🔓 No existing token - showing login form", { token: !!token })
         setIsValidatingSession(false)
         return
       }
@@ -138,12 +142,9 @@ export function LoginPage() {
         return
       }
 
-      // Se c'è sessionId e token VALIDI, facciamo redirect
+      // Se c'è token VALIDO, facciamo redirect
       logger.info(
-        `✅ SessionId found: ${sessionId.substring(
-          0,
-          8
-        )}... - redirecting to workspace selection`
+        `✅ Token found - redirecting to workspace selection`
       )
       toast.success("Sessione già attiva, reindirizzamento...")
       navigate("/workspace-selection", { replace: true })
@@ -171,21 +172,25 @@ export function LoginPage() {
       })
       logger.info("Login successful:", response.data)
 
-      if (response.data && response.data.user) {
-        // 🆕 SAVE SESSION ID FROM RESPONSE FIRST (BEFORE navigate!)
-        if (response.data.sessionId) {
-          setSessionId(response.data.sessionId)
-          logger.info(
-            `✅ SessionID saved to sessionStorage: ${response.data.sessionId.substring(
-              0,
-              8
-            )}...`
-          )
-        } else {
-          logger.error("❌ No sessionId in login response!")
-          throw new Error("No sessionId in login response")
-        }
+      // 🔒 SECURITY: Check if 2FA is required
+      if (response.data && response.data.requires2FA) {
+        logger.info("🔐 User requires 2FA verification")
+        
+        toast.success("Credentials verified! Please enter 2FA code.")
 
+        // Redirect to 2FA verification page (NO session/token yet!)
+        navigate("/auth/verify-2fa", {
+          state: {
+            userId: response.data.userId,
+            email: response.data.email,
+            provider: 'email',
+          },
+        })
+        return
+      }
+
+      // Normal login (no 2FA) - save token and redirect
+      if (response.data && response.data.user) {
         // 🆕 SAVE JWT TOKEN for Authorization header (proxy-safe)
         if (response.data.token) {
           localStorage.setItem("token", response.data.token)
@@ -200,16 +205,10 @@ export function LoginPage() {
         // JWT token is automatically saved as HTTP-only cookie by backend
         logger.info("Login successful - JWT token saved as HTTP-only cookie")
 
-        toast.success("Credentials verified! Please enter 2FA code.")
+        toast.success("Login successful!")
 
-        // Redirect to 2FA verification page
-        navigate("/auth/verify-2fa", {
-          state: {
-            userId: response.data.user.id,
-            email: response.data.user.email,
-            provider: 'email',
-          },
-        })
+        // Redirect to workspace selection
+        navigate("/workspace-selection")
       } else {
         throw new Error("Invalid response format from the server.")
       }
@@ -293,21 +292,20 @@ export function LoginPage() {
     // 🛡️ CRITICAL SECURITY: Clear ALL storage to prevent session/workspace leakage
     logger.info("🧹 [GOOGLE OAUTH] Clearing storage")
     localStorage.clear()
+    // 🛡️ CRITICAL SECURITY: Clear ALL storage before OAuth flow
+    logger.info('🧹 [GOOGLE OAUTH] Clearing ALL storage (localStorage + sessionStorage)')
+    localStorage.clear()
     sessionStorage.clear()
+    logger.info('✅ [GOOGLE OAUTH] Storage cleared completely')
     
     try {
       const response = await api.post('/auth/oauth/google', {
         credential: credentialResponse.credential,
       })
       
-      const { user, requiresSetup, qrCode, sessionId, token } = response.data
+      const { user, requiresSetup, qrCode, token } = response.data
       
       // Save authentication data
-      if (sessionId) {
-        setSessionId(sessionId)
-        logger.info('✅ [GOOGLE OAUTH] SessionId saved')
-      }
-      
       if (token) {
         localStorage.setItem('token', token)
         logger.info('✅ [GOOGLE OAUTH] Token saved')
@@ -656,33 +654,6 @@ export function LoginPage() {
 
       {/* News & Updates Section */}
       <NewsUpdates />
-
-      {/* Pricing Section */}
-      <div className="max-w-7xl mx-auto px-4 py-16 bg-gradient-to-b from-white to-slate-50">
-        <PricingPlans />
-
-        {/* Simulator Button - Centered below pricing */}
-        <div className="text-center mt-12">
-          <Button
-            onClick={() => setShowSimulator(true)}
-            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all"
-            size="lg"
-          >
-            <Calculator className="w-5 h-5 mr-2" />
-            {t("pricing.simulator.button")}
-          </Button>
-          <p className="text-sm text-slate-600 mt-3">
-            {t("pricing.simulator.description")}
-          </p>
-        </div>
-      </div>
-
-      {/* Pricing Simulator Modal */}
-      <PricingSimulatorModal
-        open={showSimulator}
-        onOpenChange={setShowSimulator}
-        t={t}
-      />
 
       {/* Contact Section */}
       <div className="bg-slate-900 text-white py-12">

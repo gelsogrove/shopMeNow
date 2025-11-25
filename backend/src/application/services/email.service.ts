@@ -1,5 +1,10 @@
 import nodemailer from "nodemailer"
 import logger from "../../utils/logger"
+import {
+  getEmailTranslation,
+  SupportedLanguage,
+  detectLanguageFromHeader,
+} from "../../utils/email-templates"
 
 export interface EmailConfig {
   host: string
@@ -15,6 +20,7 @@ export interface ResetPasswordEmailData {
   to: string
   resetToken: string
   userFirstName?: string
+  language?: SupportedLanguage
 }
 
 export interface OperatorNotificationEmailData {
@@ -64,26 +70,38 @@ export class EmailService {
     try {
       const resetUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/auth/reset-password?token=${data.resetToken}`
 
+      // Get translations for the user's language (defaults to English)
+      const t = getEmailTranslation(data.language)
+      const userFirstName = data.userFirstName || t.resetPassword.greeting
+
+      logger.info(
+        `Sending password reset email to: ${data.to} in language: ${data.language || "en (default)"}`
+      )
+
       const htmlContent = this.generateResetEmailHTML({
         resetUrl,
-        userFirstName: data.userFirstName || "User",
+        userFirstName,
         expiryTime: "1 hour",
+        translations: t.resetPassword,
       })
 
       const mailOptions = {
         from: `"ShopMe Support" <${process.env.SMTP_FROM || "noreply@shopme.com"}>`,
         to: data.to,
-        subject: "Reset Your Password - ShopMe",
+        subject: t.resetPassword.subject,
         html: htmlContent,
         text: this.generateResetEmailText(
           resetUrl,
-          data.userFirstName || "User"
+          userFirstName,
+          t.resetPassword
         ),
       }
 
       const info = await this.transporter.sendMail(mailOptions)
 
-      logger.info(`Password reset email sent successfully to: ${data.to}`)
+      logger.info(
+        `Password reset email sent successfully to: ${data.to} (language: ${data.language || "en"})`
+      )
       return true
     } catch (error) {
       logger.error("Failed to send password reset email:", error)
@@ -95,14 +113,18 @@ export class EmailService {
     resetUrl: string
     userFirstName: string
     expiryTime: string
+    translations: any
   }): string {
+    const t = data.translations
+    const warningsList = t.warnings.map((w: string) => `<li>${w}</li>`).join("\n                ")
+
     return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reset Your Password</title>
+    <title>${t.subject}</title>
     <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
         .header { background-color: #10b981; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
@@ -115,40 +137,33 @@ export class EmailService {
 </head>
 <body>
     <div class="header">
-        <h1>🔐 Reset Your Password</h1>
+        <h1>🔐 ${t.subject}</h1>
     </div>
     <div class="content">
-        <p>Hello ${data.userFirstName},</p>
+        <p>${t.greeting} ${data.userFirstName},</p>
         
-        <p>We received a request to reset the password for your ShopMe account. If you didn't make this request, you can safely ignore this email.</p>
-        
-        <p>To reset your password, click the button below:</p>
+        <p>${t.intro}</p>
         
         <p style="text-align: center;">
-            <a href="${data.resetUrl}" class="button">Reset My Password</a>
+            <a href="${data.resetUrl}" class="button">${t.resetButton}</a>
         </p>
         
-        <p>Or copy and paste this link into your browser:</p>
+        <p>${t.copyLink}</p>
         <p style="word-break: break-all; background-color: #e5e7eb; padding: 10px; border-radius: 4px;">
             ${data.resetUrl}
         </p>
         
         <div class="warning">
-            <strong>⚠️ Important:</strong>
+            <strong>${t.warningTitle}</strong>
             <ul>
-                <li>This link will expire in <strong>${data.expiryTime}</strong></li>
-                <li>This link can only be used once</li>
-                <li>If you didn't request this reset, please ignore this email</li>
+                ${warningsList}
             </ul>
         </div>
         
-        <p>If you continue to have problems, please contact our support team.</p>
-        
-        <p>Best regards,<br>The ShopMe Team</p>
+        <p>${t.footer}</p>
     </div>
     <div class="footer">
-        <p>This email was sent to ${data.resetUrl.split("?")[0].includes("localhost") ? "you" : data.resetUrl} because a password reset was requested for your ShopMe account.</p>
-        <p>ShopMe - Your trusted e-commerce platform</p>
+        <p>${t.rights}</p>
     </div>
 </body>
 </html>
@@ -157,29 +172,27 @@ export class EmailService {
 
   private generateResetEmailText(
     resetUrl: string,
-    userFirstName: string
+    userFirstName: string,
+    translations: any
   ): string {
+    const t = translations
+    const warningsList = t.warnings.map((w: string) => `- ${w}`).join("\n")
+
     return `
-Hello ${userFirstName},
+${t.greeting} ${userFirstName},
 
-We received a request to reset the password for your ShopMe account.
+${t.intro}
 
-To reset your password, please visit this link:
+${t.copyLink}
 ${resetUrl}
 
-Important:
-- This link will expire in 1 hour
-- This link can only be used once
-- If you didn't request this reset, please ignore this email
+${t.warningTitle}
+${warningsList}
 
-If you continue to have problems, please contact our support team.
-
-Best regards,
-The ShopMe Team
+${t.footer}
 
 ---
-This email was sent because a password reset was requested for your ShopMe account.
-ShopMe - Your trusted e-commerce platform
+${t.rights}
     `
   }
 
@@ -443,6 +456,7 @@ ShopMe - La tua piattaforma e-commerce di fiducia
   async sendWelcomeEmail(data: {
     to: string
     firstName: string
+    language?: SupportedLanguage
   }): Promise<boolean> {
     try {
       const htmlContent = `

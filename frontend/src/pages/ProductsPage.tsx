@@ -56,6 +56,9 @@ export function ProductsPage() {
   >([])
   const [formCertificationIds, setFormCertificationIds] = useState<string[]>([])
   const [formTransportTypeIds, setFormTransportTypeIds] = useState<string[]>([])
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([])
+  const [formCategoryIds, setFormCategoryIds] = useState<string[]>([])
+  const [showCategoriesPanel, setShowCategoriesPanel] = useState(false)
   const [showAddSheet, setShowAddSheet] = useState(false)
   const [showEditSheet, setShowEditSheet] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
@@ -253,15 +256,23 @@ export function ProductsPage() {
 
     logger.info("🔍 After search filter:", filtered.length)
 
-    // Filter by category
+    // Filter by category dropdown (old filter)
     if (filterCategory !== "all") {
       filtered = filtered.filter((p) => p.categoryId === filterCategory)
       logger.info(
-        "🔍 After category filter:",
+        "🔍 After category dropdown filter:",
         filtered.length,
         "categoryId:",
         filterCategory
       )
+    }
+
+    // Filter by selected categories (checkbox filters)
+    if (selectedCategoryIds.length > 0) {
+      filtered = filtered.filter((product) =>
+        selectedCategoryIds.some((catId) => product.categoryId === catId)
+      )
+      logger.info("🔍 After category checkbox filters:", filtered.length)
     }
 
     // Filter by selected certifications (dynamic from database)
@@ -305,6 +316,7 @@ export function ProductsPage() {
     products,
     searchValue,
     filterCategory,
+    selectedCategoryIds,
     sortBy,
     selectedCertificationIds,
     certifications,
@@ -331,6 +343,9 @@ export function ProductsPage() {
     // Send transportTypeIds array to backend
     formData.set("transportTypeIds", JSON.stringify(formTransportTypeIds))
 
+    // Send categoryId (first selected category or null)
+    formData.set("categoryId", formCategoryIds.length > 0 ? formCategoryIds[0] : "")
+
     try {
       const newProduct = await productsApi.create(workspace.id, formData)
       logger.info("Product created successfully (inactive):", newProduct)
@@ -341,6 +356,7 @@ export function ProductsPage() {
       setProductCode("")
       setSelectedCategoryId("none")
       setSelectedSupplierId("none")
+      setFormCategoryIds([])
       setFormCertificationIds([])
       setFormTransportTypeIds([])
 
@@ -364,6 +380,11 @@ export function ProductsPage() {
     setSelectedSupplierId(product.supplierId || "none")
     setProductIsActive(product.isActive ?? true)
     setProductCode(product.code || "")
+
+    // Load product's category as array for checkbox system
+    const catIds = product.categoryId ? [product.categoryId] : []
+    logger.info("📦 handleEdit - Extracted categoryIds:", catIds)
+    setFormCategoryIds(catIds)
 
     // Load product's certification IDs from productCertifications relation
     const certIds = (product as any).productCertifications?.map(
@@ -431,12 +452,8 @@ export function ProductsPage() {
     // Send transportTypeIds array to backend
     formData.set("transportTypeIds", JSON.stringify(formTransportTypeIds))
 
-    // Make sure categoryId is set correctly if "none" is selected
-    const catId = formData.get("categoryId")
-    if (catId === "none") {
-      formData.delete("categoryId")
-      formData.append("categoryId", "")
-    }
+    // Send categoryId from formCategoryIds (first selected or empty)
+    formData.set("categoryId", formCategoryIds.length > 0 ? formCategoryIds[0] : "")
 
     // Make sure supplierId is set correctly if "none" is selected
     const suppId = formData.get("supplierId")
@@ -471,6 +488,7 @@ export function ProductsPage() {
       setImageFiles([]) // Reset image files
       setCurrentImageUrls([]) // Reset current image URLs
       setReorderedImageUrls(null) // Reset reordered image URLs
+      setFormCategoryIds([]) // Reset category IDs
       setFormCertificationIds([]) // Reset certification IDs
       setFormTransportTypeIds([]) // Reset transport type IDs
       
@@ -509,11 +527,84 @@ export function ProductsPage() {
     }
   }
 
+  // Categories Panel Management
+  const [catAddFormName, setCatAddFormName] = useState("")
+  const [selectedCat, setSelectedCat] = useState<{ id: string; name: string } | null>(null)
+  const [showCatEdit, setShowCatEdit] = useState(false)
+  const [showCatDelete, setShowCatDelete] = useState(false)
+
   // Certifications Panel Management
   const [certAddFormName, setCertAddFormName] = useState("")
   const [selectedCert, setSelectedCert] = useState<Certification | null>(null)
   const [showCertEdit, setShowCertEdit] = useState(false)
   const [showCertDelete, setShowCertDelete] = useState(false)
+
+  const filteredCats = categories
+
+  const handleCatAdd = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!workspace?.id || !catAddFormName.trim()) return
+
+    try {
+      await categoriesApi.create(workspace.id, { name: catAddFormName.trim() })
+      toast.success("Category added successfully")
+      setCatAddFormName("")
+      const response = await categoriesApi.getAllForWorkspace(workspace.id)
+      setCategories(response || [])
+    } catch (error: any) {
+      logger.error("Error adding category:", error)
+      toast.error(error.response?.data?.error || "Failed to add category")
+    }
+  }
+
+  const handleCatEdit = (cat: { id: string; name: string }) => {
+    setSelectedCat(cat)
+    setShowCatEdit(true)
+  }
+
+  const handleCatEditSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!selectedCat?.id || !workspace?.id) return
+
+    const form = e.target as HTMLFormElement
+    const formData = new FormData(form)
+    const name = formData.get("name") as string
+
+    if (!name?.trim()) return
+
+    try {
+      await categoriesApi.update(selectedCat.id, workspace.id, { name: name.trim() })
+      toast.success("Category updated successfully")
+      setShowCatEdit(false)
+      setSelectedCat(null)
+      const response = await categoriesApi.getAllForWorkspace(workspace.id)
+      setCategories(response || [])
+    } catch (error: any) {
+      logger.error("Error updating category:", error)
+      toast.error(error.response?.data?.error || "Failed to update category")
+    }
+  }
+
+  const handleCatDelete = (cat: { id: string; name: string }) => {
+    setSelectedCat(cat)
+    setShowCatDelete(true)
+  }
+
+  const confirmCatDelete = async () => {
+    if (!selectedCat?.id || !workspace?.id) return
+
+    try {
+      await categoriesApi.delete(workspace.id, selectedCat.id)
+      toast.success("Category deleted successfully")
+      setShowCatDelete(false)
+      setSelectedCat(null)
+      const response = await categoriesApi.getAllForWorkspace(workspace.id)
+      setCategories(response || [])
+    } catch (error: any) {
+      logger.error("Error deleting category:", error)
+      toast.error(error.response?.data?.error || "Failed to delete category")
+    }
+  }
 
   const filteredCerts = certifications
 
@@ -693,30 +784,47 @@ export function ProductsPage() {
           </p>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="categoryId">Category *</Label>
-          <Select
-            value={selectedCategoryId}
-            onValueChange={setSelectedCategoryId}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">No Category</SelectItem>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={category.id}>
-                  {category.name}
-                </SelectItem>
+        {/* Dynamic Categories Section */}
+        {categories.length > 0 && (
+          <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
+            <Label className="text-base font-semibold">Category</Label>
+            <p className="text-xs text-gray-500 mb-3">
+              Select ONE category for this product (optional)
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {categories.map((cat) => (
+                <label
+                  key={cat.id}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <input
+                    type="radio"
+                    name="category"
+                    checked={formCategoryIds.includes(cat.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setFormCategoryIds([cat.id])
+                      } else {
+                        setFormCategoryIds([])
+                      }
+                    }}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="text-sm">{cat.name}</span>
+                </label>
               ))}
-            </SelectContent>
-          </Select>
-          <input
-            type="hidden"
-            name="categoryId"
-            value={selectedCategoryId === "none" ? "" : selectedCategoryId}
-          />
-        </div>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setFormCategoryIds([])}
+              className="text-xs text-gray-500 hover:text-gray-700"
+            >
+              Clear Selection
+            </Button>
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label htmlFor="supplierId">Supplier</Label>
@@ -919,30 +1027,47 @@ export function ProductsPage() {
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="categoryId">Category</Label>
-          <Select
-            value={selectedCategoryId}
-            onValueChange={setSelectedCategoryId}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">No Category</SelectItem>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={category.id}>
-                  {category.name}
-                </SelectItem>
+        {/* Dynamic Categories Section */}
+        {categories.length > 0 && (
+          <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
+            <Label className="text-base font-semibold">Category</Label>
+            <p className="text-xs text-gray-500 mb-3">
+              Select ONE category for this product (optional)
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {categories.map((cat) => (
+                <label
+                  key={cat.id}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <input
+                    type="radio"
+                    name="category"
+                    checked={formCategoryIds.includes(cat.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setFormCategoryIds([cat.id])
+                      } else {
+                        setFormCategoryIds([])
+                      }
+                    }}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="text-sm">{cat.name}</span>
+                </label>
               ))}
-            </SelectContent>
-          </Select>
-          <input
-            type="hidden"
-            name="categoryId"
-            value={selectedCategoryId === "none" ? "" : selectedCategoryId}
-          />
-        </div>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setFormCategoryIds([])}
+              className="text-xs text-gray-500 hover:text-gray-700"
+            >
+              Clear Selection
+            </Button>
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label htmlFor="supplierId">Supplier</Label>
@@ -1128,6 +1253,47 @@ export function ProductsPage() {
               <SelectItem value="stock">Sort by Stock</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Category Filters - Dynamic from Database */}
+        <div className="flex flex-wrap gap-3 items-center bg-gray-50 p-3 rounded-lg">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowCategoriesPanel(true)}
+            className="text-xs flex items-center gap-1"
+          >
+            <Package className="h-3 w-3" />
+            Manage Categories
+          </Button>
+          <span className="text-sm font-medium text-gray-700">
+            Categories:
+          </span>
+          {categories.map((cat) => (
+            <label
+              key={cat.id}
+              className="flex items-center gap-2 cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                checked={selectedCategoryIds.includes(cat.id)}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedCategoryIds([
+                      ...selectedCategoryIds,
+                      cat.id,
+                    ])
+                  } else {
+                    setSelectedCategoryIds(
+                      selectedCategoryIds.filter((id) => id !== cat.id)
+                    )
+                  }
+                }}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm">{cat.name}</span>
+            </label>
+          ))}
         </div>
 
         {/* Certification Filters - Dynamic from Database */}
@@ -1653,6 +1819,134 @@ export function ProductsPage() {
                   ? `This transport type is used by ${selectedTt._count.productTransportTypes} product(s) and cannot be deleted.`
                   : "This action cannot be undone."
               }`
+            : ""
+        }
+      />
+
+      {/* Categories Management Panel */}
+      <Sheet open={showCategoriesPanel} onOpenChange={setShowCategoriesPanel}>
+        <SheetContent side="right" className="w-[800px] sm:max-w-[800px]">
+          <SheetHeader>
+            <SheetTitle>Manage Categories</SheetTitle>
+            <SheetDescription>
+              Add, edit, or delete product categories
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="mt-6 space-y-6">
+            {/* Add Form */}
+            <div className="border rounded-lg p-4 bg-gray-50">
+              <h3 className="font-semibold mb-3">Add New Category</h3>
+              <form onSubmit={handleCatAdd} className="flex gap-2">
+                <Input
+                  placeholder="e.g., Cheese, Wine, Pasta"
+                  value={catAddFormName}
+                  onChange={(e) => setCatAddFormName(e.target.value)}
+                  maxLength={50}
+                  required
+                />
+                <Button type="submit">Add</Button>
+              </form>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="font-semibold">
+                Categories ({filteredCats.length})
+              </h3>
+              <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                {filteredCats.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-8">
+                    No categories found
+                  </p>
+                ) : (
+                  filteredCats.map((cat) => (
+                    <div
+                      key={cat.id}
+                      className="flex items-center justify-between p-3 border rounded-lg bg-white hover:bg-gray-50"
+                    >
+                      <div className="flex-1">
+                        <p className="font-medium">{cat.name}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleCatEdit(cat)}
+                          className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleCatDelete(cat)}
+                          className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Category Edit Sheet */}
+      <Sheet open={showCatEdit} onOpenChange={setShowCatEdit}>
+        <SheetContent side="right" className="w-[600px]">
+          <SheetHeader>
+            <SheetTitle>Edit Category</SheetTitle>
+            <SheetDescription>
+              Update category information
+            </SheetDescription>
+          </SheetHeader>
+          {selectedCat && (
+            <form onSubmit={handleCatEditSubmit} className="space-y-4 mt-6">
+              <div className="space-y-2">
+                <Label htmlFor="cat-edit-name">Category Name *</Label>
+                <Input
+                  id="cat-edit-name"
+                  name="name"
+                  defaultValue={selectedCat.name}
+                  placeholder="e.g., Cheese, Wine, Pasta"
+                  required
+                  maxLength={50}
+                />
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button type="submit" className="flex-1">
+                  Update Category
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowCatEdit(false)
+                    setSelectedCat(null)
+                  }}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Category Delete Dialog */}
+      <ConfirmDialog
+        open={showCatDelete}
+        onOpenChange={setShowCatDelete}
+        onConfirm={confirmCatDelete}
+        title="Delete Category"
+        description={
+          selectedCat
+            ? `Are you sure you want to delete "${selectedCat.name}"? This action cannot be undone.`
             : ""
         }
       />

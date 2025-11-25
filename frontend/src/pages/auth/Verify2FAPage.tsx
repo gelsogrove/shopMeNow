@@ -22,7 +22,7 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { toast } from '@/lib/toast'
 import { Loader2, Shield, AlertCircle, KeyRound } from 'lucide-react'
-import { api, setSessionId } from '@/services/api'
+import { api } from '@/services/api'
 import { logger } from '@/lib/logger'
 
 export default function Verify2FAPage() {
@@ -62,25 +62,23 @@ export default function Verify2FAPage() {
     setError('')
     
     try {
-      const response = await api.post('/auth/2fa/verify', {
+      const response = await api.post('/auth/verify-2fa', {
         userId,
         code,
       })
       
-      const { token, user, sessionId } = response.data
+      const { token, user } = response.data
       
-      // Store session (using helper for sessionStorage)
+      // 🛡️ CRITICAL SECURITY: Clear ALL storage before saving new credentials
+      logger.info('🧹 [Verify2FA] Clearing ALL storage (localStorage + sessionStorage)')
+      localStorage.clear()
+      sessionStorage.clear()
+      logger.info('✅ [Verify2FA] Storage cleared completely')
+      
+      // Store token and user
       if (token) {
         localStorage.setItem('token', token)
         logger.info('✅ JWT token saved to localStorage')
-      }
-      
-      if (sessionId) {
-        setSessionId(sessionId)
-        logger.info(`✅ SessionId saved to sessionStorage: ${sessionId.substring(0, 8)}...`)
-      } else {
-        logger.error('❌ No sessionId in verify2FA response!')
-        throw new Error('No sessionId in response')
       }
       
       localStorage.setItem('user', JSON.stringify(user))
@@ -94,7 +92,7 @@ export default function Verify2FAPage() {
       }, 200)
     } catch (error: any) {
       const errorData = error.response?.data
-      const errorMessage = errorData?.message || 'Invalid verification code'
+      const errorMessage = errorData?.message || 'Codice di verifica non valido'
       
       setError(errorMessage)
       toast.error(errorMessage)
@@ -131,32 +129,45 @@ export default function Verify2FAPage() {
         code,
       })
       
-      const { token, user, sessionId } = response.data
+      const { token, user, newRecoveryCode } = response.data
       
-      // Store session (using helper for sessionStorage)
+      // 🛡️ CRITICAL SECURITY: Clear ALL storage before saving new credentials
+      logger.info('🧹 [Verify2FA Recovery] Clearing ALL storage (localStorage + sessionStorage)')
+      localStorage.clear()
+      sessionStorage.clear()
+      logger.info('✅ [Verify2FA Recovery] Storage cleared completely')
+      
+      // Store token and user
       if (token) {
         localStorage.setItem('token', token)
         logger.info('✅ JWT token saved to localStorage')
       }
       
-      if (sessionId) {
-        setSessionId(sessionId)
-        logger.info(`✅ SessionId saved to sessionStorage: ${sessionId.substring(0, 8)}...`)
-      } else {
-        logger.error('❌ No sessionId in recovery code response!')
-        throw new Error('No sessionId in response')
-      }
-      
       localStorage.setItem('user', JSON.stringify(user))
       
-      toast.success(`Welcome back, ${user.firstName}! Recovery code used.`)
-      toast.warning('This recovery code is now invalid. You have 9 codes remaining.')
+      toast.success(`Welcome back, ${user.firstName}!`)
+      
+      // ✅ SECURITY: Show new recovery code to user
+      if (newRecoveryCode) {
+        logger.info('✅ New recovery code generated:', newRecoveryCode)
+        
+        // Show alert with new code
+        alert(
+          `🔐 RECOVERY CODE USED!\n\n` +
+          `Your old code has been consumed.\n\n` +
+          `NEW RECOVERY CODE:\n${newRecoveryCode}\n\n` +
+          `⚠️ SAVE THIS CODE IMMEDIATELY!\n` +
+          `This is the ONLY time you'll see it.`
+        )
+        
+        toast.warning('Old recovery code consumed. New code generated - check the alert!')
+      }
       
       // 🔄 CRITICAL: Hard reload instead of navigate() to clear axios cache
       logger.info('🔄 [Verify2FA] Forcing hard reload to /workspace-selection (recovery code)')
       setTimeout(() => {
         window.location.href = '/workspace-selection'
-      }, 200)
+      }, 500) // Increased delay to allow user to read alert
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Invalid recovery code'
       setError(errorMessage)

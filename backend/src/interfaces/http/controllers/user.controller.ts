@@ -198,12 +198,22 @@ export class UserController {
       }
       
       logger.info(`Updating profile for user ID: ${userId}`)
+      logger.info(`🔍 Request body received:`, JSON.stringify(userData, null, 2))
       
       const user = await this.userService.update(userId, userData)
       
       if (!user) {
         return res.status(404).json({ message: "User not found" })
       }
+      
+      logger.info(`✅ User updated successfully:`, {
+        id: user.id,
+        companyName: user.companyName,
+        vatNumber: user.vatNumber,
+        website: user.website,
+        billingPhone: user.billingPhone,
+        billingAddress: user.billingAddress,
+      })
       
       // Don't return the password
       const userWithoutPassword = {
@@ -217,7 +227,13 @@ export class UserController {
         workspaceId: user.workspaceId,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
-        lastLogin: user.lastLogin
+        lastLogin: user.lastLogin,
+        // 🧾 Billing fields (Andrea's requirement)
+        companyName: user.companyName,
+        vatNumber: user.vatNumber,
+        website: user.website,
+        billingPhone: user.billingPhone,
+        billingAddress: user.billingAddress,
       }
       
       return res.json(userWithoutPassword)
@@ -252,13 +268,15 @@ export class UserController {
         return res.status(404).json({ message: "User not found" })
       }
       
-      // Verify current password
+      // Verify current password (use passwordHash from entity)
       const { comparePassword } = await import('../../../utils/password')
-      if (!user.password || !(await comparePassword(currentPassword, user.password))) {
+      const passwordHash = (user as any).props?.password || user.password
+      
+      if (!passwordHash || !(await comparePassword(currentPassword, passwordHash))) {
         return res.status(400).json({ message: "Current password is incorrect" })
       }
       
-      // Update password
+      // Update password (will be hashed by service)
       const updatedUser = await this.userService.update(userId, { password: newPassword })
       
       if (!updatedUser) {

@@ -28,6 +28,17 @@ export class UserRepository implements UserRepositoryInterface {
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
       lastLogin: data.lastLogin,
+      // 🔒 2FA fields (CRITICAL for security checks)
+      twoFactorEnabled: data.twoFactorEnabled,
+      twoFactorSecret: data.twoFactorSecret,
+      twoFactorEnabledAt: data.twoFactorEnabledAt,
+      recoveryCodes: data.recoveryCodes,
+      // 🧾 Billing fields (Andrea's requirement - MUST be mapped from DB)
+      companyName: data.companyName,
+      vatNumber: data.vatNumber,
+      website: data.website,
+      billingPhone: data.billingPhone,
+      billingAddress: data.billingAddress,
     });
   }
 

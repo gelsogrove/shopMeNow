@@ -23,7 +23,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { toast } from '@/lib/toast'
 import { logger } from '@/lib/logger'
 import { Loader2, CheckCircle, AlertCircle, Smartphone, Copy, Download } from 'lucide-react'
-import { api, setSessionId } from '@/services/api'
+import { api } from '@/services/api'
 
 export default function Setup2FAPage() {
   const navigate = useNavigate()
@@ -72,17 +72,10 @@ export default function Setup2FAPage() {
         code: verificationCode,
       })
       
-      const { recoveryCodes: codes, sessionId, token, user } = response.data
+      const { recoveryCodes: codes, token, user } = response.data
       
-      // Save session and token for continued authentication
-      // CRITICAL: Use sessionStorage for sessionId (via setSessionId helper)
-      logger.info('🔐 [Setup2FA] verify-2fa-setup response:', { sessionId, token, user })
-      
-      if (!sessionId) {
-        logger.error('❌ [Setup2FA] CRITICAL: Backend did not return sessionId!')
-        toast.error('Authentication failed - no session ID received')
-        return
-      }
+      // Save token for authentication (JWT-only)
+      logger.info('🔐 [Setup2FA] verify-2fa-setup response:', { token, user })
       
       if (!token) {
         logger.error('❌ [Setup2FA] CRITICAL: Backend did not return token!')
@@ -92,15 +85,37 @@ export default function Setup2FAPage() {
       
       // 🛡️ CRITICAL SECURITY: Clear ALL storage before saving new credentials
       logger.info('🧹 [Setup2FA] Clearing ALL storage (localStorage + sessionStorage)')
+      
+      // 🔍 DEBUG: Log OLD token before clearing
+      const oldToken = localStorage.getItem('token')
+      logger.warn(`🔍 [Setup2FA] OLD token in storage: ${oldToken?.substring(0, 30)}...`)
+      
       localStorage.clear()
       sessionStorage.clear()
       logger.info('✅ [Setup2FA] Storage cleared completely')
       
+      // 🔍 DEBUG: Verify storage is actually empty
+      const checkToken = localStorage.getItem('token')
+      if (checkToken) {
+        logger.error('❌ [Setup2FA] CRITICAL: localStorage.clear() FAILED - token still exists!')
+        alert('CRITICAL BUG: localStorage not clearing! Check console.')
+        return
+      }
+      logger.info('✅ [Setup2FA] Verified: storage is empty')
+      
       logger.info(`🔍 [Setup2FA] NEW token to be saved: ${token.substring(0, 30)}...`)
       
-      // Save new authentication data
-      setSessionId(sessionId)
+      // Decode and log NEW token details
+      const newTokenDecoded = JSON.parse(atob(token.split('.')[1]))
+      logger.warn(`🔍 [Setup2FA] NEW token decoded:`, newTokenDecoded)
+      logger.warn(`   Email in new token: ${newTokenDecoded.email}`)
+      logger.warn(`   User ID in new token: ${newTokenDecoded.id}`)
+      
+      // Save new authentication data (ONLY token - no sessionId)
       localStorage.setItem('token', token)
+      
+      // 🔥 ALERT for debugging - REMOVE after testing
+      alert(`✅ NEW TOKEN SAVED!\nEmail: ${newTokenDecoded.email}\nID: ${newTokenDecoded.id}`)
       
       // Verify immediately that the token was saved correctly
       const savedToken = localStorage.getItem('token')
@@ -116,17 +131,13 @@ export default function Setup2FAPage() {
         localStorage.setItem('user', JSON.stringify(user))
       }
       
-      // Verify storage immediately after setting
-      const verifySessionId = sessionStorage.getItem('sessionId')
+      // Verify token saved correctly
       const verifyToken = localStorage.getItem('token')
       
-      logger.info(`✅ [Setup2FA] SessionId saved: ${verifySessionId ? verifySessionId.substring(0, 8) + '...' : 'NULL'}`)
       logger.info(`✅ [Setup2FA] Token saved: ${verifyToken ? verifyToken.substring(0, 20) + '...' : 'NULL'}`)
       
-      if (!verifySessionId || !verifyToken) {
-        logger.error('❌ [Setup2FA] CRITICAL: Storage verification failed!')
-        logger.error(`sessionStorage.sessionId: ${verifySessionId}`)
-        logger.error(`localStorage.token: ${verifyToken}`)
+      if (!verifyToken) {
+        logger.error('❌ [Setup2FA] CRITICAL: Token save failed!')
         toast.error('Authentication storage failed')
         return
       }
@@ -144,7 +155,7 @@ export default function Setup2FAPage() {
         }, 200)
       }
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Invalid verification code'
+      const errorMessage = error.response?.data?.message || 'Codice di verifica non valido'
       setError(errorMessage)
       toast.error(errorMessage)
     } finally {
@@ -184,19 +195,16 @@ export default function Setup2FAPage() {
    * Continue to workspace after saving codes
    */
   const handleContinueToWorkspace = () => {
-    // 🔒 SECURITY: Verify we have the correct session/token before navigating
-    const currentSessionId = sessionStorage.getItem('sessionId')
+    // 🔒 SECURITY: Verify we have token before navigating
     const currentToken = localStorage.getItem('token')
     
     logger.info('🔍 [Setup2FA] Verifying authentication before navigation:', {
-      hasSessionId: !!currentSessionId,
       hasToken: !!currentToken,
-      sessionIdPreview: currentSessionId ? currentSessionId.substring(0, 8) + '...' : 'NULL',
       tokenPreview: currentToken ? currentToken.substring(0, 30) + '...' : 'NULL',
     })
     
-    if (!currentSessionId || !currentToken) {
-      logger.error('❌ [Setup2FA] Missing authentication data at navigation time!')
+    if (!currentToken) {
+      logger.error('❌ [Setup2FA] Missing token at navigation time!')
       toast.error('Authentication error. Please login again.')
       navigate('/auth/login')
       return
@@ -204,31 +212,38 @@ export default function Setup2FAPage() {
     
     toast.success('Setup complete! Redirecting...')
     
-    // 🛡️ CRITICAL SECURITY: Clear ALL storage FIRST, then save ONLY new auth
-    logger.info('🧹 [Setup2FA COMPLETE] Clearing ALL storage before saving new auth')
+    // 🛡️ CRITICAL SECURITY FIX: DON'T reload old token!
+    // The token is ALREADY in localStorage from step 1 (line 109)
+    // Just verify it exists and navigate
+    logger.info('🔍 [Setup2FA COMPLETE] Verifying token exists in storage')
     
-    // Save current auth data to temp variables
-    const savedSessionId = currentSessionId
-    const savedToken = currentToken
-    const savedUser = localStorage.getItem('user')
+    const existingToken = localStorage.getItem('token')
+    if (!existingToken) {
+      logger.error('❌ [Setup2FA COMPLETE] No token in storage!')
+      toast.error('Authentication failed - please try again')
+      navigate('/auth/login')
+      return
+    }
     
-    // Clear EVERYTHING
-    localStorage.clear()
-    sessionStorage.clear()
-    logger.info('✅ [Setup2FA COMPLETE] Storage cleared completely')
+    logger.info(`✅ [Setup2FA COMPLETE] Token verified: ${existingToken.substring(0, 30)}...`)
     
-    // Save ONLY current user auth data
-    logger.info('📦 [Setup2FA COMPLETE] Saving new auth data')
-    if (savedSessionId) sessionStorage.setItem('sessionId', savedSessionId)
-    if (savedToken) localStorage.setItem('token', savedToken)
-    if (savedUser) localStorage.setItem('user', savedUser)
-    logger.info('✅ [Setup2FA COMPLETE] New auth data saved')
+    // CRITICAL: Log token details for debugging
+    logger.warn(`🔍 [Setup2FA COMPLETE] Token in localStorage:`)
+    logger.warn(`   Full token: ${existingToken}`)
+    logger.warn(`   Decoded (manual): ${JSON.stringify(parseJwt(existingToken))}`)
     
-    // Force hard reload
-    logger.info('🔄 [Setup2FA] Forcing hard reload to /workspace-selection')
-    setTimeout(() => {
-      window.location.href = '/workspace-selection'
-    }, 200)
+    // Navigate to workspace selection
+    logger.info('🔄 [Setup2FA] Navigating to /workspace-selection')
+    navigate('/workspace-selection')
+  }
+
+  // Helper to decode JWT (for debugging)
+  const parseJwt = (token: string) => {
+    try {
+      return JSON.parse(atob(token.split('.')[1]))
+    } catch (e) {
+      return null
+    }
   }
 
   /**

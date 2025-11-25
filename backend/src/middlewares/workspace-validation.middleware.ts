@@ -3,7 +3,7 @@ import logger from "../utils/logger"
 
 /**
  * Middleware to validate workspace operations
- * Ensures sessionId and workspaceId are present and valid
+ * Ensures workspaceId is present and valid (JWT-only authentication)
  */
 export const validateWorkspaceOperation = (
   req: Request,
@@ -11,19 +11,7 @@ export const validateWorkspaceOperation = (
   next: NextFunction
 ): void => {
   try {
-    // 1. Validate sessionId (mandatory for workspace operations)
-    const sessionId = req.headers["x-session-id"] as string
-
-    if (!sessionId || sessionId.trim() === "") {
-      logger.warn("Workspace operation rejected: missing sessionId")
-      res.status(401).json({
-        error: "Unauthorized",
-        message: "Session ID is required for workspace operations",
-      })
-      return
-    }
-
-    // 2. Validate workspaceId (prioritize header, then route params, then body)
+    // Validate workspaceId (prioritize header, then route params, then body)
     const workspaceId = 
       (req.headers["x-workspace-id"] as string) ||
       req.params.workspaceId || 
@@ -38,12 +26,11 @@ export const validateWorkspaceOperation = (
       return
     }
 
-    // 3. Attach to request for downstream use
-    ;(req as any).sessionId = sessionId
+    // Attach workspaceId to request for downstream use
     ;(req as any).workspaceId = workspaceId
 
     logger.info(
-      `✅ Workspace validation passed - workspaceId: ${workspaceId.substring(0, 8)}..., sessionId: ${sessionId.substring(0, 8)}...`
+      `✅ Workspace validation passed - workspaceId: ${workspaceId.substring(0, 8)}...`
     )
 
     next()

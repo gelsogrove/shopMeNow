@@ -1,15 +1,15 @@
 import { logger } from "@/lib/logger"
 import { useEffect, useState } from "react"
 import { Navigate, Outlet, useLocation } from "react-router-dom"
-import { api, getSessionId } from "../services/api"
+import { api } from "../services/api"
 
 /**
  * 🔒 PROTECTED ROUTE COMPONENT
  *
- * Validates sessionId before rendering protected content.
+ * Validates JWT token before rendering protected content.
  *
  * Behavior:
- * 1. On mount: validates sessionId via /api/session/validate
+ * 1. On mount: checks if token exists in localStorage
  * 2. If valid: renders <Outlet /> (nested routes)
  * 3. If invalid/missing: redirects to /auth/login
  * 4. Shows loading spinner during validation
@@ -33,12 +33,12 @@ export function ProtectedRoute() {
 
   const validateSession = async () => {
     try {
-      const sessionId = getSessionId()
+      const token = localStorage.getItem("token")
 
-      // If no sessionId in localStorage, clear everything and redirect
-      if (!sessionId) {
+      // If no token in localStorage, clear everything and redirect
+      if (!token) {
         logger.warn(
-          "🔓 No sessionId found - cleaning up and redirecting to login"
+          "🔓 No token found - cleaning up and redirecting to login"
         )
 
         // Clear all auth data
@@ -52,39 +52,22 @@ export function ProtectedRoute() {
         return
       }
 
-      // Validate sessionId with backend
-      logger.info(`🔒 Validating sessionId: ${sessionId.substring(0, 8)}...`)
-      const response = await api.get("/session/validate", {
-        headers: {
-          "X-Session-Id": sessionId,
-        },
-      })
-
-      if (response.data.valid === true) {
-        logger.info("✅ Session valid - allowing access")
-        setIsValid(true)
-      } else {
-        logger.warn("❌ Session invalid - redirecting to login")
-        setIsValid(false)
-      }
+      // Token exists - axios interceptor will add it to requests automatically
+      logger.info(`🔒 JWT token found - allowing access`)
+      setIsValid(true)
     } catch (error: any) {
-      logger.error("❌ Session validation failed:", error)
+      logger.error("❌ Token validation failed:", error)
 
-      // 🔥 ANDREA'S FIX: Se /session/validate fallisce, cancella SUBITO la session
-      logger.warn("🗑️ Clearing session storage due to validation failure")
+      // Clear auth data
+      logger.warn("🗑️ Clearing storage due to validation failure")
 
       // Clear localStorage
       localStorage.removeItem("currentWorkspace")
       localStorage.removeItem("token")
       localStorage.removeItem("user")
 
-      // Clear sessionStorage (including sessionId)
+      // Clear sessionStorage
       sessionStorage.clear()
-
-      // Check if it's a 401 (expired/invalid session)
-      if (error.response?.status === 401) {
-        logger.warn("🔒 Session expired or invalid (401)")
-      }
 
       setIsValid(false)
     } finally {
@@ -98,17 +81,17 @@ export function ProtectedRoute() {
       <div className="flex h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Validating session...</p>
+          <p className="text-sm text-muted-foreground">Verifying authentication...</p>
         </div>
       </div>
     )
   }
 
-  // If session is invalid, redirect to login with return URL
+  // If token is invalid, redirect to login with return URL
   if (!isValid) {
     return <Navigate to="/auth/login" state={{ from: location }} replace />
   }
 
-  // Session is valid, render nested routes via Outlet
+  // Token is valid, render nested routes via Outlet
   return <Outlet />
 }

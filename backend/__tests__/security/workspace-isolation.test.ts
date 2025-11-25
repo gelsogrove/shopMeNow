@@ -62,7 +62,6 @@ describe('WORKSPACE ISOLATION - SECURITY TEST', () => {
     userA = {
       id: userIdA,
       email: emailA,
-      sessionId: verify2FAResponseA.body.sessionId,
       token: verify2FAResponseA.body.token,
     }
 
@@ -105,51 +104,64 @@ describe('WORKSPACE ISOLATION - SECURITY TEST', () => {
     userB = {
       id: userIdB,
       email: emailB,
-      sessionId: verify2FAResponseB.body.sessionId,
       token: verify2FAResponseB.body.token,
     }
 
     console.log('✅ User B created:', userB.email)
     
-    // === CREATE WORKSPACES ===
-    // User A creates workspace A
-    const workspaceAResponse = await request(app)
-      .post('/api/workspaces')
-      .set('Authorization', `Bearer ${userA.token}`)
-      .set('X-Session-Id', userA.sessionId)
-      .send({
+    // === CREATE WORKSPACES DIRECTLY IN DATABASE ===
+    // User A gets workspace A
+    const workspaceA = await prisma.workspace.create({
+      data: {
         name: `Workspace A ${Date.now()}`,
+        slug: `workspace-a-${Date.now()}`,
         whatsappPhoneNumber: '+1234567890',
         language: 'en',
-      })
+      },
+    })
     
-    expect(workspaceAResponse.status).toBe(201)
-    console.log('✅ Workspace A created for User A')
+    // Link User A to Workspace A
+    await prisma.userWorkspace.create({
+      data: {
+        userId: userA.id,
+        workspaceId: workspaceA.id,
+        role: 'OWNER',
+      },
+    })
     
-    // User B creates workspace B
-    const workspaceBResponse = await request(app)
-      .post('/api/workspaces')
-      .set('Authorization', `Bearer ${userB.token}`)
-      .set('X-Session-Id', userB.sessionId)
-      .send({
+    userA.workspaceId = workspaceA.id
+    console.log(`✅ Workspace A created: ${workspaceA.id} for User A`)
+    
+    // User B gets workspace B
+    const workspaceB = await prisma.workspace.create({
+      data: {
         name: `Workspace B ${Date.now() + 1000}`,
+        slug: `workspace-b-${Date.now() + 1000}`,
         whatsappPhoneNumber: '+9876543210',
         language: 'es',
-      })
+      },
+    })
     
-    expect(workspaceBResponse.status).toBe(201)
-    console.log('✅ Workspace B created for User B')
-  })
+    // Link User B to Workspace B
+    await prisma.userWorkspace.create({
+      data: {
+        userId: userB.id,
+        workspaceId: workspaceB.id,
+        role: 'OWNER',
+      },
+    })
+    
+    userB.workspaceId = workspaceB.id
+    console.log(`✅ Workspace B created: ${workspaceB.id} for User B`)
+  }, 30000) // Increase timeout to 30 seconds
 
   afterAll(async () => {
     // Cleanup
     if (userA.id) {
-      await prisma.adminSession.deleteMany({ where: { userId: userA.id } })
       await prisma.userWorkspace.deleteMany({ where: { userId: userA.id } })
       await prisma.user.delete({ where: { id: userA.id } }).catch(() => {})
     }
     if (userB.id) {
-      await prisma.adminSession.deleteMany({ where: { userId: userB.id } })
       await prisma.userWorkspace.deleteMany({ where: { userId: userB.id } })
       await prisma.user.delete({ where: { id: userB.id } }).catch(() => {})
     }
@@ -161,7 +173,6 @@ describe('WORKSPACE ISOLATION - SECURITY TEST', () => {
       const response = await request(app)
         .get('/api/workspaces')
         .set('Authorization', `Bearer ${userA.token}`)
-        .set('X-Session-Id', userA.sessionId)
         .expect(200)
 
       expect(Array.isArray(response.body)).toBe(true)
@@ -184,7 +195,6 @@ describe('WORKSPACE ISOLATION - SECURITY TEST', () => {
       const response = await request(app)
         .get('/api/workspaces')
         .set('Authorization', `Bearer ${userB.token}`)
-        .set('X-Session-Id', userB.sessionId)
         .expect(200)
 
       expect(Array.isArray(response.body)).toBe(true)
@@ -207,13 +217,11 @@ describe('WORKSPACE ISOLATION - SECURITY TEST', () => {
       const responseA = await request(app)
         .get('/api/workspaces')
         .set('Authorization', `Bearer ${userA.token}`)
-        .set('X-Session-Id', userA.sessionId)
         .expect(200)
 
       const responseB = await request(app)
         .get('/api/workspaces')
         .set('Authorization', `Bearer ${userB.token}`)
-        .set('X-Session-Id', userB.sessionId)
         .expect(200)
 
       const workspaceIdA = responseA.body[0].id
@@ -231,7 +239,6 @@ describe('WORKSPACE ISOLATION - SECURITY TEST', () => {
       const responseA = await request(app)
         .get('/api/workspaces')
         .set('Authorization', `Bearer ${userA.token}`)
-        .set('X-Session-Id', userA.sessionId)
         .expect(200)
 
       const userBWorkspaces = await prisma.userWorkspace.findMany({

@@ -403,6 +403,14 @@ model User {
   linkedProviders    Json?                    @default("[]") // Array: [{provider: 'google', linkedAt: '2025-11-21T...'}]
   gdprAccepted       DateTime?
   phoneNumber        String?
+  
+  // 🧾 Billing/Invoice Information (Andrea's requirement)
+  companyName        String?                  // Nome società
+  vatNumber          String?                  // P.IVA / VAT number
+  website            String?                  // Sito internet
+  billingPhone       String?                  // Telefono per fatturazione
+  billingAddress     String?                  // Indirizzo completo
+  
   workspaces         UserWorkspace[]
   passwordResets     PasswordReset[]
   adminSessions      AdminSession[]

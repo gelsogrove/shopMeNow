@@ -22,7 +22,7 @@ import { PrismaClient } from '@prisma/client'
 import * as jwt from 'jsonwebtoken'
 import type { SignOptions } from 'jsonwebtoken'
 import { config } from '../../../config'
-import { EnhancedAuthService } from '../../../application/services/enhanced-auth.service'
+import { OAuthAuthService } from '../../../application/services/oauth-auth.service'
 import { OtpService } from '../../../application/services/otp.service'
 import { EmailService } from '../../../application/services/email.service'
 import { AdminSessionService } from '../../../application/services/admin-session.service'
@@ -33,13 +33,13 @@ import logger from '../../../utils/logger'
 const prisma = new PrismaClient()
 
 export class EnhancedAuthController {
-  private enhancedAuthService: EnhancedAuthService
+  private oauthAuthService: OAuthAuthService
   private otpService: OtpService
   private emailService: EmailService
   private adminSessionService: AdminSessionService
 
   constructor() {
-    this.enhancedAuthService = new EnhancedAuthService(prisma)
+    this.oauthAuthService = new OAuthAuthService(prisma)
     this.otpService = new OtpService(prisma)
     this.emailService = new EmailService()
     this.adminSessionService = new AdminSessionService()
@@ -89,7 +89,7 @@ export class EnhancedAuthController {
       }
 
       // Register user
-      const user = await this.enhancedAuthService.registerWithEmail(
+      const user = await this.oauthAuthService.registerWithEmail(
         {
           email,
           password,
@@ -184,7 +184,7 @@ export class EnhancedAuthController {
       }
 
       // Enable 2FA and generate recovery codes
-      const recoveryCodes = await this.enhancedAuthService.enable2FA(userId)
+      const recoveryCodes = await this.oauthAuthService.enable2FA(userId)
 
       // Get user info
       const user = await prisma.user.findUnique({
@@ -205,15 +205,6 @@ export class EnhancedAuthController {
       // User MUST create workspace manually after registration
       // This allows users to customize workspace name, phone number, etc.
 
-      // 🔒 CREATE SESSION AFTER 2FA VERIFICATION (without workspace)
-      // User will create workspace from workspace-selection page
-      const sessionId = await this.adminSessionService.createSession(
-        user.id,
-        null, // No workspace yet - user will create it manually
-        ipAddress,
-        userAgent
-      )
-      
       // Generate JWT token (user is now fully authenticated)
       const token = this.generateToken(user)
       
@@ -243,7 +234,6 @@ export class EnhancedAuthController {
       res.status(200).json({
         message: '2FA enabled successfully',
         recoveryCodes, // Show recovery codes (only time user sees them)
-        sessionId, // Session ID for continued authentication
         token, // JWT token for API calls
         user: {
           id: user.id,
@@ -263,6 +253,93 @@ export class EnhancedAuthController {
   }
 
   /**
+   * Verify 2FA code (TOTP) during LOGIN
+   * POST /api/auth/verify-2fa
+   * 
+   * Called after user enters email/password and system detects 2FA is enabled.
+   * Verifies TOTP code and creates session + token for authenticated user.
+   */
+  async verify2FA(req: Request, res: Response): Promise<void> {
+    try {
+      const { userId, code } = req.body
+      const ipAddress = req.ip || req.socket.remoteAddress
+      const userAgent = req.headers['user-agent']
+
+      if (!userId || !code) {
+        throw new AppError(400, 'ID utente e codice di verifica sono richiesti')
+      }
+
+      // Verify TOTP code
+      const isValid = await this.otpService.verifyTwoFactor(userId, code)
+
+      if (!isValid) {
+        await logAuthAttempt({
+          userId,
+          email: '', // Will be filled after user fetch
+          attemptType: '2fa',
+          success: false,
+          failureReason: 'Codice TOTP non valido',
+          ipAddress,
+          userAgent,
+        })
+        throw new AppError(401, 'Codice di verifica non valido')
+      }
+
+      // TOTP valid - fetch user and create session
+      const user = await prisma.user.findUnique({ where: { id: userId } })
+      if (!user) {
+        throw new AppError(404, 'User not found')
+      }
+
+      // Log successful 2FA
+      await logAuthAttempt({
+        userId,
+        email: user.email,
+        attemptType: '2fa',
+        success: true,
+        ipAddress,
+        userAgent,
+        metadata: { method: 'totp' },
+      })
+
+      // 🔐 CREATE ADMIN SESSION (CRITICAL - only after 2FA verified)
+      const sessionId = await this.adminSessionService.createSession(
+        user.id,
+        null, // workspaceId: null (will be set after workspace selection)
+        ipAddress,
+        userAgent
+      )
+
+      logger.info(
+        `✅ User ${user.email} verified 2FA with sessionId: ${sessionId.substring(0, 8)}...`
+      )
+
+      // Generate JWT token
+      const token = this.generateToken(user)
+
+      res.status(200).json({
+        valid: true,
+        message: 'Verifica 2FA completata con successo',
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          profilePicture: this.oauthAuthService.getUserAvatar(user),
+        },
+      })
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error
+      }
+      logger.error('Errore verifica 2FA:', error)
+      throw new AppError(500, 'Verifica 2FA fallita')
+    }
+  }
+
+  /**
    * Verify recovery code (2FA bypass)
    * POST /api/auth/verify-recovery-code
    * 
@@ -276,28 +353,28 @@ export class EnhancedAuthController {
       const userAgent = req.headers['user-agent']
 
       if (!userId || !code) {
-        throw new AppError(400, 'User ID and recovery code are required')
+        throw new AppError(400, 'ID utente e codice di recupero sono richiesti')
       }
 
       const user = await prisma.user.findUnique({ where: { id: userId } })
       if (!user) {
-        throw new AppError(404, 'User not found')
+        throw new AppError(404, 'Utente non trovato')
       }
 
       // Verify recovery code
-      const isValid = await this.enhancedAuthService.verifyRecoveryCode(userId, code)
+      const result = await this.oauthAuthService.verifyRecoveryCode(userId, code)
 
-      if (!isValid) {
+      if (!result.valid) {
         await logAuthAttempt({
           userId,
           email: user.email,
           attemptType: '2fa',
           success: false,
-          failureReason: 'Invalid recovery code',
+          failureReason: 'Codice di recupero non valido',
           ipAddress,
           userAgent,
         })
-        throw new AppError(400, 'Invalid recovery code')
+        throw new AppError(401, 'Codice di recupero non valido') // 401 for authentication failure
       }
 
       // Recovery code valid - log user in
@@ -311,26 +388,28 @@ export class EnhancedAuthController {
         metadata: { method: 'recovery_code' },
       })
 
-      // Generate session (reuse existing session logic from AuthController)
+      // Generate JWT token
       const token = this.generateToken(user)
 
       res.status(200).json({
-        message: 'Recovery code accepted',
+        valid: true, // For compatibility with frontend
+        message: 'Codice di recupero accettato',
         token,
+        newRecoveryCode: result.newRecoveryCode, // ✅ Return new recovery code to user
         user: {
           id: user.id,
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
-          profilePicture: this.enhancedAuthService.getUserAvatar(user),
+          profilePicture: this.oauthAuthService.getUserAvatar(user),
         },
       })
     } catch (error) {
       if (error instanceof AppError) {
         throw error
       }
-      logger.error('Recovery code verification error:', error)
-      throw new AppError(500, 'Recovery code verification failed')
+      logger.error('Errore verifica codice di recupero:', error)
+      throw new AppError(500, 'Verifica codice di recupero fallita')
     }
   }
 
@@ -352,7 +431,7 @@ export class EnhancedAuthController {
       const userAgent = req.headers['user-agent']
 
       // Register or login user
-      const { user, isNew } = await this.enhancedAuthService.registerOrLoginWithOAuth(
+      const { user, isNew } = await this.oauthAuthService.registerOrLoginWithOAuth(
         {
           email: profile.email,
           firstName: profile.firstName || profile.name?.givenName || '',
@@ -405,7 +484,7 @@ export class EnhancedAuthController {
         throw new AppError(404, 'User not found')
       }
 
-      const avatarUrl = this.enhancedAuthService.getUserAvatar(user)
+      const avatarUrl = this.oauthAuthService.getUserAvatar(user)
 
       res.status(200).json({ avatarUrl })
     } catch (error) {

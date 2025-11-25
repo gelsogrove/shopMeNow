@@ -24,7 +24,7 @@ import { OAuth2Client } from 'google-auth-library'
 import * as jwt from 'jsonwebtoken'
 import type { SignOptions } from 'jsonwebtoken'
 import { config } from '../../../config'
-import { EnhancedAuthService } from '../../../application/services/enhanced-auth.service'
+import { OAuthAuthService } from '../../../application/services/oauth-auth.service'
 import { AdminSessionService } from '../../../application/services/admin-session.service'
 import { OtpService } from '../../../application/services/otp.service'
 import { AppError } from '../middlewares/error.middleware'
@@ -34,13 +34,13 @@ import logger from '../../../utils/logger'
 const prisma = new PrismaClient()
 
 export class OAuthController {
-  private enhancedAuthService: EnhancedAuthService
+  private oauthAuthService: OAuthAuthService
   private adminSessionService: AdminSessionService
   private otpService: OtpService
   private googleClient: OAuth2Client
 
   constructor() {
-    this.enhancedAuthService = new EnhancedAuthService(prisma)
+    this.oauthAuthService = new OAuthAuthService(prisma)
     this.adminSessionService = new AdminSessionService()
     this.otpService = new OtpService(prisma)
     

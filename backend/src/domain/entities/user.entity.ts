@@ -13,6 +13,17 @@ export interface UserProps {
   createdAt?: Date;
   updatedAt?: Date;
   lastLogin?: Date;
+  // 🔒 2FA fields (CRITICAL for security)
+  twoFactorEnabled?: boolean;
+  twoFactorSecret?: string | null;
+  twoFactorEnabledAt?: Date | null;
+  recoveryCodes?: string[] | null;
+  // 🧾 Billing fields (Andrea's requirement)
+  companyName?: string | null;
+  vatNumber?: string | null;
+  website?: string | null;
+  billingPhone?: string | null;
+  billingAddress?: string | null;
 }
 
 export class User extends Entity<UserProps> {
@@ -69,6 +80,44 @@ export class User extends Entity<UserProps> {
 
   get lastLogin(): Date | undefined {
     return this.props.lastLogin;
+  }
+
+  // 🔒 2FA getters (CRITICAL for security checks)
+  get twoFactorEnabled(): boolean {
+    return this.props.twoFactorEnabled || false;
+  }
+
+  get twoFactorSecret(): string | null | undefined {
+    return this.props.twoFactorSecret;
+  }
+
+  get twoFactorEnabledAt(): Date | null | undefined {
+    return this.props.twoFactorEnabledAt;
+  }
+
+  get recoveryCodes(): string[] | null | undefined {
+    return this.props.recoveryCodes;
+  }
+
+  // 🧾 Billing getters (Andrea's requirement)
+  get companyName(): string | null | undefined {
+    return this.props.companyName;
+  }
+
+  get vatNumber(): string | null | undefined {
+    return this.props.vatNumber;
+  }
+
+  get website(): string | null | undefined {
+    return this.props.website;
+  }
+
+  get billingPhone(): string | null | undefined {
+    return this.props.billingPhone;
+  }
+
+  get billingAddress(): string | null | undefined {
+    return this.props.billingAddress;
   }
 
   isVerified(): boolean {

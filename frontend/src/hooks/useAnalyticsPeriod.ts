@@ -3,7 +3,7 @@ import { logger } from "@/lib/logger"
 import { useEffect, useState } from "react"
 
 const STORAGE_KEY = "analytics_period"
-const DEFAULT_PERIOD: PeriodPreset = "6months"
+const DEFAULT_PERIOD: PeriodPreset = "today" // Changed from "6months" to show current day by default
 
 /**
  * Custom hook for managing analytics period with sessionStorage persistence

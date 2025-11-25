@@ -195,7 +195,10 @@ const authMiddlewareAsync = async (
       req.user = decoded
       return next()
     } catch (error) {
-      logger.info("Token verification failed:", error.message)
+      logger.error("❌ Token verification failed:", error)
+      logger.error("   Error name:", error.name)
+      logger.error("   Error message:", error.message)
+      logger.error("   Token (first 30 chars):", token?.substring(0, 30))
       throw new AppError(401, "Invalid token")
     }
   } catch (error) {

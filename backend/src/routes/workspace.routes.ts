@@ -5,7 +5,6 @@ import {
   validateWorkspaceOperation,
   validateWorkspaceUpdateData,
 } from "../middlewares/workspace-validation.middleware"
-import { sessionValidationMiddleware } from "../interfaces/http/middlewares/session-validation.middleware"
 import { wrapController } from "../utils/controller-wrapper"
 import logger from "../utils/logger"
 
@@ -147,12 +146,11 @@ const getCurrentWorkspace: RequestHandler = async (req, res): Promise<void> => {
  */
 router.get(
   "/",
-  sessionValidationMiddleware,
   wrapController(workspaceController.getAllWorkspaces)
 )
 
 // IMPORTANT: /current must come BEFORE /:id to avoid conflict
-router.get("/current", sessionValidationMiddleware, getCurrentWorkspace)
+router.get("/current", getCurrentWorkspace)
 
 /**
  * @swagger
@@ -179,7 +177,6 @@ router.get("/current", sessionValidationMiddleware, getCurrentWorkspace)
  */
 router.get(
   "/:id",
-  sessionValidationMiddleware,
   validateWorkspaceOperation,
   wrapController(workspaceController.getWorkspaceById)
 )
@@ -266,7 +263,6 @@ router.post("/", wrapController(workspaceController.createWorkspace))
  */
 router.put(
   "/:id",
-  sessionValidationMiddleware,
   validateWorkspaceOperation,
   validateWorkspaceUpdateData,
   wrapController(workspaceController.updateWorkspace)
@@ -307,7 +303,6 @@ router.put(
  */
 router.delete(
   "/:id",
-  sessionValidationMiddleware,
   wrapController(workspaceController.deleteWorkspace)
 )
 

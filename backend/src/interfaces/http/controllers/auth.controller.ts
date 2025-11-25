@@ -35,21 +35,25 @@ import { Request, Response } from "express"
 import type { SignOptions } from "jsonwebtoken"
 import * as jwt from "jsonwebtoken"
 import { adminSessionService } from "../../../application/services/admin-session.service"
+import { AuthService } from "../../../application/services/auth.service"
 import { EmailService } from "../../../application/services/email.service"
 import { OtpService } from "../../../application/services/otp.service"
-import { PasswordResetService } from "../../../application/services/password-reset.service"
 import { UserService } from "../../../application/services/user.service"
 import { config } from "../../../config"
 import logger from "../../../utils/logger"
 import { AppError } from "../middlewares/error.middleware"
+import {
+  detectLanguageFromHeader,
+  SupportedLanguage,
+} from "../../../utils/email-templates"
 
 export class AuthController {
   private readonly emailService: EmailService
 
   constructor(
+    private readonly authService: AuthService,
     private readonly userService: UserService,
-    private readonly otpService: OtpService,
-    private readonly passwordResetService: PasswordResetService
+    private readonly otpService: OtpService
   ) {
     this.emailService = new EmailService()
   }
@@ -121,7 +125,21 @@ export class AuthController {
       throw new AppError(401, "Invalid credentials")
     }
 
-    // 🆕 CREATE ADMIN SESSION
+    // 🔒 SECURITY: Check if 2FA is enabled
+    if (user.twoFactorEnabled) {
+      logger.info(`🔐 User ${user.email} requires 2FA verification`)
+      
+      // ❌ DO NOT create session or token yet!
+      // User must verify 2FA first
+      return res.status(200).json({
+        requires2FA: true,
+        userId: user.id,
+        email: user.email,
+        // NO sessionId, NO token until 2FA is verified!
+      })
+    }
+
+    // 🆕 CREATE ADMIN SESSION (only if 2FA is NOT required)
     const sessionId = await adminSessionService.createSession(
       user.id,
       null, // workspaceId: null (will be set after workspace selection)
@@ -275,18 +293,28 @@ export class AuthController {
       const user = await this.userService.getByEmail(email)
 
       // Always generate token even if user doesn't exist (security best practice)
-      const token = await this.passwordResetService.generateResetToken(email)
+      const token = await this.authService.requestPasswordReset(email)
 
       // Only send email if user exists
       if (user) {
+        // Detect user's preferred language from Accept-Language header
+        const userLanguage = detectLanguageFromHeader(
+          req.headers['accept-language']
+        )
+
         const emailSent = await this.emailService.sendPasswordResetEmail({
           to: email,
           resetToken: token,
           userFirstName: user.firstName,
+          language: userLanguage,
         })
 
         if (!emailSent) {
           logger.error(`Failed to send reset email to: ${email}`)
+        } else {
+          logger.info(
+            `Password reset email sent to: ${email} (language: ${userLanguage})`
+          )
         }
       }
 
@@ -314,16 +342,8 @@ export class AuthController {
     try {
       const { token, newPassword } = req.body
 
-      // Verify token and get userId
-      const userId = await this.passwordResetService.verifyResetToken(token)
-      
-      // Hash the new password
-      const bcrypt = await import('bcryptjs')
-      const passwordHash = await bcrypt.hash(newPassword, 10)
-      
-      // Update user password with hashed version
-      await this.userService.update(userId, { passwordHash })
-      await this.passwordResetService.markTokenAsUsed(token)
+      // Reset password using AuthService (handles validation, hashing, token marking)
+      await this.authService.resetPassword(token, newPassword)
 
       logger.info(`✅ Password reset successful for user: ${userId}`)
       res.status(200).json({
@@ -358,6 +378,12 @@ export class AuthController {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
+        // 🧾 Billing fields (Andrea's requirement - MUST be included in /auth/me)
+        companyName: user.companyName,
+        vatNumber: user.vatNumber,
+        website: user.website,
+        billingPhone: user.billingPhone,
+        billingAddress: user.billingAddress,
       },
     })
   }

@@ -9,6 +9,7 @@ import {
   Percent,
   ShoppingCart,
   Tag,
+  User,
   UserCircle,
   Users,
   Wrench,
@@ -100,6 +101,11 @@ export function Sidebar() {
       href: "/sales",
       label: "Sales",
       icon: UserCircle,
+    },
+    {
+      href: "/profile",
+      label: "Profile",
+      icon: User,
     },
     {
       href: "/campaigns",

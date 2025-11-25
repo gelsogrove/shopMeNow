@@ -150,6 +150,14 @@ export const createAuthRouter = (authController: AuthController): Router => {
     asyncHandler(enhancedAuthController.verify2FASetup.bind(enhancedAuthController))
   )
 
+  // 2FA Login Verification (NEW)
+  // 🔒 NO AUTH REQUIRED - User is verifying 2FA during login (creates sessionId)
+  router.post(
+    "/verify-2fa",
+    twoFactorLimiter,
+    asyncHandler(enhancedAuthController.verify2FA.bind(enhancedAuthController))
+  )
+
   // Recovery Code Verification (NEW)
   router.post(
     "/verify-recovery-code",

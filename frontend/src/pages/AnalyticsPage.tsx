@@ -5,7 +5,6 @@ import DateRangeSelector, {
 } from "@/components/analytics/DateRangeSelector"
 import { HistoricalChart } from "@/components/analytics/HistoricalChart"
 import { MetricsOverview } from "@/components/analytics/MetricsOverview"
-import { PricingList } from "@/components/analytics/PricingList"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -38,7 +37,7 @@ export function AnalyticsPage() {
     useAnalyticsPeriod()
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("all")
   const [activeTab, setActiveTab] = useState<
-    "analytics" | "billing" | "pricing"
+    "analytics" | "billing"
   >("analytics")
 
   // Get translations
@@ -48,16 +47,12 @@ export function AnalyticsPage() {
   const pageTitle =
     activeTab === "analytics"
       ? t.analyticsTitle
-      : activeTab === "billing"
-      ? "Billing"
-      : "Pricing"
+      : "Billing"
 
   const pageSubtitle =
     activeTab === "analytics"
       ? t.analyticsSubtitle
-      : activeTab === "billing"
-      ? "Monthly billing breakdown and cost tracking"
-      : "Transparent pricing for all ShopMe services"
+      : "Monthly billing breakdown and cost tracking"
 
   const loadAnalytics = async (period: PeriodPreset) => {
     if (!currentWorkspace?.id) return
@@ -181,11 +176,11 @@ export function AnalyticsPage() {
         <Tabs
           value={activeTab}
           onValueChange={(value) =>
-            setActiveTab(value as "analytics" | "billing" | "pricing")
+            setActiveTab(value as "analytics" | "billing")
           }
           className="space-y-6"
         >
-          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
+          <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-grid">
             <TabsTrigger value="analytics" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Analytics
@@ -193,10 +188,6 @@ export function AnalyticsPage() {
             <TabsTrigger value="billing" className="flex items-center gap-2">
               <Euro className="h-4 w-4" />
               Billing
-            </TabsTrigger>
-            <TabsTrigger value="pricing" className="flex items-center gap-2">
-              <Euro className="h-4 w-4" />
-              Pricing
             </TabsTrigger>
           </TabsList>
 
@@ -638,11 +629,6 @@ export function AnalyticsPage() {
           {/* Billing Tab */}
           <TabsContent value="billing">
             <BillingTab />
-          </TabsContent>
-
-          {/* Pricing Tab */}
-          <TabsContent value="pricing">
-            <PricingList />
           </TabsContent>
         </Tabs>
       ) : (

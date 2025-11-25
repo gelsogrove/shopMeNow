@@ -48,18 +48,8 @@ export interface UpdateWorkspaceData {
 
 const workspaceApi = {
   async getAll(): Promise<Workspace[]> {
-    // 🆕 FORCE sessionId in headers (from sessionStorage)
-    const sessionId = sessionStorage.getItem("sessionId")
-    logger.info(
-      "🔍 [workspaceApi.getAll] Forcing X-Session-Id header:",
-      sessionId ? sessionId.substring(0, 8) + "..." : "NULL"
-    )
-
-    const response = await api.get("/workspaces", {
-      headers: {
-        "X-Session-Id": sessionId || "",
-      },
-    })
+    // JWT token is automatically added by axios interceptor
+    const response = await api.get("/workspaces")
     return response.data
   },
 

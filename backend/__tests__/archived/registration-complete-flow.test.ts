@@ -4,16 +4,13 @@
  * Tests the ENTIRE registration process end-to-end:
  * 1. Register new user
  * 2. Verify 2FA setup
- * 3. Workspace auto-creation
- * 4. Session creation
- * 5. Email notifications (welcome email)
- * 6. Forgot password flow
+ * 3. Email notifications (welcome email)
+ * 4. Forgot password flow
  * 
  * SECURITY CHECKS:
- * - No sessionId/token before 2FA verification
- * - SessionId created only after 2FA
- * - Workspace created automatically
- * - Session validates successfully
+ * - No token before 2FA verification
+ * - Token created only after 2FA
+ * - JWT validates successfully
  */
 
 import request from 'supertest'
@@ -28,7 +25,6 @@ describe('Complete Registration Flow - END TO END', () => {
   let userId: string
   let qrCode: string
   let secret: string
-  let sessionId: string
   let token: string
   let workspaceId: string
 
@@ -40,7 +36,6 @@ describe('Complete Registration Flow - END TO END', () => {
   afterAll(async () => {
     // Cleanup test user
     if (userId) {
-      await prisma.adminSession.deleteMany({ where: { userId } })
       await prisma.userWorkspace.deleteMany({ where: { userId } })
       await prisma.user.delete({ where: { id: userId } }).catch(() => {})
     }
@@ -93,7 +88,7 @@ describe('Complete Registration Flow - END TO END', () => {
   })
 
   describe('STEP 2: 2FA Verification', () => {
-    it('should verify 2FA code and create session + workspace', async () => {
+    it('should verify 2FA code and return token + recovery codes', async () => {
       // Generate TOTP code
       const totpCode = speakeasy.totp({
         secret: secret,
@@ -108,18 +103,15 @@ describe('Complete Registration Flow - END TO END', () => {
         })
         .expect(200)
 
-      expect(response.body).toHaveProperty('sessionId')
       expect(response.body).toHaveProperty('token')
       expect(response.body).toHaveProperty('recoveryCodes')
       expect(response.body).toHaveProperty('user')
 
       expect(response.body.recoveryCodes).toHaveLength(10)
 
-      sessionId = response.body.sessionId
       token = response.body.token
 
       console.log('✅ 2FA verified')
-      console.log('✅ SessionId created:', sessionId.substring(0, 8) + '...')
       console.log('✅ Token generated')
       console.log('✅ Recovery codes:', response.body.recoveryCodes.length)
     })
@@ -144,7 +136,6 @@ describe('Complete Registration Flow - END TO END', () => {
       const response = await request(app)
         .get('/api/workspaces')
         .set('Authorization', `Bearer ${token}`)
-        .set('X-Session-Id', sessionId)
         .expect(200)
 
       expect(response.body).toEqual([]) // Empty array - no workspaces
@@ -153,31 +144,7 @@ describe('Complete Registration Flow - END TO END', () => {
     })
   })
 
-  describe('STEP 4: Session Validation', () => {
-    it('should validate session successfully', async () => {
-      const response = await request(app)
-        .get('/api/session/validate')
-        .set('Authorization', `Bearer ${token}`)
-        .set('X-Session-Id', sessionId)
-        .expect(200)
-
-      expect(response.body).toHaveProperty('valid', true)
-      expect(response.body).toHaveProperty('session')
-      expect(response.body.session).toHaveProperty('userId', userId)
-
-      console.log('✅ Session validated successfully')
-    })
-
-    it('should reject requests without sessionId', async () => {
-      await request(app)
-        .get('/api/workspaces')
-        .set('Authorization', `Bearer ${token}`)
-        // Missing X-Session-Id header
-        .expect(401)
-    })
-  })
-
-  describe('STEP 5: Database Verification', () => {
+  describe('STEP 4: Database Verification', () => {
     it('should have 2FA enabled in database', async () => {
       const user = await prisma.user.findUnique({
         where: { id: userId },
@@ -204,25 +171,9 @@ describe('Complete Registration Flow - END TO END', () => {
 
       console.log('✅ Recovery codes stored (hashed)')
     })
-
-    it('should have session in database', async () => {
-      const session = await prisma.adminSession.findFirst({
-        where: { 
-          userId: userId,
-          isActive: true 
-        },
-      })
-
-      expect(session).toBeTruthy()
-      expect(session?.userId).toBe(userId)
-      expect(session?.workspaceId).toBeNull() // No workspace yet - user must create manually
-      expect(session?.isActive).toBe(true)
-
-      console.log('✅ Session exists in database (without workspace)')
-    })
   })
 
-  describe('STEP 6: Forgot Password Flow', () => {
+  describe('STEP 5: Forgot Password Flow', () => {
     it('should send password reset email for existing user', async () => {
       const response = await request(app)
         .post('/api/auth/forgot-password')

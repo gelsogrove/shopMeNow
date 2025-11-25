@@ -104,10 +104,34 @@ A comprehensive WhatsApp e-commerce platform with AI-powered chatbot, simplified
 ### Access Points
 
 - **Frontend**: http://localhost:3000
-  - Login: `admin@shopme.com` / `venezia44`
+  - **Email**: `andrea_gelsomino@hotmail.com`
+  - **Password**: `Venezia44`
+  - **2FA Recovery Code**: Check terminal output after `npm run seed`
+    - The recovery code is displayed in the terminal when you run the seed
+    - Save this code - it's consumed after first use
+    - Example output:
+      ```
+      ================================================================================
+      🔑 ADMIN 2FA RECOVERY CODE (save this for development):
+      ================================================================================
+         ABCD-EFGH-1234-5678
+      ================================================================================
+      📝 Use this recovery code when logging in with 2FA
+      ⚠️  This code will be consumed after first use
+      ```
 - **Backend API**: http://localhost:3001
 - **Database**: localhost:5434
   - User: `shopmefy` / `shopmefy`
+
+### First Login with 2FA
+
+1. Navigate to http://localhost:3000
+2. Enter email and password
+3. When prompted for 2FA code, click "Use Recovery Code"
+4. Paste the recovery code from the seed terminal output
+5. **After first login**: Set up 2FA with your authenticator app
+   - The recovery code will be consumed
+   - Future logins require authenticator app or remaining recovery codes
 
 ## 📁 Project Structure
 

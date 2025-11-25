@@ -52,6 +52,10 @@ export function VerifyOtpPage() {
         throw new Error(data.message || "Invalid OTP code")
       }
 
+      // 🛡️ CRITICAL SECURITY: Clear ALL storage before saving new credentials
+      localStorage.clear()
+      sessionStorage.clear()
+      
       // Store the token and redirect to workspace selection
       localStorage.setItem("token", data.token)
       navigate("/workspace-selection")

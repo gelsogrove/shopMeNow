@@ -1,5 +1,5 @@
 /**
- * Enhanced Authentication Service
+ * OAuth Authentication Service
  * Handles advanced auth features: OAuth, 2FA, recovery codes, profile pictures
  * 
  * SECURITY FEATURES:
@@ -38,7 +38,7 @@ export interface OAuthProfile {
   provider: 'google' | 'facebook' | 'apple'
 }
 
-export class EnhancedAuthService {
+export class OAuthAuthService {
   constructor(private readonly prisma: PrismaClient) {}
 
   /**
@@ -82,11 +82,11 @@ export class EnhancedAuthService {
           email: data.email,
           attemptType: 'registration',
           success: false,
-          failureReason: 'Email already registered',
+          failureReason: 'Utente già presente',
           ipAddress,
           userAgent,
         })
-        throw new AppError(409, 'Email already registered')
+        throw new AppError(409, 'Utente già presente. Effettua il login.')
       }
 
       // Hash password
@@ -271,12 +271,12 @@ export class EnhancedAuthService {
   }
 
   /**
-   * Verify recovery code
+   * Verify recovery code and regenerate a new one
    * @param userId - User ID
    * @param code - Recovery code
-   * @returns True if code is valid
+   * @returns Object with validation result and new recovery code if valid
    */
-  async verifyRecoveryCode(userId: string, code: string): Promise<boolean> {
+  async verifyRecoveryCode(userId: string, code: string): Promise<{ valid: boolean; newRecoveryCode?: string }> {
     try {
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
@@ -284,7 +284,7 @@ export class EnhancedAuthService {
       })
 
       if (!user || !user.recoveryCodes || user.recoveryCodes.length === 0) {
-        return false
+        return { valid: false }
       }
 
       // Check if code matches any recovery code
@@ -292,25 +292,34 @@ export class EnhancedAuthService {
         const matches = await bcrypt.compare(code.trim().toUpperCase(), user.recoveryCodes[i])
         
         if (matches) {
-          // Remove used code
+          // ✅ SECURITY: Generate a NEW recovery code to replace the used one
+          const newPlainCode = generateRecoveryCodes(1)[0] // Generate 1 new code
+          const newHashedCode = await bcrypt.hash(newPlainCode, 10)
+          
+          // Remove used code and add new one
           const updatedCodes = [...user.recoveryCodes]
-          updatedCodes.splice(i, 1)
+          updatedCodes.splice(i, 1) // Remove used code
+          updatedCodes.push(newHashedCode) // Add new code
 
           await this.prisma.user.update({
             where: { id: userId },
             data: { recoveryCodes: updatedCodes },
           })
 
-          logger.info('Recovery code used', { userId, remainingCodes: updatedCodes.length })
+          logger.info('✅ Recovery code used and regenerated', { 
+            userId, 
+            remainingCodes: updatedCodes.length,
+            newCodeGenerated: true 
+          })
 
-          return true
+          return { valid: true, newRecoveryCode: newPlainCode }
         }
       }
 
-      return false
+      return { valid: false }
     } catch (error) {
       logger.error('Recovery code verification failed', error)
-      return false
+      return { valid: false }
     }
   }
 
