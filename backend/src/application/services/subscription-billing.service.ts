@@ -534,7 +534,15 @@ export class SubscriptionBillingService {
 
     const result = await this.repository.upgradePlan(workspaceId, newPlanType)
 
-    // Log the change transaction
+    // Delete previous plan change transactions (keep only the latest)
+    await this.prisma.billingTransaction.deleteMany({
+      where: {
+        workspaceId,
+        type: TransactionType.UPGRADE_FEE,
+      },
+    })
+
+    // Log the change transaction (only the latest one is kept)
     const action = isDowngrade ? "Downgrade" : "Upgrade"
     await this.prisma.billingTransaction.create({
       data: {

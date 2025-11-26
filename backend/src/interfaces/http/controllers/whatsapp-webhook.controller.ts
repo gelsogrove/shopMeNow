@@ -873,41 +873,8 @@ export class WhatsAppWebhookController {
 
       // ✅ Messages already saved by LLMRouterService (INBOUND + OUTBOUND)
       // ✅ debugInfo already saved with timeline
-      // ❌ TODO #1: WhatsApp queue emission (not implemented yet)
-      //
-      // FUTURE IMPLEMENTATION:
-      // await whatsappQueueService.enqueue({
-      //   customerId: customer.id,
-      //   message: routerResult.response,
-      //   workspaceId: customer.workspaceId,
-      //   customerPhone: phoneNumber,
-      //   customerLanguage: customer.language
-      // })
-      //
-      // For now: Just return success - message processing completed
-
-      // 💰 BILLING: Deduct credit for successful message processing
-      try {
-        const deductResult = await billingService.deductMessageCredit(
-          customer.workspaceId,
-          whatsappMessageId
-        )
-        if (deductResult.success) {
-          logger.info("[WEBHOOK] 💰 Credit deducted for message", {
-            workspaceId: customer.workspaceId,
-            newBalance: deductResult.newBalance,
-            messageId: whatsappMessageId,
-          })
-        } else {
-          logger.warn("[WEBHOOK] ⚠️ Failed to deduct credit (non-blocking)", {
-            workspaceId: customer.workspaceId,
-            error: deductResult.error,
-          })
-        }
-      } catch (billingError) {
-        // Don't block the response if billing fails - just log it
-        logger.error("[WEBHOOK] ⚠️ Billing error (non-blocking):", billingError)
-      }
+      // 💰 BILLING: Credit is deducted by WhatsApp Queue Cronjob when message is actually sent
+      //    (not here - we only check credit availability before processing)
 
       logger.info("[WEBHOOK] ✅ Message processed successfully", {
         customerId: customer.id,

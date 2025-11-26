@@ -80,6 +80,7 @@ import {
   Filter,
   Check,
   X,
+  FileText,
 } from "lucide-react"
 
 // ============================================================================
@@ -175,6 +176,9 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
   const [showRechargeDialog, setShowRechargeDialog] = useState(false)
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false)
   const [showHistoryDialog, setShowHistoryDialog] = useState(false)
+  const [showInvoicesDialog, setShowInvoicesDialog] = useState(false)
+  const [showPlanConfirmDialog, setShowPlanConfirmDialog] = useState(false)
+  const [pendingPlanChange, setPendingPlanChange] = useState<PlanType | null>(null)
   const [rechargeAmount, setRechargeAmount] = useState(25)
   const [customAmount, setCustomAmount] = useState("")
   const [isRecharging, setIsRecharging] = useState(false)
@@ -226,7 +230,14 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
     }
   }, [effectiveWorkspaceId, billingOverview, isLoadingOverview])
 
-  // Load transactions when history dialog opens or filters change
+  // 🔄 Load transactions on component mount (for totals display)
+  useEffect(() => {
+    if (effectiveWorkspaceId && transactions.length === 0) {
+      loadTransactions()
+    }
+  }, [effectiveWorkspaceId])
+
+  // Reload transactions when history dialog opens or filters change
   useEffect(() => {
     if (showHistoryDialog && effectiveWorkspaceId) {
       loadTransactions()
@@ -337,8 +348,10 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
       const action = result.isDowngrade ? "downgraded" : "upgraded"
       toast.success(`Successfully ${action} to ${result.newPlan.displayName}!`)
 
-      // Close dialog
+      // Close dialogs
       setShowUpgradeDialog(false)
+      setShowPlanConfirmDialog(false)
+      setPendingPlanChange(null)
 
       // Refresh overview to get new plan info
       await refreshOverview()
@@ -347,6 +360,19 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
       toast.error(errorMessage)
     } finally {
       setIsUpgrading(false)
+    }
+  }
+
+  // Open confirmation dialog before plan change
+  const initiatePlanChange = (newPlan: PlanType) => {
+    setPendingPlanChange(newPlan)
+    setShowPlanConfirmDialog(true)
+  }
+
+  // Confirm and execute plan change
+  const confirmPlanChange = () => {
+    if (pendingPlanChange) {
+      handlePlanChange(pendingPlanChange)
     }
   }
 
@@ -455,19 +481,39 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
                 Manage your subscription and credit
               </CardDescription>
             </div>
-            <Badge
-              variant={getPlanBadgeVariant(billing.planType) as any}
-              className="text-sm px-3 py-1"
-            >
-              {planConfig.displayName}
-              {isTrialPlan &&
-                billing.daysUntilTrialExpires !== null &&
-                !billing.isTrialExpired && (
-                  <span className="ml-1">
-                    ({billing.daysUntilTrialExpires}d)
-                  </span>
-                )}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowHistoryDialog(true)}
+                className="gap-1 text-muted-foreground hover:text-foreground"
+              >
+                <History className="h-4 w-4" />
+                History
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowInvoicesDialog(true)}
+                className="gap-1 text-muted-foreground hover:text-foreground"
+              >
+                <FileText className="h-4 w-4" />
+                Invoices
+              </Button>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30 border border-emerald-200 dark:border-emerald-800 rounded-full">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                  {planConfig.displayName}
+                  {isTrialPlan &&
+                    billing.daysUntilTrialExpires !== null &&
+                    !billing.isTrialExpired && (
+                      <span className="ml-1 text-emerald-600 dark:text-emerald-400">
+                        ({billing.daysUntilTrialExpires}d)
+                      </span>
+                    )}
+                </span>
+              </div>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -534,37 +580,37 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Subscription:</span>
                   <span className="font-medium">
-                    {planConfig.displayName}
+                    {planConfig.displayName} - {formatCurrency(planConfig.monthlyFee)}/month
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Message cost:</span>
-                  <span className="font-medium">
-                    {formatCurrency(limits.messageCost)}
+                  <span className="text-muted-foreground">Total recharges:</span>
+                  <span className="font-medium text-emerald-600">
+                    {formatCurrency(
+                      transactions
+                        .filter(tx => tx.type === 'RECHARGE' && tx.amount > 0)
+                        .reduce((sum, tx) => sum + tx.amount, 0)
+                    )}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Order cost:</span>
-                  <span className="font-medium">
-                    {formatCurrency(limits.orderCost)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Advertising cost:</span>
-                  <span className="font-medium">
-                    {formatCurrency(limits.pushCost)}
-                  </span>
-                </div>
-                {billing.nextBillingDate && (
-                  <div className="flex justify-between">
+                {billing.nextBillingDate && billing.planType !== "FREE_TRIAL" && (
+                  <div className="flex justify-between items-center pt-2 border-t">
                     <span className="text-muted-foreground">
                       Next renewal:
                     </span>
-                    <span className="font-medium">
-                      {new Date(billing.nextBillingDate).toLocaleDateString(
-                        "en-US"
-                      )}
-                    </span>
+                    <div className="text-right">
+                      <span className="font-medium">
+                        {new Date(billing.nextBillingDate).toLocaleDateString("en-US")}
+                      </span>
+                      <span className="ml-2 text-green-600 font-bold">
+                        {formatCurrency(
+                          planConfig.monthlyFee +
+                          transactions
+                            .filter(tx => tx.type === 'RECHARGE' && tx.amount > 0)
+                            .reduce((sum, tx) => sum + tx.amount, 0)
+                        )}
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -700,18 +746,6 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
           </TooltipProvider>
         </CardContent>
       </Card>
-
-      {/* Transaction History Button */}
-      <div className="flex justify-end">
-        <Button
-          variant="outline"
-          onClick={() => setShowHistoryDialog(true)}
-          className="gap-2"
-        >
-          <History className="h-4 w-4" />
-          Transaction History
-        </Button>
-      </div>
 
       {/* Recharge Dialog */}
       <Dialog open={showRechargeDialog} onOpenChange={setShowRechargeDialog}>
@@ -877,7 +911,7 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
                           <div>
                             <Button
                               className={`w-full ${canSelect ? "bg-green-600 hover:bg-green-700" : "bg-gray-400 cursor-not-allowed"}`}
-                              onClick={() => canSelect && handlePlanChange(planKey)}
+                              onClick={() => canSelect && initiatePlanChange(planKey)}
                               disabled={isUpgrading || !canSelect}
                             >
                               {isUpgrading ? (
@@ -963,9 +997,9 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
               </select>
             </div>
 
-            {/* Transaction count */}
+            {/* Transaction count - filter out 0€ transactions */}
             <div className="ml-auto text-sm text-muted-foreground">
-              {transactions.length} transaction{transactions.length !== 1 ? "s" : ""}
+              {transactions.filter(tx => tx.amount !== 0).length} transaction{transactions.filter(tx => tx.amount !== 0).length !== 1 ? "s" : ""}
             </div>
           </div>
 
@@ -974,7 +1008,7 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
-            ) : transactions.length === 0 ? (
+            ) : transactions.filter(tx => tx.amount !== 0).length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 No transactions found for the selected filters
               </div>
@@ -987,13 +1021,11 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
                     <TableHead>Description</TableHead>
                     <TableHead className="text-right w-[100px]">Amount</TableHead>
                     <TableHead className="text-right w-[100px]">Balance</TableHead>
-                    <TableHead className="text-center w-[80px]">Invoice</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transactions.map((tx) => {
+                  {transactions.filter(tx => tx.amount !== 0).map((tx) => {
                     const typeInfo = getTransactionTypeInfo(tx.type)
-                    const isRecharge = tx.type === "RECHARGE"
                     return (
                       <TableRow key={tx.id}>
                         <TableCell className="whitespace-nowrap text-sm">
@@ -1025,22 +1057,6 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
                         <TableCell className="text-right text-sm">
                           {formatCurrency(tx.balanceAfter)}
                         </TableCell>
-                        <TableCell className="text-center">
-                          {isRecharge ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={() => {
-                                toast.info("Invoice download coming soon")
-                              }}
-                            >
-                              <Download className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                            </Button>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">—</span>
-                          )}
-                        </TableCell>
                       </TableRow>
                     )
                   })}
@@ -1055,6 +1071,176 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
               onClick={() => setShowHistoryDialog(false)}
             >
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Monthly Invoices Dialog */}
+      <Dialog open={showInvoicesDialog} onOpenChange={setShowInvoicesDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Monthly Invoices
+            </DialogTitle>
+            <DialogDescription>
+              Download your monthly billing invoices
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Invoice #</TableHead>
+                  <TableHead>Period</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="text-center">Download</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(() => {
+                  // Generate monthly invoices from transactions
+                  const monthlyData = transactions.reduce((acc, tx) => {
+                    // Only count deductions (MESSAGE, PUSH_NOTIFICATION)
+                    if (tx.amount >= 0) return acc
+                    
+                    const date = new Date(tx.createdAt)
+                    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+                    
+                    if (!acc[monthKey]) {
+                      acc[monthKey] = {
+                        period: monthKey,
+                        totalAmount: 0,
+                      }
+                    }
+                    
+                    acc[monthKey].totalAmount += Math.abs(tx.amount)
+                    
+                    return acc
+                  }, {} as Record<string, { period: string; totalAmount: number }>)
+                  
+                  const sortedMonths = Object.values(monthlyData).sort((a, b) => 
+                    b.period.localeCompare(a.period)
+                  )
+                  
+                  if (sortedMonths.length === 0) {
+                    return (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                          No invoices available yet. Invoices are generated based on your usage.
+                        </TableCell>
+                      </TableRow>
+                    )
+                  }
+                  
+                  return sortedMonths.map((month, index) => {
+                    const [year, monthNum] = month.period.split('-')
+                    const monthName = new Date(parseInt(year), parseInt(monthNum) - 1).toLocaleDateString('en-US', { 
+                      month: 'long' 
+                    })
+                    const invoiceNumber = `INV-${year}${monthNum}`
+                    
+                    return (
+                      <TableRow key={month.period}>
+                        <TableCell className="font-mono text-sm">{invoiceNumber}</TableCell>
+                        <TableCell className="font-medium">{monthName} {year}</TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(month.totalAmount)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => {
+                              toast.info(`Invoice ${invoiceNumber} - Coming soon`)
+                            }}
+                          >
+                            <Download className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                })()}
+              </TableBody>
+            </Table>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowInvoicesDialog(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Plan Change Confirmation Dialog */}
+      <Dialog open={showPlanConfirmDialog} onOpenChange={setShowPlanConfirmDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Confirm Plan Change
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to change your plan?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            {pendingPlanChange && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Current Plan</p>
+                    <p className="font-medium">{PLAN_CONFIGS[billing.planType as keyof typeof PLAN_CONFIGS]?.name || billing.planType}</p>
+                  </div>
+                  <TrendingUp className="h-5 w-5 text-muted-foreground" />
+                  <div className="text-right">
+                    <p className="text-sm text-muted-foreground">New Plan</p>
+                    <p className="font-medium">{PLAN_CONFIGS[pendingPlanChange as keyof typeof PLAN_CONFIGS]?.name || pendingPlanChange}</p>
+                  </div>
+                </div>
+                
+                <div className="text-sm text-muted-foreground space-y-2">
+                  <p>• The new plan will be applied immediately</p>
+                  <p>• Your credit balance will remain unchanged</p>
+                  <p>• Usage limits will be updated based on the new plan</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowPlanConfirmDialog(false)
+                setPendingPlanChange(null)
+              }}
+              disabled={isUpgrading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmPlanChange}
+              disabled={isUpgrading}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isUpgrading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Changing...
+                </>
+              ) : (
+                "Yes, Change Plan"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

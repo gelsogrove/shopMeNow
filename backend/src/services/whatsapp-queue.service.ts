@@ -10,6 +10,9 @@ import { SecurityAgent } from "../application/agents/SecurityAgent"
 // Repositories
 import { WhatsAppQueueRepository } from "../repositories/whatsapp-queue.repository"
 
+// Services
+import { SubscriptionBillingService } from "../application/services/subscription-billing.service"
+
 export interface EnqueueMessageDto {
   workspaceId: string
   customerId: string
@@ -25,10 +28,12 @@ export interface ValidateAndSendResult {
 export class WhatsAppQueueService {
   private repository: WhatsAppQueueRepository
   private securityAgent: SecurityAgent // 🆕 Feature 181: Security check before WhatsApp send
+  private billingService: SubscriptionBillingService // 💰 For credit deduction on message send
 
   constructor(private prisma: PrismaClient) {
     this.repository = new WhatsAppQueueRepository(prisma)
     this.securityAgent = new SecurityAgent(prisma) // Initialize Security Agent
+    this.billingService = new SubscriptionBillingService(prisma) // Initialize billing service
   }
 
   /**
@@ -162,6 +167,37 @@ export class WhatsAppQueueService {
         logger.info(
           `[WhatsAppQueueService] Message ${message.id} sent successfully, updated status to 'sent'`
         )
+
+        // 💰 BILLING: Deduct credit NOW that message is actually sent
+        try {
+          const deductResult = await this.billingService.deductMessageCredit(
+            message.workspaceId,
+            message.id
+          )
+          if (deductResult.success) {
+            logger.info(
+              `[WhatsAppQueueService] 💰 Credit deducted for message ${message.id}`,
+              {
+                workspaceId: message.workspaceId,
+                newBalance: deductResult.newBalance,
+              }
+            )
+          } else {
+            logger.warn(
+              `[WhatsAppQueueService] ⚠️ Failed to deduct credit for message ${message.id}`,
+              {
+                workspaceId: message.workspaceId,
+                error: deductResult.error,
+              }
+            )
+          }
+        } catch (billingError) {
+          // Don't fail the message send if billing fails - just log it
+          logger.error(
+            `[WhatsAppQueueService] ⚠️ Billing error for message ${message.id}:`,
+            billingError
+          )
+        }
 
         // Mark as delivered in conversation history (if exists)
         await this.markDeliveredInHistory(

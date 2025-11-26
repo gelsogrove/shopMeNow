@@ -372,8 +372,8 @@ export function WhatsAppChatModal({
     try {
       // Call the API to process the initial message - USE SAME WEBHOOK AS NORMAL MESSAGES
       const apiUrl = `${
-        import.meta.env.VITE_API_URL || "http://localhost:3001"
-      }/api/whatsapp/webhook`
+        import.meta.env.VITE_API_URL || "http://localhost:3001/api"
+      }/whatsapp/webhook`
 
       // Use provided workspaceId or get from config
       const currentWorkspaceId = getWorkspaceId(workspaceId)
@@ -573,8 +573,8 @@ export function WhatsAppChatModal({
     try {
       // Call the webhook API (same as real WhatsApp messages)
       const apiUrl = `${
-        import.meta.env.VITE_API_URL || "http://localhost:3001"
-      }/api/whatsapp/webhook`
+        import.meta.env.VITE_API_URL || "http://localhost:3001/api"
+      }/whatsapp/webhook`
 
       // Use provided workspaceId or get from config
       const currentWorkspaceId = getWorkspaceId(workspaceId)
