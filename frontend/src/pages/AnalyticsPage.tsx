@@ -1,14 +1,13 @@
-import { BillingTab } from "@/components/analytics/BillingTab"
 import DateRangeSelector, {
   PeriodPreset,
   getDateRangeFromPeriod,
 } from "@/components/analytics/DateRangeSelector"
 import { HistoricalChart } from "@/components/analytics/HistoricalChart"
 import { MetricsOverview } from "@/components/analytics/MetricsOverview"
+import { FeatureGate } from "@/components/shared/FeatureGate"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { useAnalyticsPeriod } from "@/hooks/useAnalyticsPeriod"
 import { logger } from "@/lib/logger"
@@ -22,7 +21,6 @@ import {
   Activity,
   AlertCircle,
   BarChart3,
-  Euro,
   TrendingUp,
   Users,
 } from "lucide-react"
@@ -36,23 +34,13 @@ export function AnalyticsPage() {
   const { selectedPeriod, setSelectedPeriod, isInitialized } =
     useAnalyticsPeriod()
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("all")
-  const [activeTab, setActiveTab] = useState<
-    "analytics" | "billing"
-  >("analytics")
 
   // Get translations
   const t = getAdminPageTexts()
 
-  // Dynamic page title based on active tab
-  const pageTitle =
-    activeTab === "analytics"
-      ? t.analyticsTitle
-      : "Billing"
-
-  const pageSubtitle =
-    activeTab === "analytics"
-      ? t.analyticsSubtitle
-      : "Monthly billing breakdown and cost tracking"
+  // Page title
+  const pageTitle = t.analyticsTitle
+  const pageSubtitle = t.analyticsSubtitle
 
   const loadAnalytics = async (period: PeriodPreset) => {
     if (!currentWorkspace?.id) return
@@ -137,13 +125,11 @@ export function AnalyticsPage() {
           <p className="text-gray-600 mt-1">{pageSubtitle}</p>
         </div>
 
-        {/* Period Selector - Only show for Analytics tab */}
-        {activeTab === "analytics" && (
-          <DateRangeSelector
-            selectedPeriod={selectedPeriod}
-            onPeriodChange={handlePeriodChange}
-          />
-        )}
+        {/* Period Selector */}
+        <DateRangeSelector
+          selectedPeriod={selectedPeriod}
+          onPeriodChange={handlePeriodChange}
+        />
       </div>
 
       {loading ? (
@@ -172,27 +158,13 @@ export function AnalyticsPage() {
           </Card>
         </div>
       ) : analytics ? (
-        // Data Loaded - Now with Tabs
-        <Tabs
-          value={activeTab}
-          onValueChange={(value) =>
-            setActiveTab(value as "analytics" | "billing")
-          }
-          className="space-y-6"
+        // Data Loaded - Analytics Content
+        <FeatureGate 
+          feature="ANALYTICS" 
+          requiredPlan="PREMIUM"
+          message="Analisi e Report Avanzati sono disponibili con il piano Premium. Ottieni insights dettagliati sul tuo business!"
         >
-          <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-grid">
-            <TabsTrigger value="analytics" className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Analytics
-            </TabsTrigger>
-            <TabsTrigger value="billing" className="flex items-center gap-2">
-              <Euro className="h-4 w-4" />
-              Billing
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Analytics Tab */}
-          <TabsContent value="analytics" className="space-y-6">
+          <div className="space-y-6">
             {/* Metrics Overview */}
             <MetricsOverview analytics={analytics} />
 
@@ -624,13 +596,8 @@ export function AnalyticsPage() {
             </CardContent>
           </Card>
           */}
-          </TabsContent>
-
-          {/* Billing Tab */}
-          <TabsContent value="billing">
-            <BillingTab />
-          </TabsContent>
-        </Tabs>
+          </div>
+        </FeatureGate>
       ) : (
         // No Data State
         <div className="flex items-center justify-center h-64">

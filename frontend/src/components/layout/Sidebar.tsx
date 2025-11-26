@@ -53,7 +53,7 @@ export function Sidebar() {
     }))
   }
 
-  const mainLinks: SidebarLink[] = [
+  const baseLinks: SidebarLink[] = [
     {
       href: "/chat",
       label: "Chat History",
@@ -113,6 +113,8 @@ export function Sidebar() {
       icon: Megaphone,
     },
   ]
+
+  const mainLinks = baseLinks
 
   return (
     <aside className="fixed inset-y-0 left-0 w-72 bg-white border-r">

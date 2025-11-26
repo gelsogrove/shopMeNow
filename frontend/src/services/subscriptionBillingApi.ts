@@ -220,6 +220,29 @@ export const upgradePlan = async (
 }
 
 /**
+ * Change plan - upgrade or downgrade (Owner only)
+ * For downgrade: validates current usage fits within target plan limits
+ * @param planType - Target plan (BASIC, PREMIUM, ENTERPRISE)
+ */
+export const changePlan = async (
+  workspaceId: string,
+  planType: "BASIC" | "PREMIUM" | "ENTERPRISE"
+): Promise<{
+  newPlan: { displayName: string; monthlyFee: number }
+  nextBillingDate: string
+  isDowngrade: boolean
+}> => {
+  if (!workspaceId) {
+    throw new Error("Workspace ID is required")
+  }
+
+  const response = await api.post(`/workspaces/${workspaceId}/subscription-billing/change-plan`, {
+    planType,
+  })
+  return response.data.data
+}
+
+/**
  * Get all available plans (public)
  */
 export const getAvailablePlans = async (): Promise<PlanInfo[]> => {

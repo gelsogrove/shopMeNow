@@ -452,6 +452,116 @@ export class SubscriptionBillingService {
     }
   }
 
+  /**
+   * Change workspace plan (upgrade or downgrade)
+   * OWNER-ONLY operation
+   * For downgrade: validates current usage fits within target plan limits
+   * Fee will be charged at next billing date (30 days)
+   */
+  async changePlan(
+    workspaceId: string,
+    newPlanType: PlanType
+  ): Promise<{
+    success: boolean
+    nextBillingDate: Date
+    newPlan: { displayName: string; monthlyFee: number }
+    isDowngrade: boolean
+  }> {
+    // Validate plan type
+    if (newPlanType === "FREE_TRIAL") {
+      throw new Error("Cannot change to Free Trial")
+    }
+
+    const billing = await this.repository.getWorkspaceBilling(workspaceId)
+    if (!billing) {
+      throw new Error("Workspace not found")
+    }
+
+    // Plan order for upgrade/downgrade logic
+    const planOrder: Record<PlanType, number> = {
+      FREE_TRIAL: 0,
+      BASIC: 1,
+      PREMIUM: 2,
+      ENTERPRISE: 3,
+    }
+
+    if (planOrder[newPlanType] === planOrder[billing.planType]) {
+      throw new Error(`Already on ${billing.planType} plan`)
+    }
+
+    const isDowngrade = planOrder[newPlanType] < planOrder[billing.planType]
+
+    // For downgrade: validate current usage fits within target plan limits
+    if (isDowngrade) {
+      const usage = await this.repository.getWorkspaceUsage(workspaceId)
+      const targetPlanConfig = await this.prisma.planConfiguration.findUnique({
+        where: { planType: newPlanType },
+        select: { maxChannels: true, maxProducts: true, maxCustomers: true },
+      })
+
+      if (!targetPlanConfig) {
+        throw new Error(`Plan configuration not found for ${newPlanType}`)
+      }
+
+      const violations: string[] = []
+
+      if (usage.productsCount > targetPlanConfig.maxProducts) {
+        violations.push(`Too many products: ${usage.productsCount}/${targetPlanConfig.maxProducts}`)
+      }
+      if (usage.customersCount > targetPlanConfig.maxCustomers) {
+        violations.push(`Too many customers: ${usage.customersCount}/${targetPlanConfig.maxCustomers}`)
+      }
+      if (usage.channelsCount > targetPlanConfig.maxChannels) {
+        violations.push(`Too many channels: ${usage.channelsCount}/${targetPlanConfig.maxChannels}`)
+      }
+
+      if (violations.length > 0) {
+        throw new Error(
+          `Cannot downgrade to ${newPlanType}: ${violations.join(", ")}. Please reduce usage first.`
+        )
+      }
+    }
+
+    // Get new plan config
+    const newPlanConfig = await this.prisma.planConfiguration.findUnique({
+      where: { planType: newPlanType },
+      select: { displayName: true, monthlyFee: true },
+    })
+
+    if (!newPlanConfig) {
+      throw new Error(`Plan configuration not found for ${newPlanType}`)
+    }
+
+    const result = await this.repository.upgradePlan(workspaceId, newPlanType)
+
+    // Log the change transaction
+    const action = isDowngrade ? "Downgrade" : "Upgrade"
+    await this.prisma.billingTransaction.create({
+      data: {
+        workspaceId,
+        type: TransactionType.UPGRADE_FEE, // Used for both upgrade and downgrade plan changes
+        amount: 0, // Will be charged at next billing date
+        balanceAfter: billing.creditBalance,
+        description: `${action} a ${newPlanConfig.displayName} - Prima fatturazione: ${result.nextBillingDate.toLocaleDateString("it-IT")}`,
+      },
+    })
+
+    const logEmoji = isDowngrade ? "📉" : "📈"
+    logger.info(
+      `[BILLING] ${logEmoji} Workspace ${workspaceId} ${action.toLowerCase()}d from ${billing.planType} to ${newPlanType}`
+    )
+
+    return {
+      success: true,
+      nextBillingDate: result.nextBillingDate,
+      newPlan: {
+        displayName: newPlanConfig.displayName,
+        monthlyFee: Number(newPlanConfig.monthlyFee),
+      },
+      isDowngrade,
+    }
+  }
+
   // ============================================================================
   // TRANSACTION HISTORY
   // ============================================================================

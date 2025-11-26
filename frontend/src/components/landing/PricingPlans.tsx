@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button"
+import { PLAN_CONFIGS, getPlanFeaturesWithText } from "@/config/planFeatures"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { usePricing } from "@/hooks/usePricing"
 import { Check, MessageSquare, X } from "lucide-react"
@@ -16,7 +17,7 @@ interface PricingPlan {
 
 export function PricingPlans() {
   const { t } = useLanguage()
-  const { plans: pricingPlans, usage, isLoading } = usePricing()
+  const { usage, isLoading } = usePricing()
 
   // Show loading state while fetching prices
   if (isLoading) {
@@ -36,98 +37,42 @@ export function PricingPlans() {
     PUSH_CAMPAIGN: usage.PUSH_CAMPAIGN ?? 1.0,
   }
 
-  // Build dynamic features with translations
-  const getFeatureText = (
-    count: number | string,
-    type: "channel" | "channels" | "products" | "clients"
-  ) => {
-    if (count === "Unlimited") {
-      return `${t("pricing.features.unlimited")} ${t(
-        `pricing.features.${type}`
-      )}`
-    }
-    if (typeof count === "number") {
-      return `${t("pricing.features.upto")} ${count} ${t(
-        `pricing.features.${type}`
-      )}`
-    }
-    return `${count} ${t(`pricing.features.${type}`)}`
-  }
-
+  // Build plans from shared config - SINGLE SOURCE OF TRUTH
   const plans: PricingPlan[] = [
     {
       name: "Free",
-      price: "€0",
-      priceSuffix: "/14 days",
-      description: t("pricing.free.creditDesc"),
+      price: PLAN_CONFIGS.FREE_TRIAL.priceLabel,
+      priceSuffix: PLAN_CONFIGS.FREE_TRIAL.priceSuffix,
+      description: t(PLAN_CONFIGS.FREE_TRIAL.descriptionKey || "pricing.free.creditDesc"),
       buttonText: t("pricing.button.start") + " Free Trial",
-      buttonVariant: "default",
-      isPopular: true,
-      features: [
-        { name: getFeatureText(1, "channel"), included: true },
-        { name: getFeatureText(50, "products"), included: true },
-        { name: getFeatureText(50, "clients"), included: true },
-        { name: "Multi-Language Support", included: true },
-        { name: t("pricing.features.analytics"), included: true },
-        { name: t("pricing.features.support"), included: true },
-        { name: t("pricing.features.branding"), included: false },
-        { name: t("pricing.features.integration"), included: false },
-      ],
+      buttonVariant: PLAN_CONFIGS.FREE_TRIAL.buttonVariant || "default",
+      isPopular: PLAN_CONFIGS.FREE_TRIAL.isPopular,
+      features: getPlanFeaturesWithText("FREE_TRIAL", t),
     },
     {
       name: "Basic",
-      price: "€29",
-      description: t("pricing.basic.desc"),
+      price: PLAN_CONFIGS.BASIC.priceLabel,
+      description: t(PLAN_CONFIGS.BASIC.descriptionKey || "pricing.basic.desc"),
       buttonText: `${t("pricing.button.start")} Basic`,
-      buttonVariant: "default",
-      features: [
-        { name: getFeatureText(1, "channel"), included: true },
-        { name: getFeatureText(50, "products"), included: true },
-        { name: getFeatureText(50, "clients"), included: true },
-        { name: "Multi-Language Support", included: true },
-        { name: t("pricing.features.analytics"), included: true },
-        { name: t("pricing.features.support"), included: true },
-        { name: t("pricing.features.branding"), included: false },
-        { name: t("pricing.features.integration"), included: false },
-      ],
+      buttonVariant: PLAN_CONFIGS.BASIC.buttonVariant || "default",
+      features: getPlanFeaturesWithText("BASIC", t),
     },
     {
       name: "Premium",
-      price: "€59",
-      description: t("pricing.premium.desc"),
+      price: PLAN_CONFIGS.PREMIUM.priceLabel,
+      description: t(PLAN_CONFIGS.PREMIUM.descriptionKey || "pricing.premium.desc"),
       buttonText: `${t("pricing.button.start")} Premium`,
-      buttonVariant: "default",
-      features: [
-        { name: getFeatureText(2, "channels"), included: true },
-        { name: getFeatureText(100, "products"), included: true },
-        { name: getFeatureText(100, "clients"), included: true },
-        { name: "Multi-Language Support", included: true },
-        { name: t("pricing.features.analytics"), included: true },
-        { name: t("pricing.features.support"), included: true },
-        { name: t("pricing.features.branding"), included: true },
-        { name: t("pricing.features.integration"), included: false },
-      ],
+      buttonVariant: PLAN_CONFIGS.PREMIUM.buttonVariant || "default",
+      features: getPlanFeaturesWithText("PREMIUM", t),
     },
     {
       name: "Enterprise",
-      price: pricingPlans.ENTERPRISE_MONTHLY
-        ? `€${pricingPlans.ENTERPRISE_MONTHLY}`
-        : "€0",
-      priceSuffix: "/month",
-      description: t("pricing.enterprise.desc"),
+      price: PLAN_CONFIGS.ENTERPRISE.priceLabel,
+      priceSuffix: PLAN_CONFIGS.ENTERPRISE.priceSuffix,
+      description: t(PLAN_CONFIGS.ENTERPRISE.descriptionKey || "pricing.enterprise.desc"),
       buttonText: t("pricing.button.contact"),
-      buttonVariant: "outline",
-      features: [
-        { name: getFeatureText("Unlimited", "channels"), included: true },
-        { name: getFeatureText("Unlimited", "products"), included: true },
-        { name: getFeatureText("Unlimited", "clients"), included: true },
-        { name: "Multi-Language Support", included: true },
-        { name: t("pricing.features.analytics"), included: true },
-        { name: t("pricing.features.priority"), included: true },
-        { name: t("pricing.features.branding"), included: true },
-        { name: t("pricing.features.integration"), included: true },
-        { name: "Server Dedicado", included: true },
-      ],
+      buttonVariant: PLAN_CONFIGS.ENTERPRISE.buttonVariant || "outline",
+      features: getPlanFeaturesWithText("ENTERPRISE", t),
     },
   ]
 

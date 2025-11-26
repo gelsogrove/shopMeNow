@@ -55,16 +55,18 @@ import {
   getTransactionTypeInfo,
   rechargeCredit,
   getTransactions,
-  upgradePlan,
+  changePlan,
   getBillingOverview,
   Transaction,
   PlanType,
   BillingOverview,
 } from "@/services/subscriptionBillingApi"
+import { PLAN_CONFIGS, getPlanFeaturesWithText } from "@/config/planFeatures"
 import { toast } from "@/lib/toast"
 import {
   CreditCard,
   TrendingUp,
+  TrendingDown,
   Package,
   Users,
   Radio,
@@ -76,10 +78,12 @@ import {
   Download,
   Calendar,
   Filter,
+  Check,
+  X,
 } from "lucide-react"
 
 // ============================================================================
-// TYPES
+// TYPES & CONSTANTS
 // ============================================================================
 
 interface RechargeAmountOption {
@@ -93,6 +97,54 @@ const RECHARGE_OPTIONS: RechargeAmountOption[] = [
   { value: 50, label: "€50" },
   { value: 100, label: "€100" },
 ]
+
+// Plan limits per type (used for downgrade validation)
+interface PlanLimitsConfig {
+  maxChannels: number
+  maxProducts: number
+  maxCustomers: number
+}
+
+const PLAN_LIMITS: Record<PlanType, PlanLimitsConfig> = {
+  FREE_TRIAL: { maxChannels: 1, maxProducts: 50, maxCustomers: 50 },
+  BASIC: { maxChannels: 1, maxProducts: 50, maxCustomers: 50 },
+  PREMIUM: { maxChannels: 2, maxProducts: 100, maxCustomers: 100 },
+  ENTERPRISE: { maxChannels: 999, maxProducts: 9999, maxCustomers: 9999 },
+}
+
+// Plan order for upgrade/downgrade logic
+const PLAN_ORDER: Record<PlanType, number> = {
+  FREE_TRIAL: 0,
+  BASIC: 1,
+  PREMIUM: 2,
+  ENTERPRISE: 3,
+}
+
+// Check if user can downgrade to a target plan based on current usage
+interface DowngradeCheck {
+  canDowngrade: boolean
+  reasons: string[]
+}
+
+function checkCanDowngrade(usage: { productsCount: number; customersCount: number; channelsCount: number }, targetPlan: PlanType): DowngradeCheck {
+  const limits = PLAN_LIMITS[targetPlan]
+  const reasons: string[] = []
+
+  if (usage.productsCount > limits.maxProducts) {
+    reasons.push(`Too many products: ${usage.productsCount}/${limits.maxProducts}`)
+  }
+  if (usage.customersCount > limits.maxCustomers) {
+    reasons.push(`Too many customers: ${usage.customersCount}/${limits.maxCustomers}`)
+  }
+  if (usage.channelsCount > limits.maxChannels) {
+    reasons.push(`Too many channels: ${usage.channelsCount}/${limits.maxChannels}`)
+  }
+
+  return {
+    canDowngrade: reasons.length === 0,
+    reasons,
+  }
+}
 
 // ============================================================================
 // MAIN COMPONENT
@@ -275,14 +327,15 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
     }
   }
 
-  const handleUpgrade = async (newPlan: PlanType) => {
+  const handlePlanChange = async (newPlan: PlanType) => {
     if (!effectiveWorkspaceId) return
 
     setIsUpgrading(true)
     try {
-      const result = await upgradePlan(effectiveWorkspaceId, newPlan as "BASIC" | "PREMIUM")
+      const result = await changePlan(effectiveWorkspaceId, newPlan as "BASIC" | "PREMIUM" | "ENTERPRISE")
 
-      toast.success(`Successfully upgraded to ${result.newPlan}!`)
+      const action = result.isDowngrade ? "downgraded" : "upgraded"
+      toast.success(`Successfully ${action} to ${result.newPlan.displayName}!`)
 
       // Close dialog
       setShowUpgradeDialog(false)
@@ -290,7 +343,7 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
       // Refresh overview to get new plan info
       await refreshOverview()
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || "Failed to upgrade plan"
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || "Failed to change plan"
       toast.error(errorMessage)
     } finally {
       setIsUpgrading(false)
@@ -515,14 +568,14 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
                   </div>
                 )}
               </div>
-              {isSuperAdmin && billing.planType !== "ENTERPRISE" && (
+              {isSuperAdmin && billing.planType !== "FREE_TRIAL" && (
                 <Button
                   variant="outline"
                   onClick={() => setShowUpgradeDialog(true)}
                   className="w-full gap-2"
                 >
                   <TrendingUp className="h-4 w-4" />
-                  Upgrade Plan
+                  Change Plan
                 </Button>
               )}
             </div>
@@ -758,143 +811,110 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
         </DialogContent>
       </Dialog>
 
-      {/* Upgrade Dialog */}
+      {/* Change Plan Dialog */}
       <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
-        <DialogContent className="max-w-5xl">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Upgrade Plan</DialogTitle>
+            <DialogTitle className="text-2xl">Change Plan</DialogTitle>
             <DialogDescription>
               Choose the plan that best suits your needs. The subscription
               will start in 30 days.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 md:grid-cols-3 py-4">
-            {/* Basic Plan */}
-            <Card
-              className={`cursor-pointer transition-all ${
-                billing.planType === "BASIC"
-                  ? "border-primary bg-primary/5"
-                  : "hover:border-primary/50"
-              }`}
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  Basic
-                  {billing.planType === "BASIC" && (
-                    <Badge variant="secondary">Current</Badge>
+          <div className="grid gap-6 md:grid-cols-3 py-4">
+            {/* Render plans dynamically from PLAN_CONFIGS */}
+            {(["BASIC", "PREMIUM", "ENTERPRISE"] as const).map((planKey) => {
+              const planConfig = PLAN_CONFIGS[planKey]
+              const isCurrentPlan = billing.planType === planKey
+              const isDowngrade = PLAN_ORDER[billing.planType] > PLAN_ORDER[planKey]
+              const downgradeCheck = isDowngrade ? checkCanDowngrade(usage, planKey) : { canDowngrade: true, reasons: [] }
+              const canSelect = !isCurrentPlan && (isDowngrade ? downgradeCheck.canDowngrade : true)
+              const features = getPlanFeaturesWithText(planKey)
+              
+              return (
+                <div
+                  key={planKey}
+                  className={`relative rounded-2xl border-2 p-6 flex flex-col ${
+                    isCurrentPlan
+                      ? "border-blue-500 bg-gradient-to-br from-blue-50 to-green-50 shadow-xl"
+                      : "border-gray-200 bg-white hover:border-blue-300 transition-all"
+                  }`}
+                >
+                  {isCurrentPlan && (
+                    <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-500">
+                      Current Plan
+                    </Badge>
                   )}
-                </CardTitle>
-                <div className="text-2xl font-bold">€29/month</div>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div>✓ 1 WhatsApp channel</div>
-                <div>✓ 50 products</div>
-                <div>✓ 50 customers</div>
-                <div>✓ Multi-language support</div>
-                <div>✓ Analytics dashboard</div>
-                {billing.planType !== "BASIC" &&
-                  billing.planType !== "PREMIUM" &&
-                  billing.planType !== "ENTERPRISE" && (
-                    <Button
-                      className="w-full mt-4"
-                      onClick={() => handleUpgrade("BASIC")}
-                      disabled={isUpgrading}
-                    >
-                      {isUpgrading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        "Choose Basic"
-                      )}
-                    </Button>
-                  )}
-              </CardContent>
-            </Card>
+                  <div className="text-center mb-4">
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">{planConfig.name}</h3>
+                    <div className="mb-2">
+                      <span className="text-3xl font-bold text-gray-900">{planConfig.priceLabel}</span>
+                      <span className="text-gray-600">/month</span>
+                    </div>
+                    <p className="text-sm text-gray-600">{planConfig.description}</p>
+                  </div>
 
-            {/* Premium Plan */}
-            <Card
-              className={`cursor-pointer transition-all ${
-                billing.planType === "PREMIUM"
-                  ? "border-primary bg-primary/5"
-                  : "hover:border-primary/50"
-              }`}
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  Premium
-                  {billing.planType === "PREMIUM" && (
-                    <Badge variant="secondary">Current</Badge>
-                  )}
-                </CardTitle>
-                <div className="text-2xl font-bold">€59/month</div>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div>✓ 2 WhatsApp channels</div>
-                <div>✓ 100 products</div>
-                <div>✓ 100 customers</div>
-                <div>✓ Multi-language support</div>
-                <div>✓ Advanced analytics</div>
-                <div>✓ Brand customization</div>
-                <div>✓ Priority support</div>
-                {billing.planType !== "PREMIUM" &&
-                  billing.planType !== "ENTERPRISE" && (
-                    <Button
-                      className="w-full mt-4"
-                      onClick={() => handleUpgrade("PREMIUM")}
-                      disabled={isUpgrading}
-                    >
-                      {isUpgrading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        "Choose Premium"
-                      )}
-                    </Button>
-                  )}
-              </CardContent>
-            </Card>
+                  <div className="flex-grow space-y-3 mb-6">
+                    {features.map((feature) => (
+                      <div key={feature.name} className="flex items-start gap-2">
+                        {feature.included ? (
+                          <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
+                        ) : (
+                          <X className="h-5 w-5 text-gray-300 flex-shrink-0" />
+                        )}
+                        <span className={`text-sm ${feature.included ? "text-gray-700" : "text-gray-400"}`}>
+                          {feature.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
 
-            {/* Enterprise Plan */}
-            <Card
-              className={`cursor-pointer transition-all ${
-                billing.planType === "ENTERPRISE"
-                  ? "border-primary bg-primary/5"
-                  : "hover:border-primary/50"
-              }`}
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  Enterprise
-                  {billing.planType === "ENTERPRISE" && (
-                    <Badge variant="secondary">Current</Badge>
+                  {!isCurrentPlan && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div>
+                            <Button
+                              className={`w-full ${canSelect ? "bg-green-600 hover:bg-green-700" : "bg-gray-400 cursor-not-allowed"}`}
+                              onClick={() => canSelect && handlePlanChange(planKey)}
+                              disabled={isUpgrading || !canSelect}
+                            >
+                              {isUpgrading ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : isDowngrade ? (
+                                <>
+                                  <TrendingDown className="h-4 w-4 mr-2" />
+                                  Downgrade to {planConfig.name}
+                                </>
+                              ) : (
+                                <>
+                                  <TrendingUp className="h-4 w-4 mr-2" />
+                                  Upgrade to {planConfig.name}
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </TooltipTrigger>
+                        {isDowngrade && !downgradeCheck.canDowngrade && (
+                          <TooltipContent side="bottom" className="max-w-xs">
+                            <p className="font-medium text-red-600">Cannot downgrade</p>
+                            <ul className="text-sm mt-1">
+                              {downgradeCheck.reasons.map((reason, i) => (
+                                <li key={i}>• {reason}</li>
+                              ))}
+                            </ul>
+                            <p className="text-xs mt-2 text-muted-foreground">
+                              Reduce your usage first to downgrade.
+                            </p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    </TooltipProvider>
                   )}
-                </CardTitle>
-                <div className="text-2xl font-bold">€199/month</div>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div>✓ Unlimited WhatsApp channels</div>
-                <div>✓ Unlimited products</div>
-                <div>✓ Unlimited customers</div>
-                <div>✓ Multi-language support</div>
-                <div>✓ Advanced analytics</div>
-                <div>✓ Brand customization</div>
-                <div>✓ Priority support</div>
-                <div>✓ Dedicated account manager</div>
-                <div>✓ Custom integrations</div>
-                {billing.planType !== "ENTERPRISE" && (
-                  <Button
-                    className="w-full mt-4"
-                    onClick={() => handleUpgrade("ENTERPRISE")}
-                    disabled={isUpgrading}
-                  >
-                    {isUpgrading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      "Choose Enterprise"
-                    )}
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
+                </div>
+              )
+            })}
           </div>
         </DialogContent>
       </Dialog>
@@ -963,7 +983,7 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[140px]">Date</TableHead>
-                    <TableHead className="w-[120px]">Type</TableHead>
+                    <TableHead className="w-[140px]">Type</TableHead>
                     <TableHead>Description</TableHead>
                     <TableHead className="text-right w-[100px]">Amount</TableHead>
                     <TableHead className="text-right w-[100px]">Balance</TableHead>

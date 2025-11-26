@@ -304,3 +304,62 @@ billingRoutes.post(
   requireOwnerForBilling,
   controller.upgradePlan
 )
+
+/**
+ * @swagger
+ * /api/workspaces/{workspaceId}/billing/change-plan:
+ *   post:
+ *     summary: Change plan (upgrade or downgrade)
+ *     description: |
+ *       Changes workspace subscription plan. For downgrades, validates that current usage 
+ *       (products, customers, channels) fits within target plan limits.
+ *       Fee will be charged at next billing date (30 days).
+ *       OWNER-ONLY operation.
+ *     tags: [Billing]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: header
+ *         name: x-workspace-id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: header
+ *         name: x-session-id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - planType
+ *             properties:
+ *               planType:
+ *                 type: string
+ *                 enum: [BASIC, PREMIUM, ENTERPRISE]
+ *                 description: Target plan to change to
+ *     responses:
+ *       200:
+ *         description: Plan changed successfully
+ *       400:
+ *         description: Invalid plan or usage exceeds target plan limits (for downgrade)
+ *       403:
+ *         description: Owner role required
+ */
+billingRoutes.post(
+  "/change-plan",
+  authMiddleware,
+  sessionValidationMiddleware,
+  validateWorkspaceOperation,
+  requireOwnerForBilling,
+  controller.changePlan
+)

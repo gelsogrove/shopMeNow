@@ -1700,7 +1700,7 @@ async function main() {
     {
       planType: "ENTERPRISE" as const,
       displayName: "Enterprise",
-      monthlyFee: 199.00, // Base price, actual is custom
+      monthlyFee: 149.00, // Base price, actual is custom
       maxChannels: 999, // Unlimited
       maxProducts: 9999, // Unlimited
       maxCustomers: 9999, // Unlimited

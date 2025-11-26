@@ -380,6 +380,292 @@ describe("SubscriptionBillingService", () => {
     })
   })
 
+  describe("changePlan", () => {
+    it("should reject change to FREE_TRIAL", async () => {
+      await expect(service.changePlan(mockWorkspaceId, "FREE_TRIAL" as any)).rejects.toThrow(
+        "Cannot change to Free Trial"
+      )
+    })
+
+    it("should reject change to same plan", async () => {
+      mockRepository.getWorkspaceBilling.mockResolvedValue({
+        ...mockBillingData,
+        planType: "PREMIUM",
+      })
+
+      await expect(service.changePlan(mockWorkspaceId, "PREMIUM")).rejects.toThrow(
+        "Already on PREMIUM plan"
+      )
+    })
+
+    it("should allow downgrade from ENTERPRISE to PREMIUM when within limits", async () => {
+      mockRepository.getWorkspaceBilling.mockResolvedValue({
+        ...mockBillingData,
+        planType: "ENTERPRISE",
+        creditBalance: 100,
+      })
+      
+      mockRepository.getWorkspaceUsage.mockResolvedValue({
+        productsCount: 50,
+        customersCount: 50,
+        channelsCount: 1,
+      })
+      
+      mockPrisma.planConfiguration.findUnique.mockResolvedValue({
+        displayName: "Premium",
+        monthlyFee: 59,
+        maxChannels: 2,
+        maxProducts: 100,
+        maxCustomers: 100,
+      })
+      
+      mockRepository.upgradePlan.mockResolvedValue({
+        nextBillingDate: new Date(),
+      })
+      
+      mockPrisma.billingTransaction.create.mockResolvedValue({ id: "tx-downgrade" })
+
+      const result = await service.changePlan(mockWorkspaceId, "PREMIUM")
+
+      expect(result.success).toBe(true)
+      expect(result.isDowngrade).toBe(true)
+      expect(result.newPlan.displayName).toBe("Premium")
+    })
+
+    it("should reject downgrade from ENTERPRISE to BASIC when over limits", async () => {
+      mockRepository.getWorkspaceBilling.mockResolvedValue({
+        ...mockBillingData,
+        planType: "ENTERPRISE",
+      })
+      
+      mockRepository.getWorkspaceUsage.mockResolvedValue({
+        productsCount: 80,  // Over BASIC limit of 50
+        customersCount: 30,
+        channelsCount: 1,
+      })
+      
+      mockPrisma.planConfiguration.findUnique.mockResolvedValue({
+        displayName: "Basic",
+        monthlyFee: 29,
+        maxChannels: 1,
+        maxProducts: 50,
+        maxCustomers: 50,
+      })
+
+      await expect(service.changePlan(mockWorkspaceId, "BASIC")).rejects.toThrow(
+        "Cannot downgrade to BASIC: Too many products: 80/50"
+      )
+    })
+
+    it("should upgrade from BASIC to PREMIUM", async () => {
+      mockRepository.getWorkspaceBilling.mockResolvedValue({
+        ...mockBillingData,
+        planType: "BASIC",
+        creditBalance: 100,
+      })
+      
+      mockPrisma.planConfiguration.findUnique.mockResolvedValue({
+        displayName: "Premium",
+        monthlyFee: 59,
+      })
+      
+      mockRepository.upgradePlan.mockResolvedValue({
+        nextBillingDate: new Date(),
+      })
+      
+      mockPrisma.billingTransaction.create.mockResolvedValue({ id: "tx-upgrade" })
+
+      const result = await service.changePlan(mockWorkspaceId, "PREMIUM")
+
+      expect(result.success).toBe(true)
+      expect(result.isDowngrade).toBe(false)
+      expect(result.newPlan.displayName).toBe("Premium")
+    })
+
+    it("should reject downgrade from PREMIUM to BASIC when too many customers", async () => {
+      mockRepository.getWorkspaceBilling.mockResolvedValue({
+        ...mockBillingData,
+        planType: "PREMIUM",
+      })
+      
+      mockRepository.getWorkspaceUsage.mockResolvedValue({
+        productsCount: 30,
+        customersCount: 80,  // Over BASIC limit of 50
+        channelsCount: 1,
+      })
+      
+      mockPrisma.planConfiguration.findUnique.mockResolvedValue({
+        displayName: "Basic",
+        monthlyFee: 29,
+        maxChannels: 1,
+        maxProducts: 50,
+        maxCustomers: 50,
+      })
+
+      await expect(service.changePlan(mockWorkspaceId, "BASIC")).rejects.toThrow(
+        "Cannot downgrade to BASIC: Too many customers: 80/50"
+      )
+    })
+
+    it("should reject downgrade from PREMIUM to BASIC when too many channels", async () => {
+      mockRepository.getWorkspaceBilling.mockResolvedValue({
+        ...mockBillingData,
+        planType: "PREMIUM",
+      })
+      
+      mockRepository.getWorkspaceUsage.mockResolvedValue({
+        productsCount: 30,
+        customersCount: 30,
+        channelsCount: 2,  // Over BASIC limit of 1
+      })
+      
+      mockPrisma.planConfiguration.findUnique.mockResolvedValue({
+        displayName: "Basic",
+        monthlyFee: 29,
+        maxChannels: 1,
+        maxProducts: 50,
+        maxCustomers: 50,
+      })
+
+      await expect(service.changePlan(mockWorkspaceId, "BASIC")).rejects.toThrow(
+        "Cannot downgrade to BASIC: Too many channels: 2/1"
+      )
+    })
+
+    it("should reject downgrade with multiple limit violations", async () => {
+      mockRepository.getWorkspaceBilling.mockResolvedValue({
+        ...mockBillingData,
+        planType: "ENTERPRISE",
+      })
+      
+      mockRepository.getWorkspaceUsage.mockResolvedValue({
+        productsCount: 200,  // Over BASIC limit of 50
+        customersCount: 150, // Over BASIC limit of 50
+        channelsCount: 5,    // Over BASIC limit of 1
+      })
+      
+      mockPrisma.planConfiguration.findUnique.mockResolvedValue({
+        displayName: "Basic",
+        monthlyFee: 29,
+        maxChannels: 1,
+        maxProducts: 50,
+        maxCustomers: 50,
+      })
+
+      await expect(service.changePlan(mockWorkspaceId, "BASIC")).rejects.toThrow(
+        /Cannot downgrade to BASIC:.*Too many products.*Too many customers.*Too many channels/
+      )
+    })
+
+    it("should allow downgrade from PREMIUM to BASIC when exactly at limits", async () => {
+      mockRepository.getWorkspaceBilling.mockResolvedValue({
+        ...mockBillingData,
+        planType: "PREMIUM",
+        creditBalance: 100,
+      })
+      
+      mockRepository.getWorkspaceUsage.mockResolvedValue({
+        productsCount: 50,  // Exactly at BASIC limit
+        customersCount: 50, // Exactly at BASIC limit
+        channelsCount: 1,   // Exactly at BASIC limit
+      })
+      
+      mockPrisma.planConfiguration.findUnique.mockResolvedValue({
+        displayName: "Basic",
+        monthlyFee: 29,
+        maxChannels: 1,
+        maxProducts: 50,
+        maxCustomers: 50,
+      })
+      
+      mockRepository.upgradePlan.mockResolvedValue({
+        nextBillingDate: new Date(),
+      })
+      
+      mockPrisma.billingTransaction.create.mockResolvedValue({ id: "tx-downgrade" })
+
+      const result = await service.changePlan(mockWorkspaceId, "BASIC")
+
+      expect(result.success).toBe(true)
+      expect(result.isDowngrade).toBe(true)
+      expect(result.newPlan.displayName).toBe("Basic")
+      expect(result.newPlan.monthlyFee).toBe(29)
+    })
+
+    it("should allow downgrade from ENTERPRISE to BASIC when usage is minimal", async () => {
+      mockRepository.getWorkspaceBilling.mockResolvedValue({
+        ...mockBillingData,
+        planType: "ENTERPRISE",
+        creditBalance: 500,
+      })
+      
+      mockRepository.getWorkspaceUsage.mockResolvedValue({
+        productsCount: 10,
+        customersCount: 5,
+        channelsCount: 1,
+      })
+      
+      mockPrisma.planConfiguration.findUnique.mockResolvedValue({
+        displayName: "Basic",
+        monthlyFee: 29,
+        maxChannels: 1,
+        maxProducts: 50,
+        maxCustomers: 50,
+      })
+      
+      mockRepository.upgradePlan.mockResolvedValue({
+        nextBillingDate: new Date(),
+      })
+      
+      mockPrisma.billingTransaction.create.mockResolvedValue({ id: "tx-downgrade" })
+
+      const result = await service.changePlan(mockWorkspaceId, "BASIC")
+
+      expect(result.success).toBe(true)
+      expect(result.isDowngrade).toBe(true)
+      expect(result.newPlan.displayName).toBe("Basic")
+    })
+
+    it("should log downgrade transaction with correct description", async () => {
+      mockRepository.getWorkspaceBilling.mockResolvedValue({
+        ...mockBillingData,
+        planType: "PREMIUM",
+        creditBalance: 100,
+      })
+      
+      mockRepository.getWorkspaceUsage.mockResolvedValue({
+        productsCount: 20,
+        customersCount: 20,
+        channelsCount: 1,
+      })
+      
+      mockPrisma.planConfiguration.findUnique.mockResolvedValue({
+        displayName: "Basic",
+        monthlyFee: 29,
+        maxChannels: 1,
+        maxProducts: 50,
+        maxCustomers: 50,
+      })
+      
+      mockRepository.upgradePlan.mockResolvedValue({
+        nextBillingDate: new Date("2025-12-26"),
+      })
+      
+      mockPrisma.billingTransaction.create.mockResolvedValue({ id: "tx-downgrade" })
+
+      await service.changePlan(mockWorkspaceId, "BASIC")
+
+      expect(mockPrisma.billingTransaction.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          workspaceId: mockWorkspaceId,
+          type: "UPGRADE_FEE",
+          amount: 0,
+          description: expect.stringContaining("Downgrade a Basic"),
+        }),
+      })
+    })
+  })
+
   describe("checkPlanLimits", () => {
     // =========================================================================
     // PRODUCTS LIMIT TESTS
@@ -578,7 +864,7 @@ describe("SubscriptionBillingService", () => {
         { planType: "FREE_TRIAL", displayName: "Free Trial", monthlyFee: 0, maxChannels: 1, maxProducts: 50, maxCustomers: 50, messageCost: 0.1, orderCost: 1, pushCost: 1, features: '["Feature 1"]' },
         { planType: "BASIC", displayName: "Basic", monthlyFee: 29, maxChannels: 1, maxProducts: 50, maxCustomers: 50, messageCost: 0.1, orderCost: 1, pushCost: 1, features: '["Feature 1"]' },
         { planType: "PREMIUM", displayName: "Premium", monthlyFee: 59, maxChannels: 2, maxProducts: 100, maxCustomers: 100, messageCost: 0.1, orderCost: 1, pushCost: 1, features: '["Feature 1"]' },
-        { planType: "ENTERPRISE", displayName: "Enterprise", monthlyFee: 199, maxChannels: 999, maxProducts: 9999, maxCustomers: 9999, messageCost: 0.08, orderCost: 0.8, pushCost: 0.8, features: '["Feature 1"]' },
+        { planType: "ENTERPRISE", displayName: "Enterprise", monthlyFee: 149, maxChannels: 999, maxProducts: 9999, maxCustomers: 9999, messageCost: 0.08, orderCost: 0.8, pushCost: 0.8, features: '["Feature 1"]' },
       ]
       mockRepository.getAllPlanConfigurations.mockResolvedValue(plans)
 

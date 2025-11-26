@@ -432,6 +432,106 @@ export class SubscriptionBillingController {
   }
 
   /**
+   * POST /billing/change-plan
+   * Change workspace plan (upgrade or downgrade)
+   * For downgrade: validates current usage fits within target plan limits
+   * OWNER-ONLY
+   *
+   * @swagger
+   * /api/workspaces/{workspaceId}/billing/change-plan:
+   *   post:
+   *     summary: Change workspace plan (upgrade or downgrade)
+   *     tags: [Billing]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: workspaceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               planType:
+   *                 type: string
+   *                 enum: [BASIC, PREMIUM, ENTERPRISE]
+   *     responses:
+   *       200:
+   *         description: Plan changed successfully
+   *       400:
+   *         description: Invalid plan or usage exceeds target plan limits
+   */
+  changePlan = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const workspaceId = (req as any).workspaceId || req.params.workspaceId
+      const { planType } = req.body
+
+      if (!workspaceId) {
+        res.status(400).json({ error: "Workspace ID required" })
+        return
+      }
+
+      // Validate plan type
+      const validPlans = ["BASIC", "PREMIUM", "ENTERPRISE"]
+      if (!planType || !validPlans.includes(planType)) {
+        res.status(400).json({
+          error: "Piano non valido",
+          code: "INVALID_PLAN",
+          validPlans,
+        })
+        return
+      }
+
+      const result = await this.billingService.changePlan(
+        workspaceId,
+        planType
+      )
+
+      const action = result.isDowngrade ? "Downgrade" : "Upgrade"
+      logger.info(
+        `[BILLING] ${result.isDowngrade ? "📉" : "📈"} Plan changed to ${planType} (workspace: ${workspaceId})`
+      )
+
+      res.json({
+        success: true,
+        message: `${action} a ${result.newPlan.displayName} completato!`,
+        data: {
+          newPlan: result.newPlan,
+          nextBillingDate: result.nextBillingDate,
+          isDowngrade: result.isDowngrade,
+        },
+      })
+    } catch (error) {
+      logger.error("[BILLING] Error changing plan:", error)
+
+      // Handle specific errors
+      if (error instanceof Error) {
+        if (
+          error.message.includes("Cannot downgrade") ||
+          error.message.includes("Cannot change to Free Trial") ||
+          error.message.includes("Already on")
+        ) {
+          res.status(400).json({
+            error: error.message,
+            code: "INVALID_PLAN_CHANGE",
+          })
+          return
+        }
+      }
+
+      res.status(500).json({
+        error: "Errore cambio piano",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
+  /**
    * GET /billing/plans
    * Get all available plans (public endpoint for plan comparison)
    *
