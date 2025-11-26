@@ -173,6 +173,62 @@ async function handleNewUserWelcomeFlow(
       return true
     }
 
+    // 💰 BILLING CHECK: Verify credit and plan limits BEFORE processing new user
+    const { SubscriptionBillingService } = await import(
+      "../../application/services/subscription-billing.service"
+    )
+    const billingService = new SubscriptionBillingService(prisma)
+
+    // Check trial validity first
+    const trialStatus = await billingService.isTrialValid(workspaceId)
+    if (trialStatus.isTrialPlan && !trialStatus.isValid) {
+      logger.warn(`💰 ${format}: Trial expired - SILENT BLOCK for new user`, {
+        workspaceId,
+        phoneNumber,
+      })
+      res.status(402).json({
+        status: "billing_error",
+        code: "TRIAL_EXPIRED",
+        message: "Trial period has expired.",
+      })
+      return true
+    }
+
+    // Check credit balance
+    const messageCost = await billingService.getOperationCost(workspaceId, "message")
+    const creditCheck = await billingService.checkCredit(workspaceId, messageCost)
+
+    if (!creditCheck.hasSufficientCredit) {
+      logger.warn(`💰 ${format}: Insufficient credit - SILENT BLOCK for new user`, {
+        workspaceId,
+        phoneNumber,
+        currentBalance: creditCheck.currentBalance,
+      })
+      res.status(402).json({
+        status: "billing_error",
+        code: "INSUFFICIENT_CREDIT",
+        message: "Insufficient credit.",
+      })
+      return true
+    }
+
+    // Check customer limit
+    const customerLimitCheck = await billingService.checkPlanLimits(workspaceId, "customers")
+    if (!customerLimitCheck.withinLimits) {
+      logger.warn(`📊 ${format}: Customer limit reached - SILENT BLOCK for new user`, {
+        workspaceId,
+        phoneNumber,
+        current: customerLimitCheck.current,
+        max: customerLimitCheck.max,
+      })
+      res.status(403).json({
+        status: "limit_reached",
+        code: "CUSTOMER_LIMIT_REACHED",
+        message: `Customer limit reached (${customerLimitCheck.current}/${customerLimitCheck.max}).`,
+      })
+      return true
+    }
+
     const attempt = await registrationAttemptsService.recordAttempt(
       phoneNumber,
       workspaceId

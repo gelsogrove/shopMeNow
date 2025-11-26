@@ -489,34 +489,4 @@ export class RegistrationController {
       )
     }
   }
-
-  /**
-   * Track registration cost using BillingService
-   * NEW_CUSTOMER billing (€1.00) is tracked immediately when user registers
-   */
-  private async trackRegistrationCost(
-    workspaceId: string,
-    customerId: string
-  ): Promise<void> {
-    try {
-      const { BillingService } = await import(
-        "../../../application/services/billing.service"
-      )
-      const { PrismaClient } = await import("@prisma/client")
-      const prisma = new PrismaClient()
-      const billingService = new BillingService(prisma)
-
-      // 💰 BILLING: Track NEW_CUSTOMER when user registers (€1.00)
-      await billingService.trackNewCustomer(workspaceId, customerId)
-      logger.info(
-        `[BILLING] 💰 New customer registered: €1.00 charged for customer-${customerId}`
-      )
-    } catch (error) {
-      logger.error(
-        `[BILLING] ❌ Failed to track new customer billing for customer ${customerId}:`,
-        error
-      )
-      // Don't fail registration if billing fails
-    }
-  }
 }

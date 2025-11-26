@@ -73,7 +73,7 @@ export default function Verify2FAPage() {
         code,
       })
       
-      const { token, user } = response.data
+      const { token, sessionId, user } = response.data
       
       // 🛡️ CRITICAL SECURITY: Clear ALL storage before saving new credentials
       logger.info('🧹 [Verify2FA] Clearing ALL storage (localStorage + sessionStorage)')
@@ -85,6 +85,12 @@ export default function Verify2FAPage() {
       if (token) {
         localStorage.setItem('token', token)
         logger.info('✅ JWT token saved to localStorage')
+      }
+
+      // 🆕 Store sessionId for x-session-id header
+      if (sessionId) {
+        sessionStorage.setItem('sessionId', sessionId)
+        logger.info('✅ SessionId saved to sessionStorage')
       }
       
       localStorage.setItem('user', JSON.stringify(user))
@@ -135,7 +141,7 @@ export default function Verify2FAPage() {
         code,
       })
       
-      const { token, user, newRecoveryCode } = response.data
+      const { token, sessionId, user, newRecoveryCode } = response.data
       
       // 🛡️ CRITICAL SECURITY: Clear ALL storage before saving new credentials
       logger.info('🧹 [Verify2FA Recovery] Clearing ALL storage (localStorage + sessionStorage)')
@@ -147,6 +153,12 @@ export default function Verify2FAPage() {
       if (token) {
         localStorage.setItem('token', token)
         logger.info('✅ JWT token saved to localStorage')
+      }
+
+      // 🆕 Store sessionId for x-session-id header
+      if (sessionId) {
+        sessionStorage.setItem('sessionId', sessionId)
+        logger.info('✅ SessionId saved to sessionStorage')
       }
       
       localStorage.setItem('user', JSON.stringify(user))

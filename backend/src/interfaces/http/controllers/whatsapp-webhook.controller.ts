@@ -339,12 +339,77 @@ export class WhatsAppWebhookController {
           return
         }
 
-        // ✅ STEP 3: User not blocked - send welcome message (attemptCount <= 3)
+        // ✅ STEP 3: User not blocked - check billing before sending welcome message
+        
+        // 💰 BILLING CHECK: Verify credit and plan limits BEFORE creating customer
+        const { SubscriptionBillingService } = await import(
+          "../../../application/services/subscription-billing.service"
+        )
+        const billingService = new SubscriptionBillingService(prisma)
+
+        // Check trial validity first
+        const trialStatus = await billingService.isTrialValid(workspaceId)
+        if (trialStatus.isTrialPlan && !trialStatus.isValid) {
+          logger.warn("[WEBHOOK] 💰 Trial expired - SILENT BLOCK for new user (no save, no response)", {
+            workspaceId,
+            phoneNumber,
+          })
+          // 🚨 CRITICAL: DO NOT create customer, DO NOT respond - completely silent
+          res.status(402).json({
+            status: "billing_error",
+            code: "TRIAL_EXPIRED",
+            message: "Trial period has expired. Please upgrade your plan.",
+          })
+          return
+        }
+
+        // Check credit balance
+        const messageCost = await billingService.getOperationCost(workspaceId, "message")
+        const creditCheck = await billingService.checkCredit(workspaceId, messageCost)
+
+        if (!creditCheck.hasSufficientCredit) {
+          logger.warn("[WEBHOOK] 💰 Insufficient credit - SILENT BLOCK for new user (no save, no response)", {
+            workspaceId,
+            phoneNumber,
+            currentBalance: creditCheck.currentBalance,
+            requiredAmount: messageCost,
+          })
+          // 🚨 CRITICAL: DO NOT create customer, DO NOT respond - completely silent
+          res.status(402).json({
+            status: "billing_error",
+            code: "INSUFFICIENT_CREDIT",
+            message: "Insufficient credit. Please recharge your account.",
+          })
+          return
+        }
+
+        // Check customer limit (50 for FREE_TRIAL/BASIC, 100 for PREMIUM)
+        const customerLimitCheck = await billingService.checkPlanLimits(workspaceId, "customers")
+        if (!customerLimitCheck.withinLimits) {
+          logger.warn("[WEBHOOK] 📊 Customer limit reached - SILENT BLOCK for new user (no save, no response)", {
+            workspaceId,
+            phoneNumber,
+            current: customerLimitCheck.current,
+            max: customerLimitCheck.max,
+          })
+          // 🚨 CRITICAL: DO NOT create customer, DO NOT respond - completely silent
+          // The 51st (or 101st for PREMIUM) customer will never be saved
+          res.status(403).json({
+            status: "limit_reached",
+            code: "CUSTOMER_LIMIT_REACHED",
+            message: `Customer limit reached (${customerLimitCheck.current}/${customerLimitCheck.max}). Please upgrade your plan.`,
+          })
+          return
+        }
+
         logger.info(
-          "[WEBHOOK] 📨 Sending welcome message",
+          "[WEBHOOK] 📨 Billing checks passed - sending welcome message",
           {
             phoneNumber,
             attemptCount: registrationAttempt.attemptCount,
+            creditBalance: creditCheck.currentBalance,
+            customersUsed: customerLimitCheck.current,
+            customersMax: customerLimitCheck.max,
           }
         )
 
@@ -716,6 +781,56 @@ export class WhatsAppWebhookController {
         })
       }
 
+      // 💰 BILLING CHECK: Verify credit before processing with LLM
+      const { SubscriptionBillingService } = await import(
+        "../../../application/services/subscription-billing.service"
+      )
+      const billingService = new SubscriptionBillingService(prisma)
+
+      // Check trial validity first
+      const trialStatus = await billingService.isTrialValid(customer.workspaceId)
+      if (trialStatus.isTrialPlan && !trialStatus.isValid) {
+        logger.warn("[WEBHOOK] 💰 Trial expired - SILENT BLOCK (no save, no response)", {
+          workspaceId: customer.workspaceId,
+          customerId: customer.id,
+        })
+
+        // 🚨 CRITICAL: DO NOT save message, DO NOT respond - completely silent
+        // Customer won't see any response, message won't appear in history
+        res.status(402).json({
+          status: "billing_error",
+          code: "TRIAL_EXPIRED",
+          message: "Trial period has expired. Please upgrade your plan.",
+        })
+        return
+      }
+
+      // Check credit balance
+      const messageCost = await billingService.getOperationCost(customer.workspaceId, "message")
+      const creditCheck = await billingService.checkCredit(customer.workspaceId, messageCost)
+
+      if (!creditCheck.hasSufficientCredit) {
+        logger.warn("[WEBHOOK] 💰 Insufficient credit - SILENT BLOCK (no save, no response)", {
+          workspaceId: customer.workspaceId,
+          customerId: customer.id,
+          currentBalance: creditCheck.currentBalance,
+          requiredAmount: messageCost,
+        })
+
+        // 🚨 CRITICAL: DO NOT save message, DO NOT respond - completely silent
+        // Chatbot remains "mute" - no history, no LLM processing, nothing
+        res.status(402).json({
+          status: "billing_error",
+          code: "INSUFFICIENT_CREDIT",
+          message: "Insufficient credit. Please recharge your account.",
+          details: {
+            currentBalance: creditCheck.currentBalance,
+            requiredAmount: messageCost,
+          },
+        })
+        return
+      }
+
       // 🤖 Process with LLMRouterService (NEW - replaces placeholder Echo)
       logger.info("[WEBHOOK] 🎯 Calling LLMRouterService", {
         customerId: customer.id,
@@ -770,6 +885,29 @@ export class WhatsAppWebhookController {
       // })
       //
       // For now: Just return success - message processing completed
+
+      // 💰 BILLING: Deduct credit for successful message processing
+      try {
+        const deductResult = await billingService.deductMessageCredit(
+          customer.workspaceId,
+          whatsappMessageId
+        )
+        if (deductResult.success) {
+          logger.info("[WEBHOOK] 💰 Credit deducted for message", {
+            workspaceId: customer.workspaceId,
+            newBalance: deductResult.newBalance,
+            messageId: whatsappMessageId,
+          })
+        } else {
+          logger.warn("[WEBHOOK] ⚠️ Failed to deduct credit (non-blocking)", {
+            workspaceId: customer.workspaceId,
+            error: deductResult.error,
+          })
+        }
+      } catch (billingError) {
+        // Don't block the response if billing fails - just log it
+        logger.error("[WEBHOOK] ⚠️ Billing error (non-blocking):", billingError)
+      }
 
       logger.info("[WEBHOOK] ✅ Message processed successfully", {
         customerId: customer.id,

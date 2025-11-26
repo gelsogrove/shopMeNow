@@ -54,6 +54,7 @@ async function main() {
   await prisma.campaignSent.deleteMany()
   await prisma.campaign.deleteMany()
   await prisma.billing.deleteMany()
+  await prisma.billingTransaction.deleteMany() // ✅ Feature 185: Billing transactions
   await prisma.usage.deleteMany()
   await prisma.adminSession.deleteMany()
   await prisma.shortUrls.deleteMany()
@@ -92,6 +93,9 @@ async function main() {
   await prisma.workspaceInvitation.deleteMany() // Must delete before users (foreign key)
   await prisma.userWorkspace.deleteMany()
   await prisma.user.deleteMany()
+
+  // ✅ Feature 185: Delete plan configurations before workspace
+  await prisma.planConfiguration.deleteMany()
 
   // Finally delete workspace
   await prisma.workspace.deleteMany()
@@ -163,6 +167,11 @@ async function main() {
         workspaceSettings.afterRegistrationMessages
       ),
       ownerId: adminUser.id, // ✅ Feature 184: Set workspace owner for team management
+      // ✅ Feature 185: Subscription & Billing - Start with FREE_TRIAL
+      planType: "FREE_TRIAL",
+      creditBalance: 29.0, // €29 initial credit
+      trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days from now
+      planStartedAt: new Date(),
     },
   })
 
@@ -1616,6 +1625,124 @@ async function main() {
   } else {
     console.log("⚠️  Not enough customers to create queue messages")
   }
+
+  // ============================================================================
+  // 🆕 Feature 185: Create Plan Configurations
+  // ============================================================================
+  console.log("\n💳 Creating plan configurations...")
+
+  const planConfigurations = [
+    {
+      planType: "FREE_TRIAL" as const,
+      displayName: "Free Trial",
+      monthlyFee: 0,
+      maxChannels: 1,
+      maxProducts: 50,
+      maxCustomers: 50,
+      messageCost: 0.10,
+      orderCost: 1.00,
+      pushCost: 1.00,
+      lowBalanceThreshold: 5.00,
+      trialDays: 14,
+      initialCredit: 29.00,
+      features: JSON.stringify([
+        "14 giorni di prova gratuita",
+        "€29 di credito iniziale",
+        "1 canale WhatsApp",
+        "50 prodotti",
+        "50 clienti",
+      ]),
+    },
+    {
+      planType: "BASIC" as const,
+      displayName: "Basic",
+      monthlyFee: 29.00,
+      maxChannels: 1,
+      maxProducts: 50,
+      maxCustomers: 50,
+      messageCost: 0.10,
+      orderCost: 1.00,
+      pushCost: 1.00,
+      lowBalanceThreshold: 5.00,
+      trialDays: 0,
+      initialCredit: 0,
+      features: JSON.stringify([
+        "1 canale WhatsApp",
+        "50 prodotti",
+        "50 clienti",
+        "Multi-language support",
+        "Analytics dashboard",
+      ]),
+    },
+    {
+      planType: "PREMIUM" as const,
+      displayName: "Premium",
+      monthlyFee: 59.00,
+      maxChannels: 2,
+      maxProducts: 100,
+      maxCustomers: 100,
+      messageCost: 0.10,
+      orderCost: 1.00,
+      pushCost: 1.00,
+      lowBalanceThreshold: 5.00,
+      trialDays: 0,
+      initialCredit: 0,
+      features: JSON.stringify([
+        "2 canali WhatsApp",
+        "100 prodotti",
+        "100 clienti",
+        "Multi-language support",
+        "Analytics avanzati",
+        "Brand customization",
+        "Priority support",
+      ]),
+    },
+    {
+      planType: "ENTERPRISE" as const,
+      displayName: "Enterprise",
+      monthlyFee: 199.00, // Base price, actual is custom
+      maxChannels: 999, // Unlimited
+      maxProducts: 9999, // Unlimited
+      maxCustomers: 9999, // Unlimited
+      messageCost: 0.08, // Volume discount
+      orderCost: 0.80, // Volume discount
+      pushCost: 0.80, // Volume discount
+      lowBalanceThreshold: 10.00,
+      trialDays: 0,
+      initialCredit: 0,
+      features: JSON.stringify([
+        "Canali illimitati",
+        "Prodotti illimitati",
+        "Clienti illimitati",
+        "Sconti volume sui costi",
+        "Server dedicato",
+        "CRM integrato",
+        "Support 24/7",
+        "Account manager dedicato",
+      ]),
+    },
+  ]
+
+  for (const plan of planConfigurations) {
+    await prisma.planConfiguration.create({
+      data: plan,
+    })
+  }
+
+  console.log(`✅ Created ${planConfigurations.length} plan configurations`)
+
+  // Create initial billing transaction for FREE_TRIAL credit
+  await prisma.billingTransaction.create({
+    data: {
+      workspaceId: workspace.id,
+      type: "INITIAL_CREDIT",
+      amount: 29.00,
+      balanceAfter: 29.00,
+      description: "Credito iniziale Free Trial",
+    },
+  })
+
+  console.log("✅ Created initial billing transaction (+€29 trial credit)")
 
   console.log(`\n✅ Ready to use!`)
 }

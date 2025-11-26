@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { TeamMembersTable } from "@/components/workspace/TeamMembersTable"
+import { BillingSection } from "@/components/billing/BillingSection"
 import type { Workspace } from "@/hooks/use-workspace"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
@@ -220,8 +221,8 @@ export function WorkspaceSelectionPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
-        {/* 🆕 LOGOUT BUTTON - Top Right */}
-        <div className="flex justify-end mb-4">
+        {/* Header with Logout */}
+        <div className="flex justify-end items-center mb-4">
           <Button
             onClick={handleLogout}
             variant="outline"
@@ -316,9 +317,9 @@ export function WorkspaceSelectionPage() {
             </Card>
           ))}
 
-          {/* Card per aggiungere un nuovo workspace - ONLY for SUPER_ADMIN (Owner) */}
-          {/* Only show if role is loaded AND user is SUPER_ADMIN */}
-          {!isRoleLoading && isSuperAdmin && (
+          {/* Card per aggiungere un nuovo workspace - ONLY for SUPER_ADMIN (Owner) OR when user has no workspaces */}
+          {/* Show if: user has no workspaces (first-time owner) OR user is SUPER_ADMIN */}
+          {!isRoleLoading && (workspaces.length === 0 || isSuperAdmin) && (
             <Card
               className="hover:shadow-md transition-shadow cursor-pointer border border-dashed flex flex-col items-center justify-center h-full"
               onClick={() => {
@@ -406,6 +407,14 @@ export function WorkspaceSelectionPage() {
             workspaceId={firstWorkspaceId}
             isSuperAdmin={isSuperAdmin}
           />
+        )}
+
+        {/* Subscription & Billing Section - ONLY for Owner (SUPER_ADMIN) */}
+        {firstWorkspaceId && !isRoleLoading && isSuperAdmin && (
+          <div className="mt-8">
+            <h2 className="text-xl font-bold mb-4 text-green-600">Subscription & Billing</h2>
+            <BillingSection workspaceId={firstWorkspaceId} />
+          </div>
         )}
       </div>
     </div>

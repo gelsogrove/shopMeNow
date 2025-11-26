@@ -78,10 +78,10 @@ export default function Setup2FAPage() {
         code: verificationCode,
       })
       
-      const { recoveryCodes: codes, token, user } = response.data
+      const { recoveryCodes: codes, token, sessionId, user } = response.data
       
       // Save token for authentication (JWT-only)
-      logger.info('🔐 [Setup2FA] verify-2fa-setup response:', { token, user })
+      logger.info('🔐 [Setup2FA] verify-2fa-setup response:', { token, sessionId, user })
       
       if (!token) {
         logger.error('❌ [Setup2FA] CRITICAL: Backend did not return token!')
@@ -96,9 +96,15 @@ export default function Setup2FAPage() {
       sessionStorage.clear()
       logger.info('✅ [Setup2FA] Storage cleared completely')
       
-      // Save new authentication data (ONLY token - no sessionId)
+      // Save new authentication data
       localStorage.setItem('token', token)
       logger.info(`✅ [Setup2FA] NEW token saved`)
+
+      // 🆕 Save sessionId for x-session-id header
+      if (sessionId) {
+        sessionStorage.setItem('sessionId', sessionId)
+        logger.info(`✅ [Setup2FA] SessionId saved`)
+      }
       
       // Verify immediately that the token was saved correctly
       const savedToken = localStorage.getItem('token')

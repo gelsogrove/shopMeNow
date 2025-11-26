@@ -173,25 +173,8 @@ export class OrderService {
 
       const createdOrder = await this.orderRepository.create(order)
 
-      // 💰 BILLING: If order is created as CONFIRMED, track NEW_ORDER billing (€1.00)
+      // If order is created as CONFIRMED, send email notification
       if (createdOrder.status === OrderStatus.CONFIRMED) {
-        try {
-          await this.billingService.trackNewOrder(
-            createdOrder.workspaceId,
-            createdOrder.customerId,
-            `Order ${createdOrder.orderCode} confirmed at creation`
-          )
-          logger.info(
-            `[BILLING] 💰 New order created as CONFIRMED: €1.00 charged for order ${createdOrder.orderCode} (customer: ${createdOrder.customerId})`
-          )
-        } catch (billingError) {
-          logger.error(
-            `[BILLING] ❌ Failed to track new order billing for order ${createdOrder.id}:`,
-            billingError
-          )
-          // Don't fail the order creation if billing fails
-        }
-
         // 📧 SEND EMAIL TO CUSTOMER with order confirmation
         try {
           const { EmailService } = require("./email.service")
@@ -436,36 +419,6 @@ ${workspace?.name || "ShopMe"}
       // Handle stock management and notifications
       if (updatedOrder) {
         await this.stockService.handleOrderStatusChange(id, oldStatus, status)
-
-        // 💰 BILLING: Track NEW_ORDER when status becomes CONFIRMED (€1.00)
-        if (
-          status === OrderStatus.CONFIRMED &&
-          oldStatus !== OrderStatus.CONFIRMED
-        ) {
-          try {
-            const customerId = updatedOrder.customerId
-            if (customerId) {
-              await this.billingService.trackNewOrder(
-                workspaceId,
-                customerId,
-                `Order ${updatedOrder.orderCode} confirmed`
-              )
-              logger.info(
-                `[BILLING] 💰 New order confirmed: €1.00 charged for order ${updatedOrder.orderCode} (customer: ${customerId})`
-              )
-            } else {
-              logger.warn(
-                `[BILLING] ⚠️ Cannot track order billing: no customer ID for order ${updatedOrder.orderCode}`
-              )
-            }
-          } catch (billingError) {
-            logger.error(
-              `[BILLING] ❌ Failed to track new order billing for order ${id}:`,
-              billingError
-            )
-            // Don't fail the order status update if billing fails
-          }
-        }
       }
 
       return updatedOrder

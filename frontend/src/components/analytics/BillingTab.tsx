@@ -20,8 +20,6 @@ import React, { useEffect, useState } from "react"
 const BILLING_TYPE_LABELS: Record<string, string> = {
   MONTHLY_CHANNEL: "Monthly Subscription",
   MESSAGE: "Messages",
-  NEW_CUSTOMER: "New Customers",
-  NEW_ORDER: "New Orders",
   HUMAN_SUPPORT: "Human Support",
   PUSH_CAMPAIGN: "Push Notifications",
 }
@@ -29,8 +27,6 @@ const BILLING_TYPE_LABELS: Record<string, string> = {
 const BILLING_TYPE_COLORS: Record<string, string> = {
   MONTHLY_CHANNEL: "text-purple-600 bg-purple-50",
   MESSAGE: "text-blue-600 bg-blue-50",
-  NEW_CUSTOMER: "text-green-600 bg-green-50",
-  NEW_ORDER: "text-orange-600 bg-orange-50",
   HUMAN_SUPPORT: "text-red-600 bg-red-50",
   PUSH_CAMPAIGN: "text-pink-600 bg-pink-50",
 }
@@ -420,8 +416,8 @@ export function BillingTab() {
                                   key: "MONTHLY_CHANNEL",
                                   label: "Subscription",
                                 },
-                                { key: "NEW_ORDER", label: "Orders" },
-                                { key: "MESSAGE", label: "Push message" },
+                                { key: "MESSAGE", label: "Messages" },
+                                { key: "PUSH_CAMPAIGN", label: "Push" },
                                 { key: "HUMAN_SUPPORT", label: "Human Supp." },
                               ].map(({ key, label }) => (
                                 <span

@@ -38,6 +38,14 @@ model Workspace {
   ownerId                   String?
   owner                     User?             @relation("OwnedWorkspaces", fields: [ownerId], references: [id])
   
+  // Subscription & Billing fields
+  planType                  PlanType          @default(FREE_TRIAL)
+  creditBalance             Decimal           @default(29.00) @db.Decimal(10, 2)
+  trialEndsAt               DateTime?
+  planStartedAt             DateTime          @default(now())
+  nextBillingDate           DateTime?
+  lowBalanceNotifiedAt      DateTime?         // Last time low balance notification was sent
+  
   users                     UserWorkspace[]
   invitations               WorkspaceInvitation[]
   agentConfigs              AgentConfig[]
@@ -69,8 +77,10 @@ model Workspace {
   certifications            Certification[]
   transportTypes            TransportType[]
   whatsappQueue             WhatsAppQueue[]
+  billingTransactions       BillingTransaction[]
 
   @@index([ownerId])
+  @@index([planType])
 }
 
 model Categories {
@@ -979,16 +989,84 @@ model ConversationMessage {
   @@map("conversation_messages")
 }
 
+// ============================================================================
+// SUBSCRIPTION & BILLING SYSTEM
+// ============================================================================
+
+enum PlanType {
+  FREE_TRIAL  // 14 days trial with €29 credit
+  BASIC       // €29/month - 1 channel, 50 products, 50 customers
+  PREMIUM     // €59/month - 2 channels, 100 products, 100 customers
+  ENTERPRISE  // Custom pricing - unlimited everything
+}
+
+enum TransactionType {
+  MESSAGE           // -€0.10 per WhatsApp message
+  NEW_ORDER         // -€1.00 per order created
+  PUSH_NOTIFICATION // -€1.00 per push notification
+  RECHARGE          // +€X credit recharge
+  MONTHLY_FEE       // -€29/€59 monthly subscription fee
+  UPGRADE_FEE       // Pro-rata fee when upgrading plan
+  ADJUSTMENT        // Manual adjustment by admin
+  INITIAL_CREDIT    // +€29 initial trial credit
+}
+
+// Transaction history for billing - tracks all credit movements
+model BillingTransaction {
+  id            String          @id @default(cuid())
+  workspaceId   String
+  type          TransactionType
+  amount        Decimal         @db.Decimal(10, 2) // Negative for charges, positive for credits
+  balanceAfter  Decimal         @db.Decimal(10, 2) // Balance after this transaction
+  description   String
+  referenceId   String?         // Order ID, message ID, etc.
+  referenceType String?         // "order", "message", "push", etc.
+  metadata      Json?           // Additional context
+  createdAt     DateTime        @default(now())
+  
+  workspace     Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("billing_transactions")
+}
+
+// Plan configuration - dynamic limits from database
+model PlanConfiguration {
+  id                   String    @id @default(cuid())
+  planType             PlanType  @unique
+  displayName          String    // "Free Trial", "Basic", "Premium", "Enterprise"
+  monthlyFee           Decimal   @db.Decimal(10, 2)
+  maxChannels          Int
+  maxProducts          Int
+  maxCustomers         Int
+  messageCost          Decimal   @db.Decimal(10, 2) // €0.10
+  orderCost            Decimal   @db.Decimal(10, 2) // €1.00
+  pushCost             Decimal   @db.Decimal(10, 2) // €1.00
+  lowBalanceThreshold  Decimal   @db.Decimal(10, 2) // €5.00
+  trialDays            Int       @default(0) // 14 for FREE_TRIAL, 0 for others
+  initialCredit        Decimal   @db.Decimal(10, 2) @default(0) // €29 for FREE_TRIAL
+  features             Json?     // Additional features list
+  isActive             Boolean   @default(true)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([planType])
+  @@index([isActive])
+  @@map("plan_configurations")
+}
+
 enum BillingType {
-  MONTHLY_CHANNEL // €19.00 - Monthly subscription cost
-  MESSAGE // €0.15 - Per message/interaction cost (LLM responses)
-  NEW_CUSTOMER // €1.50 - New customer registration
-  NEW_ORDER // €1.50 - New order placed
-  PUSH_CAMPAIGN // €1.00 - Push notification (advertising campaigns)
+  MONTHLY_CHANNEL // €19.00 - Monthly subscription cost (LEGACY)
+  MESSAGE // €0.15 - Per message/interaction cost (LLM responses) (LEGACY)
+  NEW_CUSTOMER // €1.50 - New customer registration (LEGACY)
+  NEW_ORDER // €1.50 - New order placed (LEGACY)
+  PUSH_CAMPAIGN // €1.00 - Push notification (advertising campaigns) (LEGACY)
   FEEDBACK // No cost - Customer feedback
   ORDER_REVIEW // No cost - Order review
   CAMPAIGN_LINK // No cost - Campaign link click
-  // NOTE: Human Support is FREE - messages during support are already charged at MESSAGE rate
+  // NOTE: Legacy billing - use BillingTransaction for new billing system
 }
 
 enum CampaignFrequency {

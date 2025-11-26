@@ -212,6 +212,18 @@ export class EnhancedAuthController {
       // User MUST create workspace manually after registration
       // This allows users to customize workspace name, phone number, etc.
 
+      // 🔐 CREATE ADMIN SESSION (user is now fully authenticated after 2FA setup)
+      const sessionId = await this.adminSessionService.createSession(
+        user.id,
+        null, // workspaceId: null (will be set after workspace selection)
+        ipAddress,
+        userAgent
+      )
+
+      logger.info(
+        `✅ User ${user.email} completed 2FA setup with sessionId: ${sessionId.substring(0, 8)}...`
+      )
+
       // Generate JWT token (user is now fully authenticated)
       const token = this.generateToken(user)
       
@@ -242,6 +254,7 @@ export class EnhancedAuthController {
         message: '2FA enabled successfully',
         recoveryCodes, // Show recovery codes (only time user sees them)
         token, // JWT token for API calls
+        sessionId, // 🆕 Include sessionId for frontend
         user: {
           id: user.id,
           email: user.email,
@@ -329,6 +342,7 @@ export class EnhancedAuthController {
         valid: true,
         message: 'Verifica 2FA completata con successo',
         token,
+        sessionId, // 🆕 CRITICAL: Include sessionId for frontend to save
         user: {
           id: user.id,
           email: user.email,
@@ -396,6 +410,18 @@ export class EnhancedAuthController {
         metadata: { method: 'recovery_code' },
       })
 
+      // 🔐 CREATE ADMIN SESSION
+      const sessionId = await this.adminSessionService.createSession(
+        user.id,
+        null, // workspaceId: null (will be set after workspace selection)
+        ipAddress,
+        userAgent
+      )
+
+      logger.info(
+        `✅ User ${user.email} logged in via recovery code with sessionId: ${sessionId.substring(0, 8)}...`
+      )
+
       // Generate JWT token
       const token = this.generateToken(user)
 
@@ -403,6 +429,7 @@ export class EnhancedAuthController {
         valid: true, // For compatibility with frontend
         message: 'Codice di recupero accettato',
         token,
+        sessionId, // 🆕 Include sessionId for frontend
         newRecoveryCode: result.newRecoveryCode, // ✅ Return new recovery code to user
         user: {
           id: user.id,

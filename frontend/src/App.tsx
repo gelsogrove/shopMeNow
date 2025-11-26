@@ -35,6 +35,7 @@ import { TermsPage } from "./pages/TermsPage"
 import CategoriesPage from "./pages/products/CategoriesPage"
 import { ProductsPage } from "./pages/ProductsPage"
 import ProfilePage from "./pages/ProfilePage"
+import BillingPage from "./pages/BillingPage"
 import RegistrationSuccess from "./pages/registration-success"
 import { ResetPasswordPage } from "./pages/ResetPasswordPage"
 import SalesPage from "./pages/SalesPage"
@@ -47,6 +48,7 @@ import { SuppliersPage } from "./pages/SuppliersPage"
 import { ProductsPage as SettingsProductsPage } from "./pages/settings/ProductsPage"
 
 import { Suspense, lazy } from "react"
+import { BillingProvider } from "./contexts/BillingContext"
 import { ChatListProvider } from "./contexts/ChatListContext"
 import { CustomerEditProvider } from "./contexts/CustomerEditContext"
 import { WorkspaceProvider } from "./contexts/WorkspaceContext"
@@ -64,10 +66,11 @@ const FeedbackPage = lazy(() => import("./pages/feedback"))
 export function App() {
   return (
     <WorkspaceProvider>
-      <CustomerEditProvider>
-        <ChatProvider>
-          <ChatListProvider>
-            <BrowserRouter>
+      <BillingProvider>
+        <CustomerEditProvider>
+          <ChatProvider>
+            <ChatListProvider>
+              <BrowserRouter>
               <Toaster position="top-right" duration={800} />
               <Routes>
                 {/* Auth Routes - accessibili senza autenticazione */}
@@ -152,6 +155,10 @@ export function App() {
 
                   <Route path="/profile" element={<Layout />}>
                     <Route index element={<ProfilePage />} />
+                  </Route>
+
+                  <Route path="/billing" element={<Layout />}>
+                    <Route index element={<BillingPage />} />
                   </Route>
 
                   <Route path="/settings" element={<Layout />}>
@@ -350,6 +357,7 @@ export function App() {
           </ChatListProvider>
         </ChatProvider>
       </CustomerEditProvider>
+      </BillingProvider>
     </WorkspaceProvider>
   )
 }

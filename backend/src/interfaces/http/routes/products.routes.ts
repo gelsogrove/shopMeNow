@@ -2,6 +2,7 @@ import { Router } from "express"
 import logger from "../../../utils/logger"
 import { ProductController } from "../controllers/product.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"
+import { checkPlanLimits } from "../middlewares/billing.middleware"
 import { handleUploadError, uploadImage } from "../middlewares/uploadMiddleware"
 import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
 
@@ -282,6 +283,7 @@ export default function setupProductRoutes(): Router {
     "/",
     authMiddleware,
     workspaceValidationMiddleware,
+    checkPlanLimits("products"),
     uploadImage.array("images", 10), // Supporto per massimo 10 immagini
     handleUploadError,
     productController.createProduct

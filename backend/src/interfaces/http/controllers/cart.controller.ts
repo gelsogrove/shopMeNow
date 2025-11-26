@@ -1326,26 +1326,6 @@ export class CartController {
         where: { cartId: cart.id },
       })
 
-      // Track complete order cost (from BillingPrices enum)
-      try {
-        await prisma.usage.create({
-          data: {
-            workspaceId: validation.data.workspaceId,
-            clientId: cart.customerId,
-            price: BillingPrices.NEW_ORDER, // Centralized pricing
-          },
-        })
-
-        logger.info(
-          `Order cost tracked: €${BillingPrices.NEW_ORDER.toFixed(2)} for customer ${cart.customerId}`
-        )
-      } catch (error) {
-        logger.error(
-          `Error tracking order cost for customer ${cart.customerId}:`,
-          error
-        )
-      }
-
       // Invalidate token (optional since user might want to create new orders)
       // await this.secureTokenService.invalidateToken(token)
 

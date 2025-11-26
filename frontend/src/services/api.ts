@@ -57,6 +57,13 @@ api.interceptors.request.use(
       logger.warn(`⚠️ No JWT token in localStorage - request may fail authentication`)
     }
 
+    // Add x-session-id header if present in sessionStorage
+    const sessionId = sessionStorage.getItem("sessionId")
+    if (sessionId) {
+      config.headers["x-session-id"] = sessionId
+      logger.info(`🔐 Added x-session-id header`)
+    }
+
     // Add x-workspace-id header if not already present and we have a workspace ID
     if (!config.headers["x-workspace-id"]) {
       const workspaceId = getCurrentWorkspaceId()

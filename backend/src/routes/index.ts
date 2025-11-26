@@ -113,6 +113,10 @@ import supplierRoutes from "../interfaces/http/routes/supplier.routes"
 // System & Config
 import analyticsRoutes from "../interfaces/http/routes/analytics.routes"
 import { billingRouter } from "../interfaces/http/routes/billing.routes"
+import {
+  billingRoutes as subscriptionBillingRoutes,
+  publicBillingRoutes,
+} from "../interfaces/http/routes/subscription-billing.routes"
 import debugRoutes from "../interfaces/http/routes/debug.routes"
 import { createLanguagesRouter } from "../interfaces/http/routes/languages.routes"
 import gdprRoutes from "../interfaces/http/routes/gdpr.routes"
@@ -441,6 +445,7 @@ const SESSION_EXEMPT_ROUTES = [
   "/token/", // TOKEN-BASED routes (NO sessionId required)
   "/analytics", // Analytics routes (JWT-based authentication)
   "/pricing", // PUBLIC pricing configuration endpoint (no auth required)
+  "/subscription/plans", // PUBLIC subscription plans endpoint (Feature 185)
 ]
 
 router.use((req: Request, res: Response, next: NextFunction) => {
@@ -560,6 +565,10 @@ logger.info("⚠️ LEGACY: /registration (use /token/registration instead)")
 // ========================================
 router.use("/pricing", pricingRoutes)
 logger.info("✅ Registered pricing routes (/api/pricing/config)")
+
+// 💳 PUBLIC SUBSCRIPTION PLANS (Feature 185 - No auth required)
+router.use("/subscription", publicBillingRoutes) // GET /api/subscription/plans
+logger.info("✅ Registered PUBLIC subscription plans route (/api/subscription/plans)")
 
 router.use("/auth", authRouter(authController))
 router.use("/session", sessionRoutes)
@@ -703,7 +712,14 @@ router.use("/workspaces/:workspaceId/gdpr", gdprRoutes)
 router.use("/gdpr", gdprRoutes)
 logger.info("Registered GDPR routes (/api/workspaces/:workspaceId/gdpr, /api/gdpr)")
 
-// Mount billing routes
+// Mount subscription billing routes (Feature 185) - WORKSPACE-SCOPED ONLY
+// Note: Public /subscription/plans route is registered earlier in the file
+router.use("/workspaces/:workspaceId/subscription-billing", subscriptionBillingRoutes)
+logger.info(
+  "Registered workspace subscription billing routes: /api/workspaces/:workspaceId/subscription-billing"
+)
+
+// Mount billing routes (legacy usage tracking - has auth middleware that catches all)
 router.use("/billing", billingRouter)
 logger.info("Registered billing routes for usage tracking")
 

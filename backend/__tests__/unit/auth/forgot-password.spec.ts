@@ -194,7 +194,7 @@ describe('Forgot Password / Password Reset', () => {
 
       expect(mockPrisma.passwordReset.update).toHaveBeenCalledWith({
         where: { id: 'token-id-123' },
-        data: { usedAt: new Date() },
+        data: { usedAt: expect.any(Date) },
       })
     })
 

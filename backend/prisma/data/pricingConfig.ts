@@ -71,13 +71,6 @@ export const pricingConfigData = [
   },
   {
     type: "USAGE" as const,
-    key: "NEW_ORDER",
-    value: BillingPrices.NEW_ORDER,
-    description: "Cost per new order completed",
-    isActive: true,
-  },
-  {
-    type: "USAGE" as const,
     key: "PUSH_CAMPAIGN",
     value: BillingPrices.PUSH_CAMPAIGN,
     description: "Cost per push notification sent (promotional messages)",

@@ -17,12 +17,9 @@ export enum BillingPrices {
   // 📤 PUSH MESSAGING COSTS
   PUSH_CHATBOT_REACTIVATED = 0.2, // €0.20 - When admin enables chatbot for customer
   PUSH_DISCOUNT_NOTIFICATION = 0.2, // €0.00 - FREE - Discount update notification
-  PUSH_ORDER_CONFIRMED = 1.0, // €0.00 - FREE - Order confirmation (already in NEW_ORDER cost)
+  PUSH_ORDER_CONFIRMED = 0.0, // €0.00 - FREE - Order confirmation
   PUSH_CAMPAIGN = 1.0, // €1.00 - Marketing campaign message
   PUSH_DEFAULT = 0.2, // €0.20 - Default for other push notifications
-
-  //  ORDER EVENTS
-  NEW_ORDER = 1.0, // €1.00 - Order confirmation (includes order + push notification)
 
   // 🏢 SUBSCRIPTION PLANS (Monthly)
   MONTHLY_CHANNEL_COST = 59.0, // €59.00 - Per WhatsApp channel/month
@@ -65,7 +62,7 @@ export const BillingPricesMetadata: Record<
   },
   PUSH_ORDER_CONFIRMED: {
     name: "Order Confirmed",
-    description: "Order confirmation push (FREE - included in NEW_ORDER)",
+    description: "Order confirmation push (FREE)",
     category: "Push Messaging",
   },
   PUSH_CAMPAIGN: {
@@ -77,13 +74,6 @@ export const BillingPricesMetadata: Record<
     name: "Default Push",
     description: "Default push notification cost",
     category: "Push Messaging",
-  },
-
-  // Order Events
-  NEW_ORDER: {
-    name: "New Order",
-    description: "Order confirmation (includes push notification)",
-    category: "Order Events",
   },
 
   // Subscription Plans

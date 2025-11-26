@@ -1,13 +1,19 @@
+import { PrismaClient } from "@prisma/client"
 import { NextFunction, Request, Response } from "express"
+import { SubscriptionBillingService } from "../../../application/services/subscription-billing.service"
 import { WorkspaceService } from "../../../application/services/workspace.service"
 import { workspaceMemberService } from "../../../application/services/workspace-member.service"
 import logger from "../../../utils/logger"
 
+const prisma = new PrismaClient()
+
 export class WorkspaceController {
   private workspaceService: WorkspaceService
+  private billingService: SubscriptionBillingService
 
   constructor() {
     this.workspaceService = new WorkspaceService()
+    this.billingService = new SubscriptionBillingService(prisma)
   }
 
   /**
@@ -161,6 +167,25 @@ export class WorkspaceController {
           error: "Not authorized to create channels",
           message: reason 
         })
+      }
+
+      // 💰 BILLING CHECK: Verify channels limit (skip for first-time owners with no workspace yet)
+      if (!isFirstTimeOwner) {
+        // Get user's existing workspaces to check limit
+        const existingWorkspaces = await this.workspaceService.getByUserId(userId)
+        if (existingWorkspaces && existingWorkspaces.length > 0) {
+          const firstWorkspaceId = existingWorkspaces[0].id
+          const limitCheck = await this.billingService.checkPlanLimits(firstWorkspaceId, "channels")
+          
+          if (!limitCheck.withinLimits) {
+            logger.warn(`❌ User ${userId} exceeded channels limit: ${limitCheck.current}/${limitCheck.max}`)
+            return res.status(403).json({
+              error: "Plan limit reached",
+              message: `Channel limit reached: ${limitCheck.current}/${limitCheck.max}`,
+              code: "CHANNEL_LIMIT_EXCEEDED",
+            })
+          }
+        }
       }
 
       logger.info(`✅ User ${userId} authorized to create workspace (firstTimeOwner: ${isFirstTimeOwner})`)

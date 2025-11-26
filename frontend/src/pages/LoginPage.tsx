@@ -215,6 +215,14 @@ export function LoginPage() {
           logger.warn("⚠️ No JWT token in login response (cookie-only mode)")
         }
 
+        // 🆕 SAVE SESSION ID for x-session-id header
+        if (response.data.sessionId) {
+          sessionStorage.setItem("sessionId", response.data.sessionId)
+          logger.info(`✅ SessionId saved to sessionStorage`)
+        } else {
+          logger.warn("⚠️ No sessionId in login response")
+        }
+
         // Save user data
         localStorage.setItem("user", JSON.stringify(response.data.user))
 

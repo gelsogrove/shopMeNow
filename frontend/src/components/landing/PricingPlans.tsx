@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { usePricing } from "@/hooks/usePricing"
-import { Check, MessageSquare, ShoppingCart, X } from "lucide-react"
+import { Check, MessageSquare, X } from "lucide-react"
 
 interface PricingPlan {
   name: string
@@ -33,8 +33,6 @@ export function PricingPlans() {
   const PRICES = {
     MONTHLY_CHANNEL: usage.MONTHLY_CHANNEL_COST ?? 59.0,
     MESSAGE: usage.MESSAGE ?? 0.1,
-    NEW_CUSTOMER: usage.NEW_CUSTOMER ?? 1.0,
-    NEW_ORDER: usage.NEW_ORDER ?? 1.0,
     PUSH_CAMPAIGN: usage.PUSH_CAMPAIGN ?? 1.0,
   }
 
@@ -224,7 +222,7 @@ export function PricingPlans() {
           {t("pricing.usage.title")}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
           {/* Messages */}
           <div className="bg-white rounded-xl p-6 border border-gray-200 text-center">
             <div className="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -238,22 +236,6 @@ export function PricingPlans() {
             </div>
             <p className="text-xs text-gray-600">
               {t("pricing.usage.message.desc")}
-            </p>
-          </div>
-
-          {/* New Order */}
-          <div className="bg-white rounded-xl p-6 border border-gray-200 text-center">
-            <div className="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-              <ShoppingCart className="w-6 h-6 text-purple-600" />
-            </div>
-            <div className="text-3xl font-bold text-purple-600 mb-1">
-              €{PRICES.NEW_ORDER.toFixed(2)}
-            </div>
-            <div className="text-sm font-medium text-gray-900 mb-2">
-              {t("pricing.usage.order")}
-            </div>
-            <p className="text-xs text-gray-600">
-              {t("pricing.usage.order.desc")}
             </p>
           </div>
 

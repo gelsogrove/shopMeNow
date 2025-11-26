@@ -231,9 +231,9 @@ describe("TeamMembersTable", () => {
       expect(screen.getByText("admin@test.com")).toBeInTheDocument()
     })
 
-    // Click remove button
+    // Click remove button (Trash icon in the actions column)
     const adminRow = screen.getByText("admin@test.com").closest("tr")!
-    const removeButton = adminRow.querySelector('button[class*="text-red"]')!
+    const removeButton = adminRow.querySelector('button.text-red-600')!
     await user.click(removeButton)
 
     // Click confirm in dialog
@@ -418,18 +418,18 @@ describe("TeamMembersTable", () => {
     expect(invitationApi.getPending).not.toHaveBeenCalled()
   })
 
-  it("should show disabled remove buttons for ADMIN users", async () => {
+  it("should not show remove buttons for ADMIN users (no Actions column)", async () => {
     render(<TeamMembersTable workspaceId={mockWorkspaceId} isSuperAdmin={false} />)
 
     await waitFor(() => {
       expect(screen.getByText("admin@test.com")).toBeInTheDocument()
     })
 
-    // Find the admin row and check that the button is disabled
+    // ADMIN users should not see the Actions column at all
+    // So there should be no Trash button in the member rows
     const adminRow = screen.getByText("admin@test.com").closest("tr")!
-    const buttons = adminRow.querySelectorAll('button')
-    const disabledButtons = Array.from(buttons).filter(btn => btn.disabled)
-    expect(disabledButtons.length).toBeGreaterThan(0)
+    const trashButtons = adminRow.querySelectorAll('button')
+    expect(trashButtons.length).toBe(0)
   })
 
   // ============================================================================

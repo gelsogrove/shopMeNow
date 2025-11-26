@@ -2,12 +2,13 @@ import { Router } from "express"
 import logger from "../../../utils/logger"
 import { CustomersController } from "../controllers/customers.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"
+import { checkPlanLimits } from "../middlewares/billing.middleware"
 
 // Router per il mounting principale
 export const customersRouter = (controller: CustomersController): Router => {
   const router = Router()
 
-  // � SECURITY: All routes require authentication
+  // 🔒 SECURITY: All routes require authentication
   router.use(authMiddleware)
 
   logger.info("Setting up customers routes")
@@ -17,8 +18,10 @@ export const customersRouter = (controller: CustomersController): Router => {
     "/:workspaceId/customers",
     controller.getCustomersForWorkspace.bind(controller)
   )
+  // 💰 BILLING: Check plan limits before creating a customer
   router.post(
     "/:workspaceId/customers",
+    checkPlanLimits("customers"),
     controller.createCustomer.bind(controller)
   )
   router.get(

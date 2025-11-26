@@ -208,7 +208,7 @@ export function TeamMembersTable({
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-green-600">
                 <Users className="h-5 w-5" />
                 Team
               </CardTitle>
@@ -266,12 +266,13 @@ export function TeamMembersTable({
                   <TableHead className="min-w-[300px]">Email</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Joined</TableHead>
+                  {isSuperAdmin && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {members.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center text-gray-500 py-8">
+                    <TableCell colSpan={isSuperAdmin ? 4 : 3} className="text-center text-gray-500 py-8">
                       No team members yet
                     </TableCell>
                   </TableRow>
@@ -280,6 +281,7 @@ export function TeamMembersTable({
                     const displayName = member.firstName && member.lastName 
                       ? `${member.firstName} ${member.lastName}`.trim()
                       : member.firstName || member.lastName || null
+                    const isOwner = member.role === "SUPER_ADMIN"
                     
                     return (
                       <TableRow key={member.userId}>
@@ -290,7 +292,7 @@ export function TeamMembersTable({
                           )}
                         </TableCell>
                         <TableCell>
-                          {member.role === "SUPER_ADMIN" ? (
+                          {isOwner ? (
                             <Badge variant="default" className="bg-amber-500 hover:bg-amber-600">
                               <Crown className="h-3 w-3 mr-1" />
                               Owner
@@ -304,6 +306,23 @@ export function TeamMembersTable({
                         <TableCell className="text-gray-500 whitespace-nowrap">
                           {formatDate(member.createdAt)}
                         </TableCell>
+                        {isSuperAdmin && (
+                          <TableCell className="text-right">
+                            {!isOwner ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => setConfirmRemoveMember(member)}
+                                disabled={isActionLoading}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            ) : (
+                              <span className="text-gray-400 text-sm">—</span>
+                            )}
+                          </TableCell>
+                        )}
                       </TableRow>
                     )
                   })
