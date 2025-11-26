@@ -473,9 +473,9 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-green-600">
                 <CreditCard className="h-5 w-5" />
-                Your Plan
+                Subscription & Billing
               </CardTitle>
               <CardDescription>
                 Manage your subscription and credit
@@ -500,6 +500,17 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
                 <FileText className="h-4 w-4" />
                 Invoices
               </Button>
+              {isSuperAdmin && billing.planType !== "FREE_TRIAL" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowUpgradeDialog(true)}
+                  className="gap-1 text-muted-foreground hover:text-foreground"
+                >
+                  <TrendingUp className="h-4 w-4" />
+                  Change Plan
+                </Button>
+              )}
               <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30 border border-emerald-200 dark:border-emerald-800 rounded-full">
                 <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
                 <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
@@ -573,14 +584,11 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
 
             {/* Plan Details */}
             <div className="space-y-3">
-              <span className="text-sm text-muted-foreground">
-                Plan Details
-              </span>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Subscription:</span>
-                  <span className="font-medium">
-                    {planConfig.displayName} - {formatCurrency(planConfig.monthlyFee)}/month
+                  <span className="font-medium text-emerald-600">
+                    {formatCurrency(planConfig.monthlyFee)}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -614,16 +622,6 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
                   </div>
                 )}
               </div>
-              {isSuperAdmin && billing.planType !== "FREE_TRIAL" && (
-                <Button
-                  variant="outline"
-                  onClick={() => setShowUpgradeDialog(true)}
-                  className="w-full gap-2"
-                >
-                  <TrendingUp className="h-4 w-4" />
-                  Change Plan
-                </Button>
-              )}
             </div>
           </div>
         </CardContent>
@@ -632,7 +630,10 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
       {/* Usage Stats Card */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Usage Limits</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-green-600">
+            <TrendingUp className="h-5 w-5" />
+            Usage Limits
+          </CardTitle>
           <CardDescription>
             Current usage of your {planConfig.displayName} plan. Upgrade to increase limits.
           </CardDescription>

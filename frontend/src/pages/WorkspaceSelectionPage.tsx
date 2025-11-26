@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { TeamMembersTable } from "@/components/workspace/TeamMembersTable"
@@ -9,7 +9,7 @@ import { useWorkspace } from "@/hooks/use-workspace"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
-import { LogOut, PlusCircle } from "lucide-react"
+import { LogOut, PlusCircle, Radio } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
@@ -233,45 +233,68 @@ export function WorkspaceSelectionPage() {
           </Button>
         </div>
 
-        <h1 className="text-xl font-bold text-center mb-2">Your Channels</h1>
-        <p className="text-center text-gray-600 mb-8">
-          Select a channel to manage its conversations or create a new one
-        </p>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-green-600">
+                  <Radio className="h-5 w-5" />
+                  Your Channels
+                </CardTitle>
+                <CardDescription>
+                  Select a channel to manage its conversations
+                </CardDescription>
+              </div>
+              {!isRoleLoading && (workspaces.length === 0 || isSuperAdmin) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1 text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    const dialog = document.getElementById(
+                      "type-selection-dialog"
+                    ) as HTMLDialogElement
+                    if (dialog) dialog.showModal()
+                  }}
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  Add Channel
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {errorMessage && (
+              <div className="mb-4 p-4 text-red-700 bg-red-100 rounded-md">
+                {errorMessage}
+              </div>
+            )}
 
-        {errorMessage && (
-          <div className="mb-4 p-4 text-red-700 bg-red-100 rounded-md">
-            {errorMessage}
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Lista dei workspace esistenti */}
-          {workspaces.map((workspace) => (
-            <Card
-              key={workspace.id}
-              className={`transition-all relative ${
-                justCreatedId === workspace.id ? "ring-2 ring-green-500" : ""
-              } ${
-                workspace.isActive
-                  ? "bg-white border-gray-200"
-                  : "bg-gray-100 border-gray-300 opacity-75"
-              }`}
-            >
-              <CardContent
-                className="p-6 cursor-pointer"
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  handleSelectWorkspace(workspace)
-                }}
-              >
-                <div className="space-y-2 min-w-0 w-full">
-                  <div className="text-lg font-semibold truncate flex items-center justify-between">
-                    <span>{workspace.name}</span>
-                    {!workspace.challengeStatus && (
-                      <span className="text-sm font-normal text-orange-600 bg-orange-50 px-2 py-1 rounded">
-                        Disabled
-                      </span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Lista dei workspace esistenti */}
+              {workspaces.map((workspace) => (
+                <div
+                  key={workspace.id}
+                  className={`rounded-lg border p-4 cursor-pointer transition-all ${
+                    justCreatedId === workspace.id ? "ring-2 ring-green-500" : ""
+                  } ${
+                    workspace.isActive
+                      ? "bg-white border-gray-200 hover:shadow-md"
+                      : "bg-gray-100 border-gray-300 opacity-75"
+                  }`}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    handleSelectWorkspace(workspace)
+                  }}
+                >
+                  <div className="space-y-2 min-w-0 w-full">
+                    <div className="text-lg font-semibold truncate flex items-center justify-between">
+                      <span>{workspace.name}</span>
+                      {!workspace.challengeStatus && (
+                        <span className="text-sm font-normal text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                          Disabled
+                        </span>
                     )}
                   </div>
                   <div
@@ -312,30 +335,12 @@ export function WorkspaceSelectionPage() {
                       </span>
                     </div>
                   )}
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-
-          {/* Card per aggiungere un nuovo workspace - ONLY for SUPER_ADMIN (Owner) OR when user has no workspaces */}
-          {/* Show if: user has no workspaces (first-time owner) OR user is SUPER_ADMIN */}
-          {!isRoleLoading && (workspaces.length === 0 || isSuperAdmin) && (
-            <Card
-              className="hover:shadow-md transition-shadow cursor-pointer border border-dashed flex flex-col items-center justify-center h-full"
-              onClick={() => {
-                const dialog = document.getElementById(
-                  "type-selection-dialog"
-                ) as HTMLDialogElement
-                if (dialog) dialog.showModal()
-              }}
-            >
-              <CardContent className="p-6 flex flex-col items-center justify-center">
-                <PlusCircle className="h-12 w-12 text-gray-400 mb-2" />
-                <div className="text-gray-500 font-medium">Add new channel</div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Dialog per la selezione del tipo di attività */}
         <dialog
@@ -412,7 +417,6 @@ export function WorkspaceSelectionPage() {
         {/* Subscription & Billing Section - ONLY for Owner (SUPER_ADMIN) */}
         {firstWorkspaceId && !isRoleLoading && isSuperAdmin && (
           <div className="mt-8">
-            <h2 className="text-xl font-bold mb-4 text-green-600">Subscription & Billing</h2>
             <BillingSection workspaceId={firstWorkspaceId} />
           </div>
         )}
