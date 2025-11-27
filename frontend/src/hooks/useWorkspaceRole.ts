@@ -9,14 +9,8 @@ interface UseWorkspaceRoleResult {
   refetch: () => Promise<void>
 }
 
-// 🔒 Global cache to prevent duplicate API calls for same workspaceId
-const roleCache = new Map<string, { data: WorkspaceRole | null; timestamp: number }>()
-const pendingRequests = new Map<string, Promise<WorkspaceRole>>()
-const CACHE_TTL = 60000 // 1 minute cache
-
 /**
  * Hook to get the current user's role in a workspace
- * Uses global cache to prevent duplicate API calls across components
  * 
  * @param workspaceId - The ID of the workspace to check role for
  * @returns Object containing role info, loading state, and error
@@ -34,43 +28,11 @@ export function useWorkspaceRole(workspaceId: string | null | undefined): UseWor
       return
     }
 
-    // Check cache first
-    const cached = roleCache.get(workspaceId)
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      setRoleData(cached.data)
-      setError(null)
-      return
-    }
-
-    // Check if there's already a pending request for this workspaceId
-    const pending = pendingRequests.get(workspaceId)
-    if (pending) {
-      try {
-        const data = await pending
-        if (mountedRef.current) {
-          setRoleData(data)
-          setError(null)
-        }
-      } catch (err) {
-        if (mountedRef.current) {
-          setError(err instanceof Error ? err : new Error('Failed to fetch role'))
-          setRoleData(null)
-        }
-      }
-      return
-    }
-
     setIsLoading(true)
     setError(null)
 
-    // Create new request and store in pending
-    const request = teamMemberApi.getRole(workspaceId)
-    pendingRequests.set(workspaceId, request)
-
     try {
-      const data = await request
-      // Cache the result
-      roleCache.set(workspaceId, { data, timestamp: Date.now() })
+      const data = await teamMemberApi.getRole(workspaceId)
       if (mountedRef.current) {
         setRoleData(data)
       }
@@ -80,7 +42,6 @@ export function useWorkspaceRole(workspaceId: string | null | undefined): UseWor
         setRoleData(null)
       }
     } finally {
-      pendingRequests.delete(workspaceId)
       if (mountedRef.current) {
         setIsLoading(false)
       }
@@ -96,12 +57,8 @@ export function useWorkspaceRole(workspaceId: string | null | undefined): UseWor
   }, [fetchRole])
 
   const refetch = useCallback(async () => {
-    // Clear cache before refetching
-    if (workspaceId) {
-      roleCache.delete(workspaceId)
-    }
     await fetchRole()
-  }, [workspaceId, fetchRole])
+  }, [fetchRole])
 
   return {
     role: roleData?.role ?? null,
