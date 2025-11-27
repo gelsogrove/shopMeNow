@@ -151,9 +151,11 @@ function checkCanDowngrade(usage: { productsCount: number; customersCount: numbe
 
 interface BillingSectionProps {
   workspaceId?: string
+  /** Optional callback to share billingOverview with parent/sibling components */
+  onBillingOverviewLoaded?: (overview: BillingOverview | null) => void
 }
 
-export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionProps) {
+export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverviewLoaded }: BillingSectionProps) {
   const { workspace } = useWorkspace()
   // Use prop workspaceId if provided, otherwise fall back to context workspace
   const effectiveWorkspaceId = propWorkspaceId || workspace?.id
@@ -169,6 +171,13 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
   // Determine which billing data to use
   const billingOverview = propWorkspaceId ? localBillingOverview : contextBilling.billingOverview
   const isLoadingOverview = propWorkspaceId ? localIsLoading : contextBilling.isLoadingOverview
+
+  // Notify parent when billing overview is loaded
+  useEffect(() => {
+    if (onBillingOverviewLoaded && billingOverview) {
+      onBillingOverviewLoaded(billingOverview)
+    }
+  }, [billingOverview, onBillingOverviewLoaded])
 
   // Local state
   const [showRechargeDialog, setShowRechargeDialog] = useState(false)
@@ -224,16 +233,9 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
     }
   }, [effectiveWorkspaceId, billingOverview, isLoadingOverview])
 
-  // 🔄 Load transactions on component mount (for totals display)
+  // 🔄 Load transactions ONLY when history dialog opens (not on mount)
   useEffect(() => {
-    if (effectiveWorkspaceId && transactions.length === 0) {
-      loadTransactions()
-    }
-  }, [effectiveWorkspaceId])
-
-  // Reload transactions when history dialog opens
-  useEffect(() => {
-    if (showHistoryDialog && effectiveWorkspaceId) {
+    if (showHistoryDialog && effectiveWorkspaceId && transactions.length === 0) {
       loadTransactions()
     }
   }, [showHistoryDialog, effectiveWorkspaceId])

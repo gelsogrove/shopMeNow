@@ -6,40 +6,26 @@
  * - Products (count / max)
  * - Customers (count / max)
  * - Channels (count / max)
+ * 
+ * OPTIMIZED: Receives billingOverview as prop to avoid duplicate API calls
  */
 
-import { useEffect, useState } from "react"
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { getBillingOverview, BillingOverview } from "@/services/subscriptionBillingApi"
+import { BillingOverview } from "@/services/subscriptionBillingApi"
 import { Package, Users, Radio, Loader2 } from "lucide-react"
 
 interface UsageLimitsCardProps {
   workspaceId: string
+  billingOverview?: BillingOverview | null
+  isLoading?: boolean
 }
 
-export function UsageLimitsCard({ workspaceId }: UsageLimitsCardProps) {
-  const [billingOverview, setBillingOverview] = useState<BillingOverview | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const data = await getBillingOverview(workspaceId)
-        setBillingOverview(data)
-      } catch (error) {
-        console.error("Failed to load billing overview:", error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    loadData()
-  }, [workspaceId])
-
+export function UsageLimitsCard({ billingOverview, isLoading = false }: UsageLimitsCardProps) {
   if (isLoading || !billingOverview) {
     return (
       <Card className="h-full">

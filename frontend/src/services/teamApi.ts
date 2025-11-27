@@ -58,14 +58,54 @@ const withWorkspaceHeader = (workspaceId: string) => ({
   headers: { 'x-workspace-id': workspaceId }
 })
 
+// 🔒 Cache for members to prevent duplicate API calls
+const membersCache = new Map<string, { data: TeamMember[]; timestamp: number }>()
+const pendingMembersRequests = new Map<string, Promise<TeamMember[]>>()
+const CACHE_TTL = 30000 // 30 seconds
+
 export const teamMemberApi = {
   /**
-   * Get all members of a workspace
+   * Get all members of a workspace (with caching)
    */
-  async getMembers(workspaceId: string): Promise<TeamMember[]> {
-    const response = await api.get(`/workspaces/${workspaceId}/members`, withWorkspaceHeader(workspaceId))
-    // API returns { success: true, members: [...] }
-    return response.data.members || response.data
+  async getMembers(workspaceId: string, forceRefresh = false): Promise<TeamMember[]> {
+    // Check cache first
+    if (!forceRefresh) {
+      const cached = membersCache.get(workspaceId)
+      if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        return cached.data
+      }
+
+      // Check if there's already a pending request
+      const pending = pendingMembersRequests.get(workspaceId)
+      if (pending) {
+        return pending
+      }
+    }
+
+    // Create new request
+    const request = api.get(`/workspaces/${workspaceId}/members`, withWorkspaceHeader(workspaceId))
+      .then(response => {
+        const data = response.data.members || response.data
+        membersCache.set(workspaceId, { data, timestamp: Date.now() })
+        return data
+      })
+      .finally(() => {
+        pendingMembersRequests.delete(workspaceId)
+      })
+
+    pendingMembersRequests.set(workspaceId, request)
+    return request
+  },
+
+  /**
+   * Clear members cache (call after adding/removing members)
+   */
+  clearCache(workspaceId?: string) {
+    if (workspaceId) {
+      membersCache.delete(workspaceId)
+    } else {
+      membersCache.clear()
+    }
   },
 
   /**
@@ -73,6 +113,8 @@ export const teamMemberApi = {
    */
   async removeMember(workspaceId: string, userId: string): Promise<void> {
     await api.delete(`/workspaces/${workspaceId}/members/${userId}`, withWorkspaceHeader(workspaceId))
+    // Clear cache after removal
+    membersCache.delete(workspaceId)
   },
 
   /**

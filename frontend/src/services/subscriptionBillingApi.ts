@@ -118,33 +118,105 @@ export interface PlanInfo {
 // API FUNCTIONS
 // ============================================================================
 
+// 🔒 Cache to prevent duplicate API calls
+const billingCache = new Map<string, { data: BillingOverview; timestamp: number }>()
+const pendingBillingRequests = new Map<string, Promise<BillingOverview>>()
+const CACHE_TTL = 30000 // 30 seconds cache
+
 /**
  * Get complete billing overview for workspace
  * Includes: plan info, credit balance, usage stats, limits
+ * Uses cache to prevent duplicate calls
  */
 export const getBillingOverview = async (
-  workspaceId: string
+  workspaceId: string,
+  forceRefresh = false
 ): Promise<BillingOverview> => {
   if (!workspaceId) {
     throw new Error("Workspace ID is required")
   }
 
-  const response = await api.get(`/workspaces/${workspaceId}/subscription-billing`)
-  return response.data.data
+  // Check cache first (unless force refresh)
+  if (!forceRefresh) {
+    const cached = billingCache.get(workspaceId)
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return cached.data
+    }
+
+    // Check if there's already a pending request
+    const pending = pendingBillingRequests.get(workspaceId)
+    if (pending) {
+      return pending
+    }
+  }
+
+  // Create new request
+  const request = api.get(`/workspaces/${workspaceId}/subscription-billing`).then(response => {
+    const data = response.data.data
+    billingCache.set(workspaceId, { data, timestamp: Date.now() })
+    return data
+  }).finally(() => {
+    pendingBillingRequests.delete(workspaceId)
+  })
+
+  pendingBillingRequests.set(workspaceId, request)
+  return request
 }
+
+// 🔒 Balance cache
+const balanceCache = new Map<string, { data: BalanceResponse; timestamp: number }>()
+const pendingBalanceRequests = new Map<string, Promise<BalanceResponse>>()
 
 /**
  * Get current credit balance (quick check for header)
+ * Uses cache to prevent duplicate calls
  */
 export const getBalance = async (
-  workspaceId: string
+  workspaceId: string,
+  forceRefresh = false
 ): Promise<BalanceResponse> => {
   if (!workspaceId) {
     throw new Error("Workspace ID is required")
   }
 
-  const response = await api.get(`/workspaces/${workspaceId}/subscription-billing/balance`)
-  return response.data.data
+  // Check cache first (unless force refresh)
+  if (!forceRefresh) {
+    const cached = balanceCache.get(workspaceId)
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return cached.data
+    }
+
+    // Check if there's already a pending request
+    const pending = pendingBalanceRequests.get(workspaceId)
+    if (pending) {
+      return pending
+    }
+  }
+
+  // Create new request
+  const request = api.get(`/workspaces/${workspaceId}/subscription-billing/balance`).then(response => {
+    const data = response.data.data
+    balanceCache.set(workspaceId, { data, timestamp: Date.now() })
+    return data
+  }).finally(() => {
+    pendingBalanceRequests.delete(workspaceId)
+  })
+
+  pendingBalanceRequests.set(workspaceId, request)
+  return request
+}
+
+/**
+ * Clear all billing caches (call after recharge/upgrade)
+ */
+export const clearAllBillingCaches = (workspaceId?: string) => {
+  if (workspaceId) {
+    billingCache.delete(workspaceId)
+    balanceCache.delete(workspaceId)
+  } else {
+    billingCache.clear()
+    balanceCache.clear()
+  }
 }
 
 /**

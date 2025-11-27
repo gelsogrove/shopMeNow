@@ -79,6 +79,9 @@ export function WorkspaceSelectionPage() {
   }
   const [isLoading, setIsLoading] = useState(false)
   const [badgeStats, setBadgeStats] = useState<Record<string, WorkspaceBadgeStats>>({})
+  
+  // Shared billing data state - to avoid duplicate API calls
+  const [sharedBillingOverview, setSharedBillingOverview] = useState<any>(null)
 
   // 🔍 DEBUG: Log ALL localStorage keys on mount
   useEffect(() => {
@@ -588,10 +591,17 @@ export function WorkspaceSelectionPage() {
         {firstWorkspaceId && !isRoleLoading && isSuperAdmin && (
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
             {/* Main - Subscription & Billing */}
-            <BillingSection workspaceId={firstWorkspaceId} />
+            <BillingSection 
+              workspaceId={firstWorkspaceId} 
+              onBillingOverviewLoaded={setSharedBillingOverview}
+            />
             
-            {/* Side - Usage Limits */}
-            <UsageLimitsCard workspaceId={firstWorkspaceId} />
+            {/* Side - Usage Limits (uses shared data from BillingSection) */}
+            <UsageLimitsCard 
+              workspaceId={firstWorkspaceId} 
+              billingOverview={sharedBillingOverview}
+              isLoading={!sharedBillingOverview}
+            />
           </div>
         )}
 
