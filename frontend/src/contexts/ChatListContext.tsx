@@ -20,6 +20,7 @@ type ChatListContextType = {
   error: Error | null
   isChatbotActive: boolean
   setIsChatbotActive: (isActive: boolean) => void
+  enableFetching: () => void  // 🆕 Call this to start fetching chats
 }
 
 const ChatListContext = createContext<ChatListContextType | undefined>(
@@ -29,6 +30,7 @@ const ChatListContext = createContext<ChatListContextType | undefined>(
 export function ChatListProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<Error | null>(null)
   const [isChatbotActive, setIsChatbotActive] = useState<boolean>(true)
+  const [fetchEnabled, setFetchEnabled] = useState<boolean>(false) // 🆕 Lazy loading
   const queryClient = useQueryClient()
 
   // Get current workspace ID from local storage (shared across tabs)
@@ -50,13 +52,14 @@ export function ChatListProvider({ children }: { children: ReactNode }) {
   // Use React Query to handle chat list fetching
   // 🚀 WEBSOCKET: No polling - updates via WebSocket events
   // 🔑 KEY FIX: Include sessionId in query key to isolate cache per login session!
+  // 🆕 LAZY: Only fetch when enableFetching() is called (e.g., in ChatPage)
   const {
     data: chats = [],
     isLoading,
     refetch: queryRefetch,
   } = useQuery({
     queryKey: ["chats", sessionId], // 🚨 FIX: sessionId nella key!
-    enabled: !!(workspaceId && sessionId), // 🔥 Only run if we have both IDs
+    enabled: !!(workspaceId && sessionId && fetchEnabled), // 🔥 Only run if enabled AND we have IDs
     queryFn: async () => {
       try {
         if (!workspaceId) {
@@ -135,6 +138,14 @@ export function ChatListProvider({ children }: { children: ReactNode }) {
     [updateChat]
   )
 
+  // 🆕 Enable fetching - call this when entering ChatPage
+  const enableFetching = useCallback(() => {
+    if (!fetchEnabled) {
+      logger.info("[ChatListContext] 🚀 Enabling chat list fetching")
+      setFetchEnabled(true)
+    }
+  }, [fetchEnabled])
+
   // Wrapper for refetch that returns Promise<void>
   const refetch = useCallback(async () => {
     logger.info("[ChatListContext] 🔄 Manual refetch triggered")
@@ -153,6 +164,7 @@ export function ChatListProvider({ children }: { children: ReactNode }) {
         error,
         isChatbotActive,
         setIsChatbotActive,
+        enableFetching,
       }}
     >
       {children}

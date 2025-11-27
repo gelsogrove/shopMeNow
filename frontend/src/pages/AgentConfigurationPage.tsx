@@ -2,38 +2,23 @@
  * Agent Configuration Dashboard
  *
  * Unified interface for managing all LLM agents in the multi-agent system.
- * Uses accordion-style collapsible panels with sliders for temperature and max tokens.
+ * Clickable rows that open a slide panel for editing.
  *
  * Features:
- * - Horizontal collapsible panels (only one open at a time)
- * - Agent icon, title, temperature, model displayed in header
- * - Sliders for temperature (0.1-1) and max tokens (0-3500)
+ * - Clickable agent rows with hover effect
+ * - Slide panel from right for full agent editing
+ * - Fullscreen prompt editor dialog for better readability
  * - Call functions list showing which functions each agent can use
- * - Markdown editor for system prompts
  * - Respects agent order (Router Agent always first)
  *
- * @architecture Clean Component with shadcn/ui Accordion
+ * @architecture Clean Component with shadcn/ui Sheet + Dialog
  */
 
 import { PageLayout } from "@/components/layout/PageLayout"
 import { AgentEditSlidePanel } from "@/components/shared/AgentEditSlidePanel"
 import { PageHeader } from "@/components/shared/PageHeader"
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
+import { PromptEditorDialog } from "@/components/shared/PromptEditorDialog"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
@@ -47,15 +32,16 @@ import {
   Bell,
   Bot,
   Brain,
+  ChevronDown,
   ChevronRight,
   Edit,
+  Eye,
   FileText,
   GitBranch,
   Headphones,
   Loader2,
   LucideIcon,
   Package,
-  Save,
   Search,
   Settings,
   Shield,
@@ -143,9 +129,12 @@ export function AgentConfigurationPage() {
   const [editingAgents, setEditingAgents] = useState<
     Record<string, AgentFormData>
   >({})
-  const [savingAgents, setSavingAgents] = useState<Record<string, boolean>>({})
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null)
   const [isSlideOpen, setIsSlideOpen] = useState(false)
+  
+  // Prompt Editor Dialog state
+  const [promptEditorAgent, setPromptEditorAgent] = useState<Agent | null>(null)
+  const [isPromptEditorOpen, setIsPromptEditorOpen] = useState(false)
 
   // Redirect if no workspace
   useEffect(() => {
@@ -217,6 +206,43 @@ export function AgentConfigurationPage() {
     setIsSlideOpen(true)
   }
 
+  // Open fullscreen prompt editor
+  const handleOpenPromptEditor = (agent: Agent) => {
+    setPromptEditorAgent(agent)
+    setIsPromptEditorOpen(true)
+  }
+
+  // Save only the prompt from the prompt editor dialog
+  const handleSavePromptOnly = async (newPrompt: string) => {
+    if (!workspace?.id || !promptEditorAgent) return
+
+    try {
+      const savedAgent = await updateAgent(workspace.id, promptEditorAgent.id, {
+        content: newPrompt,
+      })
+
+      // Update local state
+      setAgents((prev) =>
+        prev.map((agent) => (agent.id === promptEditorAgent.id ? savedAgent : agent))
+      )
+
+      // Update editing state
+      setEditingAgents((prev) => ({
+        ...prev,
+        [promptEditorAgent.id]: {
+          ...prev[promptEditorAgent.id],
+          systemPrompt: newPrompt,
+        },
+      }))
+
+      toast.success(`Prompt saved for ${promptEditorAgent.name}`)
+    } catch (error) {
+      logger.error("Failed to save prompt:", error)
+      toast.error("Failed to save prompt")
+      throw error
+    }
+  }
+
   const handleSaveFromSlide = async (updatedAgent: Agent) => {
     if (!workspace?.id) return
 
@@ -262,56 +288,6 @@ export function AgentConfigurationPage() {
     }
   }
 
-  const handleSaveAgent = async (agentId: string) => {
-    if (!workspace?.id) return
-
-    const formData = editingAgents[agentId]
-    if (!formData) return
-
-    try {
-      setSavingAgents((prev) => ({ ...prev, [agentId]: true }))
-
-      logger.info(`Saving agent ${agentId}:`, formData)
-
-      const updatedAgent = await updateAgent(workspace.id, agentId, {
-        name: formData.name,
-        content: formData.systemPrompt,
-        temperature: formData.temperature,
-        model: formData.model,
-        maxTokens: formData.maxTokens,
-        isActive: formData.isActive,
-        order: formData.order,
-        agentType: formData.agentType,
-      })
-
-      // Update local state
-      setAgents((prev) =>
-        prev.map((agent) => (agent.id === agentId ? updatedAgent : agent))
-      )
-
-      toast.success(`${formData.name} saved successfully`)
-    } catch (error) {
-      logger.error(`Failed to save agent ${agentId}:`, error)
-      toast.error("Failed to save agent")
-    } finally {
-      setSavingAgents((prev) => ({ ...prev, [agentId]: false }))
-    }
-  }
-
-  const updateAgentField = (
-    agentId: string,
-    field: keyof AgentFormData,
-    value: any
-  ) => {
-    setEditingAgents((prev) => ({
-      ...prev,
-      [agentId]: {
-        ...prev[agentId],
-        [field]: value,
-      },
-    }))
-  }
-
   if (isLoading) {
     return (
       <PageLayout>
@@ -354,315 +330,136 @@ export function AgentConfigurationPage() {
             <p className="text-gray-500">No agents found for this workspace.</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            <Accordion type="single" collapsible className="w-full space-y-2">
-              {agents.map((agent, index) => {
-                const formData = editingAgents[agent.id]
-                if (!formData) return null
+          <div className="space-y-2">
+            {agents.map((agent) => {
+              const formData = editingAgents[agent.id]
+              if (!formData) return null
 
-                // ✅ Get real available functions from database
-                const callFunctions = agentFunctions[agent.id] || []
-                const isSaving = savingAgents[agent.id]
+              // ✅ Get real available functions from database
+              const callFunctions = agentFunctions[agent.id] || []
 
-                // Normalize agent type to lowercase for display
-                const normalizedType = formData.agentType.toLowerCase()
+              // Normalize agent type to lowercase for display
+              const normalizedType = formData.agentType.toLowerCase()
 
-                // Agent hierarchy levels
-                const isRouter = normalizedType === "router"
-                const isSecurity = normalizedType === "security"
-                const isSafety = normalizedType === "safety_translation"
-                const isSummaryAgent = normalizedType === "summary_agent"
+              // Agent hierarchy levels
+              const isRouter = normalizedType === "router"
+              const isSecurity = normalizedType === "security"
+              const isSafety = normalizedType === "safety_translation"
+              const isSummaryAgent = normalizedType === "summary_agent"
 
-                // Router (level 0), Specialists (level 1), Sub-agents (level 2), Security (level 99)
-                const isSpecialistAgent = !isRouter && !isSecurity && !isSafety && !isSummaryAgent
-                const indentClass = isSpecialistAgent ? "ml-8" : isSummaryAgent ? "ml-16" : ""
-                const isProductSearch = normalizedType === "product_search"
+              // Router (level 0), Specialists (level 1), Sub-agents (level 2), Security (level 99)
+              const isSpecialistAgent = !isRouter && !isSecurity && !isSafety && !isSummaryAgent
+              const indentClass = isSpecialistAgent ? "ml-8" : isSummaryAgent ? "ml-16" : ""
 
-                // Check if previous agent was Router (to add vertical line)
-                const prevAgent = index > 0 ? agents[index - 1] : null
-                const prevType = prevAgent?.agentType?.toLowerCase() || ""
-                const isPrevRouter = prevType === "router"
-
-                return (
-                  <>
-                    <AccordionItem
-                      key={agent.id}
-                      value={agent.id}
-                      className={`border rounded-lg bg-white shadow-sm ${indentClass}`}
-                    >
-                      <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-gray-50">
-                        <div className="flex items-center justify-between w-full pr-4">
-                          {/* LEFT SIDE: Icon + Agent Info */}
-                          <div className="flex items-center gap-3 flex-1">
-                            {/* 🌳 Tree connector for Specialist agents and Summary sub-agent */}
-                            {isSpecialistAgent && (
-                              <div className="flex items-center text-gray-500">
-                                <div className="w-8 h-0.5 bg-gray-400"></div>
-                                <ChevronRight className="h-5 w-5 -ml-1" />
-                              </div>
-                            )}
-                            {/* 🌳 Double-indented connector for Summary Agent (sub-agent of Customer Support) */}
-                            {isSummaryAgent && (
-                              <div className="flex items-center text-gray-500">
-                                <div className="w-4 h-0.5 bg-gray-300"></div>
-                                <div className="w-8 h-0.5 bg-gray-400"></div>
-                                <ChevronRight className="h-5 w-5 -ml-1" />
-                              </div>
-                            )}
-                            {getAgentIcon(formData.icon, formData.agentType)}
-                            <div className="text-left">
-                              <h3
-                                className={`text-lg font-semibold ${getAgentColor(
-                                  formData.agentType
-                                )}`}
-                              >
-                                {formData.name}
-                              </h3>
-                              <div className="flex items-center gap-3 text-sm">
-                                <span className="text-gray-500">
-                                  Temp: {formData.temperature.toFixed(1)}
-                                </span>
-                                <span className="text-gray-300">•</span>
-                                <span className="text-gray-500">
-                                  Max Tokens: {formData.maxTokens}
-                                </span>
-                                <span className="text-gray-300">•</span>
-                                <span
-                                  className="max-w-[200px] truncate text-gray-500"
-                                  title={formData.model}
-                                >
-                                  {formData.model}
-                                </span>
-                              </div>
-                            </div>
+              return (
+                <div
+                  key={agent.id}
+                  onClick={() => handleOpenEdit(agent)}
+                  className={`border rounded-lg bg-white shadow-sm ${indentClass} cursor-pointer hover:bg-gray-50 hover:border-green-300 transition-colors`}
+                >
+                  <div className="px-6 py-4">
+                    <div className="flex items-center justify-between w-full">
+                      {/* LEFT SIDE: Icon + Agent Info */}
+                      <div className="flex items-center gap-3 flex-1">
+                        {/* 🌳 Tree connector for Specialist agents and Summary sub-agent */}
+                        {isSpecialistAgent && (
+                          <div className="flex items-center text-gray-500">
+                            <div className="w-8 h-0.5 bg-gray-400"></div>
+                            <ChevronRight className="h-5 w-5 -ml-1" />
                           </div>
-
-                          {/* CENTER: Call Functions or Routing Badge */}
-                          <div className="flex items-center gap-1.5 flex-wrap mx-4">
-                            {agent.agentType === "ROUTER" ? (
-                              // Router Agent: Show only routing badge (hide CF list)
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-200 rounded-full text-xs font-medium text-blue-700">
-                                🔀 Routes to sub-agents
-                              </span>
-                            ) : callFunctions.length > 0 ? (
-                              // Other agents: Show CF badges
-                              callFunctions.map((func) => (
-                                <span
-                                  key={func}
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border rounded-full text-xs font-medium text-gray-700"
-                                >
-                                  <ChevronRight className="h-3 w-3 text-green-600" />
-                                  {func}
-                                </span>
-                              ))
-                            ) : agent.name === "safety_translation" ? (
-                              // Safety Agent: Show routing badge
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-200 rounded-full text-xs font-medium text-blue-700">
-                                🔀 Routes to sub-agents
-                              </span>
-                            ) : null}
+                        )}
+                        {/* 🌳 Double-indented connector for Summary Agent (sub-agent of Customer Support) */}
+                        {isSummaryAgent && (
+                          <div className="flex items-center text-gray-500">
+                            <div className="w-4 h-0.5 bg-gray-300"></div>
+                            <div className="w-8 h-0.5 bg-gray-400"></div>
+                            <ChevronRight className="h-5 w-5 -ml-1" />
                           </div>
-
-                          {/* RIGHT SIDE: Edit Button */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleOpenEdit(agent)
-                            }}
-                            className="p-2 hover:bg-gray-100 rounded-md transition-colors"
-                            title="Edit agent"
+                        )}
+                        {getAgentIcon(formData.icon, formData.agentType)}
+                        <div className="text-left">
+                          <h3
+                            className={`text-lg font-semibold ${getAgentColor(
+                              formData.agentType
+                            )}`}
                           >
-                            <Edit className="h-4 w-4 text-gray-600" />
-                          </button>
-                        </div>
-                      </AccordionTrigger>
-
-                      <AccordionContent className="px-6 pb-6">
-                        <div className="space-y-6 pt-4">
-                          {/* First Row: Model, Temperature & Max Tokens */}
-                          <div className="grid grid-cols-3 gap-6">
-                            {/* Model Selection */}
-                            <div className="space-y-2">
-                              <Label
-                                htmlFor={`model-${agent.id}`}
-                                className="text-sm font-medium"
-                              >
-                                Model
-                              </Label>
-                              <Select
-                                value={formData.model}
-                                onValueChange={(value) =>
-                                  updateAgentField(agent.id, "model", value)
-                                }
-                              >
-                                <SelectTrigger id={`model-${agent.id}`}>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="anthropic/claude-opus-4.1">
-                                    Claude Opus 4.1 (Premium)
-                                  </SelectItem>
-                                  <SelectItem value="openai/gpt-4.1">
-                                    GPT-4.1 (High-end)
-                                  </SelectItem>
-                                  <SelectItem value="google/gemini-2.5-pro">
-                                    Gemini 2.5 Pro
-                                  </SelectItem>
-                                  <SelectItem value="google/gemini-2.0-flash-001">
-                                    Gemini 2.0 Flash (Best quality)
-                                  </SelectItem>
-                                  <SelectItem value="openai/gpt-4">
-                                    GPT-4
-                                  </SelectItem>
-                                  <SelectItem value="anthropic/claude-3.5-haiku">
-                                    Claude 3.5 Haiku
-                                  </SelectItem>
-                                  <SelectItem value="x-ai/grok-4">
-                                    Grok-4
-                                  </SelectItem>
-                                  <SelectItem value="openai/gpt-4-turbo">
-                                    GPT-4 Turbo
-                                  </SelectItem>
-                                  <SelectItem value="openai/gpt-4o-mini">
-                                    GPT-4o Mini
-                                  </SelectItem>
-                                  <SelectItem value="deepseek/deepseek-r1">
-                                    DeepSeek R1
-                                  </SelectItem>
-                                  <SelectItem value="anthropic/claude-3.5-sonnet">
-                                    Claude 3.5 Sonnet
-                                  </SelectItem>
-                                  <SelectItem value="LOCAL:llama3.2:3b">
-                                    🏠 LOCAL: Llama 3.2 3B
-                                  </SelectItem>
-                                  <SelectItem value="LOCAL:qwen3-coder:480b-cloud">
-                                    🏠 LOCAL: Qwen3 Coder
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            {/* Temperature Slider */}
-                            <div className="space-y-2">
-                              <div className="flex justify-between items-center">
-                                <Label
-                                  htmlFor={`temperature-${agent.id}`}
-                                  className="text-sm font-medium"
-                                >
-                                  Temperature
-                                </Label>
-                                <span className="text-sm font-bold text-gray-700">
-                                  {formData.temperature.toFixed(1)}
-                                </span>
-                              </div>
-                              <input
-                                type="range"
-                                id={`temperature-${agent.id}`}
-                                min="0.1"
-                                max="1"
-                                step="0.1"
-                                value={formData.temperature}
-                                onChange={(e) =>
-                                  updateAgentField(
-                                    agent.id,
-                                    "temperature",
-                                    Number(e.target.value)
-                                  )
-                                }
-                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600"
-                              />
-                              <div className="flex justify-between text-xs text-gray-500">
-                                <span>0.1</span>
-                                <span>1.0</span>
-                              </div>
-                            </div>
-
-                            {/* Max Tokens Slider */}
-                            <div className="space-y-2">
-                              <div className="flex justify-between items-center">
-                                <Label
-                                  htmlFor={`maxTokens-${agent.id}`}
-                                  className="text-sm font-medium"
-                                >
-                                  Max Tokens
-                                </Label>
-                                <span className="text-sm font-bold text-gray-700">
-                                  {formData.maxTokens}
-                                </span>
-                              </div>
-                              <input
-                                type="range"
-                                id={`maxTokens-${agent.id}`}
-                                min="0"
-                                max="3500"
-                                step="100"
-                                value={formData.maxTokens}
-                                onChange={(e) =>
-                                  updateAgentField(
-                                    agent.id,
-                                    "maxTokens",
-                                    Number(e.target.value)
-                                  )
-                                }
-                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600"
-                              />
-                              <div className="flex justify-between text-xs text-gray-500">
-                                <span>0</span>
-                                <span>3500</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* System Prompt */}
-                          <div className="space-y-2">
-                            <Label
-                              htmlFor={`prompt-${agent.id}`}
-                              className="text-sm font-medium"
+                            {formData.name}
+                          </h3>
+                          <div className="flex items-center gap-3 text-sm">
+                            <span className="text-gray-500">
+                              Temp: {formData.temperature.toFixed(1)}
+                            </span>
+                            <span className="text-gray-300">•</span>
+                            <span className="text-gray-500">
+                              Max Tokens: {formData.maxTokens}
+                            </span>
+                            <span className="text-gray-300">•</span>
+                            <span
+                              className="max-w-[200px] truncate text-gray-500"
+                              title={formData.model}
                             >
-                              System Prompt
-                            </Label>
-                            <Textarea
-                              id={`prompt-${agent.id}`}
-                              value={formData.systemPrompt}
-                              onChange={(e) =>
-                                updateAgentField(
-                                  agent.id,
-                                  "systemPrompt",
-                                  e.target.value
-                                )
-                              }
-                              className="min-h-[300px] font-mono text-sm"
-                              placeholder="Enter system prompt for this agent..."
-                            />
-                          </div>
-
-                          {/* Save Button */}
-                          <div className="flex justify-end pt-4 border-t">
-                            <Button
-                              onClick={() => handleSaveAgent(agent.id)}
-                              disabled={isSaving}
-                              className="bg-green-600 hover:bg-green-700 text-white"
-                            >
-                              {isSaving ? (
-                                <>
-                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                  Saving...
-                                </>
-                              ) : (
-                                <>
-                                  <Save className="h-4 w-4 mr-2" />
-                                  Save Configuration
-                                </>
-                              )}
-                            </Button>
+                              {formData.model}
+                            </span>
                           </div>
                         </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </>
-                )
-              })}
-            </Accordion>
+                      </div>
+
+                      {/* CENTER: Call Functions or Routing Badge */}
+                      <div className="flex items-center gap-1.5 flex-wrap mx-4">
+                        {agent.agentType === "ROUTER" ? (
+                          // Router Agent: Show only routing badge (hide CF list)
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-200 rounded-full text-xs font-medium text-blue-700">
+                            🔀 Routes to sub-agents
+                          </span>
+                        ) : callFunctions.length > 0 ? (
+                          // Other agents: Show CF badges
+                          callFunctions.map((func) => (
+                            <span
+                              key={func}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border rounded-full text-xs font-medium text-gray-700"
+                            >
+                              <ChevronRight className="h-3 w-3 text-green-600" />
+                              {func}
+                            </span>
+                          ))
+                        ) : agent.name === "safety_translation" ? (
+                          // Safety Agent: Show routing badge
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-200 rounded-full text-xs font-medium text-blue-700">
+                            🔀 Routes to sub-agents
+                          </span>
+                        ) : null}
+                      </div>
+
+                      {/* RIGHT SIDE: View Prompt + Edit Buttons */}
+                      <div className="flex items-center gap-1">
+                        {/* View Prompt - Fullscreen editor */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleOpenPromptEditor(agent)
+                          }}
+                          className="p-2 hover:bg-blue-50 rounded-md transition-colors"
+                          title="View & Edit Prompt (Fullscreen)"
+                        >
+                          <Eye className="h-4 w-4 text-blue-600" />
+                        </button>
+                        {/* Edit Agent - Slide panel */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleOpenEdit(agent)
+                          }}
+                          className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+                          title="Edit agent settings"
+                        >
+                          <Edit className="h-4 w-4 text-gray-600" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
@@ -677,6 +474,21 @@ export function AgentConfigurationPage() {
             if (!open) setEditingAgent(null)
           }}
           onSave={handleSaveFromSlide}
+        />
+      )}
+
+      {/* Fullscreen Prompt Editor Dialog */}
+      {promptEditorAgent && (
+        <PromptEditorDialog
+          open={isPromptEditorOpen}
+          onOpenChange={(open) => {
+            setIsPromptEditorOpen(open)
+            if (!open) setPromptEditorAgent(null)
+          }}
+          agentName={promptEditorAgent.name}
+          agentType={promptEditorAgent.agentType}
+          initialPrompt={promptEditorAgent.content || promptEditorAgent.systemPrompt || ""}
+          onSave={handleSavePromptOnly}
         />
       )}
     </PageLayout>

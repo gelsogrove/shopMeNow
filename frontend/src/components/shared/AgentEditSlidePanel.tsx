@@ -1,14 +1,14 @@
 /**
  * Agent Edit Slide Panel
  *
- * Slide panel from right to left for editing agent configuration.
- * Wide layout similar to Orders page.
+ * Compact slide panel for editing agent configuration.
+ * Prompt editing is done via the fullscreen PromptEditorDialog.
  *
  * Features:
- * - Slides in from right
- * - Wide layout (800px)
- * - Full agent edit form
- * - Save/Cancel actions
+ * - Compact width (500px)
+ * - Model, Temperature, Max Tokens settings
+ * - Active/Inactive toggle
+ * - No prompt editing (use Eye button for that)
  */
 
 import { Button } from "@/components/ui/button"
@@ -31,8 +31,7 @@ import {
 } from "@/components/ui/sheet"
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
-import { Textarea } from "@/components/ui/textarea"
-import { Loader2 } from "lucide-react"
+import { Loader2, Save } from "lucide-react"
 import { useEffect, useState } from "react"
 
 interface Agent {
@@ -94,11 +93,11 @@ export function AgentEditSlidePanel({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[1000px] overflow-y-auto">
+      <SheetContent side="right" className="w-[500px]">
         <SheetHeader>
           <SheetTitle>Edit Agent: {formData.name}</SheetTitle>
           <SheetDescription>
-            Modify agent configuration, prompt, and behavior settings
+            Modify agent settings. Use the 👁️ button for prompt editing.
           </SheetDescription>
         </SheetHeader>
 
@@ -116,73 +115,51 @@ export function AgentEditSlidePanel({
             />
           </div>
 
-          {/* Agent Type (Read-only) */}
+          {/* Model Selection */}
           <div className="space-y-2">
-            <Label htmlFor="type">Agent Type</Label>
-            <Input
-              id="type"
-              value={formData.agentType}
-              disabled
-              className="bg-muted"
-            />
-            <p className="text-xs text-muted-foreground">
-              Agent type cannot be changed
-            </p>
+            <Label htmlFor="model">LLM Model</Label>
+            <Select
+              value={formData.model}
+              onValueChange={(value) =>
+                setFormData({ ...formData, model: value })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select model" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="google/gemini-2.0-flash-001">
+                  Gemini 2.0 Flash (Best quality)
+                </SelectItem>
+                <SelectItem value="openai/gpt-4o-mini">
+                  GPT-4o Mini
+                </SelectItem>
+                <SelectItem value="openai/gpt-4o">
+                  GPT-4o
+                </SelectItem>
+                <SelectItem value="anthropic/claude-3.5-sonnet">
+                  Claude 3.5 Sonnet
+                </SelectItem>
+                <SelectItem value="anthropic/claude-3.5-haiku">
+                  Claude 3.5 Haiku
+                </SelectItem>
+                <SelectItem value="openai/gpt-4-turbo">
+                  GPT-4 Turbo
+                </SelectItem>
+                <SelectItem value="deepseek/deepseek-r1">
+                  DeepSeek R1
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* Model, Temperature, Max Tokens - 3 columns on same row */}
-          <div className="grid grid-cols-3 gap-4">
-            {/* Model Selection */}
-            <div className="space-y-2">
-              <Label htmlFor="model">LLM Model</Label>
-              <Select
-                value={formData.model}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, model: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue>
-                    {formData.model === "openrouter/google/gemini-2.0-flash-001"
-                      ? "Gemini 2.0 Flash"
-                      : formData.model ===
-                        "openrouter/anthropic/claude-3.5-sonnet"
-                      ? "Claude 3.5 Sonnet"
-                      : formData.model === "openrouter/openai/gpt-4o-mini"
-                      ? "GPT-4o Mini"
-                      : formData.model === "openrouter/openai/gpt-4o"
-                      ? "GPT-4o"
-                      : formData.model ===
-                        "openrouter/meta-llama/llama-3.1-70b-instruct"
-                      ? "Llama 3.1 70B"
-                      : formData.model}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="openrouter/google/gemini-2.0-flash-001">
-                    Gemini 2.0 Flash
-                  </SelectItem>
-                  <SelectItem value="openrouter/anthropic/claude-3.5-sonnet">
-                    Claude 3.5 Sonnet
-                  </SelectItem>
-                  <SelectItem value="openrouter/openai/gpt-4o-mini">
-                    GPT-4o Mini
-                  </SelectItem>
-                  <SelectItem value="openrouter/openai/gpt-4o">
-                    GPT-4o
-                  </SelectItem>
-                  <SelectItem value="openrouter/meta-llama/llama-3.1-70b-instruct">
-                    Llama 3.1 70B
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
+          {/* Temperature & Max Tokens - 2 columns */}
+          <div className="grid grid-cols-2 gap-4">
             {/* Temperature Slider */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="temperature">Temperature</Label>
-                <span className="text-sm font-medium">
+                <span className="text-sm font-medium text-green-600">
                   {formData.temperature.toFixed(1)}
                 </span>
               </div>
@@ -195,9 +172,10 @@ export function AgentEditSlidePanel({
                 onValueChange={([value]) =>
                   setFormData({ ...formData, temperature: value })
                 }
+                className="[&_[role=slider]]:bg-green-600"
               />
               <p className="text-xs text-muted-foreground">
-                Lower = more focused, Higher = more creative
+                Lower = focused, Higher = creative
               </p>
             </div>
 
@@ -205,7 +183,7 @@ export function AgentEditSlidePanel({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="maxTokens">Max Tokens</Label>
-                <span className="text-sm font-medium">
+                <span className="text-sm font-medium text-green-600">
                   {formData.maxTokens}
                 </span>
               </div>
@@ -218,31 +196,18 @@ export function AgentEditSlidePanel({
                 onValueChange={([value]) =>
                   setFormData({ ...formData, maxTokens: value })
                 }
+                className="[&_[role=slider]]:bg-green-600"
               />
               <p className="text-xs text-muted-foreground">
-                Maximum response length (tokens)
+                Max response length
               </p>
             </div>
           </div>
 
-          {/* Order */}
-          <div className="space-y-2">
-            <Label htmlFor="order">Display Order</Label>
-            <Input
-              id="order"
-              type="number"
-              value={formData.order}
-              onChange={(e) =>
-                setFormData({ ...formData, order: parseInt(e.target.value) })
-              }
-              min={1}
-            />
-          </div>
-
           {/* Active Status */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between p-4 border rounded-lg bg-gray-50">
             <div className="space-y-0.5">
-              <Label htmlFor="isActive">Active Status</Label>
+              <Label htmlFor="isActive" className="text-base">Active Status</Label>
               <p className="text-xs text-muted-foreground">
                 Enable or disable this agent
               </p>
@@ -255,32 +220,22 @@ export function AgentEditSlidePanel({
               }
             />
           </div>
-
-          {/* System Prompt */}
-          <div className="space-y-2">
-            <Label htmlFor="systemPrompt">System Prompt</Label>
-            <Textarea
-              id="systemPrompt"
-              value={formData.systemPrompt}
-              onChange={(e) =>
-                setFormData({ ...formData, systemPrompt: e.target.value })
-              }
-              rows={12}
-              className="font-mono text-sm"
-              placeholder="Enter system prompt for this agent..."
-            />
-            <p className="text-xs text-muted-foreground">
-              Instructions that define agent behavior and personality
-            </p>
-          </div>
         </div>
 
         <SheetFooter className="gap-2">
           <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button 
+            onClick={handleSave} 
+            disabled={isSaving}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            {isSaving ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
             Save Changes
           </Button>
         </SheetFooter>
