@@ -111,6 +111,7 @@ import { servicesRouter } from "../interfaces/http/routes/services.routes"
 import supplierRoutes from "../interfaces/http/routes/supplier.routes"
 
 // System & Config
+import { cartTokenLimiter } from "../config/rate-limiters"
 import analyticsRoutes from "../interfaces/http/routes/analytics.routes"
 import { billingRouter } from "../interfaces/http/routes/billing.routes"
 import {
@@ -477,10 +478,11 @@ router.use((req: Request, res: Response, next: NextFunction) => {
 logger.info("✅ Route middleware configured for JWT-only authentication")
 
 // 🛒 Cart Token Routes (for support interface)
-router.post("/cart-tokens", (req, res) =>
+// 🔒 SECURITY: Rate limited to prevent token abuse
+router.post("/cart-tokens", cartTokenLimiter, (req, res) =>
   cartTokenController.getCartToken(req, res)
 )
-router.get("/cart-tokens/:token/validate", (req, res) =>
+router.get("/cart-tokens/:token/validate", cartTokenLimiter, (req, res) =>
   cartTokenController.validateCartToken(req, res)
 )
 

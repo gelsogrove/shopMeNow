@@ -139,6 +139,56 @@ export const cartLimiter = rateLimit({
 })
 
 /**
+ * Feedback - Protezione spam feedback
+ *
+ * Prevents spam feedback submissions.
+ * Allows 5 feedbacks per 15 minutes per IP.
+ */
+export const feedbackLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minuti
+  max: 5, // 5 feedback per IP
+  message: "Too many feedback submissions, please try again later",
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    logger.warn("Rate limit exceeded for feedback", {
+      ip: req.ip,
+      path: req.path,
+    })
+    res.status(429).json({
+      error: "Too many requests",
+      message: "Too many feedback submissions. Please try again in 15 minutes.",
+      retryAfter: 900,
+    })
+  },
+})
+
+/**
+ * Cart Token - Protezione generazione token
+ *
+ * Prevents cart token abuse.
+ * Allows 10 token operations per minute per IP.
+ */
+export const cartTokenLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minuto
+  max: 10, // 10 operazioni al minuto
+  message: "Too many cart token requests, please slow down",
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    logger.warn("Rate limit exceeded for cart token", {
+      ip: req.ip,
+      path: req.path,
+    })
+    res.status(429).json({
+      error: "Too many requests",
+      message: "Too many cart token requests. Please slow down.",
+      retryAfter: 60,
+    })
+  },
+})
+
+/**
  * General API Rate Limiter
  *
  * Fallback rate limiter for all API endpoints.
