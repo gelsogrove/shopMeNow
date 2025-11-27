@@ -76,6 +76,29 @@ const workspaceApi = {
   async delete(id: string): Promise<void> {
     await api.delete(`/workspaces/${id}`)
   },
+
+  /**
+   * Get badge stats for all user's workspaces
+   * Returns counts for: unread messages, pending orders, needs operator intervention
+   */
+  async getBadgeStats(): Promise<
+    Record<
+      string,
+      {
+        unreadMessages: number
+        pendingOrders: number
+        needsIntervention: number
+      }
+    >
+  > {
+    try {
+      const response = await api.get("/workspaces/badge-stats")
+      return response.data
+    } catch (error) {
+      logger.error("[workspaceApi] Failed to fetch badge stats:", error)
+      return {}
+    }
+  },
 }
 
 // Language functions

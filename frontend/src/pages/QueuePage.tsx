@@ -24,7 +24,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Switch } from "@/components/ui/switch"
 import { ListChecks, Trash2, AlertTriangle } from "lucide-react"
 import { useEffect, useState } from "react"
 
@@ -49,7 +48,6 @@ export function QueuePage() {
   const [messages, setMessages] = useState<QueueMessage[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [isQueueEnabled, setIsQueueEnabled] = useState(true)
   const [filterMode, setFilterMode] = useState<"all" | "pending" | "error">("all")
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -78,27 +76,6 @@ export function QueuePage() {
     const interval = setInterval(fetchMessages, 5000) // Refresh every 5s
 
     return () => clearInterval(interval)
-  }, [workspace?.id])
-
-  // Load queue enabled status on mount
-  useEffect(() => {
-    if (!workspace?.id) return
-
-    const fetchQueueStatus = async () => {
-      try {
-        const response = await api.get(
-          `/workspaces/${workspace.id}/whatsapp-queue/status`
-        )
-        if (response.data.success) {
-          setIsQueueEnabled(response.data.enabled)
-          logger.info(`Queue status loaded: ${response.data.enabled ? "ENABLED" : "DISABLED"}`)
-        }
-      } catch (error) {
-        logger.error("Failed to fetch queue status:", error)
-      }
-    }
-
-    fetchQueueStatus()
   }, [workspace?.id])
 
   const getStatusBadge = (status: QueueMessage["status"]) => {
@@ -166,35 +143,6 @@ export function QueuePage() {
     }
   }
 
-  // Handle toggling queue enabled/disabled
-  const handleToggleQueue = async (enabled: boolean) => {
-    if (!workspace?.id) return
-
-    try {
-      const response = await api.put(`/workspaces/${workspace.id}/whatsapp-queue/status`, {
-        enabled,
-      })
-
-      if (response.data.success) {
-        setIsQueueEnabled(enabled)
-        toast.success(
-          `Queue ${enabled ? "enabled" : "disabled"} successfully`,
-          { duration: 2000 }
-        )
-      } else {
-        toast.error(
-          response.data.error || "Failed to update queue status",
-          { duration: 1000 }
-        )
-        setIsQueueEnabled(!enabled) // Revert on error
-      }
-    } catch (error) {
-      logger.error("Error updating queue status:", error)
-      toast.error("Failed to update queue status", { duration: 1000 })
-      setIsQueueEnabled(!enabled) // Revert on error
-    }
-  }
-
   // Handle deleting a single message
   const handleDeleteMessage = async (messageId: string) => {
     if (!workspace?.id) return
@@ -240,18 +188,6 @@ export function QueuePage() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            {/* Queue Status Toggle */}
-            <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-lg border">
-              <span className="text-sm font-medium text-gray-700">
-                Queue: {isQueueEnabled ? "Active" : "Disabled"}
-              </span>
-              <Switch
-                checked={isQueueEnabled}
-                onCheckedChange={handleToggleQueue}
-                title={isQueueEnabled ? "Disable queue" : "Enable queue"}
-              />
-            </div>
-
             {/* Clear Queue Button */}
             <Button
               variant="destructive"

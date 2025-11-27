@@ -423,7 +423,7 @@ export class WhatsAppQueueService {
   /**
    * Get queue enabled/disabled status for a workspace
    * @param workspaceId Workspace ID
-   * @returns Queue enabled status
+   * @returns Queue enabled status (based on channelStatus)
    */
   async getQueueEnabledStatus(workspaceId: string): Promise<{ enabled: boolean }> {
     try {
@@ -431,16 +431,16 @@ export class WhatsAppQueueService {
 
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { whatsappQueueEnabled: true },
+        select: { channelStatus: true },
       })
 
       if (!workspace) {
         throw new Error("Workspace not found")
       }
 
-      console.log(`✅ [WhatsAppQueueService.getQueueEnabledStatus] enabled: ${workspace.whatsappQueueEnabled}`)
+      console.log(`✅ [WhatsAppQueueService.getQueueEnabledStatus] enabled: ${workspace.channelStatus}`)
 
-      return { enabled: workspace.whatsappQueueEnabled }
+      return { enabled: workspace.channelStatus }
     } catch (error) {
       console.error(`🔴 [WhatsAppQueueService.getQueueEnabledStatus] Error:`, error)
       logger.error(`[WhatsAppQueueService] Error in getQueueEnabledStatus:`, error)
@@ -449,10 +449,10 @@ export class WhatsAppQueueService {
   }
 
   /**
-   * Update queue enabled/disabled status for a workspace
+   * Update channel status for a workspace (controls queue processing)
    * @param workspaceId Workspace ID
-   * @param enabled Enable or disable queue
-   * @returns Updated workspace
+   * @param enabled Enable or disable channel
+   * @returns Updated status
    */
   async updateQueueStatus(
     workspaceId: string,
@@ -462,14 +462,14 @@ export class WhatsAppQueueService {
       console.log(`🔍 [WhatsAppQueueService.updateQueueStatus] workspaceId: ${workspaceId}, enabled: ${enabled}`)
       
       logger.info(
-        `[WhatsAppQueueService] Updating queue status for workspace ${workspaceId}: ${
+        `[WhatsAppQueueService] Updating channel status for workspace ${workspaceId}: ${
           enabled ? "ENABLED" : "DISABLED"
         }`
       )
 
       const updated = await this.prisma.workspace.update({
         where: { id: workspaceId },
-        data: { whatsappQueueEnabled: enabled },
+        data: { channelStatus: enabled },
       })
 
       console.log(`✅ [WhatsAppQueueService.updateQueueStatus] Updated workspace:`, updated.id)

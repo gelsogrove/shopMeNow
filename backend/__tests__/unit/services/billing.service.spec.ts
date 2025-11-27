@@ -69,8 +69,7 @@ describe("Billing Service - UNIT Tests", () => {
       const customerId = "customer-456"
       const description = "Test message"
 
-      // Mock PricingRepository.getValue("MESSAGE") → returns 0.15 (default fallback in code)
-      // Note: Code has fallback to 0.15, not 0.20!
+      // Mock PricingRepository.getValue("MESSAGE") → returns 0.10 (default fallback in code)
       mockPrisma.pricingConfig.findUnique.mockResolvedValue(null) // Force default
 
       // Mock billing.aggregate for getCurrentTotalForCustomer
@@ -78,17 +77,41 @@ describe("Billing Service - UNIT Tests", () => {
         _sum: { amount: null }, // No previous billing
       })
 
-      // Mock billing creation
+      // Mock billing creation (legacy table)
       mockPrisma.billing.create.mockResolvedValue({
         id: "billing-1",
         workspaceId,
         customerId,
         type: "MESSAGE",
-        amount: 0.15,
+        amount: 0.10,
         description,
         previousTotal: 0,
-        currentCharge: 0.15,
-        newTotal: 0.15,
+        currentCharge: 0.10,
+        newTotal: 0.10,
+        createdAt: new Date(),
+      })
+
+      // Mock workspace lookup for credit deduction
+      mockPrisma.workspace.findUnique.mockResolvedValue({
+        id: workspaceId,
+        creditBalance: 29.00,
+        ownerId: "owner-123",
+      })
+
+      // Mock workspace update (credit deduction)
+      mockPrisma.workspace.update.mockResolvedValue({
+        id: workspaceId,
+        creditBalance: 28.90,
+      })
+
+      // Mock billingTransaction creation (for Transaction History)
+      mockPrisma.billingTransaction.create.mockResolvedValue({
+        id: "tx-1",
+        workspaceId,
+        type: "MESSAGE",
+        amount: 0.10,
+        description: "WhatsApp message",
+        balanceAfter: 28.90,
         createdAt: new Date(),
       })
 
@@ -100,18 +123,35 @@ describe("Billing Service - UNIT Tests", () => {
         where: { key: "MESSAGE" },
       })
 
-      // Verify billing creation with correct price (default €0.15)
+      // Verify billing creation with correct price (default €0.10)
       expect(mockPrisma.billing.create).toHaveBeenCalledWith({
         data: {
           workspaceId,
           customerId,
           type: "MESSAGE",
-          amount: 0.15, // CRITICAL: Default €0.15 when database config missing
+          amount: 0.10, // CRITICAL: Default €0.10 when database config missing
           description,
           userQuery: null,
           previousTotal: 0,
-          currentCharge: 0.15,
-          newTotal: 0.15,
+          currentCharge: 0.10,
+          newTotal: 0.10,
+        },
+      })
+
+      // Verify credit was deducted from workspace
+      expect(mockPrisma.workspace.update).toHaveBeenCalledWith({
+        where: { id: workspaceId },
+        data: { creditBalance: 28.90 },
+      })
+
+      // Verify transaction was recorded for Transaction History
+      expect(mockPrisma.billingTransaction.create).toHaveBeenCalledWith({
+        data: {
+          workspaceId,
+          type: "MESSAGE",
+          amount: 0.10,
+          description: "WhatsApp message",
+          balanceAfter: 28.90,
         },
       })
     })

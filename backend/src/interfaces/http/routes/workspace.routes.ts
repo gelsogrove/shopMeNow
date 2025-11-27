@@ -15,6 +15,10 @@ export const workspaceRouter = (): Router => {
   // Apply auth middleware to all routes
   router.use(authMiddleware);
   
+  // Get badge stats for all user's workspaces (unread messages, pending orders, etc.)
+  // MUST be before /:id to avoid matching "badge-stats" as an ID
+  router.get('/badge-stats', asyncHandler(workspaceController.getWorkspaceBadgeStats));
+  
   // Get all workspaces
   router.get('/', asyncHandler(workspaceController.getAllWorkspaces));
   

@@ -56,6 +56,7 @@ export class WorkspaceController {
         welcomeMessage: workspace.welcomeMessage,
         wipMessage: workspace.wipMessage,
         channelStatus: workspace.channelStatus,
+        challengeStatus: workspace.channelStatus, // 🔄 Alias for frontend compatibility
         isActive: workspace.isActive,
         isDelete: workspace.isDelete,
         url: workspace.url,
@@ -112,6 +113,7 @@ export class WorkspaceController {
           welcomeMessage: workspace.welcomeMessage,
           wipMessage: workspace.wipMessage,
           channelStatus: workspace.channelStatus,
+          challengeStatus: workspace.channelStatus, // 🔄 Alias for frontend compatibility
           isActive: workspace.isActive,
           isDelete: workspace.isDelete,
           url: workspace.url,
@@ -264,6 +266,7 @@ export class WorkspaceController {
         welcomeMessage: workspace.welcomeMessage,
         wipMessage: workspace.wipMessage,
         channelStatus: workspace.channelStatus,
+        challengeStatus: workspace.channelStatus, // 🔄 Alias for frontend compatibility
         isActive: workspace.isActive,
         isDelete: workspace.isDelete,
         url: workspace.url,
@@ -322,6 +325,103 @@ export class WorkspaceController {
       return res.status(204).send()
     } catch (error) {
       logger.error(`Error deleting workspace ${req.params.id}:`, error)
+      return next(error)
+    }
+  }
+
+  /**
+   * Get badge stats for all user's workspaces
+   * Returns counts for: unread messages, operator interventions needed, pending orders
+   */
+  getWorkspaceBadgeStats = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      // CRITICAL SECURITY: Get userId from authenticated request
+      const userId = (req as any).user?.id
+      if (!userId) {
+        logger.error("User ID not found in request - authentication failed")
+        return res.status(401).json({ error: "User not authenticated" })
+      }
+
+      logger.info(`📊 Getting badge stats for user: ${userId}`)
+
+      // Get all workspaces this user has access to
+      const workspaces = await this.workspaceService.getByUserId(userId)
+      const workspaceIds = workspaces.map((w) => w.id)
+
+      if (workspaceIds.length === 0) {
+        return res.json({})
+      }
+
+      // Get stats for each workspace in parallel
+      const statsPromises = workspaceIds.map(async (workspaceId) => {
+        const [unreadMessages, pendingOrders, needsIntervention] =
+          await Promise.all([
+            // Count unread incoming messages (from customers)
+            prisma.message.count({
+              where: {
+                read: false,
+                direction: "INBOUND",
+                chatSession: {
+                  workspaceId,
+                },
+              },
+            }),
+            // Count pending orders
+            prisma.orders.count({
+              where: {
+                workspaceId,
+                status: "PENDING",
+              },
+            }),
+            // Count sessions needing operator intervention
+            // Sessions where context contains escalation request
+            prisma.chatSession.count({
+              where: {
+                workspaceId,
+                status: "active",
+                context: {
+                  path: ["needsOperator"],
+                  equals: true,
+                },
+              },
+            }),
+          ])
+
+        return {
+          workspaceId,
+          unreadMessages,
+          pendingOrders,
+          needsIntervention,
+        }
+      })
+
+      const allStats = await Promise.all(statsPromises)
+
+      // Convert to a map for easy access
+      const statsMap: Record<
+        string,
+        {
+          unreadMessages: number
+          pendingOrders: number
+          needsIntervention: number
+        }
+      > = {}
+      allStats.forEach((stat) => {
+        statsMap[stat.workspaceId] = {
+          unreadMessages: stat.unreadMessages,
+          pendingOrders: stat.pendingOrders,
+          needsIntervention: stat.needsIntervention,
+        }
+      })
+
+      logger.info(`📊 Badge stats retrieved for ${workspaceIds.length} workspaces`)
+      return res.json(statsMap)
+    } catch (error) {
+      logger.error("Error fetching workspace badge stats:", error)
       return next(error)
     }
   }

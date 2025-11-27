@@ -37,7 +37,9 @@ export class BillingService {
   }
 
   /**
-   * Track message cost (€0.15) - used for all message interactions
+   * Track message cost (€0.10) - used for all message interactions
+   * This deducts from ALL workspace credits (shared across owner's channels)
+   * AND records in billingTransactions for Transaction History
    */
   async trackMessage(
     workspaceId: string,
@@ -46,11 +48,11 @@ export class BillingService {
     userQuery?: string
   ): Promise<void> {
     try {
-      // Get current price from database (fallback to 0.15 for safety)
+      // Get current price from database (fallback to 0.10 for safety)
       const messageCost =
-        (await this.pricingRepository.getValue("MESSAGE")) ?? 0.15
+        (await this.pricingRepository.getValue("MESSAGE")) ?? 0.10
 
-      // Get current total for this customer
+      // Get current total for this customer (for legacy billing table)
       const previousTotal = await this.getCurrentTotalForCustomer(
         workspaceId,
         customerId
@@ -58,6 +60,7 @@ export class BillingService {
       const currentCharge = messageCost
       const newTotal = previousTotal + currentCharge
 
+      // 1️⃣ Write to legacy billing table (for Analytics)
       await this.prisma.billing.create({
         data: {
           workspaceId,
@@ -71,9 +74,40 @@ export class BillingService {
           newTotal,
         },
       })
-      logger.info(
-        `[BILLING] 💰 Message: €${previousTotal.toFixed(2)} + €${currentCharge.toFixed(2)} = €${newTotal.toFixed(2)} (workspace: ${workspaceId}, customer: ${customerId})`
-      )
+
+      // 2️⃣ Get workspace and owner to update ALL owner's workspaces
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { creditBalance: true, ownerId: true, name: true },
+      })
+
+      if (workspace && workspace.ownerId) {
+        const newBalance = Number(workspace.creditBalance) - messageCost
+
+        // Update ALL workspaces of this owner with the new balance (shared credit)
+        await this.prisma.workspace.updateMany({
+          where: { 
+            ownerId: workspace.ownerId,
+            isActive: true,
+          },
+          data: { creditBalance: newBalance },
+        })
+
+        // 3️⃣ Record in billingTransactions for Transaction History (with channel name)
+        await this.prisma.billingTransaction.create({
+          data: {
+            workspaceId,
+            type: "MESSAGE",
+            amount: messageCost,
+            description: `WhatsApp message (${workspace.name})`,
+            balanceAfter: newBalance,
+          },
+        })
+
+        logger.info(
+          `[BILLING] 💰 Message: €${messageCost.toFixed(2)} deducted from all owner workspaces. New balance: €${newBalance.toFixed(2)}`
+        )
+      }
     } catch (error) {
       logger.error(
         `Failed to charge message cost for workspace ${workspaceId}, customer ${customerId}`,

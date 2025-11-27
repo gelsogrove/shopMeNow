@@ -353,6 +353,17 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       // Ensure whatsappApiToken/whatsappApiKey is mapped correctly for Prisma
       const dbData: any = { ...data }
 
+      // 🔄 Map challengeStatus → channelStatus (frontend uses different name than DB)
+      if (dbData.challengeStatus !== undefined) {
+        dbData.channelStatus = dbData.challengeStatus
+        delete dbData.challengeStatus
+      }
+
+      // Remove 'id' if present - shouldn't update primary key
+      if (dbData.id !== undefined) {
+        delete dbData.id
+      }
+
       // Handle both whatsappApiToken (old) and whatsappApiKey (new) fields
       if (dbData.whatsappApiToken !== undefined) {
         dbData.whatsappApiKey = dbData.whatsappApiToken

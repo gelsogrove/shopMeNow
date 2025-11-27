@@ -100,7 +100,12 @@ export class PromptProcessorService {
 
     // Sostituzione contenuti dinamici
     if (processedPrompt.includes("{{FAQ}}")) {
-      processedPrompt = processedPrompt.replace("{{FAQ}}", dynamicContent.faqs)
+      // 🚨 CRITICAL: If no FAQ, tell LLM explicitly
+      const faqContent = dynamicContent.faqs?.trim()
+        ? dynamicContent.faqs
+        : "⚠️ Non abbiamo FAQ in questo workspace."
+
+      processedPrompt = processedPrompt.replace("{{FAQ}}", faqContent)
     }
 
     if (processedPrompt.includes("{{PRODUCTS}}")) {
@@ -118,30 +123,50 @@ export class PromptProcessorService {
         )
       }
 
+      // 🚨 CRITICAL: If no products, tell LLM explicitly - DON'T let it invent from examples!
+      const productsContent = dynamicContent.products?.trim()
+        ? dynamicContent.products
+        : "⚠️ CATALOGO VUOTO - Non ci sono prodotti in questo workspace. Rispondi: 'Mi dispiace, al momento non abbiamo prodotti nel catalogo.'"
+
       processedPrompt = processedPrompt.replace(
         "{{PRODUCTS}}",
-        dynamicContent.products || ""
+        productsContent
       )
     }
 
     if (processedPrompt.includes("{{CATEGORIES}}")) {
+      // 🚨 CRITICAL: If no categories, tell LLM explicitly
+      const categoriesContent = dynamicContent.categories?.trim()
+        ? dynamicContent.categories
+        : "⚠️ Non abbiamo categorie in questo workspace."
+
       processedPrompt = processedPrompt.replace(
         "{{CATEGORIES}}",
-        dynamicContent.categories
+        categoriesContent
       )
     }
 
     if (processedPrompt.includes("{{SERVICES}}")) {
+      // 🚨 CRITICAL: If no services, tell LLM explicitly
+      const servicesContent = dynamicContent.services?.trim()
+        ? dynamicContent.services
+        : "⚠️ Non abbiamo servizi in questo workspace."
+
       processedPrompt = processedPrompt.replace(
         "{{SERVICES}}",
-        dynamicContent.services
+        servicesContent
       )
     }
 
     if (processedPrompt.includes("{{OFFERS}}")) {
+      // 🚨 CRITICAL: If no offers, tell LLM explicitly
+      const offersContent = dynamicContent.offers?.trim()
+        ? dynamicContent.offers
+        : "⚠️ Non abbiamo offerte attive in questo momento."
+
       processedPrompt = processedPrompt.replace(
         "{{OFFERS}}",
-        dynamicContent.offers
+        offersContent
       )
     }
 

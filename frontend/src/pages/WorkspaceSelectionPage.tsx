@@ -9,14 +9,22 @@ import { useWorkspace } from "@/hooks/use-workspace"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
-import { LogOut, PlusCircle, Radio } from "lucide-react"
+import { LogOut, PlusCircle, Radio, MessageSquare, ShoppingCart, AlertTriangle } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
   createWorkspace,
   getWorkspaces,
   updateWorkspace,
+  workspaceApi,
 } from "../services/workspaceApi"
+
+// Badge stats type
+interface WorkspaceBadgeStats {
+  unreadMessages: number
+  pendingOrders: number
+  needsIntervention: number
+}
 
 // Definizione dei tipi di attività supportati
 type BusinessType = "Shop"
@@ -31,6 +39,7 @@ export function WorkspaceSelectionPage() {
   const [errorMessage, setErrorMessage] = useState("")
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [badgeStats, setBadgeStats] = useState<Record<string, WorkspaceBadgeStats>>({})
 
   // 🔍 DEBUG: Log ALL localStorage keys on mount
   useEffect(() => {
@@ -115,12 +124,21 @@ export function WorkspaceSelectionPage() {
 
       setIsLoading(true)
       logger.info("🔍 [WorkspaceSelectionPage] Calling getWorkspaces()")
-      const workspaces = await getWorkspaces()
+      
+      // Load workspaces and badge stats in parallel
+      const [workspacesData, statsData] = await Promise.all([
+        getWorkspaces(),
+        workspaceApi.getBadgeStats(),
+      ])
+      
       // Set workspaces sorted by createdAt asc (oldest first)
-      const sortedWorkspaces = workspaces.sort((a, b) => 
+      const sortedWorkspaces = workspacesData.sort((a, b) => 
         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       )
       setWorkspaces(sortedWorkspaces)
+      setBadgeStats(statsData)
+      
+      logger.info("📊 Badge stats loaded:", statsData)
     } catch (error) {
       logger.error(
         "❌ [WorkspaceSelectionPage] Error loading workspaces:",
@@ -324,6 +342,36 @@ export function WorkspaceSelectionPage() {
                       </span>
                     </div>
                   )}
+                  
+                  {/* 📊 Badge Stats Row */}
+                  {badgeStats[workspace.id] && (
+                    <div className="flex items-center gap-3 mt-3 pt-3 border-t border-green-200">
+                      {/* Unread Messages Badge */}
+                      {badgeStats[workspace.id].unreadMessages > 0 && (
+                        <div className="flex items-center gap-1.5 bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full text-sm font-medium">
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          <span>{badgeStats[workspace.id].unreadMessages}</span>
+                        </div>
+                      )}
+                      
+                      {/* Pending Orders Badge */}
+                      {badgeStats[workspace.id].pendingOrders > 0 && (
+                        <div className="flex items-center gap-1.5 bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full text-sm font-medium">
+                          <ShoppingCart className="h-3.5 w-3.5" />
+                          <span>{badgeStats[workspace.id].pendingOrders}</span>
+                        </div>
+                      )}
+                      
+                      {/* Needs Intervention Badge */}
+                      {badgeStats[workspace.id].needsIntervention > 0 && (
+                        <div className="flex items-center gap-1.5 bg-red-100 text-red-700 px-2.5 py-1 rounded-full text-sm font-medium animate-pulse">
+                          <AlertTriangle className="h-3.5 w-3.5" />
+                          <span>{badgeStats[workspace.id].needsIntervention}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
                   {justCreatedId === workspace.id && (
                     <div className="mt-2">
                       <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">

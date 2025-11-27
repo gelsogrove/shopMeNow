@@ -21,7 +21,7 @@ model Workspace {
   updatedAt                 DateTime          @updatedAt
   isDelete                  Boolean           @default(false)
   currency                  String            @default("EUR")
-  channelStatus             Boolean           @default(false)
+  channelStatus             Boolean           @default(false) // true = channel active (queue enabled), false = channel disabled
   description               String?
   messageLimit              Int               @default(50)
   url                       String?
@@ -32,7 +32,6 @@ model Workspace {
   debugMode                 Boolean           @default(true)
   apiKey                    String?
   metadata                  Json?
-  whatsappQueueEnabled      Boolean           @default(true)
   
   // Team management: ownerId groups all channels belonging to same owner
   ownerId                   String?

@@ -23,11 +23,11 @@ let isProcessing = false // Cron lock to prevent concurrent execution
  * Locking mechanism prevents concurrent runs
  */
 export function startWhatsAppQueueProcessor() {
-  logger.info("[WhatsApp Queue Processor] Starting cron job (every 10 minutes)...")
+  logger.info("[WhatsApp Queue Processor] Starting cron job (every 2 minutes)...")
 
-  // Schedule: runs every 10 minutes
-  // Format: 0 */10 * * * * = at minute 0,10,20,30,40,50 of every hour
-  cron.schedule("0 */10 * * * *", async () => {
+  // Schedule: runs every 2 minutes
+  // Format: */2 * * * * = every 2 minutes
+  cron.schedule("*/2 * * * *", async () => {
     // Check lock
     if (isProcessing) {
       logger.debug(
@@ -40,17 +40,18 @@ export function startWhatsAppQueueProcessor() {
     const startTime = Date.now()
 
     try {
-      // Get all active workspaces WHERE queue is enabled
+      // Get all active workspaces WHERE channel is active (channelStatus = true)
+      // channelStatus replaces whatsappQueueEnabled - single flag for channel active state
       const workspaces = await prisma.workspace.findMany({
         where: { 
           isActive: true,
-          whatsappQueueEnabled: true, // ✅ Only process if queue is ENABLED
+          channelStatus: true, // ✅ Only process if channel is ACTIVE
         },
         select: { id: true, name: true },
       })
 
       if (workspaces.length === 0) {
-        logger.debug("[WhatsApp Queue Processor] No active workspaces with queue enabled found")
+        logger.debug("[WhatsApp Queue Processor] No active workspaces with active channel found")
         return
       }
 

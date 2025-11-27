@@ -155,8 +155,7 @@ async function main() {
       businessType: "ECOMMERCE",
       description: "Italian Gourmet Food E-commerce",
       url: workspaceSettings.url || "https://altrogusto.com",
-      channelStatus: true, // ✅ Feature 126: Chatbot enabled by default
-      whatsappQueueEnabled: true, // ✅ Queue enabled by default
+      channelStatus: true, // ✅ Feature 126: Chatbot enabled by default (also controls queue processing)
       debugMode:
         workspaceSettings.debugMode !== undefined
           ? workspaceSettings.debugMode
@@ -1704,9 +1703,9 @@ async function main() {
       maxChannels: 999, // Unlimited
       maxProducts: 9999, // Unlimited
       maxCustomers: 9999, // Unlimited
-      messageCost: 0.08, // Volume discount
-      orderCost: 0.80, // Volume discount
-      pushCost: 0.80, // Volume discount
+      messageCost: 0.10,
+      orderCost: 1.00,
+      pushCost: 1.00,
       lowBalanceThreshold: 10.00,
       trialDays: 0,
       initialCredit: 0,

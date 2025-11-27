@@ -164,21 +164,35 @@ export const workspaceService = {
   },
 
   async update(id: string, data: UpdateWorkspaceData) {
-    // Separate adminEmail from the rest of the data
-    const { adminEmail, ...workspaceData } = data as UpdateWorkspaceData & {
+    // Separate fields that shouldn't go to Prisma directly
+    const { 
+      adminEmail, 
+      challengeStatus,
+      id: _id,  // Remove id if present (shouldn't update primary key)
+      ...workspaceData 
+    } = data as UpdateWorkspaceData & {
       adminEmail?: string
+      challengeStatus?: boolean  // Frontend sends challengeStatus, but DB uses channelStatus
+      id?: string  // Frontend might send id but we shouldn't update it
     }
 
-    // 🔍 LOG DETTAGLIATO per debug whatsappApiKey
+    // 🔄 Map challengeStatus → channelStatus (frontend uses different name than DB)
+    if (challengeStatus !== undefined) {
+      (workspaceData as any).channelStatus = challengeStatus
+    }
+
+    // 🔍 LOG DETTAGLIATO per debug
     logger.info("=== WORKSPACE UPDATE DEBUG ===")
     logger.info("Workspace ID:", id)
     logger.info("Data received:", JSON.stringify(data, null, 2))
+    logger.info("challengeStatus from frontend:", challengeStatus)
+    logger.info("channelStatus mapped to:", (workspaceData as any).channelStatus)
     logger.info(
       "whatsappApiKey in data:",
       data.whatsappApiKey ? "✅ PRESENTE" : "❌ ASSENTE"
     )
     logger.info(
-      "workspaceData after adminEmail extraction:",
+      "Final workspaceData for Prisma:",
       JSON.stringify(workspaceData, null, 2)
     )
 

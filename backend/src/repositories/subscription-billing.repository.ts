@@ -53,22 +53,28 @@ export class SubscriptionBillingRepository {
   /**
    * Get workspace billing information
    * SECURITY: Requires workspaceId
+   * NOTE: Each workspace has its own creditBalance - no sharing
    */
   async getWorkspaceBilling(workspaceId: string): Promise<BillingInfo | null> {
+    // Get the workspace directly - use ITS creditBalance
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
       select: {
-        planType: true,
         creditBalance: true,
+        ownerId: true,
+        planType: true,
         trialEndsAt: true,
         planStartedAt: true,
         nextBillingDate: true,
       },
     })
 
-    if (!workspace) {
+    if (!workspace || !workspace.ownerId) {
       return null
     }
+
+    // Use THIS workspace's creditBalance directly
+    const creditBalance = Number(workspace.creditBalance)
 
     const now = new Date()
     const isTrialExpired =
@@ -88,7 +94,7 @@ export class SubscriptionBillingRepository {
 
     return {
       planType: workspace.planType,
-      creditBalance: Number(workspace.creditBalance),
+      creditBalance,
       trialEndsAt: workspace.trialEndsAt,
       planStartedAt: workspace.planStartedAt,
       nextBillingDate: workspace.nextBillingDate,
@@ -135,6 +141,7 @@ export class SubscriptionBillingRepository {
   /**
    * Get current credit balance for workspace
    * SECURITY: Requires workspaceId
+   * NOTE: Uses PRIMARY workspace (first created) for the owner - shared balance
    */
   async getCreditBalance(workspaceId: string): Promise<number> {
     const workspace = await this.prisma.workspace.findUnique({
