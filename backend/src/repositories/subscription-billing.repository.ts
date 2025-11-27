@@ -22,6 +22,7 @@ export interface BillingInfo {
   nextBillingDate: Date | null
   isTrialExpired: boolean
   daysUntilTrialExpires: number | null
+  totalRecharges: number
 }
 
 export interface PlanLimits {
@@ -76,6 +77,17 @@ export class SubscriptionBillingRepository {
     // Use THIS workspace's creditBalance directly
     const creditBalance = Number(workspace.creditBalance)
 
+    // Calculate total recharges from transactions
+    const rechargeSum = await this.prisma.billingTransaction.aggregate({
+      where: {
+        workspaceId,
+        type: 'RECHARGE',
+        amount: { gt: 0 },
+      },
+      _sum: { amount: true },
+    })
+    const totalRecharges = Number(rechargeSum._sum.amount || 0)
+
     const now = new Date()
     const isTrialExpired =
       workspace.planType === "FREE_TRIAL" &&
@@ -100,6 +112,7 @@ export class SubscriptionBillingRepository {
       nextBillingDate: workspace.nextBillingDate,
       isTrialExpired,
       daysUntilTrialExpires,
+      totalRecharges,
     }
   }
 

@@ -315,10 +315,9 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
       setShowPlanConfirmDialog(false)
       setPendingPlanChange(null)
 
-      // Refresh overview to get new plan info
-      // Use setTimeout to ensure backend has committed the transaction
+      // Refresh the entire page to update all components with new plan data
       setTimeout(() => {
-        refreshOverview()
+        window.location.reload()
       }, 500)
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.response?.data?.error || "Failed to change plan"
@@ -465,7 +464,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                 <FileText className="h-4 w-4" />
                 Invoices
               </Button>
-              {isSuperAdmin && billing.planType !== "FREE_TRIAL" && (
+              {isSuperAdmin && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -547,11 +546,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total recharges:</span>
                   <span className="font-medium text-emerald-600">
-                    {formatCurrency(
-                      transactions
-                        .filter(tx => tx.type === 'RECHARGE' && tx.amount > 0)
-                        .reduce((sum, tx) => sum + tx.amount, 0)
-                    )}
+                    {formatCurrency(billing.totalRecharges || 0)}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -571,10 +566,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                       </span>
                       <span className="ml-2 text-green-600 font-bold">
                         {formatCurrency(
-                          (planConfig.monthlyFee +
-                          transactions
-                            .filter(tx => tx.type === 'RECHARGE' && tx.amount > 0)
-                            .reduce((sum, tx) => sum + tx.amount, 0)) * 1.22
+                          (planConfig.monthlyFee + (billing.totalRecharges || 0)) * 1.22
                         )}
                       </span>
                     </div>

@@ -36,6 +36,7 @@ export interface BillingInfo {
   nextBillingDate: string | null
   isTrialExpired: boolean
   daysUntilTrialExpires: number | null
+  totalRecharges: number
 }
 
 export interface PlanLimits {
