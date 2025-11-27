@@ -145,8 +145,13 @@ export default function ClientsPage(): JSX.Element {
   // Stati per il dialogo di conferma eliminazione
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null)
-  const { chats: allChats } = useChatList()
+  const { chats: allChats, enableFetching } = useChatList()
   const [showPlayground, setShowPlayground] = useState(false)
+
+  // 🆕 Enable chat fetching when entering this page (for chat count)
+  useEffect(() => {
+    enableFetching()
+  }, [enableFetching])
 
   // 🆕 State for notification dialog
   const [showNotificationDialog, setShowNotificationDialog] = useState(false)

@@ -232,7 +232,13 @@ export function ChatPage() {
     isLoading: isLoadingChats,
     updateActiveChatbot,
     refetch: refetchChats,
+    enableFetching,
   } = useChatList()
+
+  // 🆕 Enable chat list fetching when entering this page
+  useEffect(() => {
+    enableFetching()
+  }, [enableFetching])
 
   const [hasToggledChatbot, setHasToggledChatbot] = useState(false)
   const [isBlocking, setIsBlocking] = useState(false)
