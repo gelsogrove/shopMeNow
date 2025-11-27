@@ -200,6 +200,20 @@ export class CustomersController {
       if (phone !== undefined) customerData.phone = phone
       if (address !== undefined) customerData.address = address
       if (isActive !== undefined) customerData.isActive = isActive
+
+      // 🔄 AUTO-ACTIVATE: If customer was inactive (temporary from new channel)
+      // and is being updated with a valid name, activate them automatically
+      // Note: Only require valid name - email can still be temporary
+      if (
+        originalCustomer.isActive === false &&
+        isActive === undefined &&
+        name !== undefined &&
+        name.trim() !== "" &&
+        name !== "New Customer"
+      ) {
+        customerData.isActive = true
+        logger.info(`Auto-activating customer ${id} - valid name provided`)
+      }
       if (company !== undefined) customerData.company = company
       if (discount !== undefined) customerData.discount = discount
       if (language !== undefined) customerData.language = language

@@ -1098,17 +1098,6 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
                               </TableRow>
                             )
                           })}
-                          {/* Monthly Totals Row */}
-                          <TableRow className="bg-gray-50 font-semibold">
-                            <TableCell colSpan={3} className="text-right">
-                              Monthly Total
-                            </TableCell>
-                            <TableCell className="text-right text-emerald-600">
-                              +{formatCurrency(data.income)}
-                            </TableCell>
-                            <TableCell className="text-right"></TableCell>
-                            <TableCell></TableCell>
-                          </TableRow>
                         </TableBody>
                       </Table>
                     </div>
