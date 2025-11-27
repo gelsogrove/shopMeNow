@@ -142,10 +142,25 @@ export class WhatsAppQueueService {
 
   /**
    * Process pending messages for a workspace (called by cron)
+   * If debugMode is enabled for the workspace, messages are NOT sent (stay pending)
    * @param workspaceId Workspace ID
    */
   async processPendingMessages(workspaceId: string): Promise<void> {
     try {
+      // 🔧 DEBUG MODE CHECK: If debugMode is enabled, skip sending entirely
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { debugMode: true, name: true },
+      })
+
+      if (workspace?.debugMode === true) {
+        logger.info(
+          `[WhatsAppQueueService] 🔧 DEBUG MODE ENABLED for workspace "${workspace.name}" (${workspaceId}) - messages will NOT be sent`
+        )
+        // Skip processing - messages remain in "pending" status
+        return
+      }
+
       // Fetch ONE pending message (FIFO)
       const message = await this.repository.findPending(workspaceId, 1)
 
@@ -421,26 +436,26 @@ export class WhatsAppQueueService {
   }
 
   /**
-   * Get queue enabled/disabled status for a workspace
+   * Get queue enabled status for a workspace (based on channelStatus)
    * @param workspaceId Workspace ID
-   * @returns Queue enabled status (based on channelStatus)
+   * @returns Queue enabled status (based on channelStatus) and debug mode
    */
-  async getQueueEnabledStatus(workspaceId: string): Promise<{ enabled: boolean }> {
+  async getQueueEnabledStatus(workspaceId: string): Promise<{ enabled: boolean; debugMode: boolean }> {
     try {
       console.log(`🔍 [WhatsAppQueueService.getQueueEnabledStatus] workspaceId: ${workspaceId}`)
 
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { channelStatus: true },
+        select: { channelStatus: true, debugMode: true },
       })
 
       if (!workspace) {
         throw new Error("Workspace not found")
       }
 
-      console.log(`✅ [WhatsAppQueueService.getQueueEnabledStatus] enabled: ${workspace.channelStatus}`)
+      console.log(`✅ [WhatsAppQueueService.getQueueEnabledStatus] enabled: ${workspace.channelStatus}, debugMode: ${workspace.debugMode}`)
 
-      return { enabled: workspace.channelStatus }
+      return { enabled: workspace.channelStatus, debugMode: workspace.debugMode }
     } catch (error) {
       console.error(`🔴 [WhatsAppQueueService.getQueueEnabledStatus] Error:`, error)
       logger.error(`[WhatsAppQueueService] Error in getQueueEnabledStatus:`, error)
@@ -479,6 +494,42 @@ export class WhatsAppQueueService {
       console.error(`🔴 [WhatsAppQueueService.updateQueueStatus] Error:`, error)
       logger.error(`[WhatsAppQueueService] Error in updateQueueStatus:`, error)
       throw new Error("Failed to update queue status")
+    }
+  }
+
+  /**
+   * Update debug mode for a workspace
+   * When debugMode=true, messages will NOT be sent (stay pending)
+   * When debugMode=false, messages will be sent normally
+   * @param workspaceId Workspace ID
+   * @param debugMode Debug mode setting
+   * @returns Updated debug mode status
+   */
+  async updateDebugMode(
+    workspaceId: string,
+    debugMode: boolean
+  ): Promise<{ debugMode: boolean }> {
+    try {
+      console.log(`🔍 [WhatsAppQueueService.updateDebugMode] workspaceId: ${workspaceId}, debugMode: ${debugMode}`)
+      
+      logger.info(
+        `[WhatsAppQueueService] Updating debug mode for workspace ${workspaceId}: ${
+          debugMode ? "ENABLED" : "DISABLED"
+        }`
+      )
+
+      const updated = await this.prisma.workspace.update({
+        where: { id: workspaceId },
+        data: { debugMode },
+      })
+
+      console.log(`✅ [WhatsAppQueueService.updateDebugMode] Updated workspace:`, updated.id)
+
+      return { debugMode }
+    } catch (error) {
+      console.error(`🔴 [WhatsAppQueueService.updateDebugMode] Error:`, error)
+      logger.error(`[WhatsAppQueueService] Error in updateDebugMode:`, error)
+      throw new Error("Failed to update debug mode")
     }
   }
 }

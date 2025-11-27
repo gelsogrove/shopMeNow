@@ -304,7 +304,7 @@ export class WhatsAppQueueController {
    * @swagger
    * /api/workspaces/{workspaceId}/whatsapp-queue/status:
    *   get:
-   *     summary: Get queue enabled/disabled status
+   *     summary: Get queue enabled/disabled status and debug mode
    *     tags: [WhatsApp Queue]
    *     security:
    *       - bearerAuth: []
@@ -326,6 +326,9 @@ export class WhatsAppQueueController {
    *                   type: boolean
    *                 enabled:
    *                   type: boolean
+   *                 debugMode:
+   *                   type: boolean
+   *                   description: When true, messages stay pending and are not sent
    */
   async getQueueStatus(req: Request, res: Response): Promise<Response> {
     try {
@@ -426,6 +429,88 @@ export class WhatsAppQueueController {
       return res.status(500).json({
         success: false,
         error: "Failed to update queue status",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/workspaces/{workspaceId}/whatsapp-queue/debug-mode:
+   *   put:
+   *     summary: Enable or disable debug mode
+   *     description: When debug mode is enabled, messages will NOT be sent and stay in "pending" status. Useful for testing without actually sending WhatsApp messages.
+   *     tags: [WhatsApp Queue]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: workspaceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - debugMode
+   *             properties:
+   *               debugMode:
+   *                 type: boolean
+   *                 description: When true, messages stay pending and are not sent
+   *     responses:
+   *       200:
+   *         description: Debug mode updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                 debugMode:
+   *                   type: boolean
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden - Invalid workspace
+   */
+  async updateDebugMode(req: Request, res: Response): Promise<Response> {
+    try {
+      const workspaceId = (req as any).workspaceId
+      const { debugMode } = req.body
+
+      console.log(`🔍 [updateDebugMode] workspaceId: ${workspaceId}, debugMode: ${debugMode}`)
+
+      if (typeof debugMode !== "boolean") {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid request",
+          message: "debugMode must be a boolean",
+        })
+      }
+
+      logger.info(
+        `[WhatsAppQueueController] Updating debug mode for workspace ${workspaceId}: ${
+          debugMode ? "ENABLED" : "DISABLED"
+        }`
+      )
+
+      const result = await this.service.updateDebugMode(workspaceId, debugMode)
+
+      return res.json({
+        success: true,
+        ...result,
+      })
+    } catch (error) {
+      logger.error("[WhatsAppQueueController] Error in updateDebugMode:", error)
+      console.error(`🔴 [updateDebugMode] Error details:`, error)
+      return res.status(500).json({
+        success: false,
+        error: "Failed to update debug mode",
         message: error instanceof Error ? error.message : "Unknown error",
       })
     }

@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
 import {
   Table,
   TableBody,
@@ -24,7 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { ListChecks, Trash2, AlertTriangle } from "lucide-react"
+import { ListChecks, Trash2, AlertTriangle, Bug } from "lucide-react"
 import { useEffect, useState } from "react"
 
 interface QueueMessage {
@@ -48,11 +49,62 @@ export function QueuePage() {
   const [messages, setMessages] = useState<QueueMessage[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterMode, setFilterMode] = useState<"all" | "pending" | "error">("all")
+  const [filterMode, setFilterMode] = useState<"all" | "pending" | "error">("pending")
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [messageToDelete, setMessageToDelete] = useState<QueueMessage | null>(null)
   const [showDeleteMessageDialog, setShowDeleteMessageDialog] = useState(false)
+  const [debugMode, setDebugMode] = useState(false)
+  const [isUpdatingDebugMode, setIsUpdatingDebugMode] = useState(false)
+
+  // Fetch debug mode status on mount
+  useEffect(() => {
+    if (!workspace?.id) return
+
+    const fetchDebugMode = async () => {
+      try {
+        const response = await api.get(
+          `/workspaces/${workspace.id}/whatsapp-queue/status`
+        )
+        if (response.data.success) {
+          setDebugMode(response.data.debugMode ?? false)
+        }
+      } catch (error) {
+        logger.error("Failed to fetch debug mode status:", error)
+      }
+    }
+
+    fetchDebugMode()
+  }, [workspace?.id])
+
+  // Handle debug mode toggle
+  const handleDebugModeToggle = async (newValue: boolean) => {
+    if (!workspace?.id || isUpdatingDebugMode) return
+
+    setIsUpdatingDebugMode(true)
+    try {
+      const response = await api.put(
+        `/workspaces/${workspace.id}/whatsapp-queue/debug-mode`,
+        { debugMode: newValue }
+      )
+      if (response.data.success) {
+        setDebugMode(newValue)
+        toast.success(
+          newValue 
+            ? "Debug Mode enabled - messages will NOT be sent" 
+            : "Debug Mode disabled - messages will be sent normally",
+          { duration: 3000 }
+        )
+      } else {
+        toast.error("Failed to update debug mode", { duration: 2000 })
+      }
+    } catch (error) {
+      logger.error("Failed to update debug mode:", error)
+      toast.error("Failed to update debug mode", { duration: 2000 })
+    } finally {
+      setIsUpdatingDebugMode(false)
+    }
+  }
 
   // Auto-refresh every 5 seconds
   useEffect(() => {
@@ -188,6 +240,21 @@ export function QueuePage() {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            {/* Debug Mode Toggle */}
+            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border">
+              <Bug className={`h-4 w-4 ${debugMode ? "text-orange-500" : "text-gray-400"}`} />
+              <span className="text-sm text-gray-600">Debug Mode</span>
+              <Switch
+                checked={debugMode}
+                onCheckedChange={handleDebugModeToggle}
+                disabled={isUpdatingDebugMode}
+              />
+            </div>
+            {debugMode && (
+              <Badge className="bg-orange-100 text-orange-700 border-orange-300">
+                ⚠️ Messages NOT being sent
+              </Badge>
+            )}
             {/* Clear Queue Button */}
             <Button
               variant="destructive"
@@ -243,8 +310,8 @@ export function QueuePage() {
         </Card>
 
         {/* Table */}
-        <Card>
-          <CardContent className="p-0">
+        <Card className="overflow-hidden">
+          <CardContent className="p-0 overflow-x-auto">
             {isLoading ? (
               <div className="py-12 text-center text-gray-500">
                 Loading queue...

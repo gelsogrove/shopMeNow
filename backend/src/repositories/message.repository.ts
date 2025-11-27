@@ -1138,69 +1138,8 @@ export class MessageRepository {
           )
           botResponse = existingBotMessage // Return existing response instead of creating new one
         } else {
-          logger.info(
-            `[DEBUG-TRACKING] 🔍 About to track usage for customer: ${customer.id}, workspace: ${workspaceId}`
-          )
-
-          // 💰 USAGE TRACKING: Check debugMode before tracking €0.005
-          try {
-            // Get workspace to check debugMode setting
-            const workspace = await this.prisma.workspace.findUnique({
-              where: { id: workspaceId },
-              select: { debugMode: true },
-            })
-
-            // Environment-based fallback (Constitution v1.5.0 Principle I compliance)
-            // - If debugMode is NULL:
-            //   - NODE_ENV=production → false (billing enabled)
-            //   - NODE_ENV=development → true (billing disabled)
-            //   - NODE_ENV undefined → true (safe default for local dev)
-            const effectiveDebugMode =
-              workspace?.debugMode ??
-              (process.env.NODE_ENV === "production" ? false : true)
-
-            if (!effectiveDebugMode) {
-              // debugMode is false AND customer not blacklisted, track usage normally
-              // 💰 UNIFIED BILLING: Price from BillingPrices enum (SINGLE SOURCE OF TRUTH)
-              const messagePrice = BillingPrices.MESSAGE
-
-              // Track in legacy usage system (for Analytics)
-              const { usageService } = await import("../services/usage.service")
-              await usageService.trackUsage({
-                clientId: customer.id,
-                workspaceId: workspaceId,
-                price: messagePrice,
-              })
-
-              // Track in new billing system (same price!)
-              const { BillingService } = await import(
-                "../application/services/billing.service"
-              )
-              const billingService = new BillingService(this.prisma)
-
-              // Track regular message cost (all messages are €0.15 regardless of agent type)
-              await billingService.trackMessage(
-                workspaceId,
-                customer.id,
-                `Message from ${data.phoneNumber}`,
-                data.message // User's question
-              )
-              logger.info(
-                `[BILLING] 💰 €0.15 message cost tracked for ${data.phoneNumber}`
-              )
-            } else {
-              // debugMode is true, skip tracking
-              logger.info(
-                `[DEBUG-MODE] 🚫 Usage tracking skipped - debug mode enabled for workspace ${workspaceId}`
-              )
-            }
-          } catch (trackingError) {
-            logger.error(`[DEBUG-TRACKING] ❌ Tracking error:`, trackingError)
-            logger.warn(
-              `[USAGE-TRACKING] ❌ Failed to track usage, but conversation will still be saved:`,
-              trackingError.message
-            )
-          }
+          // 💰 BILLING: Moved to WhatsApp Queue Service - tracks ONLY when message is successfully sent
+          // See whatsapp-queue.service.ts → processPendingMessages() → after successful WhatsApp delivery
 
           botResponse = await this.prisma.message.create({
             data: {

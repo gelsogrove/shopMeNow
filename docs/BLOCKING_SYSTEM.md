@@ -1,0 +1,507 @@
+# 🚫 ShopME Blocking System - Complete Documentation
+
+**Version**: 1.0.0  
+**Last Updated**: November 27, 2025  
+**Feature**: 185-subscription-billing-system  
+
+---
+
+## 📊 Overview
+
+ShopME implements multiple blocking mechanisms to ensure:
+1. **Revenue Protection** - No free usage beyond limits
+2. **Fair Usage** - Plan limits enforced
+3. **Security** - Block malicious users
+4. **Service Quality** - Prevent abuse
+
+---
+
+## 🚨 All Blocking Codes
+
+| Code | HTTP Status | Trigger | User Impact |
+|------|-------------|---------|-------------|
+| `TRIAL_EXPIRED` | 402 | Trial 14 days passed | Full service block |
+| `INSUFFICIENT_CREDIT` | 402 | Credit < operation cost | Operation blocked |
+| `CUSTOMER_LIMIT_REACHED` | 403 | Customers >= plan max | New customers blocked |
+| `PLAN_LIMIT_REACHED` | 403 | Products/Channels >= max | Creation blocked |
+| `CHANNEL_LIMIT_EXCEEDED` | 403 | Channels >= plan max | New channel blocked |
+| `OWNER_REQUIRED` | 403 | Non-owner billing action | Action blocked |
+| `BLACKLISTED` | 200* | Too many reg attempts | Silent block |
+| `WORKSPACE_REQUIRED` | 400 | Missing workspaceId | Request rejected |
+
+*Returns 200 to prevent information leak to attackers
+
+---
+
+## 📋 Detailed Block Descriptions
+
+### 1. TRIAL_EXPIRED
+
+**When it triggers:**
+- `plan = FREE_TRIAL` AND `trialEndsAt < now()`
+
+**Where it's checked:**
+- `billing.middleware.ts` → `checkTrialValid`
+- `whatsapp-webhook.controller.ts` → before processing messages
+- `whatsapp.routes.ts` → before processing new users
+
+**Code location:**
+```typescript
+// backend/src/interfaces/http/middlewares/billing.middleware.ts
+const trialStatus = await billingService.isTrialValid(workspaceId)
+
+if (trialStatus.isTrialPlan && !trialStatus.isValid) {
+  res.status(402).json({
+    error: "Trial scaduto",
+    code: "TRIAL_EXPIRED",
+    message: "Il tuo periodo di prova è scaduto. Scegli un piano per continuare."
+  })
+}
+```
+
+**User experience:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    TRIAL EXPIRED BLOCK                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  WhatsApp Customer:                                              │
+│  ┌────────────────────────────────┐                             │
+│  │ "Ciao, vorrei ordinare..."     │ → NO RESPONSE               │
+│  └────────────────────────────────┘   (Silent block)            │
+│                                                                  │
+│  Admin Panel:                                                    │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │  ⚠️ Trial Scaduto                                          │ │
+│  │                                                             │ │
+│  │  Il tuo periodo di prova è scaduto.                        │ │
+│  │  Scegli un piano per continuare ad usare ShopME.           │ │
+│  │                                                             │ │
+│  │  [Scegli Piano Basic €29/mese]  [Premium €49/mese]        │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Recovery:**
+- Upgrade to BASIC or PREMIUM plan
+- Service resumes immediately after upgrade
+
+---
+
+### 2. INSUFFICIENT_CREDIT
+
+**When it triggers:**
+- `creditBalance < operationCost`
+
+**Where it's checked:**
+- `billing.middleware.ts` → `checkCredit` (before processing)
+- `whatsapp-webhook.controller.ts` → before welcome message
+- `whatsapp.routes.ts` → before processing messages
+- `whatsapp-queue.service.ts` → `deductMessageCredit` (after successful send)
+
+**💰 Important Billing Logic:**
+- Credit is checked BEFORE processing (to avoid wasted LLM costs)
+- Credit is DEDUCTED only AFTER successful WhatsApp delivery
+- If `debugMode=true` → message stays pending → NO billing
+- If WhatsApp fails → status "error" → NO billing
+
+**Code location:**
+```typescript
+// backend/src/interfaces/http/middlewares/billing.middleware.ts
+const cost = await billingService.getOperationCost(workspaceId, operation)
+const creditCheck = await billingService.checkCredit(workspaceId, cost)
+
+if (!creditCheck.hasSufficientCredit) {
+  res.status(402).json({
+    error: "Credito insufficiente",
+    code: "INSUFFICIENT_CREDIT",
+    details: {
+      currentBalance: creditCheck.currentBalance,
+      requiredAmount: creditCheck.requiredAmount,
+      deficit: creditCheck.deficit
+    },
+    message: `Credito insufficiente. Saldo: €${creditCheck.currentBalance.toFixed(2)}`
+  })
+}
+```
+
+**User experience:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    INSUFFICIENT CREDIT BLOCK                     │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  WhatsApp Customer:                                              │
+│  ┌────────────────────────────────┐                             │
+│  │ "Quanto costa la pizza?"       │ → NO RESPONSE               │
+│  └────────────────────────────────┘   (Silent block)            │
+│                                                                  │
+│  Admin Panel Header:                                             │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │  💰 €0.05  ⚠️ CREDITO BASSO                                │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  Admin Panel Alert:                                              │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │  ⚠️ Credito Insufficiente                                  │ │
+│  │                                                             │ │
+│  │  Saldo attuale: €0.05                                      │ │
+│  │  Richiesto: €0.15 per messaggio                            │ │
+│  │                                                             │ │
+│  │  Il chatbot non può rispondere ai clienti.                 │ │
+│  │                                                             │ │
+│  │  [Ricarica €25]  [Ricarica €50]  [Ricarica €100]          │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Recovery:**
+- Recharge credit via "Ricarica" button
+- Messages in queue will be processed after recharge
+
+---
+
+### 3. CUSTOMER_LIMIT_REACHED
+
+**When it triggers:**
+- New customer tries to contact
+- Current customers >= plan limit (50 for BASIC, 100 for PREMIUM)
+
+**Where it's checked:**
+- `whatsapp-webhook.controller.ts` → line 395
+- `whatsapp.routes.ts` → line 217
+
+**Code location:**
+```typescript
+// backend/src/interfaces/http/controllers/whatsapp-webhook.controller.ts
+const customerLimitCheck = await billingService.checkPlanLimits(workspaceId, "customers")
+
+if (!customerLimitCheck.withinLimits) {
+  logger.warn("[WEBHOOK] 📊 Customer limit reached - SILENT BLOCK")
+  res.status(403).json({
+    status: "limit_reached",
+    code: "CUSTOMER_LIMIT_REACHED",
+    message: `Customer limit reached (${customerLimitCheck.current}/${customerLimitCheck.max}).`
+  })
+  return
+}
+```
+
+**User experience:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    CUSTOMER LIMIT BLOCK                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  NEW WhatsApp Customer (51st for BASIC):                         │
+│  ┌────────────────────────────────┐                             │
+│  │ "Ciao!"                        │ → NO RESPONSE               │
+│  └────────────────────────────────┘   (Silent block)            │
+│                                       Customer NOT saved         │
+│                                                                  │
+│  Existing Customers:                                             │
+│  ┌────────────────────────────────┐                             │
+│  │ "Come stai?"                   │ → Normal response           │
+│  └────────────────────────────────┘   (they're already saved)   │
+│                                                                  │
+│  Admin Panel - Workspace Selection:                              │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │  📊 Utilizzo                                               │ │
+│  │                                                             │ │
+│  │  Clienti   ██████████  50/50  ⚠️ LIMIT                     │ │
+│  │                                                             │ │
+│  │  Nuovi clienti non possono contattarti!                    │ │
+│  │                                                             │ │
+│  │  [Upgrade a Premium → 100 clienti]                         │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Recovery:**
+- Upgrade to PREMIUM (100 customers) or ENTERPRISE (unlimited)
+- OR delete inactive customers to make room
+
+---
+
+### 4. PLAN_LIMIT_REACHED (Products)
+
+**When it triggers:**
+- Admin tries to add product
+- Current products >= plan limit (50 for BASIC, 100 for PREMIUM)
+
+**Where it's checked:**
+- `products.routes.ts` → `checkPlanLimits("products")` middleware
+
+**Code location:**
+```typescript
+// backend/src/interfaces/http/routes/products.routes.ts
+router.post(
+  "/:workspaceId/products",
+  authMiddleware,
+  sessionValidationMiddleware,
+  validateWorkspaceOperation,
+  checkPlanLimits("products"),  // ← Middleware here
+  upload.single("image"),
+  productController.createProduct.bind(productController)
+)
+```
+
+**User experience:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    PRODUCT LIMIT BLOCK                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Admin clicks "Aggiungi Prodotto":                               │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │  ❌ Limite Piano Raggiunto                                  │ │
+│  │                                                             │ │
+│  │  Hai raggiunto il limite massimo di prodotti               │ │
+│  │  per il tuo piano (50/50).                                 │ │
+│  │                                                             │ │
+│  │  Passa a Premium per aggiungere fino a 100 prodotti.       │ │
+│  │                                                             │ │
+│  │  [Upgrade a Premium]  [Annulla]                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Recovery:**
+- Upgrade to PREMIUM (100 products) or ENTERPRISE (unlimited)
+- OR delete inactive products
+
+---
+
+### 5. CHANNEL_LIMIT_EXCEEDED
+
+**When it triggers:**
+- Owner tries to add new workspace/channel
+- Current channels >= plan limit (1 for BASIC, 2 for PREMIUM)
+
+**Where it's checked:**
+- `workspace.controller.ts` → `createWorkspace()` method
+
+**Code location:**
+```typescript
+// backend/src/interfaces/http/controllers/workspace.controller.ts
+const limitCheck = await this.billingService.checkPlanLimits(firstWorkspaceId, "channels")
+
+if (!limitCheck.withinLimits) {
+  return res.status(403).json({
+    error: "Limite canali raggiunto",
+    code: "CHANNEL_LIMIT_EXCEEDED",
+    message: `Hai raggiunto il limite di canali (${limitCheck.current}/${limitCheck.max}).`
+  })
+}
+```
+
+**User experience:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    CHANNEL LIMIT BLOCK                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Owner clicks "Aggiungi Canale":                                 │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │  ❌ Limite Canali Raggiunto                                 │ │
+│  │                                                             │ │
+│  │  Hai raggiunto il limite di canali WhatsApp                │ │
+│  │  per il tuo piano (1/1).                                   │ │
+│  │                                                             │ │
+│  │  Passa a Premium per avere 2 canali.                       │ │
+│  │                                                             │ │
+│  │  [Upgrade a Premium]  [Annulla]                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Recovery:**
+- Upgrade to PREMIUM (2 channels) or ENTERPRISE (unlimited)
+
+---
+
+### 6. OWNER_REQUIRED
+
+**When it triggers:**
+- Non-owner user tries to access billing functions
+
+**Where it's checked:**
+- `billing.middleware.ts` → `requireOwnerForBilling`
+
+**Code location:**
+```typescript
+// backend/src/interfaces/http/middlewares/billing.middleware.ts
+if (userWorkspace.role !== "SUPER_ADMIN") {
+  res.status(403).json({
+    error: "Solo il proprietario può modificare le impostazioni di billing",
+    code: "OWNER_REQUIRED",
+    message: "Questa operazione richiede i permessi di proprietario."
+  })
+}
+```
+
+**User experience:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    OWNER REQUIRED BLOCK                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Team member (ADMIN role) tries to recharge:                     │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │  ❌ Permessi Insufficienti                                  │ │
+│  │                                                             │ │
+│  │  Solo il proprietario del canale può:                      │ │
+│  │  • Ricaricare credito                                      │ │
+│  │  • Cambiare piano                                          │ │
+│  │  • Modificare impostazioni billing                         │ │
+│  │                                                             │ │
+│  │  Contatta il proprietario per questa operazione.           │ │
+│  │                                                             │ │
+│  │  [OK]                                                       │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 7. BLACKLISTED (Registration Attempts)
+
+**When it triggers:**
+- Same phone number fails registration 3+ times
+- Protection against spam/abuse
+
+**Where it's checked:**
+- `whatsapp-webhook.controller.ts` → `RegistrationAttemptsService`
+- `whatsapp.routes.ts` → same service
+
+**Code location:**
+```typescript
+// backend/src/interfaces/http/controllers/whatsapp-webhook.controller.ts
+const isBlocked = await registrationAttemptsService.isBlocked(phoneNumber, workspaceId)
+
+if (isBlocked) {
+  logger.info(`🚫 User ${phoneNumber} is blocked due to too many registration attempts`)
+  res.status(200).json({
+    success: true,
+    data: {
+      sessionId: null,
+      message: "EVENT_RECEIVED_CUSTOMER_BLACKLISTED"
+    }
+  })
+  return
+}
+```
+
+**User experience:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    BLACKLIST BLOCK                               │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Blocked phone number sends message:                             │
+│  ┌────────────────────────────────┐                             │
+│  │ "Ciao?"                        │ → NO RESPONSE               │
+│  └────────────────────────────────┘   (Permanent silent block)  │
+│                                                                  │
+│  Admin Panel - Customer List:                                    │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │  🚫 +39 333 1234567                                        │ │
+│  │  Status: BLACKLISTED                                       │ │
+│  │  Reason: Too many registration attempts (3+)               │ │
+│  │                                                             │ │
+│  │  [Remove from Blacklist]                                    │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Recovery:**
+- Admin can manually remove from blacklist
+- Contact support
+
+---
+
+## 🔄 Block Priority Order
+
+When processing a WhatsApp message, blocks are checked in this order:
+
+```
+1. BLACKLISTED           → Check first (security)
+         ↓
+2. TRIAL_EXPIRED         → Check trial validity
+         ↓
+3. INSUFFICIENT_CREDIT   → Check credit balance
+         ↓
+4. CUSTOMER_LIMIT_REACHED → Check customer count (new users only)
+         ↓
+5. ✅ Process message
+```
+
+---
+
+## 📊 Block Statistics (Logging)
+
+All blocks are logged for monitoring:
+
+```typescript
+logger.warn(`[BILLING] ⚠️ Credit check failed for ${operation}:`, {
+  workspaceId,
+  currentBalance: creditCheck.currentBalance,
+  required: cost,
+  code: "INSUFFICIENT_CREDIT"
+})
+```
+
+**Log patterns to monitor:**
+- `[BILLING] ⚠️ Credit check failed` → Credit issues
+- `[BILLING] ⚠️ Trial expired` → Trial conversions needed
+- `[BILLING] ⚠️ Plan limit reached` → Upgrade opportunities
+- `🚫 User blocked` → Security events
+
+---
+
+## 🛠️ Testing Blocks
+
+### Unit Tests Location
+- `backend/__tests__/unit/services/billing.service.spec.ts`
+- `backend/__tests__/security/subscription-billing.security.test.ts`
+
+### Test Commands
+```bash
+# Run all billing tests
+cd backend && npm run test:unit -- --grep "billing"
+
+# Run security tests
+cd backend && npm run test:security
+```
+
+---
+
+## 🔗 Key Files Reference
+
+| Block Type | Primary Check Location |
+|------------|----------------------|
+| TRIAL_EXPIRED | `billing.middleware.ts:checkTrialValid` |
+| INSUFFICIENT_CREDIT | `billing.middleware.ts:checkCredit` |
+| CUSTOMER_LIMIT_REACHED | `whatsapp-webhook.controller.ts:395` |
+| PLAN_LIMIT_REACHED | `billing.middleware.ts:checkPlanLimits` |
+| CHANNEL_LIMIT_EXCEEDED | `workspace.controller.ts:187` |
+| OWNER_REQUIRED | `billing.middleware.ts:requireOwnerForBilling` |
+| BLACKLISTED | `whatsapp-webhook.controller.ts:316` |
+
+---
+
+## 📚 Related Documentation
+
+- [BILLING_FLOW.md](./BILLING_FLOW.md) - Complete billing flow
+- [PRICING_CENTRALIZATION_SUMMARY.md](./PRICING_CENTRALIZATION_SUMMARY.md) - Pricing details
+- [specs/185-subscription-billing-system/spec.md](../specs/185-subscription-billing-system/spec.md) - Feature spec

@@ -277,7 +277,7 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
         toast.success(`Credit recharged! New balance: ${formatCurrency(result.newBalance)}`)
       }
 
-      // Update local balance
+      // Update local balance immediately with result from API
       updateBalanceLocally(result.newBalance)
 
       // Close dialog and reset
@@ -285,8 +285,11 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
       setCustomAmount("")
       setRechargeAmount(25)
 
-      // Refresh full overview
-      await refreshOverview()
+      // Refresh full overview to get updated transactions and totals
+      // Use setTimeout to ensure backend has committed the transaction
+      setTimeout(() => {
+        refreshOverview()
+      }, 500)
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || "Failed to recharge credit"
       toast.error(errorMessage)
@@ -311,7 +314,10 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
       setPendingPlanChange(null)
 
       // Refresh overview to get new plan info
-      await refreshOverview()
+      // Use setTimeout to ensure backend has committed the transaction
+      setTimeout(() => {
+        refreshOverview()
+      }, 500)
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.response?.data?.error || "Failed to change plan"
       toast.error(errorMessage)
@@ -432,10 +438,10 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
             <div>
               <CardTitle className="flex items-center gap-2 text-green-600">
                 <CreditCard className="h-5 w-5" />
-                Subscription & Billing
+                Plans & Billing
               </CardTitle>
               <CardDescription>
-                Manage your subscription and credit
+                Manage your plan and credit
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">

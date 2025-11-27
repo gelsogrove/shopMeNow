@@ -21,14 +21,17 @@ ShopME uses a **prepaid credit system** combined with **subscription plans**. Ev
 
 ### Operation Costs (from `BillingPrices` enum)
 
-| Operation | Cost | Enum Key |
-|-----------|------|----------|
-| WhatsApp Message | €0.15 | `MESSAGE` |
-| Welcome Message | €1.00 | `WELCOME_MESSAGE` |
-| New Order | €1.50 | `NEW_ORDER` |
-| New Customer | €1.00 | `NEW_CUSTOMER` |
-| Push Campaign | €1.00 | `PUSH_CAMPAIGN` |
-| Chatbot Reactivation | €0.20 | `PUSH_CHATBOT_REACTIVATED` |
+| Operation | Cost | Enum Key | When Charged |
+|-----------|------|----------|--------------|
+| WhatsApp Message | €0.10 | `MESSAGE` | After successful WhatsApp delivery |
+| Welcome Message | €1.00 | `WELCOME_MESSAGE` | On new customer creation |
+| New Order | €1.50 | `NEW_ORDER` | On order creation |
+| New Customer | €1.00 | `NEW_CUSTOMER` | On registration |
+| Push Campaign | €1.00 | `PUSH_CAMPAIGN` | On push send |
+| Chatbot Reactivation | €0.20 | `PUSH_CHATBOT_REACTIVATED` | On reactivation push |
+
+> **⚠️ IMPORTANT**: WhatsApp messages are charged **ONLY** when successfully delivered.
+> If `debugMode=true` or WhatsApp send fails, **NO billing occurs**.
 
 ---
 
@@ -113,17 +116,38 @@ ShopME uses a **prepaid credit system** combined with **subscription plans**. Ev
 │  │ Process with LLM Router             │                        │
 │  └───────────────┬─────────────────────┘                        │
 │         ↓                                                        │
-│  Message goes to WhatsApp Queue                                  │
+│  Message saved to DB (NO billing here)                           │
+│         ↓                                                        │
+│  Message goes to WhatsApp Queue (status: "pending")              │
 │         ↓                                                        │
 │  ┌─────────────────────────────────────┐                        │
 │  │ WhatsAppQueueService.processPending │                        │
-│  │ Actually SENDS via WhatsApp API     │                        │
 │  └───────────────┬─────────────────────┘                        │
 │         ↓                                                        │
 │  ┌─────────────────────────────────────┐                        │
+│  │ Check: debugMode enabled?           │                        │
+│  └───────────────┬─────────────────────┘                        │
+│         ↓ NO               ↓ YES                                 │
+│         │           ┌──────────────────┐                        │
+│         │           │ SKIP: Message    │                        │
+│         │           │ stays "pending"  │                        │
+│         │           │ ❌ NO BILLING    │                        │
+│         │           └──────────────────┘                        │
+│         ↓                                                        │
+│  ┌─────────────────────────────────────┐                        │
+│  │ Send via WhatsApp API               │                        │
+│  └───────────────┬─────────────────────┘                        │
+│         ↓ SUCCESS          ↓ FAIL                                │
+│         │           ┌──────────────────┐                        │
+│         │           │ status: "error"  │                        │
+│         │           │ ❌ NO BILLING    │                        │
+│         │           └──────────────────┘                        │
+│         ↓                                                        │
+│  ┌─────────────────────────────────────┐                        │
+│  │ status: "sent"                      │                        │
 │  │ 💰 BILLING: deductMessageCredit()   │                        │
 │  │ Credit deducted AFTER send success  │                        │
-│  │ €0.15 deducted from creditBalance   │                        │
+│  │ €0.10 deducted from creditBalance   │                        │
 │  └─────────────────────────────────────┘                        │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘

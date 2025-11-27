@@ -55,6 +55,14 @@ router.put(
   controller.updateQueueStatus.bind(controller)
 )
 
+// Update debug mode
+router.put(
+  "/workspaces/:workspaceId/whatsapp-queue/debug-mode",
+  authMiddleware,
+  workspaceValidationMiddleware,
+  controller.updateDebugMode.bind(controller)
+)
+
 // Get queue statistics
 router.get(
   "/workspaces/:workspaceId/whatsapp-queue/statistics",
