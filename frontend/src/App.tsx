@@ -9,7 +9,6 @@ import { AcceptInvitePage } from "./pages/AcceptInvitePage"
 import { AgentConfigurationPage } from "./pages/AgentConfigurationPage"
 import { AnalyticsPage } from "./pages/AnalyticsPage"
 import SignupPage from "./pages/auth/SignupPage"
-import RegisterPage from "./pages/auth/RegisterPage"
 import Setup2FAPage from "./pages/auth/Setup2FAPage"
 import Verify2FAPage from "./pages/auth/Verify2FAPage"
 import { ChatPage } from "./pages/ChatPage"
@@ -77,7 +76,7 @@ export function App() {
                 <Route path="/auth">
                   <Route path="login" element={<LoginPage />} />
                   <Route path="signup" element={<SignupPage />} />
-                  <Route path="register" element={<RegisterPage />} />
+                  <Route path="register" element={<Navigate to="/auth/login?action=register" replace />} />
                   <Route path="setup-2fa" element={<Setup2FAPage />} />
                   <Route path="verify-2fa" element={<Verify2FAPage />} />
                   <Route
@@ -280,8 +279,8 @@ export function App() {
                   element={<Navigate to="/auth/login" replace />}
                 />
 
-                <Route path="/register" element={<RegisterPage />} />
-                <Route path="/signup" element={<RegisterPage />} />
+                <Route path="/register" element={<Navigate to="/auth/login?action=register" replace />} />
+                <Route path="/signup" element={<Navigate to="/auth/login?action=register" replace />} />
                 <Route
                   path="/registration-success"
                   element={<RegistrationSuccess />}

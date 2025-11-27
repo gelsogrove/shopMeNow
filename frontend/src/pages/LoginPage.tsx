@@ -684,7 +684,10 @@ export function LoginPage() {
 
       {/* Pricing Section */}
       <div className="py-16 bg-gradient-to-br from-blue-50 via-white to-green-50">
-        <PricingPlans />
+        <PricingPlans onStartFreeTrial={() => {
+          setActiveTab('register')
+          setShowLoginModal(true)
+        }} />
       </div>
 
       {/* Contact Section */}
