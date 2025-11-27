@@ -343,12 +343,28 @@ model Orders {
   workspaceId     String
   trackingNumber  String?
   items           OrderItems[]
+  creditNotes     CreditNote[]
   customer        Customers       @relation(fields: [customerId], references: [id])
   workspace       Workspace       @relation(fields: [workspaceId], references: [id])
   paymentDetails  PaymentDetails?
 
   @@index([customerId])
   @@map("orders")
+}
+
+// Nota di Credito - Partial refund linked to delivered orders
+model CreditNote {
+  id            String    @id @default(uuid())
+  creditNoteCode String   @unique  // Format: NC-{orderCode} e.g., NC-ORD-2025-001
+  orderId       String
+  order         Orders    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  amount        Float                // Importo della nota di credito (positivo)
+  reason        String    @db.Text   // Motivo della nota di credito
+  createdAt     DateTime  @default(now())
+  createdById   String?              // User ID who created the credit note
+  
+  @@index([orderId])
+  @@map("credit_notes")
 }
 
 model OrderItems {

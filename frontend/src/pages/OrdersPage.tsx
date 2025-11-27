@@ -1,5 +1,6 @@
 import { PageLayout } from "@/components/layout/PageLayout"
 import { CartItemEditSheet } from "@/components/orders/CartItemEditSheet"
+import { CreditNoteDialog } from "@/components/orders/CreditNoteDialog"
 import { OrderCrudSheet } from "@/components/orders/OrderCrudSheet"
 import {
   getStatusBadgeClass,
@@ -22,7 +23,7 @@ import { clientsApi } from "@/services/clientsApi"
 import { ordersApi, type Order, type OrderStatus } from "@/services/ordersApi"
 import { commonStyles } from "@/styles/common"
 import { formatPrice } from "@/utils/format"
-import { Pencil, ShoppingCart, Trash2 } from "lucide-react"
+import { Pencil, Receipt, ShoppingCart, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { toast } from "../lib/toast"
@@ -66,6 +67,7 @@ export default function OrdersPage() {
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isCartEditOpen, setIsCartEditOpen] = useState(false)
   const [isAddOpen, setIsAddOpen] = useState(false)
+  const [isCreditNoteOpen, setIsCreditNoteOpen] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const navigate = useNavigate()
 
@@ -157,6 +159,11 @@ export default function OrdersPage() {
   const handleDelete = (order: Order) => {
     setSelectedOrder(order)
     setShowDeleteDialog(true)
+  }
+
+  const handleCreditNote = (order: Order) => {
+    setSelectedOrder(order)
+    setIsCreditNoteOpen(true)
   }
 
   const handleCustomerEdit = (customer: any) => {
@@ -512,7 +519,7 @@ export default function OrdersPage() {
     }
   }
 
-  // Custom actions for orders - Edit and Delete
+  // Custom actions for orders - Edit, Credit Note, and Delete
   const renderOrderActions = (order: Order) => (
     <div className="flex gap-1 justify-end">
       <Button
@@ -526,6 +533,17 @@ export default function OrdersPage() {
           className={`${commonStyles.actionIcon} ${commonStyles.primary}`}
         />
       </Button>
+      {(order.status === "DELIVERED" || order.status === "CONFIRMED") && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleCreditNote(order)}
+          title="Emetti Nota di Credito"
+          className="h-8 w-8 p-0 hover:bg-orange-50 hover:text-orange-700"
+        >
+          <Receipt className={`${commonStyles.actionIcon} text-orange-500`} />
+        </Button>
+      )}
       <Button
         variant="ghost"
         size="sm"
@@ -618,6 +636,18 @@ export default function OrdersPage() {
         open={isCartEditOpen}
         onClose={() => setIsCartEditOpen(false)}
         onSave={handleOrderSave}
+      />
+
+      {/* Credit Note Dialog */}
+      <CreditNoteDialog
+        order={selectedOrder}
+        open={isCreditNoteOpen}
+        onOpenChange={setIsCreditNoteOpen}
+        onSuccess={() => {
+          // Optionally refresh orders or update local state
+          setIsCreditNoteOpen(false)
+          setSelectedOrder(null)
+        }}
       />
 
       {/* Delete Confirmation Dialog */}

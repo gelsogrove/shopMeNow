@@ -85,6 +85,7 @@ import { memberRoutes } from "../interfaces/http/routes/member.routes"
 import { cartRouter } from "../interfaces/http/routes/cart.routes"
 import { categoriesRouter } from "../interfaces/http/routes/categories.routes"
 import certificationRoutes from "../interfaces/http/routes/certification.routes"
+import creditNoteRoutes from "../interfaces/http/routes/credit-note.routes"
 import transportTypeRoutes from "../interfaces/http/routes/transport-type.routes"
 import { chatRouter } from "../interfaces/http/routes/chat.routes"
 import { checkoutRouter } from "../interfaces/http/routes/checkout.routes"
@@ -737,6 +738,10 @@ const ordersRouterInstance = createOrderRouter()
 router.use("/workspaces/:workspaceId/orders", ordersRouterInstance)
 router.use("/orders", ordersRouterInstance)
 logger.info("Registered orders router with workspace routes")
+
+// Mount credit notes routes
+router.use("/", creditNoteRoutes)
+logger.info("Registered credit notes routes for partial refunds")
 
 // Mount cart routes with workspace context (for price calculation)
 router.use("/workspaces/:workspaceId/cart", cartRouter)
