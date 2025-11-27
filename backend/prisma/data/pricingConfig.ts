@@ -33,7 +33,7 @@ export const pricingConfigData = [
     type: "PLAN" as const,
     key: "PREMIUM_MONTHLY",
     value: BillingPrices.PREMIUM_MONTHLY,
-    description: "Premium plan - €59/month for established businesses",
+    description: "Premium plan - €49/month for established businesses",
     isActive: true,
   },
   {

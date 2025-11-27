@@ -79,6 +79,8 @@ export interface Transaction {
   description: string
   referenceId: string | null
   createdAt: string
+  workspaceId: string
+  workspaceName: string
 }
 
 export interface TransactionHistoryResponse {

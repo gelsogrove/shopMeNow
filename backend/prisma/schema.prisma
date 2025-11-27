@@ -996,7 +996,7 @@ model ConversationMessage {
 enum PlanType {
   FREE_TRIAL  // 14 days trial with €29 credit
   BASIC       // €29/month - 1 channel, 50 products, 50 customers
-  PREMIUM     // €59/month - 2 channels, 100 products, 100 customers
+  PREMIUM     // €49/month - 2 channels, 100 products, 100 customers
   ENTERPRISE  // Custom pricing - unlimited everything
 }
 

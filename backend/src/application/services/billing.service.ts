@@ -16,7 +16,7 @@ export class BillingService {
     try {
       // Get current price from database
       const monthlyChannelCost =
-        (await this.pricingRepository.getValue("MONTHLY_CHANNEL_COST")) ?? 59
+        (await this.pricingRepository.getValue("MONTHLY_CHANNEL_COST")) ?? 49
 
       await this.prisma.billing.create({
         data: {

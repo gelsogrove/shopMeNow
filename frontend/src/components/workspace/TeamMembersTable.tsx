@@ -217,7 +217,12 @@ export function TeamMembersTable({
               </CardDescription>
             </div>
             {isSuperAdmin ? (
-              <Button onClick={() => setInviteModalOpen(true)} className="gap-2">
+              <Button 
+                variant="outline"
+                size="sm"
+                onClick={() => setInviteModalOpen(true)} 
+                className="gap-1.5 text-green-600 border-green-600 hover:bg-green-50"
+              >
                 <UserPlus className="h-4 w-4" />
                 Invite Member
               </Button>

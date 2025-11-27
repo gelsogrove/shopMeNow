@@ -3,6 +3,7 @@ import { PLAN_CONFIGS, getPlanFeaturesWithText } from "@/config/planFeatures"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { usePricing } from "@/hooks/usePricing"
 import { Check, MessageSquare, X } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 
 interface PricingPlan {
   name: string
@@ -18,6 +19,11 @@ interface PricingPlan {
 export function PricingPlans() {
   const { t } = useLanguage()
   const { usage, isLoading } = usePricing()
+  const navigate = useNavigate()
+
+  const handleStartFreeTrial = () => {
+    navigate("/auth/register")
+  }
 
   // Show loading state while fetching prices
   if (isLoading) {
@@ -131,6 +137,7 @@ export function PricingPlans() {
                   plan.name === "Enterprise" ||
                   plan.name === "Basic"
                 }
+                onClick={plan.name === "Free" ? handleStartFreeTrial : undefined}
               >
                 {plan.name === "Free" && "Start Free Trial"}
                 {plan.name === "Basic" && "Start Basic"}

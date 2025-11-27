@@ -1384,7 +1384,7 @@ async function main() {
   console.log("\n💳 Skipping monthly channel billing (workspaces start at €0.00)...")
 
   const monthlyChannelCost =
-    pricingConfigData.find((p) => p.key === "MONTHLY_CHANNEL_COST")?.value ?? 59
+    pricingConfigData.find((p) => p.key === "MONTHLY_CHANNEL_COST")?.value ?? 49
   let channelBillingCount = 0
 
   // Generate for same months as messages (April-October 2025)
@@ -1677,7 +1677,7 @@ async function main() {
     {
       planType: "PREMIUM" as const,
       displayName: "Premium",
-      monthlyFee: 59.00,
+      monthlyFee: 49.00,
       maxChannels: 2,
       maxProducts: 100,
       maxCustomers: 100,
@@ -1738,7 +1738,7 @@ async function main() {
       type: "INITIAL_CREDIT",
       amount: 29.00,
       balanceAfter: 29.00,
-      description: "Credito iniziale Free Trial",
+      description: "Initial Free Trial credit",
     },
   })
 

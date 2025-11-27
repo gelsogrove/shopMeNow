@@ -278,7 +278,7 @@ export class SubscriptionBillingService {
       workspaceId,
       limits.messageCost,
       TransactionType.MESSAGE,
-      "Messaggio WhatsApp",
+      "WhatsApp Message",
       messageId,
       "message"
     )
@@ -365,7 +365,7 @@ export class SubscriptionBillingService {
       workspaceId,
       amount,
       TransactionType.RECHARGE,
-      `Ricarica credito: €${amount.toFixed(2)}`
+      `Credit recharge: €${amount.toFixed(2)}`
     )
 
     return {
@@ -434,7 +434,7 @@ export class SubscriptionBillingService {
         type: TransactionType.UPGRADE_FEE,
         amount: 0, // Will be charged at next billing date
         balanceAfter: billing.creditBalance,
-        description: `Upgrade a ${newPlanConfig.displayName} - Prima fatturazione: ${result.nextBillingDate.toLocaleDateString("it-IT")}`,
+        description: `Upgrade to ${newPlanConfig.displayName}`,
       },
     })
 
@@ -550,7 +550,7 @@ export class SubscriptionBillingService {
         type: TransactionType.UPGRADE_FEE, // Used for both upgrade and downgrade plan changes
         amount: 0, // Will be charged at next billing date
         balanceAfter: billing.creditBalance,
-        description: `${action} a ${newPlanConfig.displayName} - Prima fatturazione: ${result.nextBillingDate.toLocaleDateString("it-IT")}`,
+        description: `${action} to ${newPlanConfig.displayName}`,
       },
     })
 

@@ -43,6 +43,8 @@ export interface TransactionRecord {
   description: string
   referenceId: string | null
   createdAt: Date
+  workspaceId: string
+  workspaceName: string
 }
 
 export class SubscriptionBillingRepository {
@@ -275,6 +277,7 @@ export class SubscriptionBillingRepository {
   /**
    * Get transaction history for workspace
    * SECURITY: Requires workspaceId
+   * NOTE: Returns transactions from ALL workspaces owned by the same owner
    */
   async getTransactionHistory(
     workspaceId: string,
@@ -288,7 +291,26 @@ export class SubscriptionBillingRepository {
   ): Promise<{ transactions: TransactionRecord[]; total: number }> {
     const { limit = 20, offset = 0, type, startDate, endDate } = options
 
-    const where: any = { workspaceId }
+    // Get the workspace to find the owner
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { ownerId: true },
+    })
+
+    if (!workspace) {
+      return { transactions: [], total: 0 }
+    }
+
+    // Get all workspaces owned by this owner
+    const ownerWorkspaces = await this.prisma.workspace.findMany({
+      where: { ownerId: workspace.ownerId, isActive: true },
+      select: { id: true, name: true },
+    })
+    const ownerWorkspaceIds = ownerWorkspaces.map(w => w.id)
+    const workspaceNameMap = new Map(ownerWorkspaces.map(w => [w.id, w.name]))
+
+    // Build where clause for ALL owner's workspaces
+    const where: any = { workspaceId: { in: ownerWorkspaceIds } }
 
     if (type) {
       where.type = type
@@ -314,6 +336,7 @@ export class SubscriptionBillingRepository {
           description: true,
           referenceId: true,
           createdAt: true,
+          workspaceId: true,
         },
       }),
       this.prisma.billingTransaction.count({ where }),
@@ -324,22 +347,34 @@ export class SubscriptionBillingRepository {
         ...t,
         amount: Number(t.amount),
         balanceAfter: Number(t.balanceAfter),
+        workspaceName: workspaceNameMap.get(t.workspaceId) || "Unknown",
       })),
       total,
     }
   }
 
   /**
+   * Calculate next billing date: always the 1st of next month
+   * All users pay on the same day (1st of each month) for simplicity
+   */
+  private getFirstOfNextMonth(): Date {
+    const now = new Date()
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+    nextMonth.setHours(0, 0, 0, 0)
+    return nextMonth
+  }
+
+  /**
    * Upgrade workspace plan
    * ATOMIC TRANSACTION: Updates plan type and sets next billing date
    * SECURITY: Requires workspaceId
+   * BILLING: Next payment is always on the 1st of next month
    */
   async upgradePlan(
     workspaceId: string,
     newPlanType: PlanType
   ): Promise<{ success: boolean; nextBillingDate: Date }> {
-    const nextBillingDate = new Date()
-    nextBillingDate.setDate(nextBillingDate.getDate() + 30) // 30 days from now
+    const nextBillingDate = this.getFirstOfNextMonth()
 
     await this.prisma.workspace.update({
       where: { id: workspaceId },
@@ -361,6 +396,7 @@ export class SubscriptionBillingRepository {
   /**
    * Get workspace usage counts for limit checking
    * SECURITY: Requires workspaceId
+   * NOTE: Products and Customers are aggregated across ALL owner's workspaces (channels)
    */
   async getWorkspaceUsage(workspaceId: string): Promise<{
     productsCount: number
@@ -373,18 +409,36 @@ export class SubscriptionBillingRepository {
       select: { ownerId: true },
     })
 
+    if (!workspace?.ownerId) {
+      // Fallback: count only for this workspace
+      const [productsCount, customersCount] = await Promise.all([
+        this.prisma.products.count({
+          where: { workspaceId, isActive: true },
+        }),
+        this.prisma.customers.count({
+          where: { workspaceId, isActive: true },
+        }),
+      ])
+      return { productsCount, customersCount, channelsCount: 1 }
+    }
+
+    // Get all workspaces owned by this owner
+    const ownerWorkspaces = await this.prisma.workspace.findMany({
+      where: { ownerId: workspace.ownerId, isActive: true },
+      select: { id: true },
+    })
+
+    const ownerWorkspaceIds = ownerWorkspaces.map(w => w.id)
+
+    // Aggregate counts across ALL owner's workspaces
     const [productsCount, customersCount, channelsCount] = await Promise.all([
       this.prisma.products.count({
-        where: { workspaceId, isActive: true },
+        where: { workspaceId: { in: ownerWorkspaceIds }, isActive: true },
       }),
       this.prisma.customers.count({
-        where: { workspaceId, isActive: true },
+        where: { workspaceId: { in: ownerWorkspaceIds }, isActive: true },
       }),
-      workspace?.ownerId
-        ? this.prisma.workspace.count({
-            where: { ownerId: workspace.ownerId, isActive: true },
-          })
-        : Promise.resolve(1),
+      Promise.resolve(ownerWorkspaces.length),
     ])
 
     return { productsCount, customersCount, channelsCount }

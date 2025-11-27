@@ -76,8 +76,6 @@ import {
   Plus,
   Info,
   Download,
-  Calendar,
-  Filter,
   Check,
   X,
   FileText,
@@ -185,10 +183,6 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
   const [isUpgrading, setIsUpgrading] = useState(false)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false)
-  
-  // Transaction history filters
-  const [dateFilter, setDateFilter] = useState<"week" | "month" | "3months" | "all">("month")
-  const [typeFilter, setTypeFilter] = useState<string>("all")
 
   // Refresh overview function - uses local or context depending on prop
   const refreshOverview = async () => {
@@ -237,58 +231,21 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
     }
   }, [effectiveWorkspaceId])
 
-  // Reload transactions when history dialog opens or filters change
+  // Reload transactions when history dialog opens
   useEffect(() => {
     if (showHistoryDialog && effectiveWorkspaceId) {
       loadTransactions()
     }
-  }, [showHistoryDialog, effectiveWorkspaceId, dateFilter, typeFilter])
-
-  const getDateRange = () => {
-    const now = new Date()
-    // Add 1 day to include all of today's transactions
-    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000)
-    const endDate = tomorrow.toISOString().split('T')[0]
-    let startDate: string | undefined
-    
-    switch (dateFilter) {
-      case "week":
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-        startDate = weekAgo.toISOString().split('T')[0]
-        break
-      case "month":
-        const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate())
-        startDate = monthAgo.toISOString().split('T')[0]
-        break
-      case "3months":
-        const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate())
-        startDate = threeMonthsAgo.toISOString().split('T')[0]
-        break
-      case "all":
-      default:
-        startDate = undefined
-    }
-    
-    return { startDate, endDate }
-  }
+  }, [showHistoryDialog, effectiveWorkspaceId])
 
   const loadTransactions = async () => {
     if (!effectiveWorkspaceId) return
 
     setIsLoadingTransactions(true)
     try {
-      const { startDate, endDate } = getDateRange()
-      console.log('[BillingSection] Loading transactions:', { 
-        workspaceId: effectiveWorkspaceId, 
-        startDate, 
-        endDate, 
-        typeFilter 
-      })
+      console.log('[BillingSection] Loading all transactions for workspace:', effectiveWorkspaceId)
       const data = await getTransactions(effectiveWorkspaceId, { 
-        limit: 50,
-        startDate,
-        endDate,
-        type: typeFilter !== "all" ? typeFilter as any : undefined
+        limit: 200  // Load more transactions for full history
       })
       console.log('[BillingSection] Loaded transactions:', data.transactions.length)
       setTransactions(data.transactions)
@@ -483,47 +440,34 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
             </div>
             <div className="flex items-center gap-2">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={() => setShowHistoryDialog(true)}
-                className="gap-1 text-muted-foreground hover:text-foreground"
+                className="gap-1.5 text-green-600 border-green-600 hover:bg-green-50"
               >
                 <History className="h-4 w-4" />
                 History
               </Button>
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={() => setShowInvoicesDialog(true)}
-                className="gap-1 text-muted-foreground hover:text-foreground"
+                className="gap-1.5 text-green-600 border-green-600 hover:bg-green-50"
               >
                 <FileText className="h-4 w-4" />
                 Invoices
               </Button>
               {isSuperAdmin && billing.planType !== "FREE_TRIAL" && (
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => setShowUpgradeDialog(true)}
-                  className="gap-1 text-muted-foreground hover:text-foreground"
+                  className="gap-1.5 text-green-600 border-green-600 hover:bg-green-50"
                 >
                   <TrendingUp className="h-4 w-4" />
                   Change Plan
                 </Button>
               )}
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30 border border-emerald-200 dark:border-emerald-800 rounded-full">
-                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
-                  {planConfig.displayName}
-                  {isTrialPlan &&
-                    billing.daysUntilTrialExpires !== null &&
-                    !billing.isTrialExpired && (
-                      <span className="ml-1 text-emerald-600 dark:text-emerald-400">
-                        ({billing.daysUntilTrialExpires}d)
-                      </span>
-                    )}
-                </span>
-              </div>
             </div>
           </div>
         </CardHeader>
@@ -586,7 +530,7 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
             <div className="space-y-3">
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Subscription:</span>
+                  <span className="text-muted-foreground">Subscription {planConfig.displayName}:</span>
                   <span className="font-medium text-emerald-600">
                     {formatCurrency(planConfig.monthlyFee)}
                   </span>
@@ -601,6 +545,12 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
                     )}
                   </span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Taxes:</span>
+                  <span className="font-medium text-emerald-600">
+                    22%
+                  </span>
+                </div>
                 {billing.nextBillingDate && billing.planType !== "FREE_TRIAL" && (
                   <div className="flex justify-between items-center pt-2 border-t">
                     <span className="text-muted-foreground">
@@ -612,10 +562,10 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
                       </span>
                       <span className="ml-2 text-green-600 font-bold">
                         {formatCurrency(
-                          planConfig.monthlyFee +
+                          (planConfig.monthlyFee +
                           transactions
                             .filter(tx => tx.type === 'RECHARGE' && tx.amount > 0)
-                            .reduce((sum, tx) => sum + tx.amount, 0)
+                            .reduce((sum, tx) => sum + tx.amount, 0)) * 1.22
                         )}
                       </span>
                     </div>
@@ -630,13 +580,17 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
       {/* Usage Stats Card */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-green-600">
-            <TrendingUp className="h-5 w-5" />
-            Usage Limits
-          </CardTitle>
-          <CardDescription>
-            Current usage of your {planConfig.displayName} plan. Upgrade to increase limits.
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-green-600">
+                <TrendingUp className="h-5 w-5" />
+                Usage Limits
+              </CardTitle>
+              <CardDescription>
+                Current usage of your {planConfig.displayName} plan
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <TooltipProvider>
@@ -956,113 +910,211 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
 
       {/* Transaction History Dialog */}
       <Dialog open={showHistoryDialog} onOpenChange={setShowHistoryDialog}>
-        <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-6xl h-[95vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <History className="h-5 w-5" />
               Transaction History
             </DialogTitle>
             <DialogDescription>
-              View and filter your account transactions
+              Your account transactions grouped by month
             </DialogDescription>
           </DialogHeader>
 
-          {/* Filters */}
-          <div className="flex flex-wrap gap-4 py-3 border-b">
-            {/* Date Filter */}
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <select
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value as any)}
-                className="border rounded-md px-3 py-1.5 text-sm bg-background"
-              >
-                <option value="week">Last 7 days</option>
-                <option value="month">Last month</option>
-                <option value="3months">Last 3 months</option>
-                <option value="all">All time</option>
-              </select>
-            </div>
-
-            {/* Type Filter */}
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="border rounded-md px-3 py-1.5 text-sm bg-background"
-              >
-                <option value="all">All types</option>
-                <option value="MESSAGE">Messages</option>
-                <option value="PUSH_NOTIFICATION">Push Notifications</option>
-              </select>
-            </div>
-
-            {/* Transaction count - filter out 0€ transactions */}
-            <div className="ml-auto text-sm text-muted-foreground">
-              {transactions.filter(tx => tx.amount !== 0).length} transaction{transactions.filter(tx => tx.amount !== 0).length !== 1 ? "s" : ""}
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-auto min-h-[400px]">
+          <div className="flex-1 overflow-y-auto min-h-0">
             {isLoadingTransactions ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
-            ) : transactions.filter(tx => tx.amount !== 0).length === 0 ? (
+            ) : transactions.filter(tx => tx.amount !== 0 || tx.type === "UPGRADE_FEE" || tx.type === "MONTHLY_FEE").length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
-                No transactions found for the selected filters
+                No transactions found
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[140px]">Date</TableHead>
-                    <TableHead className="w-[140px]">Type</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-right w-[100px]">Amount</TableHead>
-                    <TableHead className="text-right w-[100px]">Balance</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {transactions.filter(tx => tx.amount !== 0).map((tx) => {
-                    const typeInfo = getTransactionTypeInfo(tx.type)
-                    return (
-                      <TableRow key={tx.id}>
-                        <TableCell className="whitespace-nowrap text-sm">
-                          {new Date(tx.createdAt).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "short",
-                            day: "2-digit",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="gap-1 text-xs">
-                            <span>{typeInfo.icon}</span>
-                            {typeInfo.label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="max-w-[300px] truncate text-sm">
-                          {tx.description}
-                        </TableCell>
-                        <TableCell
-                          className={`text-right font-medium ${
-                            tx.amount < 0 ? "text-red-600" : "text-emerald-600"
-                          }`}
-                        >
-                          {tx.amount > 0 ? "+" : ""}
-                          {formatCurrency(tx.amount)}
-                        </TableCell>
-                        <TableCell className="text-right text-sm">
-                          {formatCurrency(tx.balanceAfter)}
-                        </TableCell>
-                      </TableRow>
+              <div className="space-y-6">
+                {/* Group transactions by month, then aggregate messages by day */}
+                {(() => {
+                  // Include transactions with amount != 0 OR plan change transactions
+                  const filteredTx = transactions.filter(tx => tx.amount !== 0 || tx.type === "UPGRADE_FEE" || tx.type === "MONTHLY_FEE")
+                  
+                  // Types that should be aggregated by day AND channel
+                  const AGGREGATABLE_TYPES = ["MESSAGE", "PUSH_NOTIFICATION", "PUSH_CAMPAIGN", "PUSH_CHATBOT_REACTIVATED", "PUSH_DISCOUNT_NOTIFICATION"]
+                  
+                  const aggregateTransactionsByDay = (txList: Transaction[]) => {
+                    // Group by type+day+channel: { "MESSAGE-2025-11-27-workspace123": {...} }
+                    const groupedByTypeDayChannel: Record<string, { 
+                      type: string
+                      workspaceName: string
+                      count: number
+                      totalAmount: number
+                      lastDate: Date
+                      lastBalance: number 
+                    }> = {}
+                    const otherTransactions: Transaction[] = []
+                    
+                    txList.forEach(tx => {
+                      if (AGGREGATABLE_TYPES.includes(tx.type)) {
+                        const dayKey = new Date(tx.createdAt).toISOString().split('T')[0]
+                        const groupKey = `${tx.type}-${dayKey}-${tx.workspaceId || 'unknown'}`
+                        const txDate = new Date(tx.createdAt)
+                        if (!groupedByTypeDayChannel[groupKey]) {
+                          groupedByTypeDayChannel[groupKey] = { 
+                            type: tx.type,
+                            workspaceName: tx.workspaceName || 'Unknown',
+                            count: 0, 
+                            totalAmount: 0, 
+                            lastDate: txDate, 
+                            lastBalance: tx.balanceAfter 
+                          }
+                        }
+                        groupedByTypeDayChannel[groupKey].count++
+                        groupedByTypeDayChannel[groupKey].totalAmount += tx.amount
+                        // Keep the most recent time and its balance
+                        if (txDate > groupedByTypeDayChannel[groupKey].lastDate) {
+                          groupedByTypeDayChannel[groupKey].lastDate = txDate
+                          groupedByTypeDayChannel[groupKey].lastBalance = tx.balanceAfter
+                        }
+                      } else {
+                        otherTransactions.push(tx)
+                      }
+                    })
+                    
+                    // Get description based on type, including channel name
+                    const getAggregatedDescription = (type: string, count: number, channelName: string) => {
+                      const channelSuffix = channelName ? ` (${channelName})` : ''
+                      switch (type) {
+                        case "MESSAGE":
+                          return `${count} WhatsApp message${count > 1 ? 's' : ''}${channelSuffix}`
+                        case "PUSH_NOTIFICATION":
+                          return `${count} Push notification${count > 1 ? 's' : ''}${channelSuffix}`
+                        case "PUSH_CAMPAIGN":
+                          return `${count} Campaign message${count > 1 ? 's' : ''}${channelSuffix}`
+                        case "PUSH_CHATBOT_REACTIVATED":
+                          return `${count} Chatbot reactivation${count > 1 ? 's' : ''}${channelSuffix}`
+                        case "PUSH_DISCOUNT_NOTIFICATION":
+                          return `${count} Discount notification${count > 1 ? 's' : ''}${channelSuffix}`
+                        default:
+                          return `${count} ${type}${count > 1 ? 's' : ''}${channelSuffix}`
+                      }
+                    }
+                    
+                    // Convert aggregated items to pseudo-transactions
+                    const aggregatedTransactions = Object.entries(groupedByTypeDayChannel).map(([groupKey, data]) => ({
+                      id: `agg-${groupKey}`,
+                      type: data.type as any,
+                      amount: data.totalAmount,
+                      description: getAggregatedDescription(data.type, data.count, data.workspaceName),
+                      createdAt: data.lastDate.toISOString(),
+                      balanceAfter: data.lastBalance,
+                      workspaceId: '',
+                      workspaceName: data.workspaceName,
+                    }))
+                    
+                    // Combine and sort by date
+                    return [...otherTransactions, ...aggregatedTransactions].sort(
+                      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
                     )
-                  })}
-                </TableBody>
-              </Table>
+                  }
+                  
+                  const grouped = filteredTx.reduce((acc, tx) => {
+                    const date = new Date(tx.createdAt)
+                    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+                    const monthLabel = date.toLocaleDateString("en-US", { month: "long", year: "numeric" })
+                    if (!acc[monthKey]) {
+                      acc[monthKey] = { label: monthLabel, transactions: [], income: 0, expenses: 0 }
+                    }
+                    acc[monthKey].transactions.push(tx)
+                    // INITIAL_CREDIT is a gift - don't count as income
+                    if (tx.amount > 0 && tx.type !== "INITIAL_CREDIT") {
+                      acc[monthKey].income += tx.amount
+                    } else if (tx.amount < 0) {
+                      acc[monthKey].expenses += Math.abs(tx.amount)
+                    }
+                    return acc
+                  }, {} as Record<string, { label: string; transactions: Transaction[]; income: number; expenses: number }>)
+
+                  // Sort by date (newest first)
+                  const sortedMonths = Object.entries(grouped).sort((a, b) => b[0].localeCompare(a[0]))
+
+                  return sortedMonths.map(([monthKey, data]) => {
+                    // Aggregate transactions by day for this month
+                    const displayTransactions = aggregateTransactionsByDay(data.transactions)
+                    
+                    return (
+                    <div key={monthKey} className="border rounded-lg overflow-hidden">
+                      {/* Month Header */}
+                      <div className="bg-gray-50 px-4 py-3 border-b">
+                        <h3 className="font-semibold text-lg capitalize">{data.label}</h3>
+                      </div>
+
+                      {/* Transactions Table */}
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[130px]">Date</TableHead>
+                            <TableHead className="w-[200px]">Type</TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead className="text-right w-[100px]"></TableHead>
+                            <TableHead className="text-right w-[100px]"></TableHead>
+                            <TableHead className="text-right w-[100px]"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {displayTransactions.map((tx) => {
+                            const typeInfo = getTransactionTypeInfo(tx.type)
+                            return (
+                              <TableRow key={tx.id}>
+                                <TableCell className="whitespace-nowrap text-sm">
+                                  {new Date(tx.createdAt).toLocaleDateString("en-US", {
+                                    day: "2-digit",
+                                    month: "short",
+                                  })}{" "}
+                                  <span className="text-muted-foreground">
+                                    {new Date(tx.createdAt).toLocaleTimeString("en-US", {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      hour12: false,
+                                    })}
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="gap-1 text-xs">
+                                    <span>{typeInfo.icon}</span>
+                                    {typeInfo.label}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="max-w-[300px] truncate text-sm">
+                                  {tx.description}
+                                </TableCell>
+                                <TableCell className="text-right font-medium text-emerald-600">
+                                  {tx.amount > 0 && tx.type !== "INITIAL_CREDIT" ? `+${formatCurrency(tx.amount)}` : ""}
+                                </TableCell>
+                                <TableCell className="text-right font-medium text-red-600">
+                                  {tx.amount < 0 ? `-${formatCurrency(Math.abs(tx.amount))}` : ""}
+                                </TableCell>
+                                <TableCell className="text-right text-sm font-medium">
+                                  {tx.balanceAfter > 0 ? formatCurrency(tx.balanceAfter) : "—"}
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })}
+                          {/* Monthly Totals Row */}
+                          <TableRow className="bg-gray-50 font-semibold">
+                            <TableCell colSpan={3} className="text-right">
+                              Monthly Total
+                            </TableCell>
+                            <TableCell className="text-right text-emerald-600">
+                              +{formatCurrency(data.income)}
+                            </TableCell>
+                            <TableCell className="text-right"></TableCell>
+                            <TableCell></TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )})
+                })()}
+              </div>
             )}
           </div>
 
@@ -1079,98 +1131,198 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
 
       {/* Monthly Invoices Dialog */}
       <Dialog open={showInvoicesDialog} onOpenChange={setShowInvoicesDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-6xl h-[95vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
               Monthly Invoices
             </DialogTitle>
             <DialogDescription>
-              Download your monthly billing invoices
+              Your monthly billing summary grouped by month
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-4">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Invoice #</TableHead>
-                  <TableHead>Period</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead className="text-center">Download</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+          <div className="flex-1 overflow-y-auto min-h-0">
+            {isLoadingTransactions ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="space-y-6">
                 {(() => {
-                  // Generate monthly invoices from transactions
-                  const monthlyData = transactions.reduce((acc, tx) => {
-                    // Only count deductions (MESSAGE, PUSH_NOTIFICATION)
-                    if (tx.amount >= 0) return acc
-                    
+                  // Aggregate all transactions by month
+                  const monthlyInvoices = transactions.reduce((acc, tx) => {
                     const date = new Date(tx.createdAt)
                     const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+                    const monthLabel = date.toLocaleDateString("en-US", { month: "long", year: "numeric" })
                     
                     if (!acc[monthKey]) {
                       acc[monthKey] = {
-                        period: monthKey,
-                        totalAmount: 0,
+                        label: monthLabel,
+                        year: date.getFullYear(),
+                        month: date.getMonth() + 1,
+                        recharges: 0,
+                        messages: 0,
+                        messagesCount: 0,
+                        pushNotifications: 0,
+                        pushCount: 0,
+                        subscriptionFee: 0,
+                        otherExpenses: 0,
                       }
                     }
                     
-                    acc[monthKey].totalAmount += Math.abs(tx.amount)
+                    // Categorize transactions
+                    // INITIAL_CREDIT is a gift - don't count in invoices
+                    if (tx.type === "RECHARGE") {
+                      acc[monthKey].recharges += tx.amount
+                    } else if (tx.type === "MESSAGE") {
+                      acc[monthKey].messages += Math.abs(tx.amount)
+                      acc[monthKey].messagesCount++
+                    } else if (tx.type.startsWith("PUSH_") || tx.type === "PUSH_NOTIFICATION") {
+                      acc[monthKey].pushNotifications += Math.abs(tx.amount)
+                      acc[monthKey].pushCount++
+                    } else if (tx.type === "MONTHLY_FEE" || tx.type === "UPGRADE_FEE") {
+                      acc[monthKey].subscriptionFee += Math.abs(tx.amount)
+                    } else if (tx.amount < 0) {
+                      acc[monthKey].otherExpenses += Math.abs(tx.amount)
+                    }
                     
                     return acc
-                  }, {} as Record<string, { period: string; totalAmount: number }>)
+                  }, {} as Record<string, {
+                    label: string
+                    year: number
+                    month: number
+                    recharges: number
+                    messages: number
+                    messagesCount: number
+                    pushNotifications: number
+                    pushCount: number
+                    subscriptionFee: number
+                    otherExpenses: number
+                  }>)
                   
-                  const sortedMonths = Object.values(monthlyData).sort((a, b) => 
-                    b.period.localeCompare(a.period)
-                  )
+                  // Sort by date (newest first)
+                  const sortedMonths = Object.entries(monthlyInvoices).sort((a, b) => b[0].localeCompare(a[0]))
                   
                   if (sortedMonths.length === 0) {
                     return (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                          No invoices available yet. Invoices are generated based on your usage.
-                        </TableCell>
-                      </TableRow>
+                      <div className="text-center py-12 text-muted-foreground">
+                        No invoices available yet
+                      </div>
                     )
                   }
                   
-                  return sortedMonths.map((month, index) => {
-                    const [year, monthNum] = month.period.split('-')
-                    const monthName = new Date(parseInt(year), parseInt(monthNum) - 1).toLocaleDateString('en-US', { 
-                      month: 'long' 
-                    })
-                    const invoiceNumber = `INV-${year}${monthNum}`
+                  // Get current plan subscription fee
+                  const currentPlanConfig = PLAN_CONFIGS[billing.planType as keyof typeof PLAN_CONFIGS]
+                  const monthlySubscriptionFee = currentPlanConfig?.price || 0
+                  
+                  return sortedMonths.map(([monthKey, data]) => {
+                    const invoiceNumber = `INV-${data.year}${String(data.month).padStart(2, '0')}`
+                    // Use recorded subscription fee from transactions OR current plan price
+                    const subscriptionFee = data.subscriptionFee > 0 ? data.subscriptionFee : monthlySubscriptionFee
+                    // Taxes 22% on (recharges + subscription fee)
+                    const subtotal = data.recharges + subscriptionFee
+                    const taxes = subtotal * 0.22
+                    // Total = Recharges + Subscription Fee + Taxes
+                    const totalWithTaxes = subtotal + taxes
                     
                     return (
-                      <TableRow key={month.period}>
-                        <TableCell className="font-mono text-sm">{invoiceNumber}</TableCell>
-                        <TableCell className="font-medium">{monthName} {year}</TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(month.totalAmount)}
-                        </TableCell>
-                        <TableCell className="text-center">
+                      <div key={monthKey} className="border rounded-lg overflow-hidden">
+                        {/* Month Header */}
+                        <div className="bg-gray-50 px-4 py-3 border-b flex items-center justify-between">
+                          <div>
+                            <h3 className="font-semibold text-lg capitalize">{data.label}</h3>
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm text-muted-foreground font-mono">{invoiceNumber}</span>
+                              {billing.nextBillingDate && (
+                                <span className="text-sm text-muted-foreground">
+                                  • Next Payment: {new Date(billing.nextBillingDate).toLocaleDateString("en-US", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric"
+                                  })}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
-                            className="h-8 w-8 p-0"
+                            className="gap-2"
                             onClick={() => {
                               toast.info(`Invoice ${invoiceNumber} - Coming soon`)
                             }}
                           >
-                            <Download className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                            <Download className="h-4 w-4" />
+                            Download PDF
                           </Button>
-                        </TableCell>
-                      </TableRow>
+                        </div>
+
+                        {/* Invoice Details Table */}
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Description</TableHead>
+                              <TableHead className="text-right w-[150px]">Amount</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {/* Recharges */}
+                            {data.recharges > 0 && (
+                              <TableRow>
+                                <TableCell className="font-medium">💰 Credit Recharges</TableCell>
+                                <TableCell className="text-right font-medium">
+                                  {formatCurrency(data.recharges)}
+                                </TableCell>
+                              </TableRow>
+                            )}
+                            
+                            {/* Subscription Fee - Always show current plan price */}
+                            {subscriptionFee > 0 && (
+                              <TableRow>
+                                <TableCell className="font-medium">📋 Subscription Fee ({currentPlanConfig?.name || billing.planType})</TableCell>
+                                <TableCell className="text-right font-medium">
+                                  {formatCurrency(subscriptionFee)}
+                                </TableCell>
+                              </TableRow>
+                            )}
+                            
+                            {/* Other Expenses */}
+                            {data.otherExpenses > 0 && (
+                              <TableRow>
+                                <TableCell className="font-medium">📦 Other Charges</TableCell>
+                                <TableCell className="text-right font-medium">
+                                  {formatCurrency(data.otherExpenses)}
+                                </TableCell>
+                              </TableRow>
+                            )}
+                            
+                            {/* Taxes */}
+                            <TableRow>
+                              <TableCell className="font-medium">Taxes (22% IVA)</TableCell>
+                              <TableCell className="text-right font-medium text-emerald-600">
+                                {taxes > 0 ? `+${formatCurrency(taxes)}` : '—'}
+                              </TableCell>
+                            </TableRow>
+                            
+                            {/* Grand Total */}
+                            <TableRow className="bg-gray-50 font-bold">
+                              <TableCell>Monthly Balance</TableCell>
+                              <TableCell className="text-right font-medium">
+                                {formatCurrency(totalWithTaxes)}
+                              </TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
                     )
                   })
                 })()}
-              </TableBody>
-            </Table>
+              </div>
+            )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="mt-4">
             <Button
               variant="outline"
               onClick={() => setShowInvoicesDialog(false)}

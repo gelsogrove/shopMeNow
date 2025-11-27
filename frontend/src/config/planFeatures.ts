@@ -96,8 +96,8 @@ export const PLAN_CONFIGS: Record<string, PlanConfig> = {
   },
   PREMIUM: {
     name: "Premium",
-    price: 59,
-    priceLabel: "€59",
+    price: 49,
+    priceLabel: "€49",
     description: "For established businesses",
     descriptionKey: "pricing.premium.desc",
     buttonVariant: "default",

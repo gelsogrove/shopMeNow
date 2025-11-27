@@ -15,7 +15,7 @@ Implementare un sistema completo di abbonamenti, credito prepagato e billing per
 |-------|-------------|--------|----------|---------|----------------|
 | **Free Trial** | €0 (14 giorni) | 1 | 50 | 50 | €29 credito iniziale |
 | **Basic** | €29/mese | 1 | 50 | 50 | Multi-language, Analytics |
-| **Premium** | €59/mese | 2 | 100 | 100 | + Brand customization |
+| **Premium** | €49/mese | 2 | 100 | 100 | + Brand customization |
 | **Enterprise** | Custom | ∞ | ∞ | ∞ | + CRM, Server dedicato, 24/7 support |
 
 ### Costi per Operazione (scalano dal credito)

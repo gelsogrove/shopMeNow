@@ -116,8 +116,11 @@ export function WorkspaceSelectionPage() {
       setIsLoading(true)
       logger.info("🔍 [WorkspaceSelectionPage] Calling getWorkspaces()")
       const workspaces = await getWorkspaces()
-      // Set workspaces without filtering for isDelete
-      setWorkspaces(workspaces)
+      // Set workspaces sorted by createdAt asc (oldest first)
+      const sortedWorkspaces = workspaces.sort((a, b) => 
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      )
+      setWorkspaces(sortedWorkspaces)
     } catch (error) {
       logger.error(
         "❌ [WorkspaceSelectionPage] Error loading workspaces:",
@@ -220,7 +223,7 @@ export function WorkspaceSelectionPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         {/* Header with Logout */}
         <div className="flex justify-end items-center mb-4">
           <Button
@@ -247,9 +250,9 @@ export function WorkspaceSelectionPage() {
               </div>
               {!isRoleLoading && (workspaces.length === 0 || isSuperAdmin) && (
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  className="gap-1 text-muted-foreground hover:text-foreground"
+                  className="gap-1.5 text-green-600 border-green-600 hover:bg-green-50"
                   onClick={() => {
                     const dialog = document.getElementById(
                       "type-selection-dialog"
@@ -275,11 +278,11 @@ export function WorkspaceSelectionPage() {
               {workspaces.map((workspace) => (
                 <div
                   key={workspace.id}
-                  className={`rounded-lg border p-4 cursor-pointer transition-all ${
+                  className={`rounded-lg border-2 p-4 cursor-pointer transition-all ${
                     justCreatedId === workspace.id ? "ring-2 ring-green-500" : ""
                   } ${
                     workspace.isActive
-                      ? "bg-white border-gray-200 hover:shadow-md"
+                      ? "bg-green-50 border-green-300 hover:shadow-md hover:bg-green-100 hover:border-green-400"
                       : "bg-gray-100 border-gray-300 opacity-75"
                   }`}
                   onClick={(e) => {
@@ -296,13 +299,6 @@ export function WorkspaceSelectionPage() {
                           Disabled
                         </span>
                     )}
-                  </div>
-                  <div
-                    className={`text-sm ${
-                      workspace.isActive ? "text-gray-500" : "text-gray-400"
-                    }`}
-                  >
-                    Type: Shop
                   </div>
                   {workspace.whatsappPhoneNumber && (
                     <div

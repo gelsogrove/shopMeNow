@@ -22,10 +22,10 @@ export enum BillingPrices {
   PUSH_DEFAULT = 0.2, // €0.20 - Default for other push notifications
 
   // 🏢 SUBSCRIPTION PLANS (Monthly)
-  MONTHLY_CHANNEL_COST = 59.0, // €59.00 - Per WhatsApp channel/month
+  MONTHLY_CHANNEL_COST = 49.0, // €49.00 - Per WhatsApp channel/month (same as Premium)
   FREE_MONTHLY = 0.0, // €0.00 - Free plan
   BASIC_MONTHLY = 29.0, // €29.00 - Basic plan
-  PREMIUM_MONTHLY = 59.0, // €59.00 - Premium plan
+  PREMIUM_MONTHLY = 49.0, // €49.00 - Premium plan
   ENTERPRISE_MONTHLY = 149.0, // €149.00 - Enterprise plan
 }
 

@@ -40,7 +40,7 @@ export enum BillingPrices {
   MONTHLY_CHANNEL_COST = 59.0, // €59.00
   FREE_MONTHLY = 0.0, // €0.00
   BASIC_MONTHLY = 29.0, // €29.00
-  PREMIUM_MONTHLY = 59.0, // €59.00
+  PREMIUM_MONTHLY = 49.0, // €49.00
   ENTERPRISE_MONTHLY = 149.0, // €149.00
 }
 ```

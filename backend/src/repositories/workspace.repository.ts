@@ -263,6 +263,11 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
             include: {
               workspace: true,
             },
+            orderBy: {
+              workspace: {
+                createdAt: 'asc',
+              },
+            },
           },
         },
       })

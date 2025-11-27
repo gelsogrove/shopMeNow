@@ -35,6 +35,7 @@ const mockPrisma = {
     create: jest.fn(),
     findMany: jest.fn(),
     count: jest.fn(),
+    deleteMany: jest.fn(),
   },
   $transaction: jest.fn((callback: any) => callback(mockPrisma)),
 }
@@ -238,7 +239,7 @@ describe("SubscriptionBillingService", () => {
         mockWorkspaceId,
         50,
         "RECHARGE",
-        "Ricarica credito: €50.00"
+        "Credit recharge: €50.00"
       )
     })
 
@@ -660,7 +661,7 @@ describe("SubscriptionBillingService", () => {
           workspaceId: mockWorkspaceId,
           type: "UPGRADE_FEE",
           amount: 0,
-          description: expect.stringContaining("Downgrade a Basic"),
+          description: expect.stringContaining("Downgrade to Basic"),
         }),
       })
     })
@@ -863,7 +864,7 @@ describe("SubscriptionBillingService", () => {
       const plans = [
         { planType: "FREE_TRIAL", displayName: "Free Trial", monthlyFee: 0, maxChannels: 1, maxProducts: 50, maxCustomers: 50, messageCost: 0.1, orderCost: 1, pushCost: 1, features: '["Feature 1"]' },
         { planType: "BASIC", displayName: "Basic", monthlyFee: 29, maxChannels: 1, maxProducts: 50, maxCustomers: 50, messageCost: 0.1, orderCost: 1, pushCost: 1, features: '["Feature 1"]' },
-        { planType: "PREMIUM", displayName: "Premium", monthlyFee: 59, maxChannels: 2, maxProducts: 100, maxCustomers: 100, messageCost: 0.1, orderCost: 1, pushCost: 1, features: '["Feature 1"]' },
+        { planType: "PREMIUM", displayName: "Premium", monthlyFee: 49, maxChannels: 2, maxProducts: 100, maxCustomers: 100, messageCost: 0.1, orderCost: 1, pushCost: 1, features: '["Feature 1"]' },
         { planType: "ENTERPRISE", displayName: "Enterprise", monthlyFee: 149, maxChannels: 999, maxProducts: 9999, maxCustomers: 9999, messageCost: 0.08, orderCost: 0.8, pushCost: 0.8, features: '["Feature 1"]' },
       ]
       mockRepository.getAllPlanConfigurations.mockResolvedValue(plans)
@@ -894,7 +895,7 @@ describe("SubscriptionBillingService", () => {
         mockWorkspaceId,
         0.1, // messageCost
         "MESSAGE",
-        "Messaggio WhatsApp",
+        "WhatsApp Message",
         "msg-123",
         "message"
       )
@@ -927,6 +928,76 @@ describe("SubscriptionBillingService", () => {
       const cost = await service.getOperationCost(mockWorkspaceId, "push")
 
       expect(cost).toBe(1.0)
+    })
+  })
+
+  describe("getWorkspaceUsage - Aggregated across all owner channels", () => {
+    it("should aggregate products count across all owner workspaces", async () => {
+      // Mock usage returned from repository (already aggregated)
+      mockRepository.getWorkspaceUsage.mockResolvedValue({
+        productsCount: 148, // Sum: 48 + 50 + 50 from 3 channels
+        customersCount: 84, // Sum: 4 + 30 + 50 from 3 channels
+        channelsCount: 3,
+      })
+
+      mockRepository.getWorkspaceBilling.mockResolvedValue(mockBillingData)
+      mockRepository.getPlanConfiguration.mockResolvedValue(mockPlanLimits)
+
+      const result = await service.getBillingOverview(mockWorkspaceId)
+
+      expect(result.usage.productsCount).toBe(148)
+      expect(result.usage.customersCount).toBe(84)
+      expect(result.usage.channelsCount).toBe(3)
+    })
+
+    it("should calculate correct percentages for aggregated usage", async () => {
+      mockRepository.getWorkspaceUsage.mockResolvedValue({
+        productsCount: 50, // 50% of 100
+        customersCount: 75, // 75% of 100
+        channelsCount: 2, // 100% of 2
+      })
+
+      mockRepository.getWorkspaceBilling.mockResolvedValue({
+        ...mockBillingData,
+        planType: "PREMIUM",
+      })
+      mockRepository.getPlanConfiguration.mockResolvedValue({
+        ...mockPlanLimits,
+        maxProducts: 100,
+        maxCustomers: 100,
+        maxChannels: 2,
+      })
+
+      const result = await service.getBillingOverview(mockWorkspaceId)
+
+      expect(result.usage.productsPercentage).toBe(50)
+      expect(result.usage.customersPercentage).toBe(75)
+      expect(result.usage.channelsPercentage).toBe(100)
+    })
+
+    it("should show limit reached when aggregated usage exceeds plan limits", async () => {
+      mockRepository.getWorkspaceUsage.mockResolvedValue({
+        productsCount: 100, // At limit
+        customersCount: 100, // At limit
+        channelsCount: 2, // At limit
+      })
+
+      mockRepository.getWorkspaceBilling.mockResolvedValue({
+        ...mockBillingData,
+        planType: "PREMIUM",
+      })
+      mockRepository.getPlanConfiguration.mockResolvedValue({
+        ...mockPlanLimits,
+        maxProducts: 100,
+        maxCustomers: 100,
+        maxChannels: 2,
+      })
+
+      const result = await service.getBillingOverview(mockWorkspaceId)
+
+      expect(result.usage.productsPercentage).toBe(100)
+      expect(result.usage.customersPercentage).toBe(100)
+      expect(result.usage.channelsPercentage).toBe(100)
     })
   })
 })

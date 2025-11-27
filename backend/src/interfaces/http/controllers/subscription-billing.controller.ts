@@ -328,7 +328,7 @@ export class SubscriptionBillingController {
     } catch (error) {
       logger.error("[BILLING] Error recharging credit:", error)
       res.status(500).json({
-        error: "Errore ricarica credito",
+        error: "Credit recharge error",
         message: error instanceof Error ? error.message : "Unknown error",
       })
     }
@@ -401,7 +401,7 @@ export class SubscriptionBillingController {
 
       res.json({
         success: true,
-        message: `Upgrade a ${result.newPlan.displayName} completato!`,
+        message: `Upgrade to ${result.newPlan.displayName} completed!`,
         data: {
           newPlan: result.newPlan,
           nextBillingDate: result.nextBillingDate,
