@@ -112,7 +112,7 @@ export const PLAN_CONFIGS: Record<string, PlanConfig> = {
       { key: FEATURE_KEYS.CUSTOMERS, included: true },
       { key: FEATURE_KEYS.MULTI_LANGUAGE, included: true },
       { key: FEATURE_KEYS.ANALYTICS, included: true },
-      { key: FEATURE_KEYS.BRANDING, included: false },
+      { key: FEATURE_KEYS.BRANDING, included: true },
       { key: FEATURE_KEYS.INTEGRATIONS, included: false },
       { key: FEATURE_KEYS.DEDICATED_SERVER, included: false },
     ],

@@ -30,6 +30,8 @@ export interface CreateWorkspaceData {
   whatsappPhoneNumber: string
   language?: string
   description?: string
+  welcomeMessage?: string
+  adminEmail?: string
 }
 
 export interface UpdateWorkspaceData {
@@ -92,10 +94,12 @@ const workspaceApi = {
     >
   > {
     try {
+      logger.info("[workspaceApi] 📊 Fetching badge stats...")
       const response = await api.get("/workspaces/badge-stats")
+      logger.info("[workspaceApi] 📊 Badge stats response:", response.data)
       return response.data
     } catch (error) {
-      logger.error("[workspaceApi] Failed to fetch badge stats:", error)
+      logger.error("[workspaceApi] ❌ Failed to fetch badge stats:", error)
       return {}
     }
   },

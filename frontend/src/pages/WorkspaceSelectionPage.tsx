@@ -2,14 +2,16 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { TeamMembersTable } from "@/components/workspace/TeamMembersTable"
 import { BillingSection } from "@/components/billing/BillingSection"
+import { UsageLimitsCard } from "@/components/billing/UsageLimitsCard"
 import type { Workspace } from "@/hooks/use-workspace"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
-import { LogOut, PlusCircle, Radio, MessageSquare, ShoppingCart, AlertTriangle } from "lucide-react"
+import { LogOut, PlusCircle, Radio, MessageSquare, ShoppingCart, AlertTriangle, Smartphone, Crown } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
@@ -35,9 +37,46 @@ export function WorkspaceSelectionPage() {
   const [selectedType] = useState<BusinessType>("Shop") // Always Shop by default
   const [newPhoneNumber, setNewPhoneNumber] = useState("")
   const [alias, setAlias] = useState("")
+  const [welcomeMessage, setWelcomeMessage] = useState("")
+  const [adminEmail, setAdminEmail] = useState("")
   const [justCreatedId, setJustCreatedId] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState("")
+  const [channelLimitError, setChannelLimitError] = useState(false)
+  const [validationErrors, setValidationErrors] = useState<{
+    whatsapp?: string
+    email?: string
+  }>({})
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
+
+  // Validation helpers
+  const validateWhatsAppNumber = (phone: string): boolean => {
+    // Must start with + and contain only digits after
+    const whatsappRegex = /^\+[1-9]\d{6,14}$/
+    return whatsappRegex.test(phone.replace(/\s/g, ''))
+  }
+
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email)
+  }
+
+  const handleWhatsAppChange = (value: string) => {
+    setNewPhoneNumber(value)
+    if (value && !validateWhatsAppNumber(value)) {
+      setValidationErrors(prev => ({ ...prev, whatsapp: 'Invalid format. Use +1234567890' }))
+    } else {
+      setValidationErrors(prev => ({ ...prev, whatsapp: undefined }))
+    }
+  }
+
+  const handleEmailChange = (value: string) => {
+    setAdminEmail(value)
+    if (value && !validateEmail(value)) {
+      setValidationErrors(prev => ({ ...prev, email: 'Invalid email format' }))
+    } else {
+      setValidationErrors(prev => ({ ...prev, email: undefined }))
+    }
+  }
   const [isLoading, setIsLoading] = useState(false)
   const [badgeStats, setBadgeStats] = useState<Record<string, WorkspaceBadgeStats>>({})
 
@@ -185,20 +224,29 @@ export function WorkspaceSelectionPage() {
 
     try {
       setIsLoading(true)
+      setChannelLimitError(false)
       const newWorkspace = await createWorkspace({
-        name: newPhoneNumber,
+        name: alias || newPhoneNumber,
         whatsappPhoneNumber: newPhoneNumber,
         language: "en",
+        welcomeMessage: welcomeMessage || undefined,
+        adminEmail: adminEmail || undefined,
       })
 
       logger.info("✅ Workspace created successfully:", newWorkspace.id)
-      toast.success("Workspace created successfully!")
+      toast.success("Channel created successfully!")
 
       // 🔄 REFRESH PAGE - Reload workspace-selection to show new workspace with all agents
       logger.info("🔄 Reloading workspace-selection page...")
       window.location.reload()
-    } catch (error) {
-      setErrorMessage("Failed to create workspace")
+    } catch (error: any) {
+      // Check if it's a channel limit error
+      if (error?.response?.data?.code === "CHANNEL_LIMIT_EXCEEDED") {
+        setChannelLimitError(true)
+        setErrorMessage(error.response.data.message)
+      } else {
+        setErrorMessage("Failed to create channel")
+      }
       logger.error("❌ Error creating workspace:", error)
     } finally {
       setIsLoading(false)
@@ -329,13 +377,9 @@ export function WorkspaceSelectionPage() {
                         width="20"
                         height="20"
                         viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                        fill="currentColor"
                       >
-                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
                       </svg>
                       <span className="truncate">
                         {workspace.whatsappPhoneNumber}
@@ -386,44 +430,120 @@ export function WorkspaceSelectionPage() {
           </CardContent>
         </Card>
 
-        {/* Dialog per la selezione del tipo di attività */}
+        {/* Dialog per la creazione di un nuovo canale */}
         <dialog
           id="type-selection-dialog"
-          className="backdrop:bg-black/50 p-0 rounded-lg shadow-lg border max-w-md w-full"
+          className="backdrop:bg-black/50 p-0 rounded-xl shadow-xl border-0 max-w-lg w-full bg-white"
         >
-          <div className="p-8">
-            <h2 className="text-2xl font-bold mb-6">Select Channel Type</h2>
-
-            <div className="space-y-6">
+          <div className="p-6">
+            {/* Header with icon */}
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-green-100 rounded-full">
+                <Smartphone className="h-6 w-6 text-green-600" />
+              </div>
               <div>
-                <Label htmlFor="channel-name">Channel Name</Label>
+                <h2 className="text-xl font-bold text-gray-900">New Channel</h2>
+                <p className="text-sm text-gray-500">Set up your WhatsApp business channel</p>
+              </div>
+            </div>
+
+            {/* Error message for channel limit */}
+            {channelLimitError && (
+              <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3">
+                <Crown className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium text-amber-800">Upgrade Required</p>
+                  <p className="text-sm text-amber-700 mt-1">
+                    {errorMessage || "You've reached your channel limit. Upgrade your plan to add more channels."}
+                  </p>
+                  <Button
+                    size="sm"
+                    className="mt-2 bg-amber-600 hover:bg-amber-700"
+                    onClick={() => {
+                      const dialog = document.getElementById("type-selection-dialog") as HTMLDialogElement
+                      if (dialog) dialog.close()
+                      // Scroll to billing section
+                      document.querySelector('[class*="Subscription"]')?.scrollIntoView({ behavior: 'smooth' })
+                    }}
+                  >
+                    Change Plan
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="whatsapp-number" className="text-sm font-medium">
+                  WhatsApp Number <span className="text-red-500">*</span>
+                </Label>
                 <Input
-                  id="channel-name"
+                  id="whatsapp-number"
                   type="text"
-                  placeholder="My Channel"
+                  placeholder="+34612345678"
                   value={newPhoneNumber}
-                  onChange={(e) => setNewPhoneNumber(e.target.value)}
-                  className="mt-2"
+                  onChange={(e) => handleWhatsAppChange(e.target.value)}
+                  className={`mt-1.5 ${validationErrors.whatsapp ? 'border-red-500 focus:ring-red-500' : ''}`}
                   autoComplete="off"
                 />
+                {validationErrors.whatsapp && (
+                  <p className="text-xs text-red-500 mt-1">{validationErrors.whatsapp}</p>
+                )}
               </div>
 
               <div>
-                <Label htmlFor="channel-alias">Alias</Label>
+                <Label htmlFor="channel-alias" className="text-sm font-medium">
+                  Alias <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="channel-alias"
                   type="text"
-                  placeholder="My Channel Alias"
+                  placeholder="My Business Name"
                   value={alias}
                   onChange={(e) => setAlias(e.target.value)}
-                  className="mt-2"
+                  className="mt-1.5"
                   autoComplete="off"
                 />
+                <p className="text-xs text-gray-500 mt-1">This name will be used in the welcome message</p>
               </div>
 
-              {/* Channel Type is always "Shop" by default - no UI needed */}
+              <div>
+                <Label htmlFor="welcome-message" className="text-sm font-medium">
+                  Welcome Message
+                </Label>
+                <Textarea
+                  id="welcome-message"
+                  placeholder={`Welcome to ${alias || 'My Business'}! I'm your virtual assistant. How can I help you today?`}
+                  value={welcomeMessage}
+                  onChange={(e) => setWelcomeMessage(e.target.value)}
+                  className="mt-1.5 min-h-[80px] resize-none"
+                  rows={3}
+                />
+                <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                  <span className="inline-block w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                  AI will automatically translate this message to the customer's language
+                </p>
+              </div>
 
-              <div className="flex justify-end gap-4 mt-8">
+              <div>
+                <Label htmlFor="admin-email" className="text-sm font-medium">
+                  Admin Email <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="admin-email"
+                  type="email"
+                  placeholder="admin@mybusiness.com"
+                  value={adminEmail}
+                  onChange={(e) => handleEmailChange(e.target.value)}
+                  className={`mt-1.5 ${validationErrors.email ? 'border-red-500 focus:ring-red-500' : ''}`}
+                  autoComplete="off"
+                />
+                {validationErrors.email && (
+                  <p className="text-xs text-red-500 mt-1">{validationErrors.email}</p>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t mt-6">
                 <Button
                   type="button"
                   variant="outline"
@@ -432,6 +552,14 @@ export function WorkspaceSelectionPage() {
                       "type-selection-dialog"
                     ) as HTMLDialogElement
                     if (dialog) dialog.close()
+                    // Reset form
+                    setNewPhoneNumber("")
+                    setAlias("")
+                    setWelcomeMessage("")
+                    setAdminEmail("")
+                    setChannelLimitError(false)
+                    setErrorMessage("")
+                    setValidationErrors({})
                   }}
                 >
                   Cancel
@@ -440,29 +568,39 @@ export function WorkspaceSelectionPage() {
                   onClick={handleCreateWorkspace}
                   className="bg-green-600 hover:bg-green-700"
                   disabled={
-                    !selectedType || !newPhoneNumber.trim() || isLoading
+                    !selectedType || 
+                    !newPhoneNumber.trim() || 
+                    !alias.trim() || 
+                    !adminEmail.trim() || 
+                    !!validationErrors.whatsapp ||
+                    !!validationErrors.email ||
+                    isLoading
                   }
                 >
-                  Create
+                  {isLoading ? "Creating..." : "Create Channel"}
                 </Button>
               </div>
             </div>
           </div>
         </dialog>
 
-        {/* Team Members Section - Show below channels */}
+        {/* Subscription & Billing + Usage Limits Row - ONLY for Owner (SUPER_ADMIN) */}
+        {firstWorkspaceId && !isRoleLoading && isSuperAdmin && (
+          <div className="mt-8 grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
+            {/* Main - Subscription & Billing */}
+            <BillingSection workspaceId={firstWorkspaceId} />
+            
+            {/* Side - Usage Limits */}
+            <UsageLimitsCard workspaceId={firstWorkspaceId} />
+          </div>
+        )}
+
+        {/* Team Members Section */}
         {firstWorkspaceId && !isRoleLoading && (
           <TeamMembersTable
             workspaceId={firstWorkspaceId}
             isSuperAdmin={isSuperAdmin}
           />
-        )}
-
-        {/* Subscription & Billing Section - ONLY for Owner (SUPER_ADMIN) */}
-        {firstWorkspaceId && !isRoleLoading && isSuperAdmin && (
-          <div className="mt-8">
-            <BillingSection workspaceId={firstWorkspaceId} />
-          </div>
         )}
       </div>
     </div>

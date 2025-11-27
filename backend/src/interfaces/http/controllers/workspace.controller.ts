@@ -377,16 +377,12 @@ export class WorkspaceController {
                 status: "PENDING",
               },
             }),
-            // Count sessions needing operator intervention
-            // Sessions where context contains escalation request
-            prisma.chatSession.count({
+            // Count customers needing operator intervention
+            // Customers where activeChatbot = false (disabled chatbot, wants human)
+            prisma.customers.count({
               where: {
                 workspaceId,
-                status: "active",
-                context: {
-                  path: ["needsOperator"],
-                  equals: true,
-                },
+                activeChatbot: false,
               },
             }),
           ])
@@ -418,7 +414,7 @@ export class WorkspaceController {
         }
       })
 
-      logger.info(`📊 Badge stats retrieved for ${workspaceIds.length} workspaces`)
+      logger.info(`📊 Badge stats retrieved for ${workspaceIds.length} workspaces`, statsMap)
       return res.json(statsMap)
     } catch (error) {
       logger.error("Error fetching workspace badge stats:", error)

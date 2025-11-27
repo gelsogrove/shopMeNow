@@ -131,12 +131,20 @@ export class WhatsAppWebhookController {
       if (messages && messages.length > 0) {
         // WhatsApp API format
         const message = messages[0]
+        
+        // Validate required fields
+        if (!message.from) {
+          logger.warn("[WEBHOOK] ⚠️ WhatsApp message missing 'from' field", { message })
+          res.status(200).json({ status: "ignored", reason: "missing from field" })
+          return
+        }
+        
         // WhatsApp API may send with or without +, ensure it's there (but only one!)
         phoneNumber = message.from.startsWith("+")
           ? message.from.trim()
           : `+${message.from.trim()}`
         messageText = message.text?.body || ""
-        whatsappMessageId = message.id
+        whatsappMessageId = message.id || `wa-${Date.now()}`
         workspaceId = value.workspaceId // ✅ Extract workspaceId from WhatsApp format
 
         logger.info("[WEBHOOK] 📨 WhatsApp API format detected", {

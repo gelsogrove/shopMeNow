@@ -9,6 +9,9 @@ vi.mock("@/services/workspaceApi", () => ({
   getWorkspaces: vi.fn(),
   createWorkspace: vi.fn(),
   updateWorkspace: vi.fn(),
+  workspaceApi: {
+    getBadgeStats: vi.fn().mockResolvedValue({}),
+  },
 }))
 
 // Mock useWorkspace hook
@@ -44,6 +47,10 @@ vi.mock("@/components/workspace/TeamMembersTable", () => ({
 
 vi.mock("@/components/billing/BillingSection", () => ({
   BillingSection: () => <div data-testid="billing-section">Billing</div>,
+}))
+
+vi.mock("@/components/billing/UsageLimitsCard", () => ({
+  UsageLimitsCard: () => <div data-testid="usage-limits-card">Usage Limits</div>,
 }))
 
 vi.mock("@/lib/toast", () => ({
@@ -85,10 +92,10 @@ describe("WorkspaceSelectionPage", () => {
         expect(workspaceApi.getWorkspaces).toHaveBeenCalled()
       })
 
-      // The "Add new channel" card should be visible
-      // It contains a PlusCircle icon and "Add new channel" text
+      // The "Add Channel" button should be visible
+      // It contains a PlusCircle icon and "Add Channel" text
       await waitFor(() => {
-        expect(screen.getByText("Add new channel")).toBeInTheDocument()
+        expect(screen.getByText("Add Channel")).toBeInTheDocument()
       })
     })
 
@@ -112,9 +119,9 @@ describe("WorkspaceSelectionPage", () => {
         expect(workspaceApi.getWorkspaces).toHaveBeenCalled()
       })
 
-      // The "Add new channel" card should be visible for SUPER_ADMIN
+      // The "Add Channel" button should be visible for SUPER_ADMIN
       await waitFor(() => {
-        expect(screen.getByText("Add new channel")).toBeInTheDocument()
+        expect(screen.getByText("Add Channel")).toBeInTheDocument()
       })
     })
 
@@ -175,9 +182,9 @@ describe("WorkspaceSelectionPage", () => {
         expect(workspaceApi.getWorkspaces).toHaveBeenCalled()
       })
 
-      // User should see "Add new channel" button even though they're not SUPER_ADMIN
+      // User should see "Add Channel" button even though they're not SUPER_ADMIN
       // (because workspaces.length === 0)
-      const addButton = await screen.findByText("Add new channel")
+      const addButton = await screen.findByText("Add Channel")
       expect(addButton).toBeInTheDocument()
     })
   })

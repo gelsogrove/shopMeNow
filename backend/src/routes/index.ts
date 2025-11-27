@@ -610,8 +610,9 @@ router.use("/workspaces", workspaceCustomersRouter(customersController))
 // Mount workspace routes (includes the /current endpoint) with authentication FIRST
 // 🔒 SECURITY: Only authMiddleware here - sessionValidationMiddleware applied per-route basis
 // (POST /workspaces for creation doesn't need session, only JWT token)
-router.use("/workspaces", authMiddleware, workspaceRoutesLegacy)
+// NOTE: workspaceRoutes FIRST (has /badge-stats) before workspaceRoutesLegacy (has /:id which would catch "badge-stats" as ID)
 router.use("/workspaces", authMiddleware, workspaceRoutes)
+router.use("/workspaces", authMiddleware, workspaceRoutesLegacy)
 
 // Mount invitation and member routes for workspace team management (Feature 184)
 // Workspace-scoped routes (require workspaceId in path)

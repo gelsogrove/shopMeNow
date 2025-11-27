@@ -43,6 +43,12 @@ export class WhatsAppQueueRepository {
               phone: true,
             },
           },
+          workspace: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
         orderBy: {
           createdAt: "desc", // Most recent first (descending order)

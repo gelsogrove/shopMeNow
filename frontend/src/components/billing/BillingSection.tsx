@@ -498,8 +498,8 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
           {/* Credit & Plan Info */}
           <div className="grid gap-6 md:grid-cols-2">
             {/* Credit Balance */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">
                   Available Credit
                 </span>
@@ -510,20 +510,21 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
                   </Badge>
                 )}
               </div>
-              <div className="flex items-baseline gap-2">
+              <div className="flex items-center gap-4">
                 <span className="text-4xl font-bold">
                   {formatCurrency(billing.creditBalance)}
                 </span>
+                {isSuperAdmin && (
+                  <Button
+                    onClick={() => setShowRechargeDialog(true)}
+                    className="gap-2"
+                    size="sm"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Recharge Credit
+                  </Button>
+                )}
               </div>
-              {isSuperAdmin && (
-                <Button
-                  onClick={() => setShowRechargeDialog(true)}
-                  className="w-full gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Recharge Credit
-                </Button>
-              )}
             </div>
 
             {/* Plan Details */}
@@ -574,131 +575,6 @@ export function BillingSection({ workspaceId: propWorkspaceId }: BillingSectionP
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Usage Stats Card */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-green-600">
-                <TrendingUp className="h-5 w-5" />
-                Usage Limits
-              </CardTitle>
-              <CardDescription>
-                Current usage of your {planConfig.displayName} plan
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <TooltipProvider>
-            <div className="grid gap-6 md:grid-cols-3">
-              {/* Products */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4 text-muted-foreground" />
-                    <span>Products</span>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Info className="h-3 w-3 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Maximum products you can create.</p>
-                        <p className="text-xs text-muted-foreground">
-                          When limit is reached, you cannot add new products.
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                  <span className={`font-medium ${usage.productsPercentage >= 100 ? "text-red-600" : ""}`}>
-                    {usage.productsCount}/{limits.maxProducts}
-                  </span>
-                </div>
-                <Progress
-                  value={usage.productsPercentage}
-                  className={`h-2 ${getUsageColor(usage.productsPercentage)}`}
-                />
-                {usage.productsPercentage >= 90 && (
-                  <p className="text-xs text-amber-600">
-                    {usage.productsPercentage >= 100 
-                      ? "⚠️ Limit reached - upgrade to add more" 
-                      : "Approaching limit"}
-                  </p>
-                )}
-              </div>
-
-              {/* Customers */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span>Customers</span>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Info className="h-3 w-3 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Maximum customers in your CRM.</p>
-                        <p className="text-xs text-muted-foreground">
-                          When limit is reached, new customers cannot be added.
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                  <span className={`font-medium ${usage.customersPercentage >= 100 ? "text-red-600" : ""}`}>
-                    {usage.customersCount}/{limits.maxCustomers}
-                  </span>
-                </div>
-                <Progress
-                  value={usage.customersPercentage}
-                  className={`h-2 ${getUsageColor(usage.customersPercentage)}`}
-                />
-                {usage.customersPercentage >= 90 && (
-                  <p className="text-xs text-amber-600">
-                    {usage.customersPercentage >= 100 
-                      ? "⚠️ Limit reached - upgrade to add more" 
-                      : "Approaching limit"}
-                  </p>
-                )}
-              </div>
-
-              {/* Channels */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <Radio className="h-4 w-4 text-muted-foreground" />
-                    <span>WhatsApp Channels</span>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Info className="h-3 w-3 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>WhatsApp phone numbers connected.</p>
-                        <p className="text-xs text-muted-foreground">
-                          Premium: 2 channels, Enterprise: unlimited.
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                  <span className={`font-medium ${usage.channelsPercentage >= 100 ? "text-red-600" : ""}`}>
-                    {usage.channelsCount}/{limits.maxChannels}
-                  </span>
-                </div>
-                <Progress
-                  value={usage.channelsPercentage}
-                  className={`h-2 ${getUsageColor(usage.channelsPercentage)}`}
-                />
-                {usage.channelsPercentage >= 100 && (
-                  <p className="text-xs text-amber-600">
-                    ⚠️ Limit reached - upgrade to add more channels
-                  </p>
-                )}
-              </div>
-            </div>
-          </TooltipProvider>
         </CardContent>
       </Card>
 

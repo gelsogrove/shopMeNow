@@ -33,6 +33,9 @@ describe("Billing Service - UNIT Tests", () => {
         count: jest.fn(),
         aggregate: jest.fn(),
       },
+      billingTransaction: {
+        create: jest.fn(),
+      },
       pricingConfig: {
         findFirst: jest.fn(),
         findUnique: jest.fn(), // For PricingRepository.getByKey()
@@ -44,6 +47,7 @@ describe("Billing Service - UNIT Tests", () => {
       workspace: {
         findUnique: jest.fn(),
         update: jest.fn(),
+        updateMany: jest.fn(),
       },
       $transaction: jest.fn((callback: any) => callback(mockPrisma)),
     }
@@ -94,14 +98,14 @@ describe("Billing Service - UNIT Tests", () => {
       // Mock workspace lookup for credit deduction
       mockPrisma.workspace.findUnique.mockResolvedValue({
         id: workspaceId,
+        name: "Test Channel",
         creditBalance: 29.00,
         ownerId: "owner-123",
       })
 
-      // Mock workspace update (credit deduction)
-      mockPrisma.workspace.update.mockResolvedValue({
-        id: workspaceId,
-        creditBalance: 28.90,
+      // Mock workspace updateMany (credit deduction - shared credit across all owner's workspaces)
+      mockPrisma.workspace.updateMany.mockResolvedValue({
+        count: 1,
       })
 
       // Mock billingTransaction creation (for Transaction History)
@@ -138,9 +142,12 @@ describe("Billing Service - UNIT Tests", () => {
         },
       })
 
-      // Verify credit was deducted from workspace
-      expect(mockPrisma.workspace.update).toHaveBeenCalledWith({
-        where: { id: workspaceId },
+      // Verify credit was deducted from ALL owner's workspaces (shared credit)
+      expect(mockPrisma.workspace.updateMany).toHaveBeenCalledWith({
+        where: { 
+          ownerId: "owner-123",
+          isActive: true,
+        },
         data: { creditBalance: 28.90 },
       })
 
@@ -150,7 +157,7 @@ describe("Billing Service - UNIT Tests", () => {
           workspaceId,
           type: "MESSAGE",
           amount: 0.10,
-          description: "WhatsApp message",
+          description: "WhatsApp message (Test Channel)",
           balanceAfter: 28.90,
         },
       })
