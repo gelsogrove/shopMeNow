@@ -85,6 +85,13 @@ e anche i metodi GET PUT DELETE POST devono essere ben controllati
 
 - tutto quello che ci siamo detti hanno i test unitari?
 
-- non devi editare questo file ricordatelo !
 
+- ottimizzazoni necessarie per le query ? sopratutto per le tabelle piu popolate?
+
+- abbiamo solo uno schema di prisma?
+- i comandi di prisma non si lanciano in produzione dovrebbe esserci un blocco per NODE_ENV=production
+
+- c'e' qualche .env che non si utilizza piu ?
+
+- non devi editare questo file ricordatelo !
 - fammi una tabella per vedere il risultato.

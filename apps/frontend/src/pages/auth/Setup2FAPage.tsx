@@ -460,13 +460,6 @@ export default function Setup2FAPage() {
         {step === 'scan' && renderScanStep()}
         {step === 'verify' && renderVerifyStep()}
         {step === 'codes' && renderCodesStep()}
-
-        {/* Footer */}
-        <div className="mt-6 text-center text-sm text-gray-600">
-          <Link to="/auth/login" className="text-green-600 hover:text-green-700 hover:underline">
-            {t('setup2fa.skipLogin')}
-          </Link>
-        </div>
       </div>
     </div>
   )

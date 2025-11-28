@@ -206,6 +206,21 @@ class ShopMeMCPServer {
   async seedDatabase(args) {
     const { log = true } = args
 
+    // 🛡️ SAFETY CHECK: Block execution in production
+    const nodeEnv = process.env.NODE_ENV?.toLowerCase()
+    if (nodeEnv === "production" || nodeEnv === "prod") {
+      const allowBypass = process.env.ALLOW_DESTRUCTIVE_OPERATIONS === "true"
+      if (!allowBypass) {
+        throw new Error(
+          "🚫 BLOCKED: Cannot seed database in production environment!\n" +
+          "Set ALLOW_DESTRUCTIVE_OPERATIONS=true to bypass this check."
+        )
+      }
+      if (log) {
+        console.log("⚠️  WARNING: Running seed in production with ALLOW_DESTRUCTIVE_OPERATIONS=true")
+      }
+    }
+
     if (log) {
       console.log("🌱 Starting database seed...")
     }

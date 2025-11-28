@@ -20,6 +20,12 @@ import {
   PlanType,
 } from "../services/subscriptionBillingApi"
 
+// Helper to check if user is authenticated
+const isAuthenticated = (): boolean => {
+  const token = localStorage.getItem("token")
+  return !!token
+}
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -109,7 +115,8 @@ export const BillingProvider: React.FC<BillingProviderProps> = ({ children }) =>
    * Fetch quick balance info (for header)
    */
   const refreshBalance = useCallback(async () => {
-    if (!workspaceId) return
+    // Skip if no workspace or user not authenticated
+    if (!workspaceId || !isAuthenticated()) return
 
     setIsLoadingBalance(true)
     setError(null)
@@ -141,7 +148,8 @@ export const BillingProvider: React.FC<BillingProviderProps> = ({ children }) =>
    * Fetch full billing overview (for profile page)
    */
   const refreshOverview = useCallback(async () => {
-    if (!workspaceId) return
+    // Skip if no workspace or user not authenticated
+    if (!workspaceId || !isAuthenticated()) return
 
     setIsLoadingOverview(true)
     setError(null)
@@ -173,12 +181,12 @@ export const BillingProvider: React.FC<BillingProviderProps> = ({ children }) =>
     setIsLowBalance(newBalance < 5) // Default threshold
   }, [])
 
-  // Fetch balance on workspace change
+  // Fetch balance on workspace change (only if authenticated)
   useEffect(() => {
-    if (workspaceId) {
+    if (workspaceId && isAuthenticated()) {
       refreshBalance()
     } else {
-      // Reset state when no workspace
+      // Reset state when no workspace or not authenticated
       setCreditBalance(0)
       setIsLowBalance(false)
       setIsTrialPlan(false)
@@ -187,11 +195,12 @@ export const BillingProvider: React.FC<BillingProviderProps> = ({ children }) =>
       setPlanType(null)
       setBillingOverview(null)
     }
-  }, [workspaceId, refreshBalance])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId]) // Only trigger on workspaceId change, not refreshBalance
 
-  // Auto-refresh balance every 60 seconds when tab is active
+  // Auto-refresh balance every 60 seconds when tab is active (only if authenticated)
   useEffect(() => {
-    if (!workspaceId) return
+    if (!workspaceId || !isAuthenticated()) return
 
     const interval = setInterval(() => {
       if (document.visibilityState === "visible") {
@@ -200,7 +209,8 @@ export const BillingProvider: React.FC<BillingProviderProps> = ({ children }) =>
     }, 60000) // 60 seconds
 
     return () => clearInterval(interval)
-  }, [workspaceId, refreshBalance])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId]) // Only trigger on workspaceId change
 
   const value: BillingContextState = {
     creditBalance,

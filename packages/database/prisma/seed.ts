@@ -3,21 +3,20 @@
  *
  * This seed script:
  * 1. Creates workspace, users, and admin
- * 2. Imports data from prisma/data/ (exported by npm run db:export)
+ * 2. Imports data from prisma/data/
  * 3. Creates test customers and chat sessions
  *
- * Usage: npm run seed
+ * ⚠️  DESTRUCTIVE OPERATION - BLOCKED IN PRODUCTION
  *
- * IMPORTANT: Uses data from prisma/data/ (upd  console.log(`✅ Created ${faqs.length} FAQs`)
-
-  // 11. Create Campaigns
-  console.log("📣 Creating campaigns...")
-
-  for (const campaign of campaigns) {y db:export)
+ * Usage: npm run seed
  */
 
 import { config } from "dotenv"
 config() // Load environment variables from .env file
+
+// 🛡️ SAFETY CHECK: Block execution in production
+import { ensureNotProduction } from "../scripts/check-env-safety"
+ensureNotProduction("prisma:seed")
 
 import { PrismaClient } from "@prisma/client"
 import * as bcrypt from "bcrypt"
@@ -1769,6 +1768,11 @@ async function main() {
     },
     {
       jobName: "monthly-billing",
+      isActive: true,
+      lastStatus: "NEVER_RUN",
+    },
+    {
+      jobName: "messages-archive",
       isActive: true,
       lastStatus: "NEVER_RUN",
     },

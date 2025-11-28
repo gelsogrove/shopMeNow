@@ -1,7 +1,16 @@
 /**
  * Script to fix OAuth user with missing 2FA setup
  * Deletes user gelsogrove@gmail.com so they can register again
+ *
+ * ⚠️  DESTRUCTIVE OPERATION - BLOCKED IN PRODUCTION
  */
+
+import { config } from "dotenv"
+config() // Load environment variables
+
+// 🛡️ SAFETY CHECK: Block execution in production
+import { ensureNotProduction } from "@shopme/database/../scripts/check-env-safety"
+ensureNotProduction("fix-oauth-user")
 
 import { PrismaClient } from '@prisma/client'
 

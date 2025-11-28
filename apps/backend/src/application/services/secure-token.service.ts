@@ -24,7 +24,7 @@ export class SecureTokenService {
    */
   private encryptPayload(payload: any): string {
     const key =
-      process.env.TOKEN_ENCRYPTION_KEY || "default-key-change-in-production"
+      process.env.WHATSAPP_TOKEN_ENCRYPTION_KEY || process.env.TOKEN_ENCRYPTION_KEY || "default-key-change-in-production"
     const cipher = crypto.createCipher("aes-256-cbc", key)
     let encrypted = cipher.update(JSON.stringify(payload), "utf8", "hex")
     encrypted += cipher.final("hex")
@@ -37,7 +37,7 @@ export class SecureTokenService {
   private decryptPayload(encryptedPayload: string): any {
     try {
       const key =
-        process.env.TOKEN_ENCRYPTION_KEY || "default-key-change-in-production"
+        process.env.WHATSAPP_TOKEN_ENCRYPTION_KEY || process.env.TOKEN_ENCRYPTION_KEY || "default-key-change-in-production"
       const decipher = crypto.createDecipher("aes-256-cbc", key)
       let decrypted = decipher.update(encryptedPayload, "hex", "utf8")
       decrypted += decipher.final("utf8")

@@ -23,7 +23,8 @@ interface DefaultAgent {
  * @returns Prompt content as string
  */
 function loadPrompt(filename: string): string {
-  const promptPath = path.join(__dirname, "../../../docs/prompts", filename)
+  // Path: packages/database/prisma/data/ -> ../../../../docs/prompts/
+  const promptPath = path.join(__dirname, "../../../../docs/prompts", filename)
   try {
     return fs.readFileSync(promptPath, "utf-8")
   } catch (error) {

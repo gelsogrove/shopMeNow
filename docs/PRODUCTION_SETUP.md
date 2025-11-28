@@ -4,6 +4,40 @@ Guida completa per il deploy e la configurazione in produzione.
 
 ---
 
+## 🛡️ PROTEZIONE PRODUZIONE
+
+**IMPORTANTE**: Gli script distruttivi sono BLOCCATI in produzione per prevenire data loss accidentale.
+
+### Script Bloccati in Production
+
+| Script | Descrizione | Rischio |
+|--------|-------------|---------|
+| `prisma:seed` | Ricrea tutti i dati di test | 🔴 Cancella TUTTI i dati |
+| `prisma:reset` | Reset completo database | 🔴 Cancella TUTTO |
+| `fix-oauth-user` | Elimina utenti OAuth | 🟡 Cancella utenti |
+
+### Come Viene Rilevata la Produzione
+
+1. `NODE_ENV=production` o `NODE_ENV=prod`
+2. `DATABASE_URL` contiene: `production`, `railway`, `supabase`, `neon.tech`, `planetscale`
+
+### Bypass di Emergenza (USARE CON ESTREMA CAUTELA!)
+
+Se **DEVI ASSOLUTAMENTE** eseguire uno script distruttivo in produzione:
+
+```bash
+# ⚠️ ATTENZIONE: Questo cancellerà i dati di produzione!
+ALLOW_DESTRUCTIVE_OPERATIONS=true npm run prisma:seed
+```
+
+**PRIMA di usare il bypass:**
+1. ✅ Fai un backup completo del database
+2. ✅ Notifica il team
+3. ✅ Verifica di avere accesso al backup
+4. ✅ Considera le conseguenze
+
+---
+
 ## 📋 Prerequisiti
 
 - Node.js 18+
@@ -29,9 +63,11 @@ npm install
 cp .env.example .env
 nano .env  # Configura DATABASE_URL, OPENROUTER_API_KEY, etc.
 
-# Setup database
+# Setup database (migrazioni sono SICURE in prod)
 npm run prisma:migrate:prod
-npm run prisma:seed  # Solo se serve data iniziale
+
+# NOTA: prisma:seed è BLOCCATO in production per sicurezza
+# Se serve data iniziale, usa ALLOW_DESTRUCTIVE_OPERATIONS=true
 ```
 
 ### 2. Build

@@ -1,7 +1,7 @@
 /**
  * Sales Representatives Data - Auto-generated from database
  * Last updated: 2025-10-30T16:02:52.319Z
- * DO NOT EDIT MANUALLY - Use npm run db:export
+ * Seed data for ShopME
  */
 
 export interface SalesRepData {

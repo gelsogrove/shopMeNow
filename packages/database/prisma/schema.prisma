@@ -541,6 +541,9 @@ model ChatSession {
   @@unique([customerId, status], name: "unique_active_session")
   @@index([customerId, status], name: "idx_customer_status")
   @@index([workspaceId], name: "idx_workspace")
+  @@index([workspaceId, customerId], name: "idx_workspace_customer") // Common lookup
+  @@index([createdAt], name: "idx_chat_session_created") // For time-based queries
+  @@index([workspaceId, createdAt], name: "idx_workspace_created") // Dashboard stats
   @@map("chat_sessions")
 }
 
@@ -570,11 +573,58 @@ model Message {
 
   chatSession ChatSession @relation(fields: [chatSessionId], references: [id])
 
+  // 🚀 PERFORMANCE INDEXES
   @@index([chatSessionId])
   @@index([whatsappStatus])
   @@index([whatsappMessageId])
   @@index([sentBy])
+  @@index([createdAt], name: "idx_message_created") // Rate limiting queries
+  @@index([direction, createdAt], name: "idx_direction_created") // Rate limiting by direction
+  @@index([chatSessionId, createdAt], name: "idx_msg_session_created") // Chat history pagination
+  @@index([chatSessionId, direction], name: "idx_session_direction") // Filter by direction
   @@map("messages")
+}
+
+// 📦 ARCHIVED MESSAGES - Old messages moved here for performance
+// Messages older than 6 months are archived by scheduler job
+// ALL fields match Message table for easy restore if needed
+model MessageArchive {
+  id                 String           @id @default(uuid())
+  originalId         String           // Original message ID before archiving
+  direction          MessageDirection
+  content            String
+  type               MessageType      @default(TEXT)
+  status             String           @default("sent")
+  aiGenerated        Boolean          @default(false)
+  metadata           Json?            @default("{}")
+  read               Boolean          @default(false)
+  createdAt          DateTime         // Original creation date
+  updatedAt          DateTime         // Original update date
+  archivedAt         DateTime         @default(now()) // When it was archived
+  chatSessionId      String
+  workspaceId        String           // Denormalized for easy cleanup
+  customerId         String           // Denormalized for easy lookup
+  
+  // Debug/processing fields (for full restore)
+  functionCallsDebug String?
+  processingSource   String?
+  translatedQuery    String?
+  processedPrompt    String?
+  debugInfo          String?
+
+  // WhatsApp fields
+  whatsappStatus    String?
+  whatsappError     String?
+  whatsappMessageId String?
+  sentBy            String?
+
+  @@index([workspaceId])
+  @@index([customerId])
+  @@index([chatSessionId])
+  @@index([createdAt])
+  @@index([archivedAt])
+  @@index([originalId]) // For restore lookups
+  @@map("messages_archive")
 }
 
 model PasswordReset {

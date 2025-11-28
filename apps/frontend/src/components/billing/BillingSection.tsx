@@ -172,12 +172,13 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
   const billingOverview = propWorkspaceId ? localBillingOverview : contextBilling.billingOverview
   const isLoadingOverview = propWorkspaceId ? localIsLoading : contextBilling.isLoadingOverview
 
-  // Notify parent when billing overview is loaded
+  // Notify parent when billing overview is loaded (only on data change, not callback change)
   useEffect(() => {
     if (onBillingOverviewLoaded && billingOverview) {
       onBillingOverviewLoaded(billingOverview)
     }
-  }, [billingOverview, onBillingOverviewLoaded])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [billingOverview]) // Intentionally exclude onBillingOverviewLoaded to prevent loop
 
   // Local state
   const [showRechargeDialog, setShowRechargeDialog] = useState(false)
@@ -214,12 +215,20 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
     }
   }
 
-  // Update balance locally
-  const updateBalanceLocally = (newBalance: number) => {
+  // Update balance and totalRecharges locally after a recharge
+  const updateBalanceLocally = (newBalance: number, rechargeAmount?: number) => {
     if (propWorkspaceId && localBillingOverview) {
+      const currentTotalRecharges = localBillingOverview.billing.totalRecharges || 0
       setLocalBillingOverview({
         ...localBillingOverview,
-        billing: { ...localBillingOverview.billing, creditBalance: newBalance }
+        billing: { 
+          ...localBillingOverview.billing, 
+          creditBalance: newBalance,
+          // Update totalRecharges if rechargeAmount is provided
+          totalRecharges: rechargeAmount 
+            ? currentTotalRecharges + rechargeAmount 
+            : currentTotalRecharges
+        }
       })
     } else {
       contextBilling.updateBalanceLocally(newBalance)
@@ -277,8 +286,8 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
         toast.success(`Credit recharged! New balance: ${formatCurrency(result.newBalance)}`)
       }
 
-      // Update local balance immediately with result from API
-      updateBalanceLocally(result.newBalance)
+      // Update local balance AND totalRecharges immediately with result from API
+      updateBalanceLocally(result.newBalance, amount)
 
       // Close dialog and reset
       setShowRechargeDialog(false)

@@ -38,13 +38,12 @@ export function WorkspaceSelectionPage() {
   const [newPhoneNumber, setNewPhoneNumber] = useState("")
   const [alias, setAlias] = useState("")
   const [welcomeMessage, setWelcomeMessage] = useState("")
-  const [adminEmail, setAdminEmail] = useState("")
+  const [userEmail, setUserEmail] = useState("") // Email from token (auto-filled)
   const [justCreatedId, setJustCreatedId] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState("")
   const [channelLimitError, setChannelLimitError] = useState(false)
   const [validationErrors, setValidationErrors] = useState<{
     whatsapp?: string
-    email?: string
   }>({})
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
 
@@ -53,11 +52,6 @@ export function WorkspaceSelectionPage() {
     // Must start with + and contain only digits after
     const whatsappRegex = /^\+[1-9]\d{6,14}$/
     return whatsappRegex.test(phone.replace(/\s/g, ''))
-  }
-
-  const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    return emailRegex.test(email)
   }
 
   const handleWhatsAppChange = (value: string) => {
@@ -69,14 +63,6 @@ export function WorkspaceSelectionPage() {
     }
   }
 
-  const handleEmailChange = (value: string) => {
-    setAdminEmail(value)
-    if (value && !validateEmail(value)) {
-      setValidationErrors(prev => ({ ...prev, email: 'Invalid email format' }))
-    } else {
-      setValidationErrors(prev => ({ ...prev, email: undefined }))
-    }
-  }
   const [isLoading, setIsLoading] = useState(false)
   const [badgeStats, setBadgeStats] = useState<Record<string, WorkspaceBadgeStats>>({})
   
@@ -140,7 +126,7 @@ export function WorkspaceSelectionPage() {
         token ? token.substring(0, 20) + "..." : "NULL"
       )
 
-      // 🔍 DEBUG: Decode token to see who it belongs to
+      // Decode token to get user email
       if (token) {
         try {
           const base64Url = token.split('.')[1]
@@ -150,6 +136,10 @@ export function WorkspaceSelectionPage() {
           }).join(''))
           const decoded = JSON.parse(jsonPayload)
           logger.info('🔍 [WorkspaceSelectionPage] Token belongs to:', decoded.email || decoded.id)
+          // Set user email from token for workspace creation
+          if (decoded.email) {
+            setUserEmail(decoded.email)
+          }
         } catch (e) {
           logger.error('Failed to decode token:', e)
         }
@@ -233,7 +223,7 @@ export function WorkspaceSelectionPage() {
         whatsappPhoneNumber: newPhoneNumber,
         language: "en",
         welcomeMessage: welcomeMessage || undefined,
-        adminEmail: adminEmail || undefined,
+        adminEmail: userEmail, // Use email from token
       })
 
       logger.info("✅ Workspace created successfully:", newWorkspace.id)
@@ -305,7 +295,119 @@ export function WorkspaceSelectionPage() {
           </Button>
         </div>
 
-        <Card>
+        {/* ========== LOADING STATE ========== */}
+        {isLoading && (
+          <Card className="max-w-xl mx-auto">
+            <CardContent className="py-12 text-center">
+              <div className="animate-spin h-8 w-8 border-4 border-green-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+              <p className="text-gray-500">Loading your channels...</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* ========== NO WORKSPACES: Show Welcome + Create Form ========== */}
+        {!isLoading && workspaces.length === 0 && (
+          <Card className="max-w-xl mx-auto">
+            <CardHeader className="text-center pb-2">
+              <div className="mx-auto p-4 bg-green-100 rounded-full w-fit mb-4">
+                <Smartphone className="h-10 w-10 text-green-600" />
+              </div>
+              <CardTitle className="text-2xl text-gray-900">
+                Welcome to ShopME! 🎉
+              </CardTitle>
+              <CardDescription className="text-base mt-2">
+                Create your first WhatsApp channel to start receiving orders from your customers
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              {errorMessage && (
+                <div className="mb-4 p-4 text-red-700 bg-red-100 rounded-md">
+                  {errorMessage}
+                </div>
+              )}
+
+              <form onSubmit={handleCreateWorkspace} className="space-y-4">
+                <div>
+                  <Label htmlFor="whatsapp-number-inline" className="text-sm font-medium">
+                    WhatsApp Number <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="whatsapp-number-inline"
+                    type="text"
+                    placeholder="+34612345678"
+                    value={newPhoneNumber}
+                    onChange={(e) => handleWhatsAppChange(e.target.value)}
+                    className={`mt-1.5 ${validationErrors.whatsapp ? 'border-red-500 focus:ring-red-500' : ''}`}
+                    autoComplete="off"
+                  />
+                  {validationErrors.whatsapp && (
+                    <p className="text-xs text-red-500 mt-1">{validationErrors.whatsapp}</p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">Include country code (e.g., +34 for Spain)</p>
+                </div>
+
+                <div>
+                  <Label htmlFor="channel-alias-inline" className="text-sm font-medium">
+                    Business Name <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="channel-alias-inline"
+                    type="text"
+                    placeholder="My Restaurant"
+                    value={alias}
+                    onChange={(e) => setAlias(e.target.value)}
+                    className="mt-1.5"
+                    autoComplete="off"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="welcome-message-inline" className="text-sm font-medium">
+                    Welcome Message
+                  </Label>
+                  <Textarea
+                    id="welcome-message-inline"
+                    placeholder={`Welcome to ${alias || 'My Business'}! I'm your virtual assistant. How can I help you today?`}
+                    value={welcomeMessage}
+                    onChange={(e) => setWelcomeMessage(e.target.value)}
+                    className="mt-1.5 min-h-[80px] resize-none"
+                    rows={3}
+                  />
+                  <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                    <span className="inline-block w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                    AI will automatically translate to customer's language
+                  </p>
+                </div>
+
+                {/* Admin email info (auto-filled from logged user) */}
+                {userEmail && (
+                  <div className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
+                    📧 Admin email: <span className="font-medium text-gray-700">{userEmail}</span>
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  className="w-full bg-green-600 hover:bg-green-700 mt-6"
+                  size="lg"
+                  disabled={
+                    !newPhoneNumber.trim() || 
+                    !alias.trim() || 
+                    !userEmail ||
+                    !!validationErrors.whatsapp ||
+                    isLoading
+                  }
+                >
+                  {isLoading ? "Creating..." : "🚀 Create My Channel"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* ========== HAS WORKSPACES: Show List ========== */}
+        {!isLoading && workspaces.length > 0 && (
+          <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -317,7 +419,7 @@ export function WorkspaceSelectionPage() {
                   Select a channel to manage its conversations
                 </CardDescription>
               </div>
-              {!isRoleLoading && (workspaces.length === 0 || isSuperAdmin) && (
+              {!isRoleLoading && isSuperAdmin && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -432,8 +534,10 @@ export function WorkspaceSelectionPage() {
             </div>
           </CardContent>
         </Card>
+        )}
 
-        {/* Dialog per la creazione di un nuovo canale */}
+        {/* Dialog per la creazione di un nuovo canale (only shown when workspaces exist) */}
+        {workspaces.length > 0 && (
         <dialog
           id="type-selection-dialog"
           className="backdrop:bg-black/50 p-0 rounded-xl shadow-xl border-0 max-w-lg w-full bg-white"
@@ -528,23 +632,12 @@ export function WorkspaceSelectionPage() {
                 </p>
               </div>
 
-              <div>
-                <Label htmlFor="admin-email" className="text-sm font-medium">
-                  Admin Email <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="admin-email"
-                  type="email"
-                  placeholder="admin@mybusiness.com"
-                  value={adminEmail}
-                  onChange={(e) => handleEmailChange(e.target.value)}
-                  className={`mt-1.5 ${validationErrors.email ? 'border-red-500 focus:ring-red-500' : ''}`}
-                  autoComplete="off"
-                />
-                {validationErrors.email && (
-                  <p className="text-xs text-red-500 mt-1">{validationErrors.email}</p>
-                )}
-              </div>
+              {/* Admin email info (auto-filled from logged user) */}
+              {userEmail && (
+                <div className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
+                  📧 Admin email: <span className="font-medium text-gray-700">{userEmail}</span>
+                </div>
+              )}
 
               <div className="flex justify-end gap-3 pt-4 border-t mt-6">
                 <Button
@@ -559,7 +652,6 @@ export function WorkspaceSelectionPage() {
                     setNewPhoneNumber("")
                     setAlias("")
                     setWelcomeMessage("")
-                    setAdminEmail("")
                     setChannelLimitError(false)
                     setErrorMessage("")
                     setValidationErrors({})
@@ -574,9 +666,8 @@ export function WorkspaceSelectionPage() {
                     !selectedType || 
                     !newPhoneNumber.trim() || 
                     !alias.trim() || 
-                    !adminEmail.trim() || 
+                    !userEmail ||
                     !!validationErrors.whatsapp ||
-                    !!validationErrors.email ||
                     isLoading
                   }
                 >
@@ -586,6 +677,7 @@ export function WorkspaceSelectionPage() {
             </div>
           </div>
         </dialog>
+        )}
 
         {/* Subscription & Billing + Usage Limits Row - ONLY for Owner (SUPER_ADMIN) */}
         {firstWorkspaceId && !isRoleLoading && isSuperAdmin && (
