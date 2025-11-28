@@ -1,0 +1,53 @@
+{
+  "name": "shopme",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ShopME - WhatsApp E-commerce Platform",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev:backend & npm run dev:frontend",
+    "dev:backend": "npm run dev -w @shopme/backend",
+    "dev:frontend": "npm run dev -w @shopme/frontend",
+    "dev:scheduler": "npm run dev -w @shopme/scheduler",
+    "dev:backoffice": "npm run dev -w @shopme/backoffice",
+    "dev:all": "npm run dev:backend & npm run dev:frontend & npm run dev:scheduler",
+    "build": "npm run build --workspaces --if-present",
+    "build:backend": "npm run build -w @shopme/backend",
+    "build:frontend": "npm run build -w @shopme/frontend",
+    "build:scheduler": "npm run build -w @shopme/scheduler",
+    "start:backend": "npm run start -w @shopme/backend",
+    "start:scheduler": "npm run start -w @shopme/scheduler",
+    "prod:backend": "npm run start:pm2 -w @shopme/backend",
+    "prod:scheduler": "npm run start:pm2 -w @shopme/scheduler",
+    "prod:all": "npm run prod:backend && npm run prod:scheduler",
+    "prisma:generate": "npm run generate -w @shopme/database",
+    "prisma:migrate": "npm run migrate:dev -w @shopme/database",
+    "prisma:migrate:prod": "npm run migrate:deploy -w @shopme/database",
+    "prisma:seed": "npm run seed -w @shopme/database",
+    "prisma:studio": "npm run studio -w @shopme/database",
+    "prisma:reset": "npm run migrate:reset -w @shopme/database",
+    "test": "run-s test:be test:fe test:scheduler test:backoffice",
+    "test:all": "npm run test",
+    "test:be": "npm run test -w @shopme/backend",
+    "test:fe": "npm run test -w @shopme/frontend",
+    "test:scheduler": "npm run test -w @shopme/scheduler",
+    "test:backoffice": "npm run test -w @shopme/backoffice",
+    "test:unit": "npm run test:unit -w @shopme/backend",
+    "test:security": "npm run test:security -w @shopme/backend",
+    "test:coverage": "npm run test:coverage -w @shopme/backend",
+    "clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules apps/*/dist packages/*/dist"
+  },
+  "author": "Andrea Gelso",
+  "license": "ISC",
+  "dependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.0",
+    "react-is": "^19.2.0"
+  },
+  "devDependencies": {
+    "npm-run-all2": "^8.0.4"
+  }
+}

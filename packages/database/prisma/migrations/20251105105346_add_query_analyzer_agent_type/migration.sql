@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "AgentType" ADD VALUE 'QUERY_ANALYZER';

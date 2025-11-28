@@ -3,12 +3,8 @@
 .env.*
 !.env.example
 
-# Dependencies
+# Dependencies - Single node_modules at root for monorepo
 node_modules/
-/backend/node_modules
-/frontend/node_modules
-.pnp
-.pnp.js
 
 # Testing
 coverage/
@@ -16,27 +12,40 @@ coverage/
 # Production
 build/
 dist/
-/backend/dist
+dist-ssr/
 .next/
 out/
 
 # Debug and temporary files
-/backend/debug-*.js
-/backend/check-*.js
-/backend/test-*.js
-/backend/create-*.js
 **/debug-*.js
 **/temp-*.js
+**/test-*.js
+**/check-*.js
+**/create-*.js
 
-# Misc
-.DS_Store
-*.pem
-.idea/
-.vscode/
+# Logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Misc
+.DS_Store
+*.pem
+*.local
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# IDE
+.idea/
+.vscode/*
+!.vscode/extensions.json
 
 # Local files
 browser-tools-mcp/ 
@@ -44,8 +53,11 @@ browser-tools-mcp/
 .cursor/
 
 # Uploaded files
-/backend/uploads/documents/
-/backend/uploads/products/
+apps/backend/uploads/documents/
+apps/backend/uploads/products/
+
+# Prisma uploads backup
+apps/backend/prisma/uploads-backup/
 
 # Turbo
 .turbo
@@ -54,4 +66,4 @@ browser-tools-mcp/
 .specstory/.what-is-this.md
 
 cookies.txt
-backend/prompt.txt
+apps/backend/prompt.txt

@@ -1,33 +1,42 @@
 # ShopMe - AI-Powered WhatsApp E-commerce Platform
 
-A comprehensive WhatsApp e-commerce platform with AI-powered chatbot, simplified LLM architecture, and multi-language support.
+A comprehensive WhatsApp e-commerce platform with AI-powered chatbot, multi-agent LLM architecture, and multi-language support.
 
 ## 🚀 Features
 
-- **🤖 AI Chatbot**: Direct LLM integration with intelligent responses
+- **🤖 AI Chatbot**: Multi-agent LLM architecture (Router, Product Search, Safety, Translation)
 - **🛍️ E-commerce**: Complete product catalog, cart, and order management
 - **📊 Analytics**: Usage tracking and business insights
 - **🌍 Multi-language**: Native LLM support for Italian, English, Spanish, and Portuguese
-- **🔐 Security**: 2FA authentication, token-based auth, and workspace isolation ([Auth Fix Details](docs/AUTH_TOKEN_PERSISTENCE_FIX.md))
+- **🔐 Security**: 2FA authentication, token-based auth, and workspace isolation
 - **📱 Secure Links**: Temporary authenticated access to orders and profiles
-- **⚡ Simplified Architecture**: Direct LLM processing without intermediate layers
+- **⚡ Microservices**: Backend + Scheduler as separate services
+- **💳 Billing**: Per-owner billing across all channels
 
-## 🏗️ Architecture
+## 🏗️ Project Structure (Monorepo)
 
-### Simplified LLM System
-
-- **LLMService**: Direct processing and response generation
-- **Cloud Functions**: Specific actions (tracking, orders, operator contact)
-- **Variable Replacement**: Dynamic content personalization
-- **Link Generation**: Secure temporary access tokens
+```
+shopME/
+├── apps/
+│   ├── backend/         # Express API server (port 3001)
+│   ├── frontend/        # React + Vite app (port 3000)
+│   ├── scheduler/       # Cron jobs microservice
+│   └── backoffice/      # Admin panel (future)
+├── packages/
+│   └── database/        # Prisma schema & migrations
+├── docs/                # Documentation
+├── specs/               # Feature specifications
+└── package.json         # Root workspace config
+```
 
 ### Technology Stack
 
-- **Frontend**: React + TypeScript + Tailwind CSS
-- **Backend**: Node.js + Express + Prisma ORM
+- **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS + shadcn/ui
+- **Backend**: Node.js 18+ + Express + Prisma ORM
 - **Database**: PostgreSQL
 - **AI**: OpenRouter integration with GPT-4-mini
-- **Authentication**: JWT-based token system
+- **Authentication**: JWT + 2FA (TOTP)
+- **Package Manager**: npm workspaces
 
 ## 🚀 Quick Start
 
@@ -35,7 +44,7 @@ A comprehensive WhatsApp e-commerce platform with AI-powered chatbot, simplified
 
 - Node.js 18+
 - Docker & Docker Compose
-- PostgreSQL
+- PostgreSQL (via Docker)
 
 ### Installation
 
@@ -52,52 +61,72 @@ A comprehensive WhatsApp e-commerce platform with AI-powered chatbot, simplified
    docker compose up -d
    ```
 
-3. **Install backend dependencies**
+3. **Install all dependencies** (from root)
 
    ```bash
-   cd backend
    npm install
    ```
 
-4. **Install frontend dependencies**
+4. **Environment setup**
 
    ```bash
-   cd ../frontend
-   npm install
-   ```
-
-5. **Environment setup**
-
-   ```bash
-   cd ../backend
    cp .env.example .env
-   
    # Configure your environment variables in .env
-   # Most important: DATABASE_URL is already set for local development
    ```
 
-6. **Build frontend**
+5. **Setup database**
 
    ```bash
-   cd ../frontend
-   npm run build
+   npm run prisma:generate
+   npm run prisma:migrate
+   npm run prisma:seed
    ```
 
-7. **Setup database**
+6. **Start development servers**
 
    ```bash
-   cd ../backend
-   npx prisma migrate deploy
-   npm run seed
-   ```
-
-8. **Start development servers**
-
-   ```bash
-   # Terminal 1: Start frontend
-   cd frontend && npm run dev
+   # Start both backend + frontend
+   npm run dev
    
-   # Terminal 2: Start backend
+   # Or individually:
+   npm run dev:backend   # Backend on port 3001
+   npm run dev:frontend  # Frontend on port 3000
+   npm run dev:scheduler # Scheduler cron jobs
+   ```
+
+### Available Scripts
+
+```bash
+# Development
+npm run dev              # Start backend + frontend
+npm run dev:all          # Start backend + frontend + scheduler
+
+# Build
+npm run build            # Build all workspaces
+npm run build:backend    # Build only backend
+npm run build:frontend   # Build only frontend
+
+# Database
+npm run prisma:generate  # Generate Prisma client
+npm run prisma:migrate   # Run migrations (dev)
+npm run prisma:seed      # Seed test data
+npm run prisma:studio    # Open Prisma Studio
+
+# Testing
+npm run test             # Run all tests (backend)
+npm run test:unit        # Unit tests only
+npm run test:security    # Security tests only
+npm run test:coverage    # Test with coverage
+
+# Production
+npm run prod:backend     # Start backend with PM2
+npm run prod:scheduler   # Start scheduler with PM2
+```
+
+## 🔐 Default Login
+
+- **Email**: `admin@shopme.com`
+- **Password**: `venezia44`
    cd backend && npm run dev
    ```
 

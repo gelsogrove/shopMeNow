@@ -1,0 +1,1259 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Workspace {
+  id                        String            @id @default(cuid())
+  name                      String
+  slug                      String            @unique
+  whatsappPhoneNumber       String?
+  whatsappApiKey            String?
+  notificationEmail         String?
+  webhookUrl                String?
+  isActive                  Boolean           @default(true)
+  language                  String            @default("ENG")
+  createdAt                 DateTime          @default(now())
+  updatedAt                 DateTime          @updatedAt
+  isDelete                  Boolean           @default(false)
+  currency                  String            @default("EUR")
+  channelStatus             Boolean           @default(false) // true = channel active (queue enabled), false = channel disabled
+  description               String?
+  messageLimit              Int               @default(50)
+  url                       String?
+  businessType              BusinessType      @default(ECOMMERCE)
+  welcomeMessage            Json?             @default("{\"en\": \"Welcome! I'm SofiA, your digital assistant. I can help you discover Italian gourmet products, answer questions, and manage orders. How can I help you today?\", \"es\": \"¡Bienvenido! Soy SofiA, tu asistente digital. Puedo ayudarte a descubrir productos gourmet italianos, responder preguntas y gestionar pedidos. ¿Cómo puedo ayudarte hoy?\", \"it\": \"Benvenuto! Sono SofiA, il tuo assistente digitale. Posso aiutarti a scoprire prodotti gourmet italiani, rispondere alle tue domande e gestire ordini. Come posso aiutarti oggi?\", \"pt\": \"Bem-vindo! Sou a SofiA, a sua assistente digital. Posso ajudá-lo a descobrir produtos gourmet italianos, responder perguntas e gerir encomendas. Como posso ajudá-lo hoje?\"}")
+  wipMessage                Json?             @default("{\"en\": \"Work in progress. Please contact us later.\", \"es\": \"Trabajos en curso. Por favor, contáctenos más tarde.\", \"it\": \"Lavori in corso. Contattaci più tardi.\", \"pt\": \"Em manutenção. Por favor, contacte-nos mais tarde.\"}")
+  afterRegistrationMessages Json?             @default("{\"de\": \"Danke für Ihre Registrierung, [nome]! Wie kann ich Ihnen heute helfen? Möchten Sie Ihre Bestellungen sehen? Die Angebote? Oder benötigen Sie andere Informationen?\", \"en\": \"Thank you for registering, [nome]! How can I help you today? Would you like to see your orders? The offers? Or do you need other information?\", \"es\": \"¡Gracias por registrarte, [nome]! ¿Cómo puedo ayudarte hoy? ¿Quieres ver tus pedidos? ¿Las ofertas? ¿O necesitas otra información?\", \"fr\": \"Merci de vous être inscrit, [nome] ! Comment puis-je vous aider aujourd'hui ? Voulez-vous voir vos commandes ? Les offres ? Ou avez-vous besoin d'autres informations ?\", \"it\": \"Grazie per esserti registrato, [nome]! Come ti posso aiutare oggi? Vuoi vedere i tuoi ordini? Le offerte? O hai bisogno di altre informazioni?\", \"pt\": \"Obrigado por se registrar, [nome]! Como posso ajudá-lo hoje? Quer ver seus pedidos? As ofertas? Ou precisa de outras informações?\"}")
+  debugMode                 Boolean           @default(true)
+  apiKey                    String?
+  metadata                  Json?
+  
+  // Team management: ownerId groups all channels belonging to same owner
+  ownerId                   String?
+  owner                     User?             @relation("OwnedWorkspaces", fields: [ownerId], references: [id])
+  
+  // Subscription & Billing fields
+  planType                  PlanType          @default(FREE_TRIAL)
+  creditBalance             Decimal           @default(29.00) @db.Decimal(10, 2)
+  trialEndsAt               DateTime?
+  planStartedAt             DateTime          @default(now())
+  nextBillingDate           DateTime?
+  lowBalanceNotifiedAt      DateTime?         // Last time low balance notification was sent
+  
+  users                     UserWorkspace[]
+  invitations               WorkspaceInvitation[]
+  agentConfigs              AgentConfig[]
+  agentConversationLogs     AgentConversationLog[]
+  conversationMessages      ConversationMessage[]
+  carts                     Carts[]
+  categories                Categories[]
+  chatSessions              ChatSession[]
+  customers                 Customers[]
+  documents                 Documents[]
+  faqs                      FAQ[]
+  gdprContent               GdprContent[]
+  languages                 Languages[]
+  offers                    Offers[]
+  orders                    Orders[]
+  products                  Products[]
+  sales                     Sales[]
+  suppliers                 Suppliers[]
+  secureTokens              SecureToken[]
+  services                  Services[]
+  billings                  Billing[]
+  shortUrls                 ShortUrls[]
+  usage                     Usage[]
+  whatsappSettings          WhatsappSettings?
+  adminSessions             AdminSession[]
+  campaigns                 Campaign[]
+  productSearches           ProductSearch[]
+  searchConversations       SearchConversations[]
+  certifications            Certification[]
+  transportTypes            TransportType[]
+  whatsappQueue             WhatsAppQueue[]
+  billingTransactions       BillingTransaction[]
+
+  @@index([ownerId])
+  @@index([planType])
+}
+
+model Categories {
+  id              String     @id @default(uuid())
+  name            String
+  description     String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  isActive        Boolean    @default(true)
+  workspaceId     String
+  slug            String
+  workspace       Workspace  @relation(fields: [workspaceId], references: [id])
+  offers          Offers[]   @relation("OfferCategory")
+  products        Products[]
+  offerCategories Offers[]   @relation("OfferCategories")
+
+  @@unique([slug, workspaceId])
+  @@map("categories")
+}
+
+model Sales {
+  id          String      @id @default(uuid())
+  firstName   String
+  lastName    String
+  email       String
+  phone       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  isActive    Boolean     @default(true)
+  workspaceId String
+  customers   Customers[]
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id])
+
+  @@map("sales")
+}
+
+model Languages {
+  id          String    @id @default(uuid())
+  name        String
+  code        String
+  isDefault   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  isActive    Boolean   @default(true)
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@map("languages")
+}
+
+model Suppliers {
+  id              String     @id @default(uuid())
+  companyName     String
+  description     String?
+  website         String?
+  phone           String?
+  email           String?
+  contactName     String?
+  region          String?
+  country         String?
+  logoUrl         String?
+  isActive        Boolean    @default(true)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  workspaceId     String
+  workspace       Workspace  @relation(fields: [workspaceId], references: [id])
+  products        Products[]
+
+  @@map("suppliers")
+}
+
+model Products {
+  id                    String                  @id @default(uuid())
+  name                  String
+  productCode           String?
+  description           String?
+  formato               String?
+  price                 Float
+  stock                 Int                     @default(0)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  isActive              Boolean                 @default(true)
+  workspaceId           String
+  categoryId            String?
+  supplierId            String?
+  slug                  String                  @unique
+  status                ProductStatus           @default(ACTIVE)
+  imageUrl              String[]                @default([])
+  transportType         String                  @default("Temperatura ambiente")
+  region                String?
+  allergens             String[]                @default([])
+  certifications        String[]                @default([]) // DEPRECATED: Use ProductCertification relation instead
+  cartItems             CartItems[]
+  orderItems            OrderItems[]
+  productCertifications ProductCertification[]
+  productTransportTypes ProductTransportType[]
+  category              Categories?             @relation(fields: [categoryId], references: [id])
+  supplier              Suppliers?              @relation(fields: [supplierId], references: [id])
+  workspace             Workspace               @relation(fields: [workspaceId], references: [id])
+
+  @@index([allergens])
+  @@index([certifications])
+  @@map("products")
+}
+
+model Certification {
+  id                    String                  @id @default(uuid())
+  name                  String
+  workspaceId           String
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  workspace             Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  productCertifications ProductCertification[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
+  @@map("Certification")
+}
+
+model ProductCertification {
+  productId       String
+  certificationId String
+  createdAt       DateTime      @default(now())
+  product         Products      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  certification   Certification @relation(fields: [certificationId], references: [id], onDelete: Cascade)
+
+  @@id([productId, certificationId])
+  @@index([certificationId])
+  @@map("ProductCertification")
+}
+
+model TransportType {
+  id                      String                   @id @default(uuid())
+  name                    String
+  workspaceId             String
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  workspace               Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  productTransportTypes   ProductTransportType[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
+  @@index([name])
+  @@map("TransportType")
+}
+
+model ProductTransportType {
+  productId       String
+  transportTypeId String
+  product         Products      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  transportType   TransportType @relation(fields: [transportTypeId], references: [id], onDelete: Cascade)
+
+  @@id([productId, transportTypeId])
+  @@index([productId])
+  @@index([transportTypeId])
+  @@map("ProductTransportType")
+}
+
+model WhatsAppQueue {
+  id             String    @id @default(uuid())
+  workspaceId    String
+  customerId     String
+  phoneNumber    String
+  messageContent String    @db.Text
+  status         String    @default("pending") // pending, sent, error
+  errorMessage   String?   @db.Text
+  createdAt      DateTime  @default(now())
+  deliveredAt    DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer  Customers @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status])
+  @@index([customerId])
+  @@index([createdAt])
+  @@map("whatsapp_queue")
+}
+
+model Customers {
+  id                            String             @id @default(uuid())
+  name                          String
+  email                         String
+  phone                         String?
+  address                       String?
+  company                       String?
+  discount                      Float?             @default(0)
+  language                      String?            @default("ENG")
+  currency                      String?            @default("EUR")
+  notes                         String?
+  serviceIds                    String[]           @default([])
+  isBlacklisted                 Boolean            @default(false)
+  createdAt                     DateTime           @default(now())
+  updatedAt                     DateTime           @updatedAt
+  isActive                      Boolean            @default(true)
+  workspaceId                   String
+  last_privacy_version_accepted String?
+  privacy_accepted_at           DateTime?
+  push_notifications_consent    Boolean            @default(false)
+  push_notifications_consent_at DateTime?
+  activeChatbot                 Boolean            @default(true)
+  invoiceAddress                Json?
+  salesId                       String?
+  cart                          Carts?
+  chatSessions                  ChatSession[]
+  sales                         Sales?             @relation(fields: [salesId], references: [id])
+  workspace                     Workspace          @relation(fields: [workspaceId], references: [id])
+  orders                        Orders[]
+  usage                         Usage[]
+  billings                      Billing[]
+  agentConversationLogs         AgentConversationLog[]
+  conversationMessages          ConversationMessage[]
+  campaignSends                 CampaignSent[]
+  feedbacks                     CustomerFeedback[]
+  productSearches               ProductSearch[]
+  whatsappQueue                 WhatsAppQueue[]
+
+  @@index([phone])
+  @@map("customers")
+}
+
+model SearchConversations {
+  id            String   @id @default(uuid())
+  sessionId     String   @unique // WhatsApp session ID or chat session ID
+  workspaceId   String
+  customerId    String
+  state         SearchConversationState @default(ACTIVE)
+  activeAgent   AgentType? // Current agent in control (null = Router decides)
+  lastQuery     String?  // Last search query from customer
+  lastResponse  String?  // Last response summary
+  metadata      Json?    // Additional context (filters, results count, etc.)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  expiresAt     DateTime // Auto-expire after 10 minutes of inactivity
+  
+  workspace     Workspace @relation(fields: [workspaceId], references: [id])
+  
+  @@index([sessionId])
+  @@index([customerId])
+  @@index([expiresAt])
+  @@map("search_conversations")
+}
+
+model Orders {
+  id              String          @id @default(uuid())
+  orderCode       String          @unique
+  status          OrderStatus     @default(PENDING)
+  paymentMethod   PaymentMethod?
+  paymentStatus   PaymentStatus?  @default(PENDING)
+  totalAmount     Float
+  shippingAmount  Float?          @default(0)
+  taxAmount       Float?          @default(0)
+  shippingAddress Json?
+  billingAddress  Json?
+  notes           String?
+  discountCode    String?
+  discountAmount  Float?          @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  billedAt        DateTime?       // 🔴 BILLING: Timestamp when NEW_ORDER billing (€1.00) was applied - prevents double-billing
+  customerId      String
+  workspaceId     String
+  trackingNumber  String?
+  items           OrderItems[]
+  creditNotes     CreditNote[]
+  customer        Customers       @relation(fields: [customerId], references: [id])
+  workspace       Workspace       @relation(fields: [workspaceId], references: [id])
+  paymentDetails  PaymentDetails?
+
+  @@index([customerId])
+  @@map("orders")
+}
+
+// Nota di Credito - Partial refund linked to delivered orders
+model CreditNote {
+  id            String    @id @default(uuid())
+  creditNoteCode String   @unique  // Format: NC-{orderCode} e.g., NC-ORD-2025-001
+  orderId       String
+  order         Orders    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  amount        Float                // Importo della nota di credito (positivo)
+  reason        String    @db.Text   // Motivo della nota di credito
+  createdAt     DateTime  @default(now())
+  createdById   String?              // User ID who created the credit note
+  
+  @@index([orderId])
+  @@map("credit_notes")
+}
+
+model OrderItems {
+  id             String    @id @default(uuid())
+  itemType       ItemType  @default(PRODUCT)
+  quantity       Int       @default(1)
+  unitPrice      Float
+  totalPrice     Float
+  productVariant Json?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  orderId        String
+  productId      String?
+  serviceId      String?
+  order          Orders    @relation(fields: [orderId], references: [id])
+  product        Products? @relation(fields: [productId], references: [id])
+  service        Services? @relation(fields: [serviceId], references: [id])
+
+  @@map("order_items")
+}
+
+model Carts {
+  id          String      @id @default(uuid())
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  customerId  String      @unique
+  workspaceId String
+  items       CartItems[]
+  customer    Customers   @relation(fields: [customerId], references: [id])
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id])
+
+  @@map("carts")
+}
+
+model CartItems {
+  id        String    @id @default(uuid())
+  itemType  ItemType  @default(PRODUCT)
+  quantity  Int
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  cartId    String
+  productId String?
+  serviceId String?
+  cart      Carts     @relation(fields: [cartId], references: [id])
+  product   Products? @relation(fields: [productId], references: [id])
+  service   Services? @relation(fields: [serviceId], references: [id])
+
+  @@map("cart_items")
+}
+
+model User {
+  id                 String                   @id @default(uuid())
+  email              String                   @unique
+  passwordHash       String?                  // SECURITY: Nullable for social-only users (Google/Facebook/Apple)
+  firstName          String?
+  lastName           String?
+  status             UserStatus               @default(ACTIVE)
+  lastLogin          DateTime?
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+  role               UserRole                 @default(MEMBER)
+  twoFactorSecret    String?                  // TOTP secret for 2FA
+  twoFactorEnabled   Boolean                  @default(false) // 2FA active flag
+  twoFactorEnabledAt DateTime?                // When 2FA was activated
+  recoveryCodes      String[]                 @default([]) // 10 hashed recovery codes (bcrypt)
+  authProvider       String                   @default("email") // "email" | "google" | "facebook" | "apple" | "multi"
+  profilePicture     String?                  // URL to profile picture (OAuth or NULL for default avatar)
+  linkedProviders    Json?                    @default("[]") // Array: [{provider: 'google', linkedAt: '2025-11-21T...'}]
+  gdprAccepted       DateTime?
+  phoneNumber        String?
+  
+  // 🧾 Billing/Invoice Information (Andrea's requirement)
+  companyName        String?                  // Nome società
+  vatNumber          String?                  // P.IVA / VAT number
+  website            String?                  // Sito internet
+  billingPhone       String?                  // Telefono per fatturazione
+  billingAddress     String?                  // Indirizzo completo
+  
+  workspaces         UserWorkspace[]
+  ownedWorkspaces    Workspace[]              @relation("OwnedWorkspaces") // Workspaces where user is owner/SUPER_ADMIN
+  invitationsSent    WorkspaceInvitation[]    @relation("InvitedBy") // Invitations sent by this user
+  passwordResets     PasswordReset[]
+  adminSessions      AdminSession[]
+  authAttempts       AuthenticationAttempt[] // Security audit trail
+
+  @@map("users")
+}
+
+model AuthenticationAttempt {
+  id            String   @id @default(cuid())
+  userId        String?  // NULL if user doesn't exist (failed registration/login)
+  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email         String   // Email attempted (track even if user doesn't exist)
+  attemptType   String   // "registration" | "login" | "2fa" | "password_reset" | "oauth-google" | "oauth-facebook" | "oauth-apple"
+  success       Boolean
+  failureReason String?  // Error message if failed
+  ipAddress     String?  @db.VarChar(45) // IPv4 or IPv6 for rate limiting
+  userAgent     String?  @db.Text // Browser fingerprinting
+  metadata      Json?    // Additional context (OAuth response, etc.)
+  timestamp     DateTime @default(now())
+
+  @@index([email, timestamp]) // Rate limit by email
+  @@index([ipAddress, timestamp]) // Rate limit by IP
+  @@index([attemptType, success]) // Fast failed attempt queries
+  @@index([timestamp]) // Cleanup old logs
+  @@map("authentication_attempts")
+}
+
+model UserWorkspace {
+  userId      String
+  workspaceId String
+  role        String        @default("ADMIN") // Values: "SUPER_ADMIN" | "ADMIN"
+  createdAt   DateTime      @default(now())
+  user        User          @relation(fields: [userId], references: [id])
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id])
+
+  @@id([userId, workspaceId])
+}
+
+model WhatsappSettings {
+  id          String    @id @default(uuid())
+  phoneNumber String    @unique
+  apiKey      String
+  webhookUrl  String?
+  settings    Json?     @default("{}")
+  adminEmail  String?
+  smtpHost    String?   @default("smtp.ethereal.email")
+  smtpPort    Int?      @default(587)
+  smtpSecure  Boolean?  @default(false)
+  smtpUser    String?
+  smtpPass    String?
+  smtpFrom    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspaceId String    @unique
+  gdpr        String?
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@map("whatsapp_settings")
+}
+
+model PaymentDetails {
+  id               String   @id @default(uuid())
+  provider         String
+  status           String   @default("PENDING")
+  amount           Float
+  currency         String   @default("EUR")
+  providerResponse Json?    @default("{}")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  orderId          String   @unique
+  order            Orders   @relation(fields: [orderId], references: [id])
+
+  @@map("payment_details")
+}
+
+model ChatSession {
+  id          String    @id @default(uuid())
+  status      String    @default("active")
+  context     Json?     @default("{}")
+  startedAt   DateTime  @default(now())
+  endedAt     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspaceId String
+  customerId  String
+  customer    Customers @relation(fields: [customerId], references: [id])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  messages    Message[]
+
+  // 🔒 CONCURRENCY SAFETY: Unique constraint prevents duplicate active sessions
+  // Only ONE active session allowed per customer at any time
+  @@unique([customerId, status], name: "unique_active_session")
+  @@index([customerId, status], name: "idx_customer_status")
+  @@index([workspaceId], name: "idx_workspace")
+  @@map("chat_sessions")
+}
+
+model Message {
+  id                 String           @id @default(uuid())
+  direction          MessageDirection
+  content            String
+  type               MessageType      @default(TEXT)
+  status             String           @default("sent")
+  aiGenerated        Boolean          @default(false)
+  metadata           Json?            @default("{}")
+  read               Boolean          @default(false)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  chatSessionId      String
+  functionCallsDebug String?
+  processingSource   String?
+  translatedQuery    String?
+  processedPrompt    String?
+  debugInfo          String? // 🔧 NEW: Debug information as JSON string
+
+  // 🆕 WHATSAPP INTEGRATION FIELDS
+  whatsappStatus    String? // "sent" | "failed" | "pending" | "delivered" | "read"
+  whatsappError     String? // Error message if failed
+  whatsappMessageId String? // WhatsApp message ID for tracking
+  sentBy            String? // userId of operator who sent (if manual)
+
+  chatSession ChatSession @relation(fields: [chatSessionId], references: [id])
+
+  @@index([chatSessionId])
+  @@index([whatsappStatus])
+  @@index([whatsappMessageId])
+  @@index([sentBy])
+  @@map("messages")
+}
+
+model PasswordReset {
+  id        String    @id @default(uuid())
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@map("password_resets")
+}
+
+model RegistrationToken {
+  id          String    @id @default(uuid())
+  token       String    @unique
+  phoneNumber String
+  workspaceId String
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("registration_tokens")
+}
+
+model SecureToken {
+  id          String    @id @default(uuid())
+  token       String    @unique
+  type        String
+  workspaceId String
+  userId      String?
+  phoneNumber String?
+  payload     Json?
+  expiresAt   DateTime
+  usedAt      DateTime?
+  ipAddress   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  customerId  String?
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@unique([customerId, type, workspaceId], name: "unique_customer_token", map: "unique_customer_token_non_null")
+  @@index([token])
+  @@index([expiresAt])
+  @@index([workspaceId])
+  @@index([customerId])
+  @@map("secure_tokens")
+}
+
+model ProductSearch {
+  id          String     @id @default(uuid())
+  query       String // Nome del prodotto ricercato (es: "Panettone italiano")
+  workspaceId String
+  customerId  String? // Opzionale se ricerca anonima
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id])
+  customer    Customers? @relation(fields: [customerId], references: [id])
+
+  @@index([workspaceId])
+  @@index([customerId])
+  @@index([createdAt])
+  @@index([query])
+  @@map("product_searches")
+}
+
+model Services {
+  id          String       @id @default(cuid())
+  code        String       @unique
+  name        String
+  description String
+  price       Float
+  currency    String       @default("EUR")
+  isActive    Boolean      @default(true)
+  workspaceId String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  duration    Int          @default(60)
+  imageUrl    String[]     @default([])
+  cartItems   CartItems[]
+  orderItems  OrderItems[]
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id])
+
+  @@map("services")
+}
+
+model FAQ {
+  id          String    @id @default(cuid())
+  workspaceId String
+  question    String
+  answer      String    @db.Text
+  keywords    String[]  // Array for keyword matching
+  category    String?   // Optional grouping: "Ordini", "Spedizioni", etc.
+  order       Int       @default(0) // Display/priority order
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, isActive])
+  @@index([keywords])
+  @@index([category])
+  @@map("faqs")
+}
+
+model Offers {
+  id              String       @id @default(cuid())
+  name            String
+  description     String?
+  discountPercent Float
+  startDate       DateTime
+  endDate         DateTime
+  isActive        Boolean      @default(true)
+  categoryId      String?
+  workspaceId     String
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  category        Categories?  @relation("OfferCategory", fields: [categoryId], references: [id])
+  workspace       Workspace    @relation(fields: [workspaceId], references: [id])
+  categories      Categories[] @relation("OfferCategories")
+
+  @@map("offers")
+}
+
+model Documents {
+  id           String         @id @default(uuid())
+  filename     String
+  originalName String
+  filePath     String
+  fileSize     Int
+  mimeType     String
+  status       DocumentStatus @default(UPLOADED)
+  workspaceId  String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  isActive     Boolean        @default(true)
+  workspace    Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([status])
+  @@index([isActive])
+  @@map("documents")
+}
+
+model AgentConfig {
+  id                 String    @id @default(uuid())
+  workspaceId        String
+  name               String    // Display name: "Product Search Agent"
+  type               AgentType // Enum type
+  description        String?   // User-friendly description
+  icon               String?   // Lucide icon name (e.g., "Search", "ShoppingCart", "MessageCircle")
+  systemPrompt       String    @db.Text // Agent-specific prompt (was "prompt")
+  model              String    @default("openai/gpt-4o-mini")
+  temperature        Float     @default(0.7)
+  maxTokens          Int       @default(4096) // Increased from 1000
+  order              Int       @default(0) // Execution order (0=Router, 99=Safety)
+  isActive           Boolean   @default(true)
+  availableFunctions Json?     // Array of Calling Function names
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  workspace          Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, type]) // One agent per type per workspace
+  @@index([workspaceId, isActive])
+  @@index([order])
+  @@map("agent_configs")
+}
+
+model GdprContent {
+  id          String    @id @default(cuid())
+  workspaceId String    @unique
+  gdpr_ita    String    @db.Text
+  gdpr_esp    String    @db.Text
+  gdpr_eng    String    @db.Text
+  gdpr_prt    String    @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("gdpr_content")
+}
+
+model Usage {
+  id          String    @id @default(uuid())
+  workspaceId String
+  clientId    String
+  price       Float     @default(0.005)
+  createdAt   DateTime  @default(now())
+  customer    Customers @relation(fields: [clientId], references: [id])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@index([workspaceId])
+  @@index([clientId])
+  @@index([createdAt])
+  @@map("usage")
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum WorkspaceStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  DRAFT
+  OUT_OF_STOCK
+}
+
+enum DocumentStatus {
+  UPLOADED
+  PROCESSING
+  PROCESSED
+  ERROR
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  DEBIT_CARD
+  BANK_TRANSFER
+  PAYPAL
+  CASH_ON_DELIVERY
+  CRYPTO
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  PARTIALLY_PAID
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+model RegistrationAttempts {
+  id            String   @id @default(cuid())
+  phoneNumber   String
+  workspaceId   String
+  attemptCount  Int      @default(0)
+  lastAttemptAt DateTime @default(now())
+  isBlocked     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([phoneNumber, workspaceId])
+  @@map("registration_attempts")
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  DOCUMENT
+  LOCATION
+  CONTACT
+}
+
+enum ChannelType {
+  WHATSAPP
+  TELEGRAM
+  MESSENGER
+  LINE
+}
+
+enum UserRole {
+  ADMIN
+  OWNER
+  MEMBER
+}
+
+// Status of a workspace invitation
+enum InvitationStatus {
+  PENDING   // Waiting for user to accept
+  ACCEPTED  // User accepted the invitation
+  CANCELLED // SUPER_ADMIN cancelled the invitation
+  EXPIRED   // Token expired (>7 days)
+}
+
+// Workspace invitation for team management
+model WorkspaceInvitation {
+  id          String           @id @default(cuid())
+  email       String           // Email of the invited user (lowercase normalized)
+  workspaceId String
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tokenHash   String           @unique // SHA-256 hash of the invitation token
+  invitedById String
+  invitedBy   User             @relation("InvitedBy", fields: [invitedById], references: [id])
+  status      InvitationStatus @default(PENDING)
+  expiresAt   DateTime         // Token expiry (7 days from creation)
+  createdAt   DateTime         @default(now())
+  acceptedAt  DateTime?        // When the invitation was accepted
+
+  @@index([workspaceId])
+  @@index([email])
+  @@index([status])
+  @@index([tokenHash])
+  @@map("workspace_invitations")
+}
+
+model ShortUrls {
+  id             String    @id @default(cuid())
+  shortCode      String    @unique @db.VarChar(10)
+  originalUrl    String    @db.Text
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  clicks         Int       @default(0)
+  isActive       Boolean   @default(true)
+  expiresAt      DateTime?
+  lastAccessedAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([shortCode])
+  @@index([workspaceId])
+  @@index([expiresAt])
+}
+
+enum BusinessType {
+  ECOMMERCE
+  RESTAURANT
+  CLINIC
+  RETAIL
+  SERVICES
+  GENERIC
+}
+
+enum ItemType {
+  PRODUCT
+  SERVICE
+}
+
+model Billing {
+  id            String      @id @default(cuid())
+  workspaceId   String
+  customerId    String?
+  amount        Float // Current charge amount (e.g., €0.15 or €1.50)
+  type          BillingType
+  description   String
+  userQuery     String? // User's original question/message
+  previousTotal Float       @default(0) // Total before this charge
+  currentCharge Float       @default(0) // Same as amount (for clarity in formula)
+  newTotal      Float       @default(0) // previousTotal + currentCharge = newTotal
+  createdAt     DateTime    @default(now())
+  workspace     Workspace   @relation(fields: [workspaceId], references: [id])
+  customer      Customers?  @relation(fields: [customerId], references: [id])
+
+  @@index([workspaceId])
+  @@index([customerId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model AgentConversationLog {
+  id              String     @id @default(cuid())
+  workspaceId     String     // SECURITY: multi-tenant isolation
+  customerId      String     // SECURITY: customer isolation
+  conversationId  String     // Group messages: "conv_123"
+  messageId       String     // Original message ID
+  step            Int        // Execution order: 1, 2, 3... (Router=1, Agent=2, Safety=3)
+  agentType       String     // "ROUTER", "PRODUCT_SEARCH", etc.
+  agentAction     String     // "classify_intent", "search_products", "translate"
+  inputMessage    String     @db.Text // Input to this agent
+  agentPrompt     String?    @db.Text // Complete prompt used (optional, can be large)
+  llmModel        String?    // "openai/gpt-4o-mini"
+  llmResponse     String     @db.Text // Raw LLM output
+  confidence      Float?     // 0.0-1.0 confidence score
+  reasoning       String?    @db.Text // Agent's reasoning (if provided)
+  tokensUsed      Int?       // Total tokens (input + output)
+  executionTimeMs Int?       // Latency in milliseconds
+  functionsCalled Json?      // Array: [{name, params, result}]
+  hasError        Boolean    @default(false)
+  errorMessage    String?    @db.Text
+  createdAt       DateTime   @default(now())
+  workspace       Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer        Customers  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, customerId])
+  @@index([conversationId])
+  @@index([createdAt])
+  @@index([agentType])
+  @@index([hasError])
+  @@map("agent_conversation_logs")
+}
+
+// Conversation Messages - Complete history for LLM Router context
+model ConversationMessage {
+  id                String    @id @default(cuid())
+  workspaceId       String
+  customerId        String
+  conversationId    String
+  role              String // "user", "assistant", "function", "system"
+  content           String    @db.Text
+  agentType         String? // "ROUTER", "PRODUCT_SEARCH", etc.
+  functionName      String? // If role="function", name of function called
+  functionArguments Json? // If role="function", arguments passed
+  tokensUsed        Int?
+  debugInfo         String? // ✅ Debug information as JSON string (for message flow tracking)
+  deliveredAt       DateTime? // ✅ WhatsApp delivery timestamp (when message sent via queue)
+  deliveryStatus    String    @default("not_queued") // "not_queued" (never sent), "pending" (in queue), "sent" (delivered), "error" (failed)
+  createdAt         DateTime  @default(now())
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer          Customers @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@index([workspaceId, customerId])
+  @@index([createdAt])
+  @@map("conversation_messages")
+}
+
+// ============================================================================
+// SUBSCRIPTION & BILLING SYSTEM
+// ============================================================================
+
+enum PlanType {
+  FREE_TRIAL  // 14 days trial with €29 credit
+  BASIC       // €29/month - 1 channel, 50 products, 50 customers
+  PREMIUM     // €49/month - 2 channels, 100 products, 100 customers
+  ENTERPRISE  // Custom pricing - unlimited everything
+}
+
+enum TransactionType {
+  MESSAGE           // -€0.10 per WhatsApp message
+  NEW_ORDER         // -€1.00 per order created
+  PUSH_NOTIFICATION // -€1.00 per push notification
+  RECHARGE          // +€X credit recharge
+  MONTHLY_FEE       // -€29/€59 monthly subscription fee
+  UPGRADE_FEE       // Pro-rata fee when upgrading plan
+  ADJUSTMENT        // Manual adjustment by admin
+  INITIAL_CREDIT    // +€29 initial trial credit
+}
+
+// Transaction history for billing - tracks all credit movements
+model BillingTransaction {
+  id            String          @id @default(cuid())
+  workspaceId   String
+  type          TransactionType
+  amount        Decimal         @db.Decimal(10, 2) // Negative for charges, positive for credits
+  balanceAfter  Decimal         @db.Decimal(10, 2) // Balance after this transaction
+  description   String
+  referenceId   String?         // Order ID, message ID, etc.
+  referenceType String?         // "order", "message", "push", etc.
+  metadata      Json?           // Additional context
+  createdAt     DateTime        @default(now())
+  
+  workspace     Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("billing_transactions")
+}
+
+// Plan configuration - dynamic limits from database
+model PlanConfiguration {
+  id                   String    @id @default(cuid())
+  planType             PlanType  @unique
+  displayName          String    // "Free Trial", "Basic", "Premium", "Enterprise"
+  monthlyFee           Decimal   @db.Decimal(10, 2)
+  maxChannels          Int
+  maxProducts          Int
+  maxCustomers         Int
+  messageCost          Decimal   @db.Decimal(10, 2) // €0.10
+  orderCost            Decimal   @db.Decimal(10, 2) // €1.00
+  pushCost             Decimal   @db.Decimal(10, 2) // €1.00
+  lowBalanceThreshold  Decimal   @db.Decimal(10, 2) // €5.00
+  trialDays            Int       @default(0) // 14 for FREE_TRIAL, 0 for others
+  initialCredit        Decimal   @db.Decimal(10, 2) @default(0) // €29 for FREE_TRIAL
+  features             Json?     // Additional features list
+  isActive             Boolean   @default(true)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([planType])
+  @@index([isActive])
+  @@map("plan_configurations")
+}
+
+enum BillingType {
+  MONTHLY_CHANNEL // €19.00 - Monthly subscription cost (LEGACY)
+  MESSAGE // €0.15 - Per message/interaction cost (LLM responses) (LEGACY)
+  NEW_CUSTOMER // €1.50 - New customer registration (LEGACY)
+  NEW_ORDER // €1.50 - New order placed (LEGACY)
+  PUSH_CAMPAIGN // €1.00 - Push notification (advertising campaigns) (LEGACY)
+  FEEDBACK // No cost - Customer feedback
+  ORDER_REVIEW // No cost - Order review
+  CAMPAIGN_LINK // No cost - Campaign link click
+  // NOTE: Legacy billing - use BillingTransaction for new billing system
+}
+
+enum CampaignFrequency {
+  ONCE // Una sola volta (no ripetizione)
+  WEEKLY // Ogni 7 giorni
+  BIWEEKLY // Ogni 14 giorni
+  MONTHLY // Ogni 30 giorni
+  BIMONTHLY // Ogni 60 giorni
+  QUARTERLY // Ogni 90 giorni
+  SEMIANNUAL // Ogni 180 giorni (6 mesi)
+  ANNUAL // Ogni 365 giorni
+}
+
+enum CampaignTargetType {
+  ALL // Tutti i customer attivi del workspace
+  SELECTED // Solo customer IDs specificati
+}
+
+model Campaign {
+  id             String            @id @default(cuid())
+  workspaceId    String
+  name           String // "Richiesta Feedback Semestrale"
+  messagePreview String            @db.Text // Markdown per visualizzazione admin (con token [FEEDBACK], {{nome}}, ecc)
+  frequency      CampaignFrequency
+  isActive       Boolean           @default(true)
+
+  // Destinatari
+  targetType  CampaignTargetType @default(ALL)
+  customerIds String[]           @default([]) // Array di customer IDs se targetType = SELECTED
+
+  // Template WhatsApp (opzionale, per uso futuro con Meta Business API)
+  templateName   String? // Nome template Meta (es: "feedback_request_v1")
+  templateParams Json? // Parametri template WhatsApp come JSON
+
+  // Metadata
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  lastRunAt DateTime? // Ultima esecuzione cron
+
+  // Relations
+  workspace Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sends     CampaignSent[]
+  feedbacks CustomerFeedback[]
+
+  @@index([workspaceId])
+  @@index([isActive])
+  @@index([frequency])
+}
+
+model CampaignSent {
+  id          String    @id @default(cuid())
+  campaignId  String
+  customerId  String
+  workspaceId String
+  sentAt      DateTime  @default(now())
+  tokenUsed   String? // Token generato per tracking click
+  clickedAt   DateTime? // Se customer ha cliccato sul link
+
+  // Relations
+  campaign Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  customer Customers @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([customerId])
+  @@index([workspaceId])
+  @@index([sentAt])
+}
+
+model CustomerFeedback {
+  id          String   @id @default(cuid())
+  customerId  String
+  workspaceId String
+  campaignId  String? // Opzionale: da quale campagna arriva
+  rating      Int // 1-5 stelline
+  comment     String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  // Relations
+  customer Customers @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  campaign Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@index([customerId])
+  @@index([workspaceId])
+  @@index([campaignId])
+  @@index([createdAt])
+}
+
+model AdminSession {
+  id             String     @id @default(cuid())
+  sessionId      String     @unique @db.VarChar(64)
+  userId         String
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspaceId    String?
+  workspace      Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt      DateTime   @default(now())
+  expiresAt      DateTime
+  lastActivityAt DateTime   @default(now())
+  ipAddress      String?    @db.VarChar(45)
+  userAgent      String?    @db.Text
+  isActive       Boolean    @default(true)
+
+  @@index([sessionId])
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([isActive])
+  @@map("admin_sessions")
+}
+
+// ============================================================================
+// PRICING CONFIGURATION - Single Source of Truth for all pricing
+// ============================================================================
+model PricingConfig {
+  id          String      @id @default(cuid())
+  type        PricingType // PLAN, USAGE, or THRESHOLD
+  key         String      @unique // e.g., "BASIC_MONTHLY", "MESSAGE", "FREE_MESSAGES"
+  value       Float       // The actual price or threshold value
+  description String?     @db.Text // Human-readable description
+  isActive    Boolean     @default(true) // Can be toggled without deleting
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([type])
+  @@index([key])
+  @@index([isActive])
+  @@map("pricing_config")
+}
+
+enum PricingType {
+  PLAN      // Monthly subscription plans (€0, €29, €59, €199)
+  USAGE     // Per-action costs (€0.15/message, €1.50/customer, etc.)
+  THRESHOLD // Free tier limits (200 messages, 50 products, etc.)
+}
+
+enum AgentType {
+  ROUTER                // order: 0 - Intent classification + FAQ
+  OPERATOR              // order: 0.5 - Human operator manual message
+  PRODUCT_SEARCH        // order: 2 - Product search specialist
+  CART_MANAGEMENT       // order: 3 - Cart operations
+  ORDER_TRACKING        // order: 4 - Order viewing
+  CUSTOMER_SUPPORT      // order: 5 - Support & escalation
+  SUMMARY_AGENT         // order: 5.5 - Conversation summarization
+  PROFILE_MANAGEMENT    // order: 6 - Profile modifications
+  NOTIFICATIONS         // order: 7 - Push notifications
+  SAFETY_TRANSLATION    // order: 99 - Safety + translation (DEPRECATED - will be split)
+  SECURITY              // order: 98 - Security validation (blocks unsafe content)
+  TRANSLATION           // order: 99 - Translation to customer language
+  CUSTOM                // order: 1, 8-98 - Custom agents
+}
+
+enum SearchConversationState {
+  ACTIVE      // Conversation is ongoing
+  COMPLETED   // Customer finished successfully
+  ABANDONED   // Customer left without completing
+  EXPIRED     // Session expired (>10 min inactivity)
+}
+
+// ============================================
+// 🕐 SCHEDULER JOB STATUS
+// ============================================
+// Tracks the last execution of each cron job
+// ONE record per job (updated on each run, not a log)
+
+model SchedulerJobStatus {
+  id            String    @id @default(cuid())
+  jobName       String    @unique  // "whatsapp-challenge-queue", "short-urls-cleanup", etc.
+  lastRunAt     DateTime?          // Last execution timestamp
+  lastStatus    String    @default("NEVER_RUN")  // "SUCCESS", "FAILED", "RUNNING", "NEVER_RUN"
+  lastError     String?            // Error message if failed
+  lastDuration  Int?               // Duration in milliseconds
+  nextRunAt     DateTime?          // Calculated next run time
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("scheduler_job_status")
+}
