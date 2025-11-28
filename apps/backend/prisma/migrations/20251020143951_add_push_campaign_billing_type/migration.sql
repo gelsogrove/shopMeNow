@@ -1,2 +1,0 @@
--- AlterEnum
-ALTER TYPE "BillingType" ADD VALUE 'PUSH_CAMPAIGN';

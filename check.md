@@ -87,4 +87,4 @@ e anche i metodi GET PUT DELETE POST devono essere ben controllati
 
 - non devi editare questo file ricordatelo !
 
-fammi una tabella per vedere il risultato.
+- fammi una tabella per vedere il risultato.

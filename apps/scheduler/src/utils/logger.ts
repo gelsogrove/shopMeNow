@@ -9,10 +9,9 @@ const logger = winston.createLogger({
       return `[${timestamp}] ${level.toUpperCase()}: ${message} ${metaStr}`
     })
   ),
+  // Only Console transport - PM2 handles log rotation via pm2-logrotate
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/scheduler.log' }),
-    new winston.transports.File({ filename: 'logs/scheduler-error.log', level: 'error' }),
   ],
 })
 

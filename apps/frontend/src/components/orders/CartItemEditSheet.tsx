@@ -796,12 +796,6 @@ export function CartItemEditSheet({
                                   variant="outline"
                                   size="sm"
                                   onClick={(e) => {
-                                    console.log(
-                                      "🔍 Decrease button clicked - orderStatus:",
-                                      orderStatus,
-                                      "Should be disabled:",
-                                      orderStatus !== "PENDING"
-                                    )
                                     e.preventDefault()
                                     e.stopPropagation()
                                     handleUpdateProductQuantity(

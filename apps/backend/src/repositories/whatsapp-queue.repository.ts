@@ -104,13 +104,7 @@ export class WhatsAppQueueRepository {
    * @returns Created message
    */
   async create(data: CreateQueueMessageDto): Promise<WhatsAppQueue> {
-    const timestamp = new Date().toISOString()
-    console.log(`\n💾💾💾 [${timestamp}] REPOSITORY.CREATE() CALLED`)
-    console.log(`   - Workspace: ${data.workspaceId}`)
-    console.log(`   - Customer: ${data.customerId}`)
-    console.log(`   - Phone: ${data.phoneNumber}`)
-    console.log(`   - Message: "${data.messageContent.substring(0, 50)}..."`)
-    console.log(`   - Status: ${data.status || "pending"}`)
+    logger.debug(`[WhatsAppQueueRepository] Creating queue message for workspace ${data.workspaceId}`)
 
     try {
       const result = await this.prisma.whatsAppQueue.create({
@@ -124,14 +118,10 @@ export class WhatsAppQueueRepository {
         },
       })
 
-      console.log(`✅✅✅ [${timestamp}] RECORD CREATED IN DATABASE!`)
-      console.log(`   - Record ID: ${result.id}`)
-      console.log(`   - Created At: ${result.createdAt}`)
-      console.log(`   - Status: ${result.status}\n`)
+      logger.debug(`[WhatsAppQueueRepository] Created queue message: ${result.id}`)
 
       return result
     } catch (error) {
-      console.log(`❌ DATABASE ERROR: ${(error as Error).message}\n`)
       logger.error(`[WhatsAppQueueRepository] Error in create:`, error)
       throw error
     }

@@ -36,13 +36,10 @@ const logger = winston.createLogger({
       }`
     })
   ),
+  // Only Console transport - PM2 handles log rotation via pm2-logrotate
   transports: [
     new winston.transports.Console({
       stderrLevels: ["error"],
-    }),
-    new winston.transports.File({
-      filename: "/tmp/shopme-server.log",
-      level: "debug",
     }),
   ],
 })

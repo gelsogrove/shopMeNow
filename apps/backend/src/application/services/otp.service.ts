@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client"
 import * as speakeasy from "speakeasy"
 import { AppError } from "../../interfaces/http/middlewares/error.middleware"
+import logger from "../../utils/logger"
 
 export class OtpService {
   constructor(private readonly prisma: PrismaClient) {}
@@ -49,30 +50,15 @@ export class OtpService {
       throw new AppError(400, "2FA not set up for this user")
     }
 
-    // 🔍 DEBUG: Log verification attempt
-    console.log('🔐 [2FA Verify] Attempting verification:', {
-      userId,
-      userEmail: user.email,
-      tokenReceived: token,
-      tokenLength: token.length,
-      secretExists: !!user.twoFactorSecret,
-      secretLength: user.twoFactorSecret.length,
-      timestamp: new Date().toISOString(),
-    })
-
-    // Verify token with extended window for debugging
+    // Verify token with extended window for time drift
     const isValid = speakeasy.totp.verify({
       secret: user.twoFactorSecret,
       encoding: "base32",
       token: token,
-      window: 2, // 🆕 INCREASED: Allow 2 steps (60 seconds) before/after for time drift
+      window: 2, // Allow 2 steps (60 seconds) before/after for time drift
     })
 
-    console.log('🔐 [2FA Verify] Result:', {
-      isValid,
-      token,
-      userEmail: user.email,
-    })
+    logger.debug(`[2FA Verify] userId=${userId}, isValid=${isValid}`)
 
     return isValid
   }

@@ -20,6 +20,51 @@ import speakeasy from 'speakeasy'
 
 const prisma = new PrismaClient()
 
+/**
+ * Helper: Verify 2FA with retry logic (handles TOTP timing edge cases)
+ */
+async function verify2FAWithRetry(
+  userId: string, 
+  secret: string, 
+  maxRetries: number = 3
+): Promise<{ status: number; body: any }> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    // Wait a bit to ensure TOTP window is fresh
+    if (attempt > 1) {
+      await new Promise(resolve => setTimeout(resolve, 1000))
+    }
+    
+    const totpCode = speakeasy.totp({ 
+      secret, 
+      encoding: 'base32',
+      // Use current time window
+    })
+    
+    console.log(`🔐 2FA attempt ${attempt}/${maxRetries} for user ${userId.substring(0, 8)}... code: ${totpCode}`)
+    
+    const response = await request(app)
+      .post('/api/auth/verify-2fa-setup')
+      .send({
+        userId,
+        code: totpCode,
+      })
+    
+    if (response.status === 200) {
+      console.log(`✅ 2FA verified on attempt ${attempt}`)
+      return response
+    }
+    
+    console.log(`⚠️ 2FA attempt ${attempt} failed with status ${response.status}: ${JSON.stringify(response.body)}`)
+    
+    // If it's the last attempt or a non-retryable error, return the response
+    if (attempt === maxRetries || response.status !== 400) {
+      return response
+    }
+  }
+  
+  throw new Error('Should not reach here')
+}
+
 describe('WORKSPACE ISOLATION - SECURITY TEST', () => {
   let userA: any = {}
   let userB: any = {}
@@ -45,18 +90,11 @@ describe('WORKSPACE ISOLATION - SECURITY TEST', () => {
     
     // Extract secret from QR code
     const matchA = qrCodeA.match(/secret=([A-Z0-9]+)/)
+    expect(matchA).toBeTruthy()
     const secretA = matchA![1]
 
-    // Step 2: Verify 2FA for User A
-    const totpCodeA = speakeasy.totp({ secret: secretA, encoding: 'base32' })
-    
-    const verify2FAResponseA = await request(app)
-      .post('/api/auth/verify-2fa-setup')
-      .send({
-        userId: userIdA,
-        code: totpCodeA,
-      })
-
+    // Step 2: Verify 2FA for User A (with retry logic for TOTP timing)
+    const verify2FAResponseA = await verify2FAWithRetry(userIdA, secretA)
     expect(verify2FAResponseA.status).toBe(200)
 
     userA = {
@@ -66,6 +104,9 @@ describe('WORKSPACE ISOLATION - SECURITY TEST', () => {
     }
 
     console.log('✅ User A created:', userA.email)
+
+    // Small delay between user creations to avoid timing issues
+    await new Promise(resolve => setTimeout(resolve, 500))
 
     // === CREATE USER B ===
     const emailB = `user-b-${Date.now() + 1000}@example.com`
@@ -87,18 +128,11 @@ describe('WORKSPACE ISOLATION - SECURITY TEST', () => {
     
     // Extract secret from QR code
     const matchB = qrCodeB.match(/secret=([A-Z0-9]+)/)
+    expect(matchB).toBeTruthy()
     const secretB = matchB![1]
 
-    // Step 2: Verify 2FA for User B
-    const totpCodeB = speakeasy.totp({ secret: secretB, encoding: 'base32' })
-    
-    const verify2FAResponseB = await request(app)
-      .post('/api/auth/verify-2fa-setup')
-      .send({
-        userId: userIdB,
-        code: totpCodeB,
-      })
-
+    // Step 2: Verify 2FA for User B (with retry logic for TOTP timing)
+    const verify2FAResponseB = await verify2FAWithRetry(userIdB, secretB)
     expect(verify2FAResponseB.status).toBe(200)
 
     userB = {

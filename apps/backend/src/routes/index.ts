@@ -549,14 +549,24 @@ logger.info(
 router.use(shortUrlRoutes)
 logger.info("Registered short URL routes for /s/:shortCode redirection")
 
-// Legacy token routes (kept for backward compatibility - will be removed later)
-router.use("/checkout", checkoutRouter)
+// ========================================
+// ⚠️ LEGACY ROUTES (Deprecated - will be removed in v2.0)
+// ========================================
+// Add deprecation warning middleware
+const deprecationWarning = (newPath: string) => (req: Request, res: Response, next: NextFunction) => {
+  logger.warn(`⚠️ DEPRECATED: ${req.method} ${req.originalUrl} - Use /api/token${newPath} instead`)
+  res.setHeader('Deprecation', 'true')
+  res.setHeader('Link', `</api/token${newPath}>; rel="successor-version"`)
+  next()
+}
+
+router.use("/checkout", deprecationWarning("/checkout"), checkoutRouter)
 logger.info("⚠️ LEGACY: /checkout (use /token/checkout instead)")
 
-router.use("/cart", cartRouter)
+router.use("/cart", deprecationWarning("/cart"), cartRouter)
 logger.info("⚠️ LEGACY: /cart (use /token/cart instead)")
 
-router.use("/registration", createRegistrationRouter())
+router.use("/registration", deprecationWarning("/registration"), createRegistrationRouter())
 logger.info("⚠️ LEGACY: /registration (use /token/registration instead)")
 
 // ========================================

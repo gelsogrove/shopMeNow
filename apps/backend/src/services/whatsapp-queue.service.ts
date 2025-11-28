@@ -422,7 +422,7 @@ export class WhatsAppQueueService {
    */
   async getQueueEnabledStatus(workspaceId: string): Promise<{ enabled: boolean; debugMode: boolean }> {
     try {
-      console.log(`🔍 [WhatsAppQueueService.getQueueEnabledStatus] workspaceId: ${workspaceId}`)
+      logger.debug(`[WhatsAppQueueService] getQueueEnabledStatus: ${workspaceId}`)
 
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: workspaceId },
@@ -433,7 +433,7 @@ export class WhatsAppQueueService {
         throw new Error("Workspace not found")
       }
 
-      console.log(`✅ [WhatsAppQueueService.getQueueEnabledStatus] enabled: ${workspace.channelStatus}, debugMode: ${workspace.debugMode}`)
+      logger.debug(`[WhatsAppQueueService] Queue status: enabled=${workspace.channelStatus}, debugMode=${workspace.debugMode}`)
 
       return { enabled: workspace.channelStatus, debugMode: workspace.debugMode }
     } catch (error) {
@@ -454,8 +454,6 @@ export class WhatsAppQueueService {
     enabled: boolean
   ): Promise<{ enabled: boolean }> {
     try {
-      console.log(`🔍 [WhatsAppQueueService.updateQueueStatus] workspaceId: ${workspaceId}, enabled: ${enabled}`)
-      
       logger.info(
         `[WhatsAppQueueService] Updating channel status for workspace ${workspaceId}: ${
           enabled ? "ENABLED" : "DISABLED"
@@ -467,7 +465,7 @@ export class WhatsAppQueueService {
         data: { channelStatus: enabled },
       })
 
-      console.log(`✅ [WhatsAppQueueService.updateQueueStatus] Updated workspace:`, updated.id)
+      logger.debug(`[WhatsAppQueueService] Updated workspace: ${updated.id}`)
 
       return { enabled }
     } catch (error) {
@@ -490,8 +488,6 @@ export class WhatsAppQueueService {
     debugMode: boolean
   ): Promise<{ debugMode: boolean }> {
     try {
-      console.log(`🔍 [WhatsAppQueueService.updateDebugMode] workspaceId: ${workspaceId}, debugMode: ${debugMode}`)
-      
       logger.info(
         `[WhatsAppQueueService] Updating debug mode for workspace ${workspaceId}: ${
           debugMode ? "ENABLED" : "DISABLED"
@@ -503,7 +499,7 @@ export class WhatsAppQueueService {
         data: { debugMode },
       })
 
-      console.log(`✅ [WhatsAppQueueService.updateDebugMode] Updated workspace:`, updated.id)
+      logger.debug(`[WhatsAppQueueService] Updated workspace: ${updated.id}`)
 
       return { debugMode }
     } catch (error) {

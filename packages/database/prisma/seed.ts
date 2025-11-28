@@ -1743,6 +1743,47 @@ async function main() {
 
   console.log("✅ Created initial billing transaction (+€29 trial credit)")
 
+  // Seed Scheduler Job Status (all jobs active by default)
+  console.log("⏰ Creating scheduler job status...")
+
+  const schedulerJobs = [
+    {
+      jobName: "whatsapp-challenge-queue",
+      isActive: true,
+      lastStatus: "NEVER_RUN",
+    },
+    {
+      jobName: "short-urls-cleanup",
+      isActive: true,
+      lastStatus: "NEVER_RUN",
+    },
+    {
+      jobName: "blocked-customers-cleanup",
+      isActive: true,
+      lastStatus: "NEVER_RUN",
+    },
+    {
+      jobName: "unused-images-cleanup",
+      isActive: true,
+      lastStatus: "NEVER_RUN",
+    },
+    {
+      jobName: "monthly-billing",
+      isActive: true,
+      lastStatus: "NEVER_RUN",
+    },
+  ]
+
+  for (const job of schedulerJobs) {
+    await prisma.schedulerJobStatus.upsert({
+      where: { jobName: job.jobName },
+      update: {}, // Don't update if exists (preserve isActive state)
+      create: job,
+    })
+  }
+
+  console.log(`✅ Created ${schedulerJobs.length} scheduler jobs`)
+
   console.log(`\n✅ Ready to use!`)
 }
 

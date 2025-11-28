@@ -1247,8 +1247,9 @@ enum SearchConversationState {
 model SchedulerJobStatus {
   id            String    @id @default(cuid())
   jobName       String    @unique  // "whatsapp-challenge-queue", "short-urls-cleanup", etc.
+  isActive      Boolean   @default(true)  // Manual enable/disable from backoffice
   lastRunAt     DateTime?          // Last execution timestamp
-  lastStatus    String    @default("NEVER_RUN")  // "SUCCESS", "FAILED", "RUNNING", "NEVER_RUN"
+  lastStatus    String    @default("NEVER_RUN")  // "SUCCESS", "FAILED", "RUNNING", "NEVER_RUN", "SKIPPED"
   lastError     String?            // Error message if failed
   lastDuration  Int?               // Duration in milliseconds
   nextRunAt     DateTime?          // Calculated next run time

@@ -3,13 +3,34 @@ import { sendJobErrorAlert } from './email-alert.service'
 import logger from '../utils/logger'
 
 export async function runJob(jobName: string, fn: () => Promise<void>): Promise<void> {
+  // Check if job is active (can be disabled from backoffice)
+  const jobStatus = await prisma.schedulerJobStatus.findUnique({
+    where: { jobName },
+    select: { isActive: true }
+  })
+
+  // If job exists and is disabled, skip execution
+  if (jobStatus && !jobStatus.isActive) {
+    logger.info(`⏭️ Job SKIPPED (disabled): ${jobName}`)
+    await prisma.schedulerJobStatus.update({
+      where: { jobName },
+      data: { 
+        lastStatus: 'SKIPPED',
+        lastRunAt: new Date(),
+        lastError: null
+      }
+    })
+    return
+  }
+
   const start = Date.now()
 
-  // Mark as RUNNING
+  // Mark as RUNNING (upsert creates with isActive=true if not exists)
   await prisma.schedulerJobStatus.upsert({
     where: { jobName },
     create: { 
       jobName, 
+      isActive: true,
       lastStatus: 'RUNNING', 
       lastRunAt: new Date() 
     },
