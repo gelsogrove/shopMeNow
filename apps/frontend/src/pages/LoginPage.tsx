@@ -82,6 +82,17 @@ export function LoginPage() {
   const [searchParams] = useSearchParams()
   const returnUrl = searchParams.get('returnUrl')
   const actionParam = searchParams.get('action') // 🆕 For auto-opening register modal
+  const modeParam = searchParams.get('mode') // 🆕 For invite flow: 'register' opens register tab
+  const inviteParam = searchParams.get('invite') // 🆕 For invite flow: pre-fill email from invite
+  
+  // Parse invite data if present
+  const inviteData = inviteParam ? (() => {
+    try {
+      return JSON.parse(decodeURIComponent(inviteParam))
+    } catch {
+      return null
+    }
+  })() : null
   
   // Password visibility states
   const [showPassword, setShowPassword] = useState(false)
@@ -123,14 +134,33 @@ export function LoginPage() {
     logger.info('✅ [LOGIN PAGE LOAD] Storage cleared - ready for fresh login')
   }, []) // Run only once on mount
 
-  // 🆕 AUTO-OPEN REGISTER MODAL if ?action=register parameter is present
+  // 🆕 AUTO-OPEN REGISTER MODAL if ?action=register or ?mode=register parameter is present
   useEffect(() => {
-    if (actionParam === 'register') {
-      logger.info('🎯 [AUTO-OPEN] Detected ?action=register - opening registration modal')
+    if (actionParam === 'register' || modeParam === 'register') {
+      logger.info('🎯 [AUTO-OPEN] Detected register mode - opening registration modal')
       setShowLoginModal(true)
       setActiveTab('register')
+      
+      // Pre-fill form from invite data if available
+      if (inviteParam) {
+        try {
+          const data = JSON.parse(decodeURIComponent(inviteParam))
+          if (data?.email) {
+            logger.info('📧 [INVITE] Pre-filling form from invite:', data)
+            registerForm.setValue('email', data.email)
+            if (data.firstName) {
+              registerForm.setValue('firstName', data.firstName)
+            }
+            if (data.lastName) {
+              registerForm.setValue('lastName', data.lastName)
+            }
+          }
+        } catch (e) {
+          logger.error('Failed to parse invite data:', e)
+        }
+      }
     }
-  }, [actionParam])
+  }, [actionParam, modeParam, inviteParam])
 
   // 🆕 AUTO-REDIRECT IF SESSION IS ALREADY VALID
   useEffect(() => {
@@ -161,7 +191,7 @@ export function LoginPage() {
       logger.info(
         `✅ Token found - redirecting to workspace selection`
       )
-      toast.success("Sessione già attiva, reindirizzamento...")
+      toast.success("Session already active, redirecting...")
       navigate("/workspace-selection", { replace: true })
     } catch (error: any) {
       logger.error("❌ Error checking session:", error)
@@ -886,6 +916,16 @@ export function LoginPage() {
               {/* Register Form */}
               {activeTab === 'register' && (
                 <>
+                  {/* Invitation welcome message */}
+                  {inviteData && (
+                    <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-sm text-green-800">
+                        <span className="font-medium">{inviteData.invitedByName}</span> has invited you to join{' '}
+                        <span className="font-medium">{inviteData.workspaceName}</span>. 
+                        Create your account to accept the invitation.
+                      </p>
+                    </div>
+                  )}
                   <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
@@ -925,10 +965,14 @@ export function LoginPage() {
                         type="email"
                         placeholder="your@email.com"
                         {...registerForm.register("email")}
-                        disabled={isLoading}
+                        disabled={isLoading || !!inviteData?.email}
+                        readOnly={!!inviteData?.email}
                         autoComplete="email"
-                        className="h-11"
+                        className={`h-11 ${inviteData?.email ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                       />
+                      {inviteData?.email && (
+                        <p className="text-xs text-gray-500">Email is pre-filled from your invitation</p>
+                      )}
                       {registerForm.formState.errors.email && (
                         <p className="text-sm text-red-500">{registerForm.formState.errors.email.message}</p>
                       )}

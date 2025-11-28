@@ -100,7 +100,8 @@ export class ProductService {
   async createProduct(
     productData: Partial<Product>,
     certificationIds?: string[],
-    transportTypeIds?: string[]
+    transportTypeIds?: string[],
+    categoryIds?: string[]
   ): Promise<Product> {
     try {
       if (!productData.name) {
@@ -170,6 +171,14 @@ export class ProductService {
         )
       }
 
+      // Sync categories if provided (many-to-many)
+      if (categoryIds && categoryIds.length > 0) {
+        await this.productRepository.syncProductCategories(
+          createdProduct.id,
+          categoryIds
+        )
+      }
+
       // Re-fetch product with certifications
       return (
         (await this.productRepository.findById(
@@ -188,7 +197,8 @@ export class ProductService {
     productData: Partial<Product>,
     workspaceId: string,
     certificationIds?: string[],
-    transportTypeIds?: string[]
+    transportTypeIds?: string[],
+    categoryIds?: string[]
   ): Promise<Product | null> {
     try {
       // Check if price is valid when provided
@@ -232,6 +242,14 @@ export class ProductService {
         await this.productRepository.syncProductTransportTypes(
           id,
           transportTypeIds
+        )
+      }
+
+      // Sync categories (even if empty array to clear all)
+      if (categoryIds !== undefined) {
+        await this.productRepository.syncProductCategories(
+          id,
+          categoryIds
         )
       }
 

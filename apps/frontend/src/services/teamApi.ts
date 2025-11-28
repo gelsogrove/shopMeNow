@@ -33,11 +33,15 @@ export interface WorkspaceRole {
 
 export interface CreateInvitationData {
   email: string
+  firstName?: string
+  lastName?: string
 }
 
 export interface InvitationValidation {
   valid: boolean
   email: string
+  firstName?: string
+  lastName?: string
   workspaceId: string
   workspaceName: string
   invitedByName: string
@@ -130,6 +134,8 @@ export const invitationApi = {
     return {
       valid: invitation.status === 'PENDING' && !invitation.isExpired,
       email: invitation.email,
+      firstName: invitation.firstName,
+      lastName: invitation.lastName,
       workspaceId: invitation.workspaceId,
       workspaceName: invitation.workspaceName,
       invitedByName: invitation.invitedByName,

@@ -83,18 +83,19 @@ model Workspace {
 }
 
 model Categories {
-  id              String     @id @default(uuid())
-  name            String
-  description     String?
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-  isActive        Boolean    @default(true)
-  workspaceId     String
-  slug            String
-  workspace       Workspace  @relation(fields: [workspaceId], references: [id])
-  offers          Offers[]   @relation("OfferCategory")
-  products        Products[]
-  offerCategories Offers[]   @relation("OfferCategories")
+  id                String            @id @default(uuid())
+  name              String
+  description       String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  isActive          Boolean           @default(true)
+  workspaceId       String
+  slug              String
+  workspace         Workspace         @relation(fields: [workspaceId], references: [id])
+  offers            Offers[]          @relation("OfferCategory")
+  products          Products[]        // DEPRECATED: Use productCategories relation instead
+  offerCategories   Offers[]          @relation("OfferCategories")
+  productCategories ProductCategory[]
 
   @@unique([slug, workspaceId])
   @@map("categories")
@@ -163,7 +164,7 @@ model Products {
   updatedAt             DateTime                @updatedAt
   isActive              Boolean                 @default(true)
   workspaceId           String
-  categoryId            String?
+  categoryId            String?                 // DEPRECATED: Use productCategories relation instead
   supplierId            String?
   slug                  String                  @unique
   status                ProductStatus           @default(ACTIVE)
@@ -176,7 +177,8 @@ model Products {
   orderItems            OrderItems[]
   productCertifications ProductCertification[]
   productTransportTypes ProductTransportType[]
-  category              Categories?             @relation(fields: [categoryId], references: [id])
+  productCategories     ProductCategory[]
+  category              Categories?             @relation(fields: [categoryId], references: [id]) // DEPRECATED
   supplier              Suppliers?              @relation(fields: [supplierId], references: [id])
   workspace             Workspace               @relation(fields: [workspaceId], references: [id])
 
@@ -236,6 +238,19 @@ model ProductTransportType {
   @@index([productId])
   @@index([transportTypeId])
   @@map("ProductTransportType")
+}
+
+model ProductCategory {
+  productId   String
+  categoryId  String
+  createdAt   DateTime   @default(now())
+  product     Products   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category    Categories @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([productId, categoryId])
+  @@index([productId])
+  @@index([categoryId])
+  @@map("ProductCategory")
 }
 
 model WhatsAppQueue {
@@ -927,6 +942,8 @@ enum InvitationStatus {
 model WorkspaceInvitation {
   id          String           @id @default(cuid())
   email       String           // Email of the invited user (lowercase normalized)
+  firstName   String?          // First name of the invited user (optional)
+  lastName    String?          // Last name of the invited user (optional)
   workspaceId String
   workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   tokenHash   String           @unique // SHA-256 hash of the invitation token

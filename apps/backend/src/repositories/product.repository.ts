@@ -610,11 +610,11 @@ export class ProductRepository implements IProductRepository {
   }
 
   /**
-   * Helper to get include clause with certifications and transport types
+   * Helper to get include clause with certifications, transport types and categories
    */
   private getIncludeWithCertifications() {
     return {
-      category: true,
+      category: true, // DEPRECATED: keep for backward compatibility
       productCertifications: {
         include: {
           certification: true,
@@ -623,6 +623,11 @@ export class ProductRepository implements IProductRepository {
       productTransportTypes: {
         include: {
           transportType: true,
+        },
+      },
+      productCategories: {
+        include: {
+          category: true,
         },
       },
     }
@@ -678,6 +683,31 @@ export class ProductRepository implements IProductRepository {
     })
   }
 
+  /**
+   * Sync product categories (delete old + create new)
+   */
+  async syncProductCategories(
+    productId: string,
+    categoryIds: string[]
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      // Delete existing categories
+      await tx.productCategory.deleteMany({
+        where: { productId },
+      })
+
+      // Create new categories
+      if (categoryIds.length > 0) {
+        await tx.productCategory.createMany({
+          data: categoryIds.map((categoryId) => ({
+            productId,
+            categoryId,
+          })),
+        })
+      }
+    })
+  }
+
   private mapToDomainEntity(data: any): Product {
     // Extract certification names from productCertifications relation
     const certificationNames =
@@ -691,6 +721,12 @@ export class ProductRepository implements IProductRepository {
         (pt: any) => pt.transportType.name
       ) || []
 
+    // Extract category IDs from productCategories relation (many-to-many)
+    const categoryIds =
+      data.productCategories?.map(
+        (pc: any) => pc.categoryId
+      ) || (data.categoryId ? [data.categoryId] : [])
+
     const product = new Product({
       id: data.id,
       name: data.name,
@@ -702,7 +738,7 @@ export class ProductRepository implements IProductRepository {
       status: data.status,
       isActive: data.isActive,
       slug: data.slug,
-      categoryId: data.categoryId,
+      categoryId: data.categoryId, // DEPRECATED: keep for backward compatibility
       supplierId: data.supplierId,
       workspaceId: data.workspaceId,
       imageUrl: data.imageUrl || [],
@@ -711,7 +747,7 @@ export class ProductRepository implements IProductRepository {
       region: data.region,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
-      category: data.category,
+      category: data.category, // DEPRECATED: keep for backward compatibility
     })
 
     // Add productCertifications relation to the product object (for frontend use)
@@ -719,6 +755,10 @@ export class ProductRepository implements IProductRepository {
     
     // Add productTransportTypes relation to the product object (for frontend use)
     ;(product as any).productTransportTypes = data.productTransportTypes || []
+
+    // Add productCategories relation to the product object (for frontend use)
+    ;(product as any).productCategories = data.productCategories || []
+    ;(product as any).categoryIds = categoryIds
 
     return product
   }

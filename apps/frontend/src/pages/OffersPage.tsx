@@ -143,7 +143,7 @@ export function OffersPage() {
       ),
     },
     {
-      header: "Category",
+      header: "Categories",
       accessorKey: "category" as keyof Offer,
       cell: ({ row }: { row: { original: Offer } }) => {
         // Check if we have categoryIds (multiple categories)

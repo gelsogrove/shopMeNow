@@ -280,7 +280,7 @@ export function ProductsPage() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="categoryId">Category</Label>
+        <Label htmlFor="categoryId">Categories</Label>
         <Select name="categoryId" defaultValue={product?.categoryId}>
           <SelectTrigger>
             <SelectValue placeholder="Select category" />
@@ -336,7 +336,7 @@ export function ProductsPage() {
     },
     {
       name: "categoryId",
-      label: "Category",
+      label: "Categories",
       type: "select" as const,
       options: categories,
     },

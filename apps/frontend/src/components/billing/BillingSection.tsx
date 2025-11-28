@@ -242,12 +242,22 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
     }
   }, [effectiveWorkspaceId, billingOverview, isLoadingOverview])
 
-  // 🔄 Load transactions ONLY when history dialog opens (not on mount)
+  // 🔄 Load transactions on mount (needed to check if Invoices button should show)
   useEffect(() => {
-    if (showHistoryDialog && effectiveWorkspaceId && transactions.length === 0) {
+    if (effectiveWorkspaceId && transactions.length === 0) {
       loadTransactions()
     }
-  }, [showHistoryDialog, effectiveWorkspaceId])
+  }, [effectiveWorkspaceId])
+
+  // Check if there are billable transactions (not just INITIAL_CREDIT)
+  // Also show Invoices button if user has an active paid subscription
+  const hasPaidSubscription = billingOverview?.billing?.planType && 
+    billingOverview.billing.planType !== "FREE_TRIAL"
+  
+  const hasInvoiceableTransactions = hasPaidSubscription || transactions.some(tx => 
+    tx.type !== "INITIAL_CREDIT" && 
+    (tx.type === "RECHARGE" || tx.type === "MONTHLY_FEE" || tx.type === "UPGRADE_FEE" || tx.amount < 0)
+  )
 
   const loadTransactions = async () => {
     if (!effectiveWorkspaceId) return
@@ -462,15 +472,17 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                 <History className="h-4 w-4" />
                 History
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowInvoicesDialog(true)}
-                className="gap-1.5 text-green-600 border-green-600 hover:bg-green-50"
-              >
-                <FileText className="h-4 w-4" />
-                Invoices
-              </Button>
+              {hasInvoiceableTransactions && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowInvoicesDialog(true)}
+                  className="gap-1.5 text-green-600 border-green-600 hover:bg-green-50"
+                >
+                  <FileText className="h-4 w-4" />
+                  Invoices
+                </Button>
+              )}
               {isSuperAdmin && (
                 <Button
                   variant="outline"

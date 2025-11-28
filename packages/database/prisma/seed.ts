@@ -493,6 +493,16 @@ async function main() {
         },
       })
     }
+
+    // ✅ Feature: Create ProductCategory pivot record (many-to-many)
+    if (categoryId) {
+      await prisma.productCategory.create({
+        data: {
+          productId: product.id,
+          categoryId: categoryId,
+        },
+      })
+    }
   }
 
   console.log(`✅ Created ${products.length} products`)

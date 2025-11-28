@@ -250,17 +250,20 @@ export function TeamMembersTable({
               <Users className="h-4 w-4 inline mr-2" />
               Members ({members.length})
             </button>
-            <button
-              className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
-                activeTab === "invitations"
-                  ? "border-primary text-primary"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
-              onClick={() => setActiveTab("invitations")}
-            >
-              <Mail className="h-4 w-4 inline mr-2" />
-              Pending Invites ({invitations.length})
-            </button>
+            {/* Only show Pending Invites tab for SUPER_ADMIN (Owner) */}
+            {isSuperAdmin && (
+              <button
+                className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
+                  activeTab === "invitations"
+                    ? "border-primary text-primary"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+                onClick={() => setActiveTab("invitations")}
+              >
+                <Mail className="h-4 w-4 inline mr-2" />
+                Pending Invites ({invitations.length})
+              </button>
+            )}
           </div>
 
           {/* Members Tab */}

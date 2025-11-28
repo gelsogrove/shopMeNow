@@ -202,10 +202,10 @@ export function ProductSheet({
                 </div>
               </div>
 
-              {/* Category */}
+              {/* Categories */}
               <div className="space-y-2">
                 <Label htmlFor="category" className="text-sm font-medium">
-                  Category
+                  Categories
                 </Label>
                 <Select value={categoryId} onValueChange={setCategoryId}>
                   <SelectTrigger id="category">

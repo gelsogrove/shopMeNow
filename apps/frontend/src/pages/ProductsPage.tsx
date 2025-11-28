@@ -343,8 +343,8 @@ export function ProductsPage() {
     // Send transportTypeIds array to backend
     formData.set("transportTypeIds", JSON.stringify(formTransportTypeIds))
 
-    // Send categoryId (first selected category or null)
-    formData.set("categoryId", formCategoryIds.length > 0 ? formCategoryIds[0] : "")
+    // Send categoryIds array to backend (many-to-many)
+    formData.set("categoryIds", JSON.stringify(formCategoryIds))
 
     try {
       const newProduct = await productsApi.create(workspace.id, formData)
@@ -374,15 +374,19 @@ export function ProductsPage() {
   const handleEdit = (product: Product) => {
     logger.info("🔖 handleEdit - Full product object:", product)
     logger.info("🔖 handleEdit - productCertifications:", (product as any).productCertifications)
+    logger.info("🔖 handleEdit - productCategories:", (product as any).productCategories)
     
     setSelectedProduct(product)
-    setSelectedCategoryId(product.categoryId || "none")
+    setSelectedCategoryId(product.categoryId || "none") // DEPRECATED - keep for backward compatibility
     setSelectedSupplierId(product.supplierId || "none")
     setProductIsActive(product.isActive ?? true)
     setProductCode(product.code || "")
 
-    // Load product's category as array for checkbox system
-    const catIds = product.categoryId ? [product.categoryId] : []
+    // Load product's category IDs from productCategories relation (many-to-many)
+    // Fallback to categoryId for backward compatibility
+    const catIds = (product as any).categoryIds || 
+      (product as any).productCategories?.map((pc: any) => pc.categoryId) || 
+      (product.categoryId ? [product.categoryId] : [])
     logger.info("📦 handleEdit - Extracted categoryIds:", catIds)
     setFormCategoryIds(catIds)
 
@@ -452,8 +456,8 @@ export function ProductsPage() {
     // Send transportTypeIds array to backend
     formData.set("transportTypeIds", JSON.stringify(formTransportTypeIds))
 
-    // Send categoryId from formCategoryIds (first selected or empty)
-    formData.set("categoryId", formCategoryIds.length > 0 ? formCategoryIds[0] : "")
+    // Send categoryIds array to backend (many-to-many)
+    formData.set("categoryIds", JSON.stringify(formCategoryIds))
 
     // Make sure supplierId is set correctly if "none" is selected
     const suppId = formData.get("supplierId")
@@ -464,7 +468,7 @@ export function ProductsPage() {
 
     // Debug logging
     logger.info("Form data being sent for product update")
-    logger.info("CategoryId:", formData.get("categoryId"))
+    logger.info("CategoryIds:", formCategoryIds)
     logger.info("SupplierId:", formData.get("supplierId"))
     logger.info("CertificationIds:", formCertificationIds)
 
@@ -787,9 +791,9 @@ export function ProductsPage() {
         {/* Dynamic Categories Section */}
         {categories.length > 0 && (
           <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
-            <Label className="text-base font-semibold">Category</Label>
+            <Label className="text-base font-semibold">Categories</Label>
             <p className="text-xs text-gray-500 mb-3">
-              Select ONE category for this product (optional)
+              Select categories for this product (optional)
             </p>
             <div className="grid grid-cols-2 gap-3">
               {categories.map((cat) => (
@@ -798,14 +802,13 @@ export function ProductsPage() {
                   className="flex items-center gap-2 cursor-pointer"
                 >
                   <input
-                    type="radio"
-                    name="category"
+                    type="checkbox"
                     checked={formCategoryIds.includes(cat.id)}
                     onChange={(e) => {
                       if (e.target.checked) {
-                        setFormCategoryIds([cat.id])
+                        setFormCategoryIds([...formCategoryIds, cat.id])
                       } else {
-                        setFormCategoryIds([])
+                        setFormCategoryIds(formCategoryIds.filter(id => id !== cat.id))
                       }
                     }}
                     className="rounded border-gray-300"
@@ -1030,9 +1033,9 @@ export function ProductsPage() {
         {/* Dynamic Categories Section */}
         {categories.length > 0 && (
           <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
-            <Label className="text-base font-semibold">Category</Label>
+            <Label className="text-base font-semibold">Categories</Label>
             <p className="text-xs text-gray-500 mb-3">
-              Select ONE category for this product (optional)
+              Select categories for this product (optional)
             </p>
             <div className="grid grid-cols-2 gap-3">
               {categories.map((cat) => (
@@ -1041,14 +1044,13 @@ export function ProductsPage() {
                   className="flex items-center gap-2 cursor-pointer"
                 >
                   <input
-                    type="radio"
-                    name="category"
+                    type="checkbox"
                     checked={formCategoryIds.includes(cat.id)}
                     onChange={(e) => {
                       if (e.target.checked) {
-                        setFormCategoryIds([cat.id])
+                        setFormCategoryIds([...formCategoryIds, cat.id])
                       } else {
-                        setFormCategoryIds([])
+                        setFormCategoryIds(formCategoryIds.filter(id => id !== cat.id))
                       }
                     }}
                     className="rounded border-gray-300"

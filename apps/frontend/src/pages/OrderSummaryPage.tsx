@@ -62,9 +62,9 @@ const OrderSummaryPage: React.FC = () => {
         setTotalAmount(data.totalAmount || 0)
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : "Errore nel caricamento ordine"
+          err instanceof Error ? err.message : "Error loading order"
         )
-        toast.error("Errore nel caricamento dell'ordine")
+        toast.error("Error loading order")
       } finally {
         setLoading(false)
       }
@@ -98,7 +98,7 @@ const OrderSummaryPage: React.FC = () => {
   const removeItem = (index: number) => {
     const updatedItems = items.filter((_, i) => i !== index)
     setItems(updatedItems)
-    toast.success("Elemento rimosso dall'ordine")
+    toast.success("Item removed from order")
   }
 
   // Add product from catalog
@@ -117,10 +117,10 @@ const OrderSummaryPage: React.FC = () => {
           totalPrice: product.price,
         }
         setItems([...items, newItem])
-        toast.success(`${product.name} aggiunto all'ordine`)
+        toast.success(`${product.name} added to order`)
       }
     } catch (err) {
-      toast.error("Errore nell'aggiunta del prodotto")
+      toast.error("Error adding product")
     }
   }
 
@@ -140,10 +140,10 @@ const OrderSummaryPage: React.FC = () => {
           totalPrice: service.price,
         }
         setItems([...items, newItem])
-        toast.success(`${service.name} aggiunto all'ordine`)
+        toast.success(`${service.name} added to order`)
       }
     } catch (err) {
-      toast.error("Errore nell'aggiunta del servizio")
+      toast.error("Error adding service")
     }
   }
 

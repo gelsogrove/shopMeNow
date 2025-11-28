@@ -216,8 +216,10 @@ For privacy inquiries, please contact our support team.`
 
     // Extract userId for UserWorkspace relation
     const createdBy = data.createdBy
+    const adminEmail = (data as any).adminEmail // Extract adminEmail for WhatsappSettings
     const workspaceData = { ...data }
     delete (workspaceData as any).createdBy // Remove from workspace data
+    delete (workspaceData as any).adminEmail // Remove from workspace data (stored in WhatsappSettings)
 
     // 🆕 DEFAULT WELCOME AND WIP MESSAGES
     const defaultWelcomeMessage = {
@@ -259,6 +261,7 @@ For privacy inquiries, please contact our support team.`
             phoneNumber: `+34-${createdWorkspace.id.substring(0, 8)}`,
             apiKey: "default-api-key",
             gdpr: defaultGdprContent,
+            adminEmail: adminEmail || null, // 🆕 Use adminEmail from creator
           },
         })
         logger.info(
@@ -351,7 +354,49 @@ For privacy inquiries, please contact our support team.`
             `✅ Created UserWorkspace relation: user ${createdBy} → workspace ${createdWorkspace.id} (SUPER_ADMIN)`
           )
 
-          // 6. 🆕 AUTO-ADD EXISTING ADMINS (Feature 184: New channel propagation)
+          // 6. 💰 CREATE INITIAL CREDIT TRANSACTION (Welcome bonus from plan configuration)
+          try {
+            // Get the FREE_TRIAL plan configuration to get the initial credit amount
+            const freeTrial = await tx.planConfiguration.findFirst({
+              where: { planType: 'FREE_TRIAL' }
+            })
+            
+            // Convert Decimal to number (Prisma returns Decimal type)
+            const initialCredit = freeTrial?.initialCredit 
+              ? Number(freeTrial.initialCredit) 
+              : 29.00 // Fallback to €29 if not found
+            
+            if (initialCredit > 0) {
+              // Update workspace credit balance
+              await tx.workspace.update({
+                where: { id: createdWorkspace.id },
+                data: { creditBalance: initialCredit }
+              })
+              
+              // Create the billing transaction record
+              await tx.billingTransaction.create({
+                data: {
+                  workspaceId: createdWorkspace.id,
+                  type: 'INITIAL_CREDIT',
+                  amount: initialCredit,
+                  balanceAfter: initialCredit,
+                  description: 'Initial Free Trial credit',
+                }
+              })
+              
+              logger.info(
+                `✅ Created initial credit transaction: €${initialCredit} for workspace ${createdWorkspace.id}`
+              )
+            }
+          } catch (error) {
+            logger.error(
+              `Error creating initial credit for workspace ${createdWorkspace.id}:`,
+              error
+            )
+            // Don't fail the entire transaction for billing
+          }
+
+          // 7. 🆕 AUTO-ADD EXISTING ADMINS (Feature 184: New channel propagation)
           // Find all workspaces owned by this user and get their ADMINs
           const existingOwnerWorkspaces = await tx.workspace.findMany({
             where: {

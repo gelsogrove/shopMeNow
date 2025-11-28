@@ -38,6 +38,7 @@ export function WorkspaceSelectionPage() {
   const [newPhoneNumber, setNewPhoneNumber] = useState("")
   const [alias, setAlias] = useState("")
   const [welcomeMessage, setWelcomeMessage] = useState("")
+  const [isWelcomeMessageManuallyEdited, setIsWelcomeMessageManuallyEdited] = useState(false)
   const [userEmail, setUserEmail] = useState("") // Email from token (auto-filled)
   const [justCreatedId, setJustCreatedId] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState("")
@@ -68,6 +69,13 @@ export function WorkspaceSelectionPage() {
   
   // Shared billing data state - to avoid duplicate API calls
   const [sharedBillingOverview, setSharedBillingOverview] = useState<any>(null)
+
+  // Auto-generate welcome message when alias changes (only if not manually edited)
+  useEffect(() => {
+    if (!isWelcomeMessageManuallyEdited && alias.trim()) {
+      setWelcomeMessage(`Welcome to ${alias}! I'm your virtual assistant. How can I help you today?`)
+    }
+  }, [alias, isWelcomeMessageManuallyEdited])
 
   // 🔍 DEBUG: Log ALL localStorage keys on mount
   useEffect(() => {
@@ -367,9 +375,12 @@ export function WorkspaceSelectionPage() {
                   </Label>
                   <Textarea
                     id="welcome-message-inline"
-                    placeholder={`Welcome to ${alias || 'My Business'}! I'm your virtual assistant. How can I help you today?`}
+                    placeholder="Enter your welcome message..."
                     value={welcomeMessage}
-                    onChange={(e) => setWelcomeMessage(e.target.value)}
+                    onChange={(e) => {
+                      setWelcomeMessage(e.target.value)
+                      setIsWelcomeMessageManuallyEdited(true)
+                    }}
                     className="mt-1.5 min-h-[80px] resize-none"
                     rows={3}
                   />
@@ -620,9 +631,12 @@ export function WorkspaceSelectionPage() {
                 </Label>
                 <Textarea
                   id="welcome-message"
-                  placeholder={`Welcome to ${alias || 'My Business'}! I'm your virtual assistant. How can I help you today?`}
+                  placeholder="Enter your welcome message..."
                   value={welcomeMessage}
-                  onChange={(e) => setWelcomeMessage(e.target.value)}
+                  onChange={(e) => {
+                    setWelcomeMessage(e.target.value)
+                    setIsWelcomeMessageManuallyEdited(true)
+                  }}
                   className="mt-1.5 min-h-[80px] resize-none"
                   rows={3}
                 />
@@ -652,6 +666,7 @@ export function WorkspaceSelectionPage() {
                     setNewPhoneNumber("")
                     setAlias("")
                     setWelcomeMessage("")
+                    setIsWelcomeMessageManuallyEdited(false)
                     setChannelLimitError(false)
                     setErrorMessage("")
                     setValidationErrors({})

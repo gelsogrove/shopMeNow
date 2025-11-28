@@ -25,7 +25,7 @@ export class InvitationController {
     try {
       const workspaceId = (req as any).workspaceId || req.params.workspaceId
       const invitedById = (req as any).user?.id
-      const { email } = req.body
+      const { email, firstName, lastName } = req.body
 
       if (!email) {
         res.status(400).json({
@@ -61,6 +61,8 @@ export class InvitationController {
         workspaceId,
         email,
         invitedById,
+        firstName: firstName?.trim() || undefined,
+        lastName: lastName?.trim() || undefined,
       })
 
       if (!result.success) {

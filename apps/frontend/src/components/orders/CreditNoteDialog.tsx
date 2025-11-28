@@ -78,12 +78,12 @@ export function CreditNoteDialog({
     setDeletingId(creditNote.id)
     try {
       await creditNotesApi.delete(workspace.id, creditNote.id)
-      toast.success(`Nota ${creditNote.creditNoteCode} eliminata`)
+      toast.success(`Credit note ${creditNote.creditNoteCode} deleted`)
       // Reload credit notes
       await loadCreditNotes()
       onSuccess?.()
     } catch (error: any) {
-      const message = error.response?.data?.message || "Errore nell'eliminazione"
+      const message = error.response?.data?.message || "Error deleting credit note"
       toast.error(message)
     } finally {
       setDeletingId(null)
@@ -97,19 +97,19 @@ export function CreditNoteDialog({
 
     // Validation
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      toast.error("L'importo deve essere un numero maggiore di zero")
+      toast.error("Amount must be a number greater than zero")
       return
     }
 
     if (parsedAmount > maxAmount) {
       toast.error(
-        `L'importo supera il valore residuo dell'ordine. Massimo: €${maxAmount.toFixed(2)}`
+        `Amount exceeds the remaining order value. Maximum: €${maxAmount.toFixed(2)}`
       )
       return
     }
 
     if (!reason.trim()) {
-      toast.error("Il motivo della nota di credito è obbligatorio")
+      toast.error("Credit note reason is required")
       return
     }
 
@@ -121,14 +121,14 @@ export function CreditNoteDialog({
       })
 
       toast.success(
-        `Nota di credito ${creditNote.creditNoteCode} creata con successo`
+        `Credit note ${creditNote.creditNoteCode} created successfully`
       )
       onOpenChange(false)
       onSuccess?.(creditNote)
     } catch (error: any) {
       const message =
         error.response?.data?.message ||
-        "Errore nella creazione della nota di credito"
+        "Error creating credit note"
       toast.error(message)
     } finally {
       setIsLoading(false)

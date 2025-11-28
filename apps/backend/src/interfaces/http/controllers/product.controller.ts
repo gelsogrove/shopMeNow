@@ -249,12 +249,31 @@ export class ProductController {
       // Remove transportTypeIds from productData (handled separately)
       delete productData.transportTypeIds
 
+      // Parse categoryIds array from JSON string (sent from frontend) - many-to-many
+      let categoryIds: string[] = []
+      if (
+        productData.categoryIds &&
+        typeof productData.categoryIds === "string"
+      ) {
+        try {
+          categoryIds = JSON.parse(productData.categoryIds)
+        } catch (error) {
+          logger.error("Failed to parse categoryIds JSON:", error)
+          categoryIds = []
+        }
+      } else if (Array.isArray(productData.categoryIds)) {
+        categoryIds = productData.categoryIds
+      }
+
+      // Remove categoryIds from productData (handled separately via many-to-many)
+      delete productData.categoryIds
+
       // Handle supplierId: convert empty string to null
       if (productData.supplierId === "" || productData.supplierId === "none") {
         productData.supplierId = null
       }
 
-      // Handle categoryId: convert empty string to null
+      // Handle categoryId: convert empty string to null (DEPRECATED - use categoryIds instead)
       if (productData.categoryId === "" || productData.categoryId === "none") {
         productData.categoryId = null
       }
@@ -309,7 +328,8 @@ export class ProductController {
       const product = await this.productService.createProduct(
         productData,
         certificationIds,
-        transportTypeIds
+        transportTypeIds,
+        categoryIds
       )
 
       // Map backend 'ProductCode' field to frontend 'code' field
@@ -413,12 +433,31 @@ export class ProductController {
       // Remove transportTypeIds from productData (handled separately)
       delete productData.transportTypeIds
 
+      // Parse categoryIds array from JSON string (sent from frontend) - many-to-many
+      let categoryIds: string[] = []
+      if (
+        productData.categoryIds &&
+        typeof productData.categoryIds === "string"
+      ) {
+        try {
+          categoryIds = JSON.parse(productData.categoryIds)
+        } catch (error) {
+          logger.error("Failed to parse categoryIds JSON:", error)
+          categoryIds = []
+        }
+      } else if (Array.isArray(productData.categoryIds)) {
+        categoryIds = productData.categoryIds
+      }
+
+      // Remove categoryIds from productData (handled separately via many-to-many)
+      delete productData.categoryIds
+
       // Handle supplierId: convert empty string to null
       if (productData.supplierId === "" || productData.supplierId === "none") {
         productData.supplierId = null
       }
 
-      // Handle categoryId: convert empty string to null
+      // Handle categoryId: convert empty string to null (DEPRECATED - use categoryIds instead)
       if (productData.categoryId === "" || productData.categoryId === "none") {
         productData.categoryId = null
       }
@@ -516,7 +555,8 @@ export class ProductController {
         productData,
         workspaceId,
         certificationIds,
-        transportTypeIds
+        transportTypeIds,
+        categoryIds
       )
       if (!updatedProduct) {
         return res.status(404).json({ message: "Product not found" })

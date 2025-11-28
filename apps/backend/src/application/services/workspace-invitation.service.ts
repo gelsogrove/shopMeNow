@@ -12,6 +12,8 @@ export interface CreateInvitationInput {
   workspaceId: string
   email: string
   invitedById: string
+  firstName?: string  // Optional: name of invited person
+  lastName?: string   // Optional: surname of invited person
 }
 
 export interface AcceptInvitationInput {
@@ -28,6 +30,8 @@ export interface AcceptInvitationWithRegistrationInput {
 export interface InvitationInfo {
   id: string
   email: string
+  firstName?: string  // Name of invited person
+  lastName?: string   // Surname of invited person
   workspaceName: string
   workspaceId: string
   invitedByName: string
@@ -178,6 +182,8 @@ export class WorkspaceInvitationService {
       const invitation = await tx.workspaceInvitation.create({
         data: {
           email,
+          firstName: input.firstName || null,
+          lastName: input.lastName || null,
           workspaceId: input.workspaceId,
           tokenHash,
           invitedById: input.invitedById,
@@ -336,6 +342,8 @@ export class WorkspaceInvitationService {
     return {
       id: invitation.id,
       email: invitation.email,
+      firstName: invitation.firstName || undefined,
+      lastName: invitation.lastName || undefined,
       workspaceName: invitation.workspace.name,
       workspaceId: invitation.workspace.id,
       invitedByName: inviterName,

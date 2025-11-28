@@ -56,4 +56,8 @@ export interface IProductRepository {
     productId: string,
     transportTypeIds: string[]
   ): Promise<void>
+  syncProductCategories(
+    productId: string,
+    categoryIds: string[]
+  ): Promise<void>
 }

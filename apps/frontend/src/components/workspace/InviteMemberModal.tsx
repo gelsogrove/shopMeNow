@@ -32,6 +32,8 @@ export function InviteMemberModal({
   onSuccess,
 }: InviteMemberModalProps) {
   const [email, setEmail] = useState("")
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -49,9 +51,15 @@ export function InviteMemberModal({
     setIsLoading(true)
 
     try {
-      await invitationApi.create(workspaceId, { email: email.trim() })
+      await invitationApi.create(workspaceId, { 
+        email: email.trim(),
+        firstName: firstName.trim() || undefined,
+        lastName: lastName.trim() || undefined,
+      })
       toast.success(`Invitation sent to ${email}`)
       setEmail("")
+      setFirstName("")
+      setLastName("")
       onSuccess()
       onOpenChange(false)
     } catch (err: any) {
@@ -66,6 +74,8 @@ export function InviteMemberModal({
   const handleClose = () => {
     if (!isLoading) {
       setEmail("")
+      setFirstName("")
+      setLastName("")
       setError(null)
       onOpenChange(false)
     }
@@ -87,8 +97,37 @@ export function InviteMemberModal({
 
         <form onSubmit={handleSubmit} autoComplete="off">
           <div className="space-y-4 py-4">
+            {/* Name fields */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name</Label>
+                <Input
+                  id="firstName"
+                  type="text"
+                  placeholder="John"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  disabled={isLoading}
+                  autoComplete="off"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  id="lastName"
+                  type="text"
+                  placeholder="Doe"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  disabled={isLoading}
+                  autoComplete="off"
+                />
+              </div>
+            </div>
+            
+            {/* Email field */}
             <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
+              <Label htmlFor="email">Email Address *</Label>
               <Input
                 id="email"
                 type="email"

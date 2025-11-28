@@ -114,22 +114,45 @@ export function AcceptInvitePage() {
       
       if (errorMessage.includes("expired")) {
         setPageState("expired")
-      } else if (errorMessage.includes("already accepted")) {
+      } else if (errorMessage.includes("already accepted") || errorMessage.includes("already a member")) {
+        // If invitation was already accepted and user is logged in, redirect to workspace selection
+        if (isLoggedIn) {
+          logger.info("Invitation already accepted and user is logged in - redirecting to workspace selection")
+          toast.success("You're already part of the team!")
+          navigate("/workspace-selection")
+          return
+        }
         setPageState("already-accepted")
       } else {
+        // For other invalid tokens, if user is logged in just redirect to workspace
+        if (isLoggedIn) {
+          logger.info("Invalid token but user is logged in - redirecting to workspace selection")
+          navigate("/workspace-selection")
+          return
+        }
         setPageState("invalid")
       }
       setError(errorMessage)
     }
-  }, [token, isLoggedIn, currentUserEmail, autoAccept])
+  }, [token, isLoggedIn, currentUserEmail, autoAccept, navigate])
 
   useEffect(() => {
     validateToken()
   }, [validateToken])
 
   const handleLoginRedirect = () => {
+    // Pass invite data to login page for pre-filling registration form
+    const inviteData = validation ? {
+      email: validation.email,
+      firstName: validation.firstName,
+      lastName: validation.lastName,
+      workspaceName: validation.workspaceName,
+      invitedByName: validation.invitedByName,
+    } : null
+    
     const returnUrl = encodeURIComponent(`/accept-invite?token=${token}`)
-    navigate(`/auth/login?returnUrl=${returnUrl}`)
+    const inviteParam = inviteData ? `&invite=${encodeURIComponent(JSON.stringify(inviteData))}` : ''
+    navigate(`/auth/login?returnUrl=${returnUrl}&mode=register${inviteParam}`)
   }
 
   const renderContent = () => {

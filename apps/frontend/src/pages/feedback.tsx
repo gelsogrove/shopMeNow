@@ -19,7 +19,7 @@ export default function FeedbackPage() {
 
   useEffect(() => {
     if (!token) {
-      toast.error("Link non valido")
+      toast.error("Invalid link")
       setTimeout(() => navigate("/"), 2000)
       return
     }
@@ -41,10 +41,10 @@ export default function FeedbackPage() {
       setCustomerName(data.customer?.name || "Cliente")
     } catch (error: any) {
       if (error.response?.status === 401) {
-        toast.error("Link scaduto o non valido")
+        toast.error("Link expired or invalid")
         setTimeout(() => navigate("/"), 2000)
       } else {
-        toast.error("Errore nel caricamento")
+        toast.error("Error loading data")
       }
     } finally {
       setLoading(false)
@@ -55,7 +55,7 @@ export default function FeedbackPage() {
     e.preventDefault()
 
     if (rating === 0) {
-      toast.error("Seleziona una valutazione con le stelline")
+      toast.error("Please select a rating with the stars")
       return
     }
 
@@ -68,7 +68,7 @@ export default function FeedbackPage() {
         comment: comment.trim() || null,
       })
 
-      toast.success("Grazie per il tuo feedback! 🙏")
+      toast.success("Thank you for your feedback! 🙏")
 
       // Redirect after 2 seconds
       setTimeout(() => {
@@ -76,9 +76,9 @@ export default function FeedbackPage() {
       }, 2000)
     } catch (error: any) {
       if (error.response?.status === 401) {
-        toast.error("Link scaduto o non valido")
+        toast.error("Link expired or invalid")
       } else {
-        toast.error("Errore nell'invio del feedback")
+        toast.error("Error submitting feedback")
       }
     } finally {
       setSubmitting(false)
