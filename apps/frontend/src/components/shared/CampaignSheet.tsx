@@ -120,22 +120,20 @@ export function CampaignSheet({
       const { data } = await api.get(`/workspaces/${workspaceId}/customers`)
 
       // 🔥 Filtra clienti validi per campagne:
-      // 1. isBlacklisted deve essere false
-      // 2. push_notifications_consent deve essere true
-      // 3. last_privacy_version_accepted deve essere presente
+      // - Solo isBlacklisted = false (clienti non bloccati)
+      // - isActive = true (clienti attivi)
+      // NOTA: push_notifications_consent e GDPR verranno verificati al momento dell'invio
       const validCustomers = (data.data || []).filter((customer: Customer) => {
         const isBlocked = customer.isBlacklisted === true
-        const hasConsentPush = customer.push_notifications_consent === true
-        const hasGDPR = !!customer.last_privacy_version_accepted
+        const isActive = customer.isActive !== false // default true se undefined
 
-        const isValid = !isBlocked && hasConsentPush && hasGDPR
+        const isValid = !isBlocked && isActive
 
         // Log per debug (solo clienti esclusi)
         if (!isValid) {
           const reasons = []
           if (isBlocked) reasons.push("blocked")
-          if (!hasConsentPush) reasons.push("no push consent")
-          if (!hasGDPR) reasons.push("no GDPR")
+          if (!isActive) reasons.push("inactive")
           logger.info(`Cliente ${customer.name} escluso: ${reasons.join(", ")}`)
         }
 
