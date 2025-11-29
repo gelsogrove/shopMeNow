@@ -26,6 +26,7 @@ import { defaultAgents } from "./data/defaultAgents"
 import { defaultFAQs } from "./data/defaultFAQs"
 import { faqs } from "./data/faqs"
 import { offers } from "./data/offers"
+import { platformConfigData } from "./data/platformConfig"
 import { pricingConfigData } from "./data/pricingConfig"
 import { products } from "./data/products"
 import { services } from "./data/services"
@@ -267,6 +268,43 @@ async function main() {
   )
   console.log(
     `   - Thresholds: ${pricingConfigData.filter((p) => p.type === "THRESHOLD").length}`
+  )
+
+  // 6b. Create Platform Configuration (NEW Single Source of Truth)
+  console.log("🚀 Creating platform configuration (NEW)...")
+
+  for (const config of platformConfigData) {
+    await prisma.platformConfig.upsert({
+      where: { key: config.key },
+      update: {
+        type: config.type,
+        value: config.value,
+        originalValue: config.originalValue,
+        description: config.description,
+        isActive: config.isActive,
+      },
+      create: {
+        type: config.type,
+        key: config.key,
+        value: config.value,
+        originalValue: config.originalValue,
+        description: config.description,
+        isActive: config.isActive,
+      },
+    })
+  }
+
+  console.log(
+    `✅ Created/Updated ${platformConfigData.length} platform configurations`
+  )
+  console.log(
+    `   - Prices: ${platformConfigData.filter((p) => p.type === "PRICE").length}`
+  )
+  console.log(
+    `   - Flags: ${platformConfigData.filter((p) => p.type === "FLAG").length}`
+  )
+  console.log(
+    `   - Limits: ${platformConfigData.filter((p) => p.type === "LIMIT").length}`
   )
 
   // 7. Create Categories

@@ -122,6 +122,7 @@ import {
 import debugRoutes from "../interfaces/http/routes/debug.routes"
 import { createLanguagesRouter } from "../interfaces/http/routes/languages.routes"
 import gdprRoutes from "../interfaces/http/routes/gdpr.routes"
+import platformConfigRoutes from "../interfaces/http/routes/platform-config.routes"
 import pricingRoutes from "../interfaces/http/routes/pricing.routes"
 import createSettingsRouter from "../interfaces/http/routes/settings.routes"
 import { shortUrlRoutes } from "../interfaces/http/routes/short-url.routes"
@@ -578,6 +579,12 @@ logger.info("⚠️ LEGACY: /registration (use /token/registration instead)")
 // ========================================
 router.use("/pricing", pricingRoutes)
 logger.info("✅ Registered pricing routes (/api/pricing/config)")
+
+// ========================================
+// 🚀 PLATFORM CONFIG ROUTES (Public + Admin)
+// ========================================
+router.use("/platform-config", platformConfigRoutes)
+logger.info("✅ Registered platform config routes (/api/platform-config)")
 
 // 💳 PUBLIC SUBSCRIPTION PLANS (Feature 185 - No auth required)
 router.use("/subscription", publicBillingRoutes) // GET /api/subscription/plans

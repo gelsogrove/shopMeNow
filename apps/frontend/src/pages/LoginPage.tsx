@@ -1,12 +1,14 @@
 import { NewsUpdates } from "@/components/landing/NewsUpdates"
 import { PricingPlans } from "@/components/landing/PricingPlans"
 import { LanguageSelector } from "@/components/shared/LanguageSelector"
+import { WIPModal } from "@/components/shared/WIPModal"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useFeatureFlags } from "@/hooks/usePlatformConfig"
 import { logger } from "@/lib/logger"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
@@ -77,6 +79,11 @@ export function LoginPage() {
   const [isValidatingSession, setIsValidatingSession] = useState(true)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [activeTab, setActiveTab] = useState<'signin' | 'register'>('signin')
+  
+  // 🚀 Platform feature flags (canLogin, canRegister)
+  const { canLogin, canRegister, isLoading: flagsLoading } = useFeatureFlags()
+  const [showWIPModal, setShowWIPModal] = useState(false)
+  const [wipFeature, setWipFeature] = useState<'login' | 'register'>('login')
   
   // 🔗 Extract returnUrl from query params (for invitation flow)
   const [searchParams] = useSearchParams()
@@ -200,6 +207,13 @@ export function LoginPage() {
   }
 
   const onSubmit = async (data: LoginForm) => {
+    // 🚀 Check if login is enabled
+    if (!canLogin) {
+      setWipFeature('login')
+      setShowWIPModal(true)
+      return
+    }
+    
     setError("")
     setIsLoading(true)
 
@@ -284,6 +298,13 @@ export function LoginPage() {
   }
 
   const onRegisterSubmit = async (data: RegisterForm) => {
+    // 🚀 Check if registration is enabled
+    if (!canRegister) {
+      setWipFeature('register')
+      setShowWIPModal(true)
+      return
+    }
+    
     logger.info('📝 [REGISTER] Starting registration', { email: data.email })
     
     setError("")
@@ -1148,6 +1169,18 @@ export function LoginPage() {
           </div>
         </div>
       )}
+      
+      {/* WIP Modal - shown when canLogin or canRegister is false */}
+      <WIPModal
+        isOpen={showWIPModal}
+        feature={wipFeature}
+        onClose={() => setShowWIPModal(false)}
+        showBackHome={true}
+        onBackHome={() => {
+          setShowWIPModal(false)
+          setShowLoginModal(false)
+        }}
+      />
     </div>
   )
 }

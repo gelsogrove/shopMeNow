@@ -1258,8 +1258,26 @@ model AdminSession {
 }
 
 // ============================================================================
-// PRICING CONFIGURATION - Single Source of Truth for all pricing
+// PLATFORM CONFIGURATION - Single Source of Truth for pricing & feature flags
 // ============================================================================
+model PlatformConfig {
+  id            String      @id @default(cuid())
+  type          ConfigType  // PRICE, FLAG, or LIMIT
+  key           String      @unique // e.g., "BASIC_MONTHLY", "canLogin", "MAX_PRODUCTS"
+  value         String      // The actual value (parsed as number/boolean at runtime)
+  originalValue String?     // Original value for strikethrough display (e.g., "29" when current is "19")
+  description   String?     @db.Text // Human-readable description
+  isActive      Boolean     @default(true) // Can be toggled without deleting
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([type])
+  @@index([key])
+  @@index([isActive])
+  @@map("platform_config")
+}
+
+// Keep PricingConfig for backwards compatibility during migration
 model PricingConfig {
   id          String      @id @default(cuid())
   type        PricingType // PLAN, USAGE, or THRESHOLD
@@ -1274,6 +1292,12 @@ model PricingConfig {
   @@index([key])
   @@index([isActive])
   @@map("pricing_config")
+}
+
+enum ConfigType {
+  PRICE     // Monetary values (€19, €0.10, etc.)
+  FLAG      // Boolean feature flags (canLogin, canRegister)
+  LIMIT     // Numeric limits (maxProducts, maxMessages)
 }
 
 enum PricingType {
