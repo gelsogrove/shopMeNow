@@ -259,3 +259,68 @@ Le transazioni già create mantengono il prezzo al momento della creazione, indi
 - ✅ UPDATE: `monthly-billing.job.ts` → usa service
 - ✅ UPDATE: `campaign-send.job.ts` → usa service
 - ✅ UPDATE: `whatsapp-challenge-queue.job.ts` → check canLogin
+
+---
+
+## Testing Requirements
+
+### Backend Unit Tests (`apps/backend/__tests__/unit/`)
+
+| Test File | Cosa Testa |
+|-----------|------------|
+| `platform-config.service.spec.ts` | Service caching, getPrice(), getFlag(), fallback defaults |
+| `platform-config.controller.spec.ts` | API endpoints, auth, validation |
+| `push-messaging-pricing.spec.ts` | Prezzi da DB invece che enum |
+| `auth-feature-flags.spec.ts` | canLogin/canRegister blocking |
+
+**Test Cases Essenziali**:
+- ✅ `getPrice('BASIC_MONTHLY')` returns €19 from DB
+- ✅ `getPrice('UNKNOWN_KEY')` returns default + logs warning
+- ✅ `getFlag('canLogin')` returns boolean correctly
+- ✅ Cache invalidation after 5 minutes
+- ✅ `POST /auth/login` returns 503 when `canLogin=false`
+- ✅ `POST /auth/register` returns 503 when `canRegister=false`
+- ✅ Billing uses `priceAtTime` from DB, not enum
+
+### Frontend Unit Tests (`apps/frontend/src/__tests__/`)
+
+| Test File | Cosa Testa |
+|-----------|------------|
+| `usePlatformConfig.spec.ts` | Hook fetch, caching, error handling |
+| `WIPModal.spec.tsx` | Render multilingua, immagine, chiusura |
+| `PricingCard.spec.tsx` | Strikethrough quando originalPrice presente |
+| `LoginButton.spec.tsx` | Disabled + modal quando canLogin=false |
+| `RegisterButton.spec.tsx` | Disabled + modal quando canRegister=false |
+
+**Test Cases Essenziali**:
+- ✅ Pricing card shows "~~€29~~ €19" with strikethrough
+- ✅ Pricing card shows "€19" without strikethrough when no originalPrice
+- ✅ WIP modal renders in IT/EN/ES/PT based on user language
+- ✅ Login button disabled when `canLogin=false`
+- ✅ Register button disabled when `canRegister=false`
+- ✅ Click on disabled button opens WIP modal
+- ✅ Hook handles API error gracefully with fallback
+
+### Scheduler Unit Tests (`apps/scheduler/__tests__/`)
+
+| Test File | Cosa Testa |
+|-----------|------------|
+| `platform-config.service.spec.ts` | Service reads from DB correctly |
+| `monthly-billing-pricing.spec.ts` | Uses DB prices for billing |
+| `campaign-send-pricing.spec.ts` | Uses PUSH_CAMPAIGN from DB |
+| `whatsapp-queue-canlogin.spec.ts` | Skips processing when canLogin=false |
+
+**Test Cases Essenziali**:
+- ✅ `monthly-billing` charges €19 for BASIC (not hardcoded €29)
+- ✅ `campaign-send` charges €1.00 per push from DB
+- ✅ `whatsapp-queue` sends WIP message when `canLogin=false`
+- ✅ Service falls back to defaults when DB unavailable
+
+### Integration Tests
+
+| Test | Cosa Verifica |
+|------|---------------|
+| `GET /api/platform-config` | Returns all public pricing |
+| `GET /api/admin/platform-config` | Requires auth, returns all config |
+| `PUT /api/admin/platform-config/:key` | Updates value, invalidates cache |
+| Price change flow | Change in DB → API returns new value → FE shows new price |
