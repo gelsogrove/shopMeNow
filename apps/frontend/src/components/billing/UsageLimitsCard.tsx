@@ -54,7 +54,7 @@ export function UsageLimitsCard({ billingOverview, isLoading = false }: UsageLim
     },
     {
       icon: Users,
-      label: "Customers",
+      label: "Customers/Leads",
       count: usage.customersCount,
       max: limits.maxCustomers,
       percentage: usage.customersPercentage,

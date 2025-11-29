@@ -168,11 +168,11 @@ export function getFeatureDisplayText(
         : `${limits.products} products`
     case FEATURE_KEYS.CUSTOMERS:
       if (limits.customers === "unlimited") {
-        return t ? `${translate("pricing.features.unlimited")} ${translate("pricing.features.clients")}` : "Unlimited customers"
+        return t ? `${translate("pricing.features.unlimited")} ${translate("pricing.features.clients")}` : "Unlimited customers/leads"
       }
       return t
         ? `${translate("pricing.features.upto")} ${limits.customers} ${translate("pricing.features.clients")}`
-        : `${limits.customers} customers`
+        : `${limits.customers} customers/leads`
     case FEATURE_KEYS.MULTI_LANGUAGE:
       return "Multi-language support"
     case FEATURE_KEYS.ANALYTICS:

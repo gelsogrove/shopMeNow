@@ -79,6 +79,7 @@ export function LoginPage() {
   const [isValidatingSession, setIsValidatingSession] = useState(true)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [activeTab, setActiveTab] = useState<'signin' | 'register'>('signin')
+  const [isAdminAccess, setIsAdminAccess] = useState(false) // 🔐 Admin bypass for WIP mode
   
   // 🚀 Platform feature flags (canLogin, canRegister)
   const { canLogin, canRegister, isLoading: flagsLoading } = useFeatureFlags()
@@ -215,8 +216,8 @@ export function LoginPage() {
   }
 
   const onSubmit = async (data: LoginForm) => {
-    // 🚀 Check if login is enabled
-    if (!canLogin) {
+    // 🚀 Check if login is enabled (bypass if admin access mode)
+    if (!canLogin && !isAdminAccess) {
       setWipFeature('login')
       setShowWIPModal(true)
       return
@@ -485,60 +486,217 @@ export function LoginPage() {
     )
   }
 
-  // 🚧 SHOW WORK IN PROGRESS PAGE IF BOTH canLogin AND canRegister ARE FALSE
-  if (!flagsLoading && !canLogin && !canRegister) {
+  // 🚧 Check if WIP mode is active
+  const isWipMode = !flagsLoading && !canLogin && !canRegister
+
+  // 🚧 WIP MODE: Show simple page with hidden admin access
+  if (isWipMode && !showLoginModal) {
     return (
-      <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
-        <div className="max-w-lg w-full">
-          {/* Logo and Header */}
-          <div className="text-center mb-8">
-            <img
-              src="/logo.png"
-              alt="ShopMe Logo"
-              className="w-24 h-24 mx-auto mb-4 object-contain"
-            />
-            <h1 className="text-3xl font-bold text-slate-900">ShopMe</h1>
-          </div>
+      <>
+        <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+          <div className="max-w-lg w-full">
+            {/* Logo and Header */}
+            <div className="text-center mb-8">
+              <img
+                src="/logo.png"
+                alt="ShopMe Logo"
+                className="w-24 h-24 mx-auto mb-4 object-contain"
+              />
+              <h1 className="text-3xl font-bold text-slate-900">ShopMe</h1>
+            </div>
 
-          {/* WIP Card */}
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 text-center">
-            <div className="w-20 h-20 mx-auto mb-6 bg-amber-100 rounded-full flex items-center justify-center">
-              <svg 
-                className="w-10 h-10 text-amber-600" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
+            {/* WIP Card */}
+            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 text-center">
+              <div className="w-20 h-20 mx-auto mb-6 bg-amber-100 rounded-full flex items-center justify-center">
+                <svg 
+                  className="w-10 h-10 text-amber-600" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" 
+                  />
+                </svg>
+              </div>
+              
+              <h2 className="text-2xl font-bold text-slate-900 mb-3">
+                Work in Progress
+              </h2>
+              
+              <p className="text-slate-600 mb-6">
+                We're working hard to bring you something amazing. 
+                Please check back soon!
+              </p>
+
+              <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
+                <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+                <span>Coming Soon</span>
+              </div>
+              
+              {/* 🔐 Hidden Admin Access - small link for platform admins */}
+              <button
+                onClick={() => {
+                  localStorage.clear()
+                  sessionStorage.clear()
+                  setActiveTab('signin')
+                  setIsAdminAccess(true) // 🔐 Enable admin bypass
+                  setShowLoginModal(true)
+                }}
+                className="mt-6 text-xs text-slate-400 hover:text-slate-600 underline opacity-50 hover:opacity-100 transition-opacity"
               >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" 
-                />
-              </svg>
+                Admin Access
+              </button>
             </div>
-            
-            <h2 className="text-2xl font-bold text-slate-900 mb-3">
-              Work in Progress
-            </h2>
-            
-            <p className="text-slate-600 mb-6">
-              We're working hard to bring you something amazing. 
-              Please check back soon!
-            </p>
 
-            <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
-              <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-              <span>Coming Soon</span>
+            {/* Footer */}
+            <p className="text-center text-sm text-slate-400 mt-8">
+              © 2025 ShopMe. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </>
+    )
+  }
+
+  // 🚧 WIP MODE with Modal Open: Show modal overlay on top of WIP page
+  if (isWipMode && showLoginModal) {
+    return (
+      <>
+        {/* Background - WIP Page */}
+        <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+          <div className="max-w-lg w-full opacity-30">
+            <div className="text-center mb-8">
+              <img src="/logo.png" alt="ShopMe Logo" className="w-24 h-24 mx-auto mb-4 object-contain" />
+              <h1 className="text-3xl font-bold text-slate-900">ShopMe</h1>
+            </div>
+            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 text-center">
+              <h2 className="text-2xl font-bold text-slate-900 mb-3">Work in Progress</h2>
             </div>
           </div>
-
-          {/* Footer */}
-          <p className="text-center text-sm text-slate-400 mt-8">
-            © 2025 ShopMe. All rights reserved.
-          </p>
         </div>
-      </div>
+
+        {/* Login Modal */}
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto relative">
+            <div className="p-8">
+              {/* Close Button */}
+              <button
+                onClick={() => {
+                  setShowLoginModal(false)
+                  setIsAdminAccess(false) // 🔐 Reset admin bypass
+                }}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-3xl font-light leading-none w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
+              >
+                ×
+              </button>
+
+              {/* Header */}
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-bold text-slate-900">Admin Access</h3>
+              </div>
+
+              {/* Error Alert */}
+              {error && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              {/* Sign In Form */}
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email-admin">{t("form.email")}</Label>
+                  <Input
+                    id="email-admin"
+                    type="email"
+                    placeholder="your@email.com"
+                    {...register("email")}
+                    disabled={isLoading}
+                    autoComplete="username"
+                    className="h-11"
+                  />
+                  {errors.email && (
+                    <p className="text-sm text-red-500">{errors.email.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password-admin">{t("form.password")}</Label>
+                  <div className="relative">
+                    <Input
+                      id="password-admin"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      {...register("password")}
+                      disabled={isLoading}
+                      autoComplete="current-password"
+                      className="h-11 pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      tabIndex={-1}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <p className="text-sm text-red-500">{errors.password.message}</p>
+                  )}
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full h-11 bg-green-600 hover:bg-green-700"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {t("login.signingIn")}
+                    </>
+                  ) : (
+                    t("login.signin")
+                  )}
+                </Button>
+              </form>
+
+              {/* Divider */}
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t"></span>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="bg-white px-2 text-gray-500">Or continue with</span>
+                </div>
+              </div>
+
+              {/* Google OAuth */}
+              <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+                <div className="flex justify-center">
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={handleGoogleError}
+                    useOneTap={false}
+                    theme="outline"
+                    size="large"
+                    text="signin_with"
+                    shape="rectangular"
+                    logo_alignment="left"
+                  />
+                </div>
+              </GoogleOAuthProvider>
+            </div>
+          </div>
+        </div>
+      </>
     )
   }
 

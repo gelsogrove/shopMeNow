@@ -268,6 +268,44 @@ class BackofficeApi {
     }
   }
 
+  // Scheduler Jobs - Admin endpoints for managing cron jobs
+  schedulers = {
+    /**
+     * Get all scheduler jobs with their status
+     */
+    getAll: async (): Promise<ApiResponse<Array<{
+      id: string
+      jobName: string
+      isActive: boolean
+      lastRunAt: string | null
+      lastStatus: string
+      lastError: string | null
+      lastDuration: number | null
+      nextRunAt: string | null
+      createdAt: string
+      updatedAt: string
+    }>>> => {
+      return this.fetch('/schedulers')
+    },
+
+    /**
+     * Update a scheduler job (toggle isActive)
+     */
+    update: async (
+      jobName: string, 
+      data: { isActive: boolean }
+    ): Promise<ApiResponse<{
+      id: string
+      jobName: string
+      isActive: boolean
+    }>> => {
+      return this.fetch(`/schedulers/${jobName}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      })
+    }
+  }
+
   logout() {
     this.clearToken()
   }

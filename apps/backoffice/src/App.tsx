@@ -6,6 +6,7 @@ import { AuthCallbackPage } from '@/pages/AuthCallbackPage'
 import { PlatformsPage } from '@/pages/PlatformsPage'
 import { PricingPage } from '@/pages/PricingPage'
 import { ClientsPage } from '@/pages/ClientsPage'
+import { SchedulersPage } from '@/pages/SchedulersPage'
 import { ComingSoonPage } from '@/pages/ComingSoonPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -58,12 +59,7 @@ function AppRoutes() {
         />
         <Route 
           path="schedulers" 
-          element={
-            <ComingSoonPage 
-              title="Schedulers" 
-              description="Job scheduler management coming soon. Monitor cron jobs, background tasks, and scheduled operations."
-            />
-          } 
+          element={<SchedulersPage />} 
         />
       </Route>
       {/* Catch all - redirect to access denied if not authenticated */}

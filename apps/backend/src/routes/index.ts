@@ -593,6 +593,13 @@ logger.info("✅ Registered platform config routes (/api/platform-config)")
 router.use("/users", userAdminRoutes)
 logger.info("✅ Registered user admin routes (/api/users/admin/*)")
 
+// ========================================
+// 🕐 SCHEDULER ROUTES (Platform Admin only)
+// ========================================
+import schedulerRoutes from "../interfaces/http/routes/scheduler.routes"
+router.use("/schedulers", schedulerRoutes)
+logger.info("✅ Registered scheduler routes (/api/schedulers)")
+
 // 💳 PUBLIC SUBSCRIPTION PLANS (Feature 185 - No auth required)
 router.use("/subscription", publicBillingRoutes) // GET /api/subscription/plans
 logger.info("✅ Registered PUBLIC subscription plans route (/api/subscription/plans)")
