@@ -119,21 +119,23 @@ export function CampaignSheet({
       setLoading(true)
       const { data } = await api.get(`/workspaces/${workspaceId}/customers`)
 
-      // 🔥 Filtra clienti validi per campagne:
-      // - Solo isBlacklisted = false (clienti non bloccati)
-      // - isActive = true (clienti attivi)
-      // NOTA: push_notifications_consent e GDPR verranno verificati al momento dell'invio
+      // 🔥 Filtra clienti validi per campagne PUSH:
+      // - isBlacklisted = false (non bloccati)
+      // - isActive = true (attivi)
+      // - push_notifications_consent = true (hanno dato consenso push)
       const validCustomers = (data.data || []).filter((customer: Customer) => {
         const isBlocked = customer.isBlacklisted === true
-        const isActive = customer.isActive !== false // default true se undefined
+        const isActive = customer.isActive !== false
+        const hasPushConsent = customer.push_notifications_consent === true
 
-        const isValid = !isBlocked && isActive
+        const isValid = !isBlocked && isActive && hasPushConsent
 
         // Log per debug (solo clienti esclusi)
         if (!isValid) {
           const reasons = []
           if (isBlocked) reasons.push("blocked")
           if (!isActive) reasons.push("inactive")
+          if (!hasPushConsent) reasons.push("no push consent")
           logger.info(`Cliente ${customer.name} escluso: ${reasons.join(", ")}`)
         }
 
@@ -192,27 +194,6 @@ export function CampaignSheet({
     }
   }
 
-  const insertToken = (token: string) => {
-    const textarea = document.getElementById(
-      "campaign-message"
-    ) as HTMLTextAreaElement
-    if (!textarea) return
-
-    const start = textarea.selectionStart
-    const end = textarea.selectionEnd
-    const text = messagePreview
-    const before = text.substring(0, start)
-    const after = text.substring(end)
-
-    setMessagePreview(before + token + after)
-
-    // Set cursor after inserted token
-    setTimeout(() => {
-      textarea.focus()
-      textarea.setSelectionRange(start + token.length, start + token.length)
-    }, 0)
-  }
-
   const toggleCustomerSelection = (customerId: string) => {
     if (customerIds.includes(customerId)) {
       setCustomerIds(customerIds.filter((id) => id !== customerId))
@@ -263,56 +244,18 @@ export function CampaignSheet({
               Message <span className="text-red-500">*</span>
             </Label>
             <p className="text-xs text-gray-500">
-              Use{" "}
-              <code className="bg-gray-100 px-1 py-0.5 rounded">
-                {"{{nome}}"}
-              </code>{" "}
-              for customer name. Click buttons to insert links with secure
-              tokens.
+              Write your campaign message here.
             </p>
             <Textarea
               id="campaign-message"
               value={messagePreview}
               onChange={(e) => setMessagePreview(e.target.value)}
               rows={6}
-              placeholder={`Hello {{nome}},\n\nDid you like our service?\nLeave us a review: [FEEDBACK]\n\nThank you! 🙏`}
+              placeholder="Hello!\n\nDid you like our service?\n\nThank you! 🙏"
               className="font-mono text-sm"
               disabled={!isEditMode}
               required
             />
-
-            {/* Token Buttons */}
-            {isEditMode && (
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => insertToken("[FEEDBACK]")}
-                  className="text-xs bg-green-50 border-green-200 hover:bg-green-100"
-                >
-                  + [FEEDBACK]
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => insertToken("[ORDER_REVIEW]")}
-                  className="text-xs bg-green-50 border-green-200 hover:bg-green-100"
-                >
-                  + [ORDER_REVIEW]
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => insertToken("{{nome}}")}
-                  className="text-xs"
-                >
-                  + {"{{nome}}"}
-                </Button>
-              </div>
-            )}
 
             <p className="text-xs text-gray-500">
               {messagePreview.length}/500 characters
@@ -410,7 +353,12 @@ export function CampaignSheet({
                           className="w-4 h-4 text-blue-600"
                         />
                         <div className="flex-1">
-                          <p className="font-medium text-sm">{customer.name}</p>
+                          <p className="font-medium text-sm">
+                            {customer.name}
+                            {customer.company && (
+                              <span className="text-gray-500 font-normal"> - {customer.company}</span>
+                            )}
+                          </p>
                           <p className="text-xs text-gray-500">
                             {customer.email} • {customer.phone}
                           </p>

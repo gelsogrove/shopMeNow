@@ -8,6 +8,7 @@ import {
   unusedImagesCleanupJob,
   monthlyBillingJob,
   messagesArchiveJob,
+  campaignSendJob,
 } from './jobs'
 import logger from './utils/logger'
 
@@ -20,6 +21,7 @@ import logger from './utils/logger'
 // 4. Unused Images Cleanup     - daily at 23:02
 // 5. Monthly Billing           - 1st of month at 12:00
 // 6. Messages Archive          - weekly on Sunday at 03:00
+// 7. Campaign Send             - daily at 10:00 AM
 
 async function main() {
   logger.info('🚀 Starting ShopME Scheduler...')
@@ -58,6 +60,12 @@ async function main() {
     await runJob('messages-archive', messagesArchiveJob)
   })
 
+  // Job 7: Campaign Send - daily at 10:00 AM
+  // Checks active campaigns and queues messages for eligible customers
+  cron.schedule('0 10 * * *', async () => {
+    await runJob('campaign-send', campaignSendJob)
+  })
+
   logger.info('✅ Scheduler started successfully!')
   logger.info('📋 Scheduled jobs:')
   logger.info('   1. WhatsApp Challenge Queue  - every 3 minutes')
@@ -66,6 +74,7 @@ async function main() {
   logger.info('   4. Unused Images Cleanup     - daily at 23:02')
   logger.info('   5. Monthly Billing           - 1st of month at 12:00')
   logger.info('   6. Messages Archive          - weekly on Sunday at 03:00')
+  logger.info('   7. Campaign Send             - daily at 10:00 AM')
 
   // Graceful shutdown
   process.on('SIGINT', async () => {

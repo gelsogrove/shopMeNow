@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/tooltip"
 import { commonStyles } from "@/styles/common"
 import { ColumnDef } from "@tanstack/react-table"
-import { Calendar, Megaphone, Pencil, Trash2, Users } from "lucide-react"
+import { Calendar, Globe, Megaphone, Pencil, Sparkles, Trash2, Users, Clock, CheckCircle2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useWorkspace } from "../../contexts/WorkspaceContext"
 import { toast } from "../../lib/toast"
@@ -281,6 +281,66 @@ export default function CampaignsPage() {
 
   return (
     <PageLayout>
+      {/* AI-Powered Campaign Info Box */}
+      <div className="mb-6 bg-gradient-to-r from-purple-50 via-blue-50 to-indigo-50 border border-purple-200 rounded-xl p-5 shadow-sm">
+        <div className="flex items-start gap-4">
+          {/* AI Icon */}
+          <div className="flex-shrink-0">
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+              <Sparkles className="w-6 h-6 text-white" />
+            </div>
+          </div>
+          
+          {/* Content */}
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              AI-Powered Multilingual Campaigns
+              <Badge className="bg-purple-100 text-purple-700 border-purple-200">
+                Smart
+              </Badge>
+            </h3>
+            <p className="text-sm text-gray-600 mt-1 mb-4">
+              Write your campaign in Italian - our AI automatically translates it to each customer's preferred language.
+            </p>
+
+            {/* How it works - Steps */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className="flex items-center gap-2 bg-white/60 rounded-lg px-3 py-2">
+                <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-xs font-bold text-purple-600">1</div>
+                <span className="text-xs text-gray-700">Write message in Italian</span>
+              </div>
+              <div className="flex items-center gap-2 bg-white/60 rounded-lg px-3 py-2">
+                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs font-bold text-blue-600">2</div>
+                <span className="text-xs text-gray-700">Select recipients</span>
+              </div>
+              <div className="flex items-center gap-2 bg-white/60 rounded-lg px-3 py-2">
+                <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center">
+                  <Clock className="w-3 h-3 text-indigo-600" />
+                </div>
+                <span className="text-xs text-gray-700">Scheduler runs daily at 10:00</span>
+              </div>
+              <div className="flex items-center gap-2 bg-white/60 rounded-lg px-3 py-2">
+                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
+                  <Globe className="w-3 h-3 text-green-600" />
+                </div>
+                <span className="text-xs text-gray-700">AI translates per customer</span>
+              </div>
+            </div>
+
+            {/* Supported Languages */}
+            <div className="flex items-center gap-2 mt-4">
+              <span className="text-xs text-gray-500">Supported languages:</span>
+              <div className="flex gap-1">
+                <span className="px-2 py-0.5 bg-white rounded text-xs font-medium text-gray-700">🇮🇹 IT</span>
+                <span className="px-2 py-0.5 bg-white rounded text-xs font-medium text-gray-700">🇬🇧 EN</span>
+                <span className="px-2 py-0.5 bg-white rounded text-xs font-medium text-gray-700">🇪🇸 ES</span>
+                <span className="px-2 py-0.5 bg-white rounded text-xs font-medium text-gray-700">🇵🇹 PT</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <CrudPageContent
         title={<span className={commonStyles.primary}>WhatsApp Campaigns</span>}
         titleIcon={<Megaphone className={commonStyles.headerIcon} />}

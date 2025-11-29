@@ -782,6 +782,11 @@ async function main() {
         activeChatbot: true,
         currency: "EUR",
         discount: 10, // 🎯 10% discount per tutti i clienti
+        // 📱 Push notifications consent - first 2 customers have consent
+        push_notifications_consent: i < 2, // Mario and João have consent
+        push_notifications_consent_at: i < 2 ? new Date() : null,
+        // 📋 GDPR consent - first 2 customers have accepted
+        last_privacy_version_accepted: i < 2 ? "v1.0" : null,
         createdAt: customer.createdAt,
         updatedAt: customer.createdAt,
       },
@@ -790,6 +795,12 @@ async function main() {
 
   console.log(
     `✅ Created ${testCustomers.length} test customers (distributed Apr-Jul 2025)`
+  )
+  console.log(
+    `   📱 First 2 (Mario, João): active, push consent, GDPR accepted → eligible for campaigns`
+  )
+  console.log(
+    `   🚫 Last 2 (Maria, John): blacklisted, no consent → NOT eligible for campaigns`
   )
 
   // � CREATE CHAT SESSIONS WITH MESSAGE HISTORY
