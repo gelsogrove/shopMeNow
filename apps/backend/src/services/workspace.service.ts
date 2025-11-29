@@ -37,6 +37,7 @@ interface UpdateWorkspaceData {
   blocklist?: string
   url?: string
   welcomeMessage?: string // English only
+  allowedExternalLinks?: string[] // 🛡️ Security: allowed domains for external links
 }
 
 export const workspaceService = {
@@ -64,6 +65,7 @@ export const workspaceService = {
         // blocklist: true, // REMOVED: field no longer exists
         url: true,
         welcomeMessage: true,
+        allowedExternalLinks: true, // 🛡️ Security
       },
     })
   },
@@ -91,6 +93,7 @@ export const workspaceService = {
         // blocklist: true, // REMOVED: field no longer exists
         url: true,
         welcomeMessage: true,
+        allowedExternalLinks: true, // 🛡️ Security
       },
     })
 
@@ -224,6 +227,7 @@ export const workspaceService = {
         // blocklist: true, // REMOVED: field no longer exists
         url: true,
         welcomeMessage: true,
+        allowedExternalLinks: true, // 🛡️ Security
       },
     })
 

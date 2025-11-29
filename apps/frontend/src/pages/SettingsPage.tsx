@@ -32,6 +32,7 @@ interface WorkspaceData {
   challengeStatus: boolean // 🆕 Feature 126: Chatbot enabled/disabled (true=enabled, false=WIP mode)
   welcomeMessage: string
   wipMessage: string
+  allowedExternalLinks: string // 🆕 Security: comma-separated list of allowed domains
 }
 
 const defaultWelcomeMessage =
@@ -69,6 +70,7 @@ export default function SettingsPage() {
     challengeStatus: true, // 🆕 Default: chatbot enabled
     welcomeMessage: defaultWelcomeMessage,
     wipMessage: defaultWipMessage,
+    allowedExternalLinks: "", // 🆕 Security: allowed external domains
   })
   const { workspace, loading, setCurrentWorkspace } = useWorkspace()
   const { isSuperAdmin } = useWorkspaceRole(workspace?.id)
@@ -87,6 +89,7 @@ export default function SettingsPage() {
       challengeStatus: workspace.challengeStatus ?? true, // 🆕 Default to enabled if not set
       welcomeMessage: extractEnglishMessage(workspace.welcomeMessage, defaultWelcomeMessage),
       wipMessage: extractEnglishMessage(workspace.wipMessage, defaultWipMessage),
+      allowedExternalLinks: (workspace.allowedExternalLinks || []).join(", "), // 🆕 Security: convert array to comma-separated
     })
   }, [workspace])
 
@@ -174,6 +177,10 @@ export default function SettingsPage() {
       challengeStatus: formData.challengeStatus, // 🆕 Feature 126: Chatbot enabled/disabled
       welcomeMessage: formData.welcomeMessage,
       wipMessage: formData.wipMessage,
+      allowedExternalLinks: formData.allowedExternalLinks
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0), // 🆕 Security: convert to array
     }
 
     // 🔍 LOG DETTAGLIATO per debug whatsappApiKey
@@ -370,6 +377,28 @@ export default function SettingsPage() {
               language by the AI Translation layer
             </p>
           </div>
+          
+          {/* 🛡️ Security: Allowed External Links */}
+          <div className="space-y-2">
+            <Label htmlFor="allowedExternalLinks">
+              Allowed External Links{" "}
+              <span className="text-xs text-muted-foreground">
+                (Security)
+              </span>
+            </Label>
+            <Textarea
+              id="allowedExternalLinks"
+              value={formData.allowedExternalLinks}
+              onChange={(e) => handleFieldChange("allowedExternalLinks", e.target.value)}
+              rows={2}
+              placeholder="shopme.com, stripe.com, paypal.com"
+            />
+            <p className="text-xs text-muted-foreground">
+              🛡️ Comma-separated list of domains the AI can include in messages. 
+              Links to other domains will be blocked by the Security Agent.
+            </p>
+          </div>
+          
           <div className="flex justify-end gap-2 pt-4 border-t">
             {/* Delete button - ONLY for SUPER_ADMIN (Owner) */}
             {isSuperAdmin && (

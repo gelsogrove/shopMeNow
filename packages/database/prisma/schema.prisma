@@ -32,6 +32,7 @@ model Workspace {
   debugMode                 Boolean           @default(true)
   apiKey                    String?
   metadata                  Json?
+  allowedExternalLinks      String[]          @default([]) // Security Agent: allowed external domains (e.g., ["shopme.com", "stripe.com"])
   
   // Team management: ownerId groups all channels belonging to same owner
   ownerId                   String?

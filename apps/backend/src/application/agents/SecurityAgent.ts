@@ -93,10 +93,22 @@ export class SecurityAgent {
         }
       }
 
-      // 2. Build system prompt with dynamic customer info
+      // 🛡️ Load workspace to get allowedExternalLinks
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: options.workspaceId },
+        select: { allowedExternalLinks: true },
+      })
+      
+      // 🛡️ Build allowed links string (comma-separated)
+      const allowedLinks = workspace?.allowedExternalLinks?.length 
+        ? workspace.allowedExternalLinks.join(", ")
+        : "" // Empty = no external links allowed
+
+      // 2. Build system prompt with dynamic variables
       const systemPrompt = this.buildSystemPrompt(securityAgent.systemPrompt, {
         nameUser: options.customerName || "Customer",
         workspaceId: options.workspaceId,
+        ALLOWED_EXTERNAL_LINKS: allowedLinks, // 🛡️ Pass to prompt
       })
 
       // 3. Build user message

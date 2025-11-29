@@ -118,7 +118,7 @@ describe("PlatformConfigService", () => {
     },
   ]
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks()
 
     // Get the mocked prisma instance
@@ -128,6 +128,9 @@ describe("PlatformConfigService", () => {
     ;(mockPrisma.platformConfig.findMany as jest.Mock).mockResolvedValue(
       mockConfigData
     )
+
+    // Invalidate cache to ensure fresh state for each test
+    await platformConfigService.invalidateCache()
   })
 
   describe("getPrice", () => {
@@ -302,25 +305,27 @@ describe("PlatformConfigService", () => {
 
   describe("cache behavior", () => {
     it("should use cache for subsequent calls", async () => {
-      // First call
+      // Cache was populated in beforeEach via invalidateCache()
+      // Clear mock to count new calls only
+      ;(mockPrisma.platformConfig.findMany as jest.Mock).mockClear()
+      
+      // These calls should use cache (no new findMany calls)
       await platformConfigService.getPrice("BASIC_MONTHLY")
-
-      // Second call should use cache
       await platformConfigService.getPrice("PREMIUM_MONTHLY")
 
-      // findMany should only be called once (for cache population)
-      expect(mockPrisma.platformConfig.findMany).toHaveBeenCalledTimes(1)
+      // findMany should NOT be called (using cache)
+      expect(mockPrisma.platformConfig.findMany).toHaveBeenCalledTimes(0)
     })
 
     it("should refresh cache after invalidation", async () => {
-      // First call
-      await platformConfigService.getPrice("BASIC_MONTHLY")
+      // Cache was populated in beforeEach
+      ;(mockPrisma.platformConfig.findMany as jest.Mock).mockClear()
 
-      // Invalidate cache
+      // Invalidate cache - should trigger findMany
       await platformConfigService.invalidateCache()
 
-      // findMany should be called twice (initial + after invalidation)
-      expect(mockPrisma.platformConfig.findMany).toHaveBeenCalledTimes(2)
+      // findMany should be called once for refresh
+      expect(mockPrisma.platformConfig.findMany).toHaveBeenCalledTimes(1)
     })
   })
 })

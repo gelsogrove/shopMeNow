@@ -23,6 +23,12 @@ jest.mock('@prisma/client', () => {
       user: mockUser,
       $disconnect: jest.fn(),
     })),
+    UserStatus: {
+      ACTIVE: 'ACTIVE',
+      INACTIVE: 'INACTIVE',
+      SUSPENDED: 'SUSPENDED',
+      PENDING: 'PENDING',
+    },
   }
 })
 
@@ -146,7 +152,7 @@ describe('User Login', () => {
 
       await expect(
         authService.login('user@test.com', 'correct_password')
-      ).rejects.toThrow('Account is not active')
+      ).rejects.toThrow('Your account has been disabled')
     })
 
     it('should generate JWT token with correct payload', async () => {

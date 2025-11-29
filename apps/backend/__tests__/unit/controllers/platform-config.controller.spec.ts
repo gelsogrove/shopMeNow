@@ -14,9 +14,16 @@
  * @author Andrea Gelso - ShopME Platform
  */
 
-import { Request, Response } from "express"
-import { platformConfigController } from "../../../src/interfaces/http/controllers/platform-config.controller"
-import { platformConfigService } from "../../../src/services/platform-config.service"
+// Mock logger BEFORE imports
+jest.mock("../../../src/utils/logger", () => ({
+  __esModule: true,
+  default: {
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn(),
+  },
+}))
 
 // Mock the service
 jest.mock("../../../src/services/platform-config.service", () => ({
@@ -31,14 +38,9 @@ jest.mock("../../../src/services/platform-config.service", () => ({
   },
 }))
 
-// Mock logger
-jest.mock("../../../src/utils/logger", () => ({
-  default: {
-    info: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-  },
-}))
+import { Request, Response } from "express"
+import { platformConfigController } from "../../../src/interfaces/http/controllers/platform-config.controller"
+import { platformConfigService } from "../../../src/services/platform-config.service"
 
 describe("PlatformConfigController", () => {
   let mockRequest: Partial<Request>
