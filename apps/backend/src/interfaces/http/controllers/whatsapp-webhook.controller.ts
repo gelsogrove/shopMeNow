@@ -636,7 +636,7 @@ export class WhatsAppWebhookController {
               timestamp: new Date().toISOString(),
               flow: ["welcome", "safety", "save", "whatsapp"],
               attemptCount: registrationAttempt.attemptCount,
-              messagePrice: BillingPrices.WELCOME_MESSAGE,
+              messagePrice: BillingPrices.MESSAGE,
               debugSteps: debugSteps,
             }),
           },
@@ -657,7 +657,7 @@ export class WhatsAppWebhookController {
           )
 
           logger.info(
-            `[WEBHOOK] 💰 Welcome message cost tracked: €${BillingPrices.WELCOME_MESSAGE.toFixed(2)} for customer ${tempCustomer.id}`
+            `[WEBHOOK] 💰 Welcome message cost tracked: €${BillingPrices.MESSAGE.toFixed(2)} for customer ${tempCustomer.id}`
           )
         } catch (billingError) {
           logger.error(

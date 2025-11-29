@@ -128,6 +128,7 @@ import createSettingsRouter from "../interfaces/http/routes/settings.routes"
 import { shortUrlRoutes } from "../interfaces/http/routes/short-url.routes"
 import whatsappRoutes from "../interfaces/http/routes/whatsapp.routes"
 import { createTokenRouter } from "./token"
+import userAdminRoutes from "../interfaces/http/routes/user-admin.routes"
 
 // ============================================================================
 // 7. TYPE IMPORTS
@@ -585,6 +586,12 @@ logger.info("✅ Registered pricing routes (/api/pricing/config)")
 // ========================================
 router.use("/platform-config", platformConfigRoutes)
 logger.info("✅ Registered platform config routes (/api/platform-config)")
+
+// ========================================
+// 👥 USER ADMIN ROUTES (Platform Admin only)
+// ========================================
+router.use("/users", userAdminRoutes)
+logger.info("✅ Registered user admin routes (/api/users/admin/*)")
 
 // 💳 PUBLIC SUBSCRIPTION PLANS (Feature 185 - No auth required)
 router.use("/subscription", publicBillingRoutes) // GET /api/subscription/plans

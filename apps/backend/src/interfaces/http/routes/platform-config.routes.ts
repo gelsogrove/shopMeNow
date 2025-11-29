@@ -19,6 +19,7 @@
 import { Router } from "express"
 import { platformConfigController } from "../controllers/platform-config.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"
+import { platformAdminMiddleware } from "../middlewares/platform-admin.middleware"
 
 const router = Router()
 
@@ -94,10 +95,6 @@ router.get(
  *                       type: boolean
  *                     canRegister:
  *                       type: boolean
- *                     chatbotEnabled:
- *                       type: boolean
- *                     maintenanceMode:
- *                       type: boolean
  */
 router.get(
   "/flags/check",
@@ -126,6 +123,7 @@ router.get(
 router.get(
   "/admin",
   authMiddleware,
+  platformAdminMiddleware,
   platformConfigController.getAdminConfig.bind(platformConfigController)
 )
 
@@ -173,6 +171,7 @@ router.get(
 router.put(
   "/:key",
   authMiddleware,
+  platformAdminMiddleware,
   platformConfigController.updateConfig.bind(platformConfigController)
 )
 
@@ -215,6 +214,7 @@ router.put(
 router.post(
   "/flags/:key/toggle",
   authMiddleware,
+  platformAdminMiddleware,
   platformConfigController.toggleFlag.bind(platformConfigController)
 )
 
@@ -236,6 +236,7 @@ router.post(
 router.post(
   "/cache/invalidate",
   authMiddleware,
+  platformAdminMiddleware,
   platformConfigController.invalidateCache.bind(platformConfigController)
 )
 

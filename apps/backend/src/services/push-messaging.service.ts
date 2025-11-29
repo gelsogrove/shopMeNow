@@ -321,21 +321,12 @@ export const pushMessagingService = {
   },
 
   /**
-   * 💰 Get message price based on type
-   * Uses BillingPrices enum as SINGLE SOURCE OF TRUTH
+   * 💰 Get message price - ALL push notifications use PUSH_CAMPAIGN price
+   * Simplified: only 2 prices exist (MESSAGE and PUSH_CAMPAIGN)
    */
-  getMessagePrice(type: PushMessageType): number {
-    const priceMap: Record<PushMessageType, number> = {
-      [PushMessageType.CHATBOT_REACTIVATED]:
-        BillingPrices.PUSH_CHATBOT_REACTIVATED,
-      [PushMessageType.DISCOUNT_UPDATED]:
-        BillingPrices.PUSH_DISCOUNT_NOTIFICATION,
-      [PushMessageType.ORDER_CONFIRMED]: BillingPrices.PUSH_ORDER_CONFIRMED,
-      [PushMessageType.USER_REGISTERED]: BillingPrices.WELCOME_MESSAGE,
-      [PushMessageType.NEW_OFFER]: BillingPrices.PUSH_CAMPAIGN,
-    }
-
-    return priceMap[type] ?? BillingPrices.PUSH_DEFAULT
+  getMessagePrice(_type: PushMessageType): number {
+    // All push notifications have the same price
+    return BillingPrices.PUSH_CAMPAIGN
   },
 
   /**

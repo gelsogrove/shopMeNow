@@ -1,6 +1,6 @@
  
 
-rispondi alla domande si o no gutdando il codice
+rispondi alla domande
 
 - se un utente non e' registrato e manda un mesaggio viene fuori il messagigo di welcome con il link?
 
@@ -16,14 +16,16 @@ rispondi alla domande si o no gutdando il codice
 
 - se utente e'bloccato cosa riceve?
 
-- Il token tranne nelle chiamate di login viene sempre passato =?
-abbiamo un test sul middlewahre ?
+- Il token tranne nelle chiamate di login viene sempre passato? abbiamo un test sui middlewares presenti ? 
 
-- lato FE abbiamo   test su invio middleware?
+- lato FE abbiamo test su invio middleware (interceptor)?
 
-- contatore dei soldi , transazionem billing sono per ownerID ? nel senso che comprendono i costi di tutti i canali che ha ?
+- contatore dei soldi , transazione billing sono per ownerId ? nel senso che comprendono i costi di tutti i canali che hanno ?
+
+- siamo sicuri che i mesasggi tra canali e utenti non si mescolano abbiamo sempre tutti i filtri correttamente impostati nell chatbot ? per esempio per le variabili di replce abbiamo sempre il filtro workspaceId ? 
 
 - cosa succede se un utente arriva a 50 prodotti e vuole aggiungerne uno ed ha un plan Basic?
+
 - cosa succede se scrive il clente 51 esimo ? con plan basic?
 - e se fosse Premium viene rispsttato ?
 - i pagamenti vengono effettuati sempre il primo del mese?
@@ -93,5 +95,25 @@ e anche i metodi GET PUT DELETE POST devono essere ben controllati
 
 - c'e' qualche .env che non si utilizza piu ?
 
+- mi confermi che le api che abbiamo fatto di admin sono tutte dentro backoffice e che dentro FE abbiamo solo delle api de get per prednere i valori ? 
+
+- im confermi che se canLogin e' false il chatbot rispodne con il messaggio di WIP ?
+
+- mi conferni che se CanRegister e' true non ci  si puo' 
+registrare?
+
+- mi confermi che il backoffice nonha problemi di sicurezzA?
+
+- utenti isDeveloperUser e isPlatformAdmin  mi assicuri che non fanno il qr code step ?
+
+- abbiamo problemi di vulnerability ?
+
 - non devi editare questo file ricordatelo !
-- fammi una tabella per vedere il risultato.
+
+- FIlename fai un rename dei files tutto in minuscolo dovrebbero essere , ma non puoi farlu tutti scegli 5 file e fai il rename e il fix.
+
+- tutti i prezzi vengono letti da un unico prezzo
+
+- se cambio i prezzi nell'arco del tempo non affetta il passato e le vecchie fatture vero e le transizioni vero ?  cambia dal momento che cambio il valore del prezzo in avanti vero? confermi?
+
+- fammi una tabella per vedere il risultato ma solo quelle cose che non vanno le cose che vanno non fammele vedere

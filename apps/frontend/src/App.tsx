@@ -11,6 +11,7 @@ import { AnalyticsPage } from "./pages/AnalyticsPage"
 import SignupPage from "./pages/auth/SignupPage"
 import Setup2FAPage from "./pages/auth/Setup2FAPage"
 import Verify2FAPage from "./pages/auth/Verify2FAPage"
+import ImpersonatePage from "./pages/auth/ImpersonatePage"
 import { ChatPage } from "./pages/ChatPage"
 import ClientsPage from "./pages/ClientsPage"
 import { QueuePage } from "./pages/QueuePage"
@@ -79,6 +80,7 @@ export function App() {
                   <Route path="register" element={<Navigate to="/auth/login?action=register" replace />} />
                   <Route path="setup-2fa" element={<Setup2FAPage />} />
                   <Route path="verify-2fa" element={<Verify2FAPage />} />
+                  <Route path="impersonate" element={<ImpersonatePage />} />
                   <Route
                     path="forgot-password"
                     element={<ForgotPasswordPage />}

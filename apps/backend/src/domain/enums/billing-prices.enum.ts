@@ -10,16 +10,9 @@
  */
 
 export enum BillingPrices {
-  // 📱 MESSAGE COSTS
-  MESSAGE = 0.1, // €0.10 - LLM chatbot message (conversational)
-  WELCOME_MESSAGE = 1.0, // €1.00 - First message to new user (includes registration)
-
-  // 📤 PUSH MESSAGING COSTS
-  PUSH_CHATBOT_REACTIVATED = 0.2, // €0.20 - When admin enables chatbot for customer
-  PUSH_DISCOUNT_NOTIFICATION = 0.2, // €0.00 - FREE - Discount update notification
-  PUSH_ORDER_CONFIRMED = 0.0, // €0.00 - FREE - Order confirmation
-  PUSH_CAMPAIGN = 1.0, // €1.00 - Marketing campaign message
-  PUSH_DEFAULT = 0.2, // €0.20 - Default for other push notifications
+  // 📱 MESSAGE COSTS - Only 2 types!
+  MESSAGE = 0.1, // €0.10 - LLM chatbot message (all conversations)
+  PUSH_CAMPAIGN = 1.0, // €1.00 - Any push notification (campaigns, reactivation, etc.)
 
   // 🏢 SUBSCRIPTION PLANS (Monthly)
   MONTHLY_CHANNEL_COST = 49.0, // €49.00 - Per WhatsApp channel/month (same as Premium)
@@ -37,43 +30,16 @@ export const BillingPricesMetadata: Record<
   keyof typeof BillingPrices,
   { name: string; description: string; category: string }
 > = {
-  // Messages
+  // Only 2 usage-based prices!
   MESSAGE: {
-    name: "LLM Message",
-    description: "AI chatbot conversational response",
-    category: "Messages",
-  },
-  WELCOME_MESSAGE: {
-    name: "Welcome Message",
-    description: "First message to new user (includes registration)",
-    category: "Messages",
-  },
-
-  // Push Messaging
-  PUSH_CHATBOT_REACTIVATED: {
-    name: "Chatbot Reactivated",
-    description: "Notification when admin enables chatbot",
-    category: "Push Messaging",
-  },
-  PUSH_DISCOUNT_NOTIFICATION: {
-    name: "Discount Notification",
-    description: "Customer discount update (FREE)",
-    category: "Push Messaging",
-  },
-  PUSH_ORDER_CONFIRMED: {
-    name: "Order Confirmed",
-    description: "Order confirmation push (FREE)",
-    category: "Push Messaging",
+    name: "Message",
+    description: "Cost per message (AI-powered responses)",
+    category: "Usage",
   },
   PUSH_CAMPAIGN: {
-    name: "Campaign Message",
-    description: "Marketing campaign push message",
-    category: "Push Messaging",
-  },
-  PUSH_DEFAULT: {
-    name: "Default Push",
-    description: "Default push notification cost",
-    category: "Push Messaging",
+    name: "Push Notification",
+    description: "Cost per push notification sent (all types)",
+    category: "Usage",
   },
 
   // Subscription Plans

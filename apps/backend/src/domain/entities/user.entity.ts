@@ -10,6 +10,8 @@ export interface UserProps {
   status?: string;
   workspaceId?: string;
   role?: string;
+  isPlatformAdmin?: boolean; // 🔐 Platform Admin flag for Backoffice access
+  isDeveloperUser?: boolean; // 🔧 Developer user flag (skip 2FA)
   createdAt?: Date;
   updatedAt?: Date;
   lastLogin?: Date;
@@ -68,6 +70,16 @@ export class User extends Entity<UserProps> {
 
   get role(): string | undefined {
     return this.props.role;
+  }
+
+  // 🔐 Platform Admin getter for Backoffice access
+  get isPlatformAdmin(): boolean {
+    return this.props.isPlatformAdmin || false;
+  }
+
+  // 🔧 Developer User getter (skip 2FA)
+  get isDeveloperUser(): boolean {
+    return this.props.isDeveloperUser || false;
   }
 
   get createdAt(): Date | undefined {

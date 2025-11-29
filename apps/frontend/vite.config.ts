@@ -45,6 +45,20 @@ export default defineConfig({
           })
         },
       },
+      // 🔐 Backoffice proxy - localhost:3000/admin → localhost:3002
+      "/admin": {
+        target: "http://localhost:3002",
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/admin/, ''),  // /admin/foo → /foo
+        configure: (proxy, _options) => {
+          proxy.on("error", (err, _req, _res) => {
+            if (process.env.NODE_ENV === "development") {
+              console.error("Proxy error for backoffice:", err)
+            }
+          })
+        },
+      },
       "/workspaces": {
         target: "http://localhost:3001",
         changeOrigin: true,

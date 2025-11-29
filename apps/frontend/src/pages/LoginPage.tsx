@@ -144,6 +144,14 @@ export function LoginPage() {
   // 🆕 AUTO-OPEN REGISTER MODAL if ?action=register or ?mode=register parameter is present
   useEffect(() => {
     if (actionParam === 'register' || modeParam === 'register') {
+      // 🚫 If registration is disabled, show WIP modal instead
+      if (!canRegister && !flagsLoading) {
+        logger.info('🚫 [AUTO-OPEN] Registration disabled - showing WIP modal')
+        setWipFeature('register')
+        setShowWIPModal(true)
+        return
+      }
+      
       logger.info('🎯 [AUTO-OPEN] Detected register mode - opening registration modal')
       setShowLoginModal(true)
       setActiveTab('register')
@@ -167,7 +175,7 @@ export function LoginPage() {
         }
       }
     }
-  }, [actionParam, modeParam, inviteParam])
+  }, [actionParam, modeParam, inviteParam, canRegister, flagsLoading])
 
   // 🆕 AUTO-REDIRECT IF SESSION IS ALREADY VALID
   useEffect(() => {
@@ -275,6 +283,14 @@ export function LoginPage() {
 
         toast.success("Login successful!")
 
+        // 🔐 Platform Admin redirect to Backoffice
+        if (response.data.user.isPlatformAdmin) {
+          logger.info("🔐 Platform Admin detected - redirecting to Backoffice")
+          // Use /admin path (proxied to backoffice on port 3002)
+          window.location.href = `/admin/auth/callback?token=${response.data.token}`
+          return
+        }
+
         // Redirect to workspace selection
         navigate("/workspace-selection")
       } else {
@@ -379,12 +395,34 @@ export function LoginPage() {
         credential: credentialResponse.credential,
       })
       
-      const { user, requiresSetup, qrCode, token } = response.data
+      const { user, requiresSetup, requires2FA, qrCode, token, sessionId } = response.data
       
-      // 🛡️ SECURITY: Do NOT save token here - it will be saved after 2FA verification
-      // The token returned here is a pre-2FA token that should not be stored
-      // Verify2FAPage or Setup2FAPage will handle token storage after 2FA completion
-      logger.info('🔐 [GOOGLE OAUTH] Token received but NOT saved (awaiting 2FA completion)')
+      // 🔐 CASE 0: Platform Admin or Developer User - Direct login (skip 2FA)
+      if (sessionId && token && !requiresSetup && !requires2FA) {
+        logger.info('🔐 [GOOGLE OAUTH] Direct login (2FA skipped for admin/developer)')
+        
+        // Save token and session
+        localStorage.setItem('token', token)
+        sessionStorage.setItem('sessionId', sessionId)
+        localStorage.setItem('user', JSON.stringify(user))
+        
+        toast.success('Login successful!')
+        
+        // 🔐 Platform Admin redirect to Backoffice
+        if (user.isPlatformAdmin) {
+          logger.info('🔐 [GOOGLE OAUTH] Platform Admin detected - redirecting to Backoffice')
+          // Use direct URL to backoffice (proxy doesn't work well for full page navigation)
+          const backofficeUrl = 'http://localhost:3002'
+          const redirectUrl = `${backofficeUrl}/auth/callback?token=${token}`
+          logger.info('🔐 [GOOGLE OAUTH] Redirect URL:', redirectUrl)
+          window.location.replace(redirectUrl)
+          return
+        }
+        
+        // Normal user - go to workspace selection
+        navigate('/workspace-selection')
+        return
+      }
       
       // Only save user info for the 2FA pages to use
       localStorage.setItem('user', JSON.stringify(user))
@@ -447,6 +485,63 @@ export function LoginPage() {
     )
   }
 
+  // 🚧 SHOW WORK IN PROGRESS PAGE IF BOTH canLogin AND canRegister ARE FALSE
+  if (!flagsLoading && !canLogin && !canRegister) {
+    return (
+      <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+        <div className="max-w-lg w-full">
+          {/* Logo and Header */}
+          <div className="text-center mb-8">
+            <img
+              src="/logo.png"
+              alt="ShopMe Logo"
+              className="w-24 h-24 mx-auto mb-4 object-contain"
+            />
+            <h1 className="text-3xl font-bold text-slate-900">ShopMe</h1>
+          </div>
+
+          {/* WIP Card */}
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 text-center">
+            <div className="w-20 h-20 mx-auto mb-6 bg-amber-100 rounded-full flex items-center justify-center">
+              <svg 
+                className="w-10 h-10 text-amber-600" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" 
+                />
+              </svg>
+            </div>
+            
+            <h2 className="text-2xl font-bold text-slate-900 mb-3">
+              Work in Progress
+            </h2>
+            
+            <p className="text-slate-600 mb-6">
+              We're working hard to bring you something amazing. 
+              Please check back soon!
+            </p>
+
+            <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
+              <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+              <span>Coming Soon</span>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <p className="text-center text-sm text-slate-400 mt-8">
+            © 2025 ShopMe. All rights reserved.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Header with Logo */}
@@ -474,35 +569,39 @@ export function LoginPage() {
 
             {/* Sign In / Register Buttons - Desktop */}
             <div className="hidden lg:flex items-center gap-3">
-              <Button
-                size="sm"
-                onClick={() => {
-                  logger.info('🖱️ [SIGN IN BUTTON] Clicked - clearing storage')
-                  localStorage.clear()
-                  sessionStorage.clear()
-                  logger.info('✅ [SIGN IN BUTTON] Storage cleared, opening modal')
-                  setActiveTab('signin')
-                  setShowLoginModal(true)
-                }}
-                className="bg-green-600 hover:bg-green-700 px-6"
-              >
-                {t("login.signin")}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  logger.info('🖱️ [REGISTER BUTTON] Clicked - clearing storage')
-                  localStorage.clear()
-                  sessionStorage.clear()
-                  logger.info('✅ [REGISTER BUTTON] Storage cleared, opening modal')
-                  setActiveTab('register')
-                  setShowLoginModal(true)
-                }}
-                className="border-green-600 text-green-600 hover:bg-green-50 px-6"
-              >
-                {t("login.register")}
-              </Button>
+              {canLogin && (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    logger.info('🖱️ [SIGN IN BUTTON] Clicked - clearing storage')
+                    localStorage.clear()
+                    sessionStorage.clear()
+                    logger.info('✅ [SIGN IN BUTTON] Storage cleared, opening modal')
+                    setActiveTab('signin')
+                    setShowLoginModal(true)
+                  }}
+                  className="bg-green-600 hover:bg-green-700 px-6"
+                >
+                  {t("login.signin")}
+                </Button>
+              )}
+              {canRegister && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    logger.info('🖱️ [REGISTER BUTTON] Clicked - clearing storage')
+                    localStorage.clear()
+                    sessionStorage.clear()
+                    logger.info('✅ [REGISTER BUTTON] Storage cleared, opening modal')
+                    setActiveTab('register')
+                    setShowLoginModal(true)
+                  }}
+                  className="border-green-600 text-green-600 hover:bg-green-50 px-6"
+                >
+                  {t("login.register")}
+                </Button>
+              )}
             </div>
           </div>
           
@@ -598,43 +697,44 @@ export function LoginPage() {
         </div>
 
         {/* Login Form Section - Mobile Only */}
-        <div
-          id="login-form-mobile"
-          className="max-w-md mx-auto mt-12 lg:hidden"
-        >
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
-            <div className="space-y-6">
-              <div className="text-center space-y-2">
-                <h3 className="text-2xl font-bold text-slate-900">Sign In</h3>
-                <p className="text-slate-600">Access your ShopMe workspace</p>
-              </div>
-
-              {error && (
-                <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Login Error</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email-mobile">Email</Label>
-                  <Input
-                    id="email-mobile"
-                    type="email"
-                    placeholder="your@email.com"
-                    {...register("email")}
-                    disabled={isLoading}
-                    autoComplete="username"
-                    className="h-11"
-                  />
-                  {errors.email && (
-                    <p className="text-sm text-red-500">
-                      {errors.email.message}
-                    </p>
-                  )}
+        {canLogin && (
+          <div
+            id="login-form-mobile"
+            className="max-w-md mx-auto mt-12 lg:hidden"
+          >
+            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
+              <div className="space-y-6">
+                <div className="text-center space-y-2">
+                  <h3 className="text-2xl font-bold text-slate-900">Sign In</h3>
+                  <p className="text-slate-600">Access your ShopMe workspace</p>
                 </div>
+
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Login Error</AlertTitle>
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email-mobile">Email</Label>
+                    <Input
+                      id="email-mobile"
+                      type="email"
+                      placeholder="your@email.com"
+                      {...register("email")}
+                      disabled={isLoading}
+                      autoComplete="username"
+                      className="h-11"
+                    />
+                    {errors.email && (
+                      <p className="text-sm text-red-500">
+                        {errors.email.message}
+                      </p>
+                    )}
+                  </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="password-mobile">Password</Label>
@@ -716,18 +816,21 @@ export function LoginPage() {
                 </GoogleOAuthProvider>
               </div>
 
-              <div className="text-center text-sm text-slate-600">
-                Don't have an account?{" "}
-                <Link
-                  to="/auth/register"
-                  className="text-green-600 hover:text-green-700 underline-offset-4 hover:underline font-medium"
-                >
-                  Sign up
-                </Link>
-              </div>
+              {canRegister && (
+                <div className="text-center text-sm text-slate-600">
+                  Don't have an account?{" "}
+                  <Link
+                    to="/auth/register"
+                    className="text-green-600 hover:text-green-700 underline-offset-4 hover:underline font-medium"
+                  >
+                    Sign up
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>
+        )}
       </div>
 
       {/* News & Updates Section */}
@@ -736,6 +839,11 @@ export function LoginPage() {
       {/* Pricing Section */}
       <div className="py-16 bg-gradient-to-br from-blue-50 via-white to-green-50">
         <PricingPlans onStartFreeTrial={() => {
+          if (!canRegister) {
+            setWipFeature('register')
+            setShowWIPModal(true)
+            return
+          }
           setActiveTab('register')
           setShowLoginModal(true)
         }} />

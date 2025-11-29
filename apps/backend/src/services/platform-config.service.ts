@@ -225,20 +225,6 @@ class PlatformConfigService {
     return this.getFlag("canRegister")
   }
 
-  /**
-   * Check if chatbot is enabled globally
-   */
-  async isChatbotEnabled(): Promise<boolean> {
-    return this.getFlag("chatbotEnabled")
-  }
-
-  /**
-   * Check if platform is in maintenance mode
-   */
-  async isMaintenanceMode(): Promise<boolean> {
-    return this.getFlag("maintenanceMode")
-  }
-
   // ============================================================================
   // 📊 LIMIT GETTERS
   // ============================================================================
@@ -342,12 +328,16 @@ class PlatformConfigService {
       })
     }
 
+    // Only include supported flags (canLogin, canRegister)
+    const supportedFlags = ["canLogin", "canRegister"]
     for (const [key, item] of this.cache.flags) {
-      flags.push({
-        key,
-        value: item.value === "true",
-        description: item.description,
-      })
+      if (supportedFlags.includes(key)) {
+        flags.push({
+          key,
+          value: item.value === "true",
+          description: item.description,
+        })
+      }
     }
 
     for (const [key, item] of this.cache.limits) {

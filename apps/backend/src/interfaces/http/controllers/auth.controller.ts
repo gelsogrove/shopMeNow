@@ -65,7 +65,13 @@ export class AuthController {
     }
 
     return jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { 
+        id: user.id, 
+        email: user.email, 
+        role: user.role,
+        isPlatformAdmin: user.isPlatformAdmin || false,
+        isDeveloperUser: user.isDeveloperUser || false,
+      },
       config.jwt.secret,
       signOptions
     )
@@ -126,7 +132,17 @@ export class AuthController {
     }
 
     // 🔒 SECURITY: Check if 2FA is enabled
-    if (user.twoFactorEnabled) {
+    // 🔐 SKIP 2FA for Platform Admins and Developer Users (they bypass 2FA requirement)
+    const skip2FA = user.isPlatformAdmin || user.isDeveloperUser
+    
+    // 🔍 DEBUG: Log all relevant flags
+    logger.info(`🔍 Login check for ${user.email}:`)
+    logger.info(`   - isPlatformAdmin: ${user.isPlatformAdmin}`)
+    logger.info(`   - isDeveloperUser: ${user.isDeveloperUser}`)
+    logger.info(`   - twoFactorEnabled: ${user.twoFactorEnabled}`)
+    logger.info(`   - skip2FA: ${skip2FA}`)
+    
+    if (user.twoFactorEnabled && !skip2FA) {
       logger.info(`🔐 User ${user.email} requires 2FA verification`)
       
       // ❌ DO NOT create session or token yet!
@@ -137,6 +153,10 @@ export class AuthController {
         email: user.email,
         // NO sessionId, NO token until 2FA is verified!
       })
+    }
+    
+    if (skip2FA && user.twoFactorEnabled) {
+      logger.info(`🔧 User ${user.email} has 2FA enabled but SKIPPED (isPlatformAdmin=${user.isPlatformAdmin}, isDeveloperUser=${user.isDeveloperUser})`)
     }
 
     // 🆕 CREATE ADMIN SESSION (only if 2FA is NOT required)
@@ -165,6 +185,8 @@ export class AuthController {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
+        isPlatformAdmin: user.isPlatformAdmin || false, // 🔐 Platform Admin flag for Backoffice access
+        isDeveloperUser: user.isDeveloperUser || false, // 🔧 Developer user flag (skip 2FA)
       },
       sessionId, // 🆕 NEW FIELD - frontend will save in sessionStorage
       token: jwtToken, // 🆕 NEW FIELD - frontend will use in Authorization header (proxy-safe)
@@ -240,6 +262,8 @@ export class AuthController {
         lastName: user.lastName,
         role: user.role,
         profilePicture: user.profilePicture,
+        isPlatformAdmin: user.isPlatformAdmin || false, // 🔐 Platform Admin flag for Backoffice access
+        isDeveloperUser: user.isDeveloperUser || false, // 🔧 Developer user flag (skip 2FA)
       },
       sessionId, // 🆕 NEW FIELD - frontend will save in sessionStorage
       token: jwtToken2FA, // 🆕 NEW FIELD - frontend will use in Authorization header (proxy-safe)
@@ -379,7 +403,9 @@ export class AuthController {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
-        // 🧾 Billing fields (Andrea's requirement - MUST be included in /auth/me)
+        isPlatformAdmin: user.isPlatformAdmin || false, // 🔐 Platform Admin flag for Backoffice access
+        isDeveloperUser: user.isDeveloperUser || false, // 🔧 Developer user flag (skip 2FA)
+        // 🧶 Billing fields (Andrea's requirement - MUST be included in /auth/me)
         companyName: user.companyName,
         vatNumber: user.vatNumber,
         website: user.website,

@@ -442,6 +442,8 @@ model User {
   createdAt          DateTime                 @default(now())
   updatedAt          DateTime                 @updatedAt
   role               UserRole                 @default(MEMBER)
+  isPlatformAdmin    Boolean                  @default(false) // Platform-level admin (can access backoffice)
+  isDeveloperUser    Boolean                  @default(false) // Developer user (skip 2FA requirement)
   twoFactorSecret    String?                  // TOTP secret for 2FA
   twoFactorEnabled   Boolean                  @default(false) // 2FA active flag
   twoFactorEnabledAt DateTime?                // When 2FA was activated
@@ -1091,6 +1093,7 @@ enum TransactionType {
   UPGRADE_FEE       // Pro-rata fee when upgrading plan
   ADJUSTMENT        // Manual adjustment by admin
   INITIAL_CREDIT    // +€29 initial trial credit
+  BONUS             // +€X gift credit (not invoiced)
 }
 
 // Transaction history for billing - tracks all credit movements

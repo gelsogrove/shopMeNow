@@ -93,20 +93,9 @@ describe("PlatformConfigService", () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     },
-    {
-      id: "6",
-      key: "maintenanceMode",
-      type: "FLAG" as const,
-      value: "false",
-      originalValue: null,
-      description: "Platform-wide maintenance mode",
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
     // Limits
     {
-      id: "7",
+      id: "6",
       key: "FREE_PRODUCTS",
       type: "LIMIT" as const,
       value: "50",
@@ -117,7 +106,7 @@ describe("PlatformConfigService", () => {
       updatedAt: new Date(),
     },
     {
-      id: "8",
+      id: "7",
       key: "BASIC_CLIENTS",
       type: "LIMIT" as const,
       value: "50",
@@ -199,11 +188,6 @@ describe("PlatformConfigService", () => {
 
     it("canRegister should return correct value", async () => {
       const result = await platformConfigService.canRegister()
-      expect(result).toBe(false)
-    })
-
-    it("isMaintenanceMode should return correct value", async () => {
-      const result = await platformConfigService.isMaintenanceMode()
       expect(result).toBe(false)
     })
   })

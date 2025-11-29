@@ -71,7 +71,7 @@ export const platformConfigData: PlatformConfigData[] = [
   },
 
   // ============================================================================
-  // 📱 MESSAGE COSTS (Usage-based)
+  // 📱 USAGE COSTS - Only 2 types!
   // ============================================================================
   {
     type: "PRICE" as const,
@@ -83,44 +83,9 @@ export const platformConfigData: PlatformConfigData[] = [
   },
   {
     type: "PRICE" as const,
-    key: "WELCOME_MESSAGE",
-    value: "1.00",
-    description: "Cost per new customer registration (welcome message)",
-    isActive: true,
-  },
-  {
-    type: "PRICE" as const,
     key: "PUSH_CAMPAIGN",
     value: "1.00",
-    description: "Cost per push notification sent (promotional messages)",
-    isActive: true,
-  },
-  {
-    type: "PRICE" as const,
-    key: "PUSH_CHATBOT_REACTIVATED",
-    value: "0.20",
-    description: "Cost when admin enables chatbot for customer",
-    isActive: true,
-  },
-  {
-    type: "PRICE" as const,
-    key: "PUSH_DISCOUNT_NOTIFICATION",
-    value: "0.20",
-    description: "Customer discount update notification",
-    isActive: true,
-  },
-  {
-    type: "PRICE" as const,
-    key: "PUSH_ORDER_CONFIRMED",
-    value: "0.00",
-    description: "Order confirmation push (FREE)",
-    isActive: true,
-  },
-  {
-    type: "PRICE" as const,
-    key: "PUSH_DEFAULT",
-    value: "0.20",
-    description: "Default push notification cost",
+    description: "Cost per push notification sent (all types)",
     isActive: true,
   },
 
@@ -141,22 +106,6 @@ export const platformConfigData: PlatformConfigData[] = [
     value: "true",
     description:
       "Allow new user registration. When false: show WIP popup, disable register button",
-    isActive: true,
-  },
-  {
-    type: "FLAG" as const,
-    key: "maintenanceMode",
-    value: "false",
-    description:
-      "Platform-wide maintenance mode. When true: show maintenance page to all users",
-    isActive: true,
-  },
-  {
-    type: "FLAG" as const,
-    key: "chatbotEnabled",
-    value: "true",
-    description:
-      "Global chatbot toggle. When false: chatbot responds with WIP message",
     isActive: true,
   },
 

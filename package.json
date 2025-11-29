@@ -13,7 +13,7 @@
     "dev:frontend": "npm run dev -w @shopme/frontend",
     "dev:scheduler": "npm run dev -w @shopme/scheduler",
     "dev:backoffice": "npm run dev -w @shopme/backoffice",
-    "dev:all": "npm run dev:backend & npm run dev:frontend & npm run dev:scheduler",
+    "dev:all": "npm run dev:backend & npm run dev:frontend & npm run dev:scheduler & npm run dev:backoffice",
     "build": "npm run build --workspaces --if-present",
     "build:backend": "npm run build -w @shopme/backend",
     "build:frontend": "npm run build -w @shopme/frontend",

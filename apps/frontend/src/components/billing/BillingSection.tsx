@@ -50,6 +50,7 @@ import {
 import { useBilling } from "@/contexts/BillingContext"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
+import { usePlatformConfig } from "@/hooks/usePlatformConfig"
 import {
   formatCurrency,
   getTransactionTypeInfo,
@@ -163,6 +164,9 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
   
   // Use context billing if no prop workspaceId, otherwise use local state
   const contextBilling = useBilling()
+  
+  // Get prices from database for dynamic pricing
+  const { getPriceWithOriginal } = usePlatformConfig()
   
   // Local billing state (used when workspaceId prop is provided)
   const [localBillingOverview, setLocalBillingOverview] = useState<BillingOverview | null>(null)
@@ -716,6 +720,10 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
               const canSelect = !isCurrentPlan && (isDowngrade ? downgradeCheck.canDowngrade : true)
               const features = getPlanFeaturesWithText(planKey)
               
+              // Get dynamic price from database
+              const priceKey = `${planKey}_MONTHLY`
+              const priceInfo = getPriceWithOriginal(priceKey)
+              
               return (
                 <div
                   key={planKey}
@@ -733,7 +741,15 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                   <div className="text-center mb-4">
                     <h3 className="text-xl font-bold text-gray-900 mb-2">{planConfig.name}</h3>
                     <div className="mb-2">
-                      <span className="text-3xl font-bold text-gray-900">{planConfig.priceLabel}</span>
+                      {/* Show strikethrough original price if different from current */}
+                      {priceInfo.original && priceInfo.original !== priceInfo.current && (
+                        <span className="text-lg text-gray-400 line-through mr-2">
+                          €{priceInfo.original}
+                        </span>
+                      )}
+                      <span className={`text-3xl font-bold ${priceInfo.original && priceInfo.original !== priceInfo.current ? "text-green-600" : "text-gray-900"}`}>
+                        €{priceInfo.current}
+                      </span>
                       <span className="text-gray-600">/month</span>
                     </div>
                     <p className="text-sm text-gray-600">{planConfig.description}</p>
@@ -832,8 +848,8 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                   // Include transactions with amount != 0 OR plan change transactions
                   const filteredTx = transactions.filter(tx => tx.amount !== 0 || tx.type === "UPGRADE_FEE" || tx.type === "MONTHLY_FEE")
                   
-                  // Types that should be aggregated by day AND channel
-                  const AGGREGATABLE_TYPES = ["MESSAGE", "PUSH_NOTIFICATION", "PUSH_CAMPAIGN", "PUSH_CHATBOT_REACTIVATED", "PUSH_DISCOUNT_NOTIFICATION"]
+                  // Types that should be aggregated by day AND channel - only 2 types!
+                  const AGGREGATABLE_TYPES = ["MESSAGE", "PUSH_CAMPAIGN"]
                   
                   const aggregateTransactionsByDay = (txList: Transaction[]) => {
                     // Group by type+day+channel: { "MESSAGE-2025-11-27-workspace123": {...} }
@@ -880,14 +896,8 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                       switch (type) {
                         case "MESSAGE":
                           return `${count} WhatsApp message${count > 1 ? 's' : ''}${channelSuffix}`
-                        case "PUSH_NOTIFICATION":
-                          return `${count} Push notification${count > 1 ? 's' : ''}${channelSuffix}`
                         case "PUSH_CAMPAIGN":
-                          return `${count} Campaign message${count > 1 ? 's' : ''}${channelSuffix}`
-                        case "PUSH_CHATBOT_REACTIVATED":
-                          return `${count} Chatbot reactivation${count > 1 ? 's' : ''}${channelSuffix}`
-                        case "PUSH_DISCOUNT_NOTIFICATION":
-                          return `${count} Discount notification${count > 1 ? 's' : ''}${channelSuffix}`
+                          return `${count} Push notification${count > 1 ? 's' : ''}${channelSuffix}`
                         default:
                           return `${count} ${type}${count > 1 ? 's' : ''}${channelSuffix}`
                       }

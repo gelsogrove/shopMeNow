@@ -1,12 +1,13 @@
 import { Button } from "@/components/ui/button"
 import { PLAN_CONFIGS, getPlanFeaturesWithText } from "@/config/planFeatures"
 import { useLanguage } from "@/contexts/LanguageContext"
-import { usePricing } from "@/hooks/usePricing"
+import { usePlatformConfig } from "@/hooks/usePlatformConfig"
 import { Check, MessageSquare, X } from "lucide-react"
 
 interface PricingPlan {
   name: string
-  price: string
+  price: number
+  originalPrice: number | null
   priceSuffix?: string
   description: string
   features: Array<{ name: string; included: boolean }>
@@ -21,7 +22,7 @@ interface PricingPlansProps {
 
 export function PricingPlans({ onStartFreeTrial }: PricingPlansProps) {
   const { t } = useLanguage()
-  const { usage, isLoading } = usePricing()
+  const { prices, isLoading, getPriceWithOriginal } = usePlatformConfig()
 
   const handleStartFreeTrial = () => {
     if (onStartFreeTrial) {
@@ -40,19 +41,19 @@ export function PricingPlans({ onStartFreeTrial }: PricingPlansProps) {
     )
   }
 
-  // Use pricing from database (with fallbacks for safety)
-  const PRICES = {
-    MONTHLY_CHANNEL: usage.MONTHLY_CHANNEL_COST ?? 59.0,
-    MESSAGE: usage.MESSAGE ?? 0.1,
-    PUSH_CAMPAIGN: usage.PUSH_CAMPAIGN ?? 1.0,
-  }
+  // Get prices from database with original values for strikethrough
+  const freePrice = getPriceWithOriginal("FREE_MONTHLY")
+  const basicPrice = getPriceWithOriginal("BASIC_MONTHLY")
+  const premiumPrice = getPriceWithOriginal("PREMIUM_MONTHLY")
+  const enterprisePrice = getPriceWithOriginal("ENTERPRISE_MONTHLY")
 
-  // Build plans from shared config - SINGLE SOURCE OF TRUTH
+  // Build plans with DYNAMIC prices from database
   const plans: PricingPlan[] = [
     {
       name: "Free",
-      price: PLAN_CONFIGS.FREE_TRIAL.priceLabel,
-      priceSuffix: PLAN_CONFIGS.FREE_TRIAL.priceSuffix,
+      price: freePrice.current,
+      originalPrice: freePrice.original,
+      priceSuffix: "/14 days",
       description: t(PLAN_CONFIGS.FREE_TRIAL.descriptionKey || "pricing.free.creditDesc"),
       buttonText: t("pricing.button.start") + " Free Trial",
       buttonVariant: PLAN_CONFIGS.FREE_TRIAL.buttonVariant || "default",
@@ -61,7 +62,8 @@ export function PricingPlans({ onStartFreeTrial }: PricingPlansProps) {
     },
     {
       name: "Basic",
-      price: PLAN_CONFIGS.BASIC.priceLabel,
+      price: basicPrice.current,
+      originalPrice: basicPrice.original,
       description: t(PLAN_CONFIGS.BASIC.descriptionKey || "pricing.basic.desc"),
       buttonText: `${t("pricing.button.start")} Basic`,
       buttonVariant: PLAN_CONFIGS.BASIC.buttonVariant || "default",
@@ -69,7 +71,8 @@ export function PricingPlans({ onStartFreeTrial }: PricingPlansProps) {
     },
     {
       name: "Premium",
-      price: PLAN_CONFIGS.PREMIUM.priceLabel,
+      price: premiumPrice.current,
+      originalPrice: premiumPrice.original,
       description: t(PLAN_CONFIGS.PREMIUM.descriptionKey || "pricing.premium.desc"),
       buttonText: `${t("pricing.button.start")} Premium`,
       buttonVariant: PLAN_CONFIGS.PREMIUM.buttonVariant || "default",
@@ -77,8 +80,9 @@ export function PricingPlans({ onStartFreeTrial }: PricingPlansProps) {
     },
     {
       name: "Enterprise",
-      price: PLAN_CONFIGS.ENTERPRISE.priceLabel,
-      priceSuffix: PLAN_CONFIGS.ENTERPRISE.priceSuffix,
+      price: enterprisePrice.current,
+      originalPrice: enterprisePrice.original,
+      priceSuffix: "/month",
       description: t(PLAN_CONFIGS.ENTERPRISE.descriptionKey || "pricing.enterprise.desc"),
       buttonText: t("pricing.button.contact"),
       buttonVariant: PLAN_CONFIGS.ENTERPRISE.buttonVariant || "outline",
@@ -110,19 +114,27 @@ export function PricingPlans({ onStartFreeTrial }: PricingPlansProps) {
                 {plan.name}
               </h3>
               <div className="mb-3">
-                {plan.price !== "Custom" && (
-                  <span className="text-4xl font-bold text-gray-900">
-                    {plan.price}
-                  </span>
-                )}
-                {plan.priceSuffix && (
-                  <span className="text-gray-600"> {plan.priceSuffix}</span>
-                )}
-                {plan.name !== "Free" &&
-                  plan.name !== "Enterprise" &&
-                  plan.price !== "Custom" && (
+                {plan.name === "Free" ? (
+                  <>
+                    <span className="text-4xl font-bold text-gray-900">
+                      €0
+                    </span>
+                    <span className="text-gray-600"> {plan.priceSuffix}</span>
+                  </>
+                ) : (
+                  <>
+                    {/* Show strikethrough original price if different from current */}
+                    {plan.originalPrice && plan.originalPrice !== plan.price && (
+                      <span className="text-xl text-gray-400 line-through mr-2">
+                        €{plan.originalPrice}
+                      </span>
+                    )}
+                    <span className={`text-4xl font-bold ${plan.originalPrice && plan.originalPrice !== plan.price ? "text-green-600" : "text-gray-900"}`}>
+                      €{plan.price}
+                    </span>
                     <span className="text-gray-600">/month</span>
-                  )}
+                  </>
+                )}
               </div>
               <p className="text-gray-600 min-h-[40px]">{plan.description}</p>
             </div>
@@ -179,13 +191,13 @@ export function PricingPlans({ onStartFreeTrial }: PricingPlansProps) {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
-          {/* Messages */}
+          {/* Messages - dynamic from database */}
           <div className="bg-white rounded-xl p-6 border border-gray-200 text-center">
             <div className="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
               <MessageSquare className="w-6 h-6 text-green-600" />
             </div>
             <div className="text-3xl font-bold text-green-600 mb-1">
-              €{PRICES.MESSAGE.toFixed(2)}
+              €{(prices.MESSAGE?.current ?? 0.10).toFixed(2)}
             </div>
             <div className="text-sm font-medium text-gray-900 mb-2">
               {t("pricing.usage.message")}
@@ -195,7 +207,7 @@ export function PricingPlans({ onStartFreeTrial }: PricingPlansProps) {
             </p>
           </div>
 
-          {/* Push Campaign */}
+          {/* Push Campaign - dynamic from database */}
           <div className="bg-white rounded-xl p-6 border border-gray-200 text-center">
             <div className="bg-orange-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
               <svg
@@ -213,7 +225,7 @@ export function PricingPlans({ onStartFreeTrial }: PricingPlansProps) {
               </svg>
             </div>
             <div className="text-3xl font-bold text-orange-600 mb-1">
-              €{PRICES.PUSH_CAMPAIGN.toFixed(2)}
+              €{(prices.PUSH_CAMPAIGN?.current ?? 1.00).toFixed(2)}
             </div>
             <div className="text-sm font-medium text-gray-900 mb-2">
               {t("pricing.usage.push")}

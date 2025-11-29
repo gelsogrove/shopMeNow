@@ -56,6 +56,7 @@ app.use(
         : [
             "http://localhost:3000",
             "http://localhost:3001",
+            "http://localhost:3002", // 🔐 Backoffice
             "http://localhost:5173",
           ],
     credentials: true,

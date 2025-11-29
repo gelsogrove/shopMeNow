@@ -59,6 +59,8 @@ export class EnhancedAuthController {
         id: user.id, 
         email: user.email, 
         role: user.role,
+        isPlatformAdmin: user.isPlatformAdmin || false,
+        isDeveloperUser: user.isDeveloperUser || false,
         twoFactorEnabled: user.twoFactorEnabled 
       },
       config.jwt.secret,

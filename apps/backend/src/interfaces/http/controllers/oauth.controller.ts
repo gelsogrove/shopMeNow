@@ -67,6 +67,8 @@ export class OAuthController {
         id: user.id, 
         email: user.email, 
         role: user.role,
+        isPlatformAdmin: user.isPlatformAdmin || false,
+        isDeveloperUser: user.isDeveloperUser || false,
         twoFactorEnabled: user.twoFactorEnabled 
       },
       config.jwt.secret,
@@ -133,16 +135,25 @@ export class OAuthController {
           role: true,
           firstName: true,
           lastName: true,
+          status: true,  // 🚫 User status check
           twoFactorEnabled: true,
           twoFactorSecret: true,
           authProvider: true,
           profilePicture: true,
+          isPlatformAdmin: true,  // 🔐 Platform Admin check
+          isDeveloperUser: true,  // 🔧 Developer User check
         },
       })
 
       // CASE 1: USER EXISTS
       if (existingUser) {
         logger.info(`✅ [OAuth Google] Existing user found: ${email}`)
+
+        // 🚫 Check if user is disabled - block access before anything else
+        if (existingUser.status !== 'ACTIVE') {
+          logger.warn(`🚫 [OAuth Google] Login attempt for disabled user: ${email}`)
+          throw new AppError(403, 'Your account has been disabled. Please contact support.')
+        }
 
         // Update profile picture if changed
         if (picture && picture !== existingUser.profilePicture) {
@@ -151,6 +162,51 @@ export class OAuthController {
             data: { profilePicture: picture },
           })
           logger.info(`🖼️ [OAuth Google] Updated profile picture for ${email}`)
+        }
+
+        // 🔐 SKIP 2FA for Platform Admins and Developer Users
+        const skip2FA = existingUser.isPlatformAdmin || existingUser.isDeveloperUser
+        
+        if (skip2FA) {
+          logger.info(`🔧 [OAuth Google] User ${email} SKIPPING 2FA (isPlatformAdmin=${existingUser.isPlatformAdmin}, isDeveloperUser=${existingUser.isDeveloperUser})`)
+          
+          // Create session immediately (no 2FA required)
+          const sessionId = await this.adminSessionService.createSession(
+            existingUser.id,
+            null,
+            ipAddress,
+            userAgent
+          )
+          
+          const token = this.generateToken(existingUser)
+          
+          await logAuthAttempt({
+            userId: existingUser.id,
+            email: existingUser.email,
+            attemptType: 'oauth',
+            success: true,
+            ipAddress,
+            userAgent,
+            metadata: { provider: 'google', action: 'login_skip_2fa' },
+          })
+          
+          // Return full login response (no 2FA needed)
+          res.status(200).json({
+            sessionId,
+            token,
+            user: {
+              id: existingUser.id,
+              email: existingUser.email,
+              firstName: existingUser.firstName,
+              lastName: existingUser.lastName,
+              role: existingUser.role,
+              isPlatformAdmin: existingUser.isPlatformAdmin,
+              isDeveloperUser: existingUser.isDeveloperUser,
+            },
+            provider: 'google',
+            message: 'Login successful',
+          })
+          return
         }
 
         // Check if 2FA is enabled

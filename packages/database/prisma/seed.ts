@@ -134,6 +134,40 @@ async function main() {
   console.log(`🔑 Password: ${adminPassword}`)
   console.log(`⚙️  2FA: Disabled (enable via Settings UI)\n`)
 
+  // 2.5. Create Platform Admin User (for Backoffice access)
+  console.log("👤 Creating platform admin user...")
+
+  const platformAdminEmail = "gelsogrove@gmail.com"
+  const platformAdminPassword = process.env.PLATFORM_ADMIN_PASSWORD || "Venezia44"
+  const platformAdminHashedPassword = await bcrypt.hash(platformAdminPassword, 10)
+
+  const platformAdminUser = await prisma.user.create({
+    data: {
+      email: platformAdminEmail,
+      passwordHash: platformAdminHashedPassword,
+      firstName: "Andrea",
+      lastName: "Gelsomino",
+      status: "ACTIVE",
+      role: "ADMIN",
+      isPlatformAdmin: true, // ✅ Platform Admin - can access backoffice
+      isDeveloperUser: true, // ✅ Developer User - skip 2FA requirement
+      twoFactorEnabled: false,
+      twoFactorEnabledAt: null,
+      recoveryCodes: [],
+      companyName: "ShopME Platform",
+      vatNumber: null,
+      website: "https://www.shopme.it",
+      billingPhone: null,
+      billingAddress: null,
+    },
+  })
+
+  console.log(`✅ Platform admin user created: ${platformAdminEmail}`)
+  console.log(`📧 Email: ${platformAdminEmail}`)
+  console.log(`🔑 Password: ${platformAdminPassword}`)
+  console.log(`🔐 isPlatformAdmin: true (Backoffice access enabled)`)
+  console.log(`🔧 isDeveloperUser: true (Skip 2FA requirement)\n`)
+
   // 3. Create Main Workspace
   console.log("🏢 Creating workspace...")
 

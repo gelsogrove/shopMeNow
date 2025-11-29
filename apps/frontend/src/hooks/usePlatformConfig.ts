@@ -154,8 +154,6 @@ export function usePlatformConfig() {
   // Convenience accessors for common flags
   const canLogin = state.data?.flags.canLogin ?? true
   const canRegister = state.data?.flags.canRegister ?? true
-  const chatbotEnabled = state.data?.flags.chatbotEnabled ?? true
-  const maintenanceMode = state.data?.flags.maintenanceMode ?? false
 
   return {
     // Raw data
@@ -180,8 +178,6 @@ export function usePlatformConfig() {
     // Convenience flags
     canLogin,
     canRegister,
-    chatbotEnabled,
-    maintenanceMode,
   }
 }
 
@@ -193,8 +189,6 @@ export function useFeatureFlags() {
   const [flags, setFlags] = useState({
     canLogin: true,
     canRegister: true,
-    chatbotEnabled: true,
-    maintenanceMode: false,
     isLoading: true,
     error: null as string | null,
   })

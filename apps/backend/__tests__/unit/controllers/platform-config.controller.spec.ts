@@ -28,8 +28,6 @@ jest.mock("../../../src/services/platform-config.service", () => ({
     invalidateCache: jest.fn(),
     canLogin: jest.fn(),
     canRegister: jest.fn(),
-    isChatbotEnabled: jest.fn(),
-    isMaintenanceMode: jest.fn(),
   },
 }))
 
@@ -119,12 +117,6 @@ describe("PlatformConfigController", () => {
     it("should return all feature flags", async () => {
       ;(platformConfigService.canLogin as jest.Mock).mockResolvedValue(true)
       ;(platformConfigService.canRegister as jest.Mock).mockResolvedValue(false)
-      ;(platformConfigService.isChatbotEnabled as jest.Mock).mockResolvedValue(
-        true
-      )
-      ;(platformConfigService.isMaintenanceMode as jest.Mock).mockResolvedValue(
-        false
-      )
 
       await platformConfigController.checkFlags(
         mockRequest as Request,
@@ -137,8 +129,6 @@ describe("PlatformConfigController", () => {
         data: {
           canLogin: true,
           canRegister: false,
-          chatbotEnabled: true,
-          maintenanceMode: false,
         },
       })
     })

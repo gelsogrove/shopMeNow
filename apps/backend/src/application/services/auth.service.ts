@@ -13,7 +13,7 @@
  * - Repositories handle database access
  */
 
-import { PrismaClient, User } from '@prisma/client'
+import { PrismaClient, User, UserStatus } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { AppError } from '../../interfaces/http/middlewares/error.middleware'
@@ -97,8 +97,9 @@ export class AuthService {
     }
 
     // Check account status
-    if (user.status !== 'ACTIVE') {
-      throw new AppError(403, 'Account is not active')
+    if (user.status !== UserStatus.ACTIVE) {
+      logger.warn(`🚫 Login attempt for disabled user: ${user.email}`)
+      throw new AppError(403, 'Your account has been disabled. Please contact support.')
     }
 
     // Verify password
@@ -108,13 +109,20 @@ export class AuthService {
     }
 
     // Check if 2FA is enabled
-    if (user.twoFactorEnabled) {
+    // 🔐 SKIP 2FA for Platform Admins and Developer Users
+    const skip2FA = user.isPlatformAdmin || user.isDeveloperUser
+    
+    if (user.twoFactorEnabled && !skip2FA) {
       logger.info(`🔐 User ${user.email} requires 2FA verification`)
       return {
         user,
         token: '', // No token until 2FA verified
         requires2FA: true,
       }
+    }
+    
+    if (skip2FA && user.twoFactorEnabled) {
+      logger.info(`🔧 User ${user.email} has 2FA enabled but SKIPPED (isPlatformAdmin=${user.isPlatformAdmin}, isDeveloperUser=${user.isDeveloperUser})`)
     }
 
     // Generate JWT token
@@ -269,6 +277,8 @@ export class AuthService {
         id: user.id,
         email: user.email,
         role: user.role,
+        isPlatformAdmin: user.isPlatformAdmin || false,
+        isDeveloperUser: user.isDeveloperUser || false,
       },
       config.jwt.secret,
       {

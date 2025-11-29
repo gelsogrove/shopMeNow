@@ -25,6 +25,8 @@ export class UserRepository implements UserRepositoryInterface {
       status: data.status,
       workspaceId: data.workspaceId,
       role: data.role,
+      isPlatformAdmin: data.isPlatformAdmin || false, // 🔐 Platform Admin flag for Backoffice access
+      isDeveloperUser: data.isDeveloperUser || false, // 🔧 Developer user flag (skip 2FA)
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
       lastLogin: data.lastLogin,

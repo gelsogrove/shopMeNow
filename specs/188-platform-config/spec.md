@@ -324,3 +324,84 @@ Le transazioni già create mantengono il prezzo al momento della creazione, indi
 | `GET /api/admin/platform-config` | Requires auth, returns all config |
 | `PUT /api/admin/platform-config/:key` | Updates value, invalidates cache |
 | Price change flow | Change in DB → API returns new value → FE shows new price |
+
+---
+
+## Security: Backoffice Authentication (Added 2024-11-29)
+
+### Overview
+
+Il backoffice usa autenticazione JWT reale tramite redirect dal frontend, NON più autenticazione client-side fake.
+
+### User Flags
+
+| Flag | Tipo | Scopo |
+|------|------|-------|
+| `isPlatformAdmin` | Boolean | Accesso al backoffice admin |
+| `isDeveloperUser` | Boolean | Skip 2FA per sviluppatori |
+
+### Authentication Flow
+
+```mermaid
+sequenceDiagram
+    User->>Frontend: Login at localhost:3000
+    Frontend->>Backend: POST /api/auth/login
+    Backend->>Backend: Verify credentials
+    Backend->>Backend: Check isPlatformAdmin OR isDeveloperUser → Skip 2FA
+    Backend->>Frontend: JWT token with isPlatformAdmin claim
+    Frontend->>Frontend: Check response.user.isPlatformAdmin
+    alt isPlatformAdmin = true
+        Frontend->>Backoffice: Redirect to localhost:3004/auth/callback?token=xxx
+        Backoffice->>Backoffice: Validate token, store in context
+        Backoffice->>User: Show admin dashboard
+    else isPlatformAdmin = false
+        Frontend->>User: Normal workspace selection
+    end
+```
+
+### Security Requirements
+
+- **SEC-001**: Backoffice NON ha login page - accesso solo tramite redirect FE
+- **SEC-002**: JWT deve contenere claim `isPlatformAdmin: true` per accesso
+- **SEC-003**: `platformAdminMiddleware` verifica il claim su tutte le route admin
+- **SEC-004**: `isDeveloperUser` permette skip 2FA ma NON accesso backoffice
+- **SEC-005**: Se token mancante/invalido → redirect a AccessDeniedPage
+
+### Files Created/Modified
+
+**Backend**:
+- `src/interfaces/http/middlewares/platform-admin.middleware.ts` - Verifica isPlatformAdmin
+- `src/interfaces/http/routes/user-admin.routes.ts` - API per gestione utenti
+- `src/interfaces/http/controllers/auth.controller.ts` - Skip 2FA, include flags in JWT
+- `src/application/services/auth.service.ts` - Include flags in generateToken()
+
+**Frontend**:
+- `src/pages/LoginPage.tsx` - Redirect isPlatformAdmin a backoffice
+
+**Backoffice**:
+- `src/pages/AuthCallbackPage.tsx` - Riceve token da redirect
+- `src/pages/AccessDeniedPage.tsx` - Mostrata quando non autenticato
+- `src/pages/ClientsPage.tsx` - UI per gestione permessi utenti
+- Rimosso: `LoginPage.tsx`
+
+**Database**:
+- `User.isPlatformAdmin` - Boolean default false
+- `User.isDeveloperUser` - Boolean default false
+- Seed: `gelsogrove@gmail.com` con entrambi true
+
+### Unit Tests
+
+File: `__tests__/unit/platform-admin.spec.ts`
+
+| Test Case | Descrizione |
+|-----------|-------------|
+| Deny access when not authenticated | 401 se user null |
+| Deny access when not platform admin | 403 se isPlatformAdmin false |
+| Allow access when platform admin | next() se isPlatformAdmin true |
+| Skip 2FA for isPlatformAdmin | Login completo senza 2FA |
+| Skip 2FA for isDeveloperUser | Login completo senza 2FA |
+| Require 2FA for normal users | 2FA richiesto se enabled |
+| JWT contains isPlatformAdmin | Token include il claim |
+| JWT contains isDeveloperUser | Token include il claim |
+
+```

@@ -1,29 +1,84 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider, useAuth } from '@/contexts/AuthContext'
+import { Layout } from '@/components/Layout'
+import { AccessDeniedPage } from '@/pages/AccessDeniedPage'
+import { AuthCallbackPage } from '@/pages/AuthCallbackPage'
+import { PlatformsPage } from '@/pages/PlatformsPage'
+import { PricingPage } from '@/pages/PricingPage'
+import { ClientsPage } from '@/pages/ClientsPage'
+import { ComingSoonPage } from '@/pages/ComingSoonPage'
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated } = useAuth()
+  
+  if (!isAuthenticated) {
+    // Redirect to access denied page (no login form - must come from Frontend)
+    return <Navigate to="/access-denied" replace />
+  }
+  
+  return <>{children}</>
+}
+
+function AppRoutes() {
+  const { isAuthenticated } = useAuth()
+
+  return (
+    <Routes>
+      {/* Access Denied - shown when not authenticated */}
+      <Route 
+        path="/access-denied" 
+        element={isAuthenticated ? <Navigate to="/platforms" replace /> : <AccessDeniedPage />} 
+      />
+      {/* Auth Callback - receives token from Frontend redirect */}
+      <Route 
+        path="/auth/callback" 
+        element={<AuthCallbackPage />} 
+      />
+      {/* Protected Routes */}
+      <Route 
+        path="/" 
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate to="/platforms" replace />} />
+        <Route path="platforms" element={<PlatformsPage />} />
+        <Route path="pricing" element={<PricingPage />} />
+        <Route path="clients" element={<ClientsPage />} />
+        <Route 
+          path="gdpr" 
+          element={
+            <ComingSoonPage 
+              title="GDPR" 
+              description="GDPR compliance tools coming soon. Manage data retention, consent, and privacy settings."
+            />
+          } 
+        />
+        <Route 
+          path="schedulers" 
+          element={
+            <ComingSoonPage 
+              title="Schedulers" 
+              description="Job scheduler management coming soon. Monitor cron jobs, background tasks, and scheduled operations."
+            />
+          } 
+        />
+      </Route>
+      {/* Catch all - redirect to access denied if not authenticated */}
+      <Route path="*" element={<Navigate to="/access-denied" replace />} />
+    </Routes>
+  )
+}
+
 function App() {
   return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column',
-      alignItems: 'center', 
-      justifyContent: 'center', 
-      height: '100vh',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-      backgroundColor: '#f5f5f5'
-    }}>
-      <h1 style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏢 ShopME Backoffice</h1>
-      <p style={{ fontSize: '1.5rem', color: '#666' }}>Hello World!</p>
-      <p style={{ marginTop: '2rem', color: '#999' }}>
-        Running on port 3002
-      </p>
-      <div style={{ 
-        marginTop: '3rem', 
-        padding: '1rem 2rem', 
-        backgroundColor: '#e8f5e9', 
-        borderRadius: '8px' 
-      }}>
-        <p>✅ Database: @shopme/database (shared)</p>
-        <p>✅ Env: ../../.env (shared)</p>
-      </div>
-    </div>
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </BrowserRouter>
   )
 }
 
