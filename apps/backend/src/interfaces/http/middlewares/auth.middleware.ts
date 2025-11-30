@@ -137,6 +137,11 @@ const authMiddlewareAsync = async (
       if (!decoded.userId && decoded.id) {
         decoded.userId = decoded.id
       }
+      
+      // Also ensure id is set (some controllers use req.user.id)
+      if (!decoded.id && decoded.userId) {
+        decoded.id = decoded.userId
+      }
 
       // Verify user exists in database and load workspaces
       try {

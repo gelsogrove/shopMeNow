@@ -237,8 +237,8 @@ class BackofficeApi {
     impersonate: async (userId: string): Promise<ApiResponse<{
       token: string
       sessionId: string
-      user: { id: string; email: string; firstName: string | null; lastName: string | null }
-      workspace: { id: string; name: string; slug: string }
+      redirectUrl: string
+      targetUser: { id: string; email: string; firstName: string | null; lastName: string | null }
     }>> => {
       return this.fetch(`/users/admin/${userId}/impersonate`, {
         method: 'POST',
@@ -296,6 +296,28 @@ class BackofficeApi {
       expiresAt: string
     }>> => {
       return this.fetch(`/users/admin/${userId}/enable-2fa`, {
+        method: 'POST',
+      })
+    },
+    
+    /**
+     * Impersonate a user (Feature 190)
+     * Generate a special JWT token to login as the target user
+     */
+    impersonate: async (
+      userId: string
+    ): Promise<ApiResponse<{
+      success: boolean
+      token: string
+      redirectUrl: string
+      targetUser: {
+        id: string
+        email: string
+        firstName: string | null
+        lastName: string | null
+      }
+    }>> => {
+      return this.fetch(`/users/admin/${userId}/impersonate`, {
         method: 'POST',
       })
     }

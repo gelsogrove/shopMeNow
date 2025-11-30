@@ -4,6 +4,8 @@
  * Handles impersonation redirect from backoffice.
  * Receives token from URL params, stores it and redirects to workspace-selection.
  * The token already contains all user info and bypasses 2FA completely.
+ * 
+ * Feature 190: Stores isImpersonating flag for UI changes (banner, Agent Config menu)
  */
 
 import { useEffect, useState } from 'react'
@@ -30,24 +32,53 @@ export default function ImpersonatePage() {
     }
 
     try {
-      // Clear ALL existing auth data
+      // Clear ALL existing auth data FIRST
+      console.log('🧹 Clearing existing auth data...')
       localStorage.removeItem('token')
       localStorage.removeItem('currentWorkspace')
       localStorage.removeItem('sessionId')
       localStorage.removeItem('user')
+      localStorage.removeItem('isImpersonating')
+      localStorage.removeItem('impersonatorEmail')
       sessionStorage.clear()
       
-      // Store the impersonation token and sessionId
+      // Decode token to get impersonation info
+      const tokenPayload = JSON.parse(atob(token.split('.')[1]))
+      console.log('🔑 Token payload:', tokenPayload)
+      
+      // Store the impersonation token in localStorage
       localStorage.setItem('token', token)
+      console.log('✅ Token saved to localStorage')
+      
+      // Store sessionId in BOTH localStorage and sessionStorage (api.ts reads from sessionStorage)
       localStorage.setItem('sessionId', sessionId)
+      sessionStorage.setItem('sessionId', sessionId)
+      console.log('✅ SessionId saved to both storages')
       
-      console.log('🔐 Impersonation: Token and sessionId stored, forcing hard redirect to workspace-selection')
+      // Store impersonation flags (Feature 190)
+      if (tokenPayload.isImpersonating) {
+        localStorage.setItem('isImpersonating', 'true')
+        localStorage.setItem('impersonatorEmail', tokenPayload.impersonatorEmail || '')
+        console.log('🔑 Impersonation mode enabled by:', tokenPayload.impersonatorEmail)
+      }
       
-      // Small delay to ensure localStorage is updated, then HARD REDIRECT
+      // Verify token is actually saved
+      const savedToken = localStorage.getItem('token')
+      console.log('🔍 Verification - Token in localStorage:', savedToken ? savedToken.substring(0, 50) + '...' : 'NULL')
+      
+      if (!savedToken) {
+        console.error('❌ CRITICAL: Token not saved to localStorage!')
+        setError('Failed to save authentication token')
+        return
+      }
+      
+      console.log('🚀 Redirecting to workspace-selection in 500ms...')
+      
+      // Longer delay to ensure storage is updated
       setTimeout(() => {
-        // Use window.location.href for hard redirect - bypasses React Router completely
+        console.log('🚀 NOW redirecting to /workspace-selection')
         window.location.href = '/workspace-selection'
-      }, 300)
+      }, 500)
     } catch (err) {
       console.error('Impersonation error:', err)
       setError('Failed to process impersonation')

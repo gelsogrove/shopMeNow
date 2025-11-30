@@ -30,7 +30,8 @@ import {
   RefreshCw,
   MessageSquare,
   Gift,
-  ShieldOff
+  ShieldOff,
+  LogIn
 } from 'lucide-react'
 
 interface OwnedWorkspace {
@@ -109,6 +110,9 @@ export function ClientsPage() {
   // 2FA Enable modal state (Feature 189 - for users who haven't set up 2FA yet)
   const [enable2FAModal, setEnable2FAModal] = useState<{ userId: string; email: string } | null>(null)
   const [enabling2FA, setEnabling2FA] = useState(false)
+  
+  // Impersonation state (Feature 190)
+  const [impersonating, setImpersonating] = useState<string | null>(null)
 
   useEffect(() => {
     loadUsers()
@@ -324,6 +328,39 @@ export function ClientsPage() {
     }
   }
 
+  // Handle Impersonate - Login as user in new window (Feature 190)
+  const handleImpersonate = async (userId: string, email: string) => {
+    setImpersonating(userId)
+    setError(null)
+    
+    try {
+      const response = await api.users.impersonate(userId)
+      console.log('🔑 Impersonate response:', response)
+      
+      if (response.success && response.data?.redirectUrl) {
+        console.log('🔗 Opening URL:', response.data.redirectUrl)
+        // Use location.href in a new window to avoid popup blocker
+        const newWindow = window.open('', '_blank')
+        if (newWindow) {
+          newWindow.location.href = response.data.redirectUrl
+          setSuccessMessage(`Opened new window as ${email}`)
+        } else {
+          // Fallback: show the URL for manual copy
+          setError(`Popup blocked! URL: ${response.data.redirectUrl}`)
+        }
+        setTimeout(() => setSuccessMessage(null), 3000)
+      } else {
+        console.error('❌ Response missing redirectUrl:', response)
+        setError(response.error || 'Failed to impersonate user - no redirect URL')
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to impersonate user')
+      console.error('Error impersonating user:', err)
+    } finally {
+      setImpersonating(null)
+    }
+  }
+
   // Filter users: first by search query, then by showAll toggle
   const filteredUsers = users
     .filter(user => {
@@ -510,16 +547,18 @@ export function ClientsPage() {
                     </div>
                   )}
                   
-                  {/* Bonus Button */}
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full mt-3 gap-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50 border-amber-200"
-                    onClick={() => setBonusModal({ workspaceId: user.ownedWorkspaces[0].id, workspaceName: user.ownedWorkspaces[0].name })}
-                  >
-                    <Gift className="h-4 w-4" />
-                    Add Bonus Credit
-                  </Button>
+                  {/* Bonus Button - Hidden for admin users */}
+                  {!user.isPlatformAdmin && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full mt-3 gap-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50 border-amber-200"
+                      onClick={() => setBonusModal({ workspaceId: user.ownedWorkspaces[0].id, workspaceName: user.ownedWorkspaces[0].name })}
+                    >
+                      <Gift className="h-4 w-4" />
+                      Add Bonus Credit
+                    </Button>
+                  )}
                 </div>
               )}
               
@@ -546,6 +585,24 @@ export function ClientsPage() {
                 >
                   <ShieldOff className="h-4 w-4" />
                   Send 2FA Setup
+                </Button>
+              )}
+              
+              {/* Login as User Button (Feature 190) - Only for non-admin users */}
+              {!user.isPlatformAdmin && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full mt-2 gap-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
+                  onClick={() => handleImpersonate(user.id, user.email)}
+                  disabled={impersonating === user.id}
+                >
+                  {impersonating === user.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <LogIn className="h-4 w-4" />
+                  )}
+                  Login as User
                 </Button>
               )}
 

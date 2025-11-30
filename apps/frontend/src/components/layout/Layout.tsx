@@ -3,6 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { useChat } from "@/contexts/ChatContext"
 import { logger } from "@/lib/logger"
 import { Chat } from "@/types/chat"
+import ImpersonationBanner from "@/components/ImpersonationBanner"
 // Importiamo l'icona WhatsAppIcon che creiamo internamente
 import { memo, useEffect, useState } from "react"
 import { Outlet, useLocation } from "react-router-dom"
@@ -106,6 +107,7 @@ export function Layout() {
 
   return (
     <TooltipProvider>
+      <ImpersonationBanner />
       <div className="relative flex min-h-screen">
         <MemoizedSidebar />
         <div className="flex w-full flex-col pl-72">

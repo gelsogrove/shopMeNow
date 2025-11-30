@@ -82,7 +82,6 @@ export function App() {
                   <Route path="setup-2fa" element={<Setup2FAPage />} />
                   <Route path="verify-2fa" element={<Verify2FAPage />} />
                   <Route path="2fa-reset/:token" element={<TwoFactorResetPage />} />
-                  <Route path="impersonate" element={<ImpersonatePage />} />
                   <Route
                     path="forgot-password"
                     element={<ForgotPasswordPage />}
@@ -93,6 +92,9 @@ export function App() {
                   />
                   <Route path="verify-otp" element={<VerifyOtpPage />} />
                 </Route>
+
+                {/* Impersonate Route - OUTSIDE /auth to avoid LoginPage storage clearing */}
+                <Route path="/impersonate" element={<ImpersonatePage />} />
 
                 {/* Public Legal Pages */}
                 <Route path="/privacy" element={<PrivacyPage />} />

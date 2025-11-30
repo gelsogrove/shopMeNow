@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils"
 import {
+  Bot,
   Building2,
   HelpCircle,
   LucideIcon,
@@ -34,6 +35,14 @@ export function Sidebar() {
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({
     ecommerce: false, // Inizialmente chiuso
   })
+  
+  // Check if in impersonation mode (Feature 190)
+  const [isImpersonating, setIsImpersonating] = useState(false)
+  
+  useEffect(() => {
+    const impersonating = localStorage.getItem('isImpersonating') === 'true'
+    setIsImpersonating(impersonating)
+  }, [])
 
   // Controlla se siamo in una pagina che fa parte del sottomenu E-commerce
   useEffect(() => {
@@ -114,7 +123,15 @@ export function Sidebar() {
     },
   ]
 
-  const mainLinks = baseLinks
+  // Add Agent Configuration when in impersonation mode (Feature 190)
+  const mainLinks = isImpersonating 
+    ? [...baseLinks, {
+        href: "/agents",
+        label: "Agent Configuration",
+        icon: Bot,
+        className: "text-purple-600 bg-purple-50", // Highlight to show it's admin-only
+      }]
+    : baseLinks
 
   return (
     <aside className="fixed inset-y-0 left-0 w-72 bg-white border-r">
