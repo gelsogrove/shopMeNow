@@ -29,7 +29,8 @@ import {
   UserCheck,
   RefreshCw,
   MessageSquare,
-  Gift
+  Gift,
+  ShieldOff
 } from 'lucide-react'
 
 interface OwnedWorkspace {
@@ -54,6 +55,7 @@ interface User {
   isPlatformAdmin: boolean
   isDeveloperUser: boolean
   twoFactorEnabled: boolean
+  requires2FA: boolean  // true if user should have 2FA (not admin/dev)
   status: string
   createdAt: string
   lastLogin: string | null
@@ -99,6 +101,14 @@ export function ClientsPage() {
   const [bonusAmount, setBonusAmount] = useState('')
   const [bonusReason, setBonusReason] = useState('')
   const [addingBonus, setAddingBonus] = useState(false)
+  
+  // 2FA Reset modal state (Feature 189)
+  const [reset2FAModal, setReset2FAModal] = useState<{ userId: string; email: string } | null>(null)
+  const [resetting2FA, setResetting2FA] = useState(false)
+  
+  // 2FA Enable modal state (Feature 189 - for users who haven't set up 2FA yet)
+  const [enable2FAModal, setEnable2FAModal] = useState<{ userId: string; email: string } | null>(null)
+  const [enabling2FA, setEnabling2FA] = useState(false)
 
   useEffect(() => {
     loadUsers()
@@ -250,6 +260,67 @@ export function ClientsPage() {
       console.error('Error adding bonus:', err)
     } finally {
       setAddingBonus(false)
+    }
+  }
+
+  // Handle 2FA Reset (Feature 189)
+  const handle2FAReset = async () => {
+    if (!reset2FAModal) return
+    
+    setResetting2FA(true)
+    setError(null)
+    
+    try {
+      const response = await api.users.reset2FA(reset2FAModal.userId)
+      
+      if (response.success) {
+        setSuccessMessage(`2FA reset email sent to ${reset2FAModal.email}`)
+        setTimeout(() => setSuccessMessage(null), 5000)
+        
+        // Update local state to reflect 2FA is now disabled
+        setUsers(prev => prev.map(user => 
+          user.id === reset2FAModal.userId 
+            ? { ...user, twoFactorEnabled: false }
+            : user
+        ))
+        
+        // Close modal
+        setReset2FAModal(null)
+      } else {
+        setError(response.error || 'Failed to reset 2FA')
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to reset 2FA')
+      console.error('Error resetting 2FA:', err)
+    } finally {
+      setResetting2FA(false)
+    }
+  }
+
+  // Handle 2FA Enable - Send setup email to user who hasn't configured 2FA yet (Feature 189)
+  const handle2FAEnable = async () => {
+    if (!enable2FAModal) return
+    
+    setEnabling2FA(true)
+    setError(null)
+    
+    try {
+      const response = await api.users.enable2FA(enable2FAModal.userId)
+      
+      if (response.success) {
+        setSuccessMessage(`2FA setup email sent to ${enable2FAModal.email}`)
+        setTimeout(() => setSuccessMessage(null), 5000)
+        
+        // Close modal
+        setEnable2FAModal(null)
+      } else {
+        setError(response.error || 'Failed to send 2FA setup email')
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to send 2FA setup email')
+      console.error('Error enabling 2FA:', err)
+    } finally {
+      setEnabling2FA(false)
     }
   }
 
@@ -451,6 +522,32 @@ export function ClientsPage() {
                   </Button>
                 </div>
               )}
+              
+              {/* 2FA Reset Button - Only show for users who have 2FA enabled */}
+              {user.requires2FA && user.twoFactorEnabled && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full mt-2 gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                  onClick={() => setReset2FAModal({ userId: user.id, email: user.email })}
+                >
+                  <ShieldOff className="h-4 w-4" />
+                  Reset 2FA
+                </Button>
+              )}
+              
+              {/* 2FA Enable Button - Show for users who need 2FA but haven't set it up */}
+              {user.requires2FA && !user.twoFactorEnabled && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full mt-2 gap-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50 border-amber-200"
+                  onClick={() => setEnable2FAModal({ userId: user.id, email: user.email })}
+                >
+                  <ShieldOff className="h-4 w-4" />
+                  Send 2FA Setup
+                </Button>
+              )}
 
               {/* Permission Toggles - Aligned at bottom */}
               <div className="pt-3 border-t space-y-3">
@@ -567,6 +664,103 @@ export function ClientsPage() {
                   <Gift className="h-4 w-4 mr-2" />
                 )}
                 Add Bonus
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* 2FA Reset Confirmation Modal (Feature 189) */}
+      {reset2FAModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-red-600">
+              <ShieldOff className="h-5 w-5" />
+              Reset Two-Factor Authentication
+            </h2>
+            <p className="text-sm text-gray-600 mb-2">
+              You are about to reset 2FA for:
+            </p>
+            <p className="font-medium text-gray-900 mb-4 bg-gray-50 p-2 rounded">
+              {reset2FAModal.email}
+            </p>
+            
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-amber-800">
+                <strong>⚠️ Warning:</strong> This will immediately disable the user's 2FA. 
+                They will receive an email with a link to set up new 2FA. 
+                The old authenticator codes will stop working immediately.
+              </p>
+            </div>
+            
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setReset2FAModal(null)}
+                disabled={resetting2FA}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-red-500 hover:bg-red-600"
+                onClick={handle2FAReset}
+                disabled={resetting2FA}
+              >
+                {resetting2FA ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <ShieldOff className="h-4 w-4 mr-2" />
+                )}
+                Confirm Reset
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* 2FA Enable Confirmation Modal (Feature 189) */}
+      {enable2FAModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-amber-600">
+              <ShieldOff className="h-5 w-5" />
+              Send 2FA Setup Email
+            </h2>
+            <p className="text-sm text-gray-600 mb-2">
+              You are about to send a 2FA setup email to:
+            </p>
+            <p className="font-medium text-gray-900 mb-4 bg-gray-50 p-2 rounded">
+              {enable2FAModal.email}
+            </p>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-blue-800">
+                <strong>ℹ️ Info:</strong> The user will receive an email with a secure link 
+                to set up their two-factor authentication. The link will expire in 1 hour.
+              </p>
+            </div>
+            
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setEnable2FAModal(null)}
+                disabled={enabling2FA}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-amber-500 hover:bg-amber-600"
+                onClick={handle2FAEnable}
+                disabled={enabling2FA}
+              >
+                {enabling2FA ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <ShieldOff className="h-4 w-4 mr-2" />
+                )}
+                Send Email
               </Button>
             </div>
           </div>

@@ -269,6 +269,52 @@ export class AuthService {
   }
 
   /**
+   * Set password for OAuth user (Google, etc.)
+   * Allows OAuth users to add password auth ("multi" provider)
+   * Part B of spec 189-admin-2fa-reset
+   */
+  async setPasswordForOAuthUser(userId: string, newPassword: string): Promise<void> {
+    // Find user
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    })
+
+    if (!user) {
+      throw new AppError(404, 'User not found')
+    }
+
+    // Check if user already has a password
+    if (user.passwordHash) {
+      throw new AppError(400, 'You already have a password set. Use password reset to change it.')
+    }
+
+    // User must be OAuth user
+    if (user.authProvider === 'email') {
+      throw new AppError(400, 'Email users already have passwords.')
+    }
+
+    // Validate password strength
+    const validation = validatePassword(newPassword)
+    if (!validation.valid) {
+      throw new AppError(400, validation.error!)
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(newPassword, 10)
+
+    // Update user with password and change provider to "multi"
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash,
+        authProvider: 'multi', // Can now login with Google OR email/password
+      },
+    })
+
+    logger.info(`✅ Password set for OAuth user: ${user.email}, provider updated to 'multi'`)
+  }
+
+  /**
    * Generate JWT token for user
    */
   private generateToken(user: User): string {

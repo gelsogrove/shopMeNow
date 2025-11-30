@@ -185,8 +185,8 @@ export class EnhancedAuthController {
         throw new AppError(400, 'Invalid verification code')
       }
 
-      // Enable 2FA and generate recovery codes
-      const recoveryCodes = await this.oauthAuthService.enable2FA(userId)
+      // Enable 2FA (Feature 189: Recovery codes removed)
+      await this.oauthAuthService.enable2FA(userId)
 
       // Get user info
       const user = await prisma.user.findUnique({
@@ -254,7 +254,7 @@ export class EnhancedAuthController {
 
       res.status(200).json({
         message: '2FA enabled successfully',
-        recoveryCodes, // Show recovery codes (only time user sees them)
+        // NOTE: Recovery codes removed (Feature 189) - users contact admin for reset
         token, // JWT token for API calls
         sessionId, // 🆕 Include sessionId for frontend
         user: {

@@ -26,6 +26,9 @@ export interface UserProps {
   website?: string | null;
   billingPhone?: string | null;
   billingAddress?: string | null;
+  // 🔐 Auth provider info (for OAuth set-password feature)
+  authProvider?: string;
+  passwordHash?: string | null;
 }
 
 export class User extends Entity<UserProps> {
@@ -130,6 +133,15 @@ export class User extends Entity<UserProps> {
 
   get billingAddress(): string | null | undefined {
     return this.props.billingAddress;
+  }
+
+  // 🔐 Auth provider info (for OAuth set-password feature)
+  get authProvider(): string {
+    return this.props.authProvider || 'email';
+  }
+
+  get passwordHash(): string | null | undefined {
+    return this.props.passwordHash;
   }
 
   isVerified(): boolean {

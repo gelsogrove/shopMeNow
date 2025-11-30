@@ -11,6 +11,8 @@ export interface UserProfile {
   website?: string
   billingPhone?: string
   billingAddress?: string
+  authProvider?: string  // 'email' | 'google' | 'multi' etc. (Feature 189)
+  hasPassword?: boolean  // True if user has a password set (Feature 189)
 }
 
 export interface UpdateProfileData {
@@ -57,6 +59,17 @@ export const changePassword = async (data: ChangePasswordData): Promise<void> =>
     await api.post("/users/change-password", data)
   } catch (error) {
     logger.error("Error changing password:", error)
+    throw error
+  }
+}
+
+// Set password for OAuth user (Feature 189)
+// Allows OAuth users (Google, etc.) to add password auth
+export const setPassword = async (password: string): Promise<void> => {
+  try {
+    await api.post("/auth/set-password", { password })
+  } catch (error) {
+    logger.error("Error setting password:", error)
     throw error
   }
 } 

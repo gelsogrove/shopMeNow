@@ -129,6 +129,7 @@ import { shortUrlRoutes } from "../interfaces/http/routes/short-url.routes"
 import whatsappRoutes from "../interfaces/http/routes/whatsapp.routes"
 import { createTokenRouter } from "./token"
 import userAdminRoutes from "../interfaces/http/routes/user-admin.routes"
+import twoFactorResetRoutes from "../interfaces/http/routes/two-factor-reset.routes"
 
 // ============================================================================
 // 7. TYPE IMPORTS
@@ -605,6 +606,8 @@ router.use("/subscription", publicBillingRoutes) // GET /api/subscription/plans
 logger.info("✅ Registered PUBLIC subscription plans route (/api/subscription/plans)")
 
 router.use("/auth", authRouter(authController))
+router.use("/auth", twoFactorResetRoutes) // 2FA reset public routes
+logger.info("✅ Registered 2FA reset routes (/api/auth/2fa-reset/*)")
 router.use("/session", sessionRoutes)
 logger.info(
   "✅ Registered session routes (/api/session/validate, /api/session/stats)"

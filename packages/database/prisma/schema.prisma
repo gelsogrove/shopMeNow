@@ -468,8 +468,34 @@ model User {
   passwordResets     PasswordReset[]
   adminSessions      AdminSession[]
   authAttempts       AuthenticationAttempt[] // Security audit trail
+  twoFactorResets    TwoFactorResetToken[]   // 2FA reset tokens (admin-initiated)
+  adminInitiatedResets TwoFactorResetToken[] @relation("AdminInitiatedResets") // Resets initiated by this admin
 
   @@map("users")
+}
+
+// 🔐 TwoFactorResetToken: Admin-initiated 2FA reset tokens
+// Created when admin clicks "Reset 2FA" for a user who lost their phone
+// User must verify password before completing 2FA re-setup
+model TwoFactorResetToken {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token           String    @unique @db.VarChar(36) // UUID v4 (36 chars with hyphens)
+  expiresAt       DateTime  // 1 hour from creation
+  usedAt          DateTime? // NULL until token is used
+  createdAt       DateTime  @default(now())
+  createdByAdminId String   // Admin who initiated the reset
+  createdByAdmin  User      @relation("AdminInitiatedResets", fields: [createdByAdminId], references: [id])
+  
+  // Security: Track password verification attempts
+  passwordAttempts Int      @default(0) // Failed password attempts (max 5)
+  lockedUntil      DateTime? // Lockout timestamp if too many failed attempts
+
+  @@index([token]) // Fast token lookup
+  @@index([userId, createdAt]) // Find recent tokens for a user
+  @@index([expiresAt]) // Cleanup expired tokens
+  @@map("two_factor_reset_tokens")
 }
 
 model AuthenticationAttempt {

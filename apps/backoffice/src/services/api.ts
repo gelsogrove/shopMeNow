@@ -175,6 +175,7 @@ class BackofficeApi {
       isPlatformAdmin: boolean
       isDeveloperUser: boolean
       twoFactorEnabled: boolean
+      requires2FA: boolean
       status: string
       createdAt: string
       lastLogin: string | null
@@ -264,6 +265,38 @@ class BackofficeApi {
       return this.fetch(`/users/admin/${workspaceId}/bonus`, {
         method: 'POST',
         body: JSON.stringify({ amount, reason }),
+      })
+    },
+
+    /**
+     * Reset 2FA for a user (Feature 189)
+     * Immediately disables their 2FA and sends reset email
+     */
+    reset2FA: async (
+      userId: string
+    ): Promise<ApiResponse<{
+      success: boolean
+      message: string
+      expiresAt: string
+    }>> => {
+      return this.fetch(`/users/admin/${userId}/reset-2fa`, {
+        method: 'POST',
+      })
+    },
+    
+    /**
+     * Enable 2FA for a user (Feature 189)
+     * Sends email with link to set up 2FA for users who don't have it
+     */
+    enable2FA: async (
+      userId: string
+    ): Promise<ApiResponse<{
+      success: boolean
+      message: string
+      expiresAt: string
+    }>> => {
+      return this.fetch(`/users/admin/${userId}/enable-2fa`, {
+        method: 'POST',
       })
     }
   }

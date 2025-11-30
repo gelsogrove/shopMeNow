@@ -91,41 +91,51 @@ router.get(
       })
 
       // Transform data to include stats and map INACTIVE to DISABLED for frontend
-      const usersWithStats = users.map(user => ({
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        isPlatformAdmin: user.isPlatformAdmin,
-        isDeveloperUser: user.isDeveloperUser,
-        twoFactorEnabled: user.twoFactorEnabled,
-        status: user.status === UserStatus.INACTIVE ? "DISABLED" : "ACTIVE",
-        createdAt: user.createdAt,
-        lastLogin: user.lastLogin,
-        companyName: user.companyName,
-        phoneNumber: user.phoneNumber || user.billingPhone,
-        profilePicture: user.profilePicture,
-        authProvider: user.authProvider,
-        // Aggregate owned workspaces stats
-        isOwner: user.ownedWorkspaces.length > 0,
-        ownedWorkspaces: user.ownedWorkspaces.map(ws => ({
-          id: ws.id,
-          name: ws.name,
-          slug: ws.slug,
-          creditBalance: Number(ws.creditBalance),
-          planType: ws.planType,
-          language: ws.language,
-          isActive: ws.isActive,
-          whatsappPhoneNumber: ws.whatsappPhoneNumber,
-          channelStatus: ws.channelStatus,
-          numCustomers: ws.customers.length,
-          numProducts: ws.products.length,
-        })),
-        // Totals across all owned workspaces
-        totalCredit: user.ownedWorkspaces.reduce((sum, ws) => sum + Number(ws.creditBalance), 0),
-        totalCustomers: user.ownedWorkspaces.reduce((sum, ws) => sum + ws.customers.length, 0),
-        totalProducts: user.ownedWorkspaces.reduce((sum, ws) => sum + ws.products.length, 0),
-      }))
+      const usersWithStats = users.map(user => {
+        // Business rule: Admin and Developer users don't need 2FA
+        // All other users MUST have 2FA enabled
+        const shouldHave2FA = !user.isPlatformAdmin && !user.isDeveloperUser
+        
+        return {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          isPlatformAdmin: user.isPlatformAdmin,
+          isDeveloperUser: user.isDeveloperUser,
+          // 2FA is required for normal users (not admin/dev)
+          // Show as enabled if they should have it AND have completed setup
+          twoFactorEnabled: shouldHave2FA && user.twoFactorEnabled,
+          // For Reset 2FA button: show if user should have 2FA (regardless of current state)
+          requires2FA: shouldHave2FA,
+          status: user.status === UserStatus.INACTIVE ? "DISABLED" : "ACTIVE",
+          createdAt: user.createdAt,
+          lastLogin: user.lastLogin,
+          companyName: user.companyName,
+          phoneNumber: user.phoneNumber || user.billingPhone,
+          profilePicture: user.profilePicture,
+          authProvider: user.authProvider,
+          // Aggregate owned workspaces stats
+          isOwner: user.ownedWorkspaces.length > 0,
+          ownedWorkspaces: user.ownedWorkspaces.map(ws => ({
+            id: ws.id,
+            name: ws.name,
+            slug: ws.slug,
+            creditBalance: Number(ws.creditBalance),
+            planType: ws.planType,
+            language: ws.language,
+            isActive: ws.isActive,
+            whatsappPhoneNumber: ws.whatsappPhoneNumber,
+            channelStatus: ws.channelStatus,
+            numCustomers: ws.customers.length,
+            numProducts: ws.products.length,
+          })),
+          // Totals across all owned workspaces
+          totalCredit: user.ownedWorkspaces.reduce((sum, ws) => sum + Number(ws.creditBalance), 0),
+          totalCustomers: user.ownedWorkspaces.reduce((sum, ws) => sum + ws.customers.length, 0),
+          totalProducts: user.ownedWorkspaces.reduce((sum, ws) => sum + ws.products.length, 0),
+        }
+      })
 
       logger.info(`📋 Platform admin fetched ${users.length} users with stats`)
 
@@ -663,6 +673,166 @@ router.post(
       res.status(500).json({
         success: false,
         error: "Failed to add bonus credits",
+      })
+    }
+  }
+)
+
+// =============================================================================
+// 🔐 TWO-FACTOR AUTHENTICATION RESET (ADMIN-INITIATED)
+// =============================================================================
+
+import { TwoFactorResetService } from "../../../application/services/two-factor-reset.service"
+
+const twoFactorResetService = new TwoFactorResetService(prisma)
+
+/**
+ * @swagger
+ * /api/users/admin/{userId}/reset-2fa:
+ *   post:
+ *     summary: Initiate 2FA reset for a user
+ *     description: |
+ *       Admin initiates 2FA reset for a user who lost their phone/authenticator.
+ *       - Immediately disables user's current 2FA (old codes stop working)
+ *       - Sends email with secure reset link (1 hour expiry)
+ *       - User must verify password before setting up new 2FA
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID to reset 2FA for
+ *     responses:
+ *       200:
+ *         description: Reset initiated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 expiresAt:
+ *                   type: string
+ *                   format: date-time
+ *       400:
+ *         description: User doesn't have 2FA enabled or trying to reset own 2FA
+ *       403:
+ *         description: Platform admin access required
+ *       404:
+ *         description: User not found
+ *       429:
+ *         description: Too many reset requests (max 10/hour)
+ */
+router.post(
+  "/admin/:userId/reset-2fa",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params
+      const adminUser = (req as any).user
+
+      const result = await twoFactorResetService.createResetToken(
+        userId,
+        adminUser.id,
+        adminUser.email
+      )
+
+      res.json({
+        success: true,
+        message: "2FA reset email sent to user",
+        expiresAt: result.expiresAt,
+      })
+    } catch (error: any) {
+      logger.error("Error initiating 2FA reset:", error)
+      
+      const status = error.statusCode || 500
+      res.status(status).json({
+        success: false,
+        error: error.message || "Failed to initiate 2FA reset",
+      })
+    }
+  }
+)
+
+/**
+ * @swagger
+ * /api/users/admin/{userId}/enable-2fa:
+ *   post:
+ *     summary: Send 2FA setup email to a user
+ *     description: |
+ *       Admin sends 2FA setup email to a user who doesn't have 2FA enabled yet.
+ *       - Only works for users WITHOUT 2FA enabled
+ *       - Sends email with secure setup link (1 hour expiry)
+ *       - User clicks link to set up 2FA with QR code
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID to enable 2FA for
+ *     responses:
+ *       200:
+ *         description: Setup email sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 expiresAt:
+ *                   type: string
+ *                   format: date-time
+ *       400:
+ *         description: User already has 2FA enabled
+ *       403:
+ *         description: Platform admin access required
+ *       404:
+ *         description: User not found
+ *       429:
+ *         description: Too many requests (max 10/hour)
+ */
+router.post(
+  "/admin/:userId/enable-2fa",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params
+      const adminUser = (req as any).user
+
+      const result = await twoFactorResetService.createEnableToken(
+        userId,
+        adminUser.id,
+        adminUser.email
+      )
+
+      res.json({
+        success: true,
+        message: "2FA setup email sent to user",
+        expiresAt: result.expiresAt,
+      })
+    } catch (error: any) {
+      logger.error("Error sending 2FA setup email:", error)
+      
+      const status = error.statusCode || 500
+      res.status(status).json({
+        success: false,
+        error: error.message || "Failed to send 2FA setup email",
       })
     }
   }

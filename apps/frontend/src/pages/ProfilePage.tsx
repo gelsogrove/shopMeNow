@@ -18,8 +18,9 @@ import {
   UserProfile,
   changePassword,
   updateUserProfile,
+  setPassword,
 } from "@/services/userApi"
-import { Building2, Key, Loader2, User } from "lucide-react"
+import { Building2, Key, Loader2, User, KeyRound } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "../lib/toast"
 
@@ -33,12 +34,15 @@ export default function ProfilePage() {
   const { isSuperAdmin } = useWorkspaceRole(workspace?.id)
   const [isLoading, setIsLoading] = useState(false)
   const [showPasswordDialog, setShowPasswordDialog] = useState(false)
+  const [showSetPasswordDialog, setShowSetPasswordDialog] = useState(false)
   const [user, setUser] = useState<UserProfile & {
     companyName?: string
     vatNumber?: string
     website?: string
     billingPhone?: string
     billingAddress?: string
+    authProvider?: string
+    hasPassword?: boolean
   }>({
     id: "",
     firstName: "",
@@ -55,6 +59,10 @@ export default function ProfilePage() {
     newPassword: "",
     confirmPassword: "",
   })
+  const [newPasswordData, setNewPasswordData] = useState({
+    password: "",
+    confirmPassword: "",
+  })
 
   useEffect(() => {
     if (userData) {
@@ -65,6 +73,8 @@ export default function ProfilePage() {
         website: (userData as any).website || "",
         billingPhone: (userData as any).billingPhone || "",
         billingAddress: (userData as any).billingAddress || "",
+        authProvider: (userData as any).authProvider || "email",
+        hasPassword: (userData as any).hasPassword !== false, // Default to true unless explicitly false
       })
     }
   }, [userData])
@@ -157,6 +167,43 @@ export default function ProfilePage() {
     }
   }
 
+  const handleSetNewPassword = async () => {
+    // Validate password
+    if (!newPasswordData.password) {
+      toast.error("Password is required")
+      return
+    }
+    
+    if (newPasswordData.password.length < 8) {
+      toast.error("Password must be at least 8 characters")
+      return
+    }
+
+    if (newPasswordData.password !== newPasswordData.confirmPassword) {
+      toast.error("Passwords do not match")
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      await setPassword(newPasswordData.password)
+      toast.success("Password set successfully! You can now use email/password login.")
+      setNewPasswordData({
+        password: "",
+        confirmPassword: "",
+      })
+      setShowSetPasswordDialog(false)
+      // Refresh user data to update hasPassword
+      window.location.reload()
+    } catch (error: any) {
+      logger.error("Error setting password:", error)
+      const errorMessage = error?.response?.data?.message || "Failed to set password"
+      toast.error(errorMessage)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   if (userLoading) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-200px)]">
@@ -187,14 +234,25 @@ export default function ProfilePage() {
             Manage your personal information and billing details
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => setShowPasswordDialog(true)}
-          className="gap-2"
-        >
-          <Key className="h-4 w-4" />
-          Change Password
-        </Button>
+        {user.hasPassword ? (
+          <Button
+            variant="outline"
+            onClick={() => setShowPasswordDialog(true)}
+            className="gap-2"
+          >
+            <Key className="h-4 w-4" />
+            Change Password
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            onClick={() => setShowSetPasswordDialog(true)}
+            className="gap-2"
+          >
+            <Key className="h-4 w-4" />
+            Set Password
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -398,6 +456,73 @@ export default function ProfilePage() {
                 </>
               ) : (
                 "Change Password"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Set Password Dialog (for OAuth users) */}
+      <Dialog open={showSetPasswordDialog} onOpenChange={setShowSetPasswordDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Set Password</DialogTitle>
+            <DialogDescription>
+              Set a password to enable email/password login in addition to your Google account.
+              This will allow you to use the 2FA reset feature if needed.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">Password</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                value={newPasswordData.password}
+                onChange={(e) =>
+                  setNewPasswordData((prev) => ({ ...prev, password: e.target.value }))
+                }
+                placeholder="Enter your new password"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmNewPassword">Confirm Password</Label>
+              <Input
+                id="confirmNewPassword"
+                type="password"
+                value={newPasswordData.confirmPassword}
+                onChange={(e) =>
+                  setNewPasswordData((prev) => ({ ...prev, confirmPassword: e.target.value }))
+                }
+                placeholder="Confirm your new password"
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Password must be at least 8 characters long.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowSetPasswordDialog(false)
+                setNewPasswordData({
+                  password: "",
+                  confirmPassword: "",
+                })
+              }}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSetNewPassword} disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Setting...
+                </>
+              ) : (
+                "Set Password"
               )}
             </Button>
           </DialogFooter>

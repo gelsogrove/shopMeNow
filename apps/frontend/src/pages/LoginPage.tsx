@@ -287,8 +287,11 @@ export function LoginPage() {
         // 🔐 Platform Admin redirect to Backoffice
         if (response.data.user.isPlatformAdmin) {
           logger.info("🔐 Platform Admin detected - redirecting to Backoffice")
-          // Use /admin path (proxied to backoffice on port 3002)
-          window.location.href = `/admin/auth/callback?token=${response.data.token}`
+          // Use direct URL to backoffice (proxy doesn't work for full page navigation)
+          const backofficeUrl = 'http://localhost:3002'
+          const redirectUrl = `${backofficeUrl}/auth/callback?token=${response.data.token}`
+          logger.info('🔐 Redirect URL:', redirectUrl)
+          window.location.replace(redirectUrl)
           return
         }
 

@@ -1,15 +1,21 @@
-import { Router } from "express"
+import { Router, Request, Response } from "express"
 import rateLimit from "express-rate-limit"
+import { PrismaClient } from "@prisma/client"
 import logger from "../../../utils/logger"
 import { AuthController } from "../controllers/auth.controller"
 import { EnhancedAuthController } from "../controllers/enhanced-auth.controller"
 import { OAuthController } from "../controllers/oauth.controller"
+import { AuthService } from "../../../application/services/auth.service"
 import { asyncHandler } from "../middlewares/async.middleware"
 import { authMiddleware } from "../middlewares/auth.middleware"
 import {
   validateForgotPassword,
   validateResetPassword,
 } from "../middlewares/validation.middleware"
+
+// Prisma client and services
+const prisma = new PrismaClient()
+const authService = new AuthService(prisma)
 
 // Rate limiters
 // 🔒 LOGIN RATE LIMITER (OWASP A07:2021 - Protection against brute force attacks)
@@ -158,17 +164,79 @@ export const createAuthRouter = (authController: AuthController): Router => {
     asyncHandler(enhancedAuthController.verify2FA.bind(enhancedAuthController))
   )
 
-  // Recovery Code Verification (NEW)
+  // Recovery Code Verification - DEPRECATED (Feature 189)
+  // Recovery codes have been removed. Users who lose access must contact admin for reset.
   router.post(
     "/verify-recovery-code",
-    twoFactorLimiter,
-    asyncHandler(enhancedAuthController.verifyRecoveryCode.bind(enhancedAuthController))
+    (_req: Request, res: Response) => {
+      res.status(410).json({
+        error: 'Recovery codes have been removed',
+        message: 'Please contact your administrator to reset your 2FA.',
+      })
+    }
   )
 
   // Get User Avatar (NEW)
   router.get(
     "/avatar/:userId",
     asyncHandler(enhancedAuthController.getUserAvatar.bind(enhancedAuthController))
+  )
+
+  // ============================================
+  // SET PASSWORD FOR OAUTH USERS (Feature 189)
+  // ============================================
+  
+  /**
+   * @swagger
+   * /api/auth/set-password:
+   *   post:
+   *     summary: Set password for OAuth user
+   *     description: |
+   *       Allows OAuth users (Google, etc.) to set a password.
+   *       After setting password, user becomes "multi" provider
+   *       and can login with either OAuth or email/password.
+   *     tags: [Auth]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - password
+   *             properties:
+   *               password:
+   *                 type: string
+   *                 minLength: 8
+   *                 description: New password (min 8 chars, must include uppercase, lowercase, number, special char)
+   *     responses:
+   *       200:
+   *         description: Password set successfully
+   *       400:
+   *         description: Already has password or invalid password
+   *       401:
+   *         description: Not authenticated
+   */
+  router.post(
+    "/set-password",
+    authMiddleware,
+    asyncHandler(async (req: Request, res: Response) => {
+      const userId = (req as any).user.id
+      const { password } = req.body
+
+      if (!password) {
+        return res.status(400).json({ error: 'Password is required' })
+      }
+
+      await authService.setPasswordForOAuthUser(userId, password)
+
+      res.json({
+        success: true,
+        message: 'Password set successfully. You can now login with email/password too.',
+      })
+    })
   )
 
   // ============================================

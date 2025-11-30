@@ -39,7 +39,9 @@ export class UserController {
         workspaceId: user.workspaceId,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
-        lastLogin: user.lastLogin
+        lastLogin: user.lastLogin,
+        authProvider: (user as any).authProvider || "email",
+        hasPassword: !!(user as any).passwordHash,
       }
       
       return res.json(userWithoutPassword)

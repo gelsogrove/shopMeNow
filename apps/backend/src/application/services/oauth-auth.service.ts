@@ -1,11 +1,11 @@
 /**
  * OAuth Authentication Service
- * Handles advanced auth features: OAuth, 2FA, recovery codes, profile pictures
+ * Handles advanced auth features: OAuth, 2FA, profile pictures
  * 
  * SECURITY FEATURES:
  * - Multi-provider OAuth (Google, Facebook, Apple)
  * - Mandatory 2FA for all users
- * - Recovery codes (10 single-use codes)
+ * - Admin-initiated 2FA reset (Feature 189 - replaces recovery codes)
  * - Rate limiting integration
  * - Audit logging
  * - Session management
@@ -16,7 +16,7 @@ import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { AppError } from '../../interfaces/http/middlewares/error.middleware'
 import logger from '../../utils/logger'
-import { validatePassword, generateRecoveryCodes } from '../../config/security.config'
+import { validatePassword } from '../../config/security.config'
 import { getDefaultAvatarUrl } from '../../config/oauth.config'
 import { logAuthAttempt } from '../../middlewares/rateLimit.middleware'
 
@@ -236,34 +236,24 @@ export class OAuthAuthService {
   }
 
   /**
-   * Enable 2FA and generate recovery codes
+   * Enable 2FA for user
+   * NOTE: Recovery codes have been REMOVED (Feature 189)
+   * Users who lose access must contact admin for 2FA reset
    * @param userId - User ID
-   * @returns Recovery codes (plain text, to show to user)
    */
-  async enable2FA(userId: string): Promise<string[]> {
+  async enable2FA(userId: string): Promise<void> {
     try {
-      // Generate recovery codes
-      const recoveryCodes = generateRecoveryCodes(10)
-
-      // Hash recovery codes before storing
-      const hashedCodes = await Promise.all(
-        recoveryCodes.map(code => bcrypt.hash(code, 10))
-      )
-
-      // Update user
+      // Update user - Enable 2FA
       await this.prisma.user.update({
         where: { id: userId },
         data: {
           twoFactorEnabled: true,
           twoFactorEnabledAt: new Date(),
-          recoveryCodes: hashedCodes,
+          // NOTE: recoveryCodes field removed (Feature 189)
         },
       })
 
       logger.info('2FA enabled for user', { userId })
-
-      // Return plain text codes (only time user sees them)
-      return recoveryCodes
     } catch (error) {
       logger.error('Failed to enable 2FA', error)
       throw new AppError(500, 'Failed to enable 2FA')
@@ -271,55 +261,16 @@ export class OAuthAuthService {
   }
 
   /**
-   * Verify recovery code and regenerate a new one
-   * @param userId - User ID
-   * @param code - Recovery code
-   * @returns Object with validation result and new recovery code if valid
+   * Verify recovery code - DEPRECATED (Feature 189)
+   * Recovery codes have been removed. Users must contact admin for 2FA reset.
+   * @deprecated Use admin-initiated 2FA reset instead
    */
-  async verifyRecoveryCode(userId: string, code: string): Promise<{ valid: boolean; newRecoveryCode?: string }> {
-    try {
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
-        select: { recoveryCodes: true },
-      })
-
-      if (!user || !user.recoveryCodes || user.recoveryCodes.length === 0) {
-        return { valid: false }
-      }
-
-      // Check if code matches any recovery code
-      for (let i = 0; i < user.recoveryCodes.length; i++) {
-        const matches = await bcrypt.compare(code.trim().toUpperCase(), user.recoveryCodes[i])
-        
-        if (matches) {
-          // ✅ SECURITY: Generate a NEW recovery code to replace the used one
-          const newPlainCode = generateRecoveryCodes(1)[0] // Generate 1 new code
-          const newHashedCode = await bcrypt.hash(newPlainCode, 10)
-          
-          // Remove used code and add new one
-          const updatedCodes = [...user.recoveryCodes]
-          updatedCodes.splice(i, 1) // Remove used code
-          updatedCodes.push(newHashedCode) // Add new code
-
-          await this.prisma.user.update({
-            where: { id: userId },
-            data: { recoveryCodes: updatedCodes },
-          })
-
-          logger.info('✅ Recovery code used and regenerated', { 
-            userId, 
-            remainingCodes: updatedCodes.length,
-            newCodeGenerated: true 
-          })
-
-          return { valid: true, newRecoveryCode: newPlainCode }
-        }
-      }
-
-      return { valid: false }
-    } catch (error) {
-      logger.error('Recovery code verification failed', error)
-      return { valid: false }
+  async verifyRecoveryCode(_userId: string, _code: string): Promise<{ valid: boolean; newRecoveryCode?: string }> {
+    // Feature 189: Recovery codes removed - return deprecated message
+    logger.warn('verifyRecoveryCode called but recovery codes have been removed (Feature 189)')
+    return { 
+      valid: false, 
+      // No newRecoveryCode - feature removed
     }
   }
 

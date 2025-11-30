@@ -41,6 +41,9 @@ export class UserRepository implements UserRepositoryInterface {
       website: data.website,
       billingPhone: data.billingPhone,
       billingAddress: data.billingAddress,
+      // 🔐 Auth provider info (for OAuth set-password feature)
+      authProvider: data.authProvider,
+      passwordHash: data.passwordHash,
     });
   }
 
