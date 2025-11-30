@@ -92,10 +92,9 @@ describe("WorkspaceSelectionPage", () => {
         expect(workspaceApi.getWorkspaces).toHaveBeenCalled()
       })
 
-      // The "Add Channel" button should be visible
-      // It contains a PlusCircle icon and "Add Channel" text
+      // When there are no workspaces, show "Create My Channel" button in welcome form
       await waitFor(() => {
-        expect(screen.getByText("Add Channel")).toBeInTheDocument()
+        expect(screen.getByText(/Create My Channel/)).toBeInTheDocument()
       })
     })
 
@@ -164,9 +163,11 @@ describe("WorkspaceSelectionPage", () => {
         expect(workspaceApi.getWorkspaces).toHaveBeenCalled()
       })
 
-      // Page should still render with title
-      expect(screen.getByText("Your Channels")).toBeInTheDocument()
-      expect(screen.getByText(/Select a channel to manage/)).toBeInTheDocument()
+      // When no workspaces, show welcome message
+      await waitFor(() => {
+        expect(screen.getByText(/Welcome to ShopME/)).toBeInTheDocument()
+      })
+      expect(screen.getByText(/Create your first WhatsApp channel/)).toBeInTheDocument()
     })
   })
 
@@ -182,10 +183,10 @@ describe("WorkspaceSelectionPage", () => {
         expect(workspaceApi.getWorkspaces).toHaveBeenCalled()
       })
 
-      // User should see "Add Channel" button even though they're not SUPER_ADMIN
+      // User should see welcome form with "Create My Channel" button
       // (because workspaces.length === 0)
-      const addButton = await screen.findByText("Add Channel")
-      expect(addButton).toBeInTheDocument()
+      const createButton = await screen.findByText(/Create My Channel/)
+      expect(createButton).toBeInTheDocument()
     })
   })
 

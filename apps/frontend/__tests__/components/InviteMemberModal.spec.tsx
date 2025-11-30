@@ -40,7 +40,7 @@ describe("InviteMemberModal", () => {
     render(<InviteMemberModal {...defaultProps} />)
 
     expect(screen.getByText("Invite Team Member")).toBeInTheDocument()
-    expect(screen.getByLabelText("Email Address")).toBeInTheDocument()
+    expect(screen.getByLabelText(/Email Address/)).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /send invitation/i })).toBeInTheDocument()
   })
 
@@ -61,7 +61,7 @@ describe("InviteMemberModal", () => {
     const user = userEvent.setup()
     render(<InviteMemberModal {...defaultProps} />)
 
-    const emailInput = screen.getByLabelText("Email Address")
+    const emailInput = screen.getByLabelText(/Email Address/)
     await user.type(emailInput, "test@example.com")
 
     const submitButton = screen.getByRole("button", { name: /send invitation/i })
@@ -72,7 +72,7 @@ describe("InviteMemberModal", () => {
     const user = userEvent.setup()
     render(<InviteMemberModal {...defaultProps} />)
 
-    const emailInput = screen.getByLabelText("Email Address")
+    const emailInput = screen.getByLabelText(/Email Address/)
     await user.type(emailInput, "invalid-email")
 
     const form = emailInput.closest("form")!
@@ -93,7 +93,7 @@ describe("InviteMemberModal", () => {
 
     render(<InviteMemberModal {...defaultProps} />)
 
-    const emailInput = screen.getByLabelText("Email Address")
+    const emailInput = screen.getByLabelText(/Email Address/)
     await user.type(emailInput, "colleague@company.com")
 
     const form = emailInput.closest("form")!
@@ -102,6 +102,8 @@ describe("InviteMemberModal", () => {
     await waitFor(() => {
       expect(invitationApi.create).toHaveBeenCalledWith(mockWorkspaceId, {
         email: "colleague@company.com",
+        firstName: undefined,
+        lastName: undefined,
       })
     })
 
@@ -119,7 +121,7 @@ describe("InviteMemberModal", () => {
 
     render(<InviteMemberModal {...defaultProps} />)
 
-    const emailInput = screen.getByLabelText("Email Address")
+    const emailInput = screen.getByLabelText(/Email Address/)
     await user.type(emailInput, "  test@example.com  ")
 
     const form = emailInput.closest("form")!
@@ -128,6 +130,8 @@ describe("InviteMemberModal", () => {
     await waitFor(() => {
       expect(invitationApi.create).toHaveBeenCalledWith(mockWorkspaceId, {
         email: "test@example.com",
+        firstName: undefined,
+        lastName: undefined,
       })
     })
   })
@@ -140,7 +144,7 @@ describe("InviteMemberModal", () => {
 
     render(<InviteMemberModal {...defaultProps} />)
 
-    const emailInput = screen.getByLabelText("Email Address")
+    const emailInput = screen.getByLabelText(/Email Address/)
     await user.type(emailInput, "existing@company.com")
 
     const form = emailInput.closest("form")!
@@ -160,7 +164,7 @@ describe("InviteMemberModal", () => {
 
     render(<InviteMemberModal {...defaultProps} />)
 
-    const emailInput = screen.getByLabelText("Email Address")
+    const emailInput = screen.getByLabelText(/Email Address/)
     await user.type(emailInput, "test@example.com")
 
     const form = emailInput.closest("form")!
@@ -180,7 +184,7 @@ describe("InviteMemberModal", () => {
 
     render(<InviteMemberModal {...defaultProps} />)
 
-    const emailInput = screen.getByLabelText("Email Address")
+    const emailInput = screen.getByLabelText(/Email Address/)
     await user.type(emailInput, "test@example.com")
 
     const form = emailInput.closest("form")!
@@ -206,7 +210,7 @@ describe("InviteMemberModal", () => {
     const user = userEvent.setup()
     render(<InviteMemberModal {...defaultProps} />)
 
-    const emailInput = screen.getByLabelText("Email Address")
+    const emailInput = screen.getByLabelText(/Email Address/)
     await user.type(emailInput, "test@example.com")
 
     const cancelButton = screen.getByRole("button", { name: /cancel/i })
@@ -223,7 +227,7 @@ describe("InviteMemberModal", () => {
 
     render(<InviteMemberModal {...defaultProps} />)
 
-    const emailInput = screen.getByLabelText("Email Address")
+    const emailInput = screen.getByLabelText(/Email Address/)
     await user.type(emailInput, "test@example.com")
 
     const form = emailInput.closest("form")!
