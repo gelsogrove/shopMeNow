@@ -107,11 +107,18 @@ describe('SchedulersPage', () => {
     it('shows job status badges', async () => {
       render(<SchedulersPage />)
       
+      // Wait for page title to appear first
       await waitFor(() => {
-        expect(screen.getByText('Success')).toBeInTheDocument()
-        expect(screen.getByText('Failed')).toBeInTheDocument()
-        expect(screen.getByText('Never Run')).toBeInTheDocument()
+        expect(screen.getByText('Schedulers')).toBeInTheDocument()
       })
+      
+      // Then wait for status badges
+      await waitFor(() => {
+        expect(screen.getAllByText('Success').length).toBeGreaterThan(0)
+      })
+      
+      expect(screen.getByText('Failed')).toBeInTheDocument()
+      expect(screen.getByText('Never Run')).toBeInTheDocument()
     })
 
     it('shows error message for failed jobs', async () => {
@@ -227,7 +234,7 @@ describe('SchedulersPage', () => {
         await waitFor(() => {
           expect(api.schedulers.update).toHaveBeenCalled()
         })
-      })
+      }
     })
   })
 

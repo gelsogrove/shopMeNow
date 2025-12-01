@@ -153,9 +153,9 @@ export const CART_MANAGEMENT_FUNCTIONS: FunctionDefinition[] = [
   {
     type: "function",
     function: {
-      name: "addToCart",
+      name: "addItemToCart",
       description:
-        "⚙️ PRIORITY 4 - MEDIUM. Aggiunge uno o più prodotti/servizi al carrello del cliente. Usare SOLO DOPO che il cliente ha CONFERMATO di voler aggiungere. FLOW OBBLIGATORIO: 1) Mostra prodotto/servizio con prezzo e stock, 2) Chiedi 'Vuoi aggiungerlo al carrello? 🛒', 3) Se conferma ('sì', 'ok', 'perfetto', 'aggiungi') → chiama addToCart(items), 4) Dopo aggiunta → mostra link carrello. SUPPORTA PRODOTTI E SERVIZI. ESEMPI: SINGOLO PRODOTTO: [{code:'BUR-001',quantity:1,type:'PRODUCT'}] | SINGOLO SERVIZIO: [{code:'SRV-001',quantity:1,type:'SERVICE'}] | MULTIPLI: [{code:'PASTA-005',quantity:1,type:'PRODUCT'},{code:'SRV-001',quantity:1,type:'SERVICE'}]. NON chiamare se: cliente non ha confermato, stock insufficiente, code mancante, prodotto/servizio non trovato.",
+        "⚙️ PRIORITY 4 - MEDIUM. Aggiunge uno o più prodotti/servizi al carrello del cliente. Usare SOLO DOPO che il cliente ha CONFERMATO di voler aggiungere. FLOW OBBLIGATORIO: 1) Mostra prodotto/servizio con prezzo e stock, 2) Chiedi 'Vuoi aggiungerlo al carrello? 🛒', 3) Se conferma ('sì', 'ok', 'perfetto', 'aggiungi') → chiama addItemToCart(items), 4) Dopo aggiunta → mostra carrello formattato inline. SUPPORTA PRODOTTI E SERVIZI. ESEMPI: SINGOLO PRODOTTO: [{code:'BUR-001',quantity:1,type:'PRODUCT'}] | SINGOLO SERVIZIO: [{code:'SRV-001',quantity:1,type:'SERVICE'}] | MULTIPLI: [{code:'PASTA-005',quantity:1,type:'PRODUCT'},{code:'SRV-001',quantity:1,type:'SERVICE'}]. NON chiamare se: cliente non ha confermato, stock insufficiente, code mancante, prodotto/servizio non trovato.",
       parameters: {
         type: "object",
         properties: {
@@ -200,7 +200,7 @@ export const CART_MANAGEMENT_FUNCTIONS: FunctionDefinition[] = [
     function: {
       name: "viewCart",
       description:
-        "👀 Mostra il contenuto del carrello del cliente con link sicuro per checkout.",
+        "👀 Mostra il contenuto del carrello del cliente con lista prodotti, quantità, prezzi e totale. Risponde con visualizzazione testuale inline (nessun link).",
       parameters: {
         type: "object",
         properties: {},
@@ -211,9 +211,63 @@ export const CART_MANAGEMENT_FUNCTIONS: FunctionDefinition[] = [
   {
     type: "function",
     function: {
+      name: "updateCartItem",
+      description:
+        "✏️ PRIORITY 3.5 - MEDIUM. Modifica la quantità di un prodotto nel carrello. Usare quando cliente dice 'voglio 5 panettoni invece di 3', 'cambia mozzarella a 2', 'metti 3 burrate'. Se newQuantity=0, il prodotto viene rimosso. DOPO modifica → mostra carrello aggiornato inline.",
+      parameters: {
+        type: "object",
+        properties: {
+          productCode: {
+            type: "string",
+            description: "Codice del prodotto o servizio da modificare (es: 'BUR-001'). Usare se conosciuto.",
+          },
+          productName: {
+            type: "string",
+            description: "Nome del prodotto o servizio da modificare (es: 'Mozzarella di Bufala'). Usare se codice non conosciuto.",
+          },
+          newQuantity: {
+            type: "number",
+            description: "Nuova quantità. Deve essere >= 0. Se 0, il prodotto viene rimosso dal carrello.",
+          },
+        },
+        required: ["newQuantity"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "removeFromCart",
+      description:
+        "🗑️ PRIORITY 3.5 - MEDIUM. Rimuove uno o più prodotti specifici dal carrello. Usare quando cliente dice 'togli la mozzarella', 'rimuovi il panettone', 'elimina burrata e prosciutto'. Supporta rimozione singola o multipla. DOPO rimozione → mostra carrello aggiornato inline. ⚠️ DISAMBIGUAZIONE: 'rimuovi BURRATA' / 'togli mozzarella e prosciutto' → removeFromCart() (UNO o PIÙ prodotti specifici) | 'svuota TUTTO' → clearCart() (TUTTO il carrello).",
+      parameters: {
+        type: "object",
+        properties: {
+          productCode: {
+            oneOf: [
+              { type: "string", description: "Singolo codice prodotto" },
+              { type: "array", items: { type: "string" }, description: "Array di codici prodotto" }
+            ],
+            description: "Codice/i del prodotto da rimuovere. Può essere stringa singola 'BUR-001' o array ['BUR-001', 'MOZZ-002'].",
+          },
+          productName: {
+            oneOf: [
+              { type: "string", description: "Singolo nome prodotto" },
+              { type: "array", items: { type: "string" }, description: "Array di nomi prodotto" }
+            ],
+            description: "Nome/i del prodotto da rimuovere. Può essere stringa singola 'Mozzarella' o array ['Mozzarella', 'Prosciutto'].",
+          },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "clearCart",
       description:
-        "🗑️ PRIORITY 3.5 - MEDIUM (Richiede SEMPRE conferma). Svuota COMPLETAMENTE il carrello del cliente, eliminando TUTTI i prodotti/servizi. QUANDO USARE: Cliente dice 'cancella carrello', 'svuota carrello', 'elimina tutto dal carrello', 'pulisci carrello', 'ricomincia da capo', 'reset carrello', 'rimuovi tutto'. ⚠️ DISAMBIGUAZIONE CRITICA: 'cancella CARRELLO' / 'svuota TUTTO' → clearCart() (elimina TUTTO il carrello) | 'cancella BURRATA' / 'rimuovi PARMIGIANO' → removeItem() (elimina UN prodotto specifico). 🚨 FLOW OBBLIGATORIO: 1) Cliente chiede di svuotare carrello → 2) TU chiedi SEMPRE conferma: 'Vuoi davvero svuotare il carrello? Perderai tutti i prodotti! 🗑️' → 3) Aspetti risposta → 4a) Se conferma ('sì', 'ok', 'procedi', 'conferma') → chiami clearCart() → mostri messaggio successo | 4b) Se rifiuta ('no', 'aspetta', 'annulla') → NON chiami clearCart(), mantieni carrello. ❌ NON chiamare se: cliente vuole rimuovere UN prodotto specifico, cliente non ha confermato esplicitamente, carrello già vuoto. DOPO svuotamento: mostra messaggio risultato + suggerisci offerte/prodotti per ricominciare.",
+        "🗑️ PRIORITY 3.5 - MEDIUM (Richiede SEMPRE conferma). Svuota COMPLETAMENTE il carrello del cliente, eliminando TUTTI i prodotti/servizi. QUANDO USARE: Cliente dice 'cancella carrello', 'svuota carrello', 'elimina tutto dal carrello', 'pulisci carrello', 'ricomincia da capo', 'reset carrello', 'rimuovi tutto'. ⚠️ DISAMBIGUAZIONE CRITICA: 'cancella CARRELLO' / 'svuota TUTTO' → clearCart() (elimina TUTTO il carrello) | 'cancella BURRATA' / 'rimuovi PARMIGIANO' → removeFromCart() (elimina UN prodotto specifico). 🚨 FLOW OBBLIGATORIO: 1) Cliente chiede di svuotare carrello → 2) TU chiedi SEMPRE conferma: 'Vuoi davvero svuotare il carrello? Perderai tutti i prodotti! 🗑️' → 3) Aspetti risposta → 4a) Se conferma ('sì', 'ok', 'procedi', 'conferma') → chiami clearCart() → mostri messaggio successo | 4b) Se rifiuta ('no', 'aspetta', 'annulla') → NON chiami clearCart(), mantieni carrello. ❌ NON chiamare se: cliente vuole rimuovere UN prodotto specifico, cliente non ha confermato esplicitamente, carrello già vuoto. DOPO svuotamento: mostra messaggio risultato + suggerisci offerte/prodotti per ricominciare.",
       parameters: {
         type: "object",
         properties: {},

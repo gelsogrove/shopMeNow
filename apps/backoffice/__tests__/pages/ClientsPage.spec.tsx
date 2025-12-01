@@ -19,6 +19,7 @@ const mockUsers = [
     isPlatformAdmin: false,
     isDeveloperUser: false,
     twoFactorEnabled: true,
+    requires2FA: true,  // Normal user requires 2FA
     status: 'ACTIVE',
     createdAt: '2024-01-15T10:00:00Z',
     lastLogin: '2024-06-01T14:30:00Z',
@@ -54,6 +55,7 @@ const mockUsers = [
     isPlatformAdmin: false,
     isDeveloperUser: false,
     twoFactorEnabled: false,
+    requires2FA: true,  // Normal user requires 2FA
     status: 'ACTIVE',
     createdAt: '2024-02-20T08:00:00Z',
     lastLogin: null,
@@ -110,12 +112,19 @@ describe('ClientsPage', () => {
     it('displays user information', async () => {
       render(<ClientsPage />)
       
+      // Wait for all data to load
       await waitFor(() => {
-        expect(screen.getByText('john@example.com')).toBeInTheDocument()
+        expect(screen.getByText('Client Management')).toBeInTheDocument()
+      })
+      
+      // Now check for user information - emails appear twice in the card
+      await waitFor(() => {
+        const emails = screen.getAllByText('john@example.com')
+        expect(emails.length).toBeGreaterThan(0)
       })
       
       expect(screen.getByText('John Doe')).toBeInTheDocument()
-      expect(screen.getByText('jane@example.com')).toBeInTheDocument()
+      expect(screen.getAllByText('jane@example.com').length).toBeGreaterThan(0)
     })
 
     it('shows company name when available', async () => {
@@ -129,19 +138,28 @@ describe('ClientsPage', () => {
     it('shows workspace information', async () => {
       render(<ClientsPage />)
       
+      // First wait for title
       await waitFor(() => {
-        expect(screen.getByText('Test Workspace')).toBeInTheDocument()
+        expect(screen.getByText('Client Management')).toBeInTheDocument()
       })
       
-      // Should show customer count
-      expect(screen.getByText(/25/)).toBeInTheDocument()
+      // Wait for user data to appear - check for user email first
+      await waitFor(() => {
+        expect(screen.getAllByText('john@example.com').length).toBeGreaterThan(0)
+      })
+      
+      // Should show customer count (25 clients) in Owner Stats section
+      await waitFor(() => {
+        expect(screen.getByText(/25 clients/i)).toBeInTheDocument()
+      })
     })
 
-    it('shows 2FA badge when enabled', async () => {
+    it('shows 2FA reset button when 2FA is enabled', async () => {
       render(<ClientsPage />)
       
       await waitFor(() => {
-        expect(screen.getByText('2FA')).toBeInTheDocument()
+        // User with twoFactorEnabled=true and requires2FA=true should have Reset 2FA button
+        expect(screen.getByText('Reset 2FA')).toBeInTheDocument()
       })
     })
   })
@@ -168,8 +186,14 @@ describe('ClientsPage', () => {
     it('filters users by email', async () => {
       render(<ClientsPage />)
       
+      // First wait for data to load
       await waitFor(() => {
-        expect(screen.getByText('john@example.com')).toBeInTheDocument()
+        expect(screen.getByText('Client Management')).toBeInTheDocument()
+      })
+      
+      // Then wait for emails to appear
+      await waitFor(() => {
+        expect(screen.getAllByText('john@example.com').length).toBeGreaterThan(0)
       })
       
       const searchInput = screen.getByPlaceholderText(/Search by email, name, or company/i)
@@ -178,7 +202,7 @@ describe('ClientsPage', () => {
       await waitFor(() => {
         expect(screen.queryByText('john@example.com')).not.toBeInTheDocument()
       })
-      expect(screen.getByText('jane@example.com')).toBeInTheDocument()
+      expect(screen.getAllByText('jane@example.com').length).toBeGreaterThan(0)
     })
 
     it('filters users by company name', async () => {
@@ -188,11 +212,16 @@ describe('ClientsPage', () => {
         expect(screen.getByText('Client Management')).toBeInTheDocument()
       })
       
+      // Wait for users to appear
+      await waitFor(() => {
+        expect(screen.getAllByText('john@example.com').length).toBeGreaterThan(0)
+      })
+      
       const searchInput = screen.getByPlaceholderText(/Search by email, name, or company/i)
       fireEvent.change(searchInput, { target: { value: 'ACME' } })
       
       await waitFor(() => {
-        expect(screen.getByText('john@example.com')).toBeInTheDocument()
+        expect(screen.getAllByText('john@example.com').length).toBeGreaterThan(0)
         expect(screen.queryByText('jane@example.com')).not.toBeInTheDocument()
       })
     })

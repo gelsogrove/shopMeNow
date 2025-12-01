@@ -1,4 +1,3 @@
-import { CartIframePopup } from "@/components/CartIframePopup"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -104,10 +103,6 @@ export function WhatsAppChatModal({
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [showFunctionCalls, setShowFunctionCalls] = useState(false)
   const [showProcessedPrompt, setShowProcessedPrompt] = useState(false)
-
-  // 📱 Device preview state - unified with CartIframePopup
-  const [showCartPopup, setShowCartPopup] = useState(false)
-  const [cartPopupUrl, setCartPopupUrl] = useState<string>("")
 
   // 🔄 Handle modal close with chat list refresh
   const handleClose = () => {
@@ -750,12 +745,6 @@ export function WhatsAppChatModal({
     // We're intentionally NOT clearing the sessionId here
   }
 
-  // Handle link clicks to open preview in device
-  const handleLinkClick = (url: string, e: React.MouseEvent) => {
-    setCartPopupUrl(url)
-    setShowCartPopup(true)
-  }
-
   return (
     <Dialog
       open={isOpen}
@@ -767,9 +756,7 @@ export function WhatsAppChatModal({
       }}
     >
       <DialogContent
-        className={`p-0 overflow-visible [&>button]:hidden h-[90vh] flex flex-row transition-all relative ${
-          showCartPopup ? "w-[calc(100vw-450px)]" : "w-[600px]"
-        } max-w-[95vw]`}
+        className={`p-0 overflow-visible [&>button]:hidden h-[90vh] flex flex-row transition-all relative w-[600px] max-w-[95vw]`}
         data-state={isOpen ? "open" : "closed"}
         style={{
           position: "fixed",
@@ -983,7 +970,6 @@ export function WhatsAppChatModal({
                               <MessageRenderer
                                 content={message.content}
                                 variant="chat"
-                                onLinkClick={handleLinkClick}
                               />
                             </div>
 
@@ -1652,17 +1638,6 @@ export function WhatsAppChatModal({
             )}
           </div>
         </div>
-        {/* 📱 Device Preview Column - Right side split view */}
-        {showCartPopup && (
-          <div className="flex-1 flex flex-col bg-white overflow-hidden border-l border-gray-200 transition-all relative">
-            <CartIframePopup
-              isOpen={showCartPopup}
-              onClose={() => setShowCartPopup(false)}
-              iframeSrc={cartPopupUrl}
-              layoutType="inline"
-            />
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   )

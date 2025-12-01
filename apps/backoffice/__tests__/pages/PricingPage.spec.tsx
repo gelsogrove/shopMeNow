@@ -9,15 +9,21 @@ vi.mock('../../src/services/api')
 const mockConfig = {
   prices: [
     {
+      key: 'STARTER_MONTHLY',
+      current: 9.99,
+      original: 14.99,
+      description: 'Starter plan monthly subscription'
+    },
+    {
       key: 'LLM_PRICE_PER_1K_INPUT_TOKENS',
-      current: 0.00015,
-      original: 0.0001,
+      current: 0.15,
+      original: 0.10,
       description: 'Price per 1K input tokens for LLM API calls'
     },
     {
       key: 'LLM_PRICE_PER_1K_OUTPUT_TOKENS',
-      current: 0.0006,
-      original: 0.0004,
+      current: 0.60,
+      original: 0.40,
       description: 'Price per 1K output tokens for LLM API calls'
     },
     {
@@ -105,8 +111,8 @@ describe('PricingPage', () => {
       render(<PricingPage />)
       
       await waitFor(() => {
-        // Values are displayed as currency
-        expect(screen.getByText(/0\.00015/)).toBeInTheDocument()
+        // Values are displayed as currency with €
+        expect(screen.getByText('€0.15')).toBeInTheDocument()
       })
     })
   })
@@ -203,9 +209,12 @@ describe('PricingPage', () => {
     it('shows original price when available', async () => {
       render(<PricingPage />)
       
+      // Wait for prices to fully render including original price
       await waitFor(() => {
-        // Original price should be displayed for items that have it
-        expect(screen.getByText(/0\.0001/)).toBeInTheDocument()
+        expect(screen.getByText('Pricing Configuration')).toBeInTheDocument()
+        expect(screen.getByText(/STARTER_MONTHLY/i)).toBeInTheDocument()
+        // Original price €14.99 displayed as strikethrough in planPrices section
+        expect(screen.getByText(/€14\.99/)).toBeInTheDocument()
       })
     })
 

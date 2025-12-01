@@ -1,4 +1,3 @@
-import { CartIframePopup } from "@/components/CartIframePopup"
 import { PageLayout } from "@/components/layout/PageLayout"
 import { ClientSheet } from "@/components/shared/ClientSheet"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
@@ -29,7 +28,6 @@ import {
   Lock,
   Pencil,
   Send,
-  Smartphone,
   Trash2,
 } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
@@ -168,64 +166,9 @@ export function ChatPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showBlockDialog, setShowBlockDialog] = useState(false)
   const [showEditSheet, setShowEditSheet] = useState(false)
-  const [showCartPopup, setShowCartPopup] = useState(false)
-  const [cartPopupUrl, setCartPopupUrl] = useState<string>("") // URL to display in CartIframePopup
-  const [isLoadingCartToken, setIsLoadingCartToken] = useState(false)
   const [showFlowDialog, setShowFlowDialog] = useState(false)
   const [selectedFlowMessage, setSelectedFlowMessage] =
     useState<Message | null>(null)
-
-  // Function to get cart token for current customer
-  const getCartToken = async (
-    customerId: string,
-    workspaceId: string
-  ): Promise<string> => {
-    try {
-      setIsLoadingCartToken(true)
-
-      const response = await api.post("/cart-tokens", {
-        customerId,
-        workspaceId,
-      })
-
-      if (response.data.success) {
-        const token = response.data.data.token
-        return token
-      } else {
-        throw new Error(response.data.error || "Failed to get cart token")
-      }
-    } catch (error) {
-      logger.error("Error getting cart token:", error)
-      toast.error("Failed to load customer cart", { duration: 1000 })
-      throw error
-    } finally {
-      setIsLoadingCartToken(false)
-    }
-  }
-
-  // Handle View Cart click
-  const handleViewCart = async () => {
-    if (!selectedChat || !workspace?.id) {
-      toast.error("No customer or workspace selected", { duration: 1000 })
-      return
-    }
-
-    try {
-      const token = await getCartToken(selectedChat.customerId, workspace.id)
-      const checkoutUrl = `http://localhost:3000/checkout?token=${token}`
-      setCartPopupUrl(checkoutUrl)
-      setShowCartPopup(true)
-    } catch (error) {
-      // Error already handled in getCartToken
-    }
-  }
-
-  // 📱 Handle link clicks in chat history - show device preview with CartPopup
-  const handleLinkClick = (url: string, e: React.MouseEvent) => {
-    // Use CartPopup for all links (same as cellulare button)
-    setCartPopupUrl(url) // Pass full URL directly
-    setShowCartPopup(true)
-  }
 
   const {
     chats,
@@ -1453,20 +1396,6 @@ export function ChatPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={handleViewCart}
-                    className="hover:bg-green-50 h-10 w-10 p-0"
-                    title="View Customer Cart"
-                    disabled={isLoadingCartToken}
-                  >
-                    {isLoadingCartToken ? (
-                      <Loader2 className="h-5 w-5 text-green-600 animate-spin" />
-                    ) : (
-                      <Smartphone className="h-5 w-5 text-green-600" />
-                    )}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
                     onClick={() => setShowBlockDialog(true)}
                     className={
                       selectedChat?.isBlacklisted
@@ -1632,7 +1561,6 @@ export function ChatPage() {
                             <MessageRenderer
                               content={message.content}
                               variant="chat"
-                              onLinkClick={handleLinkClick}
                             />
                           </div>
 
@@ -1882,15 +1810,6 @@ export function ChatPage() {
         workspaceId={workspace?.id}
         selectedChat={selectedChat as any}
       />
-
-      {/* 📱 Unified Device Preview with Controls - for both cart and chat links */}
-      {selectedChat && cartPopupUrl && (
-        <CartIframePopup
-          isOpen={showCartPopup}
-          onClose={() => setShowCartPopup(false)}
-          iframeSrc={cartPopupUrl}
-        />
-      )}
 
       {/* Message Flow Dialog */}
       {selectedFlowMessage?.metadata?.debugInfo && (

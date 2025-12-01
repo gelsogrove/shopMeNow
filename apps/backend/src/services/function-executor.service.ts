@@ -114,7 +114,8 @@ export class FunctionExecutor {
         // Direct function calls (Sub-Agents)
         // NOTE: searchProducts removed - LLM uses {{PRODUCTS}} from prompt
 
-        case "addToCart":
+        case "addItemToCart":
+        case "addToCart": // backward compatibility
           result = await this.addToCart(args, context)
           break
 
@@ -126,7 +127,8 @@ export class FunctionExecutor {
           result = await this.removeFromCart(args, context)
           break
 
-        case "updateCartQuantity":
+        case "updateCartItem":
+        case "updateCartQuantity": // backward compatibility
           result = await this.updateCartQuantity(args, context)
           break
 
@@ -564,24 +566,42 @@ export class FunctionExecutor {
     switch (functionName) {
       // NOTE: searchProducts validation removed - function disabled
 
+      case "addItemToCart":
       case "addToCart":
-        if (!args.productId) {
-          return { valid: false, error: "addToCart requires 'productId'" }
+        if (!args.productId && !args.items) {
+          return { valid: false, error: "addItemToCart requires 'productId' or 'items'" }
         }
-        if (!args.quantity || args.quantity <= 0) {
+        if (args.productId && (!args.quantity || args.quantity <= 0)) {
           return {
             valid: false,
-            error: "addToCart requires 'quantity' > 0",
+            error: "addItemToCart requires 'quantity' > 0",
           }
         }
         break
 
       case "removeFromCart":
-      case "updateCartQuantity":
-        if (!args.cartItemId) {
+        // Now uses productCode/productName instead of cartItemId
+        if (!args.cartItemId && !args.productCode && !args.productName) {
           return {
             valid: false,
-            error: `${functionName} requires 'cartItemId'`,
+            error: `removeFromCart requires 'productCode' or 'productName'`,
+          }
+        }
+        break
+
+      case "updateCartItem":
+      case "updateCartQuantity":
+        if (args.newQuantity === undefined || args.newQuantity < 0) {
+          return {
+            valid: false,
+            error: `${functionName} requires 'newQuantity' >= 0`,
+          }
+        }
+        // Allow productCode/productName or cartItemId
+        if (!args.cartItemId && !args.productCode && !args.productName) {
+          return {
+            valid: false,
+            error: `${functionName} requires 'productCode', 'productName', or 'cartItemId'`,
           }
         }
         break

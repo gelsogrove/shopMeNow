@@ -92,6 +92,7 @@ async function main() {
   // Delete user-related tables
   await prisma.workspaceInvitation.deleteMany() // Must delete before users (foreign key)
   await prisma.userWorkspace.deleteMany()
+  await prisma.twoFactorResetToken.deleteMany() // ✅ Feature 189: Delete 2FA reset tokens before users (FK constraint)
   await prisma.user.deleteMany()
 
   // ✅ Feature 185: Delete plan configurations before workspace
@@ -117,6 +118,7 @@ async function main() {
       lastName: "Romano",
       status: "ACTIVE",
       role: "ADMIN",
+      isDeveloperUser: true, // ✅ Developer User - skip 2FA for testing
       twoFactorEnabled: false, // ❌ 2FA disabled by default - enable via Settings UI
       twoFactorEnabledAt: null,
       recoveryCodes: [], // Recovery codes generated when 2FA is enabled
@@ -132,7 +134,7 @@ async function main() {
   console.log(`✅ Admin user created: ${adminEmail}`)
   console.log(`📧 Email: ${adminEmail}`)
   console.log(`🔑 Password: ${adminPassword}`)
-  console.log(`⚙️  2FA: Disabled (enable via Settings UI)\n`)
+  console.log(`🔧 isDeveloperUser: true (Skip 2FA for testing)\n`)
 
   // 2.5. Create Platform Admin User (for Backoffice access)
   console.log("👤 Creating platform admin user...")
@@ -149,8 +151,8 @@ async function main() {
       lastName: "Gelsomino",
       status: "ACTIVE",
       role: "ADMIN",
-      isPlatformAdmin: true, // ✅ Platform Admin - can access backoffice
-      isDeveloperUser: true, // ✅ Developer User - skip 2FA requirement
+      isPlatformAdmin: true, // ✅ Platform Admin - can access backoffice + skip 2FA
+      isDeveloperUser: false, // ❌ Not a developer (can't be both)
       twoFactorEnabled: false,
       twoFactorEnabledAt: null,
       recoveryCodes: [],
@@ -165,8 +167,7 @@ async function main() {
   console.log(`✅ Platform admin user created: ${platformAdminEmail}`)
   console.log(`📧 Email: ${platformAdminEmail}`)
   console.log(`🔑 Password: ${platformAdminPassword}`)
-  console.log(`🔐 isPlatformAdmin: true (Backoffice access enabled)`)
-  console.log(`🔧 isDeveloperUser: true (Skip 2FA requirement)\n`)
+  console.log(`🔐 isPlatformAdmin: true (Backoffice access + Skip 2FA)\n`)
 
   // 3. Create Main Workspace
   console.log("🏢 Creating workspace...")

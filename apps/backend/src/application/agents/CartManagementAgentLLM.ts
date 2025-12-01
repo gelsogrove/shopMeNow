@@ -438,9 +438,12 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
       }
 
       switch (functionName) {
-        case "viewCart":
-          return await this.cartManagementAgent.getCart(agentContext)
+        case "viewCart": {
+          const cartResult = await this.cartManagementAgent.getCart(agentContext)
+          return this.formatCartResponse(cartResult)
+        }
 
+        case "addItemToCart":
         case "addToCart": {
           // Support new format (items array) and legacy format (productId)
           const items = args.items || [
@@ -471,34 +474,128 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
             })
           }
 
-          // If all succeeded, return success
+          // Get updated cart and format response
+          const cartAfterAdd = await this.cartManagementAgent.getCart(agentContext)
           const allSucceeded = results.every((r) => r.success)
+          
           return {
             success: allSucceeded,
-            data: {
-              itemsAdded: results.filter((r) => r.success).length,
-              itemsFailed: results.filter((r) => !r.success).length,
-              results,
-            },
+            message: allSucceeded ? "Items added to cart" : "Some items could not be added",
+            ...this.formatCartResponse(cartAfterAdd),
           }
         }
 
-        case "removeFromCart":
-          // TODO: Implement removeFromCart in CartManagementAgent
-          return {
-            success: false,
-            error: "Function not implemented yet",
+        case "removeFromCart": {
+          // Find item in cart by productCode or productName
+          const cart = await this.cartManagementAgent.getCart(agentContext)
+          if (cart.isEmpty) {
+            return { success: false, error: "Cart is empty", formattedCart: "🛒 Il tuo carrello è vuoto." }
           }
 
-        case "updateCartQuantity":
-          // TODO: Implement updateQuantity in CartManagementAgent
-          return {
-            success: false,
-            error: "Function not implemented yet",
+          // Find the item to remove
+          const itemToRemove = cart.cart.items.find((item: any) => {
+            const product = item.product || item.service
+            if (!product) return false
+            
+            // Match by code
+            if (args.productCode && (product.productCode === args.productCode || product.serviceCode === args.productCode)) {
+              return true
+            }
+            // Match by name (case-insensitive partial match)
+            if (args.productName && product.name.toLowerCase().includes(args.productName.toLowerCase())) {
+              return true
+            }
+            return false
+          })
+
+          if (!itemToRemove) {
+            return { 
+              success: false, 
+              error: `Product "${args.productName || args.productCode}" not found in cart`,
+              ...this.formatCartResponse(cart)
+            }
           }
 
-        case "clearCart":
-          return await this.cartManagementAgent.resetCart(agentContext)
+          // Remove the item
+          const removeResult = await this.cartManagementAgent.removeFromCart(agentContext, itemToRemove.id)
+          
+          // Get updated cart
+          const cartAfterRemove = await this.cartManagementAgent.getCart(agentContext)
+          return {
+            success: removeResult.success,
+            message: removeResult.success ? `Removed "${itemToRemove.name}" from cart` : removeResult.error,
+            ...this.formatCartResponse(cartAfterRemove),
+          }
+        }
+
+        case "updateCartItem":
+        case "updateCartQuantity": {
+          // Find item in cart by productCode or productName
+          const cart = await this.cartManagementAgent.getCart(agentContext)
+          if (cart.isEmpty) {
+            return { success: false, error: "Cart is empty", formattedCart: "🛒 Il tuo carrello è vuoto." }
+          }
+
+          // Find the item to update
+          const itemToUpdate = cart.cart.items.find((item: any) => {
+            const product = item.product || item.service
+            if (!product) return false
+            
+            // Match by code
+            if (args.productCode && (product.productCode === args.productCode || product.serviceCode === args.productCode)) {
+              return true
+            }
+            // Match by name (case-insensitive partial match)
+            if (args.productName && product.name.toLowerCase().includes(args.productName.toLowerCase())) {
+              return true
+            }
+            return false
+          })
+
+          if (!itemToUpdate) {
+            return { 
+              success: false, 
+              error: `Product "${args.productName || args.productCode}" not found in cart`,
+              ...this.formatCartResponse(cart)
+            }
+          }
+
+          // If newQuantity is 0, remove the item
+          if (args.newQuantity === 0) {
+            const removeResult = await this.cartManagementAgent.removeFromCart(agentContext, itemToUpdate.id)
+            const cartAfterRemove = await this.cartManagementAgent.getCart(agentContext)
+            return {
+              success: removeResult.success,
+              message: `Removed "${itemToUpdate.name}" from cart`,
+              ...this.formatCartResponse(cartAfterRemove),
+            }
+          }
+
+          // Update the quantity
+          const updateResult = await this.cartManagementAgent.updateQuantity(agentContext, {
+            cartItemId: itemToUpdate.id,
+            newQuantity: args.newQuantity,
+          })
+          
+          // Get updated cart
+          const cartAfterUpdate = await this.cartManagementAgent.getCart(agentContext)
+          return {
+            success: updateResult.success,
+            message: updateResult.success 
+              ? `Updated "${itemToUpdate.name}" quantity to ${args.newQuantity}` 
+              : updateResult.error,
+            ...this.formatCartResponse(cartAfterUpdate),
+          }
+        }
+
+        case "clearCart": {
+          const clearResult = await this.cartManagementAgent.resetCart(agentContext)
+          return {
+            success: clearResult.success,
+            message: "Cart cleared",
+            formattedCart: "🛒 Il tuo carrello è ora vuoto.",
+          }
+        }
 
         case "getLastOrderDetails":
           // Get customer's last order with full details
@@ -644,7 +741,7 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
         },
       },
       {
-        name: "addToCart",
+        name: "addItemToCart",
         description:
           "Add products or services to cart. Supports both PRODUCT and SERVICE types. Use AFTER customer confirmation.",
         parameters: {
@@ -685,34 +782,42 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
       },
       {
         name: "removeFromCart",
-        description: "Remove an item from the cart",
+        description: "Remove an item from the cart by product/service code or name. Use when customer says 'remove the mozzarella' or 'togli il panettone'",
         parameters: {
           type: "object",
           properties: {
-            cartItemId: {
+            productCode: {
               type: "string",
-              description: "Cart item ID to remove",
+              description: "Product or service code to remove (e.g., 'BUR-001')",
+            },
+            productName: {
+              type: "string",
+              description: "Product or service name to remove (e.g., 'Mozzarella di Bufala'). Use if code is unknown.",
             },
           },
-          required: ["cartItemId"],
+          required: [],
         },
       },
       {
-        name: "updateCartQuantity",
-        description: "Update the quantity of an item in the cart",
+        name: "updateCartItem",
+        description: "Update the quantity of an item in the cart. Use when customer says 'I want 5 panettoni instead of 3' or 'change mozzarella to 2'",
         parameters: {
           type: "object",
           properties: {
-            cartItemId: {
+            productCode: {
               type: "string",
-              description: "Cart item ID to update",
+              description: "Product or service code to update (e.g., 'BUR-001')",
+            },
+            productName: {
+              type: "string",
+              description: "Product or service name to update (e.g., 'Panettone'). Use if code is unknown.",
             },
             newQuantity: {
               type: "number",
-              description: "New quantity (must be > 0)",
+              description: "New quantity (must be >= 0). Use 0 to remove the item.",
             },
           },
-          required: ["cartItemId", "newQuantity"],
+          required: ["newQuantity"],
         },
       },
       {
@@ -745,5 +850,54 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
         },
       },
     ]
+  }
+
+  /**
+   * Format cart response as a readable text for WhatsApp
+   * Returns formatted string with emoji and prices
+   */
+  private formatCartResponse(cartResult: any): { formattedCart: string; cartData: any } {
+    if (!cartResult.success) {
+      return {
+        formattedCart: "❌ Error loading cart",
+        cartData: cartResult,
+      }
+    }
+
+    if (cartResult.isEmpty || !cartResult.cart?.items?.length) {
+      return {
+        formattedCart: "🛒 Il tuo carrello è vuoto.",
+        cartData: cartResult,
+      }
+    }
+
+    const cart = cartResult.cart
+    const lines: string[] = ["🛒 Il tuo carrello:"]
+
+    for (const item of cart.items) {
+      const name = item.name || item.product?.name || item.service?.name || "Unknown"
+      const quantity = item.quantity || 1
+      const unitPrice = item.unitPrice || item.product?.price || item.service?.price || 0
+      const itemTotal = unitPrice * quantity
+      
+      // Format price with comma for Italian locale
+      const formattedPrice = itemTotal.toFixed(2).replace(".", ",")
+      lines.push(`- ${quantity}x ${name} - ${formattedPrice}€`)
+    }
+
+    // Add total
+    const total = cart.total || cart.items.reduce((sum: number, item: any) => {
+      const price = item.unitPrice || item.product?.price || item.service?.price || 0
+      return sum + (price * (item.quantity || 1))
+    }, 0)
+    
+    const formattedTotal = total.toFixed(2).replace(".", ",")
+    lines.push("")
+    lines.push(`💰 Totale: ${formattedTotal}€`)
+
+    return {
+      formattedCart: lines.join("\n"),
+      cartData: cartResult,
+    }
   }
 }
