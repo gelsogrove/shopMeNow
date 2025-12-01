@@ -15,6 +15,7 @@
  */
 
 import { PrismaClient, ConfigType } from "@prisma/client"
+import logger from "../utils/logger"
 
 // Type definitions for platform config
 export interface PlatformConfigItem {
@@ -87,7 +88,7 @@ class PlatformConfigService {
     }
 
     this.cache.lastFetch = new Date()
-    console.log(
+    logger.info(
       `[PlatformConfig] Cache refreshed: ${configs.length} items (${this.cache.prices.size} prices, ${this.cache.flags.size} flags, ${this.cache.limits.size} limits)`
     )
   }

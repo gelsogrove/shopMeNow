@@ -92,131 +92,60 @@ export function ProductsPage() {
   //   localStorage.setItem("products_sort_by", sortBy)
   // }, [sortBy])
 
-  // Fetch products when workspace changes
+  // 🚀 CONSOLIDATED: Fetch all data in parallel when workspace changes
   useEffect(() => {
-    const loadProducts = async () => {
+    const loadAllData = async () => {
       if (!workspace?.id) {
-        logger.info("❌ No workspace ID, skipping products load")
+        logger.info("❌ No workspace ID, skipping data load")
         return
       }
 
-      logger.info("🔄 Loading products for workspace:", workspace.id)
+      logger.info("🔄 Loading all data for workspace:", workspace.id)
       setIsLoading(true)
+      
       try {
-        const response = await productsApi.getAllForWorkspace(workspace.id)
+        // Parallel fetch for better performance
+        const [
+          productsResponse,
+          categoriesData,
+          certificationsData,
+          transportTypesData,
+          suppliersData
+        ] = await Promise.all([
+          productsApi.getAllForWorkspace(workspace.id),
+          categoriesApi.getAllForWorkspace(workspace.id),
+          certificationsApi.getAllForWorkspace(workspace.id),
+          transportTypesApi.getAllForWorkspace(workspace.id),
+          supplierApi.getAll(workspace.id)
+        ])
 
-        logger.info("✅ API Response:", response)
-        if (response && Array.isArray(response.products)) {
-          logger.info(
-            `🔍 Products received from API: ${response.products.length}`
-          )
-          setProducts(response.products)
+        // Set products
+        if (productsResponse && Array.isArray(productsResponse.products)) {
+          logger.info(`✅ Products received: ${productsResponse.products.length}`)
+          setProducts(productsResponse.products)
         } else {
-          logger.error("Invalid API response format:", response)
+          logger.error("Invalid API response format:", productsResponse)
           setProducts([])
           toast.error("Error in API response format")
         }
+
+        // Set other data
+        setCategories(categoriesData)
+        setCertifications(certificationsData)
+        setTransportTypes(transportTypesData)
+        setSuppliers(suppliersData)
+
+        logger.info("✅ All data loaded successfully")
       } catch (error) {
-        logger.error("Failed to load products:", error)
-        logger.error("❌ Products load error:", error)
+        logger.error("Failed to load data:", error)
         setProducts([])
-        toast.error("Failed to load products")
+        toast.error("Failed to load data")
       } finally {
         setIsLoading(false)
       }
     }
 
-    loadProducts()
-  }, [workspace?.id])
-
-  // Fetch categories when workspace changes
-  useEffect(() => {
-    const loadCategories = async () => {
-      if (!workspace?.id) return
-
-      try {
-        const categoriesData = await categoriesApi.getAllForWorkspace(
-          workspace.id
-        )
-        setCategories(categoriesData)
-      } catch (error) {
-        logger.error("Failed to load categories:", error)
-        toast.error("Failed to load categories")
-      }
-    }
-
-    loadCategories()
-  }, [workspace?.id])
-
-  // Fetch certifications when workspace changes
-  useEffect(() => {
-    logger.info("🔖 useEffect CERTIFICATIONS triggered, workspace:", workspace?.id)
-    
-    const loadCertifications = async () => {
-      if (!workspace?.id) {
-        logger.info("🔖 No workspace ID, skipping certifications load")
-        return
-      }
-
-      logger.info("🔖 About to call certificationsApi.getAllForWorkspace")
-      try {
-        const certificationsData = await certificationsApi.getAllForWorkspace(
-          workspace.id
-        )
-        logger.info("🔖 Certifications loaded:", certificationsData)
-        logger.info(`🔖 Total certifications: ${certificationsData.length}`)
-        setCertifications(certificationsData)
-      } catch (error) {
-        logger.error("🔖 Failed to load certifications:", error)
-        toast.error("Failed to load certifications")
-      }
-    }
-
-    loadCertifications()
-  }, [workspace?.id])
-
-  // Fetch transport types when workspace changes
-  useEffect(() => {
-    logger.info("🚚 useEffect TRANSPORT TYPES triggered, workspace:", workspace?.id)
-    
-    const loadTransportTypes = async () => {
-      if (!workspace?.id) {
-        logger.info("🚚 No workspace ID, skipping transport types load")
-        return
-      }
-
-      logger.info("🚚 About to call transportTypesApi.getAllForWorkspace")
-      try {
-        const transportTypesData = await transportTypesApi.getAllForWorkspace(
-          workspace.id
-        )
-        logger.info("🚚 Transport types loaded:", transportTypesData)
-        logger.info(`🚚 Total transport types: ${transportTypesData.length}`)
-        setTransportTypes(transportTypesData)
-      } catch (error) {
-        logger.error("🚚 Failed to load transport types:", error)
-        toast.error("Failed to load transport types")
-      }
-    }
-
-    loadTransportTypes()
-  }, [workspace?.id])
-
-  // Fetch suppliers when workspace changes
-  useEffect(() => {
-    const loadSuppliers = async () => {
-      if (!workspace?.id) return
-
-      try {
-        const suppliersData = await supplierApi.getAll(workspace.id)
-        setSuppliers(suppliersData)
-      } catch (error) {
-        logger.error("Failed to load suppliers:", error)
-        toast.error("Failed to load suppliers")
-      }
-    }
-
-    loadSuppliers()
+    loadAllData()
   }, [workspace?.id])
 
   // Reset category and supplier selection when product changes

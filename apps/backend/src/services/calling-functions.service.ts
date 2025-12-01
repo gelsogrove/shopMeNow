@@ -1084,6 +1084,292 @@ export class CallingFunctionsService {
   }
 
   /**
+   * 🔍 Get product details by name (fuzzy matching)
+   * 
+   * Used by ProductSearchAgent to lookup full product details when user selects a product.
+   * Returns INTERNAL product code (never shown to user) for cart operations.
+   * 
+   * @param request - Product name and optional formato for matching
+   * @returns Product details with internal code
+   */
+  public async getProductDetails(request: {
+    workspaceId: string
+    customerId: string
+    productName: string
+    formato?: string
+  }): Promise<any> {
+    try {
+      const { workspaceId, productName, formato } = request
+      
+      logger.info("🔍 getProductDetails called:", {
+        workspaceId,
+        productName,
+        formato,
+      })
+
+      const { PrismaClient } = require("@prisma/client")
+      const prisma = new PrismaClient()
+
+      try {
+        // Normalize search terms: trim and lowercase
+        const searchName = productName.trim().toLowerCase()
+        const searchFormato = formato?.trim().toLowerCase()
+
+        // Get all active products for workspace
+        const products = await prisma.products.findMany({
+          where: {
+            workspaceId,
+            isActive: true,
+          },
+          include: {
+            category: { select: { name: true } },
+            supplier: { select: { companyName: true } },
+            productCertifications: {
+              select: {
+                certification: { select: { name: true } }
+              }
+            }
+          }
+        })
+
+        // Fuzzy matching: find products where name CONTAINS the search term
+        // or search term CONTAINS the product name
+        let matchedProducts = products.filter((p: any) => {
+          const pName = p.name.trim().toLowerCase()
+          const pFormato = p.formato?.trim().toLowerCase() || ""
+          
+          // Name matching: either contains
+          const nameMatch = pName.includes(searchName) || searchName.includes(pName)
+          
+          // If formato specified, require match
+          if (searchFormato && nameMatch) {
+            return pFormato.includes(searchFormato) || searchFormato.includes(pFormato)
+          }
+          
+          return nameMatch
+        })
+
+        // If no match, try word-based matching
+        // Use .every() to require ALL search words to be present (not just any)
+        if (matchedProducts.length === 0) {
+          const searchWords = searchName.split(/\s+/).filter(w => w.length > 2)
+          matchedProducts = products.filter((p: any) => {
+            const pName = p.name.trim().toLowerCase()
+            // ALL words must be present in product name
+            return searchWords.every(word => pName.includes(word))
+          })
+          
+          // If still no match with .every(), fallback to .some() but with priority
+          if (matchedProducts.length === 0) {
+            // Find products that match at least one word, prioritize by match count
+            const scoredProducts = products.map((p: any) => {
+              const pName = p.name.trim().toLowerCase()
+              const matchCount = searchWords.filter(word => pName.includes(word)).length
+              return { product: p, matchCount }
+            }).filter(sp => sp.matchCount > 0)
+              .sort((a, b) => b.matchCount - a.matchCount)
+            
+            // Only take products with highest match count
+            if (scoredProducts.length > 0) {
+              const maxScore = scoredProducts[0].matchCount
+              matchedProducts = scoredProducts
+                .filter(sp => sp.matchCount === maxScore)
+                .map(sp => sp.product)
+            }
+          }
+        }
+
+        if (matchedProducts.length === 0) {
+          logger.info("❌ No product found for:", { productName, formato })
+          return {
+            success: false,
+            found: false,
+            message: `Prodotto "${productName}" non trovato. Vuoi che ti mostri i prodotti disponibili?`,
+            timestamp: new Date().toISOString(),
+          }
+        }
+
+        // If multiple matches, return all for user selection
+        if (matchedProducts.length > 1) {
+          const options = matchedProducts.map((p: any) => ({
+            name: p.name,
+            formato: p.formato,
+            price: p.price,
+          }))
+          
+          logger.info("ℹ️ Multiple products found:", options)
+          return {
+            success: true,
+            found: true,
+            multiple: true,
+            products: options,
+            message: `Ho trovato ${matchedProducts.length} prodotti simili. Quale intendi?`,
+            timestamp: new Date().toISOString(),
+          }
+        }
+
+        // Single match - return full details
+        const product = matchedProducts[0]
+        const certifications = product.productCertifications?.map(
+          (pc: any) => pc.certification.name
+        ) || []
+
+        logger.info("✅ Product found:", {
+          name: product.name,
+          productCode: product.productCode,
+        })
+
+        return {
+          success: true,
+          found: true,
+          multiple: false,
+          product: {
+            // INTERNAL: productCode is for system use (addProductToCart), never show to user
+            productCode: product.productCode,
+            name: product.name,
+            formato: product.formato,
+            price: product.price,
+            description: product.description,
+            stock: product.stock,
+            category: product.category?.name,
+            supplier: product.supplier?.companyName,
+            region: product.region,
+            transportType: product.transportType,
+            certifications: certifications,
+          },
+          timestamp: new Date().toISOString(),
+        }
+      } finally {
+        await prisma.$disconnect()
+      }
+    } catch (error) {
+      logger.error("❌ Error in getProductDetails:", error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        message: "Errore nel recupero dettagli prodotto.",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  /**
+   * 🔍 Get service details by name (fuzzy matching)
+   * 
+   * Used by ProductSearchAgent to lookup full service details when user selects a service.
+   * Returns INTERNAL service code (never shown to user) for cart operations.
+   * 
+   * @param request - Service name for matching
+   * @returns Service details with internal code
+   */
+  public async getServiceDetails(request: {
+    workspaceId: string
+    customerId: string
+    serviceName: string
+  }): Promise<any> {
+    try {
+      const { workspaceId, serviceName } = request
+      
+      logger.info("🔍 getServiceDetails called:", {
+        workspaceId,
+        serviceName,
+      })
+
+      const { PrismaClient } = require("@prisma/client")
+      const prisma = new PrismaClient()
+
+      try {
+        // Normalize search term: trim and lowercase
+        const searchName = serviceName.trim().toLowerCase()
+
+        // Get all active services for workspace
+        const services = await prisma.services.findMany({
+          where: {
+            workspaceId,
+            isActive: true,
+          }
+        })
+
+        // Fuzzy matching: find services where name CONTAINS the search term
+        // or search term CONTAINS the service name
+        let matchedServices = services.filter((s: any) => {
+          const sName = s.name.trim().toLowerCase()
+          return sName.includes(searchName) || searchName.includes(sName)
+        })
+
+        // If no match, try word-based matching
+        if (matchedServices.length === 0) {
+          const searchWords = searchName.split(/\s+/).filter(w => w.length > 2)
+          matchedServices = services.filter((s: any) => {
+            const sName = s.name.trim().toLowerCase()
+            return searchWords.some(word => sName.includes(word))
+          })
+        }
+
+        if (matchedServices.length === 0) {
+          logger.info("❌ No service found for:", { serviceName })
+          return {
+            success: false,
+            found: false,
+            message: `Servizio "${serviceName}" non trovato. Vuoi che ti mostri i servizi disponibili?`,
+            timestamp: new Date().toISOString(),
+          }
+        }
+
+        // If multiple matches, return all for user selection
+        if (matchedServices.length > 1) {
+          const options = matchedServices.map((s: any) => ({
+            name: s.name,
+            price: s.price,
+          }))
+          
+          logger.info("ℹ️ Multiple services found:", options)
+          return {
+            success: true,
+            found: true,
+            multiple: true,
+            services: options,
+            message: `Ho trovato ${matchedServices.length} servizi simili. Quale intendi?`,
+            timestamp: new Date().toISOString(),
+          }
+        }
+
+        // Single match - return full details
+        const service = matchedServices[0]
+
+        logger.info("✅ Service found:", {
+          name: service.name,
+          serviceCode: service.code,
+        })
+
+        return {
+          success: true,
+          found: true,
+          multiple: false,
+          service: {
+            // INTERNAL: serviceCode is for system use (addServiceToCart), never show to user
+            serviceCode: service.code,
+            name: service.name,
+            price: service.price,
+            description: service.description,
+          },
+          timestamp: new Date().toISOString(),
+        }
+      } finally {
+        await prisma.$disconnect()
+      }
+    } catch (error) {
+      logger.error("❌ Error in getServiceDetails:", error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        message: "Errore nel recupero dettagli servizio.",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  /**
    * 📊 Save product search for analytics (statistics tracking)
    *
    * Called AUTOMATICALLY by ProductSearchAgent every time a user searches for products.

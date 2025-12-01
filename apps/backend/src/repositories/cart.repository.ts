@@ -186,14 +186,39 @@ export class CartRepository {
 
   /**
    * Remove item from cart
+   * @param cartItemId Cart item ID
+   * @param workspaceId Workspace ID for security validation
    */
-  async removeItem(cartItemId: string) {
+  async removeItem(cartItemId: string, workspaceId: string) {
     try {
+      // SECURITY: First verify the item belongs to this workspace
+      const cartItem = await this.prisma.cartItems.findUnique({
+        where: { id: cartItemId },
+        include: {
+          cart: {
+            select: { workspaceId: true }
+          }
+        }
+      })
+
+      if (!cartItem) {
+        throw new Error('Cart item not found')
+      }
+
+      if (cartItem.cart.workspaceId !== workspaceId) {
+        logger.warn('🚨 SECURITY: Attempted cross-workspace cart item deletion', {
+          cartItemId,
+          requestedWorkspaceId: workspaceId,
+          actualWorkspaceId: cartItem.cart.workspaceId
+        })
+        throw new Error('Cart item not found') // Don't reveal it exists in another workspace
+      }
+
       await this.prisma.cartItems.delete({
         where: { id: cartItemId }
       })
 
-      logger.info('Removed item from cart:', { cartItemId })
+      logger.info('Removed item from cart:', { cartItemId, workspaceId })
     } catch (error) {
       logger.error('CartRepository.removeItem error:', error)
       throw error
@@ -202,9 +227,35 @@ export class CartRepository {
 
   /**
    * Update item quantity
+   * @param cartItemId Cart item ID
+   * @param newQuantity New quantity
+   * @param workspaceId Workspace ID for security validation
    */
-  async updateItemQuantity(cartItemId: string, newQuantity: number) {
+  async updateItemQuantity(cartItemId: string, newQuantity: number, workspaceId: string) {
     try {
+      // SECURITY: First verify the item belongs to this workspace
+      const cartItem = await this.prisma.cartItems.findUnique({
+        where: { id: cartItemId },
+        include: {
+          cart: {
+            select: { workspaceId: true }
+          }
+        }
+      })
+
+      if (!cartItem) {
+        throw new Error('Cart item not found')
+      }
+
+      if (cartItem.cart.workspaceId !== workspaceId) {
+        logger.warn('🚨 SECURITY: Attempted cross-workspace cart item update', {
+          cartItemId,
+          requestedWorkspaceId: workspaceId,
+          actualWorkspaceId: cartItem.cart.workspaceId
+        })
+        throw new Error('Cart item not found') // Don't reveal it exists in another workspace
+      }
+
       await this.prisma.cartItems.update({
         where: { id: cartItemId },
         data: {
@@ -213,7 +264,7 @@ export class CartRepository {
         }
       })
 
-      logger.info('Updated cart item quantity:', { cartItemId, newQuantity })
+      logger.info('Updated cart item quantity:', { cartItemId, newQuantity, workspaceId })
     } catch (error) {
       logger.error('CartRepository.updateItemQuantity error:', error)
       throw error
@@ -222,14 +273,35 @@ export class CartRepository {
 
   /**
    * Clear all items from cart
+   * @param cartId Cart ID
+   * @param workspaceId Workspace ID for security validation
    */
-  async clearCart(cartId: string) {
+  async clearCart(cartId: string, workspaceId: string) {
     try {
+      // SECURITY: First verify the cart belongs to this workspace
+      const cart = await this.prisma.carts.findUnique({
+        where: { id: cartId },
+        select: { workspaceId: true }
+      })
+
+      if (!cart) {
+        throw new Error('Cart not found')
+      }
+
+      if (cart.workspaceId !== workspaceId) {
+        logger.warn('🚨 SECURITY: Attempted cross-workspace cart clear', {
+          cartId,
+          requestedWorkspaceId: workspaceId,
+          actualWorkspaceId: cart.workspaceId
+        })
+        throw new Error('Cart not found') // Don't reveal it exists in another workspace
+      }
+
       await this.prisma.cartItems.deleteMany({
         where: { cartId }
       })
 
-      logger.info('Cleared cart:', { cartId })
+      logger.info('Cleared cart:', { cartId, workspaceId })
     } catch (error) {
       logger.error('CartRepository.clearCart error:', error)
       throw error

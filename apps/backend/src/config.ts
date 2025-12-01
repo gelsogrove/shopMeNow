@@ -27,13 +27,27 @@ export interface Config {
   }
 }
 
+// SECURITY: JWT_SECRET must be set - no fallback allowed
+const getJwtSecret = (): string => {
+  const secret = process.env.JWT_SECRET
+  if (!secret || secret === 'your-secret-key') {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('CRITICAL: JWT_SECRET must be set in production!')
+    }
+    // Only allow default in development with warning
+    console.warn('⚠️ WARNING: Using default JWT_SECRET - NEVER use in production!')
+    return 'dev-only-secret-change-in-production'
+  }
+  return secret
+}
+
 export const config: Config = {
   port: parseInt(process.env.PORT || "3001", 10),
   jwt: {
-    secret: process.env.JWT_SECRET || "your-secret-key",
+    secret: getJwtSecret(),
     expiresIn: "1d",
   },
-  jwtSecret: process.env.JWT_SECRET || "your-secret-key",
+  jwtSecret: getJwtSecret(),
   database: {
     url:
       process.env.DATABASE_URL ||

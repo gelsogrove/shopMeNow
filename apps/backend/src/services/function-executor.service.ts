@@ -28,6 +28,7 @@ export interface ExecutionContext {
   customerId: string
   customerName?: string
   customerLanguage?: string
+  customerDiscount?: number // Customer's discount percentage (e.g., 10 for 10%)
 }
 
 export interface FunctionResult {
@@ -233,6 +234,7 @@ export class FunctionExecutor {
       customerId: context.customerId,
       customerName: context.customerName,
       language: context.customerLanguage,
+      customerDiscount: context.customerDiscount,
     }
 
     // Execute via CartManagementAgent
@@ -254,6 +256,7 @@ export class FunctionExecutor {
       customerId: context.customerId,
       customerName: context.customerName,
       language: context.customerLanguage,
+      customerDiscount: context.customerDiscount,
     }
 
     const result = await this.cartManagementAgent.getCart(cartContext)
@@ -277,6 +280,7 @@ export class FunctionExecutor {
       customerId: context.customerId,
       customerName: context.customerName,
       language: context.customerLanguage,
+      customerDiscount: context.customerDiscount,
     }
 
     const result = await this.cartManagementAgent.removeFromCart(
@@ -307,6 +311,7 @@ export class FunctionExecutor {
       customerId: context.customerId,
       customerName: context.customerName,
       language: context.customerLanguage,
+      customerDiscount: context.customerDiscount,
     }
 
     const result = await this.cartManagementAgent.updateQuantity(cartContext, {
@@ -326,6 +331,7 @@ export class FunctionExecutor {
       customerId: context.customerId,
       customerName: context.customerName,
       language: context.customerLanguage,
+      customerDiscount: context.customerDiscount,
     }
 
     const result = await this.cartManagementAgent.resetCart(cartContext)
@@ -356,6 +362,7 @@ export class FunctionExecutor {
       customerId: context.customerId,
       customerName: context.customerName,
       language: context.customerLanguage,
+      customerDiscount: context.customerDiscount,
     }
 
     const result = await this.cartManagementAgent.repeatOrder(cartContext, {

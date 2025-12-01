@@ -73,7 +73,7 @@ export const defaultAgents = (
     description:
       "Specialist in product search with progressive filtering strategy (Regola 11): guides customers from categories to specific products",
     systemPrompt: loadPrompt("product-search-agent.md"),
-    model: "google/gemini-2.0-flash-001",
+    model: "openai/gpt-4o-mini",
     temperature: 0, // ✅ Zero temperature = deterministic, reads exact data from {{PRODUCTS}} (no hallucination)
     maxTokens: 2048,
     order: 1,

@@ -274,6 +274,29 @@ export class LLMRouterService {
   }
 
   /**
+   * Retrieve customer discount (percentage) with workspace isolation
+   */
+  private async getCustomerDiscountPercent(
+    workspaceId: string,
+    customerId: string
+  ): Promise<number> {
+    try {
+      const customer = await this.prisma.customers.findFirst({
+        where: { id: customerId, workspaceId },
+        select: { discount: true },
+      })
+      return customer?.discount || 0
+    } catch (error) {
+      logger.warn("Could not fetch customer discount", {
+        workspaceId,
+        customerId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return 0
+    }
+  }
+
+  /**
    * Main entry point - Route message through multi-agent system
    */
   async routeMessage(
@@ -281,13 +304,20 @@ export class LLMRouterService {
   ): Promise<RouteMessageResponse> {
     const startTime = Date.now()
     let totalTokens = 0
+    let customerDiscount = 0
 
     try {
+      customerDiscount = await this.getCustomerDiscountPercent(
+        params.workspaceId,
+        params.customerId
+      )
+
       logger.info("🎯 Routing message", {
         workspaceId: params.workspaceId,
         customerId: params.customerId,
         conversationId: params.conversationId,
         isSystemMessage: params.isSystemMessage || false,
+        customerDiscount,
       })
 
       // 🆕 Feature 127: SYSTEM MESSAGE FAST-PATH
@@ -693,13 +723,6 @@ export class LLMRouterService {
         "✅ Router prompt processed with variables replaced (no products/categories)"
       )
 
-      // 🔍 DEBUG: Print FULL Router prompt to console
-      console.log("\n" + "=".repeat(100))
-      console.log("🔍 ROUTER AGENT - FULL SYSTEM PROMPT")
-      console.log("=".repeat(100))
-      console.log(processedRouterPrompt)
-      console.log("=".repeat(100) + "\n")
-
       // Create processed router agent with replaced prompt
       const processedRouterAgent = {
         ...routerAgent,
@@ -713,6 +736,7 @@ export class LLMRouterService {
         conversationHistory,
         userMessage: params.message,
         params,
+        customerDiscount,
       })
 
       totalTokens = result.tokensUsed
@@ -738,10 +762,6 @@ export class LLMRouterService {
         stepsCount: debugInfo.steps.length,
         totalTokens: debugInfo.totalTokens,
       })
-
-      console.log(
-        "🟡 CONSOLE: functionCallingLoop completed - about to process tokens"
-      )
 
       // STEP 5.5: Token Replacement (if any tokens were replaced)
       // Extract link replacement info from last agent step (if present)
@@ -972,8 +992,6 @@ export class LLMRouterService {
         },
       })
 
-      console.log("🟢 CONSOLE: AFTER SECURITY CHECK - continuing to URL cleanup")
-
       // STEP 5.5: Clean up punctuation attached to URLs (Safety may add punctuation)
       // Example: "http://localhost:3000/s/xyz." → "http://localhost:3000/s/xyz ."
       // Example: "http://localhost:3000/s/xyz)." → "http://localhost:3000/s/xyz ."
@@ -1005,8 +1023,6 @@ export class LLMRouterService {
           }
         )
       }
-
-      console.log("🟢 CONSOLE: AFTER URL CLEANUP - about to log success")
 
       logger.info("✅ Message routed successfully", {
         executionTimeMs: Date.now() - startTime,
@@ -1041,9 +1057,8 @@ export class LLMRouterService {
         JSON.stringify(debugInfo, null, 2)
       )
 
-      // 🚨 CRITICAL DEBUG: Log that we're about to save messages
-      console.log("🔴🔴🔴 CONSOLE.LOG - ABOUT TO SAVE MESSAGES!!!")
-      logger.error(
+      // Save messages
+      logger.info(
         "🚨🚨🚨 ABOUT TO SAVE MESSAGES - THIS SHOULD APPEAR IN LOGS!!!",
         {
           workspaceId: params.workspaceId,
@@ -1108,7 +1123,6 @@ export class LLMRouterService {
         debugInfo: debugInfo, // ✅ Return same debugInfo object that was saved
       }
     } catch (error) {
-      console.log("🔴🔴🔴 CATCH BLOCK REACHED - ERROR:", error)
       const executionTimeMs = Date.now() - startTime
 
       logger.error("❌ Error routing message", error)
@@ -1220,6 +1234,7 @@ export class LLMRouterService {
     conversationHistory: any[]
     userMessage: string
     params: RouteMessageParams
+    customerDiscount: number
   }): Promise<{
     response: string
     tokensUsed: number
@@ -1228,7 +1243,13 @@ export class LLMRouterService {
     confidence?: number
     debugSteps: DebugStep[] // 🔧 NEW: Captured execution steps
   }> {
-    const { routerAgent, conversationHistory, userMessage, params } = options
+    const {
+      routerAgent,
+      conversationHistory,
+      userMessage,
+      params,
+      customerDiscount,
+    } = options
 
     let messages = [
       { role: "system" as const, content: routerAgent.systemPrompt },
@@ -1352,6 +1373,7 @@ export class LLMRouterService {
             customerId: params.customerId,
             customerName: params.customerName,
             customerLanguage: params.customerLanguage,
+            customerDiscount: customerDiscount, // 💰 Pass customer discount for cart price calculations
           }
         )
         const functionExecutionTime = Date.now() - functionExecutionStart
@@ -1394,14 +1416,17 @@ export class LLMRouterService {
           }
 
           // Get catalog data for sub-agent
-          const customerDiscount = customer.discount || 0
+          const customerDiscountForCatalog = customer.discount || 0
           const messageRepo =
             new (require("../repositories/message.repository").MessageRepository)()
 
           const [categories, offers, products, lastOrder] = await Promise.all([
             messageRepo.getActiveCategories(params.workspaceId),
             messageRepo.getActiveOffers(params.workspaceId),
-            messageRepo.getActiveProducts(params.workspaceId, customerDiscount),
+            messageRepo.getActiveProducts(
+              params.workspaceId,
+              customerDiscountForCatalog
+            ),
             this.prisma.orders.findFirst({
               where: { customerId: customer.id },
               orderBy: { createdAt: "desc" },
@@ -1412,7 +1437,7 @@ export class LLMRouterService {
           // Build customerData object with all variables
           const customerData = {
             nameUser: customer.name || "",
-            discountUser: customer.discount || 0,
+            discountUser: customerDiscountForCatalog,
             companyName: customer.company || "",
             lastordercode: lastOrder?.orderCode || "",
             languageUser: this.getLanguageDisplayName(
@@ -1580,11 +1605,7 @@ export class LLMRouterService {
               // ✅ ALWAYS delegate to ProductSearchAgentLLM - let LLM decide what to show
               const productSearchAgent = new ProductSearchAgentLLM(this.prisma)
 
-              console.log("\n" + "🔵".repeat(50))
-              console.log(
-                "🔵 ROUTER IS DELEGATING TO PRODUCT AND SERVICES AGENT"
-              )
-              console.log("🔵".repeat(50) + "\n")
+              logger.info("🔵 ROUTER delegating to ProductSearchAgentLLM")
 
               subAgentResponse = await productSearchAgent.handleQuery({
                 workspaceId: params.workspaceId,
@@ -1660,6 +1681,7 @@ export class LLMRouterService {
                 customerId: params.customerId,
                 customerName: params.customerName,
                 customerLanguage: params.customerLanguage,
+                customerDiscount, // 🔧 Pass discount for price calculations
                 query: delegationQuery,
                 conversationHistory: recentHistory, // ✅ Pass conversation context
                 selectedProductCode, // 🔧 Feature 123: Pass product code from search memory
@@ -1999,6 +2021,7 @@ export class LLMRouterService {
                 customerId: params.customerId,
                 customerName: params.customerName,
                 customerLanguage: params.customerLanguage,
+                customerDiscount, // 🔧 Pass discount for price calculations
                 query: `CONFIRMED: ${cartQuery}`, // Add CONFIRMED prefix
                 conversationHistory: recentHistory,
               })
@@ -2404,8 +2427,8 @@ export class LLMRouterService {
       const finalResponse = safeResponse.translatedText
       const executionTimeMs = Date.now() - startTime
 
-      // 🔧 CRITICAL: Save messages BEFORE returning (same as main flow)
-      console.log("🔴🔴🔴 AUTO-DELEGATION: SAVING MESSAGES")
+      // Save messages BEFORE returning (same as main flow)
+      logger.info("Saving messages for auto-delegation flow")
 
       // Save user message (INBOUND)
       await this.conversationManager.saveUserMessage({

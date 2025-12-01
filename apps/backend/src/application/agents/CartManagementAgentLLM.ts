@@ -45,6 +45,7 @@ export interface CartLLMContext {
   customerId: string
   customerName?: string
   customerLanguage?: string
+  customerDiscount?: number // Customer's discount percentage (e.g., 10 for 10%)
   query: string
   conversationHistory?: Array<{ role: string; content: string }> // Last 2-3 messages for context
   selectedProductCode?: string // Feature 123: Product code from search memory
@@ -435,6 +436,7 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
         customerId: context.customerId,
         customerName: context.customerName,
         language: context.customerLanguage,
+        customerDiscount: context.customerDiscount, // 🔧 Pass discount for price calculations
       }
 
       switch (functionName) {
@@ -800,7 +802,7 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
       },
       {
         name: "updateCartItem",
-        description: "Update the quantity of an item in the cart. Use when customer says 'I want 5 panettoni instead of 3' or 'change mozzarella to 2'",
+        description: "Update the quantity of an item in the cart. Use when customer says 'I want 5 panettoni instead of 3', 'change mozzarella to 2', 'voglio solo una mozzarella' (reduce quantity to 1), 'metti 3 burrate'. ⚠️ 'voglio solo X' means 'reduce X to 1', NOT 'clear cart'!",
         parameters: {
           type: "object",
           properties: {
@@ -822,7 +824,7 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
       },
       {
         name: "clearCart",
-        description: "Remove all items from the cart",
+        description: "Remove ALL items from the cart. ⚠️ Use ONLY when customer explicitly says 'svuota carrello', 'cancella tutto', 'elimina carrello'. NEVER use for 'voglio solo X' (that's updateCartItem!)",
         parameters: {
           type: "object",
           properties: {},

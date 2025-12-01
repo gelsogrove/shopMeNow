@@ -940,7 +940,8 @@ async function main() {
           customerId: italianCustomer.id,
           role: "user",
           content: "Ciao! Vorrei sapere quali formaggi avete disponibili",
-          createdAt: new Date(Date.now() - 1000 * 60 * 10),
+          // 24 hours ago - outside the 10-minute conversation history window
+          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
         },
         {
           conversationId: chatSession1.id,
@@ -956,7 +957,8 @@ async function main() {
               { agentType: "PRODUCT_SEARCH", response: "..." },
             ],
           }),
-          createdAt: new Date(Date.now() - 1000 * 60 * 9),
+          // 24 hours ago - outside the 10-minute conversation history window
+          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 + 1000),
         },
         {
           conversationId: chatSession1.id,
@@ -964,7 +966,8 @@ async function main() {
           customerId: italianCustomer.id,
           role: "user",
           content: "Sì, vorrei 1kg di Parmigiano Reggiano",
-          createdAt: new Date(Date.now() - 1000 * 60 * 8),
+          // 24 hours ago - outside the 10-minute conversation history window
+          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 + 2000),
         },
         {
           conversationId: chatSession1.id,
@@ -977,7 +980,8 @@ async function main() {
             agentSelected: "CART",
             functionCalled: "AddToCart",
           }),
-          createdAt: new Date(Date.now() - 1000 * 60 * 7),
+          // 24 hours ago - outside the 10-minute conversation history window
+          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 + 3000),
         },
       ],
     })

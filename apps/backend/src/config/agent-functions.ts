@@ -144,8 +144,46 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 
   // ========================================
   // PRODUCT AND SERVICES AGENT FUNCTIONS
-  // NOTE: searchProducts REMOVED - LLM uses {{PRODUCTS}} from prompt only
   // ========================================
+
+  {
+    name: "getProductDetails",
+    description:
+      "Get full product details by searching with product name and optional formato. Use when user selects a product from a list (e.g., user says '1' after seeing a numbered list). Returns complete product info including code, price, stock, supplier, certifications. The search is fuzzy and case-insensitive.",
+    parameters: {
+      type: "object",
+      properties: {
+        productName: {
+          type: "string",
+          description:
+            "Product name to search for (e.g., 'Parmigiano Reggiano DOP 24 mesi'). Will be matched with trim() and case-insensitive.",
+        },
+        formato: {
+          type: "string",
+          description:
+            "Optional product format/size (e.g., '250g', '500ml'). Helps distinguish similar products.",
+        },
+      },
+      required: ["productName"],
+    },
+  },
+
+  {
+    name: "getServiceDetails",
+    description:
+      "Get full service details by searching with service name. Use when user selects a service from a list. Returns complete service info including code, price, description. The search is fuzzy and case-insensitive.",
+    parameters: {
+      type: "object",
+      properties: {
+        serviceName: {
+          type: "string",
+          description:
+            "Service name to search for (e.g., 'Consegna Express'). Will be matched with trim() and case-insensitive.",
+        },
+      },
+      required: ["serviceName"],
+    },
+  },
 
   {
     name: "searchProductByCertifications",
@@ -552,8 +590,8 @@ export function getFunctionNamesForAgentType(agentType: string): string[] {
       ).map((fn) => fn.name)
 
     case "PRODUCT_SEARCH":
-      // NOTE: searchProducts removed - LLM uses {{PRODUCTS}} from prompt
-      return ["searchProductByCertifications", "searchProductForStatistics"]
+      // getProductDetails and getServiceDetails for retrieving full item details by name
+      return ["getProductDetails", "getServiceDetails", "searchProductByCertifications", "searchProductForStatistics"]
 
     case "CART_MANAGEMENT":
       return [

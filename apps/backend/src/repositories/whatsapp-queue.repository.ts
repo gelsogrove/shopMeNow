@@ -156,9 +156,29 @@ export class WhatsAppQueueRepository {
   /**
    * Delete message from queue
    * @param id Message ID
+   * @param workspaceId Workspace ID for security validation
    */
-  async delete(id: string): Promise<void> {
+  async delete(id: string, workspaceId: string): Promise<void> {
     try {
+      // SECURITY: First verify the message belongs to this workspace
+      const message = await this.prisma.whatsAppQueue.findUnique({
+        where: { id },
+        select: { workspaceId: true }
+      })
+
+      if (!message) {
+        throw new Error('Queue message not found')
+      }
+
+      if (message.workspaceId !== workspaceId) {
+        logger.warn('🚨 SECURITY: Attempted cross-workspace queue message deletion', {
+          messageId: id,
+          requestedWorkspaceId: workspaceId,
+          actualWorkspaceId: message.workspaceId
+        })
+        throw new Error('Queue message not found') // Don't reveal it exists in another workspace
+      }
+
       await this.prisma.whatsAppQueue.delete({
         where: { id },
       })

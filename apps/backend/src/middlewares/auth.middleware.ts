@@ -50,9 +50,12 @@ export const authMiddleware = async (
         .json({ message: "Authentication token is required" })
     }
 
+    // SECURITY: Use config.jwtSecret which validates the secret is set
+    const { config } = await import("../config")
+    
     const decoded = verify(
       token,
-      process.env.JWT_SECRET || "your-secret-key"
+      config.jwtSecret
     ) as JwtPayload
 
     // Use either id or userId from the token

@@ -23,6 +23,7 @@ export interface CartAgentContext {
   customerId: string
   customerName?: string
   language?: string
+  customerDiscount?: number // Customer's discount percentage (e.g., 10 for 10%)
 }
 
 export interface AddToCartParams {
@@ -61,6 +62,7 @@ export class CartManagementAgent {
 
   /**
    * Get cart contents with full details
+   * Applies customer discount to all prices
    */
   async getCart(context: CartAgentContext) {
     try {
@@ -81,23 +83,35 @@ export class CartManagementAgent {
         }
       }
 
-      // Calculate totals
+      // Customer discount percentage (e.g., 10 for 10%)
+      const discountPercent = context.customerDiscount || 0
+      const discountMultiplier = 1 - discountPercent / 100
+
+      // Calculate totals with customer discount applied
       const items = cart.items.map((item) => {
-        const price = item.product?.price || item.service?.price || 0
+        const originalPrice = item.product?.price || item.service?.price || 0
+        // Apply customer discount
+        let discountedPrice = originalPrice * discountMultiplier
+        // 🔴 CRITICAL: Round UP to nearest 10 cents (€7.02 → €7.10)
+        // Andrea's requirement: arrotondamento per eccesso ai 10 centesimi
+        // Must match PriceCalculationService logic!
+        discountedPrice = Math.ceil(discountedPrice * 10) / 10
+        
         return {
           id: item.id,
           type: item.itemType,
           name: item.product?.name || item.service?.name || "Unknown",
           quantity: item.quantity,
-          unitPrice: price,
-          total: price * item.quantity,
+          originalPrice, // Price before discount
+          unitPrice: discountedPrice, // Price after discount (rounded up to 10 cents)
+          total: Number((discountedPrice * item.quantity).toFixed(2)),
           notes: item.notes,
           product: item.product,
           service: item.service,
         }
       })
 
-      const total = items.reduce((sum, item) => sum + item.total, 0)
+      const total = Number(items.reduce((sum, item) => sum + item.total, 0).toFixed(2))
 
       return {
         success: true,
@@ -107,6 +121,7 @@ export class CartManagementAgent {
           items,
           total,
           itemCount: items.length,
+          discountApplied: discountPercent, // Show what discount was applied
         },
       }
     } catch (error) {
@@ -277,8 +292,8 @@ export class CartManagementAgent {
 
       const itemName = item.product?.name || item.service?.name || "Item"
 
-      // Remove item
-      await this.cartRepo.removeItem(cartItemId)
+      // Remove item (with workspace validation for security)
+      await this.cartRepo.removeItem(cartItemId, context.workspaceId)
 
       // Return updated cart
       const updatedCart = await this.getCart(context)
@@ -361,8 +376,8 @@ export class CartManagementAgent {
         }
       }
 
-      // Update quantity
-      await this.cartRepo.updateItemQuantity(cartItemId, newQuantity)
+      // Update quantity (with workspace validation for security)
+      await this.cartRepo.updateItemQuantity(cartItemId, newQuantity, context.workspaceId)
 
       // Return updated cart
       const updatedCart = await this.getCart(context)
@@ -415,8 +430,8 @@ export class CartManagementAgent {
 
       const itemCount = cart.items.length
 
-      // Clear all items
-      await this.cartRepo.clearCart(cart.id)
+      // Clear all items (with workspace validation for security)
+      await this.cartRepo.clearCart(cart.id, context.workspaceId)
 
       logger.info("Cart cleared:", {
         workspaceId: context.workspaceId,
@@ -478,12 +493,12 @@ export class CartManagementAgent {
         }
       }
 
-      // Clear current cart first
+      // Clear current cart first (with workspace validation)
       const cart = await this.cartRepo.getOrCreateCart(
         context.workspaceId,
         context.customerId
       )
-      await this.cartRepo.clearCart(cart.id)
+      await this.cartRepo.clearCart(cart.id, context.workspaceId)
 
       logger.info("🔍 About to add order items to cart:", {
         orderId: order.id,

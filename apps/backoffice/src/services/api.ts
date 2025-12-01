@@ -29,12 +29,10 @@ class BackofficeApi {
   private token: string | null = null
 
   setToken(token: string) {
-    console.log('🔐 [API] Setting token:', token.substring(0, 20) + '...')
     this.token = token
   }
 
   clearToken() {
-    console.log('🔓 [API] Clearing token')
     this.token = null
   }
 
@@ -43,9 +41,6 @@ class BackofficeApi {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     try {
-      console.log('📡 [API] Fetching:', `${API_BASE}${endpoint}`)
-      console.log('🔑 [API] Token present:', !!this.token)
-      
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
         ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
@@ -57,7 +52,6 @@ class BackofficeApi {
       })
 
       const data = await response.json()
-      console.log('📦 [API] Response:', data)
       return data
     } catch (error) {
       console.error('❌ [API] Error:', error)

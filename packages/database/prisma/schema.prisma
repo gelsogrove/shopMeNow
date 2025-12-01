@@ -183,6 +183,7 @@ model Products {
   supplier              Suppliers?              @relation(fields: [supplierId], references: [id])
   workspace             Workspace               @relation(fields: [workspaceId], references: [id])
 
+  @@index([workspaceId])
   @@index([allergens])
   @@index([certifications])
   @@map("products")
@@ -792,6 +793,7 @@ model Offers {
   workspace       Workspace    @relation(fields: [workspaceId], references: [id])
   categories      Categories[] @relation("OfferCategories")
 
+  @@index([workspaceId])
   @@map("offers")
 }
 

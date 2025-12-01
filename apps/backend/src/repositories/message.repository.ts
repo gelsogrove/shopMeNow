@@ -1257,19 +1257,18 @@ export class MessageRepository {
       }
 
       // Formatta i servizi come lista numerata con tutti i dettagli
+      // ✅ Feature 191: NO CODES to user! Codes are internal only.
+      // LLM uses getServiceDetails(name) to get internal code for cart operations
       const formattedServices = services
         .map((service, index) => {
           const price = service.price
             ? `€${service.price.toFixed(2)}`
             : "Prezzo da definire"
           const description = service.description || "Servizio disponibile"
-          const code =
-            service.code || `SRV-${String(index + 1).padStart(3, "0")}`
 
           return [
             `${index + 1}. **${service.name}** - ${price}`,
             `   📝 Descrizione: ${description}`,
-            `   📋 Codice: ${code}`,
             `   ⏰ Disponibilità: Sempre disponibile`,
           ].join("\n")
         })
@@ -1424,11 +1423,10 @@ export class MessageRepository {
               } ${p.transportType}`
             : ""
 
-          // WhatsApp strikethrough: ~text~ (single tilde at start and end)
-          // Format: [CODICE] NOME formato ~€originalPrice~ → €finalPrice - description | Stock: ✅ N | 🔖 Certifications | 🏷️ Supplier | 🌍 Region | ❄️ Transport
-          // Se productCode è null/undefined, non mostrarlo
-          const productCode = p.productCode ? `${p.productCode} ` : ""
-          formattedProducts += `• ${productCode}${p.name}${formatoStr} ~€${originalPrice}~ → €${finalPrice}${description}${stockStr}${certificationsStr}${supplierStr}${regionStr}${transportStr}\n`
+          // ✅ Feature 191: NO CODES to user! Codes are internal only.
+          // Format: NOME formato ~€originalPrice~ → €finalPrice - description | Stock: ✅ N | 🔖 Certifications | 🏷️ Supplier | 🌍 Region | ❄️ Transport
+          // LLM uses getProductDetails(name, formato) to get internal code for cart operations
+          formattedProducts += `• ${p.name}${formatoStr} ~€${originalPrice}~ → €${finalPrice}${description}${stockStr}${certificationsStr}${supplierStr}${regionStr}${transportStr}\n`
         })
         formattedProducts += "\n"
       }

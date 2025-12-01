@@ -335,10 +335,8 @@ export function ClientsPage() {
     
     try {
       const response = await api.users.impersonate(userId)
-      console.log('🔑 Impersonate response:', response)
       
       if (response.success && response.data?.redirectUrl) {
-        console.log('🔗 Opening URL:', response.data.redirectUrl)
         // Use location.href in a new window to avoid popup blocker
         const newWindow = window.open('', '_blank')
         if (newWindow) {

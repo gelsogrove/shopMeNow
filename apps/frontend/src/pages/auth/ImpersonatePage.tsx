@@ -33,7 +33,6 @@ export default function ImpersonatePage() {
 
     try {
       // Clear ALL existing auth data FIRST
-      console.log('🧹 Clearing existing auth data...')
       localStorage.removeItem('token')
       localStorage.removeItem('currentWorkspace')
       localStorage.removeItem('sessionId')
@@ -44,27 +43,22 @@ export default function ImpersonatePage() {
       
       // Decode token to get impersonation info
       const tokenPayload = JSON.parse(atob(token.split('.')[1]))
-      console.log('🔑 Token payload:', tokenPayload)
       
       // Store the impersonation token in localStorage
       localStorage.setItem('token', token)
-      console.log('✅ Token saved to localStorage')
       
       // Store sessionId in BOTH localStorage and sessionStorage (api.ts reads from sessionStorage)
       localStorage.setItem('sessionId', sessionId)
       sessionStorage.setItem('sessionId', sessionId)
-      console.log('✅ SessionId saved to both storages')
       
       // Store impersonation flags (Feature 190)
       if (tokenPayload.isImpersonating) {
         localStorage.setItem('isImpersonating', 'true')
         localStorage.setItem('impersonatorEmail', tokenPayload.impersonatorEmail || '')
-        console.log('🔑 Impersonation mode enabled by:', tokenPayload.impersonatorEmail)
       }
       
       // Verify token is actually saved
       const savedToken = localStorage.getItem('token')
-      console.log('🔍 Verification - Token in localStorage:', savedToken ? savedToken.substring(0, 50) + '...' : 'NULL')
       
       if (!savedToken) {
         console.error('❌ CRITICAL: Token not saved to localStorage!')
@@ -72,11 +66,8 @@ export default function ImpersonatePage() {
         return
       }
       
-      console.log('🚀 Redirecting to workspace-selection in 500ms...')
-      
-      // Longer delay to ensure storage is updated
+      // Redirect to workspace selection after brief delay
       setTimeout(() => {
-        console.log('🚀 NOW redirecting to /workspace-selection')
         window.location.href = '/workspace-selection'
       }, 500)
     } catch (err) {

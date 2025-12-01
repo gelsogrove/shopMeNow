@@ -132,7 +132,6 @@ export class CustomersController {
     try {
       const { id, workspaceId } = req.params
 
-      // DIRECT console.log - NOT logger!
       logger.info("=== CONTROLLER RAW BODY ===")
       logger.info("typeof req.body:", typeof req.body)
       logger.info("req.body:", req.body)

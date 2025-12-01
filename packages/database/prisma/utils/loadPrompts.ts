@@ -23,10 +23,10 @@ type AgentType =
 // Mapping from filename to AgentType
 const AGENT_TYPE_MAP: Record<string, AgentType> = {
   "router-agent.md": "ROUTER",
-  "product-search.md": "PRODUCT_SEARCH",
-  "cart-management.md": "CART_MANAGEMENT",
-  "order-tracking.md": "ORDER_TRACKING",
-  "customer-support.md": "CUSTOMER_SUPPORT",
+  "product-search-agent.md": "PRODUCT_SEARCH",
+  "cart-management-agent.md": "CART_MANAGEMENT",
+  "order-tracking-agent.md": "ORDER_TRACKING",
+  "customer-support-agent.md": "CUSTOMER_SUPPORT",
 }
 
 export interface AgentPromptData {

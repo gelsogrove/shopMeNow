@@ -29,7 +29,8 @@ const AGENT_TYPE_MAP = {
 }
 
 async function loadPromptFromFile(filename) {
-  const filePath = path.join(__dirname, "../../docs/prompts", filename)
+  // Path relative to project root (not apps/backend)
+  const filePath = path.join(__dirname, "../../../docs/prompts", filename)
 
   if (!fs.existsSync(filePath)) {
     console.warn(`⚠️  File not found: ${filename}`)

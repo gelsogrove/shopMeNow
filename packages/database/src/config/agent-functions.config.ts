@@ -128,6 +128,49 @@ export const PRODUCT_SEARCH_FUNCTIONS: FunctionDefinition[] = [
   {
     type: "function",
     function: {
+      name: "getProductDetails",
+      description:
+        "🔍 PRIORITY 1 - Recupera dettagli completi di un prodotto cercandolo per nome (fuzzy match). OBBLIGATORIO chiamarla quando l'utente seleziona un prodotto dalla lista (es: risponde '1', '2', '3'). Ritorna: codice interno (MAI mostrarlo all'utente!), nome, prezzo, stock, descrizione, certificazioni. Il codice interno serve per passare a CartManagementAgent. FLOW: Lista → utente dice '1' → getProductDetails(nome, formato) → mostra dettagli SENZA codice → chiedi conferma → se 'sì' passa codice a CartManagementAgent.",
+      parameters: {
+        type: "object",
+        properties: {
+          productName: {
+            type: "string",
+            description:
+              "Il nome del prodotto da cercare (fuzzy match supportato). Es: 'Parmigiano', 'mozzarella bufala', 'prosciutto'.",
+          },
+          formato: {
+            type: "string",
+            description:
+              "Opzionale: il formato/peso del prodotto. Es: '1kg', '250g', '500ml'.",
+          },
+        },
+        required: ["productName"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "getServiceDetails",
+      description:
+        "🔍 PRIORITY 1 - Recupera dettagli completi di un servizio cercandolo per nome (fuzzy match). OBBLIGATORIO chiamarla quando l'utente seleziona un servizio dalla lista. Ritorna: codice interno (MAI mostrarlo all'utente!), nome, prezzo, descrizione. Il codice interno serve per passare a CartManagementAgent.",
+      parameters: {
+        type: "object",
+        properties: {
+          serviceName: {
+            type: "string",
+            description:
+              "Il nome del servizio da cercare (fuzzy match supportato). Es: 'consegna express', 'confezionamento regalo'.",
+          },
+        },
+        required: ["serviceName"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "searchProductForStatistic",
       description:
         "📊 PRIORITY 5 - BACKGROUND ONLY (non-blocking). Registra la ricerca di un prodotto da parte del cliente per analytics e trend analysis. Usare quando l'utente cerca/chiede di un prodotto alimentare: 'hai la burrata?', 'avete prosciutto?', 'mi serve parmigiano', 'vendete champagne?', 'non trovate tartufo?'. Viene chiamata SIA per prodotti trovati CHE per prodotti NON trovati. ⚠️ BACKGROUND FUNCTION: Il LLM continua a rispondere NORMALMENTE dopo la chiamata, l'utente NON deve sapere della registrazione. NON bloccare il flusso conversazionale con messaggi tecnici tipo 'sto registrando'. La funzione viene eseguita in parallelo alla risposta. NON usare per prodotti non alimentari (software, auto, abbigliamento). NON chiamare due volte per stesso prodotto nella stessa conversazione. DISAMBIGUAZIONE: 'hai burrata?' = searchProductForStatistic (BACKGROUND) | 'aggiungi burrata' (DOPO conferma) = addProduct.",

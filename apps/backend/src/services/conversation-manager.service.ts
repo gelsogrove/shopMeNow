@@ -141,6 +141,17 @@ export class ConversationManager {
     try {
       let deliveryStatus = params.deliveryStatus || "not_queued" // Default: not queued unless enqueueing succeeds
 
+      // 🛡️ GUARDIA: Skip empty messages entirely - never enqueue or save empty content
+      if (!params.content?.trim()) {
+        logger.error("🚨 Empty message content detected - cannot save/enqueue empty message", {
+          customerId: params.customerId,
+          conversationId: params.conversationId,
+          agentType: params.agentType,
+        })
+        // Don't save empty messages - this is a critical bug upstream
+        return
+      }
+
       // 🆕 Feature 181: If message is already marked as blocked, skip enqueueing entirely
       if (deliveryStatus === "blocked") {
         logger.warn("🚫 Message is blocked - skipping WhatsApp queue", {
