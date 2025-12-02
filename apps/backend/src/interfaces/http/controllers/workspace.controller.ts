@@ -357,8 +357,11 @@ export class WorkspaceController {
       }
 
       // Get stats for each workspace in parallel
+      // Calculate 24h ago for new customers count
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+      
       const statsPromises = workspaceIds.map(async (workspaceId) => {
-        const [unreadMessages, pendingOrders, needsIntervention, blockedUsers] =
+        const [unreadMessages, pendingOrders, needsIntervention, blockedUsers, newCustomers] =
           await Promise.all([
             // Count unread incoming messages (from customers)
             prisma.message.count({
@@ -392,6 +395,15 @@ export class WorkspaceController {
                 isBlacklisted: true,
               },
             }),
+            // Count new customers (created in last 24 hours)
+            prisma.customers.count({
+              where: {
+                workspaceId,
+                createdAt: {
+                  gte: twentyFourHoursAgo,
+                },
+              },
+            }),
           ])
 
         return {
@@ -400,6 +412,7 @@ export class WorkspaceController {
           pendingOrders,
           needsIntervention,
           blockedUsers,
+          newCustomers,
         }
       })
 
@@ -413,6 +426,7 @@ export class WorkspaceController {
           pendingOrders: number
           needsIntervention: number
           blockedUsers: number
+          newCustomers: number
         }
       > = {}
       allStats.forEach((stat) => {
@@ -421,6 +435,7 @@ export class WorkspaceController {
           pendingOrders: stat.pendingOrders,
           needsIntervention: stat.needsIntervention,
           blockedUsers: stat.blockedUsers,
+          newCustomers: stat.newCustomers,
         }
       })
 

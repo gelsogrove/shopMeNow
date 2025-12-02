@@ -11,6 +11,12 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { TeamMembersTable } from "@/components/workspace/TeamMembersTable"
 import { BillingSection } from "@/components/billing/BillingSection"
 import { UsageLimitsCard } from "@/components/billing/UsageLimitsCard"
@@ -20,7 +26,7 @@ import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
-import { LogOut, PlusCircle, Radio, MessageSquare, ShoppingCart, AlertTriangle, Smartphone, Crown, User, Ban } from "lucide-react"
+import { LogOut, PlusCircle, Radio, MessageSquare, ShoppingCart, AlertTriangle, Smartphone, Crown, User, Ban, UserPlus, Clock } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
@@ -36,6 +42,7 @@ interface WorkspaceBadgeStats {
   pendingOrders: number
   needsIntervention: number
   blockedUsers: number
+  newCustomers: number
 }
 
 // Definizione dei tipi di attività supportati
@@ -79,6 +86,9 @@ export function WorkspaceSelectionPage() {
   
   // Shared billing data state - to avoid duplicate API calls
   const [sharedBillingOverview, setSharedBillingOverview] = useState<any>(null)
+  
+  // State to open Change Plan dialog from header badge
+  const [openChangePlanDialog, setOpenChangePlanDialog] = useState(false)
 
   // 👤 User profile state for header menu
   const [userName, setUserName] = useState<string>("")
@@ -344,8 +354,51 @@ export function WorkspaceSelectionPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
-        {/* Header with Profile Menu - NO workspace-specific options */}
-        <div className="flex justify-end items-center mb-4">
+        {/* Header with Plan Badge and Profile Menu */}
+        <div className="flex justify-end items-center gap-3 mb-4">
+          {/* Plan Badge - clickable to open Change Plan */}
+          {sharedBillingOverview && isSuperAdmin && (
+            <TooltipProvider delayDuration={100}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setOpenChangePlanDialog(true)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all hover:scale-105 cursor-pointer ${
+                      sharedBillingOverview.billing.planType === 'FREE_TRIAL'
+                        ? 'bg-amber-100 text-amber-700 border border-amber-300'
+                        : sharedBillingOverview.billing.planType === 'BASIC'
+                        ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                        : sharedBillingOverview.billing.planType === 'PREMIUM'
+                        ? 'bg-purple-100 text-purple-700 border border-purple-300'
+                        : 'bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 border border-amber-300'
+                    }`}
+                  >
+                    <Crown className="h-4 w-4" />
+                    <span>
+                      {sharedBillingOverview.billing.planType === 'FREE_TRIAL' 
+                        ? 'Free Trial' 
+                        : sharedBillingOverview.billing.planType === 'BASIC'
+                        ? 'Starter'
+                        : sharedBillingOverview.billing.planType === 'PREMIUM'
+                        ? 'Pro'
+                        : 'Enterprise'}
+                    </span>
+                    {/* Show days remaining for trial */}
+                    {sharedBillingOverview.billing.planType === 'FREE_TRIAL' && sharedBillingOverview.billing.trialEndsAt && (
+                      <span className="flex items-center gap-1 text-xs bg-amber-200 px-1.5 py-0.5 rounded-full">
+                        <Clock className="h-3 w-3" />
+                        {Math.max(0, Math.ceil((new Date(sharedBillingOverview.billing.trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))}d
+                      </span>
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Click to change your plan</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -528,8 +581,9 @@ export function WorkspaceSelectionPage() {
               </div>
               {!isRoleLoading && isSuperAdmin && (
                 <Button
+                  variant="outline"
                   size="sm"
-                  className="gap-1.5"
+                  className="gap-1.5 text-green-600 border-green-600 hover:bg-green-50"
                   onClick={() => {
                     const dialog = document.getElementById(
                       "type-selection-dialog"
@@ -601,29 +655,67 @@ export function WorkspaceSelectionPage() {
                   {/* 📊 Badge Stats Row */}
                   {badgeStats[workspace.id] && (
                     <div className="flex items-center gap-3 mt-3 pt-3 border-t border-green-200">
-                      {/* Pending Orders Badge */}
-                      {badgeStats[workspace.id].pendingOrders > 0 && (
-                        <div className="flex items-center gap-1.5 bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full text-sm font-medium">
-                          <ShoppingCart className="h-3.5 w-3.5" />
-                          <span>{badgeStats[workspace.id].pendingOrders}</span>
-                        </div>
-                      )}
-                      
-                      {/* Needs Intervention Badge */}
-                      {badgeStats[workspace.id].needsIntervention > 0 && (
-                        <div className="flex items-center gap-1.5 bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full text-sm font-medium animate-pulse">
-                          <AlertTriangle className="h-3.5 w-3.5" />
-                          <span>{badgeStats[workspace.id].needsIntervention}</span>
-                        </div>
-                      )}
-                      
-                      {/* Blocked Users Badge */}
-                      {badgeStats[workspace.id].blockedUsers > 0 && (
-                        <div className="flex items-center gap-1.5 bg-red-100 text-red-700 px-2.5 py-1 rounded-full text-sm font-medium">
-                          <Ban className="h-3.5 w-3.5" />
-                          <span>{badgeStats[workspace.id].blockedUsers}</span>
-                        </div>
-                      )}
+                      <TooltipProvider delayDuration={100}>
+                        {/* Pending Orders Badge */}
+                        {badgeStats[workspace.id].pendingOrders > 0 && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-1.5 bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full text-sm font-medium cursor-help">
+                                <ShoppingCart className="h-3.5 w-3.5" />
+                                <span>{badgeStats[workspace.id].pendingOrders}</span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Pending orders awaiting processing</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        
+                        {/* Needs Intervention Badge */}
+                        {badgeStats[workspace.id].needsIntervention > 0 && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-1.5 bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full text-sm font-medium animate-pulse cursor-help">
+                                <AlertTriangle className="h-3.5 w-3.5" />
+                                <span>{badgeStats[workspace.id].needsIntervention}</span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Customers requesting human assistance</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        
+                        {/* Blocked Users Badge */}
+                        {badgeStats[workspace.id].blockedUsers > 0 && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-1.5 bg-red-100 text-red-700 px-2.5 py-1 rounded-full text-sm font-medium cursor-help">
+                                <Ban className="h-3.5 w-3.5" />
+                                <span>{badgeStats[workspace.id].blockedUsers}</span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Blocked/blacklisted customers</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        
+                        {/* New Customers Badge (last 24h) */}
+                        {badgeStats[workspace.id].newCustomers > 0 && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-1.5 bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full text-sm font-medium cursor-help">
+                                <UserPlus className="h-3.5 w-3.5" />
+                                <span>{badgeStats[workspace.id].newCustomers}</span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>New customers in the last 24 hours</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </TooltipProvider>
                     </div>
                   )}
                   
@@ -796,6 +888,8 @@ export function WorkspaceSelectionPage() {
             <BillingSection 
               workspaceId={firstWorkspaceId} 
               onBillingOverviewLoaded={setSharedBillingOverview}
+              openUpgradeDialog={openChangePlanDialog}
+              onUpgradeDialogClose={() => setOpenChangePlanDialog(false)}
             />
             
             {/* Side - Usage Limits (uses shared data from BillingSection) */}
@@ -815,6 +909,11 @@ export function WorkspaceSelectionPage() {
           />
         )}
       </div>
+      
+      {/* Footer */}
+      <footer className="mt-16 pb-8 text-center text-sm text-gray-500">
+        <p>© {new Date().getFullYear()} eChatbot. All rights reserved.</p>
+      </footer>
     </div>
   )
 }

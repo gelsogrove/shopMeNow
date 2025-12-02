@@ -154,9 +154,13 @@ interface BillingSectionProps {
   workspaceId?: string
   /** Optional callback to share billingOverview with parent/sibling components */
   onBillingOverviewLoaded?: (overview: BillingOverview | null) => void
+  /** Optional: externally control the upgrade dialog open state */
+  openUpgradeDialog?: boolean
+  /** Optional: callback when upgrade dialog is closed */
+  onUpgradeDialogClose?: () => void
 }
 
-export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverviewLoaded }: BillingSectionProps) {
+export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverviewLoaded, openUpgradeDialog, onUpgradeDialogClose }: BillingSectionProps) {
   const { workspace } = useWorkspace()
   // Use prop workspaceId if provided, otherwise fall back to context workspace
   const effectiveWorkspaceId = propWorkspaceId || workspace?.id
@@ -197,6 +201,21 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
   const [isUpgrading, setIsUpgrading] = useState(false)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false)
+
+  // External control: open upgrade dialog when prop changes to true
+  useEffect(() => {
+    if (openUpgradeDialog) {
+      setShowUpgradeDialog(true)
+    }
+  }, [openUpgradeDialog])
+
+  // Handle upgrade dialog close - notify parent
+  const handleUpgradeDialogClose = (open: boolean) => {
+    setShowUpgradeDialog(open)
+    if (!open && onUpgradeDialogClose) {
+      onUpgradeDialogClose()
+    }
+  }
 
   // Refresh overview function - uses local or context depending on prop
   const refreshOverview = async () => {
@@ -700,7 +719,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
       </Dialog>
 
       {/* Change Plan Dialog */}
-      <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
+      <Dialog open={showUpgradeDialog} onOpenChange={handleUpgradeDialogClose}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl">Change Plan</DialogTitle>

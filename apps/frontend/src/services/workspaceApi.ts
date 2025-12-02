@@ -81,7 +81,7 @@ const workspaceApi = {
 
   /**
    * Get badge stats for all user's workspaces
-   * Returns counts for: unread messages, pending orders, needs operator intervention
+   * Returns counts for: unread messages, pending orders, needs operator intervention, blocked users, new customers (24h)
    */
   async getBadgeStats(): Promise<
     Record<
@@ -90,6 +90,8 @@ const workspaceApi = {
         unreadMessages: number
         pendingOrders: number
         needsIntervention: number
+        blockedUsers: number
+        newCustomers: number
       }
     >
   > {

@@ -108,14 +108,20 @@ export function Layout() {
   return (
     <TooltipProvider>
       <ImpersonationBanner />
-      <div className="relative flex min-h-screen">
-        <MemoizedSidebar />
-        <div className="flex w-full flex-col pl-72">
-          <MemoizedHeader />
-          <main className="flex-1 p-8">
-            <Outlet />
-          </main>
+      <div className="relative flex min-h-screen flex-col">
+        <div className="flex flex-1">
+          <MemoizedSidebar />
+          <div className="flex w-full flex-col pl-72">
+            <MemoizedHeader />
+            <main className="flex-1 p-8">
+              <Outlet />
+            </main>
+          </div>
         </div>
+        {/* Footer */}
+        <footer className="pl-72 py-4 text-center text-sm text-gray-400 border-t border-gray-100">
+          <p>© {new Date().getFullYear()} eChatbot. All rights reserved.</p>
+        </footer>
         <WhatsAppChatModal
           isOpen={showPlaygroundDialog}
           onClose={handleClosePlayground}
