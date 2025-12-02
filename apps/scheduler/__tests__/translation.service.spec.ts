@@ -220,8 +220,8 @@ describe('Translation Service', () => {
           headers: expect.objectContaining({
             'Content-Type': 'application/json',
             'Authorization': 'Bearer test-api-key-123',
-            'HTTP-Referer': 'https://shopme.com',
-            'X-Title': 'ShopME Campaign Translation',
+            'HTTP-Referer': 'https://echatbot.ai',
+            'X-Title': 'eChatbot Campaign Translation',
           }),
         })
       )

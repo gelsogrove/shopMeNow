@@ -3,7 +3,7 @@
  * SECURITY CONFIGURATION
  * ═══════════════════════════════════════════════════════════════════════════════
  *
- * Centralized security settings for ShopME platform.
+ * Centralized security settings for eChatbot platform.
  * Values are hardcoded based on industry best practices.
  *
  * SECURITY STANDARDS:

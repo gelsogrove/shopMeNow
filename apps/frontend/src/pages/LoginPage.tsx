@@ -115,7 +115,7 @@ export function LoginPage() {
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: isDev ? "admin@shopme.com" : "",
+      email: isDev ? "admin@echatbot.ai" : "",
       password: isDev ? "Venezia44" : "",
     } as LoginForm,
   })
@@ -502,10 +502,10 @@ export function LoginPage() {
             <div className="text-center mb-8">
               <img
                 src="/logo.png"
-                alt="ShopMe Logo"
+                alt="eChatbot Logo"
                 className="w-24 h-24 mx-auto mb-4 object-contain"
               />
-              <h1 className="text-3xl font-bold text-slate-900">ShopMe</h1>
+              <h1 className="text-3xl font-bold text-slate-900">eChatbot</h1>
             </div>
 
             {/* WIP Card */}
@@ -557,7 +557,7 @@ export function LoginPage() {
 
             {/* Footer */}
             <p className="text-center text-sm text-slate-400 mt-8">
-              © 2025 ShopMe. All rights reserved.
+              © 2025 eChatbot. All rights reserved.
             </p>
           </div>
         </div>
@@ -573,8 +573,8 @@ export function LoginPage() {
         <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
           <div className="max-w-lg w-full opacity-30">
             <div className="text-center mb-8">
-              <img src="/logo.png" alt="ShopMe Logo" className="w-24 h-24 mx-auto mb-4 object-contain" />
-              <h1 className="text-3xl font-bold text-slate-900">ShopMe</h1>
+              <img src="/logo.png" alt="eChatbot Logo" className="w-24 h-24 mx-auto mb-4 object-contain" />
+              <h1 className="text-3xl font-bold text-slate-900">eChatbot</h1>
             </div>
             <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 text-center">
               <h2 className="text-2xl font-bold text-slate-900 mb-3">Work in Progress</h2>
@@ -717,11 +717,11 @@ export function LoginPage() {
             <div className="flex items-center gap-5">
               <img
                 src="/logo.png"
-                alt="ShopMe Logo"
+                alt="eChatbot Logo"
                 className="w-32 h-32 object-contain"
               />
               <div>
-                <h1 className="text-3xl font-bold text-slate-900">ShopMe</h1>
+                <h1 className="text-3xl font-bold text-slate-900">eChatbot</h1>
                 <p className="text-base text-slate-600">
                   {t("header.tagline")}
                 </p>
@@ -782,9 +782,9 @@ export function LoginPage() {
           </p>
         </div>
 
-        {/* Two Columns: Why ShopMe (Left) + Video (Right) */}
+        {/* Two Columns: Why eChatbot (Left) + Video (Right) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left Column - Why ShopMe Features */}
+          {/* Left Column - Why eChatbot Features */}
           <div className="space-y-3">
             <h3 className="text-lg font-semibold text-slate-900">
               {t("hero.whyTitle")}
@@ -867,7 +867,7 @@ export function LoginPage() {
               <div className="space-y-6">
                 <div className="text-center space-y-2">
                   <h3 className="text-2xl font-bold text-slate-900">Sign In</h3>
-                  <p className="text-slate-600">Access your ShopMe workspace</p>
+                  <p className="text-slate-600">Access your eChatbot workspace</p>
                 </div>
 
                 {error && (
@@ -1016,16 +1016,16 @@ export function LoginPage() {
           <div className="max-w-2xl mx-auto text-center space-y-4">
             <h3 className="text-2xl font-bold">Get in Touch</h3>
             <p className="text-slate-300">
-              Have questions? We're here to help you get started with ShopMe.
+              Have questions? We're here to help you get started with eChatbot.
             </p>
             <div className="flex flex-col sm:flex-row justify-center items-center gap-6 pt-4">
               <div className="flex items-center gap-3">
                 <Mail className="w-5 h-5 text-green-400" />
                 <a
-                  href="mailto:info@shopme.com"
+                  href="mailto:info@echatbot.ai"
                   className="text-slate-300 hover:text-white"
                 >
-                  info@shopme.com
+                  info@echatbot.ai
                 </a>
               </div>
               <div className="flex items-center gap-3">
@@ -1053,11 +1053,11 @@ export function LoginPage() {
             <div className="flex items-center gap-3">
               <img
                 src="/logo.png"
-                alt="ShopMe"
+                alt="eChatbot"
                 className="w-8 h-8 object-contain"
               />
               <span className="text-xs">
-                © 2025 ShopMe. All rights reserved.
+                © 2025 eChatbot. All rights reserved.
               </span>
             </div>
             <div className="flex gap-6 text-xs">

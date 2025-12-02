@@ -5,7 +5,7 @@ const AuthLogo: React.FC = () => {
     <div className="flex justify-center items-center mb-6">
       <img
         src="/logo.png"
-        alt="ShopMe Logo"
+        alt="eChatbot Logo"
         className="w-64 h-64 object-contain"
       />
     </div>

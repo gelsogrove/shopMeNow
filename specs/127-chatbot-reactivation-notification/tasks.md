@@ -419,7 +419,7 @@ router.use("/workspaces", pushRoutes(pushController))
 
    - [ ] Start backend: `cd backend && npm run dev`
    - [ ] Start frontend: `cd frontend && npm run dev`
-   - [ ] Login as admin (admin@shopme.com / venezia44)
+   - [ ] Login as admin (admin@echatbot.ai / venezia44)
    - [ ] Go to ChatPage
    - [ ] Find customer with chatbot disabled
    - [ ] Click "Enable Chatbot"

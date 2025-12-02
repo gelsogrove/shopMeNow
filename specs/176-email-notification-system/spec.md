@@ -107,7 +107,7 @@ async sendMail(params: {
 **FR-2: Dynamic FROM Address from Workspace**
 
 - System MUST fetch FROM email address from `workspace.adminEmail` field (not hardcoded)
-- Format: `"ShopMe Support" <{workspace.adminEmail}>`
+- Format: `"eChatbot Support" <{workspace.adminEmail}>`
 - Fallback: If `adminEmail` is missing, use `SMTP_FROM` from `.env`
 
 **FR-3: SMTP Configuration from Environment**
@@ -120,7 +120,7 @@ SMTP_PORT="25"
 SMTP_SECURE="true"  # true for port 465, false for others
 SMTP_USER="gelsogrovel@gmail.com"
 SMTP_AUTH="Gocciole44@"  # Password
-SMTP_FROM="noreply@shopme.com"  # Fallback FROM address
+SMTP_FROM="noreply@echatbot.ai"  # Fallback FROM address
 ```
 
 **FR-4: Agent Notification on Operator Request**
@@ -203,7 +203,7 @@ When new order is created (status = CONFIRMED):
 ## Key Entities _(if applicable)_
 
 **Workspace** (existing table)
-- `adminEmail`: FROM address for emails (e.g., "admin@shopme.com")
+- `adminEmail`: FROM address for emails (e.g., "admin@echatbot.ai")
 - Used to fetch workspace-specific sender email
 
 **Customers** (existing table)
@@ -374,7 +374,7 @@ SMTP_PORT="25"
 SMTP_SECURE="true"
 SMTP_USER="gelsogrovel@gmail.com"
 SMTP_AUTH="Gocciole44@"
-SMTP_FROM="noreply@shopme.com"
+SMTP_FROM="noreply@echatbot.ai"
 ```
 
 **Note**: Existing code uses `SMTP_PASS` but user mentioned `SMTP_AUTH`. Verify which env var name is used.

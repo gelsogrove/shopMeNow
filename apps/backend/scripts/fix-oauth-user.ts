@@ -9,7 +9,7 @@ import { config } from "dotenv"
 config() // Load environment variables
 
 // 🛡️ SAFETY CHECK: Block execution in production
-import { ensureNotProduction } from "@shopme/database/../scripts/check-env-safety"
+import { ensureNotProduction } from "@echatbot/database/../scripts/check-env-safety"
 ensureNotProduction("fix-oauth-user")
 
 import { PrismaClient } from '@prisma/client'

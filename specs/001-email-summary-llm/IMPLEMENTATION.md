@@ -31,7 +31,7 @@ Implemented AI-powered conversation summarization for operator escalation emails
 - **Variables**:
   - `{{conversationHistory}}` - Formatted messages from last hour
   - `{{customerName}}` - Customer's full name
-  - `{{agentName}}` - Bot agent name (default: "ShopME Assistant")
+  - `{{agentName}}` - Bot agent name (default: "eChatbot Assistant")
 - **Output Format**:
   ```
   CLIENTE: [nome, telefono, email]
@@ -131,7 +131,7 @@ Implemented AI-powered conversation summarization for operator escalation emails
       smtpSecure: true,
       smtpUser: process.env.SMTP_USER,
       smtpPass: process.env.SMTP_PASS,
-      smtpFrom: "ShopME <noreply@shopme.com>",
+      smtpFrom: "eChatbot <noreply@echatbot.ai>",
     },
   })
   ```
@@ -420,7 +420,7 @@ Monitor escalations via:
 ## 📞 Support & Maintenance
 
 **Contact**: Andrea Gelsomino (andrea_gelsomino@hotmail.com)  
-**Repository**: shopME - branch `001-email-summary-llm`  
+**Repository**: eChatbot - branch `001-email-summary-llm`  
 **Last Updated**: 19 November 2025
 
 **Known Limitations**:

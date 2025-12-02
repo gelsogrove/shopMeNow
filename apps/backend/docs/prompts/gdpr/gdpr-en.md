@@ -2,7 +2,7 @@
 
 ## 1. Data Controller
 
-The management of your personal data is carried out by the data controller indicated during registration to the ShopME service.
+The management of your personal data is carried out by the data controller indicated during registration to the eChatbot service.
 
 ## 2. Purpose of Processing
 

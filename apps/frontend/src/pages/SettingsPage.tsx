@@ -391,7 +391,7 @@ export default function SettingsPage() {
               value={formData.allowedExternalLinks}
               onChange={(e) => handleFieldChange("allowedExternalLinks", e.target.value)}
               rows={2}
-              placeholder="shopme.com, stripe.com, paypal.com"
+              placeholder="echatbot.ai, stripe.com, paypal.com"
             />
             <p className="text-xs text-muted-foreground">
               🛡️ Comma-separated list of domains the AI can include in messages. 

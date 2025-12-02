@@ -174,6 +174,42 @@ export const deleteClient = async (id: string): Promise<void> => {
   }
 }
 
+/**
+ * 🚫 Blocked user interface
+ */
+export interface BlockedUser {
+  id: string
+  type: "customer" | "registration_attempt"
+  name: string
+  phone: string
+  email: string | null
+  blockedAt: string | null
+  reason: string
+}
+
+/**
+ * 🚫 Get all blocked users (customers + registration attempts)
+ */
+export const getBlockedUsers = async (workspaceId: string): Promise<{
+  data: BlockedUser[]
+  counts: {
+    customers: number
+    registrationAttempts: number
+    total: number
+  }
+}> => {
+  try {
+    const response = await api.get(`/workspaces/${workspaceId}/blocked-users`)
+    return response.data
+  } catch (error) {
+    throw new Error(
+      `Error fetching blocked users: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    )
+  }
+}
+
 // Export the clients API object
 export const clientsApi = {
   getAllForWorkspace,
@@ -181,4 +217,5 @@ export const clientsApi = {
   create,
   update,
   delete: deleteClient,
+  getBlockedUsers,
 }

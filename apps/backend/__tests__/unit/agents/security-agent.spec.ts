@@ -71,7 +71,7 @@ describe("SecurityAgent", () => {
 
     // Default mock: Workspace with allowed links
     mockPrisma.workspace.findUnique.mockResolvedValue({
-      allowedExternalLinks: ["shopme.com", "stripe.com"],
+      allowedExternalLinks: ["echatbot.ai", "stripe.com"],
     })
   })
 

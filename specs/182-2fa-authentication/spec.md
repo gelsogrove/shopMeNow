@@ -349,14 +349,14 @@ A newly registered user wants to receive a welcome email confirming their regist
 - Existing EmailService in codebase supports sending HTML emails with templates
 - Channel Selection page component already exists and can be reused
 - Users have access to smartphone or device capable of running authenticator apps
-- QR code will encode TOTP URI format: `otpauth://totp/ShopME:email?secret=SECRET&issuer=ShopME`
+- QR code will encode TOTP URI format: `otpauth://totp/eChatbot:email?secret=SECRET&issuer=eChatbot`
 - Session storage will use existing AdminSession table (already has sessionId, userId, workspaceId, expiration)
 - User table already exists with: email, passwordHash, firstName, lastName, twoFactorSecret, gdprAccepted
 - OAuth providers (Google, Facebook, Apple) require app registration and API credentials setup
 - Google OAuth uses `@react-oauth/google` library on frontend
 - Facebook OAuth uses official Facebook SDK or OAuth 2.0 flow
 - Apple Sign In uses Apple's OAuth 2.0 flow with JWT verification
-- OAuth callback URLs will be whitelisted in provider console (e.g., https://shopme.com/auth/oauth/google/callback)
+- OAuth callback URLs will be whitelisted in provider console (e.g., https://echatbot.ai/auth/oauth/google/callback)
 - Password is optional for social-only users (passwordHash can be null)
 - Password reset flow will be handled in separate feature (not included here)
 - Account recovery uses recovery codes (10 codes generated during 2FA setup, stored in User.recoveryCodes array)

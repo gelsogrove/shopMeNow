@@ -2,7 +2,7 @@
 
 ## 1. Titolare del Trattamento
 
-La gestione dei tuoi dati personali è effettuata dal titolare del trattamento indicato nella registrazione al servizio ShopME.
+La gestione dei tuoi dati personali è effettuata dal titolare del trattamento indicato nella registrazione al servizio eChatbot.
 
 ## 2. Finalità del Trattamento
 

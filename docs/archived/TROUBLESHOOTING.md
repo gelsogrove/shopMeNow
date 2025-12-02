@@ -1,4 +1,4 @@
-# ShopME Troubleshooting Guide
+# eChatbot Troubleshooting Guide
 
 **Version**: 1.0.0  
 **Last Updated**: 2025-11-13

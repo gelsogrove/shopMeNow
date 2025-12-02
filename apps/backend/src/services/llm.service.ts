@@ -923,7 +923,7 @@ export class LLMService {
           Authorization: `Bearer ${llmConfig.apiKey}`,
           "Content-Type": "application/json",
           "HTTP-Referer": "http://localhost:3001",
-          "X-Title": "ShopMe LLM Response",
+          "X-Title": "eChatbot LLM Response",
         },
         body: JSON.stringify({
           model: llmConfig.model,
@@ -1126,7 +1126,7 @@ export class LLMService {
                 Authorization: `Bearer ${llmConfigFollowUp.apiKey}`,
                 "Content-Type": "application/json",
                 "HTTP-Referer": "http://localhost:3001",
-                "X-Title": "ShopMe LLM Response",
+                "X-Title": "eChatbot LLM Response",
               },
               body: JSON.stringify({
                 model: llmConfigFollowUp.model,

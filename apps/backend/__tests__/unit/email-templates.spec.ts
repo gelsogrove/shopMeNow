@@ -19,10 +19,10 @@ describe('Email Templates - Multilingual Support', () => {
     it('should return Italian translations when language is "it"', () => {
       const translations = getEmailTranslation('it')
 
-      expect(translations.welcome.subject).toBe('Benvenuto su ShopME! 🎉')
+      expect(translations.welcome.subject).toBe('Benvenuto su eChatbot! 🎉')
       expect(translations.welcome.greeting).toBe('Ciao')
       expect(translations.resetPassword.subject).toBe(
-        'Reimposta la tua Password - ShopMe'
+        'Reimposta la tua Password - eChatbot'
       )
       expect(translations.resetPassword.greeting).toBe('Ciao')
     })
@@ -30,10 +30,10 @@ describe('Email Templates - Multilingual Support', () => {
     it('should return English translations when language is "en"', () => {
       const translations = getEmailTranslation('en')
 
-      expect(translations.welcome.subject).toBe('Welcome to ShopME! 🎉')
+      expect(translations.welcome.subject).toBe('Welcome to eChatbot! 🎉')
       expect(translations.welcome.greeting).toBe('Hi')
       expect(translations.resetPassword.subject).toBe(
-        'Reset Your Password - ShopMe'
+        'Reset Your Password - eChatbot'
       )
       expect(translations.resetPassword.greeting).toBe('Hello')
     })
@@ -41,10 +41,10 @@ describe('Email Templates - Multilingual Support', () => {
     it('should return Spanish translations when language is "es"', () => {
       const translations = getEmailTranslation('es')
 
-      expect(translations.welcome.subject).toBe('¡Bienvenido a ShopME! 🎉')
+      expect(translations.welcome.subject).toBe('¡Bienvenido a eChatbot! 🎉')
       expect(translations.welcome.greeting).toBe('Hola')
       expect(translations.resetPassword.subject).toBe(
-        'Restablece tu Contraseña - ShopMe'
+        'Restablece tu Contraseña - eChatbot'
       )
       expect(translations.resetPassword.greeting).toBe('Hola')
     })
@@ -52,10 +52,10 @@ describe('Email Templates - Multilingual Support', () => {
     it('should return Portuguese translations when language is "pt"', () => {
       const translations = getEmailTranslation('pt')
 
-      expect(translations.welcome.subject).toBe('Bem-vindo ao ShopME! 🎉')
+      expect(translations.welcome.subject).toBe('Bem-vindo ao eChatbot! 🎉')
       expect(translations.welcome.greeting).toBe('Olá')
       expect(translations.resetPassword.subject).toBe(
-        'Redefina sua Senha - ShopMe'
+        'Redefina sua Senha - eChatbot'
       )
       expect(translations.resetPassword.greeting).toBe('Olá')
     })
@@ -63,16 +63,16 @@ describe('Email Templates - Multilingual Support', () => {
     it('should fallback to English when language is undefined', () => {
       const translations = getEmailTranslation(undefined)
 
-      expect(translations.welcome.subject).toBe('Welcome to ShopME! 🎉')
+      expect(translations.welcome.subject).toBe('Welcome to eChatbot! 🎉')
       expect(translations.welcome.greeting).toBe('Hi')
     })
 
     it('should fallback to English when language is not supported', () => {
       const translations = getEmailTranslation('fr' as SupportedLanguage)
 
-      expect(translations.welcome.subject).toBe('Welcome to ShopME! 🎉')
+      expect(translations.welcome.subject).toBe('Welcome to eChatbot! 🎉')
       expect(translations.resetPassword.subject).toBe(
-        'Reset Your Password - ShopMe'
+        'Reset Your Password - eChatbot'
       )
     })
   })

@@ -23,6 +23,7 @@ import {
   Phone,
   Settings,
   ShieldCheck,
+  ShieldBan,
   User,
 } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -41,6 +42,8 @@ export function Header() {
   const [profilePicture, setProfilePicture] = useState<string | null>(null)
   // Get user data from localStorage instead of API call
   const [userData, setUserData] = useState<any>(null)
+  // 🚫 Blocked users count
+  const [blockedUsersCount, setBlockedUsersCount] = useState<number>(0)
 
   // Load user data from storage
   useEffect(() => {
@@ -54,6 +57,23 @@ export function Header() {
       }
     }
   }, [])
+
+  // 🚫 Load blocked users count
+  useEffect(() => {
+    const loadBlockedCount = async () => {
+      if (!workspace?.id) return
+      try {
+        const response = await api.get(`/workspaces/badge-stats`)
+        const stats = response.data[workspace.id]
+        if (stats?.blockedUsers !== undefined) {
+          setBlockedUsersCount(stats.blockedUsers)
+        }
+      } catch (error) {
+        logger.error("Error loading blocked users count:", error)
+      }
+    }
+    loadBlockedCount()
+  }, [workspace?.id])
 
   // Get plan display info
   const getPlanDisplayInfo = (plan?: string) => {
@@ -174,6 +194,19 @@ export function Header() {
               <div className="flex items-center space-x-2 text-lg">
                 <Phone className="h-5 w-5 text-green-600" />
                 <span className="font-medium">{phoneNumber}</span>
+                {/* 🚫 Blocked users badge */}
+                {blockedUsersCount > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="ml-2 p-1 h-auto text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={() => navigate("/blocked-users")}
+                    title={`${blockedUsersCount} blocked user${blockedUsersCount > 1 ? "s" : ""}`}
+                  >
+                    <ShieldBan className="h-4 w-4 mr-1" />
+                    <span className="text-sm font-medium">{blockedUsersCount}</span>
+                  </Button>
+                )}
               </div>
               <span className="text-xs text-muted-foreground ml-7">
                 {channelName}
@@ -221,7 +254,7 @@ export function Header() {
                 <div className="flex flex-col space-y-2">
                   <p className="text-xl font-medium leading-none">{userName}</p>
                   <p className="text-lg leading-none text-muted-foreground">
-                    {userEmail || "Welcome to ShopMe"}
+                    {userEmail || "Welcome to eChatbot"}
                   </p>
                 </div>
               </DropdownMenuLabel>

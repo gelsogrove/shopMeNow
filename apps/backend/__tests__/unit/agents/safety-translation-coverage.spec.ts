@@ -177,8 +177,8 @@ describe("Safety & Translation Agent - Complete Coverage", () => {
         targetLanguage: "it",
         customerName: "Mario Rossi",
         allowedLinks: [
-          "https://shopme.com/products/123",
-          "https://shopme.com/s/abc123",
+          "https://echatbot.ai/products/123",
+          "https://echatbot.ai/s/abc123",
         ],
       },
       output: {

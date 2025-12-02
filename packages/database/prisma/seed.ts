@@ -123,9 +123,9 @@ async function main() {
       twoFactorEnabledAt: null,
       recoveryCodes: [], // Recovery codes generated when 2FA is enabled
       // 🧾 Billing Information (Andrea's requirement - sample data)
-      companyName: "ShopME Italia S.r.l.",
+      companyName: "eChatbot Italia S.r.l.",
       vatNumber: "IT12345678901",
-      website: "https://www.shopme.it",
+      website: "https://www.echatbot.it",
       billingPhone: "+39 06 1234567",
       billingAddress: "Via Roma 123, 00100 Roma, Italia",
     },
@@ -156,9 +156,9 @@ async function main() {
       twoFactorEnabled: false,
       twoFactorEnabledAt: null,
       recoveryCodes: [],
-      companyName: "ShopME Platform",
+      companyName: "eChatbot Platform",
       vatNumber: null,
-      website: "https://www.shopme.it",
+      website: "https://www.echatbot.it",
       billingPhone: null,
       billingAddress: null,
     },
@@ -220,14 +220,14 @@ async function main() {
       phoneNumber: workspaceSettings.whatsappPhoneNumber || "+34654728753",
       apiKey: process.env.WHATSAPP_API_KEY || "dummy-api-key",
       webhookUrl:
-        process.env.WHATSAPP_WEBHOOK_URL || "https://shopme.com/webhook",
+        process.env.WHATSAPP_WEBHOOK_URL || "https://echatbot.ai/webhook",
       adminEmail: "andrea_gelsomino@hotmail.com", // ✅ Email per notifiche operatore
       smtpHost: "smtp.gmail.com",
       smtpPort: 465,
       smtpSecure: true,
-      smtpUser: process.env.SMTP_USER || "noreply@shopme.com",
+      smtpUser: process.env.SMTP_USER || "noreply@echatbot.ai",
       smtpPass: process.env.SMTP_PASS || "",
-      smtpFrom: "ShopME <noreply@shopme.com>",
+      smtpFrom: "eChatbot <noreply@echatbot.ai>",
     },
   })
 

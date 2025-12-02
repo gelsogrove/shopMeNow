@@ -403,7 +403,7 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
             Authorization: `Bearer ${this.openRouterApiKey}`,
             "Content-Type": "application/json",
             "HTTP-Referer": config.appUrl,
-            "X-Title": "ShopME - Cart Management Agent",
+            "X-Title": "eChatbot - Cart Management Agent",
           },
         }
       )

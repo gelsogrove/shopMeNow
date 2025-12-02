@@ -778,7 +778,7 @@ Add tone & style section to Cart agent.
   - Inform if out of stock: "Mi dispiace, questo prodotto è esaurito 😞"
 - **Checkout Guidance**:
   - Always provide cart link after successful additions
-  - Example: "Prodotto aggiunto! Ecco il tuo carrello: https://shop.me/cart/ABC123"
+  - Example: "Prodotto aggiunto! Ecco il tuo carrello: https://echatbot.ai/cart/ABC123"
 - **No Unnecessary Confirmations**:
   - `clearCart()` executes immediately (user command = confirmation)
   - Don't ask "Sei sicuro?" - user already decided

@@ -246,7 +246,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
             textAlign: "center",
           }}
         >
-          ShopME v1.0
+          eChatbot v1.0
         </div>
       </div>
 

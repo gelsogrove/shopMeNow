@@ -359,7 +359,7 @@ Database: No customer with this phone
 Output:
   - Language detected: IT
   - Welcome message translated to Italian
-  - Short link: https://shop.me/s/AbC123d
+  - Short link: https://echatbot.ai/s/AbC123d
   - Attempt count: 1
 ```
 

@@ -33,8 +33,8 @@ async function testLoginWith2FA() {
     
     // Generate 2FA secret
     const secret = speakeasy.generateSecret({
-      name: `ShopME:${testEmail}`,
-      issuer: 'ShopME',
+      name: `eChatbot:${testEmail}`,
+      issuer: 'eChatbot',
     })
     
     const hashedPassword = await import('bcryptjs').then(bcrypt => 

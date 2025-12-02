@@ -146,7 +146,7 @@ SMTP_PORT="465"
 SMTP_SECURE="true"
 SMTP_USER="gelsogrove@gmail.com"
 SMTP_PASS="ecix cwmk oehi qrkl"
-SMTP_FROM="noreplay@shopme.com"
+SMTP_FROM="noreplay@echatbot.ai"
 ALERT_EMAIL="gelsogrove@gmail.com"
 ```
 
@@ -166,8 +166,8 @@ ALERT_EMAIL="gelsogrove@gmail.com"
     "dev": "dotenv -c .env -- tsnd --respawn src/index.ts",
     "build": "tsc",
     "prod": "npm run build && pm2 start ecosystem.config.js",
-    "stop": "pm2 stop shopme-scheduler",
-    "logs": "pm2 logs shopme-scheduler",
+    "stop": "pm2 stop echatbot-scheduler",
+    "logs": "pm2 logs echatbot-scheduler",
     "test": "jest"
   }
 }

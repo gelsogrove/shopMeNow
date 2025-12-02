@@ -240,7 +240,7 @@ const DataProtectionPage = () => {
 
         {/* Footer */}
         <div className="bg-gray-50 px-6 py-4 text-center text-gray-500 text-sm">
-          <p>© {new Date().getFullYear()} ShopMe. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} eChatbot. All rights reserved.</p>
           <p className="mt-1">
             For more information about our privacy practices, please contact our
             data protection officer.

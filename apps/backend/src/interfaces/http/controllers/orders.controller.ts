@@ -291,11 +291,11 @@ export class OrdersController {
       doc.fontSize(12).font('Helvetica-Bold').text('FROM:', startX, startY)
       doc.moveDown(0.5)
       doc.fontSize(10).font('Helvetica')
-      doc.text('ShopMe E-commerce Platform')
+      doc.text('eChatbot E-commerce Platform')
       doc.text('123 Business Street')
       doc.text('City, State 12345')
       doc.text('Phone: +1 (555) 123-4567')
-      doc.text('Email: info@shopme.com')
+      doc.text('Email: info@echatbot.ai')
 
       // Right column - Customer Info
       doc.fontSize(12).font('Helvetica-Bold').text('BILL TO:', startX + colWidth, startY)
@@ -475,11 +475,11 @@ export class OrdersController {
       doc.fontSize(12).font('Helvetica-Bold').text('FROM:', startX, startY)
       doc.moveDown(0.5)
       doc.fontSize(10).font('Helvetica')
-      doc.text('ShopMe E-commerce Platform')
+      doc.text('eChatbot E-commerce Platform')
       doc.text('123 Business Street')
       doc.text('City, State 12345')
       doc.text('Phone: +1 (555) 123-4567')
-      doc.text('Email: info@shopme.com')
+      doc.text('Email: info@echatbot.ai')
 
       // Right column - Customer Info
       doc.fontSize(12).font('Helvetica-Bold').text('DELIVER TO:', startX + colWidth, startY)

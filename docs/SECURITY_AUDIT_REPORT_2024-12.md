@@ -1,4 +1,4 @@
-# 🔒 ShopME Security Audit Report
+# 🔒 eChatbot Security Audit Report
 **Date**: December 1, 2025  
 **Auditor**: GitHub Copilot  
 **Scope**: `apps/backend/src/`, `apps/frontend/src/`, `package.json` files

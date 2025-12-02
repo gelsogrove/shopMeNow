@@ -129,7 +129,7 @@ Customer Support Agent (existing)
 - **Content**:
 
   ```markdown
-  # FAQ Agent - ShopME
+  # FAQ Agent - eChatbot
 
   ## YOUR ROLE
 
@@ -330,7 +330,7 @@ Customer Support Agent (existing)
 - **Content**:
 
   ```markdown
-  # Profile Agent - ShopME
+  # Profile Agent - eChatbot
 
   ## YOUR ROLE
 
@@ -803,7 +803,7 @@ Customer Support Agent (existing)
 - **Content Structure**:
 
   ```markdown
-  # Router Agent - ShopME (PURE ORCHESTRATION)
+  # Router Agent - eChatbot (PURE ORCHESTRATION)
 
   ## YOUR ROLE
 
@@ -1059,7 +1059,7 @@ Customer Support Agent (existing)
 - **Content**:
 
   ```markdown
-  # Router Agent - ShopME (PURE ORCHESTRATION)
+  # Router Agent - eChatbot (PURE ORCHESTRATION)
 
   ## YOUR ROLE
 

@@ -11,7 +11,7 @@ import { useWorkspace } from "@/hooks/use-workspace"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
-import { LogOut, PlusCircle, Radio, MessageSquare, ShoppingCart, AlertTriangle, Smartphone, Crown } from "lucide-react"
+import { LogOut, PlusCircle, Radio, MessageSquare, ShoppingCart, AlertTriangle, Smartphone, Crown, Ban } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
@@ -26,6 +26,7 @@ interface WorkspaceBadgeStats {
   unreadMessages: number
   pendingOrders: number
   needsIntervention: number
+  blockedUsers: number
 }
 
 // Definizione dei tipi di attività supportati
@@ -321,7 +322,7 @@ export function WorkspaceSelectionPage() {
                 <Smartphone className="h-10 w-10 text-green-600" />
               </div>
               <CardTitle className="text-2xl text-gray-900">
-                Welcome to ShopME! 🎉
+                Welcome to eChatbot! 🎉
               </CardTitle>
               <CardDescription className="text-base mt-2">
                 Create your first WhatsApp channel to start receiving orders from your customers
@@ -506,14 +507,6 @@ export function WorkspaceSelectionPage() {
                   {/* 📊 Badge Stats Row */}
                   {badgeStats[workspace.id] && (
                     <div className="flex items-center gap-3 mt-3 pt-3 border-t border-green-200">
-                      {/* Unread Messages Badge */}
-                      {badgeStats[workspace.id].unreadMessages > 0 && (
-                        <div className="flex items-center gap-1.5 bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full text-sm font-medium">
-                          <MessageSquare className="h-3.5 w-3.5" />
-                          <span>{badgeStats[workspace.id].unreadMessages}</span>
-                        </div>
-                      )}
-                      
                       {/* Pending Orders Badge */}
                       {badgeStats[workspace.id].pendingOrders > 0 && (
                         <div className="flex items-center gap-1.5 bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full text-sm font-medium">
@@ -527,6 +520,14 @@ export function WorkspaceSelectionPage() {
                         <div className="flex items-center gap-1.5 bg-red-100 text-red-700 px-2.5 py-1 rounded-full text-sm font-medium animate-pulse">
                           <AlertTriangle className="h-3.5 w-3.5" />
                           <span>{badgeStats[workspace.id].needsIntervention}</span>
+                        </div>
+                      )}
+                      
+                      {/* Blocked Users Badge */}
+                      {badgeStats[workspace.id].blockedUsers > 0 && (
+                        <div className="flex items-center gap-1.5 bg-red-100 text-red-700 px-2.5 py-1 rounded-full text-sm font-medium">
+                          <Ban className="h-3.5 w-3.5" />
+                          <span>{badgeStats[workspace.id].blockedUsers}</span>
                         </div>
                       )}
                     </div>

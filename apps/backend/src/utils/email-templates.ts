@@ -39,9 +39,9 @@ interface EmailTranslations {
 export const emailTranslations: Record<SupportedLanguage, EmailTranslations> = {
   it: {
     welcome: {
-      subject: "Benvenuto su ShopME! 🎉",
+      subject: "Benvenuto su eChatbot! 🎉",
       greeting: "Ciao",
-      intro: "Benvenuto su <strong>ShopME</strong>! Siamo entusiasti di averti con noi. 🚀",
+      intro: "Benvenuto su <strong>eChatbot</strong>! Siamo entusiasti di averti con noi. 🚀",
       accountCreated: "Il tuo account è stato creato con successo. Ora puoi:",
       features: [
         "Gestire prodotti e servizi",
@@ -52,12 +52,12 @@ export const emailTranslations: Record<SupportedLanguage, EmailTranslations> = {
       getStarted: "Inizia",
       footer: "Se hai domande, contatta il nostro team di supporto.",
       rights: "Tutti i diritti riservati",
-      disclaimer: "Ricevi questa email perché ti sei registrato su ShopME."
+      disclaimer: "Ricevi questa email perché ti sei registrato su eChatbot."
     },
     resetPassword: {
-      subject: "Reimposta la tua Password - ShopMe",
+      subject: "Reimposta la tua Password - eChatbot",
       greeting: "Ciao",
-      intro: "Abbiamo ricevuto una richiesta per reimpostare la password del tuo account ShopMe. Se non hai fatto questa richiesta, puoi ignorare questa email.",
+      intro: "Abbiamo ricevuto una richiesta per reimpostare la password del tuo account eChatbot. Se non hai fatto questa richiesta, puoi ignorare questa email.",
       resetButton: "Reimposta Password",
       copyLink: "Oppure copia e incolla questo link nel tuo browser:",
       warningTitle: "⚠️ Importante:",
@@ -72,9 +72,9 @@ export const emailTranslations: Record<SupportedLanguage, EmailTranslations> = {
   },
   en: {
     welcome: {
-      subject: "Welcome to ShopME! 🎉",
+      subject: "Welcome to eChatbot! 🎉",
       greeting: "Hi",
-      intro: "Welcome to <strong>ShopME</strong>! We're excited to have you on board. 🚀",
+      intro: "Welcome to <strong>eChatbot</strong>! We're excited to have you on board. 🚀",
       accountCreated: "Your account has been successfully created. You can now:",
       features: [
         "Manage your products and services",
@@ -85,12 +85,12 @@ export const emailTranslations: Record<SupportedLanguage, EmailTranslations> = {
       getStarted: "Get Started",
       footer: "If you have any questions, feel free to reach out to our support team.",
       rights: "All rights reserved",
-      disclaimer: "You're receiving this email because you registered for a ShopME account."
+      disclaimer: "You're receiving this email because you registered for a eChatbot account."
     },
     resetPassword: {
-      subject: "Reset Your Password - ShopMe",
+      subject: "Reset Your Password - eChatbot",
       greeting: "Hello",
-      intro: "We received a request to reset the password for your ShopMe account. If you didn't make this request, you can safely ignore this email.",
+      intro: "We received a request to reset the password for your eChatbot account. If you didn't make this request, you can safely ignore this email.",
       resetButton: "Reset My Password",
       copyLink: "Or copy and paste this link into your browser:",
       warningTitle: "⚠️ Important:",
@@ -105,9 +105,9 @@ export const emailTranslations: Record<SupportedLanguage, EmailTranslations> = {
   },
   es: {
     welcome: {
-      subject: "¡Bienvenido a ShopME! 🎉",
+      subject: "¡Bienvenido a eChatbot! 🎉",
       greeting: "Hola",
-      intro: "¡Bienvenido a <strong>ShopME</strong>! Estamos emocionados de tenerte con nosotros. 🚀",
+      intro: "¡Bienvenido a <strong>eChatbot</strong>! Estamos emocionados de tenerte con nosotros. 🚀",
       accountCreated: "Tu cuenta ha sido creada exitosamente. Ahora puedes:",
       features: [
         "Gestionar tus productos y servicios",
@@ -118,12 +118,12 @@ export const emailTranslations: Record<SupportedLanguage, EmailTranslations> = {
       getStarted: "Empezar",
       footer: "Si tienes alguna pregunta, no dudes en contactar a nuestro equipo de soporte.",
       rights: "Todos los derechos reservados",
-      disclaimer: "Estás recibiendo este correo porque te registraste en ShopME."
+      disclaimer: "Estás recibiendo este correo porque te registraste en eChatbot."
     },
     resetPassword: {
-      subject: "Restablece tu Contraseña - ShopMe",
+      subject: "Restablece tu Contraseña - eChatbot",
       greeting: "Hola",
-      intro: "Recibimos una solicitud para restablecer la contraseña de tu cuenta ShopMe. Si no hiciste esta solicitud, puedes ignorar este correo.",
+      intro: "Recibimos una solicitud para restablecer la contraseña de tu cuenta eChatbot. Si no hiciste esta solicitud, puedes ignorar este correo.",
       resetButton: "Restablecer mi Contraseña",
       copyLink: "O copia y pega este enlace en tu navegador:",
       warningTitle: "⚠️ Importante:",
@@ -138,9 +138,9 @@ export const emailTranslations: Record<SupportedLanguage, EmailTranslations> = {
   },
   pt: {
     welcome: {
-      subject: "Bem-vindo ao ShopME! 🎉",
+      subject: "Bem-vindo ao eChatbot! 🎉",
       greeting: "Olá",
-      intro: "Bem-vindo ao <strong>ShopME</strong>! Estamos animados em tê-lo conosco. 🚀",
+      intro: "Bem-vindo ao <strong>eChatbot</strong>! Estamos animados em tê-lo conosco. 🚀",
       accountCreated: "Sua conta foi criada com sucesso. Agora você pode:",
       features: [
         "Gerenciar seus produtos e serviços",
@@ -151,12 +151,12 @@ export const emailTranslations: Record<SupportedLanguage, EmailTranslations> = {
       getStarted: "Começar",
       footer: "Se você tiver alguma dúvida, entre em contato com nossa equipe de suporte.",
       rights: "Todos os direitos reservados",
-      disclaimer: "Você está recebendo este e-mail porque se registrou no ShopME."
+      disclaimer: "Você está recebendo este e-mail porque se registrou no eChatbot."
     },
     resetPassword: {
-      subject: "Redefina sua Senha - ShopMe",
+      subject: "Redefina sua Senha - eChatbot",
       greeting: "Olá",
-      intro: "Recebemos uma solicitação para redefinir a senha da sua conta ShopMe. Se você não fez esta solicitação, pode ignorar este e-mail.",
+      intro: "Recebemos uma solicitação para redefinir a senha da sua conta eChatbot. Se você não fez esta solicitação, pode ignorar este e-mail.",
       resetButton: "Redefinir minha Senha",
       copyLink: "Ou copie e cole este link no seu navegador:",
       warningTitle: "⚠️ Importante:",

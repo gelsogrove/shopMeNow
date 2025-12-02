@@ -222,7 +222,7 @@ None identified. Spec is comprehensive, clear, and implementation-ready.
 
 **Readiness**: Ready for `/speckit.clarify` (user review) followed by `/speckit.plan` (implementation planning)
 
-**Summary**: This specification is exceptionally well-crafted. It addresses a critical production bug (contactSupport placeholder) while designing a comprehensive solution (Summary LLM Agent) that integrates cleanly with existing architecture. All requirements are clear, testable, and technology-agnostic. 360-degree validation is complete for all user stories. Edge cases are thoroughly documented with pragmatic fallback behaviors. The spec fully complies with ShopME constitutional principles and coding agent instructions.
+**Summary**: This specification is exceptionally well-crafted. It addresses a critical production bug (contactSupport placeholder) while designing a comprehensive solution (Summary LLM Agent) that integrates cleanly with existing architecture. All requirements are clear, testable, and technology-agnostic. 360-degree validation is complete for all user stories. Edge cases are thoroughly documented with pragmatic fallback behaviors. The spec fully complies with eChatbot constitutional principles and coding agent instructions.
 
 **Next Steps**:
 1. User review spec via `/speckit.clarify` workflow

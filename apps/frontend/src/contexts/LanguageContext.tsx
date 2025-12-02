@@ -21,8 +21,8 @@ const translations = {
     // Hero Section
     "hero.title": "Crea il tuo agente AI per WhatsApp",
     "hero.subtitle":
-      "ShopMe porta l'e-commerce intelligente direttamente su WhatsApp. Il nostro agente AI comprende le esigenze dei clienti, consiglia prodotti e chiude vendite 24/7—tutto attraverso conversazioni naturali.",
-    "hero.whyTitle": "Perché ShopMe?",
+      "eChatbot porta l'e-commerce intelligente direttamente su WhatsApp. Il nostro agente AI comprende le esigenze dei clienti, consiglia prodotti e chiude vendite 24/7—tutto attraverso conversazioni naturali.",
+    "hero.whyTitle": "Perché eChatbot?",
 
     // Features
     "features.pushNotifications": "Push Notifications",
@@ -40,7 +40,7 @@ const translations = {
 
     // News Section
     "news.title": "Ultimi Aggiornamenti e Funzionalità",
-    "news.subtitle": "Rimani informato sugli ultimi miglioramenti di ShopMe",
+    "news.subtitle": "Rimani informato sugli ultimi miglioramenti di eChatbot",
     "news.1.date": "15 Ottobre 2025",
     "news.1.title": "Supporto Multilingua",
     "news.1.category": "Lingue",
@@ -144,7 +144,7 @@ const translations = {
     "billing.trialExpired": "Trial Expired",
     "billing.trialExpiredWarning": "Trial expired! Choose a plan to continue.",
     "billing.trialExpiredMessage": "Your trial period has expired",
-    "billing.trialExpiredAction": "Choose a plan to continue using ShopME",
+    "billing.trialExpiredAction": "Choose a plan to continue using eChatbot",
     "billing.choosePlan": "Choose a Plan",
     "billing.clickToManage": "Click to manage billing",
     "billing.rechargeCredit": "Recharge Credit",
@@ -239,7 +239,7 @@ const translations = {
     // Forgot Password
     "forgotPassword.title": "Reimposta Password",
     "forgotPassword.subtitle": "Inserisci la tua email per reimpostare la password",
-    "forgotPassword.email.placeholder": "admin@shop.me",
+    "forgotPassword.email.placeholder": "admin@echatbot.ai",
     "forgotPassword.button": "Reimposta Password",
     "forgotPassword.backToLogin": "Torna al Login",
     "forgotPassword.success": "Se questa email è registrata, riceverai le istruzioni per reimpostare la password. Controlla la tua casella di posta e segui il link per reimpostare la password.",
@@ -303,7 +303,7 @@ const translations = {
     // Privacy Policy
     "privacy.title": "Privacy Policy",
     "privacy.lastUpdate": "Ultimo aggiornamento",
-    "privacy.intro": "ShopME si impegna a proteggere la tua privacy. Questa Privacy Policy spiega come raccogliamo, utilizziamo e proteggiamo i tuoi dati personali.",
+    "privacy.intro": "eChatbot si impegna a proteggere la tua privacy. Questa Privacy Policy spiega come raccogliamo, utilizziamo e proteggiamo i tuoi dati personali.",
     "privacy.collection.title": "1. Informazioni che Raccogliamo",
     "privacy.collection.desc": "Raccogliamo informazioni che ci fornisci direttamente, inclusi nome, email, numero di telefono e dettagli commerciali quando crei un account o utilizzi i nostri servizi.",
     "privacy.usage.title": "2. Come Utilizziamo le Tue Informazioni",
@@ -317,32 +317,32 @@ const translations = {
     "privacy.cookies.title": "6. Cookie e Tecnologie di Tracciamento",
     "privacy.cookies.desc": "Utilizziamo cookie e tecnologie simili per migliorare la tua esperienza, analizzare l'utilizzo e personalizzare i contenuti. Puoi gestire le preferenze dei cookie nelle impostazioni del browser.",
     "privacy.contact.title": "7. Contattaci",
-    "privacy.contact.desc": "Per domande su questa Privacy Policy o sulle nostre pratiche di gestione dei dati, contattaci all'indirizzo privacy@shopme.com",
+    "privacy.contact.desc": "Per domande su questa Privacy Policy o sulle nostre pratiche di gestione dei dati, contattaci all'indirizzo privacy@echatbot.ai",
 
     // Terms of Service
     "terms.title": "Termini di Servizio",
     "terms.lastUpdate": "Ultimo aggiornamento",
-    "terms.intro": "Benvenuto su ShopME. Utilizzando i nostri servizi, accetti di essere vincolato da questi Termini di Servizio.",
+    "terms.intro": "Benvenuto su eChatbot. Utilizzando i nostri servizi, accetti di essere vincolato da questi Termini di Servizio.",
     "terms.acceptance.title": "1. Accettazione dei Termini",
-    "terms.acceptance.desc": "Accedendo e utilizzando ShopME, accetti di essere vincolato da questi Termini di Servizio e dalla nostra Privacy Policy. Se non accetti questi termini, non utilizzare i nostri servizi.",
+    "terms.acceptance.desc": "Accedendo e utilizzando eChatbot, accetti di essere vincolato da questi Termini di Servizio e dalla nostra Privacy Policy. Se non accetti questi termini, non utilizzare i nostri servizi.",
     "terms.services.title": "2. Descrizione dei Servizi",
-    "terms.services.desc": "ShopME fornisce una piattaforma e-commerce integrata con WhatsApp che consente alle aziende di gestire prodotti, elaborare ordini e comunicare con i clienti tramite agenti AI.",
+    "terms.services.desc": "eChatbot fornisce una piattaforma e-commerce integrata con WhatsApp che consente alle aziende di gestire prodotti, elaborare ordini e comunicare con i clienti tramite agenti AI.",
     "terms.account.title": "3. Account Utente",
-    "terms.account.desc": "Devi creare un account per utilizzare ShopME. Sei responsabile di mantenere la sicurezza del tuo account e password. Devi avere almeno 18 anni per utilizzare i nostri servizi.",
+    "terms.account.desc": "Devi creare un account per utilizzare eChatbot. Sei responsabile di mantenere la sicurezza del tuo account e password. Devi avere almeno 18 anni per utilizzare i nostri servizi.",
     "terms.conduct.title": "4. Condotta dell'Utente",
-    "terms.conduct.desc": "Accetti di non utilizzare ShopME per scopi illegali, di non violare i diritti di terzi e di rispettare tutte le leggi applicabili. Ci riserviamo il diritto di sospendere o terminare account che violano questi termini.",
+    "terms.conduct.desc": "Accetti di non utilizzare eChatbot per scopi illegali, di non violare i diritti di terzi e di rispettare tutte le leggi applicabili. Ci riserviamo il diritto di sospendere o terminare account che violano questi termini.",
     "terms.payment.title": "5. Pagamenti e Fatturazione",
     "terms.payment.desc": "I prezzi sono basati sul tuo piano di abbonamento e sull'utilizzo. I pagamenti vengono elaborati mensilmente. Puoi annullare l'abbonamento in qualsiasi momento, ma i rimborsi non sono disponibili per i periodi di servizio già fatturati.",
     "terms.ip.title": "6. Proprietà Intellettuale",
-    "terms.ip.desc": "Tutti i contenuti e la tecnologia di ShopME sono di proprietà di ShopME o dei suoi licenziatari. Mantieni la proprietà dei tuoi contenuti, ma ci concedi una licenza per utilizzarli per fornire i nostri servizi.",
+    "terms.ip.desc": "Tutti i contenuti e la tecnologia di eChatbot sono di proprietà di eChatbot o dei suoi licenziatari. Mantieni la proprietà dei tuoi contenuti, ma ci concedi una licenza per utilizzarli per fornire i nostri servizi.",
     "terms.termination.title": "7. Risoluzione",
-    "terms.termination.desc": "Possiamo sospendere o terminare il tuo accesso a ShopME in qualsiasi momento per violazione di questi termini o per altri motivi legittimi. Puoi terminare il tuo account in qualsiasi momento dalle impostazioni del tuo account.",
+    "terms.termination.desc": "Possiamo sospendere o terminare il tuo accesso a eChatbot in qualsiasi momento per violazione di questi termini o per altri motivi legittimi. Puoi terminare il tuo account in qualsiasi momento dalle impostazioni del tuo account.",
     "terms.limitation.title": "8. Limitazione di Responsabilità",
-    "terms.limitation.desc": "ShopME viene fornito 'così com'è'. Non forniamo garanzie di alcun tipo. La nostra responsabilità è limitata all'importo che hai pagato nell'ultimo mese.",
+    "terms.limitation.desc": "eChatbot viene fornito 'così com'è'. Non forniamo garanzie di alcun tipo. La nostra responsabilità è limitata all'importo che hai pagato nell'ultimo mese.",
     "terms.changes.title": "9. Modifiche ai Termini",
     "terms.changes.desc": "Possiamo aggiornare questi termini periodicamente. Ti informeremo di modifiche significative via email o tramite notifica sulla piattaforma. L'utilizzo continuato costituisce accettazione dei termini aggiornati.",
     "terms.contact.title": "10. Contattaci",
-    "terms.contact.desc": "Per domande su questi Termini di Servizio, contattaci all'indirizzo legal@shopme.com",
+    "terms.contact.desc": "Per domande su questi Termini di Servizio, contattaci all'indirizzo legal@echatbot.ai",
   },
   en: {
     // Header
@@ -351,8 +351,8 @@ const translations = {
     // Hero Section
     "hero.title": "Create your AI agent for WhatsApp",
     "hero.subtitle":
-      "ShopMe brings intelligent e-commerce directly to WhatsApp. Our AI agent understands customer needs, recommends products, and closes sales 24/7—all through natural conversations.",
-    "hero.whyTitle": "Why ShopMe?",
+      "eChatbot brings intelligent e-commerce directly to WhatsApp. Our AI agent understands customer needs, recommends products, and closes sales 24/7—all through natural conversations.",
+    "hero.whyTitle": "Why eChatbot?",
 
     // Features
     "features.pushNotifications": "Push Notifications",
@@ -370,7 +370,7 @@ const translations = {
 
     // News Section
     "news.title": "Latest Updates and Features",
-    "news.subtitle": "Stay informed about the latest ShopMe improvements",
+    "news.subtitle": "Stay informed about the latest eChatbot improvements",
     "news.1.date": "October 15, 2025",
     "news.1.title": "Multilanguage Support",
     "news.1.category": "Languages",
@@ -472,7 +472,7 @@ const translations = {
     "billing.trialExpired": "Trial Expired",
     "billing.trialExpiredWarning": "Trial expired! Choose a plan to continue.",
     "billing.trialExpiredMessage": "Your trial period has expired",
-    "billing.trialExpiredAction": "Choose a plan to continue using ShopME",
+    "billing.trialExpiredAction": "Choose a plan to continue using eChatbot",
     "billing.choosePlan": "Choose a Plan",
     "billing.clickToManage": "Click to manage billing",
     "billing.rechargeCredit": "Recharge Credit",
@@ -567,7 +567,7 @@ const translations = {
     // Forgot Password
     "forgotPassword.title": "Reset Password",
     "forgotPassword.subtitle": "Enter your email to reset your password",
-    "forgotPassword.email.placeholder": "admin@shop.me",
+    "forgotPassword.email.placeholder": "admin@echatbot.ai",
     "forgotPassword.button": "Reset Password",
     "forgotPassword.backToLogin": "Back to Login",
     "forgotPassword.success": "If this email is registered, password reset instructions have been sent to your inbox. Please check your email and follow the link to reset your password.",
@@ -631,7 +631,7 @@ const translations = {
     // Privacy Policy
     "privacy.title": "Privacy Policy",
     "privacy.lastUpdate": "Last updated",
-    "privacy.intro": "ShopME is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and protect your personal data.",
+    "privacy.intro": "eChatbot is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and protect your personal data.",
     "privacy.collection.title": "1. Information We Collect",
     "privacy.collection.desc": "We collect information you provide directly to us, including name, email, phone number, and business details when you create an account or use our services.",
     "privacy.usage.title": "2. How We Use Your Information",
@@ -645,32 +645,32 @@ const translations = {
     "privacy.cookies.title": "6. Cookies and Tracking Technologies",
     "privacy.cookies.desc": "We use cookies and similar technologies to improve your experience, analyze usage, and personalize content. You can manage cookie preferences in your browser settings.",
     "privacy.contact.title": "7. Contact Us",
-    "privacy.contact.desc": "For questions about this Privacy Policy or our data handling practices, contact us at privacy@shopme.com",
+    "privacy.contact.desc": "For questions about this Privacy Policy or our data handling practices, contact us at privacy@echatbot.ai",
 
     // Terms of Service
     "terms.title": "Terms of Service",
     "terms.lastUpdate": "Last updated",
-    "terms.intro": "Welcome to ShopME. By using our services, you agree to be bound by these Terms of Service.",
+    "terms.intro": "Welcome to eChatbot. By using our services, you agree to be bound by these Terms of Service.",
     "terms.acceptance.title": "1. Acceptance of Terms",
-    "terms.acceptance.desc": "By accessing and using ShopME, you agree to be bound by these Terms of Service and our Privacy Policy. If you do not agree to these terms, do not use our services.",
+    "terms.acceptance.desc": "By accessing and using eChatbot, you agree to be bound by these Terms of Service and our Privacy Policy. If you do not agree to these terms, do not use our services.",
     "terms.services.title": "2. Description of Services",
-    "terms.services.desc": "ShopME provides a WhatsApp-integrated e-commerce platform that enables businesses to manage products, process orders, and communicate with customers through AI agents.",
+    "terms.services.desc": "eChatbot provides a WhatsApp-integrated e-commerce platform that enables businesses to manage products, process orders, and communicate with customers through AI agents.",
     "terms.account.title": "3. User Accounts",
-    "terms.account.desc": "You must create an account to use ShopME. You are responsible for maintaining the security of your account and password. You must be at least 18 years old to use our services.",
+    "terms.account.desc": "You must create an account to use eChatbot. You are responsible for maintaining the security of your account and password. You must be at least 18 years old to use our services.",
     "terms.conduct.title": "4. User Conduct",
-    "terms.conduct.desc": "You agree not to use ShopME for illegal purposes, violate third-party rights, or breach any applicable laws. We reserve the right to suspend or terminate accounts that violate these terms.",
+    "terms.conduct.desc": "You agree not to use eChatbot for illegal purposes, violate third-party rights, or breach any applicable laws. We reserve the right to suspend or terminate accounts that violate these terms.",
     "terms.payment.title": "5. Payment and Billing",
     "terms.payment.desc": "Pricing is based on your subscription plan and usage. Payments are processed monthly. You may cancel your subscription at any time, but refunds are not available for already billed service periods.",
     "terms.ip.title": "6. Intellectual Property",
-    "terms.ip.desc": "All ShopME content and technology are owned by ShopME or its licensors. You retain ownership of your content but grant us a license to use it to provide our services.",
+    "terms.ip.desc": "All eChatbot content and technology are owned by eChatbot or its licensors. You retain ownership of your content but grant us a license to use it to provide our services.",
     "terms.termination.title": "7. Termination",
-    "terms.termination.desc": "We may suspend or terminate your access to ShopME at any time for violation of these terms or other legitimate reasons. You may terminate your account at any time from your account settings.",
+    "terms.termination.desc": "We may suspend or terminate your access to eChatbot at any time for violation of these terms or other legitimate reasons. You may terminate your account at any time from your account settings.",
     "terms.limitation.title": "8. Limitation of Liability",
-    "terms.limitation.desc": "ShopME is provided 'as is'. We make no warranties of any kind. Our liability is limited to the amount you paid in the last month.",
+    "terms.limitation.desc": "eChatbot is provided 'as is'. We make no warranties of any kind. Our liability is limited to the amount you paid in the last month.",
     "terms.changes.title": "9. Changes to Terms",
     "terms.changes.desc": "We may update these terms periodically. We will notify you of significant changes via email or platform notification. Continued use constitutes acceptance of updated terms.",
     "terms.contact.title": "10. Contact Us",
-    "terms.contact.desc": "For questions about these Terms of Service, contact us at legal@shopme.com",
+    "terms.contact.desc": "For questions about these Terms of Service, contact us at legal@echatbot.ai",
   },
   es: {
     // Header
@@ -679,8 +679,8 @@ const translations = {
     // Hero Section
     "hero.title": "Crea tu agente AI para WhatsApp",
     "hero.subtitle":
-      "ShopMe lleva el e-commerce inteligente directamente a WhatsApp. Nuestro agente de IA comprende las necesidades del cliente, recomienda productos y cierra ventas 24/7—todo a través de conversaciones naturales.",
-    "hero.whyTitle": "¿Por qué ShopMe?",
+      "eChatbot lleva el e-commerce inteligente directamente a WhatsApp. Nuestro agente de IA comprende las necesidades del cliente, recomienda productos y cierra ventas 24/7—todo a través de conversaciones naturales.",
+    "hero.whyTitle": "¿Por qué eChatbot?",
 
     // Features
     "features.pushNotifications": "Push Notifications",
@@ -698,7 +698,7 @@ const translations = {
 
     // News Section
     "news.title": "Últimas Actualizaciones y Funcionalidades",
-    "news.subtitle": "Mantente informado sobre las últimas mejoras de ShopMe",
+    "news.subtitle": "Mantente informado sobre las últimas mejoras de eChatbot",
     "news.1.date": "15 de Octubre de 2025",
     "news.1.title": "Soporte Multiidioma",
     "news.1.category": "Idiomas",
@@ -840,7 +840,7 @@ const translations = {
     // Forgot Password
     "forgotPassword.title": "Restablecer Contraseña",
     "forgotPassword.subtitle": "Ingresa tu correo para restablecer tu contraseña",
-    "forgotPassword.email.placeholder": "admin@shop.me",
+    "forgotPassword.email.placeholder": "admin@echatbot.ai",
     "forgotPassword.button": "Restablecer Contraseña",
     "forgotPassword.backToLogin": "Volver al Inicio de Sesión",
     "forgotPassword.success": "Si este correo está registrado, se han enviado instrucciones de restablecimiento de contraseña a tu bandeja de entrada. Por favor revisa tu correo y sigue el enlace para restablecer tu contraseña.",
@@ -904,7 +904,7 @@ const translations = {
     // Privacy Policy
     "privacy.title": "Política de Privacidad",
     "privacy.lastUpdate": "Última actualización",
-    "privacy.intro": "ShopME se compromete a proteger su privacidad. Esta Política de Privacidad explica cómo recopilamos, usamos y protegemos sus datos personales.",
+    "privacy.intro": "eChatbot se compromete a proteger su privacidad. Esta Política de Privacidad explica cómo recopilamos, usamos y protegemos sus datos personales.",
     "privacy.collection.title": "1. Información que Recopilamos",
     "privacy.collection.desc": "Recopilamos información que nos proporciona directamente, incluyendo nombre, correo electrónico, número de teléfono y detalles comerciales cuando crea una cuenta o usa nuestros servicios.",
     "privacy.usage.title": "2. Cómo Usamos Su Información",
@@ -918,32 +918,32 @@ const translations = {
     "privacy.cookies.title": "6. Cookies y Tecnologías de Seguimiento",
     "privacy.cookies.desc": "Usamos cookies y tecnologías similares para mejorar su experiencia, analizar el uso y personalizar el contenido. Puede gestionar las preferencias de cookies en la configuración de su navegador.",
     "privacy.contact.title": "7. Contáctenos",
-    "privacy.contact.desc": "Para preguntas sobre esta Política de Privacidad o nuestras prácticas de manejo de datos, contáctenos en privacy@shopme.com",
+    "privacy.contact.desc": "Para preguntas sobre esta Política de Privacidad o nuestras prácticas de manejo de datos, contáctenos en privacy@echatbot.ai",
 
     // Terms of Service
     "terms.title": "Términos de Servicio",
     "terms.lastUpdate": "Última actualización",
-    "terms.intro": "Bienvenido a ShopME. Al usar nuestros servicios, acepta estar sujeto a estos Términos de Servicio.",
+    "terms.intro": "Bienvenido a eChatbot. Al usar nuestros servicios, acepta estar sujeto a estos Términos de Servicio.",
     "terms.acceptance.title": "1. Aceptación de los Términos",
-    "terms.acceptance.desc": "Al acceder y usar ShopME, acepta estar sujeto a estos Términos de Servicio y nuestra Política de Privacidad. Si no acepta estos términos, no use nuestros servicios.",
+    "terms.acceptance.desc": "Al acceder y usar eChatbot, acepta estar sujeto a estos Términos de Servicio y nuestra Política de Privacidad. Si no acepta estos términos, no use nuestros servicios.",
     "terms.services.title": "2. Descripción de Servicios",
-    "terms.services.desc": "ShopME proporciona una plataforma de comercio electrónico integrada con WhatsApp que permite a las empresas gestionar productos, procesar pedidos y comunicarse con clientes a través de agentes de IA.",
+    "terms.services.desc": "eChatbot proporciona una plataforma de comercio electrónico integrada con WhatsApp que permite a las empresas gestionar productos, procesar pedidos y comunicarse con clientes a través de agentes de IA.",
     "terms.account.title": "3. Cuentas de Usuario",
-    "terms.account.desc": "Debe crear una cuenta para usar ShopME. Es responsable de mantener la seguridad de su cuenta y contraseña. Debe tener al menos 18 años para usar nuestros servicios.",
+    "terms.account.desc": "Debe crear una cuenta para usar eChatbot. Es responsable de mantener la seguridad de su cuenta y contraseña. Debe tener al menos 18 años para usar nuestros servicios.",
     "terms.conduct.title": "4. Conducta del Usuario",
-    "terms.conduct.desc": "Acepta no usar ShopME para propósitos ilegales, violar derechos de terceros o incumplir leyes aplicables. Nos reservamos el derecho de suspender o terminar cuentas que violen estos términos.",
+    "terms.conduct.desc": "Acepta no usar eChatbot para propósitos ilegales, violar derechos de terceros o incumplir leyes aplicables. Nos reservamos el derecho de suspender o terminar cuentas que violen estos términos.",
     "terms.payment.title": "5. Pago y Facturación",
     "terms.payment.desc": "Los precios se basan en su plan de suscripción y uso. Los pagos se procesan mensualmente. Puede cancelar su suscripción en cualquier momento, pero los reembolsos no están disponibles para períodos de servicio ya facturados.",
     "terms.ip.title": "6. Propiedad Intelectual",
-    "terms.ip.desc": "Todo el contenido y tecnología de ShopME son propiedad de ShopME o sus licenciantes. Conserva la propiedad de su contenido pero nos otorga una licencia para usarlo para proporcionar nuestros servicios.",
+    "terms.ip.desc": "Todo el contenido y tecnología de eChatbot son propiedad de eChatbot o sus licenciantes. Conserva la propiedad de su contenido pero nos otorga una licencia para usarlo para proporcionar nuestros servicios.",
     "terms.termination.title": "7. Terminación",
-    "terms.termination.desc": "Podemos suspender o terminar su acceso a ShopME en cualquier momento por violación de estos términos u otras razones legítimas. Puede terminar su cuenta en cualquier momento desde la configuración de su cuenta.",
+    "terms.termination.desc": "Podemos suspender o terminar su acceso a eChatbot en cualquier momento por violación de estos términos u otras razones legítimas. Puede terminar su cuenta en cualquier momento desde la configuración de su cuenta.",
     "terms.limitation.title": "8. Limitación de Responsabilidad",
-    "terms.limitation.desc": "ShopME se proporciona 'tal cual'. No ofrecemos garantías de ningún tipo. Nuestra responsabilidad se limita a la cantidad que pagó en el último mes.",
+    "terms.limitation.desc": "eChatbot se proporciona 'tal cual'. No ofrecemos garantías de ningún tipo. Nuestra responsabilidad se limita a la cantidad que pagó en el último mes.",
     "terms.changes.title": "9. Cambios en los Términos",
     "terms.changes.desc": "Podemos actualizar estos términos periódicamente. Le notificaremos de cambios significativos por correo electrónico o notificación en la plataforma. El uso continuado constituye aceptación de los términos actualizados.",
     "terms.contact.title": "10. Contáctenos",
-    "terms.contact.desc": "Para preguntas sobre estos Términos de Servicio, contáctenos en legal@shopme.com",
+    "terms.contact.desc": "Para preguntas sobre estos Términos de Servicio, contáctenos en legal@echatbot.ai",
   },
   pt: {
     // Header
@@ -952,8 +952,8 @@ const translations = {
     // Hero Section
     "hero.title": "Crie seu agente AI para WhatsApp",
     "hero.subtitle":
-      "ShopMe traz e-commerce inteligente diretamente para o WhatsApp. Nosso agente de IA entende as necessidades do cliente, recomenda produtos e fecha vendas 24/7—tudo através de conversas naturais.",
-    "hero.whyTitle": "Por que ShopMe?",
+      "eChatbot traz e-commerce inteligente diretamente para o WhatsApp. Nosso agente de IA entende as necessidades do cliente, recomenda produtos e fecha vendas 24/7—tudo através de conversas naturais.",
+    "hero.whyTitle": "Por que eChatbot?",
 
     // Features
     "features.pushNotifications": "Push Notifications",
@@ -971,7 +971,7 @@ const translations = {
 
     // News Section
     "news.title": "Últimas Atualizações e Funcionalidades",
-    "news.subtitle": "Fique informado sobre as últimas melhorias do ShopMe",
+    "news.subtitle": "Fique informado sobre as últimas melhorias do eChatbot",
     "news.1.date": "15 de Outubro de 2025",
     "news.1.title": "Suporte Multilíngue",
     "news.1.category": "Idiomas",
@@ -1115,7 +1115,7 @@ const translations = {
     // Forgot Password
     "forgotPassword.title": "Redefinir Senha",
     "forgotPassword.subtitle": "Digite seu e-mail para redefinir sua senha",
-    "forgotPassword.email.placeholder": "admin@shop.me",
+    "forgotPassword.email.placeholder": "admin@echatbot.ai",
     "forgotPassword.button": "Redefinir Senha",
     "forgotPassword.backToLogin": "Voltar ao Login",
     "forgotPassword.success": "Se este e-mail estiver registrado, instruções de redefinição de senha foram enviadas para sua caixa de entrada. Por favor, verifique seu e-mail e siga o link para redefinir sua senha.",
@@ -1179,7 +1179,7 @@ const translations = {
     // Privacy Policy
     "privacy.title": "Política de Privacidade",
     "privacy.lastUpdate": "Última atualização",
-    "privacy.intro": "ShopME está comprometido em proteger sua privacidade. Esta Política de Privacidade explica como coletamos, usamos e protegemos seus dados pessoais.",
+    "privacy.intro": "eChatbot está comprometido em proteger sua privacidade. Esta Política de Privacidade explica como coletamos, usamos e protegemos seus dados pessoais.",
     "privacy.collection.title": "1. Informações que Coletamos",
     "privacy.collection.desc": "Coletamos informações que você nos fornece diretamente, incluindo nome, e-mail, número de telefone e detalhes comerciais quando você cria uma conta ou usa nossos serviços.",
     "privacy.usage.title": "2. Como Usamos Suas Informações",
@@ -1193,32 +1193,32 @@ const translations = {
     "privacy.cookies.title": "6. Cookies e Tecnologias de Rastreamento",
     "privacy.cookies.desc": "Usamos cookies e tecnologias semelhantes para melhorar sua experiência, analisar o uso e personalizar o conteúdo. Você pode gerenciar as preferências de cookies nas configurações do seu navegador.",
     "privacy.contact.title": "7. Entre em Contato",
-    "privacy.contact.desc": "Para perguntas sobre esta Política de Privacidade ou nossas práticas de tratamento de dados, entre em contato conosco em privacy@shopme.com",
+    "privacy.contact.desc": "Para perguntas sobre esta Política de Privacidade ou nossas práticas de tratamento de dados, entre em contato conosco em privacy@echatbot.ai",
 
     // Terms of Service
     "terms.title": "Termos de Serviço",
     "terms.lastUpdate": "Última atualização",
-    "terms.intro": "Bem-vindo ao ShopME. Ao usar nossos serviços, você concorda em estar vinculado a estes Termos de Serviço.",
+    "terms.intro": "Bem-vindo ao eChatbot. Ao usar nossos serviços, você concorda em estar vinculado a estes Termos de Serviço.",
     "terms.acceptance.title": "1. Aceitação dos Termos",
-    "terms.acceptance.desc": "Ao acessar e usar o ShopME, você concorda em estar vinculado a estes Termos de Serviço e nossa Política de Privacidade. Se você não concorda com estes termos, não use nossos serviços.",
+    "terms.acceptance.desc": "Ao acessar e usar o eChatbot, você concorda em estar vinculado a estes Termos de Serviço e nossa Política de Privacidade. Se você não concorda com estes termos, não use nossos serviços.",
     "terms.services.title": "2. Descrição dos Serviços",
-    "terms.services.desc": "ShopME fornece uma plataforma de comércio eletrônico integrada ao WhatsApp que permite às empresas gerenciar produtos, processar pedidos e se comunicar com clientes através de agentes de IA.",
+    "terms.services.desc": "eChatbot fornece uma plataforma de comércio eletrônico integrada ao WhatsApp que permite às empresas gerenciar produtos, processar pedidos e se comunicar com clientes através de agentes de IA.",
     "terms.account.title": "3. Contas de Usuário",
-    "terms.account.desc": "Você deve criar uma conta para usar o ShopME. Você é responsável por manter a segurança de sua conta e senha. Você deve ter pelo menos 18 anos para usar nossos serviços.",
+    "terms.account.desc": "Você deve criar uma conta para usar o eChatbot. Você é responsável por manter a segurança de sua conta e senha. Você deve ter pelo menos 18 anos para usar nossos serviços.",
     "terms.conduct.title": "4. Conduta do Usuário",
-    "terms.conduct.desc": "Você concorda em não usar o ShopME para propósitos ilegais, violar direitos de terceiros ou descumprir leis aplicáveis. Reservamo-nos o direito de suspender ou encerrar contas que violem estes termos.",
+    "terms.conduct.desc": "Você concorda em não usar o eChatbot para propósitos ilegais, violar direitos de terceiros ou descumprir leis aplicáveis. Reservamo-nos o direito de suspender ou encerrar contas que violem estes termos.",
     "terms.payment.title": "5. Pagamento e Faturamento",
     "terms.payment.desc": "Os preços são baseados em seu plano de assinatura e uso. Os pagamentos são processados mensalmente. Você pode cancelar sua assinatura a qualquer momento, mas reembolsos não estão disponíveis para períodos de serviço já faturados.",
     "terms.ip.title": "6. Propriedade Intelectual",
-    "terms.ip.desc": "Todo o conteúdo e tecnologia do ShopME são propriedade do ShopME ou de seus licenciadores. Você mantém a propriedade de seu conteúdo, mas nos concede uma licença para usá-lo para fornecer nossos serviços.",
+    "terms.ip.desc": "Todo o conteúdo e tecnologia do eChatbot são propriedade do eChatbot ou de seus licenciadores. Você mantém a propriedade de seu conteúdo, mas nos concede uma licença para usá-lo para fornecer nossos serviços.",
     "terms.termination.title": "7. Rescisão",
-    "terms.termination.desc": "Podemos suspender ou encerrar seu acesso ao ShopME a qualquer momento por violação destes termos ou outras razões legítimas. Você pode encerrar sua conta a qualquer momento nas configurações de sua conta.",
+    "terms.termination.desc": "Podemos suspender ou encerrar seu acesso ao eChatbot a qualquer momento por violação destes termos ou outras razões legítimas. Você pode encerrar sua conta a qualquer momento nas configurações de sua conta.",
     "terms.limitation.title": "8. Limitação de Responsabilidade",
-    "terms.limitation.desc": "ShopME é fornecido 'como está'. Não fazemos garantias de qualquer tipo. Nossa responsabilidade é limitada ao valor que você pagou no último mês.",
+    "terms.limitation.desc": "eChatbot é fornecido 'como está'. Não fazemos garantias de qualquer tipo. Nossa responsabilidade é limitada ao valor que você pagou no último mês.",
     "terms.changes.title": "9. Alterações nos Termos",
     "terms.changes.desc": "Podemos atualizar estes termos periodicamente. Notificaremos você de mudanças significativas por e-mail ou notificação na plataforma. O uso continuado constitui aceitação dos termos atualizados.",
     "terms.contact.title": "10. Entre em Contato",
-    "terms.contact.desc": "Para perguntas sobre estes Termos de Serviço, entre em contato conosco em legal@shopme.com",
+    "terms.contact.desc": "Para perguntas sobre estes Termos de Serviço, entre em contato conosco em legal@echatbot.ai",
   },
 }
 

@@ -473,6 +473,139 @@ export class CustomersController {
   }
 
   /**
+   * 🚫 Get all blocked users (customers + registration attempts)
+   * Returns combined list of blocked customers and blocked registration attempts
+   */
+  async getBlockedUsers(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { workspaceId } = req.params
+
+      logger.info(`🚫 Getting blocked users for workspace: ${workspaceId}`)
+
+      // Get blocked customers and blocked registration attempts in parallel
+      const [blockedCustomers, blockedAttempts] = await Promise.all([
+        // Blocked customers (isBlacklisted = true)
+        prisma.customers.findMany({
+          where: {
+            workspaceId,
+            isBlacklisted: true,
+          },
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            email: true,
+            isBlacklisted: true,
+            updatedAt: true, // Use updatedAt as proxy for blockedAt
+          },
+          orderBy: { updatedAt: "desc" },
+        }),
+        // Blocked registration attempts (non-registered users blocked after 4 attempts)
+        prisma.registrationAttempts.findMany({
+          where: {
+            workspaceId,
+            isBlocked: true,
+          },
+          select: {
+            id: true,
+            phoneNumber: true,
+            attemptCount: true,
+            isBlocked: true,
+            lastAttemptAt: true,
+            createdAt: true,
+          },
+          orderBy: { lastAttemptAt: "desc" },
+        }),
+      ])
+
+      // Combine and format the results
+      const blockedUsers = [
+        ...blockedCustomers.map((c) => ({
+          id: c.id,
+          type: "customer" as const,
+          name: c.name || "Unknown",
+          phone: c.phone,
+          email: c.email,
+          blockedAt: c.updatedAt,
+          reason: "Manually blocked",
+        })),
+        ...blockedAttempts.map((a) => ({
+          id: a.id,
+          type: "registration_attempt" as const,
+          name: "Unregistered User",
+          phone: a.phoneNumber,
+          email: null,
+          blockedAt: a.lastAttemptAt,
+          reason: `Blocked after ${a.attemptCount} registration attempts`,
+        })),
+      ]
+
+      // Sort by blockedAt descending
+      blockedUsers.sort((a, b) => {
+        const dateA = a.blockedAt ? new Date(a.blockedAt).getTime() : 0
+        const dateB = b.blockedAt ? new Date(b.blockedAt).getTime() : 0
+        return dateB - dateA
+      })
+
+      logger.info(`🚫 Found ${blockedUsers.length} blocked users (${blockedCustomers.length} customers, ${blockedAttempts.length} attempts)`)
+
+      return res.json({
+        success: true,
+        data: blockedUsers,
+        counts: {
+          customers: blockedCustomers.length,
+          registrationAttempts: blockedAttempts.length,
+          total: blockedUsers.length,
+        },
+      })
+    } catch (error) {
+      logger.error("Error getting blocked users:", error)
+      next(error)
+    }
+  }
+
+  /**
+   * 🗑️ Delete a registration attempt (blocked unregistered user)
+   */
+  async deleteRegistrationAttempt(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { workspaceId, attemptId } = req.params
+
+      logger.info(`🗑️ Deleting registration attempt: ${attemptId} in workspace: ${workspaceId}`)
+
+      // Verify the attempt exists and belongs to this workspace
+      const attempt = await prisma.registrationAttempts.findFirst({
+        where: {
+          id: attemptId,
+          workspaceId,
+        },
+      })
+
+      if (!attempt) {
+        return res.status(404).json({
+          success: false,
+          error: "Registration attempt not found",
+        })
+      }
+
+      // Delete the attempt
+      await prisma.registrationAttempts.delete({
+        where: { id: attemptId },
+      })
+
+      logger.info(`✅ Registration attempt deleted: ${attemptId}`)
+
+      return res.json({
+        success: true,
+        message: "Registration attempt deleted successfully",
+      })
+    } catch (error) {
+      logger.error("Error deleting registration attempt:", error)
+      next(error)
+    }
+  }
+
+  /**
    * Count all "Unknown Customer" records in a workspace
    */
   async countUnknownCustomers(req: Request, res: Response, next: NextFunction) {

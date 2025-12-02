@@ -62,7 +62,7 @@ win, ganar, guadagna, ganar dinero, easy money, fast money, hot girls, sexy girl
 - **Italian product names** - must stay in Italian (e.g., pasta names, cheese names, salumi names)
 - Italian food terms (e.g., "al dente", "DOP", "IGP")
 - Order codes (e.g., ORD-001-2024)
-- Email addresses (@shopme.com)
+- Email addresses (@echatbot.ai)
 - WhatsApp numbers
 - Prices and numbers (€12.50)
 - Links listed in ALLOWED LINKS section above
@@ -252,8 +252,8 @@ Remember: Return ONLY the JSON object with translatedText, blocked, and reason f
           headers: {
             Authorization: `Bearer ${apiKey}`,
             "Content-Type": "application/json",
-            "HTTP-Referer": "https://shopme.com",
-            "X-Title": "ShopME Translation Security",
+            "HTTP-Referer": "https://echatbot.ai",
+            "X-Title": "eChatbot Translation Security",
           },
         }
       )

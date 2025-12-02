@@ -2,7 +2,7 @@
 
 ## 1. Responsable del Tratamiento
 
-La gestión de tus datos personales es realizada por el responsable del tratamiento indicado en el registro del servicio ShopME.
+La gestión de tus datos personales es realizada por el responsable del tratamiento indicado en el registro del servicio eChatbot.
 
 ## 2. Finalidad del Tratamiento
 

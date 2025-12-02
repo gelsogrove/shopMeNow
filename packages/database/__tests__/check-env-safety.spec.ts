@@ -71,7 +71,7 @@ describe("Production Environment Safety", () => {
 
     it("should return false for localhost DATABASE_URL in development", () => {
       process.env.NODE_ENV = "development"
-      process.env.DATABASE_URL = "postgresql://shopmefy:shopmefy@localhost:5434/shopmefy"
+      process.env.DATABASE_URL = "postgresql://echatbotfy:echatbotfy@localhost:5434/echatbotfy"
       expect(isProductionEnvironment()).toBe(false)
     })
   })

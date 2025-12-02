@@ -2173,7 +2173,7 @@ export class MessageRepository {
             Authorization: `Bearer ${openRouterApiKey}`,
             "Content-Type": "application/json",
             "HTTP-Referer": process.env.FRONTEND_URL || "http://localhost:5173",
-            "X-Title": "ShopME Function Router",
+            "X-Title": "eChatbot Function Router",
           },
         })
         logger.info("🔍 DEBUG - Axios call successful")

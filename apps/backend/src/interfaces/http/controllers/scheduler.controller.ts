@@ -3,7 +3,7 @@
  *
  * Handles scheduler job status management for Platform Admin.
  *
- * @author Andrea Gelso - ShopME Platform
+ * @author Andrea Gelso - eChatbot Platform
  */
 
 import { Request, Response } from "express"

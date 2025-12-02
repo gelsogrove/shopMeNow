@@ -5,7 +5,7 @@
  * - Login endpoint returns appropriate error
  * - Frontend should show WIP popup (tested via mock)
  *
- * @author Andrea Gelso - ShopME Platform
+ * @author Andrea Gelso - eChatbot Platform
  * @spec 188-platform-config
  */
 

@@ -165,7 +165,7 @@
 
 - [ ] T010 [US6] Test AddProduct CF with integration test
   - Run: npm run test:integration -- add-product
-  - Verify: cartUrl format is "https://shopme.local/checkout-public?token=xxx&step=2"
+  - Verify: cartUrl format is "https://echatbot.local/checkout-public?token=xxx&step=2"
   - Depends on T009
 
 **Checkpoint**: AddProduct CF returns checkout links with step=2

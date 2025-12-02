@@ -13,6 +13,7 @@ import Setup2FAPage from "./pages/auth/Setup2FAPage"
 import Verify2FAPage from "./pages/auth/Verify2FAPage"
 import TwoFactorResetPage from "./pages/auth/TwoFactorResetPage"
 import ImpersonatePage from "./pages/auth/ImpersonatePage"
+import { BlockedUsersPage } from "./pages/BlockedUsersPage"
 import { ChatPage } from "./pages/ChatPage"
 import ClientsPage from "./pages/ClientsPage"
 import { QueuePage } from "./pages/QueuePage"
@@ -130,6 +131,9 @@ export function App() {
                   </Route>
                   <Route path="/agents" element={<Layout />}>
                     <Route index element={<AgentConfigurationPage />} />
+                  </Route>
+                  <Route path="/blocked-users" element={<Layout />}>
+                    <Route index element={<BlockedUsersPage />} />
                   </Route>
                   <Route path="/clients" element={<Layout />}>
                     <Route index element={<ClientsPage />} />

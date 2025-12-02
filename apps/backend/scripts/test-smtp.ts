@@ -98,10 +98,10 @@ async function sendTestEmail(config: SmtpConfig): Promise<void> {
   })
 
   const info = await transporter.sendMail({
-    from: `"ShopME Test" <${config.from}>`,
+    from: `"eChatbot Test" <${config.from}>`,
     to: "getprono@gmail.com",
-    subject: "✅ SMTP Test - ShopME Email System",
-    text: `Questo è un test del sistema email di ShopME....
+    subject: "✅ SMTP Test - eChatbot Email System",
+    text: `Questo è un test del sistema email di eChatbot....
 
 Data/Ora: ${testDate}
 Server SMTP: ${config.host}:${config.port}
@@ -115,13 +115,13 @@ Prossimi passi:
 3. ⏳ Integrare nei punti di trigger (ContactOperator, Order creation)
 
 ---
-ShopME Email Notification System
+eChatbot Email Notification System
 `,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #4CAF50;">✅ SMTP Test - ShopME Email System</h2>
+        <h2 style="color: #4CAF50;">✅ SMTP Test - eChatbot Email System</h2>
         
-        <p>Questo è un test del sistema email di ShopME.</p>
+        <p>Questo è un test del sistema email di eChatbot.</p>
         
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
           <tr>
@@ -150,7 +150,7 @@ ShopME Email Notification System
         </ol>
         
         <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
-        <p style="color: #666; font-size: 12px; text-align: center;">ShopME Email Notification System</p>
+        <p style="color: #666; font-size: 12px; text-align: center;">eChatbot Email Notification System</p>
       </div>
     `,
   })
@@ -173,7 +173,7 @@ ShopME Email Notification System
 async function main() {
   console.log("")
   console.log("=".repeat(60))
-  console.log("🧪 SMTP Configuration Test - ShopME Email System")
+  console.log("🧪 SMTP Configuration Test - eChatbot Email System")
   console.log("=".repeat(60))
   console.log("")
 

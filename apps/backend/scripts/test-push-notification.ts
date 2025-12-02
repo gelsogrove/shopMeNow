@@ -12,7 +12,7 @@ import axios from "axios"
 
 const BASE_URL = "http://localhost:3001/api"
 const WORKSPACE_ID = "cm9hjgq9v00014qk8fsdy4ujv" // Bell'Italia workspace
-const ADMIN_EMAIL = "admin@shopme.com"
+const ADMIN_EMAIL = "admin@echatbot.ai"
 const ADMIN_PASSWORD = "Venezia44"
 
 async function testPushNotification() {

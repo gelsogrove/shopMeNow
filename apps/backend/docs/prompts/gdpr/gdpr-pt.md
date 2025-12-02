@@ -2,7 +2,7 @@
 
 ## 1. Controlador de Dados
 
-A gestão dos seus dados pessoais é realizada pelo controlador de dados indicado no registro do serviço ShopME.
+A gestão dos seus dados pessoais é realizada pelo controlador de dados indicado no registro do serviço eChatbot.
 
 ## 2. Finalidade do Processamento
 

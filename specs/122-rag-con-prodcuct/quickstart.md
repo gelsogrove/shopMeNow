@@ -125,7 +125,7 @@ npm run test:unit -- prompt-processor-lastorder
    // Find Order Tracking Agent config update
    const orderAgentPrompt = `
    # System Role
-   Tu sei l'Order Tracking Agent di ShopME. Gestisci tracking ordini.
+   Tu sei l'Order Tracking Agent di eChatbot. Gestisci tracking ordini.
 
    ## Ultimo Ordine Cliente
 
@@ -323,7 +323,7 @@ npm run test:unit -- link-generator-step
 ```bash
 # Check generated URL
 console.log(cartUrl)
-# Expected: "https://shopme.local/checkout-public?token=eyJ...&step=2"
+# Expected: "https://echatbot.local/checkout-public?token=eyJ...&step=2"
 ```
 
 ---

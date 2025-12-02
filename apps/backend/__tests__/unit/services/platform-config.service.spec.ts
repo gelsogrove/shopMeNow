@@ -10,7 +10,7 @@
  * - Limit retrieval
  * - Public and admin config formatting
  *
- * @author Andrea Gelso - ShopME Platform
+ * @author Andrea Gelso - eChatbot Platform
  */
 
 import { PrismaClient } from "@prisma/client"

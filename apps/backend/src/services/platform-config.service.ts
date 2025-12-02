@@ -11,7 +11,7 @@
  *
  * ⚠️ CRITICAL: After full migration, remove all fallbacks
  *
- * @author Andrea Gelso - ShopME Platform
+ * @author Andrea Gelso - eChatbot Platform
  */
 
 import { PrismaClient, ConfigType } from "@prisma/client"

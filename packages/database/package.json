@@ -1,7 +1,7 @@
 {
-  "name": "@shopme/database",
+  "name": "@echatbot/database",
   "version": "1.0.0",
-  "description": "Shared Prisma database client for ShopME",
+  "description": "Shared Prisma database client for eChatbot",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "exports": {

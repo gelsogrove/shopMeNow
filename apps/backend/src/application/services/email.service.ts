@@ -86,7 +86,7 @@ export class EmailService {
       })
 
       const mailOptions = {
-        from: `"ShopMe Support" <${process.env.SMTP_FROM || "noreply@shopme.com"}>`,
+        from: `"eChatbot Support" <${process.env.SMTP_FROM || "noreply@echatbot.ai"}>`,
         to: data.to,
         subject: t.resetPassword.subject,
         html: htmlContent,
@@ -208,7 +208,7 @@ ${t.rights}
       const textContent = this.generateOperatorNotificationText(data)
 
       const mailOptions = {
-        from: `"ShopMe Support" <${data.fromEmail || process.env.SMTP_FROM || "noreply@shopme.com"}>`,
+        from: `"eChatbot Support" <${data.fromEmail || process.env.SMTP_FROM || "noreply@echatbot.ai"}>`,
         to: data.to,
         subject:
           data.subject ||
@@ -294,11 +294,11 @@ ${t.rights}
         
         <p><strong>Azione richiesta:</strong> Contattare il cliente il prima possibile per fornire assistenza personalizzata.</p>
         
-        <p>Cordiali saluti,<br>Sistema di Notifiche ShopMe</p>
+        <p>Cordiali saluti,<br>Sistema di Notifiche eChatbot</p>
     </div>
     <div class="footer">
-        <p>Questa email è stata generata automaticamente dal sistema ShopMe quando un cliente ha richiesto assistenza operatore.</p>
-        <p>ShopMe - La tua piattaforma e-commerce di fiducia</p>
+        <p>Questa email è stata generata automaticamente dal sistema eChatbot quando un cliente ha richiesto assistenza operatore.</p>
+        <p>eChatbot - La tua piattaforma e-commerce di fiducia</p>
     </div>
 </body>
 </html>
@@ -330,11 +330,11 @@ ${chatLink ? `📱 Link alla chat completa: ${chatLink}` : ""}
 Azione richiesta: Contattare il cliente il prima possibile per fornire assistenza personalizzata.
 
 Cordiali saluti,
-Sistema di Notifiche ShopMe
+Sistema di Notifiche eChatbot
 
 ---
-Questa email è stata generata automaticamente dal sistema ShopMe quando un cliente ha richiesto assistenza operatore.
-ShopMe - La tua piattaforma e-commerce di fiducia
+Questa email è stata generata automaticamente dal sistema eChatbot quando un cliente ha richiesto assistenza operatore.
+eChatbot - La tua piattaforma e-commerce di fiducia
     `
   }
 
@@ -420,7 +420,7 @@ ShopMe - La tua piattaforma e-commerce di fiducia
         }
 
         const fromEmail = workspace.whatsappSettings.adminEmail
-        const fromName = workspace.name || "ShopMe"
+        const fromName = workspace.name || "eChatbot"
 
         // Build email options
         const mailOptions: nodemailer.SendMailOptions = {
@@ -465,7 +465,7 @@ ShopMe - La tua piattaforma e-commerce di fiducia
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to ShopME</title>
+  <title>Welcome to eChatbot</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
   <table role="presentation" style="width: 100%; border-collapse: collapse;">
@@ -475,7 +475,7 @@ ShopMe - La tua piattaforma e-commerce di fiducia
           <!-- Header -->
           <tr>
             <td style="padding: 40px 30px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px 8px 0 0;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">Welcome to ShopME! 🎉</h1>
+              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">Welcome to eChatbot! 🎉</h1>
             </td>
           </tr>
           
@@ -487,7 +487,7 @@ ShopMe - La tua piattaforma e-commerce di fiducia
               </p>
               
               <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #333333;">
-                Welcome to <strong>ShopME</strong>! We're excited to have you on board. 🚀
+                Welcome to <strong>eChatbot</strong>! We're excited to have you on board. 🚀
               </p>
               
               <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #333333;">
@@ -517,10 +517,10 @@ ShopMe - La tua piattaforma e-commerce di fiducia
           <tr>
             <td style="padding: 30px; text-align: center; background-color: #f8f9fa; border-radius: 0 0 8px 8px;">
               <p style="margin: 0; font-size: 14px; color: #666666;">
-                © 2025 ShopME. All rights reserved.
+                © 2025 eChatbot. All rights reserved.
               </p>
               <p style="margin: 10px 0 0; font-size: 12px; color: #999999;">
-                You're receiving this email because you registered for a ShopME account.
+                You're receiving this email because you registered for a eChatbot account.
               </p>
             </td>
           </tr>
@@ -533,11 +533,11 @@ ShopMe - La tua piattaforma e-commerce di fiducia
 `
 
       const textContent = `
-Welcome to ShopME!
+Welcome to eChatbot!
 
 Hi ${data.firstName},
 
-Welcome to ShopME! We're excited to have you on board.
+Welcome to eChatbot! We're excited to have you on board.
 
 Your account has been successfully created. You can now:
 - Manage your products and services
@@ -550,15 +550,15 @@ Get started: ${process.env.FRONTEND_URL || "http://localhost:3000"}
 If you have any questions, feel free to reach out to our support team.
 
 Best regards,
-The ShopME Team
+The eChatbot Team
 
-© 2025 ShopME. All rights reserved.
+© 2025 eChatbot. All rights reserved.
 `
 
       const mailOptions = {
-        from: `"ShopME" <${process.env.SMTP_FROM || "noreply@shopme.com"}>`,
+        from: `"eChatbot" <${process.env.SMTP_FROM || "noreply@echatbot.ai"}>`,
         to: data.to,
-        subject: "Welcome to ShopME! 🎉",
+        subject: "Welcome to eChatbot! 🎉",
         html: htmlContent,
         text: textContent,
       }

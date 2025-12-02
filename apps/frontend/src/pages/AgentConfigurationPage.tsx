@@ -331,7 +331,13 @@ export function AgentConfigurationPage() {
           </div>
         ) : (
           <div className="space-y-2">
-            {agents.map((agent) => {
+            {agents
+              .filter((agent) => {
+                // 🔒 SECURITY: Hide Security Agent from UI - it's hardcoded for safety
+                const agentType = agent.agentType?.toLowerCase()
+                return agentType !== "security"
+              })
+              .map((agent) => {
               const formData = editingAgents[agent.id]
               if (!formData) return null
 

@@ -371,7 +371,7 @@ SELECT * FROM conversation_messages WHERE role = 'system' AND "agentType" IN ('w
 
 ## 👨‍💻 Author
 
-**Andrea** - ShopME Team
+**Andrea** - eChatbot Team
 
 **Created**: November 20, 2025  
 **Branch**: `180-whatsapp-queue`  

@@ -36,7 +36,7 @@ if (step !== undefined && (step < 1 || step > 2)) {
 
 | Type              | Description                                    | Example                                                            |
 | ----------------- | ---------------------------------------------- | ------------------------------------------------------------------ |
-| `Promise<string>` | Full checkout URL with token and optional step | `"https://shopme.example.com/checkout-public?token=eyJ...&step=2"` |
+| `Promise<string>` | Full checkout URL with token and optional step | `"https://echatbot.example.com/checkout-public?token=eyJ...&step=2"` |
 
 ---
 
@@ -116,7 +116,7 @@ const url = await linkGenerator.generateCheckoutLink(
 )
 
 console.log(url)
-// Output: "https://shopme.example.com/checkout-public?token=eyJ..."
+// Output: "https://echatbot.example.com/checkout-public?token=eyJ..."
 ```
 
 ### Example 2: Step 1 (Cart Review)
@@ -129,7 +129,7 @@ const url = await linkGenerator.generateCheckoutLink(
 )
 
 console.log(url)
-// Output: "https://shopme.example.com/checkout-public?token=eyJ...&step=1"
+// Output: "https://echatbot.example.com/checkout-public?token=eyJ...&step=1"
 ```
 
 ### Example 3: Step 2 (Direct to Address) - **REPEAT ORDER USE CASE**
@@ -142,7 +142,7 @@ const url = await linkGenerator.generateCheckoutLink(
 )
 
 console.log(url)
-// Output: "https://shopme.example.com/checkout-public?token=eyJ...&step=2"
+// Output: "https://echatbot.example.com/checkout-public?token=eyJ...&step=2"
 ```
 
 ---
@@ -315,7 +315,7 @@ describe("LinkGeneratorService.generateCheckoutLink", () => {
                 url:
                   type: string
                   format: uri
-                  example: "https://shopme.example.com/checkout-public?token=eyJ...&step=2"
+                  example: "https://echatbot.example.com/checkout-public?token=eyJ...&step=2"
       "400":
         description: Invalid parameters
         content:

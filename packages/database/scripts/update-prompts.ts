@@ -28,8 +28,8 @@ const PROMPT_TO_AGENT_TYPE: Record<string, AgentType> = {
   "summary-agent.md": "SUMMARY_AGENT",
   "profile-management-agent.md": "PROFILE_MANAGEMENT",
   "translation-agent.md": "TRANSLATION",
-  "security-agent.md": "SECURITY",
-  // Note: safety-translation-agent.md is deprecated, TRANSLATION agent handles all translation
+  // 🔒 SECURITY agent is HARDCODED in code for safety - NOT configurable via UI/database
+  // See: apps/backend/src/application/agents/SecurityAgent.ts
 }
 
 /**

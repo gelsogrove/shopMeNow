@@ -2299,8 +2299,8 @@ export class LLMRouterService {
           headers: {
             Authorization: `Bearer ${this.openRouterApiKey}`,
             "Content-Type": "application/json",
-            "HTTP-Referer": process.env.FRONTEND_URL || "https://shopme.ai",
-            "X-Title": "ShopME Multi-Agent Router",
+            "HTTP-Referer": process.env.FRONTEND_URL || "https://echatbot.ai",
+            "X-Title": "eChatbot Multi-Agent Router",
           },
           timeout: 60000, // Increased from 30s to 60s for complex queries like "prodotti DOP"
         }

@@ -1,4 +1,4 @@
-# ShopMe - AI-Powered WhatsApp E-commerce Platform
+# eChatbot - AI-Powered WhatsApp E-commerce Platform
 
 A comprehensive WhatsApp e-commerce platform with AI-powered chatbot, multi-agent LLM architecture, and multi-language support.
 
@@ -16,7 +16,7 @@ A comprehensive WhatsApp e-commerce platform with AI-powered chatbot, multi-agen
 ## 🏗️ Project Structure (Monorepo)
 
 ```
-shopME/
+eChatbot/
 ├── apps/
 │   ├── backend/         # Express API server (port 3001)
 │   ├── frontend/        # React + Vite app (port 3000)
@@ -52,7 +52,7 @@ shopME/
 
    ```bash
    git clone <repository-url>
-   cd shopME
+   cd eChatbot
    ```
 
 2. **Start database (Docker)**
@@ -125,7 +125,7 @@ npm run prod:scheduler   # Start scheduler with PM2
 
 ## 🔐 Default Login
 
-- **Email**: `admin@shopme.com`
+- **Email**: `admin@echatbot.ai`
 - **Password**: `venezia44`
    cd backend && npm run dev
    ```
@@ -150,7 +150,7 @@ npm run prod:scheduler   # Start scheduler with PM2
       ```
 - **Backend API**: http://localhost:3001
 - **Database**: localhost:5434
-  - User: `shopmefy` / `shopmefy`
+  - User: `echatbotfy` / `echatbotfy`
 
 ### First Login with 2FA
 
@@ -227,7 +227,7 @@ cd backend && npm run seed
 
 ### Agent Prompts Management
 
-**Multi-Agent System**: ShopME uses 6 specialized agents (ROUTER, PRODUCT_SEARCH, CART_MANAGEMENT, ORDER_TRACKING, CUSTOMER_SUPPORT, SAFETY_TRANSLATION).
+**Multi-Agent System**: eChatbot uses 6 specialized agents (ROUTER, PRODUCT_SEARCH, CART_MANAGEMENT, ORDER_TRACKING, CUSTOMER_SUPPORT, SAFETY_TRANSLATION).
 
 ```bash
 # Export prompts from database to markdown files
@@ -384,7 +384,7 @@ docker logs shop_db
 
 # For PostgreSQL 18+ compatibility issues, recreate the volume:
 docker-compose down
-docker volume rm shopme_postgres_data
+docker volume rm echatbot_postgres_data
 docker-compose up -d
 
 # Wait for database to be ready, then migrate

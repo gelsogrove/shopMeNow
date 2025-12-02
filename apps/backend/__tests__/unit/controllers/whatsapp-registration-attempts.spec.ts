@@ -226,7 +226,7 @@ describe("WhatsApp Registration Attempts & Blocking - Documentation", () => {
         source: "whatsapp-webhook",
         type: "welcome_new_user",
         language: "it",
-        registrationLink: "https://shopme.com/s/abc123",
+        registrationLink: "https://echatbot.ai/s/abc123",
         timestamp: "2025-11-19T10:00:00.000Z",
         flow: ["welcome", "safety", "save", "whatsapp"],
         attemptCount: 1,

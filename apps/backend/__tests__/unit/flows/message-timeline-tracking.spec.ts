@@ -293,7 +293,7 @@ describe("Message Flow Timeline - Complete Tracking", () => {
           originalMessage: "Ecco i formaggi disponibili: ...",
           targetLanguage: "it",
           customerName: "Mario Rossi",
-          allowedLinks: ["https://shopme.com/products/123"],
+          allowedLinks: ["https://echatbot.ai/products/123"],
         },
         output: {
           translatedMessage: "Ecco i formaggi disponibili: ...",

@@ -83,7 +83,7 @@ curl -X POST http://localhost:3001/api/webhooks/whatsapp \
   "success": true,
   "data": {
     "sessionId": null,
-    "message": "Benvenuto! Sono SofiA...\n\n🔗 **Per continuare, registrati qui:**\nhttps://shop.me/s/AbC123d\n\n⏰ Link valido per 1 ora"
+    "message": "Benvenuto! Sono SofiA...\n\n🔗 **Per continuare, registrati qui:**\nhttps://echatbot.ai/s/AbC123d\n\n⏰ Link valido per 1 ora"
   }
 }
 ```
@@ -131,7 +131,7 @@ WHERE "phoneNumber" = '+39 333 1234567'
 From the response above, copy the short URL:
 
 ```
-https://shop.me/s/AbC123d
+https://echatbot.ai/s/AbC123d
 ```
 
 **Test redirect**:

@@ -606,7 +606,7 @@ Il Team
 
       const transporter = await this.emailService["transporter"]
       await transporter.sendMail({
-        from: process.env.SMTP_FROM || "noreply@shopme.com",
+        from: process.env.SMTP_FROM || "noreply@echatbot.ai",
         to: email,
         subject: `Ordine Ricevuto - ${order.orderCode}`,
         text: emailContent,
@@ -649,7 +649,7 @@ Accedi al pannello amministrativo per confermare l'ordine.
 
       const transporter = await this.emailService["transporter"]
       await transporter.sendMail({
-        from: process.env.SMTP_FROM || "noreply@shopme.com",
+        from: process.env.SMTP_FROM || "noreply@echatbot.ai",
         to: email,
         subject: `Nuovo Ordine da Confermare - ${order.orderCode}`,
         text: emailContent,

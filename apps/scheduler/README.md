@@ -1,4 +1,4 @@
-# ShopME Scheduler Microservice
+# eChatbot Scheduler Microservice
 
 Microservizio per job schedulati. Progetto separato dal backend, stesso database PostgreSQL.
 
@@ -88,7 +88,7 @@ SMTP_PORT="465"
 SMTP_SECURE="true"
 SMTP_USER="tua-email@gmail.com"
 SMTP_PASS="app-password"
-SMTP_FROM="noreplay@shopme.com"
+SMTP_FROM="noreplay@echatbot.ai"
 ALERT_EMAIL="tua-email@gmail.com"
 ```
 
@@ -122,13 +122,13 @@ Se un job fallisce, viene inviata email immediata a `ALERT_EMAIL` con:
 
 ```bash
 # Logs PM2
-pm2 logs shopme-scheduler
+pm2 logs echatbot-scheduler
 
 # Monitor real-time
 pm2 monit
 
 # Restart
-pm2 restart shopme-scheduler
+pm2 restart echatbot-scheduler
 
 # Status tutti i processi
 pm2 status

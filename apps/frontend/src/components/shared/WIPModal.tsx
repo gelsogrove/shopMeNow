@@ -19,7 +19,7 @@
  * />
  * ```
  *
- * @author Andrea Gelso - ShopME Platform
+ * @author Andrea Gelso - eChatbot Platform
  */
 
 import {

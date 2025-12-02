@@ -21,7 +21,7 @@ Implement guided product search with dynamic LLM-driven grouping that progressiv
 
 ## Constitution Check
 
-**PASS** ✅ - Feature follows ShopME coding standards:
+**PASS** ✅ - Feature follows eChatbot coding standards:
 
 - Database-first: Product certifications from DB (no hardcoded values)
 - Workspace isolation: All queries filter by `workspaceId`

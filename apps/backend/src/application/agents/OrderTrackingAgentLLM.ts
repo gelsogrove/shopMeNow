@@ -315,7 +315,7 @@ export class OrderTrackingAgentLLM {
             Authorization: `Bearer ${this.openRouterApiKey}`,
             "Content-Type": "application/json",
             "HTTP-Referer": config.appUrl,
-            "X-Title": "ShopME - Order Tracking Agent",
+            "X-Title": "eChatbot - Order Tracking Agent",
           },
         }
       )

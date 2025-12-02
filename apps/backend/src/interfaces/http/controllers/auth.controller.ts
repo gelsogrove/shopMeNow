@@ -5,7 +5,7 @@
  * Data: 13 Giugno 2025
  *
  * CREDENZIALI ADMIN FUNZIONANTI:
- * - Email: admin@shopme.com
+ * - Email: admin@echatbot.ai
  * - Password: venezia44
  *
  * AUTENTICAZIONE:
@@ -22,7 +22,7 @@
  * TEST LOGIN:
  * curl -c cookies.txt -X POST http://localhost:3001/api/auth/login \
  *   -H "Content-Type: application/json" \
- *   -d '{"email":"admin@shopme.com","password":"venezia44"}'
+ *   -d '{"email":"admin@echatbot.ai","password":"venezia44"}'
  *
  * ⚠️ NON MODIFICARE SENZA TESTARE LOGIN COMPLETO
  */
@@ -98,7 +98,7 @@ export class AuthController {
     /*
      * CRITICAL LOGIN ERROR RESOLUTION - June 13, 2025
      *
-     * PROBLEMA RISOLTO: 401 Unauthorized "User not found" per admin@shopme.com
+     * PROBLEMA RISOLTO: 401 Unauthorized "User not found" per admin@echatbot.ai
      *
      * CAUSA: L'utente admin non esisteva nel database perché:
      * 1. Il seed script non stava creando correttamente l'utente admin
@@ -120,7 +120,7 @@ export class AuthController {
      * - Verifica esplicita delle associazioni create
      *
      * CREDENZIALI ADMIN (da .env):
-     * - Email: admin@shopme.com
+     * - Email: admin@echatbot.ai
      * - Password: venezia44
      * - Ruolo: OWNER del workspace principale
      */

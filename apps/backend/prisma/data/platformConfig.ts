@@ -12,7 +12,7 @@
  * 3. Historical billing records preserve the price at transaction time
  * 4. Feature flags control platform access (WIP mode, maintenance, etc.)
  *
- * @author Andrea Gelso - ShopME Platform
+ * @author Andrea Gelso - eChatbot Platform
  */
 
 export type PlatformConfigData = {

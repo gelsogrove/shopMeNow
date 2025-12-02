@@ -257,8 +257,8 @@ ${itemsList}
 <p>Grazie per il tuo acquisto!</p>
 
 <p style="color: #666; font-size: 12px;">
-Email generata automaticamente dal sistema ShopMe<br>
-${workspace?.name || "ShopMe"}
+Email generata automaticamente dal sistema eChatbot<br>
+${workspace?.name || "eChatbot"}
 </p>
           `
 

@@ -176,7 +176,7 @@ export const checkTrialValid = async (
           expiredAt: trialStatus.expiredAt,
         },
         message:
-          "Il tuo periodo di prova è scaduto. Scegli un piano per continuare ad usare ShopME.",
+          "Il tuo periodo di prova è scaduto. Scegli un piano per continuare ad usare eChatbot.",
       })
       return
     }

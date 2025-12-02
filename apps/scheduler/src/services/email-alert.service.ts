@@ -21,9 +21,9 @@ export async function sendJobErrorAlert(jobName: string, error: Error): Promise<
 
   try {
     await transporter.sendMail({
-      from: process.env.SMTP_FROM || 'scheduler@shopme.com',
+      from: process.env.SMTP_FROM || 'scheduler@echatbot.ai',
       to: alertEmail,
-      subject: `🚨 [ShopME Scheduler] Job FAILED: ${jobName}`,
+      subject: `🚨 [eChatbot Scheduler] Job FAILED: ${jobName}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px;">
           <h2 style="color: #dc3545;">⚠️ Scheduler Job Failed</h2>

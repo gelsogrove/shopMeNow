@@ -57,7 +57,7 @@ describe("EmailService.sendMail()", () => {
     process.env.SMTP_SECURE = "false"
     process.env.SMTP_USER = "test@test.com"
     process.env.SMTP_PASS = "testpass"
-    process.env.SMTP_FROM = "noreply@shopme.com"
+    process.env.SMTP_FROM = "noreply@echatbot.ai"
 
     emailService = new EmailService()
 

@@ -8,7 +8,7 @@
 
 ## 🎯 Overview
 
-ShopME uses a **multi-agent architecture** with Router Agent orchestrating specialist agents (ProductSearch, Cart, OrderTracking, CustomerSupport) and Safety Agent for final validation/translation.
+eChatbot uses a **multi-agent architecture** with Router Agent orchestrating specialist agents (ProductSearch, Cart, OrderTracking, CustomerSupport) and Safety Agent for final validation/translation.
 
 **Key Innovation**: **Validation-Only Router Pattern** - Router validates specialist responses WITHOUT making expensive LLM call, saving 25% tokens (~5000 per request) and 800ms latency.
 

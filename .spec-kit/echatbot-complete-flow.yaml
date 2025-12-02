@@ -1,8 +1,8 @@
-# ShopME - Complete WhatsApp E-Commerce Flow Specification
+# eChatbot - Complete WhatsApp E-Commerce Flow Specification
 # Single Source of Truth for System Architecture
 
 project:
-  name: "ShopME - WhatsApp E-Commerce Platform"
+  name: "eChatbot - WhatsApp E-Commerce Platform"
   description: "Multi-agent AI chatbot for WhatsApp-based product sales with dynamic prompt variables"
   version: "1.0.0"
   stack:
@@ -1017,7 +1017,7 @@ todo:
 # NOTES
 # ============================================================================
 notes:
-  - "This spec is the SINGLE SOURCE OF TRUTH for ShopME architecture"
+  - "This spec is the SINGLE SOURCE OF TRUTH for eChatbot architecture"
   - "spec-kit will validate code against this specification"
   - "Update this file when architecture changes"
   - "NO documentation outside this spec (code + database as truth)"

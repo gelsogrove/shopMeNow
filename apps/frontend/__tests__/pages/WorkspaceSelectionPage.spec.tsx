@@ -165,7 +165,7 @@ describe("WorkspaceSelectionPage", () => {
 
       // When no workspaces, show welcome message
       await waitFor(() => {
-        expect(screen.getByText(/Welcome to ShopME/)).toBeInTheDocument()
+        expect(screen.getByText(/Welcome to eChatbot/)).toBeInTheDocument()
       })
       expect(screen.getByText(/Create your first WhatsApp channel/)).toBeInTheDocument()
     })
@@ -198,6 +198,204 @@ describe("WorkspaceSelectionPage", () => {
 
       await waitFor(() => {
         expect(screen.getByText("Logout")).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe("Badge Stats Display", () => {
+    it("should display pending orders badge when count > 0", async () => {
+      vi.mocked(workspaceApi.getWorkspaces).mockResolvedValue([
+        {
+          id: "ws-1",
+          name: "Test Shop",
+          isActive: true,
+          isDelete: false,
+          whatsappPhoneNumber: "+123456789",
+          createdAt: "2024-01-01",
+          updatedAt: "2024-01-01",
+        },
+      ])
+      vi.mocked(workspaceApi.workspaceApi.getBadgeStats).mockResolvedValue({
+        "ws-1": {
+          unreadMessages: 0,
+          pendingOrders: 5,
+          needsIntervention: 0,
+          blockedUsers: 0,
+        },
+      })
+
+      renderWithRouter(<WorkspaceSelectionPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText("5")).toBeInTheDocument()
+      })
+    })
+
+    it("should display needs intervention badge when count > 0", async () => {
+      vi.mocked(workspaceApi.getWorkspaces).mockResolvedValue([
+        {
+          id: "ws-1",
+          name: "Test Shop",
+          isActive: true,
+          isDelete: false,
+          whatsappPhoneNumber: "+123456789",
+          createdAt: "2024-01-01",
+          updatedAt: "2024-01-01",
+        },
+      ])
+      vi.mocked(workspaceApi.workspaceApi.getBadgeStats).mockResolvedValue({
+        "ws-1": {
+          unreadMessages: 0,
+          pendingOrders: 0,
+          needsIntervention: 3,
+          blockedUsers: 0,
+        },
+      })
+
+      renderWithRouter(<WorkspaceSelectionPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText("3")).toBeInTheDocument()
+      })
+    })
+
+    it("should display blocked users badge when count > 0", async () => {
+      vi.mocked(workspaceApi.getWorkspaces).mockResolvedValue([
+        {
+          id: "ws-1",
+          name: "Test Shop",
+          isActive: true,
+          isDelete: false,
+          whatsappPhoneNumber: "+123456789",
+          createdAt: "2024-01-01",
+          updatedAt: "2024-01-01",
+        },
+      ])
+      vi.mocked(workspaceApi.workspaceApi.getBadgeStats).mockResolvedValue({
+        "ws-1": {
+          unreadMessages: 0,
+          pendingOrders: 0,
+          needsIntervention: 0,
+          blockedUsers: 2,
+        },
+      })
+
+      renderWithRouter(<WorkspaceSelectionPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText("2")).toBeInTheDocument()
+      })
+    })
+
+    it("should display multiple badges when multiple counts > 0", async () => {
+      vi.mocked(workspaceApi.getWorkspaces).mockResolvedValue([
+        {
+          id: "ws-1",
+          name: "Test Shop",
+          isActive: true,
+          isDelete: false,
+          whatsappPhoneNumber: "+123456789",
+          createdAt: "2024-01-01",
+          updatedAt: "2024-01-01",
+        },
+      ])
+      vi.mocked(workspaceApi.workspaceApi.getBadgeStats).mockResolvedValue({
+        "ws-1": {
+          unreadMessages: 0,
+          pendingOrders: 10,
+          needsIntervention: 4,
+          blockedUsers: 7,
+        },
+      })
+
+      renderWithRouter(<WorkspaceSelectionPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText("10")).toBeInTheDocument() // pending orders
+        expect(screen.getByText("4")).toBeInTheDocument()  // needs intervention
+        expect(screen.getByText("7")).toBeInTheDocument()  // blocked users
+      })
+    })
+
+    it("should NOT display badges when all counts are 0", async () => {
+      vi.mocked(workspaceApi.getWorkspaces).mockResolvedValue([
+        {
+          id: "ws-1",
+          name: "Test Shop",
+          isActive: true,
+          isDelete: false,
+          whatsappPhoneNumber: "+123456789",
+          createdAt: "2024-01-01",
+          updatedAt: "2024-01-01",
+        },
+      ])
+      vi.mocked(workspaceApi.workspaceApi.getBadgeStats).mockResolvedValue({
+        "ws-1": {
+          unreadMessages: 0,
+          pendingOrders: 0,
+          needsIntervention: 0,
+          blockedUsers: 0,
+        },
+      })
+
+      renderWithRouter(<WorkspaceSelectionPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText("Test Shop")).toBeInTheDocument()
+      })
+
+      // Badge numbers should NOT be in the document
+      expect(screen.queryByText("0")).not.toBeInTheDocument()
+    })
+
+    it("should display badges for multiple workspaces independently", async () => {
+      vi.mocked(workspaceApi.getWorkspaces).mockResolvedValue([
+        {
+          id: "ws-1",
+          name: "Shop One",
+          isActive: true,
+          isDelete: false,
+          whatsappPhoneNumber: "+111111111",
+          createdAt: "2024-01-01",
+          updatedAt: "2024-01-01",
+        },
+        {
+          id: "ws-2",
+          name: "Shop Two",
+          isActive: true,
+          isDelete: false,
+          whatsappPhoneNumber: "+222222222",
+          createdAt: "2024-02-01",
+          updatedAt: "2024-02-01",
+        },
+      ])
+      vi.mocked(workspaceApi.workspaceApi.getBadgeStats).mockResolvedValue({
+        "ws-1": {
+          unreadMessages: 0,
+          pendingOrders: 3,
+          needsIntervention: 0,
+          blockedUsers: 1,
+        },
+        "ws-2": {
+          unreadMessages: 0,
+          pendingOrders: 0,
+          needsIntervention: 2,
+          blockedUsers: 0,
+        },
+      })
+
+      renderWithRouter(<WorkspaceSelectionPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText("Shop One")).toBeInTheDocument()
+        expect(screen.getByText("Shop Two")).toBeInTheDocument()
+      })
+
+      // Should display badges from both workspaces
+      await waitFor(() => {
+        expect(screen.getByText("3")).toBeInTheDocument() // ws-1 pending orders
+        expect(screen.getByText("1")).toBeInTheDocument() // ws-1 blocked users
+        expect(screen.getByText("2")).toBeInTheDocument() // ws-2 needs intervention
       })
     })
   })

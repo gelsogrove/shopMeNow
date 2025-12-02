@@ -94,7 +94,7 @@ export function SignupPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@shop.me"
+                placeholder="admin@echatbot.ai"
                 className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-green-500 focus:outline-none"
                 required
               />

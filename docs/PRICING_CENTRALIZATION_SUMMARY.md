@@ -8,7 +8,7 @@
 
 ## ✅ OBIETTIVO RAGGIUNTO
 
-**SINGLE SOURCE OF TRUTH** per tutti i prezzi del sistema ShopME.
+**SINGLE SOURCE OF TRUTH** per tutti i prezzi del sistema eChatbot.
 
 ### 📍 UN SOLO PUNTO DI MODIFICA:
 

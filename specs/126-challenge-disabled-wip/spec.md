@@ -389,7 +389,7 @@ Add valid email to workspace settings:
 workspace: {
   create: {
     name: "Test Workspace",
-    email: "admin@shopme.com", // REQUIRED
+    email: "admin@echatbot.ai", // REQUIRED
     wip_message: "Servizio momentaneamente non disponibile",
     welcome_message: "Benvenuto! Come posso aiutarti?",
     challenge: {

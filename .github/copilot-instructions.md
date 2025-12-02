@@ -1,8 +1,8 @@
-# ShopME AI Coding Agent Instructions
+# eChatbot AI Coding Agent Instructions
 
 ## 🎯 Project Overview
 
-ShopME is a **WhatsApp-based e-commerce platform** with AI chatbot integration. The system enables businesses to manage products, orders, and customer interactions through WhatsApp using a simplified LLM architecture with OpenRouter/GPT-4-mini.
+eChatbot is a **WhatsApp-based e-commerce platform** with AI chatbot integration. The system enables businesses to manage products, orders, and customer interactions through WhatsApp using a simplified LLM architecture with OpenRouter/GPT-4-mini.
 
 **Stack**: Node.js/Express + React/TypeScript + PostgreSQL + Prisma ORM + OpenRouter API
 
@@ -293,7 +293,7 @@ cd frontend && npm run dev
 docker-compose up -d
 ```
 
-**Default Login**: `admin@shopme.com` / `venezia44`
+**Default Login**: `admin@echatbot.ai` / `venezia44`
 
 ### Database Operations
 

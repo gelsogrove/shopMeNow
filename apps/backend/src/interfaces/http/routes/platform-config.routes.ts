@@ -13,7 +13,7 @@
  * - POST /api/platform-config/flags/:key/toggle - Toggle a flag
  * - POST /api/platform-config/cache/invalidate - Force cache refresh
  *
- * @author Andrea Gelso - ShopME Platform
+ * @author Andrea Gelso - eChatbot Platform
  */
 
 import { Router } from "express"

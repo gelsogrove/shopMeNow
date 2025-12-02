@@ -5,23 +5,23 @@ services:
     container_name: shop_db
     restart: always
     environment:
-      - POSTGRES_USER=shopmefy
-      - POSTGRES_PASSWORD=shopmefy
-      - POSTGRES_DB=shopmefy
+      - POSTGRES_USER=echatbotfy
+      - POSTGRES_PASSWORD=echatbotfy
+      - POSTGRES_DB=echatbotfy
     ports:
       - "5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
     networks:
-      - shopme_network
+      - echatbot_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U shopmefy"]
+      test: ["CMD-SHELL", "pg_isready -U echatbotfy"]
       interval: 30s
       timeout: 10s
       retries: 3
 
 networks:
-  shopme_network:
+  echatbot_network:
     driver: bridge
 
 volumes:

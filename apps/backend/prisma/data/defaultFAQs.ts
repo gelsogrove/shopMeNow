@@ -1,4 +1,4 @@
-// Default FAQs for ShopME e-commerce platform
+// Default FAQs for eChatbot e-commerce platform
 // IMPORTANT: All FAQs are in ENGLISH (database base language)
 // The Translation Agent will translate to customer's language (it/es/pt)
 

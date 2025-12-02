@@ -8,7 +8,7 @@
  * - GET /api/schedulers - Get all scheduler jobs
  * - PATCH /api/schedulers/:jobName - Update job (toggle isActive)
  *
- * @author Andrea Gelso - ShopME Platform
+ * @author Andrea Gelso - eChatbot Platform
  */
 
 import { Router } from "express"

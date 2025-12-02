@@ -1,4 +1,4 @@
-# ShopME - Production Setup Guide
+# eChatbot - Production Setup Guide
 
 Guida completa per il deploy e la configurazione in produzione.
 
@@ -53,8 +53,8 @@ ALLOW_DESTRUCTIVE_OPERATIONS=true npm run prisma:seed
 
 ```bash
 # Clone del repository
-git clone git@github.com:shopmenow/shopME.git
-cd shopME
+git clone git@github.com:echatbotnow/eChatbot.git
+cd eChatbot
 
 # Installa dipendenze
 npm install
@@ -158,14 +158,14 @@ pm2 status
 pm2 logs
 
 # Logs solo backend
-pm2 logs shopme-backend
+pm2 logs echatbot-backend
 
 # Logs solo scheduler
-pm2 logs shopme-scheduler
+pm2 logs echatbot-scheduler
 
 # Restart singolo servizio
-pm2 restart shopme-backend
-pm2 restart shopme-scheduler
+pm2 restart echatbot-backend
+pm2 restart echatbot-scheduler
 
 # Restart tutti
 pm2 restart all
@@ -246,10 +246,10 @@ pm2 ls | grep pm2-logrotate
 
 ```bash
 # Verifica che sia in running
-pm2 status shopme-scheduler
+pm2 status echatbot-scheduler
 
 # Controlla i log dello scheduler
-pm2 logs shopme-scheduler --lines 50
+pm2 logs echatbot-scheduler --lines 50
 ```
 
 ### Errori di memoria

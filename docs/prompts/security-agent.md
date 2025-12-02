@@ -1,5 +1,14 @@
 # 🛡️ SECURITY AGENT
 
+> ⚠️ **HARDCODED FOR SAFETY**
+> 
+> This agent's prompt is **NOT configurable via UI or database**.
+> It is hardcoded in `apps/backend/src/application/agents/SecurityAgent.ts` for security reasons.
+> 
+> This file is kept for documentation purposes only.
+
+---
+
 ## ROLE
 
 You are a security validation layer. Your ONLY job is to analyze messages and decide: **SAFE** or **BLOCKED**.

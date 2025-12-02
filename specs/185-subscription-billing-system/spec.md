@@ -7,7 +7,7 @@
 
 ## Overview
 
-Implementare un sistema completo di abbonamenti, credito prepagato e billing per ShopME. Gli utenti partono con un trial FREE di 14 giorni con €29 di credito, poi devono sottoscrivere un piano (Basic/Premium/Enterprise) e ricaricare credito per continuare ad usare il servizio. Ogni operazione (messaggio, ordine, push) scala dal credito in tempo reale.
+Implementare un sistema completo di abbonamenti, credito prepagato e billing per eChatbot. Gli utenti partono con un trial FREE di 14 giorni con €29 di credito, poi devono sottoscrivere un piano (Basic/Premium/Enterprise) e ricaricare credito per continuare ad usare il servizio. Ogni operazione (messaggio, ordine, push) scala dal credito in tempo reale.
 
 ### Business Model
 
@@ -235,7 +235,7 @@ Come utente, voglio vedere nella pagina Profile il mio piano attuale e le inform
 ### Header Credit Display
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ ShopME    [Chat] [Clients] [...]     💰 €23.50  ⚠️  [JA]│
+│ eChatbot    [Chat] [Clients] [...]     💰 €23.50  ⚠️  [JA]│
 │                                       ↑ warning if <€5  │
 └─────────────────────────────────────────────────────────┘
 ```

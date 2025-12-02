@@ -244,7 +244,7 @@ Il Team
 
       const transporter = await this.emailService["transporter"]
       await transporter.sendMail({
-        from: process.env.SMTP_FROM || "noreply@shopme.com",
+        from: process.env.SMTP_FROM || "noreply@echatbot.ai",
         to: email,
         subject: `🎉 Ordine Confermato - ${order.orderCode}`,
         text: emailContent,
@@ -288,7 +288,7 @@ L'ordine è stato processato e lo stock è stato aggiornato.
 
       const transporter = await this.emailService["transporter"]
       await transporter.sendMail({
-        from: process.env.SMTP_FROM || "noreply@shopme.com",
+        from: process.env.SMTP_FROM || "noreply@echatbot.ai",
         to: email,
         subject: `Ordine Confermato e Processato - ${order.orderCode}`,
         text: emailContent,

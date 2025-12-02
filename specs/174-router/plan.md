@@ -256,7 +256,7 @@ frontend/
 - **Backend**: Clean Architecture/DDD pattern with service layer separation
 - **Frontend**: React with page-based routing
 - **Database**: PostgreSQL with Prisma ORM
-- **Rationale**: Matches existing project structure (ShopME multi-tenant e-commerce)
+- **Rationale**: Matches existing project structure (eChatbot multi-tenant e-commerce)
 - **Implementation Status**:
   - 90% infrastructure exists (services, controllers, routes, database schema)
   - 1 file modified (registration.service.ts) to comply with Constitution

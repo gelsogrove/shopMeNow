@@ -149,7 +149,7 @@ interface CheckoutLink {
 
 ```json
 {
-  "url": "https://shopme.example.com/checkout-public?token=eyJhbGc...&step=2",
+  "url": "https://echatbot.example.com/checkout-public?token=eyJhbGc...&step=2",
   "expiresAt": "2024-11-12T15:30:00.000Z"
 }
 ```

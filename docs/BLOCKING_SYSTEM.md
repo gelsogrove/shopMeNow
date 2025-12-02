@@ -1,4 +1,4 @@
-# 🚫 ShopME Blocking System - Complete Documentation
+# 🚫 eChatbot Blocking System - Complete Documentation
 
 **Version**: 1.0.0  
 **Last Updated**: November 27, 2025  
@@ -8,7 +8,7 @@
 
 ## 📊 Overview
 
-ShopME implements multiple blocking mechanisms to ensure:
+eChatbot implements multiple blocking mechanisms to ensure:
 1. **Revenue Protection** - No free usage beyond limits
 2. **Fair Usage** - Plan limits enforced
 3. **Security** - Block malicious users
@@ -75,7 +75,7 @@ if (trialStatus.isTrialPlan && !trialStatus.isValid) {
 │  │  ⚠️ Trial Scaduto                                          │ │
 │  │                                                             │ │
 │  │  Il tuo periodo di prova è scaduto.                        │ │
-│  │  Scegli un piano per continuare ad usare ShopME.           │ │
+│  │  Scegli un piano per continuare ad usare eChatbot.           │ │
 │  │                                                             │ │
 │  │  [Scegli Piano Basic €29/mese]  [Premium €49/mese]        │ │
 │  └────────────────────────────────────────────────────────────┘ │

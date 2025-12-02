@@ -260,7 +260,7 @@ export class WorkspaceInvitationService {
           </div>
           <div class="content">
             <p>Hello,</p>
-            <p><strong>${data.inviterName}</strong> has invited you to join <strong>${data.workspaceName}</strong> on ShopME.</p>
+            <p><strong>${data.inviterName}</strong> has invited you to join <strong>${data.workspaceName}</strong> on eChatbot.</p>
             <p>Click the button below to accept the invitation:</p>
             <p style="text-align: center;">
               <a href="${acceptUrl}" class="button">Accept Invitation</a>
@@ -291,11 +291,11 @@ export class WorkspaceInvitationService {
     })
 
     await transporter.sendMail({
-      from: `"ShopMe Team" <${process.env.SMTP_FROM || "noreply@shopme.com"}>`,
+      from: `"eChatbot Team" <${process.env.SMTP_FROM || "noreply@echatbot.ai"}>`,
       to: data.to,
       subject: `You've been invited to join ${data.workspaceName}`,
       html: htmlContent,
-      text: `${data.inviterName} has invited you to join ${data.workspaceName} on ShopME. Accept the invitation: ${acceptUrl}`,
+      text: `${data.inviterName} has invited you to join ${data.workspaceName} on eChatbot. Accept the invitation: ${acceptUrl}`,
     })
   }
 

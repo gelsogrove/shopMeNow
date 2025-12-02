@@ -1,4 +1,4 @@
-# 🔒 ShopME Backend Security Audit Report
+# 🔒 eChatbot Backend Security Audit Report
 
 **Date**: November 27, 2025  
 **Auditor**: AI Security Audit System  

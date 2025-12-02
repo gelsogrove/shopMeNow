@@ -98,7 +98,7 @@ describe('Platform Admin Middleware Logic', () => {
     it('should allow access when user is platform admin', () => {
       const req = createMockRequest({
         userId: 'admin-123',
-        email: 'admin@shopme.com',
+        email: 'admin@echatbot.ai',
         isPlatformAdmin: true,
       })
       const res = createMockResponse()
@@ -132,7 +132,7 @@ describe('2FA Skip Logic', () => {
     it('should skip 2FA for isPlatformAdmin users', () => {
       const user = {
         id: 'admin-123',
-        email: 'admin@shopme.com',
+        email: 'admin@echatbot.ai',
         isPlatformAdmin: true,
         isDeveloperUser: false,
         twoFactorEnabled: true,
@@ -145,7 +145,7 @@ describe('2FA Skip Logic', () => {
     it('should skip 2FA for isDeveloperUser users', () => {
       const user = {
         id: 'dev-123',
-        email: 'dev@shopme.com',
+        email: 'dev@echatbot.ai',
         isPlatformAdmin: false,
         isDeveloperUser: true,
         twoFactorEnabled: true,
@@ -158,7 +158,7 @@ describe('2FA Skip Logic', () => {
     it('should skip 2FA for users with both flags', () => {
       const user = {
         id: 'super-123',
-        email: 'super@shopme.com',
+        email: 'super@echatbot.ai',
         isPlatformAdmin: true,
         isDeveloperUser: true,
         twoFactorEnabled: true,
@@ -205,7 +205,7 @@ describe('JWT Token Claims', () => {
   it('should include isPlatformAdmin in token payload', () => {
     const tokenPayload = {
       id: 'user-123',
-      email: 'admin@shopme.com',
+      email: 'admin@echatbot.ai',
       role: 'ADMIN',
       isPlatformAdmin: true,
       isDeveloperUser: false,
@@ -218,7 +218,7 @@ describe('JWT Token Claims', () => {
   it('should include isDeveloperUser in token payload', () => {
     const tokenPayload = {
       id: 'user-123',
-      email: 'dev@shopme.com',
+      email: 'dev@echatbot.ai',
       role: 'ADMIN',
       isPlatformAdmin: false,
       isDeveloperUser: true,

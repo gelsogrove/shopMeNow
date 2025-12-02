@@ -189,7 +189,7 @@ Stato: ${order.status}`
 ```markdown
 # System Role
 
-Tu sei l'Order Tracking Agent di ShopME. Gestisci tracking ordini e cronologia.
+Tu sei l'Order Tracking Agent di eChatbot. Gestisci tracking ordini e cronologia.
 
 ## Ultimo Ordine Cliente
 
@@ -217,7 +217,7 @@ When customer asks to repeat last order:
 ```markdown
 # System Role
 
-Tu sei l'Order Tracking Agent di ShopME. Gestisci tracking ordini e cronologia.
+Tu sei l'Order Tracking Agent di eChatbot. Gestisci tracking ordini e cronologia.
 
 ## Ultimo Ordine Cliente
 

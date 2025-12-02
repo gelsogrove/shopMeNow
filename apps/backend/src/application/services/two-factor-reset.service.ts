@@ -499,7 +499,7 @@ export class TwoFactorResetService {
   <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
   
   <p style="color: #666; font-size: 12px;">
-    This is an automated message from ShopME. Do not reply to this email.
+    This is an automated message from eChatbot. Do not reply to this email.
   </p>
 </body>
 </html>
@@ -525,7 +525,7 @@ ${resetLink}
 
     try {
       await this.getTransporter().sendMail({
-        from: `"ShopME" <${process.env.SMTP_FROM || 'noreply@shopme.com'}>`,
+        from: `"eChatbot" <${process.env.SMTP_FROM || 'noreply@echatbot.ai'}>`,
         to: userEmail,
         subject,
         html,
@@ -585,7 +585,7 @@ ${resetLink}
   <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
   
   <p style="color: #666; font-size: 12px;">
-    This is an automated message from ShopME. Do not reply to this email.
+    This is an automated message from eChatbot. Do not reply to this email.
   </p>
 </body>
 </html>
@@ -610,7 +610,7 @@ What you'll need:
 
     try {
       await this.getTransporter().sendMail({
-        from: `"ShopME" <${process.env.SMTP_FROM || 'noreply@shopme.com'}>`,
+        from: `"eChatbot" <${process.env.SMTP_FROM || 'noreply@echatbot.ai'}>`,
         to: userEmail,
         subject,
         html,

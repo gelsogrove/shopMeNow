@@ -141,8 +141,8 @@ export class SafetyTranslationAgent {
           headers: {
             Authorization: `Bearer ${this.openRouterApiKey}`,
             "Content-Type": "application/json",
-            "HTTP-Referer": process.env.FRONTEND_URL || "https://shopme.ai",
-            "X-Title": "ShopME Safety & Translation Layer",
+            "HTTP-Referer": process.env.FRONTEND_URL || "https://echatbot.ai",
+            "X-Title": "eChatbot Safety & Translation Layer",
           },
           timeout: 30000, // 30 second timeout
         }

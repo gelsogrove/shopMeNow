@@ -284,7 +284,7 @@
   - Document hot-reload behavior: Backend ~2s compile, Frontend instant HMR
 -->
 
-# ShopME Constitution
+# eChatbot Constitution
 
 **Version**: 2.1.0 (MINOR - Context Interpretation Pattern)  
 **Last Updated**: 2025-11-16

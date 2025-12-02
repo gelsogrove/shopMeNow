@@ -19,8 +19,8 @@ export class OtpService {
 
     // Generate secret
     const secret = speakeasy.generateSecret({
-      name: `ShopME:${user.email}`, // Format: "ShopME:email@example.com"
-      issuer: "ShopME", // This is what appears as app name in authenticator
+      name: `eChatbot:${user.email}`, // Format: "eChatbot:email@example.com"
+      issuer: "eChatbot", // This is what appears as app name in authenticator
       length: 32,
     })
 

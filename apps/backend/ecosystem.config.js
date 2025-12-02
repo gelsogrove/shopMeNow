@@ -3,7 +3,7 @@ const path = require('path')
 module.exports = {
   apps: [
     {
-      name: "shopme-backend",
+      name: "echatbot-backend",
       script: "./dist/src/index.js",
       cwd: __dirname,
       instances: 1,

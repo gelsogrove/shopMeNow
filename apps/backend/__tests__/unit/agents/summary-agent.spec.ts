@@ -77,7 +77,7 @@ Agente: {{agentName}}
           }
         ],
         customerName: "Test Customer",
-        agentName: "ShopME Assistant"
+        agentName: "eChatbot Assistant"
       }
 
       // Execute
@@ -237,7 +237,7 @@ Agente: {{agentName}}
           }
         ],
         customerName: "Mario Rossi",
-        agentName: "ShopME Bot"
+        agentName: "eChatbot Bot"
       }
 
       // Execute
@@ -253,7 +253,7 @@ Agente: {{agentName}}
       expect(mockFetch).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
-          body: expect.stringContaining("ShopME Bot")
+          body: expect.stringContaining("eChatbot Bot")
         })
       )
     })

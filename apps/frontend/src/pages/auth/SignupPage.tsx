@@ -109,7 +109,7 @@ export default function SignupPage() {
         <Card className="w-full max-w-md font-system bg-white/95 backdrop-blur-sm shadow-xl">
           <CardHeader className="space-y-1">
             <CardTitle className="text-lg font-bold text-center">
-              Welcome to ShopMe
+              Welcome to eChatbot
             </CardTitle>
             <CardDescription className="text-center">
               Create your account to get started

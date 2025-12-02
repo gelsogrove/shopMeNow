@@ -12,7 +12,7 @@ import {
 } from './jobs'
 import logger from './utils/logger'
 
-// ShopME Scheduler Microservice
+// eChatbot Scheduler Microservice
 //
 // Cron Jobs:
 // 1. WhatsApp Challenge Queue  - every 3 minutes
@@ -24,7 +24,7 @@ import logger from './utils/logger'
 // 7. Campaign Send             - daily at 10:00 AM
 
 async function main() {
-  logger.info('🚀 Starting ShopME Scheduler...')
+  logger.info('🚀 Starting eChatbot Scheduler...')
 
   // Connect to database
   await connectDatabase()

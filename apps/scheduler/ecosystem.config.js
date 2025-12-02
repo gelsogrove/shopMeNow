@@ -3,7 +3,7 @@ const path = require('path')
 module.exports = {
   apps: [
     {
-      name: 'shopme-scheduler',
+      name: 'echatbot-scheduler',
       script: './dist/index.js',
       cwd: __dirname,
       instances: 1,  // Solo 1 istanza per evitare job duplicati

@@ -136,8 +136,8 @@ export class TranslationService {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${this.apiKey}`,
-          'HTTP-Referer': 'https://shopme.com',
-          'X-Title': 'ShopME Campaign Translation',
+          'HTTP-Referer': 'https://echatbot.ai',
+          'X-Title': 'eChatbot Campaign Translation',
         },
         body: JSON.stringify({
           model: this.model,

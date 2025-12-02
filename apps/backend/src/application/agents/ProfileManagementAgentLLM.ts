@@ -345,7 +345,7 @@ export class ProfileManagementAgentLLM {
           headers: {
             Authorization: `Bearer ${this.openRouterApiKey}`,
             "Content-Type": "application/json",
-            "X-Title": "ShopME - Profile Management Agent",
+            "X-Title": "eChatbot - Profile Management Agent",
           },
         }
       )

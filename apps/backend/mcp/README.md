@@ -1,6 +1,6 @@
-# ShopMe MCP Server
+# eChatbot MCP Server
 
-Server MCP (Model Context Protocol) per testare e debuggare il chatbot WhatsApp di ShopMe.
+Server MCP (Model Context Protocol) per testare e debuggare il chatbot WhatsApp di eChatbot.
 
 **Location**: `backend/mcp/` (integrated with backend)
 
@@ -57,7 +57,7 @@ Popola il database con dati iniziali.
 
 ### 3. `check_health`
 
-Verifica lo stato del backend ShopMe.
+Verifica lo stato del backend eChatbot.
 
 **Parametri:** Nessuno
 
@@ -77,7 +77,7 @@ Debug di funzioni specifiche del chatbot.
 ```json
 {
   "mcpServers": {
-    "shopme": {
+    "echatbot": {
       "command": "node",
       "args": ["/Users/gelso/workspace/AI/shop/MCP/mcp-server.js"]
     }
@@ -88,10 +88,10 @@ Debug di funzioni specifiche del chatbot.
 2. **Riavvia Cursor** per caricare il server MCP
 
 3. **Usa i tool** direttamente in Cursor:
-   - `mcp_shopme_test_chat`
-   - `mcp_shopme_seed_database`
-   - `mcp_shopme_check_health`
-   - `mcp_shopme_debug_function`
+   - `mcp_echatbot_test_chat`
+   - `mcp_echatbot_seed_database`
+   - `mcp_echatbot_check_health`
+   - `mcp_echatbot_debug_function`
 
 ## 📋 Verifica Stato
 
@@ -109,23 +109,23 @@ pkill -f "mcp-server.js"
 
 ```bash
 # Aggiungi mozzarella
-mcp_shopme_test_chat("Mario Rossi", "aggiungi una mozzarella al carrello")
+mcp_echatbot_test_chat("Mario Rossi", "aggiungi una mozzarella al carrello")
 
 # Aggiungi prosecco
-mcp_shopme_test_chat("Mario Rossi", "aggiungi un prosecco")
+mcp_echatbot_test_chat("Mario Rossi", "aggiungi un prosecco")
 
 # Conferma ordine
-mcp_shopme_test_chat("Mario Rossi", "CONFERMA")
+mcp_echatbot_test_chat("Mario Rossi", "CONFERMA")
 ```
 
 ### Debug Funzioni
 
 ```bash
 # Debug ragSearch
-mcp_shopme_debug_function("ragSearch", {"query": "delivery times"})
+mcp_echatbot_debug_function("ragSearch", {"query": "delivery times"})
 
 # Debug add_to_cart
-mcp_shopme_debug_function("add_to_cart", {"product_name": "mozzarella"})
+mcp_echatbot_debug_function("add_to_cart", {"product_name": "mozzarella"})
 ```
 
 ## 🔍 Logs e Debug
@@ -151,7 +151,7 @@ MCP/
 
 ## 🚨 Note Importanti
 
-- **Backend richiesto**: Il server MCP richiede che il backend ShopMe sia attivo su porta 3001
+- **Backend richiesto**: Il server MCP richiede che il backend eChatbot sia attivo su porta 3001
 - **Database**: Assicurati che il database sia accessibile
 - **Permessi**: Lo script di avvio deve essere eseguibile (`chmod +x`)
 - **Porte**: Il server MCP usa stdio, non porte TCP

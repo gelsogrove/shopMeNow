@@ -70,7 +70,7 @@ export async function sendAlertEmail(
 
     // Format alert email content
     const alertEmailContent = {
-      to: workspace.notificationEmail || "admin@shopme.com", // Fallback to default admin email
+      to: workspace.notificationEmail || "admin@echatbot.ai", // Fallback to default admin email
       subject: `🚨 Security Alert [${severity}]: ${alertType}`,
       body: `
         Security Alert Report
@@ -103,7 +103,7 @@ export async function sendAlertEmail(
         ${getRecommendedActions(alertType, severity)}
         
         ---
-        This is an automated alert from ShopME Security System
+        This is an automated alert from eChatbot Security System
       `,
     }
 

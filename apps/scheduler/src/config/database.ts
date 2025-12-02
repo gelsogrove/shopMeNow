@@ -1,5 +1,5 @@
 // Import from shared database package
-import { prisma } from '@shopme/database'
+import { prisma } from '@echatbot/database'
 
 export { prisma }
 

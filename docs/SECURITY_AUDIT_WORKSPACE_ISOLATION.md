@@ -8,7 +8,7 @@
 
 ## 📋 Executive Summary
 
-This audit analyzed **ALL database queries** in the ShopME codebase to verify proper workspace/owner isolation. The goal was to ensure that **messages, channels, products, statistics, billing, and invoices NEVER mix between different owners/workspaces**.
+This audit analyzed **ALL database queries** in the eChatbot codebase to verify proper workspace/owner isolation. The goal was to ensure that **messages, channels, products, statistics, billing, and invoices NEVER mix between different owners/workspaces**.
 
 ### Overall Assessment: ⚠️ MODERATE RISK
 
@@ -409,7 +409,7 @@ describe('Workspace Isolation Security Tests', () => {
 
 ## 📌 CONCLUSION
 
-The ShopME codebase has **generally good workspace isolation**, with the majority of repositories properly filtering by `workspaceId`. However, there are **12 specific issues** that need attention, with **4 being critical** security vulnerabilities in the Cart and WhatsApp Queue repositories.
+The eChatbot codebase has **generally good workspace isolation**, with the majority of repositories properly filtering by `workspaceId`. However, there are **12 specific issues** that need attention, with **4 being critical** security vulnerabilities in the Cart and WhatsApp Queue repositories.
 
 The billing system correctly implements **shared credit balance across owner's workspaces** (channels), which is the intended design for multi-channel owners.
 

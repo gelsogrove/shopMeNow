@@ -486,7 +486,7 @@ export class ProductSearchAgentLLM {
             Authorization: `Bearer ${this.openRouterApiKey}`,
             "Content-Type": "application/json",
             "HTTP-Referer": config.appUrl,
-            "X-Title": "ShopME - Product and Services Agent",
+            "X-Title": "eChatbot - Product and Services Agent",
           },
         }
       )

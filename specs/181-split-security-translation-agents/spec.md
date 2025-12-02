@@ -1,6 +1,6 @@
 # Feature 181: Split Security and Translation Agents
 
-**Status:** In Progress  
+**Status:** ✅ Completed  
 **Date Created:** 2025-11-20  
 **Epic:** Agent Architecture Refactoring  
 
@@ -10,10 +10,10 @@
 
 Currently, the "Safety & Translation Agent" combines two distinct concerns: security validation and language translation. This feature splits it into **two independent agents**:
 
-1. **Translation Agent** - Handles multilingual translation only
-2. **Security Agent** - Handles content safety validation only
+1. **Translation Agent** - Handles multilingual translation only (configurable via UI)
+2. **Security Agent** - Handles content safety validation only (**HARDCODED for safety**)
 
-Both agents are fully editable through the agent configuration UI (like all other agents). The message flow in WhatsApp queue processing is updated to call Security Agent first, then Translation Agent.
+> ⚠️ **SECURITY DECISION**: Security Agent is **NOT editable** via UI. Its prompt is hardcoded in code to prevent security bypasses. Only developers can modify security rules.
 
 ---
 
@@ -22,8 +22,8 @@ Both agents are fully editable through the agent configuration UI (like all othe
 ### 1. Split Current Agent
 - Rename existing "Safety & Translation Agent" → "Translation Agent"
 - Extract security rules/prompt into new "Security Agent"
-- Both agents independently configurable in agent_configs table
-- Both appear in agent management UI with edit capability
+- Translation Agent: configurable in agent_configs table and UI
+- Security Agent: **HARDCODED** - not visible in UI, not updatable via database
 
 ### 2. Agent Configuration
 - **Translation Agent**: 
@@ -31,12 +31,14 @@ Both agents are fully editable through the agent configuration UI (like all othe
   - Type: "translation"
   - Prompt: Translation rules only (language detection, multilingual output)
   - Model: Configurable (same as current)
+  - **Editable: YES** via agent configuration UI
   
 - **Security Agent**:
   - Name: "Security Agent"  
   - Type: "security"
   - Prompt: Safety/security rules only (harmful content detection, filtering)
-  - Model: Configurable (same as current)
+  - Model: Fixed (gpt-4o-mini)
+  - **Editable: NO** - hardcoded in `SecurityAgent.ts`
 
 ### 3. Message Flow Update
 Current WhatsApp queue flow:

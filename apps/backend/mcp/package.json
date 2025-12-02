@@ -1,7 +1,7 @@
 {
-  "name": "shopme-mcp-server",
+  "name": "echatbot-mcp-server",
   "version": "1.0.0",
-  "description": "MCP Server for ShopMe WhatsApp Chatbot Testing",
+  "description": "MCP Server for eChatbot WhatsApp Chatbot Testing",
   "main": "mcp-server.js",
   "type": "module",
   "scripts": {
@@ -13,7 +13,7 @@
     "axios": "^1.6.0",
     "dotenv": "^16.3.1"
   },
-  "keywords": ["mcp", "shopme", "whatsapp", "chatbot", "testing"],
+  "keywords": ["mcp", "echatbot", "whatsapp", "chatbot", "testing"],
   "author": "Andrea",
   "license": "MIT"
 }

@@ -11,7 +11,7 @@
  * - POST /api/platform-config/flags/:key/toggle (authenticated)
  * - POST /api/platform-config/cache/invalidate (authenticated)
  *
- * @author Andrea Gelso - ShopME Platform
+ * @author Andrea Gelso - eChatbot Platform
  */
 
 // Mock logger BEFORE imports

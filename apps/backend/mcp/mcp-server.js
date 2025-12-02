@@ -12,11 +12,11 @@ import dotenv from "dotenv"
 // Load environment variables (MCP is now under backend/)
 dotenv.config({ path: "../.env" })
 
-class ShopMeMCPServer {
+class eChatbotMCPServer {
   constructor() {
     this.server = new Server(
       {
-        name: "shopme-mcp-server",
+        name: "echatbot-mcp-server",
         version: "1.0.0",
       },
       {
@@ -38,7 +38,7 @@ class ShopMeMCPServer {
           {
             name: "test_chat",
             description:
-              "Test ShopMe WhatsApp chatbot with specific user and message",
+              "Test eChatbot WhatsApp chatbot with specific user and message",
             inputSchema: {
               type: "object",
               properties: {
@@ -67,7 +67,7 @@ class ShopMeMCPServer {
           },
           {
             name: "seed_database",
-            description: "Seed the ShopMe database with initial data",
+            description: "Seed the eChatbot database with initial data",
             inputSchema: {
               type: "object",
               properties: {
@@ -81,7 +81,7 @@ class ShopMeMCPServer {
           },
           {
             name: "check_health",
-            description: "Check ShopMe backend health status",
+            description: "Check eChatbot backend health status",
             inputSchema: {
               type: "object",
               properties: {},
@@ -89,7 +89,7 @@ class ShopMeMCPServer {
           },
           {
             name: "debug_function",
-            description: "Debug specific ShopMe function with test data",
+            description: "Debug specific eChatbot function with test data",
             inputSchema: {
               type: "object",
               properties: {
@@ -256,7 +256,7 @@ class ShopMeMCPServer {
         content: [
           {
             type: "text",
-            text: `✅ ShopMe backend is healthy!\n\n**Status:** ${response.status}\n**Response:** ${JSON.stringify(response.data, null, 2)}`,
+            text: `✅ eChatbot backend is healthy!\n\n**Status:** ${response.status}\n**Response:** ${JSON.stringify(response.data, null, 2)}`,
           },
         ],
       }
@@ -265,7 +265,7 @@ class ShopMeMCPServer {
         content: [
           {
             type: "text",
-            text: `❌ ShopMe backend health check failed: ${error.message}`,
+            text: `❌ eChatbot backend health check failed: ${error.message}`,
           },
         ],
         isError: true,
@@ -338,10 +338,10 @@ class ShopMeMCPServer {
   async run() {
     const transport = new StdioServerTransport()
     await this.server.connect(transport)
-    console.error("ShopMe MCP Server running on stdio")
+    console.error("eChatbot MCP Server running on stdio")
   }
 }
 
 // Start the server
-const server = new ShopMeMCPServer()
+const server = new eChatbotMCPServer()
 server.run().catch(console.error)

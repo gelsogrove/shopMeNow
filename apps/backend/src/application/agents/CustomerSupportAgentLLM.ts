@@ -296,7 +296,7 @@ export class CustomerSupportAgentLLM {
             Authorization: `Bearer ${this.openRouterApiKey}`,
             "Content-Type": "application/json",
             "HTTP-Referer": config.appUrl,
-            "X-Title": "ShopME - Customer Support Agent",
+            "X-Title": "eChatbot - Customer Support Agent",
           },
         }
       )

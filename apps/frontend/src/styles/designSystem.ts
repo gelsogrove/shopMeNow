@@ -1,5 +1,5 @@
 /**
- * ShopME Design System
+ * eChatbot Design System
  * Centralized design tokens for all public pages
  * Mobile-first approach with consistent styling
  */

@@ -1,8 +1,8 @@
-# ShopME - WhatsApp E-Commerce Flow Specification
+# eChatbot - WhatsApp E-Commerce Flow Specification
 
 ## Overview
 
-**Project**: ShopME - WhatsApp E-Commerce Platform  
+**Project**: eChatbot - WhatsApp E-Commerce Platform  
 **Version**: 1.0.0  
 **Description**: Multi-agent AI chatbot for WhatsApp-based product sales with dynamic prompt variables
 
@@ -1470,4 +1470,4 @@ const lastOrder = await prisma.orders.findFirst({
 
 ## References
 
-- Complete YAML Spec: `.spec-kit/shopme-complete-flow.yaml`
+- Complete YAML Spec: `.spec-kit/echatbot-complete-flow.yaml`

@@ -75,6 +75,18 @@ export const customersRouter = (controller: CustomersController): Router => {
     return controller.countUnknownCustomers(req, res, next)
   })
 
+  // 🚫 Get all blocked users (customers + registration attempts)
+  router.get(
+    "/:workspaceId/blocked-users",
+    controller.getBlockedUsers.bind(controller)
+  )
+
+  // 🗑️ Delete a registration attempt (blocked unregistered user)
+  router.delete(
+    "/:workspaceId/registration-attempts/:attemptId",
+    controller.deleteRegistrationAttempt.bind(controller)
+  )
+
   logger.info("Customers routes setup complete")
   return router
 }
@@ -136,6 +148,18 @@ export const workspaceCustomersRouter = (
   router.get(
     "/:workspaceId/unknown-customers/count",
     controller.countUnknownCustomers.bind(controller)
+  )
+
+  // 🚫 Get all blocked users (customers + registration attempts)
+  router.get(
+    "/:workspaceId/blocked-users",
+    controller.getBlockedUsers.bind(controller)
+  )
+
+  // 🗑️ Delete a registration attempt (blocked unregistered user)
+  router.delete(
+    "/:workspaceId/registration-attempts/:attemptId",
+    controller.deleteRegistrationAttempt.bind(controller)
   )
 
   logger.info("Workspace customers routes setup complete")

@@ -1,7 +1,7 @@
 /**
  * 🔹 MAIN ROUTER - INDEX.TS
  *
- * Central routing file for ShopME backend.
+ * Central routing file for eChatbot backend.
  *
  * ORGANIZATION:
  * 1. Core imports (Prisma, Express, Config)

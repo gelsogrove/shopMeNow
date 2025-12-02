@@ -132,7 +132,7 @@ describe('TwoFactorResetService Unit Tests', () => {
         subject: 'Reset Your 2FA',
         template: '2fa-reset',
         data: {
-          resetLink: 'https://app.shopme.com/auth/2fa-reset/token-123',
+          resetLink: 'https://app.echatbot.ai/auth/2fa-reset/token-123',
           adminEmail: 'admin@example.com',
           expiresIn: '1 hour',
         },

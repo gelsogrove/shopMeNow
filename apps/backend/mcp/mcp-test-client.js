@@ -3,7 +3,7 @@
 /**
  * 🤖 MCP CHAT TEST CLIENT - ADVANCED VERSION
  *
- * Client per testare le chiamate reali al backend ShopME
+ * Client per testare le chiamate reali al backend eChatbot
  * con supporto per utenti multipli e test automatici
  *
  * Usage:
@@ -113,7 +113,7 @@ class MCPTestClient {
     )
 
     // Leggi i log dal file che il server scrive
-    const logFile = "/tmp/shopme-server.log"
+    const logFile = "/tmp/echatbot-server.log"
 
     // Avvia il processo per leggere i log del server
     this.logProcess = spawn("tail", ["-f", logFile], {
@@ -418,7 +418,7 @@ Metodi disponibili: carta, bonifico, contrassegno
       return `
 👋 Buongiorno Mario Rossi!
 
-Sono l'assistente virtuale di ShopME, il tuo negozio online di prodotti italiani di qualità.
+Sono l'assistente virtuale di eChatbot, il tuo negozio online di prodotti italiani di qualità.
 
 Come posso aiutarti oggi?
 - Mostrare i prodotti o le offerte

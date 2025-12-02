@@ -129,7 +129,7 @@ export default function VerifyOtpPage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-lg font-bold text-center">
-            ShopMe Security
+            eChatbot Security
           </CardTitle>
           <CardDescription className="text-center">
             Scan the QR code with your authenticator app and enter the code

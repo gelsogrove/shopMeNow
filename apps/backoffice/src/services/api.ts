@@ -294,27 +294,7 @@ class BackofficeApi {
       })
     },
     
-    /**
-     * Impersonate a user (Feature 190)
-     * Generate a special JWT token to login as the target user
-     */
-    impersonate: async (
-      userId: string
-    ): Promise<ApiResponse<{
-      success: boolean
-      token: string
-      redirectUrl: string
-      targetUser: {
-        id: string
-        email: string
-        firstName: string | null
-        lastName: string | null
-      }
-    }>> => {
-      return this.fetch(`/users/admin/${userId}/impersonate`, {
-        method: 'POST',
-      })
-    }
+
   }
 
   // Scheduler Jobs - Admin endpoints for managing cron jobs

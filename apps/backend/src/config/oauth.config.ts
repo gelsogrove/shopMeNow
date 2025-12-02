@@ -3,7 +3,7 @@
  * Manages callback URLs for Google, Facebook, and Apple OAuth providers
  * 
  * SECURITY NOTES:
- * - Production: Uses BACKEND_URL (e.g., https://api.shopme.com)
+ * - Production: Uses BACKEND_URL (e.g., https://api.echatbot.ai)
  * - Development: Google works with localhost, FB/Apple need ngrok
  * - All callback URLs must be whitelisted in provider console
  */
@@ -40,7 +40,7 @@ export const getCallbackUrl = (provider: 'google' | 'facebook' | 'apple'): strin
   
   if (isProduction) {
     // PRODUCTION: Use backend domain
-    const backendUrl = process.env.BACKEND_URL || 'https://api.shopme.com'
+    const backendUrl = process.env.BACKEND_URL || 'https://api.echatbot.ai'
     return `${backendUrl}/api/auth/callback/${provider}`
   }
   

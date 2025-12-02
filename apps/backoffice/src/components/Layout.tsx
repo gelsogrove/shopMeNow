@@ -31,7 +31,7 @@ export function Layout() {
         <div className="p-6 border-b">
           <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <Settings className="h-6 w-6 text-primary" />
-            ShopME Backoffice
+            eChatbot Backoffice
           </h1>
         </div>
 

@@ -1,7 +1,7 @@
 /**
  * Campaigns Data - Auto-generated from database
  * Last updated: 2025-10-30T16:02:52.316Z
- * Seed data for ShopME
+ * Seed data for eChatbot
  */
 
 export interface CampaignData {

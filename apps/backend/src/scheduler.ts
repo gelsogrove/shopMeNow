@@ -1,5 +1,5 @@
 /**
- * Scheduler for ShopME Background Jobs
+ * Scheduler for eChatbot Background Jobs
  *
  * Uses node-cron to run periodic maintenance tasks:
  * 1. Mark expired search conversations (every 5 minutes)

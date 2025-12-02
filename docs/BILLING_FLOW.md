@@ -1,4 +1,4 @@
-# 💰 ShopME Billing Flow - Complete Documentation
+# 💰 eChatbot Billing Flow - Complete Documentation
 
 **Version**: 1.0.0  
 **Last Updated**: November 27, 2025  
@@ -8,7 +8,7 @@
 
 ## 📊 Overview
 
-ShopME uses a **prepaid credit system** combined with **subscription plans**. Every operation (message, order, push) deducts from the workspace credit balance in real-time.
+eChatbot uses a **prepaid credit system** combined with **subscription plans**. Every operation (message, order, push) deducts from the workspace credit balance in real-time.
 
 ### Business Model Summary
 

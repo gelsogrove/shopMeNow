@@ -60,7 +60,7 @@ Variables related to assigned sales agent (from `salesAgents` table):
 | ---------------- | ------ | --------------------------- | ----------------------- | ------------------- |
 | `{{agentName}}`  | String | Sales agent's full name     | `"Giovanni Bianchi"`    | `salesAgents.nome`  |
 | `{{agentPhone}}` | String | Sales agent's phone number  | `"+39 987 654 3210"`    | `salesAgents.phone` |
-| `{{agentEmail}}` | String | Sales agent's email address | `"giovanni@shopme.com"` | `salesAgents.email` |
+| `{{agentEmail}}` | String | Sales agent's email address | `"giovanni@echatbot.ai"` | `salesAgents.email` |
 
 **Fallbacks**:
 

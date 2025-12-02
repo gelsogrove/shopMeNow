@@ -93,9 +93,9 @@ jobs:
   #     postgres:
   #       image: postgres:15
   #       env:
-  #         POSTGRES_USER: shopme
-  #         POSTGRES_PASSWORD: shopme_password
-  #         POSTGRES_DB: shopme_test
+  #         POSTGRES_USER: echatbot
+  #         POSTGRES_PASSWORD: echatbot_password
+  #         POSTGRES_DB: echatbot_test
   #       options: >-
   #         --health-cmd pg_isready
   #         --health-interval 10s
@@ -105,7 +105,7 @@ jobs:
   #         - 5432:5432
   #
   #   env:
-  #     DATABASE_URL: postgresql://shopme:shopme_password@localhost:5432/shopme_test
+  #     DATABASE_URL: postgresql://echatbot:echatbot_password@localhost:5432/echatbot_test
   #     JWT_SECRET: ${{ secrets.CI_JWT_SECRET }}
   #     JWT_EXPIRES_IN: 24h
   #     TOKEN_ENCRYPTION_KEY: ${{ secrets.CI_TOKEN_ENCRYPTION_KEY }}
@@ -114,7 +114,7 @@ jobs:
   #     NODE_ENV: test
   #     INTEGRATION_TEST: true
   #     # Admin credentials
-  #     ADMIN_EMAIL: admin@shopme.com
+  #     ADMIN_EMAIL: admin@echatbot.ai
   #     ADMIN_PASSWORD: Venezia44
   #     # Frontend
   #     FRONTEND_URL: http://localhost:3000
@@ -125,7 +125,7 @@ jobs:
   #     SMTP_SECURE: false
   #     SMTP_USER: test@ethereal.email
   #     SMTP_PASS: test-password
-  #     SMTP_FROM: noreply@shopme.com
+  #     SMTP_FROM: noreply@echatbot.ai
   #     # OpenRouter (CRITICAL - Required for LLM integration tests)
   #     OPENROUTER_API_KEY: ${{ secrets.CI_OPENROUTER_API_KEY }}
   #     # WhatsApp
@@ -202,7 +202,7 @@ jobs:
       NODE_ENV: test
       INTEGRATION_TEST: true
       # Admin credentials
-      ADMIN_EMAIL: admin@shopme.com
+      ADMIN_EMAIL: admin@echatbot.ai
       ADMIN_PASSWORD: test-venezia44
       # Frontend
       FRONTEND_URL: http://localhost:3000
@@ -213,7 +213,7 @@ jobs:
       SMTP_SECURE: false
       SMTP_USER: test@ethereal.email
       SMTP_PASS: test-password
-      SMTP_FROM: noreply@shopme.com
+      SMTP_FROM: noreply@echatbot.ai
       # OpenRouter
       OPENROUTER_API_KEY: ${{ secrets.CI_OPENROUTER_API_KEY }}
       # WhatsApp

@@ -143,7 +143,7 @@ Cart: "Prodotto aggiunto!"
 
 ```prisma
 model Workspace {
-  welcomeMessage String?  // "Welcome to ShopME! I'm your assistant..." (plain English)
+  welcomeMessage String?  // "Welcome to eChatbot! I'm your assistant..." (plain English)
   wipMessage     String?  // "Work in progress. Contact us later." (plain English)
 }
 ```

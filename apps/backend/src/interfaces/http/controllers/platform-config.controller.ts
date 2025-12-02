@@ -10,7 +10,7 @@
  * - POST /api/platform-config/flags/:key/toggle (auth required) - Toggle a flag
  * - POST /api/platform-config/cache/invalidate (auth required) - Force cache refresh
  *
- * @author Andrea Gelso - ShopME Platform
+ * @author Andrea Gelso - eChatbot Platform
  */
 
 import { Request, Response } from "express"

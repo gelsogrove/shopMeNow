@@ -26,7 +26,7 @@
  * const maxProducts = limits.BASIC_PRODUCTS // 50
  * ```
  *
- * @author Andrea Gelso - ShopME Platform
+ * @author Andrea Gelso - eChatbot Platform
  */
 
 import { useState, useEffect, useCallback } from "react"

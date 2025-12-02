@@ -165,8 +165,8 @@ router.post(
 
       // Generate new 2FA secret for the user
       const secret = speakeasy.generateSecret({
-        name: `ShopME (${resetToken.user.email})`,
-        issuer: "ShopME",
+        name: `eChatbot (${resetToken.user.email})`,
+        issuer: "eChatbot",
         length: 32,
       })
 
@@ -269,8 +269,8 @@ router.post(
 
       // Generate new 2FA secret for the user
       const secret = speakeasy.generateSecret({
-        name: `ShopME (${email})`,
-        issuer: "ShopME",
+        name: `eChatbot (${email})`,
+        issuer: "eChatbot",
         length: 32,
       })
 

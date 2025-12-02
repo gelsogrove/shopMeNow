@@ -137,7 +137,7 @@ export function Sidebar() {
     <aside className="fixed inset-y-0 left-0 w-72 bg-white border-r">
       <div className="flex flex-col h-full">
         <div className="flex items-center h-24 px-8 border-b">
-          <span className="text-2xl font-bold text-green-600">ShopME</span>
+          <span className="text-2xl font-bold text-green-600">eChatbot</span>
         </div>
 
         <nav className="flex-1 px-4 space-y-2 py-6">

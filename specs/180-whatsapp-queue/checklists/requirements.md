@@ -93,7 +93,7 @@
 
 ## Recommended Next Steps
 
-1. **Review Spec**: Andrea, please review `/Users/gelso/workspace/shopME/specs/180-whatsapp-queue/spec.md`
+1. **Review Spec**: Andrea, please review `/Users/gelso/workspace/eChatbot/specs/180-whatsapp-queue/spec.md`
 2. **Approve or Iterate**: If changes needed, update spec and re-run checklist
 3. **Create Implementation Plan**: Run `/speckit.plan` to generate task breakdown
 4. **Estimate Effort**: Plan to estimate hours for each task
