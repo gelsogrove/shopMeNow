@@ -25,12 +25,11 @@ export const PublicPageHeader: React.FC<PublicPageHeaderProps> = ({
   const menuRef = useRef<HTMLDivElement>(null)
 
   // 🛒 Navigate to different pages using same token
-  const handleNavigation = (page: "cart" | "orders" | "profile" | "gdpr") => {
+  const handleNavigation = (page: "cart" | "profile" | "gdpr") => {
     if (!token) return
 
     const urls = {
       cart: `/checkout?token=${token}`,
-      orders: `/orders-public?token=${token}`,
       profile: `/customer-profile?token=${token}`,
       gdpr: `/gdpr?token=${token}`,
     }
@@ -70,25 +69,6 @@ export const PublicPageHeader: React.FC<PublicPageHeaderProps> = ({
             strokeLinejoin="round"
             strokeWidth={2}
             d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01"
-          />
-        </svg>
-      ),
-    },
-    {
-      key: "orders",
-      label: texts.viewOrders,
-      icon: (
-        <svg
-          className="h-5 w-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           />
         </svg>
       ),

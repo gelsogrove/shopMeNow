@@ -3033,10 +3033,10 @@ export class MessageRepository {
     try {
       const now = new Date()
 
+      // Offers expire based on dates only - isActive flag is ignored
       const offers = await this.prisma.offers.findMany({
         where: {
           workspaceId,
-          isActive: true,
           startDate: { lte: now },
           endDate: { gte: now },
         },

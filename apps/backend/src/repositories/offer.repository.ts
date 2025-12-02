@@ -46,9 +46,9 @@ export class OfferRepository implements IOfferRepository {
   async findActive(workspaceId: string, categoryId?: string): Promise<Offer[]> {
     const now = new Date()
 
+    // Offers expire based on dates only - isActive flag is ignored
     const where: any = {
       workspaceId,
-      isActive: true,
       startDate: { lte: now },
       endDate: { gte: now },
     }

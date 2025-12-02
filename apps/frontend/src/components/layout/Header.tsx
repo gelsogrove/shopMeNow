@@ -15,15 +15,13 @@ import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import {
   ArrowLeftRight,
-  BarChart3,
   Bot,
   CreditCard,
-  ListChecks,
   LogOut,
   Phone,
+  Radio,
+  Send,
   Settings,
-  ShieldCheck,
-  ShieldBan,
   User,
 } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -42,8 +40,6 @@ export function Header() {
   const [profilePicture, setProfilePicture] = useState<string | null>(null)
   // Get user data from localStorage instead of API call
   const [userData, setUserData] = useState<any>(null)
-  // 🚫 Blocked users count
-  const [blockedUsersCount, setBlockedUsersCount] = useState<number>(0)
 
   // Load user data from storage
   useEffect(() => {
@@ -57,23 +53,6 @@ export function Header() {
       }
     }
   }, [])
-
-  // 🚫 Load blocked users count
-  useEffect(() => {
-    const loadBlockedCount = async () => {
-      if (!workspace?.id) return
-      try {
-        const response = await api.get(`/workspaces/badge-stats`)
-        const stats = response.data[workspace.id]
-        if (stats?.blockedUsers !== undefined) {
-          setBlockedUsersCount(stats.blockedUsers)
-        }
-      } catch (error) {
-        logger.error("Error loading blocked users count:", error)
-      }
-    }
-    loadBlockedCount()
-  }, [workspace?.id])
 
   // Get plan display info
   const getPlanDisplayInfo = (plan?: string) => {
@@ -194,19 +173,6 @@ export function Header() {
               <div className="flex items-center space-x-2 text-lg">
                 <Phone className="h-5 w-5 text-green-600" />
                 <span className="font-medium">{phoneNumber}</span>
-                {/* 🚫 Blocked users badge */}
-                {blockedUsersCount > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="ml-2 p-1 h-auto text-red-600 hover:text-red-700 hover:bg-red-50"
-                    onClick={() => navigate("/blocked-users")}
-                    title={`${blockedUsersCount} blocked user${blockedUsersCount > 1 ? "s" : ""}`}
-                  >
-                    <ShieldBan className="h-4 w-4 mr-1" />
-                    <span className="text-sm font-medium">{blockedUsersCount}</span>
-                  </Button>
-                )}
               </div>
               <span className="text-xs text-muted-foreground ml-7">
                 {channelName}
@@ -259,61 +225,34 @@ export function Header() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="p-4 text-lg cursor-pointer"
-                onClick={() => navigate("/profile")}
-              >
-                <User className="mr-3 h-5 w-5" />
-                <span>Profile</span>
-              </DropdownMenuItem>
+              {/* Owner-only menu items (SUPER_ADMIN) */}
+              {isSuperAdmin && (
+                <>
+                  <DropdownMenuItem
+                    className="p-4 text-lg cursor-pointer"
+                    onClick={() => navigate("/settings")}
+                  >
+                    <Settings className="mr-3 h-5 w-5" />
+                    <span>Settings</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="p-4 text-lg cursor-pointer"
+                    onClick={() => navigate("/agents")}
+                  >
+                    <Bot className="mr-3 h-5 w-5" />
+                    <span>Agent Configuration</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="p-4 text-lg cursor-pointer"
+                    onClick={() => navigate("/queue")}
+                  >
+                    <Send className="mr-3 h-5 w-5" />
+                    <span>WhatsApp Queue</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
 
-              
-
-              {/* Settings - ONLY for SUPER_ADMIN (Owner) */}
-              {isSuperAdmin && (
-                <DropdownMenuItem
-                  className="p-4 text-lg cursor-pointer"
-                  onClick={() => navigate("/settings")}
-                >
-                  <Settings className="mr-3 h-5 w-5" />
-                  <span>Settings</span>
-                </DropdownMenuItem>
-              )}
-              {/* GDPR Policy - ONLY for SUPER_ADMIN (Owner) */}
-              {isSuperAdmin && (
-                <DropdownMenuItem
-                  className="p-4 text-lg cursor-pointer"
-                  onClick={() => navigate("/gdpr")}
-                >
-                  <ShieldCheck className="mr-3 h-5 w-5" />
-                  <span>GDPR Policy</span>
-                </DropdownMenuItem>
-              )}
-              {/* Agents Configuration - ONLY for SUPER_ADMIN (Owner) */}
-              {isSuperAdmin && (
-                <DropdownMenuItem
-                  className="p-4 text-lg cursor-pointer"
-                  onClick={() => navigate("/agents")}
-                >
-                  <Bot className="mr-3 h-5 w-5" />
-                  <span>Agents Configuration</span>
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem
-                className="p-4 text-lg cursor-pointer"
-                onClick={() => navigate("/analytics")}
-              >
-                <BarChart3 className="mr-3 h-5 w-5" />
-                <span>Analytics</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="p-4 text-lg cursor-pointer"
-                onClick={() => navigate("/queue")}
-              >
-                <ListChecks className="mr-3 h-5 w-5" />
-                <span>WhatsApp Queue</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="p-4 text-lg cursor-pointer"
                 onClick={handleLogout}

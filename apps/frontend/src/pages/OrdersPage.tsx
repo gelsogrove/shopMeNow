@@ -57,11 +57,15 @@ export default function OrdersPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState(initialSearch)
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all")
-  const [dateRangeFilter, setDateRangeFilter] = useState<string>("all") // Default: show all orders
+  const [dateRangeFilter, setDateRangeFilter] = useState<string>("last_year") // Default: show orders from last year
+  // Initialize date filters with last year
   const [dateFromFilter, setDateFromFilter] = useState<Date | undefined>(
-    undefined
+    () => {
+      const today = new Date()
+      return new Date(today.getFullYear() - 1, today.getMonth(), today.getDate())
+    }
   )
-  const [dateToFilter, setDateToFilter] = useState<Date | undefined>(undefined)
+  const [dateToFilter, setDateToFilter] = useState<Date | undefined>(() => new Date())
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
 
   const [isEditOpen, setIsEditOpen] = useState(false)

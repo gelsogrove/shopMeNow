@@ -52,12 +52,6 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
       page: "cart",
     },
     {
-      icon: "📦",
-      label: t.myOrders,
-      path: `/orders-public?token=${token}`,
-      page: "orders",
-    },
-    {
       icon: "👤",
       label: t.profile,
       path: `/customer-profile?token=${token}`,

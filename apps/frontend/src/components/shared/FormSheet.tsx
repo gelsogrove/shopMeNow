@@ -47,7 +47,7 @@ export function FormSheet({
           {children}
 
           <div className="flex justify-end pt-4">
-            <Button type="submit" className="bg-green-600 hover:bg-green-700">
+            <Button type="submit">
               {submitLabel}
             </Button>
           </div>

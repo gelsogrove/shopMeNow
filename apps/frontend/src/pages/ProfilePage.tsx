@@ -11,8 +11,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useCurrentUser } from "@/hooks/useCurrentUser"
-import { useWorkspace } from "@/contexts/WorkspaceContext"
-import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { logger } from "@/lib/logger"
 import {
   UserProfile,
@@ -20,7 +18,7 @@ import {
   updateUserProfile,
   setPassword,
 } from "@/services/userApi"
-import { Building2, Key, Loader2, User, KeyRound } from "lucide-react"
+import { Building2, Key, Loader2, User, Phone } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "../lib/toast"
 
@@ -30,12 +28,11 @@ export default function ProfilePage() {
     isLoading: userLoading,
     isError: userError,
   } = useCurrentUser()
-  const { workspace } = useWorkspace()
-  const { isSuperAdmin } = useWorkspaceRole(workspace?.id)
   const [isLoading, setIsLoading] = useState(false)
   const [showPasswordDialog, setShowPasswordDialog] = useState(false)
   const [showSetPasswordDialog, setShowSetPasswordDialog] = useState(false)
   const [user, setUser] = useState<UserProfile & {
+    phoneNumber?: string
     companyName?: string
     vatNumber?: string
     website?: string
@@ -48,6 +45,7 @@ export default function ProfilePage() {
     firstName: "",
     lastName: "",
     email: "",
+    phoneNumber: "",
     companyName: "",
     vatNumber: "",
     website: "",
@@ -68,6 +66,7 @@ export default function ProfilePage() {
     if (userData) {
       setUser({
         ...userData,
+        phoneNumber: (userData as any).phoneNumber || "",
         companyName: (userData as any).companyName || "",
         vatNumber: (userData as any).vatNumber || "",
         website: (userData as any).website || "",
@@ -100,6 +99,7 @@ export default function ProfilePage() {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
+        phoneNumber: user.phoneNumber,
         companyName: user.companyName,
         vatNumber: user.vatNumber,
         website: user.website,
@@ -108,6 +108,7 @@ export default function ProfilePage() {
       })
       setUser({
         ...updatedUser,
+        phoneNumber: (updatedUser as any).phoneNumber || "",
         companyName: (updatedUser as any).companyName || "",
         vatNumber: (updatedUser as any).vatNumber || "",
         website: (updatedUser as any).website || "",
@@ -231,7 +232,7 @@ export default function ProfilePage() {
         <div>
           <h1 className="text-3xl font-bold">Profile</h1>
           <p className="text-muted-foreground mt-1">
-            Manage your personal information and billing details
+            Manage your personal information and account settings
           </p>
         </div>
         {user.hasPassword ? (
@@ -295,12 +296,26 @@ export default function ProfilePage() {
                 placeholder="your.email@example.com"
               />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phoneNumber" className="flex items-center gap-1">
+                <Phone className="h-3 w-3" />
+                Phone Number
+                <span className="text-xs text-muted-foreground">(optional)</span>
+              </Label>
+              <Input
+                id="phoneNumber"
+                type="tel"
+                value={user.phoneNumber || ""}
+                onChange={(e) => handleFieldChange("phoneNumber", e.target.value)}
+                placeholder="+39 123 456 7890"
+              />
+            </div>
           </CardContent>
         </Card>
 
-        {/* Billing Information - ONLY for SUPER_ADMIN (Owner) */}
-        {isSuperAdmin && (
-          <Card>
+        {/* Billing Information */}
+        <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-green-600">
                 <Building2 className="h-5 w-5" />
@@ -361,14 +376,13 @@ export default function ProfilePage() {
               </div>
             </CardContent>
           </Card>
-        )}
       </div>
 
       <div className="flex justify-end">
         <Button
           onClick={handleSave}
           disabled={isLoading}
-          className="gap-2"
+          className="gap-2 bg-green-600 hover:bg-green-700"
           size="lg"
         >
           {isLoading ? (

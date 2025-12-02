@@ -4,24 +4,26 @@ import { runJob } from './services/job-runner.service'
 import {
   whatsappChallengeQueueJob,
   shortUrlsCleanupJob,
-  blockedCustomersCleanupJob,
   unusedImagesCleanupJob,
   monthlyBillingJob,
   messagesArchiveJob,
-  campaignSendJob,
+  whatsappQueueCleanupJob,
 } from './jobs'
 import logger from './utils/logger'
 
 // eChatbot Scheduler Microservice
 //
-// Cron Jobs:
-// 1. WhatsApp Challenge Queue  - every 3 minutes
-// 2. Short URLs Cleanup        - daily at 23:00
-// 3. Blocked Customers Cleanup - every 3 days at 23:01
-// 4. Unused Images Cleanup     - daily at 23:02
-// 5. Monthly Billing           - 1st of month at 12:00
-// 6. Messages Archive          - weekly on Sunday at 03:00
-// 7. Campaign Send             - daily at 10:00 AM
+// Cron Jobs (ordered by execution time):
+// 1. WhatsApp Challenge Queue   - every 3 SECONDS (parallel send, with lock)
+// 2. Short URLs Cleanup         - daily at 23:00
+// 3. Unused Images Cleanup      - daily at 23:05
+// 4. Messages Archive           - daily at 23:10 (archive messages older than 6 months)
+// 5. WhatsApp Queue Cleanup     - daily at 23:15 (delete errors/sent older than 7 days)
+// 6. Monthly Billing            - 1st of month at 23:30
+//
+// HOW TO ENABLE/DISABLE JOBS:
+// - From Backoffice: /schedulers page → toggle isActive
+// - Jobs check isActive flag before running (skip if disabled)
 
 async function main() {
   logger.info('🚀 Starting eChatbot Scheduler...')
@@ -29,52 +31,63 @@ async function main() {
   // Connect to database
   await connectDatabase()
 
-  // Job 1: WhatsApp Challenge Queue - every 3 minutes
-  cron.schedule('*/3 * * * *', async () => {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Job 1: WhatsApp Challenge Queue - every 3 seconds
+  // Uses in-memory lock: if previous job is still running, skip
+  // Sends messages in PARALLEL (safe for different customers)
+  // ═══════════════════════════════════════════════════════════════════════════
+  cron.schedule('*/3 * * * * *', async () => {
     await runJob('whatsapp-challenge-queue', whatsappChallengeQueueJob)
   })
 
+  // ═══════════════════════════════════════════════════════════════════════════
   // Job 2: Short URLs Cleanup - daily at 23:00
+  // Deletes expired short URLs
+  // ═══════════════════════════════════════════════════════════════════════════
   cron.schedule('0 23 * * *', async () => {
     await runJob('short-urls-cleanup', shortUrlsCleanupJob)
   })
 
-  // Job 3: Blocked Customers Cleanup - every 3 days at 23:01
-  cron.schedule('1 23 */3 * *', async () => {
-    await runJob('blocked-customers-cleanup', blockedCustomersCleanupJob)
-  })
-
-  // Job 4: Unused Images Cleanup - daily at 23:02
-  cron.schedule('2 23 * * *', async () => {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Job 3: Unused Images Cleanup - daily at 23:05
+  // Removes orphaned images from uploads folder
+  // ═══════════════════════════════════════════════════════════════════════════
+  cron.schedule('5 23 * * *', async () => {
     await runJob('unused-images-cleanup', unusedImagesCleanupJob)
   })
 
-  // Job 5: Monthly Billing - 1st of each month at 12:00
-  cron.schedule('0 12 1 * *', async () => {
-    await runJob('monthly-billing', monthlyBillingJob)
-  })
-
-  // Job 6: Messages Archive - weekly on Sunday at 03:00
-  // Moves messages older than 6 months to archive table
-  cron.schedule('0 3 * * 0', async () => {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Job 4: Messages Archive - daily at 23:10
+  // Archives messages older than 6 months to reduce main table size
+  // ═══════════════════════════════════════════════════════════════════════════
+  cron.schedule('10 23 * * *', async () => {
     await runJob('messages-archive', messagesArchiveJob)
   })
 
-  // Job 7: Campaign Send - daily at 10:00 AM
-  // Checks active campaigns and queues messages for eligible customers
-  cron.schedule('0 10 * * *', async () => {
-    await runJob('campaign-send', campaignSendJob)
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Job 5: WhatsApp Queue Cleanup - daily at 23:15
+  // Deletes error and sent messages older than 7 days
+  // ═══════════════════════════════════════════════════════════════════════════
+  cron.schedule('15 23 * * *', async () => {
+    await runJob('whatsapp-queue-cleanup', whatsappQueueCleanupJob)
+  })
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Job 6: Monthly Billing - 1st of each month at 23:30
+  // Generates billing records for the previous month
+  // ═══════════════════════════════════════════════════════════════════════════
+  cron.schedule('30 23 1 * *', async () => {
+    await runJob('monthly-billing', monthlyBillingJob)
   })
 
   logger.info('✅ Scheduler started successfully!')
   logger.info('📋 Scheduled jobs:')
-  logger.info('   1. WhatsApp Challenge Queue  - every 3 minutes')
-  logger.info('   2. Short URLs Cleanup        - daily at 23:00')
-  logger.info('   3. Blocked Customers Cleanup - every 3 days at 23:01')
-  logger.info('   4. Unused Images Cleanup     - daily at 23:02')
-  logger.info('   5. Monthly Billing           - 1st of month at 12:00')
-  logger.info('   6. Messages Archive          - weekly on Sunday at 03:00')
-  logger.info('   7. Campaign Send             - daily at 10:00 AM')
+  logger.info('   1. WhatsApp Challenge Queue   - every 3 SECONDS')
+  logger.info('   2. Short URLs Cleanup         - daily at 23:00')
+  logger.info('   3. Unused Images Cleanup      - daily at 23:05')
+  logger.info('   4. Messages Archive           - daily at 23:10')
+  logger.info('   5. WhatsApp Queue Cleanup     - daily at 23:15')
+  logger.info('   6. Monthly Billing            - 1st of month at 23:30')
 
   // Graceful shutdown
   process.on('SIGINT', async () => {

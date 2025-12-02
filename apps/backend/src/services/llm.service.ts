@@ -638,7 +638,6 @@ export class LLMService {
     const SUPPORTED_TOKENS = [
       "[LINK_CHECKOUT_WITH_TOKEN]",
       "[LINK_PROFILE_WITH_TOKEN]",
-      "[LINK_ORDERS_WITH_TOKEN]",
       "[LINK_CATALOG]",
       "[LINK_REGISTRATION_WITH_TOKEN]",
     ] as const
@@ -690,26 +689,6 @@ export class LLMService {
             })
 
             finalResponse = finalResponse.replace(token, profileUrl)
-            break
-          }
-
-          case "[LINK_ORDERS_WITH_TOKEN]": {
-            const ordersLink =
-              await this.callingFunctionsService.getOrdersListLink({
-                customerId: customer.id,
-                workspaceId: workspace.id,
-              })
-            const linkUrl = ordersLink?.linkUrl || ""
-
-            linkReplacements.push({
-              token,
-              replacedWith: linkUrl,
-              tokenGenerated: ordersLink?.token || "N/A",
-              shortUrlCreated: linkUrl.includes("/s/"),
-              timestamp: new Date().toISOString(),
-            })
-
-            finalResponse = finalResponse.replace(token, linkUrl)
             break
           }
 
@@ -992,7 +971,7 @@ export class LLMService {
       const i18n = {
         errors: {
           orderNotFound:
-            "Sorry, we couldn't find your order. Here is the list of your orders: [LINK_ORDERS_WITH_TOKEN]",
+            "Sorry, we couldn't find your order. Please provide the order code and I'll help you find it.",
           trackingNotFound:
             "Sorry, I can't find tracking information for your order right now. Please contact our customer service for assistance.",
           generic: "An error has occurred.",

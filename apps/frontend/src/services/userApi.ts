@@ -6,6 +6,7 @@ export interface UserProfile {
   firstName: string
   lastName: string
   email: string
+  phoneNumber?: string  // Optional personal phone number
   companyName?: string
   vatNumber?: string
   website?: string
@@ -19,6 +20,7 @@ export interface UpdateProfileData {
   firstName?: string
   lastName?: string
   email?: string
+  phoneNumber?: string  // Optional personal phone number
   companyName?: string
   vatNumber?: string
   website?: string

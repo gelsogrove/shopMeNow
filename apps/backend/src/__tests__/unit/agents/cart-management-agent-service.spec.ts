@@ -93,7 +93,7 @@ describe("CartManagementAgent - SERVICE Cart", () => {
             {
               id: "item-1",
               itemType: "SERVICE",
-              productId: "service-id-123",
+              serviceId: "service-id-123", // SERVICE uses serviceId
               quantity: 1,
             },
           ],
@@ -117,10 +117,12 @@ describe("CartManagementAgent - SERVICE Cart", () => {
       expect(mockProductRepo.findByProductCode).not.toHaveBeenCalled()
 
       // Verify cart item added with correct type
+      // CRITICAL: SERVICE items use serviceId, PRODUCT items use productId
       expect(mockCartRepo.addItem).toHaveBeenCalledWith("cart-123", {
         itemType: "SERVICE", // ✅ Correct type
-        productId: "service-id-123",
-        quantity: 1,
+        productId: undefined, // SERVICE doesn't use productId
+        serviceId: "service-id-123", // SERVICE uses serviceId
+        quantity: 1, // Services always quantity 1
         notes: undefined,
       })
 
@@ -176,8 +178,8 @@ describe("CartManagementAgent - SERVICE Cart", () => {
             {
               id: "item-1",
               itemType: "SERVICE",
-              productId: "service-id-123",
-              quantity: 100, // High quantity - no stock check!
+              serviceId: "service-id-123", // SERVICE uses serviceId
+              quantity: 1, // Services always quantity 1 (enforced by code)
             },
           ],
         },
@@ -190,12 +192,13 @@ describe("CartManagementAgent - SERVICE Cart", () => {
         type: "SERVICE",
       })
 
-      // Should succeed even with high quantity
+      // Should succeed - services always have quantity 1 (enforced by code)
       expect(result.success).toBe(true)
       expect(mockCartRepo.addItem).toHaveBeenCalledWith("cart-123", {
         itemType: "SERVICE",
-        productId: "service-id-123",
-        quantity: 100, // No stock limit
+        productId: undefined, // SERVICE doesn't use productId
+        serviceId: "service-id-123", // SERVICE uses serviceId
+        quantity: 1, // Services always quantity 1 (enforced by code)
         notes: undefined,
       })
     })

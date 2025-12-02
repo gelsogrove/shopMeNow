@@ -8,15 +8,21 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-green-500 text-white hover:bg-green-600",
-        destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        // Primary action: solid green (Add, Create, Save, Submit, Confirm)
+        default: "bg-green-600 text-white hover:bg-green-700",
+        // Secondary action: green outline (Export, Cancel, Back, Load Defaults)
         outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+          "border-2 border-green-600 text-green-600 bg-white hover:bg-green-50",
+        // Destructive: red (Delete, Remove)
+        destructive:
+          "bg-red-600 text-white hover:bg-red-700",
+        // Ghost: transparent (navigation, minor actions)
+        ghost: "text-gray-600 hover:bg-gray-100 hover:text-gray-900",
+        // Secondary: muted gray
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+          "bg-gray-100 text-gray-900 hover:bg-gray-200",
+        // Link style
+        link: "text-green-600 underline-offset-4 hover:underline",
       },
       size: {
         default: "h-10 px-4 py-2",

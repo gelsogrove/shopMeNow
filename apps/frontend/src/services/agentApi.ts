@@ -197,3 +197,78 @@ export async function getAgentConfigs(workspaceId: string): Promise<{
     throw error
   }
 }
+
+/**
+ * Reset all agent prompts to default values
+ * WARNING: This will overwrite all customizations!
+ */
+export async function resetAgentPromptsToDefaults(
+  workspaceId: string
+): Promise<{ message: string; resetCount: number }> {
+  logger.info(`Resetting agent prompts to defaults for workspace ${workspaceId}`)
+
+  try {
+    const response = await api.post(
+      `/workspaces/${workspaceId}/agent-config/reset-to-defaults`,
+      {},
+      {
+        headers: {
+          "x-workspace-id": workspaceId,
+        },
+      }
+    )
+
+    logger.info(`Reset response:`, response.data)
+    return response.data
+  } catch (error) {
+    logger.error("Error resetting agent prompts:", error)
+    throw error
+  }
+}
+
+/**
+ * Export all agent prompts as a ZIP file
+ * Downloads a ZIP containing .md files for each agent
+ */
+export async function exportAgentPrompts(workspaceId: string): Promise<void> {
+  logger.info(`Exporting agent prompts for workspace ${workspaceId}`)
+
+  try {
+    const response = await api.get(
+      `/workspaces/${workspaceId}/agent-config/export`,
+      {
+        headers: {
+          "x-workspace-id": workspaceId,
+        },
+        responseType: "blob",
+      }
+    )
+
+    // Get filename from Content-Disposition header or use default
+    const contentDisposition = response.headers["content-disposition"]
+    let filename = "agent-prompts.zip"
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename="(.+)"/)
+      if (match) {
+        filename = match[1]
+      }
+    }
+
+    // Create download link and trigger download
+    const blob = new Blob([response.data], { type: "application/zip" })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+
+    logger.info(`Successfully downloaded ${filename}`)
+  } catch (error) {
+    logger.error("Error exporting agent prompts:", error)
+    throw error
+  }
+}
+

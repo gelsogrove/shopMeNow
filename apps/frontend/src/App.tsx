@@ -3,6 +3,7 @@ import SettingsPage from "@/pages/SettingsPage"
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom"
 import { Toaster } from "sonner"
 import { Layout } from "./components/layout/Layout"
+import { MinimalLayout } from "./components/layout/MinimalLayout"
 import { ProtectedRoute } from "./components/ProtectedRoute"
 import { ChatProvider } from "./contexts/ChatContext"
 import { AcceptInvitePage } from "./pages/AcceptInvitePage"
@@ -13,7 +14,6 @@ import Setup2FAPage from "./pages/auth/Setup2FAPage"
 import Verify2FAPage from "./pages/auth/Verify2FAPage"
 import TwoFactorResetPage from "./pages/auth/TwoFactorResetPage"
 import ImpersonatePage from "./pages/auth/ImpersonatePage"
-import { BlockedUsersPage } from "./pages/BlockedUsersPage"
 import { ChatPage } from "./pages/ChatPage"
 import ClientsPage from "./pages/ClientsPage"
 import { QueuePage } from "./pages/QueuePage"
@@ -59,7 +59,6 @@ import { VerifyOtpPage } from "./pages/VerifyOtpPage"
 import { WorkspacePage } from "./pages/WorkspacePage"
 import { WorkspaceSelectionPage } from "./pages/WorkspaceSelectionPage"
 
-const OrdersPublicPage = lazy(() => import("./pages/OrdersPublicPage"))
 const CustomerProfilePublicPage = lazy(
   () => import("./pages/CustomerProfilePublicPage")
 )
@@ -132,9 +131,6 @@ export function App() {
                   <Route path="/agents" element={<Layout />}>
                     <Route index element={<AgentConfigurationPage />} />
                   </Route>
-                  <Route path="/blocked-users" element={<Layout />}>
-                    <Route index element={<BlockedUsersPage />} />
-                  </Route>
                   <Route path="/clients" element={<Layout />}>
                     <Route index element={<ClientsPage />} />
                     <Route path=":id" element={<ClientsPage />} />
@@ -162,7 +158,7 @@ export function App() {
                     <Route index element={<FAQPage />} />
                   </Route>
 
-                  <Route path="/profile" element={<Layout />}>
+                  <Route path="/profile" element={<MinimalLayout />}>
                     <Route index element={<ProfilePage />} />
                   </Route>
 
@@ -200,66 +196,6 @@ export function App() {
                     <Route index element={<CampaignsPage />} />
                   </Route>
                 </Route>
-
-                {/* Public Orders pages via secure token (external, no platform layout) */}
-                <Route
-                  path="/orders"
-                  element={
-                    <Suspense
-                      fallback={
-                        <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-                          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
-                        </div>
-                      }
-                    >
-                      <OrdersPublicPage />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/orders/:orderCode"
-                  element={
-                    <Suspense
-                      fallback={
-                        <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-                          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
-                        </div>
-                      }
-                    >
-                      <OrdersPublicPage />
-                    </Suspense>
-                  }
-                />
-
-                {/* Public Orders pages via orders-public URL (backend generated links) */}
-                <Route
-                  path="/orders-public"
-                  element={
-                    <Suspense
-                      fallback={
-                        <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-                          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
-                        </div>
-                      }
-                    >
-                      <OrdersPublicPage />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/orders-public/:orderCode"
-                  element={
-                    <Suspense
-                      fallback={
-                        <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-                          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
-                        </div>
-                      }
-                    >
-                      <OrdersPublicPage />
-                    </Suspense>
-                  }
-                />
 
                 {/* Public Customer Profile page via secure token (external, no platform layout) */}
                 <Route

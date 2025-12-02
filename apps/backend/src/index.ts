@@ -3,7 +3,9 @@ import "dotenv/config"
 import { createServer } from "http"
 import app from "./app"
 import { startScheduler, stopScheduler } from "./scheduler"
-import { startWhatsAppQueueProcessor, stopWhatsAppQueueProcessor, startWhatsAppQueueCleanup } from "./jobs/whatsapp-queue-processor.job"
+// WhatsApp Queue Processor REMOVED - now handled by Scheduler microservice only
+// This prevents duplicate processing of the same messages
+import { startWhatsAppQueueCleanup } from "./jobs/whatsapp-queue-processor.job"
 import { websocketService } from "./services/websocket.service"
 import logger from "./utils/logger"
 
@@ -31,8 +33,8 @@ async function startServer() {
       // Start background scheduler
       startScheduler()
 
-      // Start WhatsApp queue processor (every 10 minutes)
-      startWhatsAppQueueProcessor()
+      // WhatsApp Queue Processor REMOVED - handled by Scheduler microservice
+      // See apps/scheduler/src/jobs/whatsapp-challenge-queue.job.ts
 
       // Start WhatsApp queue cleanup (daily at 2 AM)
       startWhatsAppQueueCleanup()
@@ -42,7 +44,7 @@ async function startServer() {
     process.on("SIGTERM", async () => {
       logger.info("SIGTERM received, shutting down gracefully")
       stopScheduler()
-      stopWhatsAppQueueProcessor()
+      // stopWhatsAppQueueProcessor removed - handled by Scheduler
       await websocketService.shutdown()
       await prisma.$disconnect()
       process.exit(0)

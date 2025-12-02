@@ -20,6 +20,8 @@ export interface UserProps {
   twoFactorSecret?: string | null;
   twoFactorEnabledAt?: Date | null;
   recoveryCodes?: string[] | null;
+  // 📱 Personal phone (optional)
+  phoneNumber?: string | null;
   // 🧾 Billing fields (Andrea's requirement)
   companyName?: string | null;
   vatNumber?: string | null;
@@ -112,6 +114,11 @@ export class User extends Entity<UserProps> {
 
   get recoveryCodes(): string[] | null | undefined {
     return this.props.recoveryCodes;
+  }
+
+  // 📱 Personal phone getter (optional)
+  get phoneNumber(): string | null | undefined {
+    return this.props.phoneNumber;
   }
 
   // 🧾 Billing getters (Andrea's requirement)

@@ -235,7 +235,7 @@ export default function CategoriesPage() {
       </div>
 
       <div className="pt-4 flex justify-end">
-        <Button type="submit" className="bg-green-600 hover:bg-green-700">
+        <Button type="submit">
           {category ? "Save Changes" : "Add"}
         </Button>
       </div>

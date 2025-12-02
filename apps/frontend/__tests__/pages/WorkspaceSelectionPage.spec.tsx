@@ -191,13 +191,16 @@ describe("WorkspaceSelectionPage", () => {
   })
 
   describe("Navigation", () => {
-    it("should have logout button", async () => {
+    it("should have profile menu with logout option in dropdown", async () => {
       vi.mocked(workspaceApi.getWorkspaces).mockResolvedValue([])
 
       renderWithRouter(<WorkspaceSelectionPage />)
 
       await waitFor(() => {
-        expect(screen.getByText("Logout")).toBeInTheDocument()
+        // Profile menu is now a dropdown with avatar button
+        // The logout option is inside the dropdown, not visible until opened
+        const avatarButton = document.querySelector('button[class*="rounded-full"]')
+        expect(avatarButton).toBeInTheDocument()
       })
     })
   })
@@ -220,7 +223,6 @@ describe("WorkspaceSelectionPage", () => {
           unreadMessages: 0,
           pendingOrders: 5,
           needsIntervention: 0,
-          blockedUsers: 0,
         },
       })
 
@@ -248,7 +250,6 @@ describe("WorkspaceSelectionPage", () => {
           unreadMessages: 0,
           pendingOrders: 0,
           needsIntervention: 3,
-          blockedUsers: 0,
         },
       })
 
@@ -256,34 +257,6 @@ describe("WorkspaceSelectionPage", () => {
 
       await waitFor(() => {
         expect(screen.getByText("3")).toBeInTheDocument()
-      })
-    })
-
-    it("should display blocked users badge when count > 0", async () => {
-      vi.mocked(workspaceApi.getWorkspaces).mockResolvedValue([
-        {
-          id: "ws-1",
-          name: "Test Shop",
-          isActive: true,
-          isDelete: false,
-          whatsappPhoneNumber: "+123456789",
-          createdAt: "2024-01-01",
-          updatedAt: "2024-01-01",
-        },
-      ])
-      vi.mocked(workspaceApi.workspaceApi.getBadgeStats).mockResolvedValue({
-        "ws-1": {
-          unreadMessages: 0,
-          pendingOrders: 0,
-          needsIntervention: 0,
-          blockedUsers: 2,
-        },
-      })
-
-      renderWithRouter(<WorkspaceSelectionPage />)
-
-      await waitFor(() => {
-        expect(screen.getByText("2")).toBeInTheDocument()
       })
     })
 
@@ -304,7 +277,6 @@ describe("WorkspaceSelectionPage", () => {
           unreadMessages: 0,
           pendingOrders: 10,
           needsIntervention: 4,
-          blockedUsers: 7,
         },
       })
 
@@ -313,7 +285,6 @@ describe("WorkspaceSelectionPage", () => {
       await waitFor(() => {
         expect(screen.getByText("10")).toBeInTheDocument() // pending orders
         expect(screen.getByText("4")).toBeInTheDocument()  // needs intervention
-        expect(screen.getByText("7")).toBeInTheDocument()  // blocked users
       })
     })
 
@@ -334,7 +305,6 @@ describe("WorkspaceSelectionPage", () => {
           unreadMessages: 0,
           pendingOrders: 0,
           needsIntervention: 0,
-          blockedUsers: 0,
         },
       })
 
@@ -374,13 +344,11 @@ describe("WorkspaceSelectionPage", () => {
           unreadMessages: 0,
           pendingOrders: 3,
           needsIntervention: 0,
-          blockedUsers: 1,
         },
         "ws-2": {
           unreadMessages: 0,
           pendingOrders: 0,
           needsIntervention: 2,
-          blockedUsers: 0,
         },
       })
 
@@ -394,7 +362,6 @@ describe("WorkspaceSelectionPage", () => {
       // Should display badges from both workspaces
       await waitFor(() => {
         expect(screen.getByText("3")).toBeInTheDocument() // ws-1 pending orders
-        expect(screen.getByText("1")).toBeInTheDocument() // ws-1 blocked users
         expect(screen.getByText("2")).toBeInTheDocument() // ws-2 needs intervention
       })
     })

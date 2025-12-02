@@ -214,10 +214,10 @@ export class PriceCalculationService {
   private async getActiveOffers(workspaceId: string): Promise<OfferData[]> {
     const now = new Date()
 
+    // Offers expire based on dates only - isActive flag is ignored
     return await this.prisma.offers.findMany({
       where: {
         workspaceId,
-        isActive: true,
         startDate: { lte: now },
         endDate: { gte: now },
       },

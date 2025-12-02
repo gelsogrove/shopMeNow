@@ -245,7 +245,7 @@ export default function SalesPage() {
       </div>
 
       <div className="pt-4 flex justify-end">
-        <Button type="submit" className="bg-green-600 hover:bg-green-700">
+        <Button type="submit">
           {sale ? "Save Changes" : "Add"}
         </Button>
       </div>

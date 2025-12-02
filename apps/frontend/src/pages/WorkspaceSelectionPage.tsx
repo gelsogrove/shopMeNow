@@ -1,5 +1,13 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -11,7 +19,8 @@ import { useWorkspace } from "@/hooks/use-workspace"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
-import { LogOut, PlusCircle, Radio, MessageSquare, ShoppingCart, AlertTriangle, Smartphone, Crown, Ban } from "lucide-react"
+import { api } from "@/services/api"
+import { LogOut, PlusCircle, Radio, MessageSquare, ShoppingCart, AlertTriangle, Smartphone, Crown, User, Ban } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
@@ -70,6 +79,43 @@ export function WorkspaceSelectionPage() {
   
   // Shared billing data state - to avoid duplicate API calls
   const [sharedBillingOverview, setSharedBillingOverview] = useState<any>(null)
+
+  // 👤 User profile state for header menu
+  const [userName, setUserName] = useState<string>("")
+  const [userInitials, setUserInitials] = useState<string>("U")
+  const [profilePicture, setProfilePicture] = useState<string | null>(null)
+
+  // Load user profile from localStorage
+  useEffect(() => {
+    const cachedUser = localStorage.getItem("user")
+    if (cachedUser) {
+      try {
+        const userData = JSON.parse(cachedUser)
+        const firstName = userData?.firstName || ""
+        const lastName = userData?.lastName || ""
+        const fullName = `${firstName} ${lastName}`.trim()
+        
+        setUserName(fullName || "User")
+        setProfilePicture(userData?.profilePicture || null)
+        
+        // Create initials for avatar
+        const initials =
+          firstName && lastName
+            ? `${firstName[0]}${lastName[0]}`.toUpperCase()
+            : firstName
+            ? firstName[0].toUpperCase()
+            : "U"
+        setUserInitials(initials)
+        
+        // Also set userEmail if not already set from token
+        if (!userEmail && userData?.email) {
+          setUserEmail(userData.email)
+        }
+      } catch (error) {
+        logger.error("Error parsing user from localStorage:", error)
+      }
+    }
+  }, [])
 
   // Auto-generate welcome message when alias changes (only if not manually edited)
   useEffect(() => {
@@ -277,8 +323,14 @@ export function WorkspaceSelectionPage() {
   }
 
   // 🆕 LOGOUT HANDLER
-  const handleLogout = () => {
+  const handleLogout = async () => {
     logger.info("🚺 [WorkspaceSelectionPage] Logout requested")
+    
+    try {
+      await api.post("/auth/logout")
+    } catch (error) {
+      logger.error("Error calling logout API:", error)
+    }
     
     // 🛡️ CRITICAL SECURITY: Clear ALL storage on logout to prevent user isolation bugs
     logger.info('🧹 [LOGOUT] Clearing ALL storage (localStorage + sessionStorage)')
@@ -286,22 +338,65 @@ export function WorkspaceSelectionPage() {
     sessionStorage.clear()
     logger.info('✅ [LOGOUT] Storage cleared completely')
     
-    navigate("/")
+    navigate("/auth/login")
   }
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
-        {/* Header with Logout */}
+        {/* Header with Profile Menu - NO workspace-specific options */}
         <div className="flex justify-end items-center mb-4">
-          <Button
-            onClick={handleLogout}
-            variant="outline"
-            className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-          >
-            <LogOut className="h-4 w-4" />
-            Logout
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="relative h-12 w-12 rounded-full focus:ring-2 focus:ring-green-500 focus:outline-none hover:scale-105 transition-transform p-0"
+              >
+                {profilePicture ? (
+                  <img 
+                    src={profilePicture} 
+                    alt="User"
+                    referrerPolicy="no-referrer"
+                    className="h-full w-full rounded-full object-cover"
+                    onError={(e) => {
+                      logger.error('❌ [Avatar] Image failed to load:', profilePicture)
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
+                ) : (
+                  <div className="h-full w-full rounded-full bg-green-600 flex items-center justify-center text-white text-lg font-medium">
+                    {userInitials}
+                  </div>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-64" align="end" forceMount>
+              <DropdownMenuLabel className="font-normal p-4">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-lg font-medium leading-none">{userName || "User"}</p>
+                  <p className="text-sm leading-none text-muted-foreground">
+                    {userEmail || "Welcome to eChatbot"}
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="p-3 text-base cursor-pointer"
+                onClick={() => navigate("/profile")}
+              >
+                <User className="mr-3 h-5 w-5" />
+                <span>Profile</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="p-3 text-base cursor-pointer text-red-600 focus:text-red-600"
+                onClick={handleLogout}
+              >
+                <LogOut className="mr-3 h-5 w-5" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* ========== LOADING STATE ========== */}
@@ -433,9 +528,8 @@ export function WorkspaceSelectionPage() {
               </div>
               {!isRoleLoading && isSuperAdmin && (
                 <Button
-                  variant="outline"
                   size="sm"
-                  className="gap-1.5 text-green-600 border-green-600 hover:bg-green-50"
+                  className="gap-1.5"
                   onClick={() => {
                     const dialog = document.getElementById(
                       "type-selection-dialog"
@@ -517,7 +611,7 @@ export function WorkspaceSelectionPage() {
                       
                       {/* Needs Intervention Badge */}
                       {badgeStats[workspace.id].needsIntervention > 0 && (
-                        <div className="flex items-center gap-1.5 bg-red-100 text-red-700 px-2.5 py-1 rounded-full text-sm font-medium animate-pulse">
+                        <div className="flex items-center gap-1.5 bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full text-sm font-medium animate-pulse">
                           <AlertTriangle className="h-3.5 w-3.5" />
                           <span>{badgeStats[workspace.id].needsIntervention}</span>
                         </div>

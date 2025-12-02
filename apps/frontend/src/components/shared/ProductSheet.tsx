@@ -242,7 +242,7 @@ export function ProductSheet({
               >
                 Cancel
               </Button>
-              <Button type="submit" className="bg-green-600 hover:bg-green-700">
+              <Button type="submit">
                 {product ? "Save Changes" : "Add"}
               </Button>
             </div>

@@ -358,7 +358,7 @@ export class WorkspaceController {
 
       // Get stats for each workspace in parallel
       const statsPromises = workspaceIds.map(async (workspaceId) => {
-        const [unreadMessages, pendingOrders, needsIntervention, blockedCustomers, blockedAttempts] =
+        const [unreadMessages, pendingOrders, needsIntervention, blockedUsers] =
           await Promise.all([
             // Count unread incoming messages (from customers)
             prisma.message.count({
@@ -385,18 +385,11 @@ export class WorkspaceController {
                 activeChatbot: false,
               },
             }),
-            // 🚫 Count blocked customers (isBlacklisted = true)
+            // Count blocked/blacklisted customers
             prisma.customers.count({
               where: {
                 workspaceId,
                 isBlacklisted: true,
-              },
-            }),
-            // 🚫 Count blocked registration attempts (non-registered users blocked after 4 attempts)
-            prisma.registrationAttempts.count({
-              where: {
-                workspaceId,
-                isBlocked: true,
               },
             }),
           ])
@@ -406,7 +399,7 @@ export class WorkspaceController {
           unreadMessages,
           pendingOrders,
           needsIntervention,
-          blockedUsers: blockedCustomers + blockedAttempts, // 🆕 Total blocked (customers + attempts)
+          blockedUsers,
         }
       })
 

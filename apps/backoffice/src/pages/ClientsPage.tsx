@@ -31,7 +31,8 @@ import {
   MessageSquare,
   Gift,
   ShieldOff,
-  LogIn
+  LogIn,
+  Clock
 } from 'lucide-react'
 
 interface OwnedWorkspace {
@@ -40,6 +41,7 @@ interface OwnedWorkspace {
   slug: string
   creditBalance: number
   planType: string
+  planStartedAt: string
   language: string
   isActive: boolean
   whatsappPhoneNumber: string | null
@@ -110,6 +112,12 @@ export function ClientsPage() {
   // 2FA Enable modal state (Feature 189 - for users who haven't set up 2FA yet)
   const [enable2FAModal, setEnable2FAModal] = useState<{ userId: string; email: string } | null>(null)
   const [enabling2FA, setEnabling2FA] = useState(false)
+  
+  // Extend Trial modal state
+  const [extendTrialModal, setExtendTrialModal] = useState<{ workspaceId: string; workspaceName: string; planStartedAt: string } | null>(null)
+  const [extendDays, setExtendDays] = useState('7')
+  const [extendReason, setExtendReason] = useState('')
+  const [extendingTrial, setExtendingTrial] = useState(false)
   
   // Impersonation state (Feature 190)
   const [impersonating, setImpersonating] = useState<string | null>(null)
@@ -328,6 +336,87 @@ export function ClientsPage() {
     }
   }
 
+  // Handle Extend Trial - Add days to FREE_TRIAL workspace
+  const handleExtendTrial = async () => {
+    if (!extendTrialModal) return
+    
+    const days = parseInt(extendDays)
+    if (isNaN(days) || days < 1 || days > 365) {
+      setError('Please enter a valid number of days (1-365)')
+      return
+    }
+    
+    setExtendingTrial(true)
+    setError(null)
+    
+    try {
+      const response = await api.users.extendTrial(
+        extendTrialModal.workspaceId, 
+        days, 
+        extendReason.trim() || undefined
+      )
+      
+      if (response.success && response.data) {
+        // Update local state with new planStartedAt
+        setUsers(prev => prev.map(user => ({
+          ...user,
+          ownedWorkspaces: user.ownedWorkspaces.map(ws => 
+            ws.id === extendTrialModal.workspaceId 
+              ? { ...ws, planStartedAt: response.data!.newStartDate }
+              : ws
+          )
+        })))
+        
+        setSuccessMessage(`Extended trial for ${extendTrialModal.workspaceName} by ${days} days. ${response.data.daysRemaining} days remaining.`)
+        setTimeout(() => setSuccessMessage(null), 5000)
+        
+        // Close modal and reset
+        setExtendTrialModal(null)
+        setExtendDays('7')
+        setExtendReason('')
+      } else {
+        setError(response.error || 'Failed to extend trial')
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to extend trial')
+      console.error('Error extending trial:', err)
+    } finally {
+      setExtendingTrial(false)
+    }
+  }
+
+  // Helper to calculate days remaining in trial
+  const getTrialDaysRemaining = (planStartedAt: string): number => {
+    const startDate = new Date(planStartedAt)
+    const trialEndDate = new Date(startDate.getTime() + (14 * 24 * 60 * 60 * 1000))
+    const now = new Date()
+    const daysRemaining = Math.ceil((trialEndDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
+    return Math.max(0, daysRemaining)
+  }
+
+  // Helper to get plan expiration date (for monthly plans)
+  const getPlanExpirationDate = (planStartedAt: string): string => {
+    const startDate = new Date(planStartedAt)
+    const expirationDate = new Date(startDate.getTime() + (30 * 24 * 60 * 60 * 1000)) // 30 days
+    return expirationDate.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  }
+
+  // Helper to get plan badge styling
+  const getPlanBadge = (planType: string) => {
+    switch (planType) {
+      case 'FREE_TRIAL':
+        return { label: 'TRIAL', className: 'bg-yellow-100 text-yellow-700' }
+      case 'BASIC':
+        return { label: 'BASIC', className: 'bg-blue-100 text-blue-700' }
+      case 'PREMIUM':
+        return { label: 'PREMIUM', className: 'bg-purple-100 text-purple-700' }
+      case 'FREE':
+        return { label: 'FREE', className: 'bg-gray-100 text-gray-600' }
+      default:
+        return { label: planType, className: 'bg-gray-100 text-gray-600' }
+    }
+  }
+
   // Handle Impersonate - Login as user in new window (Feature 190)
   const handleImpersonate = async (userId: string, email: string) => {
     setImpersonating(userId)
@@ -509,11 +598,28 @@ export function ClientsPage() {
               {user.isOwner && (
                 <div className="bg-gray-50 rounded-lg p-3 mb-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-medium text-gray-500 uppercase">Owner Stats</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-gray-500 uppercase">Owner Stats</span>
+                      {/* Plan Badge */}
+                      {user.ownedWorkspaces[0] && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getPlanBadge(user.ownedWorkspaces[0].planType).className}`}>
+                          {getPlanBadge(user.ownedWorkspaces[0].planType).label}
+                        </span>
+                      )}
+                    </div>
                     {user.ownedWorkspaces[0] && (
                       <span className="text-lg">{languageFlags[user.ownedWorkspaces[0].language] || '🌍'}</span>
                     )}
                   </div>
+                  
+                  {/* Plan Expiration for BASIC/PREMIUM */}
+                  {user.ownedWorkspaces[0] && ['BASIC', 'PREMIUM'].includes(user.ownedWorkspaces[0].planType) && (
+                    <div className="flex items-center gap-1.5 text-sm text-gray-600 mb-2">
+                      <Clock className="h-3.5 w-3.5 text-orange-500" />
+                      <span>Expires: {getPlanExpirationDate(user.ownedWorkspaces[0].planStartedAt)}</span>
+                    </div>
+                  )}
+                  
                   <div className="grid grid-cols-2 gap-2 mb-2">
                     <div className="flex items-center gap-1.5">
                       <CreditCard className="h-4 w-4 text-green-500" />
@@ -555,6 +661,23 @@ export function ClientsPage() {
                     >
                       <Gift className="h-4 w-4" />
                       Add Bonus Credit
+                    </Button>
+                  )}
+                  
+                  {/* Extend Trial Button - Only for FREE_TRIAL workspaces */}
+                  {!user.isPlatformAdmin && user.ownedWorkspaces[0]?.planType === 'FREE_TRIAL' && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full mt-2 gap-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
+                      onClick={() => setExtendTrialModal({ 
+                        workspaceId: user.ownedWorkspaces[0].id, 
+                        workspaceName: user.ownedWorkspaces[0].name,
+                        planStartedAt: user.ownedWorkspaces[0].planStartedAt
+                      })}
+                    >
+                      <Clock className="h-4 w-4" />
+                      Extend Trial ({getTrialDaysRemaining(user.ownedWorkspaces[0].planStartedAt)} days left)
                     </Button>
                   )}
                 </div>
@@ -821,6 +944,89 @@ export function ClientsPage() {
           </div>
         </div>
       )}
+      
+      {/* Extend Trial Modal */}
+      {extendTrialModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-blue-600">
+              <Clock className="h-5 w-5" />
+              Extend Trial Period
+            </h2>
+            <p className="text-sm text-gray-600 mb-2">
+              Extend trial for workspace:
+            </p>
+            <p className="font-medium text-gray-900 mb-4 bg-gray-50 p-2 rounded">
+              {extendTrialModal.workspaceName}
+            </p>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-blue-800">
+                <strong>📅 Current status:</strong> {getTrialDaysRemaining(extendTrialModal.planStartedAt)} days remaining
+              </p>
+            </div>
+            
+            <div className="space-y-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Days to extend
+                </label>
+                <select
+                  value={extendDays}
+                  onChange={(e) => setExtendDays(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={extendingTrial}
+                >
+                  <option value="7">7 days</option>
+                  <option value="14">14 days</option>
+                  <option value="30">30 days</option>
+                  <option value="60">60 days</option>
+                  <option value="90">90 days</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Reason (optional)
+                </label>
+                <Input
+                  value={extendReason}
+                  onChange={(e) => setExtendReason(e.target.value)}
+                  placeholder="e.g., Customer requested more time to evaluate"
+                  disabled={extendingTrial}
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setExtendTrialModal(null)
+                  setExtendDays('7')
+                  setExtendReason('')
+                }}
+                disabled={extendingTrial}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-blue-500 hover:bg-blue-600"
+                onClick={handleExtendTrial}
+                disabled={extendingTrial}
+              >
+                {extendingTrial ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Clock className="h-4 w-4 mr-2" />
+                )}
+                Extend Trial
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
+

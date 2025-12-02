@@ -210,6 +210,7 @@ export class UserController {
       
       logger.info(`✅ User updated successfully:`, {
         id: user.id,
+        phoneNumber: user.phoneNumber,
         companyName: user.companyName,
         vatNumber: user.vatNumber,
         website: user.website,
@@ -230,6 +231,8 @@ export class UserController {
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
         lastLogin: user.lastLogin,
+        // 📱 Personal phone (optional)
+        phoneNumber: user.phoneNumber,
         // 🧾 Billing fields (Andrea's requirement)
         companyName: user.companyName,
         vatNumber: user.vatNumber,

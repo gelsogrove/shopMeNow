@@ -70,6 +70,7 @@ router.get(
               slug: true,
               creditBalance: true,
               planType: true,
+              planStartedAt: true,
               language: true,
               isActive: true,
               whatsappPhoneNumber: true,
@@ -123,6 +124,7 @@ router.get(
             slug: ws.slug,
             creditBalance: Number(ws.creditBalance),
             planType: ws.planType,
+            planStartedAt: ws.planStartedAt,
             language: ws.language,
             isActive: ws.isActive,
             whatsappPhoneNumber: ws.whatsappPhoneNumber,
@@ -837,6 +839,145 @@ router.post(
       res.status(500).json({
         success: false,
         error: error.message || "Failed to create impersonation token",
+      })
+    }
+  }
+)
+
+/**
+ * @swagger
+ * /api/users/admin/{workspaceId}/extend-trial:
+ *   post:
+ *     summary: Extend trial period for a workspace
+ *     description: Extend the trial period for a FREE_TRIAL workspace by a specified number of days
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - days
+ *             properties:
+ *               days:
+ *                 type: number
+ *                 description: Number of days to extend the trial (1-365)
+ *               reason:
+ *                 type: string
+ *                 description: Optional reason for the extension
+ *     responses:
+ *       200:
+ *         description: Trial extended successfully
+ *       400:
+ *         description: Invalid days or workspace not on FREE_TRIAL
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Platform admin access required
+ *       404:
+ *         description: Workspace not found
+ */
+router.post(
+  "/admin/:workspaceId/extend-trial",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const { workspaceId } = req.params
+      const { days, reason } = req.body
+      const adminUser = (req as any).user
+
+      // Validate days
+      if (!days || typeof days !== "number" || days < 1 || days > 365) {
+        return res.status(400).json({
+          success: false,
+          error: "Days must be a number between 1 and 365",
+        })
+      }
+
+      // Get workspace
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: {
+          id: true,
+          name: true,
+          planType: true,
+          planStartedAt: true,
+          owner: {
+            select: { email: true }
+          }
+        },
+      })
+
+      if (!workspace) {
+        return res.status(404).json({
+          success: false,
+          error: "Workspace not found",
+        })
+      }
+
+      // Check if workspace is on FREE_TRIAL
+      if (workspace.planType !== "FREE_TRIAL") {
+        return res.status(400).json({
+          success: false,
+          error: `Cannot extend trial for workspace on ${workspace.planType} plan. Only FREE_TRIAL workspaces can be extended.`,
+        })
+      }
+
+      // Calculate new planStartedAt by subtracting days (moving start date back extends the trial)
+      const currentStartDate = new Date(workspace.planStartedAt)
+      const newStartDate = new Date(currentStartDate.getTime() - (days * 24 * 60 * 60 * 1000))
+
+      // Update workspace
+      const updatedWorkspace = await prisma.workspace.update({
+        where: { id: workspaceId },
+        data: { planStartedAt: newStartDate },
+        select: {
+          id: true,
+          name: true,
+          planStartedAt: true,
+          planType: true,
+        },
+      })
+
+      // Calculate new trial end date (14 days from new start)
+      const trialEndDate = new Date(newStartDate.getTime() + (14 * 24 * 60 * 60 * 1000))
+      const now = new Date()
+      const daysRemaining = Math.ceil((trialEndDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
+
+      logger.info(
+        `📅 Admin ${adminUser.email} extended trial for workspace ${workspace.name} by ${days} days. ` +
+        `New start: ${newStartDate.toISOString()}, Days remaining: ${daysRemaining}. Reason: ${reason || 'Not specified'}`
+      )
+
+      res.json({
+        success: true,
+        data: {
+          workspaceId: updatedWorkspace.id,
+          workspaceName: updatedWorkspace.name,
+          ownerEmail: workspace.owner?.email,
+          previousStartDate: currentStartDate.toISOString(),
+          newStartDate: newStartDate.toISOString(),
+          trialEndDate: trialEndDate.toISOString(),
+          daysExtended: days,
+          daysRemaining: Math.max(0, daysRemaining),
+          reason: reason || null,
+        },
+      })
+    } catch (error: any) {
+      logger.error("Error extending trial:", error)
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to extend trial",
       })
     }
   }

@@ -1855,22 +1855,22 @@ async function main() {
       lastStatus: "NEVER_RUN",
     },
     {
-      jobName: "blocked-customers-cleanup",
-      isActive: true,
-      lastStatus: "NEVER_RUN",
-    },
-    {
       jobName: "unused-images-cleanup",
       isActive: true,
       lastStatus: "NEVER_RUN",
     },
     {
-      jobName: "monthly-billing",
+      jobName: "messages-archive",
       isActive: true,
       lastStatus: "NEVER_RUN",
     },
     {
-      jobName: "messages-archive",
+      jobName: "whatsapp-queue-cleanup",
+      isActive: true,
+      lastStatus: "NEVER_RUN",
+    },
+    {
+      jobName: "monthly-billing",
       isActive: true,
       lastStatus: "NEVER_RUN",
     },

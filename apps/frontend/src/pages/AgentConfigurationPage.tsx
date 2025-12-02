@@ -19,13 +19,25 @@ import { AgentEditSlidePanel } from "@/components/shared/AgentEditSlidePanel"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { PromptEditorDialog } from "@/components/shared/PromptEditorDialog"
 import { Button } from "@/components/ui/button"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
 import {
   Agent,
+  exportAgentPrompts,
   getAgentConfigs,
   getAgents,
+  resetAgentPromptsToDefaults,
   updateAgent,
 } from "@/services/agentApi"
 import {
@@ -34,6 +46,7 @@ import {
   Brain,
   ChevronDown,
   ChevronRight,
+  Download,
   Edit,
   Eye,
   FileText,
@@ -42,6 +55,7 @@ import {
   Loader2,
   LucideIcon,
   Package,
+  RefreshCcw,
   Search,
   Settings,
   Shield,
@@ -135,6 +149,11 @@ export function AgentConfigurationPage() {
   // Prompt Editor Dialog state
   const [promptEditorAgent, setPromptEditorAgent] = useState<Agent | null>(null)
   const [isPromptEditorOpen, setIsPromptEditorOpen] = useState(false)
+
+  // Reset confirmation dialog state
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false)
+  const [isResetting, setIsResetting] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
 
   // Redirect if no workspace
   useEffect(() => {
@@ -288,6 +307,74 @@ export function AgentConfigurationPage() {
     }
   }
 
+  // Handle export prompts
+  const handleExportPrompts = async () => {
+    if (!workspace?.id) return
+
+    try {
+      setIsExporting(true)
+      await exportAgentPrompts(workspace.id)
+      toast.success("Prompts exported successfully!")
+    } catch (error) {
+      logger.error("Failed to export prompts:", error)
+      toast.error("Failed to export prompts")
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  // Handle reset to defaults
+  const handleResetToDefaults = async () => {
+    if (!workspace?.id) return
+
+    try {
+      setIsResetting(true)
+      const result = await resetAgentPromptsToDefaults(workspace.id)
+      toast.success(`${result.resetCount} prompts reset to defaults`)
+      
+      // Reload agents to show updated prompts
+      const [agentsData, configsData] = await Promise.all([
+        getAgents(workspace.id),
+        getAgentConfigs(workspace.id),
+      ])
+      
+      const sortedAgents = agentsData.sort((a, b) => a.order - b.order)
+      setAgents(sortedAgents)
+      
+      // Update functions map
+      const functionsMap: Record<string, string[]> = {}
+      configsData.agents.forEach((config) => {
+        functionsMap[config.id] = config.availableFunctions || []
+      })
+      setAgentFunctions(functionsMap)
+      
+      // Update editing state
+      const newEditing: Record<string, AgentFormData> = {}
+      sortedAgents.forEach((agent) => {
+        newEditing[agent.id] = {
+          id: agent.id,
+          name: agent.name,
+          systemPrompt: agent.content || "",
+          temperature: agent.temperature || 0.7,
+          model: agent.model || "openai/gpt-4.1-mini",
+          maxTokens: agent.maxTokens || 1000,
+          isActive: agent.isActive ?? true,
+          order: agent.order || 0,
+          agentType: agent.agentType || "router",
+          icon: agent.icon,
+        }
+      })
+      setEditingAgents(newEditing)
+      
+      setIsResetDialogOpen(false)
+    } catch (error) {
+      logger.error("Failed to reset prompts:", error)
+      toast.error("Failed to reset prompts to defaults")
+    } finally {
+      setIsResetting(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <PageLayout>
@@ -323,6 +410,29 @@ export function AgentConfigurationPage() {
             }
             description="Configure your multi-agent LLM system"
           />
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportPrompts}
+              disabled={isExporting}
+            >
+              {isExporting ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              Export Prompts
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsResetDialogOpen(true)}
+            >
+              <RefreshCcw className="h-4 w-4 mr-2" />
+              Load Defaults
+            </Button>
+          </div>
         </div>
 
         {agents.length === 0 ? (
@@ -497,6 +607,45 @@ export function AgentConfigurationPage() {
           onSave={handleSavePromptOnly}
         />
       )}
+
+      {/* Reset Confirmation Dialog */}
+      <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-orange-600">
+              ⚠️ Reset All Prompts to Defaults?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                This action will <strong>overwrite all your custom prompts</strong> with the default values.
+              </p>
+              <p className="text-orange-600 font-medium">
+                💡 We recommend exporting your current prompts first using the "Export Prompts" button.
+              </p>
+              <p className="text-sm text-gray-500">
+                This action cannot be undone.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isResetting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleResetToDefaults}
+              disabled={isResetting}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              {isResetting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Resetting...
+                </>
+              ) : (
+                "Reset All Prompts"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageLayout>
   )
 }

@@ -208,18 +208,6 @@ const CustomerProfilePublicPage: React.FC = () => {
     }
   }
 
-  // 🔗 Navigate to orders
-  // 📋 Handle view orders - Use same token (TOKEN-ONLY system)
-  const handleViewOrders = () => {
-    logger.info("[PROFILE] View Orders clicked, using current token:", token)
-
-    // Use current token and redirect to orders page (TOKEN-ONLY)
-    // No need to generate new token - same token works for all pages
-    const ordersUrl = `/orders-public?token=${token}`
-    logger.info("[PROFILE] Redirecting to orders:", ordersUrl)
-    window.location.href = ordersUrl
-  }
-
   // 🛒 Navigate to cart
   // 📋 Handle view cart - Use same token (TOKEN-ONLY system)
   const handleViewCart = () => {

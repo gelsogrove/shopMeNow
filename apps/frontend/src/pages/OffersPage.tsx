@@ -18,7 +18,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { logger } from "@/lib/logger"
@@ -192,27 +191,19 @@ export function OffersPage() {
     },
     {
       header: "Status",
-      accessorKey: "isActive" as keyof Offer,
+      accessorKey: "startDate" as keyof Offer, // Changed from isActive - status is now date-based
       cell: ({ row }: { row: { original: Offer } }) => {
         const now = new Date()
-        let status = "inactive"
-        let statusText = "Inactive"
-        let className = "bg-gray-100 text-gray-800"
+        let statusText = "Active"
+        let className = "bg-green-100 text-green-800"
 
-        if (row.original.isActive) {
-          if (row.original.startDate <= now && row.original.endDate >= now) {
-            status = "active"
-            statusText = "Active"
-            className = "bg-green-100 text-green-800"
-          } else if (row.original.startDate > now) {
-            status = "scheduled"
-            statusText = "Scheduled"
-            className = "bg-blue-100 text-blue-800"
-          } else if (row.original.endDate < now) {
-            status = "expired"
-            statusText = "Expired"
-            className = "bg-red-100 text-red-800"
-          }
+        // Status based on dates only - no isActive flag
+        if (row.original.startDate > now) {
+          statusText = "Scheduled"
+          className = "bg-blue-100 text-blue-800"
+        } else if (row.original.endDate < now) {
+          statusText = "Expired"
+          className = "bg-red-100 text-red-800"
         }
 
         return (
@@ -274,7 +265,7 @@ export function OffersPage() {
         discountPercent: Number(formData.get("discountPercent")),
         startDate,
         endDate,
-        isActive: formData.get("isActive") === "on",
+        // isActive removed - offers expire based on dates only
         categoryIds: categoryIds,
         workspaceId: workspace.id,
       }
@@ -328,7 +319,7 @@ export function OffersPage() {
         discountPercent: Number(formData.get("discountPercent")),
         startDate,
         endDate,
-        isActive: formData.get("isActive") === "on",
+        // isActive removed - offers expire based on dates only
         categoryIds: categoryIds,
       }
 
@@ -484,15 +475,7 @@ export function OffersPage() {
           </Popover>
         </div>
       </div>
-
-      <div className="flex items-center space-x-2">
-        <Switch
-          id="isActive"
-          name="isActive"
-          defaultChecked={isEdit ? currentOffer?.isActive : true}
-        />
-        <Label htmlFor="isActive">Active</Label>
-      </div>
+      {/* isActive switch removed - offers expire based on dates only */}
     </div>
   )
 
@@ -534,7 +517,7 @@ export function OffersPage() {
               <SheetClose asChild>
                 <Button variant="outline">Cancel</Button>
               </SheetClose>
-              <Button type="submit" className="bg-green-600 hover:bg-green-700">
+              <Button type="submit">
                 Create Offer
               </Button>
             </SheetFooter>
@@ -554,7 +537,7 @@ export function OffersPage() {
               <SheetClose asChild>
                 <Button variant="outline">Cancel</Button>
               </SheetClose>
-              <Button type="submit" className="bg-green-600 hover:bg-green-700">
+              <Button type="submit">
                 Save Changes
               </Button>
             </SheetFooter>

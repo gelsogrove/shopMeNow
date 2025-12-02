@@ -184,6 +184,7 @@ class BackofficeApi {
         slug: string
         creditBalance: number
         planType: string
+        planStartedAt: string
         language: string
         isActive: boolean
         whatsappPhoneNumber: string | null
@@ -291,6 +292,31 @@ class BackofficeApi {
     }>> => {
       return this.fetch(`/users/admin/${userId}/enable-2fa`, {
         method: 'POST',
+      })
+    },
+
+    /**
+     * Extend trial period for a workspace
+     * Only works for FREE_TRIAL workspaces
+     */
+    extendTrial: async (
+      workspaceId: string,
+      days: number,
+      reason?: string
+    ): Promise<ApiResponse<{
+      workspaceId: string
+      workspaceName: string
+      ownerEmail: string
+      previousStartDate: string
+      newStartDate: string
+      trialEndDate: string
+      daysExtended: number
+      daysRemaining: number
+      reason: string | null
+    }>> => {
+      return this.fetch(`/users/admin/${workspaceId}/extend-trial`, {
+        method: 'POST',
+        body: JSON.stringify({ days, reason }),
       })
     },
     

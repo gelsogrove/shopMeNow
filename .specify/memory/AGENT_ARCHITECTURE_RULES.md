@@ -643,13 +643,13 @@ Prima di implementare, verificare:
 - `LINK_CHECKOUT_WITH_TOKEN` - Link to cart/checkout page (step 1)
 - `LINK_CHECKOUT_CONFIRM` - Link to checkout confirmation page (step 2)
 - `LINK_PROFILE_WITH_TOKEN` - Link to customer profile page
-- `LINK_ORDERS_WITH_TOKEN` - Link to orders list page
 - `LINK_CATALOG` - Link to PDF catalog (static URL with shortening)
 
 **INVALID/DEPRECATED TOKENS** (❌ FORBIDDEN):
 
 - ❌ `LINK_CART` - Does NOT exist! Use `LINK_CHECKOUT_WITH_TOKEN` instead
-- ❌ `LINK_ORDER` - Does NOT exist! Use `LINK_ORDERS_WITH_TOKEN` instead
+- ❌ `LINK_ORDER` - Does NOT exist! Show order details inline instead
+- ❌ `LINK_ORDERS_WITH_TOKEN` - DEPRECATED! Show order list details inline instead
 - ❌ Any other token not in VALID list above
 
 **WHY**:
@@ -803,8 +803,8 @@ Quale preferisci? Dimmi il numero! 🛒" ← CORRECT! Multiple items, ask choice
 ❌ **NO**: Regole senza spiegazione "WHY"  
 ✅ **YES**: Ogni regola spiega motivazione e benefici (REGOLA IX)
 
-❌ **NO**: Token link non validi come `[LINK_CART]`  
-✅ **YES**: Solo token validi: LINK_CHECKOUT_WITH_TOKEN, LINK_CHECKOUT_CONFIRM, LINK_PROFILE_WITH_TOKEN, LINK_ORDERS_WITH_TOKEN, LINK_CATALOG (REGOLA X)
+❌ **NO**: Token link non validi come `[LINK_CART]` o `[LINK_ORDERS_WITH_TOKEN]`  
+✅ **YES**: Solo token validi: LINK_CHECKOUT_WITH_TOKEN, LINK_CHECKOUT_CONFIRM, LINK_PROFILE_WITH_TOKEN, LINK_CATALOG (REGOLA X)
 
 ❌ **NO**: Chiedere "Quale preferisci?" con 1 solo prodotto  
 ✅ **YES**: Con 1 prodotto → domanda carrello diretta; con 2+ → lista numerata (REGOLA XI)
@@ -1389,8 +1389,8 @@ Prima di implementare, verificare:
 ❌ **NO**: Regole senza spiegazione "WHY"  
 ✅ **YES**: Ogni regola spiega motivazione e benefici (REGOLA IX)
 
-❌ **NO**: Token link non validi come `[LINK_CART]`  
-✅ **YES**: Solo token validi: LINK_CHECKOUT_WITH_TOKEN, LINK_CHECKOUT_CONFIRM, LINK_PROFILE_WITH_TOKEN, LINK_ORDERS_WITH_TOKEN, LINK_CATALOG (REGOLA X)
+❌ **NO**: Token link non validi come `[LINK_CART]` o `[LINK_ORDERS_WITH_TOKEN]`  
+✅ **YES**: Solo token validi: LINK_CHECKOUT_WITH_TOKEN, LINK_CHECKOUT_CONFIRM, LINK_PROFILE_WITH_TOKEN, LINK_CATALOG (REGOLA X)
 
 ❌ **NO**: Chiedere "Quale preferisci?" con 1 solo prodotto  
 ✅ **YES**: Con 1 prodotto → domanda carrello diretta; con 2+ → lista numerata (REGOLA XI)

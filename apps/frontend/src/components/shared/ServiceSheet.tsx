@@ -175,7 +175,7 @@ export function ServiceSheet({
                 Cancel
               </Button>
             </DrawerClose>
-            <Button type="submit" className="bg-green-600 hover:bg-green-700">
+            <Button type="submit">
               {safeService ? "Save Changes" : "Add"}
             </Button>
           </DrawerFooter>

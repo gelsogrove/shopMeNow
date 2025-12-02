@@ -6,11 +6,19 @@ Microservizio per job schedulati. Progetto separato dal backend, stesso database
 
 | # | Job | Schedule | Cron | Description |
 |---|-----|----------|------|-------------|
-| 1 | WhatsApp Challenge Queue | Ogni 3 min | `*/3 * * * *` | Invia messaggi dalla coda |
-| 2 | Short URLs Cleanup | 23:00 daily | `0 23 * * *` | Elimina link scaduti |
-| 3 | Blocked Customers Cleanup | 23:01 ogni 3gg | `1 23 */3 * *` | Elimina conversazioni clienti bloccati |
-| 4 | Unused Images Cleanup | 23:02 daily | `2 23 * * *` | Elimina immagini orfane |
-| 5 | Monthly Billing | 1° mese 12:00 | `0 12 1 * *` | Addebita fee mensile |
+| 1 | WhatsApp Challenge Queue | Ogni 3 sec | `*/3 * * * * *` | Invia messaggi dalla coda WhatsApp |
+| 2 | Short URLs Cleanup | 23:00 daily | `0 23 * * *` | Elimina short URL scaduti |
+| 3 | Unused Images Cleanup | 23:05 daily | `5 23 * * *` | Elimina immagini orfane |
+| 4 | Messages Archive | 23:10 daily | `10 23 * * *` | Archivia messaggi > 6 mesi |
+| 5 | WhatsApp Queue Cleanup | 23:15 daily | `15 23 * * *` | Elimina errori/sent > 7 giorni |
+| 6 | Monthly Billing | 1° mese 23:30 | `30 23 1 * *` | Genera billing mensile |
+
+## 🎛️ Enable/Disable Jobs
+
+I job possono essere attivati/disattivati dal **Backoffice**:
+- URL: `http://localhost:3002/schedulers`
+- Toggle `isActive` per ogni job
+- I job disattivati vengono saltati (status: `SKIPPED`)
 
 ## 🚀 Quick Start
 
@@ -56,7 +64,6 @@ scheduler/
 ├── package.json
 ├── tsconfig.json
 ├── ecosystem.config.js     # PM2 config
-├── .env                    # Variabili ambiente
 ├── src/
 │   ├── index.ts            # Entry point + cron schedule
 │   ├── config/
@@ -64,17 +71,18 @@ scheduler/
 │   ├── jobs/
 │   │   ├── whatsapp-challenge-queue.job.ts
 │   │   ├── short-urls-cleanup.job.ts
-│   │   ├── blocked-customers-cleanup.job.ts
 │   │   ├── unused-images-cleanup.job.ts
+│   │   ├── messages-archive.job.ts
+│   │   ├── whatsapp-queue-cleanup.job.ts
 │   │   └── monthly-billing.job.ts
 │   ├── services/
-│   │   ├── job-runner.service.ts    # Wrapper con DB logging
+│   │   ├── job-runner.service.ts    # Wrapper con DB logging + isActive check
 │   │   └── email-alert.service.ts   # Alert su errore
 │   └── utils/
 │       └── logger.ts
 ```
 
-## 🔧 Configurazione
+## �� Configurazione
 
 ### Variabili .env richieste
 
@@ -96,47 +104,34 @@ ALERT_EMAIL="tua-email@gmail.com"
 
 ### Database: `scheduler_job_status`
 
-Ogni job aggiorna la sua riga nella tabella (1 record per job):
+Ogni job aggiorna la sua riga nella tabella:
 
-| jobName | lastRunAt | lastStatus | lastError | lastDuration |
-|---------|-----------|------------|-----------|--------------|
-| whatsapp-challenge-queue | 2025-11-28 14:03:00 | SUCCESS | null | 1234 |
-| short-urls-cleanup | 2025-11-28 23:00:00 | FAILED | "Connection error" | 89 |
+| Campo | Tipo | Descrizione |
+|-------|------|-------------|
+| jobName | string | Nome univoco del job |
+| isActive | boolean | Se false, il job viene saltato |
+| lastRunAt | DateTime | Ultima esecuzione |
+| lastStatus | string | SUCCESS, FAILED, RUNNING, SKIPPED, NEVER_RUN |
+| lastError | string? | Messaggio errore se fallito |
+| lastDuration | int? | Durata in ms |
 
-### Stati possibili
+### Backoffice
 
-- `NEVER_RUN` - Mai eseguito
-- `RUNNING` - In esecuzione
-- `SUCCESS` - Completato con successo
-- `FAILED` - Fallito (+ email alert)
+La pagina `/schedulers` mostra:
+- Lista di tutti i job con stato
+- Toggle per attivare/disattivare
+- Ultima esecuzione e durata
+- Eventuali errori
 
-### Email Alert
-
-Se un job fallisce, viene inviata email immediata a `ALERT_EMAIL` con:
-- Nome job
-- Timestamp
-- Messaggio errore
-- Stack trace
-
-## 🛠 Comandi utili
+## 🧪 Testing
 
 ```bash
-# Logs PM2
-pm2 logs echatbot-scheduler
+# Run all tests
+npm test
 
-# Monitor real-time
-pm2 monit
+# Watch mode
+npm run test:watch
 
-# Restart
-pm2 restart echatbot-scheduler
-
-# Status tutti i processi
-pm2 status
+# Coverage
+npm run test:coverage
 ```
-
-## ⚠️ Note
-
-- Lo scheduler usa lo **stesso database** del backend
-- Esegui `npx prisma generate` dopo ogni modifica allo schema
-- PM2 riavvia automaticamente se il processo crasha
-- Solo **1 istanza** per evitare job duplicati

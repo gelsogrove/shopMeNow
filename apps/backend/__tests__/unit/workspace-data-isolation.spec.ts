@@ -139,11 +139,11 @@ describe("Workspace Data Isolation", () => {
     it("should filter offers by workspaceId", async () => {
       await messageRepo.getActiveOffers(WORKSPACE_A)
 
+      // isActive filter removed - offers expire based on dates only
       expect(mockFindMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             workspaceId: WORKSPACE_A,
-            isActive: true,
           }),
         })
       )

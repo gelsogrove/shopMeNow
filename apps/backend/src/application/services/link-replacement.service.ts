@@ -70,14 +70,12 @@ export class LinkReplacementService {
       const hasCartToken = response.includes("LINK_CHECKOUT_WITH_TOKEN")
       const hasCartConfirmToken = response.includes("LINK_CHECKOUT_CONFIRM")
       const hasProfileToken = response.includes("LINK_PROFILE_WITH_TOKEN")
-      const hasOrdersToken = response.includes("LINK_ORDERS_WITH_TOKEN")
       const hasCatalogToken = response.includes("LINK_CATALOG")
 
       if (
         !hasCartToken &&
         !hasCartConfirmToken &&
         !hasProfileToken &&
-        !hasOrdersToken &&
         !hasCatalogToken
       ) {
         return {
@@ -291,94 +289,6 @@ export class LinkReplacementService {
           replacedResponse = replacedResponse.replace(
             /\[LINK_PROFILE_WITH_TOKEN\]/g,
             "Link del profilo non disponibile"
-          )
-        }
-      }
-
-      // Handle orders token
-      if (hasOrdersToken) {
-        try {
-          const {
-            SecureTokenService,
-          } = require("../../application/services/secure-token.service")
-          const secureTokenService = new SecureTokenService()
-
-          const ordersToken = await secureTokenService.createToken(
-            "orders",
-            workspaceId,
-            { customerId, workspaceId },
-            undefined, // Uses TOKEN_EXPIRATION from env
-            undefined,
-            undefined,
-            undefined,
-            customerId
-          )
-
-          // If caller provided an orderCode, put it in the path: /orders-public/{orderCode}?token=...
-          const orderCodeParam = (params as any).orderCode || undefined
-          let ordersLink: string
-          if (
-            orderCodeParam &&
-            typeof orderCodeParam === "string" &&
-            orderCodeParam.trim() !== ""
-          ) {
-            const safeCode = encodeURIComponent(orderCodeParam.trim())
-            ordersLink = `${config.frontendUrl}/orders-public/${safeCode}?token=${ordersToken}`
-          } else {
-            ordersLink = `${config.frontendUrl}/orders-public?token=${ordersToken}`
-          }
-
-          // Use centralized link generator
-          logger.info(`🔗 Generating orders link with:`, {
-            ordersToken: ordersToken.substring(0, 20) + "...",
-            workspaceId,
-            orderCodeParam,
-          })
-
-          const finalOrdersLink = await linkGeneratorService.generateOrdersLink(
-            ordersToken,
-            workspaceId,
-            orderCodeParam
-          )
-
-          logger.info(`✅ Generated final orders link: ${finalOrdersLink}`)
-
-          // Smart replace: handle multiple formats
-          // 1. Markdown with square brackets + trailing punctuation: [text]([LINK_ORDERS_WITH_TOKEN]).
-          replacedResponse = replacedResponse.replace(
-            /\[([^\]]+)\]\(\[LINK_ORDERS_WITH_TOKEN\]\)([\.!?,;:]?)/g,
-            (match, text, punctuation) =>
-              `[${text}](${finalOrdersLink})${punctuation}`
-          )
-
-          // 2. Markdown WITHOUT square brackets + trailing punctuation: [text](LINK_ORDERS_WITH_TOKEN).
-          replacedResponse = replacedResponse.replace(
-            /\[([^\]]+)\]\(LINK_ORDERS_WITH_TOKEN\)([\.!?,;:]?)/g,
-            (match, text, punctuation) =>
-              `[${text}](${finalOrdersLink})${punctuation}`
-          )
-
-          // 3. Plain token with optional punctuation: [LINK_ORDERS_WITH_TOKEN]
-          replacedResponse = replacedResponse.replace(
-            /\[LINK_ORDERS_WITH_TOKEN\]([\)\.]?[\.!?,]?)/g,
-            (match, suffix) => {
-              const cleanSuffix = suffix.replace(/\)/g, "")
-              return cleanSuffix
-                ? `${finalOrdersLink}${cleanSuffix}`
-                : finalOrdersLink
-            }
-          )
-
-          // 4. Bare token without brackets: LINK_ORDERS_WITH_TOKEN
-          replacedResponse = replacedResponse.replace(
-            /LINK_ORDERS_WITH_TOKEN/g,
-            finalOrdersLink
-          )
-        } catch (error) {
-          logger.error("❌ Error generating orders link:", error)
-          replacedResponse = replacedResponse.replace(
-            /\[LINK_ORDERS_WITH_TOKEN\]/g,
-            "Link degli ordini non disponibile"
           )
         }
       }

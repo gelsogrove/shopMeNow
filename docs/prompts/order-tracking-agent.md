@@ -51,7 +51,7 @@ Prodotti:
 1. Nome Prodotto x2 - €XX.XX
 2. Nome Prodotto x1 - €YY.YY
 
-👉 Vedi tutti i tuoi ordini: [LINK_ORDERS_WITH_TOKEN]
+Per maggiori dettagli su un ordine specifico, chiedi pure!
 ```
 
 ## FORMATO RISPOSTA - Lista Ordini
@@ -59,10 +59,11 @@ Prodotti:
 ```
 Ciao {{nameUser}}! Ecco i tuoi ordini recenti:
 
-1. 📦 **ORD-001** - €45.60 - ✅ Consegnato (15/11/2025)
-2. 📦 **ORD-002** - €32.00 - 🚚 In spedizione (18/11/2025)
+1. 📦 **ORD-001** - ✅ Consegnato (15/11/2025) - 2 prodotti
+2. 📦 **ORD-002** - 🚚 In spedizione (18/11/2025) - 1 prodotto
+3. 📦 **ORD-003** - 📦 In preparazione (20/11/2025) - 3 prodotti
 
-👉 Vedi dettagli: [LINK_ORDERS_WITH_TOKEN]
+Per maggiori dettagli su un ordine specifico, fammi sapere il codice ordine!
 ```
 
 ## RIPETI ORDINE (FR-13)
@@ -76,10 +77,11 @@ Quando cliente dice "ripeti ordine" / "ordina di nuovo":
 
 ## LINK VALIDI
 
-- `[LINK_ORDERS_WITH_TOKEN]` - Lista ordini
 - `[LINK_CHECKOUT_CONFIRM]` - Conferma checkout (dopo ripeti ordine)
 
-❌ MAI usare: `[LINK_ORDER]`, `[LINK_ORDER_WITH_TOKEN]` - non esistono!
+⚠️ **IMPORTANTE**: NON usare link per la lista ordini! Mostra sempre i dettagli direttamente nel messaggio.
+
+❌ MAI usare: `[LINK_ORDER]`, `[LINK_ORDER_WITH_TOKEN]`, `[LINK_ORDERS_WITH_TOKEN]` nella lista ordini
 
 ## AZIONI NON SUPPORTATE
 

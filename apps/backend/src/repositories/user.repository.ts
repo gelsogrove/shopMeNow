@@ -35,6 +35,8 @@ export class UserRepository implements UserRepositoryInterface {
       twoFactorSecret: data.twoFactorSecret,
       twoFactorEnabledAt: data.twoFactorEnabledAt,
       recoveryCodes: data.recoveryCodes,
+      // 📱 Personal phone (optional)
+      phoneNumber: data.phoneNumber,
       // 🧾 Billing fields (Andrea's requirement - MUST be mapped from DB)
       companyName: data.companyName,
       vatNumber: data.vatNumber,
