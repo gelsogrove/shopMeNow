@@ -308,6 +308,25 @@ export const ORDER_TRACKING_FUNCTIONS: FunctionDefinition[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "getOrderDetails",
+      description:
+        "📋 PRIORITY 1 - HIGHEST. Recupera i dettagli completi di un ordine specifico dal database. Usare quando l'utente seleziona un ordine dalla lista (es: risponde '1', '2', '3' dopo aver visto lista ordini) oppure fornisce direttamente un codice ordine. Ritorna: codice ordine, stato, data, totale €, lista prodotti con quantità e prezzi, documenti disponibili (fattura, nota di credito se esiste). FLOW: Lista ordini → utente dice '1' o codice ordine → getOrderDetails(orderCode) → mostra dettagli completi → offri download documenti.",
+      parameters: {
+        type: "object",
+        properties: {
+          orderCode: {
+            type: "string",
+            description:
+              "Il codice dell'ordine da recuperare. Es: 'ORD-ABC12' o 'ABCDE'. Se utente seleziona numero da lista, estrai il codice ordine corrispondente dalla conversazione.",
+          },
+        },
+        required: ["orderCode"],
+      },
+    },
+  },
 ]
 
 /**

@@ -649,7 +649,6 @@ Prima di implementare, verificare:
 
 - ❌ `LINK_CART` - Does NOT exist! Use `LINK_CHECKOUT_WITH_TOKEN` instead
 - ❌ `LINK_ORDER` - Does NOT exist! Show order details inline instead
-- ❌ `LINK_ORDERS_WITH_TOKEN` - DEPRECATED! Show order list details inline instead
 - ❌ Any other token not in VALID list above
 
 **WHY**:
@@ -803,7 +802,7 @@ Quale preferisci? Dimmi il numero! 🛒" ← CORRECT! Multiple items, ask choice
 ❌ **NO**: Regole senza spiegazione "WHY"  
 ✅ **YES**: Ogni regola spiega motivazione e benefici (REGOLA IX)
 
-❌ **NO**: Token link non validi come `[LINK_CART]` o `[LINK_ORDERS_WITH_TOKEN]`  
+❌ **NO**: Token link non validi come `[LINK_CART]`  
 ✅ **YES**: Solo token validi: LINK_CHECKOUT_WITH_TOKEN, LINK_CHECKOUT_CONFIRM, LINK_PROFILE_WITH_TOKEN, LINK_CATALOG (REGOLA X)
 
 ❌ **NO**: Chiedere "Quale preferisci?" con 1 solo prodotto  
@@ -1389,7 +1388,7 @@ Prima di implementare, verificare:
 ❌ **NO**: Regole senza spiegazione "WHY"  
 ✅ **YES**: Ogni regola spiega motivazione e benefici (REGOLA IX)
 
-❌ **NO**: Token link non validi come `[LINK_CART]` o `[LINK_ORDERS_WITH_TOKEN]`  
+❌ **NO**: Token link non validi come `[LINK_CART]`  
 ✅ **YES**: Solo token validi: LINK_CHECKOUT_WITH_TOKEN, LINK_CHECKOUT_CONFIRM, LINK_PROFILE_WITH_TOKEN, LINK_CATALOG (REGOLA X)
 
 ❌ **NO**: Chiedere "Quale preferisci?" con 1 solo prodotto  

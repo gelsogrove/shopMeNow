@@ -168,6 +168,22 @@ orderTrackingAgent("Verifica stato ordine #12345 effettuato il 15/11")
 Utente: "ripeti ultimo ordine" / "repeat last order" / "voglio riordinare" / "vorrei ripetere l'ordine"
 orderTrackingAgent("L'utente vuole ripetere/riordinare l'ultimo ordine. Mostra dettagli ordine e chiedi conferma.")
 
+# ESEMPIO 6C - Selezione ORDINE da lista (NUOVO!)
+Chatbot:
+Ecco i tuoi ordini recenti:
+1. 📦 **ABCDE** - ✅ Consegnato (15/11/2025) - €125.50
+2. 📦 **FGHIJ** - 🚚 In spedizione (18/11/2025) - €89.90
+3. 📦 **KLMNO** - ⏳ In preparazione (20/11/2025) - €234.00
+Quale ordine vuoi vedere in dettaglio?
+Utente:
+1
+Call function da chiamare:
+orderTrackingAgent("L'utente ha selezionato l'ordine numero 1 dalla lista. Codice ordine: ABCDE. Mostra dettagli completi con getOrderDetails.")
+
+# ESEMPIO 6D - Dettagli ordine specifico
+Utente: "dettagli ordine ABCDE" / "mostra ordine FGHIJ"
+orderTrackingAgent("L'utente vuole vedere i dettagli dell'ordine con codice ABCDE. Chiama getOrderDetails per recuperare tutti i dati dal database.")
+
 # ESEMPIO 7 - Richiesta lista servizi
 Utente: che servizi avete?
 productSearchAgent("mostra tutti i SERVIZI disponibili")

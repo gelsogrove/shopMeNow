@@ -325,6 +325,17 @@ export class FunctionHandlerService {
             functionName,
           }
 
+        // 📋 GET ORDER DETAILS (Full order info from DB)
+        case "getOrderDetails":
+          return {
+            data: await this.handleGetOrderDetails(
+              params,
+              customer,
+              workspaceId
+            ),
+            functionName,
+          }
+
         // 🔍 SEARCH PRODUCT (Background Analytics Tracking)
         case "searchProduct":
           return {
@@ -456,6 +467,186 @@ export class FunctionHandlerService {
     } catch (error) {
       logger.error(
         "❌ FunctionHandlerService: Error in handleGetLinkOrderByCode:",
+        error
+      )
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Errore interno del server",
+        errorType: "internal_error",
+      }
+    }
+  }
+
+  /**
+   * 📋 Gestisce la richiesta di dettagli completi di un ordine
+   * Ritorna: codice, stato, data, totale, lista prodotti, documenti disponibili
+   */
+  async handleGetOrderDetails(
+    params: any,
+    customer: any,
+    workspaceId: string
+  ): Promise<any> {
+    try {
+      logger.info(
+        "📋 FunctionHandlerService: handleGetOrderDetails called with:",
+        { params, customerId: customer?.id, workspaceId }
+      )
+
+      const orderCode = params.orderCode
+
+      if (!orderCode) {
+        return {
+          success: false,
+          error: "Codice ordine non specificato",
+          errorType: "missing_order_code",
+        }
+      }
+
+      if (!customer?.id) {
+        return {
+          success: false,
+          error: "Cliente non trovato",
+          errorType: "customer_not_found",
+        }
+      }
+
+      // Query order with full details
+      const order = await this.prisma.orders.findFirst({
+        where: {
+          orderCode: orderCode,
+          workspaceId: workspaceId,
+          customerId: customer.id, // Security: customer can only see own orders
+        },
+        include: {
+          customer: {
+            select: {
+              name: true,
+              email: true,
+              phone: true,
+            },
+          },
+          items: {
+            include: {
+              product: {
+                select: {
+                  name: true,
+                  productCode: true,
+                },
+              },
+              service: {
+                select: {
+                  name: true,
+                  code: true, // Services use 'code', not 'serviceCode'
+                },
+              },
+            },
+          },
+        },
+      })
+
+      if (!order) {
+        return {
+          success: false,
+          error: `Ordine ${orderCode} non trovato`,
+          errorType: "order_not_found",
+        }
+      }
+
+      // Map order items from relation (items are OrderItems with product/service relations)
+      const orderItems = order.items.map((item, idx) => {
+        // Get name from product or service relation
+        const itemName = item.product?.name || item.service?.name || "Prodotto"
+        const itemCode = item.product?.productCode || item.service?.code || null
+        
+        return {
+          index: idx + 1,
+          name: itemName,
+          quantity: item.quantity || 1,
+          price: item.unitPrice || 0,
+          totalPrice: item.totalPrice || (item.quantity || 1) * (item.unitPrice || 0),
+          productCode: itemCode,
+          type: item.itemType || "PRODUCT",
+        }
+      })
+
+      // Calculate status emoji
+      const statusEmojis: Record<string, string> = {
+        PENDING: "⏳",
+        CONFIRMED: "✅",
+        PROCESSING: "🔄",
+        SHIPPED: "🚚",
+        DELIVERED: "📦",
+        CANCELLED: "❌",
+      }
+
+      // Check for available documents (invoice, credit note)
+      const documents: { type: string; label: string; available: boolean }[] = []
+
+      // Invoice is always available for confirmed+ orders
+      if (["CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED"].includes(order.status)) {
+        documents.push({
+          type: "invoice",
+          label: "Fattura",
+          available: true,
+        })
+      }
+
+      // Credit note only if exists (check if order has related credit notes)
+      const creditNote = await this.prisma.orders.findFirst({
+        where: {
+          workspaceId: workspaceId,
+          customerId: customer.id,
+          notes: {
+            contains: `NOTA_CREDITO_${order.orderCode}`,
+          },
+        },
+      })
+
+      if (creditNote) {
+        documents.push({
+          type: "credit_note",
+          label: "Nota di Credito",
+          available: true,
+        })
+      }
+
+      const result = {
+        success: true,
+        order: {
+          orderCode: order.orderCode,
+          status: order.status,
+          statusEmoji: statusEmojis[order.status] || "📦",
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt,
+          totalAmount: order.totalAmount,
+          subtotalAmount: order.totalAmount - (order.shippingAmount || 0) - (order.taxAmount || 0) + (order.discountAmount || 0),
+          shippingAmount: order.shippingAmount || 0,
+          taxAmount: order.taxAmount || 0,
+          discountAmount: order.discountAmount || 0,
+          items: orderItems, // Use mapped items
+          itemsCount: orderItems.length,
+          trackingNumber: order.trackingNumber || null,
+          shippingAddress: order.shippingAddress || null,
+          notes: order.notes || null,
+          documents: documents,
+        },
+        customer: {
+          name: order.customer?.name || "Cliente",
+        },
+      }
+
+      logger.info("📋 FunctionHandlerService: getOrderDetails result:", {
+        orderCode: result.order.orderCode,
+        itemsCount: result.order.itemsCount,
+        totalAmount: result.order.totalAmount,
+        documentsCount: result.order.documents.length,
+      })
+
+      return result
+    } catch (error) {
+      logger.error(
+        "❌ FunctionHandlerService: Error in handleGetOrderDetails:",
         error
       )
       return {
