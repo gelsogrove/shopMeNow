@@ -63,6 +63,7 @@ const CustomerProfilePublicPage = lazy(
   () => import("./pages/CustomerProfilePublicPage")
 )
 const FeedbackPage = lazy(() => import("./pages/feedback"))
+const RegisterPage = lazy(() => import("./pages/register"))
 
 export function App() {
   return (
@@ -196,6 +197,22 @@ export function App() {
                     <Route index element={<CampaignsPage />} />
                   </Route>
                 </Route>
+
+                {/* Public Registration page via secure token (external, no platform layout) */}
+                <Route
+                  path="/registration"
+                  element={
+                    <Suspense
+                      fallback={
+                        <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+                          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+                        </div>
+                      }
+                    >
+                      <RegisterPage />
+                    </Suspense>
+                  }
+                />
 
                 {/* Public Customer Profile page via secure token (external, no platform layout) */}
                 <Route

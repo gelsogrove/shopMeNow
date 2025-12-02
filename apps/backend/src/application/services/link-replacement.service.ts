@@ -345,6 +345,21 @@ export class LinkReplacementService {
         }
       }
 
+      // 🧹 CLEANUP: Remove any LLM-invented URLs (example.com, placeholder URLs)
+      // The LLM sometimes generates fake URLs alongside our tokens
+      // Pattern matches: (https://example.com/...) or similar invented URLs
+      replacedResponse = replacedResponse.replace(
+        /\(https?:\/\/example\.com[^\s\)]*\)/gi,
+        ""
+      )
+      // Also clean up any orphaned markdown link syntax with example.com
+      replacedResponse = replacedResponse.replace(
+        /\[([^\]]*)\]\(https?:\/\/example\.com[^\)]*\)/gi,
+        "$1"
+      )
+      // Clean up double spaces that may result from cleanup
+      replacedResponse = replacedResponse.replace(/\s{2,}/g, " ").trim()
+
       return {
         success: true,
         response: replacedResponse,

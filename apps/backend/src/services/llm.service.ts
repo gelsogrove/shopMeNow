@@ -1469,7 +1469,7 @@ export class LLMService {
       new (require("../repositories/message.repository").MessageRepository)()
     const token = await tokenService.createRegistrationToken(phone, workspaceId)
     const workspaceUrl = await messageRepo.getWorkspaceUrl(workspaceId)
-    const registrationLink = `${workspaceUrl.replace(/\/$/, "")}/register?token=${token}`
+    const registrationLink = `${workspaceUrl.replace(/\/$/, "")}/registration?token=${token}`
 
     // Create short URL for registration link
     try {

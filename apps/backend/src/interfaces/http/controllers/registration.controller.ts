@@ -323,25 +323,10 @@ export class RegistrationController {
         `[REGISTRATION] ✅ Registration completed for ${customer.id} - cost already tracked in welcome message`
       )
 
-      // Send welcome message asynchronously
-      this.welcomeService
-        .sendWelcomeMessage(customer.id)
-        .then((success) => {
-          if (success) {
-            logger.info(
-              `Welcome message sent successfully to customer ${customer.id}`
-            )
-          } else {
-            logger.error(
-              `Failed to send welcome message to customer ${customer.id}`
-            )
-          }
-        })
-        .catch((error) => {
-          logger.error("Error sending welcome message:", error)
-        })
+      // 🚨 REMOVED: sendWelcomeMessage() - was duplicate with sendAfterRegistrationMessage
+      // Only send ONE message after registration to avoid spam
 
-      // Send after-registration message asynchronously
+      // Send after-registration message asynchronously (uses workspace-specific settings)
       this.registrationService
         .sendAfterRegistrationMessage(customer.id)
         .then((success) => {

@@ -130,7 +130,7 @@ export class LinkGeneratorService {
     workspaceUrl: string,
     workspaceId: string
   ): Promise<string> {
-    const originalUrl = `${workspaceUrl.replace(/\/$/, "")}/register?token=${token}`
+    const originalUrl = `${workspaceUrl.replace(/\/$/, "")}/registration?token=${token}`
     return this.generateShortLink(originalUrl, workspaceId, "registration")
   }
 

@@ -1314,53 +1314,46 @@ export function ChatPage() {
         <Card className="col-span-8 p-4 flex flex-col">
           {selectedChat ? (
             <>
-              {/* 🚨 OPERATOR CONTROL BANNER */}
-              {!isChatbotActive && (
-                <div className="bg-orange-100 border-l-4 border-orange-500 p-3 mb-2">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0">
-                      <Bot className="h-5 w-5 text-orange-500" />
+              {/* 🚨 BANNERS ROW - Manual Control + Blocked Customer */}
+              {(!isChatbotActive || selectedChat.isBlacklisted) && (
+                <div className="flex gap-2 mb-2">
+                  {/* 🚨 OPERATOR CONTROL BANNER */}
+                  {!isChatbotActive && (
+                    <div className={`bg-orange-100 border-l-4 border-orange-500 p-3 ${selectedChat.isBlacklisted ? 'flex-1' : 'w-full'}`}>
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <Bot className="h-5 w-5 text-orange-500" />
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm text-orange-700 font-medium">
+                            <strong>Manual Operator Control</strong>
+                          </p>
+                          <p className="text-xs text-orange-600 mt-1">
+                            AI chatbot disabled. Messages saved but no AI responses.
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="ml-3">
-                      <p className="text-sm text-orange-700 font-medium">
-                        <strong>Manual Operator Control Active</strong>
-                      </p>
-                      <p className="text-xs text-orange-600 mt-1">
-                        AI chatbot is disabled. You are now manually handling
-                        this conversation.
-                        <span className="font-medium">
-                          {" "}
-                          Customer messages will be saved but won't trigger AI
-                          responses.
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
+                  )}
 
-              {/* 🚫 CUSTOMER BLOCKED BANNER */}
-              {selectedChat.isBlacklisted && (
-                <div className="bg-red-100 border-l-4 border-red-500 p-3 mb-2">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0">
-                      <Ban className="h-5 w-5 text-red-500" />
+                  {/* 🚫 CUSTOMER BLOCKED BANNER */}
+                  {selectedChat.isBlacklisted && (
+                    <div className={`bg-red-100 border-l-4 border-red-500 p-3 ${!isChatbotActive ? 'flex-1' : 'w-full'}`}>
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <Ban className="h-5 w-5 text-red-500" />
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm text-red-700 font-medium">
+                            <strong>Customer Blocked</strong>
+                          </p>
+                          <p className="text-xs text-red-600 mt-1">
+                            Blacklisted. Cannot send new messages.
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="ml-3">
-                      <p className="text-sm text-red-700 font-medium">
-                        <strong>Customer is Blocked</strong>
-                      </p>
-                      <p className="text-xs text-red-600 mt-1">
-                        This customer has been blacklisted. New messages are
-                        blocked.
-                        <span className="font-medium">
-                          {" "}
-                          You can view existing messages but cannot send new
-                          ones.
-                        </span>
-                      </p>
-                    </div>
-                  </div>
+                  )}
                 </div>
               )}
 

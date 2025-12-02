@@ -315,15 +315,18 @@ export class CustomersController {
   /**
    * Handle automatic push messages when customer data changes
    *
-   * 🚨 DISABLED: Discount notifications now handled via /push/system-notification
+   * 🚨 DISABLED: All notifications now handled via /push/system-notification
    *    with frontend confirmation popup (Feature 127)
+   *    - Discount notifications: via popup confirmation
+   *    - Chatbot reactivation: via popup confirmation  
+   *    - Account activation: via popup confirmation
    */
   private async handleAutomaticPushMessages(
     originalCustomer: any,
     updatedCustomer: any
   ) {
     try {
-      // Check if chatbot status changed
+      // Check if chatbot status changed - LOG ONLY (notification handled by frontend popup)
       if (originalCustomer.activeChatbot !== updatedCustomer.activeChatbot) {
         logger.info(
           `Customer chatbot status changed from ${originalCustomer.activeChatbot} to ${updatedCustomer.activeChatbot}`,
@@ -333,17 +336,12 @@ export class CustomersController {
           }
         )
 
-        // Only send push notification if chatbot was reactivated (false -> true)
+        // 🚨 DISABLED: Push notification now handled by frontend confirmation popup
+        // The frontend will show a dialog asking admin if they want to notify the customer
+        // If confirmed, it calls POST /push/system-notification with CHATBOT_REACTIVATED type
         if (!originalCustomer.activeChatbot && updatedCustomer.activeChatbot) {
-          const pushResult =
-            await this.pushMessagingService.sendChatbotReactivated(
-              updatedCustomer.id,
-              updatedCustomer.phone,
-              updatedCustomer.workspaceId
-            )
-
           logger.info(
-            `Push notification ${pushResult ? "sent successfully" : "failed"} for customer ${updatedCustomer.id}`
+            `[PUSH-DISABLED] Chatbot reactivation for customer ${updatedCustomer.id} - notification handled by frontend popup`
           )
         }
       }

@@ -461,7 +461,7 @@ export class WhatsAppWebhookController {
           undefined // customerId - not yet created (registration)
         )
 
-        const registrationUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/register?token=${registrationToken}`
+        const registrationUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/registration?token=${registrationToken}`
 
         // Create short URL that expires in 24 hours
         const expiresAt = new Date()
