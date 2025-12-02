@@ -116,4 +116,10 @@ registrare?
 
 - se cambio i prezzi nell'arco del tempo non affetta il passato e le vecchie fatture vero e le transizioni vero ?  cambia dal momento che cambio il valore del prezzo in avanti vero? confermi?
 
+- i messaggi passano sempre da un layer di traduzione?
+
+- SAFETY_TRANSLATION e' stato tolto dalla documtnazione dal codice etcd..etc..
+
+- il flusso del messggio e' Router Agent → (specialist agents) → Translation Layer → Save to History > Quueue di wahtasppp
+
 - fammi una tabella per vedere il risultato ma solo quelle cose che non vanno le cose che vanno non fammele vedere

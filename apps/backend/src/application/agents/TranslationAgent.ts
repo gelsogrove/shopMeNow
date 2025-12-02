@@ -61,13 +61,14 @@ export class TranslationAgent {
 
     try {
       // 1. Check if translation is needed
+      // Base language is ITALIAN (it) - skip translation only if target is Italian
       const normalizedLanguage = this.normalizeLanguage(options.targetLanguage)
-      if (normalizedLanguage === "en") {
-        // No translation needed for English
-        logger.info("✅ TranslationAgent - English language, no translation needed")
+      if (normalizedLanguage === "it") {
+        // No translation needed - content is already in Italian (base language)
+        logger.info("✅ TranslationAgent - Italian language (base), no translation needed")
         return {
           translated: false,
-          originalLanguage: "en",
+          originalLanguage: "it",
           targetLanguage: options.targetLanguage,
           message: options.message,
           tokensUsed: 0,
@@ -88,7 +89,7 @@ export class TranslationAgent {
         // Fallback: return message without translation
         return {
           translated: false,
-          originalLanguage: "en",
+          originalLanguage: "it",
           targetLanguage: options.targetLanguage,
           message: options.message,
           tokensUsed: 0,
@@ -103,7 +104,7 @@ export class TranslationAgent {
         // Return message without translation if agent disabled
         return {
           translated: false,
-          originalLanguage: "en",
+          originalLanguage: "it",
           targetLanguage: options.targetLanguage,
           message: options.message,
           tokensUsed: 0,
@@ -121,10 +122,8 @@ export class TranslationAgent {
         }
       )
 
-      // 4. Build user message
-      const userMessage = `Translate this message to ${normalizedLanguage}:\n\n"${options.message}"\n\nRespond with JSON: {"translated": true, "originalLanguage": "en", "targetLanguage": "${normalizedLanguage}", "message": "..."}`
-
-      // 5. Call OpenRouter LLM
+      // 4. Build user message - translate FROM Italian (base) TO target language
+      const userMessage = `Translate this Italian message to ${normalizedLanguage}:\n\n"${options.message}"\n\nRespond with JSON: {"translated": true, "originalLanguage": "it", "targetLanguage": "${normalizedLanguage}", "message": "..."}`      // 5. Call OpenRouter LLM
       logger.info("🌍 Calling TranslationAgent LLM", {
         workspaceId: options.workspaceId,
         model: translationAgent.model,

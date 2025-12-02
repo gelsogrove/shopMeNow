@@ -627,10 +627,7 @@ export function getFunctionNamesForAgentType(agentType: string): string[] {
       return ["sendAlertEmail"] // Security agent sends alerts for dangerous content
 
     case "TRANSLATION":
-      return [] // Translation agent doesn't call functions
-
-    case "SAFETY_TRANSLATION":
-      return ["sendAlertEmail"] // Deprecated - kept for backwards compatibility
+      return [] // Translation agent doesn't call functions, just translates IT → target language
 
     default:
       return []

@@ -5,9 +5,9 @@
  *
  * Functions:
  * 1. **Safety Check**: Blocks PII, profanity, phishing, spam
- * 2. **Translation**: Translates response to customer's language
+ * 2. **Translation**: Translates response to customer's language (IT → target)
  *
- * Uses SAFETY_TRANSLATION agent config from database (order: 99)
+ * Uses TRANSLATION agent config from database
  *
  * @architecture Clean Architecture - Uses AgentConfigRepository
  * @critical ALWAYS call this before sending response to customer
@@ -65,15 +65,15 @@ export class SafetyTranslationAgent {
     const startTime = Date.now()
 
     try {
-      // 1. Load SAFETY_TRANSLATION agent config from database
+      // 1. Load TRANSLATION agent config from database
       const safetyAgent = await this.agentConfigRepo.findByType(
         options.workspaceId,
-        "SAFETY_TRANSLATION"
+        "TRANSLATION"
       )
 
       if (!safetyAgent) {
         logger.warn(
-          `⚠️ SAFETY_TRANSLATION agent not configured for workspace ${options.workspaceId}`
+          `⚠️ TRANSLATION agent not configured for workspace ${options.workspaceId}`
         )
         // Fallback: return original text without safety check (NOT RECOMMENDED)
         return {
@@ -87,7 +87,7 @@ export class SafetyTranslationAgent {
 
       if (!safetyAgent.isActive) {
         logger.warn(
-          `⚠️ SAFETY_TRANSLATION agent is INACTIVE for workspace ${options.workspaceId}`
+          `⚠️ TRANSLATION agent is INACTIVE for workspace ${options.workspaceId}`
         )
         // Return original if agent disabled
         return {
@@ -269,7 +269,7 @@ Please:
     try {
       const agent = await this.agentConfigRepo.findByType(
         workspaceId,
-        "SAFETY_TRANSLATION"
+        "TRANSLATION"
       )
       return agent !== null && agent.isActive
     } catch (error) {

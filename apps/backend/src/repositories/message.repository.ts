@@ -1265,8 +1265,8 @@ export class MessageRepository {
       }
 
       // Formatta i servizi come lista numerata con tutti i dettagli
-      // ✅ Feature 191: NO CODES to user! Codes are internal only.
-      // LLM uses getServiceDetails(name) to get internal code for cart operations
+      // ✅ Feature 191: Include serviceCode for LLM internal use (not shown to user)
+      // LLM uses getServiceDetails(serviceCode) to get internal code for cart operations
       const formattedServices = services
         .map((service, index) => {
           const price = service.price
@@ -1275,7 +1275,7 @@ export class MessageRepository {
           const description = service.description || "Servizio disponibile"
 
           return [
-            `${index + 1}. **${service.name}** - ${price}`,
+            `${index + 1}. [${service.code}] **${service.name}** - ${price}`,
             `   📝 Descrizione: ${description}`,
             `   ⏰ Disponibilità: Sempre disponibile`,
           ].join("\n")
@@ -1431,10 +1431,10 @@ export class MessageRepository {
               } ${p.transportType}`
             : ""
 
-          // ✅ Feature 191: NO CODES to user! Codes are internal only.
-          // Format: NOME formato ~€originalPrice~ → €finalPrice - description | Stock: ✅ N | 🔖 Certifications | 🏷️ Supplier | 🌍 Region | ❄️ Transport
-          // LLM uses getProductDetails(name, formato) to get internal code for cart operations
-          formattedProducts += `• ${p.name}${formatoStr} ~€${originalPrice}~ → €${finalPrice}${description}${stockStr}${certificationsStr}${supplierStr}${regionStr}${transportStr}\n`
+          // ✅ Feature 191: Include productCode for LLM internal use (not shown to user)
+          // Format: [CODE] NOME formato ~€originalPrice~ → €finalPrice - description | Stock: ✅ N | 🔖 Certifications | 🏷️ Supplier | 🌍 Region | ❄️ Transport
+          // LLM uses getProductDetails(productCode) to get internal code for cart operations
+          formattedProducts += `• [${p.productCode}] ${p.name}${formatoStr} ~€${originalPrice}~ → €${finalPrice}${description}${stockStr}${certificationsStr}${supplierStr}${regionStr}${transportStr}\n`
         })
         formattedProducts += "\n"
       }
@@ -2974,6 +2974,7 @@ export class MessageRepository {
    */
   async getActiveCategories(workspaceId: string): Promise<string> {
     try {
+      // Fetch categories with product count
       const categories = await this.prisma.categories.findMany({
         where: {
           workspaceId,
@@ -2982,16 +2983,28 @@ export class MessageRepository {
         orderBy: {
           name: "asc",
         },
+        include: {
+          _count: {
+            select: {
+              products: {
+                where: {
+                  isActive: true,
+                },
+              },
+            },
+          },
+        },
       })
 
       if (categories.length === 0) return ""
 
       // Feature 123: Format categories with numbers for easy selection
-      // Format: 1. Category Name - Description
+      // Format: 1. Category Name (X prodotti) - Description
       const formattedCategories = categories
         .map((category, index) => {
           const name = category.name || "Categoria"
           const description = category.description || ""
+          const productCount = category._count.products
 
           // Prendi una descrizione breve (prima frase o primi 80 caratteri)
           const shortDesc = description
@@ -2999,7 +3012,7 @@ export class MessageRepository {
             .substring(0, 80)
             .trim()
 
-          return `${index + 1}. **${name}** - ${shortDesc || "Prodotti disponibili"}`
+          return `${index + 1}. **${name}** (${productCount} prodotti) - ${shortDesc || "Prodotti disponibili"}`
         })
         .join("\n")
 

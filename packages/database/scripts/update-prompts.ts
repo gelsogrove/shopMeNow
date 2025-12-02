@@ -29,7 +29,7 @@ const PROMPT_TO_AGENT_TYPE: Record<string, AgentType> = {
   "profile-management-agent.md": "PROFILE_MANAGEMENT",
   "translation-agent.md": "TRANSLATION",
   "security-agent.md": "SECURITY",
-  "safety-translation-agent.md": "SAFETY_TRANSLATION",
+  // Note: safety-translation-agent.md is deprecated, TRANSLATION agent handles all translation
 }
 
 /**

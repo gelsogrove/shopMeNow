@@ -130,14 +130,14 @@ export const PRODUCT_SEARCH_FUNCTIONS: FunctionDefinition[] = [
     function: {
       name: "getProductDetails",
       description:
-        "🔍 PRIORITY 1 - Recupera dettagli completi di un prodotto cercandolo per nome (fuzzy match). OBBLIGATORIO chiamarla quando l'utente seleziona un prodotto dalla lista (es: risponde '1', '2', '3'). Ritorna: codice interno (MAI mostrarlo all'utente!), nome, prezzo, stock, descrizione, certificazioni. Il codice interno serve per passare a CartManagementAgent. FLOW: Lista → utente dice '1' → getProductDetails(nome, formato) → mostra dettagli SENZA codice → chiedi conferma → se 'sì' passa codice a CartManagementAgent.",
+        "🔍 PRIORITY 1 - Recupera dettagli completi di un prodotto cercandolo per productCode (priorità) o nome. OBBLIGATORIO chiamarla quando l'utente seleziona un prodotto dalla lista (es: risponde '1', '2', '3'). Ritorna: codice interno (MAI mostrarlo all'utente!), nome, prezzo, stock, descrizione, certificazioni. Il codice interno serve per passare a CartManagementAgent. FLOW: Lista → utente dice '1' → getProductDetails(productCode o nome) → mostra dettagli SENZA codice → chiedi conferma → se 'sì' passa codice a CartManagementAgent.",
       parameters: {
         type: "object",
         properties: {
           productName: {
             type: "string",
             description:
-              "Il nome del prodotto da cercare (fuzzy match supportato). Es: 'Parmigiano', 'mozzarella bufala', 'prosciutto'.",
+              "Il productCode [es: PARM-500G] o nome del prodotto da cercare. Preferire sempre il codice dalla lista prodotti.",
           },
           formato: {
             type: "string",
@@ -154,14 +154,14 @@ export const PRODUCT_SEARCH_FUNCTIONS: FunctionDefinition[] = [
     function: {
       name: "getServiceDetails",
       description:
-        "🔍 PRIORITY 1 - Recupera dettagli completi di un servizio cercandolo per nome (fuzzy match). OBBLIGATORIO chiamarla quando l'utente seleziona un servizio dalla lista. Ritorna: codice interno (MAI mostrarlo all'utente!), nome, prezzo, descrizione. Il codice interno serve per passare a CartManagementAgent.",
+        "🔍 PRIORITY 1 - Recupera dettagli completi di un servizio cercandolo per serviceCode (priorità) o nome. OBBLIGATORIO chiamarla quando l'utente seleziona un servizio dalla lista. Ritorna: codice interno (MAI mostrarlo all'utente!), nome, prezzo, descrizione. Il codice interno serve per passare a CartManagementAgent.",
       parameters: {
         type: "object",
         properties: {
           serviceName: {
             type: "string",
             description:
-              "Il nome del servizio da cercare (fuzzy match supportato). Es: 'consegna express', 'confezionamento regalo'.",
+              "Il serviceCode [es: SHIPPING, GIFT-WRAP] o nome del servizio da cercare. Preferire sempre il codice dalla lista servizi.",
           },
         },
         required: ["serviceName"],
@@ -454,9 +454,7 @@ export function getAgentFunctions(
     case "SECURITY":
       return [] // Security agent calls sendAlertEmail only
     case "TRANSLATION":
-      return [] // Translation agent doesn't call functions
-    case "SAFETY_TRANSLATION":
-      return [] // Deprecated - kept for backwards compatibility
+      return [] // Translation agent doesn't call functions, just translates IT → target
     default:
       return null
   }

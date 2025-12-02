@@ -235,13 +235,38 @@ export class CartManagementAgent {
         context.customerId
       )
 
+      // ✅ Feature 191: Check if service is already in cart (services can only be added once)
+      if (type === "SERVICE") {
+        const serviceAlreadyInCart = cart.items?.some(
+          (item: any) => item.serviceId === itemId
+        )
+        
+        if (serviceAlreadyInCart) {
+          // Return cart without adding duplicate service
+          const updatedCart = await this.getCart(context)
+          return {
+            success: true,
+            message: `Service "${itemName}" is already in your cart`,
+            alreadyInCart: true,
+            item: {
+              id: itemId,
+              name: itemName,
+              price: itemPrice,
+              quantity: 1,
+              type,
+            },
+            cart: updatedCart.cart,
+          }
+        }
+      }
+
       // Add item to cart with correct type
       // CRITICAL: Use productId for PRODUCT, serviceId for SERVICE
       await this.cartRepo.addItem(cart.id, {
         itemType: type, // "PRODUCT" or "SERVICE"
         productId: type === "PRODUCT" ? itemId : undefined,
         serviceId: type === "SERVICE" ? itemId : undefined,
-        quantity,
+        quantity: type === "SERVICE" ? 1 : quantity, // Services always quantity 1
         notes,
       })
 

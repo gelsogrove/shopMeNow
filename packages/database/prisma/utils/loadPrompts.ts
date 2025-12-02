@@ -17,7 +17,8 @@ type AgentType =
   | "CUSTOMER_SUPPORT"
   | "PROFILE_MANAGEMENT"
   | "NOTIFICATIONS"
-  | "SAFETY_TRANSLATION"
+  | "TRANSLATION"
+  | "SECURITY"
   | "CUSTOM"
 
 // Mapping from filename to AgentType

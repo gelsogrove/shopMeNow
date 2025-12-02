@@ -520,7 +520,7 @@ export class ProductSearchAgentLLM {
         workspaceId: context.workspaceId,
       })
 
-      // Handle getProductDetails - lookup product by name with fuzzy matching
+      // Handle getProductDetails - lookup product by code (priority) or name
       if (functionName === "getProductDetails") {
         const { CallingFunctionsService } = await import(
           "../../services/calling-functions.service"
@@ -543,7 +543,7 @@ export class ProductSearchAgentLLM {
         return result
       }
 
-      // Handle getServiceDetails - lookup service by name with fuzzy matching
+      // Handle getServiceDetails - lookup service by code (priority) or name
       if (functionName === "getServiceDetails") {
         const { CallingFunctionsService } = await import(
           "../../services/calling-functions.service"
@@ -614,13 +614,13 @@ export class ProductSearchAgentLLM {
     return [
       {
         name: "getProductDetails",
-        description: "Get full product details by searching with product name and optional formato. Use this when user selects a product to see details before adding to cart. Returns the INTERNAL product code needed for cart operations. NEVER show the productCode to the user.",
+        description: "Get full product details by productCode (priority) or name. Use this when user selects a product to see details before adding to cart. Returns the INTERNAL product code needed for cart operations. NEVER show the productCode to the user.",
         parameters: {
           type: "object" as const,
           properties: {
             productName: {
               type: "string" as const,
-              description: "The product name to search for (fuzzy match supported)",
+              description: "The productCode [e.g. PARM-500G] or product name. Prefer code from product list.",
             },
             formato: {
               type: "string" as const,
@@ -632,13 +632,13 @@ export class ProductSearchAgentLLM {
       },
       {
         name: "getServiceDetails",
-        description: "Get full service details by searching with service name. Use this when user selects a service to see details before adding to cart. Returns the INTERNAL service code needed for cart operations. NEVER show the serviceCode to the user.",
+        description: "Get full service details by serviceCode (priority) or name. Use this when user selects a service to see details before adding to cart. Returns the INTERNAL service code needed for cart operations. NEVER show the serviceCode to the user.",
         parameters: {
           type: "object" as const,
           properties: {
             serviceName: {
               type: "string" as const,
-              description: "The service name to search for (fuzzy match supported)",
+              description: "The serviceCode [e.g. SHIPPING, GIFT-WRAP] or service name. Prefer code from service list.",
             },
           },
           required: ["serviceName"],

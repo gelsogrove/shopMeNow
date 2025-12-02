@@ -179,8 +179,8 @@ export class LLMRouterService {
   private linkReplacementService: LinkReplacementService
   private searchConversationRepo: SearchConversationRepository
   private promptProcessor: PromptProcessorService // 🆕 Feature 124: Customer variables replacement
-  private safetyAgent: SafetyTranslationAgent // Kept for backwards compatibility with SAFETY_TRANSLATION
-  private translationAgent: TranslationAgent // 🆕 Feature 181: Translation layer
+  private safetyAgent: SafetyTranslationAgent // Used for specific flows (welcome, queue)
+  private translationAgent: TranslationAgent // Main translation layer (IT → target language)
   private openRouterApiKey: string
   private openRouterBaseUrl = "https://openrouter.ai/api/v1"
   private maxFunctionIterations = 8 // FR-13: Increased from 5 to support repeat order confirmation flow (6-7 iterations needed)
@@ -1621,14 +1621,17 @@ export class LLMRouterService {
               // ✅ ALWAYS delegate to ProductSearchAgentLLM - let LLM decide what to show
               const productSearchAgent = new ProductSearchAgentLLM(this.prisma)
 
-              logger.info("🔵 ROUTER delegating to ProductSearchAgentLLM")
+              logger.info("🔵 ROUTER delegating to ProductSearchAgentLLM", {
+                originalMessage: params.message,
+                delegationQuery: delegationQuery,
+              })
 
               subAgentResponse = await productSearchAgent.handleQuery({
                 workspaceId: params.workspaceId,
                 customerId: params.customerId,
                 customerName: params.customerName,
                 customerLanguage: params.customerLanguage,
-                query: params.message, // ✅ USE ORIGINAL CUSTOMER QUERY for QueryAnalyzer multi-language
+                query: delegationQuery, // ✅ USE ROUTER'S CONTEXTUALIZED QUERY (e.g., "Mostra dettagli del PRODOTTO Gorgonzola")
                 sessionId: `${params.workspaceId}-${params.customerId}`, // ✅ FIX: Use workspace+customer as session key for memory
               })
               break
@@ -2290,6 +2293,7 @@ export class LLMRouterService {
           // 🔀 Router has ONLY delegation functions (call sub-agents)
           // Router orchestrates, sub-agents execute business functions
           tools: getFunctionsForRouter(), // Only: callProductSearchAgent, callCartManagementAgent, etc.
+          tool_choice: "auto", // Encourage model to use functions when appropriate
         },
         {
           headers: {

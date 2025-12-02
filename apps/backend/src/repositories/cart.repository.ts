@@ -154,7 +154,14 @@ export class CartRepository {
       })
 
       if (existingItem) {
-        // Update quantity if item already exists
+        // ✅ Feature 191: Services can only have quantity 1 (no stacking)
+        if (itemType === 'SERVICE') {
+          logger.info('Service already in cart, keeping quantity 1:', { cartId, serviceId })
+          // Return existing item without updating - service already in cart
+          return existingItem
+        }
+        
+        // For products, update quantity (stack)
         return await this.prisma.cartItems.update({
           where: { id: existingItem.id },
           data: {

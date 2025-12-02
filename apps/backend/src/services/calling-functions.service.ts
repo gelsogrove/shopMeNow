@@ -1084,12 +1084,14 @@ export class CallingFunctionsService {
   }
 
   /**
-   * 🔍 Get product details by name (fuzzy matching)
+   * 🔍 Get product details by productCode or name
    * 
+   * ✅ Feature 191: FIRST searches by exact productCode match (most reliable for multi-language)
+   * Then falls back to fuzzy name matching if code not found.
    * Used by ProductSearchAgent to lookup full product details when user selects a product.
    * Returns INTERNAL product code (never shown to user) for cart operations.
    * 
-   * @param request - Product name and optional formato for matching
+   * @param request - Product code or name, and optional formato for matching
    * @returns Product details with internal code
    */
   public async getProductDetails(request: {
@@ -1132,22 +1134,29 @@ export class CallingFunctionsService {
           }
         })
 
-        // Fuzzy matching: find products where name CONTAINS the search term
-        // or search term CONTAINS the product name
+        // ✅ Feature 191: FIRST try exact match by productCode (most reliable)
         let matchedProducts = products.filter((p: any) => {
-          const pName = p.name.trim().toLowerCase()
-          const pFormato = p.formato?.trim().toLowerCase() || ""
-          
-          // Name matching: either contains
-          const nameMatch = pName.includes(searchName) || searchName.includes(pName)
-          
-          // If formato specified, require match
-          if (searchFormato && nameMatch) {
-            return pFormato.includes(searchFormato) || searchFormato.includes(pFormato)
-          }
-          
-          return nameMatch
+          const pCode = p.productCode?.trim().toLowerCase() || ""
+          return pCode === searchName
         })
+
+        // If no code match, try fuzzy name matching
+        if (matchedProducts.length === 0) {
+          matchedProducts = products.filter((p: any) => {
+            const pName = p.name.trim().toLowerCase()
+            const pFormato = p.formato?.trim().toLowerCase() || ""
+            
+            // Name matching: either contains
+            const nameMatch = pName.includes(searchName) || searchName.includes(pName)
+            
+            // If formato specified, require match
+            if (searchFormato && nameMatch) {
+              return pFormato.includes(searchFormato) || searchFormato.includes(pFormato)
+            }
+            
+            return nameMatch
+          })
+        }
 
         // If no match, try word-based matching
         // Use .every() to require ALL search words to be present (not just any)
@@ -1254,12 +1263,14 @@ export class CallingFunctionsService {
   }
 
   /**
-   * 🔍 Get service details by name (fuzzy matching)
+   * 🔍 Get service details by serviceCode or name
    * 
+   * ✅ Feature 191: FIRST searches by exact serviceCode match (most reliable for multi-language)
+   * Then falls back to fuzzy name matching if code not found.
    * Used by ProductSearchAgent to lookup full service details when user selects a service.
    * Returns INTERNAL service code (never shown to user) for cart operations.
    * 
-   * @param request - Service name for matching
+   * @param request - Service code or name for matching
    * @returns Service details with internal code
    */
   public async getServiceDetails(request: {
@@ -1290,14 +1301,21 @@ export class CallingFunctionsService {
           }
         })
 
-        // Fuzzy matching: find services where name CONTAINS the search term
-        // or search term CONTAINS the service name
+        // ✅ Feature 191: FIRST try exact match by serviceCode (most reliable)
         let matchedServices = services.filter((s: any) => {
-          const sName = s.name.trim().toLowerCase()
-          return sName.includes(searchName) || searchName.includes(sName)
+          const sCode = s.code?.trim().toLowerCase() || ""
+          return sCode === searchName
         })
 
-        // If no match, try word-based matching
+        // If no code match, try fuzzy name matching
+        if (matchedServices.length === 0) {
+          matchedServices = services.filter((s: any) => {
+            const sName = s.name.trim().toLowerCase()
+            return sName.includes(searchName) || searchName.includes(sName)
+          })
+        }
+
+        // If still no match, try word-based matching
         if (matchedServices.length === 0) {
           const searchWords = searchName.split(/\s+/).filter(w => w.length > 2)
           matchedServices = services.filter((s: any) => {
