@@ -1272,6 +1272,14 @@ export class LLMRouterService {
         `Function Calling iteration ${iterations}/${this.maxFunctionIterations}`
       )
 
+      // 🔧 DEBUG: Log what we're sending to the LLM
+      logger.info("🔍 DEBUG - Messages sent to Router LLM:", {
+        systemPromptPreview: messages[0]?.content?.substring(0, 500),
+        conversationHistoryCount: messages.length - 2, // minus system and user
+        lastAssistantMessage: messages.filter(m => m.role === 'assistant').slice(-1)[0]?.content?.substring(0, 200),
+        userMessage: messages[messages.length - 1]?.content,
+      })
+
       // Call Router LLM with functions
       const routerCallTimestamp = new Date().toISOString()
       const llmResponse = await this.callRouterLLM({
@@ -1284,6 +1292,14 @@ export class LLMRouterService {
       totalTokens += llmResponse.tokensUsed
 
       // 🔧 IMPROVED: Capture Router Agent step with REAL INPUT and OUTPUT
+      // 🔧 DEBUG: Log LLM decision
+      logger.info("🔍 DEBUG - LLM Response:", {
+        hasFunction: !!llmResponse.function_call,
+        functionName: llmResponse.function_call?.name,
+        functionArgs: llmResponse.function_call?.arguments,
+        textResponse: llmResponse.content?.substring(0, 100),
+      })
+
       const routerStep: DebugStep = {
         type: "router",
         agent: "Router Agent",

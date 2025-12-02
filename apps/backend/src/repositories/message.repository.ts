@@ -1242,6 +1242,8 @@ export class MessageRepository {
    */
   async getActiveServices(workspaceId: string): Promise<string> {
     try {
+      logger.info("🔍 getActiveServices called", { workspaceId })
+      
       const services = await this.prisma.services.findMany({
         where: {
           workspaceId: workspaceId,
@@ -1250,6 +1252,12 @@ export class MessageRepository {
         orderBy: {
           name: "asc",
         },
+      })
+
+      logger.info("🔍 getActiveServices result", { 
+        workspaceId, 
+        servicesFound: services.length,
+        serviceNames: services.map(s => s.name)
       })
 
       if (services.length === 0) {

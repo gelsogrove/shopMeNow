@@ -141,6 +141,13 @@ export class CartManagementAgent {
     try {
       const { productId, quantity, notes, type = "PRODUCT" } = params
 
+      logger.info("🛒 addToCart called:", {
+        productId,
+        quantity,
+        type,
+        workspaceId: context.workspaceId,
+      })
+
       // Validate quantity
       if (quantity <= 0) {
         return {
@@ -229,9 +236,11 @@ export class CartManagementAgent {
       )
 
       // Add item to cart with correct type
+      // CRITICAL: Use productId for PRODUCT, serviceId for SERVICE
       await this.cartRepo.addItem(cart.id, {
         itemType: type, // "PRODUCT" or "SERVICE"
-        productId: itemId, // Use UUID from item object
+        productId: type === "PRODUCT" ? itemId : undefined,
+        serviceId: type === "SERVICE" ? itemId : undefined,
         quantity,
         notes,
       })

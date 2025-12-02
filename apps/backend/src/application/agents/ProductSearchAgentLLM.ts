@@ -195,11 +195,13 @@ export class ProductSearchAgentLLM {
         context.workspaceId
       )
       const offersText = await messageRepo.getActiveOffers(context.workspaceId)
+      const servicesText = await messageRepo.getActiveServices(context.workspaceId)
 
       logger.info(`📦 Loaded dynamic content`, {
         productsLength: productsText.length,
         categoriesLength: categoriesText.length,
         offersLength: offersText.length,
+        servicesLength: servicesText.length,
         offersContent: offersText, // 🔍 DEBUG: Log actual offers content
       })
 
@@ -212,7 +214,7 @@ export class ProductSearchAgentLLM {
           faqs: "", // Not used in product search
           products: productsText,
           categories: categoriesText,
-          services: "", // Not used in product search
+          services: servicesText, // ✅ Feature 191: Include services for product/services search
           offers: offersText,
         }
       )

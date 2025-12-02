@@ -15,6 +15,7 @@
     "migrate:reset": "dotenv -e ../../.env -- ts-node scripts/safe-reset.ts",
     "migrate:reset:force": "dotenv -e ../../.env -- prisma migrate reset --force",
     "seed": "dotenv -e ../../.env -- ts-node prisma/seed.ts",
+    "update:prompts": "dotenv -e ../../.env -- ts-node scripts/update-prompts.ts",
     "studio": "dotenv -e ../../.env -- prisma studio",
     "db:push": "dotenv -e ../../.env -- prisma db push",
     "check:env": "dotenv -e ../../.env -- ts-node scripts/check-env-safety.ts",

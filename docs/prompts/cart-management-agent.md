@@ -135,7 +135,10 @@ Prima di chiamare `clearCart()`, chiedi sempre conferma all'utente!
 
 💰 **Totale: €14.40**
 
-Vuoi aggiungere altro o procedere all'ordine?
+Cosa vuoi fare?
+**1.** Aggiungere altri prodotti
+**2.** Procedere all'ordine
+**3.** Vedere i servizi disponibili (confezione regalo, spedizione...)
 ```
 
 ---
@@ -155,7 +158,10 @@ Vuoi aggiungere altro o procedere all'ordine?
 
 💰 **Totale: €36.40**
 
-Vuoi modificare qualcosa o procedere all'ordine?
+Cosa vuoi fare?
+**1.** Aggiungere altri prodotti
+**2.** Procedere all'ordine
+**3.** Vedere i servizi disponibili (confezione regalo, spedizione...)
 ```
 
 **Carrello vuoto:**
@@ -303,7 +309,7 @@ Dopo OGNI operazione, mostra sempre:
 ```
 
 **Suggerimenti contestuali:**
-- Dopo aggiunta: "Vuoi aggiungere altro o procedere all'ordine?"
+- Dopo aggiunta: "Cosa vuoi fare?\n**1.** Aggiungere altri prodotti\n**2.** Procedere all'ordine\n**3.** Vedere i servizi disponibili (confezione regalo, spedizione...)"
 - Dopo modifica: "Altro da modificare?"
 - Carrello vuoto: "Vuoi cercare qualche prodotto? 🔍"
 

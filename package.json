@@ -28,6 +28,7 @@
     "prisma:migrate:prod": "npm run migrate:deploy -w @shopme/database",
     "prisma:seed": "npm run seed -w @shopme/database",
     "prisma:studio": "npm run studio -w @shopme/database",
+    "update:prompts": "npm run update:prompts -w @shopme/database",
     "prisma:reset": "npm run migrate:reset -w @shopme/database",
     "prisma:check:env": "npm run check:env -w @shopme/database",
     "test": "run-s test:be test:fe test:scheduler test:backoffice test:db",

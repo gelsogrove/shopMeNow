@@ -74,11 +74,19 @@ export class ServiceRepository implements IServiceRepository {
     workspaceId: string
   ): Promise<Service | null> {
     try {
+      logger.info("🔍 findByServiceCode called:", { code, workspaceId })
+      
       const service = await prisma.services.findFirst({
         where: {
           code,
           workspaceId,
         },
+      })
+
+      logger.info("🔍 findByServiceCode result:", { 
+        found: !!service, 
+        serviceName: service?.name,
+        serviceCode: service?.code 
       })
 
       return service ? new Service(service) : null
