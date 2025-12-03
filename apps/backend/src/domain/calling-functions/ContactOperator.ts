@@ -150,7 +150,7 @@ export async function ContactOperator(
               const conversationHistory = messages.map((msg) => ({
                 role: msg.role === "user" ? "customer" : "assistant",
                 content: msg.content,
-                createdAt: msg.timestamp,
+                createdAt: msg.createdAt, // Use createdAt, not timestamp
               }))
 
               // Generate summary
@@ -192,6 +192,13 @@ export async function ContactOperator(
                   customerName: customer.name,
                 })
 
+                const finalSummary = safetyResult.translatedText || summaryResult.summary
+                
+                // If summary is empty, throw error to trigger fallback
+                if (!finalSummary || finalSummary.trim().length === 0) {
+                  throw new Error("Summary generated but empty")
+                }
+
                 chatSummary = `
 Cliente: ${customer.name}
 Telefono: ${customer.phone}
@@ -200,7 +207,7 @@ Data richiesta: ${new Date().toLocaleString("it-IT")}
 ${request.reason ? `\nMotivo: ${request.reason}` : ""}
 
 📋 Riassunto conversazione (ultima ora - ${messages.length} messaggi):
-${safetyResult.translatedText || summaryResult.summary}
+${finalSummary}
                 `.trim()
 
                 // 📧 Store generated summary for debug timeline
@@ -224,7 +231,7 @@ ${safetyResult.translatedText || summaryResult.summary}
               const messageList = messages
                 .map((msg, idx) => {
                   const role = msg.role === "user" ? "Cliente" : "Bot"
-                  const timestamp = new Date(msg.timestamp).toLocaleString(
+                  const timestamp = new Date(msg.createdAt).toLocaleString(
                     "it-IT"
                   )
                   return `${idx + 1}. [${timestamp}] ${role}: ${msg.content}`

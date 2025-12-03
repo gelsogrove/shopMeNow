@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client"
 // import { getAllProducts } from "../../chatbot/calling-functions/getAllProducts" // REMOVED - file no longer exists
 import { MessageRepository } from "../../repositories/message.repository"
 import logger from "../../utils/logger"
+import { linkGeneratorService } from "./link-generator.service"
 import { PriceCalculationService } from "./price-calculation.service"
 import { TokenService } from "./token.service"
 
@@ -611,6 +612,29 @@ export class FunctionHandlerService {
         })
       }
 
+      // 🔗 Generate secure link to order detail page
+      let orderDetailLink = ""
+      try {
+        const tokenService = new TokenService()
+        const orderToken = await tokenService.generateSecureToken(
+          workspaceId,
+          { customerId: customer.id, workspaceId, orderCode: order.orderCode },
+          "1h", // Valid for 1 hour
+          undefined,
+          customer.phone,
+          undefined,
+          customer.id
+        )
+        orderDetailLink = await linkGeneratorService.generateOrdersLink(
+          orderToken,
+          workspaceId,
+          order.orderCode
+        )
+        logger.info(`📋 Generated order detail link: ${orderDetailLink}`)
+      } catch (linkError) {
+        logger.error("❌ Error generating order detail link:", linkError)
+      }
+
       const result = {
         success: true,
         order: {
@@ -630,6 +654,7 @@ export class FunctionHandlerService {
           shippingAddress: order.shippingAddress || null,
           notes: order.notes || null,
           documents: documents,
+          orderDetailLink: orderDetailLink, // 🆕 Link to order detail page
         },
         customer: {
           name: order.customer?.name || "Cliente",
@@ -641,6 +666,7 @@ export class FunctionHandlerService {
         itemsCount: result.order.itemsCount,
         totalAmount: result.order.totalAmount,
         documentsCount: result.order.documents.length,
+        hasDetailLink: !!orderDetailLink,
       })
 
       return result

@@ -26,6 +26,7 @@ const AGENT_TYPE_MAP = {
   "order-tracking-agent.md": "ORDER_TRACKING",
   "customer-support-agent.md": "CUSTOMER_SUPPORT",
   "profile-management-agent.md": "PROFILE_MANAGEMENT",
+  "translation-agent.md": "TRANSLATION",
 }
 
 async function loadPromptFromFile(filename) {

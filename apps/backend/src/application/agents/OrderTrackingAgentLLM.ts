@@ -232,6 +232,15 @@ export class OrderTrackingAgentLLM {
 
         totalTokens += finalLLMResponse.tokensUsed
         finalResponse = finalLLMResponse.content || ""
+
+        // 🔗 Replace [LINK_ORDER_WITH_TOKEN] with secure short link
+        if (functionResult?.secureLink && finalResponse) {
+          finalResponse = finalResponse.replace(
+            /\[LINK_ORDER_WITH_TOKEN\]/gi,
+            functionResult.secureLink
+          )
+          logger.info(`🔗 Replaced [LINK_ORDER_WITH_TOKEN] → ${functionResult.secureLink}`)
+        }
       }
 
       const executionTimeMs = Date.now() - startTime
@@ -352,19 +361,19 @@ export class OrderTrackingAgentLLM {
 
         case "getLastOrders":
           // Get last N orders with summary details
-          const limit = args.limit || 3
+          const limit = args.limit || 20
           const allOrders = await this.orderRepo.findByCustomerId(
             context.customerId, // ✅ customerId first
             context.workspaceId // ✅ workspaceId second
           )
 
           // Return only the first N orders (already sorted by date DESC)
-          const limitedOrders = allOrders.slice(0, Math.min(limit, 10))
+          const limitedOrders = allOrders.slice(0, Math.min(limit, 50))
 
           return limitedOrders.map((order: any) => ({
             orderCode: order.orderCode,
             createdAt: order.createdAt,
-            totalPrice: order.totalPrice,
+            totalAmount: order.totalAmount || 0, // ✅ Fixed: use totalAmount, not totalPrice
             status: order.status,
             itemCount: order.items?.length || 0,
           }))
@@ -467,13 +476,13 @@ export class OrderTrackingAgentLLM {
       {
         name: "getLastOrders",
         description:
-          "Get last N orders with summary details (orderCode, date, total, status). Use this when customer asks for 'recent orders' or 'last orders'.",
+          "Get last N orders with summary details (orderCode, date, total, status). Use this when customer asks for 'orders', 'my orders', 'recent orders' or 'order history'.",
         parameters: {
           type: "object",
           properties: {
             limit: {
               type: "number",
-              description: "Number of orders to return (default: 3, max: 10)",
+              description: "Number of orders to return (default: 20, max: 50). Use default to show all recent orders.",
             },
           },
           required: [],

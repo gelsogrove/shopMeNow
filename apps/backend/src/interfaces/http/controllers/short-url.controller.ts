@@ -118,6 +118,63 @@ export class ShortUrlController {
   }
 
   /**
+   * Resolve short URL and return JSON instead of redirect
+   * GET /s/:shortCode/resolve
+   * Used by frontend SPA to get the original URL without browser redirect issues
+   */
+  async resolve(req: Request, res: Response): Promise<void> {
+    try {
+      const { shortCode } = req.params
+
+      if (!shortCode) {
+        res.status(400).json({
+          success: false,
+          error: "Short code is required",
+        })
+        return
+      }
+
+      logger.info(`📎 Resolving short URL (JSON): /s/${shortCode}`)
+
+      const result = await urlShortenerService.resolveShortUrl(shortCode)
+
+      if (!result.success) {
+        if (result.notFound) {
+          res.status(404).json({
+            success: false,
+            error: "Short URL not found",
+            notFound: true,
+          })
+        } else if (result.expired) {
+          res.status(410).json({
+            success: false,
+            error: "Short URL has expired",
+            expired: true,
+          })
+        } else {
+          res.status(500).json({
+            success: false,
+            error: "Failed to resolve short URL",
+          })
+        }
+        return
+      }
+
+      // Return the original URL as JSON
+      res.json({
+        success: true,
+        originalUrl: result.originalUrl,
+      })
+    } catch (error) {
+      logger.error("❌ Error resolving short URL (JSON):", error)
+      res.status(500).json({
+        success: false,
+        error: "Internal server error",
+      })
+    }
+  }
+
+  /**
    * Get short URL statistics
    * GET /api/short-urls/:shortCode/stats
    */

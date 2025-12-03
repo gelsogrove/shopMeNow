@@ -159,12 +159,26 @@ PRD-000-SALAME-250     → PRD-000-SALAME-250 (NOT translated)
 
 ### 3️⃣ LINKS & TOKENS (DO NOT TRANSLATE)
 
-**Links and checkout tokens stay as-is**:
+**Links, tokens, and markdown links stay EXACTLY as-is**:
 
 ```
 [LINK_CHECKOUT_WITH_TOKEN] → [LINK_CHECKOUT_WITH_TOKEN]
 [LINK_CART_URL]            → [LINK_CART_URL]
 ```
+
+**🚨 CRITICAL: MARKDOWN LINKS MUST BE PRESERVED EXACTLY**:
+
+```
+[Scarica fattura](http://localhost:3000/s/abc123)  → KEEP EXACTLY AS-IS!
+[📄 Scarica fattura](http://example.com/s/xyz789) → KEEP EXACTLY AS-IS!
+[Click here](https://domain.com/path?token=xxx)   → KEEP EXACTLY AS-IS!
+```
+
+**Rules for markdown links `[text](url)`**:
+- ❌ NEVER modify the URL inside parentheses
+- ❌ NEVER truncate the URL or remove the closing `)`
+- ❌ NEVER translate the link text if it contains "Scarica", "Download", "Click"
+- ✅ Copy the ENTIRE markdown link unchanged: `[text](full-url-with-closing-paren)`
 
 ### 4️⃣ EMOJIS (PRESERVE ALL)
 

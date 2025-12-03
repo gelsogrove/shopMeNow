@@ -1,6 +1,6 @@
 import { API_URL } from "@/config"
 import axios from "axios"
-import { useEffect } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 
 /**
@@ -11,53 +11,103 @@ import { useNavigate, useParams } from "react-router-dom"
 export default function ShortUrlRedirect() {
   const { code } = useParams<{ code: string }>()
   const navigate = useNavigate()
+  const [error, setError] = useState<string | null>(null)
+  const hasResolved = useRef(false) // Prevent double execution in StrictMode
 
   useEffect(() => {
+    // Prevent double execution (React StrictMode calls useEffect twice)
+    if (hasResolved.current) {
+      console.log("[ShortUrlRedirect] Already resolved, skipping...")
+      return
+    }
+
     const resolveShortUrl = async () => {
       if (!code) {
-        navigate("/not-found")
+        navigate("/not-found", { replace: true })
         return
       }
 
+      // Mark as resolving to prevent double execution
+      hasResolved.current = true
+
       try {
-        // Call backend to resolve short URL
-        // Remove /api from API_URL since /s/ is a root route
+        // Call backend to resolve short URL using JSON endpoint
+        // This avoids CORS issues with redirect headers
         const baseUrl = API_URL.replace("/api", "")
-        const response = await axios.get(`${baseUrl}/s/${code}`, {
-          maxRedirects: 0, // Don't follow redirects automatically
-          validateStatus: (status) => status === 302 || status === 301, // Accept redirect status
-        })
+        console.log(`[ShortUrlRedirect] Resolving short URL: ${baseUrl}/s/${code}/resolve`)
+        
+        const response = await axios.get(`${baseUrl}/s/${code}/resolve`)
 
-        // Backend returns 302 with Location header
-        const originalUrl = response.headers.location
+        if (response.data.success && response.data.originalUrl) {
+          const originalUrl = response.data.originalUrl
+          console.log(`[ShortUrlRedirect] Original URL: ${originalUrl}`)
+          
+          // Check if it's already a relative path or full URL
+          let targetPath: string
+          
+          if (originalUrl.startsWith("/")) {
+            // Already a relative path
+            targetPath = originalUrl
+          } else if (originalUrl.startsWith("http")) {
+            // Full URL - extract path + query + hash
+            try {
+              const url = new URL(originalUrl)
+              targetPath = url.pathname + url.search + url.hash
+            } catch (e) {
+              console.error("[ShortUrlRedirect] Invalid URL format:", originalUrl)
+              targetPath = originalUrl
+            }
+          } else {
+            // Unknown format, use as-is
+            targetPath = "/" + originalUrl
+          }
 
-        if (originalUrl) {
-          // Extract the path from the full URL
-          const url = new URL(originalUrl)
-          const targetPath = url.pathname + url.search + url.hash
-
-          // Navigate to the target path
-          window.location.href = targetPath
+          console.log(`[ShortUrlRedirect] Navigating to: ${targetPath}`)
+          
+          // Small delay to ensure component is fully mounted before navigation
+          setTimeout(() => {
+            navigate(targetPath, { replace: true })
+          }, 50)
         } else {
-          navigate("/not-found")
+          console.error("[ShortUrlRedirect] No originalUrl in response:", response.data)
+          navigate("/not-found", { replace: true })
         }
       } catch (error: any) {
-        console.error("Error resolving short URL:", error)
+        console.error("[ShortUrlRedirect] Error resolving short URL:", error)
+        hasResolved.current = false // Allow retry on error
 
         // Check if it's a 404 or expired link
         if (error.response?.status === 404) {
-          navigate("/not-found")
+          navigate("/not-found", { replace: true })
         } else if (error.response?.status === 410) {
           // 410 Gone - expired link
-          navigate("/expired")
+          navigate("/expired", { replace: true })
         } else {
-          navigate("/not-found")
+          setError("Errore nel caricamento del link")
+          // Retry after a short delay
+          setTimeout(() => {
+            navigate("/not-found", { replace: true })
+          }, 2000)
         }
       }
     }
 
-    resolveShortUrl()
+    // Small initial delay to ensure component is mounted
+    const timer = setTimeout(resolveShortUrl, 100)
+    
+    return () => clearTimeout(timer)
   }, [code, navigate])
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+        <div className="text-center">
+          <p className="text-red-600 mb-2">{error}</p>
+          <p className="text-gray-500 text-sm">Reindirizzamento in corso...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">

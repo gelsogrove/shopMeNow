@@ -61,9 +61,31 @@ export class TranslationAgent {
 
     try {
       // 1. Check if translation is needed
-      // Base language is ITALIAN (it) - skip translation only if target is Italian
       const normalizedLanguage = this.normalizeLanguage(options.targetLanguage)
-      if (normalizedLanguage === "it") {
+      
+      // 🆕 Feature 193: Detect if message appears to be in English (FAQ responses are in English)
+      // Common English words that indicate the message needs translation
+      const englishIndicators = [
+        /\bwe accept\b/i,
+        /\byou can\b/i,
+        /\bpayment is\b/i,
+        /\bdelivery time/i,
+        /\bshipping cost/i,
+        /\bto place an order/i,
+        /\bcredit card/i,
+        /\bbank transfer/i,
+        /\bcash on delivery/i,
+        /\bbusiness day/i,
+        /\bfree for orders/i,
+        /\bminimum order/i,
+        /\btrack your order/i,
+        /\brefrigerated shipping/i,
+        /\bSSL encryption/i,
+      ]
+      
+      const messageAppearsEnglish = englishIndicators.some(pattern => pattern.test(options.message))
+      
+      if (normalizedLanguage === "it" && !messageAppearsEnglish) {
         // No translation needed - content is already in Italian (base language)
         logger.info("✅ TranslationAgent - Italian language (base), no translation needed")
         return {
@@ -74,6 +96,11 @@ export class TranslationAgent {
           tokensUsed: 0,
           executionTimeMs: Date.now() - startTime,
         }
+      }
+      
+      // 🆕 If message appears English but target is Italian, translate EN → IT
+      if (normalizedLanguage === "it" && messageAppearsEnglish) {
+        logger.info("🌍 TranslationAgent - Detected English content, translating to Italian")
       }
 
       // 2. Load TRANSLATION agent config from database
@@ -122,8 +149,12 @@ export class TranslationAgent {
         }
       )
 
-      // 4. Build user message - translate FROM Italian (base) TO target language
-      const userMessage = `Translate this Italian message to ${normalizedLanguage}:\n\n"${options.message}"\n\nRespond with JSON: {"translated": true, "originalLanguage": "it", "targetLanguage": "${normalizedLanguage}", "message": "..."}`      // 5. Call OpenRouter LLM
+      // 4. Build user message - detect source language and translate to target
+      // 🆕 Feature 193: Handle EN→IT translation for FAQ responses
+      const sourceLanguage = messageAppearsEnglish ? "English" : "Italian"
+      const userMessage = `Translate this ${sourceLanguage} message to ${normalizedLanguage === "it" ? "Italian" : normalizedLanguage}:\n\n"${options.message}"\n\nRespond with JSON: {"translated": true, "originalLanguage": "${messageAppearsEnglish ? "en" : "it"}", "targetLanguage": "${normalizedLanguage}", "message": "..."}`
+      
+      // 5. Call OpenRouter LLM
       logger.info("🌍 Calling TranslationAgent LLM", {
         workspaceId: options.workspaceId,
         model: translationAgent.model,

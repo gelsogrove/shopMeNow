@@ -385,12 +385,21 @@ export class FunctionExecutor {
       context.workspaceId
     )
 
-    // Return limited orders
+    // Return limited orders with correct field mapping
     const limitedOrders = orders.slice(0, Math.min(limit, 50))
+
+    // Map orders to include totalAmount explicitly for LLM consumption
+    const mappedOrders = limitedOrders.map((order: any) => ({
+      orderCode: order.orderCode,
+      createdAt: order.createdAt,
+      totalAmount: order.totalAmount || 0, // ✅ Use totalAmount, not totalPrice
+      status: order.status,
+      itemCount: order.items?.length || 0,
+    }))
 
     return {
       success: true,
-      orders: limitedOrders,
+      orders: mappedOrders,
       total: orders.length,
       limit: limitedOrders.length,
     }
@@ -403,19 +412,19 @@ export class FunctionExecutor {
     args: Record<string, any>,
     context: ExecutionContext
   ): Promise<any> {
-    const limit = args.limit || 3
+    const limit = args.limit || 20
     const orders = await this.orderRepo.findByCustomerId(
       context.customerId,
       context.workspaceId
     )
 
     // Return only the first N orders (already sorted by date DESC)
-    const limitedOrders = orders.slice(0, Math.min(limit, 10))
+    const limitedOrders = orders.slice(0, Math.min(limit, 50))
 
     return limitedOrders.map((order: any) => ({
       orderCode: order.orderCode,
       createdAt: order.createdAt,
-      totalPrice: order.totalPrice,
+      totalAmount: order.totalAmount || 0, // ✅ Fixed: use totalAmount, not totalPrice
       status: order.status,
       itemCount: order.items?.length || 0,
     }))

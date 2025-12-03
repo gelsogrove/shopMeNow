@@ -510,7 +510,7 @@ export function WorkspaceSelectionPage() {
                   <Input
                     id="channel-alias-inline"
                     type="text"
-                    placeholder="My Restaurant"
+                    placeholder=""
                     value={alias}
                     onChange={(e) => setAlias(e.target.value)}
                     className="mt-1.5"

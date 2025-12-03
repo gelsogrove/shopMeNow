@@ -67,7 +67,7 @@ app.use(
       "x-workspace-id",
       "X-Session-Id",
     ],
-    exposedHeaders: ["set-cookie"],
+    exposedHeaders: ["set-cookie", "Location", "location"],
   })
 )
 

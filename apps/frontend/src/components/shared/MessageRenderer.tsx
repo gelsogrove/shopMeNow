@@ -61,13 +61,16 @@ export function MessageRenderer({
         return (
           <a
             key={index}
-            href="#"
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-blue-600 hover:underline cursor-pointer"
             onClick={(e) => {
-              e.preventDefault()
               if (onLinkClick) {
+                e.preventDefault()
                 onLinkClick(part, e)
               }
+              // Se non c'è onLinkClick, lascia il comportamento default (apre il link)
             }}
           >
             {part}

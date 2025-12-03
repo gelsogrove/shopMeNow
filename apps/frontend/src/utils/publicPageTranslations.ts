@@ -67,6 +67,13 @@ export interface PublicPageTexts {
   paymentStatus: string
   items: string
   orderSummary: string
+  orderDetails: string
+  paymentMethod: string
+  tracking: string
+  products: string
+  subtotal: string
+  vat: string
+  shipping: string
 
   // Profile labels
   personalData: string
@@ -198,6 +205,14 @@ export interface PublicPageTexts {
   orderConfirmedDownload: string
   orderConfirmedEmail: string
   orderConfirmedBackToOrders: string
+
+  // Documents (invoice, DDT, credit note)
+  documentsTitle: string
+  downloadInvoice: string
+  downloadDdt: string
+  downloadCreditNote: string
+  documentNotAvailable: string
+  documentBeingPrepared: string
 }
 
 export const publicPageTranslations: Record<
@@ -269,6 +284,13 @@ export const publicPageTranslations: Record<
     paymentStatus: "Stato Pagamento",
     items: "Articoli",
     orderSummary: "Riepilogo Ordine",
+    orderDetails: "Dettagli Ordine",
+    paymentMethod: "Metodo di Pagamento",
+    tracking: "Tracking",
+    products: "Prodotti",
+    subtotal: "Subtotale",
+    vat: "IVA",
+    shipping: "Spedizione",
 
     // Profile labels
     personalData: "Dati Personali",
@@ -404,6 +426,14 @@ export const publicPageTranslations: Record<
     orderConfirmedDownload: "Scarica Ricevuta",
     orderConfirmedEmail: "Ti abbiamo inviato una email di conferma",
     orderConfirmedBackToOrders: "Torna agli Ordini",
+
+    // Documents
+    documentsTitle: "Documenti",
+    downloadInvoice: "Scarica Fattura",
+    downloadDdt: "Scarica DDT",
+    downloadCreditNote: "Scarica Nota di Credito",
+    documentNotAvailable: "Non disponibile",
+    documentBeingPrepared: "Documento in preparazione",
   },
 
   EN: {
@@ -471,6 +501,13 @@ export const publicPageTranslations: Record<
     paymentStatus: "Payment Status",
     items: "Items",
     orderSummary: "Order Summary",
+    orderDetails: "Order Details",
+    paymentMethod: "Payment Method",
+    tracking: "Tracking",
+    products: "Products",
+    subtotal: "Subtotal",
+    vat: "VAT",
+    shipping: "Shipping",
 
     // Profile labels
     personalData: "Personal Data",
@@ -606,6 +643,14 @@ export const publicPageTranslations: Record<
     orderConfirmedDownload: "Download Receipt",
     orderConfirmedEmail: "We've sent you a confirmation email",
     orderConfirmedBackToOrders: "Back to Orders",
+
+    // Documents
+    documentsTitle: "Documents",
+    downloadInvoice: "Download Invoice",
+    downloadDdt: "Download Delivery Note",
+    downloadCreditNote: "Download Credit Note",
+    documentNotAvailable: "Not available",
+    documentBeingPrepared: "Document being prepared",
   },
 
   ES: {
@@ -673,6 +718,13 @@ export const publicPageTranslations: Record<
     paymentStatus: "Estado del Pago",
     items: "Artículos",
     orderSummary: "Resumen del Pedido",
+    orderDetails: "Detalles del Pedido",
+    paymentMethod: "Método de Pago",
+    tracking: "Seguimiento",
+    products: "Productos",
+    subtotal: "Subtotal",
+    vat: "IVA",
+    shipping: "Envío",
 
     // Profile labels
     personalData: "Datos Personales",
@@ -808,6 +860,14 @@ export const publicPageTranslations: Record<
     orderConfirmedDownload: "Descargar Recibo",
     orderConfirmedEmail: "Te hemos enviado un email de confirmación",
     orderConfirmedBackToOrders: "Volver a los Pedidos",
+
+    // Documents
+    documentsTitle: "Documentos",
+    downloadInvoice: "Descargar Factura",
+    downloadDdt: "Descargar Albarán",
+    downloadCreditNote: "Descargar Nota de Crédito",
+    documentNotAvailable: "No disponible",
+    documentBeingPrepared: "Documento en preparación",
   },
 
   PT: {
@@ -875,6 +935,13 @@ export const publicPageTranslations: Record<
     paymentStatus: "Status do Pagamento",
     items: "Itens",
     orderSummary: "Resumo do Pedido",
+    orderDetails: "Detalhes do Pedido",
+    paymentMethod: "Método de Pagamento",
+    tracking: "Rastreamento",
+    products: "Produtos",
+    subtotal: "Subtotal",
+    vat: "IVA",
+    shipping: "Frete",
 
     // Profile labels
     personalData: "Dados Pessoais",
@@ -1011,6 +1078,14 @@ export const publicPageTranslations: Record<
     orderConfirmedDownload: "Baixar Recibo",
     orderConfirmedEmail: "Enviamos um email de confirmação para você",
     orderConfirmedBackToOrders: "Voltar aos Pedidos",
+
+    // Documents
+    documentsTitle: "Documentos",
+    downloadInvoice: "Baixar Fatura",
+    downloadDdt: "Baixar Guia de Transporte",
+    downloadCreditNote: "Baixar Nota de Crédito",
+    documentNotAvailable: "Não disponível",
+    documentBeingPrepared: "Documento em preparação",
   },
 }
 
@@ -1019,11 +1094,20 @@ export const getPublicPageTexts = (
   customerLanguage?: string
 ): PublicPageTexts => {
   // Map database language codes to our localization keys
+  // Supports: 2-letter (IT, EN), 3-letter (ITA, ENG), full names (italian, english)
   const languageMap: { [key: string]: SupportedLanguage } = {
+    // 2-letter codes
     it: "IT",
     en: "EN",
     es: "ES",
     pt: "PT",
+    // 3-letter codes (from some DB records)
+    ita: "IT",
+    eng: "EN",
+    esp: "ES",
+    prt: "PT",
+    por: "PT",
+    // Full names
     italian: "IT",
     english: "EN",
     spanish: "ES",
