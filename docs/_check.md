@@ -126,6 +126,6 @@ registrare?
 
 - ogni LLM ha il suo scopo giusto e non ci sono cose di altri LLM in mezzo ? 
 
-- mi controlli che 
+- i prompt hanno esempi generici? funzionerebbero con altri prodotti ?
 
 - fammi una tabella per vedere il risultato ma solo quelle cose che non vanno le cose che vanno non fammele vedere

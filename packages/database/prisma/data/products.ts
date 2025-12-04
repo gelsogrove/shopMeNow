@@ -165,7 +165,7 @@ export const products: ProductData[] = [
     status: "ACTIVE",
     slug: "bresaola-valtellina-igp-1760539790644-1760541634632-1760541681120-1760542111956-1760542245201-1760543283332-1760544291566-1760544741662-1760544839645-1760561170877-1760562939895-1760565166843-1760565309379-1760565465279-1760565693104-1760655750307-1760715768906",
     categoryName: "Salumi",
-    imageUrl: ["/uploads/products/SALUMI005_1760565372075_1z8s3v.jpg"],
+    imageUrl: ["/uploads/products/SALUMI-005_1764806803450_9hm8sb.jpg"],
     certifications: ["IGP"],
     transportType: "Trasporto refrigerato",
   },
@@ -180,7 +180,7 @@ export const products: ProductData[] = [
     status: "ACTIVE",
     slug: "coppa-parma-1760539790645-1760541634635-1760541681122-1760542111960-1760542245204-1760543283336-1760544291574-1760544741666-1760544839647-1760561170880-1760562939905-1760565166846-1760565309382-1760565465281-1760565693106-1760655750311-1760715768909",
     categoryName: "Salumi",
-    imageUrl: ["/uploads/products/SALUMI006_1760561490111_bl6y3i.jpg"],
+    imageUrl: ["/uploads/products/SALUMI-006_1764807133217_ydze5j.jpeg"],
     region: "Emilia-Romagna",
     transportType: "Trasporto refrigerato",
   },
@@ -288,7 +288,7 @@ export const products: ProductData[] = [
     status: "ACTIVE",
     slug: "burrata-pugliese-1760539790658-1760541634649-1760541681135-1760542111982-1760542245226-1760543283368-1760544291625-1760544741686-1760544839666-1760561170896-1760562939938-1760565166863-1760565309402-1760565465295-1760565693122-1760655750330-1760715768922",
     categoryName: "Formaggi",
-    imageUrl: ["/uploads/products/FORMAG006_1760565360921_l2arwv.jpg"],
+    imageUrl: ["/uploads/products/FORMAG-007_1764806839864_0xcxsa.jpeg"],
     transportType: "Trasporto refrigerato",
   },
   {
@@ -317,7 +317,7 @@ export const products: ProductData[] = [
     status: "ACTIVE",
     slug: "aceto-balsamico-modena-igp-1760539790665-1760541634656-1760541681143-1760542111993-1760542245241-1760543283380-1760544291644-1760544741695-1760544839675-1760561170903-1760562939950-1760565166872-1760565309410-1760565465303-1760565693130-1760655750340-1760715768928",
     categoryName: "Condimenti",
-    imageUrl: ["/uploads/products/COND002_1760561317901_0j8k35.jpeg"],
+    imageUrl: ["/uploads/products/COND-002_1764806640732_ocxuhx.jpg"],
     region: "Emilia-Romagna",
   },
   {
@@ -372,7 +372,7 @@ export const products: ProductData[] = [
     status: "ACTIVE",
     slug: "crema-pistacchio-bronte-1760539790674-1760541634668-1760541681154-1760542112004-1760542245263-1760543283392-1760544291677-1760544741709-1760544839688-1760561170913-1760562939969-1760565166883-1760565309421-1760565465314-1760565693140-1760655750353-1760715768937",
     categoryName: "Condimenti",
-    imageUrl: ["/uploads/products/COND006_1760561857797_zmgg98.webp"],
+    imageUrl: ["/uploads/products/COND-006_1764807253575_h9yir9.jpeg"],
   },
   {
     name: "Panettone Classico",
@@ -399,7 +399,7 @@ export const products: ProductData[] = [
     status: "ACTIVE",
     slug: "amaretti-saronno-1760539790678-1760541634672-1760541681162-1760542112010-1760542245272-1760543283399-1760544291692-1760544741721-1760544839695-1760561170918-1760562939980-1760565166890-1760565309426-1760565465320-1760565693145-1760655750361-1760715768940",
     categoryName: "Dolci",
-    imageUrl: ["/uploads/products/DOLCI002_1760556131642_tw3cmb.jpg"],
+    imageUrl: ["/uploads/products/DOLCI-002_1764806688149_617icc.jpg"],
   },
   {
     name: "Cantuccini Toscani",
@@ -412,7 +412,7 @@ export const products: ProductData[] = [
     status: "ACTIVE",
     slug: "cantuccini-toscani-1760539790680-1760541634675-1760541681164-1760542112011-1760542245276-1760543283401-1760544291698-1760544741725-1760544839698-1760561170921-1760562939984-1760565166892-1760565309428-1760565465322-1760565693148-1760655750366-1760715768942",
     categoryName: "Dolci",
-    imageUrl: ["/uploads/products/DOLCI003_1760561304588_y6jfhf.jpg"],
+    imageUrl: ["/uploads/products/DOLCI-003_1764806915526_xcz296.jpeg"],
   },
   {
     name: "Torrone di Cremona IGP",
@@ -451,7 +451,7 @@ export const products: ProductData[] = [
     status: "ACTIVE",
     slug: "limoncello-sorrento-igp-1760539790687-1760541634683-1760541681173-1760542112019-1760542245291-1760543283411-1760544291719-1760544741741-1760544839709-1760561170928-1760562939993-1760565166900-1760565309436-1760565465329-1760565693156-1760655750376-1760715768949",
     categoryName: "Bevande",
-    imageUrl: ["/uploads/products/BEV001_1760561757585_u0xhm0.jpeg"],
+    imageUrl: ["/uploads/products/BEV-LIM-001_1764807480083_i3gq5d.jpg"],
     region: "Campania",
   },
   {
@@ -465,7 +465,7 @@ export const products: ProductData[] = [
     status: "ACTIVE",
     slug: "chianti-classico-docg-1760539790689-1760541634685-1760541681175-1760542112021-1760542245294-1760543283415-1760544291727-1760544741744-1760544839711-1760561170931-1760562939998-1760565166903-1760565309438-1760565465331-1760565693159-1760655750379-1760715768951",
     categoryName: "Bevande",
-    imageUrl: ["/uploads/products/BEV002_1760557410014_icbxua.webp"],
+    imageUrl: ["/uploads/products/BEV-CHI-001_1764807055257_od30wc.jpeg"],
     region: "Tuscany",
   },
   {
@@ -493,7 +493,7 @@ export const products: ProductData[] = [
     status: "ACTIVE",
     slug: "caffe-espresso-napoletano-1760539790694-1760541634690-1760541681181-1760542112026-1760542245303-1760543283421-1760544291740-1760544741752-1760544839716-1760561170936-1760562940004-1760565166908-1760565309443-1760565465337-1760565693165-1760655750386-1760715768955",
     categoryName: "Bevande",
-    imageUrl: ["/uploads/products/BEV004_1760544432443_qbz8ly.jpg"],
+    imageUrl: ["/uploads/products/BEV-CAF-001_1764806876918_4skbq2.jpg"],
   },
   {
     name: "Nduja Calabrese",
@@ -520,7 +520,7 @@ export const products: ProductData[] = [
     status: "ACTIVE",
     slug: "colatura-alici-cetara-1760539790701-1760541634697-1760541681188-1760542112034-1760542245317-1760543283430-1760544291761-1760544741761-1760544839726-1760561170943-1760562940012-1760565166916-1760565309450-1760565465344-1760565693170-1760655750393-1760715768959",
     categoryName: "Specialità",
-    imageUrl: ["/uploads/products/SPEC002_1760565352126_at804l.jpg"],
+    imageUrl: ["/uploads/products/SPEC-COL-001_1764807085188_kns77d.jpeg"],
   },
   {
     name: "Bottarga di Muggine Sarda",
@@ -533,7 +533,7 @@ export const products: ProductData[] = [
     status: "ACTIVE",
     slug: "bottarga-muggine-sarda-1760539790704-1760541634699-1760541681192-1760542112037-1760542245322-1760543283433-1760544291771-1760544741765-1760544839729-1760561170945-1760562940021-1760565166919-1760565309452-1760565465346-1760565693172-1760655750396-1760715768961",
     categoryName: "Specialità",
-    imageUrl: ["/uploads/products/SPEC003_1760565380340_lhm60n.jpg"],
+    imageUrl: ["/uploads/products/SPEC-BOT-001_1764806746818_cxh834.jpg"],
   },
   {
     name: "Miele di Acacia Italiano",
@@ -559,7 +559,7 @@ export const products: ProductData[] = [
     status: "ACTIVE",
     slug: "farro-perlato-umbria-1760539790710-1760541634703-1760541681196-1760542112042-1760542245329-1760543283439-1760544291788-1760544741771-1760544839735-1760561170950-1760562940030-1760565166925-1760565309457-1760565465351-1760565693176-1760655750401-1760715768966",
     categoryName: "Specialità",
-    imageUrl: ["/uploads/products/SPEC005_1760556952383_3ccss0.jpg"],
+    imageUrl: ["/uploads/products/SPEC-FAR-001_1764807290469_7hune8.jpeg"],
     region: "Umbria",
   },
   {
@@ -573,7 +573,7 @@ export const products: ProductData[] = [
     status: "ACTIVE",
     slug: "carciofi-sottolio-1760539790713-1760541634706-1760541681199-1760542112045-1760542245333-1760543283443-1760544291801-1760544741775-1760544839738-1760561170953-1760562940058-1760565166929-1760565309459-1760565465353-1760565693179-1760655750404-1760715768968",
     categoryName: "Conserve",
-    imageUrl: ["/uploads/products/SOTT001_1760557317413_na2rf3.jpg"],
+    imageUrl: ["/uploads/products/PRES-CAR-001_1764807007410_rq9p0p.jpg"],
   },
   {
     name: "Pomodori Secchi Sottolio",
@@ -625,7 +625,7 @@ export const products: ProductData[] = [
     status: "ACTIVE",
     slug: "funghi-porcini-sottolio-1760539790722-1760541634716-1760541681209-1760542112056-1760542245349-1760543283455-1760544291843-1760544741789-1760544839750-1760561170964-1760562940137-1760565166941-1760565309471-1760565465364-1760565693188-1760655750423-1760715768984",
     categoryName: "Conserve",
-    imageUrl: ["/uploads/products/SOTT005_1760562057652_qq54ho.jpg"],
+    imageUrl: ["/uploads/products/PRES-FUN-001_1764807345662_jkr9ch.webp"],
   },
   {
     name: "Giardiniera all'Aceto",
@@ -638,7 +638,7 @@ export const products: ProductData[] = [
     status: "ACTIVE",
     slug: "giardiniera-aceto-1760539790724-1760541634718-1760541681212-1760542112066-1760542245356-1760543283459-1760544291850-1760544741793-1760544839753-1760561170969-1760562940193-1760565166944-1760565309473-1760565465367-1760565693190-1760655750427-1760715768987",
     categoryName: "Conserve",
-    imageUrl: ["/uploads/products/SOTT006_1760557241649_794dfa.jpg"],
+    imageUrl: ["/uploads/products/PRES-GIA-001_1764807437942_ljwcu0.jpeg"],
   },
   {
     name: "Carciofi alla Romana Surgelati",
@@ -651,7 +651,7 @@ export const products: ProductData[] = [
     status: "ACTIVE",
     slug: "carciofi-romana-surgelati",
     categoryName: "Surgelati",
-    imageUrl: ["/uploads/products/FROZ001_1760966079042_ma4yrd.jpg"],
+    imageUrl: ["/uploads/products/FROZ-CAR-001_1764806965148_ip4ksd.jpg"],
     region: "Lazio",
   },
   {
@@ -678,7 +678,7 @@ export const products: ProductData[] = [
     status: "ACTIVE",
     slug: "funghi-porcini-trifolati-surgelati",
     categoryName: "Surgelati",
-    imageUrl: ["/uploads/products/FROZ003_1760966113194_z335s5.jpg"],
+    imageUrl: ["/uploads/products/FROZ-FUN-001_1764807386923_gik4kg.jpeg"],
   },
   {
     name: "Tortellini Bolognesi Surgelati",
@@ -704,7 +704,7 @@ export const products: ProductData[] = [
     status: "ACTIVE",
     slug: "arancini-siciliani-ragu-surgelati",
     categoryName: "Surgelati",
-    imageUrl: ["/uploads/products/FROZ005_1760966052757_2qdbfv.jpeg"],
+    imageUrl: ["/uploads/products/FROZ-ARA-001_1764806721939_76fa60.jpg"],
     region: "Sicily",
     transportType: "Trasporto congelato",
   },

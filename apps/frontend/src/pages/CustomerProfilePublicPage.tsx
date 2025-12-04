@@ -154,8 +154,11 @@ const CustomerProfilePublicPage: React.FC = () => {
           setInitialLoading(false)
         }, remainingTime)
       })
+    } else if (!tokenLoading && (tokenError || !tokenValid)) {
+      // Token validation failed - stop loading immediately
+      setInitialLoading(false)
     }
-  }, [tokenValid, token])
+  }, [tokenValid, token, tokenLoading, tokenError])
 
   // 💾 Handle profile save
   const handleSaveProfile = async (updatedData: Partial<CustomerProfile>) => {
@@ -222,23 +225,24 @@ const CustomerProfilePublicPage: React.FC = () => {
   // 🌐 Get localized text based on customer language using centralized system
   const texts = getPublicPageTexts(customerLanguage)
 
-  if (tokenLoading || loadingProfile || initialLoading) {
-    return (
-      <UnifiedLoading title={texts.loading} message={texts.loadingMessage} />
-    )
-  }
-
-  // Show error if token is invalid
-  if (tokenError || !tokenValid) {
+  // Show error FIRST if token is invalid (don't show loading)
+  if (tokenError || (!tokenLoading && !tokenValid)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <TokenError
-          error={tokenError || "Invalid profile token"}
+          error={tokenError || "Invalid or expired token"}
           onRetry={validateToken}
           showRetry={true}
           className="max-w-md w-full"
         />
       </div>
+    )
+  }
+
+  // Show loading only if token is being validated or profile is loading
+  if (tokenLoading || loadingProfile || initialLoading) {
+    return (
+      <UnifiedLoading title={texts.loading} message={texts.loadingMessage} />
     )
   }
 

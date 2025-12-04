@@ -455,6 +455,8 @@ router.get(
           currency: true,
           discount: true,
           invoiceAddress: true,
+          push_notifications_consent: true,
+          push_notifications_consent_at: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -576,6 +578,11 @@ router.put(
           ...(updateData.invoiceAddress && {
             invoiceAddress: updateData.invoiceAddress,
           }),
+          // Handle push_notifications_consent (can be true or false)
+          ...(typeof updateData.push_notifications_consent === 'boolean' && {
+            push_notifications_consent: updateData.push_notifications_consent,
+            push_notifications_consent_at: updateData.push_notifications_consent ? new Date() : null,
+          }),
           updatedAt: new Date(),
         },
         select: {
@@ -589,6 +596,8 @@ router.put(
           currency: true,
           discount: true,
           invoiceAddress: true,
+          push_notifications_consent: true,
+          push_notifications_consent_at: true,
           createdAt: true,
           updatedAt: true,
         },

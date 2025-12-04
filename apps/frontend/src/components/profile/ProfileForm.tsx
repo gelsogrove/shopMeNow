@@ -2,6 +2,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import { Bell, Info } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -16,6 +18,8 @@ interface CustomerProfile {
   currency: string
   discount: number
   invoiceAddress: any
+  push_notifications_consent: boolean
+  push_notifications_consent_at: string | null
   createdAt: string
   updatedAt: string
 }
@@ -58,6 +62,9 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
   const [invoiceVatNumber, setInvoiceVatNumber] = useState('')
   const [invoicePhone, setInvoicePhone] = useState('')
 
+  // Push notifications state
+  const [pushNotificationsConsent, setPushNotificationsConsent] = useState(false)
+
   // Form validation
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -94,6 +101,9 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
         setInvoiceVatNumber(profileData.invoiceAddress.vatNumber || '')
         setInvoicePhone(profileData.invoiceAddress.phone || '')
       }
+
+      // Initialize push notifications consent
+      setPushNotificationsConsent(profileData.push_notifications_consent || false)
     }
   }, [profileData])
 
@@ -152,7 +162,8 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
         country: invoiceCountry,
         vatNumber: invoiceVatNumber,
         phone: invoicePhone,
-      }
+      },
+      push_notifications_consent: pushNotificationsConsent,
     }
 
     await onSave(updateData)
@@ -456,6 +467,55 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
               />
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Push Notifications Card */}
+      <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white">
+        <CardHeader>
+          <CardTitle className="text-xl font-semibold flex items-center gap-2">
+            <Bell className="h-5 w-5 text-blue-600" />
+            Push Notifications
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Info Box */}
+          <div className="flex items-start gap-3 p-4 bg-blue-100/50 rounded-lg border border-blue-200">
+            <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <div className="text-sm text-blue-800">
+              <p className="font-medium mb-1">Stay updated!</p>
+              <p className="text-blue-700">
+                Enable push notifications to receive real-time updates about your orders, 
+                special offers, and important messages directly on your device. 
+                You can disable this at any time.
+              </p>
+            </div>
+          </div>
+
+          {/* Toggle Switch */}
+          <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
+            <div className="space-y-1">
+              <Label htmlFor="pushNotifications" className="text-base font-medium cursor-pointer">
+                Receive push notifications
+              </Label>
+              <p className="text-sm text-gray-500">
+                Get notified about order updates, promotions, and more
+              </p>
+            </div>
+            <Switch
+              id="pushNotifications"
+              checked={pushNotificationsConsent}
+              onCheckedChange={setPushNotificationsConsent}
+              className="data-[state=checked]:bg-blue-600"
+            />
+          </div>
+
+          {/* Consent Status */}
+          {profileData.push_notifications_consent_at && pushNotificationsConsent && (
+            <p className="text-xs text-gray-500 text-center">
+              Notifications enabled since {new Date(profileData.push_notifications_consent_at).toLocaleDateString()}
+            </p>
+          )}
         </CardContent>
       </Card>
 
