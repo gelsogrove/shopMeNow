@@ -24,6 +24,7 @@ export interface PendingInvitation {
     email: string
     name?: string
   }
+  isAgent: boolean
 }
 
 export interface WorkspaceRole {

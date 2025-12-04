@@ -35,6 +35,12 @@ export interface GetOrderResponse {
       carrier?: string
       status?: string
     }
+    creditNotes?: Array<{
+      creditNoteCode: string
+      amount: number
+      reason: string
+      createdAt: string
+    }>
   }
   message?: string
   error?: string
@@ -66,6 +72,9 @@ export async function getOrder(
           },
         },
         customer: true,
+        creditNotes: {
+          orderBy: { createdAt: 'desc' },
+        },
       },
     })
 
@@ -108,9 +117,17 @@ export async function getOrder(
             status: undefined, // Not in schema yet
           }
         : undefined,
+      creditNotes: order.creditNotes.length > 0
+        ? order.creditNotes.map((cn) => ({
+            creditNoteCode: cn.creditNoteCode,
+            amount: cn.amount,
+            reason: cn.reason,
+            createdAt: cn.createdAt.toISOString(),
+          }))
+        : undefined,
     }
 
-    logger.info(`[GET_ORDER] Order found: ${order.orderCode}`)
+    logger.info(`[GET_ORDER] Order found: ${order.orderCode}, creditNotes: ${order.creditNotes.length}`)
 
     return {
       success: true,

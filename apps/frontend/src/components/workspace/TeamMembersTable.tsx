@@ -345,6 +345,7 @@ export function TeamMembersTable({
               <TableHeader>
                 <TableRow>
                   <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Expires</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -353,7 +354,7 @@ export function TeamMembersTable({
               <TableBody>
                 {invitations.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-gray-500 py-8">
+                    <TableCell colSpan={5} className="text-center text-gray-500 py-8">
                       No pending invitations
                     </TableCell>
                   </TableRow>
@@ -362,6 +363,17 @@ export function TeamMembersTable({
                     <TableRow key={invitation.id}>
                       <TableCell className="font-medium">
                         {invitation.email}
+                      </TableCell>
+                      <TableCell>
+                        {invitation.isAgent ? (
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-200">
+                            Agent
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary">
+                            Admin
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         {isExpired(invitation.expiresAt) ? (

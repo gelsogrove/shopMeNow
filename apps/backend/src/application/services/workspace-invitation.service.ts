@@ -464,6 +464,9 @@ export class WorkspaceInvitationService {
 
   /**
    * Get pending invitations for a workspace
+   * 
+   * Business Rule: If the invited email exists in Sales table,
+   * they will become an "AGENT" when they accept the invitation.
    */
   async getPendingInvitations(workspaceId: string): Promise<
     Array<{
@@ -472,6 +475,7 @@ export class WorkspaceInvitationService {
       createdAt: Date
       expiresAt: Date
       status: InvitationStatus
+      isAgent: boolean
       invitedBy: {
         firstName: string | null
         lastName: string | null
@@ -505,12 +509,25 @@ export class WorkspaceInvitationService {
       }
     }
 
+    // Get Sales emails to determine which invitees will be Agents
+    let salesEmails: Set<string> = new Set()
+    try {
+      const salesRecords = await this.prisma.sales.findMany({
+        where: { workspaceId },
+        select: { email: true },
+      })
+      salesEmails = new Set(salesRecords.map((s) => s.email.toLowerCase()))
+    } catch {
+      // Graceful degradation: if Sales query fails, all invitees are considered Admins
+    }
+
     return invitations.map((inv) => ({
       id: inv.id,
       email: inv.email,
       createdAt: inv.createdAt,
       expiresAt: inv.expiresAt,
       status: inv.status,
+      isAgent: salesEmails.has(inv.email.toLowerCase()),
       invitedBy: inv.invitedBy,
     }))
   }

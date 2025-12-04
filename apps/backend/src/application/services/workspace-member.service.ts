@@ -19,6 +19,10 @@ export class WorkspaceMemberService {
 
   /**
    * Get all members of a workspace
+   * 
+   * Business Rule: If a member's email exists in the Sales table for this workspace,
+   * their displayed role should be "AGENT" instead of "ADMIN".
+   * SUPER_ADMIN (owner) role is never overridden.
    */
   async getMembers(workspaceId: string): Promise<WorkspaceMember[]> {
     const userWorkspaces = await this.prisma.userWorkspace.findMany({
@@ -36,14 +40,36 @@ export class WorkspaceMemberService {
       orderBy: [{ role: "asc" }, { createdAt: "asc" }],
     })
 
-    return userWorkspaces.map((uw) => ({
-      userId: uw.user.id,
-      email: uw.user.email,
-      firstName: uw.user.firstName,
-      lastName: uw.user.lastName,
-      role: uw.role,
-      createdAt: uw.createdAt,
-    }))
+    // Get all Sales emails for this workspace to check for AGENT role
+    let salesEmails: Set<string> = new Set()
+    try {
+      const salesRecords = await this.prisma.sales.findMany({
+        where: { workspaceId },
+        select: { email: true },
+      })
+      // Store emails in lowercase for case-insensitive matching
+      salesEmails = new Set(salesRecords.map((s) => s.email.toLowerCase()))
+    } catch (error) {
+      // Graceful degradation: if Sales query fails, continue with original roles
+      logger.warn(`Failed to fetch Sales for workspace ${workspaceId}, using original roles:`, error)
+    }
+
+    return userWorkspaces.map((uw) => {
+      // Determine role: SUPER_ADMIN stays unchanged, ADMIN becomes AGENT if in Sales
+      let displayRole = uw.role
+      if (uw.role !== "SUPER_ADMIN" && salesEmails.has(uw.user.email.toLowerCase())) {
+        displayRole = "AGENT"
+      }
+
+      return {
+        userId: uw.user.id,
+        email: uw.user.email,
+        firstName: uw.user.firstName,
+        lastName: uw.user.lastName,
+        role: displayRole,
+        createdAt: uw.createdAt,
+      }
+    })
   }
 
   /**
