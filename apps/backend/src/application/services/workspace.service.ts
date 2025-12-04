@@ -10,6 +10,7 @@ import { WorkspaceRepositoryInterface } from "../../domain/repositories/workspac
 import { WorkspaceRepository } from "../../repositories/workspace.repository"
 import logger from "../../utils/logger"
 import { defaultAgents } from "../../../prisma/data/defaultAgents"
+import { initialFAQs } from "../../../prisma/data/initialFAQs"
 
 export class WorkspaceService {
   private repository: WorkspaceRepositoryInterface
@@ -328,6 +329,33 @@ For privacy inquiries, please contact our support team.`
           error
         )
         // Don't fail the entire transaction for GDPR content
+      }
+
+      // 4b. 🆕 CREATE DEFAULT FAQs (Feature: Auto-create FAQs on new workspace)
+      try {
+        const faqs = initialFAQs(createdWorkspace.id)
+        for (const faq of faqs) {
+          await tx.fAQ.create({
+            data: {
+              workspaceId: createdWorkspace.id,
+              question: faq.question,
+              answer: faq.answer,
+              keywords: faq.keywords,
+              category: faq.category,
+              order: faq.order,
+              isActive: faq.isActive,
+            },
+          })
+        }
+        logger.info(
+          `✅ Created ${faqs.length} default FAQs for workspace ${createdWorkspace.id}`
+        )
+      } catch (error) {
+        logger.error(
+          `Error creating default FAQs for workspace ${createdWorkspace.id}:`,
+          error
+        )
+        // Don't fail the entire transaction for FAQs
       }
 
       // 5. 🆕 CREATE USER-WORKSPACE RELATION AND SET OWNER (Feature 184: Team Management)

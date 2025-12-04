@@ -234,7 +234,7 @@ export class PromptProcessorService {
    * Handles:
    * - Customer data: {{nameUser}}, {{email}}, {{phone}}, {{discountUser}}
    * - Sales agent data: {{agentName}}, {{agentPhone}}, {{agentEmail}}
-   * - Company data: {{companyName}}, {{languageUser}}
+   * - Company data: {{companyName}}, {{channelName}}, {{languageUser}}
    * - Order data: {{lastordercode}}
    * - System data: {{TOKEN_DURATION}}
    *
@@ -266,6 +266,7 @@ export class PromptProcessorService {
       lastordercode?: string
       pushNotificationsConsent?: boolean
       pushNotificationsConsentAt?: Date | null
+      channelName?: string
     }
   ): string {
     if (!text) return text
@@ -298,6 +299,10 @@ export class PromptProcessorService {
           ? new Date(customerData.pushNotificationsConsentAt).toISOString()
           : "Mai modificato"
       )
+      .replace(
+        /\{\{channelName\}\}/g,
+        customerData.channelName || "Shop"
+      )
   }
 
   /**
@@ -328,6 +333,7 @@ export class PromptProcessorService {
       lastordercode: customerData.lastordercode,
       pushNotificationsConsent: customerData.push_notifications_consent,
       pushNotificationsConsentAt: customerData.push_notifications_consent_at,
+      channelName: customerData.channelName,
     })
   } /**
    * Format token duration from environment variable

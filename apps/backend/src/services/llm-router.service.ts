@@ -937,6 +937,7 @@ export class LLMRouterService {
           customer.language || workspace?.language || "it"
         ),
         lastordercode: lastOrder?.orderCode || "",
+        channelName: workspace?.name || "Shop",
       }
 
       responseWithLinks = this.promptProcessor.replaceCustomerVariables(
