@@ -1117,10 +1117,17 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                   // Sort by date (newest first)
                   const sortedMonths = Object.entries(monthlyInvoices).sort((a, b) => b[0].localeCompare(a[0]))
                   
-                  if (sortedMonths.length === 0) {
+                  // 🔧 FIX: Filter out the current month - invoices only available for COMPLETED months
+                  // An invoice is available from the 1st of the following month
+                  const now = new Date()
+                  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+                  const completedMonths = sortedMonths.filter(([monthKey]) => monthKey < currentMonthKey)
+                  
+                  if (completedMonths.length === 0) {
                     return (
                       <div className="text-center py-12 text-muted-foreground">
-                        No invoices available yet
+                        <p>No invoices available yet</p>
+                        <p className="text-sm mt-2">Invoices are generated at the end of each month</p>
                       </div>
                     )
                   }
@@ -1129,7 +1136,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                   const currentPlanConfig = PLAN_CONFIGS[billing.planType as keyof typeof PLAN_CONFIGS]
                   const monthlySubscriptionFee = currentPlanConfig?.price || 0
                   
-                  return sortedMonths.map(([monthKey, data]) => {
+                  return completedMonths.map(([monthKey, data]) => {
                     const invoiceNumber = `INV-${data.year}${String(data.month).padStart(2, '0')}`
                     // Use recorded subscription fee from transactions OR current plan price
                     const subscriptionFee = data.subscriptionFee > 0 ? data.subscriptionFee : monthlySubscriptionFee

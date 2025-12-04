@@ -195,6 +195,9 @@ export function ChatPage() {
       if (prevSelectedChatIdRef.current) {
         clearOriginalCustomerData(prevSelectedChatIdRef.current)
       }
+      // 🔧 FIX: Reset messages when switching customers to avoid showing wrong chat
+      setMessages([])
+      logger.info(`🔄 Customer switched from ${prevSelectedChatIdRef.current} to ${selectedChat?.id}, messages cleared`)
       // Update ref
       prevSelectedChatIdRef.current = selectedChat?.id || null
     }
@@ -441,7 +444,14 @@ export function ChatPage() {
   // This updates when the polling tab fetches new data
   useEffect(() => {
     if (polledMessages.length > 0 && selectedChat) {
-      setMessages(polledMessages)
+      // 🔧 FIX: Deduplicate messages before setting state
+      const seen = new Set<string>()
+      const uniqueMessages = polledMessages.filter(msg => {
+        if (seen.has(msg.id)) return false
+        seen.add(msg.id)
+        return true
+      })
+      setMessages(uniqueMessages)
 
       // 🔧 FIX: Re-fetch customer details to sync activeChatbot status
       // This ensures that when ContactOperator() is called, we update isChatbotActive
@@ -639,8 +649,15 @@ export function ChatPage() {
         )
       }
 
-      // NOTE: Chatbot reactivation notification sent AUTOMATICALLY by backend
-      // when activeChatbot changes from false -> true in customer update
+      // 🔔 Send chatbot reactivation notification
+      if (notificationChanges?.chatbotActivated) {
+        await pushNotificationService.sendChatbotReactivation(workspaceId, [
+          customerId,
+        ])
+        toast.success("Chatbot reactivation notification sent", {
+          duration: 2000,
+        })
+      }
 
       // Send account activation notification if unblocked
       if (notificationChanges?.accountActivated) {

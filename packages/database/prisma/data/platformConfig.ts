@@ -33,7 +33,7 @@ export const platformConfigData: PlatformConfigData[] = [
     key: "FREE_MONTHLY",
     value: "0",
     description:
-      "Free plan - €0/month for 14 days trial with €29 credit included",
+      "Free plan - €0/month for 14 days trial with €19 credit included",
     isActive: true,
   },
   {

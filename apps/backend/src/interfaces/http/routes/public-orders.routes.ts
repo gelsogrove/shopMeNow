@@ -479,13 +479,15 @@ router.get(
       const invoiceResult = parseCustomerAddresses(
         parsedCustomer.invoiceAddress
       )
-      parsedCustomer.invoiceAddress = invoiceResult.success
-        ? invoiceResult.addresses
+      // Take first address from array (customer has single address)
+      parsedCustomer.invoiceAddress = invoiceResult.success && invoiceResult.addresses.length > 0
+        ? invoiceResult.addresses[0]
         : null
 
       const addressResult = parseCustomerAddresses(parsedCustomer.address)
-      parsedCustomer.address = addressResult.success
-        ? addressResult.addresses
+      // Take first address from array (customer has single shipping address)
+      parsedCustomer.address = addressResult.success && addressResult.addresses.length > 0
+        ? addressResult.addresses[0]
         : null
 
       return res.json({
@@ -598,13 +600,15 @@ router.put(
       const invoiceResult = parseCustomerAddresses(
         parsedCustomer.invoiceAddress
       )
-      parsedCustomer.invoiceAddress = invoiceResult.success
-        ? invoiceResult.addresses
+      // Take first address from array (customer has single invoice address)
+      parsedCustomer.invoiceAddress = invoiceResult.success && invoiceResult.addresses.length > 0
+        ? invoiceResult.addresses[0]
         : null
 
       const addressResult = parseCustomerAddresses(parsedCustomer.address)
-      parsedCustomer.address = addressResult.success
-        ? addressResult.addresses
+      // Take first address from array (customer has single shipping address)
+      parsedCustomer.address = addressResult.success && addressResult.addresses.length > 0
+        ? addressResult.addresses[0]
         : null
 
       return res.json({

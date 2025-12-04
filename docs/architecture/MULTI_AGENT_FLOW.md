@@ -65,8 +65,8 @@ eChatbot uses a **multi-agent architecture** with Router Agent orchestrating spe
                  ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │ 5. TOKEN REPLACEMENT (Backend Processing)                      │
-│    - Replace: [LINK_ORDER_12345] → https://...?token=xxx      │
-│    - Replace: [LINK_CART] → https://...cart?token=xxx         │
+│    - Replace: [LINK_ORDER_WITH_TOKEN] → https://...?token=xxx │
+│    - Replace: [LINK_CHECKOUT_WITH_TOKEN] → https://...cart?token=xxx │
 │    - Tokens: 0 (backend string manipulation)                   │
 │    - debugStep: type="token-replacement"                       │
 └────────────────┬────────────────────────────────────────────────┘
@@ -274,7 +274,7 @@ if (expectedAgent === "ORDER_TRACKING") {
       "type": "token-replacement",
       "agent": "Link Replacement Service",
       "timestamp": "2025-11-13T18:40:11.300Z",
-      "input": { "tokensDetected": ["[LINK_CART]"] },
+      "input": { "tokensDetected": ["[LINK_CHECKOUT_WITH_TOKEN]"] },
       "output": { "message": "Replaced 1 token(s)" }
     },
     {

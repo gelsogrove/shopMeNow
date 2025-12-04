@@ -198,7 +198,7 @@ export const CART_MANAGEMENT_FUNCTIONS: FunctionDefinition[] = [
     function: {
       name: "addToCart",
       description:
-        "⚙️ PRIORITY 4 - MEDIUM. Aggiunge uno o più prodotti/servizi al carrello del cliente. Usare SOLO DOPO che il cliente ha CONFERMATO di voler aggiungere. FLOW OBBLIGATORIO: 1) Mostra prodotto/servizio con prezzo e stock, 2) Chiedi 'Vuoi aggiungerlo al carrello? 🛒', 3) Se conferma ('sì', 'ok', 'perfetto', 'aggiungi') → chiama addToCart(items), 4) Dopo aggiunta → mostra link carrello. SUPPORTA PRODOTTI E SERVIZI. ESEMPI: SINGOLO PRODOTTO: [{code:'BUR-001',quantity:1,type:'PRODUCT'}] | SINGOLO SERVIZIO: [{code:'SRV-001',quantity:1,type:'SERVICE'}] | MULTIPLI: [{code:'PASTA-005',quantity:1,type:'PRODUCT'},{code:'SRV-001',quantity:1,type:'SERVICE'}]. NON chiamare se: cliente non ha confermato, stock insufficiente, code mancante, prodotto/servizio non trovato.",
+        "⚙️ PRIORITY 4 - MEDIUM. Aggiunge uno o più prodotti/servizi al carrello del cliente. Usare SOLO DOPO che il cliente ha CONFERMATO di voler aggiungere. FLOW OBBLIGATORIO: 1) Mostra prodotto/servizio con prezzo e stock, 2) Chiedi 'Vuoi aggiungerlo al carrello? 🛒 Se sì, quanti?', 3) Se conferma ('sì', 'ok', 'perfetto', 'aggiungi') → chiama addToCart(items), 4) Dopo aggiunta → mostra link carrello. SUPPORTA PRODOTTI E SERVIZI. ESEMPI: SINGOLO PRODOTTO: [{code:'BUR-001',quantity:1,type:'PRODUCT'}] | SINGOLO SERVIZIO: [{code:'SRV-001',quantity:1,type:'SERVICE'}] | MULTIPLI: [{code:'PASTA-005',quantity:1,type:'PRODUCT'},{code:'SRV-001',quantity:1,type:'SERVICE'}]. NON chiamare se: cliente non ha confermato, stock insufficiente, code mancante, prodotto/servizio non trovato.",
       parameters: {
         type: "object",
         properties: {
@@ -324,6 +324,32 @@ export const ORDER_TRACKING_FUNCTIONS: FunctionDefinition[] = [
           },
         },
         required: ["orderCode"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "confirmOrder",
+      description:
+        "✅ PRIORITY 2 - HIGH. Conferma il carrello attuale e CREA un nuovo ordine nel database. Usare SOLO quando l'utente conferma esplicitamente dopo aver visto il riepilogo carrello: 'confermo', 'ok', 'sì', 'procedi', 'conferma ordine', 'va bene', 'confirm'. FLOW: showCheckout() mostra riepilogo → utente dice 'confermo' → confirmOrder() crea ordine e svuota carrello. NON usare se utente non ha visto il riepilogo carrello prima.",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "showCheckout",
+      description:
+        "🛒 PRIORITY 2 - HIGH. Mostra il riepilogo carrello e chiede conferma per creare l'ordine. Usare quando l'utente vuole procedere all'ordine: 'checkout', 'procedi all'ordine', 'voglio comprare', 'finalizza acquisto', 'procedi', '2' (dopo menu carrello). Mostra: lista prodotti, totale con sconto cliente, link per verifica dati spedizione [LINK_PROFILE_WITH_TOKEN]. Chiede 'Rispondi confermo o ok per procedere'.",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: [],
       },
     },
   },

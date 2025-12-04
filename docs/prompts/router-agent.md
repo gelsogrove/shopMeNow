@@ -157,6 +157,35 @@ Utente: 1
 Call function da chiamare:
 productSearchAgent("Mostra dettagli del SERVIZIO Confezione Regalo")
 
+# ESEMPIO 2C - Procedere all'ordine (Checkout)
+Chatbot:
+✅ Aggiunto al carrello!
+🛒 Il tuo carrello:
+• 1x [Prodotto A] - €XX.XX
+• 1x [Prodotto B] - €XX.XX
+💰 Totale: €XX.XX
+Cosa vuoi fare?
+1. Aggiungere altri prodotti
+2. Procedere all'ordine
+3. Vedere i servizi disponibili
+Utente: 2
+Call function da chiamare:
+orderTrackingAgent("L'utente vuole procedere all'ordine (checkout). Chiama showCheckout() per mostrare riepilogo carrello con link profilo per verifica dati.")
+
+# ESEMPIO 2D - Conferma ordine dopo checkout
+Chatbot:
+📦 Riepilogo ordine:
+• 1x [Prodotto A] - €XX.XX
+💰 Totale: €XX.XX
+
+🔐 Prima di procedere, verifica i tuoi dati di spedizione:
+[LINK_PROFILE_WITH_TOKEN]
+
+✅ I dati sono corretti? Rispondi "confermo" per procedere.
+Utente: confermo / sì / ok / procedi / confirm
+Call function da chiamare:
+orderTrackingAgent("L'utente CONFERMA l'ordine. Chiama confirmOrder() per creare l'ordine nel database e svuotare il carrello.")
+
 ⚠️ **REGOLA CRITICA PER SERVIZI:**
 - Quando l'utente seleziona un numero (1, 2, etc.) dalla lista servizi
 - DEVI passare il **NOME ESATTO** del servizio come mostrato nella lista (es: "Confezione Regalo", "Spedizione")
@@ -180,15 +209,40 @@ Call function da chiamare :
 cartManagementAgent("utente conferma di aggiungere il SERVIZIO [codice] al carrello")
 
 # ESEMPIO 5 - Aggiunta diretta prodotto
-se utente scrive : "aggiungi 3 mozzarelle"
-cartManagementAgent("utente conferma di aggiungere 3 mozzarelle (PRODOTTO, codice) al carrello")
+se utente scrive : "aggiungi 3 [nome prodotto]"
+cartManagementAgent("utente conferma di aggiungere 3 [nome prodotto] (PRODOTTO, codice) al carrello")
 
 # ESEMPIO 6 - Tracking ordine
 orderTrackingAgent("Verifica stato ordine #12345 effettuato il 15/11")
 
 # ESEMPIO 6B - Ripeti ultimo ordine
 Utente: "ripeti ultimo ordine" / "repeat last order" / "voglio riordinare" / "vorrei ripetere l'ordine"
-orderTrackingAgent("L'utente vuole ripetere/riordinare l'ultimo ordine. Mostra dettagli ordine e chiedi conferma.")
+orderTrackingAgent("L'utente vuole ripetere l'ultimo ordine. Chiama SUBITO repeatOrder() senza parametri per recuperare e aggiungere al carrello i prodotti dell'ultimo ordine.")
+
+# ESEMPIO 6B-CONFERMA - Conferma riordino ordine (CRITICO!)
+Chatbot precedente:
+📦 Ordine [CODICE_ORDINE]
+📅 Data: XX/XX/XXXX
+📍 Stato: ✅ Consegnato
+💰 Totale: €XXX.XX
+🛒 Prodotti: [Lista prodotti]
+Vuoi confermare il riordino di questo ordine?
+Utente: "si" / "sì" / "ok" / "conferma" / "procedi"
+orderTrackingAgent("L'utente CONFERMA il riordino dell'ordine [CODICE_ORDINE]. Chiama repeatOrder(orderCode: '[CODICE_ORDINE]') per aggiungere i prodotti al carrello.")
+
+# ESEMPIO 6B-FINALE - Conferma ordine finale (dopo repeatOrder o checkout)
+Chatbot precedente:
+✅ Prodotti aggiunti al carrello!
+
+🛒 Riepilogo carrello:
+- [Prodotto] xN - €XX.XX
+
+💰 Totale: €XX.XX
+
+📋 Verifica i tuoi dati qui: [LINK_PROFILE_WITH_TOKEN]
+Rispondi **confermo** o **ok** per creare l'ordine!
+Utente: "confermo" / "ok" / "sì" / "confirm"
+orderTrackingAgent("L'utente CONFERMA la creazione dell'ordine. Chiama confirmOrder() per creare l'ordine nel database e svuotare il carrello.")
 
 # ESEMPIO 6C - Selezione ORDINE da lista (NUOVO!)
 Chatbot:

@@ -60,48 +60,12 @@ export class TranslationAgent {
     const startTime = Date.now()
 
     try {
-      // 1. Check if translation is needed
+      // 1. Normalize target language
       const normalizedLanguage = this.normalizeLanguage(options.targetLanguage)
       
-      // 🆕 Feature 193: Detect if message appears to be in English (FAQ responses are in English)
-      // Common English words that indicate the message needs translation
-      const englishIndicators = [
-        /\bwe accept\b/i,
-        /\byou can\b/i,
-        /\bpayment is\b/i,
-        /\bdelivery time/i,
-        /\bshipping cost/i,
-        /\bto place an order/i,
-        /\bcredit card/i,
-        /\bbank transfer/i,
-        /\bcash on delivery/i,
-        /\bbusiness day/i,
-        /\bfree for orders/i,
-        /\bminimum order/i,
-        /\btrack your order/i,
-        /\brefrigerated shipping/i,
-        /\bSSL encryption/i,
-      ]
-      
-      const messageAppearsEnglish = englishIndicators.some(pattern => pattern.test(options.message))
-      
-      if (normalizedLanguage === "it" && !messageAppearsEnglish) {
-        // No translation needed - content is already in Italian (base language)
-        logger.info("✅ TranslationAgent - Italian language (base), no translation needed")
-        return {
-          translated: false,
-          originalLanguage: "it",
-          targetLanguage: options.targetLanguage,
-          message: options.message,
-          tokensUsed: 0,
-          executionTimeMs: Date.now() - startTime,
-        }
-      }
-      
-      // 🆕 If message appears English but target is Italian, translate EN → IT
-      if (normalizedLanguage === "it" && messageAppearsEnglish) {
-        logger.info("🌍 TranslationAgent - Detected English content, translating to Italian")
-      }
+      // 🆕 ALWAYS translate to target language - input may be mixed Italian/English
+      // The Translation Agent will translate EVERYTHING to the target language
+      logger.info(`🌍 TranslationAgent - Translating to ${normalizedLanguage.toUpperCase()}`)
 
       // 2. Load TRANSLATION agent config from database
       const translationAgent = await this.agentConfigRepo.findByType(
@@ -149,10 +113,10 @@ export class TranslationAgent {
         }
       )
 
-      // 4. Build user message - detect source language and translate to target
-      // 🆕 Feature 193: Handle EN→IT translation for FAQ responses
-      const sourceLanguage = messageAppearsEnglish ? "English" : "Italian"
-      const userMessage = `Translate this ${sourceLanguage} message to ${normalizedLanguage === "it" ? "Italian" : normalizedLanguage}:\n\n"${options.message}"\n\nRespond with JSON: {"translated": true, "originalLanguage": "${messageAppearsEnglish ? "en" : "it"}", "targetLanguage": "${normalizedLanguage}", "message": "..."}`
+      // 4. Build user message - input may be mixed Italian/English
+      // 🆕 ALWAYS translate everything to target language
+      const targetLanguageName = this.getLanguageName(normalizedLanguage)
+      const userMessage = `Translate this message to ${targetLanguageName}. The input may be in Italian, English, or mixed. Output must be 100% in ${targetLanguageName}:\n\n"${options.message}"\n\nRespond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLanguage": "${normalizedLanguage}", "message": "..."}`
       
       // 5. Call OpenRouter LLM
       logger.info("🌍 Calling TranslationAgent LLM", {
@@ -302,6 +266,58 @@ export class TranslationAgent {
     }
 
     return mapping[normalized] || "en"
+  }
+
+  /**
+   * Get full language name from code
+   * 
+   * @param code - Language code (it, es, pt, en)
+   * @returns Full language name
+   */
+  private getLanguageName(code: string): string {
+    const names: Record<string, string> = {
+      it: "Italian",
+      es: "Spanish",
+      pt: "Portuguese",
+      en: "English",
+    }
+    return names[code] || "English"
+  }
+
+  /**
+   * Detect if message appears to be in English
+   * Simple heuristic based on common English words
+   * 
+   * @param message - Message to check
+   * @returns true if message appears to be English
+   */
+  private detectEnglishContent(message: string): boolean {
+    const englishIndicators = [
+      /\bthe\b/i,
+      /\byour\b/i,
+      /\bwith\b/i,
+      /\bfor\b/i,
+      /\band\b/i,
+      /\bhas been\b/i,
+      /\bwould you\b/i,
+      /\bplease\b/i,
+      /\bhere is\b/i,
+      /\bhere are\b/i,
+      /\bsuccessfully\b/i,
+      /\border\b/i,
+      /\bcart\b/i,
+      /\bproduct\b/i,
+    ]
+    
+    let matchCount = 0
+    for (const pattern of englishIndicators) {
+      if (pattern.test(message)) {
+        matchCount++
+      }
+    }
+    
+    // If 2+ English indicators found, likely English
+    return matchCount >= 2
   }
 
   /**

@@ -37,6 +37,18 @@ export function useLoadMoreMessages(
   const [allMessages, setAllMessages] = useState<Message[]>([])
   const queryClient = useQueryClient()
   const firstMessageIdRef = useRef<string | null>(null)
+  const prevSessionIdRef = useRef<string | null>(null)
+
+  // 🔧 FIX: Reset state when sessionId changes (customer switched)
+  useEffect(() => {
+    if (sessionId !== prevSessionIdRef.current) {
+      logger.info(`🔄 Session changed from ${prevSessionIdRef.current} to ${sessionId}, resetting messages`)
+      setPage(1)
+      setAllMessages([])
+      firstMessageIdRef.current = null
+      prevSessionIdRef.current = sessionId
+    }
+  }, [sessionId])
 
   // Listen for updates from other tabs via localStorage
   useEffect(() => {
@@ -136,10 +148,21 @@ export function useLoadMoreMessages(
           firstMessageIdRef.current = prev[0].id
         }
 
-        return [
-          ...currentPageData.messages,
-          ...prev,
-        ]
+        // 🔧 FIX: Merge new messages with existing ones, avoiding duplicates
+        const newMessages = currentPageData.messages
+        const existingIds = new Set(prev.map(m => m.id))
+        const uniqueNewMessages = newMessages.filter(m => !existingIds.has(m.id))
+        
+        // Combine: new unique messages + existing messages (maintaining chronological order)
+        const combined = [...uniqueNewMessages, ...prev]
+        
+        // Final deduplication pass (safety net)
+        const seen = new Set<string>()
+        return combined.filter(m => {
+          if (seen.has(m.id)) return false
+          seen.add(m.id)
+          return true
+        })
       })
     }
   }, [currentPageData?.messages, page])

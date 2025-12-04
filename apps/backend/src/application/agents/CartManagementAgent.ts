@@ -548,13 +548,42 @@ export class CartManagementAgent {
       const results = []
       for (const orderItem of order.items) {
         if (orderItem.productId) {
+          // 🔍 CRITICAL: orderItem.productId is UUID, but addToCart expects productCode
+          // First, get the product to find its code
+          const product = await this.productRepo.findById(
+            orderItem.productId,
+            context.workspaceId
+          )
+
+          if (!product) {
+            logger.warn(`⚠️ Product not found by ID: ${orderItem.productId}`)
+            results.push({
+              success: false,
+              error: "PRODUCT_NOT_FOUND",
+              message: `Product not found`,
+            })
+            continue
+          }
+
+          if (!product.productCode) {
+            logger.warn(`⚠️ Product has no productCode: ${orderItem.productId}`)
+            results.push({
+              success: false,
+              error: "PRODUCT_NO_CODE",
+              message: `Product ${product.name} has no code`,
+            })
+            continue
+          }
+
           logger.info("🔄 Attempting to add product to cart:", {
             productId: orderItem.productId,
+            productCode: product.productCode,
+            productName: product.name,
             quantity: orderItem.quantity,
           })
 
           const addResult = await this.addToCart(context, {
-            productId: orderItem.productId,
+            productId: product.productCode, // Use CODE, not UUID!
             quantity: orderItem.quantity,
           })
 

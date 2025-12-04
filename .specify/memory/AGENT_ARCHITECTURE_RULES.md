@@ -257,7 +257,7 @@ Ciao {{nome}}! Ecco [category]:
 ```markdown
 ✅ Ho aggiunto **[Product Name]** (CODE-XXX) al carrello!
 
-[LINK_CART]
+[LINK_CHECKOUT_WITH_TOKEN]
 
 Totale: €XX.XX ([N] prodotti)
 Vuoi aggiungere altro?
@@ -277,7 +277,7 @@ Prodotti:
 Totale: €XX.XX
 Spedizione: [STATUS]
 
-[LINK_ORDER_CODE]
+[LINK_ORDER_WITH_TOKEN]
 ```
 
 **Minimum**: 80 characters + order code + status

@@ -71,8 +71,21 @@ export default defineConfig({
           })
         },
       },
-      // 🚫 DO NOT proxy /s/ - it's handled by React Router (ShortUrlRedirect.tsx)
-      // The frontend calls /s/:code/resolve via /api proxy to get the target URL
+      // ✅ Short URLs - proxy to backend for direct HTTP 302 redirect
+      // Pattern: ^/s/ matches /s/XXXXX but NOT /src, /static, etc.
+      // This ensures short URLs work on FIRST click (no SPA hydration needed)
+      "^/s/": {
+        target: "http://localhost:3001",
+        changeOrigin: true,
+        secure: false,
+        configure: (proxy, _options) => {
+          proxy.on("error", (err, _req, _res) => {
+            if (process.env.NODE_ENV === "development") {
+              console.error("Proxy error for short URLs:", err)
+            }
+          })
+        },
+      },
     },
   },
   assetsInclude: ["**/*.svg"],

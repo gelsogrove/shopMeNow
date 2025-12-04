@@ -133,11 +133,22 @@ export function LoginPage() {
     },
   })
 
-  // 🔥 CRITICAL FIX: Clear storage IMMEDIATELY on page load
-  // This prevents old tokens from previous users staying in localStorage
+  // 🔥 CRITICAL FIX: Clear storage ONLY if user intentionally navigates to login
+  // Don't clear if there's already a valid token (user might be redirected here by mistake)
   useEffect(() => {
-    logger.info('🧹 [LOGIN PAGE LOAD] Auto-clearing ALL storage to prevent token leakage')
-    localStorage.clear()
+    const existingToken = localStorage.getItem('token')
+    
+    // If user already has a token, they shouldn't be on login page - redirect them
+    if (existingToken) {
+      logger.info('🔄 [LOGIN PAGE] Token already exists - redirecting to dashboard')
+      window.location.href = '/dashboard'
+      return
+    }
+    
+    // No token - safe to clear any stale data
+    logger.info('🧹 [LOGIN PAGE LOAD] No token found - clearing stale storage')
+    localStorage.removeItem('currentWorkspace')
+    localStorage.removeItem('user')
     sessionStorage.clear()
     logger.info('✅ [LOGIN PAGE LOAD] Storage cleared - ready for fresh login')
   }, []) // Run only once on mount

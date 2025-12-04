@@ -191,28 +191,42 @@ export class CustomerSupportAgentLLM {
           result: functionResult,
         })
 
-        // STEP 6: Return function result to LLM for final response
-        messages.push({
-          role: "assistant" as const,
-          content: null as any,
-          function_call: llmResponse.function_call,
-        })
-        messages.push({
-          role: "function" as const,
-          name: functionName,
-          content: JSON.stringify(functionResult),
-        })
+        // 🔧 DIRECT RETURN: For ContactOperator - return message directly without LLM reformulation
+        // This preserves the empathetic message and formatting
+        const isContactOperator = functionName.toLowerCase() === "contactoperator"
+        
+        if (isContactOperator && functionResult?.success && functionResult?.message) {
+          logger.info(`🚀 ContactOperator: Returning message directly (no LLM reformulation)`)
+          finalResponse = functionResult.message
+          
+          // Replace customer name variable if present
+          if (finalResponse.includes("{{nameUser}}")) {
+            finalResponse = finalResponse.replace(/\{\{nameUser\}\}/gi, context.customerName || "Cliente")
+          }
+        } else {
+          // STEP 6: Return function result to LLM for final response (default behavior)
+          messages.push({
+            role: "assistant" as const,
+            content: null as any,
+            function_call: llmResponse.function_call,
+          })
+          messages.push({
+            role: "function" as const,
+            name: functionName,
+            content: JSON.stringify(functionResult),
+          })
 
-        const finalLLMResponse = await this.callLLM({
-          model: agentConfig.model,
-          messages,
-          functions,
-          temperature: agentConfig.temperature,
-          maxTokens: agentConfig.maxTokens || 2000,
-        })
+          const finalLLMResponse = await this.callLLM({
+            model: agentConfig.model,
+            messages,
+            functions,
+            temperature: agentConfig.temperature,
+            maxTokens: agentConfig.maxTokens || 2000,
+          })
 
-        totalTokens += finalLLMResponse.tokensUsed
-        finalResponse = finalLLMResponse.content || ""
+          totalTokens += finalLLMResponse.tokensUsed
+          finalResponse = finalLLMResponse.content || ""
+        }
       }
 
       const executionTimeMs = Date.now() - startTime
@@ -391,6 +405,7 @@ export class CustomerSupportAgentLLM {
             customerId: context.customerId,
           })
 
+          // 🔧 Return ContactOperator's empathetic message instead of generic one
           return {
             success: true,
             salesAgent: {
@@ -398,7 +413,8 @@ export class CustomerSupportAgentLLM {
               email: customer.sales.email,
               phone: customer.sales.phone,
             },
-            message: `Your sales agent is ${customer.sales.firstName} ${customer.sales.lastName}. You can contact them at ${customer.sales.email} or ${customer.sales.phone}.`,
+            message: contactResult.message, // Use ContactOperator's message
+            chatbotDisabled: true,
           }
 
         default:

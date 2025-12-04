@@ -15,6 +15,29 @@ export const defaultFAQs = (
   workspaceId: string
 ): Array<DefaultFAQ & { workspaceId: string }> => [
   // ====================================================================
+  // CATEGORY: General (1 FAQ) - General assistant questions
+  // ====================================================================
+  {
+    workspaceId,
+    question: "Who are you?",
+    answer:
+      "Hello {{nameUser}}! 👋 I'm Bell'Italia virtual assistant, ready to assist you with everything! I can help you find products, check your order status, or show you today's best deals. You can also sort the catalogue, place orders, download invoices, and resolve any issues.\n\nFor example:\n\n- Do you have Mozzarella?\n\n- Where is my order?\n\n- Give the invoice of my last order please\n\n- Repeat my last order\n\n- I am looking fresh products\n\n- I want to talk with a human operator\n\nHow can I help you today?",
+    keywords: [
+      "who are you",
+      "what are you",
+      "assistant",
+      "help",
+      "what can you do",
+      "introduce",
+      "hello",
+      "hi",
+    ],
+    category: "General",
+    order: 0,
+    isActive: true,
+  },
+
+  // ====================================================================
   // CATEGORY: Orders (7 FAQs) - Order-related questions
   // ====================================================================
   {

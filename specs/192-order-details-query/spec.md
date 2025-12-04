@@ -161,9 +161,9 @@ As a customer, I want to download invoice, transport document (DDT), or credit n
 ```
 📄 Ecco la tua fattura per l'ordine ORD-048-2025-9:
 
-[LINK_INVOICE_DOWNLOAD]
+[LINK_ORDER_WITH_TOKEN]
 
-Il link è valido per 24 ore.
+Il link è valido per 24 ore. Dalla pagina ordine potrai scaricare la fattura.
 ```
 
 **360-Degree Validation** _(mandatory for implementation)_:

@@ -106,10 +106,15 @@ export function WhatsAppChatModal({
 
   // 🔄 Handle modal close with chat list refresh
   const handleClose = () => {
-    logger.info("[WhatsApp Modal] 🔄 Forcing page reload on close")
+    logger.info("[WhatsApp Modal] 🔄 Closing modal and triggering refresh callback")
 
-    // 🔄 BRUTALE MA FUNZIONA: Reload della pagina
-    window.location.reload()
+    // Call onMessageSent to refresh chat list if provided
+    if (onMessageSent) {
+      onMessageSent()
+    }
+    
+    // Close the modal via the provided callback
+    onClose()
   }
 
   // Render component logic

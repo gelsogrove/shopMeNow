@@ -3,7 +3,7 @@
  *
  * Tests cover:
  * 1. Transaction descriptions are in English
- * 2. INITIAL_CREDIT (Free Trial €29) excluded from Income totals
+ * 2. INITIAL_CREDIT (Free Trial €19) excluded from Income totals
  * 3. Transactions grouped by month correctly
  * 4. Income/Expenses calculation
  * 5. Billing date is 1st of next month
@@ -118,7 +118,7 @@ describe("Transaction History", () => {
 
     it("should NOT include INITIAL_CREDIT in income calculation", () => {
       const income = calculateIncome(transactions)
-      // Only TOP_UP (€50) should be counted, not INITIAL_CREDIT (€29)
+      // Only TOP_UP (€50) should be counted, not INITIAL_CREDIT (€19)
       expect(income).toBe(50)
     })
 
@@ -322,13 +322,13 @@ describe("Monthly Invoices", () => {
     })
 
     it("should calculate Basic plan monthly cost correctly", () => {
-      const basicMonthlyFee = 29
-      expect(basicMonthlyFee).toBe(29)
+      const basicMonthlyFee = 19
+      expect(basicMonthlyFee).toBe(19)
     })
 
     it("should calculate Free Trial credit correctly", () => {
-      const freeTrialCredit = 29
-      expect(freeTrialCredit).toBe(29)
+      const freeTrialCredit = 19
+      expect(freeTrialCredit).toBe(19)
     })
   })
 })
@@ -355,16 +355,16 @@ describe("Price Configuration", () => {
   })
 
   describe("Basic Plan Pricing", () => {
-    it("should have Basic monthly fee of €29", () => {
-      const BASIC_MONTHLY_FEE = 29
-      expect(BASIC_MONTHLY_FEE).toBe(29)
+    it("should have Basic monthly fee of €19", () => {
+      const BASIC_MONTHLY_FEE = 19
+      expect(BASIC_MONTHLY_FEE).toBe(19)
     })
   })
 
   describe("Free Trial", () => {
-    it("should have Free Trial credit of €29", () => {
-      const FREE_TRIAL_CREDIT = 29
-      expect(FREE_TRIAL_CREDIT).toBe(29)
+    it("should have Free Trial credit of €19", () => {
+      const FREE_TRIAL_CREDIT = 19
+      expect(FREE_TRIAL_CREDIT).toBe(19)
     })
   })
 })

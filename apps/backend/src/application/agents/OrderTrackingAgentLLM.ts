@@ -162,6 +162,15 @@ export class OrderTrackingAgentLLM {
       let finalResponse = llmResponse.content || ""
       const functionCalls: any[] = []
 
+      // 🔍 DEBUG: Log LLM response to understand empty responses
+      logger.info(`🔍 OrderTrackingAgentLLM: LLM Response received`, {
+        hasContent: !!llmResponse.content,
+        contentLength: llmResponse.content?.length || 0,
+        hasFunctionCall: !!llmResponse.function_call,
+        functionCallName: llmResponse.function_call?.name || null,
+        tokensUsed: llmResponse.tokensUsed,
+      })
+
       // STEP 5: Handle function calling loop
       if (llmResponse.function_call) {
         const functionName = llmResponse.function_call.name
@@ -210,40 +219,156 @@ export class OrderTrackingAgentLLM {
           result: functionResult,
         })
 
-        // STEP 6: Return function result to LLM for final response
-        messages.push({
-          role: "assistant" as const,
-          content: null as any,
-          function_call: llmResponse.function_call,
-        })
-        messages.push({
-          role: "function" as const,
-          name: functionName,
-          content: JSON.stringify(functionResult),
-        })
+        // 🔧 DIRECT RETURN: For repeatOrder, confirmOrder, showCheckout - return message directly without LLM reformulation
+        // This preserves formatting (newlines, markdown, etc.)
+        const isRepeatOrder = functionName.toLowerCase() === "repeatorder"
+        const isConfirmOrder = functionName.toLowerCase() === "confirmorder"
+        const isShowCheckout = functionName.toLowerCase() === "showcheckout"
+        const shouldReturnDirectly = isRepeatOrder || isConfirmOrder || isShowCheckout
+        
+        logger.info(`🔍 Function check: functionName="${functionName}", shouldReturnDirectly=${shouldReturnDirectly}, success=${functionResult?.success}, hasMessage=${!!functionResult?.message}`)
+        
+        if (shouldReturnDirectly && functionResult?.success && functionResult?.message) {
+          logger.info(`🚀 ${functionName}: Returning message directly (no LLM reformulation)`)
+          logger.info(`📝 Message preview: ${functionResult.message.substring(0, 200)}...`)
+          finalResponse = functionResult.message
+          
+          // 🔧 Replace customer variables in the response
+          if (finalResponse.includes("{{nameUser}}") || finalResponse.includes("{{agentName}}")) {
+            // Fetch agent name from customer's assigned sales rep
+            let agentName = "our team"
+            try {
+              const customer = await this.prisma.customers.findUnique({
+                where: { id: context.customerId },
+                include: { sales: true }
+              })
+              if (customer?.sales) {
+                agentName = `${customer.sales.firstName} ${customer.sales.lastName}`.trim()
+              }
+            } catch (e) {
+              logger.warn("Could not fetch customer sales rep, using default")
+            }
+            
+            finalResponse = finalResponse
+              .replace(/\{\{nameUser\}\}/gi, context.customerName || "Customer")
+              .replace(/\{\{agentName\}\}/gi, agentName)
+            logger.info(`🔄 Replaced customer variables in direct response: nameUser=${context.customerName}, agentName=${agentName}`)
+          }
+          
+          // Generate proper PROFILE link (not cart link!) - for repeatOrder and showCheckout
+          if ((isRepeatOrder || isShowCheckout) && finalResponse && finalResponse.includes("[LINK_PROFILE_WITH_TOKEN]")) {
+            try {
+              const CallingFunctionsService = require("../../services/calling-functions.service").CallingFunctionsService
+              const callingFunctionsService = new CallingFunctionsService()
+              const profileLinkResult = await callingFunctionsService.getProfileLink({
+                customerId: context.customerId,
+                workspaceId: context.workspaceId,
+              })
+              
+              if (profileLinkResult?.success && profileLinkResult?.linkUrl) {
+                finalResponse = finalResponse.replace(
+                  /\[LINK_PROFILE_WITH_TOKEN\]/gi,
+                  profileLinkResult.linkUrl
+                )
+                logger.info(`🔗 Replaced [LINK_PROFILE_WITH_TOKEN] → ${profileLinkResult.linkUrl}`)
+              } else {
+                logger.warn(`⚠️ Failed to generate profile link, keeping token`)
+              }
+            } catch (error) {
+              logger.error(`❌ Error generating profile link:`, error)
+            }
+          }
+        } else {
+          // STEP 6: Return function result to LLM for final response (default behavior)
+          messages.push({
+            role: "assistant" as const,
+            content: null as any,
+            function_call: llmResponse.function_call,
+          })
+          messages.push({
+            role: "function" as const,
+            name: functionName,
+            content: JSON.stringify(functionResult),
+          })
 
-        const finalLLMResponse = await this.callLLM({
-          model: agentConfig.model,
-          messages,
-          functions,
-          temperature: agentConfig.temperature,
-          maxTokens: agentConfig.maxTokens || 2000,
-        })
+          const finalLLMResponse = await this.callLLM({
+            model: agentConfig.model,
+            messages,
+            functions,
+            temperature: agentConfig.temperature,
+            maxTokens: agentConfig.maxTokens || 2000,
+          })
 
-        totalTokens += finalLLMResponse.tokensUsed
-        finalResponse = finalLLMResponse.content || ""
+          totalTokens += finalLLMResponse.tokensUsed
+          finalResponse = finalLLMResponse.content || ""
 
-        // 🔗 Replace [LINK_ORDER_WITH_TOKEN] with secure short link
-        if (functionResult?.secureLink && finalResponse) {
-          finalResponse = finalResponse.replace(
-            /\[LINK_ORDER_WITH_TOKEN\]/gi,
-            functionResult.secureLink
-          )
-          logger.info(`🔗 Replaced [LINK_ORDER_WITH_TOKEN] → ${functionResult.secureLink}`)
+          // 🔗 Replace [LINK_ORDER_WITH_TOKEN] with secure short link
+          logger.info(`🔍 Checking for LINK_ORDER_WITH_TOKEN replacement:`, {
+            hasSecureLink: !!functionResult?.secureLink,
+            secureLink: functionResult?.secureLink,
+            hasPlaceholder: finalResponse?.includes('[LINK_ORDER_WITH_TOKEN]'),
+          })
+          
+          if (finalResponse?.includes('[LINK_ORDER_WITH_TOKEN]')) {
+            if (functionResult?.secureLink) {
+              finalResponse = finalResponse.replace(
+                /\[LINK_ORDER_WITH_TOKEN\]/gi,
+                functionResult.secureLink
+              )
+              logger.info(`🔗 Replaced [LINK_ORDER_WITH_TOKEN] → ${functionResult.secureLink}`)
+            } else {
+              // 🔧 Fallback: Generate the link now if not available
+              logger.warn(`⚠️ secureLink not found in functionResult, generating now...`)
+              try {
+                // Try to extract orderCode from functionResult
+                const orderCode = functionResult?.orderCode || functionResult?.order?.orderCode
+                if (orderCode) {
+                  const linkResult = await this.callingFunctionsService.getOrdersListLink({
+                    customerId: context.customerId,
+                    workspaceId: context.workspaceId,
+                    orderCode: orderCode,
+                  })
+                  if (linkResult?.linkUrl) {
+                    finalResponse = finalResponse.replace(
+                      /\[LINK_ORDER_WITH_TOKEN\]/gi,
+                      linkResult.linkUrl
+                    )
+                    logger.info(`🔗 Generated and replaced [LINK_ORDER_WITH_TOKEN] → ${linkResult.linkUrl}`)
+                  } else {
+                    // Remove placeholder if we can't generate link
+                    finalResponse = finalResponse.replace(
+                      /\[LINK_ORDER_WITH_TOKEN\]/gi,
+                      '(link non disponibile)'
+                    )
+                    logger.warn(`⚠️ Could not generate order link, placeholder removed`)
+                  }
+                } else {
+                  // Remove placeholder if no orderCode
+                  finalResponse = finalResponse.replace(
+                    /\[LINK_ORDER_WITH_TOKEN\]/gi,
+                    '(link non disponibile)'
+                  )
+                  logger.warn(`⚠️ No orderCode found, placeholder removed`)
+                }
+              } catch (linkError) {
+                logger.error(`❌ Error generating fallback order link:`, linkError)
+                finalResponse = finalResponse.replace(
+                  /\[LINK_ORDER_WITH_TOKEN\]/gi,
+                  '(link non disponibile)'
+                )
+              }
+            }
+          }
         }
       }
 
       const executionTimeMs = Date.now() - startTime
+
+      // 🔧 FALLBACK: If response is empty, provide a helpful message
+      if (!finalResponse || finalResponse.trim() === "") {
+        logger.warn(`⚠️ OrderTrackingAgentLLM: Empty response detected, using fallback`)
+        finalResponse = "I'm sorry, I couldn't process your request. Please try again or ask in a different way."
+      }
 
       logger.info(`✅ OrderTrackingAgentLLM: Query processed`, {
         executionTimeMs,
@@ -437,6 +562,26 @@ export class OrderTrackingAgentLLM {
             orderCode: args.orderCode, // Optional - uses last order if not provided
           })
 
+        case "confirmOrder":
+          // Call ConfirmOrder domain function to create order from cart
+          const {
+            ConfirmOrder,
+          } = require("../../domain/calling-functions/ConfirmOrder")
+          return await ConfirmOrder({
+            customerId: context.customerId,
+            workspaceId: context.workspaceId,
+          })
+
+        case "showCheckout":
+          // Call ShowCheckout domain function to display cart summary
+          const {
+            ShowCheckout,
+          } = require("../../domain/calling-functions/ShowCheckout")
+          return await ShowCheckout({
+            customerId: context.customerId,
+            workspaceId: context.workspaceId,
+          })
+
         default:
           logger.warn(`Unknown function: ${functionName}`)
           return {
@@ -522,6 +667,26 @@ export class OrderTrackingAgentLLM {
         name: "repeatOrder",
         description:
           "Repeat the customer's last delivered order by adding all items to cart. Use after customer confirms they want to repeat their last order. Returns checkout link with step=2 parameter.",
+        parameters: {
+          type: "object",
+          properties: {},
+          required: [],
+        },
+      },
+      {
+        name: "confirmOrder",
+        description:
+          "Confirm the current cart and create a new order. Use when customer says 'confermo', 'ok', 'procedi', 'conferma ordine' after seeing the cart summary. Creates the order, clears the cart, and returns success message.",
+        parameters: {
+          type: "object",
+          properties: {},
+          required: [],
+        },
+      },
+      {
+        name: "showCheckout",
+        description:
+          "Show cart summary and ask for order confirmation. Use when customer wants to proceed with checkout: 'checkout', 'procedi all'ordine', 'voglio comprare', 'finalizza acquisto'. Shows cart contents, total with discounts, and link to verify shipping data.",
         parameters: {
           type: "object",
           properties: {},

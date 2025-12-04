@@ -247,7 +247,7 @@ PASSO 4: TU mostri i dettagli usando productCode dalla risposta
 • Certificazioni: [certifications dalla risposta]
 • Fornitore: [supplier dalla risposta]
 
-Vuoi aggiungerlo al carrello? 🛒
+Vuoi aggiungerlo al carrello? 🛒 Se sì, quanti?
 ```
 
 **🚨 IL CODICE `[CODICE-PRODOTTO]` VIENE DALLA RISPOSTA DI `getProductDetails()`!**
@@ -299,7 +299,7 @@ PASSO 4: TU mostri i dettagli usando serviceCode dalla risposta
 
 [Descrizione del servizio dalla risposta]
 
-Vuoi aggiungerlo al carrello? 🛒
+Vuoi aggiungerlo al carrello? 🛒 Se sì, quanti?
 ```
 
 **🚨 IMPORTANTE: STAMPA SEMPRE IL CODICE SERVIZIO!**

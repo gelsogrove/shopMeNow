@@ -381,6 +381,32 @@ export const ORDER_TRACKING_FUNCTIONS: FunctionDefinition[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "confirmOrder",
+      description:
+        "✅ PRIORITY 2 - HIGH. Conferma il carrello attuale e CREA un nuovo ordine nel database. Usare SOLO quando l'utente conferma esplicitamente dopo aver visto il riepilogo carrello: 'confermo', 'ok', 'sì', 'procedi', 'conferma ordine', 'va bene'. FLOW: repeatOrder() aggiunge prodotti al carrello → mostra riepilogo con 'Rispondi confermo o ok' → utente dice 'confermo' → confirmOrder() crea ordine e svuota carrello. NON usare se utente non ha visto il riepilogo carrello prima.",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "showCheckout",
+      description:
+        "🛒 PRIORITY 2 - HIGH. Mostra il riepilogo carrello e chiede conferma per creare l'ordine. Usare quando l'utente vuole procedere all'ordine: 'checkout', 'procedi all'ordine', 'voglio comprare', 'finalizza acquisto', 'procedi', '2' (dopo menu carrello). Mostra: lista prodotti, totale con sconto cliente, link per verifica dati spedizione. Chiede 'Rispondi confermo o ok per procedere'.",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+    },
+  },
 ]
 
 /**

@@ -10,6 +10,14 @@ export interface ParsedAddress {
   country: string
   state?: string
   additionalInfo?: string
+  name?: string
+  // Invoice address specific fields
+  firstName?: string
+  lastName?: string
+  company?: string
+  address?: string
+  vatNumber?: string
+  phone?: string
 }
 
 /**
@@ -19,6 +27,31 @@ export interface AddressParseResult {
   success: boolean
   addresses: ParsedAddress[]
   error?: string
+}
+
+/**
+ * Normalize address field names to consistent format
+ * Maps various field name variations to standard names
+ */
+function normalizeAddress(address: any): ParsedAddress {
+  return {
+    // Standard fields
+    street: address.street || address.address || '',
+    city: address.city || '',
+    // Normalize zip/zipCode/postal_code to postalCode
+    postalCode: address.postalCode || address.zip || address.zipCode || address.postal_code || '',
+    country: address.country || '',
+    state: address.state || address.province || '',
+    additionalInfo: address.additionalInfo || '',
+    name: address.name || '',
+    // Invoice address specific fields
+    firstName: address.firstName || '',
+    lastName: address.lastName || '',
+    company: address.company || '',
+    address: address.address || address.street || '',
+    vatNumber: address.vatNumber || address.vat_number || '',
+    phone: address.phone || '',
+  }
 }
 
 /**
@@ -59,7 +92,9 @@ export function parseCustomerAddresses(
 
     // Handle already parsed object
     if (typeof addressData === "object") {
-      const addresses = Array.isArray(addressData) ? addressData : [addressData]
+      const rawAddresses = Array.isArray(addressData) ? addressData : [addressData]
+      // Normalize all addresses
+      const addresses = rawAddresses.map(normalizeAddress)
       return {
         success: true,
         addresses,
@@ -72,24 +107,28 @@ export function parseCustomerAddresses(
 
       // Check if parsed data has "addresses" key
       if (parsed.addresses && Array.isArray(parsed.addresses)) {
+        // Normalize all addresses
+        const addresses = parsed.addresses.map(normalizeAddress)
         return {
           success: true,
-          addresses: parsed.addresses,
+          addresses,
         }
       }
 
       // Check if parsed data is direct array
       if (Array.isArray(parsed)) {
+        // Normalize all addresses
+        const addresses = parsed.map(normalizeAddress)
         return {
           success: true,
-          addresses: parsed,
+          addresses,
         }
       }
 
-      // Single address object
+      // Single address object - normalize it
       return {
         success: true,
-        addresses: [parsed],
+        addresses: [normalizeAddress(parsed)],
       }
     }
 

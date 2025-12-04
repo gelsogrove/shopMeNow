@@ -59,11 +59,43 @@ export class LinkReplacementService {
         customerId,
         workspaceId,
       })
-      const { response, linkType = "auto", context = "auto" } = params
+      let { response, linkType = "auto", context = "auto" } = params
 
       if (!customerId || !workspaceId) {
         return { success: false, response }
       }
+
+      // 🚨 NORMALIZE WRONG TOKENS - LLM sometimes writes wrong patterns
+      // Convert all wrong variations to correct token format
+      const wrongProfilePatterns = [
+        /\[link profilo\]/gi,
+        /\[link profile\]/gi,
+        /\[profilo link\]/gi,
+        /\[profile link\]/gi,
+        /link profilo/gi,
+        /link profile/gi,
+      ]
+      wrongProfilePatterns.forEach(pattern => {
+        if (pattern.test(response)) {
+          logger.warn(`⚠️ Found wrong token pattern, normalizing to [LINK_PROFILE_WITH_TOKEN]`)
+          response = response.replace(pattern, "[LINK_PROFILE_WITH_TOKEN]")
+        }
+      })
+
+      const wrongCartPatterns = [
+        /\[link carrello\]/gi,
+        /\[link cart\]/gi,
+        /\[carrello link\]/gi,
+        /\[cart link\]/gi,
+        /link carrello/gi,
+        /link cart/gi,
+      ]
+      wrongCartPatterns.forEach(pattern => {
+        if (pattern.test(response)) {
+          logger.warn(`⚠️ Found wrong cart token pattern, normalizing to [LINK_CHECKOUT_WITH_TOKEN]`)
+          response = response.replace(pattern, "[LINK_CHECKOUT_WITH_TOKEN]")
+        }
+      })
 
       // Active tokens only (deprecated tokens removed)
       // Support both plain [TOKEN] and Markdown (TOKEN) formats

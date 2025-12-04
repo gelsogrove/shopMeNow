@@ -1,5 +1,6 @@
 import { LinkGeneratorService } from "../application/services/link-generator.service"
 import { ReplaceLinkWithToken } from "../application/services/link-replacement.service"
+import { PriceCalculationService } from "../application/services/price-calculation.service"
 import { SecureTokenService } from "../application/services/secure-token.service"
 import {
   ErrorResponse,
@@ -1101,10 +1102,11 @@ export class CallingFunctionsService {
     formato?: string
   }): Promise<any> {
     try {
-      const { workspaceId, productName, formato } = request
+      const { workspaceId, customerId, productName, formato } = request
       
       logger.info("🔍 getProductDetails called:", {
         workspaceId,
+        customerId,
         productName,
         formato,
       })
@@ -1113,6 +1115,13 @@ export class CallingFunctionsService {
       const prisma = new PrismaClient()
 
       try {
+        // Get customer discount for price calculation
+        const customer = await prisma.customers.findFirst({
+          where: { id: customerId, workspaceId },
+          select: { discount: true }
+        })
+        const customerDiscount = customer?.discount || 0
+
         // Normalize search terms: trim and lowercase
         const searchName = productName.trim().toLowerCase()
         const searchFormato = formato?.trim().toLowerCase()
@@ -1198,13 +1207,26 @@ export class CallingFunctionsService {
           }
         }
 
-        // If multiple matches, return all for user selection
+        // Use PriceCalculationService to get correct prices (with discounts and rounding)
+        const priceService = new PriceCalculationService(prisma)
+        const productIds = matchedProducts.map((p: any) => p.id)
+        const priceResult = await priceService.calculatePricesWithDiscounts(
+          workspaceId,
+          productIds,
+          customerDiscount
+        )
+        const priceMap = new Map(priceResult.products.map(p => [p.id, p]))
+
+        // If multiple matches, return all for user selection with correct prices
         if (matchedProducts.length > 1) {
-          const options = matchedProducts.map((p: any) => ({
-            name: p.name,
-            formato: p.formato,
-            price: p.price,
-          }))
+          const options = matchedProducts.map((p: any) => {
+            const pricing = priceMap.get(p.id)
+            return {
+              name: p.name,
+              formato: p.formato,
+              price: pricing?.finalPrice || p.price, // Use calculated final price
+            }
+          })
           
           logger.info("ℹ️ Multiple products found:", options)
           return {
@@ -1217,8 +1239,9 @@ export class CallingFunctionsService {
           }
         }
 
-        // Single match - return full details
+        // Single match - return full details with correct price
         const product = matchedProducts[0]
+        const pricing = priceMap.get(product.id)
         const certifications = product.productCertifications?.map(
           (pc: any) => pc.certification.name
         ) || []
@@ -1226,6 +1249,9 @@ export class CallingFunctionsService {
         logger.info("✅ Product found:", {
           name: product.name,
           productCode: product.productCode,
+          basePrice: product.price,
+          finalPrice: pricing?.finalPrice,
+          customerDiscount,
         })
 
         return {
@@ -1237,7 +1263,8 @@ export class CallingFunctionsService {
             productCode: product.productCode,
             name: product.name,
             formato: product.formato,
-            price: product.price,
+            // ✅ Use finalPrice from PriceCalculationService (already discounted and rounded)
+            price: pricing?.finalPrice || product.price,
             description: product.description,
             stock: product.stock,
             category: product.category?.name,

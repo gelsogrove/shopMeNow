@@ -109,8 +109,8 @@ export function App() {
                 {/* Accept Invite - public route for team invitation acceptance */}
                 <Route path="/accept-invite" element={<AcceptInvitePage />} />
 
-                {/* Short URL redirect handler - must be before protected routes */}
-                <Route path="/s/:code" element={<ShortUrlRedirect />} />
+                {/* NOTE: Short URLs (/s/:code) are handled by Vite proxy directly to backend */}
+                {/* No React route needed - see vite.config.ts proxy for "^/s/" */}
 
                 {/* Protected Routes - richiedono autenticazione */}
                 <Route element={<ProtectedRoute />}>

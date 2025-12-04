@@ -634,6 +634,33 @@ export class LLMService {
   ): Promise<string> {
     let finalResponse = response
 
+    // 🚨 NORMALIZE WRONG TOKENS - LLM sometimes writes wrong patterns
+    // Convert all wrong variations to correct token format BEFORE checking
+    const wrongProfilePatterns = [
+      /\[link profilo\]/gi,
+      /\[link profile\]/gi,
+      /\[profilo link\]/gi,
+      /link profilo(?!\w)/gi,
+    ]
+    wrongProfilePatterns.forEach(pattern => {
+      if (pattern.test(finalResponse)) {
+        logger.warn(`⚠️ LLM wrote wrong token, normalizing to [LINK_PROFILE_WITH_TOKEN]`)
+        finalResponse = finalResponse.replace(pattern, "[LINK_PROFILE_WITH_TOKEN]")
+      }
+    })
+
+    const wrongCartPatterns = [
+      /\[link carrello\]/gi,
+      /\[link cart\]/gi,
+      /link carrello(?!\w)/gi,
+    ]
+    wrongCartPatterns.forEach(pattern => {
+      if (pattern.test(finalResponse)) {
+        logger.warn(`⚠️ LLM wrote wrong cart token, normalizing to [LINK_CHECKOUT_WITH_TOKEN]`)
+        finalResponse = finalResponse.replace(pattern, "[LINK_CHECKOUT_WITH_TOKEN]")
+      }
+    })
+
     // 🔗 Lista completa dei token supportati
     const SUPPORTED_TOKENS = [
       "[LINK_CHECKOUT_WITH_TOKEN]",

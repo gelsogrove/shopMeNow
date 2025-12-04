@@ -19,14 +19,14 @@ export const pricingConfigData = [
     key: "FREE_MONTHLY",
     value: BillingPrices.FREE_MONTHLY,
     description:
-      "Free plan - €0/month for 14 days trial with €29 credit included",
+      "Free plan - €0/month for 14 days trial with €19 credit included",
     isActive: true,
   },
   {
     type: "PLAN" as const,
     key: "BASIC_MONTHLY",
     value: BillingPrices.BASIC_MONTHLY,
-    description: "Basic plan - €29/month for growing businesses",
+    description: "Basic plan - €19/month for growing businesses",
     isActive: true,
   },
   {

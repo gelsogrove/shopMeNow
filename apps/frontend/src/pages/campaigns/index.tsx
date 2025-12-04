@@ -300,7 +300,7 @@ export default function CampaignsPage() {
               </Badge>
             </h3>
             <p className="text-sm text-gray-600 mt-1 mb-4">
-              Write your campaign in Italian - our AI automatically translates it to each customer's preferred language.
+              Write your campaign in <b>your native language</b> - our AI automatically translates it to each customer's preferred language.
             </p>
 
             {/* How it works - Steps */}

@@ -40,7 +40,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   {
     name: "cartManagementAgent",
     description:
-      "Delegate to Cart Management Agent for adding/removing products, viewing cart, checkout. Use when customer wants to buy, add to cart, modify cart, or checkout.",
+      "Delegate to Cart Management Agent for adding/removing products, viewing cart, modifying quantities. Use when customer wants to add to cart, modify cart, view cart contents. NOT for checkout - use orderTrackingAgent for checkout.",
     parameters: {
       type: "object",
       properties: {
@@ -56,7 +56,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   {
     name: "orderTrackingAgent",
     description:
-      "Delegate to Order Tracking Agent for order history, tracking, invoices, repeat orders. Use when customer asks about their orders, delivery status, or wants to reorder.",
+      "Delegate to Order Tracking Agent for order history, tracking, invoices, repeat orders, CHECKOUT and order confirmation. Use when customer asks about their orders, delivery status, wants to reorder, OR wants to CHECKOUT/confirm their order.",
     parameters: {
       type: "object",
       properties: {

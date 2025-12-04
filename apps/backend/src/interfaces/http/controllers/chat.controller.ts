@@ -6,6 +6,7 @@ import { LLMRouterService } from "../../../services/llm-router.service"
 import { WhatsAppQueueService } from "../../../services/whatsapp-queue.service"
 import { usageService } from "../../../services/usage.service"
 import { websocketService } from "../../../services/websocket.service"
+import { SubscriptionBillingService } from "../../../application/services/subscription-billing.service"
 import logger from "../../../utils/logger"
 
 export class ChatController {
@@ -633,8 +634,9 @@ export class ChatController {
         // Continue - message is saved even if debug logging fails
       }
 
-      // 📤 STEP 4: WhatsApp Queue (send the final message)
+      // 📤 STEP 4: Track usage and deduct credit
       try {
+        // Track usage in Usage table
         await usageService.trackUsage({
           workspaceId: workspaceId,
           clientId: chatSession.customer.id,
@@ -643,6 +645,22 @@ export class ChatController {
         logger.info(
           `[CHAT-SEND] 💰 Usage tracked for operator response: €${config.llm.defaultPrice}`
         )
+        
+        // 💰 FIX #4: Also deduct from workspace creditBalance
+        const billingService = new SubscriptionBillingService(this.prisma)
+        const deductResult = await billingService.deductMessageCredit(
+          workspaceId,
+          savedMessage.id
+        )
+        if (deductResult.success) {
+          logger.info(
+            `[CHAT-SEND] 💰 Credit deducted - New balance: €${deductResult.newBalance}`
+          )
+        } else {
+          logger.warn(
+            `[CHAT-SEND] ⚠️ Credit deduction failed: ${deductResult.error}`
+          )
+        }
       } catch (usageError) {
         logger.warn(
           `[CHAT-SEND] ⚠️ Usage tracking failed (message still saved):`,

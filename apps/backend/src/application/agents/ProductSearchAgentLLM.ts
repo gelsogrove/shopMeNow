@@ -760,7 +760,7 @@ export class ProductSearchAgentLLM {
 - Formato: ${p.formato || "Standard"}
 ${p.description ? `- Descrizione: ${p.description}` : ""}
 
-Vuoi che lo aggiunga al carrello?`
+Vuoi aggiungerlo al carrello? 🛒 Se sì, quanti?`
     }
 
     // Handle service found
@@ -774,7 +774,7 @@ Vuoi che lo aggiunga al carrello?`
 - Prezzo: ${priceStr}
 ${s.description ? `- Descrizione: ${s.description}` : ""}
 
-Vuoi aggiungerlo al carrello?`
+Vuoi aggiungerlo al carrello? 🛒 Se sì, quanti?`
     }
 
     // Handle multiple products found

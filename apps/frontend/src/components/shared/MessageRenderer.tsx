@@ -6,6 +6,34 @@ import remarkGfm from "remark-gfm"
 import { YouTubePlayerModal } from "./YouTubePlayerModal"
 import { YouTubePreview } from "./YouTubePreview"
 
+/**
+ * Opens a URL in a mobile-sized popup window
+ * This ensures consistent behavior across "new tab" and "new window"
+ */
+function openInMobilePopup(url: string) {
+  // Mobile phone dimensions (iPhone 14 Pro size)
+  const width = 390
+  const height = 844
+  
+  // Center the popup on screen
+  const left = (window.screen.width - width) / 2
+  const top = (window.screen.height - height) / 2
+  
+  // Open popup with mobile dimensions
+  const popup = window.open(
+    url,
+    '_blank',
+    `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
+  )
+  
+  // Focus the popup
+  if (popup) {
+    popup.focus()
+  }
+  
+  return popup
+}
+
 interface MessageRendererProps {
   content: string
   className?: string
@@ -58,6 +86,9 @@ export function MessageRenderer({
         }
 
         // Link normale (non YouTube)
+        // 🔧 FIX: For short URLs (/s/), open in mobile popup for consistent behavior
+        const isShortUrl = part.includes('/s/') && part.includes('localhost:3000')
+        
         return (
           <a
             key={index}
@@ -66,6 +97,13 @@ export function MessageRenderer({
             rel="noopener noreferrer"
             className="text-blue-600 hover:underline cursor-pointer"
             onClick={(e) => {
+              // 🔧 Short URLs: Open in mobile-sized popup for preview
+              if (isShortUrl) {
+                e.preventDefault()
+                openInMobilePopup(part)
+                return
+              }
+              
               if (onLinkClick) {
                 e.preventDefault()
                 onLinkClick(part, e)
@@ -82,6 +120,7 @@ export function MessageRenderer({
       let formatted = part
         .replace(/```json\s*/g, "") // Remove ```json opening
         .replace(/```\s*/g, "") // Remove ``` opening/closing
+        .replace(/\n/g, "<br>") // 🔧 FIX: Convert newlines to <br> for proper rendering
         .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
         .replace(/\*(.*?)\*/g, "<em>$1</em>")
         .replace(
@@ -132,20 +171,31 @@ export function MessageRenderer({
         skipHtml={false}
         components={{
           // Consistent link styling
-          a: ({ node, href, ...props }) => (
-            <a
-              {...props}
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline"
-              onClick={(e) => {
-                if (onLinkClick && href) {
-                  onLinkClick(href, e)
-                }
-              }}
-            />
-          ),
+          a: ({ node, href, ...props }) => {
+            // 🔧 FIX: For short URLs (/s/), force full page navigation
+            const isShortUrl = href && href.includes('/s/') && href.includes('localhost:3000')
+            
+            return (
+              <a
+                {...props}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline"
+                onClick={(e) => {
+                  if (isShortUrl && href) {
+                    e.preventDefault()
+                    window.location.href = href
+                    return
+                  }
+                  
+                  if (onLinkClick && href) {
+                    onLinkClick(href, e)
+                  }
+                }}
+              />
+            )
+          },
           // Clean paragraph rendering
           p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
           // Text formatting

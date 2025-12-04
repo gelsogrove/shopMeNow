@@ -5,11 +5,13 @@
  * Used when customer says: "Voglio riordinare", "Ripeti l'ordine", "Riordino", etc.
  *
  * ⚠️ IMPORTANTE: Questa funzione aggiunge al carrello esistente (non lo sostituisce)
+ * ⚠️ IMPORTANT: Uses PriceCalculationService to ensure consistent pricing with rounding
  *
  * @see docs/prompt_agent.md - Sezione "repeatOrder()"
  */
 
 import logger from "../../utils/logger"
+import { PriceCalculationService } from "../../application/services/price-calculation.service"
 
 export interface RepeatOrderRequest {
   customerId: string
@@ -23,6 +25,7 @@ export interface RepeatOrderResult {
   cartCode?: string // Codice carrello
   orderCode?: string // Codice ordine copiato
   productsAdded?: number // Numero di prodotti aggiunti
+  cartTotal?: number // Totale carrello
   cartUrl?: string // URL pubblico del carrello con token
   expiresAt?: string
   timestamp: string
@@ -319,24 +322,119 @@ export async function RepeatOrder(
       const cartUrl = cartLinkResult.linkUrl
       const token = cartLinkResult.token
 
+      // 🛒 Recupera dettagli carrello per il riepilogo
+      const cartWithItems = await prisma.carts.findFirst({
+        where: { id: cart.id },
+        include: {
+          items: {
+            include: {
+              product: true,
+              service: true,
+            },
+          },
+        },
+      })
+
+      // 🔧 Get customer discount from database
+      const customerDiscount = customer.discount ? Number(customer.discount) : 0
+      logger.info(`📊 Customer discount: ${customerDiscount}%`)
+
+      // 🔧 Use PriceCalculationService for consistent pricing (with rounding)
+      const priceService = new PriceCalculationService(prisma)
+      
+      // Calcola totale carrello usando PriceCalculationService
+      let originalTotal = 0  // Total before discount
+      let cartTotal = 0      // Total after discount (with rounding)
+      const cartSummary: string[] = []
+      
+      if (cartWithItems?.items) {
+        // Get product IDs for price calculation
+        const productIds = cartWithItems.items
+          .filter(item => item.product)
+          .map(item => item.product!.id)
+        
+        // Calculate prices with discounts and rounding
+        let productsWithPrices: any[] = []
+        if (productIds.length > 0) {
+          const priceResult = await priceService.calculatePricesWithDiscounts(
+            request.workspaceId,
+            productIds,
+            customerDiscount
+          )
+          productsWithPrices = priceResult.products
+        }
+
+        for (const item of cartWithItems.items) {
+          if (item.product) {
+            // Find the calculated price for this product
+            const productWithPrice = productsWithPrices.find(p => p.id === item.product!.id)
+            // Use finalPrice from PriceCalculationService (already discounted and rounded)
+            const unitPrice = productWithPrice?.finalPrice ?? Number(item.product.price)
+            const originalUnitPrice = productWithPrice?.originalPrice ?? Number(item.product.price)
+            const itemTotal = unitPrice * item.quantity
+            const itemOriginalTotal = originalUnitPrice * item.quantity
+            cartTotal += itemTotal
+            originalTotal += itemOriginalTotal
+            cartSummary.push(
+              `• ${item.product.name} x${item.quantity} - €${itemTotal.toFixed(2)}`
+            )
+            logger.info(`📦 Product: ${item.product.name}, qty: ${item.quantity}, unitPrice: €${unitPrice.toFixed(2)}, total: €${itemTotal.toFixed(2)}`)
+          } else if (item.service) {
+            const price = Number(item.service.price) || 0
+            const itemTotal = price * item.quantity
+            cartTotal += itemTotal
+            originalTotal += itemTotal  // Services don't get discount
+            cartSummary.push(
+              `• ${item.service.name} x${item.quantity} - €${itemTotal.toFixed(2)}`
+            )
+          }
+        }
+      }
+
       await prisma.$disconnect()
 
       logger.info("✅ RepeatOrder success: added", productsAdded, "products")
 
-      // 🔧 IMPORTANTE: Usa cartUrl REALE nel message, non placeholder
+      // Calculate discount amount (original - discounted)
+      const discountAmount = originalTotal - cartTotal
+
+      // 🔧 Messaggio con riepilogo carrello - chiede conferma finale
+      // Se c'è sconto, mostra breakdown; altrimenti mostra solo totale
+      let priceSection = ""
+      if (customerDiscount > 0 && discountAmount > 0) {
+        priceSection = `💰 **Totale:** €${originalTotal.toFixed(2)}
+🎁 **Sconto ${customerDiscount}%:** -€${discountAmount.toFixed(2)}
+💵 **Totale finale:** €${cartTotal.toFixed(2)}`
+      } else {
+        priceSection = `💰 **Totale:** €${cartTotal.toFixed(2)}`
+      }
+
+      const message = `Perfetto {{nameUser}}! ✅
+
+Ho aggiunto **${productsAdded} prodotto/i** dal tuo ultimo ordine (${order.orderCode}) al carrello! 🛒
+
+---
+
+🛒 **Riepilogo Carrello:**
+
+${cartSummary.join("\n")}
+
+${priceSection}
+
+---
+
+📍 **Verifica i tuoi dati di spedizione:**
+[LINK_PROFILE_WITH_TOKEN]
+
+✅ I dati sono corretti? Rispondi **"confermo"** o **"ok"** per procedere con l'ordine.`
+
       return {
         success: true,
-        message:
-          `Perfetto {{nameUser}}! ✅\n\n` +
-          `Ho aggiunto **${productsAdded} prodotto/i** dal tuo ultimo ordine (${order.orderCode}) al carrello! 🛒\n\n` +
-          `🛒 **Vai al checkout**:\n` +
-          `${cartUrl}\n\n` +
-          `⏰ Link valido per 15 minuti\n\n` +
-          `💡 **Ricorda**: hai uno sconto del **{{discountUser}}%** applicato automaticamente! 🎉\n\n` +
-          `Vuoi procedere con l'ordine o modificare qualcosa? 😊`,
+        message,
         cartCode: cart.id,
         orderCode: order.orderCode,
         productsAdded,
+        cartTotal,
         cartUrl,
         expiresAt: new Date(Date.now() + 1 * 60 * 60 * 1000).toISOString(), // 1 ora
         timestamp: new Date().toISOString(),

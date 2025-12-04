@@ -537,7 +537,7 @@ npm run build
 **Example**:
 ```
 
-INPUT: "Hi {{nameUser}}, you have {{discountUser}}% off! Link: [LINK_CART]"
+INPUT: "Hi {{nameUser}}, you have {{discountUser}}% off! Link: [LINK_CHECKOUT_WITH_TOKEN]"
 OUTPUT: "Hi Mario Rossi, you have 15% off! Link: http://localhost:3000/s/abc123"
 
 ```

@@ -1,6 +1,7 @@
 import { prisma } from '../config/database'
 import logger from '../utils/logger'
 import { SecurityAgentService } from '../services/security-agent.service'
+import { BillingService } from '../services/billing.service'
 
 /**
  * In-memory lock to prevent concurrent executions
@@ -133,6 +134,24 @@ export async function whatsappChallengeQueueJob(): Promise<void> {
                 deliveredAt: new Date(),
               },
             })
+
+            // 💰 BILLING: Deduct credit for sent message
+            try {
+              const billingService = new BillingService()
+              const deductResult = await billingService.deductMessageCredit(
+                workspace.id,
+                message.id
+              )
+              if (deductResult.success) {
+                logger.info(`[WhatsApp Queue] 💰 Credit deducted for message ${message.id}: €${deductResult.amountDeducted?.toFixed(2)} → Balance: €${deductResult.newBalance?.toFixed(2)}`)
+              } else {
+                logger.warn(`[WhatsApp Queue] ⚠️ Failed to deduct credit: ${deductResult.error}`)
+              }
+            } catch (billingError) {
+              logger.error(`[WhatsApp Queue] ⚠️ Billing error for message ${message.id}:`, billingError)
+              // Don't fail the message - billing error is non-critical
+            }
+
             return { status: 'sent', messageId: message.id }
 
           } catch (error) {

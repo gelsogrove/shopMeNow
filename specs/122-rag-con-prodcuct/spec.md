@@ -191,13 +191,13 @@ continue
 #### Cart Management Agent (order: 3)
 
 - **Calling Functions**: `addToCart`, `viewCart`, `clearCart`
-- **Link Generation**: Generates `[LINK_CART]` tokens
+- **Link Generation**: Generates `[LINK_CHECKOUT_WITH_TOKEN]` tokens
 - **Temperature**: 0.3, Max Tokens: 1024
 
 #### Order Tracking Agent (order: 4)
 
 - **Calling Functions**: `getOrderHistory`, `getLastOrders`, `getOrderDetails`, `trackOrderStatus`, `sendInvoice`, `repeatLastOrder`
-- **Link Generation**: Generates `[LINK_ORDERS]`, `[LINK_ORDER_{code}]` tokens
+- **Link Generation**: Generates `[LINK_ORDER_WITH_TOKEN]` tokens
 - **Temperature**: 0.3, Max Tokens: 1024
 
 #### Customer Support Agent (order: 5)
@@ -236,14 +236,16 @@ When CustomerSupportAgent calls `contactSupport()`:
 
 **Available Tokens**:
 
-- `[LINK_CART]` → Secure cart checkout link
-- `[LINK_ORDERS]` → Customer orders list link
-- `[LINK_ORDER_{code}]` → Specific order details link
+- `[LINK_CHECKOUT_WITH_TOKEN]` → Secure cart checkout link
+- `[LINK_PROFILE_WITH_TOKEN]` → Customer profile edit link
+- `[LINK_ORDER_WITH_TOKEN]` → Order details link
+- `[LINK_CATALOG]` → Product catalog link
+- `[LINK_REGISTRATION_WITH_TOKEN]` → New customer registration
 
 **Process**:
 
 1. Agent determines link is needed (e.g., cart checkout)
-2. Agent includes `[LINK_CART]` or `[LINK_ORDERS]` in response
+2. Agent includes `[LINK_CHECKOUT_WITH_TOKEN]` or `[LINK_ORDER_WITH_TOKEN]` in response
 3. LinkReplacementService replaces tokens LATER (after Safety layer)
 
 **Acceptance Criteria**:
@@ -551,7 +553,7 @@ When CustomerSupportAgent calls `contactSupport()`:
 - Customer sends message "Vedi il mio carrello"
 - Router delegates to CartManagementAgent
 - Agent calls `viewCart` function
-- Agent generates `[LINK_CART]` token
+- Agent generates `[LINK_CHECKOUT_WITH_TOKEN]` token
 - LinkReplacementService replaces with secure URL
 - Customer receives message with cart items and checkout link
 

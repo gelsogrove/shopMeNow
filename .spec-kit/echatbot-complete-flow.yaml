@@ -351,12 +351,12 @@ flows:
             - name: "addToCart"
               description: "Add product to customer cart"
               generates_link: true
-              link_type: "[LINK_CART]"
+              link_type: "[LINK_CHECKOUT_WITH_TOKEN]"
 
             - name: "viewCart"
               description: "Show cart contents with checkout link"
               generates_link: true
-              link_type: "[LINK_CART]"
+              link_type: "[LINK_CHECKOUT_WITH_TOKEN]"
 
             - name: "clearCart"
               description: "Empty customer cart"
@@ -366,12 +366,12 @@ flows:
             - name: "getOrders"
               description: "List customer orders"
               generates_link: true
-              link_type: "[LINK_ORDERS]"
+              link_type: "[LINK_ORDER_WITH_TOKEN]"
 
             - name: "repeatLastOrder"
               description: "Recreate cart from last order"
               generates_link: true
-              link_type: "[LINK_CART]"
+              link_type: "[LINK_CHECKOUT_WITH_TOKEN]"
 
           CustomerSupportAgent:
             - name: "contactSupport"
@@ -383,13 +383,15 @@ flows:
           description: "Specialist agents generate [LINK_xxx] tokens instead of real URLs"
           process:
             - "Agent determines link is needed (e.g., cart checkout)"
-            - "Agent includes [LINK_CART] or [LINK_ORDERS] in response"
+            - "Agent includes [LINK_CHECKOUT_WITH_TOKEN] or [LINK_ORDER_WITH_TOKEN] in response"
             - "LinkReplacementService replaces tokens LATER (Step 5)"
 
           available_tokens:
-            - "[LINK_CART] → Secure cart checkout link"
-            - "[LINK_ORDERS] → Customer orders list link"
-            - "[LINK_ORDER_{code}] → Specific order details link"
+            - "[LINK_CHECKOUT_WITH_TOKEN] → Secure cart checkout link"
+            - "[LINK_PROFILE_WITH_TOKEN] → Customer profile edit link"
+            - "[LINK_ORDER_WITH_TOKEN] → Order details link"
+            - "[LINK_CATALOG] → Product catalog link"
+            - "[LINK_REGISTRATION_WITH_TOKEN] → New customer registration"
 
           rules:
             - "NEVER generate real URLs in agent response"
@@ -609,20 +611,20 @@ flows:
         # LINK GENERATION EXAMPLES
         link_examples:
           cart_link:
-            input: "[LINK_CART]"
+            input: "[LINK_CHECKOUT_WITH_TOKEN]"
             process:
               - "SecureTokenService.generateToken({ customerId, workspaceId, type: 'cart' })"
               - "LinkGenerator.generateCheckoutLink(customerId, workspaceId)"
               - "UrlShortener.createShortUrl(longUrl) OR fallback"
             output: "http://localhost:3000/s/xyz789 OR http://localhost:3000/cart?token=eyJhbG..."
 
-          orders_link:
-            input: "[LINK_ORDERS]"
-            output: "http://localhost:3000/orders?token=eyJhbG..."
+          profile_link:
+            input: "[LINK_PROFILE_WITH_TOKEN]"
+            output: "http://localhost:3000/s/abc123 OR http://localhost:3000/profile?token=eyJhbG..."
 
-          specific_order_link:
-            input: "[LINK_ORDER_ORD-12345]"
-            output: "http://localhost:3000/order/ORD-12345?token=eyJhbG..."
+          order_link:
+            input: "[LINK_ORDER_WITH_TOKEN]"
+            output: "http://localhost:3000/s/def456 OR http://localhost:3000/order/ORD-12345?token=eyJhbG..."
 
         output:
           - "Final message with real secure URLs"
@@ -854,8 +856,8 @@ agents:
     temperature: 0.3
     max_tokens: 1024
     calling_functions:
-      - "addToCart (generates [LINK_CART])"
-      - "viewCart (generates [LINK_CART])"
+      - "addToCart (generates [LINK_CHECKOUT_WITH_TOKEN])"
+      - "viewCart (generates [LINK_CHECKOUT_WITH_TOKEN])"
       - "clearCart"
 
   order_tracking:
@@ -864,11 +866,11 @@ agents:
     temperature: 0.3
     max_tokens: 1024
     calling_functions:
-      - "getOrders (generates [LINK_ORDERS])"
+      - "getOrders (generates [LINK_ORDER_WITH_TOKEN])"
       - "getOrder (TODO #13 - not implemented)"
       - "trackOrder (TODO #13 - not implemented)"
       - "sendInvoice (TODO #13 - not implemented)"
-      - "repeatLastOrder (generates [LINK_CART])"
+      - "repeatLastOrder (generates [LINK_CHECKOUT_WITH_TOKEN])"
 
   customer_support:
     type: "CUSTOMER_SUPPORT"

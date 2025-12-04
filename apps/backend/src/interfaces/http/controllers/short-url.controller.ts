@@ -104,9 +104,12 @@ export class ShortUrlController {
           </html>
         `)
       } else {
-        // For non-PDF URLs, use standard redirect
-        logger.info(`📎 Redirecting to: ${result.originalUrl}`)
-        res.redirect(302, result.originalUrl!)
+        // For non-PDF URLs, do direct HTTP 302 redirect (most reliable)
+        // This ensures the redirect works on FIRST click without any SPA/JS issues
+        logger.info(`📎 HTTP 302 redirect to: ${result.originalUrl}`)
+        
+        const targetUrl = result.originalUrl!
+        res.redirect(302, targetUrl)
       }
     } catch (error) {
       logger.error("❌ Error in short URL redirect:", error)

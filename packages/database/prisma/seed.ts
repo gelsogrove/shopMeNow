@@ -203,7 +203,7 @@ async function main() {
       ownerId: adminUser.id, // ✅ Feature 184: Set workspace owner for team management
       // ✅ Feature 185: Subscription & Billing - Start with FREE_TRIAL
       planType: "FREE_TRIAL",
-      creditBalance: 29.0, // €29 initial credit
+      creditBalance: 19.0, // €19 initial credit (same as Basic plan cost)
       trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days from now
       planStartedAt: new Date(),
     },
@@ -783,9 +783,10 @@ async function main() {
       language: "IT",
       company: "Rossi Limited S.r.l.",
       shippingAddress: {
+        name: "Mario Rossi",
         street: "Via Roma 123",
         city: "Milano",
-        zip: "20100",
+        postalCode: "20100",
         country: "Italia",
       },
       createdAt: new Date(2025, 3, 5), // April 5, 2025
@@ -797,9 +798,10 @@ async function main() {
       language: "PRT",
       company: "Silva & Filhos Lda",
       shippingAddress: {
+        name: "João Silva",
         street: "Rua Augusta 456",
         city: "Lisboa",
-        zip: "1100-053",
+        postalCode: "1100-053",
         country: "Portugal",
       },
       createdAt: new Date(2025, 4, 12), // May 12, 2025
@@ -811,9 +813,10 @@ async function main() {
       language: "ESP",
       company: "Garcia Imports S.L.",
       shippingAddress: {
+        name: "Maria Garcia",
         street: "Calle Mayor 789",
         city: "Madrid",
-        zip: "28013",
+        postalCode: "28013",
         country: "España",
       },
       createdAt: new Date(2025, 5, 8), // June 8, 2025
@@ -825,9 +828,10 @@ async function main() {
       language: "ENG",
       company: "Smith & Co Ltd",
       shippingAddress: {
+        name: "John Smith",
         street: "Baker Street 221B",
         city: "London",
-        zip: "NW1 6XE",
+        postalCode: "NW1 6XE",
         country: "United Kingdom",
       },
       createdAt: new Date(2025, 6, 15), // July 15, 2025
@@ -1235,10 +1239,10 @@ async function main() {
 
   if (productsList.length > 0 && customersList.length > 0) {
     // Helper function to create order with items
+    // Now calculates total from actual product prices
     async function createOrder(
       orderCode: string,
       customerId: string,
-      total: number,
       status:
         | "PENDING"
         | "CONFIRMED"
@@ -1249,32 +1253,47 @@ async function main() {
       productIds: string[],
       quantities: number[]
     ) {
+      // First, calculate actual total from products
+      let calculatedTotal = 0
+      const itemsData: { productId: string; quantity: number; unitPrice: number; totalPrice: number }[] = []
+      
+      for (let i = 0; i < productIds.length; i++) {
+        const product = await prisma.products.findUnique({
+          where: { id: productIds[i] },
+        })
+        if (product) {
+          const unitPrice = Number(product.price)
+          const itemTotal = unitPrice * quantities[i]
+          calculatedTotal += itemTotal
+          itemsData.push({
+            productId: product.id,
+            quantity: quantities[i],
+            unitPrice,
+            totalPrice: itemTotal,
+          })
+        }
+      }
+
+      // Create order with correct calculated total
       const order = await prisma.orders.create({
         data: {
           orderCode,
           customerId,
           workspaceId: workspace.id,
           status,
-          totalAmount: total,
+          totalAmount: calculatedTotal,
           createdAt: date,
         },
       })
 
-      for (let i = 0; i < productIds.length; i++) {
-        const product = await prisma.products.findUnique({
-          where: { id: productIds[i] },
+      // Create order items
+      for (const item of itemsData) {
+        await prisma.orderItems.create({
+          data: {
+            orderId: order.id,
+            ...item,
+          },
         })
-        if (product) {
-          await prisma.orderItems.create({
-            data: {
-              orderId: order.id,
-              productId: product.id,
-              quantity: quantities[i],
-              unitPrice: product.price,
-              totalPrice: product.price * quantities[i],
-            },
-          })
-        }
       }
 
       // 💰 BILLING: Removed from seed - workspaces start at €0.00
@@ -1308,7 +1327,7 @@ async function main() {
           quantities.push(Math.floor(Math.random() * 3) + 1)
         }
 
-        const total = Math.floor(Math.random() * 150) + 30
+        // Total is now calculated inside createOrder from actual product prices
         const statuses: ("DELIVERED" | "CONFIRMED" | "PROCESSING")[] = [
           "DELIVERED",
           "DELIVERED",
@@ -1320,7 +1339,6 @@ async function main() {
         await createOrder(
           `ORD-${String(orderCount).padStart(3, "0")}-${year}-${month}`,
           customer.id,
-          total,
           status,
           new Date(year, month - 1, day),
           selectedProducts,
@@ -1740,10 +1758,10 @@ async function main() {
       pushCost: 1.00,
       lowBalanceThreshold: 5.00,
       trialDays: 14,
-      initialCredit: 29.00,
+      initialCredit: 19.00,
       features: JSON.stringify([
         "14 giorni di prova gratuita",
-        "€29 di credito iniziale",
+        "€19 di credito iniziale",
         "1 canale WhatsApp",
         "50 prodotti",
         "50 clienti",
@@ -1752,7 +1770,7 @@ async function main() {
     {
       planType: "BASIC" as const,
       displayName: "Basic",
-      monthlyFee: 29.00,
+      monthlyFee: 19.00,
       maxChannels: 1,
       maxProducts: 50,
       maxCustomers: 50,
@@ -1832,13 +1850,13 @@ async function main() {
     data: {
       workspaceId: workspace.id,
       type: "INITIAL_CREDIT",
-      amount: 29.00,
-      balanceAfter: 29.00,
+      amount: 19.00,
+      balanceAfter: 19.00,
       description: "Initial Free Trial credit",
     },
   })
 
-  console.log("✅ Created initial billing transaction (+€29 trial credit)")
+  console.log("✅ Created initial billing transaction (+€19 trial credit)")
 
   // Seed Scheduler Job Status (all jobs active by default)
   console.log("⏰ Creating scheduler job status...")
