@@ -1,5 +1,5 @@
 // External dependencies
-import { PrismaClient, WhatsAppQueue } from "@prisma/client"
+import { PrismaClient, WhatsAppQueue } from "@echatbot/database"
 
 // Internal core
 import logger from "../utils/logger"

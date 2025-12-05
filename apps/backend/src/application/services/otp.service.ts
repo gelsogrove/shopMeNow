@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import * as speakeasy from "speakeasy"
 import { AppError } from "../../interfaces/http/middlewares/error.middleware"
 import logger from "../../utils/logger"

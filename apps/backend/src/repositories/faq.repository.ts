@@ -12,7 +12,7 @@
  * Security: ALL queries filtered by workspaceId (multi-tenant isolation)
  */
 
-import { FAQ, PrismaClient } from "@prisma/client"
+import { FAQ, PrismaClient } from "@echatbot/database"
 import logger from "../utils/logger"
 
 export class FAQRepository {

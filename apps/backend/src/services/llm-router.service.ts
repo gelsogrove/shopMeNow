@@ -36,7 +36,7 @@
  * @critical ALWAYS pass final response through SafetyTranslationAgent
  */
 
-import { AgentType, PrismaClient } from "@prisma/client"
+import { AgentType, PrismaClient } from "@echatbot/database"
 import axios from "axios"
 import { CartManagementAgentLLM } from "../application/agents/CartManagementAgentLLM"
 import { CustomerSupportAgentLLM } from "../application/agents/CustomerSupportAgentLLM"

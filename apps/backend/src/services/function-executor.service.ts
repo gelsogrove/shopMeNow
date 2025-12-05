@@ -13,7 +13,7 @@
  * @architecture Clean Architecture - Dependency Injection
  */
 
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import { CartManagementAgent } from "../application/agents/CartManagementAgent"
 // NOTE: ProductSearchAgent removed - LLM uses {{PRODUCTS}} from prompt only
 import { CartRepository } from "../repositories/cart.repository"

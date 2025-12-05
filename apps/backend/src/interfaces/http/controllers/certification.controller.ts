@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import { CertificationService } from "../../../services/certification.service"
 import logger from "../../../utils/logger"
 

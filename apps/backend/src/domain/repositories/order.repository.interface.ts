@@ -1,4 +1,4 @@
-import { OrderStatus } from '@prisma/client';
+import { OrderStatus } from '../../generated/prisma/client';
 import { Order } from '../entities/order.entity';
 
 export type OrderFilters = {

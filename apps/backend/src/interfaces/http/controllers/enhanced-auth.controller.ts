@@ -18,7 +18,7 @@
  */
 
 import { Request, Response } from 'express'
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from '../../../generated/prisma/client'
 import * as jwt from 'jsonwebtoken'
 import type { SignOptions } from 'jsonwebtoken'
 import { config } from '../../../config'

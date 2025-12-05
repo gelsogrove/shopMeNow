@@ -3,7 +3,7 @@ import {
   CampaignFrequency,
   CampaignTargetType,
   PrismaClient,
-} from "@prisma/client"
+} from "@echatbot/database"
 import logger from "../../utils/logger"
 
 export interface CreateCampaignData {

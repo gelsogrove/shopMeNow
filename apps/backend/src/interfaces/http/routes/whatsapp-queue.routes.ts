@@ -1,6 +1,6 @@
 // External dependencies
 import { Router } from "express"
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 
 // Middleware
 import { authMiddleware } from "../middlewares/auth.middleware"

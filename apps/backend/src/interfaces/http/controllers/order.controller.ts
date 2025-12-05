@@ -1,4 +1,4 @@
-import { OrderStatus } from "@prisma/client"
+import { OrderStatus } from "@echatbot/database"
 import { Request, Response } from "express"
 import { BillingService } from "../../../application/services/billing.service"
 import { OrderService } from "../../../application/services/order.service"

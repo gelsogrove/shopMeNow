@@ -17,7 +17,7 @@
 // ============================================================================
 // 1. CORE IMPORTS
 // ============================================================================
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import { NextFunction, Request, Response, Router } from "express"
 import logger from "../utils/logger"
 

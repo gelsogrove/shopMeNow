@@ -13,7 +13,7 @@
  * @see docs/prompt_agent.md - Sezione "searchProduct()"
  */
 
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import logger from "../../utils/logger"
 
 export interface SearchProductRequest {

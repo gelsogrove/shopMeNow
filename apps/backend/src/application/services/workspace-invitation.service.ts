@@ -1,4 +1,4 @@
-import { PrismaClient, InvitationStatus } from "@prisma/client"
+import { PrismaClient, InvitationStatus } from "@echatbot/database"
 import crypto from "crypto"
 import logger from "../../utils/logger"
 import { EmailService } from "./email.service"

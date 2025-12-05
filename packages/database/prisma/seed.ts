@@ -18,7 +18,8 @@ config() // Load environment variables from .env file
 import { ensureNotProduction } from "../scripts/check-env-safety"
 ensureNotProduction("prisma:seed")
 
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "../src/generated/prisma/client"
+import { PrismaPg } from "@prisma/adapter-pg"
 import * as bcrypt from "bcrypt"
 import { campaigns } from "./data/campaigns"
 import { categories } from "./data/categories"
@@ -33,7 +34,12 @@ import { services } from "./data/services"
 import { suppliers } from "./data/suppliers"
 import { workspaceSettings } from "./data/workspaceSettings"
 
-const prisma = new PrismaClient()
+// Initialize the PostgreSQL adapter for Prisma 7
+const adapter = new PrismaPg({
+  connectionString: process.env.DATABASE_URL,
+})
+
+const prisma = new PrismaClient({ adapter })
 
 async function main() {
   console.log("🌱 Starting database seed...")

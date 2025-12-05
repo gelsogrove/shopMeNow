@@ -1,6 +1,6 @@
 // External dependencies
 import cron from "node-cron"
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 
 // Services
 import { WhatsAppQueueService } from "../services/whatsapp-queue.service"

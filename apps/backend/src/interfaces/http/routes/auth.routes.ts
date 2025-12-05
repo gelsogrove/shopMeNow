@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express"
 import rateLimit from "express-rate-limit"
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import logger from "../../../utils/logger"
 import { AuthController } from "../controllers/auth.controller"
 import { EnhancedAuthController } from "../controllers/enhanced-auth.controller"

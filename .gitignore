@@ -59,6 +59,10 @@ apps/backend/uploads/products/
 # Prisma uploads backup
 apps/backend/prisma/uploads-backup/
 
+# Prisma 7 Generated Client (v7.1.0+)
+# Generated client files are created during build and should not be committed
+packages/database/src/generated/
+
 # Turbo
 .turbo
 

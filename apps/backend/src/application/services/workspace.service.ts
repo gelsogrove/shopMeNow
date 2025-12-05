@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import { randomUUID } from "crypto"
 import fs from "fs"
 import path from "path"

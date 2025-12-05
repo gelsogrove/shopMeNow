@@ -10,7 +10,7 @@
  * @critical ALWAYS call this AFTER Security Agent passes
  */
 
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import axios from "axios"
 import { AgentConfigRepository } from "../../repositories/agent-config.repository"
 import logger from "../../utils/logger"

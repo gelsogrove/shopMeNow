@@ -16,7 +16,7 @@
  */
 
 import { Request, Response } from "express"
-import { PrismaClient, TransactionType } from "@prisma/client"
+import { PrismaClient, TransactionType } from "@echatbot/database"
 import { SubscriptionBillingService } from "../../../application/services/subscription-billing.service"
 import logger from "../../../utils/logger"
 

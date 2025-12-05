@@ -1,4 +1,4 @@
-import { PrismaClient, Certification } from "@prisma/client"
+import { PrismaClient, Certification } from "@echatbot/database"
 import { CertificationRepository } from "../repositories/certification.repository"
 import logger from "../utils/logger"
 

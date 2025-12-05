@@ -1,5 +1,5 @@
-import { PrismaClient } from "@prisma/client"
 import "dotenv/config"
+import { prisma } from "@echatbot/database"
 import { createServer } from "http"
 import app from "./app"
 import { startScheduler, stopScheduler } from "./scheduler"
@@ -10,7 +10,6 @@ import { websocketService } from "./services/websocket.service"
 import logger from "./utils/logger"
 
 const PORT = process.env.PORT || 3001
-const prisma = new PrismaClient()
 
 // Start the server with WebSocket support
 async function startServer() {

@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import logger from "../../utils/logger"
 import { SecureTokenService } from "./secure-token.service"
 

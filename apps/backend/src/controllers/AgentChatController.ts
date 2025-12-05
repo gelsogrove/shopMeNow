@@ -13,10 +13,10 @@
  * 1. Validate request (workspace, customer, message)
  * 2. Call LLMRouterService.routeMessage()
  * 3. Return response with agent info
- * 4. All logging handled automatically by service layer
+ * All logging handled automatically by service layer
  */
 
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import { Request, Response } from "express"
 import { v4 as uuidv4 } from "uuid"
 import { AgentLoggerService } from "../services/agent-logger.service"

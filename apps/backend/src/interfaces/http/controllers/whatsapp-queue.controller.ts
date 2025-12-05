@@ -1,6 +1,6 @@
 // External dependencies
 import { Request, Response } from "express"
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 
 // Services
 import { WhatsAppQueueService } from "../../../services/whatsapp-queue.service"

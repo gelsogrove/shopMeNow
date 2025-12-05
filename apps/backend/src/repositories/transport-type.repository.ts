@@ -1,4 +1,4 @@
-import { PrismaClient, TransportType } from "@prisma/client"
+import { PrismaClient, TransportType } from "@echatbot/database"
 import logger from "../utils/logger"
 
 export class TransportTypeRepository {

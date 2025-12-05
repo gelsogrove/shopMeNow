@@ -1,4 +1,4 @@
-import { ProductStatus } from "@prisma/client"
+import { ProductStatus } from "@echatbot/database"
 import { Product } from "../entities/product.entity"
 
 export type ProductFilters = {

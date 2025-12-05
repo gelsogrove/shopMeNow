@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import { Request, Response } from "express"
 import { LLMRouterService } from "../../../services/llm-router.service"
 import logger from "../../../utils/logger"

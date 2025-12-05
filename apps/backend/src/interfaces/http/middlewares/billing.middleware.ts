@@ -11,7 +11,7 @@
  */
 
 import { NextFunction, Request, Response } from "express"
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import { SubscriptionBillingService } from "../../../application/services/subscription-billing.service"
 import logger from "../../../utils/logger"
 

@@ -1,4 +1,4 @@
-import { ProductStatus } from "@prisma/client"
+import { ProductStatus } from "@echatbot/database"
 import { Request, Response } from "express"
 import { ProductService } from "../../../application/services/product.service"
 import { prisma } from "../../../lib/prisma"

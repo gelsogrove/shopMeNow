@@ -15,7 +15,7 @@
  * - sessionId indexed for fast lookups
  */
 
-import { Prisma, SearchConversationState } from "@prisma/client"
+import { Prisma, SearchConversationState } from "@echatbot/database"
 import { prisma } from "../lib/prisma"
 import logger from "../utils/logger"
 

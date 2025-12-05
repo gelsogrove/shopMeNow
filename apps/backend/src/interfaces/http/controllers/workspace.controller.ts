@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import { NextFunction, Request, Response } from "express"
 import { SubscriptionBillingService } from "../../../application/services/subscription-billing.service"
 import { WorkspaceService } from "../../../application/services/workspace.service"

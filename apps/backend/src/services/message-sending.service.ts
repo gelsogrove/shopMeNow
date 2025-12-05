@@ -11,7 +11,7 @@
  * 🚨 REGOLA CRITICA: sendToWhatsApp NON deve essere chiamato direttamente!
  */
 
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import logger from "../utils/logger"
 import translationSecurityService from "./translation-security.service"
 import { sendToWhatsApp } from "./whatsapp-api.service"

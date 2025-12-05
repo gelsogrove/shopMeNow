@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import { getFunctionsForAgentType } from "../../config/agent-function-mapping"
 import logger from "../../utils/logger"
 

@@ -13,7 +13,7 @@
  */
 
 import { CartManagementAgentLLM } from "../../../application/agents/CartManagementAgentLLM"
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 
 // Mock PrismaClient
 jest.mock("@prisma/client", () => ({

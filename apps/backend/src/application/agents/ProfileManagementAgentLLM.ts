@@ -12,7 +12,7 @@
  * @functions handlePushNotifications(value: boolean) - Enable/disable push notifications
  */
 
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import axios from "axios"
 import { PROFILE_MANAGEMENT_FUNCTIONS } from "../../config/agent-functions.config"
 import { PromptProcessorService } from "../../services/prompt-processor.service"

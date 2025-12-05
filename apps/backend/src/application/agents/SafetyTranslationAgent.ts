@@ -13,7 +13,7 @@
  * @critical ALWAYS call this before sending response to customer
  */
 
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import axios from "axios"
 import { AgentConfigRepository } from "../../repositories/agent-config.repository"
 import logger from "../../utils/logger"

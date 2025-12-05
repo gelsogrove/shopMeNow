@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import { TransportTypeService } from "../../../services/transport-type.service"
 import logger from "../../../utils/logger"
 

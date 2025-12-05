@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import { CertificationController } from "../controllers/certification.controller"
 import { authMiddleware } from "../../../middlewares/auth.middleware"
 import { validateWorkspaceOperation } from "../../../middlewares/workspace-validation.middleware"

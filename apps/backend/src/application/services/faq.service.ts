@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import { FAQ } from "../../domain/entities/faq.entity"
 import { FAQRepository } from "../../repositories/faq.repository"
 import logger from "../../utils/logger"

@@ -1,4 +1,4 @@
-import { ProductStatus } from "@prisma/client"
+import { ProductStatus } from "@echatbot/database"
 import { Category } from "./category.entity"
 
 export class Product {

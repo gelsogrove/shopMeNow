@@ -1,4 +1,4 @@
-import { CampaignFrequency, PrismaClient } from "@prisma/client"
+import { CampaignFrequency, PrismaClient } from "@echatbot/database"
 import * as cron from "node-cron"
 import { CampaignTokenService } from "../application/services/campaign-token.service"
 import { CampaignService } from "../application/services/campaign.service"

@@ -1,5 +1,5 @@
 import { prisma } from '../config/database'
-import { Decimal } from '@prisma/client/runtime/library'
+import { Decimal } from '../../generated/prisma/client/runtime/library'
 import logger from '../utils/logger'
 
 /**

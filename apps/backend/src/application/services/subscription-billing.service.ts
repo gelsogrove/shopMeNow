@@ -12,7 +12,7 @@
  * CRITICAL: Credit deductions are atomic with transaction records
  */
 
-import { PlanType, PrismaClient, TransactionType } from "@prisma/client"
+import { PlanType, PrismaClient, TransactionType } from "@echatbot/database"
 import {
   BillingInfo,
   PlanLimits,

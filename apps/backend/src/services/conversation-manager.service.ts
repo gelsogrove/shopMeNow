@@ -11,7 +11,7 @@
  * @architecture Clean Architecture - Uses ConversationMessageRepository
  */
 
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import { ConversationMessageRepository } from "../repositories/conversation-message.repository"
 import { WhatsAppQueueService } from "./whatsapp-queue.service"
 import logger from "../utils/logger"

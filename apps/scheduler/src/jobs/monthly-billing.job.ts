@@ -1,7 +1,7 @@
 import { prisma } from '../config/database'
 import logger from '../utils/logger'
-import { Decimal } from '@prisma/client/runtime/library'
-import { PlanType } from '@prisma/client'
+import { Decimal } from '../../generated/prisma/client/runtime/library'
+import { PlanType } from '../../generated/prisma/client'
 
 /**
  * Monthly Billing Job

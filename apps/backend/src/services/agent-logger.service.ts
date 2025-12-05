@@ -31,7 +31,7 @@
  * ```
  */
 
-import { AgentType, PrismaClient } from "@prisma/client"
+import { AgentType, PrismaClient } from "@echatbot/database"
 import { AgentConversationLogRepository } from "../repositories/agent-conversation-log.repository"
 import logger from "../utils/logger"
 

@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import { Router } from "express"
 import { AgentConfigController } from "../controllers/agent-config.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"

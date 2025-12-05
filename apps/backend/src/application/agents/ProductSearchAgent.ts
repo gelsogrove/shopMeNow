@@ -22,7 +22,7 @@
  * - "show me organic vegetables" → Filter by certification + category
  */
 
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import { ProductRepository } from "../../repositories/product.repository"
 import logger from "../../utils/logger"
 

@@ -29,7 +29,7 @@
  * @critical NEVER call LLMService - this is a SPECIALIST with OWN LLM
  */
 
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import axios from "axios"
 import { config } from "../../config"
 import { AgentConfigRepository } from "../../repositories/agent-config.repository"

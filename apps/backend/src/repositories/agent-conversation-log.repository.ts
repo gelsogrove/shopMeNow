@@ -13,7 +13,7 @@
  * Security: ALL queries filtered by workspaceId AND customerId (multi-tenant + customer isolation)
  */
 
-import { AgentConversationLog, AgentType, PrismaClient } from "@prisma/client"
+import { AgentConversationLog, AgentType, PrismaClient } from "@echatbot/database"
 import logger from "../utils/logger"
 
 export class AgentConversationLogRepository {

@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import { BillingPrices } from "../domain/enums/billing-prices.enum"
 import logger from "../utils/logger"
 import { usageService } from "./usage.service"

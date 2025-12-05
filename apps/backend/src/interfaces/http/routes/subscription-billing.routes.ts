@@ -17,7 +17,7 @@
  */
 
 import { Router } from "express"
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import { SubscriptionBillingController } from "../controllers/subscription-billing.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"
 import { sessionValidationMiddleware } from "../middlewares/session-validation.middleware"

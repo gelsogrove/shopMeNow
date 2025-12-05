@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import fs from "fs"
 import path from "path"
 import { MessageRepository } from "../repositories/message.repository"

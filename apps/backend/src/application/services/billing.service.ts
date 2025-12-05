@@ -1,4 +1,4 @@
-import { BillingType, PrismaClient } from "@prisma/client"
+import { BillingType, PrismaClient } from "@echatbot/database"
 import { PricingRepository } from "../../repositories/pricing.repository"
 import logger from "../../utils/logger"
 

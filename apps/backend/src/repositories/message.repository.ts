@@ -4,7 +4,7 @@ import {
   OrderStatus,
   Prisma,
   PrismaClient,
-} from "@prisma/client"
+} from "@echatbot/database"
 import * as dotenv from "dotenv"
 import OpenAI from "openai"
 import { BillingPrices } from "../domain/enums/billing-prices.enum"

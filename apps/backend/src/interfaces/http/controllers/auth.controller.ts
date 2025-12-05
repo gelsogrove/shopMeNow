@@ -30,7 +30,7 @@
 // @ts-nocheck - Complex schema mismatch: Prisma User vs Domain interfaces (UserProps/UserEntity)
 // Issues: passwordHash vs password, missing twoFactorSecret/gdprAccepted/phoneNumber in UserProps
 // Requires architectural decision on mapping layer between Prisma and Domain
-import { User } from "@prisma/client"
+import { User } from "@echatbot/database"
 import { Request, Response } from "express"
 import type { SignOptions } from "jsonwebtoken"
 import * as jwt from "jsonwebtoken"

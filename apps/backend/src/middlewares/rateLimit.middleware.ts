@@ -11,7 +11,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express'
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from '../../generated/prisma/client'
 import { getSecurityConfig } from '../config/security.config'
 import logger from '../utils/logger'
 

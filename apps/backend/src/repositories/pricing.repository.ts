@@ -5,7 +5,7 @@
  * All BE/FE pricing queries go through this repository.
  */
 
-import { PricingType, PrismaClient } from "@prisma/client"
+import { PricingType, PrismaClient } from "@echatbot/database"
 
 export interface PricingConfigDTO {
   type: PricingType

@@ -18,7 +18,7 @@
  */
 
 import { Router, Request, Response } from "express"
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import speakeasy from "speakeasy"
 import QRCode from "qrcode"
 import { TwoFactorResetService } from "../../../application/services/two-factor-reset.service"

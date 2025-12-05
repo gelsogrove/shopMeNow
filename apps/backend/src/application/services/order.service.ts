@@ -1,4 +1,4 @@
-import { OrderStatus, PrismaClient } from "@prisma/client"
+import { OrderStatus, PrismaClient } from "@echatbot/database"
 import { Order } from "../../domain/entities/order.entity"
 import {
   IOrderRepository,

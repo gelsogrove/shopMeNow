@@ -203,9 +203,8 @@ import { shortUrlRoutes } from "./interfaces/http/routes/short-url.routes"
 app.use("/", shortUrlRoutes)
 
 // PUBLIC SERVICES ENDPOINT (no auth required for checkout page)
-import { PrismaClient } from "@prisma/client"
+import { prisma } from "@echatbot/database"
 import { workspaceValidationMiddleware } from "./interfaces/http/middlewares/workspace-validation.middleware"
-const prismaPub = new PrismaClient()
 
 app.get(
   "/api/services/public",
@@ -223,7 +222,7 @@ app.get(
 
       logger.info(`📦 PUBLIC: Getting services for workspace: ${workspaceId}`)
 
-      const services = await prismaPub.services.findMany({
+      const services = await prisma.services.findMany({
         where: {
           workspaceId: workspaceId,
         },

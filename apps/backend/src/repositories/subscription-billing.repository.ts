@@ -10,9 +10,11 @@
  * SECURITY: All methods require workspaceId for multi-tenant isolation
  */
 
-import { PlanType, PrismaClient, TransactionType } from "@prisma/client"
-import { Decimal } from "@prisma/client/runtime/library"
+import { PlanType, PrismaClient, TransactionType, Prisma } from "@echatbot/database"
 import logger from "../utils/logger"
+
+// Extract Decimal type
+type Decimal = typeof Prisma.Decimal
 
 export interface BillingInfo {
   planType: PlanType

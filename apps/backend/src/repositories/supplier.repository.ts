@@ -1,4 +1,4 @@
-import { PrismaClient, Suppliers } from "@prisma/client"
+import { PrismaClient, Suppliers } from "@echatbot/database"
 
 const prisma = new PrismaClient()
 

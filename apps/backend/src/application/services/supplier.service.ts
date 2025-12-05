@@ -1,4 +1,4 @@
-import { Suppliers } from "@prisma/client"
+import { Suppliers } from "@echatbot/database"
 import {
   CreateSupplierData,
   SupplierRepository,

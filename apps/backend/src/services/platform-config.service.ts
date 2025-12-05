@@ -14,7 +14,7 @@
  * @author Andrea Gelso - eChatbot Platform
  */
 
-import { PrismaClient, ConfigType } from "@prisma/client"
+import { PrismaClient, ConfigType } from "@echatbot/database"
 import logger from "../utils/logger"
 
 // Type definitions for platform config

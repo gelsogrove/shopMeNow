@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import { NextFunction, Request, Response } from "express"
 import * as jwt from "jsonwebtoken"
 import { config } from "../../../config"

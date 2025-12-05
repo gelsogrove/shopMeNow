@@ -15,7 +15,7 @@
  * with product search (including rounding to nearest 10 cents)
  */
 
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import { PriceCalculationService } from "../../application/services/price-calculation.service"
 import logger from "../../utils/logger"
 

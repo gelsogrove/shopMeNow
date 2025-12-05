@@ -1,4 +1,4 @@
-import { UserRole } from "@prisma/client"
+import { UserRole } from "@echatbot/database"
 import { NextFunction, Request, Response } from "express"
 import { verify } from "jsonwebtoken"
 import { prisma } from "../lib/prisma"

@@ -12,7 +12,7 @@
  * Security: ALL queries filtered by workspaceId (multi-tenant isolation)
  */
 
-import { AgentConfig, AgentType, PrismaClient } from "@prisma/client"
+import { AgentConfig, AgentType, PrismaClient } from "@echatbot/database"
 import logger from "../utils/logger"
 
 export class AgentConfigRepository {
