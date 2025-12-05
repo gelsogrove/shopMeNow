@@ -1,7 +1,7 @@
 // Import from shared database package
-import { prisma } from '@echatbot/database'
+import { prisma, Prisma, PlanType, CampaignFrequency } from '@echatbot/database'
 
-export { prisma }
+export { prisma, Prisma, PlanType, CampaignFrequency }
 
 export async function connectDatabase(): Promise<void> {
   try {

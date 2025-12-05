@@ -1,4 +1,4 @@
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 // import { getAllProducts } from "../../chatbot/calling-functions/getAllProducts" // REMOVED - file no longer exists
 import { MessageRepository } from "../../repositories/message.repository"
 import logger from "../../utils/logger"
@@ -191,7 +191,7 @@ export class FunctionHandlerService {
   private readonly SESSION_TTL = 5 * 60 * 1000 // 5 minuti in millisecondi
 
   constructor() {
-    this.prisma = new PrismaClient()
+    this.prisma = prisma
     this.messageRepository = new MessageRepository()
     this.tokenService = new TokenService()
     this.priceCalculationService = new PriceCalculationService(this.prisma)

@@ -414,6 +414,33 @@ export class CustomerRepository implements ICustomerRepository {
         where: { customerId: id },
       })
 
+      // Delete order items first (RESTRICT constraint on orderId)
+      await prisma.orderItems.deleteMany({
+        where: {
+          order: {
+            customerId: id,
+          },
+        },
+      })
+
+      // Delete credit notes (cascade from orders)
+      await prisma.creditNote.deleteMany({
+        where: {
+          order: {
+            customerId: id,
+          },
+        },
+      })
+
+      // Delete payment details (cascade from orders)
+      await prisma.paymentDetails.deleteMany({
+        where: {
+          order: {
+            customerId: id,
+          },
+        },
+      })
+
       // Delete orders
       await prisma.orders.deleteMany({
         where: { customerId: id },

@@ -10,7 +10,7 @@ import { BillingService } from "./billing.service"
 import { CustomerService } from "./customer.service"
 import { StockService } from "./stock.service"
 
-const prisma = new PrismaClient()
+// prisma imported
 
 export class OrderService {
   private orderRepository: IOrderRepository
@@ -182,7 +182,7 @@ export class OrderService {
 
           // Get workspace for admin email (for CC)
           const { PrismaClient } = require("@prisma/client")
-          const prisma = new PrismaClient()
+          // prisma imported
 
           const workspace = await prisma.workspace.findUnique({
             where: { id: createdOrder.workspaceId },

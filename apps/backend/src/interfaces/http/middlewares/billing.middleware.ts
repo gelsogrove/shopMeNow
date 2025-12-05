@@ -11,11 +11,11 @@
  */
 
 import { NextFunction, Request, Response } from "express"
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import { SubscriptionBillingService } from "../../../application/services/subscription-billing.service"
 import logger from "../../../utils/logger"
 
-const prisma = new PrismaClient()
+// prisma imported
 const billingService = new SubscriptionBillingService(prisma)
 
 /**

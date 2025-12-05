@@ -1,4 +1,4 @@
-import { PrismaClient } from "@echatbot/database"
+import { prisma, PrismaClient } from "@echatbot/database"
 import { randomUUID } from "crypto"
 import fs from "fs"
 import path from "path"
@@ -16,8 +16,8 @@ export class WorkspaceService {
   private repository: WorkspaceRepositoryInterface
   private prisma: PrismaClient
 
-  constructor(prisma?: PrismaClient) {
-    this.prisma = prisma || new PrismaClient()
+  constructor(prismaInstance?: PrismaClient) {
+    this.prisma = prismaInstance || prisma
     this.repository = new WorkspaceRepository(this.prisma)
   }
 
@@ -245,7 +245,7 @@ For privacy inquiries, please contact our support team.`
     const workspace = Workspace.create(data)
 
     // Use transaction to create workspace and related records
-    return await this.prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async (tx) => {
       // 1. Create the workspace
       const createdWorkspace = await this.repository.create(workspace)
 

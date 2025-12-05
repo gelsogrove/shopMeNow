@@ -8,6 +8,7 @@
  */
 
 import logger from "../../utils/logger"
+import { prisma } from "@echatbot/database"
 
 export interface ContactOperatorRequest {
   phoneNumber: string
@@ -37,9 +38,7 @@ export interface ContactOperatorResult {
 export async function ContactOperator(
   request: ContactOperatorRequest
 ): Promise<ContactOperatorResult> {
-  // Import Prisma OUTSIDE try block for proper scope
-  const { PrismaClient } = require("@prisma/client")
-  const prisma = new PrismaClient()
+  // Use imported prisma singleton from @echatbot/database
   
   // 📧 Track email sending status (accessible in all scopes)
   let emailSentSuccessfully = false

@@ -1,4 +1,3 @@
-// Mock Prisma client
 const mockPrismaOrders = {
   findFirst: jest.fn(),
 }
@@ -11,14 +10,12 @@ const mockPrismaCreditNote = {
   delete: jest.fn(),
 }
 
-jest.mock("@prisma/client", () => {
-  return {
-    PrismaClient: jest.fn().mockImplementation(() => ({
-      orders: mockPrismaOrders,
-      creditNote: mockPrismaCreditNote,
-    })),
-  }
-})
+jest.mock("@echatbot/database", () => ({
+  prisma: {
+    orders: mockPrismaOrders,
+    creditNote: mockPrismaCreditNote,
+  },
+}))
 
 import { CreditNoteService, CreateCreditNoteDto } from "../../../src/application/services/credit-note.service"
 

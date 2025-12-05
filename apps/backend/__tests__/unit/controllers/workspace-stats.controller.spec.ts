@@ -8,7 +8,7 @@
  * - New customers (name = "New Customer") - unregistered customers
  */
 
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 
 // Mock PrismaClient
 const mockPrismaClient = {
@@ -23,7 +23,8 @@ const mockPrismaClient = {
   },
 }
 
-jest.mock("@prisma/client", () => ({
+jest.mock("@echatbot/database", () => ({
+
   PrismaClient: jest.fn(() => mockPrismaClient),
 }))
 

@@ -16,7 +16,7 @@
  * All logging handled automatically by service layer
  */
 
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import { Request, Response } from "express"
 import { v4 as uuidv4 } from "uuid"
 import { AgentLoggerService } from "../services/agent-logger.service"
@@ -29,7 +29,7 @@ export class AgentChatController {
   private loggerService: AgentLoggerService
 
   constructor() {
-    this.prisma = new PrismaClient()
+    this.prisma = prisma
     this.routerService = new LLMRouterService(this.prisma)
     this.loggerService = new AgentLoggerService(this.prisma)
   }

@@ -9,18 +9,18 @@
  * @see docs/prompts/security-agent.md
  */
 
-import { PrismaClient } from "@prisma/client"
+
 
 // Mock Prisma
-jest.mock("@prisma/client", () => ({
-  PrismaClient: jest.fn().mockImplementation(() => ({
+jest.mock("@echatbot/database", () => ({
+  prisma: {
     workspace: {
       findUnique: jest.fn(),
     },
     agentConfig: {
       findFirst: jest.fn(),
     },
-  })),
+  },
 }))
 
 // Mock axios for OpenRouter calls
@@ -53,7 +53,8 @@ describe("SecurityAgent", () => {
     jest.clearAllMocks()
     process.env.OPENROUTER_API_KEY = "test-api-key"
 
-    mockPrisma = new PrismaClient()
+    const { prisma } = require("@echatbot/database")
+    mockPrisma = prisma
     securityAgent = new SecurityAgent(mockPrisma)
 
     // Default mock: Security agent is active

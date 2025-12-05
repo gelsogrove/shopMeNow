@@ -1,5 +1,4 @@
-import { CampaignFrequency } from '../../generated/prisma/client'
-import { prisma } from '../config/database'
+import { prisma, CampaignFrequency } from '../config/database'
 import logger from '../utils/logger'
 import { translationService } from '../services/translation.service'
 

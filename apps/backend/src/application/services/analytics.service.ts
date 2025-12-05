@@ -1,4 +1,4 @@
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import logger from "../../utils/logger"
 
 export interface DashboardAnalytics {
@@ -88,7 +88,7 @@ export class AnalyticsService {
   private prisma: PrismaClient
 
   constructor() {
-    this.prisma = new PrismaClient()
+    this.prisma = prisma
   }
 
   async getDashboardAnalytics(

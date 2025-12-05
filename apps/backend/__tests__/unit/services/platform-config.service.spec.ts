@@ -13,30 +13,27 @@
  * @author Andrea Gelso - eChatbot Platform
  */
 
-import { PrismaClient } from "@prisma/client"
+const mockPlatformConfig = {
+  findMany: jest.fn(),
+  update: jest.fn(),
+}
 
-// Mock Prisma
-jest.mock("@prisma/client", () => {
-  const mockPlatformConfig = {
-    findMany: jest.fn(),
-    update: jest.fn(),
-  }
+const mockPrisma = {
+  platformConfig: mockPlatformConfig,
+}
 
-  return {
-    PrismaClient: jest.fn().mockImplementation(() => ({
-      platformConfig: mockPlatformConfig,
-    })),
-  }
-})
+jest.mock("@echatbot/database", () => ({
+  prisma: mockPrisma,
+  PrismaClient: jest.fn(),
+}))
 
-// Import after mocking
+// Make prisma available globally for the service
+;(global as any).prisma = mockPrisma
+
 import { platformConfigService } from "../../../src/services/platform-config.service"
 
 describe("PlatformConfigService", () => {
-  let mockPrisma: jest.Mocked<PrismaClient>
-
   const mockConfigData = [
-    // Prices
     {
       id: "1",
       key: "BASIC_MONTHLY",
@@ -70,7 +67,6 @@ describe("PlatformConfigService", () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     },
-    // Flags
     {
       id: "4",
       key: "canLogin",
@@ -93,7 +89,6 @@ describe("PlatformConfigService", () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     },
-    // Limits
     {
       id: "6",
       key: "FREE_PRODUCTS",
@@ -120,16 +115,9 @@ describe("PlatformConfigService", () => {
 
   beforeEach(async () => {
     jest.clearAllMocks()
-
-    // Get the mocked prisma instance
-    mockPrisma = new PrismaClient() as jest.Mocked<PrismaClient>
-
-    // Setup default mock for findMany
-    ;(mockPrisma.platformConfig.findMany as jest.Mock).mockResolvedValue(
+    ;(mockPlatformConfig.findMany as jest.Mock).mockResolvedValue(
       mockConfigData
     )
-
-    // Invalidate cache to ensure fresh state for each test
     await platformConfigService.invalidateCache()
   })
 
@@ -211,7 +199,6 @@ describe("PlatformConfigService", () => {
     it("should return all config in correct format", async () => {
       const config = await platformConfigService.getPublicConfig()
 
-      // Check prices
       expect(config.prices.BASIC_MONTHLY).toEqual({
         current: 19,
         original: 29,
@@ -221,11 +208,9 @@ describe("PlatformConfigService", () => {
         original: null,
       })
 
-      // Check flags
       expect(config.flags.canLogin).toBe(true)
       expect(config.flags.canRegister).toBe(false)
 
-      // Check limits
       expect(config.limits.FREE_PRODUCTS).toBe(50)
     })
   })
@@ -234,20 +219,17 @@ describe("PlatformConfigService", () => {
     it("should return config with descriptions", async () => {
       const config = await platformConfigService.getAdminConfig()
 
-      // Check prices array
       const basicPrice = config.prices.find((p) => p.key === "BASIC_MONTHLY")
       expect(basicPrice).toBeDefined()
       expect(basicPrice?.current).toBe(19)
       expect(basicPrice?.original).toBe(29)
       expect(basicPrice?.description).toBe("Basic plan - €19/month")
 
-      // Check flags array
       const canLoginFlag = config.flags.find((f) => f.key === "canLogin")
       expect(canLoginFlag).toBeDefined()
       expect(canLoginFlag?.value).toBe(true)
       expect(canLoginFlag?.description).toBe("Allow users to login")
 
-      // Check limits array
       const freeProductsLimit = config.limits.find(
         (l) => l.key === "FREE_PRODUCTS"
       )
@@ -258,7 +240,7 @@ describe("PlatformConfigService", () => {
 
   describe("updateConfig", () => {
     it("should update config and invalidate cache", async () => {
-      ;(mockPrisma.platformConfig.update as jest.Mock).mockResolvedValue({
+      ;(mockPlatformConfig.update as jest.Mock).mockResolvedValue({
         id: "1",
         key: "BASIC_MONTHLY",
         type: "PRICE",
@@ -283,8 +265,7 @@ describe("PlatformConfigService", () => {
 
   describe("toggleFlag", () => {
     it("should toggle flag and return new value", async () => {
-      // Mock the update
-      ;(mockPrisma.platformConfig.update as jest.Mock).mockResolvedValue({
+      ;(mockPlatformConfig.update as jest.Mock).mockResolvedValue({
         id: "4",
         key: "canLogin",
         type: "FLAG",
@@ -298,34 +279,26 @@ describe("PlatformConfigService", () => {
 
       const result = await platformConfigService.toggleFlag("canLogin")
 
-      // Should return the opposite of current value
       expect(typeof result).toBe("boolean")
     })
   })
 
   describe("cache behavior", () => {
     it("should use cache for subsequent calls", async () => {
-      // Cache was populated in beforeEach via invalidateCache()
-      // Clear mock to count new calls only
-      ;(mockPrisma.platformConfig.findMany as jest.Mock).mockClear()
-      
-      // These calls should use cache (no new findMany calls)
+      ;(mockPlatformConfig.findMany as jest.Mock).mockClear()
+
       await platformConfigService.getPrice("BASIC_MONTHLY")
       await platformConfigService.getPrice("PREMIUM_MONTHLY")
 
-      // findMany should NOT be called (using cache)
-      expect(mockPrisma.platformConfig.findMany).toHaveBeenCalledTimes(0)
+      expect(mockPlatformConfig.findMany).toHaveBeenCalledTimes(0)
     })
 
     it("should refresh cache after invalidation", async () => {
-      // Cache was populated in beforeEach
-      ;(mockPrisma.platformConfig.findMany as jest.Mock).mockClear()
+      ;(mockPlatformConfig.findMany as jest.Mock).mockClear()
 
-      // Invalidate cache - should trigger findMany
       await platformConfigService.invalidateCache()
 
-      // findMany should be called once for refresh
-      expect(mockPrisma.platformConfig.findMany).toHaveBeenCalledTimes(1)
+      expect(mockPlatformConfig.findMany).toHaveBeenCalledTimes(1)
     })
   })
 })

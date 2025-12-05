@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer"
 import logger from "../../utils/logger"
+import { prisma } from "@echatbot/database"
 import {
   getEmailTranslation,
   SupportedLanguage,
@@ -359,9 +360,7 @@ eChatbot - La tua piattaforma e-commerce di fiducia
     try {
       const { type, to, subject, body, cc, workspaceId } = params
 
-      // Import PrismaClient dynamically to avoid circular dependency
-      const { PrismaClient } = await import("@prisma/client")
-      const prisma = new PrismaClient()
+      // Use the singleton prisma instance from @echatbot/database
 
       let recipientEmail: string | null = null
       let recipientName: string | null = null

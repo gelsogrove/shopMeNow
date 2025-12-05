@@ -6,7 +6,16 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": false,
+    "noImplicitAny": false,
+    "noImplicitThis": false,
+    "strictNullChecks": false,
+    "strictFunctionTypes": false,
+    "strictBindCallApply": false,
+    "strictPropertyInitialization": false,
+    "noImplicitReturns": false,
+    "noFallthroughCasesInSwitch": false,
     "skipLibCheck": true,
+    "incremental": true,
     "outDir": "dist",
     "sourceMap": true,
     "resolveJsonModule": true,
@@ -23,5 +32,16 @@
     "**/*.spec.ts",
     "**/*.test.ts",
     "src/__tests__/**/*"
-  ]
+  ],
+  "ts-node": {
+    "transpileOnly": true,
+    "ignore": ["node_modules"],
+    "compilerOptions": {
+      "module": "commonjs",
+      "strict": false,
+      "skipLibCheck": true,
+      "noImplicitAny": false,
+      "strictNullChecks": false
+    }
+  }
 }

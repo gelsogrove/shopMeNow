@@ -13,9 +13,6 @@
 import { PlanType, PrismaClient, TransactionType, Prisma } from "@echatbot/database"
 import logger from "../utils/logger"
 
-// Extract Decimal type
-type Decimal = typeof Prisma.Decimal
-
 export interface BillingInfo {
   planType: PlanType
   creditBalance: number
@@ -213,7 +210,7 @@ export class SubscriptionBillingRepository {
         // Update workspace balance
         await tx.workspace.update({
           where: { id: workspaceId },
-          data: { creditBalance: new Decimal(newBalance.toFixed(2)) },
+          data: { creditBalance: new Prisma.Decimal(newBalance.toFixed(2)) },
         })
 
         // Create transaction record
@@ -221,8 +218,8 @@ export class SubscriptionBillingRepository {
           data: {
             workspaceId,
             type,
-            amount: new Decimal((-amount).toFixed(2)), // Negative for deductions
-            balanceAfter: new Decimal(newBalance.toFixed(2)),
+            amount: new Prisma.Decimal((-amount).toFixed(2)), // Negative for deductions
+            balanceAfter: new Prisma.Decimal(newBalance.toFixed(2)),
             description,
             referenceId,
             referenceType,
@@ -270,7 +267,7 @@ export class SubscriptionBillingRepository {
         // Update workspace balance
         await tx.workspace.update({
           where: { id: workspaceId },
-          data: { creditBalance: new Decimal(newBalance.toFixed(2)) },
+          data: { creditBalance: new Prisma.Decimal(newBalance.toFixed(2)) },
         })
 
         // Create transaction record
@@ -278,8 +275,8 @@ export class SubscriptionBillingRepository {
           data: {
             workspaceId,
             type,
-            amount: new Decimal(amount.toFixed(2)), // Positive for credits
-            balanceAfter: new Decimal(newBalance.toFixed(2)),
+            amount: new Prisma.Decimal(amount.toFixed(2)), // Positive for credits
+            balanceAfter: new Prisma.Decimal(newBalance.toFixed(2)),
             description,
           },
         })

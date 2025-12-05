@@ -11,7 +11,7 @@ export class OrderRepository implements IOrderRepository {
   private prisma: PrismaClient
 
   constructor() {
-    this.prisma = new PrismaClient()
+    this.prisma = prisma
   }
 
   async findAll(

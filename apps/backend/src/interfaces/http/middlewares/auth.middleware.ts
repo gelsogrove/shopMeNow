@@ -1,12 +1,10 @@
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import { NextFunction, Request, Response } from "express"
 import * as jwt from "jsonwebtoken"
 import { config } from "../../../config"
 import logger from "../../../utils/logger"
 import { AppError } from "../middlewares/error.middleware"
 import { asyncHandler } from "./async.middleware"
-
-const prisma = new PrismaClient()
 
 interface JwtPayload {
   id?: string // Per token nuovi

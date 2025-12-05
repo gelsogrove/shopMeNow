@@ -1,4 +1,4 @@
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import { Request, Response } from "express"
 import { BillingService } from "../../../application/services/billing.service"
 import logger from "../../../utils/logger"
@@ -8,7 +8,7 @@ export class BillingController {
   private prisma: PrismaClient
 
   constructor() {
-    this.prisma = new PrismaClient()
+    this.prisma = prisma
     this.billingService = new BillingService(this.prisma)
   }
 

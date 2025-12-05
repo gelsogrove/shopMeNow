@@ -65,9 +65,45 @@ const mockPrisma: Record<string, any> = {
   },
 }
 // Add $transaction separately to avoid circular type reference
-mockPrisma.$transaction = jest.fn((fn: (tx: typeof mockPrisma) => Promise<unknown>) => fn(mockPrisma))
+// Supports both callback style: prisma.$transaction(async (tx) => {}) 
+// AND array style: prisma.$transaction([promise1, promise2])
+mockPrisma.$transaction = jest.fn(async (input: unknown) => {
+  // If it's a function, call it with mockPrisma
+  if (typeof input === 'function') {
+    return await input(mockPrisma)
+  }
+  // If it's an array of promises, resolve all
+  if (Array.isArray(input)) {
+    return await Promise.all(input)
+  }
+  return undefined
+})
+
+// Mock Prisma namespace for Decimal operations
+const mockPrismaNamespace = {
+  Decimal: class {
+    value: number
+    constructor(val: number | string) {
+      this.value = typeof val === 'string' ? parseFloat(val) : val
+    }
+    lessThan(other: { value: number }): boolean {
+      return this.value < other.value
+    }
+    minus(other: { value: number }): { value: number } {
+      return new mockPrismaNamespace.Decimal(this.value - other.value)
+    }
+    negated(): { value: number } {
+      return new mockPrismaNamespace.Decimal(-this.value)
+    }
+    toString(): string {
+      return this.value.toString()
+    }
+  },
+}
+
 jest.mock('../src/config/database', () => ({
   prisma: mockPrisma,
+  Prisma: mockPrismaNamespace,
   connectDatabase: jest.fn(),
   disconnectDatabase: jest.fn(),
 }))

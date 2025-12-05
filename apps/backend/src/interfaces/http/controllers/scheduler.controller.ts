@@ -7,10 +7,10 @@
  */
 
 import { Request, Response } from "express"
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import logger from "../../../utils/logger"
 
-const prisma = new PrismaClient()
+// prisma imported
 
 class SchedulerController {
   /**

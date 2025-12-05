@@ -1,4 +1,4 @@
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import { getFunctionsForAgentType } from "../../config/agent-function-mapping"
 import logger from "../../utils/logger"
 
@@ -10,7 +10,7 @@ export class AgentService {
   private prisma: PrismaClient
 
   constructor() {
-    this.prisma = new PrismaClient()
+    this.prisma = prisma
   }
 
   /**

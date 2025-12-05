@@ -1,6 +1,6 @@
 // External dependencies
 import { Router } from "express"
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 
 // Middleware
 import { authMiddleware } from "../middlewares/auth.middleware"
@@ -10,7 +10,7 @@ import { workspaceValidationMiddleware } from "../middlewares/workspace-validati
 import { WhatsAppQueueController } from "../controllers/whatsapp-queue.controller"
 
 const router = Router()
-const prisma = new PrismaClient()
+// prisma imported
 const controller = new WhatsAppQueueController(prisma)
 
 /**

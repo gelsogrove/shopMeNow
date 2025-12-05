@@ -1,9 +1,9 @@
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import { NextFunction, Request, Response } from "express"
 import { CampaignService } from "../../../application/services/campaign.service"
 import logger from "../../../utils/logger"
 
-const prisma = new PrismaClient()
+// prisma imported
 
 /**
  * Controller for WhatsApp marketing campaigns

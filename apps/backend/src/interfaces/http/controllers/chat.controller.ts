@@ -1,4 +1,4 @@
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import { Request, Response } from "express"
 import { config } from "../../../config"
 import { MessageRepository } from "../../../repositories/message.repository"
@@ -16,7 +16,7 @@ export class ChatController {
   private whatsappQueueService: WhatsAppQueueService
 
   constructor() {
-    this.prisma = new PrismaClient()
+    this.prisma = prisma
     this.messageRepository = new MessageRepository()
     this.llmRouterService = new LLMRouterService(this.prisma)
     this.whatsappQueueService = new WhatsAppQueueService(this.prisma)

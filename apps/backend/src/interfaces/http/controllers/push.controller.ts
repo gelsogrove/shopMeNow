@@ -1,4 +1,4 @@
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import { Request, Response } from "express"
 import { LLMRouterService } from "../../../services/llm-router.service"
 import logger from "../../../utils/logger"
@@ -38,7 +38,7 @@ export class PushController {
   private llmRouterService: LLMRouterService
 
   constructor(prisma?: PrismaClient, llmRouterService?: LLMRouterService) {
-    this.prisma = prisma || new PrismaClient()
+    this.prisma = prisma
     this.llmRouterService =
       llmRouterService || new LLMRouterService(this.prisma)
   }

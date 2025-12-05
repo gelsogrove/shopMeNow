@@ -1,4 +1,4 @@
-import { AgentType } from "@prisma/client"
+import { AgentType } from "@echatbot/database"
 import * as fs from "fs"
 import * as path from "path"
 import { getAgentFunctionNames } from "../../src/config/agent-functions.config"

@@ -1,10 +1,10 @@
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import { Request, Response } from "express"
 import { BillingService } from "../../../application/services/billing.service"
 import { FaqService } from "../../../application/services/faq.service"
 import logger from "../../../utils/logger"
 
-const prisma = new PrismaClient()
+// prisma imported
 
 /**
  * FaqController class

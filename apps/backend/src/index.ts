@@ -1,5 +1,5 @@
-import "dotenv/config"
 import { prisma } from "@echatbot/database"
+import "dotenv/config"
 import { createServer } from "http"
 import app from "./app"
 import { startScheduler, stopScheduler } from "./scheduler"

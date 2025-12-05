@@ -62,8 +62,9 @@ const mockPrisma = {
   $disconnect: jest.fn(),
 }
 
-jest.mock("@prisma/client", () => ({
-  PrismaClient: jest.fn(() => mockPrisma),
+jest.mock("@echatbot/database", () => ({
+
+  prisma: mockPrisma,
 }))
 
 // Import after mocks

@@ -7,8 +7,9 @@
  * @architecture Clean Architecture - Repository Pattern
  */
 
-import { PrismaClient, ItemType } from '@prisma/client'
+import { PrismaClient, ItemType } from '@echatbot/database'
 import logger from '../utils/logger'
+import { prisma } from "@echatbot/database"
 
 export interface AddItemParams {
   itemType: ItemType
@@ -51,7 +52,7 @@ export class CartRepository {
   private prisma: PrismaClient
 
   constructor() {
-    this.prisma = new PrismaClient()
+    this.prisma = prisma
   }
 
   /**

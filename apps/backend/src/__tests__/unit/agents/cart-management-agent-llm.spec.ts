@@ -13,15 +13,13 @@
  */
 
 import { CartManagementAgentLLM } from "../../../application/agents/CartManagementAgentLLM"
-import { PrismaClient } from "@echatbot/database"
 
-// Mock PrismaClient
-jest.mock("@prisma/client", () => ({
-  PrismaClient: jest.fn().mockImplementation(() => ({
+jest.mock("@echatbot/database", () => ({
+  prisma: {
     orders: {
       findFirst: jest.fn(),
     },
-  })),
+  },
 }))
 
 // Mock repositories
@@ -46,7 +44,7 @@ jest.mock("../../../utils/logger", () => ({
 
 describe("CartManagementAgentLLM", () => {
   let agent: CartManagementAgentLLM
-  let mockPrisma: jest.Mocked<PrismaClient>
+  let mockPrisma: any
 
   const mockContext = {
     workspaceId: "ws-123",
@@ -73,7 +71,8 @@ describe("CartManagementAgentLLM", () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    mockPrisma = new PrismaClient() as jest.Mocked<PrismaClient>
+    const { prisma } = require("@echatbot/database")
+    mockPrisma = prisma
     agent = new CartManagementAgentLLM(mockPrisma)
   })
 
@@ -255,8 +254,8 @@ describe("CartManagementAgentLLM - Function Definitions", () => {
   })
 
   it("should define items parameter with correct structure for addItemToCart", () => {
-    const mockPrisma = new PrismaClient() as jest.Mocked<PrismaClient>
-    const agent = new CartManagementAgentLLM(mockPrisma)
+    const { prisma } = require("@echatbot/database")
+    const agent = new CartManagementAgentLLM(prisma)
     const getFunctions = (agent as any).getCartManagementFunctions.bind(agent)
     const functions = getFunctions()
 
@@ -277,8 +276,8 @@ describe("CartManagementAgentLLM - Function Definitions", () => {
   })
 
   it("should define removeFromCart with flexible matching parameters", () => {
-    const mockPrisma = new PrismaClient() as jest.Mocked<PrismaClient>
-    const agent = new CartManagementAgentLLM(mockPrisma)
+    const { prisma } = require("@echatbot/database")
+    const agent = new CartManagementAgentLLM(prisma)
     const getFunctions = (agent as any).getCartManagementFunctions.bind(agent)
     const functions = getFunctions()
 
@@ -292,8 +291,8 @@ describe("CartManagementAgentLLM - Function Definitions", () => {
   })
 
   it("should define updateCartItem requiring newQuantity", () => {
-    const mockPrisma = new PrismaClient() as jest.Mocked<PrismaClient>
-    const agent = new CartManagementAgentLLM(mockPrisma)
+    const { prisma } = require("@echatbot/database")
+    const agent = new CartManagementAgentLLM(prisma)
     const getFunctions = (agent as any).getCartManagementFunctions.bind(agent)
     const functions = getFunctions()
 

@@ -14,7 +14,7 @@ export class SchedulerService {
   private readonly ANALYTICS_CLEANUP_INTERVAL = 7 * 24 * 60 * 60 * 1000 // 7 giorni (weekly cleanup)
 
   constructor() {
-    this.prisma = new PrismaClient()
+    this.prisma = prisma
     this.billingService = new BillingService(this.prisma)
     this.campaignScheduler = new CampaignScheduler(this.prisma)
   }

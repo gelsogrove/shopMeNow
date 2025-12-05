@@ -17,14 +17,14 @@
  */
 
 import { Router } from "express"
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import { SubscriptionBillingController } from "../controllers/subscription-billing.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"
 import { sessionValidationMiddleware } from "../middlewares/session-validation.middleware"
 import { validateWorkspaceOperation } from "../../../middlewares/workspace-validation.middleware"
 import { requireOwnerForBilling } from "../middlewares/billing.middleware"
 
-const prisma = new PrismaClient()
+// prisma imported
 const controller = new SubscriptionBillingController(prisma)
 
 // ============================================================================

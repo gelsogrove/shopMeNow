@@ -19,7 +19,7 @@ import { config } from "../../../config"
 import { AdminSessionService } from "../../../application/services/admin-session.service"
 
 const router = Router()
-const prisma = new PrismaClient()
+// prisma imported
 const adminSessionService = new AdminSessionService()
 
 /**

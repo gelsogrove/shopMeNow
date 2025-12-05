@@ -16,7 +16,7 @@
  * - Audit logging
  */
 
-import { PrismaClient, User, TwoFactorResetToken } from '@prisma/client'
+import { PrismaClient, User, TwoFactorResetToken } from '@echatbot/database'
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import nodemailer from 'nodemailer'

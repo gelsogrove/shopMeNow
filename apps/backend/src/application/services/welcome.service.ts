@@ -1,4 +1,4 @@
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import { pushMessagingService } from "../../services/push-messaging.service"
 import logger from "../../utils/logger"
 
@@ -6,7 +6,7 @@ export class WelcomeService {
   private prisma: PrismaClient
 
   constructor() {
-    this.prisma = new PrismaClient()
+    this.prisma = prisma
   }
 
   async sendWelcomeMessage(customerId: string): Promise<boolean> {

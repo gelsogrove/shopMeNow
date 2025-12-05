@@ -8,27 +8,28 @@
  * because {{PRODUCTS}} variable replacement wasn't workspace-isolated.
  */
 
-import { PrismaClient } from "@prisma/client"
-
-// Mock Prisma
 const mockFindMany = jest.fn()
 const mockFindFirst = jest.fn()
 const mockFindUnique = jest.fn()
 
-jest.mock("@prisma/client", () => ({
-  PrismaClient: jest.fn().mockImplementation(() => ({
-    products: { findMany: mockFindMany },
-    categories: { findMany: mockFindMany },
-    services: { findMany: mockFindMany },
-    offers: { findMany: mockFindMany },
-    fAQ: { findMany: mockFindMany },
-    customers: { findFirst: mockFindFirst, findUnique: mockFindUnique },
-    agentConfig: { findFirst: mockFindFirst },
-    $disconnect: jest.fn(),
-  })),
+const mockPrisma = {
+  products: { findMany: mockFindMany },
+  categories: { findMany: mockFindMany },
+  services: { findMany: mockFindMany },
+  offers: { findMany: mockFindMany },
+  fAQ: { findMany: mockFindMany },
+  customers: { findFirst: mockFindFirst, findUnique: mockFindUnique },
+  agentConfig: { findFirst: mockFindFirst, findMany: mockFindMany },
+  $disconnect: jest.fn(),
+}
+
+jest.mock("@echatbot/database", () => ({
+  prisma: mockPrisma,
+  PrismaClient: jest.fn(),
 }))
 
-// Import after mocking
+;(global as any).prisma = mockPrisma
+
 import { MessageRepository } from "../../src/repositories/message.repository"
 import { AgentConfigRepository } from "../../src/repositories/agent-config.repository"
 
@@ -41,9 +42,8 @@ describe("Workspace Data Isolation", () => {
   beforeEach(() => {
     jest.clearAllMocks()
     messageRepo = new MessageRepository()
-    agentConfigRepo = new AgentConfigRepository(new PrismaClient())
+    agentConfigRepo = new AgentConfigRepository(mockPrisma as any)
 
-    // Default: return empty arrays
     mockFindMany.mockResolvedValue([])
     mockFindFirst.mockResolvedValue(null)
   })
@@ -63,21 +63,20 @@ describe("Workspace Data Isolation", () => {
     })
 
     it("should NOT return products from different workspace", async () => {
-      // Workspace A has products
       mockFindMany.mockImplementation((args: any) => {
         if (args.where.workspaceId === WORKSPACE_A) {
           return Promise.resolve([
             { id: "1", name: "Product A", price: 10, productCode: "A-001" },
           ])
         }
-        return Promise.resolve([]) // Workspace B has no products
+        return Promise.resolve([])
       })
 
       const resultA = await messageRepo.getActiveProducts(WORKSPACE_A, 0)
       const resultB = await messageRepo.getActiveProducts(WORKSPACE_B, 0)
 
       expect(resultA).toContain("Product A")
-      expect(resultB).toBe("") // Empty for workspace B
+      expect(resultB).toBe("")
     })
 
     it("should return empty message when workspace has no products", async () => {
@@ -139,7 +138,6 @@ describe("Workspace Data Isolation", () => {
     it("should filter offers by workspaceId", async () => {
       await messageRepo.getActiveOffers(WORKSPACE_A)
 
-      // isActive filter removed - offers expire based on dates only
       expect(mockFindMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
@@ -210,12 +208,10 @@ describe("Workspace Data Isolation", () => {
 })
 
 describe("PromptProcessorService - Empty Content Handling", () => {
-  // Import dynamically to avoid module issues
   let PromptProcessorService: any
 
   beforeEach(async () => {
     jest.resetModules()
-    // Mock dependencies
     jest.mock("../../src/repositories/message.repository", () => ({
       MessageRepository: jest.fn().mockImplementation(() => ({})),
     }))
@@ -235,7 +231,7 @@ describe("PromptProcessorService - Empty Content Handling", () => {
       {},
       {
         faqs: "",
-        products: "", // Empty products
+        products: "",
         categories: "",
         services: "",
         offers: "",
@@ -257,7 +253,7 @@ describe("PromptProcessorService - Empty Content Handling", () => {
       {
         faqs: "",
         products: "",
-        categories: "", // Empty categories
+        categories: "",
         services: "",
         offers: "",
       }
@@ -278,7 +274,7 @@ describe("PromptProcessorService - Empty Content Handling", () => {
         faqs: "",
         products: "",
         categories: "",
-        services: "", // Empty services
+        services: "",
         offers: "",
       }
     )
@@ -299,7 +295,7 @@ describe("PromptProcessorService - Empty Content Handling", () => {
         products: "",
         categories: "",
         services: "",
-        offers: "", // Empty offers
+        offers: "",
       }
     )
 
@@ -315,7 +311,7 @@ describe("PromptProcessorService - Empty Content Handling", () => {
       "workspace-id",
       {},
       {
-        faqs: "", // Empty FAQ
+        faqs: "",
         products: "",
         categories: "",
         services: "",
@@ -336,7 +332,7 @@ describe("PromptProcessorService - Empty Content Handling", () => {
       {},
       {
         faqs: "",
-        products: "Mozzarella €5.00\nParmigiano €10.00", // Real products
+        products: "Mozzarella €5.00\nParmigiano €10.00",
         categories: "",
         services: "",
         offers: "",

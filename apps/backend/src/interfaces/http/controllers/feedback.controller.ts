@@ -1,9 +1,9 @@
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import { NextFunction, Request, Response } from "express"
 import { SecureTokenService } from "../../../application/services/secure-token.service"
 import logger from "../../../utils/logger"
 
-const prisma = new PrismaClient()
+// prisma imported
 
 /**
  * Controller for customer feedback (public access with token)

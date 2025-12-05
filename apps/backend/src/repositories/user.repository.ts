@@ -1,14 +1,15 @@
 // @ts-nocheck - Schema mismatch: User model missing 'name' and 'workspaceId' fields
-import { PrismaClient, User as PrismaUser } from '@prisma/client';
+import { PrismaClient, User as PrismaUser } from '@echatbot/database';
 import { User, UserProps } from '../domain/entities/user.entity';
 import { UserRepositoryInterface } from '../domain/repositories/user.repository.interface';
 import logger from '../utils/logger';
+import { prisma } from "@echatbot/database"
 
 export class UserRepository implements UserRepositoryInterface {
   private prisma: PrismaClient;
 
   constructor(prisma?: PrismaClient) {
-    this.prisma = prisma || new PrismaClient();
+    this.prisma = prisma || prisma;
   }
 
   /**

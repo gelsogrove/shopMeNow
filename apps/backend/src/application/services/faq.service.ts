@@ -1,9 +1,9 @@
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import { FAQ } from "../../domain/entities/faq.entity"
 import { FAQRepository } from "../../repositories/faq.repository"
 import logger from "../../utils/logger"
 
-const prisma = new PrismaClient()
+// prisma imported
 
 /**
  * Service layer for FAQ

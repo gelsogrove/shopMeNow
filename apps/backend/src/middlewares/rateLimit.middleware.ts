@@ -11,11 +11,9 @@
  */
 
 import { Request, Response, NextFunction } from 'express'
-import { PrismaClient } from '../../generated/prisma/client'
+import { prisma } from '@echatbot/database'
 import { getSecurityConfig } from '../config/security.config'
 import logger from '../utils/logger'
-
-const prisma = new PrismaClient()
 
 export type RateLimitType = 'login' | 'twoFactor' | 'passwordReset' | 'registration'
 

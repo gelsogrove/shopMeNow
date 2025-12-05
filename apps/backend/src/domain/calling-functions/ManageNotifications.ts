@@ -14,6 +14,7 @@
  */
 
 import logger from "../../utils/logger"
+import { prisma } from "@echatbot/database"
 
 export interface ManageNotificationsRequest {
   action: "SUBSCRIBE" | "UNSUBSCRIBE"
@@ -59,8 +60,6 @@ export async function ManageNotifications(
     }
 
     // Import Prisma to update customer
-    const { PrismaClient } = require("@prisma/client")
-    const prisma = new PrismaClient()
 
     try {
       // Find customer by ID and workspace (security validation)

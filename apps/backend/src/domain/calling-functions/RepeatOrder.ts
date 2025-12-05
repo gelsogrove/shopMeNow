@@ -12,6 +12,7 @@
 
 import logger from "../../utils/logger"
 import { PriceCalculationService } from "../../application/services/price-calculation.service"
+import { prisma } from "@echatbot/database"
 
 export interface RepeatOrderRequest {
   customerId: string
@@ -59,8 +60,6 @@ export async function RepeatOrder(
       }
     }
 
-    const { PrismaClient } = require("@prisma/client")
-    const prisma = new PrismaClient()
 
     try {
       // Trova il cliente

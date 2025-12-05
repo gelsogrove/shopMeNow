@@ -101,8 +101,9 @@ const mockPrismaInstance = {
   $disconnect: jest.fn(),
 }
 
-jest.mock("@prisma/client", () => ({
-  PrismaClient: jest.fn().mockImplementation(() => mockPrismaInstance),
+jest.mock("@echatbot/database", () => ({
+
+  prisma: mockPrismaInstance,
 }))
 
 // NOW import the service

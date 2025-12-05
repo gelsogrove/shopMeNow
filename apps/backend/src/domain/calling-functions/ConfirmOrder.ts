@@ -15,7 +15,7 @@
  * with product search (including rounding to nearest 10 cents)
  */
 
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import { PriceCalculationService } from "../../application/services/price-calculation.service"
 import logger from "../../utils/logger"
 
@@ -40,7 +40,7 @@ export interface ConfirmOrderResult {
 export async function ConfirmOrder(
   request: ConfirmOrderRequest
 ): Promise<ConfirmOrderResult> {
-  const prisma = new PrismaClient()
+  // prisma imported
   
   try {
     logger.info("✅ ConfirmOrder called with:", {

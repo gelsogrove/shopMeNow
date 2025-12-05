@@ -12,12 +12,13 @@ import { Request, Response, NextFunction } from "express"
 // Mock prisma before imports
 const mockFindUnique = jest.fn()
 
-jest.mock("@prisma/client", () => ({
-  PrismaClient: jest.fn().mockImplementation(() => ({
+jest.mock("@echatbot/database", () => ({
+
+  prisma: {
     workspace: { findUnique: mockFindUnique },
     userWorkspace: { findUnique: jest.fn() },
     $disconnect: jest.fn(),
-  })),
+  },
 }))
 
 // Mock logger

@@ -1,4 +1,4 @@
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import { Workspace, WorkspaceProps } from "../domain/entities/workspace.entity"
 import { WorkspaceRepositoryInterface } from "../domain/repositories/workspace.repository.interface"
 import logger from "../utils/logger"
@@ -7,7 +7,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
   private prisma: PrismaClient
 
   constructor(prisma?: PrismaClient) {
-    this.prisma = prisma || new PrismaClient()
+    this.prisma = prisma
   }
 
   /**

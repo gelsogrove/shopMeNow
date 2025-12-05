@@ -1,4 +1,4 @@
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import { Request, Response } from "express"
 import messageSendingService from "../../../services/message-sending.service"
 import logger from "../../../utils/logger"
@@ -25,7 +25,7 @@ import logger from "../../../utils/logger"
  * 7. Save to database with audit trail
  */
 
-const prisma = new PrismaClient()
+// prisma imported
 
 interface SendMessageRequest {
   workspaceId: string

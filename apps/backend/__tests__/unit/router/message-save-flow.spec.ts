@@ -51,13 +51,14 @@ const mockPrisma = {
   $disconnect: jest.fn(),
 }
 
-jest.mock("@prisma/client", () => ({
-  PrismaClient: jest.fn(() => mockPrisma),
+jest.mock("@echatbot/database", () => ({
+
+  prisma: mockPrisma,
 }))
 
 // Import after mocks
 import { ConversationManager } from "../../../src/services/conversation-manager.service"
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import logger from "../../../src/utils/logger"
 
 describe("Message Save Flow", () => {

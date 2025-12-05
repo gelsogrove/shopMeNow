@@ -8,6 +8,7 @@ import logger from "../utils/logger"
 import { CallingFunctionsService } from "./calling-functions.service"
 import { PromptProcessorService } from "./prompt-processor.service"
 import translationSecurityService from "./translation-security.service"
+import { prisma } from "@echatbot/database"
 
 /**
  * Simple token usage calculator (approximation)
@@ -1553,8 +1554,6 @@ export class LLMService {
         }
       )
 
-      const { PrismaClient } = require("@prisma/client")
-      const prisma = new PrismaClient()
       const safetyAgent = new SafetyTranslationAgent(prisma)
       const result = await safetyAgent.process({
         workspaceId,

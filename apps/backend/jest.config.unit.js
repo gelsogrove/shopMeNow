@@ -22,7 +22,7 @@ module.exports = {
   coveragePathIgnorePatterns: ["/node_modules/", "/dist/", "/src/utils/"],
   testMatch: [
     "**/src/__tests__/unit/**/*.spec.ts",
-    "**/__tests__/unit/**/*.spec.ts", // 🆕 Support root __tests__ folder
+    "**/__tests__/unit/**/*.spec.ts",
   ],
   testPathIgnorePatterns: [
     "/node_modules/",

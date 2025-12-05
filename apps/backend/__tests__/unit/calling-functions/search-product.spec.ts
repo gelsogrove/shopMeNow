@@ -26,13 +26,14 @@ jest.mock("../../../src/utils/logger", () => ({
 const mockProductSearchCreate = jest.fn()
 const mockDisconnect = jest.fn()
 
-jest.mock("@prisma/client", () => ({
-  PrismaClient: jest.fn().mockImplementation(() => ({
+jest.mock("@echatbot/database", () => ({
+
+  prisma: {
     productSearch: {
       create: mockProductSearchCreate,
     },
     $disconnect: mockDisconnect,
-  })),
+  },
 }))
 
 import { SearchProduct } from "../../../src/domain/calling-functions/SearchProduct"

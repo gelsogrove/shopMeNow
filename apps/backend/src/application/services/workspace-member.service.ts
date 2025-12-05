@@ -1,4 +1,4 @@
-import { PrismaClient } from "@echatbot/database"
+import { prisma, PrismaClient } from "@echatbot/database"
 import logger from "../../utils/logger"
 
 export interface WorkspaceMember {
@@ -13,8 +13,8 @@ export interface WorkspaceMember {
 export class WorkspaceMemberService {
   private prisma: PrismaClient
 
-  constructor(prisma?: PrismaClient) {
-    this.prisma = prisma || new PrismaClient()
+  constructor(prismaInstance?: PrismaClient) {
+    this.prisma = prismaInstance || prisma
   }
 
   /**

@@ -1,7 +1,5 @@
-import { prisma } from '../config/database'
+import { prisma, Prisma, PlanType } from '../config/database'
 import logger from '../utils/logger'
-import { Decimal } from '../../generated/prisma/client/runtime/library'
-import { PlanType } from '../../generated/prisma/client'
 
 /**
  * Monthly Billing Job
@@ -55,8 +53,8 @@ export async function monthlyBillingJob(): Promise<void> {
         continue
       }
 
-      const monthlyFee = new Decimal(planConfig.monthlyFee)
-      const currentBalance = new Decimal(workspace.creditBalance)
+      const monthlyFee = new Prisma.Decimal(planConfig.monthlyFee)
+      const currentBalance = new Prisma.Decimal(workspace.creditBalance)
 
       // Check if sufficient balance
       if (currentBalance.lessThan(monthlyFee)) {

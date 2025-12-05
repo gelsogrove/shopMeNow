@@ -9,12 +9,12 @@
  * UNIT TEST = MOCK di database, NO connessioni reali
  */
 
-import { PrismaClient } from "@prisma/client"
+
 import { BillingService } from "../../../src/application/services/billing.service"
 
 // Mock Prisma Client
-jest.mock("@prisma/client", () => ({
-  PrismaClient: jest.fn(),
+jest.mock("@echatbot/database", () => ({
+  prisma: {},
   BillingType: {
     MESSAGE: "MESSAGE",
     MONTHLY_CHANNEL_COST: "MONTHLY_CHANNEL_COST",
@@ -51,11 +51,6 @@ describe("Billing Service - UNIT Tests", () => {
       },
       $transaction: jest.fn((callback: any) => callback(mockPrisma)),
     }
-
-    // Mock PrismaClient constructor
-    ;(PrismaClient as jest.MockedClass<typeof PrismaClient>).mockImplementation(
-      () => mockPrisma
-    )
 
     billingService = new BillingService(mockPrisma)
   })

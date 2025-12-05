@@ -31,6 +31,7 @@
  */
 
 import logger from "../../utils/logger"
+import { prisma } from "@echatbot/database"
 
 /**
  * Request interface per resetCart
@@ -103,8 +104,6 @@ export async function ResetCart(
     )
   }
 
-  const { PrismaClient } = require("@prisma/client")
-  const prisma = new PrismaClient()
 
   try {
     // 🔒 SECURITY: Verifica esistenza cliente nel workspace

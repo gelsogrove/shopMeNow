@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@echatbot/database';
 import { User, UserProps } from '../../domain/entities/user.entity';
 import { UserRepositoryInterface } from '../../domain/repositories/user.repository.interface';
 import { UserRepository } from '../../repositories/user.repository';

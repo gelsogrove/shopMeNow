@@ -350,14 +350,14 @@ export default function ClientsPage(): JSX.Element {
         toast.success("Client updated successfully", { duration: 2000 })
 
         // 🔍 Detect changes by comparing with original data
-        if (originalClientData) {
-          const oldDiscount = originalClientData.discount || 0
+        if (selectedClient) {
+          const oldDiscount = selectedClient.discount || 0
           const newDiscount = parseFloat(customerData.discount) || 0
           const discountChanged = oldDiscount !== newDiscount
 
           const oldChatbot =
-            originalClientData.activeChatbot !== undefined
-              ? originalClientData.activeChatbot
+            selectedClient.activeChatbot !== undefined
+              ? selectedClient.activeChatbot
               : true
           const newChatbot =
             customerData.activeChatbot !== undefined

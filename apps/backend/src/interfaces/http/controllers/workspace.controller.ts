@@ -1,11 +1,11 @@
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import { NextFunction, Request, Response } from "express"
 import { SubscriptionBillingService } from "../../../application/services/subscription-billing.service"
 import { WorkspaceService } from "../../../application/services/workspace.service"
 import { workspaceMemberService } from "../../../application/services/workspace-member.service"
 import logger from "../../../utils/logger"
 
-const prisma = new PrismaClient()
+// prisma imported
 
 export class WorkspaceController {
   private workspaceService: WorkspaceService

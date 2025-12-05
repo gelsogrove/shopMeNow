@@ -41,8 +41,9 @@ const mockPrisma = {
 }
 
 // Mock Prisma TransactionType enum
-jest.mock("@prisma/client", () => ({
-  ...jest.requireActual("@prisma/client"),
+jest.mock("@echatbot/database", () => ({
+
+  ...jest.requireActual("@echatbot/database"),
   TransactionType: {
     MESSAGE: "MESSAGE",
     PUSH_NOTIFICATION: "PUSH_NOTIFICATION",

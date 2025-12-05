@@ -28,13 +28,16 @@ const mockPrisma = {
 }
 
 // Mock modules BEFORE imports
-jest.mock("@prisma/client", () => ({
+jest.mock("@echatbot/database", () => ({
+  prisma: mockPrisma,
   PrismaClient: jest.fn().mockImplementation(() => mockPrisma),
 }))
 
 jest.mock("../../src/application/services/subscription-billing.service", () => ({
   SubscriptionBillingService: jest.fn().mockImplementation(() => mockBillingService),
 }))
+
+;(global as any).prisma = mockPrisma
 
 // Import after mocks
 import {

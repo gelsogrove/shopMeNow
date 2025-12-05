@@ -2,28 +2,22 @@
  * Offers Date-Based Expiration Tests
  * 
  * Verifies that offers expire based on dates only (startDate/endDate),
- * NOT on the isActive flag. This was changed to simplify offer management.
- * 
- * Key behavior:
- * - Offers with startDate <= now AND endDate >= now are ACTIVE
- * - Offers with startDate > now are SCHEDULED (future)
- * - Offers with endDate < now are EXPIRED
- * - isActive flag is IGNORED in all queries
+ * NOT on the isActive flag.
  */
 
-import { PrismaClient } from "@prisma/client"
-
-// Mock Prisma
 const mockFindMany = jest.fn()
 
-jest.mock("@prisma/client", () => ({
-  PrismaClient: jest.fn().mockImplementation(() => ({
-    offers: { findMany: mockFindMany },
-    $disconnect: jest.fn(),
-  })),
+const mockPrisma = {
+  offers: { findMany: mockFindMany },
+  $disconnect: jest.fn(),
+}
+
+jest.mock("@echatbot/database", () => ({
+  prisma: mockPrisma,
 }))
 
-// Import after mocking
+;(global as any).prisma = mockPrisma
+
 import { OfferRepository } from "../../src/repositories/offer.repository"
 import { MessageRepository } from "../../src/repositories/message.repository"
 
@@ -36,58 +30,49 @@ describe("Offers Date-Based Expiration", () => {
     jest.clearAllMocks()
     mockFindMany.mockResolvedValue([])
     offerRepo = new OfferRepository()
-    messageRepo = new MessageRepository(new PrismaClient())
+    messageRepo = new MessageRepository()
   })
 
   describe("OfferRepository.findActive", () => {
     it("should NOT filter by isActive flag", async () => {
       await offerRepo.findActive(WORKSPACE_ID)
 
-      // Verify the query was called
       expect(mockFindMany).toHaveBeenCalled()
       
-      // Get the where clause from the call
       const callArgs = mockFindMany.mock.calls[0][0]
       const whereClause = callArgs.where
       
-      // isActive should NOT be in the where clause
       expect(whereClause).not.toHaveProperty("isActive")
     })
 
-    it("should filter by date range (startDate <= now <= endDate)", async () => {
+    it("should filter by date range", async () => {
       await offerRepo.findActive(WORKSPACE_ID)
 
       const callArgs = mockFindMany.mock.calls[0][0]
       const whereClause = callArgs.where
 
-      // Should have workspaceId filter
       expect(whereClause.workspaceId).toBe(WORKSPACE_ID)
-      
-      // Should have date filters
       expect(whereClause.startDate).toHaveProperty("lte")
       expect(whereClause.endDate).toHaveProperty("gte")
     })
 
-    it("should return offers regardless of isActive value when within date range", async () => {
-      // Simulate offers with isActive=false but valid dates
+    it("should return offers within date range", async () => {
       const now = new Date()
-      const validOfferWithIsActiveFalse = {
+      const validOffer = {
         id: "offer-1",
         name: "Test Offer",
-        isActive: false, // This should be IGNORED
-        startDate: new Date(now.getTime() - 86400000), // yesterday
-        endDate: new Date(now.getTime() + 86400000), // tomorrow
+        isActive: false,
+        startDate: new Date(now.getTime() - 86400000),
+        endDate: new Date(now.getTime() + 86400000),
         discountPercent: 10,
         categoryId: null,
         categories: [],
       }
 
-      mockFindMany.mockResolvedValue([validOfferWithIsActiveFalse])
+      mockFindMany.mockResolvedValue([validOffer])
 
       const result = await offerRepo.findActive(WORKSPACE_ID)
 
-      // The offer should be returned because it's within date range
-      // (isActive is ignored)
       expect(result).toHaveLength(1)
       expect(result[0].id).toBe("offer-1")
     })
@@ -100,7 +85,6 @@ describe("Offers Date-Based Expiration", () => {
       const callArgs = mockFindMany.mock.calls[0][0]
       const whereClause = callArgs.where
 
-      // Should have category filter (OR condition)
       expect(whereClause.OR).toBeDefined()
       expect(whereClause.OR).toEqual(
         expect.arrayContaining([
@@ -119,7 +103,6 @@ describe("Offers Date-Based Expiration", () => {
       const callArgs = mockFindMany.mock.calls[0][0]
       const whereClause = callArgs.where
       
-      // isActive should NOT be in the where clause
       expect(whereClause).not.toHaveProperty("isActive")
     })
 
@@ -159,18 +142,17 @@ describe("Offers Date-Based Expiration", () => {
 
       const result = await messageRepo.getActiveOffers(WORKSPACE_ID)
 
-      // Should contain the formatted offer text in Italian (lingua base)
       expect(result).toContain("20%")
       expect(result).toContain("Electronics")
     })
   })
 
-  describe("Date-based status determination (Frontend logic)", () => {
+  describe("Date-based status determination", () => {
     it("should consider offer ACTIVE when startDate <= now <= endDate", () => {
       const now = new Date()
       const offer = {
-        startDate: new Date(now.getTime() - 86400000), // yesterday
-        endDate: new Date(now.getTime() + 86400000), // tomorrow
+        startDate: new Date(now.getTime() - 86400000),
+        endDate: new Date(now.getTime() + 86400000),
       }
 
       const isActive = offer.startDate <= now && offer.endDate >= now
@@ -180,8 +162,8 @@ describe("Offers Date-Based Expiration", () => {
     it("should consider offer SCHEDULED when startDate > now", () => {
       const now = new Date()
       const offer = {
-        startDate: new Date(now.getTime() + 86400000), // tomorrow
-        endDate: new Date(now.getTime() + 172800000), // day after tomorrow
+        startDate: new Date(now.getTime() + 86400000),
+        endDate: new Date(now.getTime() + 172800000),
       }
 
       const isScheduled = offer.startDate > now
@@ -191,8 +173,8 @@ describe("Offers Date-Based Expiration", () => {
     it("should consider offer EXPIRED when endDate < now", () => {
       const now = new Date()
       const offer = {
-        startDate: new Date(now.getTime() - 172800000), // 2 days ago
-        endDate: new Date(now.getTime() - 86400000), // yesterday
+        startDate: new Date(now.getTime() - 172800000),
+        endDate: new Date(now.getTime() - 86400000),
       }
 
       const isExpired = offer.endDate < now

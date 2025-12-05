@@ -13,7 +13,7 @@
  * @see docs/prompt_agent.md - Sezione "searchProduct()"
  */
 
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import logger from "../../utils/logger"
 
 export interface SearchProductRequest {
@@ -79,7 +79,7 @@ export async function SearchProduct(
       }
     }
 
-    const prisma = new PrismaClient()
+    // prisma imported
 
     try {
       // Salva ricerca nel database

@@ -11,7 +11,7 @@
  * - Session management
  */
 
-import { PrismaClient, User } from '@prisma/client'
+import { PrismaClient, User } from '@echatbot/database'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { AppError } from '../../interfaces/http/middlewares/error.middleware'

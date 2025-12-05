@@ -27,7 +27,7 @@ export class ProductRepository implements IProductRepository {
   private prisma: PrismaClient
 
   constructor() {
-    this.prisma = new PrismaClient()
+    this.prisma = prisma
   }
 
   async findAll(

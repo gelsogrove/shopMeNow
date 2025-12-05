@@ -1,11 +1,11 @@
 import { Router } from "express"
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import { CertificationController } from "../controllers/certification.controller"
 import { authMiddleware } from "../../../middlewares/auth.middleware"
 import { validateWorkspaceOperation } from "../../../middlewares/workspace-validation.middleware"
 
 const router = Router()
-const prisma = new PrismaClient()
+// prisma imported
 const certificationController = new CertificationController(prisma)
 
 /**

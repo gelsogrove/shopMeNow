@@ -1,4 +1,4 @@
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import { NextFunction, Request, Response } from "express"
 import { BillingService } from "../../../application/services/billing.service"
 import { CustomerService } from "../../../application/services/customer.service"
@@ -6,7 +6,7 @@ import { pushMessagingService } from "../../../services/push-messaging.service"
 import { websocketService } from "../../../services/websocket.service"
 import logger from "../../../utils/logger"
 
-const prisma = new PrismaClient()
+// prisma imported
 
 export class CustomersController {
   private customerService: CustomerService

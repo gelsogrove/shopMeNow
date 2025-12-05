@@ -2,6 +2,7 @@ import { Customer, CustomerProps } from "../../domain/entities/customer.entity"
 import { ICustomerRepository } from "../../domain/repositories/customer.repository.interface"
 import { CustomerRepository } from "../../repositories/customer.repository"
 import logger from "../../utils/logger"
+import { prisma } from "@echatbot/database"
 
 /**
  * Service layer for Customer
@@ -249,7 +250,6 @@ export class CustomerService {
       try {
         const { RegistrationAttemptsService } = await import("./registration-attempts.service")
         const { PrismaClient } = await import("@prisma/client")
-        const prisma = new PrismaClient()
         const registrationAttemptsService = new RegistrationAttemptsService(prisma)
         
         await registrationAttemptsService.clearAttempts(customer.phone, workspaceId)

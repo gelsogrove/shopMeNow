@@ -11,6 +11,7 @@ import {
   TokenResponse,
 } from "../types/whatsapp.types"
 import logger from "../utils/logger"
+import { prisma } from "@echatbot/database"
 
 export interface GetAllProductsRequest {
   workspaceId: string
@@ -68,8 +69,6 @@ export class CallingFunctionsService {
     try {
       logger.info("🔧 Calling getServices with:", request)
       // Direct database query with Prisma for complete services list
-      const { PrismaClient } = require("@prisma/client")
-      const prisma = new PrismaClient()
 
       // Get all services, ordered by name alphabetically
       const services = await prisma.services.findMany({
@@ -127,8 +126,6 @@ export class CallingFunctionsService {
           )
 
           // Import Prisma client
-          const { PrismaClient } = require("@prisma/client")
-          const prisma = new PrismaClient()
 
           // Query the database for the order
           const order = await prisma.orders.findFirst({
@@ -561,8 +558,6 @@ export class CallingFunctionsService {
   }): Promise<any> {
     try {
       logger.info("🛒 Calling addProductToCart with:", request)
-      const { PrismaClient } = require("@prisma/client")
-      const prisma = new PrismaClient()
 
       try {
         // Trova il cliente
@@ -752,8 +747,6 @@ export class CallingFunctionsService {
   }): Promise<any> {
     try {
       logger.info("🛠️ Calling addServiceToCart with:", request)
-      const { PrismaClient } = require("@prisma/client")
-      const prisma = new PrismaClient()
 
       try {
         // Trova il cliente
@@ -1111,8 +1104,6 @@ export class CallingFunctionsService {
         formato,
       })
 
-      const { PrismaClient } = require("@prisma/client")
-      const prisma = new PrismaClient()
 
       try {
         // Get customer discount for price calculation
@@ -1313,8 +1304,6 @@ export class CallingFunctionsService {
         serviceName,
       })
 
-      const { PrismaClient } = require("@prisma/client")
-      const prisma = new PrismaClient()
 
       try {
         // Normalize search term: trim and lowercase
@@ -1439,8 +1428,6 @@ export class CallingFunctionsService {
         query: query.substring(0, 50), // Limit log size
       })
 
-      const { PrismaClient } = require("@prisma/client")
-      const prisma = new PrismaClient()
 
       try {
         await prisma.productSearch.create({

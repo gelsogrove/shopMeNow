@@ -1,4 +1,4 @@
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import { Router } from "express"
 import { AgentConfigController } from "../controllers/agent-config.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"
@@ -6,7 +6,7 @@ import { workspaceValidationMiddleware } from "../middlewares/workspace-validati
 import { requireOwner } from "../../../middlewares/workspace-role.middleware"
 
 const router = Router()
-const prisma = new PrismaClient()
+// prisma imported
 const agentConfigController = new AgentConfigController(prisma)
 
 /**

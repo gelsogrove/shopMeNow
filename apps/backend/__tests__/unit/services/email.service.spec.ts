@@ -1,34 +1,11 @@
 /**
  * Unit tests for EmailService.sendMail() function
- *
- * Tests the generic sendMail() function that:
- * - Looks up customer/agent email from database
- * - Fetches workspace adminEmail from whatsappSettings
- * - Sends email via nodemailer
- * - Supports CC recipients
  */
 
 import { EmailService } from "../../../src/application/services/email.service"
 
-// Mock nodemailer
-jest.mock("nodemailer", () => ({
-  createTransport: jest.fn(() => ({
-    sendMail: jest.fn().mockResolvedValue({ messageId: "test-message-id" }),
-    verify: jest.fn().mockResolvedValue(true),
-  })),
-}))
-
-// Mock logger
-jest.mock("../../../src/utils/logger", () => ({
-  info: jest.fn(),
-  error: jest.fn(),
-  debug: jest.fn(),
-  warn: jest.fn(),
-}))
-
-// Mock Prisma
-jest.mock("@prisma/client", () => {
-  const mockPrismaClient = {
+jest.mock("@echatbot/database", () => ({
+  prisma: {
     customers: {
       findUnique: jest.fn(),
     },
@@ -39,19 +16,29 @@ jest.mock("@prisma/client", () => {
       findUnique: jest.fn(),
     },
     $disconnect: jest.fn(),
-  }
+  },
+}))
 
-  return {
-    PrismaClient: jest.fn(() => mockPrismaClient),
-  }
-})
+jest.mock("nodemailer", () => ({
+  createTransport: jest.fn(() => ({
+    sendMail: jest.fn().mockResolvedValue({ messageId: "test-message-id" }),
+    verify: jest.fn().mockResolvedValue(true),
+  })),
+}))
+
+jest.mock("../../../src/utils/logger", () => ({
+  info: jest.fn(),
+  error: jest.fn(),
+  debug: jest.fn(),
+  warn: jest.fn(),
+}))
+
 
 describe("EmailService.sendMail()", () => {
   let emailService: EmailService
   let mockPrisma: any
 
   beforeEach(() => {
-    // Set required env vars
     process.env.SMTP_HOST = "smtp.test.com"
     process.env.SMTP_PORT = "587"
     process.env.SMTP_SECURE = "false"
@@ -60,12 +47,9 @@ describe("EmailService.sendMail()", () => {
     process.env.SMTP_FROM = "noreply@echatbot.ai"
 
     emailService = new EmailService()
+    const { prisma } = require("@echatbot/database")
+    mockPrisma = prisma
 
-    // Get mock Prisma instance
-    const { PrismaClient } = require("@prisma/client")
-    mockPrisma = new PrismaClient()
-
-    // Reset all mocks
     jest.clearAllMocks()
   })
 
@@ -75,14 +59,12 @@ describe("EmailService.sendMail()", () => {
 
   describe("Customer emails", () => {
     it("should send email to customer successfully", async () => {
-      // Mock customer lookup
       mockPrisma.customers.findUnique.mockResolvedValue({
         id: "customer-123",
         email: "customer@test.com",
         name: "Test Customer",
       })
 
-      // Mock workspace lookup
       mockPrisma.workspace.findUnique.mockResolvedValue({
         id: "workspace-123",
         name: "Test Workspace",
@@ -150,7 +132,6 @@ describe("EmailService.sendMail()", () => {
 
   describe("Agent emails", () => {
     it("should send email to agent successfully", async () => {
-      // Mock agent lookup
       mockPrisma.user.findUnique.mockResolvedValue({
         id: "agent-123",
         email: "agent@test.com",
@@ -158,7 +139,6 @@ describe("EmailService.sendMail()", () => {
         lastName: "Agent",
       })
 
-      // Mock workspace lookup
       mockPrisma.workspace.findUnique.mockResolvedValue({
         id: "workspace-123",
         name: "Test Workspace",
@@ -228,7 +208,7 @@ describe("EmailService.sendMail()", () => {
       mockPrisma.workspace.findUnique.mockResolvedValue({
         id: "workspace-123",
         name: "Test Workspace",
-        whatsappSettings: null, // No whatsappSettings
+        whatsappSettings: null,
       })
 
       const result = await emailService.sendMail({
@@ -311,7 +291,5 @@ describe("EmailService.sendMail()", () => {
 
       expect(result).toBe(false)
     })
-
-   
   })
 })

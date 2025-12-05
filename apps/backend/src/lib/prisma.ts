@@ -1,4 +1,4 @@
-import { prisma } from '@echatbot/database'
+import { prisma } from "@echatbot/database"
 
-// Re-export the shared prisma instance
+// Export the singleton prisma instance
 export { prisma }

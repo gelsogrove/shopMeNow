@@ -1,5 +1,4 @@
-import { prisma } from '../config/database'
-import { Decimal } from '../../generated/prisma/client/runtime/library'
+import { prisma, Prisma } from '../config/database'
 import logger from '../utils/logger'
 
 /**
@@ -72,7 +71,7 @@ export class BillingService {
         // Update workspace balance
         await tx.workspace.update({
           where: { id: workspaceId },
-          data: { creditBalance: new Decimal(newBalance.toFixed(2)) },
+          data: { creditBalance: new Prisma.Decimal(newBalance.toFixed(2)) },
         })
 
         // Create transaction record
@@ -80,8 +79,8 @@ export class BillingService {
           data: {
             workspaceId,
             type: 'MESSAGE',
-            amount: new Decimal((-messageCost).toFixed(2)), // Negative for deductions
-            balanceAfter: new Decimal(newBalance.toFixed(2)),
+            amount: new Prisma.Decimal((-messageCost).toFixed(2)), // Negative for deductions
+            balanceAfter: new Prisma.Decimal(newBalance.toFixed(2)),
             description: 'WhatsApp Message',
             referenceId: messageId,
             referenceType: 'message',

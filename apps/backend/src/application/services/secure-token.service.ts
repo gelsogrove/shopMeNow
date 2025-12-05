@@ -1,4 +1,4 @@
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import crypto from "crypto"
 import logger from "../../utils/logger"
 
@@ -9,7 +9,7 @@ export class SecureTokenService {
   private prisma: PrismaClient
 
   constructor() {
-    this.prisma = new PrismaClient()
+    this.prisma = prisma
   }
 
   /**

@@ -29,8 +29,9 @@ const mockCartFindFirst = jest.fn()
 const mockCartItemsDeleteMany = jest.fn()
 const mockDisconnect = jest.fn()
 
-jest.mock("@prisma/client", () => ({
-  PrismaClient: jest.fn().mockImplementation(() => ({
+jest.mock("@echatbot/database", () => ({
+
+  prisma: {
     customers: {
       findFirst: mockCustomerFindFirst,
     },
@@ -41,7 +42,7 @@ jest.mock("@prisma/client", () => ({
       deleteMany: mockCartItemsDeleteMany,
     },
     $disconnect: mockDisconnect,
-  })),
+  },
 }))
 
 import { ResetCart } from "../../../src/domain/calling-functions/ResetCart"

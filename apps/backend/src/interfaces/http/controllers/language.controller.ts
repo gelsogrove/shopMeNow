@@ -1,12 +1,13 @@
-import { PrismaClient } from '../../../generated/prisma/client';
+import { PrismaClient } from '@echatbot/database';
 import { Request, Response } from 'express';
 import logger from '../../../utils/logger';
+import { prisma } from "@echatbot/database"
 
 export class LanguageController {
   private prisma: PrismaClient;
 
-  constructor(prisma?: PrismaClient) {
-    this.prisma = prisma || new PrismaClient();
+  constructor(prismaInstance?: PrismaClient) {
+    this.prisma = prismaInstance || prisma;
   }
 
   /**

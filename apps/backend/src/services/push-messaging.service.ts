@@ -1,9 +1,9 @@
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import { BillingPrices } from "../domain/enums/billing-prices.enum"
 import logger from "../utils/logger"
 import { usageService } from "./usage.service"
 
-const prisma = new PrismaClient()
+// prisma imported
 
 /**
  * 📱 PUSH MESSAGING SERVICE - Sistema Centralizzato

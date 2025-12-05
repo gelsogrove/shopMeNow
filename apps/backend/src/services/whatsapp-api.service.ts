@@ -1,4 +1,4 @@
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import logger from "../utils/logger"
 
 /**
@@ -13,7 +13,7 @@ import logger from "../utils/logger"
  * - Fetch workspace-specific credentials from database
  */
 
-const prisma = new PrismaClient()
+// prisma imported
 
 export interface WhatsAppSendResult {
   success: boolean

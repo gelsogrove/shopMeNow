@@ -16,7 +16,7 @@ export const prisma =
   new PrismaClient({
     adapter,
     log: process.env.NODE_ENV === 'development' 
-      ? ['query', 'error', 'warn'] 
+      ? ['error', 'warn'] 
       : ['error'],
   })
 
@@ -24,8 +24,46 @@ if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma
 }
 
-// Re-export everything from Prisma client
-export * from './generated/prisma/client'
+// Re-export Prisma types and enums
+export { PrismaClient, Prisma } from './generated/prisma/client'
 
-// Export prisma as default too
+// Re-export enums
+export * from './generated/prisma/enums'
+
+// Export common types
+export type {
+  Workspace,
+  Categories,
+  Products,
+  Customers,
+  Orders,
+  OrderItems,
+  User,
+  ChatSession,
+  Message,
+  MessageArchive,
+  CartItems,
+  Carts,
+  Certification,
+  TransportType,
+  CreditNote,
+  Languages,
+  Suppliers,
+  Sales,
+  ProductCertification,
+  ProductTransportType,
+  ProductCategory,
+  WhatsAppQueue,
+  SearchConversations,
+  TwoFactorResetToken,
+  AuthenticationAttempt,
+  UserWorkspace,
+  WhatsappSettings,
+  PaymentDetails,
+  PasswordReset,
+  Campaign,
+  CampaignSent
+} from './generated/prisma/client'
+
+// Export prisma as default
 export default prisma

@@ -19,7 +19,7 @@
  */
 
 import { Request, Response } from 'express'
-import { PrismaClient } from '../../../generated/prisma/client'
+import { PrismaClient } from '@echatbot/database'
 import { OAuth2Client } from 'google-auth-library'
 import * as jwt from 'jsonwebtoken'
 import type { SignOptions } from 'jsonwebtoken'
@@ -30,8 +30,8 @@ import { OtpService } from '../../../application/services/otp.service'
 import { AppError } from '../middlewares/error.middleware'
 import { logAuthAttempt } from '../../../middlewares/rateLimit.middleware'
 import logger from '../../../utils/logger'
+import { prisma } from "@echatbot/database"
 
-const prisma = new PrismaClient()
 
 export class OAuthController {
   private oauthAuthService: OAuthAuthService

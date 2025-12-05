@@ -18,7 +18,7 @@
  */
 
 import { Request, Response } from 'express'
-import { PrismaClient } from '../../../generated/prisma/client'
+import { PrismaClient } from '@echatbot/database'
 import * as jwt from 'jsonwebtoken'
 import type { SignOptions } from 'jsonwebtoken'
 import { config } from '../../../config'
@@ -29,8 +29,8 @@ import { AdminSessionService } from '../../../application/services/admin-session
 import { AppError } from '../middlewares/error.middleware'
 import { logAuthAttempt } from '../../../middlewares/rateLimit.middleware'
 import logger from '../../../utils/logger'
+import { prisma } from "@echatbot/database"
 
-const prisma = new PrismaClient()
 
 export class EnhancedAuthController {
   private oauthAuthService: OAuthAuthService

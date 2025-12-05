@@ -18,14 +18,14 @@
  */
 
 import { Router, Request, Response } from "express"
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import speakeasy from "speakeasy"
 import QRCode from "qrcode"
 import { TwoFactorResetService } from "../../../application/services/two-factor-reset.service"
 import logger from "../../../utils/logger"
 
 const router = Router()
-const prisma = new PrismaClient()
+// prisma imported
 const twoFactorResetService = new TwoFactorResetService(prisma)
 
 /**

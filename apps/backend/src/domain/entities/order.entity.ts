@@ -1,4 +1,4 @@
-import { ItemType, OrderStatus, PaymentMethod } from '../../generated/prisma/client';
+import { ItemType, OrderStatus, PaymentMethod } from '@echatbot/database';
 import { Customer } from './customer.entity';
 import { Product } from './product.entity';
 import { Service } from './service.entity';

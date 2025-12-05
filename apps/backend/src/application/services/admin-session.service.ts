@@ -1,9 +1,7 @@
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import { randomUUID } from "crypto"
 import logger from "../../utils/logger"
 import { config } from "../../config"
-
-const prisma = new PrismaClient()
 
 export class AdminSessionService {
   /**

@@ -1,6 +1,6 @@
 import { PrismaClient, Suppliers } from "@echatbot/database"
 
-const prisma = new PrismaClient()
+// prisma imported
 
 export interface CreateSupplierData {
   companyName: string

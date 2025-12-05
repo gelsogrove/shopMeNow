@@ -220,8 +220,6 @@ app.get(
         })
       }
 
-      logger.info(`📦 PUBLIC: Getting services for workspace: ${workspaceId}`)
-
       const services = await prisma.services.findMany({
         where: {
           workspaceId: workspaceId,

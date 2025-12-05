@@ -1,4 +1,4 @@
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import { MessageRepository } from "../../repositories/message.repository"
 import logger from "../../utils/logger"
 
@@ -10,7 +10,7 @@ export class RegistrationService {
   private messageRepository: MessageRepository
 
   constructor() {
-    this.prisma = new PrismaClient()
+    this.prisma = prisma
     this.messageRepository = new MessageRepository()
   }
 

@@ -47,7 +47,7 @@ class PlatformConfigService {
   }
 
   constructor() {
-    this.prisma = new PrismaClient()
+    this.prisma = prisma
   }
 
   /**

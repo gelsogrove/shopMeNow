@@ -17,7 +17,7 @@
 // ============================================================================
 // 1. CORE IMPORTS
 // ============================================================================
-import { PrismaClient } from "@echatbot/database"
+import { prisma } from "@echatbot/database"
 import { NextFunction, Request, Response, Router } from "express"
 import logger from "../utils/logger"
 
@@ -506,10 +506,7 @@ logger.info("Registered WhatsApp webhook routes (public, no authentication)")
 
 // Debug middleware removed - TypeScript errors fixed
 
-// Initialize Prisma client
-const prisma = new PrismaClient()
-
-// Initialize services
+// Initialize services (using shared prisma instance from @echatbot/database)
 const authService = new AuthService(prisma)
 const userService = new UserService(prisma)
 const otpService = new OtpService(prisma)

@@ -1,4 +1,4 @@
-import { PrismaClient, InvitationStatus } from "@echatbot/database"
+import { prisma, PrismaClient, InvitationStatus } from "@echatbot/database"
 import crypto from "crypto"
 import logger from "../../utils/logger"
 import { EmailService } from "./email.service"
@@ -45,8 +45,8 @@ export class WorkspaceInvitationService {
   private prisma: PrismaClient
   private emailService: EmailService
 
-  constructor(prisma?: PrismaClient, emailService?: EmailService) {
-    this.prisma = prisma || new PrismaClient()
+  constructor(prismaInstance?: PrismaClient, emailService?: EmailService) {
+    this.prisma = prismaInstance || prisma
     this.emailService = emailService || new EmailService()
   }
 

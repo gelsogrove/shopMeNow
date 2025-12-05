@@ -13,7 +13,7 @@
  * - Repositories handle database access
  */
 
-import { PrismaClient, User, UserStatus } from '@prisma/client'
+import { PrismaClient, User, UserStatus } from '@echatbot/database'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { AppError } from '../../interfaces/http/middlewares/error.middleware'

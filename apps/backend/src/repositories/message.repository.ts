@@ -71,7 +71,7 @@ export class MessageRepository {
   private prisma: PrismaClient
 
   constructor() {
-    this.prisma = new PrismaClient()
+    this.prisma = prisma
   }
 
   /**

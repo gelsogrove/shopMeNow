@@ -1,4 +1,4 @@
-import { OrderStatus } from '../../generated/prisma/client';
+import { OrderStatus } from '@echatbot/database';
 import { Order } from '../entities/order.entity';
 
 export type OrderFilters = {

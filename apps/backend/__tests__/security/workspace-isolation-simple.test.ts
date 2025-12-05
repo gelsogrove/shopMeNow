@@ -8,10 +8,8 @@
  * Uses direct DB creation (no API calls) to avoid timeout issues
  */
 
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@echatbot/database'
 import bcrypt from 'bcrypt'
-
-const prisma = new PrismaClient()
 
 describe('🔒 Workspace Isolation - Database Level', () => {
   let userAId: string

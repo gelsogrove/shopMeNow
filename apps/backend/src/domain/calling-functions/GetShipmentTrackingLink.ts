@@ -8,6 +8,7 @@
  */
 
 import logger from "../../utils/logger"
+import { prisma } from "@echatbot/database"
 
 export interface GetShipmentTrackingLinkRequest {
   customerId: string
@@ -38,8 +39,6 @@ export async function GetShipmentTrackingLink(
 ): Promise<GetShipmentTrackingLinkResult> {
   try {
     logger.info("📦 GetShipmentTrackingLink called with:", request)
-    const { PrismaClient } = require("@prisma/client")
-    const prisma = new PrismaClient()
 
     try {
       // Query the database for the order with trackingNumber

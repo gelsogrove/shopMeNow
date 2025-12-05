@@ -1,31 +1,24 @@
 import { Request, Response, NextFunction } from "express"
 
-// Mock the entire module before importing
-jest.mock("@prisma/client", () => {
-  const mockWorkspace = {
-    findUnique: jest.fn(),
-  }
-  const mockUserWorkspace = {
-    findUnique: jest.fn(),
-  }
-  return {
-    PrismaClient: jest.fn().mockImplementation(() => ({
-      workspace: mockWorkspace,
-      userWorkspace: mockUserWorkspace,
-    })),
-    __mockWorkspace: mockWorkspace,
-    __mockUserWorkspace: mockUserWorkspace,
-  }
-})
+const mockWorkspace = {
+  findUnique: jest.fn(),
+}
+const mockUserWorkspace = {
+  findUnique: jest.fn(),
+}
+
+jest.mock("@echatbot/database", () => ({
+  prisma: {
+    workspace: mockWorkspace,
+    userWorkspace: mockUserWorkspace,
+  },
+}))
 
 // Import after mocking
 import {
   requireSuperAdmin,
   requireWorkspaceMember,
 } from "../../../src/middlewares/workspace-role.middleware"
-
-// Get the mocks from the module
-const { __mockWorkspace, __mockUserWorkspace } = jest.requireMock("@prisma/client")
 
 describe("Workspace Role Middleware", () => {
   let mockReq: Partial<Request>
@@ -51,7 +44,7 @@ describe("Workspace Role Middleware", () => {
       ;(mockReq as any).user = { id: "owner-123" }
       ;(mockReq as any).workspaceId = "ws-123"
 
-      __mockWorkspace.findUnique.mockResolvedValue({
+      mockWorkspace.findUnique.mockResolvedValue({
         ownerId: "owner-123",
       })
 
@@ -69,10 +62,10 @@ describe("Workspace Role Middleware", () => {
       ;(mockReq as any).user = { id: "user-123" }
       ;(mockReq as any).workspaceId = "ws-123"
 
-      __mockWorkspace.findUnique.mockResolvedValue({
+      mockWorkspace.findUnique.mockResolvedValue({
         ownerId: "other-owner",
       })
-      __mockUserWorkspace.findUnique.mockResolvedValue({
+      mockUserWorkspace.findUnique.mockResolvedValue({
         role: "SUPER_ADMIN",
       })
 
@@ -89,10 +82,10 @@ describe("Workspace Role Middleware", () => {
       ;(mockReq as any).user = { id: "admin-123" }
       ;(mockReq as any).workspaceId = "ws-123"
 
-      __mockWorkspace.findUnique.mockResolvedValue({
+      mockWorkspace.findUnique.mockResolvedValue({
         ownerId: "owner-123",
       })
-      __mockUserWorkspace.findUnique.mockResolvedValue({
+      mockUserWorkspace.findUnique.mockResolvedValue({
         role: "ADMIN",
       })
 
@@ -149,7 +142,7 @@ describe("Workspace Role Middleware", () => {
       ;(mockReq as any).user = { id: "user-123" }
       ;(mockReq as any).workspaceId = "invalid-ws"
 
-      __mockWorkspace.findUnique.mockResolvedValue(null)
+      mockWorkspace.findUnique.mockResolvedValue(null)
 
       await requireSuperAdmin(
         mockReq as Request,
@@ -169,7 +162,7 @@ describe("Workspace Role Middleware", () => {
       ;(mockReq as any).workspaceId = undefined
       mockReq.params = { workspaceId: "ws-from-params" }
 
-      __mockWorkspace.findUnique.mockResolvedValue({
+      mockWorkspace.findUnique.mockResolvedValue({
         ownerId: "owner-123",
       })
 
@@ -188,7 +181,7 @@ describe("Workspace Role Middleware", () => {
       ;(mockReq as any).user = { id: "member-123" }
       ;(mockReq as any).workspaceId = "ws-123"
 
-      __mockUserWorkspace.findUnique.mockResolvedValue({
+      mockUserWorkspace.findUnique.mockResolvedValue({
         role: "ADMIN",
       })
 
@@ -206,7 +199,7 @@ describe("Workspace Role Middleware", () => {
       ;(mockReq as any).user = { id: "non-member" }
       ;(mockReq as any).workspaceId = "ws-123"
 
-      __mockUserWorkspace.findUnique.mockResolvedValue(null)
+      mockUserWorkspace.findUnique.mockResolvedValue(null)
 
       await requireWorkspaceMember(
         mockReq as Request,
@@ -252,7 +245,7 @@ describe("Workspace Role Middleware", () => {
       ;(mockReq as any).user = { id: "member-123" }
       ;(mockReq as any).workspaceId = "ws-123"
 
-      __mockUserWorkspace.findUnique.mockResolvedValue({
+      mockUserWorkspace.findUnique.mockResolvedValue({
         role: "SUPER_ADMIN",
       })
 

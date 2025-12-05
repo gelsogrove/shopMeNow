@@ -10,12 +10,38 @@
  * @critical Multi-tenant security requirement
  */
 
-// Import all calling functions to test their interfaces
-import { AddProduct, AddProductRequest } from "../../../src/domain/calling-functions/AddProduct"
-import { SearchProduct, SearchProductRequest } from "../../../src/domain/calling-functions/SearchProduct"
-import { ResetCart, ResetCartRequest } from "../../../src/domain/calling-functions/ResetCart"
-import { ConfirmOrder, ConfirmOrderRequest } from "../../../src/domain/calling-functions/ConfirmOrder"
-import { ContactOperator, ContactOperatorRequest } from "../../../src/domain/calling-functions/ContactOperator"
+// Mock PrismaClient with tracking FIRST (before imports)
+const mockCustomersFindFirst = jest.fn()
+const mockCartsFindFirst = jest.fn()
+const mockCartsCreate = jest.fn()
+const mockCartItemsCreate = jest.fn()
+const mockCartItemsDeleteMany = jest.fn()
+const mockProductsFindFirst = jest.fn()
+const mockProductSearchCreate = jest.fn()
+const mockOrdersCreate = jest.fn()
+const mockOrdersCount = jest.fn()
+const mockWorkspaceFindUnique = jest.fn()
+
+const mockPrisma = {
+  customers: { findFirst: mockCustomersFindFirst, update: jest.fn() },
+  carts: { findFirst: mockCartsFindFirst, create: mockCartsCreate },
+  cartItems: { create: mockCartItemsCreate, deleteMany: mockCartItemsDeleteMany },
+  products: { findFirst: mockProductsFindFirst, findMany: jest.fn() },
+  productSearch: { create: mockProductSearchCreate },
+  orders: { create: mockOrdersCreate, count: mockOrdersCount },
+  workspace: { findUnique: mockWorkspaceFindUnique },
+  chatSession: { findFirst: jest.fn() },
+  conversationMessage: { findMany: jest.fn() },
+  user: { findFirst: jest.fn() },
+  sales: { findUnique: jest.fn() },
+  customerSegments: { findMany: jest.fn().mockResolvedValue([]) },
+  offers: { findMany: jest.fn().mockResolvedValue([]) },
+  $disconnect: jest.fn(),
+}
+
+jest.mock("@echatbot/database", () => ({
+  prisma: mockPrisma,
+}))
 
 // Mock dependencies
 jest.mock("../../../src/utils/logger", () => ({
@@ -46,39 +72,6 @@ jest.mock("../../../src/application/agents/SafetyTranslationAgent", () => ({
   })),
 }))
 
-// Mock PrismaClient with tracking
-const mockCustomersFindFirst = jest.fn()
-const mockCartsFindFirst = jest.fn()
-const mockCartsCreate = jest.fn()
-const mockCartItemsCreate = jest.fn()
-const mockCartItemsDeleteMany = jest.fn()
-const mockProductsFindFirst = jest.fn()
-const mockProductSearchCreate = jest.fn()
-const mockOrdersCreate = jest.fn()
-const mockOrdersCount = jest.fn()
-const mockWorkspaceFindUnique = jest.fn()
-
-const mockPrisma = {
-  customers: { findFirst: mockCustomersFindFirst, update: jest.fn() },
-  carts: { findFirst: mockCartsFindFirst, create: mockCartsCreate },
-  cartItems: { create: mockCartItemsCreate, deleteMany: mockCartItemsDeleteMany },
-  products: { findFirst: mockProductsFindFirst, findMany: jest.fn() },
-  productSearch: { create: mockProductSearchCreate },
-  orders: { create: mockOrdersCreate, count: mockOrdersCount },
-  workspace: { findUnique: mockWorkspaceFindUnique },
-  chatSession: { findFirst: jest.fn() },
-  conversationMessage: { findMany: jest.fn() },
-  user: { findFirst: jest.fn() },
-  sales: { findUnique: jest.fn() },
-  customerSegments: { findMany: jest.fn().mockResolvedValue([]) },
-  offers: { findMany: jest.fn().mockResolvedValue([]) },
-  $disconnect: jest.fn(),
-}
-
-jest.mock("@prisma/client", () => ({
-  PrismaClient: jest.fn(() => mockPrisma),
-}))
-
 jest.mock("../../../src/services/calling-functions.service", () => ({
   CallingFunctionsService: jest.fn().mockImplementation(() => ({
     addProductToCart: jest.fn().mockResolvedValue({
@@ -88,6 +81,13 @@ jest.mock("../../../src/services/calling-functions.service", () => ({
     }),
   })),
 }))
+
+// Import all calling functions to test their interfaces
+import { AddProduct, AddProductRequest } from "../../../src/domain/calling-functions/AddProduct"
+import { SearchProduct, SearchProductRequest } from "../../../src/domain/calling-functions/SearchProduct"
+import { ResetCart, ResetCartRequest } from "../../../src/domain/calling-functions/ResetCart"
+import { ConfirmOrder, ConfirmOrderRequest } from "../../../src/domain/calling-functions/ConfirmOrder"
+import { ContactOperator, ContactOperatorRequest } from "../../../src/domain/calling-functions/ContactOperator"
 
 describe("WorkspaceId Filter in Calling Functions", () => {
   const workspaceId = "ws-test-123"
@@ -101,7 +101,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
     it("should fail if workspaceId is missing", async () => {
       const request: AddProductRequest = {
         customerId,
-        workspaceId: "", // Empty workspaceId
+        workspaceId: "",
         products: [{ productCode: "PROD-001", quantity: 1 }],
       }
 
@@ -114,7 +114,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
     it("should fail if workspaceId is null/undefined", async () => {
       const request = {
         customerId,
-        workspaceId: null as any, // null workspaceId
+        workspaceId: null as any,
         products: [{ productCode: "PROD-001", quantity: 1 }],
       }
 
@@ -124,10 +124,9 @@ describe("WorkspaceId Filter in Calling Functions", () => {
     })
 
     it("should include workspaceId in request interface", () => {
-      // TypeScript check - workspaceId is required in interface
       const request: AddProductRequest = {
         customerId: "test",
-        workspaceId: "test-ws", // Required field
+        workspaceId: "test-ws",
         products: [],
       }
       expect(request.workspaceId).toBeDefined()
@@ -138,7 +137,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
     it("should fail if workspaceId is missing", async () => {
       const request: SearchProductRequest = {
         customerId,
-        workspaceId: "", // Empty
+        workspaceId: "",
         productName: "Parmigiano",
       }
 
@@ -165,7 +164,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
 
       expect(mockProductSearchCreate).toHaveBeenCalledWith({
         data: expect.objectContaining({
-          workspaceId, // 🔒 Must include workspaceId
+          workspaceId,
         }),
       })
     })
@@ -183,7 +182,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
         data: {
           query: "Vino",
           customerId,
-          workspaceId, // 🔒 Workspace isolation
+          workspaceId,
         },
       })
     })
@@ -193,7 +192,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
     it("should fail if workspaceId is missing", async () => {
       const request: ResetCartRequest = {
         customerId,
-        workspaceId: "", // Empty
+        workspaceId: "",
       }
 
       const result = await ResetCart(request)
@@ -219,7 +218,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
         expect.objectContaining({
           where: {
             id: customerId,
-            workspaceId, // 🔒 Workspace isolation
+            workspaceId,
           },
         })
       )
@@ -246,7 +245,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
         expect.objectContaining({
           where: expect.objectContaining({
             customerId,
-            workspaceId, // 🔒 Workspace isolation
+            workspaceId,
           }),
         })
       )
@@ -257,7 +256,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
     it("should fail if workspaceId is missing", async () => {
       const request: ConfirmOrderRequest = {
         customerId,
-        workspaceId: "", // Empty
+        workspaceId: "",
       }
 
       const result = await ConfirmOrder(request)
@@ -272,7 +271,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
         workspaceId,
         name: "Test",
       })
-      mockCartsFindFirst.mockResolvedValue(null) // Empty cart
+      mockCartsFindFirst.mockResolvedValue(null)
 
       await ConfirmOrder({
         customerId,
@@ -283,7 +282,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
         expect.objectContaining({
           where: {
             id: customerId,
-            workspaceId, // 🔒 Workspace isolation
+            workspaceId,
           },
         })
       )
@@ -327,7 +326,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
       expect(mockOrdersCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            workspaceId, // 🔒 Workspace isolation
+            workspaceId,
           }),
         })
       )
@@ -336,7 +335,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
 
   describe("ContactOperator - WorkspaceId Filter", () => {
     it("should include workspaceId in customer lookup", async () => {
-      mockCustomersFindFirst.mockResolvedValue(null) // Customer not found
+      mockCustomersFindFirst.mockResolvedValue(null)
 
       await ContactOperator({
         phoneNumber: "+393331234567",
@@ -348,7 +347,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
         expect.objectContaining({
           where: {
             phone: "+393331234567",
-            workspaceId, // 🔒 Workspace isolation
+            workspaceId,
           },
         })
       )
@@ -360,7 +359,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
         name: "Test",
         phone: "+393331234567",
         workspaceId,
-        sales: { email: "test@test.com" }, // Add sales agent
+        sales: { email: "test@test.com" },
       })
       mockPrisma.customers.update.mockResolvedValue({})
       mockPrisma.chatSession.findFirst.mockResolvedValue({ id: "session-1" })
@@ -376,10 +375,9 @@ describe("WorkspaceId Filter in Calling Functions", () => {
         workspaceId,
       })
 
-      // Workspace is loaded during email setup
       expect(mockWorkspaceFindUnique).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: workspaceId }, // 🔒 Workspace isolation
+          where: { id: workspaceId },
         })
       )
     })
@@ -387,7 +385,6 @@ describe("WorkspaceId Filter in Calling Functions", () => {
 
   describe("Request Interface Validation", () => {
     it("AddProductRequest should require workspaceId", () => {
-      // This test verifies TypeScript interface
       const valid: AddProductRequest = {
         customerId: "test",
         workspaceId: "ws-test",
@@ -433,9 +430,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
   describe("No Cross-Workspace Data Leakage", () => {
     it("should not return data from different workspace", async () => {
       const ws1 = "workspace-1"
-      const ws2 = "workspace-2"
 
-      // Customer exists in ws2 but we query ws1
       mockCustomersFindFirst.mockResolvedValue(null)
 
       const result = await ResetCart({
@@ -443,7 +438,6 @@ describe("WorkspaceId Filter in Calling Functions", () => {
         workspaceId: ws1,
       })
 
-      // Should fail - customer not found in requested workspace
       expect(result.success).toBe(false)
     })
 
@@ -478,7 +472,6 @@ describe("WorkspaceId Filter in Calling Functions", () => {
 
       await ConfirmOrder({ customerId, workspaceId })
 
-      // Order count should be filtered by workspaceId
       expect(mockOrdersCount).toHaveBeenCalledWith({
         where: { workspaceId },
       })

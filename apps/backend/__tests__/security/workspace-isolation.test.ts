@@ -14,11 +14,9 @@
  */
 
 import request from 'supertest'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@echatbot/database'
 import app from '../../src/app'
 import speakeasy from 'speakeasy'
-
-const prisma = new PrismaClient()
 
 /**
  * Helper: Verify 2FA with retry logic (handles TOTP timing edge cases)

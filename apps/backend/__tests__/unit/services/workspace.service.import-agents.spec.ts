@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import { describe, it, expect, beforeAll, afterAll, jest } from "@jest/globals"
 import { WorkspaceService } from "../../../src/application/services/workspace.service"
 import { WorkspaceProps } from "../../../src/domain/entities/workspace.entity"
