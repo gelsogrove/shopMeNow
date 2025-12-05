@@ -58,6 +58,7 @@ export interface OrderTrackingLLMResponse {
     result: any
   }>
   systemPrompt?: string // 🆕 Processed system prompt for debugging
+  model?: string // 🆕 Model used for debugging timeline
 }
 
 export class OrderTrackingAgentLLM {
@@ -384,6 +385,7 @@ export class OrderTrackingAgentLLM {
         executionTimeMs,
         functionCalls,
         systemPrompt, // 🆕 Include processed prompt for debugging
+        model: agentConfig.model, // 🆕 Include model for debugging timeline
       }
     } catch (error) {
       const executionTimeMs = Date.now() - startTime

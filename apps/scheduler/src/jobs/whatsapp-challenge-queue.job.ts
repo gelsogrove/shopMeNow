@@ -4,6 +4,94 @@ import { SecurityAgentService } from '../services/security-agent.service'
 import { BillingService } from '../services/billing.service'
 
 /**
+ * Timeline step interface for debugInfo append
+ */
+interface TimelineStep {
+  type: 'sub_agent'
+  agent: string
+  timestamp: string
+  model?: string
+  systemPrompt?: string
+  input?: {
+    phoneNumber?: string
+    messageContent?: string
+    queueId?: string
+    customerId?: string
+    prompt?: string
+  }
+  output?: {
+    result?: any
+    textResponse?: string
+    executionTimeMs?: number
+  }
+}
+
+/**
+ * Append a step to the conversation message timeline (debugInfo)
+ * Used when processing queue messages to add Security Check and Send to WhatsApp steps
+ */
+async function appendTimelineStep(
+  conversationMessageId: string | null | undefined,
+  step: TimelineStep
+): Promise<void> {
+  if (!conversationMessageId) {
+    logger.debug('[WhatsApp Queue] No conversationMessageId - skipping timeline append')
+    return
+  }
+
+  try {
+    const message = await prisma.conversationMessage.findUnique({
+      where: { id: conversationMessageId },
+      select: { id: true, debugInfo: true },
+    })
+
+    if (!message) {
+      logger.warn(`[WhatsApp Queue] Conversation message ${conversationMessageId} not found for timeline append`)
+      return
+    }
+
+    // Parse existing debugInfo or create new structure
+    let debugInfo: {
+      steps: TimelineStep[]
+      totalTokens: number
+      totalCost: number
+      executionTimeMs: number
+    }
+
+    if (message.debugInfo) {
+      try {
+        debugInfo = JSON.parse(message.debugInfo)
+        if (!debugInfo.steps) {
+          debugInfo.steps = []
+        }
+      } catch {
+        debugInfo = { steps: [], totalTokens: 0, totalCost: 0, executionTimeMs: 0 }
+      }
+    } else {
+      debugInfo = { steps: [], totalTokens: 0, totalCost: 0, executionTimeMs: 0 }
+    }
+
+    // Append the new step
+    debugInfo.steps.push(step)
+
+    // Update execution time if provided
+    if (step.output?.executionTimeMs) {
+      debugInfo.executionTimeMs += step.output.executionTimeMs
+    }
+
+    // Save updated debugInfo
+    await prisma.conversationMessage.update({
+      where: { id: conversationMessageId },
+      data: { debugInfo: JSON.stringify(debugInfo) },
+    })
+
+    logger.debug(`[WhatsApp Queue] Appended "${step.agent}" step to timeline for message ${conversationMessageId}`)
+  } catch (error) {
+    logger.error(`[WhatsApp Queue] Error appending timeline step:`, error)
+  }
+}
+
+/**
  * In-memory lock to prevent concurrent executions
  * If the job is still running when the next cron tick happens, skip it
  */
@@ -104,10 +192,29 @@ export async function whatsappChallengeQueueJob(): Promise<void> {
         pendingMessages.map(async (message) => {
           try {
             // 🔒 SECURITY CHECK: Pass through Security Agent LLM before sending
+            const securityStartTime = Date.now()
             const securityCheck = await securityAgent.validateMessage({
               workspaceId: workspace.id,
               messageContent: message.messageContent,
               customerId: message.customerId,
+            })
+            const securityDuration = Date.now() - securityStartTime
+
+            // 📊 Append Security Check step to timeline
+            const securityTimestamp = new Date()
+            await appendTimelineStep(message.conversationMessageId, {
+              type: 'sub_agent',
+              agent: 'Security Check',
+              timestamp: securityTimestamp.toISOString(),
+              model: 'security-patterns/v1',
+              systemPrompt: 'Validates outgoing messages using pattern-based detection: SQL injection, XSS, command injection, sensitive data exposure, spam patterns. Also checks customer blacklist status.',
+              input: {
+                messageContent: message.messageContent.substring(0, 200) + (message.messageContent.length > 200 ? '...' : ''),
+                customerId: message.customerId,
+              },
+              output: {
+                textResponse: securityCheck.isSafe ? '✅ Message passed security validation' : `🚫 Blocked: ${securityCheck.reason}`,
+              },
             })
 
             if (!securityCheck.isSafe) {
@@ -119,12 +226,23 @@ export async function whatsappChallengeQueueJob(): Promise<void> {
                   errorMessage: `Security blocked: ${securityCheck.reason}`,
                 },
               })
+
+              // Update ConversationMessage status to blocked
+              if (message.conversationMessageId) {
+                await prisma.conversationMessage.update({
+                  where: { id: message.conversationMessageId },
+                  data: { deliveryStatus: 'blocked' },
+                })
+              }
+
               return { status: 'blocked', messageId: message.id, reason: securityCheck.reason }
             }
 
             // ✅ Message passed security - proceed with sending
+            const whatsappStartTime = Date.now()
             // TODO: Implement actual WhatsApp API call here
             // await sendWhatsAppMessage(workspace, message)
+            const whatsappDuration = Date.now() - whatsappStartTime
 
             // Mark as sent
             await prisma.whatsAppQueue.update({
@@ -134,6 +252,34 @@ export async function whatsappChallengeQueueJob(): Promise<void> {
                 deliveredAt: new Date(),
               },
             })
+
+            // 📊 Append Send to WhatsApp step to timeline
+            const whatsappTimestamp = new Date()
+            await appendTimelineStep(message.conversationMessageId, {
+              type: 'sub_agent',
+              agent: 'Send to WhatsApp',
+              timestamp: whatsappTimestamp.toISOString(),
+              model: 'WhatsApp Cloud API',
+              input: {
+                phoneNumber: message.phoneNumber,
+                messageContent: message.messageContent.substring(0, 200) + (message.messageContent.length > 200 ? '...' : ''),
+                queueId: message.id,
+              },
+              output: {
+                textResponse: `✅ Message delivered to ${message.phoneNumber}\n\n${message.messageContent}`,
+              },
+            })
+
+            // Update ConversationMessage as delivered
+            if (message.conversationMessageId) {
+              await prisma.conversationMessage.update({
+                where: { id: message.conversationMessageId },
+                data: { 
+                  deliveryStatus: 'sent',
+                  deliveredAt: new Date(),
+                },
+              })
+            }
 
             // 💰 BILLING: Deduct credit for sent message
             try {

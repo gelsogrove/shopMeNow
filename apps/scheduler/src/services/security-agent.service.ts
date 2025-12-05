@@ -37,8 +37,10 @@ export class SecurityAgentService {
     { pattern: /<iframe[\s\S]*?>/i, reason: 'Iframe injection detected' },
     
     // Command injection
-    { pattern: /[;&|`$].*?(rm|cat|wget|curl|chmod|chown|sudo|bash|sh|nc|netcat)/i, reason: 'Command injection detected' },
-    { pattern: /\$\(.*\)|\`.*\`/i, reason: 'Command substitution detected' },
+    { pattern: /[;&|`$].*?(rm|cat|wget|curl|chmod|chown|sudo|bash|sh|nc|netcat)\b/i, reason: 'Command injection detected' },
+    // Command substitution - only match actual shell patterns, not markdown backticks
+    // $(command) or `command` with actual command-like content inside
+    { pattern: /\$\([^)]*[a-z_][a-z0-9_]*\s/i, reason: 'Command substitution detected' },
     
     // Path traversal
     { pattern: /\.\.\/|\.\.\\|%2e%2e%2f/i, reason: 'Path traversal detected' },

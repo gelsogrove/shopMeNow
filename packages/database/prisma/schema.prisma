@@ -256,22 +256,25 @@ model ProductCategory {
 }
 
 model WhatsAppQueue {
-  id             String    @id @default(uuid())
-  workspaceId    String
-  customerId     String
-  phoneNumber    String
-  messageContent String    @db.Text
-  status         String    @default("pending") // pending, sent, error
-  errorMessage   String?   @db.Text
-  createdAt      DateTime  @default(now())
-  deliveredAt    DateTime?
+  id                    String               @id @default(uuid())
+  workspaceId           String
+  customerId            String
+  phoneNumber           String
+  messageContent        String               @db.Text
+  status                String               @default("pending") // pending, sent, error
+  errorMessage          String?              @db.Text
+  createdAt             DateTime             @default(now())
+  deliveredAt           DateTime?
+  conversationMessageId String?              // FK to ConversationMessage for timeline tracking
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  customer  Customers @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  workspace           Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer            Customers             @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  conversationMessage ConversationMessage?  @relation(fields: [conversationMessageId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, status])
   @@index([customerId])
   @@index([createdAt])
+  @@index([conversationMessageId])
   @@map("whatsapp_queue")
 }
 
@@ -1079,22 +1082,23 @@ model AgentConversationLog {
 
 // Conversation Messages - Complete history for LLM Router context
 model ConversationMessage {
-  id                String    @id @default(cuid())
+  id                String          @id @default(cuid())
   workspaceId       String
   customerId        String
   conversationId    String
   role              String // "user", "assistant", "function", "system"
-  content           String    @db.Text
+  content           String          @db.Text
   agentType         String? // "ROUTER", "PRODUCT_SEARCH", etc.
   functionName      String? // If role="function", name of function called
   functionArguments Json? // If role="function", arguments passed
   tokensUsed        Int?
   debugInfo         String? // ✅ Debug information as JSON string (for message flow tracking)
   deliveredAt       DateTime? // ✅ WhatsApp delivery timestamp (when message sent via queue)
-  deliveryStatus    String    @default("not_queued") // "not_queued" (never sent), "pending" (in queue), "sent" (delivered), "error" (failed)
-  createdAt         DateTime  @default(now())
-  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  customer          Customers @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  deliveryStatus    String          @default("not_queued") // "not_queued" (never sent), "pending" (in queue), "sent" (delivered), "error" (failed)
+  createdAt         DateTime        @default(now())
+  workspace         Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer          Customers       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  whatsAppQueue     WhatsAppQueue[] // Inverse relation for queue tracking
 
   @@index([conversationId, createdAt])
   @@index([workspaceId, customerId])

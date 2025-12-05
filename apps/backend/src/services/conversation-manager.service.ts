@@ -140,6 +140,7 @@ export class ConversationManager {
   ): Promise<void> {
     try {
       let deliveryStatus = params.deliveryStatus || "not_queued" // Default: not queued unless enqueueing succeeds
+      let customerPhone: string | null = null
 
       // 🛡️ GUARDIA: Skip empty messages entirely - never enqueue or save empty content
       if (!params.content?.trim()) {
@@ -163,37 +164,20 @@ export class ConversationManager {
       // 🚫 SKIP ENQUEUEING FOR REGISTRATION FLOW MESSAGES
       // Welcome messages from new user registration should NOT go to WhatsApp queue
       else if (params.agentType !== "REGISTRATION_FLOW") {
-        // 2️⃣ Try to Add to WhatsApp Queue (for sending) - ONLY for regular assistant messages
-        try {
-          // Get customer phone number
-          const customer = await this.prisma.customers.findFirst({
-            where: { id: params.customerId, workspaceId: params.workspaceId }, // 🔒 Workspace isolation
-            select: { phone: true },
-          })
+        // Check if customer has phone number (needed for queue)
+        const customer = await this.prisma.customers.findFirst({
+          where: { id: params.customerId, workspaceId: params.workspaceId }, // 🔒 Workspace isolation
+          select: { phone: true },
+        })
+        customerPhone = customer?.phone || null
 
-          if (customer?.phone) {
-            await this.whatsappQueueService.enqueue({
-              workspaceId: params.workspaceId,
-              customerId: params.customerId,
-              phoneNumber: customer.phone,
-              messageContent: params.content,
-            })
-            deliveryStatus = "pending" // ✅ Successfully enqueued = pending
-            logger.debug("📤 Assistant message added to WhatsApp queue", {
-              customerId: params.customerId,
-              phone: customer.phone,
-              deliveryStatus: "pending",
-            })
-          } else {
-            logger.warn("⚠️  Customer has no phone number, skipping WhatsApp queue", {
-              customerId: params.customerId,
-            })
-            deliveryStatus = "not_queued" // No phone = not queued
-          }
-        } catch (queueError) {
-          // Non-critical: log error but don't fail message save
-          logger.error("❌ Failed to add message to WhatsApp queue:", queueError)
-          deliveryStatus = "not_queued" // Enqueue failed = not queued
+        if (customerPhone) {
+          deliveryStatus = "pending" // Will be enqueued after save
+        } else {
+          logger.warn("⚠️  Customer has no phone number, skipping WhatsApp queue", {
+            customerId: params.customerId,
+          })
+          deliveryStatus = "not_queued" // No phone = not queued
         }
       } else {
         logger.info(
@@ -205,16 +189,41 @@ export class ConversationManager {
         deliveryStatus = "not_queued" // Registration flow = not queued
       }
 
-      // 1️⃣ Save to History (conversationMessage) with final deliveryStatus
-      await this.conversationRepo.saveMessage({
+      // 1️⃣ Save to History (conversationMessage) FIRST to get the ID
+      const messageId = await this.conversationRepo.saveMessage({
         ...params,
         role: "assistant",
-        deliveryStatus, // ✅ Pass the final delivery status
+        deliveryStatus, // ✅ Pass the delivery status
       })
       logger.debug("🤖 Assistant message saved to history", {
+        messageId,
         conversationId: params.conversationId,
         deliveryStatus: deliveryStatus,
       })
+
+      // 2️⃣ If pending status, try to add to WhatsApp Queue with the message ID
+      if (deliveryStatus === "pending" && customerPhone) {
+        try {
+          await this.whatsappQueueService.enqueue({
+            workspaceId: params.workspaceId,
+            customerId: params.customerId,
+            phoneNumber: customerPhone,
+            messageContent: params.content,
+            conversationMessageId: messageId, // ✅ Link queue to conversation message for timeline tracking
+          })
+          logger.debug("📤 Assistant message added to WhatsApp queue", {
+            messageId,
+            customerId: params.customerId,
+            phone: customerPhone,
+            deliveryStatus: "pending",
+          })
+        } catch (queueError) {
+          // Non-critical: update message status and log error
+          logger.error("❌ Failed to add message to WhatsApp queue:", queueError)
+          // Update message to not_queued since enqueue failed
+          await this.conversationRepo.updateDeliveryStatus(messageId, "not_queued")
+        }
+      }
     } catch (error) {
       logger.error("❌ Failed to save assistant message", error)
     }

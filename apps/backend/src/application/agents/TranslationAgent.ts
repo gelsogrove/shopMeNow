@@ -23,6 +23,7 @@ export interface TranslationResult {
   tokensUsed?: number
   executionTimeMs?: number
   systemPrompt?: string
+  model?: string // 🆕 Model used for debugging timeline
 }
 
 export interface ProcessOptions {
@@ -204,7 +205,8 @@ export class TranslationAgent {
         message: translatedMessage,
         tokensUsed,
         executionTimeMs,
-        systemPrompt: translationAgent.systemPrompt,
+        systemPrompt: systemPrompt, // 🆕 Use PROCESSED prompt (with variables replaced)
+        model: translationAgent.model, // 🆕 Include model for debugging timeline
       }
     } catch (error) {
       logger.error("❌ TranslationAgent error", error)

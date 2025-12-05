@@ -57,6 +57,7 @@ export interface ProductSearchLLMResponse {
     result: any
   }>
   systemPrompt?: string // 🆕 Processed system prompt for debugging
+  model?: string // 🆕 Model used for debugging timeline
 }
 
 export class ProductSearchAgentLLM {
@@ -421,6 +422,7 @@ export class ProductSearchAgentLLM {
         executionTimeMs,
         functionCalls,
         systemPrompt: processedPrompt, // 🆕 Include processed prompt for debugging
+        model: agentConfig.model, // 🆕 Include model used
       }
     } catch (error) {
       const executionTimeMs = Date.now() - startTime

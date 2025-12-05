@@ -18,11 +18,26 @@ export interface EnqueueMessageDto {
   customerId: string
   phoneNumber: string
   messageContent: string
+  conversationMessageId?: string // FK to ConversationMessage for timeline tracking
 }
 
 export interface ValidateAndSendResult {
   success: boolean
   error?: string
+}
+
+/**
+ * Timeline step for debugInfo append
+ * Used when cronjob processes queue messages
+ */
+interface TimelineStep {
+  type: "sub_agent"
+  agent: string
+  timestamp: string
+  output?: {
+    result?: any
+    executionTimeMs?: number
+  }
 }
 
 export class WhatsAppQueueService {
@@ -110,6 +125,7 @@ export class WhatsAppQueueService {
         phoneNumber: data.phoneNumber,
         messageContent: data.messageContent,
         status: "pending",
+        conversationMessageId: data.conversationMessageId,
       })
 
       logger.debug(`[WhatsAppQueueService] Message queued with ID: ${result.id}`)
@@ -197,6 +213,7 @@ export class WhatsAppQueueService {
 
         // Mark as delivered in conversation history (if exists)
         await this.markDeliveredInHistory(
+          message.conversationMessageId,
           message.customerId,
           message.messageContent
         )
@@ -213,6 +230,89 @@ export class WhatsAppQueueService {
         error
       )
       // Don't throw - let cron continue with next cycle
+    }
+  }
+
+  /**
+   * Append a step to the conversation message timeline (debugInfo)
+   * Used when cronjob processes queue messages to add Security Check and Send to WhatsApp steps
+   *
+   * @param conversationMessageId - The ID of the conversation message to update
+   * @param step - The timeline step to append
+   */
+  private async appendTimelineStep(
+    conversationMessageId: string | null,
+    step: TimelineStep
+  ): Promise<void> {
+    if (!conversationMessageId) {
+      logger.debug("[WhatsAppQueueService] No conversationMessageId - skipping timeline append")
+      return
+    }
+
+    try {
+      // Get current message with debugInfo
+      const message = await this.prisma.conversationMessage.findUnique({
+        where: { id: conversationMessageId },
+        select: { id: true, debugInfo: true },
+      })
+
+      if (!message) {
+        logger.warn(`[WhatsAppQueueService] Conversation message ${conversationMessageId} not found for timeline append`)
+        return
+      }
+
+      // Parse existing debugInfo or create new structure
+      let debugInfo: {
+        steps: TimelineStep[]
+        totalTokens: number
+        totalCost: number
+        executionTimeMs: number
+      }
+
+      if (message.debugInfo) {
+        try {
+          debugInfo = JSON.parse(message.debugInfo)
+          if (!debugInfo.steps) {
+            debugInfo.steps = []
+          }
+        } catch {
+          // Invalid JSON, create new structure
+          debugInfo = {
+            steps: [],
+            totalTokens: 0,
+            totalCost: 0,
+            executionTimeMs: 0,
+          }
+        }
+      } else {
+        debugInfo = {
+          steps: [],
+          totalTokens: 0,
+          totalCost: 0,
+          executionTimeMs: 0,
+        }
+      }
+
+      // Append the new step
+      debugInfo.steps.push(step)
+
+      // Update execution time if provided
+      if (step.output?.executionTimeMs) {
+        debugInfo.executionTimeMs += step.output.executionTimeMs
+      }
+
+      // Save updated debugInfo
+      await this.prisma.conversationMessage.update({
+        where: { id: conversationMessageId },
+        data: {
+          debugInfo: JSON.stringify(debugInfo),
+        },
+      })
+
+      logger.debug(`[WhatsAppQueueService] Appended "${step.agent}" step to timeline for message ${conversationMessageId}`)
+    } catch (error) {
+      // Non-critical error - log but don't throw
+      logger.error(`[WhatsAppQueueService] Error appending timeline step:`, error)
     }
   }
 
@@ -247,11 +347,27 @@ export class WhatsAppQueueService {
 
       // 🆕 STEP 1: Run message through Security Agent (Feature 181)
       logger.info("🛡️ Step 1: Running Security Agent before WhatsApp send")
+      const securityStartTime = Date.now()
       const securityResult = await this.securityAgent.process({
         workspaceId: message.workspaceId,
         message: message.messageContent,
         customerId: message.customerId,
         customerName: "", // Not always available from queue record
+      })
+      const securityDuration = Date.now() - securityStartTime
+
+      // 📊 Append Security Check step to timeline
+      await this.appendTimelineStep(message.conversationMessageId, {
+        type: "sub_agent",
+        agent: "Security Check",
+        timestamp: new Date().toISOString(),
+        output: {
+          result: {
+            safe: securityResult.safe,
+            blockedReason: securityResult.blockedReason || null,
+          },
+          executionTimeMs: securityDuration,
+        },
       })
 
       // If Security Agent blocks the message, don't send
@@ -269,12 +385,31 @@ export class WhatsAppQueueService {
 
       logger.info("✅ Message passed Security Agent check")
 
+      // 🆕 STEP 2: Send to WhatsApp (placeholder for now)
+      const whatsappStartTime = Date.now()
+
       // 🚨 PLACEHOLDER: Log instead of actual WhatsApp send (API not yet integrated)
       logger.info("📤 [PLACEHOLDER] WhatsApp message ready for send", {
         phone: message.phoneNumber,
         customerId: message.customerId,
         workspaceId: message.workspaceId,
         messageLength: message.messageContent.length,
+      })
+
+      const whatsappDuration = Date.now() - whatsappStartTime
+
+      // 📊 Append Send to WhatsApp step to timeline
+      await this.appendTimelineStep(message.conversationMessageId, {
+        type: "sub_agent",
+        agent: "Send to WhatsApp",
+        timestamp: new Date().toISOString(),
+        output: {
+          result: {
+            success: true,
+            phone: message.phoneNumber,
+          },
+          executionTimeMs: whatsappDuration,
+        },
       })
 
       // Simulate success
@@ -290,15 +425,36 @@ export class WhatsAppQueueService {
 
   /**
    * Mark message as delivered in conversation history
-   * @param customerId Customer ID
-   * @param messageContent Message content to find
+   * Uses conversationMessageId for direct update (if available),
+   * otherwise falls back to content matching
+   *
+   * @param conversationMessageId - Direct ID of the conversation message (preferred)
+   * @param customerId - Customer ID (fallback if conversationMessageId not available)
+   * @param messageContent - Message content for fallback matching
    */
   private async markDeliveredInHistory(
+    conversationMessageId: string | null,
     customerId: string,
     messageContent: string
   ): Promise<void> {
     try {
-      // Find matching conversation message (most recent)
+      // Prefer direct update via conversationMessageId
+      if (conversationMessageId) {
+        await this.prisma.conversationMessage.update({
+          where: { id: conversationMessageId },
+          data: {
+            deliveredAt: new Date(),
+            deliveryStatus: "sent",
+          },
+        })
+
+        logger.info(
+          `[WhatsAppQueueService] Marked conversation message ${conversationMessageId} as delivered (direct ID)`
+        )
+        return
+      }
+
+      // Fallback: Find matching conversation message by content (legacy behavior)
       const conversationMessage =
         await this.prisma.conversationMessage.findFirst({
           where: {
@@ -314,11 +470,14 @@ export class WhatsAppQueueService {
       if (conversationMessage) {
         await this.prisma.conversationMessage.update({
           where: { id: conversationMessage.id },
-          data: { deliveredAt: new Date() },
+          data: {
+            deliveredAt: new Date(),
+            deliveryStatus: "sent",
+          },
         })
 
         logger.info(
-          `[WhatsAppQueueService] Marked conversation message ${conversationMessage.id} as delivered`
+          `[WhatsAppQueueService] Marked conversation message ${conversationMessage.id} as delivered (content match)`
         )
       } else {
         logger.warn(

@@ -62,6 +62,7 @@ export interface CartLLMResponse {
     result: any
   }>
   systemPrompt?: string // 🆕 Processed system prompt for debugging
+  model?: string // 🆕 Model used for debugging timeline
 }
 
 export class CartManagementAgentLLM {
@@ -338,6 +339,7 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
         executionTimeMs,
         functionCalls,
         systemPrompt, // 🆕 Include processed prompt for debugging
+        model: agentConfig.model, // 🆕 Include model for debugging timeline
       }
     } catch (error) {
       const executionTimeMs = Date.now() - startTime

@@ -51,6 +51,7 @@ import {
   Eye,
   FileText,
   GitBranch,
+  Globe,
   Headphones,
   Loader2,
   LucideIcon,
@@ -91,30 +92,46 @@ const iconMap: Record<string, LucideIcon> = {
   Bot,
   User,
   Bell,
-  FileText, // ✅ Summary Agent icon
+  FileText,
+  Globe, // Translation Agent icon
 }
 
 // Get icon component from database icon name with colorful background
+// 🎨 ALIGNED WITH MessageFlowDialog colors
 const getAgentIcon = (iconName: string | undefined, agentType: string) => {
-  // Fallback to type-based icon if no icon name in database
-  const Icon = iconName && iconMap[iconName] ? iconMap[iconName] : Settings
-
-  // Normalize agent type (handle ROUTER, Router, router, etc.)
+  // Normalize agent type
   const normalizedType = agentType.toLowerCase().replace(/_/g, "_")
 
-  // Color mapping based on agent type - SAME AS MESSAGE FLOW TIMELINE
-  // Solid background with white icon (timeline style)
+  // Icon mapping based on agent type - SAME AS MESSAGE FLOW TIMELINE
+  const iconByType: Record<string, LucideIcon> = {
+    router: GitBranch,
+    product_search: Search,
+    cart_management: ShoppingCart,
+    order_tracking: Package,
+    customer_support: Headphones,
+    summary_agent: FileText,
+    profile_management: User,
+    translation: Globe, // 🌐 Globe for Translation (not Shield)
+    security: Shield,
+    safety_translation: Shield,
+  }
+
+  // Use type-based icon, fallback to database icon, then Settings
+  const Icon = iconByType[normalizedType] || (iconName && iconMap[iconName] ? iconMap[iconName] : Settings)
+
+  // Color mapping based on agent type - EXACT SAME AS MESSAGE FLOW TIMELINE
+  // Using hex colors converted to Tailwind classes
   const colorConfig: Record<string, { bg: string }> = {
-    router: { bg: "bg-purple-600" }, // Purple like timeline
-    product_search: { bg: "bg-blue-600" }, // Blue
-    cart_management: { bg: "bg-green-600" }, // Green
-    order_tracking: { bg: "bg-orange-600" }, // Orange
-    customer_support: { bg: "bg-pink-600" }, // Pink
-    summary_agent: { bg: "bg-pink-400" }, // ✅ Light pink for sub-agent of Customer Support
-    profile_management: { bg: "bg-slate-600" }, // Slate for profile + notifications
-    translation: { bg: "bg-teal-600" }, // Teal for translation
-    security: { bg: "bg-red-600" }, // 🔴 RED for security validation
-    safety_translation: { bg: "bg-red-600" }, // Red like timeline (legacy)
+    router: { bg: "bg-[#9333EA]" }, // Purple #9333EA
+    product_search: { bg: "bg-[#3B82F6]" }, // Blue #3B82F6
+    cart_management: { bg: "bg-[#10B981]" }, // Green #10B981
+    order_tracking: { bg: "bg-[#F97316]" }, // Orange #F97316
+    customer_support: { bg: "bg-[#EC4899]" }, // Pink #EC4899
+    summary_agent: { bg: "bg-[#F472B6]" }, // Light Pink #F472B6
+    profile_management: { bg: "bg-[#64748B]" }, // Slate #64748B
+    translation: { bg: "bg-[#14B8A6]" }, // Teal #14B8A6 (NOT red!)
+    security: { bg: "bg-[#DC2626]" }, // Red #DC2626
+    safety_translation: { bg: "bg-[#DC2626]" }, // Red #DC2626
   }
 
   const colors = colorConfig[normalizedType] || { bg: "bg-gray-600" }

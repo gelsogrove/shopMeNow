@@ -11,6 +11,7 @@ export interface CreateQueueMessageDto {
   messageContent: string
   status?: string
   errorMessage?: string
+  conversationMessageId?: string // FK to ConversationMessage for timeline tracking
 }
 
 export class WhatsAppQueueRepository {
@@ -115,6 +116,7 @@ export class WhatsAppQueueRepository {
           messageContent: data.messageContent,
           status: data.status || "pending",
           errorMessage: data.errorMessage,
+          conversationMessageId: data.conversationMessageId,
         },
       })
 

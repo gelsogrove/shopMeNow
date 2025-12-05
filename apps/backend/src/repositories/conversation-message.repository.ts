@@ -254,6 +254,26 @@ export class ConversationMessageRepository {
   }
 
   /**
+   * Update delivery status for a message
+   * Used when enqueue fails after message was saved
+   */
+  async updateDeliveryStatus(
+    messageId: string,
+    deliveryStatus: "not_queued" | "pending" | "sent" | "error" | "blocked"
+  ): Promise<void> {
+    try {
+      await this.prisma.conversationMessage.update({
+        where: { id: messageId },
+        data: { deliveryStatus },
+      })
+      logger.debug(`Updated delivery status for message ${messageId} to ${deliveryStatus}`)
+    } catch (error) {
+      logger.error("Error updating delivery status:", error)
+      throw error
+    }
+  }
+
+  /**
    * Get customer's recent conversations
    * (for customer support / debugging)
    */

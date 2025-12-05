@@ -124,6 +124,9 @@ export interface DebugStep {
     functionCalled?: string
     parameters?: any
     internalFunctionCalls?: any[]
+    // Translation specific
+    targetLanguage?: string
+    systemPrompt?: string
   }
   output?: {
     decision?: string
@@ -976,15 +979,18 @@ export class LLMRouterService {
       debugInfo.steps.push({
         type: "safety", // Use safety type for translation (post-processing)
         agent: "Translation Agent",
-        model: "openai/gpt-4o-mini",
+        model: translationResult.model || "openai/gpt-4o-mini",
         temperature: 0.1,
         timestamp: translationTimestamp,
+        systemPrompt: translationResult.systemPrompt || "Translate the following message to the target language while preserving: emojis, formatting, links, and technical terms.",
         input: {
-          previousResponse: responseWithLinks,
+          previousResponse: responseWithLinks.substring(0, 200) + (responseWithLinks.length > 200 ? '...' : ''),
+          targetLanguage: params.customerLanguage || "it",
         },
         output: {
           translatedText: translationResult.message,
           decision: "translated",
+          executionTimeMs: translationResult.executionTimeMs,
         },
         tokenUsage: {
           promptTokens: 0,
@@ -1283,12 +1289,14 @@ export class LLMRouterService {
 
       // Call Router LLM with functions
       const routerCallTimestamp = new Date().toISOString()
+      const routerCallStart = Date.now()
       const llmResponse = await this.callRouterLLM({
         model: routerAgent.model,
         messages,
         temperature: routerAgent.temperature,
         maxTokens: routerAgent.maxTokens,
       })
+      const routerCallDuration = Date.now() - routerCallStart
 
       totalTokens += llmResponse.tokensUsed
 
@@ -1326,6 +1334,7 @@ export class LLMRouterService {
           textResponse: !llmResponse.function_call
             ? llmResponse.content
             : undefined,
+          executionTimeMs: routerCallDuration, // 🆕 Duration of Router LLM call
         },
         systemPrompt: routerAgent.systemPrompt, // 🆕 Include processed Router prompt for debugging (variables already replaced)
         functionCallDecision: llmResponse.function_call?.name || "no_function",
@@ -1938,10 +1947,11 @@ export class LLMRouterService {
           // NOTE: searchProducts removed - no more QueryAnalyzer calls
           const queryAnalyzerCalls: any[] = []
 
-          // � MAIN DEBUG STEP: Show what Router delegated and what Sub-Agent returned
+          // 📊 MAIN DEBUG STEP: Show what Router delegated and what Sub-Agent returned
           debugSteps.push({
             type: "sub_agent",
             agent: `${delegationTarget} Agent`,
+            model: subAgentResponse.model, // 🆕 Include model used by sub-agent
             timestamp: new Date().toISOString(),
             input: {
               delegatedFrom: "ROUTER",
