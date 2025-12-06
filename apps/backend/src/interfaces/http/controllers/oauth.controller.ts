@@ -170,6 +170,13 @@ export class OAuthController {
         if (skip2FA) {
           logger.info(`🔧 [OAuth Google] User ${email} SKIPPING 2FA (isPlatformAdmin=${existingUser.isPlatformAdmin}, isDeveloperUser=${existingUser.isDeveloperUser})`)
           
+          // 🕐 Update lastLogin timestamp
+          await prisma.user.update({
+            where: { id: existingUser.id },
+            data: { lastLogin: new Date() },
+          })
+          logger.info(`🕐 [OAuth Google] Updated lastLogin for ${email}`)
+          
           // Create session immediately (no 2FA required)
           const sessionId = await this.adminSessionService.createSession(
             existingUser.id,

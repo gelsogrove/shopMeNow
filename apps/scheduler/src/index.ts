@@ -8,6 +8,7 @@ import {
   monthlyBillingJob,
   messagesArchiveJob,
   whatsappQueueCleanupJob,
+  softDeleteCleanupJob,
 } from './jobs'
 import logger from './utils/logger'
 
@@ -19,7 +20,8 @@ import logger from './utils/logger'
 // 3. Unused Images Cleanup      - daily at 23:05
 // 4. Messages Archive           - daily at 23:10 (archive messages older than 6 months)
 // 5. WhatsApp Queue Cleanup     - daily at 23:15 (delete errors/sent older than 7 days)
-// 6. Monthly Billing            - 1st of month at 23:30
+// 6. Soft Delete Cleanup        - daily at 23:20 (hard-delete records after retention period)
+// 7. Monthly Billing            - 1st of month at 23:30
 //
 // HOW TO ENABLE/DISABLE JOBS:
 // - From Backoffice: /schedulers page → toggle isActive
@@ -73,7 +75,16 @@ async function main() {
   })
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // Job 6: Monthly Billing - 1st of each month at 23:30
+  // Job 6: Soft Delete Cleanup - daily at 23:20
+  // Hard-deletes soft-deleted records after retention period (default 90 days)
+  // Feature 196 - Soft Delete System
+  // ═══════════════════════════════════════════════════════════════════════════
+  cron.schedule('20 23 * * *', async () => {
+    await runJob('soft-delete-cleanup', softDeleteCleanupJob)
+  })
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Job 7: Monthly Billing - 1st of each month at 23:30
   // Generates billing records for the previous month
   // ═══════════════════════════════════════════════════════════════════════════
   cron.schedule('30 23 1 * *', async () => {
@@ -87,7 +98,8 @@ async function main() {
   logger.info('   3. Unused Images Cleanup      - daily at 23:05')
   logger.info('   4. Messages Archive           - daily at 23:10')
   logger.info('   5. WhatsApp Queue Cleanup     - daily at 23:15')
-  logger.info('   6. Monthly Billing            - 1st of month at 23:30')
+  logger.info('   6. Soft Delete Cleanup        - daily at 23:20')
+  logger.info('   7. Monthly Billing            - 1st of month at 23:30')
 
   // Graceful shutdown
   process.on('SIGINT', async () => {

@@ -223,7 +223,7 @@ export async function RepeatOrder(
               data: { quantity: existingCartItem.quantity + totalQty },
             })
             logger.info(
-              `✅ Updated product ${product.code} (${product.name}): ${existingCartItem.quantity} + ${totalQty} = ${existingCartItem.quantity + totalQty}`
+              `✅ Updated product ${product.productCode || product.id} (${product.name}): ${existingCartItem.quantity} + ${totalQty} = ${existingCartItem.quantity + totalQty}`
             )
           } else {
             // Create new cart item

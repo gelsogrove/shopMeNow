@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -19,6 +20,7 @@ model Workspace {
   language                  String            @default("ENG")
   createdAt                 DateTime          @default(now())
   updatedAt                 DateTime          @updatedAt
+  deletedAt                 DateTime?
   isDelete                  Boolean           @default(false)
   currency                  String            @default("EUR")
   channelStatus             Boolean           @default(false) // true = channel active (queue enabled), false = channel disabled
@@ -78,9 +80,11 @@ model Workspace {
   transportTypes            TransportType[]
   whatsappQueue             WhatsAppQueue[]
   billingTransactions       BillingTransaction[]
+  softDeleteAuditLogs       SoftDeleteAuditLog[]
 
   @@index([ownerId])
   @@index([planType])
+  @@index([deletedAt])
 }
 
 model Categories {
@@ -293,6 +297,7 @@ model Customers {
   isBlacklisted                 Boolean            @default(false)
   createdAt                     DateTime           @default(now())
   updatedAt                     DateTime           @updatedAt
+  deletedAt                     DateTime?
   isActive                      Boolean            @default(true)
   workspaceId                   String
   last_privacy_version_accepted String?
@@ -317,6 +322,8 @@ model Customers {
   whatsappQueue                 WhatsAppQueue[]
 
   @@index([phone])
+  @@index([deletedAt])
+  @@index([workspaceId, deletedAt])
   @@map("customers")
 }
 
@@ -358,6 +365,7 @@ model Orders {
   discountAmount  Float?          @default(0)
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
+  deletedAt       DateTime?
   billedAt        DateTime?       // 🔴 BILLING: Timestamp when NEW_ORDER billing (€1.00) was applied - prevents double-billing
   customerId      String
   workspaceId     String
@@ -369,6 +377,8 @@ model Orders {
   paymentDetails  PaymentDetails?
 
   @@index([customerId])
+  @@index([deletedAt])
+  @@index([workspaceId, deletedAt])
   @@map("orders")
 }
 
@@ -396,6 +406,7 @@ model OrderItems {
   productVariant Json?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
   orderId        String
   productId      String?
   serviceId      String?
@@ -403,6 +414,7 @@ model OrderItems {
   product        Products? @relation(fields: [productId], references: [id])
   service        Services? @relation(fields: [serviceId], references: [id])
 
+  @@index([deletedAt])
   @@map("order_items")
 }
 
@@ -446,6 +458,7 @@ model User {
   lastLogin          DateTime?
   createdAt          DateTime                 @default(now())
   updatedAt          DateTime                 @updatedAt
+  deletedAt          DateTime?
   role               UserRole                 @default(MEMBER)
   isPlatformAdmin    Boolean                  @default(false) // Platform-level admin (can access backoffice)
   isDeveloperUser    Boolean                  @default(false) // Developer user (skip 2FA requirement)
@@ -475,6 +488,7 @@ model User {
   twoFactorResets    TwoFactorResetToken[]   // 2FA reset tokens (admin-initiated)
   adminInitiatedResets TwoFactorResetToken[] @relation("AdminInitiatedResets") // Resets initiated by this admin
 
+  @@index([deletedAt])
   @@map("users")
 }
 
@@ -578,6 +592,7 @@ model ChatSession {
   endedAt     DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
   workspaceId String
   customerId  String
   customer    Customers @relation(fields: [customerId], references: [id])
@@ -592,6 +607,8 @@ model ChatSession {
   @@index([workspaceId, customerId], name: "idx_workspace_customer") // Common lookup
   @@index([createdAt], name: "idx_chat_session_created") // For time-based queries
   @@index([workspaceId, createdAt], name: "idx_workspace_created") // Dashboard stats
+  @@index([deletedAt])
+  @@index([workspaceId, deletedAt])
   @@map("chat_sessions")
 }
 
@@ -606,6 +623,7 @@ model Message {
   read               Boolean          @default(false)
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
+  deletedAt          DateTime?
   chatSessionId      String
   functionCallsDebug String?
   processingSource   String?
@@ -630,6 +648,7 @@ model Message {
   @@index([direction, createdAt], name: "idx_direction_created") // Rate limiting by direction
   @@index([chatSessionId, createdAt], name: "idx_msg_session_created") // Chat history pagination
   @@index([chatSessionId, direction], name: "idx_session_direction") // Filter by direction
+  @@index([deletedAt])
   @@map("messages")
 }
 
@@ -1384,4 +1403,23 @@ model SchedulerJobStatus {
   updatedAt     DateTime  @updatedAt
 
   @@map("scheduler_job_status")
+}
+
+// ============================================================================
+// 🗑️ SOFT DELETE AUDIT LOG - Tracks all hard-deletes for compliance
+// ============================================================================
+model SoftDeleteAuditLog {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  entityType      String    // "USER", "WORKSPACE", "CUSTOMER", "ORDER", "MESSAGE", etc.
+  deletedIds      String[]  // Array of IDs that were hard-deleted
+  deletedIdCount  Int       // Number of records deleted
+  reason          String?   // Admin reason or "SCHEDULED_CLEANUP"
+  deletedByUserId String?   // Admin who initiated delete (null for scheduler)
+  deletedAt       DateTime  @default(now())
+
+  @@index([workspaceId, deletedAt])
+  @@index([deletedAt])
+  @@map("soft_delete_audit_logs")
 }

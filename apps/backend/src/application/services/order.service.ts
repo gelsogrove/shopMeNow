@@ -1,4 +1,4 @@
-import { OrderStatus, PrismaClient } from "@echatbot/database"
+import { prisma, OrderStatus, PrismaClient } from "@echatbot/database"
 import { Order } from "../../domain/entities/order.entity"
 import {
   IOrderRepository,
@@ -9,8 +9,6 @@ import logger from "../../utils/logger"
 import { BillingService } from "./billing.service"
 import { CustomerService } from "./customer.service"
 import { StockService } from "./stock.service"
-
-// prisma imported
 
 export class OrderService {
   private orderRepository: IOrderRepository

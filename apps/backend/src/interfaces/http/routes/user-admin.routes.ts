@@ -10,7 +10,7 @@
  */
 
 import { Router, Request, Response } from "express"
-import { PrismaClient, UserStatus } from "@echatbot/database"
+import { prisma, UserStatus } from "@echatbot/database"
 import jwt, { SignOptions } from "jsonwebtoken"
 import { authMiddleware } from "../middlewares/auth.middleware"
 import { platformAdminMiddleware } from "../middlewares/platform-admin.middleware"

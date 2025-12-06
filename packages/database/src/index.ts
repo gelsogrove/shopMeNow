@@ -1,4 +1,4 @@
-import { PrismaClient } from './generated/prisma/client'
+import { PrismaClient, Prisma } from './generated/prisma'
 import { PrismaPg } from '@prisma/adapter-pg'
 
 // Initialize the PostgreSQL adapter
@@ -24,11 +24,36 @@ if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma
 }
 
-// Re-export Prisma types and enums
-export { PrismaClient, Prisma } from './generated/prisma/client'
+// Re-export Prisma types and client
+export { PrismaClient, Prisma } from './generated/prisma'
 
-// Re-export enums
-export * from './generated/prisma/enums'
+// Re-export all enums and types from generated client
+export {
+  // Enums
+  UserStatus,
+  WorkspaceStatus,
+  ProductStatus,
+  DocumentStatus,
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+  MessageDirection,
+  MessageType,
+  ChannelType,
+  UserRole,
+  InvitationStatus,
+  BusinessType,
+  ItemType,
+  PlanType,
+  TransactionType,
+  BillingType,
+  CampaignFrequency,
+  CampaignTargetType,
+  ConfigType,
+  PricingType,
+  AgentType,
+  SearchConversationState,
+} from './generated/prisma'
 
 // Export common types
 export type {
@@ -62,8 +87,28 @@ export type {
   PaymentDetails,
   PasswordReset,
   Campaign,
-  CampaignSent
-} from './generated/prisma/client'
+  CampaignSent,
+  SoftDeleteAuditLog,
+  // Additional types needed by backend
+  AgentConfig,
+  AgentConversationLog,
+  FAQ,
+  Services,
+  Offers,
+  Documents,
+  GdprContent,
+  Usage,
+  RegistrationAttempts,
+  WorkspaceInvitation,
+  ShortUrls,
+  Billing,
+  ConversationMessage,
+  BillingTransaction,
+  PlanConfiguration,
+  RegistrationToken,
+  SecureToken,
+  ProductSearch,
+} from './generated/prisma'
 
 // Export prisma as default
 export default prisma

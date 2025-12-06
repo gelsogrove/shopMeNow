@@ -9,9 +9,8 @@ export async function runJob(jobName: string, fn: () => Promise<void>): Promise<
     select: { isActive: true }
   })
 
-  // If job exists and is disabled, skip execution
+  // If job exists and is disabled, skip execution (silent - no log spam)
   if (jobStatus && !jobStatus.isActive) {
-    logger.info(`⏭️ Job SKIPPED (disabled): ${jobName}`)
     await prisma.schedulerJobStatus.update({
       where: { jobName },
       data: { 
@@ -42,7 +41,7 @@ export async function runJob(jobName: string, fn: () => Promise<void>): Promise<
   })
 
   try {
-    logger.info(`⏰ Starting job: ${jobName}`)
+    // Silent execution - no log spam for routine jobs
     await fn()
 
     // Mark as SUCCESS
@@ -55,7 +54,6 @@ export async function runJob(jobName: string, fn: () => Promise<void>): Promise<
         lastError: null,
       },
     })
-    logger.info(`✅ Job completed: ${jobName} (${duration}ms)`)
 
   } catch (error) {
     const errorMsg = (error as Error).message

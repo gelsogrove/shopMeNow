@@ -1,4 +1,4 @@
-import { prisma } from "@echatbot/database"
+import { prisma, PrismaClient } from "@echatbot/database"
 import crypto from "crypto"
 import logger from "../../utils/logger"
 

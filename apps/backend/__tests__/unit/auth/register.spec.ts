@@ -99,6 +99,7 @@ describe('User Registration', () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'existing-user-id',
         email: 'existing@test.com',
+        deletedAt: null, // Active user, not soft-deleted
       })
 
       await expect(

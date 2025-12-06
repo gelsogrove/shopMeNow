@@ -52,7 +52,19 @@ class BackofficeApi {
       })
 
       const data = await response.json()
-      return data
+      
+      // If response already has success property, return as-is
+      // Otherwise wrap it in { success: true, data: ... }
+      if ('success' in data) {
+        return data
+      }
+      
+      // Check if it's an error response
+      if (!response.ok || data.error) {
+        return { success: false, error: data.error || data.message || 'Request failed' }
+      }
+      
+      return { success: true, data }
     } catch (error) {
       console.error('❌ [API] Error:', error)
       return { success: false, error: 'Network error' }
@@ -358,6 +370,98 @@ class BackofficeApi {
         method: 'PATCH',
         body: JSON.stringify(data),
       })
+    }
+  }
+
+  // Trash Management - Admin endpoints for soft-deleted items (Feature 196)
+  trash = {
+    /**
+     * Get soft-deleted users (platform users/admins)
+     */
+    getUsers: async (page: number = 1, limit: number = 50): Promise<ApiResponse<{
+      items: Array<{
+        id: string
+        email: string
+        firstName: string
+        lastName: string
+        name: string
+        role: string
+        deletedAt: string
+        daysUntilPermanentDelete: number
+        workspaces: Array<{ id: string; name: string; role: string }>
+      }>
+      pagination: { page: number; limit: number; total: number; pages: number }
+    }>> => {
+      return this.fetch(`/admin/trash/users?page=${page}&limit=${limit}`)
+    },
+
+    /**
+     * Get soft-deleted workspaces
+     */
+    getWorkspaces: async (page: number = 1, limit: number = 50): Promise<ApiResponse<{
+      items: Array<{
+        id: string
+        name: string
+        ownerEmail: string
+        deletedAt: string
+        daysUntilPermanentDelete: number
+        customerCount: number
+      }>
+      pagination: { page: number; limit: number; total: number }
+    }>> => {
+      return this.fetch(`/admin/trash/workspaces?page=${page}&limit=${limit}`)
+    },
+
+    /**
+     * Restore a soft-deleted item
+     */
+    restore: async (id: string, type: string): Promise<ApiResponse<{
+      success: boolean
+      message: string
+      restoredAt: string
+    }>> => {
+      return this.fetch(`/admin/trash/${id}/restore`, {
+        method: 'POST',
+        body: JSON.stringify({ entityType: type.toUpperCase() }),
+      })
+    },
+
+    /**
+     * Permanently delete an item (requires confirmation text)
+     */
+    permanentlyDelete: async (
+      id: string, 
+      type: string, 
+      confirmationText: string
+    ): Promise<ApiResponse<{
+      success: boolean
+      message: string
+      deletedRecordCount: number
+    }>> => {
+      return this.fetch(`/admin/trash/${id}/permanently-delete`, {
+        method: 'POST',
+        body: JSON.stringify({ 
+          entityType: type.toUpperCase(),
+          confirmationText 
+        }),
+      })
+    },
+
+    /**
+     * Get audit log of permanent deletions
+     */
+    getAuditLog: async (days: number = 30): Promise<ApiResponse<{
+      logs: Array<{
+        id: string
+        entityType: string
+        deletedIds: string[]
+        recordCount: number
+        reason: string
+        deletedByUser: string
+        deletedAt: string
+      }>
+    }>> => {
+      return this.fetch(`/admin/trash/audit-log?days=${days}`)
     }
   }
 

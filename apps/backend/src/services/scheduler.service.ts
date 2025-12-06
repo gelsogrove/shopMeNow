@@ -1,4 +1,4 @@
-import { BillingType, PrismaClient } from "@echatbot/database"
+import { prisma, BillingType, PrismaClient } from "@echatbot/database"
 import { BillingService } from "../application/services/billing.service"
 import logger from "../utils/logger"
 
@@ -87,10 +87,11 @@ export class SchedulerService {
    */
   private async trackMonthlyChannelCost(): Promise<void> {
     try {
-      // Ottiene tutti i workspace attivi
+      // Ottiene tutti i workspace attivi (esclude soft-deleted)
       const workspaces = await this.prisma.workspace.findMany({
         where: {
           isActive: true,
+          deletedAt: null, // Exclude soft-deleted workspaces from billing
         },
       })
 

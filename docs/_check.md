@@ -129,3 +129,44 @@ registrare?
 - i prompt hanno esempi generici? funzionerebbero con altri prodotti ?
 
 - fammi una tabella per vedere il risultato ma solo quelle cose che non vanno le cose che vanno non fammele vedere
+
+---
+
+## 🗑️ FEATURE 196 - SOFT DELETE SYSTEM CHECK
+
+### Domande Critiche Soft-Delete:
+
+- Se un utente si disiscrive ed è OWNER si disabilitano anche i suoi workspace? **SÌ ✅** (cascade completo)
+
+- Se un utente si disiscrive ed è AGENTE si disabilitano i workspace? **NO ✅** (isolato)
+
+- Se un utente si disiscrive ed è OPERATORE si disabilitano i workspace? **NO ✅** (isolato)
+
+- Tutto quello che si può cancellare si può ripristinare? **SÌ ✅** (entro 90 giorni)
+
+- Quando un utente si disiscrive blocchiamo il billing? **SÌ ✅** (deletedAt: null filter)
+
+- Usiamo transazioni per cancellare? **SÌ ✅** ($transaction in tutti i metodi)
+
+- Ordine FK rispettato? **SÌ ✅** (leaf → parent: Messages → Sessions → OrderItems → Orders → Customers → Workspaces → Users)
+
+- Audit log salvato? **SÌ ✅** (SoftDeleteAuditLog per ogni operazione)
+
+- Email notifica su disiscrizione? **SÌ ✅** (utente + CC admin)
+
+- Scheduler hard-delete funziona? **SÌ ✅** (90 giorni retention, 23:20 daily)
+
+### File Principali Feature 196:
+- `apps/backend/src/services/user-unsubscribe.service.ts`
+- `apps/backend/src/services/trash-restore.service.ts`
+- `apps/scheduler/src/jobs/soft-delete-cleanup.job.ts`
+- `apps/backend/src/interfaces/http/routes/trash.routes.ts`
+- `apps/backoffice/src/pages/TrashPage.tsx`
+
+### Sicurezza Implementata:
+- ✅ Workspace isolation (workspaceId check su ogni query)
+- ✅ 3-layer middleware (auth → loginBlocking → requirePlatformAdmin)
+- ✅ Retention window 90 giorni
+- ✅ Popup conferma "DELETE" / "PERMANENTLY DELETE"
+- ✅ Full logout dopo delete account/workspace
+- ✅ Billing stops per workspace soft-deleted

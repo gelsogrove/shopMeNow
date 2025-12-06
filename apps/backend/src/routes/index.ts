@@ -26,6 +26,7 @@ import logger from "../utils/logger"
 // ============================================================================
 import { authMiddleware } from "../interfaces/http/middlewares/auth.middleware"
 import { workspaceValidationMiddleware } from "../interfaces/http/middlewares/workspace-validation.middleware"
+import { loginBlockingMiddleware } from "../interfaces/http/middlewares/soft-delete.middleware"
 
 // ============================================================================
 // 3. SERVICE IMPORTS
@@ -130,6 +131,7 @@ import whatsappRoutes from "../interfaces/http/routes/whatsapp.routes"
 import { createTokenRouter } from "./token"
 import userAdminRoutes from "../interfaces/http/routes/user-admin.routes"
 import twoFactorResetRoutes from "../interfaces/http/routes/two-factor-reset.routes"
+import { createTrashRoutes } from "../interfaces/http/routes/trash.routes"
 
 // ============================================================================
 // 7. TYPE IMPORTS
@@ -590,6 +592,12 @@ logger.info("✅ Registered platform config routes (/api/platform-config)")
 // ========================================
 router.use("/users", userAdminRoutes)
 logger.info("✅ Registered user admin routes (/api/users/admin/*)")
+
+// ========================================
+// 🗑️ TRASH MANAGEMENT ROUTES (Platform Admin only)
+// ========================================
+router.use("/admin/trash", createTrashRoutes(prisma as any))
+logger.info("✅ Registered trash management routes (/api/admin/trash/*)")
 
 // ========================================
 // 🕐 SCHEDULER ROUTES (Platform Admin only)

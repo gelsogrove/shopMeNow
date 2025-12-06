@@ -7,6 +7,7 @@ import { PlatformsPage } from '@/pages/PlatformsPage'
 import { PricingPage } from '@/pages/PricingPage'
 import { ClientsPage } from '@/pages/ClientsPage'
 import { SchedulersPage } from '@/pages/SchedulersPage'
+import { TrashPage } from '@/pages/TrashPage'
 import { ComingSoonPage } from '@/pages/ComingSoonPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -60,6 +61,10 @@ function AppRoutes() {
         <Route 
           path="schedulers" 
           element={<SchedulersPage />} 
+        />
+        <Route 
+          path="trash" 
+          element={<TrashPage />} 
         />
       </Route>
       {/* Catch all - redirect to access denied if not authenticated */}

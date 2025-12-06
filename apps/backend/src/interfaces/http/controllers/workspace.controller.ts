@@ -63,6 +63,8 @@ export class WorkspaceController {
         debugMode: workspace.debugMode,
         createdAt: workspace.createdAt,
         updatedAt: workspace.updatedAt,
+        planType: workspace.planType,
+        trialEndsAt: workspace.trialEndsAt,
       }))
 
       return res.json(serializedWorkspaces)

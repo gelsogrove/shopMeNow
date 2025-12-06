@@ -1894,6 +1894,11 @@ async function main() {
       lastStatus: "NEVER_RUN",
     },
     {
+      jobName: "soft-delete-cleanup",
+      isActive: true,
+      lastStatus: "NEVER_RUN",
+    },
+    {
       jobName: "monthly-billing",
       isActive: true,
       lastStatus: "NEVER_RUN",

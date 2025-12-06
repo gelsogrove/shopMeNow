@@ -1,10 +1,10 @@
-import { prisma } from "@echatbot/database"
+import { prisma, PrismaClient } from "@echatbot/database"
 // import { getAllProducts } from "../../chatbot/calling-functions/getAllProducts" // REMOVED - file no longer exists
 import { MessageRepository } from "../../repositories/message.repository"
 import logger from "../../utils/logger"
 import { linkGeneratorService } from "./link-generator.service"
 import { PriceCalculationService } from "./price-calculation.service"
-import { TokenService } from "./token.service"
+import { SecureTokenService } from "./secure-token.service"
 
 interface FunctionCallResult {
   data: any
@@ -183,7 +183,7 @@ export class FunctionHandlerService {
     }
   }
   private messageRepository: MessageRepository
-  private tokenService: TokenService
+  private secureTokenService: SecureTokenService
   private priceCalculationService: PriceCalculationService
 
   // 🆕 DISAMBIGUATION SESSION MANAGEMENT
@@ -193,7 +193,7 @@ export class FunctionHandlerService {
   constructor() {
     this.prisma = prisma
     this.messageRepository = new MessageRepository()
-    this.tokenService = new TokenService()
+    this.secureTokenService = new SecureTokenService()
     this.priceCalculationService = new PriceCalculationService(this.prisma)
     this.callingFunctionsService =
       require("../../services/calling-functions.service").default
@@ -615,8 +615,9 @@ export class FunctionHandlerService {
       // 🔗 Generate secure link to order detail page
       let orderDetailLink = ""
       try {
-        const tokenService = new TokenService()
-        const orderToken = await tokenService.generateSecureToken(
+        const secureTokenService = new SecureTokenService()
+        const orderToken = await secureTokenService.createToken(
+          "orders",
           workspaceId,
           { customerId: customer.id, workspaceId, orderCode: order.orderCode },
           "1h", // Valid for 1 hour

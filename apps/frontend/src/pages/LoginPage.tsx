@@ -92,6 +92,7 @@ export function LoginPage() {
   const actionParam = searchParams.get('action') // 🆕 For auto-opening register modal
   const modeParam = searchParams.get('mode') // 🆕 For invite flow: 'register' opens register tab
   const inviteParam = searchParams.get('invite') // 🆕 For invite flow: pre-fill email from invite
+  const logoutParam = searchParams.get('logout') // 🆕 For forcing logout from backoffice
   
   // Parse invite data if present
   const inviteData = inviteParam ? (() => {
@@ -136,12 +137,25 @@ export function LoginPage() {
   // 🔥 CRITICAL FIX: Clear storage ONLY if user intentionally navigates to login
   // Don't clear if there's already a valid token (user might be redirected here by mistake)
   useEffect(() => {
+    // 🆕 If logout=true param, force logout regardless of existing token
+    if (logoutParam === 'true') {
+      logger.info('🚪 [LOGOUT] Force logout requested from backoffice - clearing all storage')
+      localStorage.clear()
+      sessionStorage.clear()
+      // Remove the logout param from URL to prevent re-logout on refresh
+      const newUrl = new URL(window.location.href)
+      newUrl.searchParams.delete('logout')
+      window.history.replaceState({}, '', newUrl.toString())
+      setIsValidatingSession(false)
+      return
+    }
+    
     const existingToken = localStorage.getItem('token')
     
     // If user already has a token, they shouldn't be on login page - redirect them
     if (existingToken) {
-      logger.info('🔄 [LOGIN PAGE] Token already exists - redirecting to dashboard')
-      window.location.href = '/dashboard'
+      logger.info('🔄 [LOGIN PAGE] Token already exists - redirecting to workspace selection')
+      navigate('/workspace-selection', { replace: true })
       return
     }
     
@@ -151,7 +165,7 @@ export function LoginPage() {
     localStorage.removeItem('user')
     sessionStorage.clear()
     logger.info('✅ [LOGIN PAGE LOAD] Storage cleared - ready for fresh login')
-  }, []) // Run only once on mount
+  }, [navigate, logoutParam]) // Run only once on mount, or when logout param changes
 
   // 🆕 AUTO-OPEN REGISTER MODAL if ?action=register or ?mode=register parameter is present
   useEffect(() => {

@@ -76,6 +76,7 @@ describe('User Login', () => {
         role: 'MEMBER',
         status: 'ACTIVE',
         twoFactorEnabled: false,
+        deletedAt: null,
       }
 
       mockPrisma.user.findUnique.mockResolvedValue(mockUser)
@@ -98,6 +99,7 @@ describe('User Login', () => {
         email: 'user@test.com',
         passwordHash: 'hashed_password',
         status: 'ACTIVE',
+        deletedAt: null,
       }
 
       mockPrisma.user.findUnique.mockResolvedValue(mockUser)
@@ -124,6 +126,7 @@ describe('User Login', () => {
         status: 'ACTIVE',
         twoFactorEnabled: true,
         twoFactorSecret: 'secret123',
+        deletedAt: null,
       }
 
       mockPrisma.user.findUnique.mockResolvedValue(mockUser)
@@ -145,6 +148,7 @@ describe('User Login', () => {
         email: 'user@test.com',
         passwordHash: 'hashed_password',
         status: 'SUSPENDED',
+        deletedAt: null,
       }
 
       mockPrisma.user.findUnique.mockResolvedValue(mockUser)
@@ -164,6 +168,7 @@ describe('User Login', () => {
         role: 'ADMIN',
         status: 'ACTIVE',
         twoFactorEnabled: false,
+        deletedAt: null,
       }
 
       mockPrisma.user.findUnique.mockResolvedValue(mockUser)

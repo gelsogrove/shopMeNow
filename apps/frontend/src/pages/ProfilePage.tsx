@@ -12,14 +12,17 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useCurrentUser } from "@/hooks/useCurrentUser"
 import { logger } from "@/lib/logger"
+import { api } from "@/services/api"
 import {
   UserProfile,
   changePassword,
   updateUserProfile,
   setPassword,
+  deleteMyAccount,
 } from "@/services/userApi"
-import { Building2, Key, Loader2, User, Phone } from "lucide-react"
+import { Building2, Key, Loader2, User, Phone, Trash2, AlertTriangle } from "lucide-react"
 import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { toast } from "../lib/toast"
 
 export default function ProfilePage() {
@@ -31,6 +34,10 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(false)
   const [showPasswordDialog, setShowPasswordDialog] = useState(false)
   const [showSetPasswordDialog, setShowSetPasswordDialog] = useState(false)
+  const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false)
+  const [deleteConfirmation, setDeleteConfirmation] = useState("")
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
+  const navigate = useNavigate()
   const [user, setUser] = useState<UserProfile & {
     phoneNumber?: string
     companyName?: string
@@ -202,6 +209,44 @@ export default function ProfilePage() {
       toast.error(errorMessage)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmation !== "DELETE") {
+      toast.error("Please type DELETE to confirm")
+      return
+    }
+
+    setIsDeletingAccount(true)
+    try {
+      const result = await deleteMyAccount("User requested account deletion")
+      logger.info("Account deletion initiated:", result)
+      toast.success("Your account has been deleted. You will be logged out.")
+      
+      // 🛡️ CRITICAL: Full logout after account delete (Andrea's request)
+      try {
+        await api.post("/auth/logout")
+      } catch (logoutError) {
+        logger.error("Error calling logout API:", logoutError)
+      }
+      
+      // Clear ALL storage (security)
+      logger.info("🧹 [DELETE ACCOUNT] Clearing ALL storage")
+      localStorage.clear()
+      sessionStorage.clear()
+      
+      setTimeout(() => {
+        navigate("/login")
+      }, 1500)
+    } catch (error: any) {
+      logger.error("Error deleting account:", error)
+      const errorMessage = error?.response?.data?.message || "Failed to delete account"
+      toast.error(errorMessage)
+    } finally {
+      setIsDeletingAccount(false)
+      setShowDeleteAccountDialog(false)
+      setDeleteConfirmation("")
     }
   }
 
@@ -378,7 +423,17 @@ export default function ProfilePage() {
           </Card>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-between">
+        {/* Delete Account Button */}
+        <Button
+          variant="destructive"
+          onClick={() => setShowDeleteAccountDialog(true)}
+          className="gap-2"
+        >
+          <Trash2 className="h-4 w-4" />
+          Delete My Account
+        </Button>
+
         <Button
           onClick={handleSave}
           disabled={isLoading}
@@ -395,6 +450,66 @@ export default function ProfilePage() {
           )}
         </Button>
       </div>
+
+      {/* Delete Account Dialog */}
+      <Dialog open={showDeleteAccountDialog} onOpenChange={(open) => {
+        setShowDeleteAccountDialog(open)
+        if (!open) setDeleteConfirmation("")
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Your Account
+            </DialogTitle>
+            <DialogDescription className="space-y-3">
+              <p>
+                This action will soft-delete your account. Your data will be retained for <strong>90 days</strong> and can be recovered by contacting support.
+              </p>
+              <p className="font-medium text-destructive">
+                After 90 days, all your data will be permanently deleted including:
+                your profile, workspaces, customers, orders, and chat history.
+              </p>
+              <p className="mt-4">
+                To confirm, type <span className="font-mono font-bold">DELETE</span> below:
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            value={deleteConfirmation}
+            onChange={(e) => setDeleteConfirmation(e.target.value)}
+            placeholder="Type DELETE to confirm"
+            className="font-mono"
+            autoComplete="off"
+          />
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeleteAccountDialog(false)
+                setDeleteConfirmation("")
+              }}
+              disabled={isDeletingAccount}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteAccount}
+              disabled={isDeletingAccount || deleteConfirmation !== "DELETE"}
+            >
+              {isDeletingAccount ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete My Account"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Change Password Dialog */}
       <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>

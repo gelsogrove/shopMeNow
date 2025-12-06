@@ -1,4 +1,5 @@
 import {
+  prisma,
   MessageDirection,
   MessageType,
   OrderStatus,

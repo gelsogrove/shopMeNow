@@ -269,9 +269,14 @@ export const workspaceService = {
   },
 
   async delete(id: string) {
+    // Soft-delete: set deletedAt instead of isDelete
+    // Record will be hard-deleted after 90 days by scheduler
     return prisma.workspace.update({
       where: { id },
-      data: { isDelete: true },
+      data: { 
+        isDelete: true,  // Legacy flag (keep for backward compatibility)
+        deletedAt: new Date(),  // New soft-delete timestamp
+      },
     })
   },
 

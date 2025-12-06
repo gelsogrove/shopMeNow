@@ -16,7 +16,7 @@
  * All logging handled automatically by service layer
  */
 
-import { prisma } from "@echatbot/database"
+import { prisma, PrismaClient } from "@echatbot/database"
 import { Request, Response } from "express"
 import { v4 as uuidv4 } from "uuid"
 import { AgentLoggerService } from "../services/agent-logger.service"

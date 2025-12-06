@@ -30,7 +30,7 @@ export class BillingService {
     try {
       // Get plan configuration for message cost
       const workspace = await prisma.workspace.findUnique({
-        where: { id: workspaceId },
+        where: { id: workspaceId, deletedAt: null }, // CRITICAL: Exclude soft-deleted workspaces
         select: { 
           creditBalance: true, 
           planType: true,
@@ -39,7 +39,7 @@ export class BillingService {
       })
 
       if (!workspace) {
-        return { success: false, error: 'Workspace not found' }
+        return { success: false, error: 'Workspace not found or deleted' }
       }
 
       // Get message cost from plan configuration

@@ -23,6 +23,8 @@ export interface Workspace {
   wipMessage?: string
   createdAt: string
   updatedAt: string
+  planType?: string | null
+  trialEndsAt?: string | null
 }
 
 export interface CreateWorkspaceData {

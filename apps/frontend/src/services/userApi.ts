@@ -74,4 +74,30 @@ export const setPassword = async (password: string): Promise<void> => {
     logger.error("Error setting password:", error)
     throw error
   }
+}
+
+// Delete user account (soft-delete with 90-day retention)
+// Feature 196 - Soft Delete System
+export interface DeleteAccountResult {
+  success: boolean
+  message: string
+  cascadeType: "OWNER_CASCADE" | "AGENT_ISOLATED"
+  affectedRecords: {
+    workspaces?: number
+    customers?: number
+    orders?: number
+    messages?: number
+  }
+  deletionDate: string
+  permanentDeleteDate: string
+}
+
+export const deleteMyAccount = async (reason: string = "User requested deletion"): Promise<DeleteAccountResult> => {
+  try {
+    const response = await api.post("/users/me/delete", { reason })
+    return response.data
+  } catch (error) {
+    logger.error("Error deleting account:", error)
+    throw error
+  }
 } 

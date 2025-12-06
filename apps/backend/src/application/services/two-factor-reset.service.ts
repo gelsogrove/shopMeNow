@@ -475,7 +475,7 @@ export class TwoFactorResetService {
   
   <p>Hello${firstName ? ` ${firstName}` : ''},</p>
   
-  <p>An administrator (<strong>${adminEmail}</strong>) has initiated a 2FA reset for your account.</p>
+  <p>A 2FA reset has been initiated for your account.</p>
   
   <p>If you requested this reset because you lost access to your authenticator app, click the button below to set up 2FA again:</p>
   
@@ -510,7 +510,7 @@ Two-Factor Authentication Reset
 
 Hello${firstName ? ` ${firstName}` : ''},
 
-An administrator (${adminEmail}) has initiated a 2FA reset for your account.
+A 2FA reset has been initiated for your account.
 
 If you requested this reset, click the link below to set up 2FA again:
 ${resetLink}

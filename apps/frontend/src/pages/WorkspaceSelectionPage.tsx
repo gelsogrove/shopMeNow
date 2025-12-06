@@ -356,48 +356,62 @@ export function WorkspaceSelectionPage() {
       <div className="max-w-5xl mx-auto">
         {/* Header with Plan Badge and Profile Menu */}
         <div className="flex justify-end items-center gap-3 mb-4">
-          {/* Plan Badge - clickable to open Change Plan */}
-          {sharedBillingOverview && isSuperAdmin && (
-            <TooltipProvider delayDuration={100}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => setOpenChangePlanDialog(true)}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all hover:scale-105 cursor-pointer ${
-                      sharedBillingOverview.billing.planType === 'FREE_TRIAL'
-                        ? 'bg-amber-100 text-amber-700 border border-amber-300'
-                        : sharedBillingOverview.billing.planType === 'BASIC'
-                        ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                        : sharedBillingOverview.billing.planType === 'PREMIUM'
-                        ? 'bg-purple-100 text-purple-700 border border-purple-300'
-                        : 'bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 border border-amber-300'
-                    }`}
-                  >
-                    <Crown className="h-4 w-4" />
-                    <span>
-                      {sharedBillingOverview.billing.planType === 'FREE_TRIAL' 
-                        ? 'Free Trial' 
-                        : sharedBillingOverview.billing.planType === 'BASIC'
-                        ? 'Starter'
-                        : sharedBillingOverview.billing.planType === 'PREMIUM'
-                        ? 'Pro'
-                        : 'Enterprise'}
-                    </span>
-                    {/* Show days remaining for trial */}
-                    {sharedBillingOverview.billing.planType === 'FREE_TRIAL' && sharedBillingOverview.billing.trialEndsAt && (
-                      <span className="flex items-center gap-1 text-xs bg-amber-200 px-1.5 py-0.5 rounded-full">
-                        <Clock className="h-3 w-3" />
-                        {Math.max(0, Math.ceil((new Date(sharedBillingOverview.billing.trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))}d
-                      </span>
-                    )}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Click to change your plan</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
+          {/* Plan Badge - uses first workspace data or sharedBillingOverview */}
+          {(() => {
+            // Get plan info from first workspace or from billing overview
+            const firstWorkspace = workspaces[0]
+            const planType = sharedBillingOverview?.billing?.planType || firstWorkspace?.planType || 'FREE_TRIAL'
+            const trialEndsAt = sharedBillingOverview?.billing?.trialEndsAt || firstWorkspace?.trialEndsAt
+            const daysRemaining = trialEndsAt 
+              ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+              : null
+            
+            // Show badge if we have workspaces
+            if (workspaces.length > 0 && isSuperAdmin) {
+              return (
+                <TooltipProvider delayDuration={100}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => setOpenChangePlanDialog(true)}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all hover:scale-105 cursor-pointer ${
+                          planType === 'FREE_TRIAL'
+                            ? 'bg-amber-100 text-amber-700 border border-amber-300'
+                            : planType === 'BASIC'
+                            ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                            : planType === 'PREMIUM'
+                            ? 'bg-purple-100 text-purple-700 border border-purple-300'
+                            : 'bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 border border-amber-300'
+                        }`}
+                      >
+                        <Crown className="h-4 w-4" />
+                        <span>
+                          {planType === 'FREE_TRIAL' 
+                            ? 'Free Trial' 
+                            : planType === 'BASIC'
+                            ? 'Starter'
+                            : planType === 'PREMIUM'
+                            ? 'Pro'
+                            : 'Enterprise'}
+                        </span>
+                        {/* Show days remaining for trial */}
+                        {planType === 'FREE_TRIAL' && daysRemaining !== null && (
+                          <span className="flex items-center gap-1 text-xs bg-amber-200 px-1.5 py-0.5 rounded-full">
+                            <Clock className="h-3 w-3" />
+                            {daysRemaining}d left
+                          </span>
+                        )}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Click to change your plan</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )
+            }
+            return null
+          })()}
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

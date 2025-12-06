@@ -50,12 +50,21 @@ export class AuthService {
       throw new AppError(400, validation.error!)
     }
 
-    // Check if user already exists
+    // Check if user already exists (including soft-deleted - Feature 196)
     const existingUser = await this.prisma.user.findUnique({
       where: { email: email.toLowerCase() },
     })
 
     if (existingUser) {
+      // If soft-deleted, inform about recovery option
+      if (existingUser.deletedAt !== null) {
+        const retentionDays = 90
+        const expiryDate = new Date(existingUser.deletedAt)
+        expiryDate.setDate(expiryDate.getDate() + retentionDays)
+        const daysRemaining = Math.max(0, Math.ceil((expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+        
+        throw new AppError(409, `This email belongs to a deleted account. Contact support within ${daysRemaining} days to recover it, or wait for permanent deletion.`)
+      }
       throw new AppError(409, 'User with this email already exists')
     }
 
@@ -94,6 +103,18 @@ export class AuthService {
 
     if (!user) {
       throw new AppError(401, 'Invalid credentials')
+    }
+
+    // Check if account is soft-deleted (Feature 196)
+    if (user.deletedAt !== null) {
+      // Calculate days until permanent deletion
+      const retentionDays = 90
+      const expiryDate = new Date(user.deletedAt)
+      expiryDate.setDate(expiryDate.getDate() + retentionDays)
+      const daysRemaining = Math.max(0, Math.ceil((expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+      
+      logger.warn(`🚫 Login attempt for soft-deleted user: ${user.email} (${daysRemaining} days until permanent delete)`)
+      throw new AppError(403, `Your account has been deleted. You have ${daysRemaining} days to contact support for recovery before permanent deletion.`)
     }
 
     // Check account status

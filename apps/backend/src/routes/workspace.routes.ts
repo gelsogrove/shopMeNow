@@ -272,9 +272,12 @@ router.put(
  * @swagger
  * /workspaces/{id}:
  *   delete:
- *     summary: Hard delete a workspace and all related data
+ *     summary: Soft-delete a workspace
  *     description: |
- *       Permanently deletes a workspace and ALL related data including:
+ *       Marks a workspace as deleted (soft-delete). The workspace and all related data
+ *       will be retained for 90 days and can be restored by contacting support.
+ *       
+ *       After 90 days, the scheduler will permanently delete all data including:
  *       - Products and categories
  *       - Customers and chat sessions
  *       - Services and offers
@@ -283,8 +286,8 @@ router.put(
  *       - User-workspace relationships
  *       - WhatsApp settings
  *
- *       **WARNING**: This operation is irreversible and complies with GDPR Article 17 (Right to erasure).
- *       All data will be permanently removed with no recovery option.
+ *       **NOTE**: This operation is reversible within 90 days.
+ *       Contact support to restore a deleted workspace.
  *     tags: [Workspaces]
  *     parameters:
  *       - in: path
@@ -295,7 +298,7 @@ router.put(
  *         description: The workspace ID to delete
  *     responses:
  *       204:
- *         description: Workspace and all related data successfully deleted
+ *         description: Workspace soft-deleted successfully
  *       404:
  *         description: Workspace not found
  *       500:

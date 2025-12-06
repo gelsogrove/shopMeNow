@@ -336,14 +336,21 @@ describe('Job Runner Service', () => {
     mockPrisma.schedulerJobStatus.findUnique.mockResolvedValue(null)
   })
 
-  it('should log job start and completion', async () => {
+  it('should execute job and update status to SUCCESS', async () => {
     const { runJob } = require('../src/services/job-runner.service')
     const mockJob = jest.fn().mockResolvedValue(undefined)
 
     await runJob('test-job', mockJob)
 
     expect(mockJob).toHaveBeenCalled()
-    expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('test-job'))
+    // Job runner is silent - no info logs for routine execution
+    // Status updated to SUCCESS
+    expect(mockPrisma.schedulerJobStatus.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { jobName: 'test-job' },
+        data: expect.objectContaining({ lastStatus: 'SUCCESS' })
+      })
+    )
   })
 
   it('should catch and log job errors', async () => {
@@ -357,7 +364,7 @@ describe('Job Runner Service', () => {
     )
   })
 
-  it('should skip disabled jobs', async () => {
+  it('should skip disabled jobs silently', async () => {
     const { runJob } = require('../src/services/job-runner.service')
     const mockJob = jest.fn().mockResolvedValue(undefined)
 
@@ -370,9 +377,7 @@ describe('Job Runner Service', () => {
 
     // Job should NOT be executed
     expect(mockJob).not.toHaveBeenCalled()
-    // Should log skip message
-    expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('SKIPPED'))
-    // Should update status to SKIPPED
+    // Silent skip - no log spam, just status update to SKIPPED
     expect(mockPrisma.schedulerJobStatus.update).toHaveBeenCalledWith({
       where: { jobName: 'disabled-job' },
       data: expect.objectContaining({ lastStatus: 'SKIPPED' })

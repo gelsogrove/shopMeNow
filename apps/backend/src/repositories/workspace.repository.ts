@@ -1,4 +1,4 @@
-import { prisma } from "@echatbot/database"
+import { prisma, PrismaClient } from "@echatbot/database"
 import { Workspace, WorkspaceProps } from "../domain/entities/workspace.entity"
 import { WorkspaceRepositoryInterface } from "../domain/repositories/workspace.repository.interface"
 import logger from "../utils/logger"
@@ -6,8 +6,8 @@ import logger from "../utils/logger"
 export class WorkspaceRepository implements WorkspaceRepositoryInterface {
   private prisma: PrismaClient
 
-  constructor(prisma?: PrismaClient) {
-    this.prisma = prisma
+  constructor(prismaClient?: PrismaClient) {
+    this.prisma = prismaClient || (prisma as unknown as PrismaClient)
   }
 
   /**
@@ -41,6 +41,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       updatedAt: data.updatedAt,
       businessType: data.businessType,
       afterRegistrationMessages: data.afterRegistrationMessages,
+      planType: data.planType || null,
+      trialEndsAt: data.trialEndsAt || null,
     })
   }
 
@@ -505,10 +507,11 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
   }
 
   /**
-   * Delete a workspace with CASCADE deletion
+   * Soft-delete a workspace (mark as deleted with deletedAt timestamp)
+   * Hard-delete happens after 90 days via scheduler
    */
   async delete(id: string): Promise<boolean> {
-    logger.debug(`Hard deleting workspace with ID ${id} and all related data`)
+    logger.debug(`Soft-deleting workspace with ID ${id}`)
 
     try {
       const workspace = await this.prisma.workspace.findUnique({
@@ -520,183 +523,19 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
         return false
       }
 
-      // Hard delete in cascading order to avoid foreign key constraints
-      await this.prisma.$transaction(async (tx) => {
-        // 1. Delete document chunks - REMOVED: table no longer exists
-        // await tx.documentChunks.deleteMany({
-        //   where: {
-        //     document: {
-        //       workspaceId: id,
-        //     },
-        //   },
-        // })
-
-        // 2. Delete FAQ chunks - REMOVED: table no longer exists
-        // await tx.fAQChunks.deleteMany({
-        //   where: {
-        //     faq: {
-        //       workspaceId: id,
-        //     },
-        //   },
-        // })
-
-        // 3. Delete documents
-        await tx.documents.deleteMany({
-          where: { workspaceId: id },
-        })
-
-        // 4. Delete FAQs
-        await tx.fAQ.deleteMany({
-          where: { workspaceId: id },
-        })
-
-        // 5. Delete services
-        await tx.services.deleteMany({
-          where: { workspaceId: id },
-        })
-
-        // 6. Delete offers
-        await tx.offers.deleteMany({
-          where: { workspaceId: id },
-        })
-
-        // 7. Delete order items first
-        await tx.orderItems.deleteMany({
-          where: {
-            order: {
-              workspaceId: id,
-            },
-          },
-        })
-
-        // 8. Delete cart items
-        await tx.cartItems.deleteMany({
-          where: {
-            cart: {
-              workspaceId: id,
-            },
-          },
-        })
-
-        // 9. Delete carts
-        await tx.carts.deleteMany({
-          where: { workspaceId: id },
-        })
-
-        // 10. Delete orders
-        await tx.orders.deleteMany({
-          where: { workspaceId: id },
-        })
-
-        // 11. Delete products
-        await tx.products.deleteMany({
-          where: { workspaceId: id },
-        })
-
-        // 12. Delete categories
-        await tx.categories.deleteMany({
-          where: { workspaceId: id },
-        })
-
-        // 13. Delete messages first
-        await tx.message.deleteMany({
-          where: {
-            chatSession: {
-              workspaceId: id,
-            },
-          },
-        })
-
-        // 14. Delete chat sessions
-        await tx.chatSession.deleteMany({
-          where: { workspaceId: id },
-        })
-
-        // 15. Delete customers
-        await tx.customers.deleteMany({
-          where: { workspaceId: id },
-        })
-
-        // 15b. Delete billing records
-        await tx.billing.deleteMany({
-          where: { workspaceId: id },
-        })
-
-        // 15c. Delete usage records
-        await tx.usage.deleteMany({
-          where: { workspaceId: id },
-        })
-
-        // 15d. Delete campaigns
-        await tx.campaign.deleteMany({
-          where: { workspaceId: id },
-        })
-
-        // 15e. Delete campaign sent records
-        await tx.campaignSent.deleteMany({
-          where: { workspaceId: id },
-        })
-
-        // 15f. Delete agent conversation logs
-        await tx.agentConversationLog.deleteMany({
-          where: { workspaceId: id },
-        })
-
-        // 15g. Delete conversation messages
-        await tx.conversationMessage.deleteMany({
-          where: { workspaceId: id },
-        })
-
-        // 15h. Delete customer feedback
-        await tx.customerFeedback.deleteMany({
-          where: { workspaceId: id },
-        })
-
-        // 15i. Delete short URLs
-        await tx.shortUrls.deleteMany({
-          where: { workspaceId: id },
-        })
-
-        // 15j. Delete WhatsApp queue
-        await tx.whatsAppQueue.deleteMany({
-          where: { workspaceId: id },
-        })
-
-        // 16. Delete agent configurations
-        await tx.agentConfig.deleteMany({
-          where: { workspaceId: id },
-        })
-
-        // 17. Delete languages
-        await tx.languages.deleteMany({
-          where: { workspaceId: id },
-        })
-
-        // 18. Delete WhatsApp settings
-        await tx.whatsappSettings.deleteMany({
-          where: { workspaceId: id },
-        })
-
-        // 19. Delete user-workspace relationships
-        await tx.userWorkspace.deleteMany({
-          where: { workspaceId: id },
-        })
-
-        // 20. Delete secure tokens
-        await tx.secureToken.deleteMany({
-          where: { workspaceId: id },
-        })
-
-        // 21. Finally delete the workspace itself
-        await tx.workspace.delete({
-          where: { id },
-        })
+      // Soft-delete: set deletedAt and isDelete flag
+      await this.prisma.workspace.update({
+        where: { id },
+        data: {
+          isDelete: true,  // Legacy flag for backward compatibility
+          deletedAt: new Date(),  // New soft-delete timestamp
+        },
       })
 
-      logger.info(`Hard deleted workspace ${id} and all related data`)
+      logger.info(`Soft-deleted workspace ${id} (will be hard-deleted after 90 days)`)
       return true
     } catch (error) {
-      logger.error(`Error hard deleting workspace with ID ${id}:`, error)
+      logger.error(`Error soft-deleting workspace with ID ${id}:`, error)
       throw error
     }
   }

@@ -1,6 +1,4 @@
-import { PrismaClient, Suppliers } from "@echatbot/database"
-
-// prisma imported
+import { prisma, PrismaClient, Suppliers } from "@echatbot/database"
 
 export interface CreateSupplierData {
   companyName: string

@@ -16,6 +16,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
+import { api } from "@/services/api"
 import { deleteWorkspace, updateWorkspace } from "@/services/workspaceApi"
 import { useMutation } from "@tanstack/react-query"
 import { Loader2, Save, Settings, Trash2 } from "lucide-react"
@@ -59,6 +60,7 @@ function extractEnglishMessage(
 export default function SettingsPage() {
   const navigate = useNavigate()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deleteConfirmation, setDeleteConfirmation] = useState("")
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const [formData, setFormData] = useState<WorkspaceData>({
     id: "",
@@ -118,11 +120,23 @@ export default function SettingsPage() {
 
   const deleteWorkspaceMutation = useMutation({
     mutationFn: async () => deleteWorkspace(formData.id),
-    onSuccess: () => {
-      logger.info("✅ Workspace deleted successfully")
-      localStorage.removeItem("currentWorkspace")
-      toast.success("Workspace deleted successfully")
-      navigate("/workspace-selection")
+    onSuccess: async () => {
+      logger.info("✅ Workspace deleted successfully - performing full logout")
+      
+      // 🛡️ CRITICAL: Full logout after workspace delete (Andrea's request)
+      try {
+        await api.post("/auth/logout")
+      } catch (logoutError) {
+        logger.error("Error calling logout API:", logoutError)
+      }
+      
+      // Clear ALL storage (security)
+      logger.info("🧹 [DELETE WORKSPACE] Clearing ALL storage")
+      localStorage.clear()
+      sessionStorage.clear()
+      
+      toast.success("Workspace deleted successfully. You have been logged out.")
+      navigate("/auth/login")
     },
     onError: (error) => {
       logger.error("❌ Error deleting workspace:", error)
@@ -202,7 +216,12 @@ export default function SettingsPage() {
   }
 
   const handleDelete = async () => {
+    if (deleteConfirmation !== "DELETE") {
+      toast.error("Please type DELETE to confirm")
+      return
+    }
     setShowDeleteDialog(false)
+    setDeleteConfirmation("")
     deleteWorkspaceMutation.mutate()
   }
 
@@ -433,20 +452,41 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <Dialog open={showDeleteDialog} onOpenChange={(open) => {
+        setShowDeleteDialog(open)
+        if (!open) setDeleteConfirmation("")
+      }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Workspace</DialogTitle>
-            <DialogDescription>
-              This action cannot be undone. This will permanently delete your
-              workspace and all associated data including products, customers,
-              orders, and chat history.
+            <DialogTitle className="text-destructive">⚠️ Delete Workspace</DialogTitle>
+            <DialogDescription className="space-y-3">
+              <p>
+                This action will soft-delete your workspace. It can be recovered
+                within 90 days by contacting support.
+              </p>
+              <p className="font-medium text-destructive">
+                After 90 days, all data will be permanently deleted including:
+                products, customers, orders, and chat history.
+              </p>
+              <p className="mt-4">
+                To confirm, type <span className="font-mono font-bold">DELETE</span> below:
+              </p>
             </DialogDescription>
           </DialogHeader>
+          <Input
+            value={deleteConfirmation}
+            onChange={(e) => setDeleteConfirmation(e.target.value)}
+            placeholder="Type DELETE to confirm"
+            className="font-mono"
+            autoComplete="off"
+          />
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setShowDeleteDialog(false)}
+              onClick={() => {
+                setShowDeleteDialog(false)
+                setDeleteConfirmation("")
+              }}
               disabled={deleteWorkspaceMutation.isPending}
             >
               Cancel
@@ -454,7 +494,7 @@ export default function SettingsPage() {
             <Button
               variant="destructive"
               onClick={handleDelete}
-              disabled={deleteWorkspaceMutation.isPending}
+              disabled={deleteWorkspaceMutation.isPending || deleteConfirmation !== "DELETE"}
             >
               {deleteWorkspaceMutation.isPending ? (
                 <>

@@ -30,7 +30,7 @@
 // @ts-nocheck - Complex schema mismatch: Prisma User vs Domain interfaces (UserProps/UserEntity)
 // Issues: passwordHash vs password, missing twoFactorSecret/gdprAccepted/phoneNumber in UserProps
 // Requires architectural decision on mapping layer between Prisma and Domain
-import { User } from "@echatbot/database"
+import { User, prisma } from "@echatbot/database"
 import { Request, Response } from "express"
 import type { SignOptions } from "jsonwebtoken"
 import * as jwt from "jsonwebtoken"
@@ -234,6 +234,13 @@ export class AuthController {
     if (!isValidToken) {
       throw new AppError(401, "Invalid verification code")
     }
+
+    // 🕐 Update lastLogin timestamp (2FA verification is the actual login completion)
+    await prisma.user.update({
+      where: { id: userId },
+      data: { lastLogin: new Date() },
+    })
+    logger.info(`🕐 Updated lastLogin for user ${user.email} after 2FA verification`)
 
     // 🆕 CREATE ADMIN SESSION (same as login)
     const sessionId = await adminSessionService.createSession(

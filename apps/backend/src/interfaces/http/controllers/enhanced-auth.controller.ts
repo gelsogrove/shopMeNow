@@ -314,6 +314,13 @@ export class EnhancedAuthController {
         throw new AppError(404, 'User not found')
       }
 
+      // 🕐 Update lastLogin timestamp (2FA verification is the actual login completion)
+      await prisma.user.update({
+        where: { id: userId },
+        data: { lastLogin: new Date() },
+      })
+      logger.info(`🕐 Updated lastLogin for user ${user.email} after 2FA verification`)
+
       // Log successful 2FA
       await logAuthAttempt({
         userId,

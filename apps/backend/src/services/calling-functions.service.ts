@@ -99,7 +99,6 @@ export class CallingFunctionsService {
             name: service.name,
             description: service.description,
             price: service.price,
-            unit: service.unit,
           })),
           totalServices: services.length,
         },

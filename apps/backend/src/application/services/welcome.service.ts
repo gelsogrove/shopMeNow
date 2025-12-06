@@ -1,4 +1,4 @@
-import { prisma } from "@echatbot/database"
+import { prisma, PrismaClient } from "@echatbot/database"
 import { pushMessagingService } from "../../services/push-messaging.service"
 import logger from "../../utils/logger"
 

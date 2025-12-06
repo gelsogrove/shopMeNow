@@ -101,14 +101,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const logout = () => {
-    localStorage.removeItem('backoffice_token')
+    // Clear all storage to ensure clean state
+    localStorage.clear()
+    sessionStorage.clear()
     api.logout()
-    setUser(null)
-    setIsAuthenticated(false)
     
-    // Redirect to frontend login page
+    // Redirect IMMEDIATELY before React re-renders (avoids flash of AccessDeniedPage)
     const frontendUrl = import.meta.env.VITE_FRONTEND_URL || 'http://localhost:3000'
-    window.location.href = `${frontendUrl}/auth/login`
+    window.location.href = `${frontendUrl}/auth/login?logout=true`
   }
 
   return (

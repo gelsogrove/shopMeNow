@@ -9,6 +9,7 @@ import {
   Clock,
   LogOut,
   Settings,
+  Trash2,
 } from 'lucide-react'
 
 const menuItems = [
@@ -17,6 +18,7 @@ const menuItems = [
   { path: '/pricing', label: 'Pricing', icon: CreditCard },
   { path: '/gdpr', label: 'GDPR', icon: Shield },
   { path: '/schedulers', label: 'Schedulers', icon: Clock },
+  { path: '/trash', label: 'Trash', icon: Trash2 },
 ]
 
 export function Layout() {

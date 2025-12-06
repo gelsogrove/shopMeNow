@@ -3,13 +3,13 @@ import { PrismaClient, User as PrismaUser } from '@echatbot/database';
 import { User, UserProps } from '../domain/entities/user.entity';
 import { UserRepositoryInterface } from '../domain/repositories/user.repository.interface';
 import logger from '../utils/logger';
-import { prisma } from "@echatbot/database"
+import { prisma as prismaInstance } from "@echatbot/database"
 
 export class UserRepository implements UserRepositoryInterface {
   private prisma: PrismaClient;
 
-  constructor(prisma?: PrismaClient) {
-    this.prisma = prisma || prisma;
+  constructor(prismaClient?: PrismaClient) {
+    this.prisma = prismaClient || (prismaInstance as unknown as PrismaClient);
   }
 
   /**

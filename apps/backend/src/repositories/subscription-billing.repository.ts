@@ -320,9 +320,9 @@ export class SubscriptionBillingRepository {
       return { transactions: [], total: 0 }
     }
 
-    // Get all workspaces owned by this owner
+    // Get all workspaces owned by this owner (exclude soft-deleted)
     const ownerWorkspaces = await this.prisma.workspace.findMany({
-      where: { ownerId: workspace.ownerId, isActive: true },
+      where: { ownerId: workspace.ownerId, isActive: true, deletedAt: null },
       select: { id: true, name: true },
     })
     const ownerWorkspaceIds = ownerWorkspaces.map(w => w.id)
@@ -441,9 +441,9 @@ export class SubscriptionBillingRepository {
       return { productsCount, customersCount, channelsCount: 1 }
     }
 
-    // Get all workspaces owned by this owner
+    // Get all workspaces owned by this owner (exclude soft-deleted)
     const ownerWorkspaces = await this.prisma.workspace.findMany({
-      where: { ownerId: workspace.ownerId, isActive: true },
+      where: { ownerId: workspace.ownerId, isActive: true, deletedAt: null },
       select: { id: true },
     })
 

@@ -143,15 +143,23 @@ const authMiddlewareAsync = async (
 
       // Verify user exists in database and load workspaces
       try {
-        // First check if user exists
+        // First check if user exists and is not soft-deleted
         const user = await prisma.user.findUnique({
           where: { id: decoded.userId },
-          select: { id: true, email: true },
+          select: { id: true, email: true, deletedAt: true },
         })
 
         if (!user) {
           logger.info(`User ${decoded.userId} not found in database`)
           throw new AppError(401, "User not found")
+        }
+
+        // 🚫 SOFT-DELETE CHECK: Block deleted users from accessing the system
+        if (user.deletedAt !== null) {
+          logger.warn(`🚫 Deleted user attempted access: ${user.email}`, {
+            deletedAt: user.deletedAt,
+          })
+          throw new AppError(403, "Your account has been deleted and cannot be accessed")
         }
 
         logger.info("User found in database:", user.email)

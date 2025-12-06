@@ -581,4 +581,92 @@ The eChatbot Team
       return false
     }
   }
+
+  /**
+   * Send notification email when a user unsubscribes (soft-delete)
+   * Sends to user AND admin for compliance tracking
+   */
+  async sendUnsubscribeNotification(data: {
+    userEmail: string
+    userName: string
+    workspaceName?: string
+    cascadeType: "OWNER_CASCADE" | "AGENT_ISOLATED"
+    permanentDeleteDate: Date
+    adminEmail?: string
+  }): Promise<boolean> {
+    try {
+      const formattedDate = data.permanentDeleteDate.toLocaleDateString("it-IT", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+
+      const cascadeInfo = data.cascadeType === "OWNER_CASCADE"
+        ? `The workspace "${data.workspaceName || "N/A"}" and all associated data (customers, orders, messages) have been marked for deletion.`
+        : `Only your user account has been marked for deletion. The workspace remains active.`
+
+      const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; }
+        .header { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 30px; text-align: center; }
+        .header h1 { color: white; margin: 0; font-size: 24px; }
+        .content { padding: 30px; background-color: #f9fafb; }
+        .warning { background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; }
+        .footer { background-color: #1f2937; color: #9ca3af; padding: 20px; text-align: center; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⚠️ Account Deletion Initiated</h1>
+    </div>
+    <div class="content">
+        <p>Dear ${data.userName},</p>
+        
+        <p>Your account deletion request has been processed successfully.</p>
+        
+        <div class="warning">
+            <strong>Important Information:</strong>
+            <ul>
+                <li><strong>Deletion Type:</strong> ${data.cascadeType === "OWNER_CASCADE" ? "Owner Cascade (full workspace)" : "Agent Isolated"}</li>
+                <li><strong>Permanent Delete Date:</strong> ${formattedDate}</li>
+                <li><strong>Recovery Window:</strong> 90 days from today</li>
+            </ul>
+        </div>
+        
+        <p>${cascadeInfo}</p>
+        
+        <p>If you did not request this deletion or wish to recover your account, please contact our support team immediately at <a href="mailto:support@echatbot.ai">support@echatbot.ai</a> before ${formattedDate}.</p>
+        
+        <p>After this date, all data will be permanently deleted and cannot be recovered.</p>
+        
+        <p>Best regards,<br>The eChatbot Team</p>
+    </div>
+    <div class="footer">
+        <p>© 2025 eChatbot. All rights reserved.</p>
+        <p>This is an automated notification for compliance purposes.</p>
+    </div>
+</body>
+</html>`
+
+      // Send to user
+      const mailOptions = {
+        from: `"eChatbot" <${process.env.SMTP_FROM || "noreply@echatbot.ai"}>`,
+        to: data.userEmail,
+        cc: data.adminEmail || process.env.ADMIN_EMAIL, // CC admin
+        subject: "⚠️ Account Deletion Confirmation - eChatbot",
+        html: htmlContent,
+      }
+
+      await this.transporter.sendMail(mailOptions)
+      logger.info(`Unsubscribe notification sent to: ${data.userEmail} (cc: ${data.adminEmail || process.env.ADMIN_EMAIL})`)
+      return true
+    } catch (error) {
+      logger.error("Failed to send unsubscribe notification:", error)
+      return false
+    }
+  }
 }

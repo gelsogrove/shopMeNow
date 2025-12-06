@@ -28,6 +28,8 @@ export interface WorkspaceProps {
   afterRegistrationMessages?: any
   debugMode: boolean
   adminEmail?: string | null
+  planType?: string | null
+  trialEndsAt?: Date | null
 }
 
 export class Workspace extends Entity<WorkspaceProps> {
@@ -141,6 +143,14 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get adminEmail(): string | null | undefined {
     return this.props.adminEmail
+  }
+
+  get planType(): string | null | undefined {
+    return this.props.planType
+  }
+
+  get trialEndsAt(): Date | null | undefined {
+    return this.props.trialEndsAt
   }
 
   // Business methods
