@@ -83,10 +83,10 @@ export class UserUnsubscribeService {
           throw new Error("Owner verification failed - security chain broken")
         }
 
-        // 2. Count affected records BEFORE deletion
+        // 2. Count affected records BEFORE deletion (all filtered by workspaceId for accuracy)
         const customerCount = await tx.customers.count({ where: { workspaceId, deletedAt: null } })
         const orderCount = await tx.orders.count({ where: { workspaceId, deletedAt: null } })
-        const messageCount = await tx.message.count({ where: { deletedAt: null } })
+        const messageCount = await tx.message.count({ where: { chatSession: { workspaceId }, deletedAt: null } })
         const agentCount = await tx.userWorkspace.count({ where: { workspaceId } })
         const sessionCount = await tx.chatSession.count({ where: { workspaceId, deletedAt: null } })
 

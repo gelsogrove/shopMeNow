@@ -564,7 +564,7 @@ ${resetLink}
   
   <p>Hello${firstName ? ` ${firstName}` : ''},</p>
   
-  <p>An administrator (<strong>${adminEmail}</strong>) has requested that you enable Two-Factor Authentication (2FA) on your account for enhanced security.</p>
+  <p>You have been requested to enable Two-Factor Authentication (2FA) on your account for enhanced security.</p>
   
   <p>Click the button below to set up 2FA:</p>
   
@@ -596,7 +596,7 @@ Set Up Two-Factor Authentication
 
 Hello${firstName ? ` ${firstName}` : ''},
 
-An administrator (${adminEmail}) has requested that you enable Two-Factor Authentication (2FA) on your account for enhanced security.
+You have been requested to enable Two-Factor Authentication (2FA) on your account for enhanced security.
 
 Click the link below to set up 2FA:
 ${setupLink}
