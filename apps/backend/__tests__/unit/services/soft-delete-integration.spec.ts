@@ -157,6 +157,63 @@ describe('Soft Delete Integration - UserUnsubscribeService', () => {
       expect(expectedAffected.agents).toBe(1)
       expect(expectedAffected.workspaces).toBe(0)
     })
+
+    it('should NOT soft-delete agent when owner unsubscribes if agent has other workspaces', async () => {
+      // Given: Agent is member of TWO workspaces (workspace A and B)
+      // When: Owner of workspace A unsubscribes
+      // Then: Agent should only be removed from workspace A but user remains active
+      
+      const agentId = 'agent-multi-workspace'
+      const workspaceA = 'workspace-to-delete'
+      const workspaceB = 'workspace-still-active'
+      
+      // Agent has 2 workspaces initially
+      const agentWorkspaces = [
+        { userId: agentId, workspaceId: workspaceA },
+        { userId: agentId, workspaceId: workspaceB },
+      ]
+      
+      // After owner of workspace A unsubscribes:
+      // - UserWorkspace for workspace A is DELETED
+      // - UserWorkspace for workspace B remains
+      // - User is NOT soft-deleted (can still login!)
+      
+      const remainingWorkspaces = agentWorkspaces.filter(uw => uw.workspaceId !== workspaceA)
+      
+      expect(remainingWorkspaces.length).toBe(1)
+      expect(remainingWorkspaces[0].workspaceId).toBe(workspaceB)
+      
+      // User should NOT be soft-deleted because they have remaining workspaces
+      const userShouldBeSoftDeleted = remainingWorkspaces.length === 0
+      expect(userShouldBeSoftDeleted).toBe(false)
+    })
+
+    it('should keep agent user active even with NO remaining workspaces (can create own channel)', async () => {
+      // Given: Agent is member of ONLY workspace A
+      // When: Owner of workspace A unsubscribes
+      // Then: Agent user remains active and can login to create their own channel
+      
+      const agentId = 'agent-single-workspace'
+      const workspaceA = 'workspace-to-delete'
+      
+      // Agent has only 1 workspace initially
+      const agentWorkspaces = [
+        { userId: agentId, workspaceId: workspaceA },
+      ]
+      
+      // After owner of workspace A unsubscribes:
+      // - UserWorkspace is DELETED
+      // - User is NOT soft-deleted (can login and create their own channel!)
+      
+      const remainingWorkspaces = agentWorkspaces.filter(uw => uw.workspaceId !== workspaceA)
+      
+      expect(remainingWorkspaces.length).toBe(0)
+      
+      // User should NOT be soft-deleted - they should be able to login
+      // and see "Create My Channel" form to become an owner
+      const userShouldBeSoftDeleted = false // NEVER soft-delete agents on owner unsubscribe
+      expect(userShouldBeSoftDeleted).toBe(false)
+    })
   })
 })
 

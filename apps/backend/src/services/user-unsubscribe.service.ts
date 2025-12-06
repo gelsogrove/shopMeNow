@@ -117,16 +117,38 @@ export class UserUnsubscribeService {
           data: { deletedAt: deletedDate }
         })
 
-        // Then delete all agents in workspace
-        const agents = await tx.userWorkspace.findMany({ where: { workspaceId } })
+        // Then handle agents in workspace
+        // IMPORTANT: Don't soft-delete agents - they should be able to login and create their own workspace!
+        const agents = await tx.userWorkspace.findMany({ 
+          where: { workspaceId, userId: { not: userId } } // Exclude owner
+        })
+        
         for (const agent of agents) {
-          await tx.user.update({
-            where: { id: agent.userId },
-            data: { deletedAt: deletedDate },
+          // Remove the agent from THIS workspace only
+          await tx.userWorkspace.delete({
+            where: { 
+              userId_workspaceId: { 
+                userId: agent.userId, 
+                workspaceId 
+              } 
+            }
           })
+          
+          // Check remaining workspaces for logging
+          const remainingWorkspaces = await tx.userWorkspace.count({ 
+            where: { userId: agent.userId } 
+          })
+          
+          if (remainingWorkspaces === 0) {
+            // Agent has no workspaces left - but DON'T delete their user!
+            // They can login and will see "Create My Channel" form to become an owner
+            logger.info(`Agent ${agent.userId} removed from last workspace - can login and create their own channel`)
+          } else {
+            logger.info(`Agent ${agent.userId} removed from workspace (has ${remainingWorkspaces} other workspaces)`)
+          }
         }
 
-        // Finally delete workspace and user
+        // Finally delete workspace and owner user
         await tx.workspace.update({ where: { id: workspaceId }, data: { deletedAt: deletedDate } })
         await tx.user.update({ where: { id: userId }, data: { deletedAt: deletedDate } })
 
@@ -136,7 +158,7 @@ export class UserUnsubscribeService {
             workspaceId,
             entityType: "OWNER_CASCADE",
             deletedIds: [userId, workspaceId],
-            deletedIdCount: 1 + customerCount + orderCount + messageCount + agentCount + sessionCount,
+            deletedIdCount: 1 + customerCount + orderCount + messageCount + sessionCount, // Only owner + data, not agents
             reason,
             deletedByUserId: userId, // Self-initiated
           },
