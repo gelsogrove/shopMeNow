@@ -5,6 +5,14 @@ import { WIPModal } from "@/components/shared/WIPModal"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useLanguage } from "@/contexts/LanguageContext"
@@ -25,6 +33,11 @@ import {
   Loader2,
   Eye,
   EyeOff,
+  Radio,
+  LogOut,
+  User,
+  Crown,
+  CreditCard,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
@@ -32,6 +45,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import * as z from "zod"
 import { toast } from "../lib/toast"
 import { auth, api } from "../services/api"
+import { workspaceApi } from "../services/workspaceApi"
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '988195920488-drdmtlruo5s47nkk4g8prui6k9mb0pln.apps.googleusercontent.com'
 
@@ -80,6 +94,21 @@ export function LoginPage() {
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [activeTab, setActiveTab] = useState<'signin' | 'register'>('signin')
   const [isAdminAccess, setIsAdminAccess] = useState(false) // 🔐 Admin bypass for WIP mode
+  
+  // 👤 Logged-in user state (for showing avatar instead of login/register buttons)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [loggedInUser, setLoggedInUser] = useState<{ 
+    firstName?: string; 
+    lastName?: string; 
+    email?: string;
+    profilePicture?: string;
+    authProvider?: string;
+  } | null>(null)
+  const [avatarImageError, setAvatarImageError] = useState(false)
+  const [userPlan, setUserPlan] = useState<{
+    planType?: string | null;
+    trialEndsAt?: string | null;
+  } | null>(null)
   
   // 🚀 Platform feature flags (canLogin, canRegister)
   const { canLogin, canRegister, isLoading: flagsLoading } = useFeatureFlags()
@@ -146,16 +175,50 @@ export function LoginPage() {
       const newUrl = new URL(window.location.href)
       newUrl.searchParams.delete('logout')
       window.history.replaceState({}, '', newUrl.toString())
+      setIsLoggedIn(false)
+      setLoggedInUser(null)
       setIsValidatingSession(false)
       return
     }
     
     const existingToken = localStorage.getItem('token')
     
-    // If user already has a token, they shouldn't be on login page - redirect them
+    // If user already has a token, show avatar instead of login buttons (DON'T redirect)
     if (existingToken) {
-      logger.info('🔄 [LOGIN PAGE] Token already exists - redirecting to workspace selection')
-      navigate('/workspace-selection', { replace: true })
+      logger.info('👤 [LOGIN PAGE] Token exists - showing user avatar in header')
+      // Load user data from localStorage
+      const cachedUser = localStorage.getItem('user')
+      if (cachedUser) {
+        try {
+          const userData = JSON.parse(cachedUser)
+          setLoggedInUser(userData)
+          setIsLoggedIn(true)
+          setAvatarImageError(false) // Reset image error when loading user
+          logger.info('✅ [LOGIN PAGE] User loaded:', userData.email)
+          
+          // Fetch workspaces to get plan info - use first workspace (same as WorkspaceSelectionPage)
+          workspaceApi.getAll().then(workspaces => {
+            if (workspaces && workspaces.length > 0) {
+              // Use the FIRST workspace (consistent with WorkspaceSelectionPage)
+              const firstWs = workspaces[0]
+              
+              setUserPlan({
+                planType: firstWs.planType,
+                trialEndsAt: firstWs.trialEndsAt,
+              })
+              logger.info('👑 [LOGIN PAGE] Plan loaded:', firstWs.planType, 'from workspace:', firstWs.id)
+            }
+          }).catch(err => {
+            logger.error('Failed to fetch workspaces for plan:', err)
+          })
+        } catch (e) {
+          logger.error('Failed to parse cached user:', e)
+        }
+      } else {
+        // Token exists but no user data - still logged in
+        setIsLoggedIn(true)
+      }
+      setIsValidatingSession(false)
       return
     }
     
@@ -165,6 +228,7 @@ export function LoginPage() {
     localStorage.removeItem('user')
     sessionStorage.clear()
     logger.info('✅ [LOGIN PAGE LOAD] Storage cleared - ready for fresh login')
+    setIsValidatingSession(false)
   }, [navigate, logoutParam]) // Run only once on mount, or when logout param changes
 
   // 🆕 AUTO-OPEN REGISTER MODAL if ?action=register or ?mode=register parameter is present
@@ -203,42 +267,8 @@ export function LoginPage() {
     }
   }, [actionParam, modeParam, inviteParam, canRegister, flagsLoading])
 
-  // 🆕 AUTO-REDIRECT IF SESSION IS ALREADY VALID
-  useEffect(() => {
-    checkExistingSession()
-  }, [])
-
-  const checkExistingSession = async () => {
-    try {
-      const token = localStorage.getItem('token')
-
-      // Se NON c'è token, mostra form login
-      if (!token) {
-        logger.info("🔓 No existing token - showing login form", { token: !!token })
-        setIsValidatingSession(false)
-        return
-      }
-
-      // 🚨 CRITICAL FIX: Non fare redirect automatico se siamo in fase di registrazione
-      // Questo previene il loop: registrazione → storage cleared → checkExistingSession trova sessionId vecchio → redirect
-      const isInAuthFlow = window.location.pathname.includes('/auth/')
-      if (isInAuthFlow) {
-        logger.info("🔒 In auth flow - skipping auto-redirect", { pathname: window.location.pathname })
-        setIsValidatingSession(false)
-        return
-      }
-
-      // Se c'è token VALIDO, facciamo redirect
-      logger.info(
-        `✅ Token found - redirecting to workspace selection`
-      )
-      toast.success("Session already active, redirecting...")
-      navigate("/workspace-selection", { replace: true })
-    } catch (error: any) {
-      logger.error("❌ Error checking session:", error)
-      setIsValidatingSession(false)
-    }
-  }
+  // 🆕 Session check is now done in the first useEffect above
+  // No auto-redirect - we show avatar instead if user is logged in
 
   const onSubmit = async (data: LoginForm) => {
     // 🚀 Check if login is enabled (bypass if admin access mode)
@@ -521,17 +551,17 @@ export function LoginPage() {
   if (isWipMode && !showLoginModal) {
     return (
       <>
-        <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+        <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col items-center justify-center p-4">
+          <div className="text-center mb-12 w-full">
+            <img
+             
+              alt="eChatbot Logo"
+              style={{ width: '800px !important', height: '800px' }}
+              className="mx-auto mb-8 object-contain"
+            />
+            <h1 style={{ fontSize: '120px' }} className="font-bold text-slate-900">eChatbot</h1>
+          </div>
           <div className="max-w-lg w-full">
-            {/* Logo and Header */}
-            <div className="text-center mb-8">
-              <img
-                src="/logo.png"
-                alt="eChatbot Logo"
-                className="w-24 h-24 mx-auto mb-4 object-contain"
-              />
-              <h1 className="text-3xl font-bold text-slate-900">eChatbot</h1>
-            </div>
 
             {/* WIP Card */}
             <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 text-center">
@@ -598,8 +628,8 @@ export function LoginPage() {
         <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
           <div className="max-w-lg w-full opacity-30">
             <div className="text-center mb-8">
-              <img src="/logo.png" alt="eChatbot Logo" className="w-24 h-24 mx-auto mb-4 object-contain" />
-              <h1 className="text-3xl font-bold text-slate-900">eChatbot</h1>
+              <img src={`/logo.png?v=${Date.now()}`} alt="eChatbot Logo" style={{ width: '800px', height: '800px' }} className="mx-auto mb-4 object-contain" />
+              <h1 style={{ fontSize: '120px' }} className="font-bold text-slate-900">eChatbot</h1>
             </div>
             <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 text-center">
               <h2 className="text-2xl font-bold text-slate-900 mb-3">Work in Progress</h2>
@@ -730,67 +760,151 @@ export function LoginPage() {
 
   return (
     <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Header with Logo */}
-      <header className="w-full py-1 px-4 lg:px-8 bg-gradient-to-r from-white via-green-50/30 to-emerald-50/40 backdrop-blur-sm border-b border-green-100/50 sticky top-0 z-40 shadow-sm">
-        <div className="max-w-7xl mx-auto">
-          {/* Language Selector - Top right */}
-          <div className="flex justify-end mb-1">
-            <LanguageSelector />
-          </div>
-
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-5">
-              <img
-                src="/logo.png"
-                alt="eChatbot Logo"
-                className="w-32 h-32 object-contain"
-              />
-              <div>
-                <h1 className="text-3xl font-bold text-slate-900">eChatbot</h1>
-                <p className="text-base text-slate-600">
-                  {t("header.tagline")}
-                </p>
-              </div>
+      {/* Header - Unified style */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Left: Logo */}
+            <div className="flex items-center gap-2">
+              <img src="/logo.png" alt="eChatbot" className="h-14 w-14 object-contain" />
+              <span className="text-2xl font-bold text-green-600">eChatbot</span>
             </div>
 
-            {/* Sign In / Register Buttons - Desktop */}
-            <div className="hidden lg:flex items-center gap-3">
-              {canLogin && (
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    logger.info('🖱️ [SIGN IN BUTTON] Clicked - clearing storage')
-                    localStorage.clear()
-                    sessionStorage.clear()
-                    logger.info('✅ [SIGN IN BUTTON] Storage cleared, opening modal')
-                    setActiveTab('signin')
-                    setShowLoginModal(true)
-                  }}
-                  className="bg-green-600 hover:bg-green-700 px-6"
-                >
-                  {t("login.signin")}
-                </Button>
-              )}
-              {canRegister && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    logger.info('🖱️ [REGISTER BUTTON] Clicked - clearing storage')
-                    localStorage.clear()
-                    sessionStorage.clear()
-                    logger.info('✅ [REGISTER BUTTON] Storage cleared, opening modal')
-                    setActiveTab('register')
-                    setShowLoginModal(true)
-                  }}
-                  className="border-green-600 text-green-600 hover:bg-green-50 px-6"
-                >
-                  {t("login.register")}
-                </Button>
+            {/* Right: Plan Badge + Avatar OR Login buttons */}
+            <div className="flex items-center gap-3">
+              {isLoggedIn ? (
+                <>
+                  {/* Plan Badge - Always show with fallback */}
+                  <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium border ${
+                      !userPlan?.planType || userPlan.planType === 'FREE_TRIAL'
+                        ? 'bg-amber-100 text-amber-700 border-amber-300'
+                        : userPlan.planType === 'BASIC'
+                        ? 'bg-green-100 text-green-700 border-green-300'
+                        : userPlan.planType === 'PREMIUM'
+                        ? 'bg-purple-100 text-purple-700 border-purple-300'
+                        : 'bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 border-amber-300'
+                    }`}>
+                      <Crown className="h-3.5 w-3.5" />
+                      <span>
+                        {!userPlan?.planType || userPlan.planType === 'FREE_TRIAL' 
+                          ? `Free Trial ${userPlan?.trialEndsAt ? Math.max(0, Math.ceil((new Date(userPlan.trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0}d` 
+                          : userPlan.planType === 'BASIC' ? 'Basic'
+                          : userPlan.planType === 'PREMIUM' ? 'Premium'
+                          : 'Enterprise'}
+                      </span>
+                    </div>
+
+                  {/* User Menu */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        className="relative h-10 w-10 rounded-full focus:ring-2 focus:ring-green-500 focus:outline-none hover:scale-105 transition-transform p-0"
+                      >
+                        {loggedInUser?.profilePicture && !avatarImageError ? (
+                          <img 
+                            src={loggedInUser.profilePicture} 
+                            alt="User"
+                            referrerPolicy="no-referrer"
+                            className="h-full w-full rounded-full object-cover"
+                            onError={() => setAvatarImageError(true)}
+                          />
+                        ) : (
+                          <div className="h-full w-full rounded-full bg-green-600 flex items-center justify-center text-white text-sm font-medium">
+                            {loggedInUser?.firstName?.[0]?.toUpperCase() || loggedInUser?.email?.[0]?.toUpperCase() || 'U'}
+                          </div>
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56" align="end" forceMount>
+                      <DropdownMenuLabel className="font-normal p-3">
+                        <div className="flex flex-col space-y-1">
+                          <p className="text-sm font-medium leading-none truncate">
+                            {loggedInUser?.firstName && loggedInUser?.lastName 
+                              ? `${loggedInUser.firstName} ${loggedInUser.lastName}` 
+                              : 'User'}
+                          </p>
+                          <p className="text-xs leading-none text-muted-foreground truncate">
+                            {loggedInUser?.email || 'Welcome'}
+                          </p>
+                        </div>
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="p-2 cursor-pointer"
+                        onClick={() => navigate("/workspace-selection")}
+                      >
+                        <Radio className="mr-2 h-4 w-4 text-green-600" />
+                        <span>Your Channels</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="p-2 cursor-pointer"
+                        onClick={() => navigate("/profile")}
+                      >
+                        <User className="mr-2 h-4 w-4" />
+                        <span>Profile</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="p-2 cursor-pointer"
+                        onClick={() => navigate("/billing")}
+                      >
+                        <CreditCard className="mr-2 h-4 w-4 text-green-600" />
+                        <span>Billing</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="p-2 cursor-pointer text-red-600 focus:text-red-600"
+                        onClick={() => {
+                          localStorage.clear()
+                          sessionStorage.clear()
+                          setIsLoggedIn(false)
+                          setLoggedInUser(null)
+                          setUserPlan(null)
+                          toast.success('Logged out successfully')
+                        }}
+                      >
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Log out</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
+              ) : (
+                /* Login/Register buttons for non-logged users */
+                <div className="flex items-center gap-2">
+                  {canLogin && (
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        localStorage.clear()
+                        sessionStorage.clear()
+                        setActiveTab('signin')
+                        setShowLoginModal(true)
+                      }}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      {t("login.signin")}
+                    </Button>
+                  )}
+                  {canRegister && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        localStorage.clear()
+                        sessionStorage.clear()
+                        setActiveTab('register')
+                        setShowLoginModal(true)
+                      }}
+                      className="border-green-600 text-green-600 hover:bg-green-50"
+                    >
+                      {t("login.register")}
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
           </div>
-          
         </div>
       </header>
 
@@ -883,7 +997,7 @@ export function LoginPage() {
         </div>
 
         {/* Login Form Section - Mobile Only */}
-        {canLogin && (
+        {canLogin && !isLoggedIn && (
           <div
             id="login-form-mobile"
             className="max-w-md mx-auto mt-12 lg:hidden"

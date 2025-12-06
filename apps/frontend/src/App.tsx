@@ -164,7 +164,7 @@ export function App() {
                     <Route index element={<ProfilePage />} />
                   </Route>
 
-                  <Route path="/billing" element={<Layout />}>
+                  <Route path="/billing" element={<MinimalLayout />}>
                     <Route index element={<BillingPage />} />
                   </Route>
 

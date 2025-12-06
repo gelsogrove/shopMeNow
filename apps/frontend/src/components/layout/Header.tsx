@@ -8,18 +8,24 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
+import { getBillingOverview } from "@/services/subscriptionBillingApi"
 import {
-  ArrowLeftRight,
+  ArrowLeft,
   Bot,
   CreditCard,
+  Crown,
   LogOut,
-  Phone,
-  Radio,
   Send,
   Settings,
   User,
@@ -40,19 +46,45 @@ export function Header() {
   const [profilePicture, setProfilePicture] = useState<string | null>(null)
   // Get user data from localStorage instead of API call
   const [userData, setUserData] = useState<any>(null)
+  // Real-time plan type from billing API
+  const [actualPlanType, setActualPlanType] = useState<string | null>(null)
 
   // Load user data from storage
   useEffect(() => {
-    // Load user data
-    const cachedUser = localStorage.getItem("user")
-    if (cachedUser) {
-      try {
-        setUserData(JSON.parse(cachedUser))
-      } catch (error) {
-        logger.error("Error parsing user from localStorage:", error)
+    const loadUserData = () => {
+      const cachedUser = localStorage.getItem("user")
+      if (cachedUser) {
+        try {
+          setUserData(JSON.parse(cachedUser))
+        } catch (error) {
+          logger.error("Error parsing user from localStorage:", error)
+        }
       }
     }
+    
+    loadUserData()
+    
+    // Listen for storage changes (when user data is updated on other pages)
+    window.addEventListener('storage', loadUserData)
+    return () => window.removeEventListener('storage', loadUserData)
   }, [])
+
+  // Load actual plan type from billing API (force refresh to get latest)
+  useEffect(() => {
+    const loadBillingPlan = async () => {
+      if (!workspace?.id) return
+      try {
+        const billingData = await getBillingOverview(workspace.id, true) // forceRefresh=true
+        setActualPlanType(billingData.billing.planType)
+        logger.info("💳 [Header] Billing plan loaded:", billingData.billing.planType)
+      } catch (error) {
+        logger.error("Failed to load billing plan:", error)
+        // Fallback to workspace planType
+        setActualPlanType(workspace.planType || null)
+      }
+    }
+    loadBillingPlan()
+  }, [workspace?.id])
 
   // Get plan display info
   const getPlanDisplayInfo = (plan?: string) => {
@@ -87,6 +119,8 @@ export function Header() {
   useEffect(() => {
     // Carica i dati dell'utente
     loadUserProfile()
+    // Reset avatar error when userData changes
+    setProfilePicture(userData?.profilePicture || null)
   }, [userData]) // 🆕 Re-run when userData changes
 
   const loadUserProfile = async () => {
@@ -155,44 +189,71 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-24 items-center">
-        <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
-          <div className="flex items-center">
+    <header className="bg-white border-b border-gray-200 sticky top-0 z-50 w-full">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Left: Back button + separator + eChatbot */}
+          <div className="flex items-center gap-4">
             <Button
               variant="ghost"
               size="sm"
-              className="mr-2 flex items-center text-muted-foreground hover:text-foreground"
+              className="gap-2 text-gray-600 hover:text-gray-900"
               onClick={handleBackToWorkspaces}
             >
-              <ArrowLeftRight className="h-4 w-4 mr-1" />
-              <span className="text-sm">Change</span>
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Back to Channels</span>
             </Button>
-
-            <div className="flex flex-col">
-              <div className="flex items-center space-x-2 text-lg">
-                <Phone className="h-5 w-5 text-green-600" />
-                <span className="font-medium">{phoneNumber}</span>
-              </div>
-              <span className="text-xs text-muted-foreground ml-7">
-                {channelName}
-              </span>
-            </div>
+            
+            <div className="h-6 w-px bg-gray-200" />
+            
+            <span className="text-xl font-bold text-green-600">eChatbot</span>
           </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="relative h-12 w-12 rounded-full focus:ring-2 focus:ring-green-500 focus:outline-none hover:scale-105 transition-transform p-0"
-                onClick={() => {
-                  logger.info('🖼️ [Avatar Debug]:', {
-                    profilePicture,
-                    hasProfilePicture: !!profilePicture,
-                    userData,
-                    userDataProfilePicture: userData?.profilePicture,
-                  })
-                }}
+          {/* Right side: Plan Badge + Profile menu */}
+          <div className="flex items-center gap-4">
+            {/* Plan Badge - uses actualPlanType from billing API or fallback to workspace.planType */}
+            {workspace && (
+              <TooltipProvider delayDuration={100}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => isSuperAdmin && navigate("/workspace-selection")}
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium transition-all ${isSuperAdmin ? 'hover:scale-105 cursor-pointer' : 'cursor-default'} ${
+                        (actualPlanType || workspace.planType) === 'FREE_TRIAL'
+                          ? 'bg-amber-100 text-amber-700 border border-amber-300'
+                          : (actualPlanType || workspace.planType) === 'BASIC'
+                          ? 'bg-green-100 text-green-700 border border-green-300'
+                          : (actualPlanType || workspace.planType) === 'PREMIUM'
+                          ? 'bg-purple-100 text-purple-700 border border-purple-300'
+                          : 'bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 border border-amber-300'
+                      }`}
+                    >
+                      <Crown className="h-3.5 w-3.5" />
+                      <span>
+                        {(actualPlanType || workspace.planType) === 'FREE_TRIAL' 
+                          ? 'Free Trial'
+                          : (actualPlanType || workspace.planType) === 'BASIC'
+                          ? 'Basic'
+                          : (actualPlanType || workspace.planType) === 'PREMIUM'
+                          ? 'Premium'
+                          : 'Enterprise'}
+                      </span>
+                    </button>
+                  </TooltipTrigger>
+                  {isSuperAdmin && (
+                    <TooltipContent>
+                      <p>Click to change your plan</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
+            )}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="relative h-10 w-10 rounded-full focus:ring-2 focus:ring-green-500 focus:outline-none hover:scale-105 transition-transform p-0"
               >
                 {profilePicture ? (
                   <img 
@@ -204,22 +265,19 @@ export function Header() {
                       logger.error('❌ [Avatar] Image failed to load:', profilePicture)
                       e.currentTarget.style.display = 'none'
                     }}
-                    onLoad={() => {
-                      logger.info('✅ [Avatar] Image loaded successfully:', profilePicture)
-                    }}
                   />
                 ) : (
-                  <div className="h-full w-full rounded-full bg-green-600 flex items-center justify-center text-white text-lg font-medium">
+                  <div className="h-full w-full rounded-full bg-green-600 flex items-center justify-center text-white text-sm font-medium">
                     {userInitials}
                   </div>
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-72" align="end" forceMount>
-              <DropdownMenuLabel className="font-normal p-4">
-                <div className="flex flex-col space-y-2">
-                  <p className="text-xl font-medium leading-none">{userName}</p>
-                  <p className="text-lg leading-none text-muted-foreground">
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuLabel className="font-normal p-3">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{userName}</p>
+                  <p className="text-xs leading-none text-muted-foreground">
                     {userEmail || "Welcome to eChatbot"}
                   </p>
                 </div>
@@ -229,24 +287,24 @@ export function Header() {
               {isSuperAdmin && (
                 <>
                   <DropdownMenuItem
-                    className="p-4 text-lg cursor-pointer"
+                    className="p-2 cursor-pointer"
                     onClick={() => navigate("/settings")}
                   >
-                    <Settings className="mr-3 h-5 w-5" />
+                    <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    className="p-4 text-lg cursor-pointer"
+                    className="p-2 cursor-pointer"
                     onClick={() => navigate("/agents")}
                   >
-                    <Bot className="mr-3 h-5 w-5" />
+                    <Bot className="mr-2 h-4 w-4" />
                     <span>Agent Configuration</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    className="p-4 text-lg cursor-pointer"
+                    className="p-2 cursor-pointer"
                     onClick={() => navigate("/queue")}
                   >
-                    <Send className="mr-3 h-5 w-5" />
+                    <Send className="mr-2 h-4 w-4" />
                     <span>WhatsApp Queue</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -254,14 +312,15 @@ export function Header() {
               )}
 
               <DropdownMenuItem
-                className="p-4 text-lg cursor-pointer"
+                className="p-2 cursor-pointer text-red-600 focus:text-red-600"
                 onClick={handleLogout}
               >
-                <LogOut className="mr-3 h-5 w-5" />
+                <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
     </header>

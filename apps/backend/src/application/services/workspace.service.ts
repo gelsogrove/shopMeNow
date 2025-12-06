@@ -172,7 +172,9 @@ For privacy inquiries, please contact our support team.`
       debugMode: w.debugMode ?? false,
       businessType: w.businessType ?? 'retail',
       createdAt: w.createdAt,
-      updatedAt: w.updatedAt
+      updatedAt: w.updatedAt,
+      planType: w.planType ?? undefined,
+      trialEndsAt: w.trialEndsAt ?? undefined,
     }))
   }
 

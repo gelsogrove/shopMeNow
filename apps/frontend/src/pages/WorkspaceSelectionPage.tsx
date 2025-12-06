@@ -26,7 +26,8 @@ import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
-import { LogOut, PlusCircle, Radio, MessageSquare, ShoppingCart, AlertTriangle, Smartphone, Crown, User, Ban, UserPlus, Clock } from "lucide-react"
+import { getBillingOverview } from "@/services/subscriptionBillingApi"
+import { LogOut, PlusCircle, Radio, MessageSquare, ShoppingCart, AlertTriangle, Smartphone, Crown, User, Ban, UserPlus, Clock, CreditCard, ArrowLeft } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
@@ -94,6 +95,7 @@ export function WorkspaceSelectionPage() {
   const [userName, setUserName] = useState<string>("")
   const [userInitials, setUserInitials] = useState<string>("U")
   const [profilePicture, setProfilePicture] = useState<string | null>(null)
+  const [imageError, setImageError] = useState(false)
 
   // Load user profile from localStorage
   useEffect(() => {
@@ -107,6 +109,7 @@ export function WorkspaceSelectionPage() {
         
         setUserName(fullName || "User")
         setProfilePicture(userData?.profilePicture || null)
+        setImageError(false) // Reset image error when loading profile
         
         // Create initials for avatar
         const initials =
@@ -236,6 +239,18 @@ export function WorkspaceSelectionPage() {
       setBadgeStats(statsData)
       
       logger.info("📊 Badge stats loaded:", statsData)
+      
+      // Load billing overview immediately for plan badge (force refresh to get latest data)
+      if (sortedWorkspaces.length > 0) {
+        try {
+          const billingData = await getBillingOverview(sortedWorkspaces[0].id, true) // forceRefresh=true
+          setSharedBillingOverview(billingData)
+          logger.info("💳 Billing overview loaded:", billingData.billing.planType)
+        } catch (billingError) {
+          logger.error("Failed to load billing overview:", billingError)
+          // Continue without billing data - will fallback to workspace planType
+        }
+      }
     } catch (error) {
       logger.error(
         "❌ [WorkspaceSelectionPage] Error loading workspaces:",
@@ -352,119 +367,145 @@ export function WorkspaceSelectionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto">
-        {/* Header with Plan Badge and Profile Menu */}
-        <div className="flex justify-end items-center gap-3 mb-4">
-          {/* Plan Badge - uses first workspace data or sharedBillingOverview */}
-          {(() => {
-            // Get plan info from first workspace or from billing overview
-            const firstWorkspace = workspaces[0]
-            const planType = sharedBillingOverview?.billing?.planType || firstWorkspace?.planType || 'FREE_TRIAL'
-            const trialEndsAt = sharedBillingOverview?.billing?.trialEndsAt || firstWorkspace?.trialEndsAt
-            const daysRemaining = trialEndsAt 
-              ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
-              : null
-            
-            // Show badge if we have workspaces
-            if (workspaces.length > 0 && isSuperAdmin) {
-              return (
-                <TooltipProvider delayDuration={100}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={() => setOpenChangePlanDialog(true)}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all hover:scale-105 cursor-pointer ${
-                          planType === 'FREE_TRIAL'
-                            ? 'bg-amber-100 text-amber-700 border border-amber-300'
-                            : planType === 'BASIC'
-                            ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                            : planType === 'PREMIUM'
-                            ? 'bg-purple-100 text-purple-700 border border-purple-300'
-                            : 'bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 border border-amber-300'
-                        }`}
-                      >
-                        <Crown className="h-4 w-4" />
-                        <span>
-                          {planType === 'FREE_TRIAL' 
-                            ? 'Free Trial' 
-                            : planType === 'BASIC'
-                            ? 'Starter'
-                            : planType === 'PREMIUM'
-                            ? 'Pro'
-                            : 'Enterprise'}
-                        </span>
-                        {/* Show days remaining for trial */}
-                        {planType === 'FREE_TRIAL' && daysRemaining !== null && (
-                          <span className="flex items-center gap-1 text-xs bg-amber-200 px-1.5 py-0.5 rounded-full">
-                            <Clock className="h-3 w-3" />
-                            {daysRemaining}d left
-                          </span>
-                        )}
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Click to change your plan</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )
-            }
-            return null
-          })()}
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header - same style as MinimalLayout */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Left: Back button and Logo */}
+            <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
-                className="relative h-12 w-12 rounded-full focus:ring-2 focus:ring-green-500 focus:outline-none hover:scale-105 transition-transform p-0"
+                size="sm"
+                onClick={() => navigate("/auth/login")}
+                className="gap-2 text-gray-600 hover:text-gray-900"
               >
-                {profilePicture ? (
-                  <img 
-                    src={profilePicture} 
-                    alt="User"
-                    referrerPolicy="no-referrer"
-                    className="h-full w-full rounded-full object-cover"
-                    onError={(e) => {
-                      logger.error('❌ [Avatar] Image failed to load:', profilePicture)
-                      e.currentTarget.style.display = 'none'
-                    }}
-                  />
-                ) : (
-                  <div className="h-full w-full rounded-full bg-green-600 flex items-center justify-center text-white text-lg font-medium">
-                    {userInitials}
-                  </div>
-                )}
+                <ArrowLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">Back to Home</span>
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-64" align="end" forceMount>
-              <DropdownMenuLabel className="font-normal p-4">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-lg font-medium leading-none">{userName || "User"}</p>
-                  <p className="text-sm leading-none text-muted-foreground">
-                    {userEmail || "Welcome to eChatbot"}
-                  </p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="p-3 text-base cursor-pointer"
-                onClick={() => navigate("/profile")}
-              >
-                <User className="mr-3 h-5 w-5" />
-                <span>Profile</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="p-3 text-base cursor-pointer text-red-600 focus:text-red-600"
-                onClick={handleLogout}
-              >
-                <LogOut className="mr-3 h-5 w-5" />
-                <span>Log out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              
+              <div className="h-6 w-px bg-gray-200" />
+              
+              <span className="text-xl font-bold text-green-600">eChatbot</span>
+            </div>
+
+            {/* Right side: Plan Badge + Profile */}
+            <div className="flex items-center gap-3">
+              {/* Plan Badge - uses first workspace data or sharedBillingOverview */}
+              {(() => {
+                // Get plan info from first workspace or from billing overview
+                const firstWorkspace = workspaces[0]
+                const planType = sharedBillingOverview?.billing?.planType || firstWorkspace?.planType || 'FREE_TRIAL'
+                const trialEndsAt = sharedBillingOverview?.billing?.trialEndsAt || firstWorkspace?.trialEndsAt
+                const daysRemaining = trialEndsAt 
+                  ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+                  : null
+                
+                // Show badge if we have workspaces
+                if (workspaces.length > 0) {
+                  return (
+                    <TooltipProvider delayDuration={100}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => isSuperAdmin && setOpenChangePlanDialog(true)}
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium transition-all ${isSuperAdmin ? 'hover:scale-105 cursor-pointer' : 'cursor-default'} ${
+                              planType === 'FREE_TRIAL'
+                                ? 'bg-amber-100 text-amber-700 border border-amber-300'
+                                : planType === 'BASIC'
+                                ? 'bg-green-100 text-green-700 border border-green-300'
+                                : planType === 'PREMIUM'
+                                ? 'bg-purple-100 text-purple-700 border border-purple-300'
+                                : 'bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 border border-amber-300'
+                            }`}
+                          >
+                            <Crown className="h-3.5 w-3.5" />
+                            <span>
+                              {planType === 'FREE_TRIAL' 
+                                ? `Free Trial ${daysRemaining ?? 0}d` 
+                                : planType === 'BASIC'
+                                ? 'Basic'
+                                : planType === 'PREMIUM'
+                                ? 'Premium'
+                                : 'Enterprise'}
+                            </span>
+                          </button>
+                        </TooltipTrigger>
+                        {isSuperAdmin && (
+                          <TooltipContent>
+                            <p>Click to change your plan</p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    </TooltipProvider>
+                  )
+                }
+                return null
+              })()}
+
+              {/* User Menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="relative h-10 w-10 rounded-full focus:ring-2 focus:ring-green-500 focus:outline-none hover:scale-105 transition-transform p-0"
+                  >
+                    {profilePicture && !imageError ? (
+                      <img 
+                        src={profilePicture} 
+                        alt="User"
+                        referrerPolicy="no-referrer"
+                        className="h-full w-full rounded-full object-cover"
+                        onError={() => setImageError(true)}
+                      />
+                    ) : (
+                      <div className="h-full w-full rounded-full bg-green-600 flex items-center justify-center text-white text-sm font-medium">
+                        {userInitials}
+                      </div>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal p-3">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{userName || "User"}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {userEmail || "Welcome to eChatbot"}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="p-2 cursor-pointer"
+                    onClick={() => navigate("/profile")}
+                  >
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="p-2 cursor-pointer"
+                    onClick={() => navigate("/billing")}
+                  >
+                    <CreditCard className="mr-2 h-4 w-4 text-green-600" />
+                    <span>Billing</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="p-2 cursor-pointer text-red-600 focus:text-red-600"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
         </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
 
         {/* ========== LOADING STATE ========== */}
         {isLoading && (
@@ -926,7 +967,7 @@ export function WorkspaceSelectionPage() {
       
       {/* Footer */}
       <footer className="mt-16 pb-8 text-center text-sm text-gray-500">
-        <p>© {new Date().getFullYear()} eChatbot. All rights reserved.</p>
+        <p>© 2025 eChatbot. All rights reserved.</p>
       </footer>
     </div>
   )

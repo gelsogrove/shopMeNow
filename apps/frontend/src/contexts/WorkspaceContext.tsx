@@ -32,6 +32,8 @@ export interface Workspace {
   notificationEmail?: string
   webhookUrl?: string
   businessType?: string
+  planType?: string | null
+  trialEndsAt?: string | null
 }
 
 interface WorkspaceContextType {

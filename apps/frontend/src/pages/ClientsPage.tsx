@@ -1,9 +1,9 @@
 import { ChangeDetection, ClientSheet } from "@/components/shared/ClientSheet"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
-import { DataTable } from "@/components/shared/DataTable"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { WhatsAppChatModal } from "@/components/shared/WhatsAppChatModal"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import {
   Tooltip,
@@ -20,15 +20,17 @@ import { pushNotificationService } from "@/services/pushNotificationService"
 import { getLanguages, Language } from "@/services/workspaceApi"
 import { commonStyles } from "@/styles/common"
 import { useQuery } from "@tanstack/react-query"
-import { type ColumnDef } from "@tanstack/react-table"
 import {
+  Ban,
   Bot,
   MessageSquare,
   Pencil,
+  Phone,
   Plus,
   ShoppingCart,
   Star,
   Trash2,
+  User,
   Users,
 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
@@ -551,209 +553,34 @@ export default function ClientsPage(): JSX.Element {
     setShowPlayground(true)
   }
 
-  // Define columns for the DataTable in the requested order
-  const columns: ColumnDef<Client>[] = [
-    {
-      header: "Phone",
-      accessorKey: "phone",
-    },
-    {
-      header: "Name",
-      accessorKey: "name",
-      size: 300,
-      cell: ({ row }) => (
-        <span className="min-w-[280px] block">
-          {row.original.name}
-          {row.original.company && ` (${row.original.company})`}
-        </span>
-      ),
-    },
-    {
-      header: "Chatbot",
-      accessorKey: "activeChatbot",
-      cell: ({ row }) => (
-        <div className="flex items-center">
-          <Bot
-            className={`h-4 w-4 mr-1 ${
-              row.original.activeChatbot !== false
-                ? "text-green-600"
-                : "text-gray-400"
-            }`}
-          />
-          <span
-            className={`px-2 py-1 rounded-full text-xs ${
-              row.original.activeChatbot !== false
-                ? "bg-green-100 text-green-800"
-                : "bg-red-100 text-red-800"
-            }`}
-          >
-            {row.original.activeChatbot !== false ? "Auto" : "Manual"}
-          </span>
-        </div>
-      ),
-    },
-    {
-      header: "Blocked",
-      accessorKey: "isBlacklisted",
-      cell: ({ row }) => (
-        <span
-          className={`px-2 py-1 rounded-full text-xs font-medium ${
-            row.original.isBlacklisted
-              ? "bg-red-100 text-red-800"
-              : "bg-green-100 text-green-800"
-          }`}
-        >
-          {row.original.isBlacklisted ? "YES" : "NO"}
-        </span>
-      ),
-    },
-    {
-      id: "actions",
-      header: "",
-      cell: ({ row }) => (
-        <div className="flex justify-end items-center gap-2">
-          {/* View orders for this client */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="h-8 w-8 p-0 flex items-center justify-center"
-                  onClick={() =>
-                    navigate(
-                      `/admin/orders?search=${encodeURIComponent(
-                        row.original.name
-                      )}`
-                    )
-                  }
-                >
-                  <span className="sr-only">View orders</span>
-                  <ShoppingCart className="h-4 w-4 text-blue-600" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>View orders for this client</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          {/* Chat history button for all clients */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="h-8 w-8 p-0 flex items-center justify-center"
-                  onClick={() => handleViewChatHistory(row.original)}
-                >
-                  <span className="sr-only">Chat history</span>
-                  <MessageSquare className={`h-4 w-4`} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>View chat history</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          {/* Feedback icon (if customer has feedback) */}
-          {row.original.feedback && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="h-8 w-8 p-0 flex items-center justify-center"
-                  >
-                    <span className="sr-only">Feedback</span>
-                    <Star
-                      className={`${commonStyles.actionIcon} text-yellow-500 fill-yellow-500`}
-                    />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`w-3 h-3 ${
-                            i < row.original.feedback.rating
-                              ? "text-yellow-500 fill-yellow-500"
-                              : "text-gray-300"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    {row.original.feedback.comment && (
-                      <p className="text-sm">{row.original.feedback.comment}</p>
-                    )}
-                    <p className="text-xs text-gray-500">
-                      {new Date(
-                        row.original.feedback.createdAt
-                      ).toLocaleDateString("it-IT")}
-                    </p>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-
-          {/* Edit button */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="h-8 w-8 p-0 flex items-center justify-center"
-                  onClick={() => handleEdit(row.original)}
-                >
-                  <span className="sr-only">Edit</span>
-                  <Pencil
-                    className={`${commonStyles.actionIcon} ${commonStyles.primary}`}
-                  />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Edit</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          {/* Delete button */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="h-8 w-8 p-0 flex items-center justify-center hover:bg-red-50"
-                  onClick={() => handleDelete(row.original)}
-                >
-                  <span className="sr-only">Delete</span>
-                  <Trash2
-                    className={`${commonStyles.actionIcon} text-red-600`}
-                  />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Delete</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      ),
-    },
-  ]
-
   // In the return, use isLoading from useQuery
   if (isLoadingWorkspace || isLoadingClients) {
-    return <div>Loading...</div>
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+      </div>
+    )
   }
 
   if (isError) {
-    return <div>Error loading clients.</div>
+    return (
+      <Card className="max-w-md mx-auto mt-8">
+        <CardContent className="pt-6 text-center">
+          <p className="text-red-600">Error loading clients.</p>
+        </CardContent>
+      </Card>
+    )
   }
 
   // Show error if no workspace selected
   if (!workspace?.id) {
-    return <div>No workspace selected</div>
+    return (
+      <Card className="max-w-md mx-auto mt-8">
+        <CardContent className="pt-6 text-center">
+          <p className="text-gray-600">No workspace selected</p>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -766,13 +593,13 @@ export default function ClientsPage(): JSX.Element {
             itemCount={filteredClients.length}
           />
           {/* Search and New Chat aligned to the right */}
-          <div className="flex items-center justify-end gap-2 mb-4">
+          <div className="flex items-center justify-end gap-2 mb-6">
             <Input
               type="search"
               placeholder="Search clients..."
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
-              className="max-w-xs"
+              className="max-w-xs bg-white"
             />
             <Button
               variant="default"
@@ -783,13 +610,166 @@ export default function ClientsPage(): JSX.Element {
               New Chat
             </Button>
           </div>
-          <div className="mt-6 w-full">
-            <DataTable
-              columns={columns}
-              data={filteredClients}
-              globalFilter={searchValue}
-            />
-          </div>
+
+          {/* Client Cards Grid */}
+          {filteredClients.length === 0 ? (
+            <Card className="bg-white">
+              <CardContent className="py-12 text-center">
+                <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">No clients found</p>
+                <p className="text-sm text-gray-400 mt-1">Start a new chat to add your first client</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredClients.map((client) => (
+                <Card 
+                  key={client.id} 
+                  className="bg-white hover:shadow-md transition-shadow cursor-pointer group"
+                  onClick={() => handleView(client)}
+                >
+                  <CardContent className="p-4">
+                    {/* Header with avatar and status badges */}
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                          <User className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900 group-hover:text-green-600 transition-colors">
+                            {client.name || 'Unknown'}
+                          </h3>
+                          {client.company && (
+                            <p className="text-xs text-gray-500">{client.company}</p>
+                          )}
+                        </div>
+                      </div>
+                      {/* Status badges */}
+                      <div className="flex gap-1">
+                        {client.isBlacklisted && (
+                          <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700 flex items-center gap-1">
+                            <Ban className="h-3 w-3" />
+                            Blocked
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Contact info */}
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Phone className="h-4 w-4 text-gray-400" />
+                        <span>{client.phone || 'No phone'}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Bot className={`h-4 w-4 ${client.activeChatbot !== false ? 'text-green-600' : 'text-gray-400'}`} />
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          client.activeChatbot !== false 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {client.activeChatbot !== false ? 'Chatbot Active' : 'Manual Mode'}
+                        </span>
+                        {client.feedback && (
+                          <div className="flex items-center gap-0.5 ml-auto">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`w-3 h-3 ${
+                                  i < client.feedback!.rating
+                                    ? "text-yellow-500 fill-yellow-500"
+                                    : "text-gray-300"
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="flex items-center justify-end gap-1 pt-3 border-t border-gray-100">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                navigate(`/admin/orders?search=${encodeURIComponent(client.name)}`)
+                              }}
+                            >
+                              <ShoppingCart className="h-4 w-4 text-blue-600" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Orders</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleViewChatHistory(client)
+                              }}
+                            >
+                              <MessageSquare className="h-4 w-4 text-gray-600" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Chat History</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleEdit(client)
+                              }}
+                            >
+                              <Pencil className="h-4 w-4 text-green-600" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Edit</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 hover:bg-red-50"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDelete(client)
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-600" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Delete</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </div>
       {/* WhatsApp Playground Modal */}

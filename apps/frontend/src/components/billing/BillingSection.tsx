@@ -158,9 +158,13 @@ interface BillingSectionProps {
   openUpgradeDialog?: boolean
   /** Optional: callback when upgrade dialog is closed */
   onUpgradeDialogClose?: () => void
+  /** Optional: externally control the invoices dialog open state */
+  openInvoicesDialog?: boolean
+  /** Optional: callback when invoices dialog is closed */
+  onInvoicesDialogClose?: () => void
 }
 
-export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverviewLoaded, openUpgradeDialog, onUpgradeDialogClose }: BillingSectionProps) {
+export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverviewLoaded, openUpgradeDialog, onUpgradeDialogClose, openInvoicesDialog, onInvoicesDialogClose }: BillingSectionProps) {
   const { workspace } = useWorkspace()
   // Use prop workspaceId if provided, otherwise fall back to context workspace
   const effectiveWorkspaceId = propWorkspaceId || workspace?.id
@@ -209,11 +213,26 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
     }
   }, [openUpgradeDialog])
 
+  // External control: open invoices dialog when prop changes to true
+  useEffect(() => {
+    if (openInvoicesDialog) {
+      setShowInvoicesDialog(true)
+    }
+  }, [openInvoicesDialog])
+
   // Handle upgrade dialog close - notify parent
   const handleUpgradeDialogClose = (open: boolean) => {
     setShowUpgradeDialog(open)
     if (!open && onUpgradeDialogClose) {
       onUpgradeDialogClose()
+    }
+  }
+
+  // Handle invoices dialog close - notify parent
+  const handleInvoicesDialogClose = (open: boolean) => {
+    setShowInvoicesDialog(open)
+    if (!open && onInvoicesDialogClose) {
+      onInvoicesDialogClose()
     }
   }
 
@@ -479,7 +498,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
             <div>
               <CardTitle className="flex items-center gap-2 text-green-600">
                 <CreditCard className="h-5 w-5" />
-                Plans & Billing
+                Plans
               </CardTitle>
               <CardDescription>
                 Manage your plan and credit
@@ -495,17 +514,6 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                 <History className="h-4 w-4" />
                 History
               </Button>
-              {hasInvoiceableTransactions && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowInvoicesDialog(true)}
-                  className="gap-1.5 text-green-600 border-green-600 hover:bg-green-50"
-                >
-                  <FileText className="h-4 w-4" />
-                  Invoices
-                </Button>
-              )}
               {isSuperAdmin && (
                 <Button
                   variant="outline"
@@ -720,7 +728,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
 
       {/* Change Plan Dialog */}
       <Dialog open={showUpgradeDialog} onOpenChange={handleUpgradeDialogClose}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl">Change Plan</DialogTitle>
             <DialogDescription>
@@ -729,19 +737,21 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-6 md:grid-cols-3 py-4">
+          <div className="grid gap-6 md:grid-cols-4 py-4">
             {/* Render plans dynamically from PLAN_CONFIGS */}
-            {(["BASIC", "PREMIUM", "ENTERPRISE"] as const).map((planKey) => {
+            {(["FREE_TRIAL", "BASIC", "PREMIUM", "ENTERPRISE"] as const).map((planKey) => {
               const planConfig = PLAN_CONFIGS[planKey]
               const isCurrentPlan = billing.planType === planKey
+              const isFreePlan = planKey === "FREE_TRIAL"
               const isDowngrade = PLAN_ORDER[billing.planType] > PLAN_ORDER[planKey]
               const downgradeCheck = isDowngrade ? checkCanDowngrade(usage, planKey) : { canDowngrade: true, reasons: [] }
-              const canSelect = !isCurrentPlan && (isDowngrade ? downgradeCheck.canDowngrade : true)
+              // Free plan is never selectable for plan changes
+              const canSelect = !isFreePlan && !isCurrentPlan && (isDowngrade ? downgradeCheck.canDowngrade : true)
               const features = getPlanFeaturesWithText(planKey)
               
-              // Get dynamic price from database
-              const priceKey = `${planKey}_MONTHLY`
-              const priceInfo = getPriceWithOriginal(priceKey)
+              // Get dynamic price from database (Free plan has no price key)
+              const priceKey = isFreePlan ? null : `${planKey}_MONTHLY`
+              const priceInfo = priceKey ? getPriceWithOriginal(priceKey) : { current: 0, original: null }
               
               return (
                 <div
@@ -749,7 +759,9 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                   className={`relative rounded-2xl border-2 p-6 flex flex-col ${
                     isCurrentPlan
                       ? "border-blue-500 bg-gradient-to-br from-blue-50 to-green-50 shadow-xl"
-                      : "border-gray-200 bg-white hover:border-blue-300 transition-all"
+                      : isFreePlan
+                        ? "border-gray-200 bg-gray-50 opacity-75"
+                        : "border-gray-200 bg-white hover:border-blue-300 transition-all"
                   }`}
                 >
                   {isCurrentPlan && (
@@ -760,16 +772,25 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                   <div className="text-center mb-4">
                     <h3 className="text-xl font-bold text-gray-900 mb-2">{planConfig.name}</h3>
                     <div className="mb-2">
-                      {/* Show strikethrough original price if different from current */}
-                      {priceInfo.original && priceInfo.original !== priceInfo.current && (
-                        <span className="text-lg text-gray-400 line-through mr-2">
-                          €{priceInfo.original}
-                        </span>
+                      {isFreePlan ? (
+                        <>
+                          <span className="text-3xl font-bold text-gray-900">€0</span>
+                          <span className="text-gray-600">/14 days</span>
+                        </>
+                      ) : (
+                        <>
+                          {/* Show strikethrough original price if different from current */}
+                          {priceInfo.original && priceInfo.original !== priceInfo.current && (
+                            <span className="text-lg text-gray-400 line-through mr-2">
+                              €{priceInfo.original}
+                            </span>
+                          )}
+                          <span className={`text-3xl font-bold ${priceInfo.original && priceInfo.original !== priceInfo.current ? "text-green-600" : "text-gray-900"}`}>
+                            €{priceInfo.current}
+                          </span>
+                          <span className="text-gray-600">/month</span>
+                        </>
                       )}
-                      <span className={`text-3xl font-bold ${priceInfo.original && priceInfo.original !== priceInfo.current ? "text-green-600" : "text-gray-900"}`}>
-                        €{priceInfo.current}
-                      </span>
-                      <span className="text-gray-600">/month</span>
                     </div>
                     <p className="text-sm text-gray-600">{planConfig.description}</p>
                   </div>
@@ -801,6 +822,8 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                             >
                               {isUpgrading ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : isFreePlan ? (
+                                "Only for new users"
                               ) : isDowngrade ? (
                                 <>
                                   <TrendingDown className="h-4 w-4 mr-2" />
@@ -815,6 +838,13 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                             </Button>
                           </div>
                         </TooltipTrigger>
+                        {isFreePlan && (
+                          <TooltipContent side="bottom" className="max-w-xs">
+                            <p className="text-sm">
+                              The Free Trial is only available for new registrations.
+                            </p>
+                          </TooltipContent>
+                        )}
                         {isDowngrade && !downgradeCheck.canDowngrade && (
                           <TooltipContent side="bottom" className="max-w-xs">
                             <p className="font-medium text-red-600">Cannot downgrade</p>
@@ -1043,7 +1073,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
       </Dialog>
 
       {/* Monthly Invoices Dialog */}
-      <Dialog open={showInvoicesDialog} onOpenChange={setShowInvoicesDialog}>
+      <Dialog open={showInvoicesDialog} onOpenChange={handleInvoicesDialogClose}>
         <DialogContent className="max-w-6xl h-[95vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">

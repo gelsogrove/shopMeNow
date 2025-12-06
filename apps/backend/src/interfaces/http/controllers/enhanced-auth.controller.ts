@@ -197,6 +197,7 @@ export class EnhancedAuthController {
           role: true, 
           firstName: true, 
           lastName: true,
+          authProvider: true,
           profilePicture: true,
         },
       })
@@ -263,6 +264,7 @@ export class EnhancedAuthController {
           firstName: user.firstName,
           lastName: user.lastName,
           role: user.role,
+          authProvider: user.authProvider || 'email',
           profilePicture: user.profilePicture,
         },
       })
@@ -358,6 +360,7 @@ export class EnhancedAuthController {
           firstName: user.firstName,
           lastName: user.lastName,
           role: user.role,
+          authProvider: user.authProvider || 'email',
           profilePicture: this.oauthAuthService.getUserAvatar(user),
         },
       })

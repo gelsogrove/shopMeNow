@@ -134,11 +134,8 @@ export function Sidebar() {
     : baseLinks
 
   return (
-    <aside className="fixed inset-y-0 left-0 w-72 bg-white border-r">
+    <aside className="fixed top-16 bottom-0 left-0 w-72 bg-gray-100 border-r">
       <div className="flex flex-col h-full">
-        <div className="flex items-center h-24 px-8 border-b">
-          <span className="text-2xl font-bold text-green-600">eChatbot</span>
-        </div>
 
         <nav className="flex-1 px-4 space-y-2 py-6">
           {mainLinks.map((link) => (
@@ -150,8 +147,8 @@ export function Sidebar() {
                     className={cn(
                       "flex w-full items-center justify-between gap-3 px-4 py-3 rounded-lg text-base font-medium transition-colors",
                       expandedItems[link.key || "unknown"]
-                        ? "bg-green-50 text-green-600"
-                        : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                        ? "bg-white text-green-600 shadow-sm"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-white hover:shadow-sm"
                     )}
                   >
                     <div className="flex items-center gap-3">
@@ -186,8 +183,8 @@ export function Sidebar() {
                             cn(
                               "flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
                               isActive
-                                ? "bg-green-50 text-green-600"
-                                : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                                ? "bg-white text-green-600 shadow-sm"
+                                : "text-gray-600 hover:text-gray-900 hover:bg-white hover:shadow-sm"
                             )
                           }
                         >
@@ -207,8 +204,8 @@ export function Sidebar() {
                     cn(
                       "flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium transition-colors",
                       isActive
-                        ? "bg-green-50 text-green-600"
-                        : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                        ? "bg-white text-green-600 shadow-sm"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-white hover:shadow-sm"
                     )
                   }
                 >

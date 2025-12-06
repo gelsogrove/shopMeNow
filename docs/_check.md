@@ -170,3 +170,7 @@ registrare?
 - ✅ Popup conferma "DELETE" / "PERMANENTLY DELETE"
 - ✅ Full logout dopo delete account/workspace
 - ✅ Billing stops per workspace soft-deleted
+
+
+trova nel codice un putno sia di BE che di FE che possiamo ottimizzare
+magari possiamo evitare di duplicare codice, uniformare creareo un componente di grafica comdiviso, togliere codice morto trova qualche miglioramente da fare ma 1 di Fe e 1 di BE
