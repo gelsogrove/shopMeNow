@@ -1226,10 +1226,27 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [language, setLanguageState] = useState<Language>(() => {
+    // 1. Check localStorage first
     const saved = localStorage.getItem("language")
-    // Ensure fallback works correctly (null/undefined → "it")
-    const initialLang = (saved && ["it", "en", "es", "pt"].includes(saved) ? saved : "it") as Language
-    return initialLang
+    if (saved && ["it", "en", "es", "pt"].includes(saved)) {
+      return saved as Language
+    }
+    
+    // 2. Detect browser language
+    const browserLang = navigator.language.split('-')[0].toLowerCase()
+    const langMap: Record<string, Language> = {
+      'it': 'it',
+      'en': 'en', 
+      'es': 'es',
+      'pt': 'pt',
+      // Common variants
+      'italiano': 'it',
+      'english': 'en',
+      'español': 'es',
+      'português': 'pt',
+    }
+    
+    return langMap[browserLang] || 'en' // Default to English if browser lang not supported
   })
 
   useEffect(() => {

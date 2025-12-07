@@ -553,12 +553,7 @@ export function LoginPage() {
       <>
         <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col items-center justify-center p-4">
           <div className="text-center mb-12 w-full">
-            <img
-             
-              alt="eChatbot Logo"
-              style={{ width: '800px !important', height: '800px' }}
-              className="mx-auto mb-8 object-contain"
-            />
+            
             <h1 style={{ fontSize: '120px' }} className="font-bold text-slate-900">eChatbot</h1>
           </div>
           <div className="max-w-lg w-full">
@@ -627,10 +622,7 @@ export function LoginPage() {
         {/* Background - WIP Page */}
         <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
           <div className="max-w-lg w-full opacity-30">
-            <div className="text-center mb-8">
-              <img src={`/logo.png?v=${Date.now()}`} alt="eChatbot Logo" style={{ width: '800px', height: '800px' }} className="mx-auto mb-4 object-contain" />
-              <h1 style={{ fontSize: '120px' }} className="font-bold text-slate-900">eChatbot</h1>
-            </div>
+            
             <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 text-center">
               <h2 className="text-2xl font-bold text-slate-900 mb-3">Work in Progress</h2>
             </div>
@@ -760,29 +752,39 @@ export function LoginPage() {
 
   return (
     <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Header - Unified style */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Left: Logo */}
-            <div className="flex items-center gap-2">
-              <img src="/logo.png" alt="eChatbot" className="h-14 w-14 object-contain" />
-              <span className="text-2xl font-bold text-green-600">eChatbot</span>
+      {/* Header - Professional Design */}
+      <header className="bg-white shadow-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-8 lg:px-12">
+          {/* Main Header Row */}
+          <div className="flex items-center justify-between h-24">
+            {/* Left: Logo + Brand */}
+            <div className="flex items-center gap-0 mt-[5px]">
+              <img 
+                src="/logo.png" 
+                alt="eChatbot" 
+                className="h-[100px] w-[100px] object-contain mr-[-15px] mt-[10px]"
+              />
+              <span className="text-4xl font-bold text-green-600 tracking-tight">eChatbot</span>
             </div>
 
-            {/* Right: Plan Badge + Avatar OR Login buttons */}
-            <div className="flex items-center gap-3">
+            {/* Right: Language Selector + Auth */}
+            <div className="flex items-center gap-6">
+              {/* Language Flags - Inline in header */}
+              <div className="hidden sm:block">
+                <LanguageSelector />
+              </div>
+              
               {isLoggedIn ? (
-                <>
-                  {/* Plan Badge - Always show with fallback */}
-                  <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium border ${
+                <div className="flex items-center gap-4">
+                  {/* Plan Badge */}
+                  <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border ${
                       !userPlan?.planType || userPlan.planType === 'FREE_TRIAL'
-                        ? 'bg-amber-100 text-amber-700 border-amber-300'
+                        ? 'bg-amber-50 text-amber-700 border-amber-200'
                         : userPlan.planType === 'BASIC'
-                        ? 'bg-green-100 text-green-700 border-green-300'
+                        ? 'bg-green-50 text-green-700 border-green-200'
                         : userPlan.planType === 'PREMIUM'
-                        ? 'bg-purple-100 text-purple-700 border-purple-300'
-                        : 'bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 border-amber-300'
+                        ? 'bg-purple-50 text-purple-700 border-purple-200'
+                        : 'bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-800 border-amber-200'
                     }`}>
                       <Crown className="h-3.5 w-3.5" />
                       <span>
@@ -794,24 +796,26 @@ export function LoginPage() {
                       </span>
                     </div>
 
-                  {/* User Menu */}
+                  {/* User Avatar Menu */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
-                        className="relative h-12 w-12 rounded-full focus:ring-2 focus:ring-green-500 focus:outline-none hover:scale-105 transition-transform p-0"
+                        className="relative h-11 w-11 rounded-full focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none hover:scale-105 transition-transform p-0"
                       >
                         {loggedInUser?.profilePicture && !avatarImageError ? (
                           <img 
                             src={loggedInUser.profilePicture} 
                             alt="User"
                             referrerPolicy="no-referrer"
-                            className="h-full w-full rounded-full object-cover"
+                            className="h-full w-full rounded-full object-cover ring-2 ring-gray-100"
                             onError={() => setAvatarImageError(true)}
                           />
                         ) : (
-                          <div className="h-full w-full rounded-full bg-green-600 flex items-center justify-center text-white text-base font-semibold">
- 
+                          <div className="h-full w-full rounded-full bg-green-600 flex items-center justify-center text-white text-sm font-semibold ring-2 ring-green-100">
+                            {loggedInUser?.firstName && loggedInUser?.lastName
+                              ? `${loggedInUser.firstName[0]}${loggedInUser.lastName[0]}`.toUpperCase()
+                              : loggedInUser?.firstName?.[0]?.toUpperCase() || loggedInUser?.email?.[0]?.toUpperCase() || 'U'}
                           </div>
                         )}
                       </Button>
@@ -868,27 +872,25 @@ export function LoginPage() {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                </>
+                </div>
               ) : (
                 /* Login/Register buttons for non-logged users */
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   {canLogin && (
                     <Button
-                      size="sm"
                       onClick={() => {
                         localStorage.clear()
                         sessionStorage.clear()
                         setActiveTab('signin')
                         setShowLoginModal(true)
                       }}
-                      className="bg-green-600 hover:bg-green-700"
+                      className="bg-green-600 hover:bg-green-700 px-5 py-2 text-sm font-medium"
                     >
                       {t("login.signin")}
                     </Button>
                   )}
                   {canRegister && (
                     <Button
-                      size="sm"
                       variant="outline"
                       onClick={() => {
                         localStorage.clear()
@@ -896,7 +898,7 @@ export function LoginPage() {
                         setActiveTab('register')
                         setShowLoginModal(true)
                       }}
-                      className="border-green-600 text-green-600 hover:bg-green-50"
+                      className="border-green-600 text-green-600 hover:bg-green-50 px-5 py-2 text-sm font-medium"
                     >
                       {t("login.register")}
                     </Button>
@@ -905,10 +907,15 @@ export function LoginPage() {
               )}
             </div>
           </div>
+          
+          {/* Mobile Language Selector - Below main row on small screens */}
+          <div className="sm:hidden pb-3 flex justify-end">
+            <LanguageSelector />
+          </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 py-8 lg:py-10">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10 lg:py-12">
         {/* Hero Text - Full Width */}
         <div className="space-y-3 mb-8">
           <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">
