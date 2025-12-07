@@ -15,6 +15,7 @@ export interface UserProfile {
   billingAddress?: string
   authProvider?: string  // 'email' | 'google' | 'multi' etc. (Feature 189)
   hasPassword?: boolean  // True if user has a password set (Feature 189)
+  logo?: string          // Company logo URL
 }
 
 export interface UpdateProfileData {
@@ -28,6 +29,8 @@ export interface UpdateProfileData {
   website?: string
   billingPhone?: string
   billingAddress?: string
+  logo?: File           // Company logo file
+  removeLogo?: boolean  // Flag to remove existing logo
 }
 
 export interface ChangePasswordData {
@@ -46,11 +49,46 @@ export const getUserProfile = async (): Promise<UserProfile> => {
   }
 }
 
-// Update user profile
+// Update user profile (supports logo upload via FormData)
 export const updateUserProfile = async (data: UpdateProfileData): Promise<UserProfile> => {
   try {
-    const response = await api.put("/users/profile", data)
-    return response.data
+    // Check if we have a logo file to upload
+    const hasLogo = data.logo instanceof File
+    const hasRemoveLogo = data.removeLogo
+    
+    logger.info("📤 updateUserProfile called:", { 
+      hasLogo, 
+      hasRemoveLogo, 
+      logoType: data.logo ? typeof data.logo : 'undefined',
+      logoIsFile: data.logo instanceof File
+    })
+    
+    if (hasLogo || hasRemoveLogo) {
+      // Use FormData for file upload
+      const formData = new FormData()
+      
+      // Add all non-file fields
+      Object.entries(data).forEach(([key, value]) => {
+        if (key === 'logo' && value instanceof File) {
+          formData.append('logo', value)
+        } else if (key === 'removeLogo' && value) {
+          formData.append('removeLogo', 'true')
+        } else if (value !== undefined && value !== null && key !== 'logo') {
+          formData.append(key, String(value))
+        }
+      })
+      
+      const response = await api.put("/users/profile", formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+      return response.data
+    } else {
+      // Regular JSON request
+      const response = await api.put("/users/profile", data)
+      return response.data
+    }
   } catch (error) {
     logger.error("Error updating user profile:", error)
     throw error

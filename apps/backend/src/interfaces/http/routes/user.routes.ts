@@ -6,6 +6,7 @@ import logger from '../../../utils/logger';
 import { UserController } from '../controllers/user.controller';
 import { asyncHandler } from '../middlewares/async.middleware';
 import { authMiddleware } from '../middlewares/auth.middleware';
+import { uploadImage, handleUploadError } from '../middlewares/uploadMiddleware';
 
 /**
  * Create user router
@@ -26,8 +27,13 @@ export const createUserRouter = (): Router => {
   // Get current user's profile (alias for /me)
   router.get('/profile', asyncHandler(userController.getCurrentUser));
 
-  // Update current user's profile
-  router.put('/profile', asyncHandler(userController.updateProfile));
+  // Update current user's profile (with optional logo upload)
+  router.put(
+    '/profile',
+    uploadImage.single('logo'),
+    handleUploadError,
+    asyncHandler(userController.updateProfile)
+  );
 
   // Change current user's password
   router.post('/change-password', asyncHandler(userController.changePassword));

@@ -60,7 +60,8 @@ export async function sendToWhatsApp(
     }
 
     // 3. Prepare WhatsApp API request
-    const apiUrl = `${process.env.WHATSAPP_API_URL}/${workspace.whatsappPhoneNumber}/messages`
+    // TODO: Will be replaced with new WhatsApp library
+    const apiUrl = `https://graph.facebook.com/v18.0/${workspace.whatsappPhoneNumber}/messages`
 
     const payload = {
       messaging_product: "whatsapp",

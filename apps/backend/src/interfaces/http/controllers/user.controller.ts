@@ -43,6 +43,16 @@ export class UserController {
         authProvider: (user as any).authProvider || "email",
         hasPassword: !!(user as any).passwordHash,
         language: (user as any).language || "ENG",
+        // 📱 Personal phone (optional)
+        phoneNumber: (user as any).phoneNumber,
+        // 🧾 Billing fields
+        companyName: (user as any).companyName,
+        vatNumber: (user as any).vatNumber,
+        website: (user as any).website,
+        billingPhone: (user as any).billingPhone,
+        billingAddress: (user as any).billingAddress,
+        // 🖼️ Company logo
+        logo: (user as any).logo,
       }
       
       return res.json(userWithoutPassword)
@@ -203,6 +213,19 @@ export class UserController {
       logger.info(`Updating profile for user ID: ${userId}`)
       logger.info(`🔍 Request body received:`, JSON.stringify(userData, null, 2))
       
+      // Handle logo upload if present
+      if (req.file) {
+        userData.logo = `/uploads/users/${req.file.filename}`
+        logger.info(`📸 Logo uploaded: ${userData.logo}`)
+      }
+      
+      // Handle logo removal (when removeLogo is sent)
+      if (userData.removeLogo === 'true' || userData.removeLogo === true) {
+        userData.logo = null
+        delete userData.removeLogo
+        logger.info(`🗑️ Logo removed for user ${userId}`)
+      }
+      
       const user = await this.userService.update(userId, userData)
       
       if (!user) {
@@ -218,6 +241,7 @@ export class UserController {
         website: user.website,
         billingPhone: user.billingPhone,
         billingAddress: user.billingAddress,
+        logo: user.logo,
       })
       
       // Don't return the password
@@ -243,6 +267,8 @@ export class UserController {
         website: user.website,
         billingPhone: user.billingPhone,
         billingAddress: user.billingAddress,
+        // 🖼️ Company logo
+        logo: user.logo,
       }
       
       return res.json(userWithoutPassword)

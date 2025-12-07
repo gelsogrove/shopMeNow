@@ -17,12 +17,14 @@ import ReactCrop, {
 } from "react-image-crop"
 import "react-image-crop/dist/ReactCrop.css"
 import { IMG_BASE_URL } from "@/config"
+import { ImageIcon, Building2 } from "lucide-react"
 
 interface ImageCropUploadProps {
   onImageSelected: (file: File) => void
   currentImageUrl?: string
   label?: string
   required?: boolean
+  placeholder?: "image" | "logo"  // Type of placeholder to show
 }
 
 const ASPECT_RATIO = 1 // Square aspect ratio
@@ -37,6 +39,7 @@ export function ImageCropUpload({
   currentImageUrl,
   label = "Image",
   required = false,
+  placeholder = "image",
 }: ImageCropUploadProps) {
   const [imgSrc, setImgSrc] = useState<string>("")
   const [crop, setCrop] = useState<Crop>()
@@ -216,7 +219,7 @@ export function ImageCropUpload({
 
       <div className="flex flex-col sm:flex-row gap-4 items-start">
         {/* Preview area */}
-        <div className="flex-shrink-0 w-40 h-40 border rounded-md overflow-hidden bg-gray-50 flex items-center justify-center">
+        <div className="flex-shrink-0 w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
           {previewImage ? (
             <img
               src={previewImage}
@@ -224,7 +227,14 @@ export function ImageCropUpload({
               className="w-full h-full object-cover"
             />
           ) : (
-            <span className="text-gray-400 text-sm text-center px-4">No image selected</span>
+            <div className="flex flex-col items-center justify-center text-gray-400">
+              {placeholder === "logo" ? (
+                <Building2 className="h-12 w-12 mb-1" />
+              ) : (
+                <ImageIcon className="h-12 w-12 mb-1" />
+              )}
+              <span className="text-xs">No image</span>
+            </div>
           )}
         </div>
         
@@ -246,10 +256,6 @@ export function ImageCropUpload({
             className="hidden"
             id="image-upload"
           />
-
-          {selectedFileName && (
-            <p className="text-sm text-muted-foreground">Selected: {selectedFileName}</p>
-          )}
 
           {error && <p className="text-sm text-red-500">{error}</p>}
         </div>

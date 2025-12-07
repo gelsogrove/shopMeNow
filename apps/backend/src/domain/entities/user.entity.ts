@@ -22,12 +22,16 @@ export interface UserProps {
   recoveryCodes?: string[] | null;
   // 📱 Personal phone (optional)
   phoneNumber?: string | null;
+  // 🌐 Language preference
+  language?: string;
   // 🧾 Billing fields (Andrea's requirement)
   companyName?: string | null;
   vatNumber?: string | null;
   website?: string | null;
   billingPhone?: string | null;
   billingAddress?: string | null;
+  // 🖼️ Company logo
+  logo?: string | null;
   // 🔐 Auth provider info (for OAuth set-password feature)
   authProvider?: string;
   passwordHash?: string | null;
@@ -121,6 +125,11 @@ export class User extends Entity<UserProps> {
     return this.props.phoneNumber;
   }
 
+  // 🌐 Language preference getter
+  get language(): string {
+    return this.props.language || 'ENG';
+  }
+
   // 🧾 Billing getters (Andrea's requirement)
   get companyName(): string | null | undefined {
     return this.props.companyName;
@@ -140,6 +149,11 @@ export class User extends Entity<UserProps> {
 
   get billingAddress(): string | null | undefined {
     return this.props.billingAddress;
+  }
+
+  // 🖼️ Company logo getter
+  get logo(): string | null | undefined {
+    return this.props.logo;
   }
 
   // 🔐 Auth provider info (for OAuth set-password feature)

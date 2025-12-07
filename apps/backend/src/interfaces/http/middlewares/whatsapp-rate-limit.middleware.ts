@@ -29,12 +29,9 @@ interface RateLimitCache {
 // In-memory cache per rate limiting (production: usa Redis!)
 const rateLimitCache: RateLimitCache = {}
 
-const WORKSPACE_LIMIT = parseInt(
-  process.env.WHATSAPP_MAX_MESSAGES_PER_MINUTE_WORKSPACE || "100"
-)
-const CUSTOMER_LIMIT = parseInt(
-  process.env.WHATSAPP_MAX_MESSAGES_PER_MINUTE_CUSTOMER || "10"
-)
+// Default rate limits (TODO: move to database configuration)
+const WORKSPACE_LIMIT = 100
+const CUSTOMER_LIMIT = 10
 const WINDOW_MS = 60 * 1000 // 1 minute
 
 /**

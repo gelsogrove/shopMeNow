@@ -27,10 +27,11 @@ import {
   setPassword,
   deleteMyAccount,
 } from "@/services/userApi"
-import { Building2, Key, Loader2, User, Phone, Trash2, AlertTriangle, Globe } from "lucide-react"
+import { Building2, Key, Loader2, User, Phone, Trash2, AlertTriangle, Globe, ImageIcon } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "../lib/toast"
+import { ImageCropUpload } from "@/components/shared/ImageCropUpload"
 
 // Supported languages for user interface
 const SUPPORTED_LANGUAGES = [
@@ -65,6 +66,7 @@ export default function ProfilePage() {
     billingAddress?: string
     authProvider?: string
     hasPassword?: boolean
+    logo?: string
   }>({
     id: "",
     firstName: "",
@@ -77,7 +79,9 @@ export default function ProfilePage() {
     website: "",
     billingPhone: "",
     billingAddress: "",
+    logo: "",
   })
+  const [logoFile, setLogoFile] = useState<File | null>(null)
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -101,6 +105,7 @@ export default function ProfilePage() {
         billingAddress: (userData as any).billingAddress || "",
         authProvider: (userData as any).authProvider || "email",
         hasPassword: (userData as any).hasPassword !== false, // Default to true unless explicitly false
+        logo: (userData as any).logo || "",
       })
     }
   }, [userData])
@@ -122,7 +127,7 @@ export default function ProfilePage() {
   const handleSave = async () => {
     setIsLoading(true)
     try {
-      const updatedUser = await updateUserProfile({
+      const updateData: any = {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
@@ -133,7 +138,17 @@ export default function ProfilePage() {
         website: user.website,
         billingPhone: user.billingPhone,
         billingAddress: user.billingAddress,
-      })
+      }
+      
+      // Include logo file if selected
+      if (logoFile) {
+        updateData.logo = logoFile
+        logger.info("📸 Logo file included in update:", { name: logoFile.name, size: logoFile.size, type: logoFile.type })
+      } else {
+        logger.info("📸 No logo file selected")
+      }
+      
+      const updatedUser = await updateUserProfile(updateData)
       setUser({
         ...updatedUser,
         phoneNumber: (updatedUser as any).phoneNumber || "",
@@ -143,7 +158,9 @@ export default function ProfilePage() {
         website: (updatedUser as any).website || "",
         billingPhone: (updatedUser as any).billingPhone || "",
         billingAddress: (updatedUser as any).billingAddress || "",
+        logo: (updatedUser as any).logo || "",
       })
+      setLogoFile(null) // Clear the pending file after save
       toast.success("Profile updated successfully")
     } catch (error) {
       logger.error("Error updating profile:", error)
@@ -396,6 +413,16 @@ export default function ProfilePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Company Logo */}
+              <div className="space-y-2">
+                <ImageCropUpload
+                  onImageSelected={(file) => setLogoFile(file)}
+                  currentImageUrl={user.logo}
+                  label="Company Logo"
+                  placeholder="logo"
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="companyName">Company Name</Label>
                 <Input
@@ -451,19 +478,18 @@ export default function ProfilePage() {
           </Card>
       </div>
 
-      <div className="flex justify-between items-center">
-        {/* Left side - Destructive actions */}
-        <Button
-          variant="destructive"
-          onClick={() => setShowDeleteAccountDialog(true)}
-          className="gap-2"
-        >
-          <Trash2 className="h-4 w-4" />
-          Delete Account
-        </Button>
-
-        {/* Right side - Password and Save */}
+      <div className="flex justify-end items-center">
+        {/* Right side - Password, Delete, and Save */}
         <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setShowDeleteAccountDialog(true)}
+            className="gap-2"
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete Account
+          </Button>
+
           {user.hasPassword ? (
             <Button
               variant="outline"

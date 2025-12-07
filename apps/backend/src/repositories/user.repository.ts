@@ -38,12 +38,16 @@ export class UserRepository implements UserRepositoryInterface {
       recoveryCodes: data.recoveryCodes,
       // 📱 Personal phone (optional)
       phoneNumber: data.phoneNumber,
+      // 🌐 Language preference
+      language: data.language || 'ENG',
       // 🧾 Billing fields (Andrea's requirement - MUST be mapped from DB)
       companyName: data.companyName,
       vatNumber: data.vatNumber,
       website: data.website,
       billingPhone: data.billingPhone,
       billingAddress: data.billingAddress,
+      // 🖼️ Company logo
+      logo: data.logo,
       // 🔐 Auth provider info (for OAuth set-password feature)
       authProvider: data.authProvider,
       passwordHash: data.passwordHash,

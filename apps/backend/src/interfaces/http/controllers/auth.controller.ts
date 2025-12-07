@@ -422,6 +422,8 @@ export class AuthController {
         website: user.website,
         billingPhone: user.billingPhone,
         billingAddress: user.billingAddress,
+        // 🖼️ Company logo
+        logo: user.logo,
         // 🔐 Auth provider info
         authProvider: user.authProvider || "email",
         hasPassword: !!user.passwordHash,

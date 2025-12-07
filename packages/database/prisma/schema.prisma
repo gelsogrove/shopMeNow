@@ -479,6 +479,7 @@ model User {
   recoveryCodes      String[]                 @default([]) // 10 hashed recovery codes (bcrypt)
   authProvider       String                   @default("email") // "email" | "google" | "facebook" | "apple" | "multi"
   profilePicture     String?                  // URL to profile picture (OAuth or NULL for default avatar)
+  logo               String?                  // Company logo uploaded by user
   linkedProviders    Json?                    @default("[]") // Array: [{provider: 'google', linkedAt: '2025-11-21T...'}]
   gdprAccepted       DateTime?
   phoneNumber        String?
