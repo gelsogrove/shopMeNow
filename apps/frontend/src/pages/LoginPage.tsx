@@ -799,7 +799,7 @@ export function LoginPage() {
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
-                        className="relative h-10 w-10 rounded-full focus:ring-2 focus:ring-green-500 focus:outline-none hover:scale-105 transition-transform p-0"
+                        className="relative h-12 w-12 rounded-full focus:ring-2 focus:ring-green-500 focus:outline-none hover:scale-105 transition-transform p-0"
                       >
                         {loggedInUser?.profilePicture && !avatarImageError ? (
                           <img 
@@ -810,8 +810,8 @@ export function LoginPage() {
                             onError={() => setAvatarImageError(true)}
                           />
                         ) : (
-                          <div className="h-full w-full rounded-full bg-green-600 flex items-center justify-center text-white text-sm font-medium">
-                            {loggedInUser?.firstName?.[0]?.toUpperCase() || loggedInUser?.email?.[0]?.toUpperCase() || 'U'}
+                          <div className="h-full w-full rounded-full bg-green-600 flex items-center justify-center text-white text-base font-semibold">
+ 
                           </div>
                         )}
                       </Button>
@@ -1168,13 +1168,7 @@ export function LoginPage() {
                 </a>
               </div>
               <div className="flex items-center gap-3">
-                <Phone className="w-5 h-5 text-green-400" />
-                <a
-                  href="tel:+1234567890"
-                  className="text-slate-300 hover:text-white"
-                >
-                  +1 (234) 567-890
-                </a>
+                 
               </div>
               <div className="flex items-center gap-3">
                 <MapPin className="w-5 h-5 text-green-400" />

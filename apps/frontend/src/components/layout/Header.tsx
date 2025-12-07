@@ -253,7 +253,7 @@ export function Header() {
               <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              className="relative h-10 w-10 rounded-full focus:ring-2 focus:ring-green-500 focus:outline-none hover:scale-105 transition-transform p-0"
+              className="relative h-12 w-12 rounded-full focus:ring-2 focus:ring-green-500 focus:outline-none hover:scale-105 transition-transform p-0"
               >
                 {profilePicture ? (
                   <img 
@@ -267,7 +267,7 @@ export function Header() {
                     }}
                   />
                 ) : (
-                  <div className="h-full w-full rounded-full bg-green-600 flex items-center justify-center text-white text-sm font-medium">
+                  <div className="h-full w-full rounded-full bg-green-600 flex items-center justify-center text-white text-base font-semibold">
                     {userInitials}
                   </div>
                 )}
