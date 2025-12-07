@@ -134,6 +134,7 @@ export class SupplierController {
         region,
         country,
         existingLogoUrl,
+        removeLogo,
         isActive,
       } = req.body
 
@@ -142,8 +143,13 @@ export class SupplierController {
         isActive === "on" || isActive === true || isActive === "true"
 
       // Handle logo upload
-      let logoUrl: string | undefined = existingLogoUrl
-      if (req.file) {
+      let logoUrl: string | undefined | null = existingLogoUrl
+      
+      // If removeLogo is set, clear the logo
+      if (removeLogo === "true" || removeLogo === true) {
+        logoUrl = null
+        logger.info(`Logo removed for supplier ${id}`)
+      } else if (req.file) {
         logoUrl = `/uploads/suppliers/${req.file.filename}`
         logger.info(`New logo uploaded: ${logoUrl}`)
       }

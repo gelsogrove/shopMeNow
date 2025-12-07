@@ -36,6 +36,7 @@ export function SuppliersPage() {
   )
   const [logoFiles, setLogoFiles] = useState<File[]>([])
   const [currentLogoUrl, setCurrentLogoUrl] = useState<string>("")
+  const [logoRemoved, setLogoRemoved] = useState(false)
 
   useEffect(() => {
     if (workspace?.id) {
@@ -157,6 +158,7 @@ export function SuppliersPage() {
     setSelectedSupplier(supplier)
     setCurrentLogoUrl(supplier.logoUrl || "")
     setLogoFiles([])
+    setLogoRemoved(false)
     setShowEditSheet(true)
   }
 
@@ -172,9 +174,14 @@ export function SuppliersPage() {
       formData.append("logo", logoFiles[0])
     }
 
-    // Keep existing logo if no new one uploaded
-    if (!logoFiles.length && currentLogoUrl) {
+    // Keep existing logo if no new one uploaded AND not removed
+    if (!logoFiles.length && currentLogoUrl && !logoRemoved) {
       formData.append("existingLogoUrl", currentLogoUrl)
+    }
+
+    // If logo was removed, signal to backend to clear it
+    if (logoRemoved) {
+      formData.append("removeLogo", "true")
     }
 
     try {
@@ -192,6 +199,7 @@ export function SuppliersPage() {
       setSelectedSupplier(null)
       setLogoFiles([])
       setCurrentLogoUrl("")
+      setLogoRemoved(false)
       toast.success("Supplier updated successfully")
     } catch (error) {
       logger.error("Error updating supplier:", error)
@@ -240,7 +248,14 @@ export function SuppliersPage() {
         <Label>Company Logo</Label>
         <MultiImageCropUpload
           onImagesSelected={setLogoFiles}
-          currentImageUrls={supplier?.logoUrl ? [supplier.logoUrl] : []}
+          onImagesReordered={(urls) => {
+            // If urls is empty, logo was removed
+            if (urls.length === 0) {
+              setLogoRemoved(true)
+              setCurrentLogoUrl("")
+            }
+          }}
+          currentImageUrls={supplier?.logoUrl && !logoRemoved ? [supplier.logoUrl] : []}
           maxImages={1}
         />
       </div>

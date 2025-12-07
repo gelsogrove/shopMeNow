@@ -10,6 +10,17 @@
  * - Security: owner can only access own invoices
  */
 
+// Mock logger BEFORE the service import
+jest.mock('../../src/utils/logger', () => ({
+  __esModule: true,
+  default: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+  },
+}))
+
 // Mock Prisma
 const mockPrisma = {
   monthlyInvoice: {
@@ -51,16 +62,6 @@ jest.mock('@echatbot/database', () => ({
     ADJUSTMENT: 'ADJUSTMENT',
     RECHARGE: 'RECHARGE',
     MONTHLY_FEE: 'MONTHLY_FEE',
-  },
-}))
-
-// Mock logger
-jest.mock('../../src/utils/logger', () => ({
-  default: {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
   },
 }))
 

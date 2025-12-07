@@ -1186,125 +1186,134 @@ export function ProductsPage() {
           </Select>
         </div>
 
-        {/* Category Filters - Dynamic from Database */}
-        <div className="flex flex-wrap gap-3 items-center bg-gray-50 p-3 rounded-lg">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowCategoriesPanel(true)}
-            className="text-xs flex items-center gap-1"
-          >
-            <Package className="h-3 w-3" />
-            Manage Categories
-          </Button>
-          <span className="text-sm font-medium text-gray-700">
-            Categories:
-          </span>
-          {categories.map((cat) => (
-            <label
-              key={cat.id}
-              className="flex items-center gap-2 cursor-pointer"
+        {/* Filters Panel - Compact Design */}
+        <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+          {/* Management Buttons Row */}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCategoriesPanel(true)}
+              className="text-xs h-7"
             >
-              <input
-                type="checkbox"
-                checked={selectedCategoryIds.includes(cat.id)}
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    setSelectedCategoryIds([
-                      ...selectedCategoryIds,
-                      cat.id,
-                    ])
-                  } else {
-                    setSelectedCategoryIds(
-                      selectedCategoryIds.filter((id) => id !== cat.id)
-                    )
-                  }
-                }}
-                className="rounded border-gray-300"
-              />
-              <span className="text-sm">{cat.name}</span>
-            </label>
-          ))}
-        </div>
+              <Package className="h-3 w-3 mr-1" />
+              Categories
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCertificationsPanel(true)}
+              className="text-xs h-7"
+            >
+              <Award className="h-3 w-3 mr-1" />
+              Certifications
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowTransportTypesPanel(true)}
+              className="text-xs h-7"
+            >
+              <Truck className="h-3 w-3 mr-1" />
+              Transport
+            </Button>
+          </div>
 
-        {/* Certification Filters - Dynamic from Database */}
-        <div className="flex flex-wrap gap-3 items-center bg-gray-50 p-3 rounded-lg">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowCertificationsPanel(true)}
-            className="text-xs"
-          >
-            🏆 Manage Certifications
-          </Button>
-          <span className="text-sm font-medium text-gray-700">
-            Certifications:
-          </span>
-          {certifications.map((cert) => (
-            <label
-              key={cert.id}
-              className="flex items-center gap-2 cursor-pointer"
-            >
-              <input
-                type="checkbox"
-                checked={selectedCertificationIds.includes(cert.id)}
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    setSelectedCertificationIds([
-                      ...selectedCertificationIds,
-                      cert.id,
-                    ])
-                  } else {
-                    setSelectedCertificationIds(
-                      selectedCertificationIds.filter((id) => id !== cert.id)
-                    )
-                  }
+          {/* Filter Chips */}
+          <div className="flex flex-wrap gap-2 items-center">
+            {categories.length > 0 && (
+              <>
+                <span className="text-xs font-medium text-gray-500">Filter:</span>
+                {categories.map((cat) => (
+                  <label
+                    key={cat.id}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs cursor-pointer transition-colors ${
+                      selectedCategoryIds.includes(cat.id)
+                        ? "bg-green-100 text-green-800 border border-green-300"
+                        : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedCategoryIds.includes(cat.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedCategoryIds([...selectedCategoryIds, cat.id])
+                        } else {
+                          setSelectedCategoryIds(selectedCategoryIds.filter((id) => id !== cat.id))
+                        }
+                      }}
+                      className="sr-only"
+                    />
+                    <Package className="h-3 w-3" />
+                    {cat.name}
+                  </label>
+                ))}
+              </>
+            )}
+            {certifications.map((cert) => (
+              <label
+                key={cert.id}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs cursor-pointer transition-colors ${
+                  selectedCertificationIds.includes(cert.id)
+                    ? "bg-amber-100 text-amber-800 border border-amber-300"
+                    : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedCertificationIds.includes(cert.id)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedCertificationIds([...selectedCertificationIds, cert.id])
+                    } else {
+                      setSelectedCertificationIds(selectedCertificationIds.filter((id) => id !== cert.id))
+                    }
+                  }}
+                  className="sr-only"
+                />
+                <Award className="h-3 w-3" />
+                {cert.name}
+              </label>
+            ))}
+            {transportTypes.map((type) => (
+              <label
+                key={type.id}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs cursor-pointer transition-colors ${
+                  selectedTransportTypeIds.includes(type.id)
+                    ? "bg-blue-100 text-blue-800 border border-blue-300"
+                    : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedTransportTypeIds.includes(type.id)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedTransportTypeIds([...selectedTransportTypeIds, type.id])
+                    } else {
+                      setSelectedTransportTypeIds(selectedTransportTypeIds.filter((id) => id !== type.id))
+                    }
+                  }}
+                  className="sr-only"
+                />
+                <Truck className="h-3 w-3" />
+                {type.name}
+              </label>
+            ))}
+            {(selectedCategoryIds.length > 0 || selectedCertificationIds.length > 0 || selectedTransportTypeIds.length > 0) && (
+              <button
+                onClick={() => {
+                  setSelectedCategoryIds([])
+                  setSelectedCertificationIds([])
+                  setSelectedTransportTypeIds([])
                 }}
-                className="rounded border-gray-300"
-              />
-              <span className="text-sm">{cert.name}</span>
-            </label>
-          ))}
-        </div>
-
-        {/* Transport Type Filters - Dynamic from Database */}
-        <div className="flex flex-wrap gap-3 items-center bg-gray-50 p-3 rounded-lg">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowTransportTypesPanel(true)}
-            className="text-xs"
-          >
-            🚚 Manage Transport Types
-          </Button>
-          <span className="text-sm font-medium text-gray-700">
-            Transport Types:
-          </span>
-          {transportTypes.map((type) => (
-            <label
-              key={type.id}
-              className="flex items-center gap-2 cursor-pointer"
-            >
-              <input
-                type="checkbox"
-                checked={selectedTransportTypeIds.includes(type.id)}
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    setSelectedTransportTypeIds([
-                      ...selectedTransportTypeIds,
-                      type.id,
-                    ])
-                  } else {
-                    setSelectedTransportTypeIds(
-                      selectedTransportTypeIds.filter((id) => id !== type.id)
-                    )
-                  }
-                }}
-                className="rounded border-gray-300"
-              />
-              <span className="text-sm">{type.name}</span>
-            </label>
-          ))}
+                className="text-xs text-gray-500 hover:text-gray-700 underline ml-2"
+              >
+                Clear all
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Grid View */}

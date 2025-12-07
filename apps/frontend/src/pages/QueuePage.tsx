@@ -231,7 +231,7 @@ export function QueuePage() {
               <ListChecks className="h-6 w-6 text-green-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-green-600">
                 WhatsApp Queue
               </h1>
               <p className="text-sm text-gray-500">
