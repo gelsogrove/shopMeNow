@@ -41,6 +41,7 @@ interface OwnedWorkspace {
   slug: string
   creditBalance: number
   planType: string
+  subscriptionStatus: string // Feature 197: ACTIVE | PAUSED | PAUSE_PENDING | PAYMENT_FAILED
   planStartedAt: string
   language: string
   isActive: boolean
@@ -67,6 +68,16 @@ interface User {
   profilePicture: string | null
   authProvider: string
   isOwner: boolean
+  // Feature 198: Owner-level billing (primary source of truth)
+  planType: string
+  subscriptionStatus: string
+  creditBalance: number
+  planStartedAt: string | null
+  pendingPlanType: string | null
+  pendingPlanEffectiveDate: string | null
+  pausedAt: string | null
+  pauseRequestedAt: string | null
+  // Legacy: workspaces still returned for other data
   ownedWorkspaces: OwnedWorkspace[]
   totalCredit: number
   totalCustomers: number
@@ -417,6 +428,22 @@ export function ClientsPage() {
     }
   }
 
+  // Helper to get subscription status badge styling (Feature 197)
+  const getSubscriptionBadge = (status: string) => {
+    switch (status) {
+      case 'ACTIVE':
+        return null // Don't show badge for active (normal state)
+      case 'PAUSE_PENDING':
+        return { label: '⏸ PAUSE PENDING', className: 'bg-yellow-100 text-yellow-700' }
+      case 'PAUSED':
+        return { label: '⏸ PAUSED', className: 'bg-gray-100 text-gray-600' }
+      case 'PAYMENT_FAILED':
+        return { label: '⚠️ PAYMENT FAILED', className: 'bg-red-100 text-red-700' }
+      default:
+        return null
+    }
+  }
+
   // Handle Impersonate - Login as user in new window (Feature 190)
   const handleImpersonate = async (userId: string, email: string) => {
     setImpersonating(userId)
@@ -598,12 +625,16 @@ export function ClientsPage() {
               {user.isOwner && (
                 <div className="bg-gray-50 rounded-lg p-3 mb-4">
                   <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs font-medium text-gray-500 uppercase">Owner Stats</span>
-                      {/* Plan Badge */}
-                      {user.ownedWorkspaces[0] && (
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getPlanBadge(user.ownedWorkspaces[0].planType).className}`}>
-                          {getPlanBadge(user.ownedWorkspaces[0].planType).label}
+                      {/* Plan Badge - Feature 198: Now from User level */}
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getPlanBadge(user.planType).className}`}>
+                        {getPlanBadge(user.planType).label}
+                      </span>
+                      {/* Subscription Status Badge - Feature 198: Now from User level */}
+                      {getSubscriptionBadge(user.subscriptionStatus) && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getSubscriptionBadge(user.subscriptionStatus)!.className}`}>
+                          {getSubscriptionBadge(user.subscriptionStatus)!.label}
                         </span>
                       )}
                     </div>
@@ -612,11 +643,11 @@ export function ClientsPage() {
                     )}
                   </div>
                   
-                  {/* Plan Expiration for BASIC/PREMIUM */}
-                  {user.ownedWorkspaces[0] && ['BASIC', 'PREMIUM'].includes(user.ownedWorkspaces[0].planType) && (
+                  {/* Plan Expiration for BASIC/PREMIUM - Feature 198: Now from User level */}
+                  {['BASIC', 'PREMIUM'].includes(user.planType) && user.planStartedAt && (
                     <div className="flex items-center gap-1.5 text-sm text-gray-600 mb-2">
                       <Clock className="h-3.5 w-3.5 text-orange-500" />
-                      <span>Expires: {getPlanExpirationDate(user.ownedWorkspaces[0].planStartedAt)}</span>
+                      <span>Expires: {getPlanExpirationDate(user.planStartedAt)}</span>
                     </div>
                   )}
                   
@@ -652,7 +683,7 @@ export function ClientsPage() {
                   )}
                   
                   {/* Bonus Button - Hidden for admin users */}
-                  {!user.isPlatformAdmin && (
+                  {!user.isPlatformAdmin && user.ownedWorkspaces[0] && (
                     <Button 
                       variant="outline" 
                       size="sm" 
@@ -664,8 +695,8 @@ export function ClientsPage() {
                     </Button>
                   )}
                   
-                  {/* Extend Trial Button - Only for FREE_TRIAL workspaces */}
-                  {!user.isPlatformAdmin && user.ownedWorkspaces[0]?.planType === 'FREE_TRIAL' && (
+                  {/* Extend Trial Button - Feature 198: Now from User level planType */}
+                  {!user.isPlatformAdmin && user.planType === 'FREE_TRIAL' && user.ownedWorkspaces[0] && (
                     <Button 
                       variant="outline" 
                       size="sm" 
@@ -673,11 +704,11 @@ export function ClientsPage() {
                       onClick={() => setExtendTrialModal({ 
                         workspaceId: user.ownedWorkspaces[0].id, 
                         workspaceName: user.ownedWorkspaces[0].name,
-                        planStartedAt: user.ownedWorkspaces[0].planStartedAt
+                        planStartedAt: user.planStartedAt || user.ownedWorkspaces[0].planStartedAt
                       })}
                     >
                       <Clock className="h-4 w-4" />
-                      Extend Trial ({getTrialDaysRemaining(user.ownedWorkspaces[0].planStartedAt)} days left)
+                      Extend Trial ({getTrialDaysRemaining(user.planStartedAt || user.ownedWorkspaces[0].planStartedAt)} days left)
                     </Button>
                   )}
                 </div>

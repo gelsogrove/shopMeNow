@@ -53,6 +53,8 @@ export {
   PricingType,
   AgentType,
   SearchConversationState,
+  SubscriptionStatus, // Feature 197: Subscription status enum
+  InvoiceStatus,      // Feature 197: Invoice status enum
 } from './generated/prisma'
 
 // Export common types
@@ -108,6 +110,7 @@ export type {
   RegistrationToken,
   SecureToken,
   ProductSearch,
+  MonthlyInvoice,     // Feature 197: Monthly invoices
 } from './generated/prisma'
 
 // Export prisma as default

@@ -171,6 +171,55 @@ registrare?
 - ✅ Full logout dopo delete account/workspace
 - ✅ Billing stops per workspace soft-deleted
 
+---
+
+## 💰 FEATURE 197 - BILLING SUBSCRIPTION SEPARATION CHECK
+
+### Domande Critiche Subscription:
+
+- Subscription €19 separato dal Credit Wallet? **SÌ ✅** (planType + creditBalance separati)
+
+- Credit può andare negativo fino a -€10? **SÌ ✅** (CREDIT_MIN_THRESHOLD = -10)
+
+- Silent block quando credit < -€10? **SÌ ✅** (WorkspaceAccessService.canProcessMessages)
+
+- Silent block quando subscriptionStatus = PAUSED? **SÌ ✅**
+
+- Silent block quando subscriptionStatus = PAYMENT_FAILED? **SÌ ✅**
+
+- WIP message SOLO per channelStatus=false? **SÌ ✅** (non per billing issues)
+
+- Pause diventa effettiva il 1° del mese prossimo? **SÌ ✅** (PAUSE_PENDING → PAUSED)
+
+- Downgrade effettivo il 1° del mese prossimo? **SÌ ✅** (pendingPlanType + pendingPlanEffectiveDate)
+
+- Payment mock implementato? **SÌ ✅** (processPayment returns { success: true })
+
+- Monthly billing job nel seed? **SÌ ✅** (schedulerJobStatus.monthly-billing.isActive=true)
+
+- Job può essere disattivato? **SÌ ✅** (isActive flag in SchedulerJobStatus)
+
+- Backoffice mostra subscriptionStatus? **SÌ ✅** (ClientsPage badge PAUSED/PAYMENT_FAILED)
+
+### File Principali Feature 197:
+- `apps/backend/src/application/services/workspace-access.service.ts`
+- `apps/backend/src/application/services/subscription-billing.service.ts`
+- `apps/scheduler/src/jobs/monthly-billing.job.ts`
+- `apps/backend/src/interfaces/http/controllers/subscription-billing.controller.ts`
+- `apps/frontend/src/components/billing/SubscriptionStatusCard.tsx`
+- `specs/197-billing-subscription-separation/spec.md`
+
+### Sicurezza Implementata:
+- ✅ Workspace isolation (workspaceId in all billing queries)
+- ✅ Owner-only for pause/resume/downgrade (requireOwnerForBilling middleware)
+- ✅ Silent block - no message sent, no history saved
+- ✅ Concurrent safety (Prisma transactions)
+
+### Test Coverage:
+- ✅ 31 tests WorkspaceAccessService
+- ✅ 57 tests SubscriptionBillingService
+- ✅ 6 tests monthly-billing.job (PAUSE_PENDING, downgrade, charge)
+
 
 trova nel codice un putno sia di BE che di FE che possiamo ottimizzare
 magari possiamo evitare di duplicare codice, uniformare creareo un componente di grafica comdiviso, togliere codice morto trova qualche miglioramente da fare ma 1 di Fe e 1 di BE

@@ -1,6 +1,7 @@
 /**
  * Subscription Billing Service
  * Feature 185: Subscription & Billing System
+ * Feature 198: Owner-based billing (credit shared across all workspaces)
  *
  * Business logic for:
  * - Credit management (check, deduct, recharge)
@@ -8,11 +9,15 @@
  * - Trial validation
  * - Usage tracking
  *
- * SECURITY: All methods validate workspaceId
- * CRITICAL: Credit deductions are atomic with transaction records
+ * CRITICAL (Feature 198): Billing is per OWNER (User), NOT per Workspace
+ * - creditBalance, planType, subscriptionStatus are on User model
+ * - workspaceId is optional in operations (for tracking which channel)
+ * 
+ * Methods with "workspaceId" parameter are for backward compatibility.
+ * New code should use methods with "userId" parameter when possible.
  */
 
-import { PlanType, PrismaClient, TransactionType } from "@echatbot/database"
+import { PlanType, PrismaClient, TransactionType, SubscriptionStatus } from "@echatbot/database"
 import {
   BillingInfo,
   PlanLimits,
@@ -61,21 +66,21 @@ export class SubscriptionBillingService {
   }
 
   // ============================================================================
-  // BILLING INFO & OVERVIEW
+  // OWNER-BASED BILLING INFO (Feature 198)
   // ============================================================================
 
   /**
-   * Get complete billing overview for workspace
-   * Used by frontend to display billing section in profile
+   * Get complete billing overview for owner (user)
+   * Feature 198: Primary method - billing is per owner
    */
-  async getBillingOverview(workspaceId: string): Promise<BillingOverview> {
+  async getOwnerBillingOverview(userId: string): Promise<BillingOverview> {
     const [billing, usage] = await Promise.all([
-      this.repository.getWorkspaceBilling(workspaceId),
-      this.repository.getWorkspaceUsage(workspaceId),
+      this.repository.getOwnerBilling(userId),
+      this.repository.getOwnerUsage(userId),
     ])
 
     if (!billing) {
-      throw new Error("Workspace not found")
+      throw new Error("User not found")
     }
 
     const limits = await this.repository.getPlanConfiguration(billing.planType)
@@ -115,7 +120,34 @@ export class SubscriptionBillingService {
   }
 
   /**
-   * Get credit balance (quick check for header display)
+   * Get billing overview from workspaceId (backward compatibility)
+   * @deprecated Use getOwnerBillingOverview(userId) directly when possible
+   */
+  async getBillingOverview(workspaceId: string): Promise<BillingOverview> {
+    // Get workspace owner
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { ownerId: true },
+    })
+
+    if (!workspace?.ownerId) {
+      throw new Error("Workspace not found or has no owner")
+    }
+
+    return this.getOwnerBillingOverview(workspace.ownerId)
+  }
+
+  /**
+   * Get owner credit balance
+   * Feature 198: Primary method
+   */
+  async getOwnerCreditBalance(userId: string): Promise<number> {
+    return this.repository.getOwnerCreditBalance(userId)
+  }
+
+  /**
+   * Get credit balance from workspaceId (backward compatibility)
+   * @deprecated Use getOwnerCreditBalance(userId) directly when possible
    */
   async getCreditBalance(workspaceId: string): Promise<number> {
     return this.repository.getCreditBalance(workspaceId)
@@ -141,40 +173,68 @@ export class SubscriptionBillingService {
   }
 
   // ============================================================================
-  // CREDIT CHECKS & VALIDATION
+  // OWNER-BASED CREDIT CHECKS (Feature 198)
   // ============================================================================
 
   /**
-   * Check if workspace has sufficient credit for an operation
-   * Does NOT deduct - just checks
+   * Check if owner has sufficient credit for an operation
+   * Feature 198: Primary method
    */
-  async checkCredit(
-    workspaceId: string,
+  async checkOwnerCredit(
+    userId: string,
     requiredAmount: number
   ): Promise<CreditCheckResult> {
-    const currentBalance = await this.repository.getCreditBalance(workspaceId)
+    const CREDIT_MIN_THRESHOLD = -10
+
+    const currentBalance = await this.repository.getOwnerCreditBalance(userId)
+    const balanceAfterDeduction = currentBalance - requiredAmount
 
     return {
-      hasSufficientCredit: currentBalance >= requiredAmount,
+      hasSufficientCredit: balanceAfterDeduction >= CREDIT_MIN_THRESHOLD,
       currentBalance,
       requiredAmount,
       deficit:
-        currentBalance < requiredAmount
-          ? requiredAmount - currentBalance
+        balanceAfterDeduction < CREDIT_MIN_THRESHOLD
+          ? Math.abs(balanceAfterDeduction - CREDIT_MIN_THRESHOLD)
           : undefined,
     }
   }
 
   /**
-   * Check if trial is valid (not expired)
+   * Check credit from workspaceId (backward compatibility)
+   * @deprecated Use checkOwnerCredit(userId) directly when possible
    */
-  async isTrialValid(workspaceId: string): Promise<{
+  async checkCredit(
+    workspaceId: string,
+    requiredAmount: number
+  ): Promise<CreditCheckResult> {
+    const CREDIT_MIN_THRESHOLD = -10
+
+    const currentBalance = await this.repository.getCreditBalance(workspaceId)
+    const balanceAfterDeduction = currentBalance - requiredAmount
+
+    return {
+      hasSufficientCredit: balanceAfterDeduction >= CREDIT_MIN_THRESHOLD,
+      currentBalance,
+      requiredAmount,
+      deficit:
+        balanceAfterDeduction < CREDIT_MIN_THRESHOLD
+          ? Math.abs(balanceAfterDeduction - CREDIT_MIN_THRESHOLD)
+          : undefined,
+    }
+  }
+
+  /**
+   * Check if owner's trial is valid (not expired)
+   * Feature 198: Primary method
+   */
+  async isOwnerTrialValid(userId: string): Promise<{
     isValid: boolean
     isTrialPlan: boolean
     daysRemaining: number | null
     expiredAt: Date | null
   }> {
-    const billing = await this.repository.getWorkspaceBilling(workspaceId)
+    const billing = await this.repository.getOwnerBilling(userId)
 
     if (!billing) {
       return {
@@ -185,7 +245,6 @@ export class SubscriptionBillingService {
       }
     }
 
-    // Non-trial plans are always valid
     if (billing.planType !== "FREE_TRIAL") {
       return {
         isValid: true,
@@ -204,7 +263,92 @@ export class SubscriptionBillingService {
   }
 
   /**
-   * Check if workspace is within plan limits
+   * Check trial validity from workspaceId (backward compatibility)
+   * @deprecated Use isOwnerTrialValid(userId) directly when possible
+   */
+  async isTrialValid(workspaceId: string): Promise<{
+    isValid: boolean
+    isTrialPlan: boolean
+    daysRemaining: number | null
+    expiredAt: Date | null
+  }> {
+    const billing = await this.repository.getWorkspaceBilling(workspaceId)
+
+    if (!billing) {
+      return {
+        isValid: false,
+        isTrialPlan: false,
+        daysRemaining: null,
+        expiredAt: null,
+      }
+    }
+
+    if (billing.planType !== "FREE_TRIAL") {
+      return {
+        isValid: true,
+        isTrialPlan: false,
+        daysRemaining: null,
+        expiredAt: null,
+      }
+    }
+
+    return {
+      isValid: !billing.isTrialExpired,
+      isTrialPlan: true,
+      daysRemaining: billing.daysUntilTrialExpires,
+      expiredAt: billing.trialEndsAt,
+    }
+  }
+
+  /**
+   * Check if owner is within plan limits
+   * Feature 198: Primary method - limits are aggregated across all owner's workspaces
+   */
+  async checkOwnerPlanLimits(
+    userId: string,
+    limitType: "products" | "customers" | "channels"
+  ): Promise<PlanLimitCheckResult> {
+    const billing = await this.repository.getOwnerBilling(userId)
+    if (!billing) {
+      throw new Error("User not found")
+    }
+
+    const limits = await this.repository.getPlanConfiguration(billing.planType)
+    if (!limits) {
+      throw new Error(`Plan configuration not found for ${billing.planType}`)
+    }
+
+    const usage = await this.repository.getOwnerUsage(userId)
+
+    let current: number
+    let max: number
+
+    switch (limitType) {
+      case "products":
+        current = usage.productsCount
+        max = limits.maxProducts
+        break
+      case "customers":
+        current = usage.customersCount
+        max = limits.maxCustomers
+        break
+      case "channels":
+        current = usage.channelsCount
+        max = limits.maxChannels
+        break
+    }
+
+    return {
+      withinLimits: current < max,
+      current,
+      max,
+      limitType,
+    }
+  }
+
+  /**
+   * Check plan limits from workspaceId (backward compatibility)
+   * @deprecated Use checkOwnerPlanLimits(userId) directly when possible
    */
   async checkPlanLimits(
     workspaceId: string,
@@ -249,58 +393,86 @@ export class SubscriptionBillingService {
   }
 
   // ============================================================================
-  // CREDIT OPERATIONS (DEDUCT & RECHARGE)
+  // OWNER-BASED CREDIT OPERATIONS (Feature 198)
   // ============================================================================
 
   /**
-   * Deduct credit for a message
-   * Called after WhatsApp message is sent
+   * Deduct credit for a message from owner
+   * Feature 198: Primary method - credit is deducted from owner, channel is tracked
+   *
+   * @param userId - Owner's user ID
+   * @param workspaceId - Optional: which channel sent the message
+   * @param messageId - Optional: reference to the message
+   */
+  async deductOwnerMessageCredit(
+    userId: string,
+    workspaceId?: string,
+    messageId?: string
+  ): Promise<{ success: boolean; newBalance: number; error?: string }> {
+    const billing = await this.repository.getOwnerBilling(userId)
+    if (!billing) {
+      return { success: false, newBalance: 0, error: "User not found" }
+    }
+
+    const limits = await this.repository.getPlanConfiguration(billing.planType)
+    if (!limits) {
+      return {
+        success: false,
+        newBalance: 0,
+        error: "Plan configuration not found",
+      }
+    }
+
+    const result = await this.repository.deductCredit(
+      userId,
+      limits.messageCost,
+      TransactionType.MESSAGE,
+      "WhatsApp Message",
+      workspaceId,
+      messageId,
+      "message"
+    )
+
+    if (result.success) {
+      await this.checkAndNotifyOwnerLowBalance(userId, result.newBalance, limits.lowBalanceThreshold)
+    }
+
+    return result
+  }
+
+  /**
+   * Deduct message credit from workspaceId (backward compatibility)
+   * @deprecated Use deductOwnerMessageCredit(userId) directly when possible
    */
   async deductMessageCredit(
     workspaceId: string,
     messageId?: string
   ): Promise<{ success: boolean; newBalance: number; error?: string }> {
-    const billing = await this.repository.getWorkspaceBilling(workspaceId)
-    if (!billing) {
+    // Get workspace owner
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { ownerId: true },
+    })
+
+    if (!workspace?.ownerId) {
       return { success: false, newBalance: 0, error: "Workspace not found" }
     }
 
-    const limits = await this.repository.getPlanConfiguration(billing.planType)
-    if (!limits) {
-      return {
-        success: false,
-        newBalance: 0,
-        error: "Plan configuration not found",
-      }
-    }
-
-    const result = await this.repository.deductCredit(
-      workspaceId,
-      limits.messageCost,
-      TransactionType.MESSAGE,
-      "WhatsApp Message",
-      messageId,
-      "message"
-    )
-
-    // Check for low balance notification
-    if (result.success) {
-      await this.checkAndNotifyLowBalance(workspaceId, result.newBalance, limits.lowBalanceThreshold)
-    }
-
-    return result
+    return this.deductOwnerMessageCredit(workspace.ownerId, workspaceId, messageId)
   }
 
   /**
-   * Deduct credit for a push notification
+   * Deduct credit for a push notification from owner
+   * Feature 198: Primary method
    */
-  async deductPushCredit(
-    workspaceId: string,
+  async deductOwnerPushCredit(
+    userId: string,
+    workspaceId?: string,
     campaignId?: string
   ): Promise<{ success: boolean; newBalance: number; error?: string }> {
-    const billing = await this.repository.getWorkspaceBilling(workspaceId)
+    const billing = await this.repository.getOwnerBilling(userId)
     if (!billing) {
-      return { success: false, newBalance: 0, error: "Workspace not found" }
+      return { success: false, newBalance: 0, error: "User not found" }
     }
 
     const limits = await this.repository.getPlanConfiguration(billing.planType)
@@ -313,56 +485,74 @@ export class SubscriptionBillingService {
     }
 
     const result = await this.repository.deductCredit(
-      workspaceId,
+      userId,
       limits.pushCost,
       TransactionType.PUSH_NOTIFICATION,
       "Push notification",
+      workspaceId,
       campaignId,
       "campaign"
     )
 
     if (result.success) {
-      await this.checkAndNotifyLowBalance(workspaceId, result.newBalance, limits.lowBalanceThreshold)
+      await this.checkAndNotifyOwnerLowBalance(userId, result.newBalance, limits.lowBalanceThreshold)
     }
 
     return result
   }
 
   /**
-   * Recharge credit (manual top-up)
-   * OWNER-ONLY operation
-   * 
-   * If workspace is on FREE_TRIAL, automatically upgrades to BASIC
+   * Deduct push credit from workspaceId (backward compatibility)
+   * @deprecated Use deductOwnerPushCredit(userId) directly when possible
    */
-  async rechargeCredit(
+  async deductPushCredit(
     workspaceId: string,
+    campaignId?: string
+  ): Promise<{ success: boolean; newBalance: number; error?: string }> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { ownerId: true },
+    })
+
+    if (!workspace?.ownerId) {
+      return { success: false, newBalance: 0, error: "Workspace not found" }
+    }
+
+    return this.deductOwnerPushCredit(workspace.ownerId, workspaceId, campaignId)
+  }
+
+  /**
+   * Recharge credit for owner (manual top-up)
+   * Feature 198: Primary method - OWNER-ONLY operation
+   * 
+   * If owner is on FREE_TRIAL, automatically upgrades to BASIC
+   */
+  async rechargeOwnerCredit(
+    userId: string,
     amount: number
   ): Promise<{ success: boolean; newBalance: number; upgradedToPlan?: string }> {
     if (amount <= 0) {
       throw new Error("Amount must be positive")
     }
 
-    // Validate reasonable amount (max €1000 per recharge)
     if (amount > 1000) {
       throw new Error("Maximum recharge amount is €1000")
     }
 
-    // Check if workspace is on FREE_TRIAL - auto-upgrade to BASIC
-    const billing = await this.repository.getWorkspaceBilling(workspaceId)
+    const billing = await this.repository.getOwnerBilling(userId)
     let upgradedToPlan: string | undefined
 
     if (billing?.planType === "FREE_TRIAL") {
-      // Auto-upgrade to BASIC when user recharges
-      await this.repository.upgradePlan(workspaceId, "BASIC")
+      await this.repository.upgradeOwnerPlan(userId, "BASIC")
       upgradedToPlan = "BASIC"
       
       logger.info(
-        `[BILLING] 🎉 Workspace ${workspaceId} auto-upgraded from FREE_TRIAL to BASIC on first recharge`
+        `[BILLING] 🎉 User ${userId} auto-upgraded from FREE_TRIAL to BASIC on first recharge`
       )
     }
 
     const result = await this.repository.addCredit(
-      workspaceId,
+      userId,
       amount,
       TransactionType.RECHARGE,
       `Credit recharge: €${amount.toFixed(2)}`
@@ -374,34 +564,51 @@ export class SubscriptionBillingService {
     }
   }
 
+  /**
+   * Recharge credit from workspaceId (backward compatibility)
+   * @deprecated Use rechargeOwnerCredit(userId) directly when possible
+   */
+  async rechargeCredit(
+    workspaceId: string,
+    amount: number
+  ): Promise<{ success: boolean; newBalance: number; upgradedToPlan?: string }> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { ownerId: true },
+    })
+
+    if (!workspace?.ownerId) {
+      throw new Error("Workspace not found")
+    }
+
+    return this.rechargeOwnerCredit(workspace.ownerId, amount)
+  }
+
   // ============================================================================
-  // PLAN UPGRADE
+  // OWNER-BASED PLAN MANAGEMENT (Feature 198)
   // ============================================================================
 
   /**
-   * Upgrade workspace plan
-   * OWNER-ONLY operation
-   * Fee will be charged at next billing date (30 days)
+   * Upgrade owner plan
+   * Feature 198: Primary method - OWNER-ONLY operation
    */
-  async upgradePlan(
-    workspaceId: string,
+  async upgradeOwnerPlan(
+    userId: string,
     newPlanType: PlanType
   ): Promise<{
     success: boolean
     nextBillingDate: Date
     newPlan: { displayName: string; monthlyFee: number }
   }> {
-    // Validate plan type
     if (newPlanType === "FREE_TRIAL") {
       throw new Error("Cannot upgrade to Free Trial")
     }
 
-    const billing = await this.repository.getWorkspaceBilling(workspaceId)
+    const billing = await this.repository.getOwnerBilling(userId)
     if (!billing) {
-      throw new Error("Workspace not found")
+      throw new Error("User not found")
     }
 
-    // Validate upgrade path
     const planOrder: Record<PlanType, number> = {
       FREE_TRIAL: 0,
       BASIC: 1,
@@ -415,7 +622,6 @@ export class SubscriptionBillingService {
       )
     }
 
-    // Get new plan config
     const newPlanConfig = await this.prisma.planConfiguration.findUnique({
       where: { planType: newPlanType },
       select: { displayName: true, monthlyFee: true },
@@ -425,21 +631,21 @@ export class SubscriptionBillingService {
       throw new Error(`Plan configuration not found for ${newPlanType}`)
     }
 
-    const result = await this.repository.upgradePlan(workspaceId, newPlanType)
+    const result = await this.repository.upgradeOwnerPlan(userId, newPlanType)
 
-    // Log the upgrade transaction (no charge now, charge at billing date)
+    // Log the upgrade transaction
     await this.prisma.billingTransaction.create({
       data: {
-        workspaceId,
+        userId,
         type: TransactionType.UPGRADE_FEE,
-        amount: 0, // Will be charged at next billing date
+        amount: 0,
         balanceAfter: billing.creditBalance,
         description: `Upgrade to ${newPlanConfig.displayName}`,
       },
     })
 
     logger.info(
-      `[BILLING] 📈 Workspace ${workspaceId} upgraded from ${billing.planType} to ${newPlanType}`
+      `[BILLING] 📈 User ${userId} upgraded from ${billing.planType} to ${newPlanType}`
     )
 
     return {
@@ -453,13 +659,35 @@ export class SubscriptionBillingService {
   }
 
   /**
-   * Change workspace plan (upgrade or downgrade)
-   * OWNER-ONLY operation
-   * For downgrade: validates current usage fits within target plan limits
-   * Fee will be charged at next billing date (30 days)
+   * Upgrade plan from workspaceId (backward compatibility)
+   * @deprecated Use upgradeOwnerPlan(userId) directly when possible
    */
-  async changePlan(
+  async upgradePlan(
     workspaceId: string,
+    newPlanType: PlanType
+  ): Promise<{
+    success: boolean
+    nextBillingDate: Date
+    newPlan: { displayName: string; monthlyFee: number }
+  }> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { ownerId: true },
+    })
+
+    if (!workspace?.ownerId) {
+      throw new Error("Workspace not found")
+    }
+
+    return this.upgradeOwnerPlan(workspace.ownerId, newPlanType)
+  }
+
+  /**
+   * Change owner plan (upgrade or downgrade)
+   * Feature 198: Primary method - OWNER-ONLY operation
+   */
+  async changeOwnerPlan(
+    userId: string,
     newPlanType: PlanType
   ): Promise<{
     success: boolean
@@ -467,17 +695,15 @@ export class SubscriptionBillingService {
     newPlan: { displayName: string; monthlyFee: number }
     isDowngrade: boolean
   }> {
-    // Validate plan type
     if (newPlanType === "FREE_TRIAL") {
       throw new Error("Cannot change to Free Trial")
     }
 
-    const billing = await this.repository.getWorkspaceBilling(workspaceId)
+    const billing = await this.repository.getOwnerBilling(userId)
     if (!billing) {
-      throw new Error("Workspace not found")
+      throw new Error("User not found")
     }
 
-    // Plan order for upgrade/downgrade logic
     const planOrder: Record<PlanType, number> = {
       FREE_TRIAL: 0,
       BASIC: 1,
@@ -491,9 +717,8 @@ export class SubscriptionBillingService {
 
     const isDowngrade = planOrder[newPlanType] < planOrder[billing.planType]
 
-    // For downgrade: validate current usage fits within target plan limits
     if (isDowngrade) {
-      const usage = await this.repository.getWorkspaceUsage(workspaceId)
+      const usage = await this.repository.getOwnerUsage(userId)
       const targetPlanConfig = await this.prisma.planConfiguration.findUnique({
         where: { planType: newPlanType },
         select: { maxChannels: true, maxProducts: true, maxCustomers: true },
@@ -522,7 +747,6 @@ export class SubscriptionBillingService {
       }
     }
 
-    // Get new plan config
     const newPlanConfig = await this.prisma.planConfiguration.findUnique({
       where: { planType: newPlanType },
       select: { displayName: true, monthlyFee: true },
@@ -532,23 +756,22 @@ export class SubscriptionBillingService {
       throw new Error(`Plan configuration not found for ${newPlanType}`)
     }
 
-    const result = await this.repository.upgradePlan(workspaceId, newPlanType)
+    const result = await this.repository.upgradeOwnerPlan(userId, newPlanType)
 
-    // Delete previous plan change transactions (keep only the latest)
+    // Delete previous plan change transactions
     await this.prisma.billingTransaction.deleteMany({
       where: {
-        workspaceId,
+        userId,
         type: TransactionType.UPGRADE_FEE,
       },
     })
 
-    // Log the change transaction (only the latest one is kept)
     const action = isDowngrade ? "Downgrade" : "Upgrade"
     await this.prisma.billingTransaction.create({
       data: {
-        workspaceId,
-        type: TransactionType.UPGRADE_FEE, // Used for both upgrade and downgrade plan changes
-        amount: 0, // Will be charged at next billing date
+        userId,
+        type: TransactionType.UPGRADE_FEE,
+        amount: 0,
         balanceAfter: billing.creditBalance,
         description: `${action} to ${newPlanConfig.displayName}`,
       },
@@ -556,7 +779,7 @@ export class SubscriptionBillingService {
 
     const logEmoji = isDowngrade ? "📉" : "📈"
     logger.info(
-      `[BILLING] ${logEmoji} Workspace ${workspaceId} ${action.toLowerCase()}d from ${billing.planType} to ${newPlanType}`
+      `[BILLING] ${logEmoji} User ${userId} ${action.toLowerCase()}d from ${billing.planType} to ${newPlanType}`
     )
 
     return {
@@ -570,12 +793,161 @@ export class SubscriptionBillingService {
     }
   }
 
+  /**
+   * Schedule a plan downgrade for the next billing cycle
+   * Feature 198: Primary method for owner-based billing
+   */
+  async scheduleOwnerDowngrade(
+    userId: string,
+    newPlanType: PlanType
+  ): Promise<{
+    success: boolean
+    effectiveDate: Date
+    currentPlan: PlanType
+    pendingPlan: PlanType
+  }> {
+    const billing = await this.repository.getOwnerBilling(userId)
+    if (!billing) {
+      throw new Error("User not found")
+    }
+
+    const planOrder: Record<PlanType, number> = {
+      FREE_TRIAL: 0,
+      BASIC: 1,
+      PREMIUM: 2,
+      ENTERPRISE: 3,
+    }
+
+    // Verify it's actually a downgrade
+    if (planOrder[newPlanType] >= planOrder[billing.planType]) {
+      throw new Error(`${newPlanType} is not a downgrade from ${billing.planType}`)
+    }
+
+    // Validate usage limits for target plan
+    const usage = await this.repository.getOwnerUsage(userId)
+    const targetPlanConfig = await this.prisma.planConfiguration.findUnique({
+      where: { planType: newPlanType },
+      select: { maxChannels: true, maxProducts: true, maxCustomers: true },
+    })
+
+    if (!targetPlanConfig) {
+      throw new Error(`Plan configuration not found for ${newPlanType}`)
+    }
+
+    const violations: string[] = []
+
+    if (usage.productsCount > targetPlanConfig.maxProducts) {
+      violations.push(`Prodotti: ${usage.productsCount}/${targetPlanConfig.maxProducts}`)
+    }
+    if (usage.customersCount > targetPlanConfig.maxCustomers) {
+      violations.push(`Clienti: ${usage.customersCount}/${targetPlanConfig.maxCustomers}`)
+    }
+    if (usage.channelsCount > targetPlanConfig.maxChannels) {
+      violations.push(`Canali: ${usage.channelsCount}/${targetPlanConfig.maxChannels}`)
+    }
+
+    if (violations.length > 0) {
+      throw new Error(
+        `Non puoi passare a ${newPlanType}: superi i limiti del piano (${violations.join(", ")}). Riduci prima l'utilizzo.`
+      )
+    }
+
+    // Calculate effective date (1st of next month)
+    const now = new Date()
+    const effectiveDate = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+    effectiveDate.setHours(0, 0, 0, 0)
+
+    // Schedule the downgrade
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        pendingPlanType: newPlanType,
+        pendingPlanEffectiveDate: effectiveDate,
+      },
+    })
+
+    logger.info(
+      `[BILLING] ⬇️ User ${userId} scheduled downgrade from ${billing.planType} to ${newPlanType}, effective: ${effectiveDate.toISOString()}`
+    )
+
+    return {
+      success: true,
+      effectiveDate,
+      currentPlan: billing.planType,
+      pendingPlan: newPlanType,
+    }
+  }
+
+  /**
+   * Change plan from workspaceId (backward compatibility)
+   * @deprecated Use changeOwnerPlan(userId) directly when possible
+   */
+  async changePlan(
+    workspaceId: string,
+    newPlanType: PlanType
+  ): Promise<{
+    success: boolean
+    nextBillingDate: Date
+    newPlan: { displayName: string; monthlyFee: number }
+    isDowngrade: boolean
+  }> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { ownerId: true },
+    })
+
+    if (!workspace?.ownerId) {
+      throw new Error("Workspace not found")
+    }
+
+    return this.changeOwnerPlan(workspace.ownerId, newPlanType)
+  }
+
   // ============================================================================
-  // TRANSACTION HISTORY
+  // OWNER-BASED TRANSACTION HISTORY (Feature 198)
   // ============================================================================
 
   /**
-   * Get transaction history with pagination
+   * Get owner transaction history with pagination
+   * Feature 198: Primary method
+   */
+  async getOwnerTransactionHistory(
+    userId: string,
+    options: {
+      page?: number
+      limit?: number
+      type?: TransactionType
+      startDate?: Date
+      endDate?: Date
+    } = {}
+  ): Promise<{
+    transactions: TransactionRecord[]
+    total: number
+    page: number
+    totalPages: number
+  }> {
+    const { page = 1, limit = 20, type, startDate, endDate } = options
+    const offset = (page - 1) * limit
+
+    const result = await this.repository.getOwnerTransactionHistory(userId, {
+      limit,
+      offset,
+      type,
+      startDate,
+      endDate,
+    })
+
+    return {
+      transactions: result.transactions,
+      total: result.total,
+      page,
+      totalPages: Math.ceil(result.total / limit),
+    }
+  }
+
+  /**
+   * Get transaction history from workspaceId (backward compatibility)
+   * @deprecated Use getOwnerTransactionHistory(userId) directly when possible
    */
   async getTransactionHistory(
     workspaceId: string,
@@ -612,11 +984,152 @@ export class SubscriptionBillingService {
   }
 
   // ============================================================================
+  // SUBSCRIPTION STATUS (Feature 197 + 198)
+  // ============================================================================
+
+  /**
+   * Pause subscription for owner - IMMEDIATE effect
+   * Feature 198: Primary method - affects ALL owner's workspaces
+   * 
+   * Business logic:
+   * - Pausa IMMEDIATA: chatbot smette di rispondere subito
+   * - A fine mese si paga solo il consumo effettivo fino alla pausa
+   * - Niente abbonamento per mesi in pausa
+   */
+  async requestOwnerPause(userId: string): Promise<{
+    success: boolean
+    effectiveDate: Date
+  }> {
+    const billing = await this.repository.getOwnerBilling(userId)
+    if (!billing) {
+      throw new Error("User not found")
+    }
+
+    if (billing.subscriptionStatus === "PAUSED") {
+      throw new Error("Subscription is already paused")
+    }
+
+    // IMMEDIATE pause - no more PAUSE_PENDING
+    const now = new Date()
+
+    await this.repository.updateOwnerSubscriptionStatus(userId, {
+      subscriptionStatus: "PAUSED",
+      pausedAt: now,
+      pauseRequestedAt: now,
+    })
+
+    logger.info(
+      `[BILLING] ⏸️ User ${userId} paused subscription IMMEDIATELY at ${now.toISOString()}`
+    )
+
+    return {
+      success: true,
+      effectiveDate: now, // Immediate effect
+    }
+  }
+
+  /**
+   * Resume owner subscription - FREE, no charges
+   * Feature 198: Primary method - resumes ALL owner's workspaces
+   * 
+   * Business logic:
+   * - Riattivazione IMMEDIATA e GRATUITA
+   * - Riprende a consumare credito normalmente
+   * - Pagamento abbonamento dal 1° del mese successivo
+   */
+  async resumeOwnerSubscription(userId: string): Promise<{
+    success: boolean
+    nextBillingDate: Date
+  }> {
+    const billing = await this.repository.getOwnerBilling(userId)
+    if (!billing) {
+      throw new Error("User not found")
+    }
+
+    if (billing.subscriptionStatus === "ACTIVE") {
+      throw new Error("Subscription is already active")
+    }
+
+    // Calculate next billing date (1st of next month)
+    const now = new Date()
+    const nextBillingDate = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+    nextBillingDate.setHours(0, 0, 0, 0)
+
+    await this.repository.updateOwnerSubscriptionStatus(userId, {
+      subscriptionStatus: "ACTIVE",
+      pausedAt: null,
+      pauseRequestedAt: null,
+    })
+
+    logger.info(`[BILLING] ▶️ User ${userId} resumed subscription - FREE, next billing: ${nextBillingDate.toISOString()}`)
+
+    return { 
+      success: true,
+      nextBillingDate,
+    }
+  }
+
+  /**
+   * Get owner subscription status
+   * Feature 198: Primary method
+   */
+  async getOwnerSubscriptionStatus(userId: string): Promise<{
+    status: SubscriptionStatus
+    pausedAt: Date | null
+    pauseRequestedAt: Date | null
+    pauseEffectiveDate: Date | null
+  }> {
+    const status = await this.repository.getOwnerSubscriptionStatus(userId)
+    if (!status) {
+      throw new Error("User not found")
+    }
+
+    // No more PAUSE_PENDING - pause is immediate
+    // Keep this for backward compatibility
+    let pauseEffectiveDate: Date | null = null
+    if (status.status === "PAUSED" && status.pausedAt) {
+      pauseEffectiveDate = status.pausedAt
+    }
+
+    return {
+      status: status.status,
+      pausedAt: status.pausedAt,
+      pauseRequestedAt: status.pauseRequestedAt,
+      pauseEffectiveDate,
+    }
+  }
+
+  // ============================================================================
   // INTERNAL HELPERS
   // ============================================================================
 
   /**
-   * Check and send low balance notification if needed
+   * Check and send low balance notification for owner if needed
+   */
+  private async checkAndNotifyOwnerLowBalance(
+    userId: string,
+    currentBalance: number,
+    threshold: number
+  ): Promise<void> {
+    if (currentBalance <= threshold) {
+      const shouldNotify =
+        await this.repository.shouldSendOwnerLowBalanceNotification(userId)
+
+      if (shouldNotify) {
+        await this.repository.updateOwnerLowBalanceNotification(userId)
+
+        logger.warn(
+          `[BILLING] ⚠️ Low balance alert: €${currentBalance.toFixed(2)} (threshold: €${threshold.toFixed(2)}, user: ${userId})`
+        )
+
+        // TODO: Send email notification
+        // await emailService.sendLowBalanceAlert(userId, currentBalance)
+      }
+    }
+  }
+
+  /**
+   * @deprecated Use checkAndNotifyOwnerLowBalance
    */
   private async checkAndNotifyLowBalance(
     workspaceId: string,
@@ -628,16 +1141,11 @@ export class SubscriptionBillingService {
         await this.repository.shouldSendLowBalanceNotification(workspaceId)
 
       if (shouldNotify) {
-        // Update notification timestamp
         await this.repository.updateLowBalanceNotification(workspaceId)
 
-        // TODO: Send email notification
         logger.warn(
           `[BILLING] ⚠️ Low balance alert: €${currentBalance.toFixed(2)} (threshold: €${threshold.toFixed(2)}, workspace: ${workspaceId})`
         )
-
-        // For now, just log - email integration can be added later
-        // await emailService.sendLowBalanceAlert(workspaceId, currentBalance)
       }
     }
   }
@@ -652,6 +1160,34 @@ export class SubscriptionBillingService {
     const billing = await this.repository.getWorkspaceBilling(workspaceId)
     if (!billing) {
       throw new Error("Workspace not found")
+    }
+
+    const limits = await this.repository.getPlanConfiguration(billing.planType)
+    if (!limits) {
+      throw new Error("Plan configuration not found")
+    }
+
+    switch (operation) {
+      case "message":
+        return limits.messageCost
+      case "order":
+        return limits.orderCost
+      case "push":
+        return limits.pushCost
+    }
+  }
+
+  /**
+   * Get owner's cost for a specific operation type
+   * Feature 198: Primary method
+   */
+  async getOwnerOperationCost(
+    userId: string,
+    operation: "message" | "order" | "push"
+  ): Promise<number> {
+    const billing = await this.repository.getOwnerBilling(userId)
+    if (!billing) {
+      throw new Error("User not found")
     }
 
     const limits = await this.repository.getPlanConfiguration(billing.planType)

@@ -5,7 +5,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model Workspace {
@@ -40,13 +39,25 @@ model Workspace {
   ownerId                   String?
   owner                     User?             @relation("OwnedWorkspaces", fields: [ownerId], references: [id])
   
-  // Subscription & Billing fields
+  // ============================================================================
+  // ⚠️ DEPRECATED: Billing fields - moving to User model (Feature 198)
+  // These fields will be removed after data migration is complete
+  // Use User.planType, User.creditBalance, etc. instead
+  // ============================================================================
   planType                  PlanType          @default(FREE_TRIAL)
   creditBalance             Decimal           @default(19.00) @db.Decimal(10, 2)
   trialEndsAt               DateTime?
   planStartedAt             DateTime          @default(now())
   nextBillingDate           DateTime?
   lowBalanceNotifiedAt      DateTime?         // Last time low balance notification was sent
+  subscriptionStatus        SubscriptionStatus @default(ACTIVE)
+  pausedAt                  DateTime?         // When subscription was paused
+  pauseRequestedAt          DateTime?         // When user requested pause (effective next month)
+  pendingPlanType           PlanType?         // Plan to switch to on next billing
+  pendingPlanEffectiveDate  DateTime?         // When pending plan becomes active
+  lastPaymentFailedAt       DateTime?         // Last payment failure timestamp
+  paymentFailureCount       Int               @default(0) // Consecutive failed payments
+  // ============================================================================
   
   users                     UserWorkspace[]
   invitations               WorkspaceInvitation[]
@@ -479,6 +490,30 @@ model User {
   billingPhone       String?                  // Telefono per fatturazione
   billingAddress     String?                  // Indirizzo completo
   
+  // ============================================================================
+  // 💳 SUBSCRIPTION & BILLING (Feature 198 - Owner-based billing)
+  // Credit is SHARED across ALL owned workspaces
+  // ============================================================================
+  planType                  PlanType          @default(FREE_TRIAL)
+  creditBalance             Decimal           @default(19.00) @db.Decimal(10, 2)
+  trialEndsAt               DateTime?
+  planStartedAt             DateTime          @default(now())
+  nextBillingDate           DateTime?
+  lowBalanceNotifiedAt      DateTime?         // Last time low balance notification was sent
+  
+  // Subscription Status
+  subscriptionStatus        SubscriptionStatus @default(ACTIVE)
+  pausedAt                  DateTime?         // When subscription was paused
+  pauseRequestedAt          DateTime?         // When user requested pause (effective next month)
+  
+  // Pending Plan Change (for downgrades - effective next billing cycle)
+  pendingPlanType           PlanType?         // Plan to switch to on next billing
+  pendingPlanEffectiveDate  DateTime?         // When pending plan becomes active
+  
+  // Payment tracking
+  lastPaymentFailedAt       DateTime?         // Last payment failure timestamp
+  paymentFailureCount       Int               @default(0) // Consecutive failed payments
+  
   workspaces         UserWorkspace[]
   ownedWorkspaces    Workspace[]              @relation("OwnedWorkspaces") // Workspaces where user is owner/SUPER_ADMIN
   invitationsSent    WorkspaceInvitation[]    @relation("InvitedBy") // Invitations sent by this user
@@ -487,8 +522,12 @@ model User {
   authAttempts       AuthenticationAttempt[] // Security audit trail
   twoFactorResets    TwoFactorResetToken[]   // 2FA reset tokens (admin-initiated)
   adminInitiatedResets TwoFactorResetToken[] @relation("AdminInitiatedResets") // Resets initiated by this admin
+  billingTransactions BillingTransaction[]   // Owner's billing transaction history
+  monthlyInvoices    MonthlyInvoice[]        // Feature 197: Monthly invoices for this owner
 
   @@index([deletedAt])
+  @@index([planType])
+  @@index([subscriptionStatus])
   @@map("users")
 }
 
@@ -1136,6 +1175,14 @@ enum PlanType {
   ENTERPRISE  // Custom pricing - unlimited everything
 }
 
+// Feature 197: Subscription status for billing separation
+enum SubscriptionStatus {
+  ACTIVE          // Normal operation - chatbot responds
+  PAUSE_PENDING   // User requested pause - effective next month
+  PAUSED          // Subscription paused - no billing, no chatbot
+  PAYMENT_FAILED  // Payment failed - chatbot blocked until payment
+}
+
 enum TransactionType {
   MESSAGE           // -€0.10 per WhatsApp message
   NEW_ORDER         // -€1.00 per order created
@@ -1149,9 +1196,12 @@ enum TransactionType {
 }
 
 // Transaction history for billing - tracks all credit movements
+// Feature 198: userId is primary key for billing (owner-based)
+// workspaceId is optional for operation tracking (which channel was used)
 model BillingTransaction {
   id            String          @id @default(cuid())
-  workspaceId   String
+  userId        String          // Owner who owns the credit
+  workspaceId   String?         // Optional: which workspace/channel originated the charge
   type          TransactionType
   amount        Decimal         @db.Decimal(10, 2) // Negative for charges, positive for credits
   balanceAfter  Decimal         @db.Decimal(10, 2) // Balance after this transaction
@@ -1161,12 +1211,63 @@ model BillingTransaction {
   metadata      Json?           // Additional context
   createdAt     DateTime        @default(now())
   
-  workspace     Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace     Workspace?      @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
 
+  @@index([userId])
   @@index([workspaceId])
   @@index([type])
   @@index([createdAt])
   @@map("billing_transactions")
+}
+
+// Feature 197: Monthly Invoice for billing tracking
+// Tracks subscription fees + credit usage per month per owner
+enum InvoiceStatus {
+  DRAFT       // Current month, still accumulating charges
+  PENDING     // Month ended, awaiting payment
+  PAID        // Successfully charged
+  FAILED      // Payment failed
+  CANCELLED   // Invoice cancelled (e.g., user deleted)
+}
+
+model MonthlyInvoice {
+  id                  String        @id @default(cuid())
+  userId              String        // Owner of the invoice (Feature 198)
+  
+  // Period
+  periodStart         DateTime      // 1st of month 00:00:00
+  periodEnd           DateTime      // Last day of month 23:59:59
+  periodMonth         Int           // Month (1-12)
+  periodYear          Int           // Year (e.g., 2025)
+  
+  // Amounts
+  subscriptionAmount  Decimal       @db.Decimal(10, 2)  // €19/€49/€99 monthly fee
+  creditUsage         Decimal       @db.Decimal(10, 2)  // Total consumption from wallet
+  creditDebt          Decimal       @default(0) @db.Decimal(10, 2)  // Negative balance carried over
+  totalAmount         Decimal       @db.Decimal(10, 2)  // Total to charge
+  
+  // Status
+  status              InvoiceStatus @default(DRAFT)
+  paidAt              DateTime?
+  paypalTransactionId String?
+  
+  // Metadata
+  planType            PlanType      // Plan during this period
+  itemsBreakdown      Json          // { messages: 150, orders: 10, pushes: 5, ... }
+  
+  // Timestamps
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  
+  // Relations
+  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, periodYear, periodMonth])
+  @@index([userId])
+  @@index([status])
+  @@index([periodYear, periodMonth])
+  @@map("monthly_invoices")
 }
 
 // Plan configuration - dynamic limits from database

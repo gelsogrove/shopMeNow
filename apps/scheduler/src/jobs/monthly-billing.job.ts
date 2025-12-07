@@ -1,107 +1,331 @@
-import { prisma, Prisma, PlanType } from '../config/database'
+import { prisma, Prisma, PlanType, SubscriptionStatus } from '../config/database'
 import logger from '../utils/logger'
 
 /**
  * Monthly Billing Job
- * Runs on the 1st of each month at 12:00
- * Charges monthly fee from workspace credit balance
- * 
- * Uses PlanConfiguration to get the monthlyFee for each plan type
- * Creates BillingTransaction records for audit trail
+ * Feature 198: Billing Owner Refactor
+ *
+ * Runs on the 1st of each month at 00:05
+ *
+ * CRITICAL CHANGE (Feature 198):
+ * - Billing is now per OWNER (User), not per Workspace
+ * - Credit balance is SHARED across all owner's workspaces
+ * - One subscription covers ALL workspaces owned by a user
+ *
+ * Flow:
+ * 1. Apply pending plan changes (downgrades scheduled for this month) on User
+ * 2. Handle pause requests (PAUSE_PENDING → PAUSED) on User
+ * 3. Skip paused users
+ * 4. Calculate total charge: subscription + credit debt (if negative)
+ * 5. Process payment (mocked for now)
+ * 6. On success: reset credit to €0, create transaction with userId
+ * 7. On failure: set PAYMENT_FAILED on User, affects all their workspaces
+ *
+ * SECURITY: All operations are user-isolated
+ * ATOMIC: Each user processed in a transaction
  */
+
+/**
+ * MOCK: Payment processing
+ * TODO: Replace with real PayPal/Stripe integration
+ *
+ * @returns Always returns true for now
+ */
+async function processPayment(
+  userId: string,
+  amount: number,
+  description: string
+): Promise<{ success: boolean; transactionId?: string; error?: string }> {
+  logger.info(`[PAYMENT MOCK] 💳 Processing €${amount.toFixed(2)} for user ${userId}`)
+  logger.info(`[PAYMENT MOCK] Description: ${description}`)
+
+  // TODO: Implement real payment processing
+  // const paymentResult = await paypalService.charge(userId, amount)
+  // return paymentResult
+
+  // For now, always succeed
+  return {
+    success: true,
+    transactionId: `MOCK_${Date.now()}_${userId.substring(0, 8)}`,
+  }
+}
+
+/**
+ * Get first day of current month
+ */
+function getFirstOfCurrentMonth(): Date {
+  const now = new Date()
+  return new Date(now.getFullYear(), now.getMonth(), 1)
+}
+
+/**
+ * Get month name for logging
+ */
+function getCurrentMonthName(): string {
+  return new Date().toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })
+}
+
 export async function monthlyBillingJob(): Promise<void> {
-  // Get all active workspaces (not free trial, not deleted)
-  const workspaces = await prisma.workspace.findMany({
+  const startTime = Date.now()
+  const monthName = getCurrentMonthName()
+
+  logger.info(`[BILLING] 🗓️ Starting monthly billing for ${monthName}`)
+  logger.info(`[BILLING] 📢 Feature 198: Processing billing per OWNER (User), not per Workspace`)
+
+  // Get all users who are workspace owners (have at least one workspace)
+  // We bill users who own workspaces, not individual workspaces
+  const owners = await prisma.user.findMany({
     where: {
-      isActive: true,
-      isDelete: false,
-      planType: {
-        not: 'FREE_TRIAL',
+      status: 'ACTIVE',
+      ownedWorkspaces: {
+        some: {
+          isActive: true,
+          isDelete: false,
+          deletedAt: null,
+        },
       },
     },
-    select: {
-      id: true,
-      name: true,
-      planType: true,
-      creditBalance: true,
+    include: {
+      ownedWorkspaces: {
+        where: {
+          isActive: true,
+          isDelete: false,
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          name: true,
+        },
+      },
     },
   })
 
-  if (workspaces.length === 0) {
-    logger.info('No active paid workspaces found')
+  if (owners.length === 0) {
+    logger.info('[BILLING] No active workspace owners found')
     return
   }
+
+  logger.info(`[BILLING] Processing ${owners.length} workspace owners`)
 
   // Get all plan configurations (cached once)
   const planConfigs = await prisma.planConfiguration.findMany({
     where: { isActive: true },
   })
-
   const planConfigMap = new Map(planConfigs.map(c => [c.planType, c]))
 
-  let successCount = 0
-  let failedCount = 0
+  const stats = {
+    processed: 0,
+    skippedPaused: 0,
+    skippedFreeTrial: 0,
+    pendingPlanApplied: 0,
+    pauseApplied: 0,
+    paymentSuccess: 0,
+    paymentFailed: 0,
+    errors: 0,
+  }
 
-  for (const workspace of workspaces) {
+  const today = getFirstOfCurrentMonth()
+
+  for (const owner of owners) {
+    const ownerName = `${owner.firstName} ${owner.lastName}`.trim() || owner.email
+    const workspaceCount = owner.ownedWorkspaces.length
+
     try {
-      // Get plan configuration for this workspace's plan
-      const planConfig = planConfigMap.get(workspace.planType as PlanType)
-      
-      if (!planConfig) {
-        logger.error(`No plan configuration found for plan type: ${workspace.planType}`)
-        failedCount++
+      // ═══════════════════════════════════════════════════════════════════
+      // STEP 1: Apply pending plan change (downgrades) on User
+      // ═══════════════════════════════════════════════════════════════════
+      if (
+        owner.pendingPlanType &&
+        owner.pendingPlanEffectiveDate &&
+        new Date(owner.pendingPlanEffectiveDate) <= today
+      ) {
+        logger.info(
+          `[BILLING] 📋 Applying pending plan change for ${ownerName}: ${owner.planType} → ${owner.pendingPlanType}`
+        )
+
+        await prisma.user.update({
+          where: { id: owner.id },
+          data: {
+            planType: owner.pendingPlanType,
+            pendingPlanType: null,
+            pendingPlanEffectiveDate: null,
+            planStartedAt: new Date(),
+          },
+        })
+
+        // Update local reference for billing calculation
+        owner.planType = owner.pendingPlanType
+        stats.pendingPlanApplied++
+      }
+
+      // ═══════════════════════════════════════════════════════════════════
+      // STEP 2: Handle pause requests (PAUSE_PENDING → PAUSED) on User
+      // This affects ALL workspaces owned by this user
+      // ═══════════════════════════════════════════════════════════════════
+      if (owner.subscriptionStatus === 'PAUSE_PENDING') {
+        logger.info(`[BILLING] ⏸️ Activating pause for owner ${ownerName} (${workspaceCount} workspaces affected)`)
+
+        await prisma.user.update({
+          where: { id: owner.id },
+          data: {
+            subscriptionStatus: 'PAUSED',
+            pausedAt: new Date(),
+          },
+        })
+
+        stats.pauseApplied++
+        stats.skippedPaused++
+        continue // Skip billing for this owner
+      }
+
+      // ═══════════════════════════════════════════════════════════════════
+      // STEP 3: Skip paused owners
+      // ═══════════════════════════════════════════════════════════════════
+      if (owner.subscriptionStatus === 'PAUSED') {
+        logger.info(`[BILLING] ⏸️ Skipping paused owner: ${ownerName}`)
+        stats.skippedPaused++
         continue
       }
 
-      const monthlyFee = new Prisma.Decimal(planConfig.monthlyFee)
-      const currentBalance = new Prisma.Decimal(workspace.creditBalance)
+      // ═══════════════════════════════════════════════════════════════════
+      // STEP 4: Skip FREE_TRIAL (no subscription fee)
+      // ═══════════════════════════════════════════════════════════════════
+      if (owner.planType === 'FREE_TRIAL') {
+        // Check if trial has expired
+        if (owner.trialEndsAt && new Date(owner.trialEndsAt) < today) {
+          logger.info(`[BILLING] ⚠️ Trial expired for ${ownerName}, blocking access`)
+          await prisma.user.update({
+            where: { id: owner.id },
+            data: {
+              subscriptionStatus: 'PAUSED', // Trial expired = paused until upgrade
+            },
+          })
+        } else {
+          logger.info(`[BILLING] 🆓 Skipping FREE_TRIAL owner: ${ownerName}`)
+        }
+        stats.skippedFreeTrial++
+        continue
+      }
 
-      // Check if sufficient balance
-      if (currentBalance.lessThan(monthlyFee)) {
-        logger.warn(`Workspace ${workspace.name} has insufficient balance: ${currentBalance} < ${monthlyFee}`)
-        
+      // ═══════════════════════════════════════════════════════════════════
+      // STEP 5: Calculate total charge (subscription + credit debt)
+      // Credit is now on User, shared across all workspaces
+      // ═══════════════════════════════════════════════════════════════════
+      const planConfig = planConfigMap.get(owner.planType as PlanType)
+
+      if (!planConfig) {
+        logger.error(`[BILLING] ❌ No plan config for ${owner.planType}`)
+        stats.errors++
+        continue
+      }
+
+      const subscriptionFee = Number(planConfig.monthlyFee)
+      const currentBalance = Number(owner.creditBalance)
+
+      // If credit is negative, add the debt to the charge
+      const creditDebt = currentBalance < 0 ? Math.abs(currentBalance) : 0
+      const totalCharge = subscriptionFee + creditDebt
+
+      logger.info(
+        `[BILLING] 💰 Owner ${ownerName} (${workspaceCount} workspaces): Subscription €${subscriptionFee} + Debt €${creditDebt.toFixed(2)} = Total €${totalCharge.toFixed(2)}`
+      )
+
+      // ═══════════════════════════════════════════════════════════════════
+      // STEP 6: Process payment
+      // ═══════════════════════════════════════════════════════════════════
+      const paymentResult = await processPayment(
+        owner.id,
+        totalCharge,
+        `Monthly billing ${monthName} - ${planConfig.displayName}`
+      )
+
+      if (paymentResult.success) {
+        // ═══════════════════════════════════════════════════════════════
+        // PAYMENT SUCCESS - Update User billing fields
+        // ═══════════════════════════════════════════════════════════════
+        await prisma.$transaction([
+          // Reset credit balance to €0 on User
+          prisma.user.update({
+            where: { id: owner.id },
+            data: {
+              creditBalance: new Prisma.Decimal(0),
+              subscriptionStatus: 'ACTIVE',
+              paymentFailureCount: 0,
+              lastPaymentFailedAt: null,
+              nextBillingDate: new Date(today.getFullYear(), today.getMonth() + 1, 1),
+            },
+          }),
+          // Create transaction record with userId (required)
+          // workspaceId is optional (null for owner-level billing)
+          prisma.billingTransaction.create({
+            data: {
+              userId: owner.id, // Feature 198: Required field
+              workspaceId: null, // Owner-level billing, not workspace-specific
+              type: 'MONTHLY_FEE',
+              amount: new Prisma.Decimal((-totalCharge).toFixed(2)),
+              balanceAfter: new Prisma.Decimal(0),
+              description: `Monthly billing ${monthName} - ${planConfig.displayName} (€${subscriptionFee}) + Credit debt (€${creditDebt.toFixed(2)})`,
+              referenceId: paymentResult.transactionId,
+              referenceType: 'payment',
+            },
+          }),
+        ])
+
+        logger.info(
+          `[BILLING] ✅ Payment success for ${ownerName}: €${totalCharge.toFixed(2)} (Tx: ${paymentResult.transactionId})`
+        )
+        stats.paymentSuccess++
+      } else {
+        // ═══════════════════════════════════════════════════════════════
+        // PAYMENT FAILED - Update User status (affects all workspaces)
+        // ═══════════════════════════════════════════════════════════════
+        await prisma.user.update({
+          where: { id: owner.id },
+          data: {
+            subscriptionStatus: 'PAYMENT_FAILED',
+            lastPaymentFailedAt: new Date(),
+            paymentFailureCount: { increment: 1 },
+          },
+        })
+
         // Create failed transaction record
         await prisma.billingTransaction.create({
           data: {
-            workspaceId: workspace.id,
+            userId: owner.id, // Feature 198: Required field
+            workspaceId: null, // Owner-level billing
             type: 'MONTHLY_FEE',
-            amount: monthlyFee.negated(),
-            balanceAfter: currentBalance, // Balance unchanged
-            description: `Monthly fee - FAILED (insufficient balance)`,
+            amount: new Prisma.Decimal(0), // No charge
+            balanceAfter: new Prisma.Decimal(currentBalance.toFixed(2)),
+            description: `Monthly billing ${monthName} - PAYMENT FAILED: ${paymentResult.error || 'Unknown error'}`,
           },
         })
-        
-        failedCount++
-        continue
+
+        logger.warn(
+          `[BILLING] ❌ Payment failed for ${ownerName} (${workspaceCount} workspaces blocked): ${paymentResult.error || 'Unknown error'}`
+        )
+        stats.paymentFailed++
+
+        // TODO: Send payment failed notification email
+        // await emailService.sendPaymentFailedNotification(owner)
       }
 
-      // Deduct monthly fee - atomic transaction
-      const newBalance = currentBalance.minus(monthlyFee)
-
-      await prisma.$transaction([
-        prisma.workspace.update({
-          where: { id: workspace.id },
-          data: { creditBalance: newBalance },
-        }),
-        prisma.billingTransaction.create({
-          data: {
-            workspaceId: workspace.id,
-            type: 'MONTHLY_FEE',
-            amount: monthlyFee.negated(),
-            balanceAfter: newBalance,
-            description: `Monthly subscription fee - ${new Date().toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })}`,
-          },
-        }),
-      ])
-
-      logger.info(`Charged ${monthlyFee}€ from workspace ${workspace.name}. New balance: ${newBalance}€`)
-      successCount++
-
+      stats.processed++
     } catch (error) {
-      logger.error(`Failed to charge workspace ${workspace.name}:`, error)
-      failedCount++
+      logger.error(`[BILLING] ❌ Error processing owner ${ownerName}:`, error)
+      stats.errors++
     }
   }
 
-  logger.info(`Monthly billing complete. Success: ${successCount}, Failed: ${failedCount}`)
+  const duration = ((Date.now() - startTime) / 1000).toFixed(2)
+
+  logger.info(`[BILLING] 🏁 Monthly billing completed in ${duration}s`)
+  logger.info(`[BILLING] 📊 Stats:`)
+  logger.info(`   - Owners Processed: ${stats.processed}`)
+  logger.info(`   - Payment Success: ${stats.paymentSuccess}`)
+  logger.info(`   - Payment Failed: ${stats.paymentFailed}`)
+  logger.info(`   - Pending Plans Applied: ${stats.pendingPlanApplied}`)
+  logger.info(`   - Pause Applied: ${stats.pauseApplied}`)
+  logger.info(`   - Skipped (Paused): ${stats.skippedPaused}`)
+  logger.info(`   - Skipped (Free Trial): ${stats.skippedFreeTrial}`)
+  logger.info(`   - Errors: ${stats.errors}`)
 }

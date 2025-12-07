@@ -62,6 +62,7 @@ import {
   PlanType,
   BillingOverview,
 } from "@/services/subscriptionBillingApi"
+import { SubscriptionStatusCard } from "./SubscriptionStatusCard"
 import { PLAN_CONFIGS, getPlanFeaturesWithText } from "@/config/planFeatures"
 import { toast } from "@/lib/toast"
 import {
@@ -489,6 +490,14 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
             </Button>
           )}
         </div>
+      )}
+
+      {/* 📋 Subscription Status Card - Feature 197 */}
+      {effectiveWorkspaceId && !isTrialPlan && (
+        <SubscriptionStatusCard 
+          workspaceId={effectiveWorkspaceId}
+          onStatusChange={refreshOverview}
+        />
       )}
 
       {/* Plan & Credit Card */}

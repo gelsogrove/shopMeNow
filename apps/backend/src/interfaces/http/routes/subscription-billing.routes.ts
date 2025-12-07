@@ -363,3 +363,210 @@ billingRoutes.post(
   requireOwnerForBilling,
   controller.changePlan
 )
+
+// ============================================================================
+// Feature 197: Subscription Management Routes
+// ============================================================================
+
+/**
+ * @swagger
+ * /api/workspaces/{workspaceId}/billing/subscription/status:
+ *   get:
+ *     summary: Get subscription status
+ *     description: Get detailed subscription status including pause state, pending changes, and block reasons
+ *     tags: [Billing]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: header
+ *         name: x-session-id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Subscription status
+ */
+billingRoutes.get(
+  "/subscription/status",
+  authMiddleware,
+  sessionValidationMiddleware,
+  validateWorkspaceOperation,
+  controller.getSubscriptionStatus
+)
+
+/**
+ * @swagger
+ * /api/workspaces/{workspaceId}/billing/subscription/pause:
+ *   post:
+ *     summary: Pause subscription
+ *     description: |
+ *       Request to pause subscription. Effective from 1st of next month.
+ *       Chatbot will stop responding. Data is retained.
+ *       OWNER-ONLY operation.
+ *     tags: [Billing]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: header
+ *         name: x-session-id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Pause scheduled
+ *       400:
+ *         description: Already paused or invalid state
+ *       403:
+ *         description: Owner role required
+ */
+billingRoutes.post(
+  "/subscription/pause",
+  authMiddleware,
+  sessionValidationMiddleware,
+  validateWorkspaceOperation,
+  requireOwnerForBilling,
+  controller.pauseSubscription
+)
+
+/**
+ * @swagger
+ * /api/workspaces/{workspaceId}/billing/subscription/resume:
+ *   post:
+ *     summary: Resume subscription
+ *     description: |
+ *       Resume a paused subscription or cancel a pending pause.
+ *       Chatbot will start responding again immediately.
+ *       OWNER-ONLY operation.
+ *     tags: [Billing]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: header
+ *         name: x-session-id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Subscription resumed
+ *       400:
+ *         description: Not paused
+ *       403:
+ *         description: Owner role required
+ */
+billingRoutes.post(
+  "/subscription/resume",
+  authMiddleware,
+  sessionValidationMiddleware,
+  validateWorkspaceOperation,
+  requireOwnerForBilling,
+  controller.resumeSubscription
+)
+
+/**
+ * @swagger
+ * /api/workspaces/{workspaceId}/billing/plan/downgrade:
+ *   post:
+ *     summary: Schedule plan downgrade
+ *     description: |
+ *       Schedule a downgrade for next billing cycle.
+ *       Validates that current usage fits within target plan limits.
+ *       OWNER-ONLY operation.
+ *     tags: [Billing]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: header
+ *         name: x-session-id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - newPlan
+ *             properties:
+ *               newPlan:
+ *                 type: string
+ *                 enum: [BASIC, PREMIUM]
+ *     responses:
+ *       200:
+ *         description: Downgrade scheduled
+ *       400:
+ *         description: Invalid downgrade or limits exceeded
+ *       403:
+ *         description: Owner role required
+ */
+billingRoutes.post(
+  "/plan/downgrade",
+  authMiddleware,
+  sessionValidationMiddleware,
+  validateWorkspaceOperation,
+  requireOwnerForBilling,
+  controller.scheduleDowngrade
+)
+
+/**
+ * @swagger
+ * /api/workspaces/{workspaceId}/billing/plan/pending:
+ *   delete:
+ *     summary: Cancel pending plan change
+ *     description: |
+ *       Cancel a scheduled downgrade before it takes effect.
+ *       OWNER-ONLY operation.
+ *     tags: [Billing]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: header
+ *         name: x-session-id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Pending change cancelled
+ *       400:
+ *         description: No pending change
+ *       403:
+ *         description: Owner role required
+ */
+billingRoutes.delete(
+  "/plan/pending",
+  authMiddleware,
+  sessionValidationMiddleware,
+  validateWorkspaceOperation,
+  requireOwnerForBilling,
+  controller.cancelPendingPlanChange
+)

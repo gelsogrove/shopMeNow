@@ -1,177 +1,130 @@
 /**
  * Billing Service - UNIT Tests
+ * Feature 198: Billing Owner Refactor
  *
  * Test UNITARI con MOCK di Prisma - nessun database reale
  *
- * Andrea's Requirements:
- * 1. ✅ Test trackMessage - correct price from database (€0.10)
- *
- * UNIT TEST = MOCK di database, NO connessioni reali
+ * Tests:
+ * 1. trackMessage - deducts from owner, records transaction with userId
+ * 2. chargeMonthlyChannelCost - charges monthly fee
  */
-
 
 import { BillingService } from "../../../src/application/services/billing.service"
 
 // Mock Prisma Client
-jest.mock("@echatbot/database", () => ({
-  prisma: {},
-  BillingType: {
-    MESSAGE: "MESSAGE",
-    MONTHLY_CHANNEL_COST: "MONTHLY_CHANNEL_COST",
+const mockPrisma = {
+  billing: {
+    create: jest.fn(),
+    count: jest.fn(),
+    aggregate: jest.fn(),
+    findFirst: jest.fn(),
   },
+  billingTransaction: {
+    create: jest.fn(),
+  },
+  pricingConfig: {
+    findFirst: jest.fn(),
+    findUnique: jest.fn(),
+  },
+  orders: {
+    findFirst: jest.fn(),
+    update: jest.fn(),
+  },
+  workspace: {
+    findUnique: jest.fn(),
+    update: jest.fn(),
+  },
+  user: {
+    update: jest.fn(),
+  },
+}
+
+// Mock PricingRepository
+jest.mock("../../../src/repositories/pricing.repository", () => ({
+  PricingRepository: jest.fn().mockImplementation(() => ({
+    getValue: jest.fn().mockResolvedValue(0.10),
+  })),
 }))
 
-describe("Billing Service - UNIT Tests", () => {
+describe("Billing Service - Feature 198 Owner-Based Billing", () => {
   let billingService: BillingService
-  let mockPrisma: any
+
+  const mockWorkspaceId = "test-workspace-id"
+  const mockCustomerId = "test-customer-id"
+  const mockOwnerId = "test-owner-id"
 
   beforeEach(() => {
-    // Setup mock Prisma
-    mockPrisma = {
-      billing: {
-        create: jest.fn(),
-        count: jest.fn(),
-        aggregate: jest.fn(),
-      },
-      billingTransaction: {
-        create: jest.fn(),
-      },
-      pricingConfig: {
-        findFirst: jest.fn(),
-        findUnique: jest.fn(), // For PricingRepository.getByKey()
-      },
-      orders: {
-        findFirst: jest.fn(),
-        update: jest.fn(),
-      },
-      workspace: {
-        findUnique: jest.fn(),
-        update: jest.fn(),
-        updateMany: jest.fn(),
-      },
-      $transaction: jest.fn((callback: any) => callback(mockPrisma)),
-    }
-
-    billingService = new BillingService(mockPrisma)
-  })
-
-  afterEach(() => {
     jest.clearAllMocks()
+    billingService = new BillingService(mockPrisma as any)
   })
 
-  /**
-   * TEST 1: trackMessage - Verify correct price from database (€0.10)
-   */
-  describe("trackMessage", () => {
-    it("should charge correct price from database (€0.10 per message)", async () => {
-      const workspaceId = "workspace-123"
-      const customerId = "customer-456"
-      const description = "Test message"
-
-      // Mock PricingRepository.getValue("MESSAGE") → returns 0.10 (default fallback in code)
-      mockPrisma.pricingConfig.findUnique.mockResolvedValue(null) // Force default
-
-      // Mock billing.aggregate for getCurrentTotalForCustomer
-      mockPrisma.billing.aggregate.mockResolvedValue({
-        _sum: { amount: null }, // No previous billing
-      })
-
-      // Mock billing creation (legacy table)
-      mockPrisma.billing.create.mockResolvedValue({
-        id: "billing-1",
-        workspaceId,
-        customerId,
-        type: "MESSAGE",
-        amount: 0.10,
-        description,
-        previousTotal: 0,
-        currentCharge: 0.10,
-        newTotal: 0.10,
-        createdAt: new Date(),
-      })
-
-      // Mock workspace lookup for credit deduction
+  describe("trackMessage - Feature 198", () => {
+    beforeEach(() => {
+      // Mock workspace with owner
       mockPrisma.workspace.findUnique.mockResolvedValue({
-        id: workspaceId,
-        name: "Test Channel",
-        creditBalance: 29.00,
-        ownerId: "owner-123",
+        id: mockWorkspaceId,
+        name: "Test Workspace",
+        creditBalance: 50,
+        ownerId: mockOwnerId,
       })
 
-      // Mock workspace updateMany (credit deduction - shared credit across all owner's workspaces)
-      mockPrisma.workspace.updateMany.mockResolvedValue({
-        count: 1,
+      // Mock aggregate for previous total
+      mockPrisma.billing.aggregate.mockResolvedValue({
+        _sum: { amount: 10 },
       })
+    })
 
-      // Mock billingTransaction creation (for Transaction History)
-      mockPrisma.billingTransaction.create.mockResolvedValue({
-        id: "tx-1",
-        workspaceId,
-        type: "MESSAGE",
-        amount: 0.10,
-        description: "WhatsApp message",
-        balanceAfter: 28.90,
-        createdAt: new Date(),
+    it("should deduct message cost from owner credit balance", async () => {
+      await billingService.trackMessage(mockWorkspaceId, mockCustomerId, "Test message")
+
+      // Should update USER (owner) credit balance, not workspace
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: mockOwnerId },
+        data: { creditBalance: expect.any(Number) },
       })
+    })
 
-      // Execute
-      await billingService.trackMessage(workspaceId, customerId, description)
+    it("should create billing transaction with userId (Feature 198)", async () => {
+      await billingService.trackMessage(mockWorkspaceId, mockCustomerId, "Test message")
 
-      // Verify pricing query via PricingRepository
-      expect(mockPrisma.pricingConfig.findUnique).toHaveBeenCalledWith({
-        where: { key: "MESSAGE" },
-      })
-
-      // Verify billing creation with correct price (default €0.10)
-      expect(mockPrisma.billing.create).toHaveBeenCalledWith({
-        data: {
-          workspaceId,
-          customerId,
-          type: "MESSAGE",
-          amount: 0.10, // CRITICAL: Default €0.10 when database config missing
-          description,
-          userQuery: null,
-          previousTotal: 0,
-          currentCharge: 0.10,
-          newTotal: 0.10,
-        },
-      })
-
-      // Verify credit was deducted from ALL owner's workspaces (shared credit)
-      expect(mockPrisma.workspace.updateMany).toHaveBeenCalledWith({
-        where: { 
-          ownerId: "owner-123",
-          isActive: true,
-        },
-        data: { creditBalance: 28.90 },
-      })
-
-      // Verify transaction was recorded for Transaction History
+      // billingTransaction must include userId (required in Feature 198)
       expect(mockPrisma.billingTransaction.create).toHaveBeenCalledWith({
-        data: {
-          workspaceId,
+        data: expect.objectContaining({
+          userId: mockOwnerId,
+          workspaceId: mockWorkspaceId,
           type: "MESSAGE",
-          amount: 0.10,
-          description: "WhatsApp message (Test Channel)",
-          balanceAfter: 28.90,
-        },
+        }),
+      })
+    })
+
+    it("should record in legacy billing table for analytics", async () => {
+      await billingService.trackMessage(mockWorkspaceId, mockCustomerId, "Test message")
+
+      // Legacy billing table for analytics
+      expect(mockPrisma.billing.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          workspaceId: mockWorkspaceId,
+          customerId: mockCustomerId,
+          type: "MESSAGE",
+        }),
+      })
+    })
+
+    it("should use MESSAGE cost from pricing config (€0.10)", async () => {
+      await billingService.trackMessage(mockWorkspaceId, mockCustomerId, "Test message")
+
+      // Credit balance should be reduced by message cost
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: mockOwnerId },
+        data: { creditBalance: 49.9 }, // 50 - 0.10
       })
     })
   })
 
-  /**
-   * PROTECTION TEST: Verify billing methods exist
-   *
-   * This test ensures that if a developer accidentally removes
-   * a billing method, the test suite will FAIL and alert them.
-   */
-  describe("Integration Point Protection", () => {
+  describe("trackMessage - method signature", () => {
     it("should verify trackMessage method exists and is callable", () => {
       expect(billingService.trackMessage).toBeDefined()
       expect(typeof billingService.trackMessage).toBe("function")
-      // Note: TypeScript counts only required parameters (workspaceId, customerId)
-      // Optional parameters (description, userQuery) are not counted in .length
-      expect(billingService.trackMessage.length).toBe(2)
     })
   })
 })

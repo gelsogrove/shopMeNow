@@ -396,16 +396,18 @@ For privacy inquiries, please contact our support team.`
               ? Number(freeTrial.initialCredit) 
               : 19.00 // Fallback to €19 if not found
             
-            if (initialCredit > 0) {
-              // Update workspace credit balance
-              await tx.workspace.update({
-                where: { id: createdWorkspace.id },
+            if (initialCredit > 0 && createdBy) {
+              // Feature 198: Update owner's credit balance (not workspace)
+              await tx.user.update({
+                where: { id: createdBy },
                 data: { creditBalance: initialCredit }
               })
               
               // Create the billing transaction record
+              // Feature 198: userId is required, workspaceId tracks which channel
               await tx.billingTransaction.create({
                 data: {
+                  userId: createdBy,
                   workspaceId: createdWorkspace.id,
                   type: 'INITIAL_CREDIT',
                   amount: initialCredit,

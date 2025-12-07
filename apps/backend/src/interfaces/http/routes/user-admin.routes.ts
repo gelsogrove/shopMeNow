@@ -62,6 +62,15 @@ router.get(
           billingPhone: true,
           profilePicture: true,
           authProvider: true,
+          // Feature 198: Owner-level billing fields
+          planType: true,
+          subscriptionStatus: true,
+          creditBalance: true,
+          planStartedAt: true,
+          pendingPlanType: true,
+          pendingPlanEffectiveDate: true,
+          pausedAt: true,
+          pauseRequestedAt: true,
           // Get owned workspaces with stats
           ownedWorkspaces: {
             select: {
@@ -70,6 +79,7 @@ router.get(
               slug: true,
               creditBalance: true,
               planType: true,
+              subscriptionStatus: true, // Feature 197: Subscription status (legacy, deprecated)
               planStartedAt: true,
               language: true,
               isActive: true,
@@ -116,6 +126,15 @@ router.get(
           phoneNumber: user.phoneNumber || user.billingPhone,
           profilePicture: user.profilePicture,
           authProvider: user.authProvider,
+          // Feature 198: Owner-level billing (primary source of truth)
+          planType: user.planType,
+          subscriptionStatus: user.subscriptionStatus,
+          creditBalance: Number(user.creditBalance),
+          planStartedAt: user.planStartedAt,
+          pendingPlanType: user.pendingPlanType,
+          pendingPlanEffectiveDate: user.pendingPlanEffectiveDate,
+          pausedAt: user.pausedAt,
+          pauseRequestedAt: user.pauseRequestedAt,
           // Aggregate owned workspaces stats
           isOwner: user.ownedWorkspaces.length > 0,
           ownedWorkspaces: user.ownedWorkspaces.map(ws => ({
@@ -124,6 +143,7 @@ router.get(
             slug: ws.slug,
             creditBalance: Number(ws.creditBalance),
             planType: ws.planType,
+            subscriptionStatus: ws.subscriptionStatus, // Feature 197 (deprecated)
             planStartedAt: ws.planStartedAt,
             language: ws.language,
             isActive: ws.isActive,
@@ -132,8 +152,8 @@ router.get(
             numCustomers: ws.customers.length,
             numProducts: ws.products.length,
           })),
-          // Totals across all owned workspaces
-          totalCredit: user.ownedWorkspaces.reduce((sum, ws) => sum + Number(ws.creditBalance), 0),
+          // Totals across all owned workspaces (Feature 198: use owner's creditBalance)
+          totalCredit: Number(user.creditBalance),
           totalCustomers: user.ownedWorkspaces.reduce((sum, ws) => sum + ws.customers.length, 0),
           totalProducts: user.ownedWorkspaces.reduce((sum, ws) => sum + ws.products.length, 0),
         }
@@ -454,15 +474,15 @@ router.post(
         })
       }
 
-      // Get workspace
+      // Get workspace with owner info
       const workspace = await prisma.workspace.findUnique({
         where: { id: workspaceId },
         select: {
           id: true,
           name: true,
-          creditBalance: true,
+          ownerId: true, // Feature 198: Need ownerId for billing
           owner: {
-            select: { email: true, isPlatformAdmin: true }
+            select: { email: true, isPlatformAdmin: true, creditBalance: true }
           }
         },
       })
@@ -482,22 +502,31 @@ router.post(
         })
       }
 
-      // Calculate new balance
-      const currentBalance = Number(workspace.creditBalance)
+      // Ensure workspace has owner
+      if (!workspace.ownerId) {
+        return res.status(400).json({
+          success: false,
+          error: "Workspace has no owner",
+        })
+      }
+
+      // Feature 198: Get owner's current credit balance from workspace.owner
+      const currentBalance = Number(workspace.owner?.creditBalance || 0)
       const newBalance = currentBalance + amount
 
-      // Update workspace and create transaction in a transaction
+      // Update owner's balance and create transaction in a transaction
       const result = await prisma.$transaction(async (tx) => {
-        // Update workspace balance
-        const updatedWorkspace = await tx.workspace.update({
-          where: { id: workspaceId },
+        // Feature 198: Update owner's balance (not workspace)
+        await tx.user.update({
+          where: { id: workspace.ownerId! },
           data: { creditBalance: newBalance },
-          select: { creditBalance: true },
         })
 
         // Create BONUS transaction
+        // Feature 198: userId is required, workspaceId is optional
         const transaction = await tx.billingTransaction.create({
           data: {
+            userId: workspace.ownerId!,
             workspaceId,
             type: "BONUS",
             amount: amount, // Positive for credit
@@ -512,7 +541,7 @@ router.post(
           },
         })
 
-        return { updatedWorkspace, transaction }
+        return { transaction }
       })
 
       logger.info(

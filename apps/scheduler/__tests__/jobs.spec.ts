@@ -283,18 +283,115 @@ describe('Scheduler Jobs', () => {
   })
 
   describe('Monthly Billing Job', () => {
+    // Feature 197: Updated tests for new billing flow
+    
+    beforeEach(() => {
+      // Reset mocks for each test
+      mockPrisma.workspace.findMany.mockReset()
+      mockPrisma.workspace.update.mockReset()
+      mockPrisma.planConfiguration.findMany.mockReset()
+      mockPrisma.billingTransaction.create.mockReset()
+    })
+
     it('should skip free trial workspaces', async () => {
+      // Workspaces returned don't include FREE_TRIAL (filtered in query)
       mockPrisma.workspace.findMany.mockResolvedValue([])
 
       await monthlyBillingJob()
 
-      expect(mockPrisma.workspace.findMany).toHaveBeenCalledWith({
-        where: expect.objectContaining({
-          planType: { not: 'FREE_TRIAL' },
+      // Should log "No active workspaces found" when empty
+      expect(mockLogger.info).toHaveBeenCalledWith('[BILLING] No active workspaces found')
+    })
+
+    it('should handle PAUSE_PENDING → PAUSED transition', async () => {
+      const mockWorkspace = {
+        id: 'ws-pause',
+        name: 'Pause Pending Workspace',
+        planType: 'BASIC',
+        creditBalance: 50.00,
+        subscriptionStatus: 'PAUSE_PENDING',
+        pendingPlanType: null,
+        pendingPlanEffectiveDate: null,
+        channelStatus: true,
+      }
+
+      mockPrisma.workspace.findMany.mockResolvedValue([mockWorkspace])
+      mockPrisma.planConfiguration.findMany.mockResolvedValue([])
+      mockPrisma.workspace.update.mockResolvedValue({ ...mockWorkspace, subscriptionStatus: 'PAUSED' })
+
+      await monthlyBillingJob()
+
+      // Should update to PAUSED and disable channel
+      expect(mockPrisma.workspace.update).toHaveBeenCalledWith({
+        where: { id: 'ws-pause' },
+        data: expect.objectContaining({
+          subscriptionStatus: 'PAUSED',
+          pausedAt: expect.any(Date),
+          channelStatus: false,
         }),
-        select: expect.any(Object),
       })
-      expect(mockLogger.info).toHaveBeenCalledWith('No active paid workspaces found')
+    })
+
+    it('should skip already paused workspaces', async () => {
+      const mockWorkspace = {
+        id: 'ws-paused',
+        name: 'Paused Workspace',
+        planType: 'BASIC',
+        creditBalance: 50.00,
+        subscriptionStatus: 'PAUSED',
+        pendingPlanType: null,
+        pendingPlanEffectiveDate: null,
+        channelStatus: false,
+      }
+
+      mockPrisma.workspace.findMany.mockResolvedValue([mockWorkspace])
+      mockPrisma.planConfiguration.findMany.mockResolvedValue([])
+
+      await monthlyBillingJob()
+
+      // Should log skip message
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        expect.stringContaining('Skipping paused workspace')
+      )
+    })
+
+    it('should apply pending plan changes (downgrade)', async () => {
+      const lastMonth = new Date()
+      lastMonth.setMonth(lastMonth.getMonth() - 1)
+
+      const mockWorkspace = {
+        id: 'ws-downgrade',
+        name: 'Downgrade Workspace',
+        planType: 'PREMIUM',
+        creditBalance: 50.00,
+        subscriptionStatus: 'ACTIVE',
+        pendingPlanType: 'BASIC',
+        pendingPlanEffectiveDate: lastMonth, // Should be applied (date in past)
+        channelStatus: true,
+      }
+
+      const mockPlanConfig = {
+        planType: 'BASIC',
+        monthlyFee: 29.00,
+        displayName: 'Basic',
+        isActive: true,
+      }
+
+      mockPrisma.workspace.findMany.mockResolvedValue([mockWorkspace])
+      mockPrisma.planConfiguration.findMany.mockResolvedValue([mockPlanConfig])
+      mockPrisma.workspace.update.mockResolvedValue({ ...mockWorkspace, planType: 'BASIC' })
+
+      await monthlyBillingJob()
+
+      // First update: apply pending plan change
+      expect(mockPrisma.workspace.update).toHaveBeenCalledWith({
+        where: { id: 'ws-downgrade' },
+        data: expect.objectContaining({
+          planType: 'BASIC',
+          pendingPlanType: null,
+          pendingPlanEffectiveDate: null,
+        }),
+      })
     })
 
     it('should charge monthly fee for paid workspaces', async () => {
@@ -303,28 +400,66 @@ describe('Scheduler Jobs', () => {
         name: 'Paid Workspace',
         planType: 'BASIC',
         creditBalance: 100.00,
+        subscriptionStatus: 'ACTIVE',
+        pendingPlanType: null,
+        pendingPlanEffectiveDate: null,
+        channelStatus: true,
       }
 
       const mockPlanConfig = {
         planType: 'BASIC',
         monthlyFee: 29.00,
+        displayName: 'Basic',
         isActive: true,
       }
 
       mockPrisma.workspace.findMany.mockResolvedValue([mockWorkspace])
       mockPrisma.planConfiguration.findMany.mockResolvedValue([mockPlanConfig])
-      mockPrisma.workspace.update.mockResolvedValue({ ...mockWorkspace, creditBalance: 71.00 })
+      mockPrisma.workspace.update.mockResolvedValue({ ...mockWorkspace, creditBalance: 0 })
       mockPrisma.billingTransaction.create.mockResolvedValue({})
 
       await monthlyBillingJob()
 
-      expect(mockPrisma.workspace.update).toHaveBeenCalledWith({
-        where: { id: 'ws-1' },
-        data: expect.objectContaining({
-          creditBalance: expect.any(Object), // Decimal
-        }),
-      })
+      // Should create transaction for monthly fee
       expect(mockPrisma.billingTransaction.create).toHaveBeenCalled()
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        expect.stringContaining('Payment success')
+      )
+    })
+
+    it('should include credit debt when balance is negative', async () => {
+      const mockWorkspace = {
+        id: 'ws-debt',
+        name: 'Debt Workspace',
+        planType: 'BASIC',
+        creditBalance: -5.00, // Negative balance
+        subscriptionStatus: 'ACTIVE',
+        pendingPlanType: null,
+        pendingPlanEffectiveDate: null,
+        channelStatus: true,
+      }
+
+      const mockPlanConfig = {
+        planType: 'BASIC',
+        monthlyFee: 29.00,
+        displayName: 'Basic',
+        isActive: true,
+      }
+
+      mockPrisma.workspace.findMany.mockResolvedValue([mockWorkspace])
+      mockPrisma.planConfiguration.findMany.mockResolvedValue([mockPlanConfig])
+      mockPrisma.workspace.update.mockResolvedValue({ ...mockWorkspace, creditBalance: 0 })
+      mockPrisma.billingTransaction.create.mockResolvedValue({})
+
+      await monthlyBillingJob()
+
+      // Should log total charge including debt: 29 + 5 = 34
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        expect.stringContaining('Subscription €29')
+      )
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        expect.stringContaining('Debt €5')
+      )
     })
   })
 })

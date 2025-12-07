@@ -190,12 +190,23 @@ class BackofficeApi {
       profilePicture: string | null
       authProvider: string
       isOwner: boolean
+      // Feature 198: Owner-level billing (primary source of truth)
+      planType: string
+      subscriptionStatus: string
+      creditBalance: number
+      planStartedAt: string | null
+      pendingPlanType: string | null
+      pendingPlanEffectiveDate: string | null
+      pausedAt: string | null
+      pauseRequestedAt: string | null
+      // Legacy: workspaces data
       ownedWorkspaces: Array<{
         id: string
         name: string
         slug: string
         creditBalance: number
         planType: string
+        subscriptionStatus: string // Legacy, deprecated
         planStartedAt: string
         language: string
         isActive: boolean

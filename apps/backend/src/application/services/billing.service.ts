@@ -84,18 +84,17 @@ export class BillingService {
       if (workspace && workspace.ownerId) {
         const newBalance = Number(workspace.creditBalance) - messageCost
 
-        // Update ALL workspaces of this owner with the new balance (shared credit)
-        await this.prisma.workspace.updateMany({
-          where: { 
-            ownerId: workspace.ownerId,
-            isActive: true,
-          },
+        // Feature 198: Update owner's credit balance (shared across all workspaces)
+        await this.prisma.user.update({
+          where: { id: workspace.ownerId },
           data: { creditBalance: newBalance },
         })
 
         // 3️⃣ Record in billingTransactions for Transaction History (with channel name)
+        // Feature 198: userId is required, workspaceId tracks which channel
         await this.prisma.billingTransaction.create({
           data: {
+            userId: workspace.ownerId,
             workspaceId,
             type: "MESSAGE",
             amount: messageCost,

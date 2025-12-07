@@ -120,6 +120,7 @@ import {
   billingRoutes as subscriptionBillingRoutes,
   publicBillingRoutes,
 } from "../interfaces/http/routes/subscription-billing.routes"
+import { ownerBillingRoutes } from "../interfaces/http/routes/owner-billing.routes"
 import debugRoutes from "../interfaces/http/routes/debug.routes"
 import { createLanguagesRouter } from "../interfaces/http/routes/languages.routes"
 import gdprRoutes from "../interfaces/http/routes/gdpr.routes"
@@ -755,11 +756,18 @@ router.use("/workspaces/:workspaceId/gdpr", gdprRoutes)
 router.use("/gdpr", gdprRoutes)
 logger.info("Registered GDPR routes (/api/workspaces/:workspaceId/gdpr, /api/gdpr)")
 
-// Mount subscription billing routes (Feature 185) - WORKSPACE-SCOPED ONLY
+// Mount subscription billing routes (Feature 185) - WORKSPACE-SCOPED (DEPRECATED)
 // Note: Public /subscription/plans route is registered earlier in the file
 router.use("/workspaces/:workspaceId/subscription-billing", subscriptionBillingRoutes)
 logger.info(
-  "Registered workspace subscription billing routes: /api/workspaces/:workspaceId/subscription-billing"
+  "Registered workspace subscription billing routes: /api/workspaces/:workspaceId/subscription-billing (DEPRECATED)"
+)
+
+// Mount owner-based billing routes (Feature 198) - NO WORKSPACEID
+// This is the NEW primary billing API - uses userId from JWT token
+router.use("/subscription-billing", ownerBillingRoutes)
+logger.info(
+  "Registered owner billing routes: /api/subscription-billing (Feature 198)"
 )
 
 // Mount billing routes (legacy usage tracking - has auth middleware that catches all)

@@ -824,6 +824,39 @@ export class WhatsAppWebhookController {
         })
       }
 
+      // 🔒 Feature 197: Check workspace access BEFORE billing
+      // This handles: PAUSED, PAYMENT_FAILED, CREDIT_EXHAUSTED (< -€10)
+      // WIP mode (channelStatus=false) is handled separately with message
+      const { WorkspaceAccessService } = await import(
+        "../../../application/services/workspace-access.service"
+      )
+      const workspaceAccessService = new WorkspaceAccessService(prisma)
+      
+      // Skip channel check - WIP mode handled separately above
+      const accessResult = await workspaceAccessService.canProcessMessages(
+        customer.workspaceId,
+        true // skipChannelCheck - WIP handled by activeChatbot check
+      )
+
+      if (!accessResult.canProcess) {
+        // Silent block for billing issues (PAUSED, PAYMENT_FAILED, CREDIT_EXHAUSTED)
+        logger.warn("[WEBHOOK] 🚫 Feature 197: Workspace blocked - SILENT BLOCK", {
+          workspaceId: customer.workspaceId,
+          customerId: customer.id,
+          blockReason: accessResult.blockReason,
+          message: accessResult.message,
+        })
+
+        // 🚨 CRITICAL: DO NOT save message, DO NOT respond - completely silent
+        // Customer won't see any response, message won't appear in history
+        res.status(402).json({
+          status: "workspace_blocked",
+          code: accessResult.blockReason,
+          message: accessResult.message,
+        })
+        return
+      }
+
       // 💰 BILLING CHECK: Verify credit before processing with LLM
       const { SubscriptionBillingService } = await import(
         "../../../application/services/subscription-billing.service"

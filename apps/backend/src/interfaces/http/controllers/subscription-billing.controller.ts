@@ -559,4 +559,1217 @@ export class SubscriptionBillingController {
       })
     }
   }
+
+  // ============================================================================
+  // Feature 197: Subscription Management Endpoints
+  // ============================================================================
+
+  /**
+   * POST /billing/subscription/pause
+   * Request to pause subscription (effective next billing cycle)
+   *
+   * @swagger
+   * /api/workspaces/{workspaceId}/billing/subscription/pause:
+   *   post:
+   *     summary: Pause subscription
+   *     tags: [Billing]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: workspaceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Pause scheduled
+   *       400:
+   *         description: Already paused or invalid state
+   */
+  pauseSubscription = async (req: Request, res: Response): Promise<void> => {
+    try {
+      // Feature 198: Use userId from token for owner-based billing
+      const userId = (req as any).user?.id
+      const workspaceId = (req as any).workspaceId || req.params.workspaceId
+
+      if (!userId) {
+        res.status(401).json({ error: "User not authenticated" })
+        return
+      }
+
+      // Get owner billing status from User
+      const owner = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          firstName: true,
+          subscriptionStatus: true,
+          planType: true,
+        },
+      })
+
+      if (!owner) {
+        res.status(404).json({ error: "User not found" })
+        return
+      }
+
+      // Validate current status
+      if (owner.subscriptionStatus === "PAUSED") {
+        res.status(400).json({
+          error: "Abbonamento già in pausa",
+          code: "ALREADY_PAUSED",
+        })
+        return
+      }
+
+      if (owner.subscriptionStatus === "PAUSE_PENDING") {
+        res.status(400).json({
+          error: "Pausa già programmata per il prossimo mese",
+          code: "PAUSE_ALREADY_PENDING",
+        })
+        return
+      }
+
+      // Calculate effective date (1st of next month)
+      const now = new Date()
+      const effectiveDate = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+
+      // Set PAUSE_PENDING status on User (affects all owner's workspaces)
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          subscriptionStatus: "PAUSE_PENDING",
+          pauseRequestedAt: now,
+        },
+      })
+
+      logger.info(
+        `[BILLING] ⏸️ Pause requested for owner ${owner.firstName} (userId: ${userId}), effective ${effectiveDate.toISOString()}`
+      )
+
+      res.json({
+        success: true,
+        message: "La pausa sarà effettiva dal 1° del prossimo mese. I chatbot di tutti i workspace smetteranno di rispondere.",
+        data: {
+          effectiveDate: effectiveDate.toISOString(),
+          currentStatus: "PAUSE_PENDING",
+        },
+      })
+    } catch (error) {
+      logger.error("[BILLING] Error pausing subscription:", error)
+      res.status(500).json({
+        error: "Errore durante la pausa dell'abbonamento",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
+  /**
+   * POST /billing/subscription/resume
+   * Resume a paused subscription
+   *
+   * @swagger
+   * /api/workspaces/{workspaceId}/billing/subscription/resume:
+   *   post:
+   *     summary: Resume subscription
+   *     tags: [Billing]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: workspaceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Subscription resumed
+   *       400:
+   *         description: Not paused
+   */
+  resumeSubscription = async (req: Request, res: Response): Promise<void> => {
+    try {
+      // Feature 198: Use userId from token for owner-based billing
+      const userId = (req as any).user?.id
+
+      if (!userId) {
+        res.status(401).json({ error: "User not authenticated" })
+        return
+      }
+
+      const owner = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          firstName: true,
+          subscriptionStatus: true,
+          planType: true,
+          pausedAt: true,
+        },
+      })
+
+      if (!owner) {
+        res.status(404).json({ error: "User not found" })
+        return
+      }
+
+      // Can resume from PAUSED or cancel PAUSE_PENDING
+      if (
+        owner.subscriptionStatus !== "PAUSED" &&
+        owner.subscriptionStatus !== "PAUSE_PENDING"
+      ) {
+        res.status(400).json({
+          error: "L'abbonamento non è in pausa",
+          code: "NOT_PAUSED",
+        })
+        return
+      }
+
+      // Resume subscription on User (affects all owner's workspaces)
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          subscriptionStatus: "ACTIVE",
+          pausedAt: null,
+          pauseRequestedAt: null,
+        },
+      })
+
+      logger.info(`[BILLING] ▶️ Subscription resumed for owner ${owner.firstName} (userId: ${userId})`)
+
+      res.json({
+        success: true,
+        message: "Abbonamento riattivato! I chatbot di tutti i workspace torneranno a rispondere.",
+        data: {
+          currentStatus: "ACTIVE",
+        },
+      })
+    } catch (error) {
+      logger.error("[BILLING] Error resuming subscription:", error)
+      res.status(500).json({
+        error: "Errore durante la riattivazione dell'abbonamento",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
+  /**
+   * POST /billing/plan/downgrade
+   * Schedule a downgrade (effective next billing cycle)
+   *
+   * @swagger
+   * /api/workspaces/{workspaceId}/billing/plan/downgrade:
+   *   post:
+   *     summary: Schedule plan downgrade
+   *     tags: [Billing]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: workspaceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               newPlan:
+   *                 type: string
+   *                 enum: [BASIC, PREMIUM]
+   *     responses:
+   *       200:
+   *         description: Downgrade scheduled
+   *       400:
+   *         description: Invalid downgrade or limits exceeded
+   */
+  scheduleDowngrade = async (req: Request, res: Response): Promise<void> => {
+    try {
+      // Feature 198: Use userId from token for owner-based billing
+      const userId = (req as any).user?.id
+      const workspaceId = (req as any).workspaceId || req.params.workspaceId
+      const { newPlan } = req.body
+
+      if (!userId) {
+        res.status(401).json({ error: "User not authenticated" })
+        return
+      }
+
+      if (!newPlan) {
+        res.status(400).json({ error: "New plan required" })
+        return
+      }
+
+      const owner = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          firstName: true,
+          planType: true,
+          pendingPlanType: true,
+        },
+      })
+
+      if (!owner) {
+        res.status(404).json({ error: "User not found" })
+        return
+      }
+
+      // Validate it's a downgrade
+      const planOrder = ["FREE_TRIAL", "BASIC", "PREMIUM", "ENTERPRISE"]
+      const currentIndex = planOrder.indexOf(owner.planType)
+      const newIndex = planOrder.indexOf(newPlan)
+
+      if (newIndex >= currentIndex) {
+        res.status(400).json({
+          error: "Questo non è un downgrade. Usa l'endpoint upgrade per passare a un piano superiore.",
+          code: "NOT_A_DOWNGRADE",
+        })
+        return
+      }
+
+      // Check plan limits before scheduling (use workspaceId for resource counting)
+      const newPlanConfig = await this.prisma.planConfiguration.findUnique({
+        where: { planType: newPlan },
+      })
+
+      if (!newPlanConfig) {
+        res.status(400).json({ error: "Piano non trovato" })
+        return
+      }
+
+      // Get current usage across ALL owner's workspaces
+      const ownerWorkspaces = await this.prisma.workspace.findMany({
+        where: { ownerId: userId },
+        select: { id: true },
+      })
+      const workspaceIds = ownerWorkspaces.map((w) => w.id)
+
+      const productCount = await this.prisma.products.count({
+        where: { workspaceId: { in: workspaceIds }, isActive: true },
+      })
+      const customerCount = await this.prisma.customers.count({
+        where: { workspaceId: { in: workspaceIds }, deletedAt: null },
+      })
+
+      if (productCount > newPlanConfig.maxProducts) {
+        res.status(400).json({
+          error: `Hai ${productCount} prodotti attivi totali, ma il piano ${newPlanConfig.displayName} ne permette solo ${newPlanConfig.maxProducts}. Riduci i prodotti prima di fare il downgrade.`,
+          code: "PRODUCTS_EXCEED_LIMIT",
+          details: {
+            current: productCount,
+            limit: newPlanConfig.maxProducts,
+          },
+        })
+        return
+      }
+
+      if (customerCount > newPlanConfig.maxCustomers) {
+        res.status(400).json({
+          error: `Hai ${customerCount} clienti totali, ma il piano ${newPlanConfig.displayName} ne permette solo ${newPlanConfig.maxCustomers}. Non è possibile fare il downgrade.`,
+          code: "CUSTOMERS_EXCEED_LIMIT",
+          details: {
+            current: customerCount,
+            limit: newPlanConfig.maxCustomers,
+          },
+        })
+        return
+      }
+
+      // Schedule downgrade for next month on User (affects all workspaces)
+      const effectiveDate = new Date()
+      effectiveDate.setMonth(effectiveDate.getMonth() + 1)
+      effectiveDate.setDate(1)
+      effectiveDate.setHours(0, 0, 0, 0)
+
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          pendingPlanType: newPlan,
+          pendingPlanEffectiveDate: effectiveDate,
+        },
+      })
+
+      logger.info(
+        `[BILLING] 📋 Downgrade scheduled for owner ${owner.firstName}: ${owner.planType} → ${newPlan} on ${effectiveDate.toISOString()}`
+      )
+
+      res.json({
+        success: true,
+        message: `Downgrade a ${newPlanConfig.displayName} programmato per il 1° del prossimo mese. Riguarderà tutti i tuoi workspace.`,
+        data: {
+          currentPlan: owner.planType,
+          pendingPlan: newPlan,
+          effectiveDate: effectiveDate.toISOString(),
+        },
+      })
+    } catch (error) {
+      logger.error("[BILLING] Error scheduling downgrade:", error)
+      res.status(500).json({
+        error: "Errore durante la programmazione del downgrade",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
+  /**
+   * DELETE /billing/plan/pending
+   * Cancel a pending plan change (downgrade)
+   *
+   * @swagger
+   * /api/workspaces/{workspaceId}/billing/plan/pending:
+   *   delete:
+   *     summary: Cancel pending plan change
+   *     tags: [Billing]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: workspaceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Pending change cancelled
+   *       400:
+   *         description: No pending change
+   */
+  cancelPendingPlanChange = async (req: Request, res: Response): Promise<void> => {
+    try {
+      // Feature 198: Use userId from token for owner-based billing
+      const userId = (req as any).user?.id
+
+      if (!userId) {
+        res.status(401).json({ error: "User not authenticated" })
+        return
+      }
+
+      const owner = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          firstName: true,
+          pendingPlanType: true,
+          pendingPlanEffectiveDate: true,
+        },
+      })
+
+      if (!owner) {
+        res.status(404).json({ error: "User not found" })
+        return
+      }
+
+      if (!owner.pendingPlanType) {
+        res.status(400).json({
+          error: "Nessun cambio piano in sospeso",
+          code: "NO_PENDING_CHANGE",
+        })
+        return
+      }
+
+      const cancelledPlan = owner.pendingPlanType
+
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          pendingPlanType: null,
+          pendingPlanEffectiveDate: null,
+        },
+      })
+
+      logger.info(`[BILLING] ❌ Pending downgrade cancelled for owner ${owner.firstName}`)
+
+      res.json({
+        success: true,
+        message: `Downgrade a ${cancelledPlan} annullato.`,
+        data: {
+          cancelledPlan,
+        },
+      })
+    } catch (error) {
+      logger.error("[BILLING] Error cancelling pending plan:", error)
+      res.status(500).json({
+        error: "Errore durante l'annullamento del cambio piano",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
+  /**
+   * GET /billing/subscription/status
+   * Get current subscription status and access info
+   *
+   * @swagger
+   * /api/workspaces/{workspaceId}/billing/subscription/status:
+   *   get:
+   *     summary: Get subscription status
+   *     tags: [Billing]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: workspaceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Subscription status
+   */
+  getSubscriptionStatus = async (req: Request, res: Response): Promise<void> => {
+    try {
+      // Feature 198: Use userId from token for owner-based billing
+      const userId = (req as any).user?.id
+
+      if (!userId) {
+        res.status(401).json({ error: "User not authenticated" })
+        return
+      }
+
+      const owner = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          subscriptionStatus: true,
+          creditBalance: true,
+          pausedAt: true,
+          pauseRequestedAt: true,
+          pendingPlanType: true,
+          pendingPlanEffectiveDate: true,
+          lastPaymentFailedAt: true,
+          paymentFailureCount: true,
+          nextBillingDate: true,
+          planType: true,
+        },
+      })
+
+      if (!owner) {
+        res.status(404).json({ error: "User not found" })
+        return
+      }
+
+      // Determine if service is blocked
+      const creditBalance = Number(owner.creditBalance)
+      const CREDIT_MIN_THRESHOLD = -10
+      const isBlocked =
+        owner.subscriptionStatus === "PAUSED" ||
+        owner.subscriptionStatus === "PAYMENT_FAILED" ||
+        creditBalance < CREDIT_MIN_THRESHOLD
+
+      res.json({
+        success: true,
+        data: {
+          subscriptionStatus: owner.subscriptionStatus,
+          creditBalance,
+          isBlocked,
+          blockReason: isBlocked
+            ? owner.subscriptionStatus === "PAUSED"
+              ? "PAUSED"
+              : owner.subscriptionStatus === "PAYMENT_FAILED"
+                ? "PAYMENT_FAILED"
+                : creditBalance < CREDIT_MIN_THRESHOLD
+                  ? "CREDIT_EXHAUSTED"
+                  : null
+            : null,
+          pausedAt: owner.pausedAt,
+          pauseRequestedAt: owner.pauseRequestedAt,
+          pendingPlanType: owner.pendingPlanType,
+          pendingPlanEffectiveDate: owner.pendingPlanEffectiveDate,
+          lastPaymentFailedAt: owner.lastPaymentFailedAt,
+          paymentFailureCount: owner.paymentFailureCount,
+          nextBillingDate: owner.nextBillingDate,
+          planType: owner.planType,
+        },
+      })
+    } catch (error) {
+      logger.error("[BILLING] Error getting subscription status:", error)
+      res.status(500).json({
+        error: "Errore recupero stato abbonamento",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
+  // ===========================================================================
+  // OWNER-BASED ROUTES (Feature 198) - No workspaceId required
+  // These routes use userId from JWT token only
+  // ===========================================================================
+
+  /**
+   * GET /subscription-billing
+   * Get billing overview for authenticated owner (user)
+   */
+  getOwnerBillingOverview = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = (req as any).user?.id
+
+      if (!userId) {
+        res.status(401).json({ error: "User not authenticated" })
+        return
+      }
+
+      const overview = await this.billingService.getOwnerBillingOverview(userId)
+
+      res.json({
+        success: true,
+        data: overview,
+      })
+    } catch (error) {
+      logger.error("[BILLING] Error getting owner billing overview:", error)
+      res.status(500).json({
+        error: "Errore recupero informazioni billing",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
+  /**
+   * GET /subscription-billing/balance
+   * Quick credit balance check for owner
+   */
+  getOwnerBalance = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = (req as any).user?.id
+
+      if (!userId) {
+        res.status(401).json({ error: "User not authenticated" })
+        return
+      }
+
+      const owner = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          creditBalance: true,
+          planType: true,
+          subscriptionStatus: true,
+        },
+      })
+
+      if (!owner) {
+        res.status(404).json({ error: "User not found" })
+        return
+      }
+
+      const creditBalance = Number(owner.creditBalance)
+      const LOW_BALANCE_WARNING = 5
+
+      res.json({
+        success: true,
+        data: {
+          creditBalance,
+          planType: owner.planType,
+          subscriptionStatus: owner.subscriptionStatus,
+          isLowBalance: creditBalance < LOW_BALANCE_WARNING,
+          isCritical: creditBalance < 0,
+        },
+      })
+    } catch (error) {
+      logger.error("[BILLING] Error getting owner balance:", error)
+      res.status(500).json({
+        error: "Errore recupero saldo",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
+  /**
+   * GET /subscription-billing/status
+   * Get subscription status for owner
+   */
+  getOwnerSubscriptionStatus = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = (req as any).user?.id
+
+      if (!userId) {
+        res.status(401).json({ error: "User not authenticated" })
+        return
+      }
+
+      const owner = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          subscriptionStatus: true,
+          creditBalance: true,
+          pausedAt: true,
+          pauseRequestedAt: true,
+          pendingPlanType: true,
+          pendingPlanEffectiveDate: true,
+          lastPaymentFailedAt: true,
+          paymentFailureCount: true,
+          nextBillingDate: true,
+          planType: true,
+          trialEndsAt: true,
+          planStartedAt: true,
+        },
+      })
+
+      if (!owner) {
+        res.status(404).json({ error: "User not found" })
+        return
+      }
+
+      const creditBalance = Number(owner.creditBalance)
+      const CREDIT_MIN_THRESHOLD = -10
+      const isBlocked =
+        owner.subscriptionStatus === "PAUSED" ||
+        owner.subscriptionStatus === "PAYMENT_FAILED" ||
+        creditBalance < CREDIT_MIN_THRESHOLD
+
+      res.json({
+        success: true,
+        data: {
+          subscriptionStatus: owner.subscriptionStatus,
+          creditBalance,
+          planType: owner.planType,
+          isBlocked,
+          blockReason: isBlocked
+            ? owner.subscriptionStatus === "PAUSED"
+              ? "PAUSED"
+              : owner.subscriptionStatus === "PAYMENT_FAILED"
+                ? "PAYMENT_FAILED"
+                : creditBalance < CREDIT_MIN_THRESHOLD
+                  ? "CREDIT_EXHAUSTED"
+                  : null
+            : null,
+          pausedAt: owner.pausedAt,
+          pauseRequestedAt: owner.pauseRequestedAt,
+          pendingPlanType: owner.pendingPlanType,
+          pendingPlanEffectiveDate: owner.pendingPlanEffectiveDate,
+          lastPaymentFailedAt: owner.lastPaymentFailedAt,
+          paymentFailureCount: owner.paymentFailureCount,
+          nextBillingDate: owner.nextBillingDate,
+          trialEndsAt: owner.trialEndsAt,
+          planStartedAt: owner.planStartedAt,
+        },
+      })
+    } catch (error) {
+      logger.error("[BILLING] Error getting owner subscription status:", error)
+      res.status(500).json({
+        error: "Errore recupero stato abbonamento",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
+  /**
+   * GET /subscription-billing/transactions
+   * Get transaction history for owner
+   */
+  getOwnerTransactions = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = (req as any).user?.id
+
+      if (!userId) {
+        res.status(401).json({ error: "User not authenticated" })
+        return
+      }
+
+      const page = parseInt(req.query.page as string) || 1
+      const limit = Math.min(parseInt(req.query.limit as string) || 20, 100)
+      const type = req.query.type as TransactionType | undefined
+
+      const skip = (page - 1) * limit
+
+      const where: any = { userId }
+      if (type) {
+        where.type = type
+      }
+
+      const [transactions, total] = await Promise.all([
+        this.prisma.billingTransaction.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: limit,
+          select: {
+            id: true,
+            type: true,
+            amount: true,
+            balanceAfter: true,
+            description: true,
+            metadata: true,
+            createdAt: true,
+            workspaceId: true,
+          },
+        }),
+        this.prisma.billingTransaction.count({ where }),
+      ])
+
+      res.json({
+        success: true,
+        transactions,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      })
+    } catch (error) {
+      logger.error("[BILLING] Error getting owner transactions:", error)
+      res.status(500).json({
+        error: "Errore recupero storico transazioni",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
+  /**
+   * POST /subscription-billing/recharge
+   * Recharge credit for owner
+   */
+  rechargeOwnerCredit = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = (req as any).user?.id
+      const { amount } = req.body
+
+      if (!userId) {
+        res.status(401).json({ error: "User not authenticated" })
+        return
+      }
+
+      if (!amount || typeof amount !== "number" || amount < 10 || amount > 1000) {
+        res.status(400).json({
+          error: "Importo non valido (min €10, max €1000)",
+          code: "INVALID_AMOUNT",
+        })
+        return
+      }
+
+      const result = await this.billingService.rechargeOwnerCredit(userId, amount)
+
+      logger.info(`[BILLING] 💰 Owner ${userId} recharged €${amount}`)
+
+      res.json({
+        success: true,
+        message: `Credito ricaricato di €${amount}`,
+        data: result,
+      })
+    } catch (error) {
+      logger.error("[BILLING] Error recharging owner credit:", error)
+      res.status(500).json({
+        error: "Errore durante la ricarica",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
+  /**
+   * POST /subscription-billing/pause
+   * Pause subscription for owner (effective next month)
+   */
+  pauseOwnerSubscription = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = (req as any).user?.id
+
+      if (!userId) {
+        res.status(401).json({ error: "User not authenticated" })
+        return
+      }
+
+      const owner = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          firstName: true,
+          subscriptionStatus: true,
+          planType: true,
+        },
+      })
+
+      if (!owner) {
+        res.status(404).json({ error: "User not found" })
+        return
+      }
+
+      if (owner.subscriptionStatus === "PAUSED") {
+        res.status(400).json({
+          error: "Abbonamento già in pausa",
+          code: "ALREADY_PAUSED",
+        })
+        return
+      }
+
+      if (owner.subscriptionStatus === "PAUSE_PENDING") {
+        res.status(400).json({
+          error: "Pausa già programmata per il prossimo mese",
+          code: "PAUSE_ALREADY_PENDING",
+        })
+        return
+      }
+
+      const now = new Date()
+      const effectiveDate = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          subscriptionStatus: "PAUSE_PENDING",
+          pauseRequestedAt: now,
+        },
+      })
+
+      logger.info(
+        `[BILLING] ⏸️ Owner ${owner.firstName} (${userId}) requested pause, effective ${effectiveDate.toISOString()}`
+      )
+
+      res.json({
+        success: true,
+        message: "La pausa sarà effettiva dal 1° del prossimo mese. I chatbot di tutti i workspace smetteranno di rispondere.",
+        data: {
+          effectiveDate: effectiveDate.toISOString(),
+          currentStatus: "PAUSE_PENDING",
+        },
+      })
+    } catch (error) {
+      logger.error("[BILLING] Error pausing owner subscription:", error)
+      res.status(500).json({
+        error: "Errore durante la pausa dell'abbonamento",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
+  /**
+   * POST /subscription-billing/resume
+   * Resume a paused subscription for owner
+   */
+  resumeOwnerSubscription = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = (req as any).user?.id
+
+      if (!userId) {
+        res.status(401).json({ error: "User not authenticated" })
+        return
+      }
+
+      const owner = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          firstName: true,
+          subscriptionStatus: true,
+        },
+      })
+
+      if (!owner) {
+        res.status(404).json({ error: "User not found" })
+        return
+      }
+
+      if (owner.subscriptionStatus === "PAUSE_PENDING") {
+        // Cancel pending pause
+        await this.prisma.user.update({
+          where: { id: userId },
+          data: {
+            subscriptionStatus: "ACTIVE",
+            pauseRequestedAt: null,
+          },
+        })
+
+        logger.info(`[BILLING] ▶️ Owner ${owner.firstName} cancelled pending pause`)
+
+        res.json({
+          success: true,
+          message: "Richiesta di pausa annullata. L'abbonamento rimane attivo.",
+          data: { currentStatus: "ACTIVE" },
+        })
+        return
+      }
+
+      if (owner.subscriptionStatus !== "PAUSED") {
+        res.status(400).json({
+          error: "L'abbonamento non è in pausa",
+          code: "NOT_PAUSED",
+        })
+        return
+      }
+
+      // Resume from PAUSED
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          subscriptionStatus: "ACTIVE",
+          pausedAt: null,
+          pauseRequestedAt: null,
+        },
+      })
+
+      logger.info(`[BILLING] ▶️ Owner ${owner.firstName} resumed subscription`)
+
+      res.json({
+        success: true,
+        message: "Abbonamento riattivato! I chatbot riprenderanno a rispondere.",
+        data: { currentStatus: "ACTIVE" },
+      })
+    } catch (error) {
+      logger.error("[BILLING] Error resuming owner subscription:", error)
+      res.status(500).json({
+        error: "Errore durante la riattivazione dell'abbonamento",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
+  /**
+   * POST /subscription-billing/upgrade
+   * Upgrade plan for owner (immediate)
+   */
+  upgradeOwnerPlan = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = (req as any).user?.id
+      const { planType } = req.body
+
+      if (!userId) {
+        res.status(401).json({ error: "User not authenticated" })
+        return
+      }
+
+      const validPlans = ["BASIC", "PREMIUM", "ENTERPRISE"]
+      if (!planType || !validPlans.includes(planType)) {
+        res.status(400).json({
+          error: "Piano non valido",
+          code: "INVALID_PLAN",
+        })
+        return
+      }
+
+      const result = await this.billingService.upgradeOwnerPlan(userId, planType)
+
+      logger.info(`[BILLING] ⬆️ Owner ${userId} upgraded to ${planType}`)
+
+      res.json({
+        success: true,
+        message: `Piano aggiornato a ${planType}`,
+        data: result,
+      })
+    } catch (error) {
+      logger.error("[BILLING] Error upgrading owner plan:", error)
+      res.status(500).json({
+        error: "Errore durante l'upgrade del piano",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
+  /**
+   * POST /subscription-billing/downgrade
+   * Schedule downgrade for owner (effective next billing cycle)
+   */
+  scheduleOwnerDowngrade = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = (req as any).user?.id
+      const { newPlan } = req.body
+
+      if (!userId) {
+        res.status(401).json({ error: "User not authenticated" })
+        return
+      }
+
+      const validPlans = ["BASIC", "PREMIUM"]
+      if (!newPlan || !validPlans.includes(newPlan)) {
+        res.status(400).json({
+          error: "Piano non valido per downgrade",
+          code: "INVALID_PLAN",
+        })
+        return
+      }
+
+      const result = await this.billingService.scheduleOwnerDowngrade(userId, newPlan)
+
+      logger.info(`[BILLING] ⬇️ Owner ${userId} scheduled downgrade to ${newPlan}`)
+
+      res.json({
+        success: true,
+        message: `Downgrade a ${newPlan} programmato per il prossimo ciclo di fatturazione`,
+        data: result,
+      })
+    } catch (error) {
+      logger.error("[BILLING] Error scheduling owner downgrade:", error)
+      const errorMessage = error instanceof Error ? error.message : "Unknown error"
+      
+      // Check for specific errors
+      if (errorMessage.includes("Cannot downgrade") || errorMessage.includes("usage exceeds")) {
+        res.status(400).json({
+          error: errorMessage,
+          code: "DOWNGRADE_NOT_ALLOWED",
+        })
+        return
+      }
+
+      res.status(500).json({
+        error: "Errore durante la programmazione del downgrade",
+        message: errorMessage,
+      })
+    }
+  }
+
+  /**
+   * DELETE /subscription-billing/pending-change
+   * Cancel pending plan change for owner
+   */
+  cancelOwnerPendingChange = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = (req as any).user?.id
+
+      if (!userId) {
+        res.status(401).json({ error: "User not authenticated" })
+        return
+      }
+
+      const owner = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          pendingPlanType: true,
+          pendingPlanEffectiveDate: true,
+        },
+      })
+
+      if (!owner) {
+        res.status(404).json({ error: "User not found" })
+        return
+      }
+
+      if (!owner.pendingPlanType) {
+        res.status(400).json({
+          error: "Nessun cambio piano in sospeso",
+          code: "NO_PENDING_CHANGE",
+        })
+        return
+      }
+
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          pendingPlanType: null,
+          pendingPlanEffectiveDate: null,
+        },
+      })
+
+      logger.info(`[BILLING] ❌ Owner ${userId} cancelled pending plan change`)
+
+      res.json({
+        success: true,
+        message: "Cambio piano annullato",
+      })
+    } catch (error) {
+      logger.error("[BILLING] Error cancelling owner pending change:", error)
+      res.status(500).json({
+        error: "Errore durante l'annullamento del cambio piano",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
+  /**
+   * GET /subscription-billing/invoices
+   * Get invoice history for owner
+   */
+  getOwnerInvoices = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = (req as any).user?.id
+
+      if (!userId) {
+        res.status(401).json({ error: "User not authenticated" })
+        return
+      }
+
+      const page = parseInt(req.query.page as string) || 1
+      const limit = parseInt(req.query.limit as string) || 12
+
+      // Lazy import to avoid circular dependencies
+      const { invoiceService } = await import("../../../application/services/invoice.service")
+      const result = await invoiceService.getInvoicesForOwner(userId, page, limit)
+
+      res.json({
+        success: true,
+        data: result.invoices,
+        pagination: {
+          page,
+          limit,
+          total: result.total,
+          totalPages: Math.ceil(result.total / limit),
+        },
+      })
+    } catch (error) {
+      logger.error("[BILLING] Error getting owner invoices:", error)
+      res.status(500).json({
+        error: "Errore nel recupero delle fatture",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
+  /**
+   * GET /subscription-billing/invoices/current
+   * Get current month's draft invoice with consumption breakdown
+   */
+  getCurrentInvoice = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = (req as any).user?.id
+
+      if (!userId) {
+        res.status(401).json({ error: "User not authenticated" })
+        return
+      }
+
+      // Lazy import to avoid circular dependencies
+      const { invoiceService } = await import("../../../application/services/invoice.service")
+      const invoice = await invoiceService.getOrCreateCurrentInvoice(userId)
+
+      res.json({
+        success: true,
+        data: invoice,
+      })
+    } catch (error) {
+      logger.error("[BILLING] Error getting current invoice:", error)
+      res.status(500).json({
+        error: "Errore nel recupero della fattura corrente",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
+  /**
+   * GET /subscription-billing/invoices/:invoiceId
+   * Get specific invoice by ID
+   */
+  getInvoiceById = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = (req as any).user?.id
+      const { invoiceId } = req.params
+
+      if (!userId) {
+        res.status(401).json({ error: "User not authenticated" })
+        return
+      }
+
+      // Lazy import to avoid circular dependencies
+      const { invoiceService } = await import("../../../application/services/invoice.service")
+      const invoice = await invoiceService.getInvoiceById(invoiceId, userId)
+
+      if (!invoice) {
+        res.status(404).json({
+          error: "Fattura non trovata",
+          code: "INVOICE_NOT_FOUND",
+        })
+        return
+      }
+
+      res.json({
+        success: true,
+        data: invoice,
+      })
+    } catch (error) {
+      logger.error("[BILLING] Error getting invoice by ID:", error)
+      res.status(500).json({
+        error: "Errore nel recupero della fattura",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
 }

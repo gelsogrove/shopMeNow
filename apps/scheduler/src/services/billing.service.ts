@@ -3,38 +3,55 @@ import logger from '../utils/logger'
 
 /**
  * Billing Service for Scheduler
- * 
- * Handles credit deduction for WhatsApp messages processed by the queue
- * 
- * CRITICAL: All operations are atomic (using Prisma transactions)
- * SECURITY: Always validates workspaceId
+ * Feature 198: Billing Owner Refactor
+ *
+ * CRITICAL CHANGE (Feature 198):
+ * - Credit is now deducted from OWNER (User), not Workspace
+ * - workspaceId is kept in transaction for channel tracking
+ * - userId is REQUIRED in all BillingTransaction records
+ *
+ * SECURITY: All operations are atomic (using Prisma transactions)
+ * SECURITY: Always validates workspaceId and finds owner
  */
 export class BillingService {
-  
+
   /**
    * Deduct credit for a sent message
    * 
-   * @param workspaceId - The workspace to deduct from
+   * Feature 198: Now deducts from Owner's creditBalance (shared across all workspaces)
+   *
+   * @param workspaceId - The workspace where message was sent (for tracking)
    * @param messageId - Optional message ID for transaction reference
    * @returns Result with success status and new balance
    */
   async deductMessageCredit(
     workspaceId: string,
     messageId?: string
-  ): Promise<{ 
+  ): Promise<{
     success: boolean
     newBalance?: number
     amountDeducted?: number
-    error?: string 
+    error?: string
   }> {
     try {
-      // Get plan configuration for message cost
+      // Get workspace with owner (Feature 198: we need ownerId for billing)
       const workspace = await prisma.workspace.findUnique({
         where: { id: workspaceId, deletedAt: null }, // CRITICAL: Exclude soft-deleted workspaces
-        select: { 
-          creditBalance: true, 
-          planType: true,
+        select: {
+          id: true,
           name: true,
+          ownerId: true,
+          planType: true,
+          owner: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              creditBalance: true, // Feature 198: Credit is on User now
+              planType: true,
+              subscriptionStatus: true,
+            },
+          },
         },
       })
 
@@ -42,9 +59,21 @@ export class BillingService {
         return { success: false, error: 'Workspace not found or deleted' }
       }
 
-      // Get message cost from plan configuration
+      if (!workspace.owner) {
+        return { success: false, error: 'Workspace owner not found' }
+      }
+
+      const owner = workspace.owner
+
+      // Check if owner's subscription is active
+      if (owner.subscriptionStatus !== 'ACTIVE') {
+        logger.warn(`[Billing] ⚠️ Owner ${owner.firstName} subscription not active: ${owner.subscriptionStatus}`)
+        return { success: false, error: `Subscription not active: ${owner.subscriptionStatus}` }
+      }
+
+      // Get message cost from owner's plan configuration (Feature 198: use owner's plan)
       const planConfig = await prisma.planConfiguration.findUnique({
-        where: { planType: workspace.planType },
+        where: { planType: owner.planType },
         select: { messageCost: true },
       })
 
@@ -53,55 +82,137 @@ export class BillingService {
       }
 
       const messageCost = Number(planConfig.messageCost)
-      const currentBalance = Number(workspace.creditBalance)
+      const currentBalance = Number(owner.creditBalance)
 
-      // Check if sufficient balance
+      // Check if sufficient balance on Owner
       if (currentBalance < messageCost) {
-        logger.warn(`[Billing] ⚠️ Insufficient credit for workspace ${workspace.name}: €${currentBalance.toFixed(2)} < €${messageCost.toFixed(2)}`)
-        return { 
-          success: false, 
-          error: `Insufficient credit. Balance: €${currentBalance.toFixed(2)}, Required: €${messageCost.toFixed(2)}` 
+        logger.warn(`[Billing] ⚠️ Insufficient credit for owner ${owner.firstName}: €${currentBalance.toFixed(2)} < €${messageCost.toFixed(2)}`)
+        return {
+          success: false,
+          error: `Insufficient credit. Balance: €${currentBalance.toFixed(2)}, Required: €${messageCost.toFixed(2)}`
         }
       }
 
       const newBalance = currentBalance - messageCost
+      const ownerName = `${owner.firstName} ${owner.lastName || ''}`.trim()
 
-      // Atomic transaction: update balance + create transaction record
+      // Atomic transaction: update Owner balance + create transaction record
       await prisma.$transaction(async (tx) => {
-        // Update workspace balance
-        await tx.workspace.update({
-          where: { id: workspaceId },
+        // Feature 198: Update OWNER balance (shared across all workspaces)
+        await tx.user.update({
+          where: { id: owner.id },
           data: { creditBalance: new Prisma.Decimal(newBalance.toFixed(2)) },
         })
 
-        // Create transaction record
+        // Feature 198: Create transaction record with userId (required) + workspaceId (tracking)
         await tx.billingTransaction.create({
           data: {
-            workspaceId,
+            userId: owner.id,          // Required: Owner who paid
+            workspaceId: workspaceId,  // Optional: Which workspace used the credit (for tracking)
             type: 'MESSAGE',
             amount: new Prisma.Decimal((-messageCost).toFixed(2)), // Negative for deductions
             balanceAfter: new Prisma.Decimal(newBalance.toFixed(2)),
-            description: 'WhatsApp Message',
+            description: `WhatsApp Message - ${workspace.name}`,
             referenceId: messageId,
             referenceType: 'message',
           },
         })
       })
 
-      logger.info(`[Billing] 💰 Deducted €${messageCost.toFixed(2)} from "${workspace.name}": €${currentBalance.toFixed(2)} → €${newBalance.toFixed(2)}`)
+      logger.info(`[Billing] 💰 Deducted €${messageCost.toFixed(2)} from owner "${ownerName}" (workspace: ${workspace.name}): €${currentBalance.toFixed(2)} → €${newBalance.toFixed(2)}`)
 
-      return { 
-        success: true, 
+      return {
+        success: true,
         newBalance,
         amountDeducted: messageCost,
       }
 
     } catch (error) {
       logger.error('[Billing] ❌ Error deducting credit:', error)
-      return { 
-        success: false, 
-        error: (error as Error).message 
+      return {
+        success: false,
+        error: (error as Error).message
       }
+    }
+  }
+
+  /**
+   * Check if owner has sufficient credit for a message
+   * 
+   * Feature 198: Checks owner's balance, not workspace's
+   *
+   * @param workspaceId - The workspace to check
+   * @returns true if owner has enough credit
+   */
+  async hasOwnerCredit(workspaceId: string): Promise<boolean> {
+    try {
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId, deletedAt: null },
+        select: {
+          owner: {
+            select: {
+              creditBalance: true,
+              planType: true,
+              subscriptionStatus: true,
+            },
+          },
+        },
+      })
+
+      if (!workspace?.owner) {
+        return false
+      }
+
+      // Check subscription status
+      if (workspace.owner.subscriptionStatus !== 'ACTIVE') {
+        return false
+      }
+
+      // Get message cost
+      const planConfig = await prisma.planConfiguration.findUnique({
+        where: { planType: workspace.owner.planType },
+        select: { messageCost: true },
+      })
+
+      if (!planConfig) {
+        return false
+      }
+
+      const messageCost = Number(planConfig.messageCost)
+      const currentBalance = Number(workspace.owner.creditBalance)
+
+      return currentBalance >= messageCost
+    } catch (error) {
+      logger.error('[Billing] ❌ Error checking credit:', error)
+      return false
+    }
+  }
+
+  /**
+   * Get owner's current credit balance for a workspace
+   * 
+   * Feature 198: Returns owner's balance
+   *
+   * @param workspaceId - The workspace
+   * @returns Owner's credit balance
+   */
+  async getOwnerBalance(workspaceId: string): Promise<number | null> {
+    try {
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId, deletedAt: null },
+        select: {
+          owner: {
+            select: {
+              creditBalance: true,
+            },
+          },
+        },
+      })
+
+      return workspace?.owner ? Number(workspace.owner.creditBalance) : null
+    } catch (error) {
+      logger.error('[Billing] ❌ Error getting balance:', error)
+      return null
     }
   }
 }
