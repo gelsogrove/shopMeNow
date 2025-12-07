@@ -1,3 +1,21 @@
+// Load environment variables from root .env if not already loaded
+// This ensures DATABASE_URL is available before PrismaPg adapter is created
+import 'dotenv/config'
+import path from 'path'
+import dotenv from 'dotenv'
+
+// Try to load .env from various locations (monorepo support)
+const envPaths = [
+  path.resolve(process.cwd(), '.env'),
+  path.resolve(process.cwd(), '../../.env'),
+  path.resolve(__dirname, '../../../.env'),
+  path.resolve(__dirname, '../../../../.env'),
+]
+for (const envPath of envPaths) {
+  dotenv.config({ path: envPath })
+  if (process.env.DATABASE_URL) break
+}
+
 import { PrismaClient, Prisma } from './generated/prisma'
 import { PrismaPg } from '@prisma/adapter-pg'
 

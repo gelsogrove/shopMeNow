@@ -1,7 +1,7 @@
 # 🚫 eChatbot Blocking System - Complete Documentation
 
-**Version**: 1.0.0  
-**Last Updated**: November 27, 2025  
+**Version**: 1.1.0  
+**Last Updated**: January 20, 2025  
 **Feature**: 185-subscription-billing-system  
 
 ---
@@ -20,6 +20,12 @@ eChatbot implements multiple blocking mechanisms to ensure:
 
 | Code | HTTP Status | Trigger | User Impact |
 |------|-------------|---------|-------------|
+| `PAUSED` | - | Owner paused subscription | Chatbot silently ignores messages |
+| `PAYMENT_FAILED` | - | Monthly payment failed | Chatbot blocked until payment |
+| `CREDIT_EXHAUSTED` | - | Credit < -€10 | Chatbot blocked |
+| `CHANNEL_DISABLED` | - | channelStatus = false | WIP mode response |
+| `WORKSPACE_INACTIVE` | - | Workspace deleted | Full block |
+| `NO_OWNER` | - | Workspace has no owner | Full block |
 | `TRIAL_EXPIRED` | 402 | Trial 14 days passed | Full service block |
 | `INSUFFICIENT_CREDIT` | 402 | Credit < operation cost | Operation blocked |
 | `CUSTOMER_LIMIT_REACHED` | 403 | Customers >= plan max | New customers blocked |
@@ -30,6 +36,28 @@ eChatbot implements multiple blocking mechanisms to ensure:
 | `WORKSPACE_REQUIRED` | 400 | Missing workspaceId | Request rejected |
 
 *Returns 200 to prevent information leak to attackers
+
+---
+
+## ⏸️ PAUSED - Owner Paused Subscription (IMMEDIATE)
+
+**When it triggers:**
+- Owner clicks "Pause Subscription" in BillingPage
+- `owner.subscriptionStatus = 'PAUSED'`
+
+**Effect:**
+- **IMMEDIATE** - Chatbot stops responding instantly
+- NO billing on 1st of month for paused users
+- Affects ALL workspaces owned by this user
+
+**Checked by:**
+- `WorkspaceAccessService.canProcessMessages()`
+- `WhatsApp webhook` → before LLM processing
+
+**Resume:**
+- Owner clicks "Resume Subscription"
+- `subscriptionStatus = 'ACTIVE'`
+- Chatbot resumes immediately
 
 ---
 

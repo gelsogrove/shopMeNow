@@ -1,5 +1,7 @@
-import { prisma } from "@echatbot/database"
+// Load environment variables BEFORE any other imports
 import "dotenv/config"
+
+import { prisma } from "@echatbot/database"
 import { createServer } from "http"
 import app from "./app"
 import { startScheduler, stopScheduler } from "./scheduler"

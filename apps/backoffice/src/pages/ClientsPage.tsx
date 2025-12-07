@@ -41,7 +41,7 @@ interface OwnedWorkspace {
   slug: string
   creditBalance: number
   planType: string
-  subscriptionStatus: string // Feature 197: ACTIVE | PAUSED | PAUSE_PENDING | PAYMENT_FAILED
+  subscriptionStatus: string // Feature 197: ACTIVE | PAUSED | PAYMENT_FAILED (PAUSE_PENDING removed - pause is IMMEDIATE)
   planStartedAt: string
   language: string
   isActive: boolean
@@ -429,12 +429,11 @@ export function ClientsPage() {
   }
 
   // Helper to get subscription status badge styling (Feature 197)
+  // NOTE: PAUSE_PENDING no longer used - pause is now IMMEDIATE
   const getSubscriptionBadge = (status: string) => {
     switch (status) {
       case 'ACTIVE':
         return null // Don't show badge for active (normal state)
-      case 'PAUSE_PENDING':
-        return { label: '⏸ PAUSE PENDING', className: 'bg-yellow-100 text-yellow-700' }
       case 'PAUSED':
         return { label: '⏸ PAUSED', className: 'bg-gray-100 text-gray-600' }
       case 'PAYMENT_FAILED':
@@ -626,7 +625,7 @@ export function ClientsPage() {
                 <div className="bg-gray-50 rounded-lg p-3 mb-4">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-medium text-gray-500 uppercase">Owner Stats</span>
+                      <span className="text-xs font-medium text-gray-500 uppercase">Piano:</span>
                       {/* Plan Badge - Feature 198: Now from User level */}
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getPlanBadge(user.planType).className}`}>
                         {getPlanBadge(user.planType).label}
@@ -635,6 +634,12 @@ export function ClientsPage() {
                       {getSubscriptionBadge(user.subscriptionStatus) && (
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getSubscriptionBadge(user.subscriptionStatus)!.className}`}>
                           {getSubscriptionBadge(user.subscriptionStatus)!.label}
+                        </span>
+                      )}
+                      {/* Show pausedAt date when PAUSED */}
+                      {user.subscriptionStatus === 'PAUSED' && user.pausedAt && (
+                        <span className="text-xs text-gray-500">
+                          (dal {new Date(user.pausedAt).toLocaleDateString('it-IT')})
                         </span>
                       )}
                     </div>

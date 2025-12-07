@@ -42,6 +42,7 @@ export class UserController {
         lastLogin: user.lastLogin,
         authProvider: (user as any).authProvider || "email",
         hasPassword: !!(user as any).passwordHash,
+        language: (user as any).language || "ENG",
       }
       
       return res.json(userWithoutPassword)
@@ -211,6 +212,7 @@ export class UserController {
       logger.info(`✅ User updated successfully:`, {
         id: user.id,
         phoneNumber: user.phoneNumber,
+        language: user.language,
         companyName: user.companyName,
         vatNumber: user.vatNumber,
         website: user.website,
@@ -233,6 +235,8 @@ export class UserController {
         lastLogin: user.lastLogin,
         // 📱 Personal phone (optional)
         phoneNumber: user.phoneNumber,
+        // 🌐 Language preference
+        language: user.language || "ENG",
         // 🧾 Billing fields (Andrea's requirement)
         companyName: user.companyName,
         vatNumber: user.vatNumber,

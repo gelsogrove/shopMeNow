@@ -473,6 +473,21 @@ export function WhatsAppChatModal({
         return // Exit silently - no message displayed
       }
 
+      // 🚫 Feature 197: Handle 402 (PAUSED, PAYMENT_FAILED, CREDIT_EXHAUSTED, TRIAL_EXPIRED) - Silent block
+      // When subscription is paused or billing issue, chatbot doesn't respond
+      if ((error as any).response?.status === 402) {
+        const blockReason = (error as any).response?.data?.code || 'BILLING_ISSUE'
+        logger.warn(`🚫 Workspace blocked (402 ${blockReason}) - silent block`)
+        return // Exit silently - no message displayed
+      }
+
+      // 🚫 Handle 403 (CUSTOMER_LIMIT_REACHED, PLAN_LIMIT_REACHED) - Silent block
+      if ((error as any).response?.status === 403) {
+        const blockReason = (error as any).response?.data?.code || 'LIMIT_REACHED'
+        logger.warn(`🚫 Plan limit reached (403 ${blockReason}) - silent block`)
+        return // Exit silently - no message displayed
+      }
+
       // Add an error message to the chat in case of exception
       const errorMessage: Message = {
         id: (Date.now() + 200).toString(),
@@ -704,6 +719,22 @@ export function WhatsAppChatModal({
       // 🚫 P1: Handle 410 Gone (blocked customer) - Silent block
       if ((error as any).response?.status === 410) {
         logger.warn("🚫 Customer is blocked (410 Gone) - silent block")
+        setIsLoading(false)
+        return // Exit silently - no message displayed
+      }
+
+      // 🚫 Feature 197: Handle 402 (PAUSED, PAYMENT_FAILED, CREDIT_EXHAUSTED, TRIAL_EXPIRED) - Silent block
+      if ((error as any).response?.status === 402) {
+        const blockReason = (error as any).response?.data?.code || 'BILLING_ISSUE'
+        logger.warn(`🚫 Workspace blocked (402 ${blockReason}) - silent block`)
+        setIsLoading(false)
+        return // Exit silently - no message displayed
+      }
+
+      // 🚫 Handle 403 (CUSTOMER_LIMIT_REACHED, PLAN_LIMIT_REACHED) - Silent block
+      if ((error as any).response?.status === 403) {
+        const blockReason = (error as any).response?.data?.code || 'LIMIT_REACHED'
+        logger.warn(`🚫 Plan limit reached (403 ${blockReason}) - silent block`)
         setIsLoading(false)
         return // Exit silently - no message displayed
       }

@@ -623,37 +623,28 @@ export class SubscriptionBillingController {
         return
       }
 
-      if (owner.subscriptionStatus === "PAUSE_PENDING") {
-        res.status(400).json({
-          error: "Pausa già programmata per il prossimo mese",
-          code: "PAUSE_ALREADY_PENDING",
-        })
-        return
-      }
-
-      // Calculate effective date (1st of next month)
+      // IMMEDIATE pause - chatbots stop responding NOW
       const now = new Date()
-      const effectiveDate = new Date(now.getFullYear(), now.getMonth() + 1, 1)
 
-      // Set PAUSE_PENDING status on User (affects all owner's workspaces)
       await this.prisma.user.update({
         where: { id: userId },
         data: {
-          subscriptionStatus: "PAUSE_PENDING",
+          subscriptionStatus: "PAUSED",
           pauseRequestedAt: now,
+          pausedAt: now,
         },
       })
 
       logger.info(
-        `[BILLING] ⏸️ Pause requested for owner ${owner.firstName} (userId: ${userId}), effective ${effectiveDate.toISOString()}`
+        `[BILLING] ⏸️ Subscription PAUSED IMMEDIATELY for owner ${owner.firstName} (userId: ${userId})`
       )
 
       res.json({
         success: true,
-        message: "La pausa sarà effettiva dal 1° del prossimo mese. I chatbot di tutti i workspace smetteranno di rispondere.",
+        message: "Abbonamento in pausa. I chatbot di tutti i workspace hanno smesso di rispondere.",
         data: {
-          effectiveDate: effectiveDate.toISOString(),
-          currentStatus: "PAUSE_PENDING",
+          effectiveDate: now.toISOString(),
+          currentStatus: "PAUSED",
         },
       })
     } catch (error) {
@@ -714,11 +705,8 @@ export class SubscriptionBillingController {
         return
       }
 
-      // Can resume from PAUSED or cancel PAUSE_PENDING
-      if (
-        owner.subscriptionStatus !== "PAUSED" &&
-        owner.subscriptionStatus !== "PAUSE_PENDING"
-      ) {
+      // Can only resume from PAUSED
+      if (owner.subscriptionStatus !== "PAUSED") {
         res.status(400).json({
           error: "L'abbonamento non è in pausa",
           code: "NOT_PAUSED",
@@ -1394,35 +1382,28 @@ export class SubscriptionBillingController {
         return
       }
 
-      if (owner.subscriptionStatus === "PAUSE_PENDING") {
-        res.status(400).json({
-          error: "Pausa già programmata per il prossimo mese",
-          code: "PAUSE_ALREADY_PENDING",
-        })
-        return
-      }
-
+      // IMMEDIATE pause - chatbots stop responding NOW
       const now = new Date()
-      const effectiveDate = new Date(now.getFullYear(), now.getMonth() + 1, 1)
 
       await this.prisma.user.update({
         where: { id: userId },
         data: {
-          subscriptionStatus: "PAUSE_PENDING",
+          subscriptionStatus: "PAUSED",
           pauseRequestedAt: now,
+          pausedAt: now,
         },
       })
 
       logger.info(
-        `[BILLING] ⏸️ Owner ${owner.firstName} (${userId}) requested pause, effective ${effectiveDate.toISOString()}`
+        `[BILLING] ⏸️ Subscription PAUSED IMMEDIATELY for owner ${owner.firstName} (userId: ${userId})`
       )
 
       res.json({
         success: true,
-        message: "La pausa sarà effettiva dal 1° del prossimo mese. I chatbot di tutti i workspace smetteranno di rispondere.",
+        message: "Abbonamento in pausa. I chatbot di tutti i workspace hanno smesso di rispondere.",
         data: {
-          effectiveDate: effectiveDate.toISOString(),
-          currentStatus: "PAUSE_PENDING",
+          effectiveDate: now.toISOString(),
+          currentStatus: "PAUSED",
         },
       })
     } catch (error) {
@@ -1458,26 +1439,6 @@ export class SubscriptionBillingController {
 
       if (!owner) {
         res.status(404).json({ error: "User not found" })
-        return
-      }
-
-      if (owner.subscriptionStatus === "PAUSE_PENDING") {
-        // Cancel pending pause
-        await this.prisma.user.update({
-          where: { id: userId },
-          data: {
-            subscriptionStatus: "ACTIVE",
-            pauseRequestedAt: null,
-          },
-        })
-
-        logger.info(`[BILLING] ▶️ Owner ${owner.firstName} cancelled pending pause`)
-
-        res.json({
-          success: true,
-          message: "Richiesta di pausa annullata. L'abbonamento rimane attivo.",
-          data: { currentStatus: "ACTIVE" },
-        })
         return
       }
 

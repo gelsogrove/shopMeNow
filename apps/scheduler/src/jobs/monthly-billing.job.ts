@@ -2,25 +2,55 @@ import { prisma, Prisma, PlanType, SubscriptionStatus } from '../config/database
 import logger from '../utils/logger'
 
 /**
- * Monthly Billing Job
- * Feature 198: Billing Owner Refactor
- *
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * MONTHLY BILLING JOB - Feature 198: Billing Owner Refactor
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
  * Runs on the 1st of each month at 00:05
- *
- * CRITICAL CHANGE (Feature 198):
- * - Billing is now per OWNER (User), not per Workspace
- * - Credit balance is SHARED across all owner's workspaces
- * - One subscription covers ALL workspaces owned by a user
- *
- * Flow:
- * 1. Apply pending plan changes (downgrades scheduled for this month) on User
- * 2. Handle pause requests (PAUSE_PENDING → PAUSED) on User
- * 3. Skip paused users
- * 4. Calculate total charge: subscription + credit debt (if negative)
- * 5. Process payment (mocked for now)
- * 6. On success: reset credit to €0, create transaction with userId
- * 7. On failure: set PAYMENT_FAILED on User, affects all their workspaces
- *
+ * 
+ * ┌─────────────────────────────────────────────────────────────────────────────┐
+ * │ BILLING LOGIC                                                               │
+ * ├─────────────────────────────────────────────────────────────────────────────┤
+ * │                                                                             │
+ * │ 1. OWNER-BASED BILLING (Feature 198)                                        │
+ * │    - Billing is per OWNER (User), not per Workspace                         │
+ * │    - Credit balance is SHARED across all owner's workspaces                 │
+ * │    - One subscription covers ALL workspaces owned by a user                 │
+ * │                                                                             │
+ * │ 2. SUBSCRIPTION STATUSES                                                    │
+ * │    - ACTIVE: Normal operation, chatbots respond, billing active             │
+ * │    - PAUSED: Chatbots blocked, NO billing (skip this owner)                 │
+ * │    - PAYMENT_FAILED: Payment failed, access blocked until resolved          │
+ * │    - FREE_TRIAL: Free plan, no billing until upgrade or trial expires       │
+ * │    - CANCELLED: User cancelled, no billing, access blocked                  │
+ * │                                                                             │
+ * │ 3. PAUSE/RESUME FLOW                                                        │
+ * │    ┌─────────────────────────────────────────────────────────────────┐      │
+ * │    │ USER CLICKS "PAUSE" → IMMEDIATE:                                │      │
+ * │    │   • subscriptionStatus = 'PAUSED'                               │      │
+ * │    │   • pausedAt = NOW                                              │      │
+ * │    │   • Chatbots stop responding IMMEDIATELY                        │      │
+ * │    │   • NEXT MONTH: No billing (this job skips PAUSED users)        │      │
+ * │    └─────────────────────────────────────────────────────────────────┘      │
+ * │    ┌─────────────────────────────────────────────────────────────────┐      │
+ * │    │ USER CLICKS "RESUME" → IMMEDIATE:                               │      │
+ * │    │   • subscriptionStatus = 'ACTIVE'                               │      │
+ * │    │   • pausedAt = NULL                                             │      │
+ * │    │   • Chatbots start responding IMMEDIATELY                       │      │
+ * │    │   • NEXT 1st OF MONTH: Billing resumes (this job processes)     │      │
+ * │    └─────────────────────────────────────────────────────────────────┘      │
+ * │                                                                             │
+ * │ 4. MONTHLY BILLING STEPS (this job)                                         │
+ * │    Step 1: Apply pending plan changes (downgrades)                          │
+ * │    Step 2: SKIP PAUSED users (no billing, no chatbot)                       │
+ * │    Step 3: SKIP FREE_TRIAL users (no billing)                               │
+ * │    Step 4: Calculate charge: subscription + credit debt                     │
+ * │    Step 5: Process payment                                                  │
+ * │    Step 6: On success → reset credit, create transaction                    │
+ * │    Step 7: On failure → set PAYMENT_FAILED status                           │
+ * │                                                                             │
+ * └─────────────────────────────────────────────────────────────────────────────┘
+ * 
  * SECURITY: All operations are user-isolated
  * ATOMIC: Each user processed in a transaction
  */
@@ -28,8 +58,6 @@ import logger from '../utils/logger'
 /**
  * MOCK: Payment processing
  * TODO: Replace with real PayPal/Stripe integration
- *
- * @returns Always returns true for now
  */
 async function processPayment(
   userId: string,
@@ -72,8 +100,10 @@ export async function monthlyBillingJob(): Promise<void> {
   logger.info(`[BILLING] 🗓️ Starting monthly billing for ${monthName}`)
   logger.info(`[BILLING] 📢 Feature 198: Processing billing per OWNER (User), not per Workspace`)
 
-  // Get all users who are workspace owners (have at least one workspace)
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FETCH ALL WORKSPACE OWNERS
   // We bill users who own workspaces, not individual workspaces
+  // ═══════════════════════════════════════════════════════════════════════════
   const owners = await prisma.user.findMany({
     where: {
       status: 'ACTIVE',
@@ -118,7 +148,6 @@ export async function monthlyBillingJob(): Promise<void> {
     skippedPaused: 0,
     skippedFreeTrial: 0,
     pendingPlanApplied: 0,
-    pauseApplied: 0,
     paymentSuccess: 0,
     paymentFailed: 0,
     errors: 0,
@@ -159,36 +188,32 @@ export async function monthlyBillingJob(): Promise<void> {
       }
 
       // ═══════════════════════════════════════════════════════════════════
-      // STEP 2: Handle pause requests (PAUSE_PENDING → PAUSED) on User
-      // This affects ALL workspaces owned by this user
+      // STEP 2: SKIP PAUSED USERS - No billing, no chatbot
       // ═══════════════════════════════════════════════════════════════════
-      if (owner.subscriptionStatus === 'PAUSE_PENDING') {
-        logger.info(`[BILLING] ⏸️ Activating pause for owner ${ownerName} (${workspaceCount} workspaces affected)`)
-
-        await prisma.user.update({
-          where: { id: owner.id },
-          data: {
-            subscriptionStatus: 'PAUSED',
-            pausedAt: new Date(),
-          },
-        })
-
-        stats.pauseApplied++
-        stats.skippedPaused++
-        continue // Skip billing for this owner
-      }
-
-      // ═══════════════════════════════════════════════════════════════════
-      // STEP 3: Skip paused owners
+      // PAUSE FLOW:
+      // - User clicks "Pause" → subscriptionStatus = 'PAUSED', pausedAt = NOW
+      // - Chatbots stop responding IMMEDIATELY
+      // - This job SKIPS paused users → NO MONTHLY CHARGE
+      // - User clicks "Resume" → subscriptionStatus = 'ACTIVE', pausedAt = NULL
+      // - Chatbots resume responding, next 1st of month billing resumes
       // ═══════════════════════════════════════════════════════════════════
       if (owner.subscriptionStatus === 'PAUSED') {
-        logger.info(`[BILLING] ⏸️ Skipping paused owner: ${ownerName}`)
+        const pausedDate = owner.pausedAt 
+          ? new Date(owner.pausedAt).toLocaleDateString('it-IT')
+          : 'unknown'
+        logger.info(`[BILLING] ⏸️ SKIPPING PAUSED owner: ${ownerName} (paused on ${pausedDate}, ${workspaceCount} workspaces)`)
         stats.skippedPaused++
-        continue
+        continue // NO BILLING for paused users
       }
 
+      // NOTE: CANCELLED status not in current schema. When added:
+      // if (owner.subscriptionStatus === 'CANCELLED') {
+      //   stats.skippedCancelled++
+      //   continue
+      // }
+
       // ═══════════════════════════════════════════════════════════════════
-      // STEP 4: Skip FREE_TRIAL (no subscription fee)
+      // STEP 3: SKIP FREE_TRIAL USERS (no subscription fee)
       // ═══════════════════════════════════════════════════════════════════
       if (owner.planType === 'FREE_TRIAL') {
         // Check if trial has expired
@@ -324,7 +349,6 @@ export async function monthlyBillingJob(): Promise<void> {
   logger.info(`   - Payment Success: ${stats.paymentSuccess}`)
   logger.info(`   - Payment Failed: ${stats.paymentFailed}`)
   logger.info(`   - Pending Plans Applied: ${stats.pendingPlanApplied}`)
-  logger.info(`   - Pause Applied: ${stats.pauseApplied}`)
   logger.info(`   - Skipped (Paused): ${stats.skippedPaused}`)
   logger.info(`   - Skipped (Free Trial): ${stats.skippedFreeTrial}`)
   logger.info(`   - Errors: ${stats.errors}`)

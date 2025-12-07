@@ -1,8 +1,58 @@
 # 💰 eChatbot Billing Flow - Complete Documentation
 
-**Version**: 1.0.0  
-**Last Updated**: November 27, 2025  
+**Version**: 1.1.0  
+**Last Updated**: January 20, 2025  
 **Feature**: 185-subscription-billing-system  
+
+---
+
+## ⏸️ Pause/Resume Subscription Flow (IMPORTANT)
+
+### Pause Flow - IMMEDIATE EFFECT
+```
+User clicks "Pause Subscription"
+         ↓
+API: PUT /api/subscription-billing/owner/pause
+         ↓
+Database Update:
+  • subscriptionStatus = 'PAUSED'
+  • pausedAt = NOW
+  • pauseRequestedAt = NOW
+         ↓
+CHATBOT STOPS IMMEDIATELY
+  • WorkspaceAccessService.canProcessMessages() returns FALSE
+  • BlockReason = 'PAUSED'
+  • Customer messages silently ignored
+         ↓
+Monthly Billing (1st of month):
+  • SKIPS paused users → NO €29/€49 charge
+  • User keeps current credit balance
+```
+
+### Resume Flow - IMMEDIATE EFFECT
+```
+User clicks "Resume Subscription"
+         ↓
+API: PUT /api/subscription-billing/owner/resume
+         ↓
+Database Update:
+  • subscriptionStatus = 'ACTIVE'
+  • pausedAt = NULL
+  • pauseRequestedAt = NULL
+         ↓
+CHATBOT RESUMES IMMEDIATELY
+  • WorkspaceAccessService.canProcessMessages() returns TRUE
+  • Customer messages processed normally
+         ↓
+Next 1st of Month:
+  • User charged normally (€29/€49)
+```
+
+### Key Points:
+- **IMMEDIATE**: Pause/Resume take effect instantly (not end-of-month)
+- **NO BILLING**: Paused users are NOT charged on 1st of month
+- **ALL WORKSPACES**: Pause affects ALL workspaces owned by the user
+- **CREDIT PRESERVED**: Credit balance stays unchanged while paused
 
 ---
 

@@ -7,6 +7,7 @@ export interface UserProfile {
   lastName: string
   email: string
   phoneNumber?: string  // Optional personal phone number
+  language?: string     // User's preferred language (ENG, ITA, ESP, POR, FRA, DEU)
   companyName?: string
   vatNumber?: string
   website?: string
@@ -21,6 +22,7 @@ export interface UpdateProfileData {
   lastName?: string
   email?: string
   phoneNumber?: string  // Optional personal phone number
+  language?: string     // User's preferred language (ENG, ITA, ESP, POR, FRA, DEU)
   companyName?: string
   vatNumber?: string
   website?: string

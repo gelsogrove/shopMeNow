@@ -36,10 +36,10 @@ import {
 } from "@/components/ui/alert"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import {
-  getSubscriptionStatus,
-  pauseSubscription,
-  resumeSubscription,
-  cancelPendingPlanChange,
+  getOwnerSubscriptionStatus,
+  pauseOwnerSubscription,
+  resumeOwnerSubscription,
+  cancelOwnerPendingChange,
   SubscriptionStatusResponse,
   getSubscriptionStatusInfo,
 } from "@/services/subscriptionBillingApi"
@@ -64,6 +64,8 @@ import {
 interface SubscriptionStatusCardProps {
   workspaceId: string
   onStatusChange?: () => void
+  /** When clicking "Pause", open Change Plan dialog instead of pause confirmation */
+  onOpenChangePlan?: () => void
 }
 
 // ============================================================================
@@ -73,6 +75,7 @@ interface SubscriptionStatusCardProps {
 export function SubscriptionStatusCard({
   workspaceId,
   onStatusChange,
+  onOpenChangePlan,
 }: SubscriptionStatusCardProps) {
   const { isSuperAdmin } = useWorkspaceRole(workspaceId)
 
@@ -86,15 +89,13 @@ export function SubscriptionStatusCard({
 
   // Load subscription status
   const loadStatus = async () => {
-    if (!workspaceId) return
-
     try {
       setIsLoading(true)
-      const data = await getSubscriptionStatus(workspaceId)
+      const data = await getOwnerSubscriptionStatus()
       setStatus(data)
     } catch (error) {
       console.error("Failed to load subscription status:", error)
-      toast.error("Errore caricamento stato abbonamento")
+      toast.error("Error loading subscription status")
     } finally {
       setIsLoading(false)
     }
@@ -102,21 +103,19 @@ export function SubscriptionStatusCard({
 
   useEffect(() => {
     loadStatus()
-  }, [workspaceId])
+  }, [])
 
   // Handle pause subscription
   const handlePause = async () => {
-    if (!workspaceId) return
-
     try {
       setIsPausing(true)
-      const result = await pauseSubscription(workspaceId)
-      toast.success(`Pausa programmata per il ${new Date(result.effectiveDate).toLocaleDateString("it-IT")}`)
+      const result = await pauseOwnerSubscription()
+      toast.success(`Pause scheduled for ${new Date(result.effectiveDate).toLocaleDateString("en-US")}`)
       setShowPauseConfirmDialog(false)
       await loadStatus()
       onStatusChange?.()
     } catch (error: any) {
-      const message = error.response?.data?.error || "Errore durante la pausa"
+      const message = error.response?.data?.error || "Error pausing subscription"
       toast.error(message)
     } finally {
       setIsPausing(false)
@@ -125,16 +124,14 @@ export function SubscriptionStatusCard({
 
   // Handle resume subscription
   const handleResume = async () => {
-    if (!workspaceId) return
-
     try {
       setIsResuming(true)
-      await resumeSubscription(workspaceId)
-      toast.success("Abbonamento riattivato!")
+      await resumeOwnerSubscription()
+      toast.success("Subscription resumed!")
       await loadStatus()
       onStatusChange?.()
     } catch (error: any) {
-      const message = error.response?.data?.error || "Errore durante la riattivazione"
+      const message = error.response?.data?.error || "Error resuming subscription"
       toast.error(message)
     } finally {
       setIsResuming(false)
@@ -143,16 +140,14 @@ export function SubscriptionStatusCard({
 
   // Handle cancel pending plan change
   const handleCancelPending = async () => {
-    if (!workspaceId) return
-
     try {
       setIsCancellingPending(true)
-      await cancelPendingPlanChange(workspaceId)
-      toast.success("Downgrade annullato")
+      await cancelOwnerPendingChange()
+      toast.success("Downgrade cancelled")
       await loadStatus()
       onStatusChange?.()
     } catch (error: any) {
-      const message = error.response?.data?.error || "Errore durante l'annullamento"
+      const message = error.response?.data?.error || "Error cancelling downgrade"
       toast.error(message)
     } finally {
       setIsCancellingPending(false)
@@ -280,22 +275,10 @@ export function SubscriptionStatusCard({
             </div>
           )}
 
-          {/* Pause/Resume Actions */}
+          {/* Resume Action (only when paused) */}
           {isSuperAdmin && status.subscriptionStatus !== "PAYMENT_FAILED" && (
             <div className="flex gap-2">
-              {status.subscriptionStatus === "ACTIVE" && (
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => setShowPauseConfirmDialog(true)}
-                >
-                  <Pause className="h-4 w-4 mr-2" />
-                  Metti in Pausa
-                </Button>
-              )}
-
-              {(status.subscriptionStatus === "PAUSED" ||
-                status.subscriptionStatus === "PAUSE_PENDING") && (
+              {status.subscriptionStatus === "PAUSED" && (
                 <Button
                   variant="default"
                   className="flex-1"
@@ -321,12 +304,7 @@ export function SubscriptionStatusCard({
                 In pausa dal: {new Date(status.pausedAt).toLocaleDateString("it-IT")}
               </div>
             )}
-            {status.pauseRequestedAt && status.subscriptionStatus === "PAUSE_PENDING" && (
-              <div className="flex items-center gap-1">
-                <Info className="h-3 w-3" />
-                Pausa richiesta il: {new Date(status.pauseRequestedAt).toLocaleDateString("it-IT")}
-              </div>
-            )}
+            {/* PAUSE_PENDING no longer used - pause is IMMEDIATE */}
             {status.lastPaymentFailedAt && (
               <div className="flex items-center gap-1 text-red-600">
                 <XCircle className="h-3 w-3" />

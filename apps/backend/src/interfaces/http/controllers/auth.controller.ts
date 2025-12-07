@@ -412,12 +412,19 @@ export class AuthController {
         role: user.role,
         isPlatformAdmin: user.isPlatformAdmin || false, // 🔐 Platform Admin flag for Backoffice access
         isDeveloperUser: user.isDeveloperUser || false, // 🔧 Developer user flag (skip 2FA)
+        // 📱 Personal phone (optional)
+        phoneNumber: user.phoneNumber,
+        // 🌐 Language preference
+        language: user.language || "ENG",
         // 🧶 Billing fields (Andrea's requirement - MUST be included in /auth/me)
         companyName: user.companyName,
         vatNumber: user.vatNumber,
         website: user.website,
         billingPhone: user.billingPhone,
         billingAddress: user.billingAddress,
+        // 🔐 Auth provider info
+        authProvider: user.authProvider || "email",
+        hasPassword: !!user.passwordHash,
       },
     })
   }

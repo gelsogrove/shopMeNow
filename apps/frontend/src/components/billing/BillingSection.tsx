@@ -58,11 +58,14 @@ import {
   getTransactions,
   changePlan,
   getBillingOverview,
+  pauseOwnerSubscription,
+  resumeOwnerSubscription,
+  getOwnerSubscriptionStatus,
   Transaction,
   PlanType,
   BillingOverview,
+  SubscriptionStatusResponse,
 } from "@/services/subscriptionBillingApi"
-import { SubscriptionStatusCard } from "./SubscriptionStatusCard"
 import { PLAN_CONFIGS, getPlanFeaturesWithText } from "@/config/planFeatures"
 import { toast } from "@/lib/toast"
 import {
@@ -79,8 +82,12 @@ import {
   Info,
   Download,
   Check,
+  CheckCircle,
   X,
   FileText,
+  Pause,
+  Play,
+  Calendar,
 } from "lucide-react"
 
 // ============================================================================
@@ -204,6 +211,12 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
   const [customAmount, setCustomAmount] = useState("")
   const [isRecharging, setIsRecharging] = useState(false)
   const [isUpgrading, setIsUpgrading] = useState(false)
+  const [isPausingSubscription, setIsPausingSubscription] = useState(false)
+  const [isResumingSubscription, setIsResumingSubscription] = useState(false)
+  const [showResumeConfirmDialog, setShowResumeConfirmDialog] = useState(false)
+  const [showPauseConfirmView, setShowPauseConfirmView] = useState(false)
+  const [showResumeConfirmView, setShowResumeConfirmView] = useState(false)
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatusResponse | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false)
 
@@ -220,6 +233,27 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
       setShowInvoicesDialog(true)
     }
   }, [openInvoicesDialog])
+
+  // Load subscription status
+  const loadSubscriptionStatus = async () => {
+    try {
+      const status = await getOwnerSubscriptionStatus()
+      setSubscriptionStatus(status)
+    } catch (error) {
+      console.error("Failed to load subscription status:", error)
+    }
+  }
+
+  // Load subscription status on mount and when dialog opens
+  useEffect(() => {
+    loadSubscriptionStatus()
+  }, [])
+
+  useEffect(() => {
+    if (showUpgradeDialog) {
+      loadSubscriptionStatus()
+    }
+  }, [showUpgradeDialog])
 
   // Handle upgrade dialog close - notify parent
   const handleUpgradeDialogClose = (open: boolean) => {
@@ -400,6 +434,41 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
     }
   }
 
+  // Handle pause subscription
+  const handlePauseSubscription = async () => {
+    try {
+      setIsPausingSubscription(true)
+      await pauseOwnerSubscription()
+      // Refresh billing data and subscription status - UI already shows confirmation page
+      refreshOverview()
+      loadSubscriptionStatus()
+    } catch (error: any) {
+      const message = error.response?.data?.error || "Error pausing subscription"
+      toast.error(message)
+    } finally {
+      setIsPausingSubscription(false)
+    }
+  }
+
+  // Handle resume subscription
+  const handleResumeSubscription = async () => {
+    try {
+      setIsResumingSubscription(true)
+      await resumeOwnerSubscription()
+      // Refresh billing data and subscription status - UI already shows confirmation page
+      refreshOverview()
+      loadSubscriptionStatus()
+    } catch (error: any) {
+      const message = error.response?.data?.error || "Error resuming subscription"
+      toast.error(message)
+    } finally {
+      setIsResumingSubscription(false)
+    }
+  }
+
+  // Check if subscription is paused (PAUSE_PENDING no longer used - pause is IMMEDIATE)
+  const isSubscriptionPaused = subscriptionStatus?.subscriptionStatus === "PAUSED"
+
   // Loading state
   if (isLoadingOverview || !billingOverview) {
     return (
@@ -442,6 +511,31 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
 
   return (
     <div className="space-y-6">
+      {/* 🔶 PAUSED: Subscription is paused */}
+      {isSubscriptionPaused && (
+        <div className="flex items-center gap-3 p-4 bg-orange-100 dark:bg-orange-950 rounded-lg border-2 border-orange-500">
+          <Pause className="h-6 w-6 text-orange-600 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="font-bold text-orange-800 dark:text-orange-200 text-lg">
+              ⏸️ Subscription PAUSED
+            </p>
+            <p className="text-sm text-orange-700 dark:text-orange-300">
+              Your chatbot/s are not responding to customers. Click "Change Plan" to resume your subscription.
+            </p>
+          </div>
+          {isSuperAdmin && (
+            <Button
+              onClick={() => setShowUpgradeDialog(true)}
+              variant="outline"
+              className="flex-shrink-0 border-orange-500 text-orange-700 hover:bg-orange-100"
+            >
+              <Play className="h-4 w-4 mr-2" />
+              Resume
+            </Button>
+          )}
+        </div>
+      )}
+
       {/* 🚨 CRITICAL: Credit = 0 Warning - Chatbot is DISABLED */}
       {isCreditCritical && !billing.isTrialExpired && (
         <div className="flex items-center gap-3 p-4 bg-red-100 dark:bg-red-950 rounded-lg border-2 border-red-500 animate-pulse">
@@ -490,14 +584,6 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
             </Button>
           )}
         </div>
-      )}
-
-      {/* 📋 Subscription Status Card - Feature 197 */}
-      {effectiveWorkspaceId && !isTrialPlan && (
-        <SubscriptionStatusCard 
-          workspaceId={effectiveWorkspaceId}
-          onStatusChange={refreshOverview}
-        />
       )}
 
       {/* Plan & Credit Card */}
@@ -736,30 +822,243 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
       </Dialog>
 
       {/* Change Plan Dialog */}
-      <Dialog open={showUpgradeDialog} onOpenChange={handleUpgradeDialogClose}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-2xl">Change Plan</DialogTitle>
-            <DialogDescription>
-              Choose the plan that best suits your needs. The subscription
-              will start in 30 days.
-            </DialogDescription>
-          </DialogHeader>
+      <Dialog open={showUpgradeDialog} onOpenChange={(open) => {
+        handleUpgradeDialogClose(open)
+        if (!open) {
+          setShowPauseConfirmView(false)
+          setShowResumeConfirmView(false)
+        }
+      }}>
+        <DialogContent className={(showPauseConfirmView || showResumeConfirmView) ? "max-w-3xl" : "max-w-6xl max-h-[90vh] overflow-y-auto"}>
+          {showPauseConfirmView ? (
+            /* Pause Confirmation View */
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-2xl text-orange-600 flex items-center gap-2">
+                  <Pause className="h-6 w-6" />
+                  Pause Subscription
+                </DialogTitle>
+                <DialogDescription>
+                  Review what happens when you pause your subscription
+                </DialogDescription>
+              </DialogHeader>
 
-          <div className="grid gap-6 md:grid-cols-4 py-4">
-            {/* Render plans dynamically from PLAN_CONFIGS */}
-            {(["FREE_TRIAL", "BASIC", "PREMIUM", "ENTERPRISE"] as const).map((planKey) => {
-              const planConfig = PLAN_CONFIGS[planKey]
-              const isCurrentPlan = billing.planType === planKey
-              const isFreePlan = planKey === "FREE_TRIAL"
-              const isDowngrade = PLAN_ORDER[billing.planType] > PLAN_ORDER[planKey]
-              const downgradeCheck = isDowngrade ? checkCanDowngrade(usage, planKey) : { canDowngrade: true, reasons: [] }
-              // Free plan is never selectable for plan changes
-              const canSelect = !isFreePlan && !isCurrentPlan && (isDowngrade ? downgradeCheck.canDowngrade : true)
-              const features = getPlanFeaturesWithText(planKey)
-              
-              // Get dynamic price from database (Free plan has no price key)
-              const priceKey = isFreePlan ? null : `${planKey}_MONTHLY`
+              <div className="grid md:grid-cols-2 gap-6 py-4">
+                {/* Left: Current Plan Card */}
+                <div className="rounded-2xl border-2 border-orange-300 bg-orange-50 p-6">
+                  <Badge className="mb-4 bg-orange-500">Current Plan</Badge>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">
+                    {PLAN_CONFIGS[billing.planType]?.name || billing.planType}
+                  </h3>
+                  <div className="mb-4">
+                    <span className="text-3xl font-bold text-gray-900">
+                      €{planConfig?.monthlyFee || 0}
+                    </span>
+                    <span className="text-gray-600">/month</span>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {PLAN_CONFIGS[billing.planType]?.description}
+                  </p>
+                </div>
+
+                {/* Right: What happens */}
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-gray-900">What will happen:</h4>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <X className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium text-gray-900">Chatbot stops responding</p>
+                        <p className="text-sm text-gray-600">All WhatsApp channels will be blocked. Customers won't receive any responses.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <Calendar className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium text-gray-900">Final invoice at month end</p>
+                        <p className="text-sm text-gray-600">You'll be charged only for usage until pause date. No more charges after.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium text-gray-900">Data is preserved</p>
+                        <p className="text-sm text-gray-600">Products, customers, orders - everything stays safe.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <Play className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium text-gray-900">Reactivate anytime</p>
+                        <p className="text-sm text-gray-600">You can resume your subscription whenever you want.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter className="gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowPauseConfirmView(false)}
+                  disabled={isPausingSubscription}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="bg-orange-500 hover:bg-orange-600"
+                  onClick={async () => {
+                    await handlePauseSubscription()
+                    setShowPauseConfirmView(false)
+                    // Dialog stays open, shows updated state
+                  }}
+                  disabled={isPausingSubscription}
+                >
+                  {isPausingSubscription ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Pausing...
+                    </>
+                  ) : (
+                    <>
+                      <Pause className="h-4 w-4 mr-2" />
+                      Confirm Pause
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </>
+          ) : showResumeConfirmView ? (
+            /* Resume Confirmation View */
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-2xl text-green-600 flex items-center gap-2">
+                  <Play className="h-6 w-6" />
+                  Resume Subscription
+                </DialogTitle>
+                <DialogDescription>
+                  Review what happens when you resume your subscription
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="grid md:grid-cols-2 gap-6 py-4">
+                {/* Left: Current Plan Card */}
+                <div className="rounded-2xl border-2 border-green-300 bg-green-50 p-6">
+                  <Badge className="mb-4 bg-green-500">Your Plan</Badge>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">
+                    {PLAN_CONFIGS[billing.planType]?.name || billing.planType}
+                  </h3>
+                  <div className="mb-4">
+                    <span className="text-3xl font-bold text-gray-900">
+                      €{planConfig?.monthlyFee || 0}
+                    </span>
+                    <span className="text-gray-600">/month</span>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {PLAN_CONFIGS[billing.planType]?.description}
+                  </p>
+                </div>
+
+                {/* Right: What happens */}
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-gray-900">What will happen:</h4>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium text-gray-900">Chatbot reactivated immediately</p>
+                        <p className="text-sm text-gray-600">All WhatsApp channels will start responding to customers right away.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <Calendar className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium text-gray-900">Billing resumes on 1st of next month</p>
+                        <p className="text-sm text-gray-600">An invoice will be generated for your {PLAN_CONFIGS[billing.planType]?.name || billing.planType} plan ({formatCurrency(planConfig?.monthlyFee || 0)}/month) plus any recharges you make.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium text-gray-900">All your data is intact</p>
+                        <p className="text-sm text-gray-600">Products, customers, orders - everything is still there, ready to go.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <Pause className="h-5 w-5 text-orange-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium text-gray-900">Pause again anytime</p>
+                        <p className="text-sm text-gray-600">You can pause your subscription whenever you need to.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter className="gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowResumeConfirmView(false)}
+                  disabled={isResumingSubscription}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="bg-green-600 hover:bg-green-700"
+                  onClick={async () => {
+                    await handleResumeSubscription()
+                    setShowResumeConfirmView(false)
+                    // Dialog stays open, shows updated state
+                  }}
+                  disabled={isResumingSubscription}
+                >
+                  {isResumingSubscription ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Resuming...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-4 w-4 mr-2" />
+                      Confirm Resume
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            /* Normal Plan Selection View */
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-2xl">Change Plan</DialogTitle>
+                <DialogDescription>
+                  Choose the plan that best suits your needs. The subscription
+                  will start in 30 days.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="grid gap-6 md:grid-cols-4 py-4">
+                {/* Render plans dynamically from PLAN_CONFIGS */}
+                {(["FREE_TRIAL", "BASIC", "PREMIUM", "ENTERPRISE"] as const).map((planKey) => {
+                  const planConfig = PLAN_CONFIGS[planKey]
+                  const isCurrentPlan = billing.planType === planKey
+                  const isFreePlan = planKey === "FREE_TRIAL"
+                  const isDowngrade = PLAN_ORDER[billing.planType] > PLAN_ORDER[planKey]
+                  const downgradeCheck = isDowngrade ? checkCanDowngrade(usage, planKey) : { canDowngrade: true, reasons: [] }
+                  // Free plan is never selectable for plan changes
+                  const canSelect = !isFreePlan && !isCurrentPlan && (isDowngrade ? downgradeCheck.canDowngrade : true)
+                  const features = getPlanFeaturesWithText(planKey)
+                  
+                  // Get dynamic price from database (Free plan has no price key)
+                  const priceKey = isFreePlan ? null : `${planKey}_MONTHLY`
               const priceInfo = priceKey ? getPriceWithOriginal(priceKey) : { current: 0, original: null }
               
               return (
@@ -774,8 +1073,8 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                   }`}
                 >
                   {isCurrentPlan && (
-                    <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-500">
-                      Current Plan
+                    <Badge className={`absolute -top-3 left-1/2 -translate-x-1/2 ${isSubscriptionPaused ? "bg-orange-500" : "bg-blue-500"}`}>
+                      {isSubscriptionPaused ? "PAUSED" : "Current Plan"}
                     </Badge>
                   )}
                   <div className="text-center mb-4">
@@ -818,6 +1117,32 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                       </div>
                     ))}
                   </div>
+
+                  {/* Pause/Resume section for current plan */}
+                  {isCurrentPlan && !isFreePlan && (
+                    <div className="space-y-2">
+                      {isSubscriptionPaused ? (
+                        /* Resume flow - opens confirmation view */
+                        <Button
+                          className="w-full bg-orange-500 hover:bg-orange-600"
+                          onClick={() => setShowResumeConfirmView(true)}
+                        >
+                          <Play className="h-4 w-4 mr-2" />
+                          Resume Subscription
+                        </Button>
+                      ) : (
+                        /* Pause flow - opens confirmation view */
+                        <Button
+                          variant="outline"
+                          className="w-full text-orange-600 border-orange-300 hover:bg-orange-50"
+                          onClick={() => setShowPauseConfirmView(true)}
+                        >
+                          <Pause className="h-4 w-4 mr-2" />
+                          Pause Subscription
+                        </Button>
+                      )}
+                    </div>
+                  )}
 
                   {!isCurrentPlan && (
                     <TooltipProvider>
@@ -873,7 +1198,9 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                 </div>
               )
             })}
-          </div>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 

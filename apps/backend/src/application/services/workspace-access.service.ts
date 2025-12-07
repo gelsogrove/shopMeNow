@@ -31,6 +31,7 @@ export type BlockReason =
   | "WORKSPACE_INACTIVE"
   | "NO_OWNER"
   | "OWNER_NOT_FOUND"
+  // | "CANCELLED" // TODO: Add when CANCELLED status is added to schema
 
 export interface AccessCheckResult {
   canProcess: boolean
@@ -145,6 +146,11 @@ export class WorkspaceAccessService {
         }
       }
 
+      // NOTE: CANCELLED status not in current schema. When added, uncomment:
+      // if (owner.subscriptionStatus === "CANCELLED") {
+      //   return { canProcess: false, blockReason: "CANCELLED", ... }
+      // }
+
       // 4. Check owner subscription status - PAYMENT_FAILED
       if (owner.subscriptionStatus === "PAYMENT_FAILED") {
         logger.info(
@@ -235,7 +241,7 @@ export class WorkspaceAccessService {
 
   /**
    * Check if workspace is blocked due to billing issues
-   * (PAUSED, PAYMENT_FAILED, or CREDIT_EXHAUSTED)
+   * (PAUSED, CANCELLED, PAYMENT_FAILED, or CREDIT_EXHAUSTED)
    * Feature 198: These are checked on Owner (User), affecting ALL their workspaces
    *
    * @param workspaceId - Workspace to check
@@ -247,6 +253,7 @@ export class WorkspaceAccessService {
       result.blockReason === "PAUSED" ||
       result.blockReason === "PAYMENT_FAILED" ||
       result.blockReason === "CREDIT_EXHAUSTED"
+      // || result.blockReason === "CANCELLED" // TODO: Add when schema supports it
     )
   }
 

@@ -10,6 +10,13 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useCurrentUser } from "@/hooks/useCurrentUser"
 import { logger } from "@/lib/logger"
 import { api } from "@/services/api"
@@ -20,10 +27,20 @@ import {
   setPassword,
   deleteMyAccount,
 } from "@/services/userApi"
-import { Building2, Key, Loader2, User, Phone, Trash2, AlertTriangle } from "lucide-react"
+import { Building2, Key, Loader2, User, Phone, Trash2, AlertTriangle, Globe } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "../lib/toast"
+
+// Supported languages for user interface
+const SUPPORTED_LANGUAGES = [
+  { code: "ENG", name: "English", flag: "🇬🇧" },
+  { code: "ITA", name: "Italiano", flag: "🇮🇹" },
+  { code: "ESP", name: "Español", flag: "🇪🇸" },
+  { code: "POR", name: "Português", flag: "🇵🇹" },
+  { code: "FRA", name: "Français", flag: "🇫🇷" },
+  { code: "DEU", name: "Deutsch", flag: "🇩🇪" },
+]
 
 export default function ProfilePage() {
   const {
@@ -40,6 +57,7 @@ export default function ProfilePage() {
   const navigate = useNavigate()
   const [user, setUser] = useState<UserProfile & {
     phoneNumber?: string
+    language?: string
     companyName?: string
     vatNumber?: string
     website?: string
@@ -53,6 +71,7 @@ export default function ProfilePage() {
     lastName: "",
     email: "",
     phoneNumber: "",
+    language: "ENG",
     companyName: "",
     vatNumber: "",
     website: "",
@@ -74,6 +93,7 @@ export default function ProfilePage() {
       setUser({
         ...userData,
         phoneNumber: (userData as any).phoneNumber || "",
+        language: (userData as any).language || "ENG",
         companyName: (userData as any).companyName || "",
         vatNumber: (userData as any).vatNumber || "",
         website: (userData as any).website || "",
@@ -107,6 +127,7 @@ export default function ProfilePage() {
         lastName: user.lastName,
         email: user.email,
         phoneNumber: user.phoneNumber,
+        language: user.language,
         companyName: user.companyName,
         vatNumber: user.vatNumber,
         website: user.website,
@@ -116,6 +137,7 @@ export default function ProfilePage() {
       setUser({
         ...updatedUser,
         phoneNumber: (updatedUser as any).phoneNumber || "",
+        language: (updatedUser as any).language || "ENG",
         companyName: (updatedUser as any).companyName || "",
         vatNumber: (updatedUser as any).vatNumber || "",
         website: (updatedUser as any).website || "",
@@ -280,25 +302,6 @@ export default function ProfilePage() {
             Manage your personal information and account settings
           </p>
         </div>
-        {user.hasPassword ? (
-          <Button
-            variant="outline"
-            onClick={() => setShowPasswordDialog(true)}
-            className="gap-2"
-          >
-            <Key className="h-4 w-4" />
-            Change Password
-          </Button>
-        ) : (
-          <Button
-            variant="outline"
-            onClick={() => setShowSetPasswordDialog(true)}
-            className="gap-2"
-          >
-            <Key className="h-4 w-4" />
-            Set Password
-          </Button>
-        )}
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -355,6 +358,31 @@ export default function ProfilePage() {
                 onChange={(e) => handleFieldChange("phoneNumber", e.target.value)}
                 placeholder="+39 123 456 7890"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="language" className="flex items-center gap-1">
+                <Globe className="h-3 w-3" />
+                Preferred Language
+              </Label>
+              <Select
+                value={user.language || "ENG"}
+                onValueChange={(value) => handleFieldChange("language", value)}
+              >
+                <SelectTrigger id="language">
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SUPPORTED_LANGUAGES.map((lang) => (
+                    <SelectItem key={lang.code} value={lang.code}>
+                      <span className="flex items-center gap-2">
+                        <span>{lang.flag}</span>
+                        <span>{lang.name}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
@@ -423,32 +451,55 @@ export default function ProfilePage() {
           </Card>
       </div>
 
-      <div className="flex justify-between">
-        {/* Delete Account Button */}
+      <div className="flex justify-between items-center">
+        {/* Left side - Destructive actions */}
         <Button
           variant="destructive"
           onClick={() => setShowDeleteAccountDialog(true)}
           className="gap-2"
         >
           <Trash2 className="h-4 w-4" />
-          Delete My Account
+          Delete Account
         </Button>
 
-        <Button
-          onClick={handleSave}
-          disabled={isLoading}
-          className="gap-2 bg-green-600 hover:bg-green-700"
-          size="lg"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Saving...
-            </>
+        {/* Right side - Password and Save */}
+        <div className="flex gap-3">
+          {user.hasPassword ? (
+            <Button
+              variant="outline"
+              onClick={() => setShowPasswordDialog(true)}
+              className="gap-2"
+            >
+              <Key className="h-4 w-4" />
+              Change Password
+            </Button>
           ) : (
-            "Save Changes"
+            <Button
+              variant="outline"
+              onClick={() => setShowSetPasswordDialog(true)}
+              className="gap-2"
+            >
+              <Key className="h-4 w-4" />
+              Set Password
+            </Button>
           )}
-        </Button>
+
+          <Button
+            onClick={handleSave}
+            disabled={isLoading}
+            className="gap-2 bg-green-600 hover:bg-green-700"
+            size="lg"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save Changes"
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Delete Account Dialog */}

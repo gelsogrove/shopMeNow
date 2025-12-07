@@ -482,6 +482,7 @@ model User {
   linkedProviders    Json?                    @default("[]") // Array: [{provider: 'google', linkedAt: '2025-11-21T...'}]
   gdprAccepted       DateTime?
   phoneNumber        String?
+  language           String                   @default("ENG") // User's preferred language: ENG, ITA, ESP, POR, FRA, DEU
   
   // 🧾 Billing/Invoice Information (Andrea's requirement)
   companyName        String?                  // Nome società
