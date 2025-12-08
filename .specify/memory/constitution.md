@@ -2992,7 +2992,7 @@ When search returns 1 product OR customer selects number, show ALL fields:
 🍖 **{{productName}}**
 📝 **Descrizione**: {{description}}
 💰 **Prezzo**: ~€{{originalPrice}}~ → €{{discountedPrice}} (sconto {{discount}}%)
-📋 **Codice**: {{productCode}}
+📋 **Codice**: {{sku}}
 🏷️ **Categoria**: {{category}}
 🌍 **Origine**: {{origin}}
 ✅ **Certificazioni**: {{certifications}}

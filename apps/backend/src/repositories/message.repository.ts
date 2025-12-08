@@ -1309,7 +1309,7 @@ export class MessageRepository {
         select: {
           id: true,
           name: true,
-          productCode: true,
+          sku: true,
           price: true,
           description: true, // Aggiungi description per il prompt
           formato: true, // Aggiungi formato per il prompt
@@ -1432,10 +1432,10 @@ export class MessageRepository {
               } ${p.transportType}`
             : ""
 
-          // ✅ Feature 191: Include productCode for LLM internal use (not shown to user)
+          // ✅ Feature 191: Include sku for LLM internal use (not shown to user)
           // Format: [CODE] NOME formato ~€originalPrice~ → €finalPrice - description | Stock: ✅ N | 🔖 Certifications | 🏷️ Supplier | 🌍 Region | ❄️ Transport
-          // LLM uses getProductDetails(productCode) to get internal code for cart operations
-          formattedProducts += `• [${p.productCode}] ${p.name}${formatoStr} ~€${originalPrice}~ → €${finalPrice}${description}${stockStr}${certificationsStr}${supplierStr}${regionStr}${transportStr}\n`
+          // LLM uses getProductDetails(sku) to get internal code for cart operations
+          formattedProducts += `• [${p.sku}] ${p.name}${formatoStr} ~€${originalPrice}~ → €${finalPrice}${description}${stockStr}${certificationsStr}${supplierStr}${regionStr}${transportStr}\n`
         })
         formattedProducts += "\n"
       }

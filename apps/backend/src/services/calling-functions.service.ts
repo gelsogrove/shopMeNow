@@ -551,7 +551,7 @@ export class CallingFunctionsService {
   public async addProductToCart(request: {
     customerId: string
     workspaceId: string
-    productCode: string
+    sku: string
     quantity: number
     notes?: string
   }): Promise<any> {
@@ -577,25 +577,25 @@ export class CallingFunctionsService {
           }
         }
 
-        // Trova il prodotto per productCode o per nome (fallback)
-        // Prima prova con productCode esatto
+        // Trova il prodotto per sku o per nome (fallback)
+        // Prima prova con sku esatto
         let product = await prisma.products.findFirst({
           where: {
-            productCode: request.productCode,
+            sku: request.sku,
             workspaceId: request.workspaceId,
             isActive: true,
           },
         })
 
-        // Se non trovato per ProductCode, cerca per nome (case-insensitive)
+        // Se non trovato per Sku, cerca per nome (case-insensitive)
         if (!product) {
           logger.info(
-            `🔍 ProductCode not found, searching by name: ${request.productCode}`
+            `🔍 Sku not found, searching by name: ${request.sku}`
           )
           product = await prisma.products.findFirst({
             where: {
               name: {
-                contains: request.productCode,
+                contains: request.sku,
                 mode: "insensitive",
               },
               workspaceId: request.workspaceId,
@@ -605,11 +605,11 @@ export class CallingFunctionsService {
         }
 
         if (!product) {
-          logger.error("❌ Product not found:", request.productCode)
+          logger.error("❌ Product not found:", request.sku)
           return {
             success: false,
             error: "Prodotto non trovato",
-            message: `Il prodotto "${request.productCode}" non è disponibile.`,
+            message: `Il prodotto "${request.sku}" non è disponibile.`,
             timestamp: new Date().toISOString(),
           }
         }
@@ -617,7 +617,7 @@ export class CallingFunctionsService {
         // Verifica stock disponibile
         if (product.stock < request.quantity) {
           logger.error(
-            `❌ Insufficient stock for product ${request.productCode}. Available: ${product.stock}, Requested: ${request.quantity}`
+            `❌ Insufficient stock for product ${request.sku}. Available: ${product.stock}, Requested: ${request.quantity}`
           )
           return {
             success: false,
@@ -663,7 +663,7 @@ export class CallingFunctionsService {
           })
           logger.info(
             "✅ Updated existing cart item for product:",
-            request.productCode
+            request.sku
           )
         } else {
           // Altrimenti, crea un nuovo item
@@ -676,7 +676,7 @@ export class CallingFunctionsService {
               notes: request.notes || "",
             },
           })
-          logger.info("✅ Added product to cart:", request.productCode)
+          logger.info("✅ Added product to cart:", request.sku)
         }
 
         // Genera token per accesso al carrello
@@ -1077,9 +1077,9 @@ export class CallingFunctionsService {
   }
 
   /**
-   * 🔍 Get product details by productCode or name
+   * 🔍 Get product details by sku or name
    * 
-   * ✅ Feature 191: FIRST searches by exact productCode match (most reliable for multi-language)
+   * ✅ Feature 191: FIRST searches by exact sku match (most reliable for multi-language)
    * Then falls back to fuzzy name matching if code not found.
    * Used by ProductSearchAgent to lookup full product details when user selects a product.
    * Returns INTERNAL product code (never shown to user) for cart operations.
@@ -1133,9 +1133,9 @@ export class CallingFunctionsService {
           }
         })
 
-        // ✅ Feature 191: FIRST try exact match by productCode (most reliable)
+        // ✅ Feature 191: FIRST try exact match by sku (most reliable)
         let matchedProducts = products.filter((p: any) => {
-          const pCode = p.productCode?.trim().toLowerCase() || ""
+          const pCode = p.sku?.trim().toLowerCase() || ""
           return pCode === searchName
         })
 
@@ -1238,7 +1238,7 @@ export class CallingFunctionsService {
 
         logger.info("✅ Product found:", {
           name: product.name,
-          productCode: product.productCode,
+          sku: product.sku,
           basePrice: product.price,
           finalPrice: pricing?.finalPrice,
           customerDiscount,
@@ -1249,8 +1249,8 @@ export class CallingFunctionsService {
           found: true,
           multiple: false,
           product: {
-            // INTERNAL: productCode is for system use (addProductToCart), never show to user
-            productCode: product.productCode,
+            // INTERNAL: sku is for system use (addProductToCart), never show to user
+            sku: product.sku,
             name: product.name,
             formato: product.formato,
             // ✅ Use finalPrice from PriceCalculationService (already discounted and rounded)

@@ -102,7 +102,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
       const request: AddProductRequest = {
         customerId,
         workspaceId: "",
-        products: [{ productCode: "PROD-001", quantity: 1 }],
+        products: [{ sku: "PROD-001", quantity: 1 }],
       }
 
       const result = await AddProduct(request)
@@ -115,7 +115,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
       const request = {
         customerId,
         workspaceId: null as any,
-        products: [{ productCode: "PROD-001", quantity: 1 }],
+        products: [{ sku: "PROD-001", quantity: 1 }],
       }
 
       const result = await AddProduct(request)

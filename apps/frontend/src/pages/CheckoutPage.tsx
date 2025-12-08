@@ -448,7 +448,7 @@ const CheckoutPage: React.FC = () => {
               id: item.id,
               productId: item.productId,
               itemType: "PRODUCT",
-              codice: item.productCode || "Non disponibile",
+              codice: item.sku || "Non disponibile",
               descrizione: item.name || "Prodotto senza nome",
               formato: item.formato || null,
               prezzo: item.originalPrice || 0,
@@ -1278,7 +1278,7 @@ const CheckoutPage: React.FC = () => {
                                       </p>
                                     )}
                                     <p className="text-xs text-gray-600 mb-2">
-                                      {product.ProductCode ||
+                                      {product.Sku ||
                                         product.sku ||
                                         "Non disponibile"}
                                     </p>

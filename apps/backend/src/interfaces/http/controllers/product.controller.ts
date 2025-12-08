@@ -4,6 +4,7 @@ import { ProductService } from "../../../application/services/product.service"
 import { prisma } from "../../../lib/prisma"
 import { cleanupRemovedImages } from "../../../utils/fileManager"
 import logger from "../../../utils/logger"
+import { Readable } from "stream"
 
 export class ProductController {
   private productService: ProductService
@@ -49,10 +50,10 @@ export class ProductController {
         `🔍 Products found in database: ${result.products.length} (total: ${result.total})`
       )
 
-      // Map backend 'ProductCode' field to frontend 'code' field for all products
+      // Map backend 'Sku' field to frontend 'code' field for all products
       const productsWithCode = result.products.map((product) => ({
         ...product,
-        code: product.productCode,
+        code: product.sku,
         formato: product.formato,
       }))
 
@@ -92,10 +93,10 @@ export class ProductController {
         return res.status(404).json({ message: "Product not found" })
       }
 
-      // Map backend 'ProductCode' field to frontend 'code' field
+      // Map backend 'Sku' field to frontend 'code' field
       const responseProduct = {
         ...product,
-        code: product.productCode,
+        code: product.sku,
       }
 
       return res.json(responseProduct)
@@ -179,23 +180,23 @@ export class ProductController {
         productData.workspaceId = workspaceId
       }
 
-      // Validate ProductCode uniqueness within workspace
-      const productCode = productData.code || productData.productCode
-      if (productCode) {
+      // Validate Sku uniqueness within workspace
+      const sku = productData.code || productData.sku
+      if (sku) {
         const existingProduct = await prisma.products.findFirst({
           where: {
-            productCode: productCode,
+            sku: sku,
             workspaceId: workspaceId,
           },
         })
 
         if (existingProduct) {
           logger.warn(
-            `Duplicate ProductCode attempt: ${productCode} in workspace ${workspaceId}`
+            `Duplicate Sku attempt: ${sku} in workspace ${workspaceId}`
           )
           return res.status(400).json({
             message: "Product code already exists",
-            error: `A product with code "${productCode}" already exists in this workspace`,
+            error: `A product with code "${sku}" already exists in this workspace`,
           })
         }
       }
@@ -290,9 +291,9 @@ export class ProductController {
         productData.categoryId
       )
 
-      // Map frontend 'code' field to backend 'ProductCode' field
-      if (productData.code && !productData.productCode) {
-        productData.productCode = productData.code
+      // Map frontend 'code' field to backend 'Sku' field
+      if (productData.code && !productData.sku) {
+        productData.sku = productData.code
         delete productData.code
       }
 
@@ -332,10 +333,10 @@ export class ProductController {
         categoryIds
       )
 
-      // Map backend 'ProductCode' field to frontend 'code' field
+      // Map backend 'Sku' field to frontend 'code' field
       const responseProduct = {
         ...product,
-        code: product.productCode,
+        code: product.sku,
       }
 
       return res.status(201).json(responseProduct)
@@ -474,9 +475,9 @@ export class ProductController {
         productData.categoryId
       )
 
-      // Map frontend 'code' field to backend 'ProductCode' field
-      if (productData.code && !productData.productCode) {
-        productData.productCode = productData.code
+      // Map frontend 'code' field to backend 'Sku' field
+      if (productData.code && !productData.sku) {
+        productData.sku = productData.code
         delete productData.code
       }
 
@@ -562,10 +563,10 @@ export class ProductController {
         return res.status(404).json({ message: "Product not found" })
       }
 
-      // Map backend 'productCode' field to frontend 'code' field
+      // Map backend 'sku' field to frontend 'code' field
       const responseProduct = {
         ...updatedProduct,
-        code: updatedProduct.productCode,
+        code: updatedProduct.sku,
       }
 
       return res.json(responseProduct)
@@ -749,6 +750,327 @@ export class ProductController {
       logger.error("Error fetching products with discounts:", error)
       return res.status(500).json({
         message: "An error occurred while fetching products with discounts",
+        error: (error as Error).message,
+      })
+    }
+  }
+
+  /**
+   * Export products to CSV
+   * Uses supplierName and categoryName instead of IDs for readability
+   */
+  exportProductsCsv = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const workspaceId = req.params.workspaceId
+
+      if (!workspaceId) {
+        res.status(400).json({ message: "WorkspaceId is required" })
+        return
+      }
+
+      // Fetch all products with relations
+      const products = await prisma.products.findMany({
+        where: { 
+          workspaceId
+        },
+        include: {
+          supplier: { select: { companyName: true } },
+          category: { select: { name: true } },
+        },
+        orderBy: { name: "asc" },
+      })
+
+      // CSV Header
+      const headers = [
+        "sku",
+        "name",
+        "description",
+        "formato",
+        "price",
+        "stock",
+        "status",
+        "isActive",
+        "supplierName",
+        "categoryName",
+        "transportType",
+        "region",
+        "allergens",
+        "certifications",
+      ]
+
+      // Escape CSV value
+      const escapeCsv = (value: string | null | undefined): string => {
+        if (value === null || value === undefined) return ""
+        const str = String(value)
+        if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+          return `"${str.replace(/"/g, '""')}"`
+        }
+        return str
+      }
+
+      // Build CSV content
+      const csvRows = [headers.join(",")]
+      
+      for (const product of products) {
+        const row = [
+          escapeCsv(product.sku),
+          escapeCsv(product.name),
+          escapeCsv(product.description),
+          escapeCsv(product.formato),
+          product.price?.toString() || "0",
+          product.stock?.toString() || "0",
+          product.status || "ACTIVE",
+          product.isActive ? "true" : "false",
+          escapeCsv(product.supplier?.companyName),
+          escapeCsv(product.category?.name),
+          escapeCsv(product.transportType),
+          escapeCsv(product.region),
+          escapeCsv(product.allergens?.join("|")),
+          escapeCsv(product.certifications?.join("|")),
+        ]
+        csvRows.push(row.join(","))
+      }
+
+      const csvContent = csvRows.join("\n")
+
+      // Set headers for file download
+      res.setHeader("Content-Type", "text/csv; charset=utf-8")
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="products-export-${new Date().toISOString().split("T")[0]}.csv"`
+      )
+      
+      res.send(csvContent)
+      
+      logger.info(`📤 Exported ${products.length} products to CSV for workspace ${workspaceId}`)
+    } catch (error) {
+      logger.error("Error exporting products to CSV:", error)
+      res.status(500).json({
+        message: "An error occurred while exporting products",
+        error: (error as Error).message,
+      })
+    }
+  }
+
+  /**
+   * Import products from CSV
+   * Supports upsert: creates new products or updates existing ones by SKU
+   * Uses supplierName and categoryName with lookup to find IDs
+   */
+  importProductsCsv = async (req: Request, res: Response): Promise<Response> => {
+    try {
+      const workspaceId = req.params.workspaceId
+
+      if (!workspaceId) {
+        return res.status(400).json({ message: "WorkspaceId is required" })
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "CSV file is required" })
+      }
+
+      const csvContent = req.file.buffer.toString("utf-8")
+      const lines = csvContent.split("\n").filter(line => line.trim())
+      
+      if (lines.length < 2) {
+        return res.status(400).json({ message: "CSV file is empty or has no data rows" })
+      }
+
+      // Parse header
+      const headers = lines[0].split(",").map(h => h.trim().toLowerCase())
+      const requiredHeaders = ["sku", "name", "price"]
+      
+      for (const required of requiredHeaders) {
+        if (!headers.includes(required)) {
+          return res.status(400).json({ 
+            message: `Missing required column: ${required}`,
+            headers: headers 
+          })
+        }
+      }
+
+      // Build lookup maps for suppliers and categories
+      const suppliers = await prisma.suppliers.findMany({
+        where: { workspaceId },
+        select: { id: true, companyName: true },
+      })
+      const supplierMap = new Map(
+        suppliers.map(s => [s.companyName?.toLowerCase().trim(), s.id])
+      )
+
+      const categories = await prisma.categories.findMany({
+        where: { workspaceId },
+        select: { id: true, name: true },
+      })
+      const categoryMap = new Map(
+        categories.map(c => [c.name?.toLowerCase().trim(), c.id])
+      )
+
+      // Parse CSV value (handle quoted values)
+      const parseCsvValue = (value: string): string => {
+        if (!value) return ""
+        let result = value.trim()
+        if (result.startsWith('"') && result.endsWith('"')) {
+          result = result.slice(1, -1).replace(/""/g, '"')
+        }
+        return result
+      }
+
+      // Parse CSV row handling quoted values
+      const parseCsvRow = (line: string): string[] => {
+        const result: string[] = []
+        let current = ""
+        let inQuotes = false
+        
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i]
+          
+          if (char === '"') {
+            if (inQuotes && line[i + 1] === '"') {
+              current += '"'
+              i++
+            } else {
+              inQuotes = !inQuotes
+            }
+          } else if (char === "," && !inQuotes) {
+            result.push(current.trim())
+            current = ""
+          } else {
+            current += char
+          }
+        }
+        result.push(current.trim())
+        
+        return result
+      }
+
+      const results = {
+        created: 0,
+        updated: 0,
+        errors: [] as { row: number; sku: string; error: string }[],
+      }
+
+      // Process each row
+      for (let i = 1; i < lines.length; i++) {
+        const values = parseCsvRow(lines[i])
+        const rowData: Record<string, string> = {}
+        
+        headers.forEach((header, index) => {
+          rowData[header] = parseCsvValue(values[index] || "")
+        })
+
+        const sku = rowData.sku?.trim()
+        const name = rowData.name?.trim()
+        const price = parseFloat(rowData.price) || 0
+
+        if (!sku || !name) {
+          results.errors.push({
+            row: i + 1,
+            sku: sku || "N/A",
+            error: "Missing required field: sku or name",
+          })
+          continue
+        }
+
+        try {
+          // Lookup supplier and category IDs
+          const supplierName = rowData.suppliername?.toLowerCase().trim()
+          const categoryName = rowData.categoryname?.toLowerCase().trim()
+          
+          const supplierId = supplierName ? supplierMap.get(supplierName) : null
+          const categoryId = categoryName ? categoryMap.get(categoryName) : null
+
+          // Warn if supplier/category not found but continue
+          if (supplierName && !supplierId) {
+            logger.warn(`⚠️ Supplier not found: "${rowData.suppliername}" for product ${sku}`)
+          }
+          if (categoryName && !categoryId) {
+            logger.warn(`⚠️ Category not found: "${rowData.categoryname}" for product ${sku}`)
+          }
+
+          // Parse arrays (pipe-separated)
+          const allergens = rowData.allergens 
+            ? rowData.allergens.split("|").map(a => a.trim()).filter(Boolean)
+            : []
+          const certifications = rowData.certifications
+            ? rowData.certifications.split("|").map(c => c.trim()).filter(Boolean)
+            : []
+
+          // Generate slug from name
+          const slug = `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now()}-${Math.random().toString(36).substring(7)}`
+
+          // Upsert product
+          const existingProduct = await prisma.products.findFirst({
+            where: { workspaceId, sku },
+          })
+
+          if (existingProduct) {
+            // Update existing
+            await prisma.products.update({
+              where: { id: existingProduct.id },
+              data: {
+                name,
+                description: rowData.description || null,
+                formato: rowData.formato || null,
+                price,
+                stock: parseInt(rowData.stock) || 0,
+                status: (rowData.status?.toUpperCase() as ProductStatus) || "ACTIVE",
+                isActive: rowData.isactive?.toLowerCase() !== "false",
+                supplierId: supplierId || existingProduct.supplierId,
+                categoryId: categoryId || existingProduct.categoryId,
+                transportType: rowData.transporttype || existingProduct.transportType,
+                region: rowData.region || existingProduct.region,
+                allergens,
+                certifications,
+                updatedAt: new Date(),
+              },
+            })
+            results.updated++
+          } else {
+            // Create new
+            await prisma.products.create({
+              data: {
+                sku,
+                name,
+                description: rowData.description || null,
+                formato: rowData.formato || null,
+                price,
+                stock: parseInt(rowData.stock) || 0,
+                status: (rowData.status?.toUpperCase() as ProductStatus) || "ACTIVE",
+                isActive: rowData.isactive?.toLowerCase() !== "false",
+                supplierId,
+                categoryId,
+                transportType: rowData.transporttype || "Temperatura ambiente",
+                region: rowData.region || null,
+                allergens,
+                certifications,
+                slug,
+                workspaceId,
+              },
+            })
+            results.created++
+          }
+        } catch (error) {
+          results.errors.push({
+            row: i + 1,
+            sku,
+            error: (error as Error).message,
+          })
+        }
+      }
+
+      logger.info(
+        `📥 Import completed for workspace ${workspaceId}: ${results.created} created, ${results.updated} updated, ${results.errors.length} errors`
+      )
+
+      return res.json({
+        message: "Import completed",
+        results,
+      })
+    } catch (error) {
+      logger.error("Error importing products from CSV:", error)
+      return res.status(500).json({
+        message: "An error occurred while importing products",
         error: (error as Error).message,
       })
     }

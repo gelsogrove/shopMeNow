@@ -165,8 +165,8 @@ export class CartManagementAgent {
       let itemId: string = ""
 
       if (type === "PRODUCT") {
-        const product = await this.productRepo.findByProductCode(
-          productId, // This is actually productCode like "SALUMI-006"
+        const product = await this.productRepo.findBySku(
+          productId, // This is actually sku like "SALUMI-006"
           context.workspaceId
         )
 
@@ -548,7 +548,7 @@ export class CartManagementAgent {
       const results = []
       for (const orderItem of order.items) {
         if (orderItem.productId) {
-          // 🔍 CRITICAL: orderItem.productId is UUID, but addToCart expects productCode
+          // 🔍 CRITICAL: orderItem.productId is UUID, but addToCart expects sku
           // First, get the product to find its code
           const product = await this.productRepo.findById(
             orderItem.productId,
@@ -565,8 +565,8 @@ export class CartManagementAgent {
             continue
           }
 
-          if (!product.productCode) {
-            logger.warn(`⚠️ Product has no productCode: ${orderItem.productId}`)
+          if (!product.sku) {
+            logger.warn(`⚠️ Product has no sku: ${orderItem.productId}`)
             results.push({
               success: false,
               error: "PRODUCT_NO_CODE",
@@ -577,13 +577,13 @@ export class CartManagementAgent {
 
           logger.info("🔄 Attempting to add product to cart:", {
             productId: orderItem.productId,
-            productCode: product.productCode,
+            sku: product.sku,
             productName: product.name,
             quantity: orderItem.quantity,
           })
 
           const addResult = await this.addToCart(context, {
-            productId: product.productCode, // Use CODE, not UUID!
+            productId: product.sku, // Use CODE, not UUID!
             quantity: orderItem.quantity,
           })
 

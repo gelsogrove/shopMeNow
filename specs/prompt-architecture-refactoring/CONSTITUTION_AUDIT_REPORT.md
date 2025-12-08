@@ -523,7 +523,7 @@ Mostra TUTTI i campi:
 🍖 **{{productName}}**
 📝 **Descrizione**: {{description}}
 💰 **Prezzo**: ~€{{originalPrice}}~ → €{{discountedPrice}} (sconto {{discount}}%)
-📋 **Codice**: {{productCode}}
+📋 **Codice**: {{sku}}
 🏷️ **Categoria**: {{category}}
 🌍 **Origine**: {{origin}}
 ✅ **Certificazioni**: {{certifications}} (halal, bio, DOP, etc.)

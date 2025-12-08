@@ -403,7 +403,7 @@ SAFETY & TRANSLATION (1,500 tokens):  ✅ Security + i18n
 ```
 ProductSearch shows product details → asks "Vuoi aggiungerlo?"
 User says "sì"
-ProductSearch extracts productCode → calls CartAgent("add PROD-123")
+ProductSearch extracts sku → calls CartAgent("add PROD-123")
 Router just passes through responses
 ```
 

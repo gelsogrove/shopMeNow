@@ -37,7 +37,7 @@
        include: {
          items: {
            include: {
-             product: { select: { productCode: true, name: true } }
+             product: { select: { sku: true, name: true } }
            }
          }
        },
@@ -52,7 +52,7 @@
      const orderDate = order.createdAt.toISOString().split('T')[0]
      const itemsText = order.items.map(item => {
        const lineTotal = item.quantity * item.unitPrice
-       return `- ${item.product.productCode} ${item.product.name} x${item.quantity} (${item.unitPrice.toFixed(2)}€ cad.) = ${lineTotal.toFixed(2)}€`
+       return `- ${item.product.sku} ${item.product.name} x${item.quantity} (${item.unitPrice.toFixed(2)}€ cad.) = ${lineTotal.toFixed(2)}€`
      }).join('\n')
 
      const totalPrice = order.items.reduce(
@@ -450,8 +450,8 @@ if (!request.confirmed) {
          workspaceId: testWorkspace.id,
          status: "DELIVERED",
          items: [
-           { productCode: "A001", quantity: 4 },
-           { productCode: "A002", quantity: 12 },
+           { sku: "A001", quantity: 4 },
+           { sku: "A002", quantity: 12 },
          ],
        })
 
@@ -476,8 +476,8 @@ if (!request.confirmed) {
          customerId: testCustomer.id,
          workspaceId: testWorkspace.id,
          products: [
-           { productCode: "A001", quantity: 4 },
-           { productCode: "A002", quantity: 12 },
+           { sku: "A001", quantity: 4 },
+           { sku: "A002", quantity: 12 },
          ],
        })
 

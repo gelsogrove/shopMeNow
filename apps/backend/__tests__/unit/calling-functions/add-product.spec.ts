@@ -43,7 +43,7 @@ describe("AddProduct Calling Function", () => {
       const result = await AddProduct({
         customerId: "",
         workspaceId: "workspace-456",
-        products: [{ productCode: "MOZZ001", quantity: 1 }],
+        products: [{ sku: "MOZZ001", quantity: 1 }],
       })
 
       expect(result.success).toBe(false)
@@ -55,7 +55,7 @@ describe("AddProduct Calling Function", () => {
       const result = await AddProduct({
         customerId: "customer-123",
         workspaceId: "",
-        products: [{ productCode: "MOZZ001", quantity: 1 }],
+        products: [{ sku: "MOZZ001", quantity: 1 }],
       })
 
       expect(result.success).toBe(false)
@@ -98,7 +98,7 @@ describe("AddProduct Calling Function", () => {
       const result = await AddProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
-        products: [{ productCode: "MOZZ001", quantity: 2 }],
+        products: [{ sku: "MOZZ001", quantity: 2 }],
       })
 
       expect(result.success).toBe(true)
@@ -119,7 +119,7 @@ describe("AddProduct Calling Function", () => {
       const result = await AddProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
-        products: [{ productCode: "INVALID", quantity: 1 }],
+        products: [{ sku: "INVALID", quantity: 1 }],
       })
 
       expect(result.success).toBe(false)
@@ -138,7 +138,7 @@ describe("AddProduct Calling Function", () => {
       const result = await AddProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
-        products: [{ productCode: "MOZZ001", quantity: 10 }],
+        products: [{ sku: "MOZZ001", quantity: 10 }],
       })
 
       expect(result.success).toBe(false)
@@ -166,8 +166,8 @@ describe("AddProduct Calling Function", () => {
         customerId: "customer-123",
         workspaceId: "workspace-456",
         products: [
-          { productCode: "MOZZ001", quantity: 2 },
-          { productCode: "PROS001", quantity: 1 },
+          { sku: "MOZZ001", quantity: 2 },
+          { sku: "PROS001", quantity: 1 },
         ],
       })
 
@@ -194,8 +194,8 @@ describe("AddProduct Calling Function", () => {
         customerId: "customer-123",
         workspaceId: "workspace-456",
         products: [
-          { productCode: "INVALID", quantity: 1 },
-          { productCode: "PROS001", quantity: 1 },
+          { sku: "INVALID", quantity: 1 },
+          { sku: "PROS001", quantity: 1 },
         ],
       })
 
@@ -212,7 +212,7 @@ describe("AddProduct Calling Function", () => {
       const result = await AddProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
-        products: [{ productCode: "MOZZ001", quantity: -1 }],
+        products: [{ sku: "MOZZ001", quantity: -1 }],
       })
 
       expect(result.skipped).toBe(1)
@@ -230,7 +230,7 @@ describe("AddProduct Calling Function", () => {
       const result = await AddProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
-        products: [{ productCode: "MOZZ001", quantity: 0 }],
+        products: [{ sku: "MOZZ001", quantity: 0 }],
       })
 
       // 0 gets defaulted to 1, then fails due to mock error
@@ -241,7 +241,7 @@ describe("AddProduct Calling Function", () => {
       const result = await AddProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
-        products: [{ productCode: "MOZZ001", quantity: 1.5 }],
+        products: [{ sku: "MOZZ001", quantity: 1.5 }],
       })
 
       expect(result.skipped).toBe(1)
@@ -258,7 +258,7 @@ describe("AddProduct Calling Function", () => {
       await AddProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
-        products: [{ productCode: "MOZZ001", quantity: undefined as any }],
+        products: [{ sku: "MOZZ001", quantity: undefined as any }],
       })
 
       expect(mockAddProductToCart).toHaveBeenCalledWith(
@@ -290,8 +290,8 @@ describe("AddProduct Calling Function", () => {
         customerId: "customer-123",
         workspaceId: "workspace-456",
         products: [
-          { productCode: "MOZZ001", quantity: 1 },
-          { productCode: "PROS001", quantity: 1 },
+          { sku: "MOZZ001", quantity: 1 },
+          { sku: "PROS001", quantity: 1 },
         ],
       })
 
@@ -309,7 +309,7 @@ describe("AddProduct Calling Function", () => {
       const result = await AddProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
-        products: [{ productCode: "MOZZ001", quantity: 1 }],
+        products: [{ sku: "MOZZ001", quantity: 1 }],
       })
 
       expect(result.timestamp).toBeDefined()
@@ -330,7 +330,7 @@ describe("AddProduct Calling Function", () => {
         workspaceId: "workspace-456",
         products: [
           {
-            productCode: "MOZZ001",
+            sku: "MOZZ001",
             quantity: 1,
             notes: "Extra fresh please",
           },

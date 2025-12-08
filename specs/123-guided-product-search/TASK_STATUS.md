@@ -15,7 +15,7 @@
 - Numbered selection
 - AddProduct with quantity
 - Router → ProductSearchAgent → CartManagementAgent flow
-- **BUG FIXED**: Router now extracts productCode correctly
+- **BUG FIXED**: Router now extracts sku correctly
 
 **⚠️ DEFERRED**: 10% (Performance optimization + Test coverage)
 
@@ -81,7 +81,7 @@
 - [x] T022 Verify/modify AddToCart with quantity → ✅ DONE (AddProduct.ts)
 - [x] T023 Add product detail display format → ✅ DONE (full details)
 - [x] T024 Add cart integration instructions → ✅ DONE (recognize "sì lo voglio")
-- [x] T025 Add Router Agent cart recognition → ✅ DONE + **BUG FIXED** (productCode extraction)
+- [x] T025 Add Router Agent cart recognition → ✅ DONE + **BUG FIXED** (sku extraction)
 - [x] T026 Update database prompts → ✅ DONE (npm run update-prompt)
 - [ ] T027 Run unit tests → ⚠️ DEFERRED (P1)
 
@@ -184,9 +184,9 @@
 
 ### ✅ COMPLETED
 
-1. **Router ProductCode Extraction Bug** (CRITICAL)
+1. **Router Sku Extraction Bug** (CRITICAL)
 
-   - Issue: Router extracted product NAME instead of productCode
+   - Issue: Router extracted product NAME instead of sku
    - Impact: AddProduct always failed with "non disponibile"
    - Fix: Updated `docs/prompts/router-agent.md:226-235`
    - Database: Updated via `npx ts-node scripts/update-all-agent-prompts.ts`
@@ -237,7 +237,7 @@
 ### Option 1: Deploy to Production (RECOMMENDED)
 
 - ✅ All core functionality working
-- ✅ Bug fixed (Router productCode extraction)
+- ✅ Bug fixed (Router sku extraction)
 - ✅ Database seeded with test data
 - ✅ Documentation complete
 - ⚠️ Deferred items are optimization/testing (not blocking)
@@ -276,7 +276,7 @@
 - Product details (full info with certifications, price, origin)
 - Cart addition (with quantity support: "ne voglio 5")
 - Router delegation (Router → ProductSearchAgent → CartManagementAgent)
-- **Router productCode extraction** (BUG FIXED 2025-11-12)
+- **Router sku extraction** (BUG FIXED 2025-11-12)
 
 ### What's Deferred ⚠️
 
@@ -286,7 +286,7 @@
 
 ### What Was Fixed 🔧
 
-- **CRITICAL BUG**: Router now extracts productCode (e.g., "FORMAG-002") instead of product name
+- **CRITICAL BUG**: Router now extracts sku (e.g., "FORMAG-002") instead of product name
 - Before: `cartManagementAgent("CONFIRMED: add Parmigiano Reggiano DOP 24 mesi")` → NOT FOUND
 - After: `cartManagementAgent("CONFIRMED: add FORMAG-002")` → ✅ FOUND
 

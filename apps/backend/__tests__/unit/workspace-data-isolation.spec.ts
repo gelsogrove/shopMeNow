@@ -66,7 +66,7 @@ describe("Workspace Data Isolation", () => {
       mockFindMany.mockImplementation((args: any) => {
         if (args.where.workspaceId === WORKSPACE_A) {
           return Promise.resolve([
-            { id: "1", name: "Product A", price: 10, productCode: "A-001" },
+            { id: "1", name: "Product A", price: 10, sku: "A-001" },
           ])
         }
         return Promise.resolve([])

@@ -90,7 +90,7 @@ Modifica la quantità di un prodotto nel carrello.
 **Parametri:**
 ```json
 {
-  "productCode": "CODICE",    // Usare se disponibile
+  "sku": "CODICE",    // Usare se disponibile
   "productName": "nome",      // Usare se codice non disponibile
   "newQuantity": 3            // Nuova quantità (0 = rimuove)
 }
@@ -109,8 +109,8 @@ Rimuove uno o più prodotti specifici.
 **Parametri:**
 ```json
 {
-  "productCode": "CODICE",           // Singolo
-  "productCode": ["COD1", "COD2"],   // Multipli
+  "sku": "CODICE",           // Singolo
+  "sku": ["COD1", "COD2"],   // Multipli
   "productName": "nome",             // Singolo per nome
   "productName": ["nome1", "nome2"]  // Multipli per nome
 }
@@ -204,7 +204,7 @@ Vuoi cercare qualche prodotto? 🔍
 1. **ESTRAI** codice/nome e nuova quantità
 2. **CHIAMA** `updateCartItem`:
    ```json
-   { "productCode": "MOZZ-BUF-001", "newQuantity": 3 }
+   { "sku": "MOZZ-BUF-001", "newQuantity": 3 }
    ```
 3. **MOSTRA** carrello aggiornato
 

@@ -355,7 +355,7 @@ describe("CallingFunctionsService - Cart Operations", () => {
     const mockRequest = {
       customerId: "customer-123",
       workspaceId: "workspace-456",
-      productCode: "MOZZ001",
+      sku: "MOZZ001",
       quantity: 2,
     }
 
@@ -389,7 +389,7 @@ describe("CallingFunctionsService - Cart Operations", () => {
       mockPrismaInstance.products.findFirst.mockResolvedValue({
         id: "product-1",
         name: "Mozzarella",
-        productCode: "MOZZ001",
+        sku: "MOZZ001",
         stock: 1, // Only 1 available
       })
 
@@ -410,7 +410,7 @@ describe("CallingFunctionsService - Cart Operations", () => {
       mockPrismaInstance.products.findFirst.mockResolvedValue({
         id: "product-1",
         name: "Mozzarella",
-        productCode: "MOZZ001",
+        sku: "MOZZ001",
         stock: 100,
       })
       mockPrismaInstance.carts.findFirst.mockResolvedValue({
@@ -439,7 +439,7 @@ describe("CallingFunctionsService - Cart Operations", () => {
       mockPrismaInstance.products.findFirst.mockResolvedValue({
         id: "product-1",
         name: "Mozzarella",
-        productCode: "MOZZ001",
+        sku: "MOZZ001",
         stock: 100,
       })
       mockPrismaInstance.carts.findFirst.mockResolvedValue(null)
@@ -467,7 +467,7 @@ describe("CallingFunctionsService - Cart Operations", () => {
       mockPrismaInstance.products.findFirst.mockResolvedValue({
         id: "product-1",
         name: "Mozzarella",
-        productCode: "MOZZ001",
+        sku: "MOZZ001",
         stock: 100,
       })
       mockPrismaInstance.carts.findFirst.mockResolvedValue({

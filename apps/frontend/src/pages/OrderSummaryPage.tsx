@@ -12,7 +12,7 @@ interface OrderItem {
   itemType: "PRODUCT" | "SERVICE"
   productId?: string
   serviceId?: string
-  productCode?: string
+  sku?: string
   serviceCode?: string
   name: string
   quantity: number
@@ -110,7 +110,7 @@ const OrderSummaryPage: React.FC = () => {
         const newItem: OrderItem = {
           itemType: "PRODUCT",
           productId: product.id,
-          productCode: product.code,
+          sku: product.code,
           name: product.name,
           quantity: 1,
           unitPrice: product.price,
@@ -339,7 +339,7 @@ const OrderSummaryPage: React.FC = () => {
                               <p className="text-sm text-gray-500">
                                 Code:{" "}
                                 {item.itemType === "PRODUCT"
-                                  ? item.productCode
+                                  ? item.sku
                                   : item.serviceCode}
                               </p>
                               <p className="text-sm text-gray-600">

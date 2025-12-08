@@ -8,9 +8,9 @@
 
 ## Executive Summary
 
-Feature 123 (Guided Progressive Product Search) is **90% functionally complete** with excellent core architecture. **CRITICAL BUG FIXED**: Router now correctly extracts productCode (not name) when customer confirms adding to cart.
+Feature 123 (Guided Progressive Product Search) is **90% functionally complete** with excellent core architecture. **CRITICAL BUG FIXED**: Router now correctly extracts sku (not name) when customer confirms adding to cart.
 
-✅ **Working**: Dynamic grouping, conversational memory, numbered lists, AddProduct with quantity, {{PRODUCTS}} variable with certifications array, Router productCode extraction  
+✅ **Working**: Dynamic grouping, conversational memory, numbered lists, AddProduct with quantity, {{PRODUCTS}} variable with certifications array, Router sku extraction  
 ✅ **Completed**: Supplier/region in {{PRODUCTS}} (C2), AddService (M1), Documentation (M2), Bug fix (Router prompt)  
 ⚠️ **Remaining**: Token count monitoring (T003, T014, T048 - DEFERRED P2), integration tests (C3 - DEFERRED P1)
 
@@ -31,7 +31,7 @@ Feature 123 (Guided Progressive Product Search) is **90% functionally complete**
 {
   id: true,
   name: true,
-  productCode: true,
+  sku: true,
   price: true,
   description: true,
   formato: true,
@@ -54,7 +54,7 @@ Feature 123 (Guided Progressive Product Search) is **90% functionally complete**
 - Shows original price (strikethrough) + discounted price
 - Customer discount applied from profile
 
-**✅ PASSES PRODUCT IDS**: ProductCode present, can be added to cart via `AddProduct({ productCode, quantity })`
+**✅ PASSES PRODUCT IDS**: Sku present, can be added to cart via `AddProduct({ sku, quantity })`
 
 ---
 
@@ -93,7 +93,7 @@ Feature 123 (Guided Progressive Product Search) is **90% functionally complete**
 
 ```typescript
 export interface ProductToAdd {
-  productCode: string // ✅ Product identifier
+  sku: string // ✅ Product identifier
   quantity: number // ✅ Supports quantity (default: 1)
   notes?: string // ✅ Optional notes
 }
@@ -106,7 +106,7 @@ export interface ProductToAdd {
 - Generates secure cart URL with 15-minute expiry
 - Returns `{ success, message, cartUrl, totalAdded, skipped, details[] }`
 
-**✅ CART INTEGRATION WORKING**: AddProduct accepts productCode + quantity, generates cartUrl
+**✅ CART INTEGRATION WORKING**: AddProduct accepts sku + quantity, generates cartUrl
 
 **❌ SERVICES NOT SUPPORTED**: No `AddService` calling function exists
 
@@ -255,7 +255,7 @@ async getActiveProducts(workspaceId: string, customerDiscount: number): Promise<
 select: {
   id: true,
   name: true,
-  productCode: true,
+  sku: true,
   price: true,
   description: true,
   formato: true,
@@ -275,7 +275,7 @@ select: {
 select: {
   id: true,
   name: true,
-  productCode: true,
+  sku: true,
   price: true,
   description: true,
   formato: true,
@@ -290,7 +290,7 @@ select: {
 // Line 1260: Include in formatted output
 const supplierStr = p.supplier?.companyName ? ` | 🏷️ ${p.supplier.companyName}` : ""
 const regionStr = p.region ? ` | 🌍 ${p.region}` : ""
-formattedProducts += `• ${productCode}${p.name}${formatoStr} ~€${originalPrice}~ → €${finalPrice}${description}${stockStr}${certificationsStr}${supplierStr}${regionStr}\n`
+formattedProducts += `• ${sku}${p.name}${formatoStr} ~€${originalPrice}~ → €${finalPrice}${description}${stockStr}${certificationsStr}${supplierStr}${regionStr}\n`
 ```
 
 ---
@@ -313,7 +313,7 @@ formattedProducts += `• ${productCode}${p.name}${formatoStr} ~€${originalPri
 
 1. Create `tests/integration/agents/ProductSearchAgentLLM.test.ts`
 2. Test scenarios: Generic search → Groups → Selection → Product list → Single product → AddToCart
-3. Add unit tests for `AddProduct({ productCode, quantity: 5 })`
+3. Add unit tests for `AddProduct({ sku, quantity: 5 })`
 
 ---
 
@@ -396,11 +396,11 @@ export async function AddService(request: AddServiceRequest): Promise<AddService
 
 ### ✅ COMPLETED TASKS
 
-**Bug Fix**: Router ProductCode Extraction (2025-11-12)
+**Bug Fix**: Router Sku Extraction (2025-11-12)
 
 - File: `docs/prompts/router-agent.md:226-235`
-- Issue: Router extracted product NAME instead of productCode → AddProduct failed with "non disponibile"
-- Fix: Updated prompt to extract productCode from `• PRODUCT-CODE Name...` format
+- Issue: Router extracted product NAME instead of sku → AddProduct failed with "non disponibile"
+- Fix: Updated prompt to extract sku from `• PRODUCT-CODE Name...` format
 - Database: Updated via `npx ts-node scripts/update-all-agent-prompts.ts`
 - Documentation: See `BUG_FIX_ROUTER_PRODUCTCODE.md`
 - Status: ✅ FIXED

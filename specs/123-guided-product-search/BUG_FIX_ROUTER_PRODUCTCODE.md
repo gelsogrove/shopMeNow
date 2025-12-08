@@ -1,4 +1,4 @@
-# Bug Fix: Router Extracts Product Name Instead of ProductCode
+# Bug Fix: Router Extracts Product Name Instead of Sku
 
 **Date**: 2025-11-12  
 **Severity**: 🔴 CRITICAL  
@@ -9,7 +9,7 @@
 
 ## Problem Description
 
-When customer confirms adding a product to cart after viewing product details from ProductSearchAgent, the Router LLM extracted the **product NAME** instead of **productCode**, causing AddProduct to fail with "product not found" error.
+When customer confirms adding a product to cart after viewing product details from ProductSearchAgent, the Router LLM extracted the **product NAME** instead of **sku**, causing AddProduct to fail with "product not found" error.
 
 ### Reproduction Steps
 
@@ -42,8 +42,8 @@ cartManagementAgent("CONFIRMED: add [product name from previous message]")
 2. Customer: "si"
 3. Router extracts: **"Parmigiano Reggiano DOP 24 mesi"** (name, not code)
 4. Router calls: `cartManagementAgent("CONFIRMED: add Parmigiano Reggiano DOP 24 mesi")`
-5. AddProduct receives: `productCode: "Parmigiano Reggiano DOP 24 mesi"`
-6. addProductToCart searches: `findFirst({ where: { productCode: "Parmigiano..." } })` → **NOT FOUND**
+5. AddProduct receives: `sku: "Parmigiano Reggiano DOP 24 mesi"`
+6. addProductToCart searches: `findFirst({ where: { sku: "Parmigiano..." } })` → **NOT FOUND**
 7. Fallback search: `findFirst({ where: { name: { contains: "Parmigiano..." } } })` → **FAILS** (string doesn't match exactly)
 8. Returns: "Il prodotto non è disponibile"
 
@@ -56,7 +56,7 @@ cartManagementAgent("CONFIRMED: add [product name from previous message]")
 **New Instruction** (CORRECT):
 
 ```markdown
-- **ACTION**: Extract **productCode** (NOT product name) from previous message and call:
+- **ACTION**: Extract **sku** (NOT product name) from previous message and call:
 ```
 
 cartManagementAgent("CONFIRMED: add [PRODUCT-CODE from previous message]")
@@ -71,10 +71,10 @@ cartManagementAgent("CONFIRMED: add [PRODUCT-CODE from previous message]")
 
 1. ProductSearchAgent shows: `• FORMAG-002 Parmigiano Reggiano DOP 24 mesi 500g...`
 2. Customer: "si"
-3. Router extracts: **"FORMAG-002"** (productCode from start of line)
+3. Router extracts: **"FORMAG-002"** (sku from start of line)
 4. Router calls: `cartManagementAgent("CONFIRMED: add FORMAG-002")`
-5. AddProduct receives: `productCode: "FORMAG-002"`
-6. addProductToCart searches: `findFirst({ where: { productCode: "FORMAG-002" } })` → ✅ **FOUND**
+5. AddProduct receives: `sku: "FORMAG-002"`
+6. addProductToCart searches: `findFirst({ where: { sku: "FORMAG-002" } })` → ✅ **FOUND**
 7. Product added to cart successfully
 8. Returns cart link
 
@@ -86,11 +86,11 @@ cartManagementAgent("CONFIRMED: add [PRODUCT-CODE from previous message]")
 
 **Changes**:
 
-- Line 226: Changed "Extract product name" → "Extract **productCode** (NOT product name)"
+- Line 226: Changed "Extract product name" → "Extract **sku** (NOT product name)"
 - Added lines 230-233: Critical warning with format explanation and examples
 - Line 235: Updated example from `add Speck Alto Adige` → `add SALUMI-003`
 
-**Impact**: Router now correctly extracts productCode from {{PRODUCTS}} format
+**Impact**: Router now correctly extracts sku from {{PRODUCTS}} format
 
 ### 2. Database Update
 
@@ -113,7 +113,7 @@ npx ts-node scripts/update-all-agent-prompts.ts
    6. Safety & Translation Agent - sendAlertEmail, sicurezza
 ```
 
-**Impact**: All workspaces now have updated Router prompt with productCode extraction fix
+**Impact**: All workspaces now have updated Router prompt with sku extraction fix
 
 ---
 
@@ -124,18 +124,18 @@ npx ts-node scripts/update-all-agent-prompts.ts
 1. **{{PRODUCTS}} Format** (`message.repository.ts:1284-1285`):
 
    ```typescript
-   const productCode = p.productCode ? `${p.productCode} ` : ""
-   formattedProducts += `• ${productCode}${p.name}${formatoStr}...`
+   const sku = p.sku ? `${p.sku} ` : ""
+   formattedProducts += `• ${sku}${p.name}${formatoStr}...`
    ```
 
    **Output**: `• FORMAG-002 Parmigiano Reggiano DOP 24 mesi 500g...`
-   ✅ ProductCode IS in the format (first token after `•`)
+   ✅ Sku IS in the format (first token after `•`)
 
 2. **AddProduct Interface** (`AddProduct.ts:18`):
 
    ```typescript
    export interface ProductToAdd {
-     productCode: string // ← Expects code, not name
+     sku: string // ← Expects code, not name
      quantity: number
    }
    ```
@@ -146,15 +146,15 @@ npx ts-node scripts/update-all-agent-prompts.ts
 
    ```typescript
    let product = await prisma.products.findFirst({
-     where: { productCode: request.productCode }, // ← Primary search by code
+     where: { sku: request.sku }, // ← Primary search by code
    })
    ```
 
-   ✅ Searches by productCode field
+   ✅ Searches by sku field
 
 4. **Database State**:
    - Product exists: "Parmigiano Reggiano DOP 24 mesi"
-   - ProductCode: "FORMAG-002"
+   - Sku: "FORMAG-002"
    - Stock: Available
    - IsActive: true
      ✅ Data is correct
@@ -205,7 +205,7 @@ Customer: "si"
 - ✅ **C2**: Supplier/region in {{PRODUCTS}} (ANALYSIS_REPORT.md Task C2) - COMPLETED (Feature 123 Phase 1-4)
 - ✅ **M1**: AddService calling function (ANALYSIS_REPORT.md Task M1) - COMPLETED
 - ✅ **M2**: Documentation update (ANALYSIS_REPORT.md Task M2) - COMPLETED
-- ✅ **BUG FIX**: Router productCode extraction - COMPLETED (this document)
+- ✅ **BUG FIX**: Router sku extraction - COMPLETED (this document)
 
 ### Remaining (From tasks.md)
 
@@ -241,7 +241,7 @@ Customer: "si"
 
 ## Next Steps
 
-1. ✅ **DONE**: Update Router prompt with productCode extraction
+1. ✅ **DONE**: Update Router prompt with sku extraction
 2. ✅ **DONE**: Deploy to database via update-all-agent-prompts.ts
 3. ⚠️ **PENDING**: Manual WhatsApp test (when available)
 4. ⚠️ **OPTIONAL**: Add integration test for Router → AddProduct flow (Task C3)
@@ -261,4 +261,4 @@ Customer: "si"
 
 ---
 
-**Status**: ✅ BUG FIXED - Router now correctly extracts productCode from {{PRODUCTS}} format
+**Status**: ✅ BUG FIXED - Router now correctly extracts sku from {{PRODUCTS}} format

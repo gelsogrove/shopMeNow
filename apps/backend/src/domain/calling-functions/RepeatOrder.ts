@@ -173,10 +173,10 @@ export async function RepeatOrder(
 
       for (const item of order.items) {
         if (item.itemType === "PRODUCT" && item.product) {
-          const code = item.product.productCode // 🔧 FIX: Use productCode, not code
+          const code = item.product.sku // 🔧 FIX: Use sku, not code
           if (!code) {
             logger.warn(
-              `⚠️ Product ${item.product.name} has no productCode, skipping`
+              `⚠️ Product ${item.product.name} has no sku, skipping`
             )
             continue
           }
@@ -202,7 +202,7 @@ export async function RepeatOrder(
         const { item, totalQty } = productGroups[code]
         const product = await prisma.products.findFirst({
           where: {
-            productCode: code, // 🔧 FIX: Use productCode field
+            sku: code, // 🔧 FIX: Use sku field
             workspaceId: request.workspaceId,
           },
         })
@@ -223,7 +223,7 @@ export async function RepeatOrder(
               data: { quantity: existingCartItem.quantity + totalQty },
             })
             logger.info(
-              `✅ Updated product ${product.productCode || product.id} (${product.name}): ${existingCartItem.quantity} + ${totalQty} = ${existingCartItem.quantity + totalQty}`
+              `✅ Updated product ${product.sku || product.id} (${product.name}): ${existingCartItem.quantity} + ${totalQty} = ${existingCartItem.quantity + totalQty}`
             )
           } else {
             // Create new cart item
@@ -237,7 +237,7 @@ export async function RepeatOrder(
               },
             })
             logger.info(
-              `✅ Added product ${product.productCode} (${product.name}) x${totalQty} to cart`
+              `✅ Added product ${product.sku} (${product.name}) x${totalQty} to cart`
             )
           }
           productsAdded++

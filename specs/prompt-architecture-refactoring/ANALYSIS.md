@@ -187,7 +187,7 @@ Router handles service flow directly instead of delegating to specialist.
 
 - Customer says generic confirmation: "sì", "si", "yes", "ok"
 - Check conversation history: Did previous message come from Product Search?
-- ACTION: Extract productCode and call cartManagementAgent("CONFIRMED: add [CODE]")
+- ACTION: Extract sku and call cartManagementAgent("CONFIRMED: add [CODE]")
 ```
 
 **Location 2**: `product-search-agent.md` (lines 180-220)
@@ -530,7 +530,7 @@ But Router NEVER writes final responses - specialists do!
 
 When user says "sì"/"yes"/"ok" after showing product details:
 
-1. Extract productCode from your previous message
+1. Extract sku from your previous message
 2. Default quantity: 1 (unless user specified)
 3. CALL: cartManagementAgent("add [CODE] qty [N]")
 4. Return cart confirmation + link

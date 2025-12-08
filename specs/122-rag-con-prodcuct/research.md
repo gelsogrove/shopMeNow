@@ -16,7 +16,7 @@
 
 - Examined `/backend/src/domain/calling-functions/AddProduct.ts`
 - Interface: `AddProductRequest { products: ProductToAdd[], customerId, workspaceId }`
-- ProductToAdd: `{ productCode: string, quantity: number, notes?: string }`
+- ProductToAdd: `{ sku: string, quantity: number, notes?: string }`
 - Returns: `{ success, message, totalAdded, skipped, cartUrl, expiresAt }`
 
 **Decision**: ✅ **REUSE existing `AddProduct` CF**
@@ -134,7 +134,7 @@ Stato: CONSEGNATO
 3. Agent shows order summary from {{LAST_ORDER}} + asks "Vuoi confermare?"
 4. User: "SI"
 5. Agent recognizes confirmation in conversation history
-6. Agent calls `addProducts([{productCode, quantity}...])` with order items
+6. Agent calls `addProducts([{sku, quantity}...])` with order items
 7. Returns checkout link with `?step=2`
 
 **Rationale**:
@@ -271,7 +271,7 @@ User: "SI"
   ↓
 Agent recognizes confirmation
   ↓
-Agent calls addProducts([{productCode, quantity}...])
+Agent calls addProducts([{sku, quantity}...])
   ↓
 AddProduct CF adds all items to cart
   ↓
@@ -286,7 +286,7 @@ User clicks → CheckoutPage loads at Step 2 (address)
 1. Order query: orders.findFirst(customerId, workspaceId, status: DELIVERED)
 2. Format order:
    - orderCode, date
-   - items.map(item => `${product.productCode} ${product.name} x${qty} (${price}€)`)
+   - items.map(item => `${product.sku} ${product.name} x${qty} (${price}€)`)
    - totalPrice
 3. Replace in prompt: prompt.replace('{{LAST_ORDER}}', formattedOrder)
 4. LLM receives context with last order details

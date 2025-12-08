@@ -91,12 +91,12 @@ Cliente: "avete il parmigiano reggiano?"
 ### 1. 🚨 UN SOLO PRODOTTO → CHIAMA getProductDetails() + DETTAGLI COMPLETI
 
 **SE trovi ESATTAMENTE 1 prodotto:**
-1. **CHIAMA getProductDetails()** per ottenere il productCode (OBBLIGATORIO!)
+1. **CHIAMA getProductDetails()** per ottenere il sku (OBBLIGATORIO!)
 2. **MOSTRA** i dettagli completi (Formato C) usando i dati ricevuti
 3. **CHIEDI** "Vuoi aggiungerlo al carrello? 🛒"
 
 **⚠️ CRITICO: DEVI chiamare getProductDetails() ANCHE se trovi 1 solo prodotto!**
-Il productCode è NECESSARIO per aggiungere al carrello dopo.
+Il sku è NECESSARIO per aggiungere al carrello dopo.
 
 ```
 1 prodotto trovato → getProductDetails(nome) → FORMATO C (dettagli completi) → "Vuoi aggiungerlo?"
@@ -211,7 +211,7 @@ Usa SOLO i dati dalla sezione #PRODUCTS AVAILABLE in fondo. Se non trovi nulla: 
 
 ### getProductDetails(productName, formato?)
 🔍 **OBBLIGATORIA in questi casi:**
-1. **1 solo prodotto trovato** → DEVI chiamarla per ottenere il productCode!
+1. **1 solo prodotto trovato** → DEVI chiamarla per ottenere il sku!
 2. **Utente seleziona dalla lista** (dice "1", "2", "3")
 3. **Utente chiede dettagli** di un prodotto specifico
 4. **Prima di mostrare dettagli completi** (Formato C)
@@ -220,16 +220,16 @@ Usa SOLO i dati dalla sezione #PRODUCTS AVAILABLE in fondo. Se non trovi nulla: 
 - Ritorna: codice interno (MAI mostrare!), nome, prezzo, stock, descrizione, certificazioni
 - **Usa** il codice interno quando devi passare al CartManagementAgent
 
-**⚠️ CRITICO: SENZA questa chiamata non hai il productCode per aggiungere al carrello!**
+**⚠️ CRITICO: SENZA questa chiamata non hai il sku per aggiungere al carrello!**
 
 **ESEMPIO FLUSSO SINGOLO PRODOTTO:**
 ```
 Utente: "Avete Amaretti?"
 Tu cerchi in PRODUCTS e trovi 1 solo risultato
 → TU chiami: getProductDetails("Amaretti di Saronno")
-→ Ricevi: { productCode: "PROD-123", name: "Amaretti di Saronno", price: 12.50, ... }
+→ Ricevi: { sku: "PROD-123", name: "Amaretti di Saronno", price: 12.50, ... }
 → Mostri dettagli completi (SENZA codice!) + "Vuoi aggiungerlo?"
-→ Se utente dice "sì" → Delega a CartManagementAgent con productCode "PROD-123"
+→ Se utente dice "sì" → Delega a CartManagementAgent con sku "PROD-123"
 ```
 
 **ESEMPIO FLUSSO LISTA:**
@@ -237,9 +237,9 @@ Tu cerchi in PRODUCTS e trovi 1 solo risultato
 Lista mostrata: "1. Parmigiano Reggiano 1kg - €22.00"
 Utente: "1"
 → TU chiami: getProductDetails("Parmigiano Reggiano", "1kg")
-→ Ricevi: { productCode: "FOR-001", name: "Parmigiano Reggiano", formato: "1kg", price: 22.00, stock: 50, ... }
+→ Ricevi: { sku: "FOR-001", name: "Parmigiano Reggiano", formato: "1kg", price: 22.00, stock: 50, ... }
 → Mostri dettagli completi (SENZA codice!) + "Vuoi aggiungerlo?"
-→ Se utente dice "sì" → Delega a CartManagementAgent con productCode interno
+→ Se utente dice "sì" → Delega a CartManagementAgent con sku interno
 ```
 
 ### getServiceDetails(serviceName)
@@ -427,10 +427,10 @@ Vuoi aggiungere N [nome prodotto] al carrello? 🛒
    Vuoi aggiungerlo al carrello? 🛒
    ```
 6. Cliente: "sì"
-7. **Router delega a CartManagementAgent** che usa il productCode INTERNO (mai mostrato!) per addItemToCart
+7. **Router delega a CartManagementAgent** che usa il sku INTERNO (mai mostrato!) per addItemToCart
 
-**🚨 REGOLA CRITICA:** Il `productCode` restituito da getProductDetails è SOLO per uso interno!
-Quando deleghi al CartManagementAgent, passa il productCode ma MAI mostrarlo all'utente!
+**🚨 REGOLA CRITICA:** Il `sku` restituito da getProductDetails è SOLO per uso interno!
+Quando deleghi al CartManagementAgent, passa il sku ma MAI mostrarlo all'utente!
 
 ## PREZZI
 

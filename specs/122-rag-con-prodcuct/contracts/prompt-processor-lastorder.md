@@ -94,7 +94,7 @@ export class PromptProcessorService {
             include: {
               product: {
                 select: {
-                  productCode: true,
+                  sku: true,
                   name: true,
                 },
               },
@@ -116,7 +116,7 @@ export class PromptProcessorService {
       const itemsText = order.items
         .map((item) => {
           const lineTotal = item.quantity * item.unitPrice
-          return `- ${item.product.productCode} ${item.product.name} x${
+          return `- ${item.product.sku} ${item.product.name} x${
             item.quantity
           } (${item.unitPrice.toFixed(2)}€ cad.) = ${lineTotal.toFixed(2)}€`
         })
@@ -261,7 +261,7 @@ SELECT
   o.status,
   oi.quantity,
   oi.unitPrice,
-  p.productCode,
+  p.sku,
   p.name AS productName
 FROM orders o
 INNER JOIN orderItems oi ON oi.orderId = o.id
@@ -288,7 +288,7 @@ const order = await prisma.orders.findFirst({
       include: {
         product: {
           select: {
-            productCode: true,
+            sku: true,
             name: true,
           },
         },

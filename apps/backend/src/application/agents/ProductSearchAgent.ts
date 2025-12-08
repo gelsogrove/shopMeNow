@@ -194,7 +194,7 @@ export class ProductSearchAgent {
 
       return {
         id: product.id,
-        code: product.productCode, // ✅ Include product code
+        code: product.sku, // ✅ Include product code
         name: product.name,
         description: product.description || "",
         price: finalPrice, // ✅ Use discounted price

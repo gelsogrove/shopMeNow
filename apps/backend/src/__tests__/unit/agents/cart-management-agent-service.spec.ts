@@ -114,7 +114,7 @@ describe("CartManagementAgent - SERVICE Cart", () => {
       )
 
       // Verify product repository NOT called
-      expect(mockProductRepo.findByProductCode).not.toHaveBeenCalled()
+      expect(mockProductRepo.findBySku).not.toHaveBeenCalled()
 
       // Verify cart item added with correct type
       // CRITICAL: SERVICE items use serviceId, PRODUCT items use productId
@@ -215,7 +215,7 @@ describe("CartManagementAgent - SERVICE Cart", () => {
         stock: 10,
       }
 
-      mockProductRepo.findByProductCode = jest
+      mockProductRepo.findBySku = jest
         .fn()
         .mockResolvedValue(mockProduct)
       mockCartRepo.getOrCreateCart = jest.fn().mockResolvedValue(mockCart)
@@ -243,7 +243,7 @@ describe("CartManagementAgent - SERVICE Cart", () => {
       })
 
       // Verify product repository called
-      expect(mockProductRepo.findByProductCode).toHaveBeenCalledWith(
+      expect(mockProductRepo.findBySku).toHaveBeenCalledWith(
         "SALUMI-006",
         "ws-123"
       )
@@ -272,7 +272,7 @@ describe("CartManagementAgent - SERVICE Cart", () => {
         stock: 5,
       }
 
-      mockProductRepo.findByProductCode = jest
+      mockProductRepo.findBySku = jest
         .fn()
         .mockResolvedValue(mockProduct)
       mockCartRepo.getOrCreateCart = jest.fn().mockResolvedValue(mockCart)
@@ -301,7 +301,7 @@ describe("CartManagementAgent - SERVICE Cart", () => {
       })
 
       // Should default to PRODUCT search
-      expect(mockProductRepo.findByProductCode).toHaveBeenCalled()
+      expect(mockProductRepo.findBySku).toHaveBeenCalled()
       expect(mockServiceRepo.findByServiceCode).not.toHaveBeenCalled()
 
       // Verify cart item uses PRODUCT type

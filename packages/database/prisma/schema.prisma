@@ -171,7 +171,7 @@ model Suppliers {
 model Products {
   id                    String                  @id @default(uuid())
   name                  String
-  productCode           String?
+  sku                   String?
   description           String?
   formato               String?
   price                 Float

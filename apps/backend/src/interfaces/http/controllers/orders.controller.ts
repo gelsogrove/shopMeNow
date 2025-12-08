@@ -254,7 +254,7 @@ export class OrdersController {
           customer: true,
           items: {
             include: {
-              product: { select: { name: true, productCode: true } },
+              product: { select: { name: true, sku: true } },
               service: { select: { name: true, code: true } },
             },
           },
@@ -349,7 +349,7 @@ export class OrdersController {
       if (order.items.length > 0) {
         order.items.forEach((it: any) => {
           const name = it.product?.name || it.service?.name || 'Item'
-          const code = it.product?.ProductCode || it.service?.code || ''
+          const code = it.product?.Sku || it.service?.code || ''
           const itemName = code ? `${name} (${code})` : name
           
           doc.text(itemName, itemX, currentY)
@@ -439,7 +439,7 @@ export class OrdersController {
           customer: true,
           items: {
             include: {
-              product: { select: { name: true, productCode: true } },
+              product: { select: { name: true, sku: true } },
               service: { select: { name: true, code: true } },
             },
           },
@@ -532,7 +532,7 @@ export class OrdersController {
       if (order.items.length > 0) {
         order.items.forEach((it: any) => {
           const name = it.product?.name || it.service?.name || 'Item'
-          const code = it.product?.ProductCode || it.service?.code || 'N/A'
+          const code = it.product?.Sku || it.service?.code || 'N/A'
           
           doc.text(name, itemX, currentY)
           doc.text(it.quantity.toString(), qtyX, currentY)

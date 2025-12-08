@@ -208,7 +208,7 @@ export function ProductSearchDebug() {
                           <div className="text-xs text-gray-600 mt-1">
                             🔹 Codice:{" "}
                             <code className="bg-gray-100 px-2 py-1 rounded">
-                              {product.productCode}
+                              {product.sku}
                             </code>
                           </div>
                         </div>

@@ -912,7 +912,7 @@ A quale sei interessato? 🛒" ← CORRECT! Generic = show category
 
 **ALL responses mentioning products MUST include the product code (in parentheses)**
 
-**WHY**: Cart Agent extracts product code from conversation history to call `addToCart(productCode)`. Without the code visible in the response, Cart Agent cannot add the product to cart (resulting in "Product not found" errors).
+**WHY**: Cart Agent extracts product code from conversation history to call `addToCart(sku)`. Without the code visible in the response, Cart Agent cannot add the product to cart (resulting in "Product not found" errors).
 
 **MANDATORY FORMAT**:
 
@@ -932,10 +932,10 @@ Vuoi aggiungerla al tuo carrello?" ← WRONG! No code!
 
 Customer: "si"
 Cart Agent: [ERROR] "Product with code 6f3218dd-6b6d-4a6a-a93a-6082ebc7e933 not found"
-↑ UUID instead of productCode because code wasn't in response!
+↑ UUID instead of sku because code wasn't in response!
 ```
 
-**WHY WRONG**: Cart Agent cannot extract productCode from conversation history, uses UUID instead, fails to add to cart.
+**WHY WRONG**: Cart Agent cannot extract sku from conversation history, uses UUID instead, fails to add to cart.
 
 ✅ **CORRECT** (product code visible):
 
@@ -1014,17 +1014,17 @@ Quale preferisci? (Rispondi con il numero)
 4. Router Agent:
    - Reads conversation history (LAST assistant message)
    - Finds: "(MOZZ-001)" in previous response
-   - Extracts: productCode = "MOZZ-001"
+   - Extracts: sku = "MOZZ-001"
    - Delegates to Cart Agent with: "Utente conferma di voler aggiungere 1 prodotto mozzarella: MOZZ-001"
    ↑ Router does the extraction work!
 
 5. Cart Agent:
    - Receives: "Utente conferma di voler aggiungere 1 prodotto mozzarella: MOZZ-001"
-   - Extracts: productCode = "MOZZ-001" (from delegation query)
+   - Extracts: sku = "MOZZ-001" (from delegation query)
    - Calls: addToCart(productId: "MOZZ-001", quantity: 1)
 
 6. Backend:
-   - findByProductCode("MOZZ-001") → Found! ✅
+   - findBySku("MOZZ-001") → Found! ✅
    - Result: Product added to cart successfully!
 ```
 
@@ -1033,7 +1033,7 @@ Quale preferisci? (Rispondi con il numero)
 - ✅ **Product Search Agent**: Show product code in ALL responses (REGOLA XIII)
 - ✅ **Router Agent**: Extract product code and pass to Cart Agent explicitly
 - ✅ **Cart Agent**: Use product code from delegation query to call addToCart
-- ✅ **Backend**: Validate productCode and add to cart
+- ✅ **Backend**: Validate sku and add to cart
 
 ---
 

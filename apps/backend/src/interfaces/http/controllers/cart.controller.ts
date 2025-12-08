@@ -320,7 +320,7 @@ export class CartController {
                   select: {
                     id: true,
                     name: true,
-                    productCode: true,
+                    sku: true,
                     price: true,
                     description: true,
                     formato: true,
@@ -347,7 +347,7 @@ export class CartController {
                   select: {
                     id: true,
                     name: true,
-                    productCode: true,
+                    sku: true,
                     price: true,
                     description: true,
                     formato: true,
@@ -378,7 +378,7 @@ export class CartController {
                     select: {
                       id: true,
                       name: true,
-                      productCode: true,
+                      sku: true,
                       price: true,
                       description: true,
                       formato: true,
@@ -432,7 +432,7 @@ export class CartController {
               type: "product",
               itemType: "PRODUCT",
               productId: item.productId,
-              productCode: "N/A",
+              sku: "N/A",
               name: `Product ${item.productId} (Not Found)`,
               originalPrice: 0,
               finalPrice: 0,
@@ -458,7 +458,7 @@ export class CartController {
             type: "product",
             itemType: "PRODUCT",
             productId: item.productId,
-            productCode: item.product.productCode || item.productId,
+            sku: item.product.sku || item.productId,
             name: item.product.formato
               ? `${item.product.name} ${item.product.formato}`
               : item.product.name || `Product ${item.productId}`,
@@ -554,7 +554,7 @@ export class CartController {
           productId: item.productId || null,
           serviceId: item.serviceId || null,
           codice:
-            item.itemType === "PRODUCT" ? item.productCode : item.serviceCode, // Use correct code based on type
+            item.itemType === "PRODUCT" ? item.sku : item.serviceCode, // Use correct code based on type
           descrizione: item.name,
           formato: item.formato || null, // Only products have formato
           duration: item.duration || null, // Only services have duration
@@ -1415,7 +1415,7 @@ export class CartController {
           items: (payload.items || []).map((item: any) => ({
             id: item.id,
             productId: item.productId || "",
-            productCode: item.code,
+            sku: item.code,
             productName: item.name,
             quantity: item.quantity,
             unitPrice: item.finalPrice,

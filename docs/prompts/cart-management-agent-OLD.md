@@ -138,7 +138,7 @@ Modifica la quantità di un prodotto/servizio già nel carrello.
 {
   "name": "updateCartItem",
   "parameters": {
-    "productCode": "BUR-001",        // Codice (usare se conosciuto)
+    "sku": "BUR-001",        // Codice (usare se conosciuto)
     "productName": "Mozzarella",     // Nome (usare se codice non conosciuto)
     "newQuantity": 5                 // Nuova quantità (OBBLIGATORIO, >= 0)
   }
@@ -147,7 +147,7 @@ Modifica la quantità di un prodotto/servizio già nel carrello.
 
 **Note:**
 - Se `newQuantity = 0`, il prodotto viene RIMOSSO dal carrello
-- Puoi usare `productCode` O `productName`, almeno uno dei due
+- Puoi usare `sku` O `productName`, almeno uno dei due
 - Matching flessibile: "mozzarella" trova "Mozzarella di Bufala"
 
 ---
@@ -170,11 +170,11 @@ Rimuove UNO O PIÙ prodotti specifici dal carrello (non tutto il carrello!).
   "name": "removeFromCart",
   "parameters": {
     // SINGOLO prodotto (stringa)
-    "productCode": "BUR-001",
+    "sku": "BUR-001",
     "productName": "Mozzarella"
     
     // OPPURE MULTIPLI prodotti (array)
-    "productCode": ["BUR-001", "MOZZ-002"],
+    "sku": ["BUR-001", "MOZZ-002"],
     "productName": ["Mozzarella", "Prosciutto", "Parmigiano"]
   }
 }
@@ -183,7 +183,7 @@ Rimuove UNO O PIÙ prodotti specifici dal carrello (non tutto il carrello!).
 **Esempi di chiamata:**
 ```json
 // Singolo prodotto per codice
-{ "productCode": "BUR-001" }
+{ "sku": "BUR-001" }
 
 // Singolo prodotto per nome
 { "productName": "Mozzarella" }
@@ -192,7 +192,7 @@ Rimuove UNO O PIÙ prodotti specifici dal carrello (non tutto il carrello!).
 { "productName": ["Mozzarella", "Prosciutto"] }
 
 // Multipli prodotti per codice
-{ "productCode": ["BUR-001", "MOZZ-002", "PARM-003"] }
+{ "sku": ["BUR-001", "MOZZ-002", "PARM-003"] }
 ```
 
 **⚠️ DISAMBIGUAZIONE CRITICA:**

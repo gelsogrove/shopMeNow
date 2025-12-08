@@ -37,7 +37,7 @@ interface LastOrderSummary {
 }
 
 interface OrderItemSummary {
-  productCode: string // e.g., "A001", "SALUMI-006"
+  sku: string // e.g., "A001", "SALUMI-006"
   productName: string // Italian base language from DB
   quantity: number
   unitPrice: number
@@ -85,7 +85,7 @@ interface AddProductsRequest {
 }
 
 interface ProductToAdd {
-  productCode: string // From OrderItemSummary.productCode
+  sku: string // From OrderItemSummary.sku
   quantity: number // From OrderItemSummary.quantity
   notes?: string // Optional (e.g., "Da ordine ORD-2024-001")
 }
@@ -99,17 +99,17 @@ interface ProductToAdd {
   "workspaceId": "cm9hjgq9v00004qk8fsdy4ujv",
   "products": [
     {
-      "productCode": "A001",
+      "sku": "A001",
       "quantity": 4,
       "notes": "Da ordine ORD-2024-001"
     },
     {
-      "productCode": "A002",
+      "sku": "A002",
       "quantity": 12,
       "notes": "Da ordine ORD-2024-001"
     },
     {
-      "productCode": "A003",
+      "sku": "A003",
       "quantity": 1,
       "notes": "Da ordine ORD-2024-001"
     }
@@ -120,7 +120,7 @@ interface ProductToAdd {
 **Validation Rules**:
 
 - ✅ products array required (min 1 item)
-- ✅ productCode must exist in products table (workspace-filtered)
+- ✅ sku must exist in products table (workspace-filtered)
 - ✅ quantity > 0 and integer
 - ✅ Stock availability check (product.stock >= quantity)
 
@@ -185,7 +185,7 @@ const lastOrder = await prisma.orders.findFirst({
       include: {
         product: {
           select: {
-            productCode: true,
+            sku: true,
             name: true,
             price: true,
           },
@@ -256,7 +256,7 @@ async getLastOrderVariable(
   // 3. Format order summary
   const items = order.items.map(item => {
     const lineTotal = item.quantity * item.unitPrice
-    return `- ${item.product.productCode} ${item.product.name} x${item.quantity} (${item.unitPrice.toFixed(2)}€ cad.) = ${lineTotal.toFixed(2)}€`
+    return `- ${item.product.sku} ${item.product.name} x${item.quantity} (${item.unitPrice.toFixed(2)}€ cad.) = ${lineTotal.toFixed(2)}€`
   }).join('\n')
 
   const totalPrice = order.items.reduce(
@@ -318,7 +318,7 @@ erDiagram
 
     PRODUCTS {
         string id PK
-        string productCode
+        string sku
         string name
         decimal price
         int stock
@@ -349,7 +349,7 @@ erDiagram
 
 - Orders MUST have workspaceId (workspace isolation)
 - OrderItems MUST reference existing productId
-- Products MUST have unique productCode within workspace
+- Products MUST have unique sku within workspace
 
 ---
 
@@ -411,8 +411,8 @@ erDiagram
 ┌─────────────────────────────────────────────────────────────────┐
 │          Agent Recognizes Confirmation in History               │
 │          Calls: addProducts([                                   │
-│            {productCode: "A001", quantity: 4},                  │
-│            {productCode: "A002", quantity: 12}                  │
+│            {sku: "A001", quantity: 4},                  │
+│            {sku: "A002", quantity: 12}                  │
 │          ])                                                     │
 └─────────────────────────────────────────────────────────────────┘
                               │
@@ -421,7 +421,7 @@ erDiagram
 │                AddProduct CF Execution                          │
 │                                                                 │
 │  1. Iterate products array                                     │
-│  2. For each: addProductToCart(productCode, quantity)          │
+│  2. For each: addProductToCart(sku, quantity)          │
 │  3. Generate checkout token                                    │
 │  4. Build link: linkGenerator.generateCheckoutLink(token, 2)   │
 │  5. Return: {cartUrl: "...?token=xxx&step=2", totalAdded: 2}  │
@@ -455,7 +455,7 @@ erDiagram
 | customerId  | ✅       | UUID    | Must exist in customers table                     | "Cliente non trovato"                       |
 | workspaceId | ✅       | UUID    | Must match customer.workspaceId                   | "Workspace non valido"                      |
 | orderCode   | ❌       | string  | If provided, must exist                           | "Ordine non trovato"                        |
-| productCode | ✅       | string  | Must exist in products table (workspace-filtered) | "Prodotto {code} non trovato"               |
+| sku | ✅       | string  | Must exist in products table (workspace-filtered) | "Prodotto {code} non trovato"               |
 | quantity    | ✅       | integer | > 0, <= product.stock                             | "Quantità non valida o stock insufficiente" |
 | step        | ❌       | integer | 1 or 2                                            | "Step non valido (usa 1 o 2)"               |
 | token       | ✅       | JWT     | Not expired, valid HMAC                           | "Token non valido o scaduto"                |
@@ -473,7 +473,7 @@ erDiagram
 CREATE INDEX idx_orders_customer_workspace_status ON orders(customerId, workspaceId, status, createdAt DESC);
 
 -- products table
-CREATE INDEX idx_products_code_workspace ON products(productCode, workspaceId);
+CREATE INDEX idx_products_code_workspace ON products(sku, workspaceId);
 
 -- cartItems table
 CREATE INDEX idx_cartitems_cart_product ON cartItems(cartId, productId);

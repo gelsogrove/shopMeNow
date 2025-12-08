@@ -363,12 +363,59 @@ export const updateStock = async (
   }
 }
 
+/**
+ * Export products to CSV
+ */
+export const exportCsv = async (workspaceId: string): Promise<string> => {
+  try {
+    logger.info(`Exporting products to CSV for workspace: ${workspaceId}`)
+    const response = await api.get(`/workspaces/${workspaceId}/products/export`, {
+      responseType: "text",
+    })
+    return response.data
+  } catch (error) {
+    logger.error("Error exporting products to CSV:", error)
+    throw error
+  }
+}
+
+/**
+ * Import products from CSV
+ */
+export const importCsv = async (
+  workspaceId: string,
+  file: File
+): Promise<{ message: string; results: { created: number; updated: number; errors: Array<{ row: number; sku: string; error: string }> } }> => {
+  try {
+    logger.info(`Importing products from CSV for workspace: ${workspaceId}`)
+    const formData = new FormData()
+    formData.append("file", file)
+    
+    const response = await api.post(
+      `/workspaces/${workspaceId}/products/import`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    )
+    return response.data
+  } catch (error) {
+    logger.error("Error importing products from CSV:", error)
+    throw error
+  }
+}
+
 export const productsApi = {
   getAllForWorkspace,
+  getAll: getAllForWorkspace, // Alias for convenience
   getById,
   getByCategory,
   create,
   update,
   delete: deleteProduct,
   updateStock,
+  exportCsv,
+  importCsv,
 }

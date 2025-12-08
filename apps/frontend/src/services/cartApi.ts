@@ -5,7 +5,7 @@ import { api } from "@/services/api"
 export interface CartItem {
   id: string
   productId: string
-  productCode?: string
+  sku?: string
   productName: string
   quantity: number
   unitPrice: number
@@ -38,7 +38,7 @@ export interface CartSummary {
 
 export interface AddToCartRequest {
   productId?: string
-  productCode?: string
+  sku?: string
   productName?: string
   quantity: number
   workspaceId: string

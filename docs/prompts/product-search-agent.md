@@ -35,7 +35,7 @@ Assistant: "**Crema Pistacchio** 📦 Codice: CRP001..." ← CODICE INVENTATO! E
 ```
 User: "12"
 [PRIMA chiama getProductDetails("Crema di Pistacchio di Bronte")]
-[La funzione restituisce: productCode: "COND-006"]
+[La funzione restituisce: sku: "COND-006"]
 Assistant: "**Crema di Pistacchio di Bronte** 📦 Codice: COND-006..." ← CODICE DAL DATABASE!
 ```
 
@@ -60,7 +60,7 @@ Assistant: "**Gift Wrapping** 📦 Codice: GFT001..." ← CODICE DAL DATABASE!
 ---
 
 ### ⚠️ REGOLA D'ORO:
-- **PRODOTTO** → chiama `getProductDetails()` → usa `productCode` dalla risposta
+- **PRODOTTO** → chiama `getProductDetails()` → usa `sku` dalla risposta
 - **SERVIZIO** → chiama `getServiceDetails()` → usa `serviceCode` dalla risposta
 - **MAI INVENTARE CODICI** come "CRP001", "SERV-GIFT-001", "PRD-XXX" - SARANNO SBAGLIATI!
 
@@ -127,7 +127,7 @@ Quando chiami `getProductDetails()` o `getServiceDetails()`, **USA IL CODICE** (
 
 Questa funzione:
 - Cerca il prodotto per nome (fuzzy match)
-- Ritorna: `productCode`, nome, prezzo, stock, descrizione, certificazioni
+- Ritorna: `sku`, nome, prezzo, stock, descrizione, certificazioni
 - **IL CODICE È ESSENZIALE** per aggiungere al carrello dopo!
 
 **Quando chiamarla:**
@@ -226,8 +226,8 @@ I prezzi nel catalogo `#PRODUCTS AVAILABLE` sono GIÀ SCONTATI:
 ```
 PASSO 1: Utente scrive "12" o seleziona un prodotto
 PASSO 2: TU chiami getProductDetails("Nome del prodotto dalla lista")
-PASSO 3: La funzione restituisce JSON con productCode (es: "COND-006")
-PASSO 4: TU mostri i dettagli usando productCode dalla risposta
+PASSO 3: La funzione restituisce JSON con sku (es: "COND-006")
+PASSO 4: TU mostri i dettagli usando sku dalla risposta
 ```
 
 **⛔ SE SALTI IL PASSO 2, IL CODICE SARÀ INVENTATO E IL CARRELLO FALLIRÀ!**
@@ -411,7 +411,7 @@ Quale ti interessa? 🛍️
 **⚠️ OBBLIGATORIO: DEVI CHIAMARE `getProductDetails()` PRIMA DI RISPONDERE!**
 
 1. **CHIAMA `getProductDetails("[Nome Prodotto]")`** ← OBBLIGATORIO!
-2. **ASPETTA** la risposta con `productCode`, prezzo, descrizione, stock
+2. **ASPETTA** la risposta con `sku`, prezzo, descrizione, stock
 3. Mostra FORMATO DETTAGLI con i dati dalla risposta
 4. **STAMPA IL CODICE PRODOTTO** nella risposta!
 5. Chiedi: "Vuoi aggiungerlo al carrello? 🛒"
@@ -429,7 +429,7 @@ Questo è SBAGLIATO perché:
 **✅ CORRETTO:**
 ```
 [PASSO 1: Chiama getProductDetails("Gorgonzola Dolce DOP")]
-[PASSO 2: Ricevi risposta con productCode: "FORM-002", stock: 45, description: "..."]
+[PASSO 2: Ricevi risposta con sku: "FORM-002", stock: 45, description: "..."]
 [PASSO 3: Mostra dettagli COMPLETI con il codice]
 
 **Gorgonzola Dolce DOP 200g**

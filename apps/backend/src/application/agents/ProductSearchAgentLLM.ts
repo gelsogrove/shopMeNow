@@ -378,13 +378,13 @@ export class ProductSearchAgentLLM {
         if (productDetailsFunctionCall?.result?.found && productDetailsFunctionCall?.result?.product) {
           const product = productDetailsFunctionCall.result.product
           groupsMetadata = {
-            selectedProductCode: product.productCode,
+            selectedSku: product.sku,
             productName: product.name,
             timestamp: new Date().toISOString(),
           }
 
           logger.info(`📦 Storing product details from function call`, {
-            selectedProductCode: product.productCode,
+            selectedSku: product.sku,
             productName: product.name,
           })
         }
@@ -401,7 +401,7 @@ export class ProductSearchAgentLLM {
         logger.info(`💾 Saved conversation to memory`, {
           sessionId: context.sessionId,
           hasProductDetails: !!groupsMetadata,
-          selectedProductCode: groupsMetadata?.selectedProductCode,
+          selectedSku: groupsMetadata?.selectedSku,
         })
       } catch (memoryError) {
         logger.error(`⚠️ Failed to save conversation memory:`, memoryError)
@@ -616,13 +616,13 @@ export class ProductSearchAgentLLM {
     return [
       {
         name: "getProductDetails",
-        description: "Get full product details by productCode (priority) or name. Use this when user selects a product to see details before adding to cart. Returns the INTERNAL product code needed for cart operations. NEVER show the productCode to the user.",
+        description: "Get full product details by sku (priority) or name. Use this when user selects a product to see details before adding to cart. Returns the INTERNAL product code needed for cart operations. NEVER show the sku to the user.",
         parameters: {
           type: "object" as const,
           properties: {
             productName: {
               type: "string" as const,
-              description: "The productCode [e.g. PARM-500G] or product name. Prefer code from product list.",
+              description: "The sku [e.g. PARM-500G] or product name. Prefer code from product list.",
             },
             formato: {
               type: "string" as const,

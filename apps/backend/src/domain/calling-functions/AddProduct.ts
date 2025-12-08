@@ -14,7 +14,7 @@ import logger from "../../utils/logger"
 import { CallingFunctionsService } from "../../services/calling-functions.service"
 
 export interface ProductToAdd {
-  productCode: string // Codice del prodotto
+  sku: string // Codice del prodotto
   quantity: number // Quantità (default: 1)
   notes?: string // Note opzionali
 }
@@ -36,7 +36,7 @@ export interface AddProductResult {
   error?: string
   details?: Array<{
     // Dettagli per ogni prodotto
-    productCode: string
+    sku: string
     productName?: string
     success: boolean
     message?: string
@@ -101,11 +101,11 @@ export async function AddProduct(
         const quantity = product.quantity || 1
         if (quantity < 1 || !Number.isInteger(quantity)) {
           logger.warn(
-            `⚠️ Invalid quantity for ${product.productCode}: ${quantity}`
+            `⚠️ Invalid quantity for ${product.sku}: ${quantity}`
           )
           skipped++
           details.push({
-            productCode: product.productCode,
+            sku: product.sku,
             success: false,
             message: "Quantità non valida",
           })
@@ -116,7 +116,7 @@ export async function AddProduct(
         const result = await callingFunctionsService.addProductToCart({
           customerId: request.customerId,
           workspaceId: request.workspaceId,
-          productCode: product.productCode,
+          sku: product.sku,
           quantity,
           notes: product.notes,
         })
@@ -129,7 +129,7 @@ export async function AddProduct(
             expiresAt = result.expiresAt
           }
           details.push({
-            productCode: product.productCode,
+            sku: product.sku,
             productName: result.productName,
             success: true,
             message: result.message,
@@ -137,16 +137,16 @@ export async function AddProduct(
         } else {
           skipped++
           details.push({
-            productCode: product.productCode,
+            sku: product.sku,
             success: false,
             message: result.message || result.error,
           })
         }
       } catch (error) {
-        logger.error(`❌ Error adding product ${product.productCode}:`, error)
+        logger.error(`❌ Error adding product ${product.sku}:`, error)
         skipped++
         details.push({
-          productCode: product.productCode,
+          sku: product.sku,
           success: false,
           message:
             error instanceof Error ? error.message : "Errore sconosciuto",

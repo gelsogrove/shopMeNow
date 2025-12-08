@@ -1580,7 +1580,7 @@ export class LLMRouterService {
               ...(updatedMetadata as any),
               filteredProducts: null, // Clear filtered list
               lastSearch: null, // Clear last search metadata
-              // Keep selectedProductCode if user confirmed a product
+              // Keep selectedSku if user confirmed a product
             }
           }
 
@@ -1674,7 +1674,7 @@ export class LLMRouterService {
                 .filter((msg: any) => msg.role !== "system")
                 .slice(-3) // Last 3 messages
 
-              // 🔧 Feature 123: Load product search memory for selectedProductCode
+              // 🔧 Feature 123: Load product search memory for selectedSku
               const sessionId = `${params.workspaceId}-${params.customerId}`
               const searchMemory =
                 await this.searchConversationRepo.findBySessionId(
@@ -1682,16 +1682,16 @@ export class LLMRouterService {
                   params.workspaceId
                 )
 
-              const selectedProductCode =
-                searchMemory?.metadata?.selectedProductCode
+              const selectedSku =
+                searchMemory?.metadata?.selectedSku
 
-              if (selectedProductCode) {
-                logger.info(`📦 Found selectedProductCode in search memory`, {
-                  selectedProductCode,
+              if (selectedSku) {
+                logger.info(`📦 Found selectedSku in search memory`, {
+                  selectedSku,
                   productName: searchMemory?.metadata?.productName,
                 })
               } else {
-                logger.warn(`⚠️ No selectedProductCode in search memory`, {
+                logger.warn(`⚠️ No selectedSku in search memory`, {
                   hasSearchMemory: !!searchMemory,
                   metadata: searchMemory?.metadata,
                 })
@@ -1713,7 +1713,7 @@ export class LLMRouterService {
                 customerDiscount, // 🔧 Pass discount for price calculations
                 query: delegationQuery,
                 conversationHistory: recentHistory, // ✅ Pass conversation context
-                selectedProductCode, // 🔧 Feature 123: Pass product code from search memory
+                selectedSku, // 🔧 Feature 123: Pass product code from search memory
               })
               break
             }
@@ -2639,7 +2639,7 @@ export class LLMRouterService {
    * Handle delegation handoff from one agent to another
    * Example: ProductSearch → "🛒 DELEGATE_TO_CART: add" → Cart
    *
-   * CRITICAL: ALWAYS reads product code from metadata.selectedProductCode,
+   * CRITICAL: ALWAYS reads product code from metadata.selectedSku,
    * NEVER trusts LLM-generated code in response (can be stale/wrong)
    */
   private async handleDelegationHandoff(
@@ -2655,27 +2655,27 @@ export class LLMRouterService {
 
     try {
       // � ALWAYS read product code from metadata (source of truth)
-      // ProductSearchAgent saves selectedProductCode after user picks from list
+      // ProductSearchAgent saves selectedSku after user picks from list
       const conversation = await this.prisma.searchConversations.findUnique({
         where: { sessionId: options.params.conversationId },
         select: { metadata: true },
       })
 
       const metadata = conversation?.metadata as any
-      const selectedProductCode = metadata?.selectedProductCode
+      const selectedSku = metadata?.selectedSku
 
-      if (!selectedProductCode) {
+      if (!selectedSku) {
         logger.error(
-          "❌ No selectedProductCode in metadata for cart delegation"
+          "❌ No selectedSku in metadata for cart delegation"
         )
         throw new Error(
           "Product code not found - user must select product first"
         )
       }
 
-      const cartQuery = `add ${selectedProductCode}`
+      const cartQuery = `add ${selectedSku}`
       logger.info(
-        `🔀 HANDOFF: ${options.activeAgent} → CART_MANAGEMENT (product: ${selectedProductCode})`
+        `🔀 HANDOFF: ${options.activeAgent} → CART_MANAGEMENT (product: ${selectedSku})`
       )
 
       // Update activeAgent in SearchConversations

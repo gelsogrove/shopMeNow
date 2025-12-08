@@ -358,7 +358,7 @@ router.get(
         id: item.id,
         itemType: item.itemType,
         name: item.product?.name || item.service?.name || "Unknown Item",
-        code: item.product?.productCode || item.service?.code || null,
+        code: item.product?.sku || item.service?.code || null,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         totalPrice: item.totalPrice,
@@ -729,7 +729,7 @@ router.post(
         select: {
           id: true,
           name: true,
-          productCode: true,
+          sku: true,
           description: true,
           price: true,
           stock: true,
@@ -767,7 +767,7 @@ router.post(
         return {
           id: product.id,
           name: product.name,
-          productCode: product.productCode,
+          sku: product.sku,
           description: product.description,
           formato: product.formato || null,
           price: originalPrice,
@@ -854,7 +854,7 @@ router.get(
               product: {
                 select: {
                   name: true,
-                  productCode: true,
+                  sku: true,
                 },
               },
               service: {
@@ -907,7 +907,7 @@ router.get(
         id: item.id,
         itemType: item.itemType,
         name: item.product?.name || item.service?.name || "Unknown Item",
-        code: item.product?.productCode || item.service?.code || null,
+        code: item.product?.sku || item.service?.code || null,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         totalPrice: item.totalPrice,

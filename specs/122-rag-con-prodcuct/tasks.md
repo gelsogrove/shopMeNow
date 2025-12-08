@@ -82,7 +82,7 @@
 - [x] T001 [P] [US6] Add getLastOrderVariable() method to backend/src/services/prompt-processor.service.ts
 
   - Query orders.findFirst(customerId, workspaceId, status: 'DELIVERED', orderBy createdAt DESC)
-  - Format order summary in Italian: "Ultimo ordine: {code} del {date}\nProdotti ordinati:\n- {productCode} {name} x{qty} ({price}€ cad.) = {total}€\nTotale ordine: {total}€\nStato: {status}"
+  - Format order summary in Italian: "Ultimo ordine: {code} del {date}\nProdotti ordinati:\n- {sku} {name} x{qty} ({price}€ cad.) = {total}€\nTotale ordine: {total}€\nStato: {status}"
   - Return "Nessun ordine precedente disponibile." if no orders found
   - Include error handling with logger.error()
 

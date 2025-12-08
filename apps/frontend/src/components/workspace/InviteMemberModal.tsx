@@ -95,7 +95,7 @@ export function InviteMemberModal({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} autoComplete="off">
+        <form onSubmit={handleSubmit} autoComplete="off" data-lpignore="true" data-form-type="other">
           <div className="space-y-4 py-4">
             {/* Name fields */}
             <div className="grid grid-cols-2 gap-3">
@@ -108,7 +108,9 @@ export function InviteMemberModal({
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   disabled={isLoading}
-                  autoComplete="off"
+                  autoComplete="new-password"
+                  data-lpignore="true"
+                  data-form-type="other"
                 />
               </div>
               <div className="space-y-2">
@@ -120,7 +122,9 @@ export function InviteMemberModal({
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   disabled={isLoading}
-                  autoComplete="off"
+                  autoComplete="new-password"
+                  data-lpignore="true"
+                  data-form-type="other"
                 />
               </div>
             </div>
@@ -137,7 +141,9 @@ export function InviteMemberModal({
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isLoading}
                 autoFocus
-                autoComplete="off"
+                autoComplete="new-password"
+                data-lpignore="true"
+                data-form-type="other"
               />
               {error && (
                 <p className="text-sm text-red-600">{error}</p>

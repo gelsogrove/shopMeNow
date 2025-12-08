@@ -61,7 +61,7 @@ const storage = multer.diskStorage({
   filename: (req, file, cb) => {
     // Get code from body or params (ensure it's a string)
     const code =
-      req.body.ProductCode ||
+      req.body.Sku ||
       req.body.code ||
       req.body.companyName || // For suppliers
       req.params.code ||

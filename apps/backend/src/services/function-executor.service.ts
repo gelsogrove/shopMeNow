@@ -596,11 +596,11 @@ export class FunctionExecutor {
         break
 
       case "removeFromCart":
-        // Now uses productCode/productName instead of cartItemId
-        if (!args.cartItemId && !args.productCode && !args.productName) {
+        // Now uses sku/productName instead of cartItemId
+        if (!args.cartItemId && !args.sku && !args.productName) {
           return {
             valid: false,
-            error: `removeFromCart requires 'productCode' or 'productName'`,
+            error: `removeFromCart requires 'sku' or 'productName'`,
           }
         }
         break
@@ -613,11 +613,11 @@ export class FunctionExecutor {
             error: `${functionName} requires 'newQuantity' >= 0`,
           }
         }
-        // Allow productCode/productName or cartItemId
-        if (!args.cartItemId && !args.productCode && !args.productName) {
+        // Allow sku/productName or cartItemId
+        if (!args.cartItemId && !args.sku && !args.productName) {
           return {
             valid: false,
-            error: `${functionName} requires 'productCode', 'productName', or 'cartItemId'`,
+            error: `${functionName} requires 'sku', 'productName', or 'cartItemId'`,
           }
         }
         break

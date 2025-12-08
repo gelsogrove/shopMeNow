@@ -1,10 +1,24 @@
 import { Router } from "express"
+import multer from "multer"
 import logger from "../../../utils/logger"
 import { ProductController } from "../controllers/product.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"
 import { checkPlanLimits } from "../middlewares/billing.middleware"
 import { handleUploadError, uploadImage } from "../middlewares/uploadMiddleware"
 import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
+
+// Multer config for CSV upload (memory storage)
+const csvUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === "text/csv" || file.originalname.endsWith(".csv")) {
+      cb(null, true)
+    } else {
+      cb(new Error("Only CSV files are allowed"))
+    }
+  },
+})
 
 /**
  * @swagger
@@ -165,6 +179,97 @@ export default function setupProductRoutes(): Router {
    */
   // @ts-ignore
   router.get("/", productController.getAllProducts)
+
+  /**
+   * @swagger
+   * /api/workspaces/{workspaceId}/products/export:
+   *   get:
+   *     summary: Export all products to CSV
+   *     tags: [Products]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: workspaceId
+   *         schema:
+   *           type: string
+   *         required: true
+   *         description: The workspace ID
+   *     responses:
+   *       200:
+   *         description: CSV file with all products
+   *         content:
+   *           text/csv:
+   *             schema:
+   *               type: string
+   *       401:
+   *         description: Unauthorized
+   */
+  // @ts-ignore
+  router.get("/export", productController.exportProductsCsv)
+
+  /**
+   * @swagger
+   * /api/workspaces/{workspaceId}/products/import:
+   *   post:
+   *     summary: Import products from CSV
+   *     description: Upsert products - creates new or updates existing by SKU. Uses supplierName and categoryName with lookup.
+   *     tags: [Products]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: workspaceId
+   *         schema:
+   *           type: string
+   *         required: true
+   *         description: The workspace ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               file:
+   *                 type: string
+   *                 format: binary
+   *                 description: CSV file to import
+   *     responses:
+   *       200:
+   *         description: Import results
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                 results:
+   *                   type: object
+   *                   properties:
+   *                     created:
+   *                       type: integer
+   *                     updated:
+   *                       type: integer
+   *                     errors:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           row:
+   *                             type: integer
+   *                           sku:
+   *                             type: string
+   *                           error:
+   *                             type: string
+   *       400:
+   *         description: Invalid CSV or missing file
+   *       401:
+   *         description: Unauthorized
+   */
+  // @ts-ignore
+  router.post("/import", csvUpload.single("file"), productController.importProductsCsv)
 
   /**
    * @swagger

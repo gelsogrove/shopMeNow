@@ -13,7 +13,7 @@ export interface ProductWithPrice {
   price: number
   categoryId?: string | null
   formato?: string | null
-  ProductCode?: string | null
+  Sku?: string | null
   description?: string | null
   stock?: number
   sku?: string | null
@@ -200,7 +200,7 @@ export class PriceCalculationService {
         price: true,
         categoryId: true,
         formato: true,
-        productCode: true,
+        sku: true,
         description: true,
         stock: true,
         // sku: true // REMOVED: field no longer exists

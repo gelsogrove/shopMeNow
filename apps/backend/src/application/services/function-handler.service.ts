@@ -32,7 +32,7 @@ interface ProductOption {
   name: string
   price: number
   stock: number
-  productCode: string
+  sku: string
   index: number
   // 🆕 ADDITIONAL FIELDS FOR DISAMBIGUATION
   category?: string
@@ -532,7 +532,7 @@ export class FunctionHandlerService {
               product: {
                 select: {
                   name: true,
-                  productCode: true,
+                  sku: true,
                 },
               },
               service: {
@@ -558,7 +558,7 @@ export class FunctionHandlerService {
       const orderItems = order.items.map((item, idx) => {
         // Get name from product or service relation
         const itemName = item.product?.name || item.service?.name || "Prodotto"
-        const itemCode = item.product?.productCode || item.service?.code || null
+        const itemCode = item.product?.sku || item.service?.code || null
         
         return {
           index: idx + 1,
@@ -566,7 +566,7 @@ export class FunctionHandlerService {
           quantity: item.quantity || 1,
           price: item.unitPrice || 0,
           totalPrice: item.totalPrice || (item.quantity || 1) * (item.unitPrice || 0),
-          productCode: itemCode,
+          sku: itemCode,
           type: item.itemType || "PRODUCT",
         }
       })
@@ -720,7 +720,7 @@ export class FunctionHandlerService {
           price: product.price,
           description: product.description,
           stock: product.stock,
-          productCode: product.productCode,
+          sku: product.sku,
         })),
         query,
         totalFound: products.length,
@@ -901,8 +901,8 @@ export class FunctionHandlerService {
       )
 
       // Validazione parametri
-      if (!params.productCode || !customer?.id) {
-        logger.error("❌ Missing productCode or customerId")
+      if (!params.sku || !customer?.id) {
+        logger.error("❌ Missing sku or customerId")
         return {
           success: false,
           error: "Parametri richiesti mancanti",
@@ -918,7 +918,7 @@ export class FunctionHandlerService {
       const result = await AddProduct({
         customerId: customer.id,
         workspaceId: workspaceId,
-        productCode: params.productCode,
+        sku: params.sku,
         quantity: params.quantity || 1,
         notes: params.notes,
       })

@@ -3,8 +3,8 @@
  *
  * Tests for LLM-based cart operations including:
  * 1. addItemToCart - Add items to cart (renamed from addToCart)
- * 2. updateCartItem - Update quantity by productCode or productName
- * 3. removeFromCart - Remove item by productCode or productName
+ * 2. updateCartItem - Update quantity by sku or productName
+ * 3. removeFromCart - Remove item by sku or productName
  * 4. viewCart - View formatted cart
  * 5. clearCart - Clear all items
  * 6. formatCartResponse - Internal formatting for WhatsApp display
@@ -188,27 +188,27 @@ describe("CartManagementAgentLLM", () => {
       expect(addItemToCart.parameters.required).toContain("items")
     })
 
-    it("removeFromCart should use productCode or productName (not cartItemId)", () => {
+    it("removeFromCart should use sku or productName (not cartItemId)", () => {
       const getFunctions = (agent as any).getCartManagementFunctions.bind(agent)
       const functions = getFunctions()
 
       const removeFromCart = functions.find((f: any) => f.name === "removeFromCart")
 
       expect(removeFromCart).toBeDefined()
-      expect(removeFromCart.parameters.properties.productCode).toBeDefined()
+      expect(removeFromCart.parameters.properties.sku).toBeDefined()
       expect(removeFromCart.parameters.properties.productName).toBeDefined()
       // Should NOT have cartItemId - customers don't know internal IDs
       expect(removeFromCart.parameters.properties.cartItemId).toBeUndefined()
     })
 
-    it("updateCartItem should use productCode or productName with newQuantity", () => {
+    it("updateCartItem should use sku or productName with newQuantity", () => {
       const getFunctions = (agent as any).getCartManagementFunctions.bind(agent)
       const functions = getFunctions()
 
       const updateCartItem = functions.find((f: any) => f.name === "updateCartItem")
 
       expect(updateCartItem).toBeDefined()
-      expect(updateCartItem.parameters.properties.productCode).toBeDefined()
+      expect(updateCartItem.parameters.properties.sku).toBeDefined()
       expect(updateCartItem.parameters.properties.productName).toBeDefined()
       expect(updateCartItem.parameters.properties.newQuantity).toBeDefined()
       expect(updateCartItem.parameters.required).toContain("newQuantity")
@@ -283,10 +283,10 @@ describe("CartManagementAgentLLM - Function Definitions", () => {
 
     const removeFromCart = functions.find((f: any) => f.name === "removeFromCart")
 
-    // Either productCode OR productName can be used
+    // Either sku OR productName can be used
     expect(removeFromCart.parameters.required).toEqual([])
     // But at least one should be provided (handled by LLM)
-    expect(removeFromCart.parameters.properties.productCode.type).toBe("string")
+    expect(removeFromCart.parameters.properties.sku.type).toBe("string")
     expect(removeFromCart.parameters.properties.productName.type).toBe("string")
   })
 

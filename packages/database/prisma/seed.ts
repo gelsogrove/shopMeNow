@@ -521,7 +521,7 @@ async function main() {
     const product = await prisma.products.create({
       data: {
         name: prod.name,
-        productCode: prod.ProductCode || `PROD-${Date.now()}`,
+        sku: prod.ProductCode || `PROD-${Date.now()}`,
         description: prod.description,
         formato: prod.formato,
         price: prod.price,
@@ -1854,7 +1854,8 @@ async function main() {
   // Create initial billing transaction for FREE_TRIAL credit
   await prisma.billingTransaction.create({
     data: {
-      workspaceId: workspace.id,
+      workspace: { connect: { id: workspace.id } },
+      user: { connect: { id: adminUser.id } },
       type: "INITIAL_CREDIT",
       amount: 19.00,
       balanceAfter: 19.00,

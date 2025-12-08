@@ -48,7 +48,7 @@ export interface CartLLMContext {
   customerDiscount?: number // Customer's discount percentage (e.g., 10 for 10%)
   query: string
   conversationHistory?: Array<{ role: string; content: string }> // Last 2-3 messages for context
-  selectedProductCode?: string // Feature 123: Product code from search memory
+  selectedSku?: string // Feature 123: Product code from search memory
 }
 
 export interface CartLLMResponse {
@@ -141,23 +141,23 @@ export class CartManagementAgentLLM {
         },
       ]
 
-      // 🔧 Feature 123: If we have selectedProductCode from search, inject it
-      if (context.selectedProductCode) {
+      // 🔧 Feature 123: If we have selectedSku from search, inject it
+      if (context.selectedSku) {
         messages.push({
           role: "system" as const,
           content: `⚠️ IMPORTANT: The user just selected a product from the catalog.
-Product Code: ${context.selectedProductCode}
+Product Code: ${context.selectedSku}
 
 When the user says "yes" or "sì" or confirms they want to add the product to cart, 
-you MUST call addToCart() with this EXACT product code: "${context.selectedProductCode}"
+you MUST call addToCart() with this EXACT product code: "${context.selectedSku}"
 
 DO NOT use product names - ALWAYS use the product code provided above.`,
         })
 
         logger.info(
-          `📦 Injected selectedProductCode into CartManagementAgent`,
+          `📦 Injected selectedSku into CartManagementAgent`,
           {
-            selectedProductCode: context.selectedProductCode,
+            selectedSku: context.selectedSku,
           }
         )
       }
@@ -490,7 +490,7 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
         }
 
         case "removeFromCart": {
-          // Find item in cart by productCode or productName
+          // Find item in cart by sku or productName
           const cart = await this.cartManagementAgent.getCart(agentContext)
           if (cart.isEmpty) {
             return { success: false, error: "Cart is empty", formattedCart: "🛒 Il tuo carrello è vuoto." }
@@ -502,7 +502,7 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
             if (!product) return false
             
             // Match by code
-            if (args.productCode && (product.productCode === args.productCode || product.serviceCode === args.productCode)) {
+            if (args.sku && (product.sku === args.sku || product.serviceCode === args.sku)) {
               return true
             }
             // Match by name (case-insensitive partial match)
@@ -515,7 +515,7 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
           if (!itemToRemove) {
             return { 
               success: false, 
-              error: `Product "${args.productName || args.productCode}" not found in cart`,
+              error: `Product "${args.productName || args.sku}" not found in cart`,
               ...this.formatCartResponse(cart)
             }
           }
@@ -534,7 +534,7 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
 
         case "updateCartItem":
         case "updateCartQuantity": {
-          // Find item in cart by productCode or productName
+          // Find item in cart by sku or productName
           const cart = await this.cartManagementAgent.getCart(agentContext)
           if (cart.isEmpty) {
             return { success: false, error: "Cart is empty", formattedCart: "🛒 Il tuo carrello è vuoto." }
@@ -546,7 +546,7 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
             if (!product) return false
             
             // Match by code
-            if (args.productCode && (product.productCode === args.productCode || product.serviceCode === args.productCode)) {
+            if (args.sku && (product.sku === args.sku || product.serviceCode === args.sku)) {
               return true
             }
             // Match by name (case-insensitive partial match)
@@ -559,7 +559,7 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
           if (!itemToUpdate) {
             return { 
               success: false, 
-              error: `Product "${args.productName || args.productCode}" not found in cart`,
+              error: `Product "${args.productName || args.sku}" not found in cart`,
               ...this.formatCartResponse(cart)
             }
           }
@@ -790,7 +790,7 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
         parameters: {
           type: "object",
           properties: {
-            productCode: {
+            sku: {
               type: "string",
               description: "Product or service code to remove (e.g., 'BUR-001')",
             },
@@ -808,7 +808,7 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
         parameters: {
           type: "object",
           properties: {
-            productCode: {
+            sku: {
               type: "string",
               description: "Product or service code to update (e.g., 'BUR-001')",
             },

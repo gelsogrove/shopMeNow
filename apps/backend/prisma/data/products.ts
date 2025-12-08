@@ -6,7 +6,7 @@
 
 export interface ProductData {
   name: string
-  ProductCode?: string
+  Sku?: string
   description: string
   formato: string
   price: number
@@ -23,7 +23,7 @@ export interface ProductData {
 export const products: ProductData[] = [
   {
     name: "Spaghetti di Gragnano IGP",
-    ProductCode: "PASTA-001",
+    Sku: "PASTA-001",
     description:
       "Traditional bronze-drawn spaghetti from Gragnano, featuring a rough texture that holds sauce perfectly. Made with 100% Italian durum wheat semolina and mountain spring water.",
     formato: "500g",
@@ -38,7 +38,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Penne Rigate1",
-    ProductCode: "PASTA-002",
+    Sku: "PASTA-002",
     description:
       "Classic ridged penne pasta with a firm al dente texture. The diagonal cut and ridges make it ideal for capturing chunky sauces and ragù.",
     formato: "500g",
@@ -51,7 +51,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Orecchiette Pugliesi",
-    ProductCode: "PASTA-003",
+    Sku: "PASTA-003",
     description:
       "Small ear-shaped pasta from Puglia, traditionally served with cime di rapa. The concave shape holds vegetables and sauce in every bite.",
     formato: "500g",
@@ -65,7 +65,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Fusilli Lunghi",
-    ProductCode: "PASTA-004",
+    Sku: "PASTA-004",
     description:
       "Long spiral pasta that wraps around creamy sauces beautifully. A Southern Italian specialty perfect for pesto and seafood dishes.",
     formato: "500g",
@@ -78,7 +78,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Paccheri Napoletani",
-    ProductCode: "PASTA-005",
+    Sku: "PASTA-005",
     description:
       "Large tube pasta from Naples, perfect for stuffing or serving with thick, hearty sauces. Traditional partner for seafood ragù.",
     formato: "500g",
@@ -94,7 +94,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Prosciutto di Parma DOP",
-    ProductCode: "SALUMI-001",
+    Sku: "SALUMI-001",
     description:
       "18-month aged Parma ham with sweet, delicate flavor. Hand-sliced to order, revealing marbled pink meat with a buttery texture. Protected Designation of Origin certified.",
     formato: "100g",
@@ -110,7 +110,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Mortadella Bologna IGP",
-    ProductCode: "SALUMI-002",
+    Sku: "SALUMI-002",
     description:
       "Authentic Bologna mortadella with pistachios, featuring a smooth texture and aromatic spice blend. A cornerstone of Italian charcuterie boards.",
     formato: "200g",
@@ -125,7 +125,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Speck Alto Adige IGP",
-    ProductCode: "SALUMI-003",
+    Sku: "SALUMI-003",
     description:
       "Smoked cured ham from Alto Adige with juniper and mountain herbs. Lightly smoked for a distinctive alpine flavor, sliced paper-thin.",
     formato: "100g",
@@ -141,7 +141,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Salame Milano",
-    ProductCode: "SALUMI-004",
+    Sku: "SALUMI-004",
     description:
       "Classic Milanese salami with fine grain and subtle garlic notes. Made from select pork cuts, aged to perfection with a delicate, refined taste.",
     formato: "200g",
@@ -156,7 +156,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Bresaola della Valtellina IGP",
-    ProductCode: "SALUMI-005",
+    Sku: "SALUMI-005",
     description:
       "Air-dried beef from Valtellina, lean and intensely flavored. Aged in mountain air for 2-3 months, resulting in a deep burgundy color and delicate taste.",
     formato: "80g",
@@ -171,7 +171,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Coppa di Parma",
-    ProductCode: "SALUMI-006",
+    Sku: "SALUMI-006",
     description:
       "Cured pork shoulder collar with marbled fat, sweet and slightly spicy. Aged for 90 days, offering a melt-in-mouth texture.",
     formato: "100g",
@@ -186,7 +186,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Gorgonzola Dolce DOP",
-    ProductCode: "FORMAG-001",
+    Sku: "FORMAG-001",
     description:
       "Creamy sweet gorgonzola with delicate blue veining. Soft and spreadable, perfect for risotto or paired with honey and walnuts.",
     formato: "200g",
@@ -202,7 +202,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Parmigiano Reggiano DOP 24 mesi",
-    ProductCode: "FORMAG-002",
+    Sku: "FORMAG-002",
     description:
       "24-month aged Parmigiano Reggiano with crystalline texture and complex nutty flavor. Made from raw cow's milk in traditional copper vats.",
     formato: "250g",
@@ -218,7 +218,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Mozzarella di Bufala Campana DOP",
-    ProductCode: "FORMAG-003",
+    Sku: "FORMAG-003",
     description:
       "Fresh buffalo milk mozzarella from Campania, porcelain-white with a creamy interior. Milky-sweet flavor with a slight tang.",
     formato: "250g",
@@ -234,7 +234,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Pecorino Romano DOP",
-    ProductCode: "FORMAG-004",
+    Sku: "FORMAG-004",
     description:
       "Hard sheep's milk cheese aged 8 months, sharp and salty. Essential for authentic Cacio e Pepe and Carbonara, grated fresh to order.",
     formato: "200g",
@@ -250,7 +250,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Taleggio DOP",
-    ProductCode: "FORMAG-005",
+    Sku: "FORMAG-005",
     description:
       "Soft-washed rind cheese from Lombardy with a fruity, tangy flavor. Creamy interior becomes runny when ripe, perfect for melting.",
     formato: "200g",
@@ -265,7 +265,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Provolone Piccante",
-    ProductCode: "FORMAG-006",
+    Sku: "FORMAG-006",
     description:
       "Aged sharp provolone with a firm texture and bold flavor. Ideal for grating over pasta or enjoying with crusty bread and wine.",
     formato: "300g",
@@ -279,7 +279,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Burrata Pugliese",
-    ProductCode: "FORMAG-007",
+    Sku: "FORMAG-007",
     description:
       "Fresh cow's milk cheese with a solid mozzarella exterior and creamy stracciatella center. Best enjoyed within 48 hours of production.",
     formato: "200g",
@@ -293,7 +293,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Olio Extravergine di Oliva Toscano IGP",
-    ProductCode: "COND-001",
+    Sku: "COND-001",
     description:
       "Extra virgin olive oil from Tuscan hills with peppery finish and fruity notes. Cold-pressed from Frantoio and Leccino olives, ideal for finishing dishes.",
     formato: "500ml",
@@ -308,7 +308,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Aceto Balsamico di Modena IGP",
-    ProductCode: "COND-002",
+    Sku: "COND-002",
     description:
       "Aged balsamic vinegar from Modena with sweet-tart complexity. Perfect for dressings, marinades, or drizzled over strawberries and gelato.",
     formato: "250ml",
@@ -322,7 +322,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Pesto Genovese DOP",
-    ProductCode: "COND-003",
+    Sku: "COND-003",
     description:
       "Traditional Genoese pesto with PDO Ligurian basil, pine nuts, Parmigiano, and Ligurian olive oil. Fresh, vibrant flavor for pasta and bruschetta.",
     formato: "180g",
@@ -336,7 +336,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Tartufo Nero Estivo",
-    ProductCode: "COND-005",
+    Sku: "COND-005",
     description:
       "Summer black truffle slices preserved in olive oil. Earthy, aromatic, ideal for elevating pasta, risotto, and egg dishes.",
     formato: "80g",
@@ -350,7 +350,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Passata di Pomodoro San Marzano DOP",
-    ProductCode: "COND-004",
+    Sku: "COND-004",
     description:
       "Premium tomato passata made from San Marzano tomatoes grown in volcanic soil. Sweet, low-acid, perfect base for authentic Neapolitan pizza sauce.",
     formato: "700g",
@@ -363,7 +363,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Crema di Pistacchio di Bronte",
-    ProductCode: "COND-006",
+    Sku: "COND-006",
     description:
       "Pure pistachio cream from Bronte, Sicily, made with DOP pistachios. Rich, intense flavor perfect for spreading on bread or swirling into gelato.",
     formato: "200g",
@@ -376,7 +376,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Panettone Classico",
-    ProductCode: "DOLCI-001",
+    Sku: "DOLCI-001",
     description:
       "Traditional Milanese Christmas cake with candied fruits and raisins. Naturally leavened for 72 hours, resulting in a light, fluffy texture.",
     formato: "1kg",
@@ -390,7 +390,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Amaretti di Saronno",
-    ProductCode: "DOLCI-002",
+    Sku: "DOLCI-002",
     description:
       "Classic almond amaretti cookies from Saronno, crisp exterior with a soft, chewy center. Made with sweet and bitter almonds for depth of flavor.",
     formato: "250g",
@@ -403,7 +403,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Cantuccini Toscani",
-    ProductCode: "DOLCI-003",
+    Sku: "DOLCI-003",
     description:
       "Tuscan almond biscotti, twice-baked for a satisfying crunch. Traditionally dunked in Vin Santo, perfect with espresso or dessert wine.",
     formato: "300g",
@@ -416,7 +416,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Torrone di Cremona IGP",
-    ProductCode: "DOLCI-004",
+    Sku: "DOLCI-004",
     description:
       "Traditional nougat from Cremona with honey, egg whites, and toasted almonds. Chewy texture with a delicate sweetness, a Christmas staple.",
     formato: "200g",
@@ -429,7 +429,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Pandoro Veronese",
-    ProductCode: "DOLCI-005",
+    Sku: "DOLCI-005",
     description:
       "Star-shaped Christmas cake from Verona with a golden, buttery crumb. Dusted with vanilla-scented powdered sugar, lighter than panettone.",
     formato: "750g",
@@ -442,7 +442,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Limoncello di Sorrento IGP",
-    ProductCode: "BEV-LIM-001",
+    Sku: "BEV-LIM-001",
     description:
       "Traditional lemon liqueur from Sorrento peninsula, made with Femminello Sorrentino lemons. Bright, zesty, served ice-cold as a digestivo.",
     formato: "500ml",
@@ -456,7 +456,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Chianti Classico DOCG",
-    ProductCode: "BEV-CHI-001",
+    Sku: "BEV-CHI-001",
     description:
       "Classic Tuscan red wine with Sangiovese grapes, featuring cherry and violet notes. Medium-bodied with balanced tannins, pairs beautifully with pasta and grilled meats.",
     formato: "750ml",
@@ -470,7 +470,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Prosecco Valdobbiadene DOCG",
-    ProductCode: "BEV-PRO-001",
+    Sku: "BEV-PRO-001",
     description:
       "Premium sparkling wine from Veneto hills with delicate bubbles and floral aroma. Crisp, refreshing, perfect for aperitivo or celebrations.",
     formato: "750ml",
@@ -484,7 +484,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Caffè Espresso Napoletano",
-    ProductCode: "BEV-CAF-001",
+    Sku: "BEV-CAF-001",
     description:
       "Neapolitan espresso blend with full body and rich crema. Dark roasted for intense flavor, perfect for moka pot or espresso machine.",
     formato: "250g",
@@ -497,7 +497,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Nduja Calabrese",
-    ProductCode: "SPEC-NDU-001",
+    Sku: "SPEC-NDU-001",
     description:
       "Spicy spreadable salami from Calabria with Calabrian chili peppers. Intense heat and deep pork flavor, perfect for pasta, pizza, or bruschetta.",
     formato: "180g",
@@ -511,7 +511,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Colatura di Alici di Cetara",
-    ProductCode: "SPEC-COL-001",
+    Sku: "SPEC-COL-001",
     description:
       "Ancient anchovy essence from Cetara, aged in chestnut barrels. Umami-rich, use sparingly to add depth to pasta, vegetables, and sauces.",
     formato: "100ml",
@@ -524,7 +524,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Bottarga di Muggine Sarda",
-    ProductCode: "SPEC-BOT-001",
+    Sku: "SPEC-BOT-001",
     description:
       "Cured mullet roe from Sardinia, hand-salted and sun-dried. Grated over pasta or shaved on salads for a briny, oceanic flavor.",
     formato: "80g",
@@ -537,7 +537,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Miele di Acacia Italiano",
-    ProductCode: "SPEC-MIE-001",
+    Sku: "SPEC-MIE-001",
     description:
       "Delicate acacia honey with a light, floral sweetness. Crystal-clear and slow to crystallize, ideal for tea, cheese pairings, and baking.",
     formato: "400g",
@@ -550,7 +550,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Farro Perlato dell'Umbria",
-    ProductCode: "SPEC-FAR-001",
+    Sku: "SPEC-FAR-001",
     description:
       "Pearled Umbrian spelt, an ancient grain with nutty flavor and chewy texture. Perfect for soups, salads, and as a risotto alternative.",
     formato: "500g",
@@ -564,7 +564,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Carciofi Sottolio",
-    ProductCode: "PRES-CAR-001",
+    Sku: "PRES-CAR-001",
     description:
       "Baby artichokes preserved in extra virgin olive oil with herbs. Tender, flavorful, ready to serve on antipasti platters or with cheese.",
     formato: "280g",
@@ -577,7 +577,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Pomodori Secchi Sottolio",
-    ProductCode: "PRES-POM-001",
+    Sku: "PRES-POM-001",
     description:
       "Sun-dried tomatoes in olive oil with garlic and oregano. Intensely sweet and umami-rich, perfect for pasta, focaccia, and sandwiches.",
     formato: "280g",
@@ -590,7 +590,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Olive Taggiasche",
-    ProductCode: "PRES-OLI-001",
+    Sku: "PRES-OLI-001",
     description:
       "Small Ligurian olives with delicate, fruity flavor. Marinated in Ligurian olive oil, ideal for salads, pizzas, or enjoyed as a snack.",
     formato: "300g",
@@ -603,7 +603,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Peperoni Arrostiti",
-    ProductCode: "PRES-PEP-001",
+    Sku: "PRES-PEP-001",
     description:
       "Flame-roasted bell peppers peeled and preserved in olive oil. Sweet, smoky, perfect for bruschetta, panini, or as a colorful side.",
     formato: "280g",
@@ -616,7 +616,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Funghi Porcini Sottolio",
-    ProductCode: "PRES-FUN-001",
+    Sku: "PRES-FUN-001",
     description:
       "Sliced porcini mushrooms preserved in olive oil with parsley and garlic. Earthy, meaty texture, ready to toss with pasta or risotto.",
     formato: "280g",
@@ -629,7 +629,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Giardiniera all'Aceto",
-    ProductCode: "PRES-GIA-001",
+    Sku: "PRES-GIA-001",
     description:
       "Mixed pickled vegetables with cauliflower, carrots, peppers, and onions. Crunchy and tangy, a classic Italian table condiment.",
     formato: "280g",
@@ -642,7 +642,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Carciofi alla Romana Surgelati",
-    ProductCode: "FROZ-CAR-001",
+    Sku: "FROZ-CAR-001",
     description:
       "Roman-style artichokes, pre-cooked with garlic, mint and extra virgin olive oil. Flash-frozen to preserve authentic flavor. Ready to heat and serve.",
     formato: "400g",
@@ -656,7 +656,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Supplì al Telefono Surgelati",
-    ProductCode: "FROZ-SUP-001",
+    Sku: "FROZ-SUP-001",
     description:
       "Classic Roman rice croquettes with tomato sauce and mozzarella center. Breaded and ready to fry. When you bite, the mozzarella stretches like a telephone cord!",
     formato: "6 pezzi (450g)",
@@ -669,7 +669,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Funghi Porcini Trifolati Surgelati",
-    ProductCode: "FROZ-FUN-001",
+    Sku: "FROZ-FUN-001",
     description:
       "Italian porcini mushrooms sautéed with garlic and parsley, flash-frozen at peak freshness. Perfect for risottos, pasta, or as a side dish. No soaking needed.",
     formato: "300g",
@@ -682,7 +682,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Tortellini Bolognesi Surgelati",
-    ProductCode: "FROZ-TOR-001",
+    Sku: "FROZ-TOR-001",
     description:
       "Handmade-style tortellini filled with traditional Bolognese meat filling. Frozen to preserve fresh pasta quality. Cook directly from frozen in 3-4 minutes.",
     formato: "500g",
@@ -695,7 +695,7 @@ export const products: ProductData[] = [
   },
   {
     name: "Arancini Siciliani al Ragù Surgelati",
-    ProductCode: "FROZ-ARA-001",
+    Sku: "FROZ-ARA-001",
     description:
       "Authentic Sicilian rice balls with beef ragù, peas and mozzarella. Perfectly breaded and ready to fry. A taste of Sicilian street food tradition at home.",
     formato: "4 pezzi (400g)",

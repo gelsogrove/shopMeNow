@@ -35,8 +35,8 @@ import { productsApi, type Product } from "@/services/productsApi"
 import { supplierApi, type Supplier } from "@/services/supplier"
 import { commonStyles } from "@/styles/common"
 import { getCurrencySymbol } from "@/utils/format"
-import { Award, Package, Pencil, Trash2, Truck } from "lucide-react"
-import React, { useEffect, useState } from "react"
+import { Award, Download, Package, Pencil, Trash2, Truck, Upload } from "lucide-react"
+import React, { useEffect, useRef, useState } from "react"
 
 export function ProductsPage() {
   const { workspace, loading: isWorkspaceLoading } = useWorkspace()
@@ -69,12 +69,17 @@ export function ProductsPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("none")
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>("none")
   const [productIsActive, setProductIsActive] = useState(true)
-  const [productCode, setProductCode] = useState("")
+  const [sku, setSku] = useState("")
   const [imageFiles, setImageFiles] = useState<File[]>([])
   const [currentImageUrls, setCurrentImageUrls] = useState<string[]>([])
   const [reorderedImageUrls, setReorderedImageUrls] = useState<string[] | null>(
     null
   )
+
+  // Import/Export state
+  const [isExporting, setIsExporting] = useState(false)
+  const [isImporting, setIsImporting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Load filters from localStorage or use defaults
   const [filterCategory, setFilterCategory] = useState<string>("all")
@@ -158,7 +163,7 @@ export function ProductsPage() {
         supplierId: selectedProduct.supplierId,
       })
     }
-    // Rimuovo il reset del productCode da qui per evitare conflitti
+    // Rimuovo il reset del sku da qui per evitare conflitti
   }, [selectedProduct, suppliers]) // Also depend on suppliers being loaded
 
   // Filter and sort products
@@ -253,6 +258,70 @@ export function ProductsPage() {
     transportTypes,
   ])
 
+  // Export products to CSV
+  const handleExport = async () => {
+    if (!workspace?.id) return
+    
+    setIsExporting(true)
+    try {
+      const response = await productsApi.exportCsv(workspace.id)
+      
+      // Create blob and download
+      const blob = new Blob([response], { type: "text/csv;charset=utf-8;" })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.setAttribute("download", `products-export-${new Date().toISOString().split("T")[0]}.csv`)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      
+      toast.success("Products exported successfully")
+    } catch (error: any) {
+      logger.error("Failed to export products:", error)
+      toast.error(error.response?.data?.message || "Failed to export products")
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  // Import products from CSV
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!workspace?.id) return
+    
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Reset input so same file can be selected again
+    event.target.value = ""
+
+    setIsImporting(true)
+    try {
+      const result = await productsApi.importCsv(workspace.id, file)
+      
+      // Refresh products list
+      const response = await productsApi.getAll(workspace.id) as any
+      setProducts(response.products || response)
+      
+      // Show results
+      const { created, updated, errors } = result.results
+      if (errors.length > 0) {
+        toast.warning(
+          `Import completed with errors: ${created} created, ${updated} updated, ${errors.length} errors`
+        )
+        logger.warn("Import errors:", errors)
+      } else {
+        toast.success(`Import completed: ${created} created, ${updated} updated`)
+      }
+    } catch (error: any) {
+      logger.error("Failed to import products:", error)
+      toast.error(error.response?.data?.message || "Failed to import products")
+    } finally {
+      setIsImporting(false)
+    }
+  }
+
   const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!workspace?.id) return
@@ -264,7 +333,7 @@ export function ProductsPage() {
     formData.set("isActive", "false")
 
     // Set product code from state
-    formData.set("code", productCode)
+    formData.set("code", sku)
 
     // Send certificationIds array to backend
     formData.set("certificationIds", JSON.stringify(formCertificationIds))
@@ -282,7 +351,7 @@ export function ProductsPage() {
       setShowAddSheet(false)
 
       // Reset form state
-      setProductCode("")
+      setSku("")
       setSelectedCategoryId("none")
       setSelectedSupplierId("none")
       setFormCategoryIds([])
@@ -309,7 +378,7 @@ export function ProductsPage() {
     setSelectedCategoryId(product.categoryId || "none") // DEPRECATED - keep for backward compatibility
     setSelectedSupplierId(product.supplierId || "none")
     setProductIsActive(product.isActive ?? true)
-    setProductCode(product.code || "")
+    setSku(product.code || "")
 
     // Load product's category IDs from productCategories relation (many-to-many)
     // Fallback to categoryId for backward compatibility
@@ -376,7 +445,7 @@ export function ProductsPage() {
     formData.append("existingImageUrls", JSON.stringify(imagesToSend))
 
     // Override form fields with state values (not append, to avoid duplicates)
-    formData.set("code", productCode) // Use .set() instead of .append()
+    formData.set("code", sku) // Use .set() instead of .append()
     formData.set("isActive", productIsActive.toString())
 
     // Send certificationIds array to backend
@@ -417,7 +486,7 @@ export function ProductsPage() {
 
       setShowEditSheet(false)
       setSelectedProduct(null)
-      setProductCode("") // Reset del productCode dopo il submit
+      setSku("") // Reset del sku dopo il submit
       setImageFiles([]) // Reset image files
       setCurrentImageUrls([]) // Reset current image URLs
       setReorderedImageUrls(null) // Reset reordered image URLs
@@ -707,8 +776,8 @@ export function ProductsPage() {
             id="code"
             name="code"
             placeholder="e.g. PROD001"
-            value={productCode}
-            onChange={(e) => setProductCode(e.target.value.toUpperCase())}
+            value={sku}
+            onChange={(e) => setSku(e.target.value.toUpperCase())}
             maxLength={20}
             required
           />
@@ -895,10 +964,10 @@ export function ProductsPage() {
             id="code"
             name="code"
             placeholder="Enter product code (e.g., 00001)"
-            value={productCode}
+            value={sku}
             onChange={(e) => {
               const value = e.target.value.slice(0, 5) // Limita a 5 caratteri
-              setProductCode(value)
+              setSku(value)
             }}
             maxLength={5}
             required
@@ -1134,16 +1203,48 @@ export function ProductsPage() {
             <Package className={commonStyles.headerIcon} />
             <h1 className="text-2xl font-bold text-green-600">Products</h1>
           </div>
-          <Button
-            onClick={() => {
-              setSelectedCategoryId("none")
-              setProductIsActive(true)
-              setProductCode("")
-              setShowAddSheet(true)
-            }}
-          >
-            Add Product
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Hidden file input for CSV import */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImport}
+              accept=".csv"
+              className="hidden"
+            />
+            
+            {/* Export Button */}
+            <Button
+              variant="outline"
+              onClick={handleExport}
+              disabled={isExporting}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              {isExporting ? "Exporting..." : "Export CSV"}
+            </Button>
+            
+            {/* Import Button */}
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isImporting}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              {isImporting ? "Importing..." : "Import CSV"}
+            </Button>
+            
+            {/* Add Product Button */}
+            <Button
+              onClick={() => {
+                setSelectedCategoryId("none")
+                setProductIsActive(true)
+                setSku("")
+                setShowAddSheet(true)
+              }}
+            >
+              Add Product
+            </Button>
+          </div>
         </div>
 
         {/* Filters Row */}
@@ -1155,21 +1256,6 @@ export function ProductsPage() {
             onChange={(e) => setSearchValue(e.target.value)}
             className="max-w-sm"
           />
-
-          {/* Category Filter */}
-          <Select value={filterCategory} onValueChange={setFilterCategory}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="All Categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {categories.map((cat) => (
-                <SelectItem key={cat.id} value={cat.id}>
-                  {cat.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
 
           {/* Sort By */}
           <Select

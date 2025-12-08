@@ -1432,7 +1432,7 @@ export class LLMService {
           return await AddProduct({
             customerId: customer.id,
             workspaceId: workspace.id,
-            products: args.products, // Array of {productCode, quantity, notes}
+            products: args.products, // Array of {sku, quantity, notes}
           })
 
         case "manageNotifications":

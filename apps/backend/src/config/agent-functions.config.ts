@@ -130,14 +130,14 @@ export const PRODUCT_SEARCH_FUNCTIONS: FunctionDefinition[] = [
     function: {
       name: "getProductDetails",
       description:
-        "🔍 PRIORITY 1 - Recupera dettagli completi di un prodotto cercandolo per productCode (priorità) o nome. OBBLIGATORIO chiamarla quando l'utente seleziona un prodotto dalla lista (es: risponde '1', '2', '3'). Ritorna: codice interno (MAI mostrarlo all'utente!), nome, prezzo, stock, descrizione, certificazioni. Il codice interno serve per passare a CartManagementAgent. FLOW: Lista → utente dice '1' → getProductDetails(productCode o nome) → mostra dettagli SENZA codice → chiedi conferma → se 'sì' passa codice a CartManagementAgent.",
+        "🔍 PRIORITY 1 - Recupera dettagli completi di un prodotto cercandolo per sku (priorità) o nome. OBBLIGATORIO chiamarla quando l'utente seleziona un prodotto dalla lista (es: risponde '1', '2', '3'). Ritorna: codice interno (MAI mostrarlo all'utente!), nome, prezzo, stock, descrizione, certificazioni. Il codice interno serve per passare a CartManagementAgent. FLOW: Lista → utente dice '1' → getProductDetails(sku o nome) → mostra dettagli SENZA codice → chiedi conferma → se 'sì' passa codice a CartManagementAgent.",
       parameters: {
         type: "object",
         properties: {
           productName: {
             type: "string",
             description:
-              "Il productCode [es: PARM-500G] o nome del prodotto da cercare. Preferire sempre il codice dalla lista prodotti.",
+              "Il sku [es: PARM-500G] o nome del prodotto da cercare. Preferire sempre il codice dalla lista prodotti.",
           },
           formato: {
             type: "string",

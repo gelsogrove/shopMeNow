@@ -234,7 +234,7 @@ Il link è valido per 24 ore. Dalla pagina ordine potrai scaricare la fattura.
 ### Key Entities
 
 - **Order**: Existing entity - orderCode, status, date, total, customerId, workspaceId, invoiceUrl, ddtUrl, creditNoteUrl
-- **OrderItem**: Existing entity - productCode, productName, quantity, unitPrice, lineTotal
+- **OrderItem**: Existing entity - sku, productName, quantity, unitPrice, lineTotal
 - **Customer**: Existing entity - used for ownership verification
 
 ## Success Criteria _(mandatory)_

@@ -174,17 +174,17 @@ export class ProductRepository implements IProductRepository {
   }
 
   /**
-   * Find product by productCode (e.g., "SALUMI-006")
+   * Find product by sku (e.g., "SALUMI-006")
    * Used by CartManagementAgent to add products to cart
    */
-  async findByProductCode(
-    productCode: string,
+  async findBySku(
+    sku: string,
     workspaceId: string
   ): Promise<Product | null> {
     try {
       const product = await this.prisma.products.findFirst({
         where: {
-          productCode,
+          sku,
           workspaceId,
           isActive: true, // Only active products can be added to cart
         },
@@ -195,14 +195,14 @@ export class ProductRepository implements IProductRepository {
 
       if (!product) {
         logger.warn(
-          `Product not found: ${productCode} in workspace ${workspaceId}`
+          `Product not found: ${sku} in workspace ${workspaceId}`
         )
         return null
       }
 
       return this.mapToDomainEntity(product)
     } catch (error) {
-      logger.error(`Error in findByProductCode for ${productCode}:`, error)
+      logger.error(`Error in findBySku for ${sku}:`, error)
       return null
     }
   }
@@ -235,7 +235,7 @@ export class ProductRepository implements IProductRepository {
       const createdProduct = await this.prisma.products.create({
         data: {
           name: product.name,
-          productCode: product.productCode,
+          sku: product.sku,
           description: product.description,
           formato: product.formato,
           price: product.price,
@@ -266,7 +266,7 @@ export class ProductRepository implements IProductRepository {
     try {
       const updateData: any = {
         name: product.name,
-        productCode: product.productCode,
+        sku: product.sku,
         description: product.description,
         formato: product.formato,
         price: product.price,
@@ -449,17 +449,17 @@ export class ProductRepository implements IProductRepository {
         isActive: true, // Only active products
       }
 
-      // Keywords search (name, productCode, transportType, formato, supplier.companyName)
+      // Keywords search (name, sku, transportType, formato, supplier.companyName)
       // 🔧 CRITICAL: If categoryId is provided, keywords become OPTIONAL (OR)
       // This allows "formaggi?" to match category WITHOUT requiring "formaggi" in product name
       if (filters.keywords && filters.keywords.length > 0) {
         const orConditions: Prisma.ProductsWhereInput[] = []
 
         filters.keywords.forEach((keyword) => {
-          // Search in: name, productCode, transportType, formato, region, supplier companyName (case-insensitive)
+          // Search in: name, sku, transportType, formato, region, supplier companyName (case-insensitive)
           orConditions.push(
             { name: { contains: keyword, mode: "insensitive" } },
-            { productCode: { contains: keyword, mode: "insensitive" } },
+            { sku: { contains: keyword, mode: "insensitive" } },
             { transportType: { contains: keyword, mode: "insensitive" } },
             { formato: { contains: keyword, mode: "insensitive" } },
             { region: { contains: keyword, mode: "insensitive" } },
@@ -730,7 +730,7 @@ export class ProductRepository implements IProductRepository {
     const product = new Product({
       id: data.id,
       name: data.name,
-      productCode: data.productCode,
+      sku: data.sku,
       description: data.description,
       formato: data.formato,
       price: data.price,
