@@ -31,9 +31,24 @@ export interface Workspace {
   challengeStatus?: boolean
   notificationEmail?: string
   webhookUrl?: string
-  businessType?: string
   planType?: string | null
   trialEndsAt?: string | null
+  // Channel Configuration (Feature 199)
+  sellsProducts?: boolean
+  sellsServices?: boolean
+  sellsProductsAndServices?: boolean // 🆕 Unified field
+  hasSalesAgents?: boolean
+  hasSuppliers?: boolean // 🆕 Suppliers menu visibility
+  hasHumanSupport?: boolean
+  humanSupportInstructions?: string
+  operatorContactMethod?: string
+  operatorWhatsappNumber?: string
+  toneOfVoice?: string
+  botIdentityResponse?: string
+  address?: string // 🆕 Physical address for "where are you?" questions
+  customAiRules?: string // 🆕 Custom AI rules that override default behavior
+  allowedExternalLinks?: string[] // 🆕 Security: allowed external domains
+  logoUrl?: string // 🆕 Channel logo/icon
 }
 
 interface WorkspaceContextType {
@@ -65,7 +80,8 @@ export const WorkspaceProvider = ({ children }: WorkspaceProviderProps) => {
       // Initialize from localStorage (shared across tabs)
       try {
         const stored = localStorage.getItem("currentWorkspace")
-        return stored ? JSON.parse(stored) : null
+        const parsed = stored ? JSON.parse(stored) : null
+        return parsed
       } catch (error) {
         return null
       }
@@ -130,18 +146,9 @@ export const WorkspaceProvider = ({ children }: WorkspaceProviderProps) => {
     }
   }, [currentWorkspace])
 
-  // Carica il workspace dal localStorage all'avvio
-  useEffect(() => {
-    const cachedWorkspace = localStorage.getItem("currentWorkspace")
-    if (cachedWorkspace) {
-      try {
-        const workspace = JSON.parse(cachedWorkspace)
-        setCurrentWorkspace(workspace)
-      } catch (error) {
-        logger.error("Error parsing workspace from localStorage:", error)
-      }
-    }
-  }, [])
+  // ❌ REMOVED: This useEffect was causing a race condition!
+  // The workspace is already initialized from localStorage in useState (line 77)
+  // This useEffect was overwriting fresh API data with stale localStorage data
 
   // Aggiorna il workspace quando cambiano i dati
   useEffect(() => {
@@ -151,9 +158,28 @@ export const WorkspaceProvider = ({ children }: WorkspaceProviderProps) => {
   }, [workspaceData, currentWorkspace])
 
   const handleSetCurrentWorkspace = (workspace: Workspace) => {
-    setCurrentWorkspace(workspace)
-    // Salva nel localStorage
+    // 🔍 Check what's currently in localStorage BEFORE we update
+    const beforeUpdate = localStorage.getItem("currentWorkspace")
+    if (beforeUpdate) {
+      const parsed = JSON.parse(beforeUpdate)
+      
+      // 🧹 CRITICAL: Clear chat-related storage when workspace changes
+      // This prevents cross-workspace data contamination
+      if (parsed?.id !== workspace?.id) {
+        logger.info("🧹 Workspace changed! Clearing chat localStorage AND sessionStorage...")
+        localStorage.removeItem("selectedChat")
+        localStorage.removeItem("chatMessages")
+        localStorage.removeItem("chat-list-updated")
+        sessionStorage.removeItem("selectedChatId")  // 🔥 CRITICAL: ChatContext reads this!
+        // Invalidate react-query cache by triggering storage event
+        localStorage.setItem("workspace-changed", Date.now().toString())
+      }
+    }
+    
+    // Salva nel localStorage PRIMA di settare lo state
     localStorage.setItem("currentWorkspace", JSON.stringify(workspace))
+    
+    setCurrentWorkspace(workspace)
   }
 
   const value: WorkspaceContextType = {

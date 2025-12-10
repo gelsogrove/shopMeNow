@@ -37,7 +37,7 @@ export interface ConfirmOrderResult {
 /**
  * Confirms the cart and creates a new order
  */
-export async function ConfirmOrder(
+export async function confirmOrder(
   request: ConfirmOrderRequest
 ): Promise<ConfirmOrderResult> {
   // prisma imported

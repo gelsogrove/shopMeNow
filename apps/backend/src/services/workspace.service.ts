@@ -38,6 +38,15 @@ interface UpdateWorkspaceData {
   url?: string
   welcomeMessage?: string // English only
   allowedExternalLinks?: string[] // 🛡️ Security: allowed domains for external links
+  // 🆕 Channel Configuration (Feature 199)
+  sellsProductsAndServices?: boolean
+  hasSalesAgents?: boolean
+  hasHumanSupport?: boolean
+  humanSupportInstructions?: string
+  operatorContactMethod?: string
+  operatorWhatsappNumber?: string
+  toneOfVoice?: string
+  botIdentityResponse?: string
 }
 
 export const workspaceService = {
@@ -66,6 +75,17 @@ export const workspaceService = {
         url: true,
         welcomeMessage: true,
         allowedExternalLinks: true, // 🛡️ Security
+        // 🆕 Channel Configuration (Feature 199)
+        sellsProductsAndServices: true,
+        hasSalesAgents: true,
+        hasHumanSupport: true,
+        humanSupportInstructions: true,
+        operatorContactMethod: true,
+        operatorWhatsappNumber: true,
+        toneOfVoice: true,
+        botIdentityResponse: true,
+        address: true,
+        customAiRules: true,
       },
     })
   },
@@ -94,6 +114,17 @@ export const workspaceService = {
         url: true,
         welcomeMessage: true,
         allowedExternalLinks: true, // 🛡️ Security
+        // 🆕 Channel Configuration (Feature 199)
+        sellsProductsAndServices: true,
+        hasSalesAgents: true,
+        hasHumanSupport: true,
+        humanSupportInstructions: true,
+        operatorContactMethod: true,
+        operatorWhatsappNumber: true,
+        toneOfVoice: true,
+        botIdentityResponse: true,
+        address: true,
+        customAiRules: true,
       },
     })
 
@@ -228,6 +259,17 @@ export const workspaceService = {
         url: true,
         welcomeMessage: true,
         allowedExternalLinks: true, // 🛡️ Security
+        // 🆕 Channel Configuration (Feature 199)
+        sellsProductsAndServices: true,
+        hasSalesAgents: true,
+        hasHumanSupport: true,
+        humanSupportInstructions: true,
+        operatorContactMethod: true,
+        operatorWhatsappNumber: true,
+        toneOfVoice: true,
+        botIdentityResponse: true,
+        address: true,
+        customAiRules: true,
       },
     })
 

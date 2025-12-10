@@ -1004,27 +1004,8 @@ export class MessageRepository {
         throw new Error("Customer workspace mismatch - potential data leakage")
       }
 
-      // Find or create chat session
-      let session = await this.prisma.chatSession.findFirst({
-        where: {
-          customerId: customer.id,
-          status: "active",
-        },
-        orderBy: {
-          startedAt: "desc",
-        },
-      })
-
-      if (!session) {
-        session = await this.prisma.chatSession.create({
-          data: {
-            workspaceId: workspaceId,
-            customerId: customer.id,
-            status: "active",
-          },
-        })
-        logger.info(`saveMessage: Created new chat session: ${session.id}`)
-      }
+      // 🔒 USE TRANSACTIONAL findOrCreateChatSession to prevent race conditions
+      const session = await this.findOrCreateChatSession(workspaceId, customer.id)
 
       // Use INBOUND as default direction
       const direction =
@@ -1637,6 +1618,8 @@ export class MessageRepository {
         logger.error("getChatSessionsWithUnreadCounts: workspaceId is required")
         throw new Error("workspaceId is mandatory for retrieving chat sessions")
       }
+      
+      logger.info(`[ChatSessions] 🔍 Fetching sessions for workspace: ${workspaceId}`)
 
       // Get all chat sessions, including those with blacklisted customers
       // We want to show all chats but mark blacklisted ones visually
@@ -1681,6 +1664,8 @@ export class MessageRepository {
         },
         take: limit,
       })
+      
+      logger.info(`[ChatSessions] ✅ Found ${chatSessions.length} sessions for workspace ${workspaceId}`)
 
       // Return all sessions - we'll show blacklisted status in UI instead of hiding
       // Map sessions to include unread count and activeChatbot
@@ -2042,7 +2027,7 @@ export class MessageRepository {
       // ANDREA DECISION: CF ATTIVE CON NOMI CORRETTI
       const availableFunctions = [
         {
-          name: "ContactOperator",
+          name: "contactOperator",
           description:
             "Contact a human operator when: 1) User explicitly requests operator with phrases like 'voglio parlare con operatore', 'contatta operatore', 'mettimi in contatto con operatore'. 2) User responds 'si', 'yes', 'sì' after being asked if they want to contact an operator. Check conversation history to see if previous message offered operator contact. Do NOT trigger for product problems unless user confirms with 'si'/'yes'.",
           parameters: {
@@ -2058,7 +2043,7 @@ export class MessageRepository {
           },
         },
         {
-          name: "GetLinkOrderByCode",
+          name: "getLinkOrderByCode",
           description:
             "Get a secure link to view a specific order (or the last order if omitted). Triggers when user asks for a specific order or invoice.",
           parameters: {

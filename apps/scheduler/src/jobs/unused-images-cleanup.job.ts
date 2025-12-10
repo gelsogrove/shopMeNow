@@ -7,7 +7,7 @@ import * as path from 'path'
  * Unused Images Cleanup Job
  * Runs daily at 23:02
  * Deletes orphaned images not referenced in the database
- * Covers: products, services, suppliers, users (logos)
+ * Covers: products, services, suppliers, users, channels (logos)
  */
 export async function unusedImagesCleanupJob(): Promise<void> {
   const uploadsDir = path.join(__dirname, '..', '..', '..', 'backend', 'uploads')
@@ -93,6 +93,25 @@ export async function unusedImagesCleanupJob(): Promise<void> {
 
   logger.info(`[Users] Found ${usedUserLogos.size} logos referenced in database`)
   totalDeleted += cleanupDirectory(userImagesDir, usedUserLogos, 'users')
+
+  // ═══════════════════════════════════════════════════════════════
+  // 5. CHANNEL LOGOS CLEANUP
+  // ═══════════════════════════════════════════════════════════════
+  const channelImagesDir = path.join(uploadsDir, 'channels')
+  const workspaces = await prisma.workspace.findMany({
+    select: { logoUrl: true },
+  })
+
+  const usedChannelLogos = new Set<string>()
+  for (const workspace of workspaces) {
+    if (workspace.logoUrl) {
+      const filename = path.basename(workspace.logoUrl)
+      usedChannelLogos.add(filename)
+    }
+  }
+
+  logger.info(`[Channels] Found ${usedChannelLogos.size} logos referenced in database`)
+  totalDeleted += cleanupDirectory(channelImagesDir, usedChannelLogos, 'channels')
 
   // ═══════════════════════════════════════════════════════════════
   // SUMMARY

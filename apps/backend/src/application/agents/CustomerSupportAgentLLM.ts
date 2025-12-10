@@ -112,8 +112,33 @@ export class CustomerSupportAgentLLM {
         model: agentConfig.model,
       })
 
-      // Store the processed system prompt for debugging
-      const systemPrompt = agentConfig.systemPrompt
+      // 🆕 STEP 1.5: Load workspace config for address and other dynamic fields
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: context.workspaceId },
+        select: {
+          address: true,
+          customAiRules: true,
+          name: true,
+        },
+      })
+
+      // Build dynamic context to inject into prompt
+      let systemPrompt = agentConfig.systemPrompt
+      
+      // Inject address if available
+      if (workspace?.address) {
+        const addressSection = `\n\n## OUR LOCATION\nWhen customer asks "where are you?", "your address?", "dove siete?", "indirizzo?":\nRespond with: "${workspace.address}"\n`
+        // Insert after the first section or at the beginning
+        systemPrompt = systemPrompt + addressSection
+        logger.info(`📍 Injected address into CUSTOMER_SUPPORT prompt: ${workspace.address}`)
+      }
+      
+      // Inject custom AI rules if available
+      if (workspace?.customAiRules) {
+        const rulesSection = `\n\n## ⚠️ PRIORITY RULES (OVERRIDE)\nThe following rules have PRIORITY over all other instructions:\n${workspace.customAiRules}\n`
+        systemPrompt = systemPrompt + rulesSection
+        logger.info(`⚙️ Injected custom AI rules into CUSTOMER_SUPPORT prompt`)
+      }
 
       // STEP 2: Build messages for LLM
       const messages: any[] = [
@@ -389,7 +414,7 @@ export class CustomerSupportAgentLLM {
           // 📧 Call ContactOperator to send email with summary
           const {
             ContactOperator,
-          } = require("../../domain/calling-functions/ContactOperator")
+          } = require("../../domain/calling-functions/contactOperator")
 
           logger.info("📧 Calling ContactOperator to send email notification")
 

@@ -26,7 +26,6 @@ model Workspace {
   description               String?
   messageLimit              Int               @default(50)
   url                       String?
-  businessType              BusinessType      @default(ECOMMERCE)
   welcomeMessage            Json?             @default("{\"en\": \"Welcome! I'm SofiA, your digital assistant. I can help you discover Italian gourmet products, answer questions, and manage orders. How can I help you today?\", \"es\": \"¡Bienvenido! Soy SofiA, tu asistente digital. Puedo ayudarte a descubrir productos gourmet italianos, responder preguntas y gestionar pedidos. ¿Cómo puedo ayudarte hoy?\", \"it\": \"Benvenuto! Sono SofiA, il tuo assistente digitale. Posso aiutarti a scoprire prodotti gourmet italiani, rispondere alle tue domande e gestire ordini. Come posso aiutarti oggi?\", \"pt\": \"Bem-vindo! Sou a SofiA, a sua assistente digital. Posso ajudá-lo a descobrir produtos gourmet italianos, responder perguntas e gerir encomendas. Como posso ajudá-lo hoje?\"}")
   wipMessage                Json?             @default("{\"en\": \"Work in progress. Please contact us later.\", \"es\": \"Trabajos en curso. Por favor, contáctenos más tarde.\", \"it\": \"Lavori in corso. Contattaci più tardi.\", \"pt\": \"Em manutenção. Por favor, contacte-nos mais tarde.\"}")
   afterRegistrationMessages Json?             @default("{\"de\": \"Danke für Ihre Registrierung, [nome]! Wie kann ich Ihnen heute helfen? Möchten Sie Ihre Bestellungen sehen? Die Angebote? Oder benötigen Sie andere Informationen?\", \"en\": \"Thank you for registering, [nome]! How can I help you today? Would you like to see your orders? The offers? Or do you need other information?\", \"es\": \"¡Gracias por registrarte, [nome]! ¿Cómo puedo ayudarte hoy? ¿Quieres ver tus pedidos? ¿Las ofertas? ¿O necesitas otra información?\", \"fr\": \"Merci de vous être inscrit, [nome] ! Comment puis-je vous aider aujourd'hui ? Voulez-vous voir vos commandes ? Les offres ? Ou avez-vous besoin d'autres informations ?\", \"it\": \"Grazie per esserti registrato, [nome]! Come ti posso aiutare oggi? Vuoi vedere i tuoi ordini? Le offerte? O hai bisogno di altre informazioni?\", \"pt\": \"Obrigado por se registrar, [nome]! Como posso ajudá-lo hoje? Quer ver seus pedidos? As ofertas? Ou precisa de outras informações?\"}")
@@ -34,6 +33,23 @@ model Workspace {
   apiKey                    String?
   metadata                  Json?
   allowedExternalLinks      String[]          @default([]) // Security Agent: allowed external domains (e.g., ["shopme.com", "stripe.com"])
+  logoUrl                   String?                            // Channel logo URL (circular display)
+  
+  // ============================================================================
+  // 🆕 Channel Configuration (from Wizard - Feature 199)
+  // ============================================================================
+  sellsProductsAndServices  Boolean           @default(true)   // Does this channel sell products/services? (enables E-commerce menu)
+  hasSalesAgents            Boolean           @default(false)  // Has sales team for customer assignment?
+  hasSuppliers              Boolean           @default(false)  // Has suppliers management?
+  hasHumanSupport           Boolean           @default(true)   // Can customers request human support?
+  humanSupportInstructions  String?           @db.Text         // Instructions for human support requests
+  operatorContactMethod     String?           @default("email") // 'email' | 'whatsapp'
+  operatorWhatsappNumber    String?                            // WhatsApp number for human support (if method='whatsapp')
+  toneOfVoice               String?           @default("friendly") // 'formal' | 'friendly' | 'professional' | 'casual'
+  botIdentityResponse       String?           @db.Text         // Response when customer asks "Who are you?"
+  customAiRules             String?           @db.Text         // Custom AI rules/instructions that override default behavior
+  address                   String?           @db.Text         // Physical address/location for "where are you?" questions
+  // ============================================================================
   
   // Team management: ownerId groups all channels belonging to same owner
   ownerId                   String?
@@ -92,6 +108,7 @@ model Workspace {
   whatsappQueue             WhatsAppQueue[]
   billingTransactions       BillingTransaction[]
   softDeleteAuditLogs       SoftDeleteAuditLog[]
+  callingFunctions          WorkspaceCallingFunction[] // ✅ Inverse relation
 
   @@index([ownerId])
   @@index([planType])
@@ -1073,15 +1090,6 @@ model ShortUrls {
   @@index([expiresAt])
 }
 
-enum BusinessType {
-  ECOMMERCE
-  RESTAURANT
-  CLINIC
-  RETAIL
-  SERVICES
-  GENERIC
-}
-
 enum ItemType {
   PRODUCT
   SERVICE
@@ -1195,6 +1203,7 @@ enum TransactionType {
   ADJUSTMENT        // Manual adjustment by admin
   INITIAL_CREDIT    // +€29 initial trial credit
   BONUS             // +€X gift credit (not invoiced)
+  INVOICE_PAID      // Bank charge for monthly invoice (plan + usage) - does NOT affect credit
 }
 
 // Transaction history for billing - tracks all credit movements
@@ -1525,4 +1534,22 @@ model SoftDeleteAuditLog {
   @@index([workspaceId, deletedAt])
   @@index([deletedAt])
   @@map("soft_delete_audit_logs")
+}
+
+// ============================================================================
+// ⚡ WORKSPACE CALLING FUNCTIONS - Controls which CFs are active per workspace
+// ============================================================================
+model WorkspaceCallingFunction {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  functionName    String    // camelCase function name: "addToCart", "contactOperator", etc.
+  description     String?   // Optional description override for this workspace
+  isActive        Boolean   @default(true)  // Toggle ON/OFF for this workspace
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([workspaceId, functionName]) // One record per function per workspace
+  @@index([workspaceId, isActive])
+  @@map("workspace_calling_functions")
 }

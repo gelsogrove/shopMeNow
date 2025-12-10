@@ -27,6 +27,7 @@ export type TransactionType =
   | "UPGRADE_FEE"
   | "ADJUSTMENT"
   | "INITIAL_CREDIT"
+  | "INVOICE_PAID"
 
 export interface BillingInfo {
   planType: PlanType
@@ -355,6 +356,7 @@ export const getTransactionTypeInfo = (
     UPGRADE_FEE: { label: "Upgrade", color: "indigo", icon: "⬆️" },
     ADJUSTMENT: { label: "Adjustment", color: "gray", icon: "🔧" },
     INITIAL_CREDIT: { label: "Initial Credit", color: "emerald", icon: "🎁" },
+    INVOICE_PAID: { label: "Invoice", color: "green", icon: "🧾" },
   }
 
   return typeMap[type] || { label: type, color: "gray", icon: "❓" }

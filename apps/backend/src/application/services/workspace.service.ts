@@ -170,11 +170,24 @@ For privacy inquiries, please contact our support team.`
       isDelete: w.isDelete,
       url: w.url ?? undefined,
       debugMode: w.debugMode ?? false,
-      businessType: w.businessType ?? 'retail',
       createdAt: w.createdAt,
       updatedAt: w.updatedAt,
       planType: w.planType ?? undefined,
       trialEndsAt: w.trialEndsAt ?? undefined,
+      // 🆕 Channel Configuration (Feature 199) - CRITICAL: Must include these!
+      sellsProductsAndServices: w.sellsProductsAndServices,
+      hasSalesAgents: w.hasSalesAgents,
+      hasSuppliers: w.hasSuppliers,
+      hasHumanSupport: w.hasHumanSupport,
+      humanSupportInstructions: w.humanSupportInstructions ?? undefined,
+      operatorContactMethod: w.operatorContactMethod ?? undefined,
+      operatorWhatsappNumber: w.operatorWhatsappNumber ?? undefined,
+      toneOfVoice: w.toneOfVoice ?? undefined,
+      botIdentityResponse: w.botIdentityResponse ?? undefined,
+      address: w.address ?? undefined,
+      customAiRules: w.customAiRules ?? undefined,
+      // 🆕 Logo
+      logoUrl: w.logoUrl ?? undefined,
     }))
   }
 
@@ -220,9 +233,11 @@ For privacy inquiries, please contact our support team.`
     // Extract userId for UserWorkspace relation
     const createdBy = data.createdBy
     const adminEmail = (data as any).adminEmail // Extract adminEmail for WhatsappSettings
+    const customFaqs = (data as any).faqs // 🆕 Extract custom FAQs from wizard (Feature 199)
     const workspaceData = { ...data }
     delete (workspaceData as any).createdBy // Remove from workspace data
     delete (workspaceData as any).adminEmail // Remove from workspace data (stored in WhatsappSettings)
+    delete (workspaceData as any).faqs // Remove FAQs from workspace data (stored in separate table)
 
     // 🆕 DEFAULT WELCOME AND WIP MESSAGES
     const defaultWelcomeMessage = {
@@ -242,6 +257,30 @@ For privacy inquiries, please contact our support team.`
     // Add messages to workspace data
     data.welcomeMessage = defaultWelcomeMessage
     data.wipMessage = defaultWipMessage
+
+    // 🆕 Feature 199: Set default channel configuration values
+    // These can be overridden by wizard input, but provide sensible defaults
+    if (data.hasHumanSupport === undefined) data.hasHumanSupport = true
+    if (data.hasSalesAgents === undefined) data.hasSalesAgents = false
+    if (data.sellsProductsAndServices === undefined) data.sellsProductsAndServices = true
+    if (data.toneOfVoice === undefined) data.toneOfVoice = "FRIENDLY"
+    if (data.operatorContactMethod === undefined) data.operatorContactMethod = "EMAIL"
+    
+    // Default human support instructions - use placeholder as default
+    if (!data.humanSupportInstructions) {
+      if (data.hasSalesAgents) {
+        // With Sales Team: agent info placeholder
+        data.humanSupportInstructions = `Hello {{nameUser}}, I'm sorry for the issue! 😔\nI understand your frustration.\n\nYour dedicated agent is:\n• {{agentName}}\n• 📞 {{agentPhone}}\n• ✉️ {{agentEmail}}\n\n⏸️ Chat is now paused.\nYour agent will contact you as soon as possible!`
+      } else {
+        // Without Sales Team: email contact placeholder
+        data.humanSupportInstructions = "Please send an email to {{adminEmail}} and we will write you back as soon as possible."
+      }
+    }
+    
+    // Default bot identity
+    if (!data.botIdentityResponse) {
+      data.botIdentityResponse = "I'm your digital assistant. I can help you find products, answer questions, and manage your orders!"
+    }
 
     // Create workspace entity
     const workspace = Workspace.create(data)
@@ -333,28 +372,40 @@ For privacy inquiries, please contact our support team.`
         // Don't fail the entire transaction for GDPR content
       }
 
-      // 4b. 🆕 CREATE DEFAULT FAQs (Feature: Auto-create FAQs on new workspace)
+      // 4b. 🆕 CREATE FAQs (Feature 199: Use wizard FAQs if provided, otherwise defaults)
       try {
-        const faqs = initialFAQs(createdWorkspace.id)
-        for (const faq of faqs) {
+        // Use custom FAQs from wizard if provided, otherwise use default FAQs
+        const faqsToCreate = (customFaqs && customFaqs.length > 0) 
+          ? customFaqs.map((faq: { question: string; answer: string }, index: number) => ({
+              question: faq.question,
+              answer: faq.answer,
+              keywords: [], // Will be populated by user later
+              category: 'General',
+              order: index,
+              isActive: true,
+            }))
+          : initialFAQs(createdWorkspace.id)
+        
+        for (const faq of faqsToCreate) {
           await tx.fAQ.create({
             data: {
               workspaceId: createdWorkspace.id,
               question: faq.question,
               answer: faq.answer,
-              keywords: faq.keywords,
-              category: faq.category,
-              order: faq.order,
-              isActive: faq.isActive,
+              keywords: faq.keywords || [],
+              category: faq.category || 'General',
+              order: faq.order ?? 0,
+              isActive: faq.isActive ?? true,
             },
           })
         }
+        const faqSource = (customFaqs && customFaqs.length > 0) ? 'wizard' : 'default'
         logger.info(
-          `✅ Created ${faqs.length} default FAQs for workspace ${createdWorkspace.id}`
+          `✅ Created ${faqsToCreate.length} FAQs (${faqSource}) for workspace ${createdWorkspace.id}`
         )
       } catch (error) {
         logger.error(
-          `Error creating default FAQs for workspace ${createdWorkspace.id}:`,
+          `Error creating FAQs for workspace ${createdWorkspace.id}:`,
           error
         )
         // Don't fail the entire transaction for FAQs
@@ -494,6 +545,33 @@ For privacy inquiries, please contact our support team.`
     data: Partial<WorkspaceProps>
   ): Promise<Workspace | null> {
     logger.info(`Updating workspace with ID: ${id}`)
+
+    // 🆕 Feature 199: Auto-toggle e-commerce agents based on sellsProductsAndServices
+    const ecommerceAgentTypes = ["PRODUCT_SEARCH", "CART_MANAGEMENT", "ORDER_TRACKING"]
+    
+    if (data.sellsProductsAndServices === false) {
+      logger.info(`⚠️ sellsProductsAndServices = false → Disabling e-commerce agents`)
+      
+      for (const agentType of ecommerceAgentTypes) {
+        try {
+          await this.repository.updateAgentStatus(id, agentType, false)
+          logger.info(`✅ Disabled ${agentType} agent for workspace ${id}`)
+        } catch (error) {
+          logger.warn(`⚠️ Failed to disable ${agentType} agent:`, error)
+        }
+      }
+    } else if (data.sellsProductsAndServices === true) {
+      logger.info(`✅ sellsProductsAndServices = true → Enabling e-commerce agents`)
+      
+      for (const agentType of ecommerceAgentTypes) {
+        try {
+          await this.repository.updateAgentStatus(id, agentType, true)
+          logger.info(`✅ Enabled ${agentType} agent for workspace ${id}`)
+        } catch (error) {
+          logger.warn(`⚠️ Failed to enable ${agentType} agent:`, error)
+        }
+      }
+    }
 
     // Generate slug if name is updated and slug is not provided
     if (data.name && !data.slug) {

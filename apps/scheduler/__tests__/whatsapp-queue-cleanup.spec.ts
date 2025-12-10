@@ -29,7 +29,6 @@ describe('WhatsApp Queue Cleanup Job', () => {
         id: workspaceId,
         name: 'Test Workspace Cleanup',
         slug: 'test-workspace-cleanup',
-        businessType: 'ECOMMERCE',
         ownerId: ownerId,
       },
     })

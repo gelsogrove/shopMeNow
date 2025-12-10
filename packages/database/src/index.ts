@@ -60,7 +60,6 @@ export {
   ChannelType,
   UserRole,
   InvitationStatus,
-  BusinessType,
   ItemType,
   PlanType,
   TransactionType,

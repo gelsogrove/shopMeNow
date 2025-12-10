@@ -22,7 +22,6 @@ export interface WorkspaceProps {
   blocklist?: string | null
   url?: string | null
   assistantPhone?: string | null
-  businessType: string
   welcomeMessage?: any
   wipMessage?: any
   afterRegistrationMessages?: any
@@ -30,6 +29,22 @@ export interface WorkspaceProps {
   adminEmail?: string | null
   planType?: string | null
   trialEndsAt?: Date | null
+  allowedExternalLinks?: string[]
+  // 🆕 Channel Configuration (Feature 199)
+  sellsProductsAndServices?: boolean
+  hasSalesAgents?: boolean
+  hasSuppliers?: boolean
+  hasHumanSupport?: boolean
+  humanSupportInstructions?: string | null
+  operatorContactMethod?: string | null
+  operatorWhatsappNumber?: string | null
+  toneOfVoice?: string | null
+  botIdentityResponse?: string | null
+  // 🆕 Prompt Builder fields (Dynamic Prompt System)
+  address?: string | null
+  customAiRules?: string | null
+  // 🆕 Logo
+  logoUrl?: string | null
 }
 
 export class Workspace extends Entity<WorkspaceProps> {
@@ -121,10 +136,6 @@ export class Workspace extends Entity<WorkspaceProps> {
     return this.props.url
   }
 
-  get businessType(): string {
-    return this.props.businessType
-  }
-
   get welcomeMessage(): any {
     return this.props.welcomeMessage
   }
@@ -151,6 +162,59 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get trialEndsAt(): Date | null | undefined {
     return this.props.trialEndsAt
+  }
+
+  get allowedExternalLinks(): string[] | undefined {
+    return this.props.allowedExternalLinks
+  }
+
+  // 🆕 Channel Configuration getters (Feature 199)
+  get sellsProductsAndServices(): boolean {
+    return this.props.sellsProductsAndServices ?? true
+  }
+
+  get hasSalesAgents(): boolean {
+    return this.props.hasSalesAgents ?? false
+  }
+
+  get hasSuppliers(): boolean {
+    return this.props.hasSuppliers ?? false
+  }
+
+  get hasHumanSupport(): boolean {
+    return this.props.hasHumanSupport ?? true
+  }
+
+  get humanSupportInstructions(): string | null | undefined {
+    return this.props.humanSupportInstructions
+  }
+
+  get operatorContactMethod(): string | null | undefined {
+    return this.props.operatorContactMethod
+  }
+
+  get operatorWhatsappNumber(): string | null | undefined {
+    return this.props.operatorWhatsappNumber
+  }
+
+  get toneOfVoice(): string | null | undefined {
+    return this.props.toneOfVoice
+  }
+
+  get botIdentityResponse(): string | null | undefined {
+    return this.props.botIdentityResponse
+  }
+
+  get address(): string | null | undefined {
+    return this.props.address
+  }
+
+  get customAiRules(): string | null | undefined {
+    return this.props.customAiRules
+  }
+
+  get logoUrl(): string | null | undefined {
+    return this.props.logoUrl
   }
 
   // Business methods

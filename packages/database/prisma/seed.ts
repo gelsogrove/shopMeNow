@@ -61,6 +61,7 @@ async function main() {
   await prisma.campaign.deleteMany()
   await prisma.billing.deleteMany()
   await prisma.billingTransaction.deleteMany() // ✅ Feature 185: Billing transactions
+  await prisma.monthlyInvoice.deleteMany() // ✅ Feature 197: Monthly invoices
   await prisma.usage.deleteMany()
   await prisma.adminSession.deleteMany()
   await prisma.shortUrls.deleteMany()
@@ -124,6 +125,8 @@ async function main() {
       lastName: "Romano",
       status: "ACTIVE",
       role: "ADMIN",
+      planType: "PREMIUM", // ✅ Premium plan (not free trial)
+      creditBalance: 186.90, // ✅ Reflects final balance from billing history
       isDeveloperUser: true, // ✅ Developer User - skip 2FA for testing
       twoFactorEnabled: false, // ❌ 2FA disabled by default - enable via Settings UI
       twoFactorEnabledAt: null,
@@ -157,6 +160,7 @@ async function main() {
       lastName: "Gelsomino",
       status: "ACTIVE",
       role: "ADMIN",
+      planType: "PREMIUM", // ✅ Premium plan (not free trial)
       isPlatformAdmin: true, // ✅ Platform Admin - can access backoffice + skip 2FA
       isDeveloperUser: false, // ❌ Not a developer (can't be both)
       twoFactorEnabled: false,
@@ -175,59 +179,60 @@ async function main() {
   console.log(`🔑 Password: ${platformAdminPassword}`)
   console.log(`🔐 isPlatformAdmin: true (Backoffice access + Skip 2FA)\n`)
 
-  // 3. Create Main Workspace
-  console.log("🏢 Creating workspace...")
+  // 2.7. Create E-commerce Workspace for Admin User (BellItalia VIP)
+  console.log("🏢 Creating E-commerce workspace (BellItalia VIP) for admin user...")
 
-  // ⚠️ CRITICAL: Use FIXED workspace ID to match webhook configuration
-  const FIXED_WORKSPACE_ID = "cm9hjgq9v00014qk8fsdy4ujv"
-
-  const workspace = await prisma.workspace.create({
+  const ecommerceWorkspace = await prisma.workspace.create({
     data: {
-      id: FIXED_WORKSPACE_ID, // ✅ Fixed ID for consistency
-      name: workspaceSettings.name,
-      slug: "altro-gusto",
-      whatsappPhoneNumber:
-        workspaceSettings.whatsappPhoneNumber || "+34654728753",
-      notificationEmail:
-        workspaceSettings.notificationEmail || "info@altrogusto.com",
+      name: "BellItalia VIP",
+      slug: "bell-italia-vip",
+      whatsappPhoneNumber: "+34654728751",
+      notificationEmail: "info@bellitalia.com",
       isActive: true,
       language: "ENG",
       currency: "EUR",
-      businessType: "ECOMMERCE",
-      description: "Italian Gourmet Food E-commerce",
-      url: workspaceSettings.url || "https://altrogusto.com",
-      channelStatus: true, // ✅ Feature 126: Chatbot enabled by default (also controls queue processing)
-      debugMode:
-        workspaceSettings.debugMode !== undefined
-          ? workspaceSettings.debugMode
-          : true,
-      welcomeMessage: workspaceSettings.welcomeMessages, // ✅ Simple string, no JSON.stringify()
-      wipMessage: workspaceSettings.wipMessages, // ✅ Simple string, no JSON.stringify()
-      afterRegistrationMessages: JSON.stringify(
-        workspaceSettings.afterRegistrationMessages
-      ),
-      ownerId: adminUser.id, // ✅ Feature 184: Set workspace owner for team management
-      // ✅ Feature 185: Subscription & Billing - Start with FREE_TRIAL
-      planType: "FREE_TRIAL",
-      creditBalance: 19.0, // €19 initial credit (same as Basic plan cost)
-      trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days from now
+      description: "Italian Gourmet Food E-commerce - VIP Channel",
+      url: "https://bellitalia.com/vip",
+      channelStatus: true,
+      debugMode: true,
+      welcomeMessage: "Welcome to BellItalia! How can I help you today?",
+      wipMessage: "Sorry, I'm currently being improved. Please try again later.",
+      ownerId: adminUser.id,
+      // ✅ PREMIUM plan
+      planType: "PREMIUM",
+      creditBalance: 100.0,
+      trialEndsAt: null, // No trial - paid plan
       planStartedAt: new Date(),
+      // ✅ E-COMMERCE workspace
+      sellsProductsAndServices: true,
+      hasSalesAgents: false,
+      hasHumanSupport: true,
+      humanSupportInstructions: "Please send an email to {{adminEmail}} and we will get back to you.",
+      operatorContactMethod: "EMAIL",
+      toneOfVoice: "FRIENDLY",
+      botIdentityResponse: "I'm the BellItalia VIP virtual assistant, here to help you discover and purchase authentic Italian gourmet products!",
     },
   })
 
-  console.log(`✅ Workspace created: ${workspace.name} (${workspace.id})`)
+  console.log(`✅ E-commerce workspace created: ${ecommerceWorkspace.name} (${ecommerceWorkspace.id})`)
 
-  // 3.5. Create WhatsApp Settings
-  console.log("📱 Creating WhatsApp settings...")
+  // Associate admin user with e-commerce workspace
+  await prisma.userWorkspace.create({
+    data: {
+      userId: adminUser.id,
+      workspaceId: ecommerceWorkspace.id,
+      role: "SUPER_ADMIN",
+    },
+  })
 
+  // Create WhatsApp settings for e-commerce workspace
   await prisma.whatsappSettings.create({
     data: {
-      workspaceId: workspace.id,
-      phoneNumber: workspaceSettings.whatsappPhoneNumber || "+34654728753",
+      workspaceId: ecommerceWorkspace.id,
+      phoneNumber: "+34654728751",
       apiKey: process.env.WHATSAPP_API_KEY || "dummy-api-key",
-      webhookUrl:
-        process.env.WHATSAPP_WEBHOOK_URL || "https://echatbot.ai/webhook",
-      adminEmail: "andrea_gelsomino@hotmail.com", // ✅ Email per notifiche operatore
+      webhookUrl: process.env.WHATSAPP_WEBHOOK_URL || "https://echatbot.ai/webhook",
+      adminEmail: adminEmail,
       smtpHost: "smtp.gmail.com",
       smtpPort: 465,
       smtpSecure: true,
@@ -237,32 +242,201 @@ async function main() {
     },
   })
 
-  console.log(
-    `✅ WhatsApp settings created with admin email: andrea_gelsomino@hotmail.com`
-  )
+  // Create languages for e-commerce workspace
+  for (const lang of [
+    { code: "IT", name: "Italiano", isDefault: true },
+    { code: "ENG", name: "English", isDefault: false },
+  ]) {
+    await prisma.languages.create({
+      data: {
+        code: lang.code,
+        name: lang.name,
+        isDefault: lang.isDefault,
+        isActive: true,
+        workspaceId: ecommerceWorkspace.id,
+      },
+    })
+  }
 
-  // 4. Associate Admin with Workspace
-  await prisma.userWorkspace.create({
+  // Create agent configs for e-commerce workspace (ALL agents including PRODUCT_SEARCH, CART_MANAGEMENT, ORDER_TRACKING)
+  const ecommerceAgents = defaultAgents(ecommerceWorkspace.id)
+  for (const config of ecommerceAgents) {
+    await prisma.agentConfig.create({
+      data: {
+        workspaceId: config.workspaceId,
+        name: config.name,
+        type: config.type,
+        description: config.description,
+        icon: config.icon,
+        systemPrompt: config.systemPrompt,
+        model: config.model,
+        temperature: config.temperature,
+        maxTokens: config.maxTokens,
+        order: config.order,
+        isActive: config.isActive,
+        availableFunctions: config.availableFunctions || null,
+      },
+    })
+  }
+
+  console.log(`✅ E-commerce workspace configured with ${ecommerceAgents.length} agents`)
+
+  // 2.8. Create Informational Workspace for Admin User (BellItalia)
+  console.log("🏢 Creating Informational workspace (BellItalia) for admin user...")
+
+  const infoWorkspace = await prisma.workspace.create({
     data: {
-      userId: adminUser.id,
-      workspaceId: workspace.id,
-      role: "SUPER_ADMIN", // ✅ Feature 184: Creator is SUPER_ADMIN
+      name: "BellItalia",
+      slug: "bell-italia",
+      whatsappPhoneNumber: "+34654728752",
+      notificationEmail: "info@bellitalia.com",
+      isActive: true,
+      language: "ENG",
+      currency: "EUR",
+      description: "Italian Gourmet Food - Information Channel",
+      url: "https://bellitalia.com",
+      channelStatus: true,
+      debugMode: true,
+      welcomeMessage: "Welcome to BellItalia! Ask me anything about our products and services.",
+      wipMessage: "Sorry, I'm currently being improved. Please try again later.",
+      ownerId: adminUser.id,
+      // ✅ PREMIUM plan
+      planType: "PREMIUM",
+      creditBalance: 171.00, // ✅ Reflects final balance from billing history
+      trialEndsAt: null,
+      planStartedAt: new Date(),
+      // ✅ INFORMATIONAL workspace (no e-commerce)
+      sellsProductsAndServices: false,
+      hasSalesAgents: false,
+      hasHumanSupport: true,
+      humanSupportInstructions: "Please send an email to {{adminEmail}} for assistance.",
+      operatorContactMethod: "EMAIL",
+      toneOfVoice: "PROFESSIONAL",
+      botIdentityResponse: "I'm the BellItalia assistant, here to provide information about our Italian gourmet products!",
     },
   })
 
-  console.log("✅ Admin associated with workspace as SUPER_ADMIN")
+  console.log(`✅ Informational workspace created: ${infoWorkspace.name} (${infoWorkspace.id})`)
 
-  // 5. Create Languages
-  console.log("🌐 Creating languages...")
+  // Associate admin user with informational workspace
+  await prisma.userWorkspace.create({
+    data: {
+      userId: adminUser.id,
+      workspaceId: infoWorkspace.id,
+      role: "SUPER_ADMIN",
+    },
+  })
 
-  const languages = [
+  // Create WhatsApp settings for informational workspace
+  await prisma.whatsappSettings.create({
+    data: {
+      workspaceId: infoWorkspace.id,
+      phoneNumber: "+34654728752",
+      apiKey: process.env.WHATSAPP_API_KEY || "dummy-api-key",
+      webhookUrl: process.env.WHATSAPP_WEBHOOK_URL || "https://echatbot.ai/webhook",
+      adminEmail: adminEmail,
+      smtpHost: "smtp.gmail.com",
+      smtpPort: 465,
+      smtpSecure: true,
+      smtpUser: process.env.SMTP_USER || "noreply@echatbot.ai",
+      smtpPass: process.env.SMTP_PASS || "",
+      smtpFrom: "eChatbot <noreply@echatbot.ai>",
+    },
+  })
+
+  // Create languages for informational workspace
+  for (const lang of [
     { code: "IT", name: "Italiano", isDefault: true },
     { code: "ENG", name: "English", isDefault: false },
-    { code: "ESP", name: "Español", isDefault: false },
-    { code: "PRT", name: "Português", isDefault: false },
+  ]) {
+    await prisma.languages.create({
+      data: {
+        code: lang.code,
+        name: lang.name,
+        isDefault: lang.isDefault,
+        isActive: true,
+        workspaceId: infoWorkspace.id,
+      },
+    })
+  }
+
+  // Create agent configs for informational workspace (EXCLUDES PRODUCT_SEARCH, CART_MANAGEMENT, ORDER_TRACKING)
+  const ECOMMERCE_ONLY_TYPES = ["PRODUCT_SEARCH", "CART_MANAGEMENT", "ORDER_TRACKING"]
+  const infoAgents = defaultAgents(infoWorkspace.id).filter(
+    (agent) => !ECOMMERCE_ONLY_TYPES.includes(agent.type)
+  )
+  for (const config of infoAgents) {
+    await prisma.agentConfig.create({
+      data: {
+        workspaceId: config.workspaceId,
+        name: config.name,
+        type: config.type,
+        description: config.description,
+        icon: config.icon,
+        systemPrompt: config.systemPrompt,
+        model: config.model,
+        temperature: config.temperature,
+        maxTokens: config.maxTokens,
+        order: config.order,
+        isActive: config.isActive,
+        availableFunctions: config.availableFunctions || null,
+      },
+    })
+  }
+
+  // Create FAQs for informational workspace (BellItalia)
+  const infoFAQs = [
+    { category: "Products", question: "What kinds of products does BellItalia offer?", answer: "We provide a wide variety of Italian and Mediterranean food products — from artisanal items made by exclusive producers to well-known brand names — ideal for restaurants, pizzerias, distributors and large distribution." },
+    { category: "Customers", question: "Who can buy from BellItalia (restaurants / shops / individuals)?", answer: "Our catalogue is designed mainly for professional clients — pizzerias, restaurants, distributors and GDO (large retailers)." },
+    { category: "Products", question: "How many products do you have in your catalogue?", answer: "We offer more than 600 references in our catalogue of authentic Italian products." },
+    { category: "Products", question: "Do you supply fresh products (like fresh cheese or tomatoes)?", answer: "Yes — among our offerings there are fresh Italian cheeses and tomatoes, as part of our authentic Italian ingredients." },
+    { category: "Products", question: "Do you offer pasta products?", answer: "Yes — for example, we distribute traditional Italian pasta such as tagliatelle." },
+    { category: "Customers", question: "Do you supply to pizzerias and help them with Italian pizza ingredients?", answer: "Absolutely — we offer specialized selections for pizzerias, helping them with high-quality Italian ingredients to craft their pizzas." },
+    { category: "Delivery", question: "Do you deliver all over Spain or only locally?", answer: "We provide logistic solutions across the Iberian Peninsula, serving both local businesses and large distribution clients." },
+    { category: "Contact", question: "How can I contact you to place an order or ask for information?", answer: "You can contact us via phone at +34 93 15 91 221, via WhatsApp at +34 602 25 17 06, or by email at info@bellitalia.com." },
+    { category: "Products", question: "Can I request your catalog in PDF?", answer: "Yes — our catalogue is downloadable as a PDF with all our product references." },
+    { category: "Customers", question: "Is your service suitable for big distribution companies / retailers?", answer: "Yes — we have a business area dedicated to 'GDO' (large distribution), offering tailored logistic and supply solutions for large retailers." },
+    { category: "Customers", question: "If I own a restaurant, can you support my supply needs?", answer: "Definitely — we work with restaurants to supply high-quality Italian products, with a reliable and professional service." },
+    { category: "Products", question: "Are your products only Italian or also Mediterranean more broadly?", answer: "We offer primarily Italian products but also Mediterranean-style foods and beverages, aimed at clients who value quality and tradition." },
+    { category: "Company", question: "What makes BellItalia unique compared to other distributors?", answer: "Our strengths are the variety of unique products (from artisanal to branded), fast and reliable delivery, and specialized professional service." },
+    { category: "Customers", question: "Can I become a distributor with BellItalia if I have a wholesale business?", answer: "Yes — there is a section for distributors: we offer a reliable product range, logistic support and collaboration adapted to distributors' needs." },
+    { category: "Customers", question: "Do you ship to grocery stores or supermarkets?", answer: "Yes — through our 'GDO' line, we supply to large distribution channels, ensuring products suitable for retail shelves." },
+    { category: "Delivery", question: "How quickly can you deliver orders?", answer: "We emphasize fast and reliable shipping as one of our main qualities." },
+    { category: "Orders", question: "Are there any minimum order quantities / requirements?", answer: "For details like minimum orders or logistic conditions, we recommend contacting us directly — you can reach us by phone, WhatsApp or email." },
+    { category: "Products", question: "Do you only supply food, or also beverages and wines?", answer: "We supply food products, beverages, and Mediterranean/Italian wines." },
+    { category: "Customers", question: "I'm a small restaurant — can I still place an order?", answer: "Yes — BellItalia works with restaurants of different sizes and tailors service to their specific needs." },
+    { category: "Contact", question: "How long does it take to get a response when I contact you?", answer: "Once you send a message via our contact form, we commit to responding within 24 hours." },
   ]
 
-  for (const lang of languages) {
+  for (const faq of infoFAQs) {
+    await prisma.fAQ.create({
+      data: {
+        workspaceId: infoWorkspace.id,
+        question: faq.question,
+        answer: faq.answer,
+        isActive: true,
+        category: faq.category,
+      },
+    })
+  }
+
+  console.log(`✅ Informational workspace configured with ${infoAgents.length} agents and ${infoFAQs.length} FAQs`)
+  console.log(`\n📦 Admin user channels setup complete:`)
+  console.log(`   - Email: ${adminEmail}`)
+  console.log(`   - Plan: PREMIUM`)
+  console.log(`   - Channels: 2 (E-commerce: BellItalia VIP, Informational: BellItalia)\n`)
+
+  // Use BellItalia VIP as the main workspace for demo data
+  const workspace = ecommerceWorkspace
+
+  // 5. Create Languages (additional languages for main workspace)
+  console.log("🌐 Creating additional languages...")
+
+  // Add Spanish and Portuguese (IT and ENG already created)
+  for (const lang of [
+    { code: "ESP", name: "Español", isDefault: false },
+    { code: "PRT", name: "Português", isDefault: false },
+  ]) {
     await prisma.languages.create({
       data: {
         code: lang.code,
@@ -274,7 +448,7 @@ async function main() {
     })
   }
 
-  console.log(`✅ Created ${languages.length} languages`)
+  console.log(`✅ Created 2 additional languages (ESP, PRT)`)
 
   // 6. Create Pricing Configuration (Single Source of Truth)
   console.log("💰 Creating pricing configuration...")
@@ -689,36 +863,7 @@ async function main() {
 
   console.log(`✅ Created ${campaigns.length} campaigns`)
 
-  // 12. Create Agent Configurations (Multi-Agent System)
-  // Agents load their prompts from docs/prompts/*.md via defaultAgents()
-  console.log("🤖 Creating agent configurations...") // Use defaultAgents from data file (includes all 6 agents with prompts)
-  const agentConfigs = defaultAgents(workspace.id)
-  console.log(
-    `📄 Preparing ${agentConfigs.length} agents (ROUTER + 5 specialists + SAFETY)`
-  )
-
-  for (const config of agentConfigs) {
-    await prisma.agentConfig.create({
-      data: {
-        workspaceId: config.workspaceId,
-        name: config.name,
-        type: config.type,
-        description: config.description,
-        icon: config.icon,
-        systemPrompt: config.systemPrompt,
-        model: config.model,
-        temperature: config.temperature,
-        maxTokens: config.maxTokens,
-        order: config.order,
-        isActive: config.isActive,
-        availableFunctions: config.availableFunctions || null,
-      },
-    })
-  }
-
-  console.log(
-    `✅ Created ${agentConfigs.length} agents (ROUTER + specialists + SAFETY)`
-  )
+  // NOTE: Agent configurations already created above for BellItalia VIP (ecommerceWorkspace)
 
   // 13. Create Sales Representatives
   console.log("👔 Creating sales representatives...")
@@ -930,7 +1075,7 @@ async function main() {
       data: {
         chatSessionId: chatSession1.id,
         direction: "OUTBOUND",
-        content: "Ciao! Benvenuto in Bell'Italia. Come posso aiutarti oggi?",
+        content: "Ciao! Benvenuto in BellItalia. Come posso aiutarti oggi?",
         type: "TEXT",
         aiGenerated: true,
         metadata: {
@@ -1181,7 +1326,7 @@ async function main() {
       data: {
         chatSessionId: chatSession4.id,
         direction: "OUTBOUND",
-        content: "Hello! Welcome to Bell'Italia. How can I help you today?",
+        content: "Hello! Welcome to BellItalia. How can I help you today?",
         type: "TEXT",
         aiGenerated: true,
         metadata: {
@@ -1797,7 +1942,7 @@ async function main() {
     {
       planType: "PREMIUM" as const,
       displayName: "Premium",
-      monthlyFee: 49.00,
+      monthlyFee: 39.00,
       maxChannels: 2,
       maxProducts: 100,
       maxCustomers: 100,
@@ -1851,19 +1996,268 @@ async function main() {
 
   console.log(`✅ Created ${planConfigurations.length} plan configurations`)
 
-  // Create initial billing transaction for FREE_TRIAL credit
+  // Create billing transaction history for PREMIUM plan
+  console.log("💳 Creating billing transaction history...")
+
+  const now = new Date()
+  const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+  const twoMonthsAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000)
+  const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
+
+  // ============================================================================
+  // BILLING TRANSACTIONS - Realistic history starting from €19 Free Trial
+  // Story: User starts Free Trial (€19), then upgrades, recharges, uses messages
+  // NOTE: Monthly subscription fees are billed separately (not from credit balance)
+  // ============================================================================
+
+  // September 2025: User signs up with Free Trial (€19)
   await prisma.billingTransaction.create({
     data: {
       workspace: { connect: { id: workspace.id } },
       user: { connect: { id: adminUser.id } },
-      type: "INITIAL_CREDIT",
+      type: "RECHARGE",
       amount: 19.00,
       balanceAfter: 19.00,
-      description: "Initial Free Trial credit",
+      description: "Initial credit - Free Trial",
+      createdAt: new Date(2025, 8, 5, 10, 0, 0), // Sep 5, 2025
     },
   })
 
-  console.log("✅ Created initial billing transaction (+€19 trial credit)")
+  // September 15: First recharge +€30 (triggers automatic upgrade from FREE_TRIAL to BASIC)
+  await prisma.billingTransaction.create({
+    data: {
+      workspace: { connect: { id: workspace.id } },
+      user: { connect: { id: adminUser.id } },
+      type: "RECHARGE",
+      amount: 30.00,
+      balanceAfter: 49.00,
+      description: "Credit recharge +€30",
+      createdAt: new Date(2025, 8, 15, 14, 30, 0), // Sep 15, 2025
+    },
+  })
+
+  // September 15: Automatic upgrade from FREE_TRIAL to BASIC (same time as recharge)
+  await prisma.billingTransaction.create({
+    data: {
+      workspace: { connect: { id: workspace.id } },
+      user: { connect: { id: adminUser.id } },
+      type: "UPGRADE_FEE",
+      amount: 0,
+      balanceAfter: 49.00,
+      description: "Upgrade from Free Trial to Basic plan (€19.00/month)",
+      createdAt: new Date(2025, 8, 15, 14, 30, 0), // Sep 15, 2025 (same time)
+    },
+  })
+
+  // October 1: Payment for September invoice (Plan €19 Basic + Recharges €30 = €49 charged)
+  // After this, balance is 49, invoice is separate charge
+  await prisma.billingTransaction.create({
+    data: {
+      workspace: { connect: { id: workspace.id } },
+      user: { connect: { id: adminUser.id } },
+      type: "INVOICE_PAID",
+      amount: 0,
+      balanceAfter: 49.00,
+      description: "Invoice Sep 2025 paid - Basic plan €19.00 + Recharges €30.00",
+      createdAt: new Date(2025, 9, 1, 6, 0, 0), // Oct 1, 2025 at 06:00
+    },
+  })
+
+  // October 1: Upgrade to Premium plan (after invoice payment)
+  await prisma.billingTransaction.create({
+    data: {
+      workspace: { connect: { id: workspace.id } },
+      user: { connect: { id: adminUser.id } },
+      type: "UPGRADE_FEE",
+      amount: 0,
+      balanceAfter: 49.00,
+      description: "Upgrade from Basic to Premium plan (€39.00/month)",
+      createdAt: new Date(2025, 9, 1, 7, 0, 0), // Oct 1, 2025 at 07:00
+    },
+  })
+
+  // October 20: Message usage -€5
+  await prisma.billingTransaction.create({
+    data: {
+      workspace: { connect: { id: workspace.id } },
+      user: { connect: { id: adminUser.id } },
+      type: "MESSAGE",
+      amount: -5.00,
+      balanceAfter: 44.00,
+      description: "50 WhatsApp messages (BellItalia VIP)",
+      createdAt: new Date(2025, 9, 20, 16, 45, 0), // Oct 20, 2025
+    },
+  })
+
+  // November 1: Payment for October invoice (Plan €39 Premium + Recharges €0 = €39 charged)
+  // Balance stays 44 (invoice is separate)
+  await prisma.billingTransaction.create({
+    data: {
+      workspace: { connect: { id: workspace.id } },
+      user: { connect: { id: adminUser.id } },
+      type: "INVOICE_PAID",
+      amount: 0,
+      balanceAfter: 44.00,
+      description: "Invoice Oct 2025 paid - Premium plan €39.00 + Recharges €0.00",
+      createdAt: new Date(2025, 10, 1, 6, 0, 0), // Nov 1, 2025 at 06:00
+    },
+  })
+
+  // November 1: Credit recharge +€49
+  await prisma.billingTransaction.create({
+    data: {
+      workspace: { connect: { id: workspace.id } },
+      user: { connect: { id: adminUser.id } },
+      type: "RECHARGE",
+      amount: 49.00,
+      balanceAfter: 93.00,
+      description: "Credit recharge +€49",
+      createdAt: new Date(2025, 10, 1, 8, 0, 0), // Nov 1, 2025 at 08:00
+    },
+  })
+
+  // November 15: Message usage -€3.50
+  await prisma.billingTransaction.create({
+    data: {
+      workspace: { connect: { id: workspace.id } },
+      user: { connect: { id: adminUser.id } },
+      type: "MESSAGE",
+      amount: -3.50,
+      balanceAfter: 89.50,
+      description: "35 WhatsApp messages (BellItalia)",
+      createdAt: new Date(2025, 10, 15, 11, 30, 0), // Nov 15, 2025
+    },
+  })
+
+  // December 1: Payment for November invoice (Plan €39 Premium + Recharges €49 = €88 charged)
+  // Balance stays 89.50 (invoice is separate)
+  await prisma.billingTransaction.create({
+    data: {
+      workspace: { connect: { id: workspace.id } },
+      user: { connect: { id: adminUser.id } },
+      type: "INVOICE_PAID",
+      amount: 0,
+      balanceAfter: 89.50,
+      description: "Invoice Nov 2025 paid - Premium plan €39.00 + Recharges €49.00",
+      createdAt: new Date(2025, 11, 1, 6, 0, 0), // Dec 1, 2025 at 06:00
+    },
+  })
+
+  // December 1: Credit recharge +€100
+  await prisma.billingTransaction.create({
+    data: {
+      workspace: { connect: { id: workspace.id } },
+      user: { connect: { id: adminUser.id } },
+      type: "RECHARGE",
+      amount: 100.00,
+      balanceAfter: 189.50,
+      description: "Credit recharge +€100",
+      createdAt: new Date(2025, 11, 1, 8, 0, 0), // Dec 1, 2025 at 08:00
+    },
+  })
+
+  // December 8: Message usage -€2.50
+  await prisma.billingTransaction.create({
+    data: {
+      workspace: { connect: { id: workspace.id } },
+      user: { connect: { id: adminUser.id } },
+      type: "MESSAGE",
+      amount: -2.50,
+      balanceAfter: 187.00,
+      description: "25 WhatsApp messages (BellItalia VIP)",
+      createdAt: new Date(2025, 11, 8, 14, 20, 0), // Dec 8, 2025
+    },
+  })
+
+  // December 10: Today's message -€0.10
+  await prisma.billingTransaction.create({
+    data: {
+      workspace: { connect: { id: workspace.id } },
+      user: { connect: { id: adminUser.id } },
+      type: "MESSAGE",
+      amount: -0.10,
+      balanceAfter: 186.90,
+      description: "1 WhatsApp message (BellItalia)",
+      createdAt: new Date(), // Today
+    },
+  })
+
+  console.log("✅ Created 13 billing transactions (realistic history)")
+
+  // ============================================================================
+  // MONTHLY INVOICES - Past paid invoices
+  // ============================================================================
+  console.log("🧾 Creating monthly invoices...")
+
+  // October 2025 Invoice (PAID)
+  await prisma.monthlyInvoice.create({
+    data: {
+      user: { connect: { id: adminUser.id } },
+      periodStart: new Date(2025, 9, 1, 0, 0, 0),
+      periodEnd: new Date(2025, 9, 31, 23, 59, 59),
+      periodMonth: 10,
+      periodYear: 2025,
+      subscriptionAmount: 49.00,
+      creditUsage: 5.00,
+      creditDebt: 0,
+      totalAmount: 54.00,
+      status: "PAID",
+      paidAt: new Date(2025, 10, 1, 10, 0, 0),
+      planType: "PREMIUM",
+      itemsBreakdown: {
+        messages: 50,
+        orders: 5,
+        pushNotifications: 2,
+      },
+    },
+  })
+
+  // November 2025 Invoice (PAID)
+  await prisma.monthlyInvoice.create({
+    data: {
+      user: { connect: { id: adminUser.id } },
+      periodStart: new Date(2025, 10, 1, 0, 0, 0),
+      periodEnd: new Date(2025, 10, 30, 23, 59, 59),
+      periodMonth: 11,
+      periodYear: 2025,
+      subscriptionAmount: 49.00,
+      creditUsage: 3.50,
+      creditDebt: 0,
+      totalAmount: 52.50,
+      status: "PAID",
+      paidAt: new Date(2025, 11, 1, 10, 0, 0),
+      planType: "PREMIUM",
+      itemsBreakdown: {
+        messages: 35,
+        orders: 8,
+        pushNotifications: 3,
+      },
+    },
+  })
+
+  // December 2025 Invoice (DRAFT - current month)
+  await prisma.monthlyInvoice.create({
+    data: {
+      user: { connect: { id: adminUser.id } },
+      periodStart: new Date(2025, 11, 1, 0, 0, 0),
+      periodEnd: new Date(2025, 11, 31, 23, 59, 59),
+      periodMonth: 12,
+      periodYear: 2025,
+      subscriptionAmount: 49.00,
+      creditUsage: 2.60,
+      creditDebt: 0,
+      totalAmount: 51.60,
+      status: "DRAFT",
+      planType: "PREMIUM",
+      itemsBreakdown: {
+        messages: 26,
+        orders: 2,
+        pushNotifications: 0,
+      },
+    },
+  })
+
+  console.log("✅ Created 3 monthly invoices (Oct, Nov, Dec 2025)")
 
   // Seed Scheduler Job Status (all jobs active by default)
   console.log("⏰ Creating scheduler job status...")

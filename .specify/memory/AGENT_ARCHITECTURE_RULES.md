@@ -29,23 +29,23 @@
 
 **VARIABILI GRANDI**:
 
-- `{{PRODUCTS}}` - Lista tutti prodotti (~50k tokens)
-- `{{SERVICES}}` - Lista tutti servizi (~5k tokens)
-- `{{CATEGORIES}}` - Lista tutte categorie (~2k tokens)
-- `{{OFFERS}}` - Lista tutte offerte (~3k tokens)
+- `{{products}}` - Lista tutti prodotti (~50k tokens)
+- `{{services}}` - Lista tutti servizi (~5k tokens)
+- `{{categories}}` - Lista tutte categorie (~2k tokens)
+- `{{offers}}` - Lista tutte offerte (~3k tokens)
 
 **ALLOWED**:
 
-- ✅ `{{SERVICES}}` in Router Agent prompt
-- ✅ `{{SERVICES}}` in Product Search Agent prompt (agents diversi OK)
-- ✅ `{{PRODUCTS}}` in Product Search Agent prompt
-- ✅ `{{CATEGORIES}}` in Product Search Agent prompt
+- ✅ `{{services}}` in Router Agent prompt
+- ✅ `{{services}}` in Product Search Agent prompt (agents diversi OK)
+- ✅ `{{products}}` in Product Search Agent prompt
+- ✅ `{{categories}}` in Product Search Agent prompt
 
 **FORBIDDEN**:
 
-- ❌ `{{SERVICES}}` due volte nello STESSO prompt Router Agent
-- ❌ `{{PRODUCTS}}` due volte nello STESSO prompt Product Search Agent
-- ❌ `{{CATEGORIES}}` due volte nello STESSO prompt
+- ❌ `{{services}}` due volte nello STESSO prompt Router Agent
+- ❌ `{{products}}` due volte nello STESSO prompt Product Search Agent
+- ❌ `{{categories}}` due volte nello STESSO prompt
 
 **REASON**: Ogni variabile può generare 50k+ tokens. Duplicazione NELLO STESSO PROMPT causa 100k+ prompt → API failure.
 
@@ -168,7 +168,7 @@ model Workspace {
 ```typescript
 // backend/prisma/data/workspaceSettings.ts
 export const workspaceSettings = {
-  welcomeMessage: "Welcome to Bell'Italia! I'm SofiA...", // ✅ String
+  welcomeMessage: "Welcome to BellItalia! I'm SofiA...", // ✅ String
   wipMessage: "Work in progress. Contact us later.", // ✅ String
   // ❌ NO: welcomeMessages: { en: "", it: "" }
 }
@@ -600,7 +600,7 @@ customerFunction({
 **PATTERN**:
 
 ```markdown
-**Variable**: {{PRODUCTS}}
+**Variable**: {{products}}
 **Typical Size**: ~50,000 tokens (500 products × 100 tokens each)
 **Usage**: Max once per prompt (see REGOLA II)
 ```
@@ -784,8 +784,8 @@ Quale preferisci? Dimmi il numero! 🛒" ← CORRECT! Multiple items, ask choice
 ❌ **NO**: welcomeMessage come JSON object `{en: "", it: ""}`  
 ✅ **YES**: welcomeMessage come stringa semplice "Welcome..."
 
-❌ **NO**: `{{SERVICES}}` due volte nello stesso prompt  
-✅ **YES**: `{{SERVICES}}` max una volta per prompt
+❌ **NO**: `{{services}}` due volte nello stesso prompt  
+✅ **YES**: `{{services}}` max una volta per prompt
 
 ❌ **NO**: Router Agent gestisce logica prodotti  
 ✅ **YES**: Router Agent delega a Product Search Agent
@@ -1057,14 +1057,14 @@ Quale preferisci? (Rispondi con il numero)
 
 - Product Search Agent prompt aveva esempi con code "MOZZ-001", "PARM-001"
 - Database reale aveva code "FORMAG-003", "PARM-002"
-- LLM ha copiato "MOZZ-001" dall'esempio invece di estrarre "FORMAG-003" da {{PRODUCTS}}
+- LLM ha copiato "MOZZ-001" dall'esempio invece di estrarre "FORMAG-003" da {{products}}
 - Cart Agent ricevuto code fake → "Product not found" error
 - User reaction: "molto ma molto ma molto male amico mio !!!"
 
 ❌ **ROOT CAUSE**: Prompt non specificava che MOZZ-001 era FAKE, solo esempio
 
 - LLM ha pensato: "MOZZ-001 è un codice valido, lo uso"
-- Non ha capito che doveva leggere da {{PRODUCTS}} variabile
+- Non ha capito che doveva leggere da {{products}} variabile
 ```
 
 **MANDATORY LABELING PATTERNS**:
@@ -1078,7 +1078,7 @@ All product codes, phone numbers, order IDs, customer names shown in the example
 
 **YOU MUST**:
 
-- ✅ Read REAL data from {{PRODUCTS}}, {{SERVICES}}, {{CUSTOMERS}} variables
+- ✅ Read REAL data from {{products}}, {{services}}, {{CUSTOMERS}} variables
 - ✅ Extract codes/IDs from variable content, NOT from examples
 - ❌ NEVER copy codes/names/IDs from examples below
 
@@ -1088,7 +1088,7 @@ All product codes, phone numbers, order IDs, customer names shown in the example
 
 Example 1: Product search with mozzarella
 ...
-(MOZZ-001) Mozzarella... ← FAKE CODE! Real code in {{PRODUCTS}}
+(MOZZ-001) Mozzarella... ← FAKE CODE! Real code in {{products}}
 ```
 
 ### Pattern 2: Inline Labels on Each Fake Data Point
@@ -1102,7 +1102,7 @@ Vuoi aggiungerla?"
 
 **HOW TO GET REAL CODE**:
 
-1. Read {{PRODUCTS}} variable: `• FORMAG-003 Mozzarella di Bufala...`
+1. Read {{products}} variable: `• FORMAG-003 Mozzarella di Bufala...`
 2. Extract code: FORMAG-003
 3. Use in response: `(FORMAG-003) Mozzarella...` ← Real code!
 ```
@@ -1118,16 +1118,16 @@ addToCart({ code: "MOZZ-001" }) // ← FAKE CODE from examples!
 ```
 ````
 
-✅ **CORRECT** (using real data from {{PRODUCTS}}):
+✅ **CORRECT** (using real data from {{products}}):
 
 ```javascript
-// {{PRODUCTS}} contains: "• FORMAG-003 Mozzarella di Bufala..."
+// {{products}} contains: "• FORMAG-003 Mozzarella di Bufala..."
 addToCart({ code: "FORMAG-003" }) // ← REAL CODE from variable!
 // Result: Product added successfully ✅
 ```
 
 **WHY DIFFERENT**: Example codes (MOZZ-001) don't exist in database!
-Only codes from {{PRODUCTS}} variable are valid.
+Only codes from {{products}} variable are valid.
 
 ````
 
@@ -1138,8 +1138,8 @@ Only codes from {{PRODUCTS}} variable are valid.
 ## 🚨 CRITICAL - DATA SOURCES
 
 **ALL data MUST come from these variables**:
-- {{PRODUCTS}} - Real product codes, names, prices (NOT from examples!)
-- {{SERVICES}} - Real service codes (NOT from examples!)
+- {{products}} - Real product codes, names, prices (NOT from examples!)
+- {{services}} - Real service codes (NOT from examples!)
 - {{CUSTOMERS}} - Real customer data (NOT from examples!)
 
 **EXAMPLES in this prompt use FAKE data** (MOZZ-001, PARM-001, +39-123-456, etc.)
@@ -1152,7 +1152,7 @@ Only codes from {{PRODUCTS}} variable are valid.
 
 ```markdown
 Example 1: Single product response
-Agent: "(MOZZ-001) Mozzarella..." ← ⚠️ FAKE! Use real code from {{PRODUCTS}}
+Agent: "(MOZZ-001) Mozzarella..." ← ⚠️ FAKE! Use real code from {{products}}
 
 Example 2: Cart addition
 addToCart("PARM-001") ← ⚠️ FAKE CODE - example only!
@@ -1165,13 +1165,13 @@ addToCart("PARM-001") ← ⚠️ FAKE CODE - example only!
 
 **Step-by-step**:
 
-1. Read {{PRODUCTS}} variable
+1. Read {{products}} variable
 2. Find product matching customer query
 3. Extract code from format: `• CODE ProductName...`
 4. Use EXACT code in response
 
 **Example extraction**:
-{{PRODUCTS}} contains: `• FORMAG-003 Mozzarella di Bufala Campana DOP 250g...`
+{{products}} contains: `• FORMAG-003 Mozzarella di Bufala Campana DOP 250g...`
 ↑ This is the REAL code
 Extract: FORMAG-003
 Use in response: "(FORMAG-003) Mozzarella di Bufala..."
@@ -1225,19 +1225,19 @@ Agent responds with: "(MOZZ-001) Mozzarella..."
 
 → NO warning that MOZZ-001 is fake!
 → LLM thinks MOZZ-001 is valid code!
-→ Copies MOZZ-001 instead of reading {{PRODUCTS}}!
+→ Copies MOZZ-001 instead of reading {{products}}!
 
 ✅ **CORRECT** (explicit labeling):
 
 ```markdown
 ⚠️ **WARNING**: Example below uses FAKE code (MOZZ-001)
-Real codes come from {{PRODUCTS}} variable (e.g., FORMAG-003)
+Real codes come from {{products}} variable (e.g., FORMAG-003)
 
 Example: Customer asks for mozzarella
 Agent responds with: "(MOZZ-001) Mozzarella..." ← ⚠️ FAKE CODE - example only!
 
 **HOW TO GET REAL CODE**:
-Read {{PRODUCTS}}: `• FORMAG-003 Mozzarella...`
+Read {{products}}: `• FORMAG-003 Mozzarella...`
 Extract: FORMAG-003
 Use: "(FORMAG-003) Mozzarella..." ← Real code!
 ```
@@ -1370,8 +1370,8 @@ Prima di implementare, verificare:
 ❌ **NO**: welcomeMessage come JSON object `{en: "", it: ""}`  
 ✅ **YES**: welcomeMessage come stringa semplice "Welcome..."
 
-❌ **NO**: `{{SERVICES}}` due volte nello stesso prompt  
-✅ **YES**: `{{SERVICES}}` max una volta per prompt
+❌ **NO**: `{{services}}` due volte nello stesso prompt  
+✅ **YES**: `{{services}}` max una volta per prompt
 
 ❌ **NO**: Router Agent gestisce logica prodotti  
 ✅ **YES**: Router Agent delega a Product Search Agent

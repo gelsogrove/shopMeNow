@@ -45,7 +45,7 @@ describe("Agent Functions Mapping - Single Source of Truth", () => {
       expect(functionNames).not.toContain("addToCart")
       expect(functionNames).not.toContain("getProductDetails")
       expect(functionNames).not.toContain("confirmOrder")
-      expect(functionNames).not.toContain("ContactOperator")
+      expect(functionNames).not.toContain("contactOperator")
     })
 
     it("should have required query parameter for all delegation functions", () => {
@@ -123,7 +123,7 @@ describe("Agent Functions Mapping - Single Source of Truth", () => {
     it("should have order management functions", () => {
       const functionNames = ORDER_TRACKING_FUNCTIONS.map((fn) => fn.function.name)
 
-      expect(functionNames).toContain("GetLinkOrderByCode")
+      expect(functionNames).toContain("getLinkOrderByCode")
       expect(functionNames).toContain("repeatOrder")
       expect(functionNames).toContain("getOrderDetails")
       expect(functionNames).toContain("confirmOrder")
@@ -152,19 +152,19 @@ describe("Agent Functions Mapping - Single Source of Truth", () => {
   })
 
   describe("CUSTOMER_SUPPORT Agent Functions", () => {
-    it("should have ContactOperator function", () => {
+    it("should have contactOperator function", () => {
       const functionNames = CUSTOMER_SUPPORT_FUNCTIONS.map((fn) => fn.function.name)
 
-      expect(functionNames).toContain("ContactOperator")
+      expect(functionNames).toContain("contactOperator")
     })
 
     it("should have exactly 1 function (escalation only)", () => {
       expect(CUSTOMER_SUPPORT_FUNCTIONS.length).toBe(1)
     })
 
-    it("ContactOperator should have no required parameters", () => {
+    it("contactOperator should have no required parameters", () => {
       const contactOperator = CUSTOMER_SUPPORT_FUNCTIONS.find(
-        (fn) => fn.function.name === "ContactOperator"
+        (fn) => fn.function.name === "contactOperator"
       )
 
       expect(contactOperator).toBeDefined()
@@ -260,7 +260,7 @@ describe("Agent Functions Mapping - Single Source of Truth", () => {
       // Order functions
       expect(allNames).toContain("confirmOrder")
       // Support functions
-      expect(allNames).toContain("ContactOperator")
+      expect(allNames).toContain("contactOperator")
       // Profile functions
       expect(allNames).toContain("getProfileLink")
     })

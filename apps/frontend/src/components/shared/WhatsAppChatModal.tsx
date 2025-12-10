@@ -8,12 +8,20 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { getWorkspaceId } from "@/config/workspace.config"
 import { logger } from "@/lib/logger"
 import { api } from "@/services/api"
+import { getAllForWorkspace, Client } from "@/services/clientsApi"
 import axios from "axios"
-import { Headphones, MessageCircle, Send, X } from "lucide-react"
+import { Headphones, MessageCircle, Send, X, UserPlus, Users } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { MessageRenderer } from "./MessageRenderer"
 
@@ -103,6 +111,60 @@ export function WhatsAppChatModal({
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [showFunctionCalls, setShowFunctionCalls] = useState(false)
   const [showProcessedPrompt, setShowProcessedPrompt] = useState(false)
+
+  // Customer selection states
+  const [customers, setCustomers] = useState<Client[]>([])
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>("")
+  const [isNewCustomer, setIsNewCustomer] = useState(false)
+  const [loadingCustomers, setLoadingCustomers] = useState(false)
+
+  // Load customers when modal opens
+  useEffect(() => {
+    const loadCustomers = async () => {
+      const wsId = getWorkspaceId(workspaceId)
+      if (!isOpen || !wsId) return
+
+      setLoadingCustomers(true)
+      try {
+        const customerList = await getAllForWorkspace(wsId)
+        // Filter only active customers with phone numbers
+        const activeCustomers = customerList.filter(c => c.isActive && c.phone)
+        setCustomers(activeCustomers)
+        logger.info(`[WhatsApp Modal] Loaded ${activeCustomers.length} customers`)
+      } catch (error) {
+        logger.error("[WhatsApp Modal] Failed to load customers:", error)
+        setCustomers([])
+      } finally {
+        setLoadingCustomers(false)
+      }
+    }
+
+    loadCustomers()
+  }, [isOpen, workspaceId])
+
+  // Handle customer selection from dropdown
+  const handleCustomerSelect = (customerId: string) => {
+    setSelectedCustomerId(customerId)
+    setIsNewCustomer(false)
+    const customer = customers.find(c => c.id === customerId)
+    if (customer?.phone) {
+      setUserPhoneNumber(customer.phone)
+    }
+  }
+
+  // Handle new customer mode
+  const handleNewCustomerClick = () => {
+    setIsNewCustomer(true)
+    setSelectedCustomerId("")
+    setUserPhoneNumber("")
+  }
+
+  // Handle back to customer selection
+  const handleBackToSelection = () => {
+    setIsNewCustomer(false)
+    setSelectedCustomerId("")
+    setUserPhoneNumber("")
+  }
 
   // 🔄 Handle modal close with chat list refresh
   const handleClose = () => {
@@ -838,7 +900,7 @@ export function WhatsAppChatModal({
             {!chatStarted ? (
               <div className="p-6">
                 <h3 className="text-lg font-semibold mb-4">
-                  Enter details to start a chat
+                  Start a Chat Simulation
                 </h3>
 
                 {!hasValidWorkspace && (
@@ -851,38 +913,125 @@ export function WhatsAppChatModal({
                 )}
 
                 <div className="space-y-6">
-                  <div>
-                    <Label htmlFor="phone-number">Phone Number</Label>
-                    <Input
-                      id="phone-number"
-                      type="tel"
-                      placeholder="+1 234 567 8900"
-                      value={userPhoneNumber}
-                      onChange={(e) => setUserPhoneNumber(e.target.value)}
-                      autoFocus
-                      autoComplete="off"
-                      className="mt-2"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Enter the recipient's phone number including country code
-                    </p>
-                  </div>
+                  {/* Customer Selection */}
+                  {!isNewCustomer ? (
+                    <>
+                      <div>
+                        <Label htmlFor="customer-select" className="flex items-center gap-2">
+                          <Users className="h-4 w-4" />
+                          Select Existing Customer
+                        </Label>
+                        <Select
+                          value={selectedCustomerId}
+                          onValueChange={handleCustomerSelect}
+                          disabled={loadingCustomers}
+                        >
+                          <SelectTrigger className="mt-2">
+                            <SelectValue placeholder={loadingCustomers ? "Loading customers..." : "Choose a customer..."} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {customers.map((customer) => (
+                              <SelectItem key={customer.id} value={customer.id}>
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{customer.name}</span>
+                                  <span className="text-xs text-gray-500">{customer.phone}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                            {customers.length === 0 && !loadingCustomers && (
+                              <SelectItem value="none" disabled>
+                                No customers found
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {customers.length} customers available
+                        </p>
+                      </div>
 
-                  <div>
-                    <Label htmlFor="initial-message">First Message *</Label>
-                    <Textarea
-                      id="initial-message"
-                      placeholder="Hello, I'd like to know about your products..."
-                      value={initialMessage}
-                      onChange={(e) => setInitialMessage(e.target.value)}
-                      className="mt-2"
-                      rows={3}
-                      required
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Enter the first message to start the conversation
-                    </p>
-                  </div>
+                      <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                          <span className="w-full border-t" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                          <span className="bg-white px-2 text-gray-500">Or</span>
+                        </div>
+                      </div>
+
+                      <Button
+                        variant="outline"
+                        className="w-full gap-2"
+                        onClick={handleNewCustomerClick}
+                      >
+                        <UserPlus className="h-4 w-4" />
+                        New Customer (Enter Phone Number)
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleBackToSelection}
+                          className="text-gray-500 hover:text-gray-700"
+                        >
+                          ← Back to customer list
+                        </Button>
+                      </div>
+                      <div>
+                        <Label htmlFor="phone-number" className="flex items-center gap-2">
+                          <UserPlus className="h-4 w-4" />
+                          New Customer Phone Number
+                        </Label>
+                        <Input
+                          id="phone-number"
+                          type="tel"
+                          placeholder="+34 612 345 678"
+                          value={userPhoneNumber}
+                          onChange={(e) => setUserPhoneNumber(e.target.value)}
+                          autoFocus
+                          autoComplete="off"
+                          className="mt-2"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Enter phone number with country code (e.g. +34 for Spain)
+                        </p>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Show phone number if customer selected */}
+                  {selectedCustomerId && !isNewCustomer && (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+                      <p className="text-sm text-green-800 font-medium">
+                        📱 Selected: {customers.find(c => c.id === selectedCustomerId)?.name}
+                      </p>
+                      <p className="text-xs text-green-600 mt-1">
+                        Phone: {userPhoneNumber}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* First message - always shown when customer/phone is ready */}
+                  {(selectedCustomerId || (isNewCustomer && userPhoneNumber)) && (
+                    <div>
+                      <Label htmlFor="initial-message">First Message *</Label>
+                      <Textarea
+                        id="initial-message"
+                        placeholder="Hello, I'd like to know about your products..."
+                        value={initialMessage}
+                        onChange={(e) => setInitialMessage(e.target.value)}
+                        className="mt-2"
+                        rows={3}
+                        required
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Enter the first message to start the conversation
+                      </p>
+                    </div>
+                  )}
 
                   <Button
                     className="w-full bg-green-500 hover:bg-green-600"

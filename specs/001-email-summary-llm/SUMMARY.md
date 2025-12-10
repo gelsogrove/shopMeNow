@@ -31,7 +31,7 @@ A comprehensive 200+ line specification with:
   - Create SUMMARY agent type (order 7, after Safety Translation)
   - Load prompt from `docs/prompts/summary-agent.md`
   - Integrate into email flow: History → Summary Agent → Safety Agent → Email
-  - Fix `contactSupport` CF to call `ContactOperator.ts` instead of placeholder
+  - Fix `contactSupport` CF to call `contactOperator.ts` instead of placeholder
   - Retrieve last 15 messages from database (configurable)
   - Fallback to raw history if Summary Agent fails
 
@@ -117,7 +117,7 @@ return {
 }
 ```
 
-**Result**: Customer escalations disable chatbot but **NO EMAIL is ever sent** to sales agents. The full email implementation exists in `ContactOperator.ts` but is never called.
+**Result**: Customer escalations disable chatbot but **NO EMAIL is ever sent** to sales agents. The full email implementation exists in `contactOperator.ts` but is never called.
 
 ### The Solution (Summary LLM Agent)
 
@@ -130,7 +130,7 @@ Create a new **SUMMARY agent** (order 7) that:
 
 **Email Flow**:
 ```
-contactSupport CF → ContactOperator.ts → 
+contactSupport CF → contactOperator.ts → 
   Retrieve messages from last hour (WHERE createdAt >= NOW() - 1 hour) → 
   Summary Agent (receives array, returns text summary - NO calling functions) → 
   Safety Translation Agent (translate + sanitize) → 

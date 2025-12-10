@@ -270,7 +270,7 @@ export class FunctionHandlerService {
           }
 
         // 🔗 ORDER LINK
-        case "GetLinkOrderByCode":
+        case "getLinkOrderByCode":
           return {
             data: await this.handleGetLinkOrderByCode(
               params,
@@ -302,7 +302,7 @@ export class FunctionHandlerService {
           }
 
         //  CONTACT OPERATOR
-        case "ContactOperator":
+        case "contactOperator":
           return {
             data: await this.handleContactOperator(
               params,
@@ -359,7 +359,7 @@ export class FunctionHandlerService {
                 "search_products",
                 "search_documents",
                 "get_faq_info",
-                "ContactOperator",
+                "contactOperator",
                 "addProduct",
                 "repeatOrder",
                 "searchProduct",
@@ -445,13 +445,13 @@ export class FunctionHandlerService {
         params
       )
 
-      // Import the GetLinkOrderByCode function
+      // Import the getLinkOrderByCode function
       const {
-        GetLinkOrderByCode,
-      } = require("../../domain/calling-functions/GetLinkOrderByCode")
+        getLinkOrderByCode,
+      } = require("../../domain/calling-functions/getLinkOrderByCode")
 
-      // Call the GetLinkOrderByCode function
-      const result = await GetLinkOrderByCode({
+      // Call the getLinkOrderByCode function
+      const result = await getLinkOrderByCode({
         customerId: customer?.id || "",
         workspaceId: workspaceId,
         orderCode: params.orderCode || undefined,
@@ -460,7 +460,7 @@ export class FunctionHandlerService {
       })
 
       logger.info(
-        "🔧 FunctionHandlerService: GetLinkOrderByCode result:",
+        "🔧 FunctionHandlerService: getLinkOrderByCode result:",
         result
       )
 
@@ -866,15 +866,15 @@ export class FunctionHandlerService {
       } = require("../../services/calling-functions.service")
       const callingFunctionsService = new CallingFunctionsService()
 
-      // Call the ContactOperator function with required phoneNumber parameter
-      const result = await callingFunctionsService.ContactOperator({
+      // Call the contactOperator function with required phoneNumber parameter
+      const result = await callingFunctionsService.contactOperator({
         message: params.message || "",
         phoneNumber: customer?.phone || "", // Ora usiamo phoneNumber
         customerId: customer?.id || "",
         workspaceId: workspaceId,
       })
 
-      logger.info("🔧 ContactOperator result:", result)
+      logger.info("🔧 contactOperator result:", result)
       return result
     } catch (error) {
       logger.error("❌ Error in handleContactOperator:", error)
@@ -912,10 +912,10 @@ export class FunctionHandlerService {
 
       // Import the calling function
       const {
-        AddProduct,
-      } = require("../../domain/calling-functions/AddProduct")
+        addProduct,
+      } = require("../../domain/calling-functions/addProduct")
 
-      const result = await AddProduct({
+      const result = await addProduct({
         customerId: customer.id,
         workspaceId: workspaceId,
         sku: params.sku,
@@ -923,7 +923,7 @@ export class FunctionHandlerService {
         notes: params.notes,
       })
 
-      logger.info("✅ AddProduct result:", result)
+      logger.info("✅ addProduct result:", result)
       return result
     } catch (error) {
       logger.error("❌ Error in handleAddProduct:", error)
@@ -960,16 +960,16 @@ export class FunctionHandlerService {
 
       // Import the calling function
       const {
-        RepeatOrder,
-      } = require("../../domain/calling-functions/RepeatOrder")
+        repeatOrder,
+      } = require("../../domain/calling-functions/repeatOrder")
 
-      const result = await RepeatOrder({
+      const result = await repeatOrder({
         customerId: customer.id,
         workspaceId: workspaceId,
         orderCode: params.orderCode,
       })
 
-      logger.info("✅ RepeatOrder result:", result)
+      logger.info("✅ repeatOrder result:", result)
       return result
     } catch (error) {
       logger.error("❌ Error in handleRepeatOrder:", error)
@@ -1016,16 +1016,16 @@ export class FunctionHandlerService {
 
       // Import the calling function
       const {
-        SearchProduct,
-      } = require("../../domain/calling-functions/SearchProduct")
+        searchProduct,
+      } = require("../../domain/calling-functions/searchProduct")
 
-      const result = await SearchProduct({
+      const result = await searchProduct({
         customerId: customer.id,
         workspaceId: workspaceId,
         productName: params.productName,
       })
 
-      logger.info("✅ SearchProduct result:", result)
+      logger.info("✅ searchProduct result:", result)
       return result
     } catch (error) {
       logger.error("❌ Error in handleSearchProduct:", error)

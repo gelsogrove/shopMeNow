@@ -2,7 +2,6 @@ import GdprPage from "@/pages/GdprPage"
 import SettingsPage from "@/pages/SettingsPage"
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom"
 import { Toaster } from "sonner"
-import { Layout } from "./components/layout/Layout"
 import { MinimalLayout } from "./components/layout/MinimalLayout"
 import { ProtectedRoute } from "./components/ProtectedRoute"
 import { ChatProvider } from "./contexts/ChatContext"
@@ -120,43 +119,43 @@ export function App() {
                     element={<WorkspaceSelectionPage />}
                   />
 
-                  {/* Layout con sidebar */}
-                  <Route path="/chat" element={<Layout />}>
+                  {/* Layout senza sidebar */}
+                  <Route path="/chat" element={<MinimalLayout />}>
                     <Route index element={<ChatPage />} />
                   </Route>
-                  <Route path="/queue" element={<Layout />}>
+                  <Route path="/queue" element={<MinimalLayout />}>
                     <Route index element={<QueuePage />} />
                   </Route>
-                  <Route path="/analytics" element={<Layout />}>
+                  <Route path="/analytics" element={<MinimalLayout />}>
                     <Route index element={<AnalyticsPage />} />
                   </Route>
-                  <Route path="/agents" element={<Layout />}>
+                  <Route path="/agents" element={<MinimalLayout />}>
                     <Route index element={<AgentConfigurationPage />} />
                   </Route>
-                  <Route path="/clients" element={<Layout />}>
+                  <Route path="/clients" element={<MinimalLayout />}>
                     <Route index element={<ClientsPage />} />
                     <Route path=":id" element={<ClientsPage />} />
                   </Route>
-                  <Route path="/sales" element={<Layout />}>
+                  <Route path="/sales" element={<MinimalLayout />}>
                     <Route index element={<SalesPage />} />
                   </Route>
-                  <Route path="/admin/orders" element={<Layout />}>
+                  <Route path="/admin/orders" element={<MinimalLayout />}>
                     <Route index element={<OrdersPage />} />
                   </Route>
-                  <Route path="/products" element={<Layout />}>
+                  <Route path="/products" element={<MinimalLayout />}>
                     <Route index element={<ProductsPage />} />
                   </Route>
-                  <Route path="/suppliers" element={<Layout />}>
+                  <Route path="/suppliers" element={<MinimalLayout />}>
                     <Route index element={<SuppliersPage />} />
                   </Route>
-                  <Route path="/categories" element={<Layout />}>
+                  <Route path="/categories" element={<MinimalLayout />}>
                     <Route index element={<CategoriesPage />} />
                   </Route>
 
-                  <Route path="/services" element={<Layout />}>
+                  <Route path="/services" element={<MinimalLayout />}>
                     <Route index element={<ServicesPage />} />
                   </Route>
-                  <Route path="/faq" element={<Layout />}>
+                  <Route path="/faq" element={<MinimalLayout />}>
                     <Route index element={<FAQPage />} />
                   </Route>
 
@@ -168,7 +167,7 @@ export function App() {
                     <Route index element={<BillingPage />} />
                   </Route>
 
-                  <Route path="/settings" element={<Layout />}>
+                  <Route path="/settings" element={<MinimalLayout />}>
                     <Route index element={<SettingsPage />} />
                     <Route path="languages" element={<LanguagesPage />} />
                     <Route
@@ -181,20 +180,18 @@ export function App() {
                     />
                     <Route path="products" element={<SettingsProductsPage />} />
                   </Route>
-                  <Route path="/gdpr" element={<Layout />}>
+                  <Route path="/gdpr" element={<MinimalLayout />}>
                     <Route index element={<GdprPage />} />
                   </Route>
-                  <Route path="/workspace" element={<Layout />}>
+                  <Route path="/workspace" element={<MinimalLayout />}>
                     <Route index element={<WorkspacePage />} />
                   </Route>
 
-                  {/* Modifico la route per offers per usare Layout e OffersPage */}
-                  <Route path="/offers" element={<Layout />}>
+                  <Route path="/offers" element={<MinimalLayout />}>
                     <Route index element={<OffersPage />} />
                   </Route>
 
-                  {/* Campaign routes */}
-                  <Route path="/campaigns" element={<Layout />}>
+                  <Route path="/campaigns" element={<MinimalLayout />}>
                     <Route index element={<CampaignsPage />} />
                   </Route>
                 </Route>

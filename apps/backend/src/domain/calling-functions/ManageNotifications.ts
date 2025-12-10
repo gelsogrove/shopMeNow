@@ -37,7 +37,7 @@ export interface ManageNotificationsResult {
  * @param request - Request with action (SUBSCRIBE/UNSUBSCRIBE)
  * @returns Result with confirmation message and current status
  */
-export async function ManageNotifications(
+export async function manageNotifications(
   request: ManageNotificationsRequest
 ): Promise<ManageNotificationsResult> {
   try {

@@ -89,12 +89,6 @@ export function QueuePage() {
       )
       if (response.data.success) {
         setDebugMode(newValue)
-        toast.success(
-          newValue 
-            ? "Debug Mode enabled - messages will NOT be sent" 
-            : "Debug Mode disabled - messages will be sent normally",
-          { duration: 3000 }
-        )
       } else {
         toast.error("Failed to update debug mode", { duration: 2000 })
       }
@@ -182,7 +176,6 @@ export function QueuePage() {
       
       if (response.data.success) {
         setMessages([])
-        toast.success("Queue cleared successfully", { duration: 2000 })
         setShowDeleteDialog(false)
       } else {
         toast.error(response.data.error || "Failed to clear queue", { duration: 1000 })
@@ -207,7 +200,6 @@ export function QueuePage() {
 
       if (response.data.success) {
         setMessages(messages.filter((m) => m.id !== messageId))
-        toast.success("Message deleted successfully", { duration: 2000 })
         setShowDeleteMessageDialog(false)
         setMessageToDelete(null)
       } else {

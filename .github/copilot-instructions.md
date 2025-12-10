@@ -155,7 +155,7 @@ eChatbot is a **WhatsApp-based e-commerce platform** with AI chatbot integration
 
 ### 11. **Variable Uniqueness Constraint**
 
-- **ALWAYS** ensure `{{PRODUCTS}}`, `{{OFFERS}}`, `{{SERVICES}}`, `{{CATEGORIES}}` appear at most ONCE per prompt
+- **ALWAYS** ensure `{{products}}`, `{{offers}}`, `{{services}}`, `{{categories}}` appear at most ONCE per prompt
 - **Critical Reason**: Each variable can inject 50k+ tokens → duplicate usage causes 100k+ token prompts → LLM API failure
 - **Implementation Requirements**:
   - ✅ **Validation on Save**: Admin UI MUST validate prompts before saving to `agentConfig` table
@@ -167,7 +167,7 @@ eChatbot is a **WhatsApp-based e-commerce platform** with AI chatbot integration
   ```typescript
   // Validation function in PromptProcessorService
   private validatePromptVariables(prompt: string): void {
-    const largeVariables = ["PRODUCTS", "OFFERS", "SERVICES", "CATEGORIES"]
+    const largeVariables = ["products", "offers", "services", "categories"]
 
     for (const variable of largeVariables) {
       const regex = new RegExp(`\\{\\{${variable}\\}\\}`, "g")
@@ -189,9 +189,9 @@ eChatbot is a **WhatsApp-based e-commerce platform** with AI chatbot integration
   ```
 
 - **Examples**:
-  - ❌ **WRONG**: `"Prodotti: {{PRODUCTS}} ... Vedi anche: {{PRODUCTS}}"` → 100k+ tokens
-  - ✅ **CORRECT**: `"Prodotti: {{PRODUCTS}}"` → ~50k tokens
-  - ✅ **CORRECT**: `"Categorie: {{CATEGORIES}}\nOfferte: {{OFFERS}}\nProdotti: {{PRODUCTS}}"` → Multiple different variables OK
+  - ❌ **WRONG**: `"Prodotti: {{products}} ... Vedi anche: {{products}}"` → 100k+ tokens
+  - ✅ **CORRECT**: `"Prodotti: {{products}}"` → ~50k tokens
+  - ✅ **CORRECT**: `"Categorie: {{categories}}\nOfferte: {{offers}}\nProdotti: {{products}}"` → Multiple different variables OK
 - See `.specify/memory/constitution.md` Principle III (Variable Uniqueness Constraint) for complete details
 
 ### 12. **Code Cleanliness & Technical Debt Prevention**

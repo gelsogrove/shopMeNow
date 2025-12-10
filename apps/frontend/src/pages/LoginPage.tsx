@@ -33,7 +33,7 @@ import {
   Loader2,
   Eye,
   EyeOff,
-  Radio,
+  MessageSquare,
   LogOut,
   User,
   Crown,
@@ -336,8 +336,6 @@ export function LoginPage() {
 
         // JWT token is automatically saved as HTTP-only cookie by backend
         logger.info("Login successful - JWT token saved as HTTP-only cookie")
-
-        toast.success("Login successful!")
 
         // 🔐 Platform Admin redirect to Backoffice
         if (response.data.user.isPlatformAdmin) {
@@ -801,7 +799,7 @@ export function LoginPage() {
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
-                        className="relative h-11 w-11 rounded-full focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none hover:scale-105 transition-transform p-0"
+                        className="relative h-10 w-10 rounded-full focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none hover:scale-105 transition-transform p-0"
                       >
                         {loggedInUser?.profilePicture && !avatarImageError ? (
                           <img 
@@ -838,21 +836,21 @@ export function LoginPage() {
                         className="p-2 cursor-pointer"
                         onClick={() => navigate("/workspace-selection")}
                       >
-                        <Radio className="mr-2 h-4 w-4 text-green-600" />
+                        <MessageSquare className="mr-2 h-4 w-4 text-green-500" fill="currentColor" />
                         <span>Your Channels</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="p-2 cursor-pointer"
                         onClick={() => navigate("/profile")}
                       >
-                        <User className="mr-2 h-4 w-4" />
+                        <User className="mr-2 h-4 w-4 text-blue-500" />
                         <span>Profile</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="p-2 cursor-pointer"
                         onClick={() => navigate("/billing")}
                       >
-                        <CreditCard className="mr-2 h-4 w-4 text-green-600" />
+                        <CreditCard className="mr-2 h-4 w-4 text-emerald-500" />
                         <span>Billing</span>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />

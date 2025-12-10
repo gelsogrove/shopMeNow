@@ -49,7 +49,7 @@ export interface AddProductResult {
  * @param request - Request parameters con customerId, workspaceId, products[]
  * @returns Result con riepilogo aggiunte e link carrello
  */
-export async function AddProduct(
+export async function addProduct(
   request: AddProductRequest
 ): Promise<AddProductResult> {
   try {

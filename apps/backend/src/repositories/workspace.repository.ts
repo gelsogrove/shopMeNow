@@ -39,10 +39,24 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       debugMode: data.debugMode ?? true,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
-      businessType: data.businessType,
       afterRegistrationMessages: data.afterRegistrationMessages,
       planType: data.planType || null,
       trialEndsAt: data.trialEndsAt || null,
+      allowedExternalLinks: data.allowedExternalLinks || [],
+      // 🆕 Channel Configuration (Feature 199)
+      sellsProductsAndServices: data.sellsProductsAndServices ?? true,
+      hasSalesAgents: data.hasSalesAgents ?? false,
+      hasSuppliers: data.hasSuppliers ?? false,
+      hasHumanSupport: data.hasHumanSupport ?? true,
+      humanSupportInstructions: data.humanSupportInstructions || null,
+      operatorContactMethod: data.operatorContactMethod || 'email',
+      operatorWhatsappNumber: data.operatorWhatsappNumber || null,
+      toneOfVoice: data.toneOfVoice || 'friendly',
+      botIdentityResponse: data.botIdentityResponse || null,
+      address: data.address || null,
+      customAiRules: data.customAiRules || null,
+      // 🆕 Logo
+      logoUrl: data.logoUrl || null,
     })
   }
 
@@ -71,6 +85,21 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       isDelete: workspace.isDelete,
       url: workspace.url,
       debugMode: workspace.debugMode,
+      allowedExternalLinks: workspace.allowedExternalLinks || [],
+      // 🆕 Channel Configuration (Feature 199)
+      sellsProductsAndServices: workspace.sellsProductsAndServices,
+      hasSalesAgents: workspace.hasSalesAgents,
+      hasSuppliers: workspace.hasSuppliers,
+      hasHumanSupport: workspace.hasHumanSupport,
+      humanSupportInstructions: workspace.humanSupportInstructions,
+      operatorContactMethod: workspace.operatorContactMethod,
+      operatorWhatsappNumber: workspace.operatorWhatsappNumber,
+      toneOfVoice: workspace.toneOfVoice,
+      botIdentityResponse: workspace.botIdentityResponse,
+      address: workspace.address,
+      customAiRules: workspace.customAiRules,
+      // 🆕 Logo
+      logoUrl: workspace.logoUrl,
     }
   }
 
@@ -92,9 +121,21 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       })
 
       logger.debug(`Found ${workspaces.length} workspaces`)
+      
+      // 🔍 DEBUG: Log raw sellsProductsAndServices values from Prisma
+      workspaces.forEach((ws) => {
+        logger.info(`🔍 PRISMA RAW - Workspace "${ws.name}": sellsProductsAndServices = ${ws.sellsProductsAndServices} (type: ${typeof ws.sellsProductsAndServices})`)
+      })
 
       // Map workspaces to domain entities
-      return workspaces.map((workspace) => this.mapToDomain(workspace))
+      const mappedWorkspaces = workspaces.map((workspace) => this.mapToDomain(workspace))
+      
+      // 🔍 DEBUG: Log mapped sellsProductsAndServices values
+      mappedWorkspaces.forEach((ws) => {
+        logger.info(`🔍 MAPPED - Workspace "${ws.name}": sellsProductsAndServices = ${ws.sellsProductsAndServices} (type: ${typeof ws.sellsProductsAndServices})`)
+      })
+      
+      return mappedWorkspaces
     } catch (error) {
       logger.error("Error finding workspaces:", error)
       throw error
@@ -150,7 +191,6 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
             messageLimit: 50,
             blocklist: "",
             url: null,
-            businessType: "ECOMMERCE",
             welcomeMessage: null,
             wipMessage: null,
             afterRegistrationMessages: null,
@@ -285,8 +325,20 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
         .filter((workspace) => !workspace.isDelete)
 
       logger.debug(`Found ${workspaces.length} workspaces for user ${userId}`)
+      
+      // 🔍 DEBUG: Log raw sellsProductsAndServices values from Prisma (findByUserId)
+      workspaces.forEach((ws) => {
+        logger.info(`🔍 PRISMA RAW (findByUserId) - Workspace "${ws.name}": sellsProductsAndServices = ${ws.sellsProductsAndServices} (type: ${typeof ws.sellsProductsAndServices})`)
+      })
 
-      return workspaces.map((workspace) => this.mapToDomain(workspace))
+      const mappedWorkspaces = workspaces.map((workspace) => this.mapToDomain(workspace))
+      
+      // 🔍 DEBUG: Log mapped sellsProductsAndServices values (findByUserId)
+      mappedWorkspaces.forEach((ws) => {
+        logger.info(`🔍 MAPPED (findByUserId) - Workspace "${ws.name}": sellsProductsAndServices = ${ws.sellsProductsAndServices} (type: ${typeof ws.sellsProductsAndServices})`)
+      })
+      
+      return mappedWorkspaces
     } catch (error) {
       logger.error(`Error finding workspaces for user ${userId}:`, error)
       throw error
@@ -325,6 +377,12 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
     logger.debug(
       `📥 Raw data received in repository.update: ${JSON.stringify(data, null, 2)}`
     )
+    
+    // 🔍 LOG FEATURE 199
+    logger.debug("=== FEATURE 199 REPOSITORY DEBUG ===")
+    logger.debug(`sellsProductsAndServices ricevuto: ${data.sellsProductsAndServices} (tipo: ${typeof data.sellsProductsAndServices})`)
+    logger.debug(`hasSalesAgents ricevuto: ${data.hasSalesAgents} (tipo: ${typeof data.hasSalesAgents})`)
+    logger.debug(`hasHumanSupport ricevuto: ${data.hasHumanSupport} (tipo: ${typeof data.hasHumanSupport})`)
 
     try {
       const existingWorkspace = await this.prisma.workspace.findUnique({
@@ -396,6 +454,13 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
         `📝 Data prepared for Prisma update (workspace ${id}): ${JSON.stringify(dbData, null, 2)}`
       )
       logger.debug(`📧 AdminEmail to update: ${adminEmail}`)
+      
+      // 🔍 LOG FEATURE 199 AFTER TRANSFORMATION
+      logger.debug("=== FEATURE 199 AFTER TRANSFORMATION ===")
+      logger.debug(`sellsProductsAndServices in dbData: ${dbData.sellsProductsAndServices}`)
+      logger.debug(`hasSalesAgents in dbData: ${dbData.hasSalesAgents}`)
+      logger.debug(`hasSuppliers in dbData: ${dbData.hasSuppliers}`)
+      logger.debug(`hasHumanSupport in dbData: ${dbData.hasHumanSupport}`)
 
       // Prepare the exact data object for Prisma
       const prismaUpdateData: any = {
@@ -441,7 +506,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
 
       logger.debug(`✅ Prisma update completed for workspace ${id}`)
       logger.debug(
-        `� AFTER UPDATE - New DB state: ${JSON.stringify(
+        `✅ AFTER UPDATE - New DB state: ${JSON.stringify(
           {
             name: updatedWorkspace.name,
             whatsappPhoneNumber: updatedWorkspace.whatsappPhoneNumber,
@@ -449,12 +514,23 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
             adminEmail: updatedWorkspace.whatsappSettings?.adminEmail,
             isActive: updatedWorkspace.isActive,
             debugMode: updatedWorkspace.debugMode,
+            sellsProductsAndServices: updatedWorkspace.sellsProductsAndServices,
+            hasSalesAgents: updatedWorkspace.hasSalesAgents,
+            hasSuppliers: updatedWorkspace.hasSuppliers,
+            hasHumanSupport: updatedWorkspace.hasHumanSupport,
             updatedAt: updatedWorkspace.updatedAt,
           },
           null,
           2
         )}`
       )
+      
+      // 🔍 LOG FEATURE 199 FINAL
+      logger.debug("=== FEATURE 199 FINAL DB VALUES ===")
+      logger.debug(`sellsProductsAndServices DB finale: ${updatedWorkspace.sellsProductsAndServices}`)
+      logger.debug(`hasSalesAgents DB finale: ${updatedWorkspace.hasSalesAgents}`)
+      logger.debug(`hasSuppliers DB finale: ${updatedWorkspace.hasSuppliers}`)
+      logger.debug(`hasHumanSupport DB finale: ${updatedWorkspace.hasHumanSupport}`)
 
       try {
         const domainEntity = this.mapToDomain(updatedWorkspace)
@@ -484,7 +560,6 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
             messageLimit: 50,
             blocklist: "",
             url: null,
-            businessType: "ECOMMERCE",
             welcomeMessage: null,
             wipMessage: null,
             afterRegistrationMessages: null,
@@ -502,6 +577,36 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       }
     } catch (error) {
       logger.error(`Error updating workspace with ID ${id}:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Update agent status (enable/disable) for a workspace
+   * Used for Feature 199: Auto-disable e-commerce agents when sellsProductsAndServices = false
+   */
+  async updateAgentStatus(
+    workspaceId: string,
+    agentType: string,
+    isActive: boolean
+  ): Promise<boolean> {
+    logger.debug(`Updating agent status for workspace ${workspaceId}: ${agentType} = ${isActive}`)
+
+    try {
+      const result = await this.prisma.agentConfig.updateMany({
+        where: {
+          workspaceId,
+          type: agentType as any, // AgentType enum
+        },
+        data: {
+          isActive,
+        },
+      })
+
+      logger.info(`✅ Updated ${result.count} agent(s) for workspace ${workspaceId}`)
+      return result.count > 0
+    } catch (error) {
+      logger.error(`Error updating agent status:`, error)
       throw error
     }
   }

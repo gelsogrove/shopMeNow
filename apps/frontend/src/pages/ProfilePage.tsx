@@ -314,14 +314,59 @@ export default function ProfilePage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Profile</h1>
+          <h1 className="text-2xl font-bold text-green-600">Profile</h1>
           <p className="text-muted-foreground mt-1">
             Manage your personal information and account settings
           </p>
         </div>
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setShowDeleteAccountDialog(true)}
+            className="gap-2"
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete Account
+          </Button>
+
+          {user.hasPassword ? (
+            <Button
+              variant="outline"
+              onClick={() => setShowPasswordDialog(true)}
+              className="gap-2"
+            >
+              <Key className="h-4 w-4" />
+              Change Password
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={() => setShowSetPasswordDialog(true)}
+              className="gap-2"
+            >
+              <Key className="h-4 w-4" />
+              Set Password
+            </Button>
+          )}
+
+          <Button
+            onClick={handleSave}
+            disabled={isLoading}
+            className="gap-2 bg-green-600 hover:bg-green-700"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save Changes"
+            )}
+          </Button>
+        </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
         {/* Personal Information */}
         <Card>
           <CardHeader>
@@ -420,6 +465,7 @@ export default function ProfilePage() {
                   currentImageUrl={user.logo}
                   label="Company Logo"
                   placeholder="logo"
+                  editIconStyle={true}
                 />
               </div>
 
@@ -478,55 +524,7 @@ export default function ProfilePage() {
           </Card>
       </div>
 
-      <div className="flex justify-end items-center">
-        {/* Right side - Password, Delete, and Save */}
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            onClick={() => setShowDeleteAccountDialog(true)}
-            className="gap-2"
-          >
-            <Trash2 className="h-4 w-4" />
-            Delete Account
-          </Button>
 
-          {user.hasPassword ? (
-            <Button
-              variant="outline"
-              onClick={() => setShowPasswordDialog(true)}
-              className="gap-2"
-            >
-              <Key className="h-4 w-4" />
-              Change Password
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              onClick={() => setShowSetPasswordDialog(true)}
-              className="gap-2"
-            >
-              <Key className="h-4 w-4" />
-              Set Password
-            </Button>
-          )}
-
-          <Button
-            onClick={handleSave}
-            disabled={isLoading}
-            className="gap-2 bg-green-600 hover:bg-green-700"
-            size="lg"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              "Save Changes"
-            )}
-          </Button>
-        </div>
-      </div>
 
       {/* Delete Account Dialog */}
       <Dialog open={showDeleteAccountDialog} onOpenChange={(open) => {

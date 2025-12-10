@@ -1,5 +1,5 @@
 /**
- * GetLinkOrderByCode - LLM-Callable Function
+ * getLinkOrderByCode - LLM-Callable Function
  *
  * Genera un link sicuro per visualizzare i dettagli di un ordine specifico.
  * Utilizzata quando l'utente chiede: "dammi ordine", "mostrami ultimo ordine", "fattura ordine XXX"
@@ -24,11 +24,11 @@ export interface GetLinkOrderByCodeRequest {
  * @param request - Request parameters
  * @returns Token response with secure link
  */
-export async function GetLinkOrderByCode(
+export async function getLinkOrderByCode(
   request: GetLinkOrderByCodeRequest
 ): Promise<any> {
   try {
-    logger.info("📄 GetLinkOrderByCode called with:", request)
+    logger.info("📄 getLinkOrderByCode called with:", request)
     const callingFunctionsService = new CallingFunctionsService()
 
     // Use getOrdersListLink which handles both specific orders and order lists
@@ -38,10 +38,10 @@ export async function GetLinkOrderByCode(
       orderCode: request.orderCode, // If provided, shows specific order; otherwise shows all orders
     })
 
-    logger.info("✅ GetLinkOrderByCode result:", result)
+    logger.info("✅ getLinkOrderByCode result:", result)
     return result
   } catch (error) {
-    logger.error("❌ Error in GetLinkOrderByCode:", error)
+    logger.error("❌ Error in getLinkOrderByCode:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Errore interno",

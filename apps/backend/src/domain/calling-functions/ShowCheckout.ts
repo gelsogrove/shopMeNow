@@ -36,7 +36,7 @@ export interface ShowCheckoutResult {
 /**
  * Shows cart summary and asks for order confirmation
  */
-export async function ShowCheckout(
+export async function showCheckout(
   request: ShowCheckoutRequest
 ): Promise<ShowCheckoutResult> {
   // prisma imported

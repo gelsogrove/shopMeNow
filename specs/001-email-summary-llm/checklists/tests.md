@@ -37,7 +37,7 @@
 - [ ] **Test 1.5**: Complete pipeline logged with markers
   - **Given**: Escalation triggered
   - **When**: Email sent successfully
-  - **Then**: Logs show: contactSupport CF → ContactOperator → Summary Agent 🤖 → Safety Agent 🤖 → EmailService 📧 → SMTP confirmation 📧
+  - **Then**: Logs show: contactSupport CF → contactOperator → Summary Agent 🤖 → Safety Agent 🤖 → EmailService 📧 → SMTP confirmation 📧
   - **Verify**: All pipeline steps logged with clear markers, no missing steps
 
 - [ ] **Test 1.6**: Email delivery confirmed with MessageID
@@ -161,7 +161,7 @@
 - [ ] **Test 3.8**: Sales agent email missing → fallback to workspace admin
   - **Given**: Customer's sales agent has NULL email
   - **When**: Email send attempted
-  - **Then**: ContactOperator.ts falls back to workspace admin email
+  - **Then**: contactOperator.ts falls back to workspace admin email
   - **Verify**: Email sent to admin, log shows fallback reason
 
 ### Safety Translation Tests
@@ -189,8 +189,8 @@
     1. Customer sends 15 messages (product questions, cart operations)
     2. Customer writes "vorrei parlare con un agente"
     3. contactSupport CF triggers
-    4. ContactOperator.ts disables chatbot
-    5. ContactOperator.ts retrieves last 15 messages
+    4. contactOperator.ts disables chatbot
+    5. contactOperator.ts retrieves last 15 messages
     6. Summary Agent generates summary
     7. Safety Translation Agent translates + sanitizes
     8. EmailService sends via SMTP

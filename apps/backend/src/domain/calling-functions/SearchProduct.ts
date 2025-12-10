@@ -36,7 +36,7 @@ export interface SearchProductResult {
  * @param request - Request parameters con customerId, workspaceId, productName
  * @returns Result con conferma del salvataggio
  */
-export async function SearchProduct(
+export async function searchProduct(
   request: SearchProductRequest
 ): Promise<SearchProductResult> {
   try {

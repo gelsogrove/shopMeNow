@@ -221,5 +221,52 @@ registrare?
 - ✅ 6 tests monthly-billing.job (PAUSE_PENDING, downgrade, charge)
 
 
+
+MODELLO DI PAGAMENTO eChatbot
+Sistema a credito prepagato con fatturazione mensile.
+
+Come funziona:
+Inizi con FREE TRIAL (14 giorni)
+
+Hai 14 giorni per provare la piattaforma
+Dopo 14 giorni: se non ricarichi, il servizio si blocca
+Prima ricarica = Upgrade automatico a BASIC
+
+Quando fai la prima ricarica, passi automaticamente al piano BASIC
+Il credito viene aggiunto al tuo saldo
+Il credito scala ad ogni operazione
+
+Ogni messaggio WhatsApp inviato/ricevuto scala dal credito
+Ogni ordine processato scala dal credito
+Ogni notifica push scala dal credito
+Fattura mensile il 1° del mese
+
+Il 1° di ogni mese ricevi la fattura del mese PRECEDENTE
+La fattura include: costo piano + ricariche fatte nel mese precedente
+Esempio: il 1° Novembre ricevi fattura di Ottobre
+Soglia minima: -€10
+
+Puoi andare in negativo fino a -€10
+Sotto -€10 → account bloccato, devi ricaricare
+Un owner, più canali, una fattura
+
+Puoi avere più canali WhatsApp (workspaces)
+Il credito è condiviso tra tutti i canali
+Ricevi UNA sola fattura per tutto
+Upgrade/Downgrade
+
+Puoi cambiare piano quando vuoi
+Upgrade: effetto immediato
+Downgrade: devi prima ridurre prodotti/clienti/canali se superi i limiti
+In sintesi: Ricarichi credito → il credito scala con l'uso → ogni mese ricevi fattura riepilogativa.
+
+
+TUTTO QUELLO CHE HO SCRITTO E? VERO? 
+CI SONO I TEST CHE COPRONO?
+
+
+
+dobbiamo aggiungere quaclosa al gitignore?
+
 trova nel codice un putno sia di BE che di FE che possiamo ottimizzare
 magari possiamo evitare di duplicare codice, uniformare creareo un componente di grafica comdiviso, togliere codice morto trova qualche miglioramente da fare ma 1 di Fe e 1 di BE

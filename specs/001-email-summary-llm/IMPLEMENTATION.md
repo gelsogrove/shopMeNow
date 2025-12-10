@@ -65,7 +65,7 @@ Implemented AI-powered conversation summarization for operator escalation emails
   - `getLLMConfig()` - OpenRouter credentials
   - File system (fs, path) - Prompt loading
 
-#### 3. **ContactOperator Function** (`backend/src/domain/calling-functions/ContactOperator.ts`)
+#### 3. **contactOperator Function** (`backend/src/domain/calling-functions/contactOperator.ts`)
 
 - **Modified**: Added complete summary generation flow
 - **Size**: 454 lines total (~200 lines modified)
@@ -86,7 +86,7 @@ Implemented AI-powered conversation summarization for operator escalation emails
 - **Modified**: `contactSupport` calling function execution
 - **Changes**:
   - Disables chatbot before calling ContactOperator
-  - Calls `ContactOperator()` with customer context
+  - Calls `contactOperator()` with customer context
   - Logs escalation flow (📧 markers)
 - **Flow**:
   ```typescript
@@ -172,9 +172,9 @@ Router → Customer Support Agent → contactSupport CF
     ↓
 CustomerSupportAgentLLM.executeFunction("contactSupport"):
   1. Disable chatbot (activeChatbot = false)
-  2. Call ContactOperator()
+  2. Call contactOperator()
     ↓
-ContactOperator():
+contactOperator():
   1. Get customer with sales agent
   2. Get active ChatSession
   3. Get messages from last hour (createdAt >= NOW() - 1 hour)
@@ -215,43 +215,43 @@ Email delivered to Sales Agent
 
 - **Problem**: `prisma` instance declared inside try block, inaccessible in nested catch
 - **Fix**: Moved `const prisma = new PrismaClient()` OUTSIDE all try blocks
-- **File**: `ContactOperator.ts` line 37
+- **File**: `contactOperator.ts` line 37
 
 ### 2. **Wrong Table Name - ChatSession**
 
 - **Problem**: Used `prisma.chatSessions` (plural)
 - **Fix**: Changed to `prisma.chatSession` (singular)
-- **File**: `ContactOperator.ts` line 97
+- **File**: `contactOperator.ts` line 97
 
 ### 3. **Wrong Table Name - ConversationMessage**
 
 - **Problem**: Used `prisma.chatMessage`
 - **Fix**: Changed to `prisma.conversationMessage`
-- **File**: `ContactOperator.ts` line 107
+- **File**: `contactOperator.ts` line 107
 
 ### 4. **Wrong Field Name - conversationId**
 
 - **Problem**: Used `sessionId`
 - **Fix**: Changed to `conversationId`
-- **File**: `ContactOperator.ts` line 108
+- **File**: `contactOperator.ts` line 108
 
 ### 5. **Wrong Field Name - createdAt**
 
 - **Problem**: Used `timestamp`
 - **Fix**: Changed to `createdAt`
-- **File**: `ContactOperator.ts` lines 110-111
+- **File**: `contactOperator.ts` lines 110-111
 
 ### 6. **SafetyTranslationAgent Wrong Method**
 
 - **Problem**: Called `handleMessage()`
 - **Fix**: Changed to `process()`
-- **File**: `ContactOperator.ts` line 172
+- **File**: `contactOperator.ts` line 172
 
 ### 7. **SafetyTranslationAgent Missing Constructor**
 
 - **Problem**: Didn't pass `prisma` instance
 - **Fix**: `new SafetyTranslationAgent(prisma)`
-- **File**: `ContactOperator.ts` line 169
+- **File**: `contactOperator.ts` line 169
 
 ### 8. **WhatsappSettings.adminEmail NULL**
 
@@ -281,15 +281,15 @@ Email delivered to Sales Agent
 ```
 ✅ 10:20:37.991 - Chatbot disabled for customer
 ✅ 10:20:37.991 - Calling ContactOperator
-✅ 10:20:37.992 - ContactOperator called with phoneNumber, workspaceId, customerId
+✅ 10:20:37.992 - contactOperator called with phoneNumber, workspaceId, customerId
 ✅ 10:20:38.029 - Retrieved 42 messages from last hour
 ✅ 10:20:38.134 - Calling SummaryAgentLLM
 ✅ 10:20:39.906 - Summary generated successfully (46 chars, 5 words)
 ✅ 10:20:39.906 - Passing summary through Safety Translation
 ✅ 10:20:40.978 - SafetyTranslationAgent completed (safe: true)
 ✅ 10:20:40.979 - Summary processed and translated
-✅ 10:20:40.984 - ContactOperator escalation registered
-✅ 10:20:40.985 - ContactOperator completed (success: true)
+✅ 10:20:40.984 - contactOperator escalation registered
+✅ 10:20:40.985 - contactOperator completed (success: true)
 ✅ Email delivered to gelsogrove@gmail.com
 ```
 
@@ -330,8 +330,8 @@ Email delivered to Sales Agent
 | ----------------------------------------------------------- | ------------- | -------- | ----------------------------------------------- |
 | `backend/docs/prompts/summary-agent.md`                     | +280          | NEW      | Summary Agent system prompt                     |
 | `backend/src/services/summary-agent-llm.service.ts`         | +203          | NEW      | Summary generation utility service              |
-| `backend/src/domain/calling-functions/ContactOperator.ts`   | ~250 modified | MODIFIED | Added summary flow + email sending              |
-| `backend/src/application/agents/CustomerSupportAgentLLM.ts` | ~50 modified  | MODIFIED | Added ContactOperator call in contactSupport CF |
+| `backend/src/domain/calling-functions/contactOperator.ts`   | ~250 modified | MODIFIED | Added summary flow + email sending              |
+| `backend/src/application/agents/CustomerSupportAgentLLM.ts` | ~50 modified  | MODIFIED | Added contactOperator call in contactSupport CF |
 | `backend/prisma/seed.ts`                                    | +20           | MODIFIED | Added WhatsappSettings creation with adminEmail |
 
 **Total**: 2 new files, 3 modified files, ~800 lines total
@@ -425,7 +425,7 @@ Monitor escalations via:
 
 **Known Limitations**:
 
-- Summary limited to last hour messages (configurable in ContactOperator.ts)
+- Summary limited to last hour messages (configurable in contactOperator.ts)
 - Requires valid SMTP credentials in .env
 - Email delivery depends on Gmail SMTP availability
 - No retry mechanism for failed emails (logs error, continues)

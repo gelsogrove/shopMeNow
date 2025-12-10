@@ -65,6 +65,19 @@ export class WorkspaceController {
         updatedAt: workspace.updatedAt,
         planType: workspace.planType,
         trialEndsAt: workspace.trialEndsAt,
+        // 🆕 Channel Configuration (Feature 199)
+        sellsProductsAndServices: workspace.sellsProductsAndServices,
+        hasSalesAgents: workspace.hasSalesAgents,
+        hasSuppliers: workspace.hasSuppliers,
+        hasHumanSupport: workspace.hasHumanSupport,
+        humanSupportInstructions: workspace.humanSupportInstructions,
+        operatorContactMethod: workspace.operatorContactMethod,
+        operatorWhatsappNumber: workspace.operatorWhatsappNumber,
+        toneOfVoice: workspace.toneOfVoice,
+        botIdentityResponse: workspace.botIdentityResponse,
+        address: workspace.address,
+        customAiRules: workspace.customAiRules,
+        logoUrl: workspace.logoUrl,
       }))
 
       return res.json(serializedWorkspaces)
@@ -122,6 +135,20 @@ export class WorkspaceController {
           debugMode: workspace.debugMode,
           createdAt: workspace.createdAt,
           updatedAt: workspace.updatedAt,
+          allowedExternalLinks: workspace.allowedExternalLinks,
+          // 🆕 Channel Configuration (Feature 199)
+          sellsProductsAndServices: workspace.sellsProductsAndServices,
+          hasSalesAgents: workspace.hasSalesAgents,
+          hasSuppliers: workspace.hasSuppliers,
+          hasHumanSupport: workspace.hasHumanSupport,
+          humanSupportInstructions: workspace.humanSupportInstructions,
+          operatorContactMethod: workspace.operatorContactMethod,
+          operatorWhatsappNumber: workspace.operatorWhatsappNumber,
+          toneOfVoice: workspace.toneOfVoice,
+          botIdentityResponse: workspace.botIdentityResponse,
+          address: workspace.address,
+          customAiRules: workspace.customAiRules,
+          logoUrl: workspace.logoUrl,
         }
 
         return res.json(serializedWorkspace)
@@ -244,6 +271,13 @@ export class WorkspaceController {
         )
       }
 
+      // 🔍 LOG SPECIFICO per Feature 199 fields
+      logger.info("=== FEATURE 199 TOGGLE DEBUG ===")
+      logger.info(`sellsProductsAndServices nel body: ${workspaceData.sellsProductsAndServices} (tipo: ${typeof workspaceData.sellsProductsAndServices})`)
+      logger.info(`hasSalesAgents nel body: ${workspaceData.hasSalesAgents} (tipo: ${typeof workspaceData.hasSalesAgents})`)
+      logger.info(`hasHumanSupport nel body: ${workspaceData.hasHumanSupport} (tipo: ${typeof workspaceData.hasHumanSupport})`)
+      logger.info("operatorContactMethod nel body:", workspaceData.operatorContactMethod)
+
       const workspace = await this.workspaceService.update(id, workspaceData)
 
       if (!workspace) {
@@ -275,6 +309,20 @@ export class WorkspaceController {
         debugMode: workspace.debugMode,
         createdAt: workspace.createdAt,
         updatedAt: workspace.updatedAt,
+        allowedExternalLinks: workspace.allowedExternalLinks,
+        // 🆕 Channel Configuration (Feature 199)
+        sellsProductsAndServices: workspace.sellsProductsAndServices,
+        hasSalesAgents: workspace.hasSalesAgents,
+        hasSuppliers: workspace.hasSuppliers,
+        hasHumanSupport: workspace.hasHumanSupport,
+        humanSupportInstructions: workspace.humanSupportInstructions,
+        operatorContactMethod: workspace.operatorContactMethod,
+        operatorWhatsappNumber: workspace.operatorWhatsappNumber,
+        toneOfVoice: workspace.toneOfVoice,
+        botIdentityResponse: workspace.botIdentityResponse,
+        address: workspace.address,
+        customAiRules: workspace.customAiRules,
+        logoUrl: workspace.logoUrl,
       }
 
       logger.info(
@@ -327,6 +375,48 @@ export class WorkspaceController {
       return res.status(204).send()
     } catch (error) {
       logger.error(`Error deleting workspace ${req.params.id}:`, error)
+      return next(error)
+    }
+  }
+
+  /**
+   * Upload workspace logo
+   * SECURITY: Only SUPER_ADMIN (owner) can upload logo
+   */
+  uploadWorkspaceLogo = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { id } = req.params
+      const userId = (req as any).user?.id
+
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" })
+      }
+
+      // Check if user is SUPER_ADMIN
+      const isSuperAdmin = await workspaceMemberService.isSuperAdmin(id, userId)
+      if (!isSuperAdmin) {
+        return res.status(403).json({ error: "Only workspace owners can upload logo" })
+      }
+
+      const file = req.file
+      if (!file) {
+        return res.status(400).json({ error: "No file uploaded" })
+      }
+
+      // File path is relative to uploads/ directory served by express.static
+      const logoUrl = `/uploads/channels/${file.filename}`
+
+      // Update workspace with new logo
+      const workspace = await this.workspaceService.update(id, { logoUrl })
+
+      logger.info(`✅ Logo uploaded for workspace ${id}: ${logoUrl}`)
+      return res.json({ logoUrl: workspace.logoUrl })
+    } catch (error) {
+      logger.error("Error uploading workspace logo:", error)
       return next(error)
     }
   }

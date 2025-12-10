@@ -551,12 +551,25 @@ export class SubscriptionBillingService {
       )
     }
 
+    // Create RECHARGE transaction
     const result = await this.repository.addCredit(
       userId,
       amount,
       TransactionType.RECHARGE,
       `Credit recharge: €${amount.toFixed(2)}`
     )
+
+    // If upgraded, create UPGRADE_FEE transaction to document the plan change
+    if (upgradedToPlan === "BASIC") {
+      const basicPlanConfig = await this.repository.getPlanConfiguration("BASIC")
+      const monthlyFeeStr = basicPlanConfig ? `€${basicPlanConfig.monthlyFee.toFixed(2)}/month` : ""
+      await this.repository.addCredit(
+        userId,
+        0,
+        TransactionType.UPGRADE_FEE,
+        `Upgrade from Free Trial to ${upgradedToPlan} plan${monthlyFeeStr ? ` (${monthlyFeeStr})` : ""}`
+      )
+    }
 
     return {
       ...result,
@@ -634,13 +647,14 @@ export class SubscriptionBillingService {
     const result = await this.repository.upgradeOwnerPlan(userId, newPlanType)
 
     // Log the upgrade transaction
+    const monthlyFeeStr = newPlanConfig.monthlyFee ? `€${Number(newPlanConfig.monthlyFee).toFixed(2)}/month` : ""
     await this.prisma.billingTransaction.create({
       data: {
         userId,
         type: TransactionType.UPGRADE_FEE,
         amount: 0,
         balanceAfter: billing.creditBalance,
-        description: `Upgrade to ${newPlanConfig.displayName}`,
+        description: `Upgrade to ${newPlanConfig.displayName}${monthlyFeeStr ? ` (${monthlyFeeStr})` : ""}`,
       },
     })
 
@@ -767,13 +781,14 @@ export class SubscriptionBillingService {
     })
 
     const action = isDowngrade ? "Downgrade" : "Upgrade"
+    const monthlyFeeStr = newPlanConfig.monthlyFee ? `€${Number(newPlanConfig.monthlyFee).toFixed(2)}/month` : ""
     await this.prisma.billingTransaction.create({
       data: {
         userId,
         type: TransactionType.UPGRADE_FEE,
         amount: 0,
         balanceAfter: billing.creditBalance,
-        description: `${action} to ${newPlanConfig.displayName}`,
+        description: `${action} to ${newPlanConfig.displayName}${monthlyFeeStr ? ` (${monthlyFeeStr})` : ""}`,
       },
     })
 

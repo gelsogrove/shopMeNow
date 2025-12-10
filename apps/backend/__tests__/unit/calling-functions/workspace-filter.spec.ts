@@ -83,11 +83,11 @@ jest.mock("../../../src/services/calling-functions.service", () => ({
 }))
 
 // Import all calling functions to test their interfaces
-import { AddProduct, AddProductRequest } from "../../../src/domain/calling-functions/AddProduct"
-import { SearchProduct, SearchProductRequest } from "../../../src/domain/calling-functions/SearchProduct"
-import { ResetCart, ResetCartRequest } from "../../../src/domain/calling-functions/ResetCart"
-import { ConfirmOrder, ConfirmOrderRequest } from "../../../src/domain/calling-functions/ConfirmOrder"
-import { ContactOperator, ContactOperatorRequest } from "../../../src/domain/calling-functions/ContactOperator"
+import { addProduct, AddProductRequest } from "../../../src/domain/calling-functions/addProduct"
+import { searchProduct, SearchProductRequest } from "../../../src/domain/calling-functions/searchProduct"
+import { resetCart, ResetCartRequest } from "../../../src/domain/calling-functions/resetCart"
+import { confirmOrder, ConfirmOrderRequest } from "../../../src/domain/calling-functions/confirmOrder"
+import { contactOperator, ContactOperatorRequest } from "../../../src/domain/calling-functions/contactOperator"
 
 describe("WorkspaceId Filter in Calling Functions", () => {
   const workspaceId = "ws-test-123"
@@ -105,7 +105,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
         products: [{ sku: "PROD-001", quantity: 1 }],
       }
 
-      const result = await AddProduct(request)
+      const result = await addProduct(request)
 
       expect(result.success).toBe(false)
       expect(result.error).toContain("Parametri richiesti mancanti")
@@ -118,7 +118,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
         products: [{ sku: "PROD-001", quantity: 1 }],
       }
 
-      const result = await AddProduct(request)
+      const result = await addProduct(request)
 
       expect(result.success).toBe(false)
     })
@@ -141,7 +141,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
         productName: "Parmigiano",
       }
 
-      const result = await SearchProduct(request)
+      const result = await searchProduct(request)
 
       expect(result.success).toBe(false)
       expect(result.error).toContain("Parametri richiesti mancanti")
@@ -160,7 +160,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
         productName: "Parmigiano",
       }
 
-      await SearchProduct(request)
+      await searchProduct(request)
 
       expect(mockProductSearchCreate).toHaveBeenCalledWith({
         data: expect.objectContaining({
@@ -172,7 +172,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
     it("should include workspaceId in saved search data", async () => {
       mockProductSearchCreate.mockResolvedValue({ id: "search-1" })
 
-      await SearchProduct({
+      await searchProduct({
         customerId,
         workspaceId,
         productName: "Vino",
@@ -195,7 +195,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
         workspaceId: "",
       }
 
-      const result = await ResetCart(request)
+      const result = await resetCart(request)
 
       expect(result.success).toBe(false)
       expect(result.error).toContain("Parametri richiesti mancanti")
@@ -209,7 +209,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
       })
       mockCartsFindFirst.mockResolvedValue(null)
 
-      await ResetCart({
+      await resetCart({
         customerId,
         workspaceId,
       })
@@ -236,7 +236,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
       })
       mockCartItemsDeleteMany.mockResolvedValue({ count: 1 })
 
-      await ResetCart({
+      await resetCart({
         customerId,
         workspaceId,
       })
@@ -259,7 +259,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
         workspaceId: "",
       }
 
-      const result = await ConfirmOrder(request)
+      const result = await confirmOrder(request)
 
       expect(result.success).toBe(false)
       expect(result.error).toContain("Missing required parameters")
@@ -273,7 +273,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
       })
       mockCartsFindFirst.mockResolvedValue(null)
 
-      await ConfirmOrder({
+      await confirmOrder({
         customerId,
         workspaceId,
       })
@@ -318,7 +318,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
         { id: "prod-1", name: "Test", price: 10 },
       ])
 
-      await ConfirmOrder({
+      await confirmOrder({
         customerId,
         workspaceId,
       })
@@ -337,7 +337,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
     it("should include workspaceId in customer lookup", async () => {
       mockCustomersFindFirst.mockResolvedValue(null)
 
-      await ContactOperator({
+      await contactOperator({
         phoneNumber: "+393331234567",
         workspaceId,
         customerId,
@@ -370,7 +370,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
         whatsappSettings: { adminEmail: "admin@test.com" },
       })
 
-      await ContactOperator({
+      await contactOperator({
         phoneNumber: "+393331234567",
         workspaceId,
       })
@@ -433,7 +433,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
 
       mockCustomersFindFirst.mockResolvedValue(null)
 
-      const result = await ResetCart({
+      const result = await resetCart({
         customerId,
         workspaceId: ws1,
       })
@@ -470,7 +470,7 @@ describe("WorkspaceId Filter in Calling Functions", () => {
         { id: "prod-1", price: 10 },
       ])
 
-      await ConfirmOrder({ customerId, workspaceId })
+      await confirmOrder({ customerId, workspaceId })
 
       expect(mockOrdersCount).toHaveBeenCalledWith({
         where: { workspaceId },

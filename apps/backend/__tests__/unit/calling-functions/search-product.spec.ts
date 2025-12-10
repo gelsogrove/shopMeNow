@@ -7,7 +7,7 @@
  * 3. Database save operation
  * 4. Error handling
  *
- * @see apps/backend/src/domain/calling-functions/SearchProduct.ts
+ * @see apps/backend/src/domain/calling-functions/searchProduct.ts
  */
 
 // Mock logger FIRST
@@ -36,7 +36,7 @@ jest.mock("@echatbot/database", () => ({
   },
 }))
 
-import { SearchProduct } from "../../../src/domain/calling-functions/SearchProduct"
+import { searchProduct } from "../../../src/domain/calling-functions/searchProduct"
 
 describe("SearchProduct Calling Function", () => {
   beforeEach(() => {
@@ -45,7 +45,7 @@ describe("SearchProduct Calling Function", () => {
 
   describe("Parameter Validation", () => {
     it("should return error when customerId is missing", async () => {
-      const result = await SearchProduct({
+      const result = await searchProduct({
         customerId: "",
         workspaceId: "workspace-456",
         productName: "Mozzarella",
@@ -56,7 +56,7 @@ describe("SearchProduct Calling Function", () => {
     })
 
     it("should return error when workspaceId is missing", async () => {
-      const result = await SearchProduct({
+      const result = await searchProduct({
         customerId: "customer-123",
         workspaceId: "",
         productName: "Mozzarella",
@@ -67,7 +67,7 @@ describe("SearchProduct Calling Function", () => {
     })
 
     it("should return error when productName is missing", async () => {
-      const result = await SearchProduct({
+      const result = await searchProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         productName: "",
@@ -81,7 +81,7 @@ describe("SearchProduct Calling Function", () => {
   describe("Product Name Validation", () => {
     it("should return error when productName exceeds 255 characters", async () => {
       const longName = "A".repeat(256)
-      const result = await SearchProduct({
+      const result = await searchProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         productName: longName,
@@ -98,7 +98,7 @@ describe("SearchProduct Calling Function", () => {
         query: exactLengthName,
       })
 
-      const result = await SearchProduct({
+      const result = await searchProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         productName: exactLengthName,
@@ -108,7 +108,7 @@ describe("SearchProduct Calling Function", () => {
     })
 
     it("should return error when productName is only whitespace", async () => {
-      const result = await SearchProduct({
+      const result = await searchProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         productName: "   ",
@@ -124,7 +124,7 @@ describe("SearchProduct Calling Function", () => {
         query: "Mozzarella",
       })
 
-      await SearchProduct({
+      await searchProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         productName: "  Mozzarella  ",
@@ -147,7 +147,7 @@ describe("SearchProduct Calling Function", () => {
         workspaceId: "workspace-456",
       })
 
-      const result = await SearchProduct({
+      const result = await searchProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         productName: "Panettone italiano",
@@ -164,7 +164,7 @@ describe("SearchProduct Calling Function", () => {
         id: "search-123",
       })
 
-      await SearchProduct({
+      await searchProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         productName: "Vino rosso",
@@ -184,7 +184,7 @@ describe("SearchProduct Calling Function", () => {
         id: "search-123",
       })
 
-      await SearchProduct({
+      await searchProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         productName: "Burrata",
@@ -200,7 +200,7 @@ describe("SearchProduct Calling Function", () => {
         new Error("Database connection failed")
       )
 
-      const result = await SearchProduct({
+      const result = await searchProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         productName: "Mozzarella",
@@ -214,7 +214,7 @@ describe("SearchProduct Calling Function", () => {
     it("should disconnect from prisma even on error", async () => {
       mockProductSearchCreate.mockRejectedValue(new Error("Database error"))
 
-      await SearchProduct({
+      await searchProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         productName: "Mozzarella",
@@ -226,7 +226,7 @@ describe("SearchProduct Calling Function", () => {
     it("should include timestamp in error response", async () => {
       mockProductSearchCreate.mockRejectedValue(new Error("Database error"))
 
-      const result = await SearchProduct({
+      const result = await searchProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         productName: "Mozzarella",
@@ -244,7 +244,7 @@ describe("SearchProduct Calling Function", () => {
         query: "Mozzarella di Bufala",
       })
 
-      const result = await SearchProduct({
+      const result = await searchProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         productName: "Mozzarella di Bufala",
@@ -260,7 +260,7 @@ describe("SearchProduct Calling Function", () => {
       })
 
       // This is a valid use case - we track searches even for non-existent products
-      const result = await SearchProduct({
+      const result = await searchProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         productName: "Prodotto non esistente",

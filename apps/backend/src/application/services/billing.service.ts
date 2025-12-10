@@ -60,41 +60,61 @@ export class BillingService {
       const currentCharge = messageCost
       const newTotal = previousTotal + currentCharge
 
-      // 1️⃣ Write to legacy billing table (for Analytics)
-      await this.prisma.billing.create({
-        data: {
-          workspaceId,
-          customerId,
-          amount: currentCharge,
-          type: BillingType.MESSAGE,
-          description,
-          userQuery: userQuery || null,
-          previousTotal,
-          currentCharge,
-          newTotal,
-        },
-      })
-
-      // 2️⃣ Get workspace and owner to update ALL owner's workspaces
+      // Get workspace and owner info before transaction
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: workspaceId },
         select: { creditBalance: true, ownerId: true, name: true },
       })
 
-      if (workspace && workspace.ownerId) {
-        const newBalance = Number(workspace.creditBalance) - messageCost
+      if (!workspace || !workspace.ownerId) {
+        // No workspace/owner, just create billing record for analytics
+        await this.prisma.billing.create({
+          data: {
+            workspaceId,
+            customerId,
+            amount: currentCharge,
+            type: BillingType.MESSAGE,
+            description,
+            userQuery: userQuery || null,
+            previousTotal,
+            currentCharge,
+            newTotal,
+          },
+        })
+        logger.warn(`[BILLING] ⚠️ Workspace ${workspaceId} has no owner - billing record created but no credit deducted`)
+        return
+      }
 
-        // Feature 198: Update owner's credit balance (shared across all workspaces)
-        await this.prisma.user.update({
-          where: { id: workspace.ownerId },
+      const newBalance = Number(workspace.creditBalance) - messageCost
+
+      // 🔒 TRANSACTION: Ensure billing, credit deduction, and transaction history are atomic
+      // Prevents: credit not deducted but message sent, or inconsistent transaction history
+      await this.prisma.$transaction(async (tx) => {
+        // 1️⃣ Write to legacy billing table (for Analytics)
+        await tx.billing.create({
+          data: {
+            workspaceId,
+            customerId,
+            amount: currentCharge,
+            type: BillingType.MESSAGE,
+            description,
+            userQuery: userQuery || null,
+            previousTotal,
+            currentCharge,
+            newTotal,
+          },
+        })
+
+        // 2️⃣ Update owner's credit balance (shared across all workspaces)
+        await tx.user.update({
+          where: { id: workspace.ownerId! },
           data: { creditBalance: newBalance },
         })
 
         // 3️⃣ Record in billingTransactions for Transaction History (with channel name)
-        // Feature 198: userId is required, workspaceId tracks which channel
-        await this.prisma.billingTransaction.create({
+        await tx.billingTransaction.create({
           data: {
-            userId: workspace.ownerId,
+            userId: workspace.ownerId!,
             workspaceId,
             type: "MESSAGE",
             amount: messageCost,
@@ -102,11 +122,11 @@ export class BillingService {
             balanceAfter: newBalance,
           },
         })
+      })
 
-        logger.info(
-          `[BILLING] 💰 Message: €${messageCost.toFixed(2)} deducted from all owner workspaces. New balance: €${newBalance.toFixed(2)}`
-        )
-      }
+      logger.info(
+        `[BILLING] 💰 Message: €${messageCost.toFixed(2)} deducted from all owner workspaces. New balance: €${newBalance.toFixed(2)}`
+      )
     } catch (error) {
       logger.error(
         `Failed to charge message cost for workspace ${workspaceId}, customer ${customerId}`,

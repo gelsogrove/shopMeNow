@@ -48,7 +48,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 - [ ] Agent prompts use template syntax: `{{variable}}`
 - [ ] Runtime replacement via `replaceAllVariables()` before LLM calls
 - [ ] Base language Italian, LLM handles translation
-- [ ] **Variable Uniqueness**: `{{PRODUCTS}}`, `{{OFFERS}}`, `{{SERVICES}}`, `{{CATEGORIES}}` appear at most ONCE per prompt
+- [ ] **Variable Uniqueness**: `{{products}}`, `{{offers}}`, `{{services}}`, `{{categories}}` appear at most ONCE per prompt
 - [ ] Prompt validation prevents duplicate large variables (token explosion prevention)
 
 **Principle IV - No Static Translations**:

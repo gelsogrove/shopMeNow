@@ -31,10 +31,8 @@ export function PageLayout({ children, selectedChat }: PageLayoutProps) {
   }
 
   return (
-    <div className="container pl-0 pr-4 pt-4 pb-4 relative">
-      <div className="grid grid-cols-12 gap-0">
-        <div className="col-span-11 col-start-1">{children}</div>
-      </div>
+    <div className="container mx-auto px-4 pt-4 pb-4 relative">
+      {children}
 
       {/* Playground Chat Modal */}
       <WhatsAppChatModal

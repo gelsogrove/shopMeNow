@@ -177,15 +177,15 @@ export const defaultAgents = (
   },
 
   // ====================================================================
-  // TRANSLATION AGENT (order: 7) - Translate to customer language
+  // FORMAT AND TRANSLATION AGENT (order: 7) - Format and translate to customer language
   // ====================================================================
   {
     workspaceId,
-    name: "Translation Agent",
+    name: "Format and Translation Agent",
     type: "TRANSLATION" as AgentType,
     icon: "Globe",
     description:
-      "Translation layer: translates all agent responses to customer language (Italian, Spanish, Portuguese, English)",
+      "Format and translation layer: formats responses for WhatsApp and translates to customer language (Italian, Spanish, Portuguese, English)",
     systemPrompt: loadPrompt("translation-agent.md"),
     model: "openai/gpt-4o-mini",
     temperature: 0.1, // Very low for consistency

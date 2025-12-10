@@ -1,8 +1,9 @@
-import { PrismaClient } from "@echatbot/database"
+import { PrismaClient, AgentType } from "@echatbot/database"
 import { Request, Response } from "express"
 import archiver from "archiver"
 import logger from "../../../utils/logger"
 import { defaultAgents } from "../../../../prisma/data/defaultAgents"
+import { dynamicAgents } from "../../../../prisma/data/dynamicAgents"
 
 /**
  * Agent Configuration Controller
@@ -95,10 +96,22 @@ export class AgentConfigController {
         })
       }
 
+      // Check if workspace is e-commerce or info-only
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { sellsProductsAndServices: true },
+      })
+      const hasEcommerce = workspace?.sellsProductsAndServices ?? true
+
+      // E-commerce only agent types - hide these for info-only workspaces
+      const ecommerceOnlyTypes: AgentType[] = ["PRODUCT_SEARCH", "CART_MANAGEMENT", "ORDER_TRACKING"]
+
       // Fetch all agents for workspace, ordered by order field
       const agents = await this.prisma.agentConfig.findMany({
         where: {
           workspaceId,
+          // Filter out e-commerce agents for info-only workspaces
+          ...(hasEcommerce ? {} : { type: { notIn: ecommerceOnlyTypes } }),
         },
         orderBy: {
           order: "asc",
@@ -120,7 +133,7 @@ export class AgentConfigController {
       })
 
       logger.info(
-        `✅ Agent configs retrieved for workspace ${workspaceId}: ${agents.length} agents`
+        `✅ Agent configs retrieved for workspace ${workspaceId}: ${agents.length} agents (hasEcommerce: ${hasEcommerce})`
       )
 
       return res.status(200).json({
@@ -182,6 +195,7 @@ export class AgentConfigController {
   async resetToDefaults(req: Request, res: Response) {
     try {
       const workspaceId = (req as any).workspaceId
+      const { useDynamicTemplates } = req.body || {}
 
       if (!workspaceId) {
         return res.status(400).json({
@@ -190,10 +204,24 @@ export class AgentConfigController {
         })
       }
 
-      logger.info(`🔄 Resetting agent configs to defaults for workspace ${workspaceId}`)
+      // Get workspace to determine if it's e-commerce or info-only
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { sellsProductsAndServices: true },
+      })
+      const hasEcommerce = workspace?.sellsProductsAndServices ?? true
 
-      // Get default agent configurations
-      const defaults = defaultAgents(workspaceId)
+      // Choose which templates to load:
+      // - useDynamicTemplates=true: Load from src/templates/ with {{#if}} conditionals
+      // - useDynamicTemplates=false (default): Load from docs/prompts/ (legacy)
+      const templateSource = useDynamicTemplates ? "dynamic ({{#if}} templates)" : "legacy (docs/prompts)"
+      const workspaceType = hasEcommerce ? "e-commerce" : "informational"
+      logger.info(`🔄 Resetting agent configs to ${templateSource} for ${workspaceType} workspace ${workspaceId}`)
+
+      // Get agent configurations from appropriate source
+      const defaults = useDynamicTemplates 
+        ? dynamicAgents(workspaceId, hasEcommerce) 
+        : defaultAgents(workspaceId)
 
       // Update each agent with default values
       let resetCount = 0
@@ -223,11 +251,12 @@ export class AgentConfigController {
         }
       }
 
-      logger.info(`✅ Reset ${resetCount} agent configs to defaults for workspace ${workspaceId}`)
+      logger.info(`✅ Reset ${resetCount} agent configs to ${templateSource} for workspace ${workspaceId}`)
 
       return res.status(200).json({
-        message: "Agent configurations reset to defaults successfully",
+        message: `Agent configurations reset to ${templateSource} successfully`,
         resetCount,
+        templateSource: useDynamicTemplates ? "dynamic" : "legacy",
       })
     } catch (error) {
       logger.error("❌ Failed to reset agent configs:", error)

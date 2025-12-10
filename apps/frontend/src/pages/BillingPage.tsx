@@ -111,9 +111,9 @@ export function BillingPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Billing</h1>
+        <h1 className="text-2xl font-bold text-green-600">Billing</h1>
         <p className="text-muted-foreground">View your subscription and billing history</p>
       </div>
 
@@ -131,9 +131,9 @@ export function BillingPage() {
               <span className="font-medium text-green-600">{formatCurrency(subscriptionFee)}</span>
             </div>
             
-            {/* Total recharges row */}
+            {/* Recharges this month row */}
             <div className="flex justify-between items-center py-2">
-              <span className="text-muted-foreground">Total recharges:</span>
+              <span className="text-muted-foreground">Recharges this month:</span>
               <span className="font-medium text-green-600">{formatCurrency(totalRecharges)}</span>
             </div>
             
@@ -146,12 +146,17 @@ export function BillingPage() {
             {/* Separator line */}
             <div className="border-t border-gray-200 my-2"></div>
             
+            {/* Total row */}
+            <div className="flex justify-between items-center py-2">
+              <span className="font-semibold">Total (incl. taxes):</span>
+              <span className="font-bold text-lg text-green-600">{formatCurrency(total)}</span>
+            </div>
+            
             {/* Next renewal row */}
             <div className="flex justify-between items-center py-2">
               <span className="text-muted-foreground">Next renewal:</span>
-              <span className="font-semibold">
-                {format(nextBillingDate, "d/M/yyyy")}{" "}
-                <span className="text-green-600">{formatCurrency(total)}</span>
+              <span className="font-medium">
+                {format(nextBillingDate, "d/M/yyyy")}
               </span>
             </div>
           </div>

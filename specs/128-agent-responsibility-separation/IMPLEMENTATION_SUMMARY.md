@@ -255,7 +255,7 @@ Output: "Notifiche: true, modificate 2025-11-15T10:30:00.000Z"
 
 **Test Data Created**:
 
-- Workspace: Bell'Italia
+- Workspace: BellItalia
 - Categories: 9
 - Products: 49
 - Services: 2

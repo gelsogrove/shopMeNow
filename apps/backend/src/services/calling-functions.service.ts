@@ -279,19 +279,19 @@ export class CallingFunctionsService {
     phoneNumber: string
   }): Promise<StandardResponse> {
     try {
-      logger.info("🔧 Calling ContactOperator with:", request)
-      // Import the ContactOperator function
+      logger.info("🔧 Calling contactOperator with:", request)
+      // Import the contactOperator function
       const {
-        ContactOperator,
-      } = require("../domain/calling-functions/ContactOperator")
+        contactOperator,
+      } = require("../domain/calling-functions/contactOperator")
 
-      const result = await ContactOperator({
+      const result = await contactOperator({
         phoneNumber: request.phoneNumber, // 🎯 CORRETTO: phoneNumber invece di phone
         workspaceId: request.workspaceId,
         customerId: request.customerId, // 🎯 AGGIUNTO: customerId se disponibile
       })
 
-      logger.info("✅ ContactOperator result:", result)
+      logger.info("✅ contactOperator result:", result)
       
       // 📧 Se il Summary Agent è stato eseguito, loggalo per il debug timeline
       if (result.summaryAgentExecuted) {
@@ -338,20 +338,20 @@ export class CallingFunctionsService {
     workspaceId: string
   }): Promise<StandardResponse> {
     try {
-      logger.info("🔔 Calling ManageNotifications with:", request)
+      logger.info("🔔 Calling manageNotifications with:", request)
 
-      // Import the ManageNotifications function
+      // Import the manageNotifications function
       const {
-        ManageNotifications,
-      } = require("../domain/calling-functions/ManageNotifications")
+        manageNotifications,
+      } = require("../domain/calling-functions/manageNotifications")
 
-      const result = await ManageNotifications({
+      const result = await manageNotifications({
         action: request.action,
         customerId: request.customerId,
         workspaceId: request.workspaceId,
       })
 
-      logger.info("✅ ManageNotifications result:", result)
+      logger.info("✅ manageNotifications result:", result)
 
       return {
         success: result.success,
@@ -915,18 +915,18 @@ export class CallingFunctionsService {
   }): Promise<any> {
     try {
       logger.info("🔍 Calling searchProduct with:", request)
-      // Import the SearchProduct function
+      // Import the searchProduct function
       const {
-        SearchProduct,
-      } = require("../domain/calling-functions/SearchProduct")
+        searchProduct,
+      } = require("../domain/calling-functions/searchProduct")
 
-      const result = await SearchProduct({
+      const result = await searchProduct({
         customerId: request.customerId,
         workspaceId: request.workspaceId,
         productName: request.productName,
       })
 
-      logger.info("✅ SearchProduct result:", result)
+      logger.info("✅ searchProduct result:", result)
       return {
         success: true,
         message: result.message || "Ricerca registrata per analytics",
@@ -952,7 +952,7 @@ export class CallingFunctionsService {
   }): Promise<any> {
     try {
       logger.info("📦 Calling getOrder with:", request)
-      const { getOrder } = require("../domain/calling-functions/GetOrder")
+      const { getOrder } = require("../domain/calling-functions/getOrder")
 
       const result = await getOrder({
         customerId: request.customerId,
@@ -983,7 +983,7 @@ export class CallingFunctionsService {
   }): Promise<any> {
     try {
       logger.info("📍 Calling trackOrder with:", request)
-      const { trackOrder } = require("../domain/calling-functions/TrackOrder")
+      const { trackOrder } = require("../domain/calling-functions/trackOrder")
 
       const result = await trackOrder({
         customerId: request.customerId,
@@ -1015,7 +1015,7 @@ export class CallingFunctionsService {
   }): Promise<any> {
     try {
       logger.info("📧 Calling sendInvoice with:", request)
-      const { sendInvoice } = require("../domain/calling-functions/SendInvoice")
+      const { sendInvoice } = require("../domain/calling-functions/sendInvoice")
 
       const result = await sendInvoice({
         customerId: request.customerId,
@@ -1052,7 +1052,7 @@ export class CallingFunctionsService {
       logger.warn("🚨 Calling sendAlertEmail with:", request)
       const {
         sendAlertEmail,
-      } = require("../domain/calling-functions/SendAlertEmail")
+      } = require("../domain/calling-functions/sendAlertEmail")
 
       const result = await sendAlertEmail({
         workspaceId: request.workspaceId,

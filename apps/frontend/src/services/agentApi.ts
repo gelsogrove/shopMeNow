@@ -201,16 +201,20 @@ export async function getAgentConfigs(workspaceId: string): Promise<{
 /**
  * Reset all agent prompts to default values
  * WARNING: This will overwrite all customizations!
+ * 
+ * @param workspaceId - Workspace ID
+ * @param useDynamicTemplates - If true, use dynamic templates with {{#if}} conditionals
  */
 export async function resetAgentPromptsToDefaults(
-  workspaceId: string
-): Promise<{ message: string; resetCount: number }> {
-  logger.info(`Resetting agent prompts to defaults for workspace ${workspaceId}`)
+  workspaceId: string,
+  useDynamicTemplates: boolean = false
+): Promise<{ message: string; resetCount: number; templateSource?: string }> {
+  logger.info(`Resetting agent prompts to defaults for workspace ${workspaceId} (dynamic: ${useDynamicTemplates})`)
 
   try {
     const response = await api.post(
       `/workspaces/${workspaceId}/agent-config/reset-to-defaults`,
-      {},
+      { useDynamicTemplates },
       {
         headers: {
           "x-workspace-id": workspaceId,

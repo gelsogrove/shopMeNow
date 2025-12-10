@@ -21,6 +21,7 @@ const uploadDirs = {
   services: path.join(backendRoot, "uploads/services"),
   suppliers: path.join(backendRoot, "uploads/suppliers"),
   users: path.join(backendRoot, "uploads/users"),
+  channels: path.join(backendRoot, "uploads/channels"),
 }
 
 Object.values(uploadDirs).forEach((dir) => {
@@ -50,11 +51,13 @@ const storage = multer.diskStorage({
     const isProduct = req.baseUrl?.includes("/products")
     const isSupplier = req.baseUrl?.includes("/suppliers")
     const isUser = req.baseUrl?.includes("/users") || req.path?.includes("/profile")
+    const isChannel = req.baseUrl?.includes("/workspaces") || req.path?.includes("/logo")
 
     let uploadDir = uploadDirs.services // default
     if (isProduct) uploadDir = uploadDirs.products
     else if (isSupplier) uploadDir = uploadDirs.suppliers
     else if (isUser) uploadDir = uploadDirs.users
+    else if (isChannel) uploadDir = uploadDirs.channels
 
     cb(null, uploadDir)
   },

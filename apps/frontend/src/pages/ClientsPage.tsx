@@ -1,6 +1,5 @@
 import { ChangeDetection, ClientSheet } from "@/components/shared/ClientSheet"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
-import { PageHeader } from "@/components/shared/PageHeader"
 import { WhatsAppChatModal } from "@/components/shared/WhatsAppChatModal"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -584,35 +583,34 @@ export default function ClientsPage(): JSX.Element {
   }
 
   return (
-    <div className="container pl-0 pr-4 pt-4 pb-4">
-      <div className="grid grid-cols-12 gap-0">
-        <div className="col-span-11 col-start-1">
-          <PageHeader
-            title="Clients"
-            titleIcon={<Users className="mr-2 h-6 w-6 text-green-500" />}
-            itemCount={filteredClients.length}
+    <div className="space-y-6">
+      {/* Page Title + Search */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-green-600">Clients</h1>
+          <span className="text-sm text-muted-foreground">({filteredClients.length})</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Input
+            type="search"
+            placeholder="Search clients..."
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            className="max-w-xs bg-white"
           />
-          {/* Search and New Chat aligned to the right */}
-          <div className="flex items-center justify-end gap-2 mb-6">
-            <Input
-              type="search"
-              placeholder="Search clients..."
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              className="max-w-xs bg-white"
-            />
-            <Button
-              variant="default"
-              className="bg-green-600 hover:bg-green-700 text-white"
-              onClick={handleOpenNewChat}
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              New Chat
-            </Button>
-          </div>
+          <Button
+            variant="default"
+            className="bg-green-600 hover:bg-green-700 text-white"
+            onClick={handleOpenNewChat}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            New Chat
+          </Button>
+        </div>
+      </div>
 
-          {/* Client Cards Grid */}
-          {filteredClients.length === 0 ? (
+      {/* Client Cards Grid */}
+      {filteredClients.length === 0 ? (
             <Card className="bg-white">
               <CardContent className="py-12 text-center">
                 <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
@@ -770,8 +768,7 @@ export default function ClientsPage(): JSX.Element {
               ))}
             </div>
           )}
-        </div>
-      </div>
+
       {/* WhatsApp Playground Modal */}
       <WhatsAppChatModal
         isOpen={showPlayground}

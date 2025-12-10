@@ -1,3 +1,4 @@
+import { IMG_BASE_URL } from "@/config"
 import { PageLayout } from "@/components/layout/PageLayout"
 import { ClientSheet } from "@/components/shared/ClientSheet"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
@@ -26,6 +27,7 @@ import {
   Eye,
   Loader2,
   Lock,
+  MessageSquare,
   Pencil,
   Send,
   Trash2,
@@ -98,12 +100,36 @@ const getLanguageFlag = (language?: string): string => {
 
 export function ChatPage() {
   // ChatPage loaded
-  const { workspace, loading: isWorkspaceLoading } = useWorkspace()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const { workspace, setCurrentWorkspace, loading: isWorkspaceLoading } = useWorkspace()
   const {
     saveOriginalCustomerData,
     getOriginalCustomerData,
     clearOriginalCustomerData,
   } = useCustomerEdit()
+
+  // 🔑 Get workspaceId from URL first, fallback to localStorage
+  const urlWorkspaceId = new URLSearchParams(window.location.search).get("workspaceId")
+  const storedWorkspace = localStorage.getItem("currentWorkspace")
+  const storedWorkspaceId = storedWorkspace ? JSON.parse(storedWorkspace)?.id : null
+  const effectiveWorkspaceId = urlWorkspaceId || storedWorkspaceId
+
+  // 🚨 CRITICAL: If no workspaceId anywhere, redirect to workspace selection
+  useEffect(() => {
+    if (!effectiveWorkspaceId) {
+      logger.warn("[ChatPage] No workspaceId found - redirecting to workspace selection")
+      window.location.href = "/workspace-selection"
+      return
+    }
+    
+    // If workspaceId is in URL, make sure localStorage is in sync
+    if (urlWorkspaceId && storedWorkspaceId !== urlWorkspaceId) {
+      logger.info(`[ChatPage] Syncing localStorage with URL workspaceId: ${urlWorkspaceId}`)
+      // We need to fetch workspace data - for now just clear the cache
+      localStorage.removeItem("currentWorkspace")
+    }
+  }, [])
 
   // Get sessionId from sessionStorage (unique per browser session)
   const userSessionId = sessionStorage.getItem("sessionId")
@@ -133,32 +159,12 @@ export function ChatPage() {
   const [loading, setLoading] = useState(false)
   const [loadingChat, setLoadingChat] = useState(false)
   const [isWorkspaceChanging, setIsWorkspaceChanging] = useState(false) // 🆕 Loading per workspace change
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [, setSearchParams] = useSearchParams() // Only need setter, we read from searchParams above
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesScrollContainerRef = useRef<HTMLDivElement>(null) // 📍 Ref for scroll preservation
   const hasCompletedChatDataRef = useRef(false) // 🔥 Traccia se abbiamo completato i dati della chat
   const hasResetOnMountRef = useRef(false) // 🔥 Traccia se abbiamo fatto il reset iniziale
-  // 🚨 REMOVED: sessionId from URL - chat selection now managed via React context only
 
-  // �🚨 FIX: RELOAD page when workspace changes (hard refresh)
-  const prevWorkspaceIdRef = useRef<string | undefined>(workspace?.id)
-  useEffect(() => {
-    if (
-      workspace?.id &&
-      prevWorkspaceIdRef.current &&
-      workspace.id !== prevWorkspaceIdRef.current
-    ) {
-      logger.info(
-        `[ChatPage] 🔄 Workspace changed from ${prevWorkspaceIdRef.current} to ${workspace.id} - RELOADING PAGE`
-      )
-
-      // 🔄 HARD RELOAD - Force page refresh to clear all state
-      window.location.href = "/chat"
-    }
-
-    // Update ref for next comparison
-    prevWorkspaceIdRef.current = workspace?.id
-  }, [workspace?.id])
   const [clientSearchTerm, setClientSearchTerm] = useState(
     searchParams.get("client") || ""
   )
@@ -224,7 +230,6 @@ export function ChatPage() {
     newDiscount: number
   } | null>(null)
 
-  const navigate = useNavigate()
   const [showPlaygroundDialog, setShowPlaygroundDialog] = useState(false)
   const queryClient = useQueryClient()
 
@@ -429,8 +434,8 @@ export function ChatPage() {
     }
   }, [chats, clientSearchTerm])
 
-  // Get workspaceId from workspace hook
-  const workspaceId = workspace?.id
+  // 🔑 Get workspaceId - prefer URL, fallback to localStorage, then context
+  const workspaceId = effectiveWorkspaceId || workspace?.id
 
   // Fetch available languages
   const { data: availableLanguages = [] } = useQuery<Language[]>({
@@ -1178,64 +1183,82 @@ export function ChatPage() {
       )}
 
       <div className="grid grid-cols-12 gap-6 h-[calc(100vh-12rem)]">
-        {/* Chat List */}
-        <Card className="col-span-4 p-4 overflow-hidden flex flex-col">
-          <div className="mb-4 space-y-2">
-            <Input
-              type="search"
-              placeholder="Search chats..."
-              value={clientSearchTerm}
-              onChange={(e) => {
-                const newParams = new URLSearchParams(searchParams)
-                if (e.target.value) {
-                  newParams.set("client", e.target.value)
-                } else {
-                  newParams.delete("client")
-                }
-                // 🚨 REMOVED: No longer using sessionId in URL
-                setSearchParams(newParams)
-                setClientSearchTerm(e.target.value)
-              }}
-              className="w-full"
-            />
-            {/* 🚀 WebSocket Status Indicator */}
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  isWebSocketConnected ? "bg-green-500" : "bg-red-500"
-                } ${isWebSocketConnected ? "animate-pulse" : ""}`}
+        {/* Chat List - Vertical Sidebar */}
+        <div className="col-span-3 flex flex-col gap-3">
+          {/* Channel Logo & Name */}
+          <div className="flex items-center gap-3 pb-3 border-b border-gray-200">
+            {workspace?.logoUrl ? (
+              <img
+                src={workspace.logoUrl.startsWith('http') ? workspace.logoUrl : `${IMG_BASE_URL}${workspace.logoUrl}`}
+                alt={workspace.name}
+                className="h-12 w-12 rounded-full object-cover border-2 border-white shadow-md"
               />
-              <span>
-                {isWebSocketConnected ? "Real-time updates" : "Connecting..."}
-              </span>
+            ) : (
+              <div className="h-12 w-12 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-xl shadow-md">
+                {workspace?.name?.charAt(0).toUpperCase() || 'C'}
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <h2 className="text-base font-semibold text-gray-900 truncate">
+                {workspace?.name || 'Channel'}
+              </h2>
+              <p className="text-xs text-gray-500">
+                {workspace?.sellsProductsAndServices ? 'E-commerce' : 'Info'}
+              </p>
             </div>
           </div>
 
-          <div
-            className="chat-scrollbar"
-            style={{
-              height: "600px",
-              overflow: "auto",
-              backgroundColor: "white",
+          {/* Search Bar */}
+          <Input
+            type="search"
+            placeholder="Search chats..."
+            value={clientSearchTerm}
+            className="h-8 text-sm"
+            onChange={(e) => {
+              const newParams = new URLSearchParams(searchParams)
+              if (e.target.value) {
+                newParams.set("client", e.target.value)
+              } else {
+                newParams.delete("client")
+              }
+              setSearchParams(newParams)
+              setClientSearchTerm(e.target.value)
             }}
-          >
+            className="w-full max-w-xs"
+          />
+          
+          {/* WebSocket Status */}
+          <div className="flex items-center gap-2 text-xs text-gray-500 px-1">
+            <div
+              className={`w-2 h-2 rounded-full ${
+                isWebSocketConnected ? "bg-green-500" : "bg-red-500"
+              } ${isWebSocketConnected ? "animate-pulse" : ""}`}
+            />
+            <span>
+              {isWebSocketConnected ? "Real-time" : "Connecting..."}
+            </span>
+          </div>
+          
+          {/* Chat List */}
+          <div className="flex-1 overflow-y-auto chat-scrollbar">
+          <div className="flex flex-col gap-2">
             {chats.length > 0 ? (
               chats.map((chat: Chat) => {
                 // Compare sessionId instead of id
                 const isSelected = selectedChat?.sessionId === chat.sessionId
 
                 return (
-                  <div
+                  <Card
                     key={chat.id}
-                    className={`p-3 cursor-pointer rounded-lg mb-2 transition-all
+                    className={`p-3 cursor-pointer transition-all flex-shrink-0 w-64
                       ${
                         isSelected
                           ? chat.activeChatbot === false
-                            ? "border-l-4 border-orange-500 bg-orange-100 text-orange-800 font-bold"
-                            : "border-l-4 border-green-600 bg-green-50 text-green-800 font-bold"
+                            ? "border-t-4 border-orange-500 bg-orange-100 text-orange-800 font-bold"
+                            : "border-t-4 border-green-600 bg-green-50 text-green-800 font-bold"
                           : chat.activeChatbot === false
-                          ? "border-l-4 border-orange-300 bg-orange-50 text-orange-700"
-                          : "border-l-0 bg-white text-gray-900"
+                          ? "border-t-4 border-orange-300 bg-orange-50 text-orange-700"
+                          : "border-t-0 bg-white text-gray-900"
                       }
                       ${
                         !isSelected
@@ -1317,18 +1340,35 @@ export function ChatPage() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </Card>
                 )
               })
             ) : (
-              <div className="text-center py-4 text-gray-500">
-                {isLoadingChats ? "Loading chats..." : "No chats found"}
+              <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                {isLoadingChats ? (
+                  <>
+                    <Loader2 className="h-8 w-8 text-gray-400 animate-spin mb-3" />
+                    <p className="text-sm text-gray-500">Loading chats...</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                      <MessageSquare className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-sm font-medium text-gray-700 mb-1">No chats yet</h3>
+                    <p className="text-xs text-gray-500 max-w-[200px]">
+                      When customers message you on WhatsApp, their conversations will appear here
+                    </p>
+                  </>
+                )}
               </div>
             )}
+            </div>
           </div>
-        </Card>
+        </div>
 
-        <Card className="col-span-8 p-4 flex flex-col">
+        {/* Chat Messages - Right Side */}
+        <Card className="col-span-9 p-4 flex flex-col">
           {selectedChat ? (
             <>
               {/* 🚨 BANNERS ROW - Manual Control + Blocked Customer */}
@@ -1655,8 +1695,27 @@ export function ChatPage() {
               )}
             </>
           ) : (
-            <div className="text-center py-4 text-gray-500">
-              {isLoadingChats ? "Loading chats..." : "No chats found"}
+            <div className="flex flex-col items-center justify-center h-full text-center px-8">
+              {isLoadingChats ? (
+                <>
+                  <Loader2 className="h-12 w-12 text-gray-300 animate-spin mb-4" />
+                  <p className="text-gray-500">Loading conversations...</p>
+                </>
+              ) : (
+                <>
+                  <div className="w-24 h-24 bg-gradient-to-br from-green-50 to-green-100 rounded-full flex items-center justify-center mb-6">
+                    <MessageSquare className="h-12 w-12 text-green-500" />
+                  </div>
+                  <h2 className="text-xl font-semibold text-gray-700 mb-2">No conversations yet</h2>
+                  <p className="text-gray-500 max-w-md mb-6">
+                    Your WhatsApp conversations will appear here. When customers send messages to your business number, you'll be able to view and respond to them.
+                  </p>
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                    <span>Waiting for incoming messages...</span>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </Card>
@@ -1797,6 +1856,7 @@ export function ChatPage() {
             : []
         }
       />
+
       {/* WhatsApp Floating Button - stile OlaClick, solo su /chat */}
       <div className="fixed bottom-6 right-6 z-50">
         <Button

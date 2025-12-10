@@ -1,5 +1,5 @@
 /**
- * ContactOperator - LLM-Callable Function
+ * contactOperator - LLM-Callable Function
  *
  * Escalation a operatore umano quando il cliente richiede assistenza personale.
  * Utilizzata quando l'utente chiede: "voglio parlare con operatore", "assistenza umana", etc.
@@ -35,7 +35,7 @@ export interface ContactOperatorResult {
  * @param request - Request parameters
  * @returns Result with confirmation message
  */
-export async function ContactOperator(
+export async function contactOperator(
   request: ContactOperatorRequest
 ): Promise<ContactOperatorResult> {
   // Use imported prisma singleton from @echatbot/database
@@ -48,7 +48,7 @@ export async function ContactOperator(
   let conversationMessages: any[] = []
 
   try {
-    logger.info("📞 ContactOperator called with:", {
+    logger.info("📞 contactOperator called with:", {
       phoneNumber: request.phoneNumber,
       workspaceId: request.workspaceId,
       customerId: request.customerId,
@@ -153,7 +153,7 @@ export async function ContactOperator(
               }))
 
               // Generate summary
-              logger.info("🤖 [ContactOperator] Calling SummaryAgentLLM", {
+              logger.info("🤖 [contactOperator] Calling SummaryAgentLLM", {
                 messageCount: conversationHistory.length,
                 customerName: customer.name,
               })
@@ -168,7 +168,7 @@ export async function ContactOperator(
 
               if (summaryResult.success && summaryResult.summary) {
                 logger.info(
-                  "✅ [ContactOperator] Summary generated successfully",
+                  "✅ [contactOperator] Summary generated successfully",
                   {
                     summaryLength: summaryResult.summary.length,
                   }
@@ -181,7 +181,7 @@ export async function ContactOperator(
                 const safetyAgent = new SafetyTranslationAgent(prisma)
 
                 logger.info(
-                  "🛡️ [ContactOperator] Passing summary through Safety Translation Agent"
+                  "🛡️ [contactOperator] Passing summary through Safety Translation Agent"
                 )
 
                 const safetyResult = await safetyAgent.process({
@@ -213,7 +213,7 @@ ${finalSummary}
                 generatedSummary = chatSummary
 
                 logger.info(
-                  "✅ [ContactOperator] Summary processed and translated"
+                  "✅ [contactOperator] Summary processed and translated"
                 )
               } else {
                 throw new Error(
@@ -223,7 +223,7 @@ ${finalSummary}
             } catch (summaryError) {
               // Fallback to raw message list if summary generation fails
               logger.warn(
-                "⚠️ [ContactOperator] Summary generation failed, falling back to raw history:",
+                "⚠️ [contactOperator] Summary generation failed, falling back to raw history:",
                 summaryError
               )
 
@@ -276,7 +276,7 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
             },
           })
 
-          logger.info("🔍 [ContactOperator] Workspace config loaded:", {
+          logger.info("🔍 [contactOperator] Workspace config loaded:", {
             workspaceId: request.workspaceId,
             workspaceName: workspace?.name,
             hasWhatsappSettings: !!workspace?.whatsappSettings,
@@ -293,7 +293,7 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
             // Send email to customer's sales agent (if exists)
             if (customer.sales?.email) {
               logger.info(
-                "📧 [ContactOperator] Preparing to send email to sales agent:",
+                "📧 [contactOperator] Preparing to send email to sales agent:",
                 customer.sales.email,
                 `(${customer.sales.firstName} ${customer.sales.lastName})`
               )
@@ -312,13 +312,13 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
                   })
 
                 logger.info(
-                  "📧 [ContactOperator] Email service returned:",
+                  "📧 [contactOperator] Email service returned:",
                   emailResult
                 )
 
                 if (emailResult) {
                   logger.info(
-                    "✅ [ContactOperator] Email sent successfully to sales agent:",
+                    "✅ [contactOperator] Email sent successfully to sales agent:",
                     customer.sales.email,
                     `(${customer.sales.firstName} ${customer.sales.lastName})`,
                     "for customer:",
@@ -327,13 +327,13 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
                   emailSentSuccessfully = true
                 } else {
                   logger.error(
-                    "❌ [ContactOperator] Email sending FAILED (returned false) to sales agent:",
+                    "❌ [contactOperator] Email sending FAILED (returned false) to sales agent:",
                     customer.sales.email
                   )
                 }
               } catch (emailError) {
                 logger.error(
-                  "❌ [ContactOperator] Email sending EXCEPTION:",
+                  "❌ [contactOperator] Email sending EXCEPTION:",
                   emailError
                 )
               }
@@ -350,7 +350,7 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
 
               if (adminUser?.email) {
                 logger.info(
-                  "📧 [ContactOperator] No sales agent - sending to admin:",
+                  "📧 [contactOperator] No sales agent - sending to admin:",
                   adminUser.email
                 )
 
@@ -367,13 +367,13 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
                     })
 
                   logger.info(
-                    "📧 [ContactOperator] Email service returned (admin):",
+                    "📧 [contactOperator] Email service returned (admin):",
                     emailResult
                   )
 
                   if (emailResult) {
                     logger.info(
-                      "✅ [ContactOperator] Email sent successfully to admin:",
+                      "✅ [contactOperator] Email sent successfully to admin:",
                       adminUser.email,
                       "for customer:",
                       customer.name
@@ -381,13 +381,13 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
                     emailSentSuccessfully = true
                   } else {
                     logger.error(
-                      "❌ [ContactOperator] Email sending FAILED (returned false) to admin:",
+                      "❌ [contactOperator] Email sending FAILED (returned false) to admin:",
                       adminUser.email
                     )
                   }
                 } catch (emailError) {
                   logger.error(
-                    "❌ [ContactOperator] Email sending EXCEPTION (admin):",
+                    "❌ [contactOperator] Email sending EXCEPTION (admin):",
                     emailError
                   )
                 }
@@ -402,7 +402,7 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
         }
       } catch (emailError) {
         logger.error(
-          "❌ [ContactOperator] Failed to send email to agent:",
+          "❌ [contactOperator] Failed to send email to agent:",
           emailError
         )
         // Don't fail the entire operation if email fails
@@ -414,7 +414,7 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
 
       const ticketId = `TICKET-${Date.now()}`
 
-      logger.info("✅ ContactOperator escalation registered:", {
+      logger.info("✅ contactOperator escalation registered:", {
         ticketId,
         customerId: customer?.id,
         phoneNumber: request.phoneNumber,
@@ -443,7 +443,7 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
         conversationMessages // 📧 I messaggi della conversazione per debug timeline
       }
     } catch (dbError) {
-      logger.error("❌ Database error in ContactOperator:", dbError)
+      logger.error("❌ Database error in contactOperator:", dbError)
       await prisma.$disconnect()
 
       // Still return success - escalation intent is recorded in logs
@@ -467,7 +467,7 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
       }
     }
   } catch (error) {
-    logger.error("❌ Error in ContactOperator:", error)
+    logger.error("❌ Error in contactOperator:", error)
     return {
       success: false,
       message: "Si è verificato un errore. Riprova più tardi.",

@@ -4,7 +4,7 @@
  * CRITICAL: Verifies that ALL data loading methods filter by workspaceId
  * to prevent cross-workspace data contamination.
  *
- * Bug Context: Sjopme workspace (empty) was showing Bell'Italia products
+ * Bug Context: Sjopme workspace (empty) was showing BellItalia products
  * because {{PRODUCTS}} variable replacement wasn't workspace-isolated.
  */
 
@@ -221,9 +221,9 @@ describe("PromptProcessorService - Empty Content Handling", () => {
     PromptProcessorService = module.PromptProcessorService
   })
 
-  it("should replace empty {{PRODUCTS}} with warning message", async () => {
+  it("should replace empty {{products}} with warning message", async () => {
     const processor = new PromptProcessorService()
-    const promptWithProducts = "Available products: {{PRODUCTS}}"
+    const promptWithProducts = "Available products: {{products}}"
 
     const result = await processor.preProcessPrompt(
       promptWithProducts,
@@ -242,9 +242,9 @@ describe("PromptProcessorService - Empty Content Handling", () => {
     expect(result).toContain("Non ci sono prodotti")
   })
 
-  it("should replace empty {{CATEGORIES}} with warning message", async () => {
+  it("should replace empty {{categories}} with warning message", async () => {
     const processor = new PromptProcessorService()
-    const promptWithCategories = "Categories: {{CATEGORIES}}"
+    const promptWithCategories = "Categories: {{categories}}"
 
     const result = await processor.preProcessPrompt(
       promptWithCategories,
@@ -262,9 +262,9 @@ describe("PromptProcessorService - Empty Content Handling", () => {
     expect(result).toContain("Non abbiamo categorie")
   })
 
-  it("should replace empty {{SERVICES}} with warning message", async () => {
+  it("should replace empty {{services}} with warning message", async () => {
     const processor = new PromptProcessorService()
-    const promptWithServices = "Services: {{SERVICES}}"
+    const promptWithServices = "Services: {{services}}"
 
     const result = await processor.preProcessPrompt(
       promptWithServices,
@@ -282,9 +282,9 @@ describe("PromptProcessorService - Empty Content Handling", () => {
     expect(result).toContain("Non abbiamo servizi")
   })
 
-  it("should replace empty {{OFFERS}} with warning message", async () => {
+  it("should replace empty {{offers}} with warning message", async () => {
     const processor = new PromptProcessorService()
-    const promptWithOffers = "Offers: {{OFFERS}}"
+    const promptWithOffers = "Offers: {{offers}}"
 
     const result = await processor.preProcessPrompt(
       promptWithOffers,
@@ -302,9 +302,9 @@ describe("PromptProcessorService - Empty Content Handling", () => {
     expect(result).toContain("Non abbiamo offerte")
   })
 
-  it("should replace empty {{FAQ}} with warning message", async () => {
+  it("should replace empty {{faq}} with warning message", async () => {
     const processor = new PromptProcessorService()
-    const promptWithFaq = "FAQ: {{FAQ}}"
+    const promptWithFaq = "FAQ: {{faq}}"
 
     const result = await processor.preProcessPrompt(
       promptWithFaq,
@@ -324,7 +324,7 @@ describe("PromptProcessorService - Empty Content Handling", () => {
 
   it("should keep real content when data exists", async () => {
     const processor = new PromptProcessorService()
-    const promptWithProducts = "Products: {{PRODUCTS}}"
+    const promptWithProducts = "Products: {{products}}"
 
     const result = await processor.preProcessPrompt(
       promptWithProducts,

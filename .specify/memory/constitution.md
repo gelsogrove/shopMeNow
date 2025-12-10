@@ -223,14 +223,14 @@
   - NONE
 
   Templates Requiring Updates:
-  - ⚠️ `docs/prompts/router-agent.md` - Remove {{SERVICES}}, strip to 3k tokens (Rule 7, 8)
+  - ⚠️ `docs/prompts/router-agent.md` - Remove {{services}}, strip to 3k tokens (Rule 7, 8)
   - ⚠️ `docs/prompts/product-search-agent.md` - Rename to `product-services-search-agent.md` (Rule 6)
   - ⚠️ `backend/src/interfaces/http/controllers/whatsapp-webhook.controller.ts` - Add Security Gate (Rule 9)
   - ⚠️ `backend/prisma/data/defaultAgents.ts` - Fix agent name (Rule 6)
   - ⚠️ `backend/src/__tests__/unit/services/llm-router-priorities.spec.ts` - Add welcome message test (Rule 3)
 
   Follow-up TODOs:
-  - ❌ **CRITICAL**: Fix {{SERVICES}} duplication (Rule 7) - currently in Router + ProductSearch
+  - ❌ **CRITICAL**: Fix {{services}} duplication (Rule 7) - currently in Router + ProductSearch
   - ❌ **CRITICAL**: Strip Router from 8k to 3k tokens (Rule 8) - remove tone/examples
   - ❌ **CRITICAL**: Rename agent "Product & Services Search Agent" (Rule 6)
   - ❌ **CRITICAL**: Add Security Gate BEFORE priorities (Rule 9) - SQL/XSS validation
@@ -244,7 +244,7 @@
   - Router Agent role fundamentally redefined (orchestration only, NOT dialogue)
   - Product Search Agent becomes "Product & Services Search" (name change)
   - Security validation now MANDATORY first step (architecture change)
-  - {{SERVICES}} variable MUST be removed from Router (breaks existing prompts)
+  - {{services}} variable MUST be removed from Router (breaks existing prompts)
 
   Migration Plan:
   - Phase 1: Update constitution (✅ completed in this version)
@@ -402,11 +402,11 @@ const prompt = replaceAllVariables(dbPrompt, {
 
 #### Variable Uniqueness Constraint (MUST - NON-NEGOTIABLE)
 
-**The variables `{{PRODUCTS}}`, `{{OFFERS}}`, `{{SERVICES}}`, `{{CATEGORIES}}` MUST appear at most ONCE per prompt.**
+**The variables `{{products}}`, `{{offers}}`, `{{services}}`, `{{categories}}` MUST appear at most ONCE per prompt.**
 
 **Requirements**:
 
-- ❌ **ZERO duplicate usage** - Each large variable (PRODUCTS/OFFERS/SERVICES/CATEGORIES) can only appear ONCE in the same prompt
+- ❌ **ZERO duplicate usage** - Each large variable (products/offers/services/categories) can only appear ONCE in the same prompt
 - ✅ **Token explosion prevention** - Prevents accidental duplication that causes 50k+ token prompts
 - ✅ **Validation on save** - Admin UI MUST validate prompts before saving to `agentConfig`
 - ✅ **Runtime detection** - `PromptProcessorService` MUST throw error if duplicates detected (prevents LLM API failure)
@@ -414,33 +414,33 @@ const prompt = replaceAllVariables(dbPrompt, {
 **Examples**:
 
 ```typescript
-// ❌ WRONG - Duplicate {{PRODUCTS}} variable
+// ❌ WRONG - Duplicate {{products}} variable
 const badPrompt = `
-Ecco i nostri prodotti: {{PRODUCTS}}
+Ecco i nostri prodotti: {{products}}
 ...
-Se vuoi vedere di nuovo, ecco i prodotti: {{PRODUCTS}}
+Se vuoi vedere di nuovo, ecco i prodotti: {{products}}
 `
 // Result: Products list injected TWICE → 100k+ tokens → API failure
 
-// ✅ CORRECT - Single usage of {{PRODUCTS}}
+// ✅ CORRECT - Single usage of {{products}}
 const goodPrompt = `
-Ecco il nostro catalogo completo: {{PRODUCTS}}
+Ecco il nostro catalogo completo: {{products}}
 Puoi chiedermi dettagli su qualsiasi prodotto.
 `
 // Result: Products list injected ONCE → ~50k tokens → works properly
 
 // ✅ CORRECT - Multiple DIFFERENT variables allowed
 const mixedPrompt = `
-Categorie disponibili: {{CATEGORIES}}
-Offerte attive: {{OFFERS}}
-Prodotti in catalogo: {{PRODUCTS}}
+Categorie disponibili: {{categories}}
+Offerte attive: {{offers}}
+Prodotti in catalogo: {{products}}
 `
 // Result: Each variable used once → valid prompt
 ```
 
 **Rationale**:
 
-- `{{PRODUCTS}}` can contain 1000+ products → ~50k tokens per injection
+- `{{products}}` can contain 1000+ products → ~50k tokens per injection
 - Duplicate usage → 100k+ tokens → exceeds LLM context window (128k for GPT-4-mini)
 - Prevents accidental duplication in prompt templates
 - Reduces API costs (fewer tokens = lower billing)
@@ -458,7 +458,7 @@ Prodotti in catalogo: {{PRODUCTS}}
 ```typescript
 // Validation function (MUST be added to PromptProcessorService)
 private validatePromptVariables(prompt: string): void {
-  const largeVariables = ["PRODUCTS", "OFFERS", "SERVICES", "CATEGORIES"]
+  const largeVariables = ["products", "offers", "services", "categories"]
 
   for (const variable of largeVariables) {
     const regex = new RegExp(`\\{\\{${variable}\\}\\}`, "g")
@@ -496,7 +496,7 @@ public async replaceAllVariables(
 
 #### Example Products Prevention (MUST - NON-NEGOTIABLE)
 
-**LLMs MUST NOT copy product names from prompt examples - only from `{{PRODUCTS}}` variable.**
+**LLMs MUST NOT copy product names from prompt examples - only from `{{products}}` variable.**
 
 **Problem**: Agent prompts contain examples with fake product names (e.g., "Salame Toscano", "Parmigiano Reggiano 24 mesi"). LLMs can hallucinate and copy these examples instead of reading actual catalog data.
 
@@ -504,7 +504,7 @@ public async replaceAllVariables(
 
 - ✅ **Warning at prompt start**: ALL agent prompts MUST have warning box: "⚠️ EXAMPLE PRODUCTS ARE FAKE - DON'T COPY THEM"
 - ✅ **Generic placeholders**: Use `[PRODUCT_NAME]`, `[CATEGORY]` instead of real-looking names in examples
-- ✅ **Explicit instruction**: "NEVER copy product names from examples - extract from {{PRODUCTS}} only"
+- ✅ **Explicit instruction**: "NEVER copy product names from examples - extract from {{products}} only"
 - ✅ **"Maximum 5" clarification**: "Maximum 5 is a LIMIT (not a target) - if catalog has 2 products, show 2"
 - ❌ **NO realistic fake examples**: Never use "Salame Milano 200g €6.80" in examples (LLM will copy it)
 
@@ -520,7 +520,7 @@ public async replaceAllVariables(
 Examples like "Parmigiano Reggiano", "Salame Toscano" are NOT in your catalog.
 
 🚨 NEVER copy product names from examples
-✅ ONLY use exact names from {{PRODUCTS}} variable
+✅ ONLY use exact names from {{products}} variable
 ✅ IF catalog has 2 salami → show 2 (not 5 invented)
 
 ---
@@ -547,7 +547,7 @@ You help customers find products...
 
 **Testing**:
 
-- Manual: Ask "avete salami?" and verify response only contains products from `{{PRODUCTS}}`
+- Manual: Ask "avete salami?" and verify response only contains products from `{{products}}`
 - Automated: Script `validate-agent-prompts.ts` checks for suspicious patterns
 
 ---
@@ -1218,9 +1218,9 @@ If codebase already has technical debt:
 
 **6. Context Variable Limit**:
 
-- ✅ **ONE dynamic variable per category** per prompt ({{PRODUCTS}} OR {{PRODUCT_DETAILS}}, not both)
+- ✅ **ONE dynamic variable per category** per prompt ({{products}} OR {{productDetails}}, not both)
 - ❌ Multiple similar variables create ambiguity and prompt confusion
-- ✅ **Router MUST NOT have {{PRODUCTS}} or {{CATEGORIES}}** (ProductSearch only)
+- ✅ **Router MUST NOT have {{products}} or {{categories}}** (ProductSearch only)
 
 **7. Single Source of Truth**:
 
@@ -1348,7 +1348,7 @@ if (message.includes("salami")) {
 
 **Agent Responsibility Matrix**:
 
-| Agent                | Domain                      | Has {{PRODUCTS}} | Has {{CATEGORIES}} | Outputs Language    |
+| Agent                | Domain                      | Has {{products}} | Has {{categories}} | Outputs Language    |
 | -------------------- | --------------------------- | ---------------- | ------------------ | ------------------- |
 | Router               | Routing + Contextualization | ❌ NO            | ❌ NO              | English             |
 | ProductSearch        | Product queries             | ✅ YES           | ✅ YES             | English             |
@@ -1362,13 +1362,13 @@ if (message.includes("salami")) {
 - Router contamination with product data (discovered in Session 123) caused hallucinations despite temperature 0.0
 - Without strict boundaries: context leakage, invented data, architectural violations
 - Multi-agent systems require clear separation: Router = orchestration, Specialists = domain execution
-- Variable isolation prevents prompt bloat (Router with {{PRODUCTS}} = 50k+ unnecessary tokens)
+- Variable isolation prevents prompt bloat (Router with {{products}} = 50k+ unnecessary tokens)
 
 **Enforcement**:
 
 - Code reviews MUST verify agent domain separation (Router ≠ ProductSearch variables)
 - Integration tests MUST validate delegation flow (Router → Specialist → Router → Safety)
-- Prompt audits MUST check variable isolation (`grep "{{PRODUCTS}}" docs/prompts/*.md`)
+- Prompt audits MUST check variable isolation (`grep "{{products}}" docs/prompts/*.md`)
 - Load tests MUST verify no cross-agent contamination
 - Pre-commit hook MUST reject prompts with duplicate large variables
 
@@ -1455,9 +1455,9 @@ router.post(
 - **Investigation**:
   - ✅ Database confirmed: 5 DOP cheeses exist (Gorgonzola, Parmigiano, Mozzarella, Pecorino, Taleggio)
   - ✅ MessageRepository.getActiveProducts(): All 5 in formatted output
-  - ✅ PromptProcessorService: {{PRODUCTS}} includes all 5 (verified in logs/prompt-debug files)
+  - ✅ PromptProcessorService: {{products}} includes all 5 (verified in logs/prompt-debug files)
   - ❌ **LLM output**: Only 4 shown consistently (Taleggio missing)
-- **Root Cause**: `searchConversations` table cached first response with 4 products, LLM reused cache instead of re-filtering from fresh {{PRODUCTS}}
+- **Root Cause**: `searchConversations` table cached first response with 4 products, LLM reused cache instead of re-filtering from fresh {{products}}
 - **Solution**: Clear `searchConversations.deleteMany({ where: { sessionId } })` before re-query → **Test passed**: All 5 products shown including Taleggio
 
 **Requirements**:
@@ -2668,7 +2668,7 @@ model ChatMessages {
 
 - ✅ **Agent name**: "Product & Services Search Agent" (NOT "Product Search Agent")
 - ✅ **Handles**: Product discovery + service discovery (unified flow)
-- ✅ **Variables**: `{{PRODUCTS}}`, `{{SERVICES}}`, `{{CATEGORIES}}`, `{{OFFERS}}` (all in ONE agent)
+- ✅ **Variables**: `{{products}}`, `{{services}}`, `{{categories}}`, `{{offers}}` (all in ONE agent)
 - ❌ **NO separation**: Services NOT handled by Router or separate agent
 - ✅ **Tone**: Warm, enthusiastic, highlights discounts, uses customer name
 
@@ -2691,7 +2691,7 @@ name: "Product & Services Search Agent"
 
 // ✅ Unified handling
 // docs/prompts/product-services-search-agent.md:
-// - Handles {{PRODUCTS}} AND {{SERVICES}}
+// - Handles {{products}} AND {{services}}
 // - Unified numbered list (products + services together)
 // - Same confirmation flow for both
 ```
@@ -2703,41 +2703,41 @@ name: "Product & Services Search Agent"
 - ✅ Rename agent in `defaultAgents.ts`
 - ✅ Rename prompt file: `product-search-agent.md` → `product-services-search-agent.md`
 - ✅ Update database seed with correct name
-- ✅ Verify {{SERVICES}} variable in this agent prompt (not Router)
+- ✅ Verify {{services}} variable in this agent prompt (not Router)
 
 ---
 
 #### Rule 7: Variable Uniqueness - One Usage Per Prompt
 
-**Large variables ({{PRODUCTS}}, {{SERVICES}}, {{CATEGORIES}}, {{OFFERS}}) MUST appear at most ONCE per agent prompt.**
+**Large variables ({{products}}, {{services}}, {{categories}}, {{offers}}) MUST appear at most ONCE per agent prompt.**
 
 **Requirements**:
 
 - ✅ **Already defined**: See Principle III: Variable Uniqueness Constraint
 - ✅ **Enforcement**: Validation in `PromptProcessorService.replaceAllVariables()`
 - ✅ **Current violations**:
-  - ❌ {{SERVICES}} in Router prompt (8,000 tokens)
-  - ❌ {{SERVICES}} in ProductSearch prompt (55,000 tokens)
+  - ❌ {{services}} in Router prompt (8,000 tokens)
+  - ❌ {{services}} in ProductSearch prompt (55,000 tokens)
   - = 5,000+ token waste per request
 - ✅ **Target state**:
-  - Router: {{FAQ}} ONLY (3,000 tokens)
-  - Product & Services Search: {{PRODUCTS}}, {{SERVICES}}, {{CATEGORIES}}, {{OFFERS}} (60,000 tokens)
+  - Router: {{faq}} ONLY (3,000 tokens)
+  - Product & Services Search: {{products}}, {{services}}, {{categories}}, {{offers}} (60,000 tokens)
 
 **Remediation**:
 
 ```markdown
-<!-- docs/prompts/router-agent.md - REMOVE {{SERVICES}} -->
+<!-- docs/prompts/router-agent.md - REMOVE {{services}} -->
 <!-- Target: 3,000 tokens (orchestration only) -->
 
-<!-- docs/prompts/product-services-search-agent.md - KEEP {{SERVICES}} -->
-<!-- Has: {{PRODUCTS}}, {{SERVICES}}, {{CATEGORIES}}, {{OFFERS}} -->
+<!-- docs/prompts/product-services-search-agent.md - KEEP {{services}} -->
+<!-- Has: {{products}}, {{services}}, {{categories}}, {{offers}} -->
 ```
 
 **Rationale**: See Principle III - prevents 50k+ token duplication, reduces API costs, prevents LLM context overflow.
 
 **Enforcement**:
 
-- ✅ Remove {{SERVICES}} from Router prompt (Issue A1 in audit report)
+- ✅ Remove {{services}} from Router prompt (Issue A1 in audit report)
 - ✅ Add validation test in `validate-agent-prompts.ts`
 - ✅ Constitution Principle III already mandates this
 
@@ -2753,7 +2753,7 @@ name: "Product & Services Search Agent"
   - Intent classification rules
   - Delegation function descriptions
   - Edge case handling (5-10 examples MAX)
-  - {{FAQ}} variable (small, <1000 tokens)
+  - {{faq}} variable (small, <1000 tokens)
 - ❌ **Router MUST NOT have**:
   - Tone rules ("warm", "friendly", "use emojis")
   - Customer name usage rules
@@ -3181,7 +3181,7 @@ async addToCart(args: { items: Array<{code: string, quantity?: number, type: "PR
 - [ ] **Rule 4**: Router delegates (never responds directly)
 - [ ] **Rule 5**: Router has full conversation history
 - [ ] **Rule 6**: Agent named "Product & Services Search Agent" (❌ wrong name, fix)
-- [ ] **Rule 7**: {{SERVICES}} appears ONCE (❌ duplicated, fix)
+- [ ] **Rule 7**: {{services}} appears ONCE (❌ duplicated, fix)
 - [ ] **Rule 8**: Router ≤ 3,500 tokens, no tone/examples (❌ 8k tokens, fix)
 - [ ] **Rule 9**: Security Gate BEFORE priorities (❌ missing, add)
 - [ ] **Rule 10**: Timeline has all LLM calls (✅ compliant)
@@ -3201,7 +3201,7 @@ async addToCart(args: { items: Array<{code: string, quantity?: number, type: "PR
 - ✅ **Max prompt size**: 100 lines (not 460!)
 - ✅ **Only 2 responsibilities**:
   1. Classify customer intent → route to specialist agent
-  2. Answer FAQ questions directly using {{FAQ}}
+  2. Answer FAQ questions directly using {{faq}}
 - ❌ **NO agent descriptions** - Router doesn't need to know what agents DO, only their NAMES
 - ❌ **NO examples in prompt** - Examples confuse LLM, increase tokens, cause hallucinations
 - ❌ **NO performance metrics** - Keep these in constitution, not in agent prompts
@@ -3211,7 +3211,7 @@ async addToCart(args: { items: Array<{code: string, quantity?: number, type: "PR
 **Required Sections ONLY**:
 
 1. **Role** (2 lines): "Classify intent and route. Answer FAQ directly."
-2. **FAQ Knowledge Base**: `{{FAQ}}` variable
+2. **FAQ Knowledge Base**: `{{faq}}` variable
 3. **Context Interpretation** (5 lines): How to handle short responses (SI/NO/1/2)
 4. **Specialist Agents** (table): Agent name + when to use (1 line each)
 5. **Response Format** (JSON schema): routerDecision, contextualizedMessage, confidence, reasoning
@@ -3237,7 +3237,7 @@ Classify customer intent and route to specialist agents. Answer FAQ directly.
 
 ## FAQ Knowledge Base
 
-{{FAQ}}
+{{faq}}
 
 ## Context Interpretation
 
@@ -3270,7 +3270,7 @@ When customer sends SHORT response (SI, NO, 1, 2):
 
 1. Return ONLY valid JSON
 2. For short responses: build contextualizedMessage from history
-3. For FAQ: answer directly from {{FAQ}}
+3. For FAQ: answer directly from {{faq}}
 4. When uncertain: route to CUSTOMER_SUPPORT
 ```
 

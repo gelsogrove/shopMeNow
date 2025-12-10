@@ -49,7 +49,7 @@ export interface AddServiceResult {
  * @param request - Request parameters con customerId, workspaceId, services[]
  * @returns Result con riepilogo aggiunte e link carrello
  */
-export async function AddService(
+export async function addService(
   request: AddServiceRequest
 ): Promise<AddServiceResult> {
   try {

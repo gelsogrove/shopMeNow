@@ -332,14 +332,36 @@ Postcondizioni: Chatbot riprende a funzionare
 
 | RF-ID | Requisito | Dettaglio |
 |-------|-----------|-----------|
-| RF-030 | Credit System | Saldo credito per owner (non per workspace) |
-| RF-031 | Usage Tracking | Tracciamento messaggi, ordini, push per fatturazione |
-| RF-032 | Plans | 4 piani: FREE_TRIAL, BASIC, PREMIUM, ENTERPRISE con limiti diversi |
-| RF-033 | Recharge | Ricarica credito via PayPal |
-| RF-034 | Invoices | Generazione fattura mensile con breakdown |
-| RF-035 | Pause/Resume | Pausa immediata servizio (stop chatbot) |
+| RF-030 | Credit System | Saldo credito per owner (non per workspace). Il credito è condiviso tra tutti i workspace dello stesso owner |
+| RF-031 | Usage Tracking | Tracciamento messaggi WhatsApp (€0.10/msg) e campagne push (€1.00/msg) per fatturazione. I costi vengono scalati dal credito dell'owner |
+| RF-032 | Plans | 4 piani: FREE_TRIAL (€5 credito iniziale), BASIC (€29/mese), PREMIUM (€79/mese), ENTERPRISE (custom) |
+| RF-033 | Recharge | Ricarica credito via PayPal (min €20, max €500). Pacchetti preconfigurati: €20, €50, €100, €200 |
+| RF-034 | Invoices | Generazione fattura mensile con breakdown per workspace e tipo di utilizzo |
+| RF-035 | Pause/Resume | Pausa immediata servizio (stop chatbot) senza cancellazione dati |
+| RF-036 | Billing per Owner | Il billing è a livello di owner, non di workspace. Un owner con più workspace ha un unico saldo credito |
 
-### 8.5 Modulo Authentication
+### 8.5 Modulo Channel Types (Feature 199)
+
+| RF-ID | Requisito | Dettaglio |
+|-------|-----------|-----------|
+| RF-050 | E-commerce Channel | Canale con `sellsProductsAndServices=true`. Include: catalogo prodotti, carrello, ordini, offerte. Agenti attivi: 9 (inclusi PRODUCT_SEARCH, CART_MANAGEMENT, ORDER_TRACKING) |
+| RF-051 | Informational Channel | Canale con `sellsProductsAndServices=false`. Solo FAQ e supporto informativo. Agenti attivi: 6 (esclusi agenti e-commerce) |
+| RF-052 | Channel Configuration | Ogni workspace ha configurazioni dedicate: `hasSalesAgents`, `hasSuppliers`, `hasHumanSupport`, `toneOfVoice`, `botIdentityResponse` |
+| RF-053 | Logo Channel | Ogni workspace può avere un logo personalizzato (`logoUrl`) mostrato nella lista canali |
+| RF-054 | Channel Switching | L'owner può cambiare tipo canale (e-commerce ↔ info) dalla dashboard. Gli agenti vengono filtrati automaticamente |
+
+### 8.6 Modulo Dynamic Prompt System
+
+| RF-ID | Requisito | Dettaglio |
+|-------|-----------|-----------|
+| RF-060 | PromptBuilderService | Sistema che costruisce dinamicamente il prompt del Router Agent basandosi sulla configurazione del workspace |
+| RF-061 | Variable Replacement | Sostituzione di variabili nel prompt: `{{products}}`, `{{categories}}`, `{{offers}}`, `{{services}}`, `{{faqs}}`, `{{certifications}}` |
+| RF-062 | Context Injection | Il prompt include automaticamente: nome workspace, lingua, indirizzo, regole custom, identità bot |
+| RF-063 | Agent Filtering | Gli agenti disponibili nel prompt dipendono da `sellsProductsAndServices`. Canali info non vedono agenti e-commerce |
+| RF-064 | Variable Uniqueness | Ogni variabile grande (`{{products}}`, `{{offers}}`, etc.) può apparire al massimo UNA volta per prompt per evitare token overflow |
+| RF-065 | Database-Driven | TUTTI i prompt vengono dalla tabella `AgentConfig`. Nessun prompt hardcoded nel codice |
+
+### 8.7 Modulo Authentication
 
 | RF-ID | Requisito | Dettaglio |
 |-------|-----------|-----------|

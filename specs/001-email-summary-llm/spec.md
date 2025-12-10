@@ -25,8 +25,8 @@ When a customer escalates to a human operator, the sales agent receives an email
 **360-Degree Validation** _(mandatory for implementation)_:
 
 - [ ] Frontend: No changes required (backend handles email automatically)
-- [ ] Backend API: contactSupport calling function modified to invoke ContactOperator.ts instead of placeholder response
-- [ ] Service Layer: SummaryAgentLLM service created, integrated into ContactOperator flow (receives array, returns text only - NO calling functions)
+- [ ] Backend API: contactSupport calling function modified to invoke contactOperator.ts instead of placeholder response
+- [ ] Service Layer: SummaryAgentLLM service created, integrated into contactOperator flow (receives array, returns text only - NO calling functions)
 - [ ] Repository: Retrieve messages from last hour (createdAt >= NOW() - 1 hour) with workspaceId filter
 - [ ] Database: Add SUMMARY agent configuration to agentConfigs table via seed
 - [ ] Security: Email sending requires workspace isolation (sales agent must belong to customer's workspace)
@@ -115,7 +115,7 @@ The system handles edge cases like empty chat history, very long conversations, 
   System retrieves only messages from last hour (time-based filter). If last hour still exceeds token limit, system truncates oldest messages to fit within limit.
 
 - **What happens when sales agent email is missing from customer record?**  
-  System falls back to workspace admin email (existing ContactOperator.ts behavior). Email always delivers.
+  System falls back to workspace admin email (existing contactOperator.ts behavior). Email always delivers.
 
 - **What happens when Safety Translation Agent blocks entire summary?**  
   System sends email with notice "Content could not be translated due to safety concerns" and raw history. Sales agent can review original conversation in admin panel.
@@ -130,7 +130,7 @@ The system handles edge cases like empty chat history, very long conversations, 
 - **FR-004**: Summary Agent MUST accept conversation history as input array and return text summary (NO calling functions - only text generation)
 - **FR-005**: System MUST replace variables in summary prompt: {{conversationHistory}}, {{customerName}}, {{agentName}} before sending to LLM
 - **FR-006**: System MUST integrate Summary Agent into email flow: retrieve history → Summary Agent → Safety Translation Agent → Email Service
-- **FR-007**: System MUST modify contactSupport calling function in function-executor.service.ts to invoke ContactOperator.ts instead of returning placeholder response
+- **FR-007**: System MUST modify contactSupport calling function in function-executor.service.ts to invoke contactOperator.ts instead of returning placeholder response
 - **FR-008**: System MUST retrieve messages from last hour (createdAt >= NOW() - 1 hour) from ConversationMessages table filtered by customerId and workspaceId
 - **FR-009**: System MUST pass Summary Agent output through Safety Translation Agent to sanitize and translate content
 - **FR-010**: System MUST send final email using EmailService.sendOperatorNotificationEmail method with sales agent email address
@@ -153,7 +153,7 @@ The system handles edge cases like empty chat history, very long conversations, 
 - Email implementation follows pattern from working test script `npm test:smtp` (nodemailer with Gmail SMTP)
 - Safety Translation Agent (order 6) already exists and handles language translation + content safety
 - EmailService.sendOperatorNotificationEmail accepts direct email addresses (already modified in previous work)
-- ContactOperator.ts already loads sales agent email from customer.sales.email relationship
+- contactOperator.ts already loads sales agent email from customer.sales.email relationship
 - customerLanguage variable is NOT needed (Safety Translation Agent determines target language from sales agent profile or workspace settings)
 
 ## Success Criteria _(mandatory)_
@@ -167,4 +167,4 @@ The system handles edge cases like empty chat history, very long conversations, 
 - **SC-005**: Summary Agent configuration changes (temperature, maxTokens) MUST affect next email within 1 minute (no caching delays)
 - **SC-006**: Summary MUST pass through Safety Translation Agent and arrive in sales agent's language (Italian default) regardless of customer's original language
 - **SC-007**: Email MUST deliver even if Summary Agent fails (fallback to raw history maintains 100% email delivery rate)
-- **SC-008**: Logs MUST show complete email pipeline trace: contactSupport → ContactOperator → Summary Agent → Safety Agent → EmailService → SMTP confirmation
+- **SC-008**: Logs MUST show complete email pipeline trace: contactSupport → contactOperator → Summary Agent → Safety Agent → EmailService → SMTP confirmation

@@ -327,7 +327,7 @@ export const ORDER_TRACKING_FUNCTIONS: FunctionDefinition[] = [
   {
     type: "function",
     function: {
-      name: "GetLinkOrderByCode",
+      name: "getLinkOrderByCode",
       description:
         "🚨 PRIORITY 2 - HIGH. Fornisce il link per visualizzare UN SINGOLO ordine specifico tramite codice ordine. Usare quando l'utente vuole: 'vedere ordine specifico', 'dettagli ordine', 'fattura ordine', 'ultimo ordine', 'ordine ORD-123'. Se orderCode non specificato → usa automaticamente lastordercode. IMPORTANTE: Ha PRIORITÀ sulle FAQ per 'ultimo ordine'. Per 'lista ordini' mostra i dettagli inline (NO link). NON usare per tracking 'dov'è il mio ordine' (tracking fisico).",
       parameters: {
@@ -416,9 +416,9 @@ export const CUSTOMER_SUPPORT_FUNCTIONS: FunctionDefinition[] = [
   {
     type: "function",
     function: {
-      name: "ContactOperator",
+      name: "contactOperator",
       description:
-        "🚨 PRIORITY 1 - HIGHEST. CHIAMA IMMEDIATAMENTE quando utente: 1) RICHIEDE ESPLICITAMENTE operatore: 'operatore', 'parlare con operatore', 'assistenza umana', 'customer service', 'voglio parlare con', 'operator', 'human'. 2) ESPRIME FRUSTRAZIONE/PROBLEMA CRITICO (🔴 trigger automatico - NO conferma): 'merce scaduta', 'prodotto scaduto', 'scaduto', 'danneggiato', 'rotto', 'difettoso', 'marcio', 'andato a male', 'stufo/a', 'problema grave', 'sempre problemi', 'ogni volta', 'mai funziona', 'pessimo servizio', 'non funziona mai'. Se rilevi UNA di queste parole → ESEGUI SUBITO ContactOperator() senza chiedere conferma! NON rispondere con testo generico, CHIAMA la funzione!",
+        "🚨 PRIORITY 1 - HIGHEST. CHIAMA IMMEDIATAMENTE quando utente: 1) RICHIEDE ESPLICITAMENTE operatore: 'operatore', 'parlare con operatore', 'assistenza umana', 'customer service', 'voglio parlare con', 'operator', 'human'. 2) ESPRIME FRUSTRAZIONE/PROBLEMA CRITICO (🔴 trigger automatico - NO conferma): 'merce scaduta', 'prodotto scaduto', 'scaduto', 'danneggiato', 'rotto', 'difettoso', 'marcio', 'andato a male', 'stufo/a', 'problema grave', 'sempre problemi', 'ogni volta', 'mai funziona', 'pessimo servizio', 'non funziona mai'. Se rilevi UNA di queste parole → ESEGUI SUBITO contactOperator() senza chiedere conferma! NON rispondere con testo generico, CHIAMA la funzione!",
       parameters: {
         type: "object",
         properties: {},
@@ -434,7 +434,7 @@ export const CUSTOMER_SUPPORT_FUNCTIONS: FunctionDefinition[] = [
  */
 export const SUMMARY_AGENT_FUNCTIONS: FunctionDefinition[] = [
   // Summary Agent typically doesn't call functions - it processes existing data
-  // It's used as a utility service by ContactOperator function
+  // It's used as a utility service by contactOperator function
 ]
 
 /**

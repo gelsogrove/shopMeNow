@@ -8,10 +8,26 @@ class PollingCoordinator {
   private subscribers = new Map<string, () => void>()
   private cachedData: any = null
   private cacheExpiry = 0
+  private currentWorkspaceId: string | null = null
 
   // Minimum interval between API calls (in ms)
   private readonly MIN_INTERVAL = 4000 // 4 seconds (more lenient)
   private readonly CACHE_DURATION = 3000 // Cache data for 3 seconds
+
+  constructor() {
+    // 🔥 Listen for workspace changes to clear cache
+    if (typeof window !== 'undefined') {
+      window.addEventListener('workspace-changed', () => {
+        this.clearCache()
+      })
+      
+      window.addEventListener('storage', (e: StorageEvent) => {
+        if (e.key === 'workspace-changed' || e.key === 'currentWorkspace') {
+          this.clearCache()
+        }
+      })
+    }
+  }
 
   /**
    * Check if we can make a call to the recent chats endpoint

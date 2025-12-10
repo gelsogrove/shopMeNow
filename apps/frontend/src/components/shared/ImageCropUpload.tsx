@@ -17,7 +17,7 @@ import ReactCrop, {
 } from "react-image-crop"
 import "react-image-crop/dist/ReactCrop.css"
 import { IMG_BASE_URL } from "@/config"
-import { ImageIcon, Building2 } from "lucide-react"
+import { ImageIcon, Building2, Pencil } from "lucide-react"
 
 interface ImageCropUploadProps {
   onImageSelected: (file: File) => void
@@ -25,13 +25,24 @@ interface ImageCropUploadProps {
   label?: string
   required?: boolean
   placeholder?: "image" | "logo"  // Type of placeholder to show
+  circularCrop?: boolean  // Enable circular crop mask
+  size?: "sm" | "md" | "lg" | "xl"  // Preview size
+  editIconStyle?: boolean  // Show edit icon on hover instead of button
 }
 
 const ASPECT_RATIO = 1 // Square aspect ratio
 const MIN_DIMENSION = 150 // Minimum width/height in pixels
 
+// Size classes for preview
+const sizeClasses = {
+  sm: "w-16 h-16",
+  md: "w-24 h-24", 
+  lg: "w-32 h-32",
+  xl: "w-40 h-40",
+}
+
 /**
- * Component for image upload with square crop functionality
+ * Component for image upload with square/circular crop functionality
  * Validates file size (max 4MB) and format (PNG, JPG, JPEG, GIF, WEBP, SVG, BMP)
  */
 export function ImageCropUpload({
@@ -40,6 +51,9 @@ export function ImageCropUpload({
   label = "Image",
   required = false,
   placeholder = "image",
+  circularCrop = false,
+  size = "lg",
+  editIconStyle = false,
 }: ImageCropUploadProps) {
   const [imgSrc, setImgSrc] = useState<string>("")
   const [crop, setCrop] = useState<Crop>()
@@ -217,36 +231,38 @@ export function ImageCropUpload({
         {required && <span className="text-red-500 ml-1">*</span>}
       </Label>
 
-      <div className="flex flex-col sm:flex-row gap-4 items-start">
-        {/* Preview area */}
-        <div className="flex-shrink-0 w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
-          {previewImage ? (
-            <img
-              src={previewImage}
-              alt="Image Preview"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center text-gray-400">
-              {placeholder === "logo" ? (
-                <Building2 className="h-12 w-12 mb-1" />
-              ) : (
-                <ImageIcon className="h-12 w-12 mb-1" />
-              )}
-              <span className="text-xs">No image</span>
-            </div>
-          )}
-        </div>
-        
-        <div className="flex-grow flex flex-col gap-2">
-          <Button 
-            type="button" 
-            variant="outline"
+      {editIconStyle ? (
+        /* Edit Icon Style - image with hover edit button */
+        <div className="relative group w-fit">
+          <div 
+            className={`${sizeClasses[size]} border-2 border-dashed border-gray-300 ${circularCrop ? "rounded-full" : "rounded-lg"} overflow-hidden bg-gray-50 flex items-center justify-center cursor-pointer`}
             onClick={() => fileInputRef.current?.click()}
-            className="w-full justify-start"
           >
-            Choose file
-          </Button>
+            {previewImage ? (
+              <img
+                src={previewImage}
+                alt="Image Preview"
+                className={`w-full h-full object-cover ${circularCrop ? "rounded-full" : ""}`}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center text-gray-400">
+                {placeholder === "logo" ? (
+                  <Building2 className="h-12 w-12 mb-1" />
+                ) : (
+                  <ImageIcon className="h-12 w-12 mb-1" />
+                )}
+                <span className="text-xs">No image</span>
+              </div>
+            )}
+          </div>
+          {/* Edit button - appears on hover */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="absolute bottom-1 right-1 p-1.5 bg-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-100"
+          >
+            <Pencil className="h-4 w-4 text-gray-600" />
+          </button>
           
           <input
             ref={fileInputRef}
@@ -256,10 +272,54 @@ export function ImageCropUpload({
             className="hidden"
             id="image-upload"
           />
-
-          {error && <p className="text-sm text-red-500">{error}</p>}
+          {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
         </div>
-      </div>
+      ) : (
+        /* Default Style - image with Choose file button */
+        <div className="flex flex-col sm:flex-row gap-4 items-start">
+          {/* Preview area */}
+          <div className={`flex-shrink-0 ${sizeClasses[size]} border-2 border-dashed border-gray-300 ${circularCrop ? "rounded-full" : "rounded-lg"} overflow-hidden bg-gray-50 flex items-center justify-center`}>
+            {previewImage ? (
+              <img
+                src={previewImage}
+                alt="Image Preview"
+                className={`w-full h-full object-cover ${circularCrop ? "rounded-full" : ""}`}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center text-gray-400">
+                {placeholder === "logo" ? (
+                  <Building2 className="h-12 w-12 mb-1" />
+                ) : (
+                  <ImageIcon className="h-12 w-12 mb-1" />
+                )}
+                <span className="text-xs">No image</span>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex-grow flex flex-col gap-2">
+            <Button 
+              type="button" 
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full justify-start"
+            >
+              Choose file
+            </Button>
+            
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={onSelectFile}
+              className="hidden"
+              id="image-upload"
+            />
+
+            {error && <p className="text-sm text-red-500">{error}</p>}
+          </div>
+        </div>
+      )}
 
       {/* Crop Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -281,7 +341,7 @@ export function ImageCropUpload({
                 aspect={ASPECT_RATIO}
                 minWidth={MIN_DIMENSION}
                 minHeight={MIN_DIMENSION}
-                circularCrop={false}
+                circularCrop={circularCrop}
               >
                 <img
                   ref={imgRef}

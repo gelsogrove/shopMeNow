@@ -8,7 +8,7 @@
  * 3. Response formatting for credit notes
  */
 
-import { GetOrderResponse } from "../../../src/domain/calling-functions/GetOrder"
+import { GetOrderResponse } from "../../../src/domain/calling-functions/getOrder"
 
 describe("GetOrder - Credit Notes Response Structure", () => {
   describe("GetOrderResponse interface", () => {

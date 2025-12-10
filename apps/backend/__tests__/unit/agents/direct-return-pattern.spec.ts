@@ -2,7 +2,7 @@
  * Unit tests for Agent Direct Return Pattern
  *
  * Tests cover:
- * 1. ContactOperator returns message directly without LLM reformulation
+ * 1. contactOperator returns message directly without LLM reformulation
  * 2. RepeatOrder returns message directly
  * 3. ConfirmOrder returns message directly
  * 4. ShowCheckout returns message directly
@@ -14,7 +14,7 @@ describe("Agent Direct Return Pattern", () => {
     "repeatOrder",
     "confirmOrder",
     "showCheckout",
-    "ContactOperator",
+    "contactOperator",
   ]
 
   describe("Direct Return Function Detection", () => {
@@ -31,9 +31,9 @@ describe("Agent Direct Return Pattern", () => {
     })
   })
 
-  describe("ContactOperator Direct Return", () => {
+  describe("contactOperator Direct Return", () => {
     it("should return empathetic message directly", () => {
-      // Mock ContactOperator result
+      // Mock contactOperator result
       const contactResult = {
         success: true,
         message:
@@ -125,7 +125,7 @@ Clicca il link per completare l'ordine.`,
         { function: "repeatOrder", shouldBeDirect: true },
         { function: "confirmOrder", shouldBeDirect: true },
         { function: "showCheckout", shouldBeDirect: true },
-        { function: "ContactOperator", shouldBeDirect: true },
+        { function: "contactOperator", shouldBeDirect: true },
         { function: "searchProducts", shouldBeDirect: false },
         { function: "getOrderHistory", shouldBeDirect: false },
         { function: "getFAQ", shouldBeDirect: false },

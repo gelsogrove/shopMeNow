@@ -554,32 +554,32 @@ export class OrderTrackingAgentLLM {
           }
 
         case "repeatOrder":
-          // Call RepeatOrder domain function directly
+          // Call repeatOrder domain function directly
           const {
-            RepeatOrder,
-          } = require("../../domain/calling-functions/RepeatOrder")
-          return await RepeatOrder({
+            repeatOrder,
+          } = require("../../domain/calling-functions/repeatOrder")
+          return await repeatOrder({
             customerId: context.customerId,
             workspaceId: context.workspaceId,
             orderCode: args.orderCode, // Optional - uses last order if not provided
           })
 
         case "confirmOrder":
-          // Call ConfirmOrder domain function to create order from cart
+          // Call confirmOrder domain function to create order from cart
           const {
-            ConfirmOrder,
-          } = require("../../domain/calling-functions/ConfirmOrder")
-          return await ConfirmOrder({
+            confirmOrder,
+          } = require("../../domain/calling-functions/confirmOrder")
+          return await confirmOrder({
             customerId: context.customerId,
             workspaceId: context.workspaceId,
           })
 
         case "showCheckout":
-          // Call ShowCheckout domain function to display cart summary
+          // Call showCheckout domain function to display cart summary
           const {
-            ShowCheckout,
-          } = require("../../domain/calling-functions/ShowCheckout")
-          return await ShowCheckout({
+            showCheckout,
+          } = require("../../domain/calling-functions/showCheckout")
+          return await showCheckout({
             customerId: context.customerId,
             workspaceId: context.workspaceId,
           })

@@ -358,7 +358,7 @@ router.get(
         id: item.id,
         itemType: item.itemType,
         name: item.product?.name || item.service?.name || "Unknown Item",
-        code: item.product?.sku || item.service?.code || null,
+        code: item.product?.productCode || item.service?.code || null,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         totalPrice: item.totalPrice,
@@ -777,7 +777,7 @@ router.post(
           discount: customerDiscount,
           stock: product.stock,
           isActive: product.isActive,
-          imageUrl: (product as any).imageUrl || [], // 🖼️ Include product images
+          imageUrl: product.imageUrl || [],
           category: product.category
             ? {
                 id: product.category.id,

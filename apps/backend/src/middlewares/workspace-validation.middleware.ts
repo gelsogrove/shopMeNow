@@ -14,6 +14,7 @@ export const validateWorkspaceOperation = (
     // Validate workspaceId (prioritize header, then route params, then body)
     const workspaceId = 
       (req.headers["x-workspace-id"] as string) ||
+      req.params.id || 
       req.params.workspaceId || 
       req.body.id
 

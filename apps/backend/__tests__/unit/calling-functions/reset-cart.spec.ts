@@ -8,7 +8,7 @@
  * 4. Successful cart reset with items
  * 5. Database error handling
  *
- * @see apps/backend/src/domain/calling-functions/ResetCart.ts
+ * @see apps/backend/src/domain/calling-functions/resetCart.ts
  */
 
 // Mock logger FIRST
@@ -45,7 +45,7 @@ jest.mock("@echatbot/database", () => ({
   },
 }))
 
-import { ResetCart } from "../../../src/domain/calling-functions/ResetCart"
+import { resetCart } from "../../../src/domain/calling-functions/resetCart"
 
 describe("ResetCart Calling Function", () => {
   beforeEach(() => {
@@ -54,7 +54,7 @@ describe("ResetCart Calling Function", () => {
 
   describe("Parameter Validation", () => {
     it("should return error when customerId is missing", async () => {
-      const result = await ResetCart({
+      const result = await resetCart({
         customerId: "",
         workspaceId: "workspace-456",
       })
@@ -65,7 +65,7 @@ describe("ResetCart Calling Function", () => {
     })
 
     it("should return error when workspaceId is missing", async () => {
-      const result = await ResetCart({
+      const result = await resetCart({
         customerId: "customer-123",
         workspaceId: "",
       })
@@ -75,7 +75,7 @@ describe("ResetCart Calling Function", () => {
     })
 
     it("should include timestamp in validation error response", async () => {
-      const result = await ResetCart({
+      const result = await resetCart({
         customerId: "",
         workspaceId: "workspace-456",
       })
@@ -89,7 +89,7 @@ describe("ResetCart Calling Function", () => {
     it("should return error when customer not found", async () => {
       mockCustomerFindFirst.mockResolvedValue(null)
 
-      const result = await ResetCart({
+      const result = await resetCart({
         customerId: "nonexistent-customer",
         workspaceId: "workspace-456",
       })
@@ -102,7 +102,7 @@ describe("ResetCart Calling Function", () => {
     it("should return error when customer exists in different workspace", async () => {
       mockCustomerFindFirst.mockResolvedValue(null) // Customer not found in this workspace
 
-      const result = await ResetCart({
+      const result = await resetCart({
         customerId: "customer-123",
         workspaceId: "wrong-workspace",
       })
@@ -117,7 +117,7 @@ describe("ResetCart Calling Function", () => {
       mockCustomerFindFirst.mockResolvedValue({ id: "customer-123" })
       mockCartFindFirst.mockResolvedValue(null)
 
-      const result = await ResetCart({
+      const result = await resetCart({
         customerId: "customer-123",
         workspaceId: "workspace-456",
       })
@@ -134,7 +134,7 @@ describe("ResetCart Calling Function", () => {
         items: [],
       })
 
-      const result = await ResetCart({
+      const result = await resetCart({
         customerId: "customer-123",
         workspaceId: "workspace-456",
       })
@@ -158,7 +158,7 @@ describe("ResetCart Calling Function", () => {
       })
       mockCartItemsDeleteMany.mockResolvedValue({ count: 3 })
 
-      const result = await ResetCart({
+      const result = await resetCart({
         customerId: "customer-123",
         workspaceId: "workspace-456",
       })
@@ -178,7 +178,7 @@ describe("ResetCart Calling Function", () => {
       })
       mockCartItemsDeleteMany.mockResolvedValue({ count: 2 })
 
-      const result = await ResetCart({
+      const result = await resetCart({
         customerId: "customer-123",
         workspaceId: "workspace-456",
       })
@@ -196,7 +196,7 @@ describe("ResetCart Calling Function", () => {
       })
       mockCartItemsDeleteMany.mockResolvedValue({ count: 1 })
 
-      await ResetCart({
+      await resetCart({
         customerId: "customer-123",
         workspaceId: "workspace-456",
       })
@@ -211,7 +211,7 @@ describe("ResetCart Calling Function", () => {
         new Error("Database connection failed")
       )
 
-      const result = await ResetCart({
+      const result = await resetCart({
         customerId: "customer-123",
         workspaceId: "workspace-456",
       })
@@ -231,7 +231,7 @@ describe("ResetCart Calling Function", () => {
         new Error("Delete operation failed")
       )
 
-      const result = await ResetCart({
+      const result = await resetCart({
         customerId: "customer-123",
         workspaceId: "workspace-456",
       })
@@ -244,7 +244,7 @@ describe("ResetCart Calling Function", () => {
       mockCustomerFindFirst.mockResolvedValue({ id: "customer-123" })
       mockCartFindFirst.mockRejectedValue(new Error("Query error"))
 
-      await ResetCart({
+      await resetCart({
         customerId: "customer-123",
         workspaceId: "workspace-456",
       })
@@ -262,7 +262,7 @@ describe("ResetCart Calling Function", () => {
       })
       mockCartItemsDeleteMany.mockResolvedValue({ count: 1 })
 
-      const result = await ResetCart({
+      const result = await resetCart({
         customerId: "customer-123",
         workspaceId: "workspace-456",
       })
@@ -276,7 +276,7 @@ describe("ResetCart Calling Function", () => {
       mockCustomerFindFirst.mockResolvedValue({ id: "customer-123" })
       mockCartFindFirst.mockResolvedValue(null)
 
-      const result = await ResetCart({
+      const result = await resetCart({
         customerId: "customer-123",
         workspaceId: "workspace-456",
       })
@@ -288,7 +288,7 @@ describe("ResetCart Calling Function", () => {
     it("should include support contact info in error messages", async () => {
       mockCustomerFindFirst.mockResolvedValue(null)
 
-      const result = await ResetCart({
+      const result = await resetCart({
         customerId: "nonexistent",
         workspaceId: "workspace-456",
       })

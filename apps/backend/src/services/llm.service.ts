@@ -265,25 +265,25 @@ export class LLMService {
       process.env.TOKEN_EXPIRATION || "1h"
     )
 
-    // Get workspace URL for {{URL}} replacement
+    // Get workspace URL for {{url}} replacement
     const workspaceUrl = workspace.url || "http://localhost:3000"
 
     // 🔍 DEBUG: Check prompt BEFORE replacement (for PRODUCT_SEARCH only)
     if ((llmRequest as any).agentType === "PRODUCT_SEARCH") {
       logger.info("🔍 BEFORE replacement", {
         promptLength: prompt.length,
-        hasPlaceholder: prompt.includes("{{PRODUCTS}}"),
-        placeholderCount: (prompt.match(/\{\{PRODUCTS\}\}/g) || []).length,
+        hasPlaceholder: prompt.includes("{{products}}"),
+        placeholderCount: (prompt.match(/\{\{products\}\}/g) || []).length,
       })
     }
 
     let promptWithVars = prompt
-      .replace("{{FAQ}}", faqs)
-      .replace("{{SERVICES}}", services)
-      .replace("{{PRODUCTS}}", products)
-      .replace("{{CATEGORIES}}", categories)
-      .replace("{{OFFERS}}", offers)
-      .replace(/\{\{URL\}\}/g, workspaceUrl) // Replace ALL occurrences of {{URL}}
+      .replace("{{faq}}", faqs)
+      .replace("{{services}}", services)
+      .replace("{{products}}", products)
+      .replace("{{categories}}", categories)
+      .replace("{{offers}}", offers)
+      .replace(/\{\{url\}\}/g, workspaceUrl) // Replace ALL occurrences of {{url}}
       .replace(/\{\{nameUser\}\}/g, userInfo.nameUser) // Replace ALL occurrences
       .replace(/\{\{discountUser\}\}/g, String(userInfo.discountUser)) // Replace ALL occurrences
       .replace(/\{\{companyName\}\}/g, userInfo.companyName) // Replace ALL occurrences
@@ -304,9 +304,9 @@ export class LLMService {
       userMessageLength: llmRequest.chatInput.length,
     }
 
-    // 🔍 DEBUG: Check if {{PRODUCTS}} was replaced
+    // 🔍 DEBUG: Check if {{products}} was replaced
     if ((llmRequest as any).agentType === "PRODUCT_SEARCH") {
-      const hasProductsPlaceholder = promptWithVars.includes("{{PRODUCTS}}")
+      const hasProductsPlaceholder = promptWithVars.includes("{{products}}")
       const hasProductsContent = promptWithVars.includes("Panettone Classico")
       const hasDolciCategory = promptWithVars.includes("**DESSERTS**")
       const productsHasPanettone =
@@ -1183,7 +1183,7 @@ export class LLMService {
         }
 
         if (functionResult.success === false) {
-          if (functionName === "GetLinkOrderByCode") {
+          if (functionName === "getLinkOrderByCode") {
             return {
               response: i18n.errors.orderNotFound,
               tokenUsage,
@@ -1210,7 +1210,7 @@ export class LLMService {
           }
         }
 
-        if (functionName === "ContactOperator") {
+        if (functionName === "contactOperator") {
           // 🚨 CRITICAL: Return EXACT message from function - NO LLM reformulation
           // Operator escalation must use precise, contractual language
           const processedMessage = this.replaceVariablesInResponse(
@@ -1246,7 +1246,7 @@ export class LLMService {
           }
         }
 
-        if (functionName === "GetLinkOrderByCode") {
+        if (functionName === "getLinkOrderByCode") {
           // Always return in English - Translation & Security Layer will translate to customer's language
           const tokenDuration = this.getTokenDurationText(
             process.env.TOKEN_EXPIRATION || "15m"
@@ -1362,16 +1362,16 @@ export class LLMService {
   ): Promise<any> {
     try {
       // 🎯 PRIORITY ORDER (reflected in switch statement order):
-      // 1. ContactOperator (🚨 PRIORITY 1 - Frustration, explicit operator request)
-      // 2. GetLinkOrderByCode (🚨 PRIORITY 2 - View specific order)
+      // 1. contactOperator (🚨 PRIORITY 1 - Frustration, explicit operator request)
+      // 2. getLinkOrderByCode (🚨 PRIORITY 2 - View specific order)
       // 3. repeatOrder (⚙️ PRIORITY 3 - Repeat previous order)
       // 4. addProduct (⚙️ PRIORITY 4 - Add single product)
       // 5. searchProduct (📊 PRIORITY 5 - BACKGROUND ONLY)
 
       switch (functionName) {
-        case "ContactOperator":
+        case "contactOperator":
           // 🚨 PRIORITY 1 - HIGHEST
-          logger.info("📞 ContactOperator called (PRIORITY 1)")
+          logger.info("📞 contactOperator called (PRIORITY 1)")
           const contactResult = await this.callingFunctionsService.contactOperator({
             customerId: customer.id,
             workspaceId: workspace.id,
@@ -1380,20 +1380,20 @@ export class LLMService {
           
           // 📧 Se il Summary Agent è stato eseguito, logga per debug
           if (contactResult.summaryAgentExecuted) {
-            logger.info("🤖 Summary Agent executed within ContactOperator", {
+            logger.info("🤖 Summary Agent executed within contactOperator", {
               agentType: "summary_agent",
               ticketId: contactResult.ticketId,
               emailSent: contactResult.summaryEmailSent,
               timestamp: new Date().toISOString(),
-              function: "ContactOperator"
+              function: "contactOperator"
             })
           }
           
           return contactResult
 
-        case "GetLinkOrderByCode":
+        case "getLinkOrderByCode":
           // 🚨 PRIORITY 2 - HIGH
-          logger.info("📦 GetLinkOrderByCode called (PRIORITY 2):", args)
+          logger.info("📦 getLinkOrderByCode called (PRIORITY 2):", args)
           return await this.callingFunctionsService.getOrdersListLink({
             customerId: customer.id,
             workspaceId: workspace.id,
@@ -1405,11 +1405,11 @@ export class LLMService {
 
         case "repeatOrder":
           // ⚙️ PRIORITY 3 - MEDIUM (requires confirmation)
-          logger.info("� repeatOrder called (PRIORITY 3):", args)
+          logger.info("🔄 repeatOrder called (PRIORITY 3):", args)
           const {
-            RepeatOrder,
-          } = require("../domain/calling-functions/RepeatOrder")
-          return await RepeatOrder({
+            repeatOrder,
+          } = require("../domain/calling-functions/repeatOrder")
+          return await repeatOrder({
             customerId: customer.id,
             workspaceId: workspace.id,
             orderCode: args.orderCode,
@@ -1418,8 +1418,8 @@ export class LLMService {
         case "resetCart":
           // 🗑️ PRIORITY 3.5 - MEDIUM (requires confirmation)
           logger.info("🗑️ resetCart called (PRIORITY 3.5):", args)
-          const { ResetCart } = require("../domain/calling-functions/ResetCart")
-          return await ResetCart({
+          const { resetCart } = require("../domain/calling-functions/resetCart")
+          return await resetCart({
             customerId: customer.id,
             workspaceId: workspace.id,
           })
@@ -1427,9 +1427,9 @@ export class LLMService {
           // 🛒 PRIORITY 4 - MEDIUM (requires confirmation, add one or more products)
           logger.info("🛒 addProduct called (PRIORITY 4):", args)
           const {
-            AddProduct,
-          } = require("../domain/calling-functions/AddProduct")
-          return await AddProduct({
+            addProduct,
+          } = require("../domain/calling-functions/addProduct")
+          return await addProduct({
             customerId: customer.id,
             workspaceId: workspace.id,
             products: args.products, // Array of {sku, quantity, notes}

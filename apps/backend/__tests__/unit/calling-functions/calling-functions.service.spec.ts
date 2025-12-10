@@ -49,7 +49,7 @@ jest.mock("../../../src/application/services/link-generator.service", () => ({
 
 // Mock domain calling functions
 jest.mock("../../../src/domain/calling-functions/ContactOperator", () => ({
-  ContactOperator: jest.fn().mockResolvedValue({
+  contactOperator: jest.fn().mockResolvedValue({
     success: true,
     message: "Ticket created successfully",
     ticketId: "ticket-123",
@@ -58,8 +58,8 @@ jest.mock("../../../src/domain/calling-functions/ContactOperator", () => ({
   }),
 }))
 
-jest.mock("../../../src/domain/calling-functions/ManageNotifications", () => ({
-  ManageNotifications: jest.fn().mockResolvedValue({
+jest.mock("../../../src/domain/calling-functions/manageNotifications", () => ({
+  manageNotifications: jest.fn().mockResolvedValue({
     success: true,
     message: "Notifications updated",
     action: "SUBSCRIBE",

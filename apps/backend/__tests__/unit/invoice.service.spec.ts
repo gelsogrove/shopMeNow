@@ -37,6 +37,9 @@ const mockPrisma = {
   billingTransaction: {
     findMany: jest.fn(),
   },
+  planConfiguration: {
+    findUnique: jest.fn(),
+  },
 }
 
 // Mock modules BEFORE imports
@@ -109,6 +112,8 @@ describe('InvoiceService - Feature 197 Monthly Invoice Management', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     service = new InvoiceService()
+    // Default mock for planConfiguration
+    mockPrisma.planConfiguration.findUnique.mockResolvedValue({ monthlyFee: 19.0 })
   })
 
   describe('getOrCreateCurrentInvoice', () => {

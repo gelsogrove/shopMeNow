@@ -208,7 +208,6 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
   const [showPlanConfirmDialog, setShowPlanConfirmDialog] = useState(false)
   const [pendingPlanChange, setPendingPlanChange] = useState<PlanType | null>(null)
   const [rechargeAmount, setRechargeAmount] = useState(25)
-  const [customAmount, setCustomAmount] = useState("")
   const [isRecharging, setIsRecharging] = useState(false)
   const [isUpgrading, setIsUpgrading] = useState(false)
   const [isPausingSubscription, setIsPausingSubscription] = useState(false)
@@ -356,16 +355,9 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
   const handleRecharge = async () => {
     if (!effectiveWorkspaceId) return
 
-    const amount = customAmount ? parseFloat(customAmount) : rechargeAmount
-
-    if (amount < 10 || amount > 1000) {
-      toast.error("Amount must be between €10 and €1000")
-      return
-    }
-
     setIsRecharging(true)
     try {
-      const result = await rechargeCredit(effectiveWorkspaceId, amount)
+      const result = await rechargeCredit(effectiveWorkspaceId, rechargeAmount)
 
       if (result.upgradedToPlan) {
         toast.success(`Credit recharged! Plan upgraded to ${result.upgradedToPlan}. New balance: ${formatCurrency(result.newBalance)}`)
@@ -374,11 +366,10 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
       }
 
       // Update local balance AND totalRecharges immediately with result from API
-      updateBalanceLocally(result.newBalance, amount)
+      updateBalanceLocally(result.newBalance, rechargeAmount)
 
       // Close dialog and reset
       setShowRechargeDialog(false)
-      setCustomAmount("")
       setRechargeAmount(25)
 
       // Refresh full overview to get updated transactions and totals
@@ -607,7 +598,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                 className="gap-1.5 text-green-600 border-green-600 hover:bg-green-50"
               >
                 <History className="h-4 w-4" />
-                History
+                Transaction History
               </Button>
               {isSuperAdmin && (
                 <Button
@@ -689,7 +680,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total recharges:</span>
+                  <span className="text-muted-foreground">Recharges this month:</span>
                   <span className="font-medium text-emerald-600">
                     {formatCurrency(billing.totalRecharges || 0)}
                   </span>
@@ -700,21 +691,16 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                     22%
                   </span>
                 </div>
-                {billing.nextBillingDate && billing.planType !== "FREE_TRIAL" && (
-                  <div className="flex justify-between items-center pt-2 border-t">
-                    <span className="text-muted-foreground">
-                      Next renewal:
+                {billing.planType !== "FREE_TRIAL" && (
+                  <div className="flex justify-between items-center pt-3 border-t mt-3">
+                    <span className="font-semibold">
+                      Next monthly charge{billing.nextBillingDate && ` (${new Date(billing.nextBillingDate).toLocaleDateString("it-IT")})`}:
                     </span>
-                    <div className="text-right">
-                      <span className="font-medium">
-                        {new Date(billing.nextBillingDate).toLocaleDateString("en-US")}
-                      </span>
-                      <span className="ml-2 text-green-600 font-bold">
-                        {formatCurrency(
-                          (planConfig.monthlyFee + (billing.totalRecharges || 0)) * 1.22
-                        )}
-                      </span>
-                    </div>
+                    <span className="text-green-600 font-bold text-lg">
+                      {formatCurrency(
+                        (planConfig.monthlyFee + (billing.totalRecharges || 0)) * 1.22
+                      )}
+                    </span>
                   </div>
                 )}
               </div>
@@ -729,7 +715,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
           <DialogHeader>
             <DialogTitle>Recharge Credit</DialogTitle>
             <DialogDescription>
-              Select an amount or enter a custom amount (min €10, max €1000)
+              Select an amount to recharge
             </DialogDescription>
           </DialogHeader>
 
@@ -740,59 +726,15 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                 <Button
                   key={option.value}
                   variant={
-                    rechargeAmount === option.value && !customAmount
-                      ? "default"
-                      : "outline"
+                    rechargeAmount === option.value ? "default" : "outline"
                   }
                   onClick={() => {
                     setRechargeAmount(option.value)
-                    setCustomAmount("")
                   }}
                 >
                   {option.label}
                 </Button>
               ))}
-            </div>
-
-            {/* Custom amount */}
-            <div className="space-y-2">
-              <Label htmlFor="customAmount">Custom Amount</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                  €
-                </span>
-                <Input
-                  id="customAmount"
-                  type="number"
-                  min={10}
-                  max={1000}
-                  placeholder="Enter amount"
-                  className="pl-7"
-                  value={customAmount}
-                  onChange={(e) => setCustomAmount(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Summary with messages estimate */}
-            <div className="rounded-lg bg-muted p-4 space-y-2">
-              <div className="flex justify-between items-center">
-                <span>Recharge amount:</span>
-                <span className="text-xl font-bold">
-                  {formatCurrency(
-                    customAmount ? parseFloat(customAmount) || 0 : rechargeAmount
-                  )}
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-sm text-muted-foreground border-t pt-2">
-                <span>Estimated messages:</span>
-                <span className="font-medium text-foreground">
-                  ~{Math.floor((customAmount ? parseFloat(customAmount) || 0 : rechargeAmount) / limits.messageCost)} messages
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Based on {formatCurrency(limits.messageCost)} per message
-              </p>
             </div>
           </div>
 
@@ -1039,9 +981,13 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
             <>
               <DialogHeader>
                 <DialogTitle className="text-2xl">Change Plan</DialogTitle>
-                <DialogDescription>
-                  Choose the plan that best suits your needs. The subscription
-                  will start in 30 days.
+                <DialogDescription className="space-y-2">
+                  <span className="block">
+                    Choose the plan that best suits your needs. The subscription will start in 30 days.
+                  </span>
+                  <span className="block text-xs text-muted-foreground">
+                    💡 Usage costs are extra: €0.10 per message + €1.00 per WhatsApp campaign message
+                  </span>
                 </DialogDescription>
               </DialogHeader>
 
@@ -1222,7 +1168,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
-            ) : transactions.filter(tx => tx.amount !== 0 || tx.type === "UPGRADE_FEE" || tx.type === "MONTHLY_FEE").length === 0 ? (
+            ) : transactions.filter(tx => tx.amount !== 0 || tx.type === "UPGRADE_FEE" || tx.type === "MONTHLY_FEE" || tx.type === "INVOICE_PAID").length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 No transactions found
               </div>
@@ -1231,7 +1177,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                 {/* Group transactions by month, then aggregate messages by day */}
                 {(() => {
                   // Include transactions with amount != 0 OR plan change transactions
-                  const filteredTx = transactions.filter(tx => tx.amount !== 0 || tx.type === "UPGRADE_FEE" || tx.type === "MONTHLY_FEE")
+                  const filteredTx = transactions.filter(tx => tx.amount !== 0 || tx.type === "UPGRADE_FEE" || tx.type === "MONTHLY_FEE" || tx.type === "INVOICE_PAID")
                   
                   // Types that should be aggregated by day AND channel - only 2 types!
                   const AGGREGATABLE_TYPES = ["MESSAGE", "PUSH_CAMPAIGN"]
@@ -1377,13 +1323,13 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                                   {tx.description}
                                 </TableCell>
                                 <TableCell className="text-right font-medium text-emerald-600">
-                                  {tx.amount > 0 && tx.type !== "INITIAL_CREDIT" ? `+${formatCurrency(tx.amount)}` : ""}
+                                  {tx.amount > 0 && tx.type !== "INITIAL_CREDIT" && tx.type !== "UPGRADE_FEE" && tx.type !== "INVOICE_PAID" ? `+${formatCurrency(tx.amount)}` : ""}
                                 </TableCell>
                                 <TableCell className="text-right font-medium text-red-600">
-                                  {tx.amount < 0 ? `-${formatCurrency(Math.abs(tx.amount))}` : ""}
+                                  {tx.amount < 0 && tx.type !== "UPGRADE_FEE" && tx.type !== "INVOICE_PAID" ? `-${formatCurrency(Math.abs(tx.amount))}` : ""}
                                 </TableCell>
                                 <TableCell className="text-right text-sm font-medium">
-                                  {tx.balanceAfter > 0 ? formatCurrency(tx.balanceAfter) : "—"}
+                                  {tx.type !== "INVOICE_PAID" && tx.balanceAfter > 0 ? formatCurrency(tx.balanceAfter) : ""}
                                 </TableCell>
                               </TableRow>
                             )

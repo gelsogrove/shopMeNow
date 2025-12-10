@@ -8,7 +8,7 @@
  * 4. Error handling for invalid products
  * 5. Quantity validation
  *
- * @see apps/backend/src/domain/calling-functions/AddProduct.ts
+ * @see apps/backend/src/domain/calling-functions/addProduct.ts
  */
 
 // Mock logger FIRST
@@ -31,7 +31,7 @@ jest.mock("../../../src/services/calling-functions.service", () => ({
   })),
 }))
 
-import { AddProduct } from "../../../src/domain/calling-functions/AddProduct"
+import { addProduct } from "../../../src/domain/calling-functions/addProduct"
 
 describe("AddProduct Calling Function", () => {
   beforeEach(() => {
@@ -40,7 +40,7 @@ describe("AddProduct Calling Function", () => {
 
   describe("Parameter Validation", () => {
     it("should return error when customerId is missing", async () => {
-      const result = await AddProduct({
+      const result = await addProduct({
         customerId: "",
         workspaceId: "workspace-456",
         products: [{ sku: "MOZZ001", quantity: 1 }],
@@ -52,7 +52,7 @@ describe("AddProduct Calling Function", () => {
     })
 
     it("should return error when workspaceId is missing", async () => {
-      const result = await AddProduct({
+      const result = await addProduct({
         customerId: "customer-123",
         workspaceId: "",
         products: [{ sku: "MOZZ001", quantity: 1 }],
@@ -63,7 +63,7 @@ describe("AddProduct Calling Function", () => {
     })
 
     it("should return error when products array is empty", async () => {
-      const result = await AddProduct({
+      const result = await addProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         products: [],
@@ -74,7 +74,7 @@ describe("AddProduct Calling Function", () => {
     })
 
     it("should return error when products is undefined", async () => {
-      const result = await AddProduct({
+      const result = await addProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         products: undefined as any,
@@ -95,7 +95,7 @@ describe("AddProduct Calling Function", () => {
         message: "Product added successfully",
       })
 
-      const result = await AddProduct({
+      const result = await addProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         products: [{ sku: "MOZZ001", quantity: 2 }],
@@ -116,7 +116,7 @@ describe("AddProduct Calling Function", () => {
         message: 'Il prodotto "INVALID" non è disponibile.',
       })
 
-      const result = await AddProduct({
+      const result = await addProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         products: [{ sku: "INVALID", quantity: 1 }],
@@ -135,7 +135,7 @@ describe("AddProduct Calling Function", () => {
         message: 'Purtroppo disponibili solo 2 unità di "Mozzarella".',
       })
 
-      const result = await AddProduct({
+      const result = await addProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         products: [{ sku: "MOZZ001", quantity: 10 }],
@@ -162,7 +162,7 @@ describe("AddProduct Calling Function", () => {
           expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
         })
 
-      const result = await AddProduct({
+      const result = await addProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         products: [
@@ -190,7 +190,7 @@ describe("AddProduct Calling Function", () => {
           expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
         })
 
-      const result = await AddProduct({
+      const result = await addProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         products: [
@@ -209,7 +209,7 @@ describe("AddProduct Calling Function", () => {
 
   describe("Quantity Validation", () => {
     it("should skip products with invalid quantity (negative)", async () => {
-      const result = await AddProduct({
+      const result = await addProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         products: [{ sku: "MOZZ001", quantity: -1 }],
@@ -227,7 +227,7 @@ describe("AddProduct Calling Function", () => {
         error: "Stock insufficiente",
       })
 
-      const result = await AddProduct({
+      const result = await addProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         products: [{ sku: "MOZZ001", quantity: 0 }],
@@ -238,7 +238,7 @@ describe("AddProduct Calling Function", () => {
     })
 
     it("should skip products with non-integer quantity", async () => {
-      const result = await AddProduct({
+      const result = await addProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         products: [{ sku: "MOZZ001", quantity: 1.5 }],
@@ -255,7 +255,7 @@ describe("AddProduct Calling Function", () => {
         cartUrl: "https://example.com/checkout?token=abc123",
       })
 
-      await AddProduct({
+      await addProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         products: [{ sku: "MOZZ001", quantity: undefined as any }],
@@ -286,7 +286,7 @@ describe("AddProduct Calling Function", () => {
           expiresAt: "2025-01-01T01:00:00Z",
         })
 
-      const result = await AddProduct({
+      const result = await addProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         products: [
@@ -306,7 +306,7 @@ describe("AddProduct Calling Function", () => {
         cartUrl: "https://example.com/checkout",
       })
 
-      const result = await AddProduct({
+      const result = await addProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         products: [{ sku: "MOZZ001", quantity: 1 }],
@@ -325,7 +325,7 @@ describe("AddProduct Calling Function", () => {
         cartUrl: "https://example.com/checkout",
       })
 
-      await AddProduct({
+      await addProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         products: [

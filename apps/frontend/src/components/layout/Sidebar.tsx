@@ -1,4 +1,6 @@
 import { cn } from "@/lib/utils"
+import { useWorkspace } from "@/contexts/WorkspaceContext"
+import { IMG_BASE_URL } from "@/config"
 import {
   Bot,
   Building2,
@@ -28,9 +30,9 @@ interface SidebarLink {
 }
 
 export function Sidebar() {
-  // Temporarily removed hooks to test single API call
+  // Get workspace from context to check hasSalesAgents
+  const { workspace } = useWorkspace()
   const totalUnreadMessages = 0
-  const workspace = null
   const location = useLocation()
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({
     ecommerce: false, // Inizialmente chiuso
@@ -79,7 +81,8 @@ export function Sidebar() {
       label: "FAQ",
       icon: HelpCircle,
     },
-    {
+    // E-commerce menu - only if sellsProductsAndServices is true
+    ...(workspace?.sellsProductsAndServices === true ? [{
       label: "E-commerce",
       icon: ShoppingCart,
       key: "ecommerce",
@@ -99,23 +102,25 @@ export function Sidebar() {
           label: "Offers",
           icon: Percent,
         },
-        {
+        // Suppliers menu - only if hasSuppliers is true
+        ...(workspace?.hasSuppliers === true ? [{
           href: "/suppliers",
           label: "Suppliers",
           icon: Building2,
-        },
-        {
+        }] : []),
+        // Sales menu - only if hasSalesAgents is true
+        ...(workspace?.hasSalesAgents === true ? [{
           href: "/sales",
           label: "Sales",
           icon: UserCircle,
-        },
+        }] : []),
         {
           href: "/admin/orders",
           label: "Orders",
           icon: ShoppingCart,
         },
       ],
-    },
+    }] : []),
     {
       href: "/campaigns",
       label: "Campaigns",
@@ -136,6 +141,31 @@ export function Sidebar() {
   return (
     <aside className="fixed top-16 bottom-0 left-0 w-72 bg-gray-100 border-r">
       <div className="flex flex-col h-full">
+        
+        {/* Channel Logo & Name Header */}
+        <div className="px-4 py-4 border-b border-gray-200 bg-white">
+          <div className="flex items-center gap-3">
+            {workspace?.logoUrl ? (
+              <img
+                src={workspace.logoUrl.startsWith('http') ? workspace.logoUrl : `${IMG_BASE_URL}${workspace.logoUrl}`}
+                alt={workspace.name}
+                className="h-12 w-12 rounded-full object-cover border-2 border-white shadow-md"
+              />
+            ) : (
+              <div className="h-12 w-12 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-xl shadow-md">
+                {workspace?.name?.charAt(0).toUpperCase() || 'C'}
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <h2 className="text-base font-semibold text-gray-900 truncate">
+                {workspace?.name || 'Channel'}
+              </h2>
+              <p className="text-xs text-gray-500">
+                {workspace?.sellsProductsAndServices ? 'E-commerce' : 'Info'}
+              </p>
+            </div>
+          </div>
+        </div>
 
         <nav className="flex-1 px-4 space-y-2 py-6">
           {mainLinks.map((link) => (

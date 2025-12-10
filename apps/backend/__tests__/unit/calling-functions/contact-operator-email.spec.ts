@@ -66,7 +66,7 @@ jest.mock("@echatbot/database", () => ({
   prisma: mockPrisma,
 }))
 
-import { ContactOperator, ContactOperatorRequest } from "../../../src/domain/calling-functions/ContactOperator"
+import { contactOperator, ContactOperatorRequest } from "../../../src/domain/calling-functions/contactOperator"
 import { EmailService } from "../../../src/application/services/email.service"
 import logger from "../../../src/utils/logger"
 
@@ -97,7 +97,7 @@ describe("ContactOperator Email Notifications", () => {
 
   const mockWorkspace = {
     id: workspaceId,
-    name: "Bell'Italia Foods",
+    name: "BellItalia Foods",
     whatsappSettings: {
       adminEmail: "admin@bellitalia.com",
     },
@@ -156,7 +156,7 @@ describe("ContactOperator Email Notifications", () => {
         reason: "Prodotto scaduto",
       }
 
-      await ContactOperator(request)
+      await contactOperator(request)
 
       expect(mockEmailService.sendOperatorNotificationEmail).toHaveBeenCalledTimes(1)
       expect(mockEmailService.sendOperatorNotificationEmail).toHaveBeenCalledWith(
@@ -175,7 +175,7 @@ describe("ContactOperator Email Notifications", () => {
         customerId,
       }
 
-      await ContactOperator(request)
+      await contactOperator(request)
 
       expect(mockPrisma.customers.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({

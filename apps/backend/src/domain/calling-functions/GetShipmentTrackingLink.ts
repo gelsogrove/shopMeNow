@@ -34,7 +34,7 @@ export interface GetShipmentTrackingLinkResult {
  * @param request - Request parameters
  * @returns Short URL redirecting to DHL tracking page
  */
-export async function GetShipmentTrackingLink(
+export async function getShipmentTrackingLink(
   request: GetShipmentTrackingLinkRequest
 ): Promise<GetShipmentTrackingLinkResult> {
   try {

@@ -1,4 +1,5 @@
 import { useChatList } from "@/contexts/ChatListContext"
+import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { logger } from "@/lib/logger"
 import { api } from "@/services/api"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
@@ -14,6 +15,8 @@ export function useRecentChats(
   const hasPollingLock = !isExternallyBlocked // Can poll if not externally blocked
   const queryClient = useQueryClient()
   const { setChats } = useChatList()
+  const { workspace } = useWorkspace()
+  const currentWorkspaceId = workspace?.id
 
   // Listen for updates from other tabs via localStorage
   useEffect(() => {
@@ -22,16 +25,37 @@ export function useRecentChats(
         logger.info("📥 Received chat list update from another tab")
         queryClient.invalidateQueries({ queryKey: ["chats"] })
       }
+      // 🧹 CRITICAL: Clear cache when workspace changes
+      if (e.key === "workspace-changed" && e.newValue) {
+        logger.info("🔄 Workspace changed - invalidating chat cache")
+        queryClient.invalidateQueries({ queryKey: ["chats"] })
+        setChats([]) // Clear current chats immediately
+      }
     }
 
     window.addEventListener("storage", handleStorageChange)
     return () => window.removeEventListener("storage", handleStorageChange)
-  }, [queryClient])
+  }, [queryClient, setChats])
+
+  // 🧹 Clear chats when workspace changes (same tab)
+  useEffect(() => {
+    if (currentWorkspaceId) {
+      logger.info(`🔄 Workspace changed to ${currentWorkspaceId} - clearing chat cache`)
+      setChats([])
+      queryClient.invalidateQueries({ queryKey: ["chats"] })
+    }
+  }, [currentWorkspaceId, queryClient, setChats])
 
   return useQuery({
-    queryKey: ["chats"],
+    // 🔑 Include workspaceId in queryKey for automatic cache invalidation
+    queryKey: ["chats", currentWorkspaceId],
     queryFn: async () => {
       try {
+        // Skip if no workspace
+        if (!currentWorkspaceId) {
+          throw new Error("No workspace ID available")
+        }
+
         // First check if we have cached data
         const cachedData = pollingCoordinator.getCachedData()
         if (cachedData) {
@@ -45,30 +69,12 @@ export function useRecentChats(
           throw new Error("API call blocked by coordinator")
         }
 
-        // Get current workspace ID from local storage
-        const workspaceData = localStorage.getItem("currentWorkspace")
-        let workspaceId = null
-
-        if (workspaceData) {
-          try {
-            const workspace = JSON.parse(workspaceData)
-            workspaceId = workspace.id
-          } catch (e) {
-            logger.error("Error parsing workspace data:", e)
-          }
-        }
-
-        if (!workspaceId) {
-          pollingCoordinator.markCallCompleted("recent-chats")
-          throw new Error("No workspace ID available")
-        }
-
-        logger.info("📡 useRecentChats: Making API call to /chat/recent")
+        logger.info(`📡 useRecentChats: Making API call to /chat/recent for workspace ${currentWorkspaceId}`)
 
         // Make API request with explicit header
         const response = await api.get("/chat/recent", {
           headers: {
-            "x-workspace-id": workspaceId,
+            "x-workspace-id": currentWorkspaceId,
           },
         })
 

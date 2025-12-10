@@ -25,6 +25,23 @@ export interface Workspace {
   updatedAt: string
   planType?: string | null
   trialEndsAt?: string | null
+  // 🆕 Feature 199: Channel Configuration
+  sellsProductsAndServices?: boolean
+  hasSalesAgents?: boolean
+  hasSuppliers?: boolean
+  hasHumanSupport?: boolean
+  humanSupportInstructions?: string
+  operatorContactMethod?: string
+  operatorWhatsappNumber?: string
+  toneOfVoice?: string
+  botIdentityResponse?: string
+  challengeStatus?: boolean
+  allowedExternalLinks?: string[]
+  // 🆕 Prompt Builder fields
+  address?: string
+  customAiRules?: string
+  // 🆕 Channel branding
+  logoUrl?: string
 }
 
 export interface CreateWorkspaceData {
@@ -48,6 +65,21 @@ export interface UpdateWorkspaceData {
   debugMode?: boolean
   welcomeMessage?: string
   wipMessage?: string
+  allowedExternalLinks?: string
+  // 🆕 Feature 199: Channel Configuration
+  sellsProductsAndServices?: boolean
+  hasSalesAgents?: boolean
+  hasSuppliers?: boolean
+  hasHumanSupport?: boolean
+  humanSupportInstructions?: string
+  operatorContactMethod?: string
+  operatorWhatsappNumber?: string
+  toneOfVoice?: string
+  botIdentityResponse?: string
+  challengeStatus?: boolean
+  // 🆕 Prompt Builder fields
+  address?: string
+  customAiRules?: string
 }
 
 const workspaceApi = {

@@ -8,6 +8,7 @@
  * - Compact width (500px)
  * - Model, Temperature, Max Tokens settings
  * - Active/Inactive toggle
+ * - Available Functions list with descriptions
  * - No prompt editing (use Eye button for that)
  */
 
@@ -31,8 +32,37 @@ import {
 } from "@/components/ui/sheet"
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
-import { Loader2, Save } from "lucide-react"
+import { ChevronRight, Loader2, Save, Zap } from "lucide-react"
 import { useEffect, useState } from "react"
+
+// Function descriptions mapping
+const FUNCTION_DESCRIPTIONS: Record<string, string> = {
+  // Router Agent delegations
+  productSearchAgent: "Delegates product/service searches to Product Search Agent",
+  cartManagementAgent: "Delegates cart management to Cart Management Agent",
+  orderTrackingAgent: "Delegates order tracking to Order Tracking Agent",
+  customerSupportAgent: "Delegates customer support to Customer Support Agent",
+  profileManagementAgent: "Delegates profile management to Profile Management Agent",
+  // Product Search functions
+  getProductDetails: "Retrieves complete product details by SKU or name",
+  getServiceDetails: "Retrieves complete service details by code or name",
+  searchProductForStatistic: "Registers product search for analytics tracking",
+  // Cart Management functions
+  addToCart: "Adds products/services to customer cart",
+  viewCart: "Shows cart contents with checkout link",
+  clearCart: "Clears all items from the cart",
+  // Order Tracking functions
+  getLinkOrderByCode: "Generates secure link to view a specific order",
+  repeatOrder: "Repeats a previous order by adding all items to cart",
+  getOrderDetails: "Retrieves complete order details by code",
+  confirmOrder: "Confirms cart and creates a new order",
+  showCheckout: "Displays cart summary for order confirmation",
+  // Customer Support functions
+  contactOperator: "Escalates to human operator support",
+  // Profile Management functions
+  handlePushNotifications: "Manages push notification subscription",
+  getProfileLink: "Generates secure link to edit customer profile",
+}
 
 interface Agent {
   id: string
@@ -52,6 +82,7 @@ interface AgentEditSlidePanelProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSave: (agent: Agent) => Promise<void>
+  availableFunctions?: string[]
 }
 
 export function AgentEditSlidePanel({
@@ -59,6 +90,7 @@ export function AgentEditSlidePanel({
   open,
   onOpenChange,
   onSave,
+  availableFunctions = [],
 }: AgentEditSlidePanelProps) {
   const [formData, setFormData] = useState<Agent | null>(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -220,6 +252,35 @@ export function AgentEditSlidePanel({
               }
             />
           </div>
+
+          {/* Available Functions Section */}
+          {availableFunctions.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-green-600" />
+                <Label className="text-base font-semibold">Available Functions</Label>
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                  {availableFunctions.length}
+                </span>
+              </div>
+              <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2">
+                {availableFunctions.map((func) => (
+                  <div
+                    key={func}
+                    className="flex items-start gap-2 p-3 bg-gray-50 border rounded-lg"
+                  >
+                    <ChevronRight className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm text-gray-900">{func}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {FUNCTION_DESCRIPTIONS[func] || "Calling function disponibile per questo agent"}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <SheetFooter className="gap-2">

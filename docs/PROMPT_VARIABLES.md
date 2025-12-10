@@ -1,6 +1,6 @@
 # Prompt Variables Reference
 
-**Last Updated**: 2025-11-18  
+**Last Updated**: 2025-12-09  
 **Maintainer**: Andrea Gelso  
 **Related**: `backend/src/services/prompt-processor.service.ts`
 
@@ -44,11 +44,68 @@ Variables related to workspace configuration:
 | `{{companyName}}`   | String | Company/workspace name      | `"L'Altra Italia"`           | `workspace.companyName` |
 | `{{workspaceId}}`   | String | Workspace unique ID         | `"cm9hjgq9v00014qk8..."`     | `workspace.id`          |
 | `{{workspaceName}}` | String | Alias for `{{companyName}}` | `"L'Altra Italia"`           | `workspace.companyName` |
-| `{{URL}}`           | String | Workspace public URL        | `"https://shop.example.com"` | `workspace.url`         |
+| `{{url}}`           | String | Workspace public URL        | `"https://shop.example.com"` | `workspace.url`         |
 
 **Fallbacks**:
 
 - `{{companyName}}` / `{{workspaceName}}` → `"L'Altra Italia"` if missing
+
+---
+
+### 🤖 Channel Configuration Variables (Feature 199)
+
+Variables related to bot personality and human support settings:
+
+| Variable                 | Type   | Description                                                     | Example Output                                              | Source                         |
+| ------------------------ | ------ | --------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------ |
+| `{{BOT_PERSONALITY}}`    | String | Tone of voice and communication style                           | See personality descriptions below                          | `workspace.toneOfVoice`        |
+| `{{BOT_IDENTITY}}`       | String | Bot introduction when asked "Who are you?"                      | `"I'm your digital assistant for Italian gourmet products"` | `workspace.botIdentityResponse` |
+| `{{HUMAN_SUPPORT_INFO}}` | String | How to contact human support (varies based on config)           | See conditional outputs below                               | Multiple workspace fields       |
+| `{{SALES_AGENT_CONTACT}}`| String | Sales agent contact block (empty if hasSalesAgents=false)       | `"Agent John will contact you..."` or `""`                   | `workspace.hasSalesAgents`     |
+| `{{ALLOWED_EXTERNAL_LINKS}}`| String | List of allowed domains for external links in bot responses   | See security rules below                                    | `workspace.allowedExternalLinks` |
+
+**`{{BOT_PERSONALITY}}` Values by toneOfVoice**:
+
+| toneOfVoice    | Generated Text                                                                                       |
+| -------------- | ---------------------------------------------------------------------------------------------------- |
+| `friendly`     | Sei amichevole, caloroso e usi emoji per rendere la conversazione piacevole 😊. Parli in modo informale ma rispettoso. |
+| `professional` | Sei professionale e cortese. Rispondi in modo chiaro e diretto, mantenendo un tono business appropriato.               |
+| `formal`       | Sei formale ed educato. Usi il 'Lei' e mantieni un tono tradizionale e rispettoso.                                    |
+| `casual`       | Sei rilassato e informale ✌️. Parli come un amico, in modo naturale e divertente.                                     |
+
+**Fallback**: `friendly` tone if missing
+
+**`{{HUMAN_SUPPORT_INFO}}` Conditional Logic**:
+
+```
+IF hasHumanSupport = true:
+  IF hasSalesAgents = true:
+    → "L'agente {{agentName}} ti contatterà...\n📧 Email: {{agentEmail}}\n📞 Telefono: {{agentPhone}}"
+  ELSE IF operatorContactMethod = "whatsapp":
+    → "Puoi contattare il nostro supporto su WhatsApp: {operatorWhatsappNumber}"
+  ELSE:
+    → "Puoi contattare il nostro supporto via email: {adminEmail}"
+  + humanSupportInstructions (if provided)
+ELSE:
+  → "Al momento non è disponibile supporto umano. Prova a riformulare la tua richiesta o consulta le nostre FAQ."
+```
+
+**`{{BOT_IDENTITY}}` Default**:
+`"Sono l'assistente virtuale di questo negozio. Posso aiutarti a trovare prodotti, rispondere alle domande e gestire i tuoi ordini."`
+
+**`{{ALLOWED_EXTERNAL_LINKS}}` Conditional Logic**:
+
+```
+IF allowedExternalLinks has items:
+  → "**Domini autorizzati per link esterni:**
+     - domain1.com
+     - domain2.com
+     ⚠️ **REGOLA CRITICA**: NON includere MAI link a domini diversi..."
+ELSE:
+  → "⚠️ **REGOLA CRITICA**: NON includere MAI link esterni nelle risposte. Puoi usare solo link interni al sistema."
+```
+
+**Security Purpose**: Prevents the LLM from generating arbitrary external links that could be phishing or malicious. Only domains explicitly configured by the workspace admin are allowed.
 
 ---
 
@@ -76,9 +133,9 @@ Variables related to customer's order history:
 | Variable            | Type     | Description                 | Example Output      | Source                      |
 | ------------------- | -------- | --------------------------- | ------------------- | --------------------------- |
 | `{{lastordercode}}` | String   | Most recent order code      | `"ORD-2025-001234"` | `orders.code` (latest)      |
-| `{{LAST_ORDER}}`    | Markdown | Complete last order summary | See below           | Database query + formatting |
+| `{{lastOrder}}`    | Markdown | Complete last order summary | See below           | Database query + formatting |
 
-**`{{LAST_ORDER}}` Format**:
+**`{{lastOrder}}` Format**:
 
 ```markdown
 📦 ULTIMO ORDINE CONSEGNATO:
@@ -96,7 +153,7 @@ PRODOTTI:
 **Fallbacks**:
 
 - `{{lastordercode}}` → `"N/A"` if no orders
-- `{{LAST_ORDER}}` → `"Nessun ordine consegnato disponibile"` if no delivered orders
+- `{{lastOrder}}` → `"Nessun ordine consegnato disponibile"` if no delivered orders
 
 ---
 
@@ -131,15 +188,15 @@ Variables that inject large amounts of data (catalogs, FAQs, etc.):
 
 | Variable         | Type     | Description                | Token Count | Source                      |
 | ---------------- | -------- | -------------------------- | ----------- | --------------------------- |
-| `{{PRODUCTS}}`   | Markdown | Complete product catalog   | ~50k tokens | Database query + formatting |
-| `{{CATEGORIES}}` | Markdown | Product categories list    | ~5k tokens  | Database query + formatting |
-| `{{SERVICES}}`   | Markdown | Available services list    | ~3k tokens  | Database query + formatting |
-| `{{OFFERS}}`     | Markdown | Active offers/promotions   | ~8k tokens  | Database query + formatting |
-| `{{FAQ}}`        | Markdown | Frequently asked questions | ~2k tokens  | Database query + formatting |
+| `{{products}}`   | Markdown | Complete product catalog   | ~50k tokens | Database query + formatting |
+| `{{categories}}` | Markdown | Product categories list    | ~5k tokens  | Database query + formatting |
+| `{{services}}`   | Markdown | Available services list    | ~3k tokens  | Database query + formatting |
+| `{{offers}}`     | Markdown | Active offers/promotions   | ~8k tokens  | Database query + formatting |
+| `{{faq}}`        | Markdown | Frequently asked questions | ~2k tokens  | Database query + formatting |
 
 **⚠️ CRITICAL CONSTRAINT** (Constitution v1.5.0 Principle III):
 
-- Each large variable (`{{PRODUCTS}}`, `{{OFFERS}}`, `{{SERVICES}}`, `{{CATEGORIES}}`) can appear **AT MOST ONCE** per prompt
+- Each large variable (`{{products}}`, `{{offers}}`, `{{services}}`, `{{categories}}`) can appear **AT MOST ONCE** per prompt
 - Duplicate usage causes 100k+ token prompts → OpenRouter API failure
 - Validation happens in `PromptProcessorService.validatePromptVariables()` before replacement
 
@@ -147,20 +204,20 @@ Variables that inject large amounts of data (catalogs, FAQs, etc.):
 
 ```markdown
 Available products:
-{{PRODUCTS}}
+{{products}}
 
 Current offers:
-{{OFFERS}}
+{{offers}}
 ```
 
 **Example INVALID Usage** (duplicate):
 
 ```markdown
 Top products:
-{{PRODUCTS}}
+{{products}}
 
 Also check:
-{{PRODUCTS}} ❌ ERROR: Variable can only appear once
+{{products}} ❌ ERROR: Variable can only appear once
 ```
 
 ---
@@ -221,12 +278,12 @@ Template control structures for conditional content:
 
 Variables are replaced in this sequence (see `PromptProcessorService.preProcessPrompt()`):
 
-1. **Validation**: Check for duplicate large variables (`{{PRODUCTS}}`, `{{OFFERS}}`, etc.)
-2. **Workspace URL**: Replace `{{URL}}` with workspace public URL
+1. **Validation**: Check for duplicate large variables (`{{products}}`, `{{offers}}`, etc.)
+2. **Workspace URL**: Replace `{{url}}` with workspace public URL
 3. **Customer Data**: Replace all `{{nameUser}}`, `{{email}}`, `{{phone}}`, etc.
 4. **Push Subscription**: Replace `{{SUBSCRIBE_MESSAGE}}` based on consent status
-5. **Dynamic Content**: Replace `{{FAQ}}`, `{{PRODUCTS}}`, `{{CATEGORIES}}`, `{{SERVICES}}`, `{{OFFERS}}`
-6. **Last Order**: Replace `{{LAST_ORDER}}` with formatted order summary
+5. **Dynamic Content**: Replace `{{faq}}`, `{{products}}`, `{{categories}}`, `{{services}}`, `{{offers}}`
+6. **Last Order**: Replace `{{lastOrder}}` with formatted order summary
 
 **All replacements happen BEFORE sending prompt to OpenRouter** ✅
 
@@ -282,8 +339,8 @@ To add a new variable to the system:
 ❌ **Duplicating large variables**:
 
 ```markdown
-Products: {{PRODUCTS}}
-Also: {{PRODUCTS}} ❌ Causes 100k+ token error
+Products: {{products}}
+Also: {{products}} ❌ Causes 100k+ token error
 ```
 
 ❌ **Typos in variable names**:

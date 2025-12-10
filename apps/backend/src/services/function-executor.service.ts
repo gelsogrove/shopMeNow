@@ -15,12 +15,12 @@
 
 import { PrismaClient } from "@echatbot/database"
 import { CartManagementAgent } from "../application/agents/CartManagementAgent"
-// NOTE: ProductSearchAgent removed - LLM uses {{PRODUCTS}} from prompt only
+// NOTE: ProductSearchAgent removed - LLM uses {{products}} from prompt only
 import { CartRepository } from "../repositories/cart.repository"
 import { OrderRepository } from "../repositories/order.repository"
 import { ProductRepository } from "../repositories/product.repository"
 import { ServiceRepository } from "../repositories/service.repository"
-import { ContactOperator } from "../domain/calling-functions/ContactOperator"
+import { contactOperator } from "../domain/calling-functions/contactOperator"
 import logger from "../utils/logger"
 
 export interface ExecutionContext {
@@ -39,7 +39,7 @@ export interface FunctionResult {
 }
 
 export class FunctionExecutor {
-  // NOTE: productSearchAgent removed - LLM uses {{PRODUCTS}} from prompt only
+  // NOTE: productSearchAgent removed - LLM uses {{products}} from prompt only
   private cartManagementAgent: CartManagementAgent
   private productRepo: ProductRepository
   private serviceRepo: ServiceRepository
@@ -113,7 +113,7 @@ export class FunctionExecutor {
           break
 
         // Direct function calls (Sub-Agents)
-        // NOTE: searchProducts removed - LLM uses {{PRODUCTS}} from prompt
+        // NOTE: searchProducts removed - LLM uses {{products}} from prompt
 
         case "addItemToCart":
         case "addToCart": // backward compatibility
@@ -211,7 +211,7 @@ export class FunctionExecutor {
     }
   }
 
-  // NOTE: searchProducts method removed - LLM uses {{PRODUCTS}} from prompt only
+  // NOTE: searchProducts method removed - LLM uses {{products}} from prompt only
 
   /**
    * Add product to cart
@@ -534,14 +534,14 @@ export class FunctionExecutor {
     args: Record<string, any>,
     context: ExecutionContext
   ): Promise<any> {
-    logger.info("📞 contactSupport CF called, invoking ContactOperator.ts", {
+    logger.info("📞 contactSupport CF called, invoking contactOperator.ts", {
       workspaceId: context.workspaceId,
       customerId: context.customerId,
       reason: args.reason,
       urgency: args.urgency,
     })
 
-    // Get customer phone number to call ContactOperator
+    // Get customer phone number to call contactOperator
     const customer = await this.prisma.customers.findUnique({
       where: { id: context.customerId },
       select: { phone: true },
@@ -551,15 +551,15 @@ export class FunctionExecutor {
       throw new Error(`Customer not found: ${context.customerId}`)
     }
 
-    // Call the actual ContactOperator function
-    const result = await ContactOperator({
+    // Call the actual contactOperator function
+    const result = await contactOperator({
       phoneNumber: customer.phone,
       workspaceId: context.workspaceId,
       customerId: context.customerId,
       reason: args.reason || "Customer requested operator assistance",
     })
 
-    logger.info("✅ ContactOperator completed", {
+    logger.info("✅ contactOperator completed", {
       success: result.success,
       customerId: context.customerId,
     })

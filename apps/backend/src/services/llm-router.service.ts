@@ -46,6 +46,7 @@ import { ProfileManagementAgentLLM } from "../application/agents/ProfileManageme
 import { SafetyTranslationAgent } from "../application/agents/SafetyTranslationAgent"
 import { TranslationAgent } from "../application/agents/TranslationAgent"
 import { LinkReplacementService } from "../application/services/link-replacement.service"
+import { PromptBuilderService } from "../application/services/prompt-builder"
 import { getFunctionsForRouter } from "../config/agent-functions"
 import { AgentConfigRepository } from "../repositories/agent-config.repository"
 import { FAQRepository } from "../repositories/faq.repository"
@@ -182,6 +183,7 @@ export class LLMRouterService {
   private linkReplacementService: LinkReplacementService
   private searchConversationRepo: SearchConversationRepository
   private promptProcessor: PromptProcessorService // 🆕 Feature 124: Customer variables replacement
+  private promptBuilder: PromptBuilderService // 🆕 Dynamic prompt generation from templates
   private safetyAgent: SafetyTranslationAgent // Used for specific flows (welcome, queue)
   private translationAgent: TranslationAgent // Main translation layer (IT → target language)
   private openRouterApiKey: string
@@ -199,6 +201,7 @@ export class LLMRouterService {
     this.linkReplacementService = new LinkReplacementService()
     this.searchConversationRepo = new SearchConversationRepository()
     this.promptProcessor = new PromptProcessorService() // 🆕 Feature 124: Inject for variable replacement
+    this.promptBuilder = new PromptBuilderService(prisma) // 🆕 Dynamic prompt generation
 
     this.openRouterApiKey = process.env.OPENROUTER_API_KEY || ""
     if (!this.openRouterApiKey) {
@@ -634,6 +637,26 @@ export class LLMRouterService {
 
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: params.workspaceId },
+        select: {
+          id: true,
+          name: true,
+          url: true,
+          language: true,
+          // 🆕 Feature 199: Channel Configuration fields
+          toneOfVoice: true,
+          botIdentityResponse: true,
+          hasHumanSupport: true,
+          humanSupportInstructions: true,
+          operatorContactMethod: true,
+          operatorWhatsappNumber: true,
+          hasSalesAgents: true,
+          hasSuppliers: true, // 🆕 Suppliers toggle
+          notificationEmail: true,
+          allowedExternalLinks: true, // 🆕 Security: allowed domains for links
+          sellsProductsAndServices: true, // 🆕 Dynamic function routing
+          address: true, // 🆕 Location info for "where are you?" questions
+          customAiRules: true, // 🆕 Custom AI rules that override defaults
+        },
       })
 
       const messageRepo =
@@ -688,38 +711,73 @@ export class LLMRouterService {
         hasFAQs: !!faqs,
       })
 
-      // Process Router prompt with variable replacement
-      const PromptProcessorService =
-        require("./prompt-processor.service").PromptProcessorService
-      const promptProcessor = new PromptProcessorService()
-
-      // 🔒 CRITICAL: Router MUST NOT have product/category data (Principle VIII Rule #4, #6)
-      // Products/Categories ONLY for ProductSearchAgent - prevents hallucination & context contamination
+      // 🆕 DYNAMIC PROMPT GENERATION: Try PromptBuilder first, fallback to old system
       let processedRouterPrompt: string
       try {
-        processedRouterPrompt = await promptProcessor.preProcessPrompt(
-          routerAgent.systemPrompt,
-          params.workspaceId,
-          customerData,
-          {
-            faqs: faqs || "",
-            services: services || "",
-            offers: offers || "",
-            // ❌ NO products - Router delegates to ProductSearchAgent
-            // ❌ NO categories - Router delegates to ProductSearchAgent
-          },
-          workspace?.url
-        )
-      } catch (error: any) {
-        // Handle PromptValidationError (duplicate variables)
-        if (error.name === "PromptValidationError") {
-          logger.error(`[Router] Prompt validation failed: ${error.message}`)
-          throw new Error(
-            `Invalid Router prompt configuration: ${error.message}. Please contact system administrator.`
+        // Try new PromptBuilder system (templates from filesystem)
+        const builtPrompt = await this.promptBuilder.build("ROUTER", {
+          workspaceId: params.workspaceId,
+          customerId: params.customerId,
+        })
+        processedRouterPrompt = builtPrompt.content
+        logger.info("✅ Router prompt generated via PromptBuilder", {
+          sellsProductsAndServices: builtPrompt.variables.sellsProductsAndServices,
+          promptLength: processedRouterPrompt.length,
+        })
+      } catch (promptBuilderError) {
+        // Fallback: Use old system with agentConfig.systemPrompt from DB
+        logger.warn("⚠️ PromptBuilder failed, falling back to agentConfig.systemPrompt", {
+          error: promptBuilderError instanceof Error ? promptBuilderError.message : String(promptBuilderError),
+        })
+
+        // Process Router prompt with variable replacement (old system)
+        const PromptProcessorService =
+          require("./prompt-processor.service").PromptProcessorService
+        const promptProcessor = new PromptProcessorService()
+
+        // 🔒 CRITICAL: Router MUST NOT have product/category data (Principle VIII Rule #4, #6)
+        // Products/Categories ONLY for ProductSearchAgent - prevents hallucination & context contamination
+        try {
+          processedRouterPrompt = await promptProcessor.preProcessPrompt(
+            routerAgent.systemPrompt,
+            params.workspaceId,
+            customerData,
+            {
+              faqs: faqs || "",
+              services: services || "",
+              offers: offers || "",
+              // ❌ NO products - Router delegates to ProductSearchAgent
+              // ❌ NO categories - Router delegates to ProductSearchAgent
+            },
+            workspace?.url,
+            // 🆕 Feature 199: Pass workspace config for dynamic prompt variables
+            {
+              sellsProductsAndServices: workspace?.sellsProductsAndServices ?? true, // 🆕 E-commerce toggle
+              toneOfVoice: workspace?.toneOfVoice || "friendly",
+              botIdentityResponse: workspace?.botIdentityResponse || undefined,
+              hasHumanSupport: workspace?.hasHumanSupport ?? true,
+              humanSupportInstructions: workspace?.humanSupportInstructions || undefined,
+              operatorContactMethod: workspace?.operatorContactMethod || "email",
+              operatorWhatsappNumber: workspace?.operatorWhatsappNumber || undefined,
+              hasSalesAgents: workspace?.hasSalesAgents ?? false,
+              hasSuppliers: workspace?.hasSuppliers ?? false, // 🆕 Suppliers toggle
+              adminEmail: workspace?.notificationEmail || undefined,
+              allowedExternalLinks: workspace?.allowedExternalLinks || [], // 🆕 Security: allowed domains
+              address: workspace?.address || undefined, // 🆕 Physical address
+              customAiRules: workspace?.customAiRules || undefined, // 🆕 Custom AI rules
+            }
           )
+        } catch (error: any) {
+          // Handle PromptValidationError (duplicate variables)
+          if (error.name === "PromptValidationError") {
+            logger.error(`[Router] Prompt validation failed: ${error.message}`)
+            throw new Error(
+              `Invalid Router prompt configuration: ${error.message}. Please contact system administrator.`
+            )
+          }
+          // Re-throw other errors
+          throw error
         }
-        // Re-throw other errors
-        throw error
       }
 
       logger.info(
@@ -740,6 +798,7 @@ export class LLMRouterService {
         userMessage: params.message,
         params,
         customerDiscount,
+        sellsProductsAndServices: workspace?.sellsProductsAndServices ?? true,
       })
 
       totalTokens = result.tokensUsed
@@ -1242,6 +1301,7 @@ export class LLMRouterService {
     userMessage: string
     params: RouteMessageParams
     customerDiscount: number
+    sellsProductsAndServices: boolean
   }): Promise<{
     response: string
     tokensUsed: number
@@ -1256,6 +1316,7 @@ export class LLMRouterService {
       userMessage,
       params,
       customerDiscount,
+      sellsProductsAndServices,
     } = options
 
     let messages = [
@@ -1295,6 +1356,7 @@ export class LLMRouterService {
         messages,
         temperature: routerAgent.temperature,
         maxTokens: routerAgent.maxTokens,
+        sellsProductsAndServices, // 🆕 Dynamic function routing
       })
       const routerCallDuration = Date.now() - routerCallStart
 
@@ -2288,6 +2350,7 @@ export class LLMRouterService {
     messages: any[]
     temperature: number
     maxTokens: number
+    sellsProductsAndServices?: boolean // 🆕 Dynamic function routing
   }): Promise<{
     content?: string
     function_call?: { name: string; arguments: string }
@@ -2303,7 +2366,10 @@ export class LLMRouterService {
           max_tokens: options.maxTokens,
           // 🔀 Router has ONLY delegation functions (call sub-agents)
           // Router orchestrates, sub-agents execute business functions
-          tools: getFunctionsForRouter(), // Only: callProductSearchAgent, callCartManagementAgent, etc.
+          // 🆕 Dynamic: If sellsProductsAndServices=false, exclude e-commerce agents
+          tools: getFunctionsForRouter({ 
+            sellsProductsAndServices: options.sellsProductsAndServices ?? true 
+          }),
           tool_choice: "auto", // Encourage model to use functions when appropriate
         },
         {

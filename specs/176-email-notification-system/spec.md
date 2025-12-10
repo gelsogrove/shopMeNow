@@ -308,9 +308,9 @@ async sendMail(params: {
 
 **3.1 Agent Notification - Operator Request**
 
-**Location**: `backend/src/domain/calling-functions/ContactOperator.ts` (or similar)
+**Location**: `backend/src/domain/calling-functions/contactOperator.ts` (or similar)
 
-**Trigger**: When `ContactOperator` calling function executes
+**Trigger**: When `contactOperator` calling function executes
 
 **Logic**:
 1. Fetch customer's last 10 messages
@@ -343,7 +343,7 @@ async sendMail(params: {
 ## Related Features _(optional)_
 
 - **Existing EmailService**: `backend/src/application/services/email.service.ts` (password reset emails)
-- **Calling Functions**: `ContactOperator`, `CreateOrder` will trigger emails
+- **Calling Functions**: `contactOperator`, `CreateOrder` will trigger emails
 - **Workspace Settings**: `adminEmail` field used as FROM address
 
 ## Technical Notes _(optional)_

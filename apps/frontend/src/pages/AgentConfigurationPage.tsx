@@ -19,6 +19,8 @@ import { AgentEditSlidePanel } from "@/components/shared/AgentEditSlidePanel"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { PromptEditorDialog } from "@/components/shared/PromptEditorDialog"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -171,6 +173,7 @@ export function AgentConfigurationPage() {
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
+  const [useDynamicTemplates, setUseDynamicTemplates] = useState(true) // 🆕 Default to dynamic templates
 
   // Redirect if no workspace
   useEffect(() => {
@@ -346,8 +349,8 @@ export function AgentConfigurationPage() {
 
     try {
       setIsResetting(true)
-      const result = await resetAgentPromptsToDefaults(workspace.id)
-      toast.success(`${result.resetCount} prompts reset to defaults`)
+      const result = await resetAgentPromptsToDefaults(workspace.id, useDynamicTemplates)
+      toast.success(`${result.resetCount} prompts reset to ${useDynamicTemplates ? 'dynamic' : 'legacy'} defaults`)
       
       // Reload agents to show updated prompts
       const [agentsData, configsData] = await Promise.all([
@@ -537,26 +540,17 @@ export function AgentConfigurationPage() {
                         </div>
                       </div>
 
-                      {/* CENTER: Call Functions or Routing Badge */}
+                      {/* CENTER: Functions count badge (details in edit panel) */}
                       <div className="flex items-center gap-1.5 flex-wrap mx-4">
                         {agent.agentType === "ROUTER" ? (
-                          // Router Agent: Show only routing badge (hide CF list)
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-200 rounded-full text-xs font-medium text-blue-700">
                             🔀 Routes to sub-agents
                           </span>
                         ) : callFunctions.length > 0 ? (
-                          // Other agents: Show CF badges
-                          callFunctions.map((func) => (
-                            <span
-                              key={func}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border rounded-full text-xs font-medium text-gray-700"
-                            >
-                              <ChevronRight className="h-3 w-3 text-green-600" />
-                              {func}
-                            </span>
-                          ))
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-50 border border-green-200 rounded-full text-xs font-medium text-green-700">
+                            ⚡ {callFunctions.length} function{callFunctions.length > 1 ? 's' : ''}
+                          </span>
                         ) : agent.name === "safety_translation" ? (
-                          // Safety Agent: Show routing badge
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-200 rounded-full text-xs font-medium text-blue-700">
                             🔀 Routes to sub-agents
                           </span>
@@ -607,6 +601,7 @@ export function AgentConfigurationPage() {
             if (!open) setEditingAgent(null)
           }}
           onSave={handleSaveFromSlide}
+          availableFunctions={agentFunctions[editingAgent.id] || []}
         />
       )}
 
@@ -639,6 +634,27 @@ export function AgentConfigurationPage() {
               <p className="text-orange-600 font-medium">
                 💡 We recommend exporting your current prompts first using the "Export Prompts" button.
               </p>
+              
+              {/* Template type selection */}
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg border">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="useDynamicTemplates" 
+                    checked={useDynamicTemplates}
+                    onCheckedChange={(checked) => setUseDynamicTemplates(checked === true)}
+                  />
+                  <Label htmlFor="useDynamicTemplates" className="text-sm font-medium cursor-pointer">
+                    Use Dynamic Templates (recommended)
+                  </Label>
+                </div>
+                <p className="mt-2 text-xs text-gray-500 ml-6">
+                  {useDynamicTemplates 
+                    ? "✅ Templates will adapt based on workspace settings (sellsProductsAndServices, hasHumanSupport, address, etc.)"
+                    : "⚠️ Static templates without conditional logic"
+                  }
+                </p>
+              </div>
+              
               <p className="text-sm text-gray-500">
                 This action cannot be undone.
               </p>

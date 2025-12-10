@@ -254,14 +254,14 @@ export class ProfileManagementAgentLLM {
   ): Promise<any> {
     try {
       if (functionName === "handlePushNotifications") {
-        // Call ManageNotifications domain function
+        // Call manageNotifications domain function
         const {
-          ManageNotifications,
-        } = require("../../domain/calling-functions/ManageNotifications")
+          manageNotifications,
+        } = require("../../domain/calling-functions/manageNotifications")
 
         const action = args.value ? "SUBSCRIBE" : "UNSUBSCRIBE"
 
-        const result = await ManageNotifications({
+        const result = await manageNotifications({
           action,
           customerId: context.customerId,
           workspaceId: context.workspaceId,

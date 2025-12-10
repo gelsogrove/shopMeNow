@@ -551,12 +551,27 @@ export function getFunctionsForAPI() {
 /**
  * Get functions for Router Agent
  * Includes: delegation functions (sub-agents) + direct utility functions
+ * 
+ * @param options.sellsProductsAndServices - If false, exclude e-commerce agents (product, cart, order)
  */
-export function getFunctionsForRouter() {
+export function getFunctionsForRouter(options?: { sellsProductsAndServices?: boolean }) {
+  const sellsProducts = options?.sellsProductsAndServices ?? true
+
   // Router Agent can call:
   // 1. Delegation functions (productSearchAgent, cartManagementAgent, orderTrackingAgent, customerSupportAgent)
   // 2. Direct functions (manageNotifications, RESET_ACTIVE_AGENT)
   const routerFunctions = AGENT_FUNCTIONS.filter((fn) => {
+    // E-commerce agents - only include if sellsProductsAndServices is true
+    const ecommerceAgents = [
+      "productSearchAgent",
+      "cartManagementAgent",
+      "orderTrackingAgent",
+    ]
+    
+    if (!sellsProducts && ecommerceAgents.includes(fn.name)) {
+      return false // Exclude e-commerce agents for vetrina mode
+    }
+
     return (
       fn.name.endsWith("Agent") || // Delegation to sub-agents
       fn.name === "manageNotifications" || // Direct notification management

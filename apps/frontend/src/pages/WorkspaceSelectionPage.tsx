@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { ImageCropUpload } from "@/components/shared/ImageCropUpload"
+import { IMG_BASE_URL } from "@/config"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,7 +29,7 @@ import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import { getBillingOverview } from "@/services/subscriptionBillingApi"
-import { LogOut, PlusCircle, Radio, MessageSquare, ShoppingCart, AlertTriangle, Smartphone, Crown, User, Ban, UserPlus, Clock, CreditCard, ArrowLeft } from "lucide-react"
+import { LogOut, PlusCircle, MessageSquare, ShoppingCart, AlertTriangle, Smartphone, Crown, User, Ban, UserPlus, Clock, CreditCard, ArrowLeft, Check, ChevronRight, ChevronLeft, Store, Users, Headphones, Bot, X, HelpCircle, Trash2, Plus, Mail, Briefcase, ImagePlus, Pencil } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
@@ -36,6 +38,68 @@ import {
   updateWorkspace,
   workspaceApi,
 } from "../services/workspaceApi"
+
+// ============================================================================
+// WIZARD TYPES & CONFIGURATION
+// ============================================================================
+
+interface WizardFormData {
+  // Step 1: Channel Details
+  whatsappNumber: string
+  alias: string
+  email: string
+  website: string
+  // Step 2: Business Type (E-commerce)
+  sellsProductsAndServices: boolean
+  // Step 3: Sales Agents (conditional)
+  hasSalesAgents: boolean
+  // Step 3b: Suppliers (conditional)
+  hasSuppliers: boolean
+  // Step 4: Human Support
+  hasHumanSupport: boolean
+  humanSupportInstructions: string
+  operatorContactMethod: 'email' | 'whatsapp'
+  operatorWhatsappNumber: string
+  // Step 5: Tone of Voice
+  toneOfVoice: 'formal' | 'friendly' | 'professional' | 'casual'
+  // Step 6: Bot Identity
+  botIdentityResponse: string
+  // Step 7: FAQs
+  faqs: Array<{ question: string; answer: string }>
+}
+
+const WIZARD_STEPS = [
+  { id: 1, title: "Channel Details", description: "Basic channel information", icon: Smartphone },
+  { id: 2, title: "E-commerce", description: "Sell products/services on WhatsApp?", icon: Store },
+  { id: 3, title: "Sales Team", description: "Do you have sales agents?", icon: Users },
+  { id: 4, title: "Human Support", description: "Talk to an operator?", icon: Headphones },
+  { id: 5, title: "Contact Method", description: "How to reach operator?", icon: Mail },
+  { id: 6, title: "Tone of Voice", description: "How should the bot communicate?", icon: MessageSquare },
+  { id: 7, title: "Bot Identity", description: "How should the bot introduce itself?", icon: Bot },
+  { id: 8, title: "FAQs", description: "Common questions & answers", icon: HelpCircle },
+] as const
+
+const initialWizardData: WizardFormData = {
+  whatsappNumber: "",
+  alias: "",
+  email: "",
+  website: "",
+  sellsProductsAndServices: true,
+  hasSalesAgents: false,
+  hasSuppliers: false,
+  hasHumanSupport: true,
+  humanSupportInstructions: "",
+  operatorContactMethod: 'email',
+  operatorWhatsappNumber: "",
+  toneOfVoice: 'friendly',
+  botIdentityResponse: "",
+  faqs: [
+    { question: "How is my privacy protected?", answer: "" },
+    { question: "What are the delivery times?", answer: "" },
+    { question: "How can I repeat a previous order?", answer: "" },
+    { question: "What payment methods do you accept?", answer: "" },
+  ],
+}
 
 // Badge stats type
 interface WorkspaceBadgeStats {
@@ -46,13 +110,18 @@ interface WorkspaceBadgeStats {
   newCustomers: number
 }
 
-// Definizione dei tipi di attività supportati
-type BusinessType = "Shop"
-
 export function WorkspaceSelectionPage() {
   const navigate = useNavigate()
   const { setCurrentWorkspace } = useWorkspace()
-  const [selectedType] = useState<BusinessType>("Shop") // Always Shop by default
+  
+  // ============================================================================
+  // WIZARD STATE
+  // ============================================================================
+  const [wizardStep, setWizardStep] = useState(1)
+  const [wizardData, setWizardData] = useState<WizardFormData>(initialWizardData)
+  const [wizardOpen, setWizardOpen] = useState(false)
+  
+  // Legacy state (kept for compatibility during transition)
   const [newPhoneNumber, setNewPhoneNumber] = useState("")
   const [alias, setAlias] = useState("")
   const [welcomeMessage, setWelcomeMessage] = useState("")
@@ -65,6 +134,121 @@ export function WorkspaceSelectionPage() {
     whatsapp?: string
   }>({})
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
+  
+  // Logo upload state
+  const [logoDialogOpen, setLogoDialogOpen] = useState(false)
+  const [selectedWorkspaceForLogo, setSelectedWorkspaceForLogo] = useState<string | null>(null)
+  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+
+  // ============================================================================
+  // WIZARD HELPERS
+  // ============================================================================
+  
+  const updateWizardData = <K extends keyof WizardFormData>(field: K, value: WizardFormData[K]) => {
+    setWizardData(prev => ({ ...prev, [field]: value }))
+  }
+
+  const validateCurrentStep = (): boolean => {
+    switch (wizardStep) {
+      case 1: // Channel Details
+        return !!(
+          wizardData.whatsappNumber.trim() && 
+          validateWhatsAppNumber(wizardData.whatsappNumber) &&
+          wizardData.alias.trim()
+        )
+      case 2: // E-commerce - always valid (boolean)
+        return true
+      case 3: // Sales Agents - always valid (boolean)
+        return true
+      case 4: // Human Support - always valid (boolean)
+        return true
+      case 5: // Tone of Voice - always valid (has default)
+        return true
+      case 6: // Availability - always valid (has default)
+        return true
+      case 7: // Bot Identity - require some text
+        return wizardData.botIdentityResponse.trim().length > 0
+      case 8: // Welcome Message - optional but we auto-generate
+        return true
+      default:
+        return true
+    }
+  }
+
+  const getVisibleSteps = () => {
+    // Step 3 (Sales Agents) only visible if sellsProductsAndServices is true
+    // Step 5 (Contact Method) only visible if hasHumanSupport is true
+    return WIZARD_STEPS.filter(step => {
+      if (step.id === 3) return wizardData.sellsProductsAndServices
+      if (step.id === 5) return wizardData.hasHumanSupport
+      return true
+    })
+  }
+
+  const getNextStep = () => {
+    if (wizardStep === 2 && !wizardData.sellsProductsAndServices) {
+      return 4 // Skip step 3 (Sales Agents)
+    }
+    if (wizardStep === 4 && !wizardData.hasHumanSupport) {
+      return 6 // Skip step 5 (Contact Method)
+    }
+    return wizardStep + 1
+  }
+
+  const getPrevStep = () => {
+    if (wizardStep === 4 && !wizardData.sellsProductsAndServices) {
+      return 2 // Skip back over step 3
+    }
+    if (wizardStep === 6 && !wizardData.hasHumanSupport) {
+      return 4 // Skip back over step 5
+    }
+    return wizardStep - 1
+  }
+
+  const handleNextStep = () => {
+    if (validateCurrentStep()) {
+      const next = getNextStep()
+      if (next <= 8) {
+        setWizardStep(next)
+      }
+    }
+  }
+
+  const handlePrevStep = () => {
+    const prev = getPrevStep()
+    if (prev >= 1) {
+      setWizardStep(prev)
+    }
+  }
+
+  const resetWizard = () => {
+    setWizardStep(1)
+    setWizardData({
+      ...initialWizardData,
+      email: userEmail, // Pre-fill with logged user email
+    })
+    setErrorMessage("")
+    setChannelLimitError(false)
+    setValidationErrors({})
+  }
+
+  const openWizardDialog = () => {
+    resetWizard()
+    setWizardOpen(true)
+    // Use setTimeout to ensure state is set before showing dialog
+    setTimeout(() => {
+      const dialog = document.getElementById("wizard-dialog") as HTMLDialogElement
+      if (dialog) dialog.showModal()
+    }, 0)
+  }
+
+  const closeWizardDialog = () => {
+    const dialog = document.getElementById("wizard-dialog") as HTMLDialogElement
+    if (dialog) dialog.close()
+    setWizardOpen(false)
+    resetWizard()
+  }
 
   // Validation helpers
   const validateWhatsAppNumber = (phone: string): boolean => {
@@ -75,6 +259,7 @@ export function WorkspaceSelectionPage() {
 
   const handleWhatsAppChange = (value: string) => {
     setNewPhoneNumber(value)
+    updateWizardData('whatsappNumber', value)
     if (value && !validateWhatsAppNumber(value)) {
       setValidationErrors(prev => ({ ...prev, whatsapp: 'Invalid format. Use +1234567890' }))
     } else {
@@ -180,6 +365,11 @@ export function WorkspaceSelectionPage() {
     })
   }, [firstWorkspaceId, isSuperAdmin, isRoleLoading, role, workspaces.length])
 
+  // 🧹 Clear workspace on mount
+  useEffect(() => {
+    localStorage.removeItem("currentWorkspace")
+  }, [])
+
   // Carica i workspace all'avvio
   useEffect(() => {
     loadWorkspaces()
@@ -235,6 +425,7 @@ export function WorkspaceSelectionPage() {
       const sortedWorkspaces = workspacesData.sort((a, b) => 
         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       )
+      
       setWorkspaces(sortedWorkspaces)
       setBadgeStats(statsData)
       
@@ -264,33 +455,28 @@ export function WorkspaceSelectionPage() {
 
   // Gestisce la selezione di un workspace
   const handleSelectWorkspace = (workspace: Workspace) => {
-    // ✅ SINGLE SOURCE OF TRUTH: Save to localStorage + context
-    // WorkspaceContext will automatically sync from localStorage
-    setCurrentWorkspace(workspace)
-
-    // ✅ Log workspace selection
-    logger.info("✅ Workspace selected:", workspace.name, workspace.id)
+    // 1. Set localStorage
+    localStorage.setItem("currentWorkspace", JSON.stringify(workspace))
     
-    // ✅ Navigate using React Router (preserves React state)
-    logger.info("🔄 Navigating to /chat")
-    navigate("/chat")
+    // 2. Redirect with workspaceId in URL (SOURCE OF TRUTH)
+    window.location.href = `/chat?workspaceId=${workspace.id}`
   }
 
-  // Gestisce la creazione di un nuovo workspace
-  const handleCreateWorkspace = async (e: React.FormEvent) => {
-    e.preventDefault()
+  // Gestisce la creazione di un nuovo workspace (from wizard)
+  const handleCreateWorkspace = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
 
-    if (!selectedType) {
-      setErrorMessage("Select a business type")
-      return
-    }
+    // Use wizard data
+    const phoneNumber = wizardData.whatsappNumber
+    const channelAlias = wizardData.alias
+    const channelWelcomeMessage = wizardData.welcomeMessage
 
-    if (!newPhoneNumber.trim()) {
+    if (!phoneNumber.trim()) {
       setErrorMessage("Enter a phone number")
       return
     }
 
-    if (!alias.trim()) {
+    if (!channelAlias.trim()) {
       setErrorMessage("Enter an alias")
       return
     }
@@ -298,16 +484,55 @@ export function WorkspaceSelectionPage() {
     try {
       setIsLoading(true)
       setChannelLimitError(false)
-      const newWorkspace = await createWorkspace({
-        name: alias || newPhoneNumber,
-        whatsappPhoneNumber: newPhoneNumber,
+      
+      // 🆕 Build workspace data with ALL wizard configuration (Feature 199)
+      // Website URL is automatically added to allowedExternalLinks with echatbot.ai and paypal.com
+      const allowedLinks = ["echatbot.ai", "paypal.com"]
+      if (wizardData.website) {
+        try {
+          const url = new URL(wizardData.website)
+          allowedLinks.unshift(url.hostname) // Add website domain at the beginning
+        } catch {
+          // Invalid URL, skip adding to allowedLinks
+        }
+      }
+      
+      const workspaceConfig = {
+        name: channelAlias || phoneNumber,
+        whatsappPhoneNumber: phoneNumber,
         language: "en",
-        welcomeMessage: welcomeMessage || undefined,
-        adminEmail: userEmail, // Use email from token
-      })
+        welcomeMessage: channelWelcomeMessage || undefined,
+        adminEmail: wizardData.email || userEmail,
+        url: wizardData.website || undefined,
+        allowedExternalLinks: allowedLinks,
+        // 🆕 Channel Configuration (Feature 199)
+        sellsProductsAndServices: wizardData.sellsProductsAndServices,
+        hasSalesAgents: wizardData.hasSalesAgents,
+        hasSuppliers: wizardData.hasSuppliers,
+        hasHumanSupport: wizardData.hasHumanSupport,
+        humanSupportInstructions: wizardData.humanSupportInstructions || undefined,
+        operatorContactMethod: wizardData.operatorContactMethod,
+        operatorWhatsappNumber: wizardData.operatorWhatsappNumber || undefined,
+        toneOfVoice: wizardData.toneOfVoice,
+        botIdentityResponse: wizardData.botIdentityResponse || undefined,
+        // FAQs will be created by the backend from initialFAQs, 
+        // but we can pass custom FAQs if user edited them
+        faqs: wizardData.faqs.filter(faq => faq.answer.trim() !== ''),
+      }
+      
+      const newWorkspace = await createWorkspace(workspaceConfig)
 
       logger.info("✅ Workspace created successfully:", newWorkspace.id)
+      logger.info("📋 Wizard configuration:", {
+        sellsProductsAndServices: wizardData.sellsProductsAndServices,
+        hasSalesAgents: wizardData.hasSalesAgents,
+        hasSuppliers: wizardData.hasSuppliers,
+        hasHumanSupport: wizardData.hasHumanSupport,
+        toneOfVoice: wizardData.toneOfVoice,
+      })
+      
       toast.success("Channel created successfully!")
+      closeWizardDialog()
 
       // 🔄 REFRESH PAGE - Reload workspace-selection to show new workspace with all agents
       logger.info("🔄 Reloading workspace-selection page...")
@@ -366,12 +591,47 @@ export function WorkspaceSelectionPage() {
     navigate("/auth/login")
   }
 
+  // Handle logo upload
+  const handleLogoUpload = async () => {
+    if (!logoFile || !selectedWorkspaceForLogo) return
+
+    try {
+      setUploadingLogo(true)
+      const formData = new FormData()
+      formData.append('logo', logoFile)
+
+      const response = await api.post(`/workspaces/${selectedWorkspaceForLogo}/logo`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+
+      logger.info('Logo upload response:', response.data)
+
+      // Reload workspaces to get fresh data
+      await loadWorkspaces()
+
+      toast.success('Logo updated successfully!')
+      setLogoDialogOpen(false)
+      setLogoFile(null)
+      setSelectedWorkspaceForLogo(null)
+    } catch (error) {
+      logger.error('Error uploading logo:', error)
+      toast.error('Failed to upload logo')
+    } finally {
+      setUploadingLogo(false)
+    }
+  }
+
+  const openLogoDialog = (workspaceId: string) => {
+    setSelectedWorkspaceForLogo(workspaceId)
+    setLogoDialogOpen(true)
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header - same style as MinimalLayout */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14">
             {/* Left: Back button and Logo */}
             <div className="flex items-center gap-4">
               <Button
@@ -505,7 +765,7 @@ export function WorkspaceSelectionPage() {
       </header>
 
       {/* Main Content */}
-      <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
 
         {/* ========== LOADING STATE ========== */}
         {isLoading && (
@@ -627,7 +887,7 @@ export function WorkspaceSelectionPage() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2 text-green-600">
-                  <Radio className="h-5 w-5" />
+                  <MessageSquare className="h-5 w-5" fill="currentColor" />
                   Your Channels
                 </CardTitle>
                 <CardDescription>
@@ -639,12 +899,7 @@ export function WorkspaceSelectionPage() {
                   variant="outline"
                   size="sm"
                   className="gap-1.5 text-green-600 border-green-600 hover:bg-green-50"
-                  onClick={() => {
-                    const dialog = document.getElementById(
-                      "type-selection-dialog"
-                    ) as HTMLDialogElement
-                    if (dialog) dialog.showModal()
-                  }}
+                  onClick={openWizardDialog}
                 >
                   <PlusCircle className="h-4 w-4" />
                   Add Channel
@@ -659,17 +914,17 @@ export function WorkspaceSelectionPage() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* Lista dei workspace esistenti */}
               {workspaces.map((workspace) => (
                 <div
                   key={workspace.id}
-                  className={`rounded-lg border-2 p-4 cursor-pointer transition-all ${
+                  className={`rounded-xl border-2 overflow-hidden cursor-pointer transition-all ${
                     justCreatedId === workspace.id ? "ring-2 ring-green-500" : ""
                   } ${
                     workspace.isActive
-                      ? "bg-green-50 border-green-300 hover:shadow-md hover:bg-green-100 hover:border-green-400"
-                      : "bg-gray-100 border-gray-300 opacity-75"
+                      ? "bg-white border-green-200 hover:shadow-lg hover:border-green-400"
+                      : "bg-gray-50 border-gray-300 opacity-75"
                   }`}
                   onClick={(e) => {
                     e.preventDefault()
@@ -677,110 +932,161 @@ export function WorkspaceSelectionPage() {
                     handleSelectWorkspace(workspace)
                   }}
                 >
-                  <div className="space-y-2 min-w-0 w-full">
-                    <div className="text-lg font-semibold truncate flex items-center justify-between">
-                      <span>{workspace.name}</span>
-                      {!workspace.challengeStatus && (
-                        <span className="text-sm font-normal text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                  {/* Logo Header Area */}
+                  <div 
+                    className={`relative h-40 flex items-center justify-center ${
+                      workspace.isActive ? "bg-gradient-to-br from-green-50 to-green-100" : "bg-gray-100"
+                    }`}
+                  >
+                    <div className="relative group">
+                      {workspace.logoUrl ? (
+                        <img
+                          src={workspace.logoUrl.startsWith('http') ? workspace.logoUrl : `${IMG_BASE_URL}${workspace.logoUrl}`}
+                          alt={workspace.name}
+                          className="h-32 w-32 rounded-full object-cover border-4 border-white shadow-xl"
+                        />
+                      ) : (
+                        <div className={`h-32 w-32 rounded-full flex items-center justify-center text-white font-bold text-5xl shadow-xl ${
+                          workspace.isActive ? "bg-green-500" : "bg-gray-400"
+                        }`}>
+                          {workspace.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      {/* Edit button - appears on hover */}
+                      {isSuperAdmin && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            openLogoDialog(workspace.id)
+                          }}
+                          className="absolute -bottom-1 -right-1 h-9 w-9 rounded-full bg-white border-2 border-gray-200 shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-green-50 hover:border-green-300"
+                        >
+                          <Pencil className="h-4 w-4 text-gray-600" />
+                        </button>
+                      )}
+                    </div>
+                    {/* Type Badge - Top Right */}
+                    <div className="absolute top-2 right-2">
+                      <span className={`text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 ${
+                        workspace.sellsProductsAndServices 
+                          ? "text-green-700 bg-white/90 border border-green-200" 
+                          : "text-gray-600 bg-white/90 border border-gray-200"
+                      }`}>
+                        <Store className="h-3 w-3" />
+                        {workspace.sellsProductsAndServices ? "E-commerce" : "Info"}
+                      </span>
+                    </div>
+                    {/* Disabled Badge - Top Left */}
+                    {!workspace.challengeStatus && (
+                      <div className="absolute top-2 left-2">
+                        <span className="text-xs font-medium text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
                           Disabled
                         </span>
+                      </div>
                     )}
                   </div>
-                  {workspace.whatsappPhoneNumber && (
-                    <div
-                      className={`text-xl flex items-center gap-2 ${
-                        workspace.isActive ? "text-green-600" : "text-gray-400"
-                      }`}
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
+                  
+                  {/* Content Area */}
+                  <div className="p-4 space-y-3">
+                    {/* Channel Name */}
+                    <h3 className="text-lg font-semibold text-gray-900 truncate text-center">
+                      {workspace.name}
+                    </h3>
+                    
+                    {/* WhatsApp Number */}
+                    {workspace.whatsappPhoneNumber && (
+                      <div
+                        className={`flex items-center justify-center gap-2 text-sm ${
+                          workspace.isActive ? "text-green-600" : "text-gray-400"
+                        }`}
                       >
-                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                      </svg>
-                      <span className="truncate">
-                        {workspace.whatsappPhoneNumber}
-                      </span>
-                    </div>
-                  )}
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                        </svg>
+                        <span className="truncate">{workspace.whatsappPhoneNumber}</span>
+                      </div>
+                    )}
                   
-                  {/* 📊 Badge Stats Row */}
-                  {badgeStats[workspace.id] && (
-                    <div className="flex items-center gap-3 mt-3 pt-3 border-t border-green-200">
-                      <TooltipProvider delayDuration={100}>
-                        {/* Pending Orders Badge */}
-                        {badgeStats[workspace.id].pendingOrders > 0 && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex items-center gap-1.5 bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full text-sm font-medium cursor-help">
-                                <ShoppingCart className="h-3.5 w-3.5" />
-                                <span>{badgeStats[workspace.id].pendingOrders}</span>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Pending orders awaiting processing</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                        
-                        {/* Needs Intervention Badge */}
-                        {badgeStats[workspace.id].needsIntervention > 0 && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex items-center gap-1.5 bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full text-sm font-medium animate-pulse cursor-help">
-                                <AlertTriangle className="h-3.5 w-3.5" />
-                                <span>{badgeStats[workspace.id].needsIntervention}</span>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Customers requesting human assistance</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                        
-                        {/* Blocked Users Badge */}
-                        {badgeStats[workspace.id].blockedUsers > 0 && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex items-center gap-1.5 bg-red-100 text-red-700 px-2.5 py-1 rounded-full text-sm font-medium cursor-help">
-                                <Ban className="h-3.5 w-3.5" />
-                                <span>{badgeStats[workspace.id].blockedUsers}</span>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Blocked/blacklisted customers</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                        
-                        {/* New Customers Badge (last 24h) */}
-                        {badgeStats[workspace.id].newCustomers > 0 && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex items-center gap-1.5 bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full text-sm font-medium cursor-help">
-                                <UserPlus className="h-3.5 w-3.5" />
-                                <span>{badgeStats[workspace.id].newCustomers}</span>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>New customers in the last 24 hours</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                      </TooltipProvider>
-                    </div>
-                  )}
-                  
-                  {justCreatedId === workspace.id && (
-                    <div className="mt-2">
-                      <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                        New
-                      </span>
-                    </div>
-                  )}
+                    {/* 📊 Badge Stats Row */}
+                    {badgeStats[workspace.id] && (
+                      <div className="flex items-center justify-center gap-2 pt-3 border-t border-gray-100">
+                        <TooltipProvider delayDuration={100}>
+                          {/* Pending Orders Badge */}
+                          {badgeStats[workspace.id].pendingOrders > 0 && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center gap-1 bg-amber-100 text-amber-700 px-2 py-1 rounded-full text-xs font-medium cursor-help">
+                                  <ShoppingCart className="h-3 w-3" />
+                                  <span>{badgeStats[workspace.id].pendingOrders}</span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Pending orders awaiting processing</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                          
+                          {/* Needs Intervention Badge */}
+                          {badgeStats[workspace.id].needsIntervention > 0 && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-xs font-medium animate-pulse cursor-help">
+                                  <AlertTriangle className="h-3 w-3" />
+                                  <span>{badgeStats[workspace.id].needsIntervention}</span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Customers requesting human assistance</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                          
+                          {/* Blocked Users Badge */}
+                          {badgeStats[workspace.id].blockedUsers > 0 && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center gap-1 bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-medium cursor-help">
+                                  <Ban className="h-3 w-3" />
+                                  <span>{badgeStats[workspace.id].blockedUsers}</span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Blocked/blacklisted customers</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                          
+                          {/* New Customers Badge (last 24h) */}
+                          {badgeStats[workspace.id].newCustomers > 0 && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-medium cursor-help">
+                                  <UserPlus className="h-3 w-3" />
+                                  <span>{badgeStats[workspace.id].newCustomers}</span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>New customers in the last 24 hours</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                        </TooltipProvider>
+                      </div>
+                    )}
+                    
+                    {justCreatedId === workspace.id && (
+                      <div className="text-center">
+                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                          New
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -789,152 +1095,732 @@ export function WorkspaceSelectionPage() {
         </Card>
         )}
 
-        {/* Dialog per la creazione di un nuovo canale (only shown when workspaces exist) */}
-        {workspaces.length > 0 && (
+        {/* ============================================================================ */}
+        {/* WIZARD DIALOG - Multi-step channel creation */}
+        {/* ============================================================================ */}
         <dialog
-          id="type-selection-dialog"
-          className="backdrop:bg-black/50 p-0 rounded-xl shadow-xl border-0 max-w-lg w-full bg-white"
+          id="wizard-dialog"
+          className="backdrop:bg-black/50 p-0 rounded-2xl shadow-2xl border-0 w-[1200px] max-w-[95vw] bg-white"
         >
-          <div className="p-6">
-            {/* Header with icon */}
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-green-100 rounded-full">
-                <Smartphone className="h-6 w-6 text-green-600" />
+          <div className="flex h-[750px] max-h-[90vh]">
+            {/* LEFT SIDEBAR - Step Indicators */}
+            <div className="w-[340px] bg-gradient-to-b from-green-600 to-green-700 p-6 flex flex-col rounded-l-2xl">
+              <div className="mb-8">
+                <h2 className="text-xl font-bold text-white">New Channel</h2>
+                <p className="text-green-200 text-sm mt-1">Setup wizard</p>
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">New Channel</h2>
-                <p className="text-sm text-gray-500">Set up your WhatsApp business channel</p>
+              
+              <div className="flex-1 space-y-1">
+                {getVisibleSteps().map((step, index) => {
+                  const isActive = wizardStep === step.id
+                  const isCompleted = wizardStep > step.id
+                  const StepIcon = step.icon
+                  const canNavigate = isCompleted || isActive
+                  
+                  return (
+                    <div
+                      key={step.id}
+                      onClick={() => canNavigate && setWizardStep(step.id)}
+                      className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
+                        canNavigate ? 'cursor-pointer hover:bg-white/10' : ''
+                      } ${
+                        isActive 
+                          ? 'bg-white/20 text-white' 
+                          : isCompleted 
+                            ? 'text-green-200' 
+                            : 'text-green-300/60'
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        isCompleted 
+                          ? 'bg-white text-green-600' 
+                          : isActive 
+                            ? 'bg-white/30 text-white' 
+                            : 'bg-green-500/30 text-green-300'
+                      }`}>
+                        {isCompleted ? (
+                          <Check className="w-4 h-4" />
+                        ) : (
+                          <StepIcon className="w-4 h-4" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className={`text-sm font-medium truncate ${isActive ? 'text-white' : ''}`}>
+                          {step.title}
+                        </p>
+                        <p className={`text-xs truncate ${isActive ? 'text-green-100' : 'text-green-300/60'}`}>
+                          {step.description}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              
+              {/* WhatsApp branding */}
+              <div className="mt-auto pt-4 border-t border-green-500/30">
+                <div className="flex items-center gap-2 text-green-200 text-xs">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                  </svg>
+                  <span>WhatsApp Business Channel</span>
+                </div>
               </div>
             </div>
 
-            {/* Error message for channel limit */}
-            {channelLimitError && (
-              <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3">
-                <Crown className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium text-amber-800">Upgrade Required</p>
-                  <p className="text-sm text-amber-700 mt-1">
-                    {errorMessage || "You've reached your channel limit. Upgrade your plan to add more channels."}
-                  </p>
-                  <Button
-                    size="sm"
-                    className="mt-2 bg-amber-600 hover:bg-amber-700"
-                    onClick={() => {
-                      const dialog = document.getElementById("type-selection-dialog") as HTMLDialogElement
-                      if (dialog) dialog.close()
-                      // Scroll to billing section
-                      document.querySelector('[class*="Subscription"]')?.scrollIntoView({ behavior: 'smooth' })
-                    }}
-                  >
-                    Change Plan
-                  </Button>
-                </div>
-              </div>
-            )}
+            {/* RIGHT CONTENT - Step Forms */}
+            <div className="flex-1 flex flex-col relative">
+              {/* Close button */}
+              <button
+                type="button"
+                onClick={closeWizardDialog}
+                className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors z-10"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
 
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="whatsapp-number" className="text-sm font-medium">
-                  WhatsApp Number <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="whatsapp-number"
-                  type="text"
-                  placeholder="+34612345678"
-                  value={newPhoneNumber}
-                  onChange={(e) => handleWhatsAppChange(e.target.value)}
-                  className={`mt-1.5 ${validationErrors.whatsapp ? 'border-red-500 focus:ring-red-500' : ''}`}
-                  autoComplete="off"
-                />
-                {validationErrors.whatsapp && (
-                  <p className="text-xs text-red-500 mt-1">{validationErrors.whatsapp}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="channel-alias" className="text-sm font-medium">
-                  Alias <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="channel-alias"
-                  type="text"
-                  placeholder="My Business Name"
-                  value={alias}
-                  onChange={(e) => setAlias(e.target.value)}
-                  className="mt-1.5"
-                  autoComplete="off"
-                />
-                <p className="text-xs text-gray-500 mt-1">This name will be used in the welcome message</p>
-              </div>
-
-              <div>
-                <Label htmlFor="welcome-message" className="text-sm font-medium">
-                  Welcome Message
-                </Label>
-                <Textarea
-                  id="welcome-message"
-                  placeholder="Enter your welcome message..."
-                  value={welcomeMessage}
-                  onChange={(e) => {
-                    setWelcomeMessage(e.target.value)
-                    setIsWelcomeMessageManuallyEdited(true)
-                  }}
-                  className="mt-1.5 min-h-[80px] resize-none"
-                  rows={3}
-                />
-                <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                  <span className="inline-block w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                  AI will automatically translate this message to the customer's language
-                </p>
-              </div>
-
-              {/* Admin email info (auto-filled from logged user) */}
-              {userEmail && (
-                <div className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
-                  📧 Admin email: <span className="font-medium text-gray-700">{userEmail}</span>
+              {/* Error message for channel limit */}
+              {channelLimitError && (
+                <div className="m-6 mb-0 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3">
+                  <Crown className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-amber-800">Upgrade Required</p>
+                    <p className="text-sm text-amber-700 mt-1">
+                      {errorMessage || "You've reached your channel limit. Upgrade your plan to add more channels."}
+                    </p>
+                    <Button
+                      size="sm"
+                      className="mt-2 bg-amber-600 hover:bg-amber-700"
+                      onClick={() => {
+                        closeWizardDialog()
+                        document.querySelector('[class*="Subscription"]')?.scrollIntoView({ behavior: 'smooth' })
+                      }}
+                    >
+                      Change Plan
+                    </Button>
+                  </div>
                 </div>
               )}
 
-              <div className="flex justify-end gap-3 pt-4 border-t mt-6">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    const dialog = document.getElementById(
-                      "type-selection-dialog"
-                    ) as HTMLDialogElement
-                    if (dialog) dialog.close()
-                    // Reset form
-                    setNewPhoneNumber("")
-                    setAlias("")
-                    setWelcomeMessage("")
-                    setIsWelcomeMessageManuallyEdited(false)
-                    setChannelLimitError(false)
-                    setErrorMessage("")
-                    setValidationErrors({})
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleCreateWorkspace}
-                  className="bg-green-600 hover:bg-green-700"
-                  disabled={
-                    !selectedType || 
-                    !newPhoneNumber.trim() || 
-                    !alias.trim() || 
-                    !userEmail ||
-                    !!validationErrors.whatsapp ||
-                    isLoading
-                  }
-                >
-                  {isLoading ? "Creating..." : "Create Channel"}
-                </Button>
+              {/* Step Content */}
+              <div className="flex-1 p-6 overflow-y-auto">
+                {/* STEP 1: Channel Details */}
+                {wizardStep === 1 && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Channel Details</h3>
+                      <p className="text-sm text-gray-500 mt-1">Basic information about your WhatsApp channel</p>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="wizard-whatsapp" className="text-sm font-medium">
+                          WhatsApp Number <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="wizard-whatsapp"
+                          type="text"
+                          placeholder="+34612345678"
+                          value={wizardData.whatsappNumber}
+                          onChange={(e) => {
+                            updateWizardData('whatsappNumber', e.target.value)
+                            if (e.target.value && !validateWhatsAppNumber(e.target.value)) {
+                              setValidationErrors(prev => ({ ...prev, whatsapp: 'Invalid format. Use +1234567890' }))
+                            } else {
+                              setValidationErrors(prev => ({ ...prev, whatsapp: undefined }))
+                            }
+                          }}
+                          className={`mt-1.5 ${validationErrors.whatsapp ? 'border-red-500 focus:ring-red-500' : ''}`}
+                        />
+                        {validationErrors.whatsapp && (
+                          <p className="text-xs text-red-500 mt-1">{validationErrors.whatsapp}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <Label htmlFor="wizard-alias" className="text-sm font-medium">
+                          Business Name / Alias <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="wizard-alias"
+                          type="text"
+                          placeholder="My Business Name"
+                          value={wizardData.alias}
+                          onChange={(e) => updateWizardData('alias', e.target.value)}
+                          className="mt-1.5"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">This name will identify your channel</p>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="wizard-email" className="text-sm font-medium">
+                          Admin Email <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="wizard-email"
+                          type="email"
+                          placeholder="admin@yourbusiness.com"
+                          value={wizardData.email || userEmail}
+                          onChange={(e) => updateWizardData('email', e.target.value)}
+                          className="mt-1.5"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="wizard-website" className="text-sm font-medium">
+                          Website URL <span className="text-gray-400">(optional)</span>
+                        </Label>
+                        <Input
+                          id="wizard-website"
+                          type="url"
+                          placeholder="https://yourbusiness.com"
+                          value={wizardData.website}
+                          onChange={(e) => updateWizardData('website', e.target.value)}
+                          className="mt-1.5"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 2: E-commerce */}
+                {wizardStep === 2 && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">E-commerce Integration</h3>
+                      <p className="text-sm text-gray-500 mt-1">What do you want to sell through WhatsApp?</p>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {/* Sells Products & Services option */}
+                      <div 
+                        className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
+                          wizardData.sellsProductsAndServices 
+                            ? 'border-green-500 bg-green-50' 
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        onClick={() => updateWizardData('sellsProductsAndServices', true)}
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className={`p-3 rounded-lg ${wizardData.sellsProductsAndServices ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                            <Store className="w-6 h-6" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900">Yes, I sell products & services</h4>
+                            <p className="text-sm text-gray-500 mt-1">
+                              Enable product/service catalog, shopping cart, and order management
+                            </p>
+                          </div>
+                          {wizardData.sellsProductsAndServices && (
+                            <Check className="w-5 h-5 text-green-500" />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Support only option */}
+                      <div 
+                        className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
+                          !wizardData.sellsProductsAndServices
+                            ? 'border-green-500 bg-green-50' 
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        onClick={() => updateWizardData('sellsProductsAndServices', false)}
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className={`p-3 rounded-lg ${!wizardData.sellsProductsAndServices ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                            <MessageSquare className="w-6 h-6" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900">No, just customer support</h4>
+                            <p className="text-sm text-gray-500 mt-1">
+                              Use WhatsApp for customer inquiries and support only
+                            </p>
+                          </div>
+                          {!wizardData.sellsProductsAndServices && (
+                            <Check className="w-5 h-5 text-green-500" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 3: Sales Agents (only if selling products) */}
+                {wizardStep === 3 && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Sales Team</h3>
+                      <p className="text-sm text-gray-500 mt-1">Do you have sales agents who handle customer requests?</p>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div 
+                        className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
+                          wizardData.hasSalesAgents 
+                            ? 'border-green-500 bg-green-50' 
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        onClick={() => updateWizardData('hasSalesAgents', true)}
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className={`p-3 rounded-lg ${wizardData.hasSalesAgents ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                            <Users className="w-6 h-6" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900">Yes, I have sales agents</h4>
+                            <p className="text-sm text-gray-500 mt-1">
+                              Enable agent assignment
+                            </p>
+                          </div>
+                          {wizardData.hasSalesAgents && (
+                            <Check className="w-5 h-5 text-green-500" />
+                          )}
+                        </div>
+                      </div>
+
+                      <div 
+                        className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
+                          !wizardData.hasSalesAgents 
+                            ? 'border-green-500 bg-green-50' 
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        onClick={() => updateWizardData('hasSalesAgents', false)}
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className={`p-3 rounded-lg ${!wizardData.hasSalesAgents ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                            <Bot className="w-6 h-6" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900">No, AI handles everything</h4>
+                            <p className="text-sm text-gray-500 mt-1">
+                              The AI chatbot will manage all sales conversations
+                            </p>
+                          </div>
+                          {!wizardData.hasSalesAgents && (
+                            <Check className="w-5 h-5 text-green-500" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Suppliers Toggle */}
+                    <div className="pt-4 border-t">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">Suppliers</h3>
+                        <p className="text-sm text-gray-500 mt-1">Do you manage suppliers for your products?</p>
+                      </div>
+                      
+                      <div className="space-y-4 mt-4">
+                        <div 
+                          className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                            wizardData.hasSuppliers 
+                              ? 'border-green-500 bg-green-50' 
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                          onClick={() => updateWizardData('hasSuppliers', !wizardData.hasSuppliers)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className={`p-2 rounded-lg ${wizardData.hasSuppliers ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                                <Store className="w-5 h-5" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-900">Enable Suppliers Management</h4>
+                                <p className="text-sm text-gray-500">Track and manage product suppliers</p>
+                              </div>
+                            </div>
+                            {wizardData.hasSuppliers && (
+                              <Check className="w-5 h-5 text-green-500" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 4: Human Support */}
+                {wizardStep === 4 && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Human Support</h3>
+                      <p className="text-sm text-gray-500 mt-1">Allow customers to request a human operator?</p>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div 
+                        className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
+                          wizardData.hasHumanSupport 
+                            ? 'border-green-500 bg-green-50' 
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        onClick={() => updateWizardData('hasHumanSupport', true)}
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className={`p-3 rounded-lg ${wizardData.hasHumanSupport ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                            <Headphones className="w-6 h-6" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900">Yes, enable human handoff</h4>
+                            <p className="text-sm text-gray-500 mt-1">
+                              Customers can request to speak with a human operator when needed
+                            </p>
+                          </div>
+                          {wizardData.hasHumanSupport && (
+                            <Check className="w-5 h-5 text-green-500" />
+                          )}
+                        </div>
+                      </div>
+
+                      <div 
+                        className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
+                          !wizardData.hasHumanSupport 
+                            ? 'border-green-500 bg-green-50' 
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        onClick={() => updateWizardData('hasHumanSupport', false)}
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className={`p-3 rounded-lg ${!wizardData.hasHumanSupport ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                            <Bot className="w-6 h-6" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900">No, AI only</h4>
+                            <p className="text-sm text-gray-500 mt-1">
+                              The AI will handle all conversations without human intervention
+                            </p>
+                          </div>
+                          {!wizardData.hasHumanSupport && (
+                            <Check className="w-5 h-5 text-green-500" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 5: Contact Method (only if Human Support enabled) */}
+                {wizardStep === 5 && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Contact Method</h3>
+                      <p className="text-sm text-gray-500 mt-1">How should we contact the operator when a customer requests human support?</p>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div
+                        className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
+                          wizardData.operatorContactMethod === 'email'
+                            ? 'border-green-500 bg-green-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        onClick={() => updateWizardData('operatorContactMethod', 'email')}
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className={`p-3 rounded-lg ${wizardData.operatorContactMethod === 'email' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                            <Mail className="w-6 h-6" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900">Email</h4>
+                            <p className="text-sm text-gray-500 mt-1">
+                              Send notification to admin email when customer requests human support
+                            </p>
+                          </div>
+                          {wizardData.operatorContactMethod === 'email' && (
+                            <Check className="w-5 h-5 text-green-500" />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* WhatsApp option - always visible */}
+                      <div
+                        className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
+                          wizardData.operatorContactMethod === 'whatsapp'
+                            ? 'border-green-500 bg-green-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        onClick={() => updateWizardData('operatorContactMethod', 'whatsapp')}
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className={`p-3 rounded-lg ${wizardData.operatorContactMethod === 'whatsapp' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                            <Smartphone className="w-6 h-6" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900">WhatsApp</h4>
+                            <p className="text-sm text-gray-500 mt-1">
+                              {wizardData.hasSalesAgents 
+                                ? "Forward conversation to the assigned sales agent's WhatsApp"
+                                : "Forward conversation to operator's WhatsApp number"
+                              }
+                            </p>
+                          </div>
+                          {wizardData.operatorContactMethod === 'whatsapp' && (
+                            <Check className="w-5 h-5 text-green-500" />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Info note when sales agents are enabled */}
+                      {wizardData.hasSalesAgents && (
+                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <p className="text-sm text-blue-700">
+                            💡 Requests will be forwarded to the assigned sales agent's contact (email or WhatsApp).
+                          </p>
+                        </div>
+                      )}
+
+                      {/* WhatsApp number input - shown when whatsapp selected AND no sales agents */}
+                      {wizardData.operatorContactMethod === 'whatsapp' && !wizardData.hasSalesAgents && (
+                        <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+                          <Label htmlFor="wizard-operator-whatsapp" className="text-sm font-medium text-gray-700">
+                            Operator WhatsApp Number <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            id="wizard-operator-whatsapp"
+                            type="text"
+                            placeholder="+34612345678"
+                            value={wizardData.operatorWhatsappNumber}
+                            onChange={(e) => updateWizardData('operatorWhatsappNumber', e.target.value)}
+                            className="mt-1.5"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">The WhatsApp number where operator requests will be forwarded</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 6: Tone of Voice */}
+                {wizardStep === 6 && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Tone of Voice</h3>
+                      <p className="text-sm text-gray-500 mt-1">How should the chatbot communicate with customers?</p>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      {[
+                        { value: 'friendly', label: 'Friendly', emoji: '😊', desc: 'Warm, approachable, uses emojis' },
+                        { value: 'professional', label: 'Professional', emoji: '💼', desc: 'Polite, business-like, clear' },
+                        { value: 'formal', label: 'Formal', emoji: '🎩', desc: 'Respectful, traditional, courteous' },
+                        { value: 'casual', label: 'Casual', emoji: '✌️', desc: 'Relaxed, conversational, fun' },
+                      ].map((tone) => (
+                        <div
+                          key={tone.value}
+                          className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                            wizardData.toneOfVoice === tone.value
+                              ? 'border-green-500 bg-green-50'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                          onClick={() => updateWizardData('toneOfVoice', tone.value as WizardFormData['toneOfVoice'])}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl">{tone.emoji}</span>
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-gray-900">{tone.label}</h4>
+                              <p className="text-xs text-gray-500">{tone.desc}</p>
+                            </div>
+                            {wizardData.toneOfVoice === tone.value && (
+                              <Check className="w-5 h-5 text-green-500" />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Preview */}
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <p className="text-xs font-medium text-gray-600 mb-2">Example response:</p>
+                      <p className="text-sm text-gray-800 italic">
+                        {wizardData.toneOfVoice === 'friendly' && '"Hey there! 👋 Great to hear from you! How can I help you today?"'}
+                        {wizardData.toneOfVoice === 'professional' && '"Good day. Thank you for contacting us. How may I assist you?"'}
+                        {wizardData.toneOfVoice === 'formal' && '"Good afternoon. It is my pleasure to assist you. How may I be of service?"'}
+                        {wizardData.toneOfVoice === 'casual' && '"Hey! What\'s up? Need any help finding something cool?"'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 7: Bot Identity */}
+                {wizardStep === 7 && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Bot Identity</h3>
+                      <p className="text-sm text-gray-500 mt-1">When a customer asks "Who are you?", how should the bot respond?</p>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="wizard-identity" className="text-sm font-medium">
+                        Bot's self-introduction <span className="text-red-500">*</span>
+                      </Label>
+                      <Textarea
+                        id="wizard-identity"
+                        placeholder={`E.g., "I'm Sofia, the virtual assistant for ${wizardData.alias || 'your business'}. I can help you browse our products, answer questions, and place orders."`}
+                        value={wizardData.botIdentityResponse}
+                        onChange={(e) => updateWizardData('botIdentityResponse', e.target.value)}
+                        className="mt-1.5 min-h-[150px]"
+                        rows={6}
+                      />
+                      <p className="text-xs text-gray-500 mt-2">
+                        💡 Tip: Include the bot's name, what it can help with, and your business name
+                      </p>
+                    </div>
+
+                    {/* Quick suggestions */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-gray-600">Quick templates:</p>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded-full text-gray-700 transition-colors"
+                          onClick={() => updateWizardData('botIdentityResponse', `I'm Sofia, the AI assistant for ${wizardData.alias || 'our store'}. I can help you discover our products, answer your questions, check order status, and assist with purchases. How can I help you today?`)}
+                        >
+                          🛒 E-commerce assistant
+                        </button>
+                        <button
+                          type="button"
+                          className="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded-full text-gray-700 transition-colors"
+                          onClick={() => updateWizardData('botIdentityResponse', `Hi! I'm the virtual assistant for ${wizardData.alias || 'our company'}. I'm here to help answer your questions and provide information about our services. Feel free to ask me anything!`)}
+                        >
+                          💬 Support assistant
+                        </button>
+                        <button
+                          type="button"
+                          className="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded-full text-gray-700 transition-colors"
+                          onClick={() => updateWizardData('botIdentityResponse', `Hello! I'm your personal shopping assistant at ${wizardData.alias || 'our store'}. I know everything about our Italian gourmet products and I'm happy to help you find exactly what you're looking for. What would you like to explore today?`)}
+                        >
+                          🇮🇹 Gourmet specialist
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 8: FAQs */}
+                {wizardStep === 8 && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Frequently Asked Questions</h3>
+                      <p className="text-sm text-gray-500 mt-1">Add common questions and answers for your customers</p>
+                    </div>
+
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-700">
+                        💡 <strong>Tip:</strong> You can edit these FAQs anytime after creating your channel in the Settings page.
+                      </p>
+                    </div>
+
+                    <div className="space-y-4">
+                      {wizardData.faqs.map((faq, index) => (
+                        <div key={index} className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <Label className="text-sm font-medium text-gray-700">
+                                Question {index + 1}
+                              </Label>
+                              <Input
+                                value={faq.question}
+                                onChange={(e) => {
+                                  const newFaqs = [...wizardData.faqs]
+                                  newFaqs[index] = { ...newFaqs[index], question: e.target.value }
+                                  updateWizardData('faqs', newFaqs)
+                                }}
+                                placeholder="Enter a common question..."
+                                className="mt-1"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newFaqs = wizardData.faqs.filter((_, i) => i !== index)
+                                updateWizardData('faqs', newFaqs)
+                              }}
+                              className="mt-6 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Remove FAQ"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                          <div>
+                            <Label className="text-sm font-medium text-gray-700">
+                              Answer
+                            </Label>
+                            <Textarea
+                              value={faq.answer}
+                              onChange={(e) => {
+                                const newFaqs = [...wizardData.faqs]
+                                newFaqs[index] = { ...newFaqs[index], answer: e.target.value }
+                                updateWizardData('faqs', newFaqs)
+                              }}
+                              placeholder="Provide the answer..."
+                              className="mt-1 min-h-[60px]"
+                              rows={2}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Add FAQ button */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        updateWizardData('faqs', [...wizardData.faqs, { question: '', answer: '' }])
+                      }}
+                      className="w-full gap-2 border-dashed"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add FAQ
+                    </Button>
+
+                    <p className="text-xs text-gray-500 text-center">
+                      Default FAQs are provided as suggestions. Feel free to modify or remove them.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer with navigation */}
+              <div className="p-6 border-t bg-gray-50 flex items-center justify-end">
+                <div className="flex items-center gap-3">
+                  {wizardStep > 1 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handlePrevStep}
+                      className="gap-2"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      Back
+                    </Button>
+                  )}
+                  
+                  {wizardStep < 8 ? (
+                    <Button
+                      onClick={handleNextStep}
+                      disabled={!validateCurrentStep()}
+                      className="bg-green-600 hover:bg-green-700 gap-2"
+                    >
+                      Next
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleCreateWorkspace}
+                      disabled={isLoading || !validateCurrentStep()}
+                      className="bg-green-600 hover:bg-green-700 gap-2"
+                    >
+                      {isLoading ? "Creating..." : "Create Channel"}
+                      {!isLoading && <Check className="w-4 h-4" />}
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </dialog>
-        )}
 
         {/* Subscription & Billing + Usage Limits Row - ONLY for Owner (SUPER_ADMIN) */}
         {firstWorkspaceId && !isRoleLoading && isSuperAdmin && (
@@ -965,6 +1851,58 @@ export function WorkspaceSelectionPage() {
         )}
       </div>
       
+      {/* Logo Upload Dialog */}
+      {logoDialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-2xl shadow-2xl w-[500px] max-w-[95vw] relative">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Update Channel Logo</h3>
+                <button
+                  onClick={() => {
+                    setLogoDialogOpen(false)
+                    setLogoFile(null)
+                    setSelectedWorkspaceForLogo(null)
+                  }}
+                  className="p-2 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <ImageCropUpload
+                onImageSelected={setLogoFile}
+                currentImageUrl={workspaces.find(w => w.id === selectedWorkspaceForLogo)?.logoUrl}
+                label="Channel Logo"
+                circularCrop={true}
+                size="xl"
+                placeholder="logo"
+              />
+
+              <div className="flex justify-end gap-3 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setLogoDialogOpen(false)
+                    setLogoFile(null)
+                    setSelectedWorkspaceForLogo(null)
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleLogoUpload}
+                  disabled={!logoFile || uploadingLogo}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {uploadingLogo ? 'Uploading...' : 'Save Logo'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
       <footer className="mt-16 pb-8 text-center text-sm text-gray-500">
         <p>© 2025 eChatbot. All rights reserved.</p>

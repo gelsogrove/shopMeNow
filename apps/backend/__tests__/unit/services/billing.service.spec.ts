@@ -37,6 +37,11 @@ const mockPrisma = {
   user: {
     update: jest.fn(),
   },
+  // 🔒 Mock $transaction for atomic operations
+  $transaction: jest.fn(async (callback: (tx: typeof mockPrisma) => Promise<any>) => {
+    // Execute the callback with the mock prisma as transaction client
+    return callback(mockPrisma)
+  }),
 }
 
 // Mock PricingRepository

@@ -80,7 +80,7 @@ export interface ResetCartResult {
  * });
  * // result: { success: true, message: "Ho svuotato il carrello...", itemsRemoved: 3 }
  */
-export async function ResetCart(
+export async function resetCart(
   request: ResetCartRequest
 ): Promise<ResetCartResult> {
   const timestamp = new Date().toISOString()

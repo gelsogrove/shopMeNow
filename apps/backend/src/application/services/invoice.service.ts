@@ -42,15 +42,19 @@ interface InvoiceData {
   updatedAt: Date
 }
 
-// Plan monthly fees (should come from PlanConfiguration table)
-const PLAN_FEES: Record<string, number> = {
-  FREE_TRIAL: 0,
-  BASIC: 29,
-  PREMIUM: 49,
-  ENTERPRISE: 99,
-}
-
 export class InvoiceService {
+  /**
+   * Get plan monthly fee from database (PlanConfiguration table)
+   * NO HARDCODED VALUES - everything from database
+   */
+  private async getPlanMonthlyFee(planType: string): Promise<number> {
+    const planConfig = await prisma.planConfiguration.findUnique({
+      where: { planType: planType as any },
+      select: { monthlyFee: true },
+    })
+    return planConfig ? Number(planConfig.monthlyFee) : 0
+  }
+
   /**
    * Get or create the current month's draft invoice for an owner
    */
@@ -81,6 +85,9 @@ export class InvoiceService {
         throw new Error('User not found')
       }
       
+      // Get plan monthly fee from database (NO HARDCODED VALUES)
+      const monthlyFee = await this.getPlanMonthlyFee(user.planType)
+      
       // Calculate period dates
       const periodStart = new Date(periodYear, periodMonth - 1, 1, 0, 0, 0)
       const periodEnd = new Date(periodYear, periodMonth, 0, 23, 59, 59) // Last day of month
@@ -93,10 +100,10 @@ export class InvoiceService {
           periodEnd,
           periodMonth,
           periodYear,
-          subscriptionAmount: PLAN_FEES[user.planType] || 0,
+          subscriptionAmount: monthlyFee,
           creditUsage: 0,
           creditDebt: 0,
-          totalAmount: PLAN_FEES[user.planType] || 0,
+          totalAmount: monthlyFee,
           status: 'DRAFT',
           planType: user.planType,
           itemsBreakdown: {

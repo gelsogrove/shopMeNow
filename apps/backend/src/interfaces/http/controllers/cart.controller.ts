@@ -1192,86 +1192,87 @@ export class CartController {
         orderCode += letters.charAt(Math.floor(Math.random() * letters.length))
       }
 
-      // Create order
-      const order = await prisma.orders.create({
-        data: {
-          orderCode,
-          customerId: cart.customerId,
-          workspaceId: validation.data.workspaceId,
-          totalAmount: totalAmount,
-          status: "PENDING",
-          paymentMethod: paymentMethod as any,
-          shippingAddress: shippingAddress || cart.customer.address,
-          items: {
-            create: cart.items.map((item) => {
-              // Handle PRODUCT items
-              if (item.itemType === "PRODUCT") {
-                if (!item.product) {
-                  logger.warn(
-                    `⚠️ Cart item ${item.id} has missing product (productId: ${item.productId})`
-                  )
+      // 🔒 TRANSACTION: Ensure order creation, customer update, and cart clearing are atomic
+      // Prevents: duplicate orders if cart clear fails, orphan orders if customer update crashes
+      const order = await prisma.$transaction(async (tx) => {
+        // 1️⃣ Create order with items
+        const newOrder = await tx.orders.create({
+          data: {
+            orderCode,
+            customerId: cart.customerId,
+            workspaceId: validation.data.workspaceId,
+            totalAmount: totalAmount,
+            status: "PENDING",
+            paymentMethod: paymentMethod as any,
+            shippingAddress: shippingAddress || cart.customer.address,
+            items: {
+              create: cart.items.map((item) => {
+                // Handle PRODUCT items
+                if (item.itemType === "PRODUCT") {
+                  if (!item.product) {
+                    logger.warn(
+                      `⚠️ Cart item ${item.id} has missing product (productId: ${item.productId})`
+                    )
+                    return {
+                      itemType: "PRODUCT",
+                      productId: item.productId,
+                      quantity: item.quantity,
+                      unitPrice: 0,
+                      totalPrice: 0,
+                    }
+                  }
                   return {
                     itemType: "PRODUCT",
                     productId: item.productId,
                     quantity: item.quantity,
-                    unitPrice: 0,
-                    totalPrice: 0,
+                    unitPrice: item.product.price || 0,
+                    totalPrice: (item.product.price || 0) * item.quantity,
                   }
                 }
-                return {
-                  itemType: "PRODUCT",
-                  productId: item.productId,
-                  quantity: item.quantity,
-                  unitPrice: item.product.price || 0,
-                  totalPrice: (item.product.price || 0) * item.quantity,
-                }
-              }
 
-              // Handle SERVICE items
-              if (item.itemType === "SERVICE") {
-                if (!item.service) {
-                  logger.warn(
-                    `⚠️ Cart item ${item.id} has missing service (serviceId: ${item.serviceId})`
-                  )
+                // Handle SERVICE items
+                if (item.itemType === "SERVICE") {
+                  if (!item.service) {
+                    logger.warn(
+                      `⚠️ Cart item ${item.id} has missing service (serviceId: ${item.serviceId})`
+                    )
+                    return {
+                      itemType: "SERVICE",
+                      serviceId: item.serviceId,
+                      quantity: item.quantity,
+                      unitPrice: 0,
+                      totalPrice: 0,
+                    }
+                  }
                   return {
                     itemType: "SERVICE",
                     serviceId: item.serviceId,
                     quantity: item.quantity,
-                    unitPrice: 0,
-                    totalPrice: 0,
+                    unitPrice: item.service.price || 0,
+                    totalPrice: (item.service.price || 0) * item.quantity,
                   }
                 }
+
+                // Fallback for unknown item types
+                logger.warn(
+                  `⚠️ Cart item ${item.id} has unknown itemType: ${item.itemType}`
+                )
                 return {
-                  itemType: "SERVICE",
-                  serviceId: item.serviceId,
+                  itemType: "PRODUCT",
+                  productId: item.productId,
                   quantity: item.quantity,
-                  unitPrice: item.service.price || 0,
-                  totalPrice: (item.service.price || 0) * item.quantity,
+                  unitPrice: 0,
+                  totalPrice: 0,
                 }
-              }
-
-              // Fallback for unknown item types
-              logger.warn(
-                `⚠️ Cart item ${item.id} has unknown itemType: ${item.itemType}`
-              )
-              return {
-                itemType: "PRODUCT",
-                productId: item.productId,
-                quantity: item.quantity,
-                unitPrice: 0,
-                totalPrice: 0,
-              }
-            }),
+              }),
+            },
           },
-        },
-        include: {
-          items: true,
-        },
-      })
+          include: {
+            items: true,
+          },
+        })
 
-      // 🎯 TASK: Auto-update customer address in database
-      try {
-        // Validate shipping address fields if provided
+        // 2️⃣ Auto-update customer address in database (within transaction)
         const hasValidShippingAddress =
           shippingAddress &&
           shippingAddress.firstName &&
@@ -1292,8 +1293,7 @@ export class CartController {
             phone: shippingAddress.phone || cart.customer.phone || "",
           }
 
-          // Update customer address in database
-          await prisma.customers.update({
+          await tx.customers.update({
             where: {
               id: cart.customerId,
               workspaceId: validation.data.workspaceId,
@@ -1313,17 +1313,13 @@ export class CartController {
             `[CART] No valid shipping address provided for customer ${cart.customerId}, using existing address`
           )
         }
-      } catch (addressUpdateError) {
-        // Don't fail the order if address update fails
-        logger.error(
-          `[CART] Failed to auto-update customer address for ${cart.customerId}:`,
-          addressUpdateError
-        )
-      }
 
-      // Clear cart
-      await prisma.cartItems.deleteMany({
-        where: { cartId: cart.id },
+        // 3️⃣ Clear cart items (within transaction)
+        await tx.cartItems.deleteMany({
+          where: { cartId: cart.id },
+        })
+
+        return newOrder
       })
 
       // Invalidate token (optional since user might want to create new orders)

@@ -68,7 +68,7 @@ jest.mock("@echatbot/database", () => ({
 }))
 
 // Import after mocks
-import { ConfirmOrder, ConfirmOrderRequest } from "../../../src/domain/calling-functions/ConfirmOrder"
+import { confirmOrder, ConfirmOrderRequest } from "../../../src/domain/calling-functions/confirmOrder"
 import { EmailService } from "../../../src/application/services/email.service"
 import logger from "../../../src/utils/logger"
 
@@ -133,7 +133,7 @@ describe("Order Email Notifications", () => {
     mockPrisma.sales.findUnique.mockResolvedValue(mockSalesAgent)
     mockPrisma.workspace.findUnique.mockResolvedValue({
       id: workspaceId,
-      name: "Bell'Italia Foods",
+      name: "BellItalia Foods",
     })
     mockPrisma.products.findMany.mockResolvedValue([
       {
@@ -154,7 +154,7 @@ describe("Order Email Notifications", () => {
         workspaceId,
       }
 
-      const result = await ConfirmOrder(request)
+      const result = await confirmOrder(request)
 
       expect(result.success).toBe(true)
       expect(mockEmailService.sendOperatorNotificationEmail).toHaveBeenCalledTimes(1)
@@ -166,7 +166,7 @@ describe("Order Email Notifications", () => {
         workspaceId,
       }
 
-      await ConfirmOrder(request)
+      await confirmOrder(request)
 
       expect(mockEmailService.sendOperatorNotificationEmail).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -181,7 +181,7 @@ describe("Order Email Notifications", () => {
         workspaceId,
       }
 
-      await ConfirmOrder(request)
+      await confirmOrder(request)
 
       expect(mockEmailService.sendOperatorNotificationEmail).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -196,7 +196,7 @@ describe("Order Email Notifications", () => {
         workspaceId,
       }
 
-      await ConfirmOrder(request)
+      await confirmOrder(request)
 
       expect(mockEmailService.sendOperatorNotificationEmail).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -211,11 +211,11 @@ describe("Order Email Notifications", () => {
         workspaceId,
       }
 
-      await ConfirmOrder(request)
+      await confirmOrder(request)
 
       expect(mockEmailService.sendOperatorNotificationEmail).toHaveBeenCalledWith(
         expect.objectContaining({
-          workspaceName: "Bell'Italia Foods",
+          workspaceName: "BellItalia Foods",
         })
       )
     })
@@ -226,7 +226,7 @@ describe("Order Email Notifications", () => {
         workspaceId,
       }
 
-      await ConfirmOrder(request)
+      await confirmOrder(request)
 
       expect(mockEmailService.sendOperatorNotificationEmail).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -243,7 +243,7 @@ describe("Order Email Notifications", () => {
         workspaceId,
       }
 
-      await ConfirmOrder(request)
+      await confirmOrder(request)
 
       expect(logger.info).toHaveBeenCalledWith(
         expect.stringContaining("New order notification email sent"),
@@ -266,7 +266,7 @@ describe("Order Email Notifications", () => {
         workspaceId,
       }
 
-      const result = await ConfirmOrder(request)
+      const result = await confirmOrder(request)
 
       expect(result.success).toBe(true)
       expect(mockEmailService.sendOperatorNotificationEmail).not.toHaveBeenCalled()
@@ -285,7 +285,7 @@ describe("Order Email Notifications", () => {
         workspaceId,
       }
 
-      await ConfirmOrder(request)
+      await confirmOrder(request)
 
       expect(logger.info).toHaveBeenCalledWith(
         expect.stringContaining("Sales agent has no email")
@@ -305,7 +305,7 @@ describe("Order Email Notifications", () => {
         workspaceId,
       }
 
-      const result = await ConfirmOrder(request)
+      const result = await confirmOrder(request)
 
       expect(result.success).toBe(true)
       expect(mockPrisma.sales.findUnique).not.toHaveBeenCalled()
@@ -324,7 +324,7 @@ describe("Order Email Notifications", () => {
         workspaceId,
       }
 
-      const result = await ConfirmOrder(request)
+      const result = await confirmOrder(request)
 
       // Order should still be successful
       expect(result.success).toBe(true)
@@ -339,7 +339,7 @@ describe("Order Email Notifications", () => {
         workspaceId,
       }
 
-      await ConfirmOrder(request)
+      await confirmOrder(request)
 
       expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining("Failed to send new order notification email")
@@ -356,7 +356,7 @@ describe("Order Email Notifications", () => {
         workspaceId,
       }
 
-      await ConfirmOrder(request)
+      await confirmOrder(request)
 
       expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining("Failed to send new order notification"),
@@ -372,7 +372,7 @@ describe("Order Email Notifications", () => {
         workspaceId,
       }
 
-      await ConfirmOrder(request)
+      await confirmOrder(request)
 
       expect(mockPrisma.customers.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -390,7 +390,7 @@ describe("Order Email Notifications", () => {
         workspaceId,
       }
 
-      await ConfirmOrder(request)
+      await confirmOrder(request)
 
       expect(mockPrisma.carts.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -408,7 +408,7 @@ describe("Order Email Notifications", () => {
         workspaceId,
       }
 
-      await ConfirmOrder(request)
+      await confirmOrder(request)
 
       expect(mockPrisma.orders.create).toHaveBeenCalledWith(
         expect.objectContaining({

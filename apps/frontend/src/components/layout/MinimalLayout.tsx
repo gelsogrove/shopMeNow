@@ -7,9 +7,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { logger } from "@/lib/logger"
-import { workspaceApi } from "@/services/workspaceApi"
-import { ArrowLeft, LogOut, User, Radio, CreditCard, Crown } from "lucide-react"
+import { ArrowLeft, LogOut, User, CreditCard, Crown, Bot, BarChart3, MessageSquare, History, Users, HelpCircle, Package, Briefcase, Tag, Truck, UserCog, ShoppingCart, Megaphone, Settings, ListTodo } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Outlet, useNavigate, useLocation } from "react-router-dom"
 
@@ -26,16 +26,25 @@ export function MinimalLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   
+  // Get workspace from context (reactive to changes)
+  const { workspace } = useWorkspace()
+  
   // User profile state
   const [userName, setUserName] = useState<string>("")
   const [userEmail, setUserEmail] = useState<string>("")
   const [userInitials, setUserInitials] = useState<string>("U")
   const [profilePicture, setProfilePicture] = useState<string | null>(null)
   const [imageError, setImageError] = useState(false)
-  const [planType, setPlanType] = useState<string>("FREE_TRIAL")
-  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null)
 
-  // Load user profile from localStorage and workspace for plan
+  // Derived from workspace context (reactive)
+  const planType = workspace?.planType || "FREE_TRIAL"
+  const trialEndsAt = workspace?.trialEndsAt || null
+  const workspaceName = workspace?.name || ""
+  const workspacePhone = workspace?.whatsappPhoneNumber || ""
+  const hasSalesAgents = workspace?.hasSalesAgents ?? false
+  const hasSuppliers = workspace?.hasSuppliers ?? false
+
+  // Load user profile from localStorage
   useEffect(() => {
     const cachedUser = localStorage.getItem("user")
     if (cachedUser) {
@@ -62,25 +71,7 @@ export function MinimalLayout() {
         logger.error("Error parsing user from localStorage:", error)
       }
     }
-    
-    // Load workspace to get plan type
-    loadWorkspacePlan()
   }, [])
-
-  const loadWorkspacePlan = async () => {
-    try {
-      const workspaces = await workspaceApi.getAll()
-      if (workspaces && workspaces.length > 0) {
-        // Use the FIRST workspace (consistent with WorkspaceSelectionPage)
-        const firstWs = workspaces[0]
-        
-        setPlanType(firstWs.planType || 'FREE_TRIAL')
-        setTrialEndsAt(firstWs.trialEndsAt || null)
-      }
-    } catch (error) {
-      logger.error("Error loading workspace plan:", error)
-    }
-  }
 
   const getPlanBadgeColor = (type: string) => {
     switch (type) {
@@ -124,17 +115,18 @@ export function MinimalLayout() {
     navigate("/workspace-selection")
   }
 
-  // Check if we're on the profile page
-  const isProfilePage = location.pathname === "/profile"
-  const isBillingPage = location.pathname === "/billing"
+  // Check if we're on user-level pages (no workspace context needed)
+  const isUserLevelPage = location.pathname === "/profile" || location.pathname === "/billing"
+  // Check if we're on chat page (needs minimal menu)
+  const isChatPage = location.pathname === "/chat"
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Left: Back button and Logo */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14">
+            {/* Left: Back button, Logo, and Channel Info */}
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
@@ -143,13 +135,24 @@ export function MinimalLayout() {
                 className="gap-2 text-gray-600 hover:text-gray-900"
               >
                 <ArrowLeft className="h-4 w-4" />
-                <span className="hidden sm:inline">Back to Channels</span>
+                <span className="hidden sm:inline">Back</span>
               </Button>
               
               <div className="h-6 w-px bg-gray-200" />
               
               <span className="text-xl font-bold text-green-600">eChatbot</span>
             </div>
+
+            {/* Center: Workspace Info (hidden on user-level pages) */}
+            {!isUserLevelPage && (workspaceName || workspacePhone) && (
+              <div className="flex items-center gap-2 text-sm text-gray-700">
+                {workspaceName && <span className="font-medium">{workspaceName}</span>}
+                {workspaceName && workspacePhone && <span>•</span>}
+                {workspacePhone && <span>{workspacePhone}</span>}
+              </div>
+            )}
+
+
 
             {/* Right: Plan Badge + User Menu */}
             <div className="flex items-center gap-3">
@@ -164,7 +167,7 @@ export function MinimalLayout() {
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="relative h-12 w-12 rounded-full focus:ring-2 focus:ring-green-500 focus:outline-none hover:scale-105 transition-transform p-0"
+                    className="relative h-10 w-10 rounded-full focus:ring-2 focus:ring-green-500 focus:outline-none hover:scale-105 transition-transform p-0"
                   >
                     {profilePicture && !imageError ? (
                       <img 
@@ -191,39 +194,135 @@ export function MinimalLayout() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="p-2 cursor-pointer"
-                  onClick={() => navigate("/workspace-selection")}
-                >
-                  <Radio className="mr-2 h-4 w-4 text-green-600" />
-                  <span>Your Channels</span>
-                </DropdownMenuItem>
-                {!isProfilePage && (
-                  <DropdownMenuItem
-                    className="p-2 cursor-pointer"
-                    onClick={() => navigate("/profile")}
-                  >
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                  </DropdownMenuItem>
+                {isUserLevelPage ? (
+                  /* User-level pages: Only Profile, Billing, Logout */
+                  <>
+                    <DropdownMenuItem
+                      className="p-2 cursor-pointer"
+                      onClick={() => navigate("/profile")}
+                    >
+                      <User className="mr-2 h-4 w-4 text-blue-500" />
+                      <span>Profile</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="p-2 cursor-pointer"
+                      onClick={() => navigate("/billing")}
+                    >
+                      <CreditCard className="mr-2 h-4 w-4 text-emerald-500" />
+                      <span>Billing</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="p-2 cursor-pointer text-red-600 focus:text-red-600"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  /* Workspace pages: Full menu */
+                  <>
+                    <DropdownMenuItem
+                      className="p-2 cursor-pointer"
+                      onClick={() => navigate("/workspace-selection")}
+                    >
+                      <MessageSquare className="mr-2 h-4 w-4 text-green-500" fill="currentColor" />
+                      <span>Your Channels</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/chat")}>
+                      <History className="mr-2 h-4 w-4 text-green-500" />
+                      <span>Chat History</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/clients")}>
+                      <Users className="mr-2 h-4 w-4 text-indigo-500" />
+                      <span>Clients</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/faq")}>
+                      <HelpCircle className="mr-2 h-4 w-4 text-amber-500" />
+                      <span>FAQ</span>
+                    </DropdownMenuItem>
+                    {workspace?.sellsProductsAndServices && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel>E-commerce</DropdownMenuLabel>
+                        <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/products")}>
+                          <Package className="mr-2 h-4 w-4 text-orange-500" />
+                          <span>Products</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/services")}>
+                          <Briefcase className="mr-2 h-4 w-4 text-cyan-500" />
+                          <span>Services</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/offers")}>
+                          <Tag className="mr-2 h-4 w-4 text-pink-500" />
+                          <span>Offers</span>
+                        </DropdownMenuItem>
+                        {hasSuppliers && (
+                          <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/suppliers")}>
+                            <Truck className="mr-2 h-4 w-4 text-teal-500" />
+                            <span>Suppliers</span>
+                          </DropdownMenuItem>
+                        )}
+                        {hasSalesAgents && (
+                          <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/sales")}>
+                            <UserCog className="mr-2 h-4 w-4 text-violet-500" />
+                            <span>Sales</span>
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/admin/orders")}>
+                          <ShoppingCart className="mr-2 h-4 w-4 text-emerald-500" />
+                          <span>Orders</span>
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/campaigns")}>
+                      <Megaphone className="mr-2 h-4 w-4 text-rose-500" />
+                      <span>Campaigns</span>
+                    </DropdownMenuItem>
+                    {workspace?.sellsProductsAndServices && (
+                      <DropdownMenuItem
+                        className="p-2 cursor-pointer"
+                        onClick={() => navigate("/analytics")}
+                      >
+                        <BarChart3 className="mr-2 h-4 w-4 text-purple-500" />
+                        <span>Analytics</span>
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="p-2 cursor-pointer"
+                      onClick={() => navigate("/agents")}
+                    >
+                      <Bot className="mr-2 h-4 w-4 text-blue-600" />
+                      <span>Agents Configuration</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="p-2 cursor-pointer"
+                      onClick={() => navigate("/settings")}
+                    >
+                      <Settings className="mr-2 h-4 w-4 text-gray-600" />
+                      <span>Settings</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="p-2 cursor-pointer"
+                      onClick={() => navigate("/queue")}
+                    >
+                      <ListTodo className="mr-2 h-4 w-4 text-green-600" />
+                      <span>WhatsApp Queue</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="p-2 cursor-pointer text-red-600 focus:text-red-600"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </>
                 )}
-                {!isBillingPage && (
-                  <DropdownMenuItem
-                    className="p-2 cursor-pointer"
-                    onClick={() => navigate("/billing")}
-                  >
-                    <CreditCard className="mr-2 h-4 w-4 text-green-600" />
-                    <span>Billing</span>
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="p-2 cursor-pointer text-red-600 focus:text-red-600"
-                  onClick={handleLogout}
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
               </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -232,12 +331,14 @@ export function MinimalLayout() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        <Outlet />
+      <main className="w-full py-8 px-4 sm:px-6 lg:px-8 flex-1">
+        <div className="max-w-7xl mx-auto w-full">
+          <Outlet />
+        </div>
       </main>
 
       {/* Footer */}
-      <footer className="mt-16 pb-8 text-center text-sm text-gray-500">
+      <footer className="py-4 text-center text-sm text-gray-500 border-t border-gray-200 bg-white">
         <p>© 2025 eChatbot. All rights reserved.</p>
       </footer>
     </div>

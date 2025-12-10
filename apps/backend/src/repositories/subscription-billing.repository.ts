@@ -81,18 +81,24 @@ export class SubscriptionBillingRepository {
 
     const creditBalance = Number(user.creditBalance)
 
-    // Calculate total recharges from user's transactions
+    // Calculate recharges for CURRENT month (from 1st of current month to now)
+    const now = new Date()
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    
     const rechargeSum = await this.prisma.billingTransaction.aggregate({
       where: {
         userId,
         type: 'RECHARGE',
         amount: { gt: 0 },
+        createdAt: {
+          gte: currentMonthStart,
+          lte: now,
+        },
       },
       _sum: { amount: true },
     })
     const totalRecharges = Number(rechargeSum._sum.amount || 0)
 
-    const now = new Date()
     const isTrialExpired =
       user.planType === "FREE_TRIAL" &&
       user.trialEndsAt !== null &&

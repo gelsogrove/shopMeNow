@@ -1,6 +1,7 @@
 import { prisma } from "@echatbot/database"
 import fs from "fs"
 import path from "path"
+import { TemplateEngineService } from "../application/services/prompt-builder/template-engine.service"
 import { MessageRepository } from "../repositories/message.repository"
 import logger from "../utils/logger"
 import { PromptValidationError } from "../utils/PromptValidationError"
@@ -9,16 +10,18 @@ import { PromptValidationError } from "../utils/PromptValidationError"
 
 export class PromptProcessorService {
   private messageRepository: MessageRepository
+  private templateEngine: TemplateEngineService
 
   constructor() {
     this.messageRepository = new MessageRepository()
+    this.templateEngine = new TemplateEngineService()
   }
 
   /**
    * Validate prompt variables to prevent duplicate large variables
    * Constitution v1.5.0 Principle III Compliance
    *
-   * MUST throw error if {{PRODUCTS}}, {{OFFERS}}, {{SERVICES}}, or {{CATEGORIES}}
+   * MUST throw error if {{products}}, {{offers}}, {{services}}, or {{categories}}
    * appear more than once in the same prompt (prevents 100k+ token prompts)
    *
    * STRATEGY: Only count variables that appear ALONE on a line (actual placeholders),
@@ -28,11 +31,11 @@ export class PromptProcessorService {
    * @throws PromptValidationError if duplicate large variables detected
    */
   private validatePromptVariables(prompt: string): void {
-    const largeVariables = ["PRODUCTS", "OFFERS", "SERVICES", "CATEGORIES"]
+    const largeVariables = ["products", "offers", "services", "categories"]
 
     for (const variable of largeVariables) {
       // Match ONLY when variable appears alone or at start/end of line
-      // This excludes instructional text like "scroll to {{PRODUCTS}}"
+      // This excludes instructional text like "scroll to {{products}}"
       const standaloneRegex = new RegExp(
         `^\\s*\\{\\{${variable}\\}\\}\\s*$`,
         "gm"
@@ -73,7 +76,22 @@ export class PromptProcessorService {
       services: string
       offers: string
     },
-    workspaceUrl?: string
+    workspaceUrl?: string,
+    workspaceConfig?: {
+      sellsProductsAndServices?: boolean // 🆕 E-commerce toggle for {{#if}} conditionals
+      toneOfVoice?: string
+      botIdentityResponse?: string
+      hasHumanSupport?: boolean
+      humanSupportInstructions?: string
+      operatorContactMethod?: string
+      operatorWhatsappNumber?: string
+      hasSalesAgents?: boolean
+      hasSuppliers?: boolean // 🆕 Suppliers menu visibility
+      adminEmail?: string
+      allowedExternalLinks?: string[] // 🆕 Feature 199: Allowed domains for external links
+      address?: string // 🆕 Physical address for "where are you?" questions
+      customAiRules?: string // 🆕 Custom AI rules that override defaults
+    }
   ): Promise<string> {
     // 🔒 STEP 1: Validate prompt BEFORE replacement (Constitution v1.5.0 Principle III)
     // Fail-fast pattern: prevents 100k+ token prompts from duplicate variables
@@ -81,9 +99,52 @@ export class PromptProcessorService {
 
     let processedPrompt = promptContent
 
+    // 🆕 STEP 1.5: Process {{#if}} conditionals FIRST (Handlebars syntax)
+    // This handles workspace config conditionals like {{#if sellsProductsAndServices}}
+    if (processedPrompt.includes("{{#if") || processedPrompt.includes("{{#unless")) {
+      // NOTE: Only pass variables needed for CONDITIONALS, not for text replacement
+      // Text replacement happens in STEP 2 via replaceVariables()
+      const conditionalVariables = {
+        // Workspace config booleans (for {{#if}} conditions)
+        sellsProductsAndServices: workspaceConfig?.sellsProductsAndServices ?? true,
+        hasHumanSupport: workspaceConfig?.hasHumanSupport ?? true,
+        hasSalesAgents: workspaceConfig?.hasSalesAgents ?? false,
+        hasSuppliers: workspaceConfig?.hasSuppliers ?? false, // 🆕 Suppliers menu visibility
+        // String variables - ONLY truthiness matters for {{#if}}, actual value substituted later
+        address: workspaceConfig?.address || "",
+        customAiRules: workspaceConfig?.customAiRules || "",
+        botIdentityResponse: workspaceConfig?.botIdentityResponse || "",
+        humanSupportInstructions: workspaceConfig?.humanSupportInstructions || "",
+        allowedExternalLinks: workspaceConfig?.allowedExternalLinks?.join("\n") || "",
+        // Customer booleans (for conditionals)
+        hasAgentAssigned: !!(customerData?.agentName),
+      }
+
+      processedPrompt = this.templateEngine.process(processedPrompt, conditionalVariables)
+      logger.debug("✅ Processed {{#if}} conditionals in prompt")
+    }
+
+    // 🔧 STEP 1.6: Replace workspace config string variables
+    // These are replaced AFTER conditionals are processed
+    if (workspaceConfig?.address) {
+      processedPrompt = processedPrompt.replace(/\{\{address\}\}/g, workspaceConfig.address)
+    }
+    if (workspaceConfig?.customAiRules) {
+      processedPrompt = processedPrompt.replace(/\{\{customAiRules\}\}/g, workspaceConfig.customAiRules)
+    }
+    if (workspaceConfig?.botIdentityResponse) {
+      processedPrompt = processedPrompt.replace(/\{\{botIdentityResponse\}\}/g, workspaceConfig.botIdentityResponse)
+    }
+    if (workspaceConfig?.humanSupportInstructions) {
+      processedPrompt = processedPrompt.replace(/\{\{humanSupportInstructions\}\}/g, workspaceConfig.humanSupportInstructions)
+    }
+    if (workspaceConfig?.allowedExternalLinks?.length) {
+      processedPrompt = processedPrompt.replace(/\{\{allowedExternalLinks\}\}/g, workspaceConfig.allowedExternalLinks.join("\n"))
+    }
+
     // Sostituzione URL workspace (PRIMA di altre sostituzioni)
-    if (workspaceUrl && processedPrompt.includes("{{URL}}")) {
-      processedPrompt = processedPrompt.replace(/\{\{URL\}\}/g, workspaceUrl)
+    if (workspaceUrl && processedPrompt.includes("{{url}}")) {
+      processedPrompt = processedPrompt.replace(/\{\{url\}\}/g, workspaceUrl)
     }
 
     // Sostituzione delle informazioni utente
@@ -99,27 +160,27 @@ export class PromptProcessorService {
     }
 
     // Sostituzione contenuti dinamici
-    if (processedPrompt.includes("{{FAQ}}")) {
+    if (processedPrompt.includes("{{faq}}")) {
       // 🚨 CRITICAL: If no FAQ, tell LLM explicitly
       const faqContent = dynamicContent.faqs?.trim()
         ? dynamicContent.faqs
         : "⚠️ Non abbiamo FAQ in questo workspace."
 
-      processedPrompt = processedPrompt.replace("{{FAQ}}", faqContent)
+      processedPrompt = processedPrompt.replace("{{faq}}", faqContent)
     }
 
-    if (processedPrompt.includes("{{PRODUCTS}}")) {
-      // Feature 123: Log token count for {{PRODUCTS}} variable
+    if (processedPrompt.includes("{{products}}")) {
+      // Feature 123: Log token count for {{products}} variable
       const productsTokenCount = this.estimateTokenCount(
         dynamicContent.products || ""
       )
       logger.info(
-        `[ProductSearch] {{PRODUCTS}} token count: ${productsTokenCount}`
+        `[ProductSearch] {{products}} token count: ${productsTokenCount}`
       )
 
       if (productsTokenCount > 50000) {
         logger.warn(
-          `[ProductSearch] ⚠️ {{PRODUCTS}} exceeds 50k tokens (${productsTokenCount}). Consider filtering.`
+          `[ProductSearch] ⚠️ {{products}} exceeds 50k tokens (${productsTokenCount}). Consider filtering.`
         )
       }
 
@@ -129,57 +190,183 @@ export class PromptProcessorService {
         : "⚠️ CATALOGO VUOTO - Non ci sono prodotti in questo workspace. Rispondi: 'Mi dispiace, al momento non abbiamo prodotti nel catalogo.'"
 
       processedPrompt = processedPrompt.replace(
-        "{{PRODUCTS}}",
+        "{{products}}",
         productsContent
       )
     }
 
-    if (processedPrompt.includes("{{CATEGORIES}}")) {
+    if (processedPrompt.includes("{{categories}}")) {
       // 🚨 CRITICAL: If no categories, tell LLM explicitly
       const categoriesContent = dynamicContent.categories?.trim()
         ? dynamicContent.categories
         : "⚠️ Non abbiamo categorie in questo workspace."
 
       processedPrompt = processedPrompt.replace(
-        "{{CATEGORIES}}",
+        "{{categories}}",
         categoriesContent
       )
     }
 
-    if (processedPrompt.includes("{{SERVICES}}")) {
+    if (processedPrompt.includes("{{services}}")) {
       // 🚨 CRITICAL: If no services, tell LLM explicitly
       const servicesContent = dynamicContent.services?.trim()
         ? dynamicContent.services
         : "⚠️ Non abbiamo servizi in questo workspace."
 
       processedPrompt = processedPrompt.replace(
-        "{{SERVICES}}",
+        "{{services}}",
         servicesContent
       )
     }
 
-    if (processedPrompt.includes("{{OFFERS}}")) {
+    if (processedPrompt.includes("{{offers}}")) {
       // 🚨 CRITICAL: If no offers, tell LLM explicitly
       const offersContent = dynamicContent.offers?.trim()
         ? dynamicContent.offers
         : "⚠️ Non abbiamo offerte attive in questo momento."
 
       processedPrompt = processedPrompt.replace(
-        "{{OFFERS}}",
+        "{{offers}}",
         offersContent
       )
     }
 
-    // Sostituzione {{LAST_ORDER}} - FR-13 Repeat Order
-    if (processedPrompt.includes("{{LAST_ORDER}}")) {
+    // Sostituzione {{lastOrder}} - FR-13 Repeat Order
+    if (processedPrompt.includes("{{lastOrder}}")) {
       const lastOrderSummary = await this.getLastOrderVariable(
         customerData.id,
         workspaceId
       )
       processedPrompt = processedPrompt.replace(
-        /\{\{LAST_ORDER\}\}/g,
+        /\{\{lastOrder\}\}/g,
         lastOrderSummary
       )
+    }
+
+    // 🆕 Feature 199: Channel Configuration Variables
+    // {{BOT_PERSONALITY}} - Tone of voice (friendly, professional, formal, casual)
+    if (processedPrompt.includes("{{BOT_PERSONALITY}}")) {
+      const toneOfVoice = workspaceConfig?.toneOfVoice || "friendly"
+      const personalityMap: Record<string, string> = {
+        friendly: "Sei amichevole, caloroso e usi emoji per rendere la conversazione piacevole 😊. Parli in modo informale ma rispettoso.",
+        professional: "Sei professionale e cortese. Rispondi in modo chiaro e diretto, mantenendo un tono business appropriato.",
+        formal: "Sei formale ed educato. Usi il 'Lei' e mantieni un tono tradizionale e rispettoso.",
+        casual: "Sei rilassato e informale ✌️. Parli come un amico, in modo naturale e divertente.",
+      }
+      processedPrompt = processedPrompt.replace(
+        /\{\{BOT_PERSONALITY\}\}/g,
+        personalityMap[toneOfVoice] || personalityMap.friendly
+      )
+    }
+
+    // {{BOT_IDENTITY}} - How the bot introduces itself
+    if (processedPrompt.includes("{{BOT_IDENTITY}}")) {
+      const botIdentity = workspaceConfig?.botIdentityResponse || 
+        "Sono l'assistente virtuale di questo negozio. Posso aiutarti a trovare prodotti, rispondere alle domande e gestire i tuoi ordini."
+      processedPrompt = processedPrompt.replace(
+        /\{\{BOT_IDENTITY\}\}/g,
+        botIdentity
+      )
+    }
+
+    // {{HUMAN_SUPPORT_INFO}} - How to contact human support
+    if (processedPrompt.includes("{{HUMAN_SUPPORT_INFO}}")) {
+      let humanSupportInfo: string
+      
+      if (workspaceConfig?.hasHumanSupport) {
+        // Human support is enabled
+        if (workspaceConfig.hasSalesAgents) {
+          // Has sales agents - customer gets their assigned agent
+          humanSupportInfo = `Il tuo agente di riferimento è:
+• {{agentName}}
+• 📞 {{agentPhone}}
+• ✉️ {{agentEmail}}
+
+⏸️ Da questo momento la chat è in pausa.
+Il nostro agente ti contatterà il prima possibile direttamente in questa chat per risolvere la situazione.`
+        } else {
+          // No sales agents - use Admin Email
+          const email = workspaceConfig.adminEmail || "support@echatbot.ai"
+          humanSupportInfo = `⏸️ Da questo momento la chat è in pausa.
+
+Il nostro team ti contatterà via email (${email}) il prima possibile per risolvere la situazione.`
+        }
+        
+        // Add custom instructions if provided
+        if (workspaceConfig.humanSupportInstructions?.trim()) {
+          humanSupportInfo += `\n\n${workspaceConfig.humanSupportInstructions}`
+        }
+      } else {
+        // Human support disabled - generic response
+        humanSupportInfo = "Al momento non è disponibile supporto umano. Prova a riformulare la tua richiesta o consulta le nostre FAQ."
+      }
+      
+      processedPrompt = processedPrompt.replace(
+        /\{\{HUMAN_SUPPORT_INFO\}\}/g,
+        humanSupportInfo
+      )
+    }
+
+    // {{SALES_AGENT_CONTACT}} - Sales agent contact block (only if hasSalesAgents=true)
+    if (processedPrompt.includes("{{SALES_AGENT_CONTACT}}")) {
+      const salesAgentContact = workspaceConfig?.hasSalesAgents
+        ? `L'agente {{agentName}} ti contatterà per assisterti.\n📧 Email: {{agentEmail}}\n📞 Telefono: {{agentPhone}}`
+        : "" // Empty if no sales agents
+      processedPrompt = processedPrompt.replace(
+        /\{\{SALES_AGENT_CONTACT\}\}/g,
+        salesAgentContact
+      )
+    }
+
+    // {{ALLOWED_EXTERNAL_LINKS}} - List of allowed domains for external links
+    if (processedPrompt.includes("{{ALLOWED_EXTERNAL_LINKS}}")) {
+      const allowedLinks = workspaceConfig?.allowedExternalLinks || []
+      let linksContent: string
+      
+      if (allowedLinks.length > 0) {
+        linksContent = `**Domini autorizzati per link esterni:**\n${allowedLinks.map(link => `- ${link}`).join('\n')}\n\n⚠️ **REGOLA CRITICA**: NON includere MAI link a domini diversi da quelli elencati sopra. Se devi suggerire un link esterno, verifica che il dominio sia nella lista autorizzata.`
+      } else {
+        linksContent = `⚠️ **REGOLA CRITICA**: NON includere MAI link esterni nelle risposte. Puoi usare solo link interni al sistema (ordini, profilo, carrello).`
+      }
+      
+      processedPrompt = processedPrompt.replace(
+        /\{\{ALLOWED_EXTERNAL_LINKS\}\}/g,
+        linksContent
+      )
+    }
+
+    // {{ADDRESS}} - Physical location/address of the business
+    if (processedPrompt.includes("{{ADDRESS}}")) {
+      const address = workspaceConfig?.address?.trim() || ""
+      if (address) {
+        processedPrompt = processedPrompt.replace(
+          /\{\{ADDRESS\}\}/g,
+          address
+        )
+      } else {
+        // If no address configured, replace with instruction to not answer location questions
+        processedPrompt = processedPrompt.replace(
+          /\{\{ADDRESS\}\}/g,
+          "⚠️ Indirizzo non configurato - Se il cliente chiede dove siete, rispondi che l'indirizzo non è disponibile."
+        )
+      }
+    }
+
+    // {{CUSTOM_AI_RULES}} - Custom rules that OVERRIDE default behavior
+    if (processedPrompt.includes("{{CUSTOM_AI_RULES}}")) {
+      const customRules = workspaceConfig?.customAiRules?.trim() || ""
+      if (customRules) {
+        processedPrompt = processedPrompt.replace(
+          /\{\{CUSTOM_AI_RULES\}\}/g,
+          `⚠️ REGOLE PRIORITARIE (hanno la precedenza su tutto):\n${customRules}`
+        )
+      } else {
+        // Remove placeholder if no custom rules
+        processedPrompt = processedPrompt.replace(
+          /\{\{CUSTOM_AI_RULES\}\}/g,
+          ""
+        )
+      }
     }
 
     // Remove duplicate CATEGORIES check since it's already handled above

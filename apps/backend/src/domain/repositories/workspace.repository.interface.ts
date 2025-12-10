@@ -35,4 +35,10 @@ export interface WorkspaceRepositoryInterface {
    * Delete a workspace
    */
   delete(id: string): Promise<boolean>;
+
+  /**
+   * Update agent status (enable/disable) for a workspace
+   * Used for auto-toggling e-commerce agents based on sellsProductsAndServices
+   */
+  updateAgentStatus(workspaceId: string, agentType: string, isActive: boolean): Promise<boolean>;
 } 

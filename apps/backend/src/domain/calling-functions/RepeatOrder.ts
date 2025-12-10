@@ -39,7 +39,7 @@ export interface RepeatOrderResult {
  * @param request - Request parameters
  * @returns Result con confirmazione e link carrello
  */
-export async function RepeatOrder(
+export async function repeatOrder(
   request: RepeatOrderRequest
 ): Promise<RepeatOrderResult> {
   try {

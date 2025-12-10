@@ -11,6 +11,7 @@ import {
 interface ChatContextType {
   selectedChat: Chat | null
   setSelectedChat: (chat: Chat | null) => void
+  clearSelectedChat: () => void
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined)
@@ -36,8 +37,39 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }, []) // ✅ Esegui solo una volta al mount
 
+  // 🔥 Listen for workspace changes to clear chat selection
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "workspace-changed" || e.key === "selectedChatId") {
+        logger.info("🧹 ChatContext - Workspace changed, clearing selected chat")
+        setSelectedChat(null)
+      }
+    }
+
+    // Also listen for custom event dispatched within same tab
+    const handleWorkspaceChange = () => {
+      logger.info("🧹 ChatContext - Custom workspace-changed event, clearing selected chat")
+      setSelectedChat(null)
+    }
+
+    window.addEventListener("storage", handleStorageChange)
+    window.addEventListener("workspace-changed", handleWorkspaceChange)
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange)
+      window.removeEventListener("workspace-changed", handleWorkspaceChange)
+    }
+  }, [])
+
+  // 🔥 Method to manually clear selected chat (used when switching workspaces)
+  const clearSelectedChat = () => {
+    logger.info("🧹 ChatContext - clearSelectedChat called")
+    sessionStorage.removeItem("selectedChatId")
+    setSelectedChat(null)
+  }
+
   return (
-    <ChatContext.Provider value={{ selectedChat, setSelectedChat }}>
+    <ChatContext.Provider value={{ selectedChat, setSelectedChat, clearSelectedChat }}>
       {children}
     </ChatContext.Provider>
   )
