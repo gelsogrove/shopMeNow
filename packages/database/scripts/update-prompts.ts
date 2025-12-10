@@ -1,7 +1,7 @@
 /**
  * UPDATE PROMPTS ONLY
  *
- * This script updates ONLY the agent prompts from docs/prompts/ folder
+ * This script updates ONLY the agent prompts from docs/prompts/templates/ folder
  * WITHOUT touching other seed data (products, categories, customers, etc.)
  *
  * ⚠️  Updates prompts for the SEED workspace user only
@@ -10,33 +10,41 @@
  */
 
 import { config } from "dotenv"
-config() // Load environment variables from .env file
-
-import { PrismaClient, AgentType } from "@prisma/client"
-import * as fs from "fs"
 import * as path from "path"
 
-const prisma = new PrismaClient()
+// Load .env from root
+config({ path: path.join(__dirname, "../../../.env") })
+
+import { PrismaClient, AgentType } from "../src/generated/prisma/client"
+import { PrismaPg } from "@prisma/adapter-pg"
+import * as fs from "fs"
+
+// Initialize the PostgreSQL adapter for Prisma 7
+const adapter = new PrismaPg({
+  connectionString: process.env.DATABASE_URL,
+})
+
+const prisma = new PrismaClient({ adapter })
 
 // Mapping: prompt filename → AgentType
 const PROMPT_TO_AGENT_TYPE: Record<string, AgentType> = {
-  "router-agent.md": "ROUTER",
-  "product-search-agent.md": "PRODUCT_SEARCH",
-  "cart-management-agent.md": "CART_MANAGEMENT",
-  "order-tracking-agent.md": "ORDER_TRACKING",
-  "customer-support-agent.md": "CUSTOMER_SUPPORT",
-  "summary-agent.md": "SUMMARY_AGENT",
-  "profile-management-agent.md": "PROFILE_MANAGEMENT",
-  "translation-agent.md": "TRANSLATION",
-  // 🔒 SECURITY agent is HARDCODED in code for safety - NOT configurable via UI/database
+  "01-router.template.md": "ROUTER",
+  "02-product-search.template.md": "PRODUCT_SEARCH",
+  "03-cart-management.template.md": "CART_MANAGEMENT",
+  "03-order-tracking.template.md": "ORDER_TRACKING",
+  "04-customer-support.template.md": "CUSTOMER_SUPPORT",
+  "08-summary.template.md": "SUMMARY_AGENT",
+  "05-profile-management.template.md": "PROFILE_MANAGEMENT",
+  "07-translation.template.md": "TRANSLATION",
+  // 🔒 SECURITY agent (06-security.template.md) is HARDCODED in code for safety - NOT configurable via UI/database
   // See: apps/backend/src/application/agents/SecurityAgent.ts
 }
 
 /**
- * Load prompt from markdown file
+ * Load prompt from markdown file in templates folder
  */
 function loadPrompt(filename: string): string {
-  const promptPath = path.join(__dirname, "../../../docs/prompts", filename)
+  const promptPath = path.join(__dirname, "../../../docs/prompts/templates", filename)
   try {
     return fs.readFileSync(promptPath, "utf-8")
   } catch (error) {
