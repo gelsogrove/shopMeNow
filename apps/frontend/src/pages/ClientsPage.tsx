@@ -583,21 +583,24 @@ export default function ClientsPage(): JSX.Element {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Page Title + Search */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold text-green-600">Clients</h1>
-          <span className="text-sm text-muted-foreground">({filteredClients.length})</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Input
-            type="search"
-            placeholder="Search clients..."
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            className="max-w-xs bg-white"
-          />
+    <>
+    <Card className="min-h-[calc(100vh-13.7rem)]">
+      <CardContent className="p-6">
+        <div className="space-y-6">
+          {/* Page Title + Search */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-green-600">Clients</h1>
+              <span className="text-sm text-muted-foreground">({filteredClients.length})</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                type="search"
+                placeholder="Search clients..."
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                className="max-w-xs bg-white"
+              />
           <Button
             variant="default"
             className="bg-green-600 hover:bg-green-700 text-white"
@@ -768,6 +771,9 @@ export default function ClientsPage(): JSX.Element {
               ))}
             </div>
           )}
+        </div>
+      </CardContent>
+    </Card>
 
       {/* WhatsApp Playground Modal */}
       <WhatsAppChatModal
@@ -804,6 +810,6 @@ export default function ClientsPage(): JSX.Element {
         confirmLabel="Delete"
         variant="destructive"
       />
-    </div>
+    </>
   )
 }

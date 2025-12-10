@@ -266,116 +266,120 @@ export function ServicesPage() {
 
   return (
     <PageLayout>
-      <div className="space-y-4">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Wrench className={commonStyles.headerIcon} />
-            <h1 className="text-2xl font-bold text-green-600">Services</h1>
-          </div>
-          <Button
-            onClick={() => {
-              setImageFiles([])
-              setCurrentImageUrls([])
-              setReorderedImageUrls(null)
-              setShowAddSheet(true)
-            }}
-          >
-            Add Service
-          </Button>
-        </div>
-
-        {/* Search */}
-        <Input
-          placeholder="Search services..."
-          value={searchValue}
-          onChange={(e) => setSearchValue(e.target.value)}
-          className="max-w-sm"
-        />
-
-        {/* Grid View */}
-        {isLoading ? (
-          <div className="text-center py-8 text-muted-foreground">
-            Loading services...
-          </div>
-        ) : filteredServices.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            No services found
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredServices.map((service) => (
-              <Card
-                key={service.id}
-                className={`hover:shadow-lg transition-shadow ${
-                  !service.isActive ? "opacity-60 border-gray-400 border-2" : ""
-                }`}
+      <Card className="min-h-[calc(100vh-13.7rem)]">
+        <CardContent className="p-6">
+          <div className="space-y-4">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Wrench className={commonStyles.headerIcon} />
+                <h1 className="text-2xl font-bold text-green-600">Services</h1>
+              </div>
+              <Button
+                onClick={() => {
+                  setImageFiles([])
+                  setCurrentImageUrls([])
+                  setReorderedImageUrls(null)
+                  setShowAddSheet(true)
+                }}
               >
-                <CardContent className="p-4">
-                  <div className="flex flex-col gap-3">
-                    {/* Service Image */}
-                    <div className="w-full h-48 bg-gray-100 rounded-md overflow-hidden flex items-center justify-center">
-                      {service.imageUrl && service.imageUrl.length > 0 ? (
-                        <ProductImage
-                          imageUrl={service.imageUrl}
-                          alt={service.name}
-                          size="lg"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <Wrench className="w-16 h-16 text-gray-400" />
-                      )}
-                    </div>
+                Add Service
+              </Button>
+            </div>
 
-                    {/* Service Info */}
-                    <div className="space-y-2 flex-1">
-                      <h3 className="font-semibold text-lg line-clamp-2 min-h-[3.5rem]">
-                        {service.name}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {service.code}
-                      </p>
-                      <p className="text-lg font-bold text-green-600">
-                        {currencySymbol}
-                        {service.price.toFixed(2)}
-                      </p>
-                      {service.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2">
-                          {service.description}
-                        </p>
-                      )}
-                    </div>
+            {/* Search */}
+            <Input
+              placeholder="Search services..."
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              className="max-w-sm"
+            />
 
-                    {/* Actions */}
-                    <div className="flex gap-2 justify-end pt-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(service)}
-                        className="h-8 w-8 p-0 flex items-center justify-center"
-                      >
-                        <Pencil
-                          className={`${commonStyles.actionIcon} ${commonStyles.primary}`}
-                        />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(service)}
-                        className="h-8 w-8 p-0 flex items-center justify-center hover:bg-red-50"
-                      >
-                        <Trash2
-                          className={`${commonStyles.actionIcon} text-red-600`}
-                        />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            {/* Grid View */}
+            {isLoading ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Loading services...
+              </div>
+            ) : filteredServices.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No services found
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredServices.map((service) => (
+                  <Card
+                    key={service.id}
+                    className={`hover:shadow-lg transition-shadow ${
+                      !service.isActive ? "opacity-60 border-gray-400 border-2" : ""
+                    }`}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex flex-col gap-3">
+                        {/* Service Image */}
+                        <div className="w-full h-48 bg-gray-100 rounded-md overflow-hidden flex items-center justify-center">
+                          {service.imageUrl && service.imageUrl.length > 0 ? (
+                            <ProductImage
+                              imageUrl={service.imageUrl}
+                              alt={service.name}
+                              size="lg"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <Wrench className="w-16 h-16 text-gray-400" />
+                          )}
+                        </div>
+
+                        {/* Service Info */}
+                        <div className="space-y-2 flex-1">
+                          <h3 className="font-semibold text-lg line-clamp-2 min-h-[3.5rem]">
+                            {service.name}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            {service.code}
+                          </p>
+                          <p className="text-lg font-bold text-green-600">
+                            {currencySymbol}
+                            {service.price.toFixed(2)}
+                          </p>
+                          {service.description && (
+                            <p className="text-xs text-muted-foreground line-clamp-2">
+                              {service.description}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex gap-2 justify-end pt-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(service)}
+                            className="h-8 w-8 p-0 flex items-center justify-center"
+                          >
+                            <Pencil
+                              className={`${commonStyles.actionIcon} ${commonStyles.primary}`}
+                            />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(service)}
+                            className="h-8 w-8 p-0 flex items-center justify-center hover:bg-red-50"
+                          >
+                            <Trash2
+                              className={`${commonStyles.actionIcon} text-red-600`}
+                            />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </CardContent>
+      </Card>
 
       <FormSheet
         open={showAddSheet}

@@ -1196,22 +1196,24 @@ export function ProductsPage() {
 
   return (
     <PageLayout>
-      <div className="space-y-4">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Package className={commonStyles.headerIcon} />
-            <h1 className="text-2xl font-bold text-green-600">Products</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Hidden file input for CSV import */}
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleImport}
-              accept=".csv"
-              className="hidden"
-            />
+      <Card className="min-h-[calc(100vh-13.7rem)]">
+        <CardContent className="p-6">
+          <div className="space-y-4">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Package className={commonStyles.headerIcon} />
+                <h1 className="text-2xl font-bold text-green-600">Products</h1>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* Hidden file input for CSV import */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImport}
+                  accept=".csv"
+                  className="hidden"
+                />
             
             {/* Export Button */}
             <Button
@@ -1537,7 +1539,9 @@ export function ProductsPage() {
             ))}
           </div>
         )}
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <FormSheet
         open={showAddSheet}

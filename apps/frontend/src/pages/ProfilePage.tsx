@@ -451,24 +451,22 @@ export default function ProfilePage() {
 
         {/* Billing Information */}
         <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-start justify-between">
               <CardTitle className="flex items-center gap-2 text-green-600">
                 <Building2 className="h-5 w-5" />
                 Billing Information
               </CardTitle>
+              {/* Company Logo - Top Right */}
+              <ImageCropUpload
+                onImageSelected={(file) => setLogoFile(file)}
+                currentImageUrl={user.logo}
+                label=""
+                placeholder="logo"
+                editIconStyle={true}
+                size="lg"
+              />
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Company Logo */}
-              <div className="space-y-2">
-                <ImageCropUpload
-                  onImageSelected={(file) => setLogoFile(file)}
-                  currentImageUrl={user.logo}
-                  label="Company Logo"
-                  placeholder="logo"
-                  editIconStyle={true}
-                />
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="companyName">Company Name</Label>
                 <Input

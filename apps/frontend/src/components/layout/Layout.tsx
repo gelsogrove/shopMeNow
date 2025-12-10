@@ -115,13 +115,13 @@ export function Layout() {
         <div className="flex flex-1">
           <MemoizedSidebar />
           <div className="flex w-full flex-col pl-72 bg-gray-50">
-            <main className="flex-1 p-8">
+            <main className="flex-1 px-8 py-9">
               <Outlet />
             </main>
           </div>
         </div>
         {/* Footer */}
-        <footer className="pl-72 py-4 text-center text-sm text-gray-400 border-t border-gray-100 bg-gray-50">
+        <footer className="pl-72 py-9 text-center text-sm text-gray-400 border-t border-gray-100 bg-gray-50">
           <p>© {new Date().getFullYear()} eChatbot. All rights reserved.</p>
         </footer>
         <WhatsAppChatModal
