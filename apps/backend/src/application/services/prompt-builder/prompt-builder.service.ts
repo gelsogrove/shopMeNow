@@ -100,16 +100,28 @@ export class PromptBuilderService {
       // 3. Apply template engine (replace variables, handle conditionals)
       const content = this.templateEngine.process(template, variables)
 
+      // 🔴 ZERO SECTION: Custom AI Rules (ABSOLUTE PRIORITY - prepended to prompt)
+      const customAiRules = variables.customAiRules || ""
+      const finalContent = customAiRules
+        ? `🔴 CUSTOM AI RULES (ABSOLUTE PRIORITY - Override all default instructions):
+${customAiRules}
+
+---
+
+${content}`
+        : content
+
       const executionTime = Date.now() - startTime
 
       logger.info(`✅ Prompt built for ${agentType} in ${executionTime}ms`, {
         templateLength: template.length,
-        contentLength: content.length,
+        contentLength: finalContent.length,
         variablesCount: Object.keys(variables).length,
+        hasCustomRules: !!customAiRules,
       })
 
       return {
-        content,
+        content: finalContent,
         agentType,
         variables,
         generatedAt: new Date(),

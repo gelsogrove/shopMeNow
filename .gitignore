@@ -3,6 +3,15 @@
 .env.*
 !.env.example
 
+# Terraform
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/*.tfvars
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/crash.log
+terraform/crash.*.log
+
 # Dependencies - Single node_modules at root for monorepo
 node_modules/
 

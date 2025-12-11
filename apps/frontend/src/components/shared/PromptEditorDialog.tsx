@@ -111,6 +111,7 @@ interface PromptEditorDialogProps {
   agentType: string
   initialPrompt: string
   onSave: (newPrompt: string) => Promise<void>
+  readOnly?: boolean
 }
 
 export function PromptEditorDialog({
@@ -120,6 +121,7 @@ export function PromptEditorDialog({
   agentType,
   initialPrompt,
   onSave,
+  readOnly = false,
 }: PromptEditorDialogProps) {
   const [prompt, setPrompt] = useState(initialPrompt)
   const [isSaving, setIsSaving] = useState(false)
@@ -456,9 +458,16 @@ export function PromptEditorDialog({
             <FileText className="h-5 w-5 text-green-600" />
             <span>System Prompt: {agentName}</span>
             <span className="text-sm font-normal text-gray-500">({agentType})</span>
+            {readOnly && <span className="ml-auto text-sm font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">READ-ONLY</span>}
           </DialogTitle>
           <DialogDescription>
-            Edit the system prompt for this agent. <span className="text-gray-500">Press <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono">Tab</kbd> to indent, <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono">⌘S</kbd> to save.</span>
+            {readOnly ? (
+              "Prompts are generated on-demand by the system. To customize behavior, use Custom AI Rules in Settings."
+            ) : (
+              <>
+                Edit the system prompt for this agent. <span className="text-gray-500">Press <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono">Tab</kbd> to indent, <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono">⌘S</kbd> to save.</span>
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -487,12 +496,21 @@ export function PromptEditorDialog({
                 <Textarea
                   ref={textareaRef}
                   value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  onKeyDown={handleKeyDown}
+                  onChange={(e) => !readOnly && setPrompt(e.target.value)}
+                  onKeyDown={readOnly ? undefined : handleKeyDown}
+                  disabled={readOnly}
                   className="w-full h-full min-h-[60vh] font-mono text-sm leading-relaxed resize-none tabular-nums"
                   placeholder="Enter the system prompt for this agent..."
                   spellCheck={false}
                 />
+                {readOnly && (
+                  <div className="absolute inset-0 bg-white/50 flex items-center justify-center rounded-lg pointer-events-none">
+                    <div className="text-center">
+                      <Eye className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600">View only - prompts are generated on-demand</p>
+                    </div>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="preview" className="flex-1 mt-4 overflow-auto border rounded-lg p-6 bg-white min-h-0">
@@ -597,25 +615,27 @@ export function PromptEditorDialog({
           <div className="flex items-center gap-2 w-full justify-end">
             <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
               <X className="h-4 w-4 mr-2" />
-              Cancel
+              {readOnly ? "Close" : "Cancel"}
             </Button>
-            <Button 
-              onClick={handleSave} 
-              disabled={isSaving}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Prompt
-                </>
-              )}
-            </Button>
+            {!readOnly && (
+              <Button 
+                onClick={handleSave} 
+                disabled={isSaving}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Prompt
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </DialogFooter>
       </DialogContent>

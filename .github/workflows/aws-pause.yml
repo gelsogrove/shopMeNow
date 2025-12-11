@@ -1,0 +1,79 @@
+name: ⏸️ Pause AWS (Maximum Savings)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "PAUSE" to confirm'
+        required: true
+        default: ''
+
+jobs:
+  pause-infrastructure:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'PAUSE'
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
+
+      - name: Stop EC2 Instances
+        run: |
+          echo "⏸️ PAUSING AWS INFRASTRUCTURE"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          # Stop App Server
+          APP_ID=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=echatbot-app-server" "Name=instance-state-name,Values=running" \
+            --query 'Reservations[0].Instances[0].InstanceId' \
+            --output text)
+          
+          if [ "$APP_ID" != "None" ]; then
+            echo "🛑 Stopping App Server: $APP_ID"
+            aws ec2 stop-instances --instance-ids $APP_ID
+          fi
+          
+          # Stop DB Server
+          DB_ID=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=echatbot-db-server" "Name=instance-state-name,Values=running" \
+            --query 'Reservations[0].Instances[0].InstanceId' \
+            --output text)
+          
+          if [ "$DB_ID" != "None" ]; then
+            echo "🛑 Stopping DB Server: $DB_ID"
+            aws ec2 stop-instances --instance-ids $DB_ID
+          fi
+
+      - name: Disable CloudFront Distribution (Optional)
+        run: |
+          echo ""
+          echo "⚠️ CloudFront remains active (minimal cost)"
+          echo "   To disable manually: AWS Console → CloudFront → Disable"
+
+      - name: Summary
+        run: |
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ INFRASTRUCTURE PAUSED"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "💰 COST SAVINGS:"
+          echo "   Before: ~€76/month"
+          echo "   After:  ~€53/month"
+          echo "   Saving: ~€23/month (30%)"
+          echo ""
+          echo "🔴 STOPPED:"
+          echo "   • EC2 App Server"
+          echo "   • EC2 DB Server"
+          echo ""
+          echo "🟢 STILL ACTIVE (minimal cost):"
+          echo "   • S3 Storage (~€2/month)"
+          echo "   • CloudFront CDN (~€1/month)"
+          echo "   • Route53 DNS (~€0.50/month)"
+          echo ""
+          echo "▶️ To resume: Run 'Resume AWS' workflow"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

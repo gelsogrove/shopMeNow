@@ -7,10 +7,11 @@
  * con supporto per utenti multipli e test automatici
  *
  * Usage:
- *   node mcp-test-client.js [user] [message] [exit-first-message=true] [seed=true]
+ *   node mcp-test-client.js [user] [message] [workspaceId=ID] [exit-first-message=true] [seed=true]
  *
  * Examples:
  *   node mcp-test-client.js "Mario Rossi" "aggiungi una mozzarella" exit-first-message=true
+ *   node mcp-test-client.js "Mario Rossi" "aggiungi una mozzarella" workspaceId=cm9hjgq9v00014qk8fsdy4ujv exit-first-message=true
  *   node mcp-test-client.js "John Smith" "add to cart prosecco" seed=true
  *   node mcp-test-client.js "Mario Rossi" "mostra carrello" exit-first-message=true seed=true
  *   node mcp-test-client.js (interactive mode)
@@ -64,13 +65,15 @@ class MCPTestClient {
     testMessage = null,
     exitAfterFirst = false,
     runSeed = false,
-    showLogs = false
+    showLogs = false,
+    workspaceId = null
   ) {
     this.selectedUser = selectedUser || CONFIG.defaultUser
     this.testMessage = testMessage
     this.exitAfterFirst = exitAfterFirst
     this.runSeed = runSeed
     this.showLogs = showLogs
+    this.workspaceId = workspaceId || "cm9hjgq9v00014qk8fsdy4ujv" // Default workspace
     this.sessionActive = false
     this.sessionData = {
       messages: [],
@@ -456,7 +459,7 @@ Cosa desideri fare?
       const payload = {
         message: message,
         phoneNumber: userConfig.customerPhone,
-        workspaceId: "cm9hjgq9v00014qk8fsdy4ujv",
+        workspaceId: this.workspaceId,
         // 🔧 PARAMETRI AVANZATI PER TEST URL SHORTENER
         debug: true,
         logLevel: "verbose",
@@ -493,7 +496,7 @@ Cosa desideri fare?
 
       if (response.status === 200) {
         // Mostra la risposta del LLM
-        if (response.data && response.data.data && response.data.data.message) {
+        if (response.data && response.data.response) {
           console.log(
             `${this.colors.green}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${this.colors.reset}`
           )
@@ -504,7 +507,7 @@ Cosa desideri fare?
             `${this.colors.green}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${this.colors.reset}`
           )
           console.log(
-            `${this.colors.blue}🤖 BOT > ${this.colors.reset}${response.data.data.message}`
+            `${this.colors.blue}🤖 BOT > ${this.colors.reset}${response.data.response}`
           )
           console.log(
             `${this.colors.green}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${this.colors.reset}`
@@ -719,6 +722,9 @@ function parseArgs() {
     console.log("  node mcp-test-client.js (modalità interattiva)\n")
     console.log("Parametri disponibili:")
     console.log(
+      "  workspaceId=ID      - ID del workspace (default: cm9hjgq9v00014qk8fsdy4ujv)"
+    )
+    console.log(
       "  seed=true           - Esegue il seed del database prima del test"
     )
     console.log(
@@ -734,7 +740,14 @@ function parseArgs() {
   const runSeed = args.includes("seed=true")
   const showLogs = args.includes("log=true")
 
-  return { selectedUser, testMessage, exitAfterFirst, runSeed, showLogs }
+  // Estrai workspaceId se presente
+  let workspaceId = null
+  const workspaceIdArg = args.find((arg) => arg.startsWith("workspaceId="))
+  if (workspaceIdArg) {
+    workspaceId = workspaceIdArg.split("=")[1]
+  }
+
+  return { selectedUser, testMessage, exitAfterFirst, runSeed, showLogs, workspaceId }
 }
 
 // Avvia il client
@@ -745,6 +758,7 @@ const {
   exitAfterFirst,
   runSeed,
   showLogs,
+  workspaceId,
 } = parseArgs()
 
 if (interactive) {
@@ -761,7 +775,8 @@ async function main() {
     testMessage,
     exitAfterFirst,
     runSeed,
-    showLogs
+    showLogs,
+    workspaceId
   )
   client.start().catch((error) => {
     console.error("❌ Errore avvio client:", error.message)

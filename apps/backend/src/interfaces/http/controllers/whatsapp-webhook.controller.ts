@@ -1032,13 +1032,25 @@ export class WhatsAppWebhookController {
         debugInfo: routerResult.debugInfo, // ✅ Include debug info for frontend debugging
       })
     } catch (error: any) {
+      // 🔴 DEBUG: Log complete error stack
+      console.error("[WEBHOOK CATCH BLOCK] ERROR DETAILS:", {
+        message: error.message,
+        stack: error.stack,
+        code: error.code,
+        name: error.name,
+      })
+      
       logger.error("[WEBHOOK] ❌ Error processing message:", {
         error: error.message,
         stack: error.stack,
+        fullError: JSON.stringify(error, null, 2),
       })
 
       // Still return 200 to prevent WhatsApp from retrying
-      res.status(200).json({ error: "Internal error" })
+      res.status(200).json({ 
+        error: "Internal error",
+        debugMessage: process.env.DEBUG_MODE === "true" ? error.message : undefined,
+      })
     }
   }
 }

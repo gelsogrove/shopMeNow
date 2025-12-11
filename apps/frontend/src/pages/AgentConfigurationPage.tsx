@@ -617,6 +617,7 @@ export function AgentConfigurationPage() {
           agentType={promptEditorAgent.agentType}
           initialPrompt={promptEditorAgent.content || promptEditorAgent.systemPrompt || ""}
           onSave={handleSavePromptOnly}
+          readOnly={true}
         />
       )}
 

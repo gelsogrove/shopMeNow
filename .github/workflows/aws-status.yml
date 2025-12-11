@@ -1,0 +1,97 @@
+name: 📊 Check AWS Infrastructure Status
+
+on:
+  workflow_dispatch: # Manual trigger only
+  schedule:
+    - cron: '0 8 * * *' # Every day at 8:00 AM UTC (9:00 AM CET)
+
+jobs:
+  check-status:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
+
+      - name: Check EC2 Status
+        run: |
+          echo "📊 Checking AWS Infrastructure Status..."
+          echo ""
+          
+          # App Server
+          APP_STATE=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=echatbot-app-server" \
+            --query 'Reservations[0].Instances[0].State.Name' \
+            --output text)
+          
+          APP_IP=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=echatbot-app-server" \
+            --query 'Reservations[0].Instances[0].PublicIpAddress' \
+            --output text)
+          
+          # DB Server
+          DB_STATE=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=echatbot-db-server" \
+            --query 'Reservations[0].Instances[0].State.Name' \
+            --output text)
+          
+          DB_IP=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=echatbot-db-server" \
+            --query 'Reservations[0].Instances[0].PrivateIpAddress' \
+            --output text)
+          
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🖥️  EC2 INSTANCES STATUS"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "App Server:  $APP_STATE"
+          echo "  Public IP: $APP_IP"
+          echo ""
+          echo "DB Server:   $DB_STATE"
+          echo "  Private IP: $DB_IP"
+          echo ""
+          
+          # Cost estimate
+          if [ "$APP_STATE" == "running" ] && [ "$DB_STATE" == "running" ]; then
+            echo "💰 Estimated cost: ~€76/month (RUNNING)"
+          elif [ "$APP_STATE" == "stopped" ] && [ "$DB_STATE" == "stopped" ]; then
+            echo "💰 Estimated cost: ~€53/month (STOPPED - saving €23)"
+          else
+            echo "💰 Estimated cost: ~€60-70/month (PARTIAL)"
+          fi
+          
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+      - name: Check Service Health (if running)
+        run: |
+          APP_STATE=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=echatbot-app-server" \
+            --query 'Reservations[0].Instances[0].State.Name' \
+            --output text)
+          
+          if [ "$APP_STATE" == "running" ]; then
+            APP_IP=$(aws ec2 describe-instances \
+              --filters "Name=tag:Name,Values=echatbot-app-server" \
+              --query 'Reservations[0].Instances[0].PublicIpAddress' \
+              --output text)
+            
+            echo "🔍 Checking service health..."
+            
+            if curl -f http://$APP_IP:3001/health 2>/dev/null; then
+              echo "✅ Backend is healthy"
+            else
+              echo "⚠️ Backend health check failed"
+            fi
+            
+            if curl -f https://echatbot.ai 2>/dev/null; then
+              echo "✅ Frontend is accessible"
+            else
+              echo "⚠️ Frontend not accessible"
+            fi
+          else
+            echo "⏸️ Instances are stopped, skipping health checks"
+          fi

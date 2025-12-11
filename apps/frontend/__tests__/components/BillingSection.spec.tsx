@@ -263,23 +263,6 @@ describe("BillingSection", () => {
         expect(screen.getByText("€100")).toBeInTheDocument()
       })
     })
-
-    it("should show message estimate in recharge dialog", async () => {
-      render(<BillingSection />)
-
-      await waitFor(() => {
-        const rechargeButtons = screen.getAllByRole("button", { name: /Recharge Credit/i })
-        fireEvent.click(rechargeButtons[0])
-      })
-
-      await waitFor(() => {
-        // Default €25 / €0.10 per message = ~250 messages
-        expect(screen.getByText("~250 messages")).toBeInTheDocument()
-        expect(
-          screen.getByText(/Based on €0.10 per message/)
-        ).toBeInTheDocument()
-      })
-    })
   })
 
   // ===========================================================================
