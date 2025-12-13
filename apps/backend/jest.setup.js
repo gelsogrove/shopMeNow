@@ -8,6 +8,12 @@ global.console = {
 }
 
 jest.mock("./src/utils/logger", () => ({
+  default: {
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn(),
+  },
   info: jest.fn(),
   error: jest.fn(),
   warn: jest.fn(),

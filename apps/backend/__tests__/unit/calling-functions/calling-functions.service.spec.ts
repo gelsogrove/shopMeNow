@@ -250,7 +250,7 @@ describe("CallingFunctionsService", () => {
 
       expect(result.success).toBe(true)
       expect(result.message).toContain("DELEGATE_TO_AGENT:PRODUCT_SEARCH")
-      expect(result.data?.agentType).toBe("PRODUCT_SEARCH")
+      expect(result.data?.delegateTo).toBe("PRODUCT_SEARCH")
       expect(result.data?.query).toBe(mockRequest.query)
     })
 
@@ -259,7 +259,7 @@ describe("CallingFunctionsService", () => {
 
       expect(result.success).toBe(true)
       expect(result.message).toContain("DELEGATE_TO_AGENT:CART_MANAGEMENT")
-      expect(result.data?.agentType).toBe("CART_MANAGEMENT")
+      expect(result.data?.delegateTo).toBe("CART_MANAGEMENT")
     })
 
     it("orderTrackingAgent should return delegation message", async () => {
@@ -267,7 +267,7 @@ describe("CallingFunctionsService", () => {
 
       expect(result.success).toBe(true)
       expect(result.message).toContain("DELEGATE_TO_AGENT:ORDER_TRACKING")
-      expect(result.data?.agentType).toBe("ORDER_TRACKING")
+      expect(result.data?.delegateTo).toBe("ORDER_TRACKING")
     })
 
     it("customerSupportAgent should return delegation message", async () => {
@@ -275,7 +275,7 @@ describe("CallingFunctionsService", () => {
 
       expect(result.success).toBe(true)
       expect(result.message).toContain("DELEGATE_TO_AGENT:CUSTOMER_SUPPORT")
-      expect(result.data?.agentType).toBe("CUSTOMER_SUPPORT")
+      expect(result.data?.delegateTo).toBe("CUSTOMER_SUPPORT")
     })
   })
 

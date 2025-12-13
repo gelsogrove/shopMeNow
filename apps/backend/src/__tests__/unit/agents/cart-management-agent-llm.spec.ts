@@ -12,7 +12,42 @@
  * @spec 191-cart-llm-management
  */
 
-import { CartManagementAgentLLM } from "../../../application/agents/CartManagementAgentLLM"
+// Mock logger FIRST before any imports
+jest.mock("../../../utils/logger", () => ({
+  default: {
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn(),
+  },
+}))
+
+// Mock message.repository to prevent logger issue during import
+jest.mock("../../../repositories/message.repository", () => ({
+  MessageRepository: jest.fn().mockImplementation(() => ({
+    create: jest.fn(),
+    findMany: jest.fn(),
+  })),
+}))
+
+// Mock template services
+jest.mock("../../../application/services/prompt-builder/template-engine.service", () => ({
+  TemplateEngineService: jest.fn().mockImplementation(() => ({
+    render: jest.fn().mockReturnValue("mocked template"),
+    compile: jest.fn(),
+  })),
+}))
+
+jest.mock("../../../application/services/template-loader.service", () => ({
+  TemplateLoaderService: {
+    getInstance: jest.fn().mockReturnValue({
+      loadTemplate: jest.fn().mockResolvedValue("mocked template content"),
+      getTemplateEngine: jest.fn().mockReturnValue({
+        render: jest.fn().mockReturnValue("mocked template"),
+      }),
+    }),
+  },
+}))
 
 jest.mock("@echatbot/database", () => ({
   prisma: {
@@ -32,15 +67,7 @@ jest.mock("../../../repositories/agent-config.repository")
 // Mock axios for OpenRouter calls
 jest.mock("axios")
 
-// Mock logger
-jest.mock("../../../utils/logger", () => ({
-  default: {
-    info: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-    debug: jest.fn(),
-  },
-}))
+import { CartManagementAgentLLM } from "../../../application/agents/CartManagementAgentLLM"
 
 describe("CartManagementAgentLLM", () => {
   let agent: CartManagementAgentLLM
