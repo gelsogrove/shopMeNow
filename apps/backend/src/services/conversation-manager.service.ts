@@ -133,6 +133,28 @@ export class ConversationManager {
   }
 
   /**
+   * Save system context message (hidden from user, visible to LLM)
+   * Used for passing JSON context like group mappings, cart state, etc.
+   */
+  async saveSystemContext(
+    params: Omit<SaveMessageParams, "role" | "deliveryStatus">
+  ): Promise<void> {
+    try {
+      await this.conversationRepo.saveMessage({
+        ...params,
+        role: "system",
+        deliveryStatus: "not_queued", // System messages never go to WhatsApp
+      })
+      logger.info("📋 System context saved to history", {
+        conversationId: params.conversationId,
+        contentPreview: params.content.substring(0, 100),
+      })
+    } catch (error) {
+      logger.error("❌ Failed to save system context", error)
+    }
+  }
+
+  /**
    * Save assistant response
    */
   async saveAssistantMessage(

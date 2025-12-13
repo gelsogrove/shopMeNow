@@ -93,9 +93,9 @@ export class PromptRenderService {
       // 2. Load template from file (cached)
       const template = await this.loadTemplate(agentType, workspace.sellsProductsAndServices ?? true)
 
-      // 3. STEP 1: RENDER - Compile conditionals
+      // 3. STEP 1: RENDER - Process conditionals
       const conditionalValues = this.buildConditionalValues(workspace)
-      const renderedTemplate = this.templateEngine.compileConditionals(template, conditionalValues)
+      const renderedTemplate = this.templateEngine.process(template, conditionalValues)
 
       // 4. STEP 2: REPLACE - Substitute variables
       const finalPrompt = await this.replaceVariables(renderedTemplate, context, workspace)

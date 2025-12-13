@@ -10,13 +10,13 @@
  *
  * Architecture:
  * - Own LLM instance (OpenRouter + GPT-4o-mini)
- * - Own system prompt from database (agentConfig.PRODUCT_SEARCH)
+ * - Own system prompt from files (TemplateLoaderService loads from /templates/ecommerce/02-product-search.template.md)
  * - Variables replaced: {{PRODUCTS}}, {{CATEGORIES}}, {{OFFERS}}, {{nameUser}}, etc.
  * - Returns direct Italian response (no translation needed)
  *
  * Flow:
  * 1. Router delegates query → Product and Services Agent
- * 2. Load system prompt from database (agentType: PRODUCT_SEARCH)
+ * 2. Load system prompt from template files (agentType: PRODUCT_SEARCH)
  * 3. Replace all variables with real data
  * 4. Call LLM with customer query
  * 5. Return direct response → Router
@@ -32,10 +32,13 @@
 import { PrismaClient } from "@echatbot/database"
 import axios from "axios"
 import { config } from "../../config"
-import { AgentConfigRepository } from "../../repositories/agent-config.repository"
 import { SearchConversationRepository } from "../../repositories/searchConversation.repository"
+import { TemplateLoaderService } from "../services/template-loader.service"
+import { getSystemContextService, SystemContextService, ListItem } from "../../services/system-context.service"
 import logger from "../../utils/logger"
 // NOTE: ProductSearchAgent removed - LLM uses {{PRODUCTS}} from prompt only
+
+import { CustomerData } from "../../types/agent.types"
 
 export interface ProductSearchLLMContext {
   workspaceId: string
@@ -44,6 +47,8 @@ export interface ProductSearchLLMContext {
   customerName?: string
   customerLanguage?: string
   query: string // Customer's search query (from Router)
+  /** Pre-loaded customer data from Router (avoids duplicate DB queries) */
+  customerData?: CustomerData
 }
 
 export interface ProductSearchLLMResponse {
@@ -64,7 +69,8 @@ export class ProductSearchAgentLLM {
   private prisma: PrismaClient
   // NOTE: productSearchAgent removed - LLM uses {{PRODUCTS}} from prompt only
   private searchConversationRepo: SearchConversationRepository
-  private agentConfigRepo: AgentConfigRepository
+  private templateLoader: TemplateLoaderService
+  private systemContextService: SystemContextService
   private openRouterApiKey: string
   private openRouterBaseUrl: string
 
@@ -72,7 +78,8 @@ export class ProductSearchAgentLLM {
     this.prisma = prisma
     // NOTE: ProductSearchAgent instance removed - no database queries needed
     this.searchConversationRepo = new SearchConversationRepository()
-    this.agentConfigRepo = new AgentConfigRepository(prisma)
+    this.templateLoader = TemplateLoaderService.getInstance(prisma)
+    this.systemContextService = getSystemContextService(prisma)
 
     // OpenRouter API configuration
     this.openRouterApiKey = process.env.OPENROUTER_API_KEY || ""
@@ -138,22 +145,15 @@ export class ProductSearchAgentLLM {
         context.workspaceId
       )
 
-      // STEP 1: Load system prompt from database
-      const agentConfig = await this.agentConfigRepo.findByType(
-        context.workspaceId,
-        "PRODUCT_SEARCH"
+      // STEP 1: Load template from file (NOT from Router query)
+      // Router query goes as USER MESSAGE, template is the SYSTEM PROMPT
+      const systemPrompt = await this.templateLoader.loadAndRenderTemplate(
+        "PRODUCT_SEARCH",
+        context.workspaceId
       )
 
-      if (!agentConfig || !agentConfig.isActive) {
-        throw new Error(
-          "ProductSearchAgent configuration not found or inactive"
-        )
-      }
-
-      logger.info(`📋 Loaded PRODUCT_SEARCH prompt from database`, {
-        promptLength: agentConfig.systemPrompt.length,
-        model: agentConfig.model,
-        temperature: agentConfig.temperature,
+      logger.info(`📋 Loaded ProductSearch template from file`, {
+        promptLength: systemPrompt.length,
       })
 
       // 🔴 CRITICAL: Replace {{PRODUCTS}} with real data from database
@@ -170,24 +170,34 @@ export class ProductSearchAgentLLM {
         `🔄 Loading products and categories for variable replacement...`
       )
 
-      // Get customer data
-      const customer = await this.prisma.customers.findUnique({
-        where: { id: context.customerId },
-      })
+      // 🔧 OPTIMIZATION: Use pre-loaded customerData from Router if available (avoids duplicate DB queries)
+      let customerDataForPrompt: any
+      let customerDiscount: number
 
-      // Map customer DB fields to prompt processor expected format
-      const customerData = customer
-        ? {
-            nameUser: customer.name || "Cliente",
-            email: customer.email || "",
-            phone: customer.phone || "",
-            discountUser: customer.discount || 0,
-            languageUser: customer.language || "ITALIANO",
-          }
-        : {}
+      if (context.customerData) {
+        // Router already loaded customer data - use it directly
+        customerDataForPrompt = context.customerData
+        customerDiscount = context.customerData.discountUser || 0
+        logger.info(`✅ Using pre-loaded customerData from Router (0 extra queries)`)
+      } else {
+        // Fallback: Load customer data from DB (legacy behavior)
+        const customer = await this.prisma.customers.findUnique({
+          where: { id: context.customerId },
+        })
+        customerDataForPrompt = customer
+          ? {
+              nameUser: customer.name || "Cliente",
+              email: customer.email || "",
+              phone: customer.phone || "",
+              discountUser: customer.discount || 0,
+              languageUser: customer.language || "ITALIANO",
+            }
+          : {}
+        customerDiscount = customer?.discount || 0
+        logger.warn(`⚠️ Fallback: Loaded customer from DB (consider passing customerData from Router)`)
+      }
 
       // Load dynamic content (products, categories, etc.) with customer discount applied
-      const customerDiscount = customer?.discount || 0
       const productsText = await messageRepo.getActiveProducts(
         context.workspaceId,
         customerDiscount // 🔴 CRITICAL: Pass customer discount to calculate prices correctly
@@ -206,11 +216,78 @@ export class ProductSearchAgentLLM {
         offersContent: offersText, // 🔍 DEBUG: Log actual offers content
       })
 
+      // 🔒 Runtime overrides to prevent grouping regressions for known cases (e.g., Salumi single-group)
+      const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+
+      const extractCategoryProducts = (categoryName: string) => {
+        if (!productsText) return { count: 0, items: [] as string[] }
+        const headerRegex = new RegExp(
+          `\\*\\*${escapeRegExp(categoryName.toUpperCase())}\\*\\* \\((\\d+) prodotti\\)\\n([\\s\\S]*?)(?:\\n\\n|$)`,
+          "i"
+        )
+        const match = productsText.match(headerRegex)
+        if (!match) return { count: 0, items: [] as string[] }
+        const count = parseInt(match[1], 10) || 0
+        const block = match[2] || ""
+        const items = block
+          .split(/\n/)
+          .map((line) => line.trim())
+          .filter((line) => line.startsWith("•"))
+        return { count, items }
+      }
+
+      const findKeywordMatches = (keyword: string) => {
+        if (!keyword || !productsText) return { count: 0, items: [] as string[] }
+        const lower = keyword.toLowerCase()
+        const items = productsText
+          .split(/\n/)
+          .map((line) => line.trim())
+          .filter((line) => line.startsWith("•") && line.toLowerCase().includes(lower))
+        return { count: items.length, items }
+      }
+
+      const findProductLineByName = (productName: string) => {
+        if (!productName || !productsText) return null
+        const lower = productName.toLowerCase()
+        return (
+          productsText
+            .split(/\n/)
+            .map((line) => line.trim())
+            .find((line) => line.startsWith("•") && line.toLowerCase().includes(lower)) || null
+        )
+      }
+
+      let runtimeDirectives = ""
+      const normalizedQueryRuntime = context.query.toLowerCase()
+
+      const keywordMatch = context.query.match(/products related to \"([^\"]+)\"|products related to '([^']+)'/i)
+      const keyword = keywordMatch ? keywordMatch[1] || keywordMatch[2] : null
+      if (keyword) {
+        const keywordMatches = findKeywordMatches(keyword)
+        if (keywordMatches.count === 1) {
+          runtimeDirectives += `- Parola chiave "${keyword}": trovato 1 prodotto. Mostra i dettagli di quel prodotto e chiedi se aggiungere al carrello. Non reindirizzare ad altre categorie o gruppi.\n`
+        } else if (keywordMatches.count >= 2 && keywordMatches.count <= 5) {
+          runtimeDirectives += `- Parola chiave "${keyword}": trovati ${keywordMatches.count} prodotti. Elenca tutti con numeri e prezzi (no gruppi) e chiedi quale prodotto interessa.\n`
+        } else if (keywordMatches.count >= 6) {
+          runtimeDirectives += `- Parola chiave "${keyword}": trovati ${keywordMatches.count} prodotti. Crea 2-4 gruppi bilanciati; se i gruppi sarebbero singoli, elenca direttamente tutti i prodotti con numeri e prezzi (mai un solo gruppo).\n`
+        }
+      }
+
+      // Force direct product detail when Router passes an explicit product name (avoids salumi/category fallback)
+      const directProductMatch = context.query.match(/product ['\"]([^'\"]+)['\"]/i)
+      if (directProductMatch && directProductMatch[1]) {
+        const productName = directProductMatch[1]
+        const productLine = findProductLineByName(productName)
+        if (productLine) {
+          runtimeDirectives += `- Prodotto specifico "${productName}": mostra i dettagli esatti di questo prodotto (nome, prezzo, breve descrizione se presente) e chiedi se aggiungere al carrello. Non raggruppare, non cambiare categoria o elenco.
+`
+        }
+      }
       // Replace ALL variables ({{PRODUCTS}}, {{CATEGORIES}}, {{nameUser}}, etc.)
       const processedPrompt = await promptProcessor.preProcessPrompt(
-        agentConfig.systemPrompt,
+        systemPrompt,
         context.workspaceId,
-        customerData, // Mapped customer data for variable replacement
+        customerDataForPrompt, // Mapped customer data for variable replacement
         {
           faqs: "", // Not used in product search
           products: productsText,
@@ -220,31 +297,42 @@ export class ProductSearchAgentLLM {
         }
       )
 
-      logger.info(`✅ Prompt variables replaced`, {
-        originalLength: agentConfig.systemPrompt.length,
-        processedLength: processedPrompt.length,
-        hasProducts:
-          processedPrompt.includes("SALUMI-") ||
-          processedPrompt.includes("FOR-"),
+      // 🎯 CRITICAL: Add Router's query as INSTRUCTION to the system prompt
+      // Router sends: "User want to see categories... Format MUST be: 1. Name (N items)"
+      // This becomes part of system prompt so LLM follows it as instruction
+      let finalSystemPrompt =
+        processedPrompt +
+        "\n\n## 🎯 CURRENT REQUEST (FOLLOW THESE INSTRUCTIONS)\n" +
+        context.query
+
+      if (runtimeDirectives) {
+        finalSystemPrompt +=
+          "\n\n## RUNTIME DIRECTIVES (HIGH PRIORITY)\n" +
+          runtimeDirectives.trim()
+      }
+
+      logger.info(`✅ Prompt variables replaced + Router instructions added`, {
+        originalLength: systemPrompt.length,
+        processedLength: finalSystemPrompt.length,
       })
 
       // 🔍 DEBUG: Log prompt info (without printing full prompt to console)
       logger.debug("Product Search Agent prompt processed", {
-        promptLength: processedPrompt.length,
-        firstChars: processedPrompt.substring(0, 200),
+        promptLength: finalSystemPrompt.length,
+        firstChars: finalSystemPrompt.substring(0, 200),
       })
 
-      // STEP 2: Build messages for LLM (with conversation history if exists)
+      // STEP 2: Build messages for LLM (with conversation history if appropriate)
       const messages: any[] = [
         {
           role: "system" as const,
-          content: processedPrompt, // ✅ Use processed prompt with ALL variables replaced
+          content: finalSystemPrompt, // ✅ Use processed prompt with ALL variables replaced + Router instructions
         },
       ]
 
-      // Add conversation history for context (last query/response)
-      // Feature 191: This provides context so LLM knows what list was shown before
-      // When user says "1", LLM sees previous response and calls getProductDetails()
+      // 🚦 Conversation history is helpful for follow-ups like "1" after a product list,
+      // but it can cause loops when the Router explicitly asks to show a category or to reset to full categories.
+      // Always include conversation history when available (no keyword heuristics)
       if (conversation?.lastQuery && conversation?.lastResponse) {
         messages.push({
           role: "user" as const,
@@ -260,21 +348,22 @@ export class ProductSearchAgentLLM {
         })
       }
 
+      // User message is simple - instructions are already in system prompt
       messages.push({
         role: "user" as const,
-        content: context.query,
+        content: "Execute the request following the instructions above.",
       })
 
       // STEP 3: Define function calls for product search
       const functions = this.getProductSearchFunctions()
 
-      // STEP 4: Call LLM (OpenRouter)
+      // STEP 4: Call LLM (OpenRouter) with default config
       const llmResponse = await this.callLLM({
-        model: agentConfig.model,
+        model: "gpt-4o-mini", // 🆕 Default model from template
         messages,
         functions,
-        temperature: agentConfig.temperature,
-        maxTokens: agentConfig.maxTokens || 2000,
+        temperature: 0.3, // Slightly higher to avoid over-constraint while keeping responses stable
+        maxTokens: 2000, // 🆕 Default max tokens
       })
 
       let totalTokens = llmResponse.tokensUsed
@@ -343,21 +432,42 @@ export class ProductSearchAgentLLM {
         })
 
         const finalLLMResponse = await this.callLLM({
-          model: agentConfig.model,
+          model: "gpt-4o-mini", // 🆕 Default model from template
           messages,
           functions,
-          temperature: agentConfig.temperature,
-          maxTokens: agentConfig.maxTokens || 2000,
+          temperature: 0.3, // Match primary call for consistent behavior
+          maxTokens: 2000, // 🆕 Default max tokens
         })
 
         totalTokens += finalLLMResponse.tokensUsed
         finalResponse = finalLLMResponse.content || ""
+      }
 
-        // 🛡️ GUARDIA: Se l'LLM non ha generato testo, costruisci risposta dal function result
-        if (!finalResponse.trim() && functionCalls.length > 0) {
-          logger.warn(`⚠️ LLM returned empty response after function call, building fallback from function result`)
-          finalResponse = this.buildFallbackResponseFromFunctionResult(functionCalls, context.customerLanguage || "it")
-          logger.info(`✅ Built fallback response`, { responseLength: finalResponse.length })
+      // 🔴 STEP 6.5: VALIDATE GROUPING RULE
+      // If response contains 6+ product lines, retry with grouping instruction
+      const groupingValidation = this.validateGroupingRule(finalResponse)
+      if (groupingValidation.violated) {
+        logger.warn(`🚨 Grouping rule violated! Retrying with explicit instruction...`, {
+          productLineCount: groupingValidation.productLineCount,
+        })
+
+        const retryResult = await this.retryWithGroupingInstruction(
+          messages,
+          this.getProductSearchFunctions(),
+          groupingValidation.productLineCount,
+          finalResponse
+        )
+
+        if (retryResult.content) {
+          // Validate retry response too
+          const retryValidation = this.validateGroupingRule(retryResult.content)
+          if (!retryValidation.violated) {
+            finalResponse = retryResult.content
+            totalTokens += retryResult.tokensUsed
+            logger.info(`✅ Grouping retry successful - now using grouped response`)
+          } else {
+            logger.warn(`⚠️ Retry still violated grouping (${retryValidation.productLineCount} lines) - using original`)
+          }
         }
       }
 
@@ -408,6 +518,27 @@ export class ProductSearchAgentLLM {
         // Don't fail the whole request if memory save fails
       }
 
+      // 🆕 STEP 7.5: Extract and save list to SystemContext (for numeric selections)
+      try {
+        const extractedList = this.extractListFromResponse(finalResponse, functionCalls)
+        if (extractedList && extractedList.length > 0) {
+          await this.systemContextService.setCurrentList(
+            context.workspaceId,
+            context.customerId,
+            {
+              type: this.determineListType(extractedList),
+              items: extractedList,
+            }
+          )
+          logger.info(`📋 [SystemContext] Saved list for future selections`, {
+            itemCount: extractedList.length,
+            type: this.determineListType(extractedList),
+          })
+        }
+      } catch (contextError) {
+        logger.error(`⚠️ Failed to save SystemContext:`, contextError)
+      }
+
       logger.info(`✅ ProductSearchAgentLLM: Query processed`, {
         executionTimeMs,
         tokensUsed: totalTokens,
@@ -422,7 +553,7 @@ export class ProductSearchAgentLLM {
         executionTimeMs,
         functionCalls,
         systemPrompt: processedPrompt, // 🆕 Include processed prompt for debugging
-        model: agentConfig.model, // 🆕 Include model used
+        model: "gpt-4o-mini", // 🆕 Default model from template
       }
     } catch (error) {
       const executionTimeMs = Date.now() - startTime
@@ -668,160 +799,185 @@ export class ProductSearchAgentLLM {
   // Now the LLM uses getProductDetails() function call instead
 
   /**
-   * Analyze LLM response to detect grouping strategy used
-   * Feature 123: Analytics for dynamic grouping intelligence
+   * 🔴 GROUPING RULE VALIDATION
+   * 
+   * Detects if response violates the 6+ grouping rule:
+   * - Pattern: 6 or more lines like "1. Product Name - €Price"
+   * - If violated, returns the count of product lines
+   * - If valid, returns null
    */
-  private analyzeGroupingStrategy(
-    response: string,
-    products: any[]
-  ): { strategy: string; groupCount: number } {
-    const responseLower = response.toLowerCase()
+  private validateGroupingRule(response: string): { violated: boolean; productLineCount: number } {
+    // Pattern to match product list lines: "1. Product Name - €Price" or "1. Product Name €Price"
+    // Also matches lines like "1. Product Name (€7.50/kg)" or variations
+    const productLinePattern = /^\s*\d+\.\s+[^(]+(?:€[\d.,]+|[\d.,]+\s*€)/gm
+    
+    const matches = response.match(productLinePattern) || []
+    const productLineCount = matches.length
 
-    // Detect strategy based on keywords in response
-    let strategy = "unknown"
-    let groupCount = 0
-
-    // Count numbered groups (1., 2., 3., etc.)
-    const groupMatches = response.match(/^\d+\.\s/gm)
-    groupCount = groupMatches ? groupMatches.length : 0
-
-    // Detect strategy type
-    if (
-      responseLower.includes("dop") ||
-      responseLower.includes("halal") ||
-      responseLower.includes("bio") ||
-      responseLower.includes("certificazioni")
-    ) {
-      strategy = "certification-based"
-    } else if (
-      responseLower.includes("prezzo") ||
-      responseLower.includes("€") ||
-      responseLower.includes("fascia")
-    ) {
-      strategy = "price-based"
-    } else if (
-      responseLower.includes("regione") ||
-      responseLower.includes("sicilian") ||
-      responseLower.includes("sardi")
-    ) {
-      strategy = "region-based"
-    } else if (
-      responseLower.includes("aperitivo") ||
-      responseLower.includes("colazione") ||
-      responseLower.includes("cena")
-    ) {
-      strategy = "use-case"
-    } else if (
-      responseLower.includes("stagionat") ||
-      responseLower.includes("piccante") ||
-      responseLower.includes("dolce")
-    ) {
-      strategy = "attribute-based"
-    } else if (
-      responseLower.includes("tipo") ||
-      responseLower.includes("categor") ||
-      groupCount > 0
-    ) {
-      strategy = "category-based"
-    } else if (products.length <= 3) {
-      strategy = "direct-list"
-    } else if (products.length === 1) {
-      strategy = "single-product"
+    if (productLineCount >= 6) {
+      logger.warn(`🚨 GROUPING RULE VIOLATED: Response contains ${productLineCount} product lines (>=6 should be grouped)`, {
+        sampleLines: matches.slice(0, 3).map(l => l.trim()),
+      })
+      return { violated: true, productLineCount }
     }
 
-    return { strategy, groupCount }
+    return { violated: false, productLineCount }
   }
 
   /**
-   * 🛡️ Build fallback response when LLM returns empty content
-   * Uses function call results to construct a helpful response
+   * 🔧 RETRY WITH GROUPING INSTRUCTION
+   * 
+   * When grouping rule is violated, retry the LLM with explicit instruction
+   * to group the products instead of listing them all.
    */
-  private buildFallbackResponseFromFunctionResult(
-    functionCalls: Array<{ name: string; arguments: any; result: any }>,
-    language: string
-  ): string {
-    // Find product or service details from function calls
-    const productDetails = functionCalls.find(
-      (fc) => fc.name === "getProductDetails" && fc.result?.found
-    )
-    const serviceDetails = functionCalls.find(
-      (fc) => fc.name === "getServiceDetails" && fc.result?.found
-    )
+  private async retryWithGroupingInstruction(
+    messages: any[],
+    functions: any[],
+    productLineCount: number,
+    originalResponse: string
+  ): Promise<{ content: string | null; tokensUsed: number }> {
+    logger.info(`🔄 Retrying with grouping instruction after ${productLineCount} products listed`)
 
-    // Handle product found
-    if (productDetails?.result?.product) {
-      const p = productDetails.result.product
-      const priceStr = p.discountedPrice
-        ? `€${p.discountedPrice.toFixed(2).replace(".", ",")} (invece di €${p.price.toFixed(2).replace(".", ",")})`
-        : `€${p.price.toFixed(2).replace(".", ",")}`
+    // Add correction message to conversation
+    const correctionMessages = [
+      ...messages,
+      {
+        role: "assistant" as const,
+        content: originalResponse,
+      },
+      {
+        role: "user" as const,
+        content: `⚠️ ERRORE: Hai listato ${productLineCount} prodotti singolarmente. Questo viola la REGOLA DI GROUPING: quando ci sono 6+ prodotti, DEVI raggrupparli in 2-4 categorie logiche.
 
-      return `Sì, abbiamo **${p.name}**! 🧀
+NON listare prodotti singoli! Invece, crea gruppi come:
+1. [Nome Gruppo] (X prodotti)
+2. [Nome Gruppo] (Y prodotti)
 
-📦 **Dettagli prodotto:**
-- Prezzo: ${priceStr}
-- Formato: ${p.formato || "Standard"}
-${p.description ? `- Descrizione: ${p.description}` : ""}
+Raggruppa per: tipo/texture, uso, fascia di prezzo, o profilo di sapore.
+Rispondi ORA con i gruppi, NON con la lista prodotti.`,
+      },
+    ]
 
-Vuoi aggiungerlo al carrello? 🛒 Se sì, quanti?`
+    const retryResponse = await this.callLLM({
+      model: "gpt-4o-mini",
+      messages: correctionMessages,
+      functions,
+      temperature: 0.2, // Lower temperature for more deterministic grouping
+      maxTokens: 1500,
+    })
+
+    return {
+      content: retryResponse.content,
+      tokensUsed: retryResponse.tokensUsed,
     }
-
-    // Handle service found
-    if (serviceDetails?.result?.service) {
-      const s = serviceDetails.result.service
-      const priceStr = `€${s.price.toFixed(2).replace(".", ",")}`
-
-      return `Sì, offriamo il servizio **${s.name}**! 🚚
-
-📋 **Dettagli servizio:**
-- Prezzo: ${priceStr}
-${s.description ? `- Descrizione: ${s.description}` : ""}
-
-Vuoi aggiungerlo al carrello? 🛒 Se sì, quanti?`
-    }
-
-    // Handle multiple products found
-    const multipleProducts = functionCalls.find(
-      (fc) => fc.name === "getProductDetails" && fc.result?.multiple
-    )
-    if (multipleProducts?.result?.options) {
-      const options = multipleProducts.result.options
-      let response = `Ho trovato ${options.length} varianti. Quale preferisci?\n\n`
-      options.slice(0, 5).forEach((opt: any, idx: number) => {
-        const priceStr = `€${opt.price.toFixed(2).replace(".", ",")}`
-        response += `${idx + 1}. **${opt.name}** - ${priceStr}\n`
-      })
-      return response
-    }
-
-    // Handle not found
-    const notFoundCall = functionCalls.find(
-      (fc) =>
-        (fc.name === "getProductDetails" || fc.name === "getServiceDetails") &&
-        !fc.result?.found
-    )
-    if (notFoundCall) {
-      const searchTerm =
-        notFoundCall.arguments?.productName ||
-        notFoundCall.arguments?.serviceName ||
-        "prodotto"
-      return `Mi dispiace, non ho trovato "${searchTerm}" nel nostro catalogo. Vuoi che cerchi qualcos'altro?`
-    }
-
-    // 🆕 Handle searchProductForStatistics - this is analytics-only, no product data
-    // When this is the only function call, the LLM should have responded with product info
-    // but didn't. Return a helpful message asking for clarification.
-    const statsCall = functionCalls.find(
-      (fc) => fc.name === "searchProductForStatistics"
-    )
-    if (statsCall) {
-      const query = statsCall.arguments?.query || "prodotto"
-      logger.warn(`⚠️ LLM only called searchProductForStatistics without responding. Query: "${query}"`)
-      // Return a message that acknowledges the search but asks for more context
-      // The LLM SHOULD have used {{PRODUCTS}} to find the product - this is a fallback
-      return `Ho registrato la tua ricerca per "${query}". Per aiutarti meglio, potresti dirmi quale prodotto specifico cerchi dal nostro catalogo? 📋`
-    }
-
-    // Generic fallback
-    return `Sto elaborando la tua richiesta. Come posso aiutarti?`
   }
+
+  /**
+   * 🆕 Extract list items from LLM response for SystemContext
+   * 
+   * Parses numbered lists from response and extracts SKUs from function calls
+   * to create a mapping for future numeric selections.
+   */
+  private extractListFromResponse(
+    response: string,
+    functionCalls: Array<{ name: string; arguments: any; result: any }>
+  ): ListItem[] {
+    const items: ListItem[] = []
+    
+    // Pattern 1: Numbered list with products or groups
+    // e.g., "1. Parmigiano Reggiano - €12.50 [SKU:PARM-24]"
+    // e.g., "1. Formaggi Stagionati (4 items) [SKUS:SKU1,SKU2,SKU3,SKU4]"
+    const numberedLinePattern = /^(\d+)[.)]\s*(.+)$/gm
+    let match
+    
+    while ((match = numberedLinePattern.exec(response)) !== null) {
+      const index = parseInt(match[1], 10)
+      const label = match[2].trim()
+      
+      // Try to extract single SKU (format: [SKU:XXX])
+      const skuMatch = label.match(/\[SKU:([A-Z0-9-]+)\]/i)
+      
+      // Try to extract multiple SKUs (format: [SKUS:XXX,YYY,ZZZ])
+      const skusMatch = label.match(/\[SKUS?:([A-Z0-9-,]+)\]/i)
+      
+      // Check if this looks like a grouping (contains "prodotti" or "products" count)
+      const isGrouping = /\(\d+\s*(?:prodotti?|products?|items?)\)/i.test(label)
+      
+      // Clean the label by removing SKU tags
+      const cleanLabel = label
+        .replace(/\[SKU:[A-Z0-9-]+\]/gi, '')
+        .replace(/\[SKUS?:[A-Z0-9-,]+\]/gi, '')
+        .trim()
+      
+      if (isGrouping && skusMatch) {
+        // This is a grouping with multiple SKUs
+        const skus = skusMatch[1].split(',').map(s => s.trim())
+        items.push({
+          index,
+          label: cleanLabel,
+          skus,
+          type: "grouping",
+        })
+      } else if (isGrouping) {
+        // Grouping without explicit SKUs (fallback)
+        items.push({
+          index,
+          label: cleanLabel,
+          type: "grouping",
+        })
+      } else {
+        // This is a single product
+        items.push({
+          index,
+          label: cleanLabel,
+          sku: skuMatch ? skuMatch[1] : (skusMatch ? skusMatch[1] : undefined),
+          type: "product",
+        })
+      }
+    }
+    
+    // Pattern 2: Try to get SKUs from function call results (backup)
+    for (const fc of functionCalls) {
+      if (fc.name === "getProductDetails" && fc.result?.product) {
+        const product = fc.result.product
+        // Update the matching item with SKU if we found it
+        const matchingItem = items.find(
+          item => item.label.toLowerCase().includes(product.name.toLowerCase().substring(0, 10))
+        )
+        if (matchingItem && !matchingItem.sku) {
+          matchingItem.sku = product.sku
+        }
+      }
+      
+      // Handle searchProducts results
+      if (fc.name === "searchProducts" && fc.result?.products) {
+        const products = fc.result.products
+        products.forEach((product: any, idx: number) => {
+          const existingItem = items.find(item => item.index === idx + 1)
+          if (existingItem && !existingItem.sku && product.sku) {
+            existingItem.sku = product.sku
+          }
+        })
+      }
+    }
+    
+    return items
+  }
+
+  /**
+   * 🆕 Determine list type from extracted items
+   */
+  private determineListType(items: ListItem[]): "products" | "categories" | "groupings" | "orders" {
+    if (items.some(i => i.type === "grouping")) {
+      return "groupings"
+    }
+    if (items.every(i => i.type === "product")) {
+      return "products"
+    }
+    if (items.every(i => i.type === "category")) {
+      return "categories"
+    }
+    return "products" // Default
+  }
+
 }

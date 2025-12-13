@@ -4,7 +4,8 @@ import { UrlShortenerService } from "../../../application/services/url-shortener
 import { BillingPrices } from "../../../domain/enums/billing-prices.enum"
 import { prisma } from "../../../lib/prisma"
 import { whatsappMessageRateLimiter, whatsappWorkspaceRateLimiter } from "../../../middlewares/rateLimiter"
-import { LLMRouterService } from "../../../services/llm-router.service"
+// 🆕 Code-First LLM Architecture - replaces LLMRouterService
+import { CodeFirstLLMService, getCodeFirstLLM } from "../../../application/code-first-llm"
 import {
   detectLanguageFromPhonePrefix,
   getRegistrationText,
@@ -972,25 +973,24 @@ export class WhatsAppWebhookController {
         return
       }
 
-      // 🤖 Process with LLMRouterService (NEW - replaces placeholder Echo)
-      logger.info("[WEBHOOK] 🎯 Calling LLMRouterService", {
+      // 🤖 Process with CodeFirstLLMService (NEW Architecture - CODE decides, LLM formats)
+      logger.info("[WEBHOOK] 🎯 Calling CodeFirstLLMService", {
         customerId: customer.id,
         conversationId: chatSession.id,
         messageLength: messageMarkdown.length,
       })
 
-      const llmRouterService = new LLMRouterService(prisma)
-      const routerResult = await llmRouterService.routeMessage({
+      const codeFirstService = getCodeFirstLLM(prisma)
+      const routerResult = await codeFirstService.routeMessage({
         workspaceId: customer.workspaceId,
         customerId: customer.id,
         conversationId: chatSession.id,
-        messageId: whatsappMessageId, // WhatsApp message ID
         message: messageMarkdown,
         customerLanguage: customer.language || "it",
         customerName: customer.name,
       })
 
-      logger.info("[WEBHOOK] ✅ LLMRouterService completed", {
+      logger.info("[WEBHOOK] ✅ CodeFirstLLMService completed", {
         agentUsed: routerResult.agentUsed,
         tokensUsed: routerResult.tokensUsed,
         executionTimeMs: routerResult.executionTimeMs,

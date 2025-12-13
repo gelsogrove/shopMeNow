@@ -1213,7 +1213,7 @@ export function ChatPage() {
             type="search"
             placeholder="Search chats..."
             value={clientSearchTerm}
-            className="h-8 text-sm"
+            className="h-8 text-sm w-full max-w-xs"
             onChange={(e) => {
               const newParams = new URLSearchParams(searchParams)
               if (e.target.value) {
@@ -1224,7 +1224,6 @@ export function ChatPage() {
               setSearchParams(newParams)
               setClientSearchTerm(e.target.value)
             }}
-            className="w-full max-w-xs"
           />
           
           {/* WebSocket Status */}

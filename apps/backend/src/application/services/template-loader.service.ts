@@ -25,8 +25,8 @@ import logger from "../../utils/logger"
 const TEMPLATE_FILES: Record<string, string> = {
   ROUTER: "01-router.template.md",
   PRODUCT_SEARCH: "02-product-search.template.md",
+  CART_MANAGEMENT: "03-cart-management.template.md", // Dedicated template with {{products}}
   ORDER_TRACKING: "03-order-tracking.template.md",
-  CART_MANAGEMENT: "03-order-tracking.template.md", // Shares order template for cart context
   CUSTOMER_SUPPORT: "04-customer-support.template.md",
   PROFILE_MANAGEMENT: "05-profile-management.template.md",
   SECURITY: "06-security.template.md",
@@ -49,6 +49,7 @@ interface WorkspaceSettings {
   hasHumanSupport: boolean
   hasSalesAgents: boolean
   hasSuppliers: boolean
+  address: string // 🆕 Physical address for {{#if address}} conditional
 }
 
 export class TemplateLoaderService {
@@ -90,8 +91,8 @@ export class TemplateLoaderService {
       // 2. Load template (cached)
       const template = this.loadTemplate(agentType, settings.sellsProductsAndServices)
 
-      // 3. Compile conditionals (pure CPU, no I/O)
-      const rendered = this.templateEngine.compileConditionals(template, settings)
+      // 3. Process conditionals (pure CPU, no I/O)
+      const rendered = this.templateEngine.process(template, settings)
 
       const elapsed = performance.now() - startTime
       logger.debug(`⚡ Template loaded in ${elapsed.toFixed(2)}ms`, { agentType, chars: rendered.length })
@@ -104,7 +105,7 @@ export class TemplateLoaderService {
   }
 
   /**
-   * Load template from file (cached in memory)
+   * Load template from file (cached in memory - DISABLED IN DEVELOPMENT)
    */
   private loadTemplate(agentType: string, isEcommerce: boolean): string {
     const templateFile = TEMPLATE_FILES[agentType]
@@ -124,20 +125,30 @@ export class TemplateLoaderService {
 
     const cacheKey = `${folder}/${templateFile}`
 
-    // Cache hit - instant return
-    if (templateCache.has(cacheKey)) {
+    // 🔧 DEVELOPMENT: Always reload from disk (no cache)
+    const isDevelopment = process.env.NODE_ENV === "development"
+
+    // Cache hit - instant return (SKIP IN DEVELOPMENT)
+    if (!isDevelopment && templateCache.has(cacheKey)) {
       return templateCache.get(cacheKey)!
     }
 
-    // Cache miss - load from disk
+    // Load from disk
     const templatePath = folder
       ? path.join(__dirname, "..", "..", "templates", folder, templateFile)
       : path.join(__dirname, "..", "..", "templates", templateFile)
 
     try {
       const content = fs.readFileSync(templatePath, "utf-8")
-      templateCache.set(cacheKey, content)
-      logger.info(`📂 Template cached: ${cacheKey}`)
+      
+      // Only cache in production
+      if (!isDevelopment) {
+        templateCache.set(cacheKey, content)
+        logger.info(`📂 Template cached: ${cacheKey}`)
+      } else {
+        logger.debug(`📂 Template loaded (no cache in dev): ${cacheKey}`)
+      }
+      
       return content
     } catch (error) {
       // Fallback for informational: try ecommerce version
@@ -145,7 +156,12 @@ export class TemplateLoaderService {
         const fallbackPath = path.join(__dirname, "..", "..", "templates", "ecommerce", templateFile)
         try {
           const content = fs.readFileSync(fallbackPath, "utf-8")
-          templateCache.set(cacheKey, content)
+          
+          // Only cache in production
+          if (!isDevelopment) {
+            templateCache.set(cacheKey, content)
+          }
+          
           logger.warn(`⚠️ Using ecommerce fallback for: ${templateFile}`)
           return content
         } catch {
@@ -176,6 +192,7 @@ export class TemplateLoaderService {
         hasHumanSupport: true,
         hasSalesAgents: true,
         hasSuppliers: true,
+        address: true, // 🆕 For {{#if address}} conditional in templates
       },
     })
 
@@ -188,6 +205,7 @@ export class TemplateLoaderService {
       hasHumanSupport: workspace.hasHumanSupport ?? false,
       hasSalesAgents: workspace.hasSalesAgents ?? false,
       hasSuppliers: workspace.hasSuppliers ?? false,
+      address: workspace.address || "", // 🆕 Physical address for location questions
     }
 
     workspaceCache.set(workspaceId, { settings, timestamp: now })

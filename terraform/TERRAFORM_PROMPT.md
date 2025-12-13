@@ -1,18 +1,130 @@
-# 🏗️ Terraform AWS Infrastructure Prompt
+# 🏗️ Terraform AWS Infrastructure Prompt - eChatbot
 
 ## 📋 Contesto Progetto
 
 **Nome**: eChatbot  
 **Stack**: Node.js Backend + React Frontend + PostgreSQL  
-**Porte**: Backend 3001, Frontend 3000
+**Porte**: Backend 3001, Frontend 3000  
+**Dominio**: echatbot.ai (GoDaddy)
 
-## 🎯 Cosa Deployare
+---
 
-1. **RDS PostgreSQL** - Database
-2. **EC2** - Backend Node.js
-3. **S3 + CloudFront** - Frontend React
-4. **VPC + Security Groups** - Networking
-5. **ALB** - Load Balancer
+## 🏢 MULTI-TENANT ARCHITECTURE
+
+### Strategia: Terraform Workspaces + Sottodomini Isolati
+
+**Obiettivo**: Replicare infrastruttura completa per ogni cliente
+
+```
+echatbot.ai              → Prodotto base (workspace: default)
+altraita.echatbot.ai     → Cliente 1 (workspace: altraita)  
+cliente2.echatbot.ai     → Cliente 2 (workspace: cliente2)
+```
+
+### Ogni cliente ha:
+- ✅ Sottodominio dedicato (`cliente.echatbot.ai`)
+- ✅ Repository GitHub separato (fork di shopME)
+- ✅ Database PostgreSQL isolato
+- ✅ Server EC2 dedicato
+- ✅ Codice personalizzabile (logo, colori, testi)
+- ✅ Costi tracciabili (~€25/mese per cliente)
+- ✅ Backup separati
+- ✅ GitHub Secrets separati
+
+### Comandi Multi-Tenant:
+
+```bash
+# Deploy prodotto base (echatbot.ai)
+terraform workspace select default
+terraform apply
+
+# Crea nuovo cliente
+terraform workspace new altraita
+terraform apply -var-file="terraform.altraita.tfvars"
+# Crea: altraita.echatbot.ai con infrastruttura dedicata
+
+# Switch tra clienti
+terraform workspace list
+terraform workspace select altraita
+
+# Elimina cliente
+terraform workspace select altraita
+terraform destroy -var-file="terraform.altraita.tfvars"
+terraform workspace select default
+terraform workspace delete altraita
+```
+
+### Workflow Nuovo Cliente (Step-by-Step):
+
+```bash
+# 1. Fork repository per cliente
+cd /Users/gelso/workspace
+git clone https://github.com/YOUR_USERNAME/shopME.git shopME-altraita
+cd shopME-altraita
+gh repo create shopME-altraita --private --source=. --remote=origin --push
+
+# 2. Personalizza codice cliente (logo, colori, testi)
+git commit -am "feat: personalizzazione altraita"
+git push
+
+# 3. Crea workspace Terraform
+cd /Users/gelso/workspace/shopME/terraform
+terraform workspace new altraita
+
+# 4. Crea file terraform.altraita.tfvars
+cat > terraform.altraita.tfvars << EOF
+subdomain    = "altraita"
+domain_name  = "echatbot.ai"
+project_name = "echatbot-altraita"
+db_username  = "echatbot_altraita"
+db_password  = "$(openssl rand -base64 24)"
+db_name      = "echatbot_altraita"
+ssh_public_key = "$(cat ~/.ssh/echatbot-key.pub)"
+EOF
+
+# 5. Deploy infrastruttura cliente
+terraform apply -var-file="terraform.altraita.tfvars"
+
+# 6. Configura GitHub Secrets (repository cliente)
+cd /Users/gelso/workspace/shopME-altraita
+gh secret set DATABASE_URL --body "$(cd ../shopME/terraform && terraform output -raw database_url)"
+# ... tutti gli altri 14 secrets
+
+# 7. Deploy automatico
+git push origin main  # GitHub Actions fa tutto
+
+# 8. Verifica
+curl https://altraita.echatbot.ai/health
+```
+
+### Costi per Cliente:
+- **EC2 t3.micro**: ~€8/mese
+- **RDS db.t3.micro**: ~€15/mese
+- **S3 + CloudFront**: ~€2/mese
+- **Route 53**: €0.50/mese
+- **Totale**: ~€25-30/mese per cliente
+
+### Isolamento Sicurezza:
+- ✅ Database separato (no data leakage)
+- ✅ EC2 separato (no resource contention)
+- ✅ Security Groups dedicati
+- ✅ Secrets GitHub separati
+- ✅ Repository Git separato
+- ✅ Backup separati
+
+---
+
+## 🎯 Cosa Deployare (Per Ogni Cliente)
+
+1. **VPC + Networking** - Rete isolata
+2. **EC2 Instance** - Backend Node.js + PM2
+3. **RDS PostgreSQL** - Database dedicato
+4. **Route 53** - DNS sottodominio
+5. **ACM Certificate** - SSL automatico
+6. **S3 Bucket** - Backup
+7. **Security Groups** - Firewall
+
+---
 
 ## 📦 Requisiti Minimi
 
@@ -20,327 +132,99 @@
 - PostgreSQL 15
 - db.t3.micro (Free Tier)
 - 20GB storage
-- Backup 7 giorni
+- Backup automatico 7 giorni
 
 ### Backend
 - Ubuntu 22.04
-- t3.small (2GB RAM)
+- t3.micro (1GB RAM)
 - Node.js 18 + PM2 + Nginx
 
-### Frontend
-- S3 bucket static hosting
-- CloudFront CDN
-- SSL/TLS
+### Networking
+- VPC dedicata
+- 2 subnet pubbliche
+- 2 subnet private
+- Internet Gateway
+
+---
 
 ## 🔐 Secrets Management Strategy
 
-### Approccio: GitHub Actions Secrets (Semplice e Diretto)
+### ⚠️ IMPORTANTE: Terraform NON gestisce secrets applicativi
+
+**Separazione netta**:
+- 🏗️ **Terraform**: Crea solo infrastruttura (EC2, RDS, VPC)
+- 🔐 **GitHub Secrets**: Gestisce credenziali applicative
+- 🚀 **GitHub Actions**: Genera `.env` su EC2 durante deploy
 
 **Vantaggi**:
-- ✅ Tutto in un posto (GitHub)
-- ✅ Nessun setup AWS aggiuntivo
-- ✅ Deployment script più semplice
-- ✅ Gratuito
-- ✅ Facile da aggiornare
+- ✅ Secrets mai nel codice Terraform
+- ✅ Facile rotazione credenziali
+- ✅ Deploy automatico ad ogni push
+- ✅ Audit log su GitHub
 
-### 1. GitHub Actions Workflow (Genera .env durante deploy)
+### Lista Completa Secrets GitHub (14 totali):
 
-```yaml
-# .github/workflows/deploy.yml
-name: Deploy to Production
+| Secret Name | Valore | Dove prenderlo |
+|-------------|--------|----------------|
+| `DATABASE_URL` | `postgresql://user:pass@host:5432/db` | `terraform output -raw database_url` |
+| `JWT_SECRET` | `a38fa4911b7fdb4aebe1911677792b35...` | Dal `.env` locale |
+| `OPENROUTER_API_KEY` | `sk-or-v1-e297e258a59714296503647eff54fa43...` | Dal `.env` locale |
+| `SMTP_USER` | `gelsogrove@gmail.com` | Dal `.env` locale |
+| `SMTP_PASS` | `skvf saqx fryt xeem` | Dal `.env` locale |
+| `GOOGLE_CLIENT_ID` | `988195920488-drdmtlruo5s47nkk4g8prui6k9mb0pln...` | Dal `.env` locale |
+| `GOOGLE_CLIENT_SECRET` | `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` | Dal `.env` locale |
+| `ADMIN_EMAIL` | `admin@echatbot.ai` | Dal `.env` locale |
+| `ADMIN_PASSWORD` | `Venezia44` | Dal `.env` locale |
+| `TOKEN_ENCRYPTION_KEY` | `193b20c983cfeca68ab22230a2097899efbb0574...` | Dal `.env` locale |
+| `EC2_HOST` | IP pubblico | `terraform output -raw ec2_public_ip` |
+| `EC2_SSH_KEY` | Chiave privata | `cat ~/.ssh/echatbot-key` |
+| `AWS_ACCESS_KEY_ID` | `AKIAQC4U3MGFIUTN4JHJ` | Già disponibile |
+| `AWS_SECRET_ACCESS_KEY` | `J9Cc074xEquBwga50mj3rOwQ7ceCPFTl9dC0FiYY` | Già disponibile |
 
-on:
-  workflow_dispatch: # Manual trigger only
-
-jobs:
-  deploy-backend:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy Backend to EC2
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            set -e
-            cd /opt/echatbot/backend
-            
-            # Download artifacts from S3
-            aws s3 cp s3://echatbot-deployment-artifacts/backend-latest.tar.gz .
-            tar -xzf backend-latest.tar.gz
-            rm backend-latest.tar.gz
-            
-            # Install dependencies
-            npm ci --production
-            
-            # Generate .env from GitHub secrets
-            cat > .env << 'EOF'
-            NODE_ENV=production
-            PORT=3001
-            
-            # Database
-            DATABASE_URL=${{ secrets.DATABASE_URL }}
-            
-            # Authentication
-            JWT_SECRET=${{ secrets.JWT_SECRET }}
-            JWT_EXPIRES_IN=7d
-            
-            # AI Integration
-            OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}
-            
-            # Email
-            SMTP_HOST=smtp.gmail.com
-            SMTP_PORT=587
-            SMTP_USER=noreply@echatbot.ai
-            SMTP_PASS=${{ secrets.SMTP_PASS }}
-            
-            # Frontend URL
-            FRONTEND_URL=https://echatbot.ai
-            
-            # Uploads
-            UPLOADS_DIR=/opt/echatbot/uploads
-            MAX_FILE_SIZE=10485760
-            EOF
-            
-            chmod 600 .env
-            
-            # Run database migrations
-            npx prisma migrate deploy
-            
-            # Restart services
-            pm2 restart backend
-            pm2 restart scheduler
-            
-            echo "✅ Backend deployed successfully"
-```
-
-### 2. Setup Secrets in GitHub (Una Volta)
-
-**Vai su: Repository → Settings → Secrets and Variables → Actions → New repository secret**
+### Setup GitHub Secrets (Dopo terraform apply):
 
 ```bash
-# Infrastructure Secrets
-EC2_HOST=ec2-xx-xx-xx-xx.eu-west-1.compute.amazonaws.com
-EC2_SSH_KEY=<contenuto completo di echatbot-key.pem>
-AWS_ACCESS_KEY_ID=<IAM user per GitHub Actions>
-AWS_SECRET_ACCESS_KEY=<IAM secret>
+# Configura tutti i secrets in un colpo
+gh secret set DATABASE_URL --body "$(terraform output -raw database_url)"
+gh secret set JWT_SECRET --body "a38fa4911b7fdb4aebe1911677792b35599ce990b13b563580e6fad1d2a120ea43e41ba630c9915822fe5bf92449e17a231b99168aa8b5cd18adce3b47b7f3d8"
+gh secret set OPENROUTER_API_KEY --body "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"
+gh secret set SMTP_USER --body "gelsogrove@gmail.com"
+gh secret set SMTP_PASS --body "skvf saqx fryt xeem"
+gh secret set GOOGLE_CLIENT_ID --body "988195920488-drdmtlruo5s47nkk4g8prui6k9mb0pln.apps.googleusercontent.com"
+gh secret set GOOGLE_CLIENT_SECRET --body "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"
+gh secret set ADMIN_EMAIL --body "admin@echatbot.ai"
+gh secret set ADMIN_PASSWORD --body "Venezia44"
+gh secret set TOKEN_ENCRYPTION_KEY --body "193b20c983cfeca68ab22230a2097899efbb0574bab7c43e6ec13b86a33edadc"
+gh secret set EC2_HOST --body "$(terraform output -raw ec2_public_ip)"
+gh secret set EC2_SSH_KEY --body "$(cat ~/.ssh/echatbot-key)"
+gh secret set AWS_ACCESS_KEY_ID --body "AKIAQC4U3MGFIUTN4JHJ"
+gh secret set AWS_SECRET_ACCESS_KEY --body "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"
 
-# Application Secrets
-DATABASE_URL=postgresql://echatbot_admin:PASSWORD@db-host:5432/echatbot
-JWT_SECRET=<genera con: openssl rand -base64 32>
-OPENROUTER_API_KEY=sk-or-v1-your-real-key-here
-SMTP_PASS=<Gmail app password: abcd efgh ijkl mnop>
-```
-
-### 3. Lista Completa Secrets GitHub
-
-| Secret Name | Descrizione | Come Ottenerlo |
-|-------------|-------------|----------------|
-| `EC2_HOST` | IP pubblico EC2 | Terraform output dopo apply |
-| `EC2_SSH_KEY` | Chiave SSH privata | Contenuto file `echatbot-key.pem` |
-| `AWS_ACCESS_KEY_ID` | AWS credentials | IAM user per GitHub Actions |
-| `AWS_SECRET_ACCESS_KEY` | AWS secret | IAM user secret |
-| `DATABASE_URL` | PostgreSQL connection | `postgresql://user:pass@host:5432/db` |
-| `JWT_SECRET` | JWT signing key | `openssl rand -base64 32` |
-| `OPENROUTER_API_KEY` | OpenRouter API key | Dashboard OpenRouter |
-| `SMTP_PASS` | Gmail app password | Google Account → Security → App passwords |
-
-### 4. Generare JWT Secret
-
-```bash
-# Genera un secret sicuro
-openssl rand -base64 32
-
-# Output esempio:
-# kX9mP2vL8nQ4rT6wY1zA3bC5dE7fG9hJ0iK2lM4nO6pQ8rS0tU2vW4xY6zA8bC0d
-```
-
-### 5. Aggiornare Secrets
-
-**Via GitHub UI:**
-1. Repository → Settings → Secrets and Variables → Actions
-2. Clicca sul secret da aggiornare
-3. Update secret → Inserisci nuovo valore
-4. Save
-
-**Via GitHub CLI:**
-```bash
-# Installa gh CLI
-brew install gh
-gh auth login
-
-# Aggiorna secret
-gh secret set JWT_SECRET --body "$(openssl rand -base64 32)"
-gh secret set OPENROUTER_API_KEY --body "sk-or-v1-new-key"
-
-# Verifica secrets (mostra solo nomi, non valori)
+# Verifica
 gh secret list
 ```
-
-### 6. Rotazione Secrets (Best Practice)
-
-```bash
-# 1. Genera nuovo secret
-NEW_JWT=$(openssl rand -base64 32)
-
-# 2. Aggiorna in GitHub
-gh secret set JWT_SECRET --body "$NEW_JWT"
-
-# 3. Redeploy
-gh workflow run deploy.yml
-
-# 4. Verifica che il backend sia ripartito
-curl https://api.echatbot.ai/health
-```
-
-### 7. Backup Secrets (Locale, Criptato)
-
-```bash
-# Crea file secrets.txt (NON committare!)
-cat > secrets.txt << EOF
-DATABASE_URL=postgresql://...
-JWT_SECRET=...
-OPENROUTER_API_KEY=...
-SMTP_PASS=...
-EOF
-
-# Cripta con GPG
-gpg --symmetric --cipher-algo AES256 secrets.txt
-# Output: secrets.txt.gpg (questo puoi salvare)
-
-# Elimina file non criptato
-rm secrets.txt
-
-# Per decriptare in futuro
-gpg --decrypt secrets.txt.gpg > secrets.txt
-```
-
-### 8. Security Best Practices
-
-- ✅ **Mai committare secrets** nel codice
-- ✅ **Rotazione periodica** (ogni 90 giorni)
-- ✅ **Backup criptato** dei secrets
-- ✅ **Accesso limitato** al repository (solo team necessario)
-- ✅ **Audit log** - GitHub traccia chi modifica i secrets
-- ✅ **Secrets separati** per staging/production
-
-### 9. Troubleshooting
-
-**Errore: "Secret not found"**
-```bash
-# Verifica che il secret esista
-gh secret list
-
-# Se manca, aggiungilo
-gh secret set SECRET_NAME --body "value"
-```
-
-**Errore: "Invalid DATABASE_URL"**
-```bash
-# Formato corretto
-postgresql://username:password@host:port/database
-
-# Esempio
-postgresql://echatbot_admin:MyPass123@echatbot-db.xxx.eu-west-1.rds.amazonaws.com:5432/echatbot
-```
-
-**Errore: "JWT verification failed"**
-```bash
-# Il JWT_SECRET è cambiato, rigenera e redeploy
-gh secret set JWT_SECRET --body "$(openssl rand -base64 32)"
-gh workflow run deploy.yml
-```
-
----
 
 ---
 
 ## 🌍 Dominio e DNS
 
-### Setup: GoDaddy → AWS
+### Setup: GoDaddy → AWS Route 53
 
 **Dominio**: `echatbot.ai` (registrato su GoDaddy)
 
-**Cosa fare**:
+**Processo**:
 1. Terraform crea **Route53 Hosted Zone**
-2. Tu copi i **nameservers AWS** in GoDaddy (una volta)
-3. Terraform gestisce tutti i record DNS automaticamente
+2. Terraform output mostra **4 nameservers AWS**
+3. Tu copi i nameservers in **GoDaddy** (una volta)
+4. Terraform gestisce tutti i **record DNS automaticamente**
 
-### 1. Terraform Crea Hosted Zone
-
-```hcl
-# terraform/modules/dns/main.tf
-resource "aws_route53_zone" "main" {
-  name = "echatbot.ai"
-  
-  tags = {
-    Name        = "${var.project_name}-hosted-zone"
-    Environment = "production"
-  }
-}
-
-# Output nameservers da copiare in GoDaddy
-output "nameservers" {
-  value = aws_route53_zone.main.name_servers
-  description = "Copia questi nameservers in GoDaddy"
-}
-
-# Record DNS automatici
-resource "aws_route53_record" "frontend" {
-  zone_id = aws_route53_zone.main.zone_id
-  name    = "echatbot.ai"
-  type    = "A"
-  
-  alias {
-    name                   = aws_cloudfront_distribution.frontend.domain_name
-    zone_id                = aws_cloudfront_distribution.frontend.hosted_zone_id
-    evaluate_target_health = false
-  }
-}
-
-resource "aws_route53_record" "www" {
-  zone_id = aws_route53_zone.main.zone_id
-  name    = "www.echatbot.ai"
-  type    = "CNAME"
-  ttl     = 300
-  records = ["echatbot.ai"]
-}
-
-resource "aws_route53_record" "api" {
-  zone_id = aws_route53_zone.main.zone_id
-  name    = "api.echatbot.ai"
-  type    = "A"
-  
-  alias {
-    name                   = aws_lb.backend.dns_name
-    zone_id                = aws_lb.backend.zone_id
-    evaluate_target_health = true
-  }
-}
-
-resource "aws_route53_record" "admin" {
-  zone_id = aws_route53_zone.main.zone_id
-  name    = "admin.echatbot.ai"
-  type    = "A"
-  
-  alias {
-    name                   = aws_lb.backend.dns_name
-    zone_id                = aws_lb.backend.zone_id
-    evaluate_target_health = true
-  }
-}
-```
-
-### 2. Setup GoDaddy (Dopo terraform apply)
+### Dopo terraform apply:
 
 ```bash
-# 1. Esegui terraform
-terraform apply
+# 1. Copia i nameservers
+terraform output domain_nameservers
 
-# 2. Copia i nameservers dall'output
-terraform output nameservers
-# Output:
+# Output esempio:
 # [
 #   "ns-123.awsdns-12.com",
 #   "ns-456.awsdns-45.net",
@@ -348,205 +232,46 @@ terraform output nameservers
 #   "ns-012.awsdns-01.co.uk"
 # ]
 
-# 3. Vai su GoDaddy:
-# - Login → My Products → echatbot.ai → Manage DNS
+# 2. Vai su GoDaddy:
+# - Login → My Products → echatbot.ai → DNS
 # - Nameservers → Change → Custom
 # - Incolla i 4 nameservers AWS
 # - Save
 
-# 4. Attendi propagazione DNS (15-60 minuti)
-dig echatbot.ai +short
+# 3. Attendi propagazione DNS (15-60 minuti)
+watch -n 300 'dig echatbot.ai +short'
 ```
 
-### 3. SSL Certificates (Automatico)
-
-```hcl
-# terraform/modules/ssl/main.tf
-
-# Certificate per CloudFront (DEVE essere in us-east-1)
-resource "aws_acm_certificate" "frontend" {
-  provider          = aws.us_east_1
-  domain_name       = "echatbot.ai"
-  validation_method = "DNS"
-  
-  subject_alternative_names = [
-    "www.echatbot.ai"
-  ]
-  
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-# Certificate per ALB (eu-west-1)
-resource "aws_acm_certificate" "backend" {
-  domain_name       = "api.echatbot.ai"
-  validation_method = "DNS"
-  
-  subject_alternative_names = [
-    "admin.echatbot.ai"
-  ]
-  
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-# Validazione automatica DNS
-resource "aws_route53_record" "cert_validation_frontend" {
-  for_each = {
-    for dvo in aws_acm_certificate.frontend.domain_validation_options : dvo.domain_name => {
-      name   = dvo.resource_record_name
-      record = dvo.resource_record_value
-      type   = dvo.resource_record_type
-    }
-  }
-  
-  zone_id = aws_route53_zone.main.zone_id
-  name    = each.value.name
-  type    = each.value.type
-  records = [each.value.record]
-  ttl     = 60
-}
-
-resource "aws_acm_certificate_validation" "frontend" {
-  provider                = aws.us_east_1
-  certificate_arn         = aws_acm_certificate.frontend.arn
-  validation_record_fqdns = [for record in aws_route53_record.cert_validation_frontend : record.fqdn]
-}
-```
+### SSL Certificates (Automatico):
+- Terraform crea certificati ACM
+- Validazione DNS automatica
+- HTTPS attivo dopo propagazione DNS
 
 ---
 
 ## 💾 Backup Strategy
 
-### Backup Giornaliero con Storico 7 Giorni
-
-**Cosa viene backuppato**:
+### Backup Giornaliero Automatico:
 - ✅ Database PostgreSQL (dump completo)
-- ✅ S3 Uploads (immagini, file)
+- ✅ S3 Uploads (file utenti)
 - ✅ Retention: 7 giorni
 - ✅ Storage: S3 bucket dedicato
+- ✅ Cron job: 23:00 ogni giorno
 
-### 1. S3 Bucket per Backup
+### Script inclusi:
+- `/opt/echatbot/scripts/backup-database.sh`
+- `/opt/echatbot/scripts/backup-uploads.sh`
 
-```hcl
-# terraform/modules/backup/main.tf
-resource "aws_s3_bucket" "backups" {
-  bucket = "${var.project_name}-backups-prod"
-  
-  tags = {
-    Name        = "${var.project_name}-backups"
-    Environment = "production"
-  }
-}
-
-resource "aws_s3_bucket_lifecycle_configuration" "backups" {
-  bucket = aws_s3_bucket.backups.id
-  
-  rule {
-    id     = "delete-old-backups"
-    status = "Enabled"
-    
-    expiration {
-      days = 7  # Elimina backup dopo 7 giorni
-    }
-  }
-}
-
-resource "aws_s3_bucket_versioning" "backups" {
-  bucket = aws_s3_bucket.backups.id
-  
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
-```
-
-### 2. Script Backup Database
-
-```bash
-# /opt/echatbot/scripts/backup-database.sh
-#!/bin/bash
-set -e
-
-DATE=$(date +%Y-%m-%d_%H-%M-%S)
-BACKUP_FILE="echatbot-db-$DATE.sql.gz"
-S3_BUCKET="echatbot-backups-prod"
-
-echo "🔄 Starting database backup: $BACKUP_FILE"
-
-# Leggi DATABASE_URL da .env
-source /opt/echatbot/backend/.env
-
-# Estrai credenziali da DATABASE_URL
-DB_HOST=$(echo $DATABASE_URL | sed -n 's/.*@\(.*\):.*/\1/p')
-DB_PORT=$(echo $DATABASE_URL | sed -n 's/.*:\([0-9]*\)\/.*/\1/p')
-DB_NAME=$(echo $DATABASE_URL | sed -n 's/.*\/\(.*\)/\1/p')
-DB_USER=$(echo $DATABASE_URL | sed -n 's/.*:\/\/\(.*\):.*/\1/p')
-DB_PASS=$(echo $DATABASE_URL | sed -n 's/.*:\/\/.*:\(.*\)@.*/\1/p')
-
-# Dump database
-export PGPASSWORD="$DB_PASS"
-pg_dump -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME | gzip > /tmp/$BACKUP_FILE
-
-# Upload to S3
-aws s3 cp /tmp/$BACKUP_FILE s3://$S3_BUCKET/database/$BACKUP_FILE
-
-# Cleanup local file
-rm /tmp/$BACKUP_FILE
-
-echo "✅ Backup completed: s3://$S3_BUCKET/database/$BACKUP_FILE"
-```
-
-### 3. Script Backup Uploads
-
-```bash
-# /opt/echatbot/scripts/backup-uploads.sh
-#!/bin/bash
-set -e
-
-DATE=$(date +%Y-%m-%d)
-S3_BUCKET="echatbot-backups-prod"
-UPLOADS_DIR="/opt/echatbot/uploads"
-
-echo "🔄 Starting uploads backup"
-
-# Sync uploads to S3 (incremental)
-aws s3 sync $UPLOADS_DIR s3://$S3_BUCKET/uploads/$DATE/ \
-  --delete \
-  --storage-class STANDARD_IA
-
-echo "✅ Uploads backup completed"
-```
-
-### 4. Cron Job (Ogni Giorno alle 23:00)
-
-```bash
-# Aggiungi a crontab su EC2
-crontab -e
-
-# Database backup - ogni giorno alle 23:00 (11 PM)
-0 23 * * * /opt/echatbot/scripts/backup-database.sh >> /var/log/echatbot/backup.log 2>&1
-
-# Uploads backup - ogni giorno alle 23:30 (11:30 PM)
-30 23 * * * /opt/echatbot/scripts/backup-uploads.sh >> /var/log/echatbot/backup.log 2>&1
-```
-
-### 5. Restore da Backup
+### Restore da backup:
 
 ```bash
 # Lista backup disponibili
 aws s3 ls s3://echatbot-backups-prod/database/
 
-# Download backup
-aws s3 cp s3://echatbot-backups-prod/database/echatbot-db-2024-01-15_03-00-00.sql.gz .
-
-# Restore database
-gunzip echatbot-db-2024-01-15_03-00-00.sql.gz
-psql -h $DB_HOST -U $DB_USER -d $DB_NAME < echatbot-db-2024-01-15_03-00-00.sql
-
-echo "✅ Database restored"
+# Download e restore
+aws s3 cp s3://echatbot-backups-prod/database/echatbot-db-2024-01-15.sql.gz .
+gunzip echatbot-db-2024-01-15.sql.gz
+psql -h $DB_HOST -U $DB_USER -d $DB_NAME < echatbot-db-2024-01-15.sql
 ```
 
 ---
@@ -555,399 +280,311 @@ echo "✅ Database restored"
 
 ### Budget Alert: €60/mese
 
-```hcl
-# terraform/modules/billing/main.tf
-resource "aws_budgets_budget" "monthly_cost" {
-  name              = "${var.project_name}-monthly-budget"
-  budget_type       = "COST"
-  limit_amount      = "60"
-  limit_unit        = "USD"  # AWS usa USD, ~€60 = $65
-  time_unit         = "MONTHLY"
-  time_period_start = "2024-01-01_00:00"
-  
-  notification {
-    comparison_operator        = "GREATER_THAN"
-    threshold                  = 80  # Alert al 80% (€48)
-    threshold_type             = "PERCENTAGE"
-    notification_type          = "ACTUAL"
-    subscriber_email_addresses = [var.alert_email]
-  }
-  
-  notification {
-    comparison_operator        = "GREATER_THAN"
-    threshold                  = 100  # Alert al 100% (€60)
-    threshold_type             = "PERCENTAGE"
-    notification_type          = "ACTUAL"
-    subscriber_email_addresses = [var.alert_email]
-  }
-  
-  notification {
-    comparison_operator        = "GREATER_THAN"
-    threshold                  = 120  # Alert al 120% (€72)
-    threshold_type             = "PERCENTAGE"
-    notification_type          = "FORECASTED"
-    subscriber_email_addresses = [var.alert_email]
-  }
-}
-```
+Terraform configura:
+- ✅ Alert al 80% (€48)
+- ✅ Alert al 100% (€60)
+- ✅ Alert forecast 120% (€72)
+- ✅ Email notifiche
 
-### CloudWatch Alarms
-
-```hcl
-# terraform/modules/monitoring/alarms.tf
-
-# CPU Alta
-resource "aws_cloudwatch_metric_alarm" "ec2_cpu_high" {
-  alarm_name          = "${var.project_name}-ec2-cpu-high"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = "2"
-  metric_name         = "CPUUtilization"
-  namespace           = "AWS/EC2"
-  period              = "300"
-  statistic           = "Average"
-  threshold           = "80"
-  alarm_description   = "CPU > 80% for 10 minutes"
-  alarm_actions       = [aws_sns_topic.alerts.arn]
-  
-  dimensions = {
-    InstanceId = aws_instance.app.id
-  }
-}
-
-# Disk Pieno
-resource "aws_cloudwatch_metric_alarm" "disk_full" {
-  alarm_name          = "${var.project_name}-disk-full"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = "1"
-  metric_name         = "disk_used_percent"
-  namespace           = "CWAgent"
-  period              = "300"
-  statistic           = "Average"
-  threshold           = "85"
-  alarm_description   = "Disk usage > 85%"
-  alarm_actions       = [aws_sns_topic.alerts.arn]
-}
-
-# Database Connection Errors
-resource "aws_cloudwatch_metric_alarm" "db_connections" {
-  alarm_name          = "${var.project_name}-db-connection-errors"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = "1"
-  metric_name         = "DatabaseConnections"
-  namespace           = "AWS/RDS"
-  period              = "60"
-  statistic           = "Average"
-  threshold           = "80"
-  alarm_description   = "Too many DB connections"
-  alarm_actions       = [aws_sns_topic.alerts.arn]
-}
-
-# SNS Topic per Email
-resource "aws_sns_topic" "alerts" {
-  name = "${var.project_name}-alerts"
-}
-
-resource "aws_sns_topic_subscription" "email" {
-  topic_arn = aws_sns_topic.alerts.arn
-  protocol  = "email"
-  endpoint  = var.alert_email
-}
-```
+### CloudWatch Alarms:
+- CPU > 80%
+- Disk > 85%
+- Database connections > 80
 
 ---
 
-## 🔄 PM2 Process Manager (Produzione)
+## 🔄 PM2 Process Manager
 
-### Cos'è PM2?
-
-**PM2** gestisce i processi Node.js in produzione:
-- ✅ **Auto-restart** se l'app crasha
-- ✅ **Gestione logs** automatica con rotazione
-- ✅ **Monitoring** CPU, memoria, uptime
-- ✅ **Cluster mode** per scalare su più CPU
-- ✅ **Startup script** per riavvio server
-
-### Comandi PM2 Essenziali
+### Comandi Essenziali:
 
 ```bash
-# START - Prima volta o dopo stop
-pm2 start ecosystem.config.js
-pm2 start npm --name "backend" -- run prod
-
-# RESTART - Dopo deploy (zero-downtime)
-pm2 restart all
-pm2 restart backend
-pm2 restart scheduler
-
-# RELOAD - Zero-downtime restart (cluster mode)
-pm2 reload all
-
-# STOP - Ferma processi
-pm2 stop all
-pm2 stop backend
-
-# DELETE - Rimuove da PM2
-pm2 delete all
-pm2 delete backend
-
-# STATUS - Vedi tutti i processi
+# Status
 pm2 status
 pm2 list
 
-# LOGS - Vedi logs in tempo reale
-pm2 logs              # Tutti i processi
-pm2 logs backend      # Solo backend
-pm2 logs --lines 100  # Ultime 100 righe
-pm2 logs --err        # Solo errori
+# Logs
+pm2 logs
+pm2 logs backend --lines 100
 
-# MONITORING - Dashboard interattiva
+# Restart
+pm2 restart all
+pm2 restart backend
+
+# Monitoring
 pm2 monit
 
-# INFO - Dettagli processo
-pm2 info backend
-pm2 describe backend
-
-# FLUSH - Pulisci logs vecchi
-pm2 flush
-
-# SAVE - Salva configurazione corrente
-pm2 save
-
-# STARTUP - Auto-start al riavvio server
+# Startup auto-restart
 pm2 startup
 pm2 save
 ```
-
-### PM2 vs npm run dev
-
-| Feature | `npm run dev` | `pm2 start` |
-|---------|---------------|-------------|
-| **Uso** | Development | Production |
-| **Hot-reload** | ✅ Sì | ❌ No |
-| **Auto-restart** | ❌ No | ✅ Sì |
-| **Cluster mode** | ❌ No | ✅ Sì |
-| **Log management** | ❌ No | ✅ Sì |
-| **Monitoring** | ❌ No | ✅ Sì |
-| **Startup script** | ❌ No | ✅ Sì |
 
 **IMPORTANTE**: In produzione usa SEMPRE PM2, mai `npm run dev`!
 
 ---
 
-## 🚀 Guida Completa al Deployment
+## 🚀 GUIDA DEPLOY STEP-BY-STEP
 
-### Step 1: Prerequisiti
+### STEP 1: Prerequisiti (5 min)
 
 ```bash
-# 1. Installa Terraform
-brew install terraform
+# Installa tools
+brew install terraform awscli gh
 
-# 2. Configura AWS CLI
+# Configura AWS CLI
 aws configure
-# AWS Access Key ID: <your-key>
-# AWS Secret Access Key: <your-secret>
-# Default region: eu-west-1
-# Default output format: json
+# Access Key ID: AKIAQC4U3MGFIUTN4JHJ
+# Secret Access Key: J9Cc074xEquBwga50mj3rOwQ7ceCPFTl9dC0FiYY
+# Region: eu-west-1
+# Output: json
 
-# 3. Genera SSH key per EC2
-ssh-keygen -t rsa -b 4096 -f ~/.ssh/echatbot-key -C "echatbot-production"
-# Salva la chiave in un posto sicuro!
+# Genera SSH key
+ssh-keygen -t rsa -b 4096 -f ~/.ssh/echatbot-key -N ""
 ```
 
-### Step 2: Terraform Init & Apply
+### STEP 2: Deploy Infrastruttura (20 min)
 
 ```bash
-# 1. Vai nella directory terraform
-cd terraform
+# Vai in terraform directory
+cd /Users/gelso/workspace/shopME/terraform
 
-# 2. Crea file terraform.tfvars
-cat > terraform.tfvars << EOF
-project_name = "echatbot"
-aws_region   = "eu-west-1"
-domain_name  = "echatbot.ai"
-alert_email  = "andrea_gelsomino@hotmail.com"
-
-# Database
-db_username = "echatbot_admin"
-db_password = "$(openssl rand -base64 24)"
-
-# SSH
-ssh_public_key = "$(cat ~/.ssh/echatbot-key.pub)"
-EOF
-
-# 3. Inizializza Terraform
+# Inizializza
 terraform init
 
-# 4. Valida configurazione
+# Valida
 terraform validate
 
-# 5. Vedi cosa verrà creato
+# Vedi cosa verrà creato
 terraform plan
 
-# 6. Crea infrastruttura (15-20 minuti)
+# Crea infrastruttura (conferma con 'yes')
 terraform apply
-# Type 'yes' quando richiesto
 
-# 7. Salva gli output importanti
+# Salva output
 terraform output > ../terraform-outputs.txt
 ```
 
-### Step 3: Configura GoDaddy DNS
+### STEP 3: Configura DNS GoDaddy (10 min)
 
 ```bash
-# 1. Copia i nameservers
-terraform output nameservers
+# Copia nameservers
+terraform output domain_nameservers
 
-# 2. Vai su GoDaddy:
-# - https://dcc.godaddy.com/manage/echatbot.ai/dns
-# - Nameservers → Change → Custom
-# - Incolla i 4 nameservers AWS
-# - Save
-
-# 3. Attendi propagazione (15-60 minuti)
-watch -n 30 'dig echatbot.ai +short'
+# Vai su GoDaddy e aggiorna nameservers
+# Attendi propagazione (15-60 min)
 ```
 
-### Step 4: Setup EC2 (Prima Volta)
+### STEP 4: Setup GitHub Secrets (5 min)
 
 ```bash
-# 1. Connettiti a EC2
-EC2_HOST=$(terraform output -raw ec2_public_ip)
-ssh -i ~/.ssh/echatbot-key ubuntu@$EC2_HOST
-
-# 2. Installa Node.js 18
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-# 3. Installa PM2
-sudo npm install -g pm2
-
-# 4. Installa AWS CLI
-sudo apt-get install -y awscli
-
-# 5. Crea directory applicazione
-sudo mkdir -p /opt/echatbot/{backend,uploads,scripts}
-sudo chown -R ubuntu:ubuntu /opt/echatbot
-
-# 6. Configura PM2 startup
-pm2 startup
-sudo env PATH=$PATH:/usr/bin pm2 startup systemd -u ubuntu --hp /home/ubuntu
-
-# 7. Crea directory logs
-sudo mkdir -p /var/log/echatbot
-sudo chown ubuntu:ubuntu /var/log/echatbot
-
-# 8. Crea script backup
-cd /opt/echatbot/scripts
-# Copia backup-database.sh e backup-uploads.sh
-chmod +x *.sh
-
-# 9. Configura cron
-crontab -e
-# Aggiungi:
-# 0 23 * * * /opt/echatbot/scripts/backup-database.sh >> /var/log/echatbot/backup.log 2>&1
-# 30 23 * * * /opt/echatbot/scripts/backup-uploads.sh >> /var/log/echatbot/backup.log 2>&1
-
-# 10. Configura PM2 startup
-pm2 startup
-# Esegui il comando suggerito (con sudo)
-pm2 save
-
-# 11. Esci
-exit
-```
-
-### Step 5: Setup GitHub Secrets
-
-```bash
-# 1. Installa GitHub CLI
-brew install gh
+# Login GitHub
 gh auth login
 
-# 2. Imposta secrets
+# Configura tutti i secrets (copia-incolla tutto)
+gh secret set DATABASE_URL --body "$(terraform output -raw database_url)"
+gh secret set JWT_SECRET --body "a38fa4911b7fdb4aebe1911677792b35599ce990b13b563580e6fad1d2a120ea43e41ba630c9915822fe5bf92449e17a231b99168aa8b5cd18adce3b47b7f3d8"
+gh secret set OPENROUTER_API_KEY --body "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"
+gh secret set SMTP_USER --body "gelsogrove@gmail.com"
+gh secret set SMTP_PASS --body "skvf saqx fryt xeem"
+gh secret set GOOGLE_CLIENT_ID --body "988195920488-drdmtlruo5s47nkk4g8prui6k9mb0pln.apps.googleusercontent.com"
+gh secret set GOOGLE_CLIENT_SECRET --body "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"
+gh secret set ADMIN_EMAIL --body "admin@echatbot.ai"
+gh secret set ADMIN_PASSWORD --body "Venezia44"
+gh secret set TOKEN_ENCRYPTION_KEY --body "193b20c983cfeca68ab22230a2097899efbb0574bab7c43e6ec13b86a33edadc"
 gh secret set EC2_HOST --body "$(terraform output -raw ec2_public_ip)"
 gh secret set EC2_SSH_KEY --body "$(cat ~/.ssh/echatbot-key)"
-gh secret set AWS_ACCESS_KEY_ID --body "YOUR_AWS_KEY"
-gh secret set AWS_SECRET_ACCESS_KEY --body "YOUR_AWS_SECRET"
-gh secret set DATABASE_URL --body "$(terraform output -raw database_url)"
-gh secret set JWT_SECRET --body "$(openssl rand -base64 32)"
-gh secret set OPENROUTER_API_KEY --body "sk-or-v1-YOUR-KEY"
-gh secret set SMTP_PASS --body "YOUR_GMAIL_APP_PASSWORD"
+gh secret set AWS_ACCESS_KEY_ID --body "AKIAQC4U3MGFIUTN4JHJ"
+gh secret set AWS_SECRET_ACCESS_KEY --body "J9Cc074xEquBwga50mj3rOwQ7ceCPFTl9dC0FiYY"
 
-# 3. Verifica
+# Verifica
 gh secret list
 ```
 
-### Step 6: Primo Deploy
+### STEP 5: Setup EC2 (10 min)
 
 ```bash
-# 1. Crea migration logoUrl
-cd packages/database
-npx prisma migrate dev --name add_workspace_logo
-git add prisma/migrations/
-git commit -m "feat: add logoUrl to Workspace model"
-git push origin main
+# Connetti a EC2
+EC2_IP=$(terraform output -raw ec2_public_ip)
+ssh -i ~/.ssh/echatbot-key ubuntu@$EC2_IP
 
-# 2. Attendi CI build (GitHub Actions)
-# Vai su: https://github.com/YOUR_REPO/actions
+# Installa Node.js 18
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs
 
-# 3. Deploy manuale
-gh workflow run deploy.yml
+# Installa PM2
+sudo npm install -g pm2
 
-# 4. Monitora deployment
-gh run watch
+# Installa AWS CLI
+sudo apt-get install -y awscli
+aws configure  # Stesse credenziali
 
-# 5. Verifica che sia online
-curl https://api.echatbot.ai/health
-curl https://echatbot.ai
+# Crea directory
+sudo mkdir -p /opt/echatbot/{backend,uploads,scripts}
+sudo chown -R ubuntu:ubuntu /opt/echatbot
+
+# Configura PM2 startup
+pm2 startup
+# Esegui comando suggerito
+pm2 save
+
+# Esci
+exit
 ```
 
-### Step 7: Verifica Tutto
+### STEP 6: Crea GitHub Actions (5 min)
 
 ```bash
-# 1. Frontend
+# Crea workflow file
+mkdir -p .github/workflows
+cat > .github/workflows/deploy.yml << 'EOF'
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/echatbot/backend
+            
+            # Clone/update repo
+            if [ ! -d ".git" ]; then
+              git clone https://github.com/YOUR_USERNAME/shopME.git .
+            else
+              git pull origin main
+            fi
+            
+            # Generate .env
+            cat > .env << 'ENVFILE'
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}
+            SMTP_HOST=smtp.gmail.com
+            SMTP_PORT=465
+            SMTP_SECURE=true
+            SMTP_USER=${{ secrets.SMTP_USER }}
+            SMTP_PASS=${{ secrets.SMTP_PASS }}
+            SMTP_FROM=noreplay@echatbot.ai
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+            NODE_ENV=production
+            PORT=3001
+            CORS_ORIGIN=https://echatbot.ai
+            FRONTEND_URL=https://echatbot.ai
+            ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}
+            ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
+            TOKEN_EXPIRATION=15m
+            TOKEN_ENCRYPTION_KEY=${{ secrets.TOKEN_ENCRYPTION_KEY }}
+            SKIP_HMAC_VERIFICATION=false
+            ENVFILE
+            
+            chmod 600 .env
+            npm install
+            npx prisma generate
+            npx prisma migrate deploy
+            pm2 restart all || pm2 start npm --name "backend" -- run prod:backend
+            pm2 save
+EOF
+
+# Sostituisci YOUR_USERNAME
+sed -i '' 's/YOUR_USERNAME/il-tuo-username/g' .github/workflows/deploy.yml
+
+# Commit e push
+git add .github/workflows/deploy.yml
+git commit -m "feat: add deploy workflow"
+git push origin main
+```
+
+### STEP 7: Primo Deploy (5 min)
+
+```bash
+# Trigger deploy
+gh workflow run deploy.yml
+
+# Monitora
+gh run watch
+
+# Verifica
+curl http://$(terraform output -raw ec2_public_ip):3001/health
+```
+
+### STEP 8: Verifica Finale
+
+```bash
+# Backend
+curl https://echatbot.ai/health
+
+# Frontend (dopo DNS propagato)
 open https://echatbot.ai
 
-# 2. Backend API
-curl https://api.echatbot.ai/health
-
-# 3. Admin Panel
-open https://admin.echatbot.ai
-
-# 4. Database
-psql $(terraform output -raw database_url)
-\dt  # Lista tabelle
-\q
-
-# 5. PM2 Status & Logs
-ssh -i ~/.ssh/echatbot-key ubuntu@$EC2_HOST
-pm2 list                    # Status
-pm2 monit                   # Dashboard
-pm2 logs backend --lines 50 # Logs
+# PM2 status
+ssh -i ~/.ssh/echatbot-key ubuntu@$(terraform output -raw ec2_public_ip)
+pm2 status
+pm2 logs
 exit
-
-# 6. Backup
-aws s3 ls s3://echatbot-backups-prod/
-
-# 7. Monitoring
-open https://console.aws.amazon.com/cloudwatch/
 ```
 
 ---
 
-## 🔐 Variabili Terraform
+## 🎉 DEPLOY COMPLETATO!
 
-```hcl
-# terraform/terraform.tfvars
-project_name = "echatbot"
-aws_region   = "eu-west-1"
-domain_name  = "echatbot.ai"
-alert_email  = "andrea_gelsomino@hotmail.com"
+### URL Attivi:
+- **Frontend**: https://echatbot.ai
+- **Backend API**: https://echatbot.ai/api
+- **Admin Panel**: https://echatbot.ai/admin
 
-# Database
-db_username = "echatbot_admin"
-db_password = "GENERATE_STRONG_PASSWORD"
-db_name     = "echatbot"
+### Deploy Successivi:
+```bash
+# Fai modifiche
+git add .
+git commit -m "feat: nuova feature"
+git push origin main
 
-# SSH
-ssh_public_key = "ssh-rsa AAAA... echatbot-production"
+# GitHub Actions fa tutto automaticamente!
+```
+
+---
+
+## 📚 Documenti di Riferimento
+
+- `DEPLOY_GUIDE.md` - Guida step-by-step dettagliata
+- `ENV_MANAGEMENT.md` - Gestione variabili d'ambiente
+- `MULTI_TENANT_GUIDE.md` - Architettura multi-cliente
+- `terraform-outputs.txt` - Output Terraform (dopo apply)
+
+---
+
+## 🆘 Troubleshooting
+
+### Terraform apply fallisce
+```bash
+aws sts get-caller-identity  # Verifica credenziali
+```
+
+### DNS non propaga
+```bash
+dig echatbot.ai NS +short  # Verifica nameservers
+```
+
+### GitHub Actions fallisce
+```bash
+gh secret list  # Verifica secrets (devono essere 14)
+```
+
+### Backend non risponde
+```bash
+ssh -i ~/.ssh/echatbot-key ubuntu@$EC2_IP
+pm2 logs backend
+pm2 restart backend
+```

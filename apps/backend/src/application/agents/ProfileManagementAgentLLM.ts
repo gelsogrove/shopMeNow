@@ -76,6 +76,17 @@ export class ProfileManagementAgentLLM {
         throw new Error("Profile Management Agent config not found")
       }
 
+      // 🆕 Load workspace config for dynamic fields (customAiRules, companyName, etc.)
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: context.workspaceId },
+        select: {
+          name: true,
+          address: true,
+          customAiRules: true,
+          botIdentityResponse: true,
+        },
+      })
+
       // Get customer data
       const customer = await this.prisma.customers.findUnique({
         where: { id: context.customerId },
@@ -90,6 +101,7 @@ export class ProfileManagementAgentLLM {
             email: customer.email || "",
             phone: customer.phone || "",
             discountUser: customer.discount || 0,
+            companyName: workspace?.name || "",
             languageUser: customer.language || "ITALIANO",
             pushNotificationsConsent: customer.push_notifications_consent,
           }
@@ -106,6 +118,12 @@ export class ProfileManagementAgentLLM {
           categories: "",
           services: "",
           offers: "",
+        },
+        undefined, // workspaceUrl
+        {
+          address: workspace?.address || "",
+          customAiRules: workspace?.customAiRules || "",
+          botIdentityResponse: workspace?.botIdentityResponse || "",
         }
       )
 

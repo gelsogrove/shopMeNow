@@ -10,7 +10,7 @@
  *
  * Architecture:
  * - Own LLM instance (OpenRouter + GPT-4o-mini)
- * - Own system prompt from database (agentConfig.ORDER_TRACKING)
+ * - Own system prompt from files (TemplateLoaderService loads from /templates/ecommerce/03-order-tracking.template.md)
  * - Function execution via OrderRepository
  * - Returns English ONLY (Router handles translation)
  *
@@ -32,11 +32,15 @@
 import { PrismaClient } from "@echatbot/database"
 import axios from "axios"
 import { config } from "../../config"
-import { AgentConfigRepository } from "../../repositories/agent-config.repository"
 import { OrderRepository } from "../../repositories/order.repository"
+import { TemplateLoaderService } from "../services/template-loader.service"
+import { PromptProcessorService } from "../../services/prompt-processor.service"
 import { CallingFunctionsService } from "../../services/calling-functions.service"
+import { SystemContextService, getSystemContextService } from "../../services/system-context.service"
 import logger from "../../utils/logger"
 import { LinkGeneratorService } from "../services/link-generator.service"
+
+import { CustomerData } from "../../types/agent.types"
 
 export interface OrderTrackingLLMContext {
   workspaceId: string
@@ -45,6 +49,8 @@ export interface OrderTrackingLLMContext {
   customerLanguage?: string
   query: string
   lastOrderCode?: string // ✅ Last order code (avoid extra query)
+  /** Pre-loaded customer data from Router (avoids duplicate DB queries) */
+  customerData?: CustomerData
 }
 
 export interface OrderTrackingLLMResponse {
@@ -64,15 +70,17 @@ export interface OrderTrackingLLMResponse {
 export class OrderTrackingAgentLLM {
   private prisma: PrismaClient
   private orderRepo: OrderRepository
-  private agentConfigRepo: AgentConfigRepository
+  private templateLoader: TemplateLoaderService
   private callingFunctionsService: CallingFunctionsService
+  private systemContextService: SystemContextService
   private openRouterApiKey: string
   private openRouterBaseUrl: string
 
   constructor(prisma: PrismaClient) {
     this.prisma = prisma
     this.orderRepo = new OrderRepository()
-    this.agentConfigRepo = new AgentConfigRepository(prisma)
+    this.templateLoader = TemplateLoaderService.getInstance(prisma)
+    this.systemContextService = getSystemContextService(prisma)
 
     // Initialize CallingFunctionsService with LinkGeneratorService
     const linkGeneratorService = new LinkGeneratorService()
@@ -106,27 +114,30 @@ export class OrderTrackingAgentLLM {
         query: context.query.substring(0, 100),
       })
 
-      // STEP 1: Load system prompt from database
-      const agentConfig = await this.agentConfigRepo.findByType(
-        context.workspaceId,
-        "ORDER_TRACKING"
+      // STEP 1: Load system prompt from template files
+      let systemPromptRaw = await this.templateLoader.loadAndRenderTemplate(
+        "ORDER_TRACKING",
+        context.workspaceId
       )
 
-      if (!agentConfig || !agentConfig.isActive) {
-        throw new Error(
-          "OrderTrackingAgent configuration not found or inactive"
-        )
-      }
+      logger.info(`📋 Loaded ORDER_TRACKING template from files`, {
+        promptLength: systemPromptRaw.length,
+      })
 
-      logger.info(`📋 Loaded ORDER_TRACKING prompt from database`, {
-        promptLength: agentConfig.systemPrompt.length,
-        model: agentConfig.model,
+      // 🆕 STEP 1.3: Load workspace config for dynamic fields (customAiRules, botIdentityResponse, etc.)
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: context.workspaceId },
+        select: {
+          name: true,
+          address: true,
+          customAiRules: true,
+          botIdentityResponse: true,
+        },
       })
 
       // Replace variables in system prompt
-      let systemPrompt = agentConfig.systemPrompt
       if (context.lastOrderCode) {
-        systemPrompt = systemPrompt.replace(
+        systemPromptRaw = systemPromptRaw.replace(
           /\{\{lastordercode\}\}/g,
           context.lastOrderCode
         )
@@ -134,6 +145,68 @@ export class OrderTrackingAgentLLM {
           `✅ Replaced {{lastordercode}} with: ${context.lastOrderCode}`
         )
       }
+
+      // 🔧 STEP 1.5: Replace ALL variables ({{companyName}}, {{nameUser}}, etc.)
+      // CRITICAL: Must call preProcessPrompt to render variables before passing to LLM
+      const promptProcessor = new PromptProcessorService()
+      
+      // 🔧 OPTIMIZATION: Use pre-loaded customerData from Router if available (avoids duplicate DB queries)
+      // 🔴 CRITICAL FIX: Merge Router data with workspace fallbacks to ensure no empty values
+      const baseCustomerData = {
+        nameUser: context.customerName || "",
+        email: "",
+        phone: "",
+        discountUser: 0,
+        companyName: workspace?.name || "",
+        lastordercode: context.lastOrderCode || "",
+        languageUser: context.customerLanguage || "it",
+        agentName: "Non assegnato",
+        agentPhone: "N/A",
+        agentEmail: "N/A",
+        botIdentityResponse: workspace?.botIdentityResponse || "",
+      }
+      
+      // Merge: Router data takes priority, but fallback to local workspace data if empty
+      const customerDataForPrompt = context.customerData ? {
+        ...baseCustomerData,
+        ...context.customerData,
+        // 🔴 CRITICAL: Ensure companyName is NEVER empty
+        companyName: context.customerData.companyName || workspace?.name || baseCustomerData.companyName,
+        lastordercode: context.lastOrderCode || context.customerData.lastordercode || "",
+      } : baseCustomerData
+      
+      // 🔍 DEBUG: Log what we're passing to preProcessPrompt
+      logger.info(`📋 OrderTrackingAgent customerDataForPrompt:`, {
+        companyName: customerDataForPrompt.companyName,
+        nameUser: customerDataForPrompt.nameUser,
+        lastordercode: customerDataForPrompt.lastordercode,
+        hasRouterData: !!context.customerData,
+        workspaceName: workspace?.name,
+      })
+      
+      const systemPrompt = await promptProcessor.preProcessPrompt(
+        systemPromptRaw,
+        context.workspaceId,
+        customerDataForPrompt,
+        {
+          faqs: "",
+          products: "",
+          categories: "",
+          services: "",
+          offers: "",
+        },
+        undefined, // workspaceUrl
+        {
+          address: workspace?.address || "",
+          customAiRules: workspace?.customAiRules || "",
+          botIdentityResponse: context.customerData?.botIdentityResponse || workspace?.botIdentityResponse || "",
+        }
+      )
+
+      logger.info(`✅ Variables replaced in ORDER_TRACKING prompt`, {
+        originalLength: systemPromptRaw.length,
+        processedLength: systemPrompt.length,
+      })
 
       // STEP 2: Build messages for LLM
       const messages: any[] = [
@@ -152,11 +225,11 @@ export class OrderTrackingAgentLLM {
 
       // STEP 4: Call LLM (OpenRouter)
       const llmResponse = await this.callLLM({
-        model: agentConfig.model,
+        model: "gpt-4o-mini",
         messages,
         functions,
-        temperature: agentConfig.temperature,
-        maxTokens: agentConfig.maxTokens || 2000,
+        temperature: 0.7,
+        maxTokens: 2000,
       })
 
       let totalTokens = llmResponse.tokensUsed
@@ -293,11 +366,11 @@ export class OrderTrackingAgentLLM {
           })
 
           const finalLLMResponse = await this.callLLM({
-            model: agentConfig.model,
+            model: "gpt-4o-mini",
             messages,
             functions,
-            temperature: agentConfig.temperature,
-            maxTokens: agentConfig.maxTokens || 2000,
+            temperature: 0.7,
+            maxTokens: 2000,
           })
 
           totalTokens += finalLLMResponse.tokensUsed
@@ -385,7 +458,7 @@ export class OrderTrackingAgentLLM {
         executionTimeMs,
         functionCalls,
         systemPrompt, // 🆕 Include processed prompt for debugging
-        model: agentConfig.model, // 🆕 Include model for debugging timeline
+        model: "gpt-4o-mini", // 🆕 Include model for debugging timeline
       }
     } catch (error) {
       const executionTimeMs = Date.now() - startTime

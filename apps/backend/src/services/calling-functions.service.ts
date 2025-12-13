@@ -388,12 +388,13 @@ export class CallingFunctionsService {
       // This function is called by Router Agent to delegate to Product and Services Agent
       // The actual delegation happens in llm-router.service.ts
       // We return a signal that tells the router to call the sub-agent
+      // ✅ FIX: Return delegateTo (not agentType) to match llm-router.service.ts check at line 1480
       return {
         success: true,
         message: `DELEGATE_TO_AGENT:PRODUCT_SEARCH:${request.query}`,
         timestamp: new Date().toISOString(),
         data: {
-          agentType: "PRODUCT_SEARCH",
+          delegateTo: "PRODUCT_SEARCH", // ✅ FIX: Use delegateTo (not agentType)
           query: request.query,
         },
       }
@@ -424,7 +425,7 @@ export class CallingFunctionsService {
         message: `DELEGATE_TO_AGENT:CART_MANAGEMENT:${request.query}`,
         timestamp: new Date().toISOString(),
         data: {
-          agentType: "CART_MANAGEMENT",
+          delegateTo: "CART_MANAGEMENT", // ✅ FIX: Use delegateTo (not agentType)
           query: request.query,
         },
       }
@@ -455,7 +456,7 @@ export class CallingFunctionsService {
         message: `DELEGATE_TO_AGENT:ORDER_TRACKING:${request.query}`,
         timestamp: new Date().toISOString(),
         data: {
-          agentType: "ORDER_TRACKING",
+          delegateTo: "ORDER_TRACKING", // ✅ FIX: Use delegateTo (not agentType)
           query: request.query,
         },
       }
@@ -486,7 +487,7 @@ export class CallingFunctionsService {
         message: `DELEGATE_TO_AGENT:CUSTOMER_SUPPORT:${request.query}`,
         timestamp: new Date().toISOString(),
         data: {
-          agentType: "CUSTOMER_SUPPORT",
+          delegateTo: "CUSTOMER_SUPPORT", // ✅ FIX: Use delegateTo (not agentType)
           query: request.query,
         },
       }

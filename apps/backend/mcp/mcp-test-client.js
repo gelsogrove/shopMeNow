@@ -73,7 +73,7 @@ class MCPTestClient {
     this.exitAfterFirst = exitAfterFirst
     this.runSeed = runSeed
     this.showLogs = showLogs
-    this.workspaceId = workspaceId || "cm9hjgq9v00014qk8fsdy4ujv" // Default workspace
+    this.workspaceId = workspaceId || "cmj2l7sdp0000aangfqr3pj9b" // Default workspace BellItalia VIP
     this.sessionActive = false
     this.sessionData = {
       messages: [],
@@ -722,23 +722,24 @@ function parseArgs() {
     console.log("  node mcp-test-client.js (modalità interattiva)\n")
     console.log("Parametri disponibili:")
     console.log(
-      "  workspaceId=ID      - ID del workspace (default: cm9hjgq9v00014qk8fsdy4ujv)"
+      "  workspaceId=ID           - ID del workspace (default: cmj2l7sdp0000aangfqr3pj9b)"
     )
     console.log(
-      "  seed=true           - Esegue il seed del database prima del test"
+      "  seed=true                - Esegue il seed del database prima del test"
     )
     console.log(
-      "  log=true            - Mostra i log del server in tempo reale"
+      "  log=false                - Disabilita i log del server (default: log=true)"
     )
-    console.log("  exit-first-message=true - Esce dopo il primo messaggio\n")
+    console.log("  exit-first-message=false - Continua dopo il primo messaggio (default: exit=true)\n")
     process.exit(0)
   }
 
   const selectedUser = args[0]
   const testMessage = args[1] || null
-  const exitAfterFirst = args.includes("exit-first-message=true")
+  // DEFAULT: exit-first-message=true e log=true (a meno che non sia esplicitamente disabilitato)
+  const exitAfterFirst = !args.includes("exit-first-message=false")
   const runSeed = args.includes("seed=true")
-  const showLogs = args.includes("log=true")
+  const showLogs = !args.includes("log=false")
 
   // Estrai workspaceId se presente
   let workspaceId = null

@@ -47,16 +47,21 @@ import { SafetyTranslationAgent } from "../application/agents/SafetyTranslationA
 import { TranslationAgent } from "../application/agents/TranslationAgent"
 import { LinkReplacementService } from "../application/services/link-replacement.service"
 import { PromptBuilderService } from "../application/services/prompt-builder"
+import { PromptVariableBuilder } from "../application/services/prompt-variable-builder.service"
+import { TemplateLoaderService } from "../application/services/template-loader.service"
 import { getFunctionsForRouter } from "../config/agent-functions"
 import { AgentConfigRepository } from "../repositories/agent-config.repository"
 import { FAQRepository } from "../repositories/faq.repository"
 import { SearchConversationRepository } from "../repositories/searchConversation.repository"
+import { PromptVariables } from "../types/prompt-variables.types"
 import logger from "../utils/logger"
 import { AgentLoggerService } from "./agent-logger.service"
 import { ConversationManager } from "./conversation-manager.service"
 import { FunctionExecutor } from "./function-executor.service"
+import { messagePreprocessorService, PreprocessResult } from "./message-preprocessor.service" // 🆕 FASE 2: Deterministic preprocessing
 import { PromptProcessorService } from "./prompt-processor.service" // 🆕 Feature 124: Customer variables replacement
 import { SecurityService } from "./security.service"
+import { getSystemContextService, SystemContextService } from "./system-context.service" // 🆕 System Context for hidden SKU mappings
 import { websocketService } from "./websocket.service"
 
 export interface RouteMessageParams {
@@ -184,8 +189,10 @@ export class LLMRouterService {
   private searchConversationRepo: SearchConversationRepository
   private promptProcessor: PromptProcessorService // 🆕 Feature 124: Customer variables replacement
   private promptBuilder: PromptBuilderService // 🆕 Dynamic prompt generation from templates
+  private templateLoader: TemplateLoaderService // 🆕 Load templates from files
   private safetyAgent: SafetyTranslationAgent // Used for specific flows (welcome, queue)
   private translationAgent: TranslationAgent // Main translation layer (IT → target language)
+  private systemContextService: SystemContextService // 🆕 System Context for hidden SKU mappings
   private openRouterApiKey: string
   private openRouterBaseUrl = "https://openrouter.ai/api/v1"
   private maxFunctionIterations = 8 // FR-13: Increased from 5 to support repeat order confirmation flow (6-7 iterations needed)
@@ -202,6 +209,8 @@ export class LLMRouterService {
     this.searchConversationRepo = new SearchConversationRepository()
     this.promptProcessor = new PromptProcessorService() // 🆕 Feature 124: Inject for variable replacement
     this.promptBuilder = new PromptBuilderService(prisma) // 🆕 Dynamic prompt generation
+    this.templateLoader = TemplateLoaderService.getInstance(prisma) // 🆕 Load templates from files
+    this.systemContextService = getSystemContextService(prisma) // 🆕 System Context for SKU mappings
 
     this.openRouterApiKey = process.env.OPENROUTER_API_KEY || ""
     if (!this.openRouterApiKey) {
@@ -598,10 +607,54 @@ export class LLMRouterService {
 
       // STEP 2: Load conversation history
       logger.info("Step 2: Loading conversation history")
-      const conversationHistory = await this.conversationManager.loadHistory(
+      const conversationHistoryRaw = await this.conversationManager.loadHistory(
         params.workspaceId,
         params.conversationId
       )
+
+      // 🚦 If the current message is clearly asking for catalog/categories/products,
+      // drop prior history to avoid misrouting into identity flows when an old
+      // "Identità non configurata" was the last assistant message.
+      const msgLower = (params.message || "").toLowerCase()
+      const isCatalogIntent = /catalog|categ|prodott/.test(msgLower)
+      const conversationHistory = isCatalogIntent ? [] : conversationHistoryRaw
+
+      // STEP 2.5: Load last option mapping to normalize short replies (numbers / yes-no)
+      const conversationState = await this.prisma.searchConversations.findUnique({
+        where: { sessionId: params.conversationId },
+        select: { metadata: true },
+      })
+
+      const lastOptionsMapping =
+        (conversationState?.metadata as any)?.lastOptionsMapping || null
+
+      // 🔍 DEBUG: Log loaded mapping
+      logger.info("📋 [OptionMapping] Loaded mapping for preprocessing", {
+        conversationId: params.conversationId,
+        hasMapping: !!lastOptionsMapping,
+        mappingType: lastOptionsMapping?.type,
+        optionsCount: lastOptionsMapping?.options?.length,
+        listType: lastOptionsMapping?.listType,
+      })
+
+      // 🆕 FASE 2: Use MessagePreprocessorService for DETERMINISTIC parsing
+      // This extracts numbers, confirmations, and resolves them to actual values
+      const preprocessResult = messagePreprocessorService.process(
+        params.message,
+        lastOptionsMapping
+      )
+
+      // Log preprocessing result for debugging
+      if (preprocessResult.isShortInput) {
+        logger.info("🔍 [Preprocessor] Short input detected", {
+          originalMessage: params.message,
+          inputType: preprocessResult.inputType,
+          extractedNumber: preprocessResult.extractedNumber,
+        })
+      }
+
+      // Use enriched message (has context like "User selected category 'Formaggi'")
+      const normalizedUserMessage = preprocessResult.enrichedMessage
 
       // ❌ REMOVED: State-based pre-routing (auto-delegation to activeAgent)
       // WHY: Too complex, causes routing issues when topic changes
@@ -612,17 +665,15 @@ export class LLMRouterService {
       // If LLM fails → orphan INBOUND message in DB without response
       // MOVED TO: After safety layer (with OUTBOUND save) for atomic operation
 
-      // STEP 4: Get Router Agent config
-      const routerAgent = await this.agentConfigRepo.findByType(
-        params.workspaceId,
-        "ROUTER"
+      // STEP 4: Load Router template from files
+      const routerSystemPrompt = await this.templateLoader.loadAndRenderTemplate(
+        "ROUTER",
+        params.workspaceId
       )
 
-      if (!routerAgent) {
-        throw new Error(
-          `Router agent not configured for workspace ${params.workspaceId}`
-        )
-      }
+      logger.info("📋 Loaded ROUTER template from files", {
+        promptLength: routerSystemPrompt.length,
+      })
 
       // STEP 4.5: Load customer data and dynamic content for Router prompt
       logger.info("Step 4.5: Loading customer data and dynamic content")
@@ -662,7 +713,9 @@ export class LLMRouterService {
       const messageRepo =
         new (require("../repositories/message.repository").MessageRepository)()
 
-      const [categories, offers, products, services, faqs, lastOrder] =
+      const directIntentIndexPromise = this.getDirectIntentIndex(params.workspaceId)
+
+      const [categories, offers, products, services, faqs, lastOrder, directIntentIndex] =
         await Promise.all([
           messageRepo.getActiveCategories(params.workspaceId),
           messageRepo.getActiveOffers(params.workspaceId),
@@ -677,38 +730,60 @@ export class LLMRouterService {
             orderBy: { createdAt: "desc" },
             select: { orderCode: true },
           }),
+          directIntentIndexPromise,
         ])
 
-      // Helper function to get language display name
-      // Build customerData object with all variables
+      // If the user explicitly mentions a known product or category (e.g., "mozzarella" or "salumi"),
+      // normalize the message to point the Router directly to that entity instead of regrouping.
+      const directIntent = this.detectDirectIntent(
+        params.message,
+        directIntentIndex.products,
+        directIntentIndex.categories
+      )
+      const userMessageForRouter = directIntent || normalizedUserMessage
+      const conversationHistoryForRouter = directIntent ? [] : conversationHistory
+
+      // 🆕 BUILD PROMPT VARIABLES using centralized builder (SINGLE SOURCE OF TRUTH)
+      // This replaces the old manual customerData construction
+      const promptVariables = PromptVariableBuilder.build(
+        customer,
+        workspace,
+        {
+          products,
+          categories,
+          services,
+          offers,
+          faqs,
+        },
+        {
+          lastOrderCode: lastOrder?.orderCode || undefined,
+        }
+      )
+
+      // 🔒 BACKWARD COMPATIBILITY: Build legacy customerData object from PromptVariables
+      // This is passed to sub-agents until they are migrated to use PromptVariables directly
       const customerData = {
-        nameUser: customer.name || "",
-        email: customer.email || "",
-        phone: customer.phone || "",
-        discountUser: customer.discount || 0,
-        companyName: customer.company || "",
-        lastordercode: lastOrder?.orderCode || "",
-        languageUser: this.getLanguageDisplayName(
-          customer.language || workspace?.language || "it"
-        ),
-        agentName: customer.sales
-          ? `${customer.sales.firstName} ${customer.sales.lastName}`.trim()
-          : "Non assegnato",
-        agentPhone: customer.sales?.phone || "N/A",
-        agentEmail: customer.sales?.email || "N/A",
-        push_notifications_consent: customer.push_notifications_consent,
+        nameUser: promptVariables.customerName,
+        email: promptVariables.customerEmail,
+        phone: promptVariables.customerPhone,
+        discountUser: promptVariables.customerDiscount,
+        companyName: promptVariables.companyName,
+        lastordercode: promptVariables.lastOrderCode || "",
+        languageUser: promptVariables.languageUser,
+        agentName: promptVariables.agentName,
+        agentPhone: promptVariables.agentPhone,
+        agentEmail: promptVariables.agentEmail,
+        push_notifications_consent: promptVariables.pushNotificationsConsent,
+        botIdentityResponse: promptVariables.botIdentityResponse,
+        adminEmail: promptVariables.adminEmail || "", // 🆕 For support/escalation
       }
 
-      logger.info("📦 Customer data and dynamic content loaded for Router", {
-        nameUser: customerData.nameUser,
-        email: customerData.email,
-        phone: customerData.phone,
-        discount: customerData.discountUser,
-        hasProducts: !!products,
-        hasCategories: !!categories,
-        hasOffers: !!offers,
-        hasServices: !!services,
-        hasFAQs: !!faqs,
+      logger.info("📦 PromptVariables built for Router and sub-agents:", {
+        companyName: promptVariables.companyName,
+        customerName: promptVariables.customerName,
+        hasBotIdentity: !!promptVariables.botIdentityResponse,
+        hasProducts: !!promptVariables.products,
+        hasCategories: !!promptVariables.categories,
       })
 
       // 🆕 DYNAMIC PROMPT GENERATION: Try PromptBuilder first, fallback to old system
@@ -739,7 +814,7 @@ export class LLMRouterService {
         // Products/Categories ONLY for ProductSearchAgent - prevents hallucination & context contamination
         try {
           processedRouterPrompt = await promptProcessor.preProcessPrompt(
-            routerAgent.systemPrompt,
+            routerSystemPrompt,
             params.workspaceId,
             customerData,
             {
@@ -784,21 +859,39 @@ export class LLMRouterService {
         "✅ Router prompt processed with variables replaced (no products/categories)"
       )
 
-      // Create processed router agent with replaced prompt
+      // 🆕 STEP 4.9: Add System Context (hidden SKU mappings, cart summary, etc.)
+      const systemContextJson = await this.systemContextService.formatForSystemMessage(
+        params.workspaceId,
+        params.customerId
+      )
+      if (systemContextJson) {
+        processedRouterPrompt += systemContextJson
+        logger.info("📋 [SystemContext] Added to Router prompt", {
+          contextLength: systemContextJson.length,
+          contextPreview: systemContextJson.substring(0, 500),
+        })
+      } else {
+        logger.info("📋 [SystemContext] No context available for this conversation")
+      }
+
+      // Create processed router agent with replaced prompt and default config
       const processedRouterAgent = {
-        ...routerAgent,
         systemPrompt: processedRouterPrompt,
+        model: "gpt-4o-mini", // 🆕 Default Router model
+        temperature: 0, // Deterministic routing to avoid mis-mapping numeric selections
+        maxTokens: 2000, // 🆕 Default max tokens
       }
 
       // STEP 5: Function Calling Loop
       logger.info("Step 3: Starting Function Calling loop")
       const result = await this.functionCallingLoop({
         routerAgent: processedRouterAgent,
-        conversationHistory,
-        userMessage: params.message,
+        conversationHistory: conversationHistoryForRouter,
+        userMessage: userMessageForRouter,
         params,
         customerDiscount,
         sellsProductsAndServices: workspace?.sellsProductsAndServices ?? true,
+        preprocessResult, // 🆕 FASE 2: Pass for deterministic fast-path delegation
       })
 
       totalTokens = result.tokensUsed
@@ -984,6 +1077,17 @@ export class LLMRouterService {
       //
       // @see specs/124-customer-variables-replacement/spec.md FR-1, FR-2, FR-3
       // @see MULTI_AGENT_FLOW.md Step 4.6
+      // 🔴 DEBUG: Log workspace values BEFORE building customerVarsData
+      logger.info("🔍 STEP 4.6 DEBUG: Workspace config before variable replacement", {
+        workspaceId: params.workspaceId,
+        notificationEmail: workspace?.notificationEmail || "(empty)",
+        botIdentityResponse: workspace?.botIdentityResponse ? workspace.botIdentityResponse.substring(0, 50) + "..." : "(empty)",
+        name: workspace?.name || "(empty)",
+        responseBeforeReplacement: responseWithLinks.substring(0, 200),
+        hasAdminEmail: responseWithLinks.includes("{{adminEmail}}"),
+        hasBotIdentity: responseWithLinks.includes("{{botIdentityResponse}}"),
+      })
+
       const customerVarsData = {
         nome: params.customerName,
         email: customer.email,
@@ -994,24 +1098,42 @@ export class LLMRouterService {
           : "Non assegnato",
         agentPhone: customer.sales?.phone || "N/A",
         agentEmail: customer.sales?.email || "N/A",
-        companyName: customer.company || "L'Altra Italia",
+        companyName: workspace?.name || "L'Altra Italia", // ✅ FIX: Changed from customer.company to workspace.name
         languageUser: this.getLanguageDisplayName(
           customer.language || workspace?.language || "it"
         ),
         lastordercode: lastOrder?.orderCode || "",
         channelName: workspace?.name || "Shop",
+        adminEmail: workspace?.notificationEmail || "support@echatbot.ai", // 🆕 For support/escalation links
+        botIdentityResponse: workspace?.botIdentityResponse || "Virtual Assistant", // 🆕 For identity answers
       }
+
+      // 🔴 DEBUG: Log customerVarsData BEFORE replacement
+      logger.info("🔍 STEP 4.6 DEBUG: customerVarsData ready for replacement", {
+        adminEmail: customerVarsData.adminEmail,
+        botIdentityResponse: customerVarsData.botIdentityResponse ? customerVarsData.botIdentityResponse.substring(0, 50) + "..." : "(empty)",
+        companyName: customerVarsData.companyName,
+      })
 
       responseWithLinks = this.promptProcessor.replaceCustomerVariables(
         responseWithLinks,
         customerVarsData
       )
 
+      // 🔴 DEBUG: Log response AFTER replacement to verify variables were replaced
+      logger.info("🔍 STEP 4.6 DEBUG: Response AFTER replaceCustomerVariables", {
+        stillHasAdminEmail: responseWithLinks.includes("{{adminEmail}}"),
+        stillHasBotIdentity: responseWithLinks.includes("{{botIdentityResponse}}"),
+        responseAfterReplacement: responseWithLinks.substring(0, 200),
+      })
+
       logger.info("✅ Replaced customer variables in response", {
         nameUser: customerVarsData.nome,
         discountUser: customerVarsData.discountUser,
         agentName: customerVarsData.agentName,
         companyName: customerVarsData.companyName,
+        adminEmail: customerVarsData.adminEmail,
+        botIdentityResponse: customerVarsData.botIdentityResponse ? customerVarsData.botIdentityResponse.substring(0, 50) + "..." : "(empty)",
         hasEmail: !!customerVarsData.email,
         hasPhone: !!customerVarsData.phone,
         hasLastOrder: !!customerVarsData.lastordercode,
@@ -1063,6 +1185,12 @@ export class LLMRouterService {
       // Example: "http://localhost:3000/s/xyz)." → "http://localhost:3000/s/xyz ."
       let finalCleanResponse = finalResponse
 
+      // 🆕 STEP 5.5.1: Remove SKU tags (they're for system use only, not customer-visible)
+      // Remove [SKU:xxx] and [SKUS:xxx,yyy] tags
+      finalCleanResponse = finalCleanResponse
+        .replace(/\s*\[SKU:[A-Z0-9-]+\]/gi, '')
+        .replace(/\s*\[SKUS?:[A-Z0-9-,]+\]/gi, '')
+      
       // Regex to find URLs ending with short paths (like /s/xxx) followed by punctuation
       // This avoids matching domain dots like "localhost:3000"
       const urlWithPunctuationRegex =
@@ -1153,6 +1281,18 @@ export class LLMRouterService {
         agentType: "ROUTER",
         tokensUsed: totalTokens,
         debugInfo: debugInfo, // ✅ Save complete debug information for message flow tracking
+      })
+
+      // STEP 6c: Update last options mapping for next-turn numeric/yes-no selections
+      logger.info("📋 [OptionMapping] Calling updateOptionMappingMetadata (main routeMessage path)", {
+        conversationId: params.conversationId,
+        responseLength: finalCleanResponse.length,
+      })
+      await this.updateOptionMappingMetadata({
+        workspaceId: params.workspaceId,
+        conversationId: params.conversationId,
+        customerId: params.customerId,
+        responseText: finalCleanResponse,
       })
 
       // ❌ TODO #1: MISSING - WhatsApp Queue Emission
@@ -1294,6 +1434,9 @@ export class LLMRouterService {
    * Iteratively calls Router LLM with function results until:
    * - LLM returns text response (no function_call)
    * - Max iterations reached
+   *
+   * 🆕 FASE 2: If preprocessResult has forceDelegationTarget, skip Router LLM
+   * and delegate directly to the specified sub-agent.
    */
   private async functionCallingLoop(options: {
     routerAgent: any
@@ -1302,6 +1445,7 @@ export class LLMRouterService {
     params: RouteMessageParams
     customerDiscount: number
     sellsProductsAndServices: boolean
+    preprocessResult?: PreprocessResult // 🆕 FASE 2: Deterministic delegation
   }): Promise<{
     response: string
     tokensUsed: number
@@ -1317,6 +1461,7 @@ export class LLMRouterService {
       params,
       customerDiscount,
       sellsProductsAndServices,
+      preprocessResult,
     } = options
 
     let messages = [
@@ -1332,6 +1477,9 @@ export class LLMRouterService {
     // 🔧 NEW: Track execution steps for debug timeline
     const debugSteps: DebugStep[] = []
 
+    // 🆕 NOTE: FAST-PATH removed - LLM now handles all selections using conversation history
+    // The preprocessor enriches the message with hints, and LLM understands context
+
     // Loop until max iterations or final response
     while (iterations < this.maxFunctionIterations) {
       iterations++
@@ -1344,7 +1492,7 @@ export class LLMRouterService {
       logger.info("🔍 DEBUG - Messages sent to Router LLM:", {
         systemPromptPreview: messages[0]?.content?.substring(0, 500),
         conversationHistoryCount: messages.length - 2, // minus system and user
-        lastAssistantMessage: messages.filter(m => m.role === 'assistant').slice(-1)[0]?.content?.substring(0, 200),
+            userMessagePreview: messages[messages.length - 1]?.content?.substring(0, 500) || "",
         userMessage: messages[messages.length - 1]?.content,
       })
 
@@ -1522,32 +1670,43 @@ export class LLMRouterService {
             }),
           ])
 
-          // Build customerData object with all variables
+          // 🆕 BUILD PROMPT VARIABLES using centralized builder (for delegation)
+          const delegationPromptVariables = PromptVariableBuilder.build(
+            customer,
+            workspace,
+            {
+              products,
+              categories,
+              offers,
+            },
+            {
+              lastOrderCode: lastOrder?.orderCode || undefined,
+            }
+          )
+
+          // 🔒 BACKWARD COMPATIBILITY: Build legacy customerData object
           const customerData = {
-            nameUser: customer.name || "",
+            nameUser: delegationPromptVariables.customerName,
+            email: delegationPromptVariables.customerEmail,
+            phone: delegationPromptVariables.customerPhone,
             discountUser: customerDiscountForCatalog,
-            companyName: customer.company || "",
-            lastordercode: lastOrder?.orderCode || "",
-            languageUser: this.getLanguageDisplayName(
-              customer.language || workspace.language || "it"
-            ),
-            agentName: customer.sales
-              ? `${customer.sales.firstName} ${customer.sales.lastName}`.trim()
-              : "Non assegnato",
-            agentPhone: customer.sales?.phone || "N/A",
-            agentEmail: customer.sales?.email || "N/A",
+            companyName: delegationPromptVariables.companyName,
+            lastordercode: delegationPromptVariables.lastOrderCode || "",
+            languageUser: delegationPromptVariables.languageUser,
+            agentName: delegationPromptVariables.agentName,
+            agentPhone: delegationPromptVariables.agentPhone,
+            agentEmail: delegationPromptVariables.agentEmail,
+            botIdentityResponse: delegationPromptVariables.botIdentityResponse,
             PRODUCTS: products || "",
             CATEGORIES: categories || "",
             OFFERS: offers || "",
           }
 
-          logger.info("📦 Customer data prepared for sub-agent", {
-            nameUser: customerData.nameUser,
-            discount: customerData.discountUser,
+          logger.info("📦 PromptVariables built for sub-agent delegation:", {
+            companyName: delegationPromptVariables.companyName,
+            customerName: delegationPromptVariables.customerName,
+            hasBotIdentity: !!delegationPromptVariables.botIdentityResponse,
             hasProducts: !!products,
-            hasCategories: !!categories,
-            hasOffers: !!offers,
-            productsLength: products?.length || 0,
           })
 
           // FASE 4: Update activeAgent state BEFORE delegation
@@ -1705,6 +1864,7 @@ export class LLMRouterService {
                 customerLanguage: params.customerLanguage,
                 query: delegationQuery, // ✅ USE ROUTER'S CONTEXTUALIZED QUERY (e.g., "Mostra dettagli del PRODOTTO Gorgonzola")
                 sessionId: `${params.workspaceId}-${params.customerId}`, // ✅ FIX: Use workspace+customer as session key for memory
+                customerData, // 🔧 OPTIMIZATION: Pass pre-loaded data to avoid duplicate DB queries
               })
               break
             }
@@ -1776,6 +1936,7 @@ export class LLMRouterService {
                 query: delegationQuery,
                 conversationHistory: recentHistory, // ✅ Pass conversation context
                 selectedSku, // 🔧 Feature 123: Pass product code from search memory
+                customerData, // 🔧 OPTIMIZATION: Pass pre-loaded data to avoid duplicate DB queries
               })
               break
             }
@@ -1806,6 +1967,7 @@ export class LLMRouterService {
                 customerLanguage: params.customerLanguage,
                 query: delegationQuery,
                 lastOrderCode: customerData.lastordercode, // ✅ Pass last order code
+                customerData, // 🔧 OPTIMIZATION: Pass pre-loaded data to avoid duplicate DB queries
               })
               break
             }
@@ -1837,6 +1999,7 @@ export class LLMRouterService {
                 customerName: params.customerName,
                 customerLanguage: params.customerLanguage,
                 query: delegationQuery,
+                customerData, // 🔧 OPTIMIZATION: Pass pre-loaded data to avoid duplicate DB queries
               })
 
               // 📧 ADD CUSTOMER SUPPORT AGENT DEBUG STEP
@@ -2187,6 +2350,20 @@ export class LLMRouterService {
           // Update total tokens (from specialist agent response only)
           totalTokens += subAgentResponse.tokensUsed || 0
 
+          // 🆕 UPDATE OPTIONS MAPPING for next-turn numeric/yes-no handling
+          // CRITICAL: This was missing and caused FAST-PATH to fail!
+          logger.info("📋 [OptionMapping] Updating mapping after sub-agent delegation", {
+            conversationId: params.conversationId,
+            delegationTarget,
+            responseLength: subAgentFinalResponse.length,
+          })
+          await this.updateOptionMappingMetadata({
+            workspaceId: params.workspaceId,
+            conversationId: params.conversationId,
+            customerId: params.customerId,
+            responseText: subAgentFinalResponse,
+          })
+
           logger.info(
             "🔍 DEBUG: Exiting functionCallingLoop with specialist response",
             {
@@ -2370,7 +2547,7 @@ export class LLMRouterService {
           tools: getFunctionsForRouter({ 
             sellsProductsAndServices: options.sellsProductsAndServices ?? true 
           }),
-          tool_choice: "auto", // Encourage model to use functions when appropriate
+          tool_choice: "required", // FORCE model to always call a function
         },
         {
           headers: {
@@ -2385,6 +2562,17 @@ export class LLMRouterService {
 
       const choice = response.data.choices[0]
       const tokensUsed = response.data.usage?.total_tokens || 0
+
+      // 🔍 DEBUG: Log raw LLM response to see what OpenRouter returns
+      logger.info("🔍 RAW OpenRouter Response:", {
+        hasContent: !!choice.message.content,
+        contentPreview: choice.message.content?.substring(0, 100),
+        hasToolCalls: !!choice.message.tool_calls,
+        toolCallsCount: choice.message.tool_calls?.length || 0,
+        toolCallName: choice.message.tool_calls?.[0]?.function?.name,
+        toolCallArgs: choice.message.tool_calls?.[0]?.function?.arguments,
+        finishReason: choice.finish_reason,
+      })
 
       return {
         content: choice.message.content,
@@ -2662,6 +2850,18 @@ export class LLMRouterService {
         debugInfo: debugInfo,
       })
 
+      // Update last options mapping for next user turn (numeric / yes-no handling)
+      logger.info("📋 [OptionMapping] Calling updateOptionMappingMetadata (handleWithActiveAgent path)", {
+        conversationId: params.conversationId,
+        responseLength: finalResponse.length,
+      })
+      await this.updateOptionMappingMetadata({
+        workspaceId: params.workspaceId,
+        conversationId: params.conversationId,
+        customerId: params.customerId,
+        responseText: finalResponse,
+      })
+
       // 🔔 CRITICAL: Notify WebSocket clients of new message
       websocketService.notifyNewMessage(params.workspaceId, {
         id: Date.now().toString(), // Temporary ID (real ID from DB not returned)
@@ -2753,6 +2953,15 @@ export class LLMRouterService {
         } as any, // VSCode Prisma type cache - field exists in runtime
       })
 
+      // Clear last options mapping because cart handoff should not reuse previous list context
+      await this.updateOptionMappingMetadata({
+        workspaceId: options.params.workspaceId,
+        conversationId: options.params.conversationId,
+        customerId: options.params.customerId,
+        responseText: "",
+        forceClear: true,
+      })
+
       // Get Cart agent
       const cartAgent = await this.getSpecialistAgent(
         "CART_MANAGEMENT",
@@ -2791,6 +3000,469 @@ export class LLMRouterService {
       logger.error("❌ Error handling delegation handoff:", error)
       throw error
     }
+  }
+
+  // ✅ REMOVED: normalizeUserMessageWithMapping()
+  // Replaced by MessagePreprocessorService (FASE 2)
+  // The new service provides deterministic parsing + FAST-PATH delegation
+
+  /**
+   * Persist mapping between displayed options and their labels for next-turn selection
+   */
+  private async updateOptionMappingMetadata(options: {
+    workspaceId: string
+    conversationId: string
+    customerId?: string
+    responseText: string
+    forceClear?: boolean
+  }): Promise<void> {
+    const { workspaceId, conversationId, responseText, customerId } = options
+    const mapping = options.forceClear
+      ? null
+      : this.extractOptionMapping(responseText)
+
+    // 🔍 DEBUG: Log mapping extraction
+    logger.info("📋 [OptionMapping] Extracting mapping from response", {
+      conversationId,
+      responsePreview: responseText?.substring(0, 200),
+      extractedMapping: mapping ? { type: mapping.type, optionsCount: mapping.options?.length, listType: mapping.listType } : null,
+    })
+
+    const existing = await this.prisma.searchConversations.findUnique({
+      where: { sessionId: conversationId },
+    })
+
+    const currentMetadata = (existing as any)?.metadata || {}
+    const updatedMetadata = {
+      ...currentMetadata,
+      lastOptionsMapping: mapping,
+    }
+
+    // Keep activeAgent/state; only adjust metadata
+    await this.prisma.searchConversations.upsert({
+      where: { sessionId: conversationId },
+      create: {
+        sessionId: conversationId,
+        workspaceId,
+        customerId: (existing as any)?.customerId || customerId || "",
+        metadata: updatedMetadata,
+        activeAgent: (existing as any)?.activeAgent || null,
+        expiresAt:
+          (existing as any)?.expiresAt || new Date(Date.now() + 10 * 60 * 1000),
+      } as any,
+      update: {
+        metadata: updatedMetadata,
+      } as any,
+    })
+  }
+
+  /**
+   * Extract mapping from assistant response: numbered lists or yes/no prompts
+   */
+  private extractOptionMapping(responseText: string): any | null {
+    if (!responseText) return null
+
+    const lines = responseText.split(/\r?\n/)
+    const options: Array<{ number: number; label: string; count?: number }> = []
+    for (const line of lines) {
+      const match = line.match(/^\s*(\d+)[\.|\)]\s*(.+)$/)
+      if (match) {
+        const number = parseInt(match[1], 10)
+        const label = match[2].trim()
+        if (!Number.isNaN(number) && label) {
+          const countMatch = label.match(/\((\d+)\s*(prodotti|items)\)/i)
+          const parsedCount = countMatch ? parseInt(countMatch[1], 10) : undefined
+          options.push({ number, label, count: parsedCount })
+        }
+      }
+    }
+
+    if (options.length >= 2) {
+      const lowerFull = responseText.toLowerCase()
+      const hasPrice = /€|euro/i.test(responseText)
+      const hasGroupCue = /quale\s+gruppo|gruppi?\b/i.test(lowerFull)
+      const hasCategoryCue = /categorie|catalogo/i.test(lowerFull)
+
+      let listType: "categories" | "groups" | "products" | undefined
+      if (hasPrice) listType = "products"
+      else if (hasGroupCue) listType = "groups"
+      else if (hasCategoryCue) listType = "categories"
+
+      return {
+        type: "numbered",
+        options: options.slice(0, 30),
+        listType,
+      }
+    }
+
+    const lower = responseText.toLowerCase()
+    const hasYesNo = /\b(sì|si|yes|no|ok|va bene|okay)\b/i.test(lower)
+    if (hasYesNo) {
+      return { type: "binary", options: ["yes", "no", "ok"] }
+    }
+
+    return null
+  }
+
+  /**
+   * 🆕 FASE 2: Execute fast-path delegation (bypasses Router LLM)
+   *
+   * When MessagePreprocessorService detects a deterministic selection (number, confirmation),
+   * this method executes the delegation DIRECTLY to the sub-agent without calling Router LLM.
+   *
+   * Benefits:
+   * - 100% accurate selection (no LLM interpretation errors)
+   * - Faster response (saves ~500ms Router LLM call)
+   * - Lower cost (no Router tokens)
+   */
+  private async executeFastPathDelegation(options: {
+    delegationTarget: "PRODUCT_SEARCH" | "CART_MANAGEMENT" | "ORDER_TRACKING" | "CUSTOMER_SUPPORT"
+    delegationQuery: string
+    params: RouteMessageParams
+    customerDiscount: number
+    conversationHistory: any[]
+    debugSteps: DebugStep[]
+  }): Promise<{
+    response: string
+    tokensUsed: number
+    agentUsed: AgentType
+  } | null> {
+    const { delegationTarget, delegationQuery, params, customerDiscount, conversationHistory, debugSteps } = options
+
+    try {
+      logger.info(`⚡ [FAST-PATH] Executing direct delegation to ${delegationTarget}`, {
+        query: delegationQuery,
+        workspaceId: params.workspaceId,
+        customerId: params.customerId,
+      })
+
+      // Load customer and workspace data (same as normal delegation)
+      const customer = await this.prisma.customers.findFirst({
+        where: { id: params.customerId, workspaceId: params.workspaceId },
+        include: { sales: true },
+      })
+
+      if (!customer) {
+        logger.error("⚡ [FAST-PATH] Customer not found", { customerId: params.customerId })
+        return null
+      }
+
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: params.workspaceId },
+      })
+
+      if (!workspace) {
+        logger.error("⚡ [FAST-PATH] Workspace not found", { workspaceId: params.workspaceId })
+        return null
+      }
+
+      // Load catalog data
+      const messageRepo = new (require("../repositories/message.repository").MessageRepository)()
+      const [categories, offers, products, lastOrder] = await Promise.all([
+        messageRepo.getActiveCategories(params.workspaceId),
+        messageRepo.getActiveOffers(params.workspaceId),
+        messageRepo.getActiveProducts(params.workspaceId, customer.discount || 0),
+        this.prisma.orders.findFirst({
+          where: { customerId: customer.id },
+          orderBy: { createdAt: "desc" },
+          select: { orderCode: true },
+        }),
+      ])
+
+      // Build customer data using centralized builder
+      const delegationPromptVariables = PromptVariableBuilder.build(
+        customer,
+        workspace,
+        { products, categories, offers },
+        { lastOrderCode: lastOrder?.orderCode || undefined }
+      )
+
+      const customerData = {
+        nameUser: delegationPromptVariables.customerName,
+        email: delegationPromptVariables.customerEmail,
+        phone: delegationPromptVariables.customerPhone,
+        discountUser: customer.discount || 0,
+        companyName: delegationPromptVariables.companyName,
+        lastordercode: delegationPromptVariables.lastOrderCode || "",
+        languageUser: delegationPromptVariables.languageUser,
+        agentName: delegationPromptVariables.agentName,
+        agentPhone: delegationPromptVariables.agentPhone,
+        agentEmail: delegationPromptVariables.agentEmail,
+        push_notifications_consent: delegationPromptVariables.pushNotificationsConsent,
+        botIdentityResponse: delegationPromptVariables.botIdentityResponse,
+      }
+
+      let subAgentResponse: any
+
+      // Execute delegation based on target
+      switch (delegationTarget) {
+        case "PRODUCT_SEARCH": {
+          debugSteps.push({
+            type: "delegation" as any,
+            timestamp: new Date().toISOString(),
+            fromAgent: "FAST-PATH",
+            toAgent: "PRODUCT_SEARCH",
+            reason: "Deterministic numeric selection",
+            delegationQuery,
+          } as any)
+
+          const productSearchAgent = new ProductSearchAgentLLM(this.prisma)
+          subAgentResponse = await productSearchAgent.handleQuery({
+            workspaceId: params.workspaceId,
+            customerId: params.customerId,
+            customerName: params.customerName,
+            customerLanguage: params.customerLanguage,
+            query: delegationQuery,
+            sessionId: `${params.workspaceId}-${params.customerId}`,
+            customerData,
+          })
+          break
+        }
+
+        case "CART_MANAGEMENT": {
+          debugSteps.push({
+            type: "delegation" as any,
+            timestamp: new Date().toISOString(),
+            fromAgent: "FAST-PATH",
+            toAgent: "CART_MANAGEMENT",
+            reason: "Deterministic cart selection",
+            delegationQuery,
+          } as any)
+
+          const cartAgent = new CartManagementAgentLLM(this.prisma)
+          const recentHistory = conversationHistory
+            .filter((msg: any) => msg.role !== "system")
+            .slice(-3)
+
+          subAgentResponse = await cartAgent.handleQuery({
+            workspaceId: params.workspaceId,
+            customerId: params.customerId,
+            customerName: params.customerName,
+            customerLanguage: params.customerLanguage,
+            customerDiscount,
+            query: delegationQuery,
+            conversationHistory: recentHistory,
+            customerData,
+          })
+          break
+        }
+
+        case "ORDER_TRACKING": {
+          debugSteps.push({
+            type: "delegation" as any,
+            timestamp: new Date().toISOString(),
+            fromAgent: "FAST-PATH",
+            toAgent: "ORDER_TRACKING",
+            reason: "Deterministic order selection",
+            delegationQuery,
+          } as any)
+
+          const orderAgent = new OrderTrackingAgentLLM(this.prisma)
+          const recentHistory = conversationHistory
+            .filter((msg: any) => msg.role !== "system")
+            .slice(-3)
+
+          subAgentResponse = await orderAgent.handleQuery({
+            workspaceId: params.workspaceId,
+            customerId: params.customerId,
+            customerName: params.customerName,
+            customerLanguage: params.customerLanguage,
+            query: delegationQuery,
+            customerData,
+          })
+          break
+        }
+
+        case "CUSTOMER_SUPPORT": {
+          debugSteps.push({
+            type: "delegation" as any,
+            timestamp: new Date().toISOString(),
+            fromAgent: "FAST-PATH",
+            toAgent: "CUSTOMER_SUPPORT",
+            reason: "Deterministic support selection",
+            delegationQuery,
+          } as any)
+
+          const supportAgent = new CustomerSupportAgentLLM(this.prisma)
+          subAgentResponse = await supportAgent.handleQuery({
+            workspaceId: params.workspaceId,
+            customerId: params.customerId,
+            customerName: params.customerName,
+            customerLanguage: params.customerLanguage,
+            query: delegationQuery,
+            customerData,
+          })
+          break
+        }
+
+        default:
+          logger.warn(`⚡ [FAST-PATH] Unknown delegation target: ${delegationTarget}`)
+          return null
+      }
+
+      if (!subAgentResponse?.response) {
+        logger.error("⚡ [FAST-PATH] Sub-agent returned empty response")
+        return null
+      }
+
+      // Update activeAgent state
+      await this.prisma.searchConversations.upsert({
+        where: { sessionId: params.conversationId },
+        create: {
+          sessionId: params.conversationId,
+          workspaceId: params.workspaceId,
+          customerId: params.customerId,
+          activeAgent: delegationTarget,
+          expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        } as any,
+        update: {
+          activeAgent: delegationTarget,
+          expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        } as any,
+      })
+
+      logger.info(`✅ [FAST-PATH] Delegation complete`, {
+        target: delegationTarget,
+        responseLength: subAgentResponse.response?.length,
+        tokensUsed: subAgentResponse.tokensUsed || 0,
+      })
+
+      return {
+        response: subAgentResponse.response,
+        tokensUsed: subAgentResponse.tokensUsed || 0,
+        agentUsed: delegationTarget as AgentType,
+      }
+
+    } catch (error) {
+      logger.error("⚡ [FAST-PATH] Delegation failed", {
+        target: delegationTarget,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return null
+    }
+  }
+
+  /**
+   * Build a minimal index of products and categories for direct intent detection.
+   * Uses workspace isolation and only selects identifiers needed for matching.
+   */
+  private async getDirectIntentIndex(workspaceId: string): Promise<{
+    products: Array<{ name?: string; sku?: string }>
+    categories: Array<{ name?: string }>
+  }> {
+    try {
+      const [productIndex, categoryIndex] = await Promise.all([
+        this.prisma.products.findMany({
+          where: { workspaceId, isActive: true },
+          select: { name: true, sku: true },
+        }),
+        this.prisma.categories.findMany({
+          where: { workspaceId, isActive: true },
+          select: { name: true },
+        }),
+      ])
+
+      return { products: productIndex, categories: categoryIndex }
+    } catch (error) {
+      logger.warn("⚠️ Failed to build direct intent index", {
+        workspaceId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return { products: [], categories: [] }
+    }
+  }
+
+  /**
+   * Detect explicit product or category mentions in free-text messages to avoid regrouping loops.
+   */
+  private detectDirectIntent(
+    message: string,
+    products: any[],
+    categories: any[]
+  ): string | null {
+    if (!message) return null
+
+    const normalizedMessage = this.normalizeForMatch(message)
+    if (!normalizedMessage || normalizedMessage.length < 3) return null
+
+    const matchedProducts: Array<{ name?: string; token?: string }> = []
+    const matchedCategories: Array<{ name?: string }> = []
+
+    // 1) Check products first (higher specificity)
+    for (const product of products || []) {
+      const productName = product?.name || product?.sku
+      const productSku = product?.sku || product?.code
+      const normalizedName = this.normalizeForMatch(productName)
+      const normalizedSku = this.normalizeForMatch(productSku)
+
+      const nameTokens = normalizedName
+        ? normalizedName.split(/\s+/).filter((t) => t.length >= 4)
+        : []
+
+      const tokenHit = nameTokens.find((t) => normalizedMessage.includes(t))
+
+      if (
+        (normalizedName && normalizedMessage.includes(normalizedName)) ||
+        (normalizedName && normalizedName.includes(normalizedMessage)) ||
+        (normalizedSku && normalizedMessage.includes(normalizedSku)) ||
+        tokenHit
+      ) {
+        matchedProducts.push({ name: productName, token: tokenHit || normalizedName })
+      }
+    }
+
+    // 2) Check categories (fallback)
+    for (const category of categories || []) {
+      const categoryName = category?.name
+      const normalizedCategory = this.normalizeForMatch(categoryName)
+
+      const categoryTokens = normalizedCategory
+        ? normalizedCategory.split(/\s+/).filter((t) => t.length >= 4)
+        : []
+      const tokenHit = categoryTokens.find((t) => normalizedMessage.includes(t))
+
+      if (
+        (normalizedCategory && normalizedMessage.includes(normalizedCategory)) ||
+        (normalizedCategory && normalizedCategory.includes(normalizedMessage)) ||
+        tokenHit
+      ) {
+        matchedCategories.push({ name: categoryName })
+      }
+    }
+
+    // Decide best direct intent
+    if (matchedProducts.length === 1) {
+      const only = matchedProducts[0]
+      return `User is asking about product "${only.name}". Show product details and ask if they want to add to cart.`
+    }
+
+    if (matchedProducts.length >= 2) {
+      const sampleNames = matchedProducts
+        .map((m) => m.name)
+        .filter(Boolean)
+        .slice(0, 3)
+      const keyword = matchedProducts.find((m) => m.token)?.token || normalizedMessage
+      return `User is asking about products related to "${keyword}" (e.g., ${sampleNames.join(", ")}). Filter products whose name contains that keyword. Apply count rules on this subset: 1-2 → show details + ask add-to-cart; 3-5 → numbered list with prices + ask selection; 6+ → create 2-4 meaningful groups, and if grouping would yield a single bucket, list all items instead (never show a single group). Stay within matched products, do not reset to full catalog.`
+    }
+
+    if (matchedCategories.length >= 1) {
+      const categoryName = matchedCategories[0].name
+      return `User wants to see category "${categoryName}". Show products or sub-groups for this category. If the category has 6+ items, create 2-4 groups; if grouping would produce only one bucket, list all items with numbers instead (never show a single group). If you cannot confidently form 2+ groups, fall back to listing all items with prices and ask for a selection.`
+    }
+
+    return null
+  }
+
+  /**
+   * Lowercase + accent/diacritic stripping for reliable substring comparisons.
+   */
+  private normalizeForMatch(text?: string): string {
+    if (!text || typeof text !== "string") return ""
+    return text
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
   }
 
   /**

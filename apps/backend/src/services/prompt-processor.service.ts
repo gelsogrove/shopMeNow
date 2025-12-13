@@ -5,6 +5,7 @@ import { TemplateEngineService } from "../application/services/prompt-builder/te
 import { MessageRepository } from "../repositories/message.repository"
 import logger from "../utils/logger"
 import { PromptValidationError } from "../utils/PromptValidationError"
+import { PromptVariables, VARIABLE_ALIASES, LARGE_VARIABLES } from "../types/prompt-variables.types"
 
 // prisma imported
 
@@ -16,6 +17,161 @@ export class PromptProcessorService {
     this.messageRepository = new MessageRepository()
     this.templateEngine = new TemplateEngineService()
   }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // 🆕 NEW SIMPLIFIED API - Uses PromptVariables directly
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * 🆕 SIMPLIFIED PROMPT PROCESSING - Uses standardized PromptVariables
+   * 
+   * This is the NEW recommended method. It receives pre-built PromptVariables
+   * from PromptVariableBuilder and does ONLY string replacement.
+   * 
+   * NO database queries, NO complex logic, NO side effects.
+   * 
+   * @param template - Template string with {{variables}}
+   * @param variables - Pre-built PromptVariables from PromptVariableBuilder
+   * @returns Processed template with all variables replaced
+   * 
+   * @example
+   * const variables = PromptVariableBuilder.build(customer, workspace, dynamicContent)
+   * const processed = promptProcessor.processWithVariables(template, variables)
+   */
+  public processWithVariables(template: string, variables: PromptVariables): string {
+    // STEP 1: Validate for duplicate large variables
+    this.validatePromptVariables(template)
+    
+    let result = template
+    
+    // STEP 2: Process {{#if}} conditionals FIRST
+    if (result.includes("{{#if") || result.includes("{{#unless")) {
+      const conditionalVars = {
+        // Booleans for {{#if}} conditions
+        sellsProductsAndServices: variables.sellsProductsAndServices,
+        hasHumanSupport: variables.hasHumanSupport,
+        hasSalesAgents: variables.hasSalesAgents,
+        hasSuppliers: variables.hasSuppliers,
+        // Computed booleans
+        hasIdentity: !!variables.botIdentityResponse,
+        hasFaq: !!variables.faqs,
+        hasCustomAiRules: !!variables.customAiRules,
+        hasAgentAssigned: variables.agentName !== 'Non assegnato',
+        hasProducts: !!variables.products,
+        hasCategories: !!variables.categories,
+        hasServices: !!variables.services,
+        hasOffers: !!variables.offers,
+        hasAddress: !!variables.address,
+        // String values (truthiness for conditionals)
+        address: variables.address,
+        customAiRules: variables.customAiRules,
+        botIdentityResponse: variables.botIdentityResponse,
+        humanSupportInstructions: variables.humanSupportInstructions,
+        allowedExternalLinks: variables.allowedExternalLinks,
+      }
+      
+      result = this.templateEngine.process(result, conditionalVars)
+      logger.debug("✅ Processed {{#if}} conditionals")
+    }
+    
+    // STEP 3: Replace all standard variables
+    result = this.replaceStandardVariables(result, variables)
+    
+    // STEP 4: Replace legacy aliases for backward compatibility
+    result = this.replaceLegacyAliases(result, variables)
+    
+    // STEP 5: Handle empty dynamic content with explicit messages
+    result = this.handleEmptyContent(result, variables)
+    
+    // Log any unreplaced variables (debugging)
+    const unreplaced = result.match(/\{\{[^}#/]+\}\}/g)
+    if (unreplaced && unreplaced.length > 0) {
+      logger.warn(`⚠️ Unreplaced variables in prompt: ${[...new Set(unreplaced)].join(', ')}`)
+    }
+    
+    return result
+  }
+  
+  /**
+   * Replace all standard PromptVariables
+   */
+  private replaceStandardVariables(text: string, vars: PromptVariables): string {
+    return text
+      // Customer variables
+      .replace(/\{\{customerName\}\}/g, vars.customerName || 'Cliente')
+      .replace(/\{\{customerPhone\}\}/g, vars.customerPhone || '')
+      .replace(/\{\{customerEmail\}\}/g, vars.customerEmail || '')
+      .replace(/\{\{customerDiscount\}\}/g, String(vars.customerDiscount || 0))
+      .replace(/\{\{languageUser\}\}/g, vars.languageUser || 'ITALIANO')
+      .replace(/\{\{pushNotificationsConsent\}\}/g, vars.pushNotificationsConsent ? 'true' : 'false')
+      
+      // Sales agent variables
+      .replace(/\{\{agentName\}\}/g, vars.agentName || 'Non assegnato')
+      .replace(/\{\{agentPhone\}\}/g, vars.agentPhone || 'N/A')
+      .replace(/\{\{agentEmail\}\}/g, vars.agentEmail || 'N/A')
+      
+      // Workspace/Company variables
+      .replace(/\{\{companyName\}\}/g, vars.companyName || 'Shop')
+      .replace(/\{\{botIdentityResponse\}\}/g, vars.botIdentityResponse || '')
+      .replace(/\{\{customAiRules\}\}/g, vars.customAiRules || '')
+      .replace(/\{\{address\}\}/g, vars.address || '')
+      .replace(/\{\{channelName\}\}/g, vars.channelName || 'Shop')
+      .replace(/\{\{workspaceUrl\}\}/g, vars.workspaceUrl || '')
+      .replace(/\{\{url\}\}/g, vars.workspaceUrl || '') // Alias
+      .replace(/\{\{toneOfVoice\}\}/g, vars.toneOfVoice || 'friendly')
+      .replace(/\{\{humanSupportInstructions\}\}/g, vars.humanSupportInstructions || '')
+      .replace(/\{\{allowedExternalLinks\}\}/g, vars.allowedExternalLinks || '')
+      
+      // Context variables
+      .replace(/\{\{lastOrderCode\}\}/g, vars.lastOrderCode || '')
+      .replace(/\{\{lastordercode\}\}/g, vars.lastOrderCode || '') // Alias (lowercase)
+      .replace(/\{\{cartContents\}\}/g, vars.cartContents || '')
+      .replace(/\{\{tokenDuration\}\}/g, vars.tokenDuration || '15 minutes')
+      .replace(/\{\{TOKEN_DURATION\}\}/g, vars.tokenDuration || '15 minutes') // Alias
+      
+      // Dynamic content
+      .replace(/\{\{products\}\}/g, vars.products || '')
+      .replace(/\{\{categories\}\}/g, vars.categories || '')
+      .replace(/\{\{services\}\}/g, vars.services || '')
+      .replace(/\{\{offers\}\}/g, vars.offers || '')
+      .replace(/\{\{faqs\}\}/g, vars.faqs || '')
+      .replace(/\{\{faq\}\}/g, vars.faqs || '') // Alias
+  }
+  
+  /**
+   * Replace legacy variable names for backward compatibility
+   * @deprecated These aliases will be removed in next major version
+   */
+  private replaceLegacyAliases(text: string, vars: PromptVariables): string {
+    return text
+      // Customer aliases
+      .replace(/\{\{nameUser\}\}/g, vars.customerName || 'Cliente')
+      .replace(/\{\{nome\}\}/g, vars.customerName || 'Cliente')
+      .replace(/\{\{phone\}\}/g, vars.customerPhone || '')
+      .replace(/\{\{email\}\}/g, vars.customerEmail || '')
+      .replace(/\{\{discountUser\}\}/g, String(vars.customerDiscount || 0))
+  }
+  
+  /**
+   * Handle empty dynamic content with explicit LLM-friendly messages
+   */
+  private handleEmptyContent(text: string, vars: PromptVariables): string {
+    // Only add messages if the variable was present but empty
+    // (prevents double-messaging if variable wasn't in template)
+    
+    if (!vars.products && text.includes('CATALOGO VUOTO')) {
+      // Already has empty message from replaceStandardVariables
+    }
+    
+    // Products empty warning is already handled in replaceStandardVariables
+    // but we can add additional context here if needed
+    
+    return text
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // LEGACY API - Maintained for backward compatibility
+  // ══════════════════════════════════════════════════════════════════════════
 
   /**
    * Validate prompt variables to prevent duplicate large variables
@@ -110,6 +266,10 @@ export class PromptProcessorService {
         hasHumanSupport: workspaceConfig?.hasHumanSupport ?? true,
         hasSalesAgents: workspaceConfig?.hasSalesAgents ?? false,
         hasSuppliers: workspaceConfig?.hasSuppliers ?? false, // 🆕 Suppliers menu visibility
+        // ✅ FIX: Add hasIdentity, hasFaq, hasCustomAiRules boolean checks for {{#if}} conditionals
+        hasIdentity: !!workspaceConfig?.botIdentityResponse,
+        hasFaq: !!dynamicContent?.faqs,
+        hasCustomAiRules: !!workspaceConfig?.customAiRules,
         // String variables - ONLY truthiness matters for {{#if}}, actual value substituted later
         address: workspaceConfig?.address || "",
         customAiRules: workspaceConfig?.customAiRules || "",
@@ -140,6 +300,9 @@ export class PromptProcessorService {
     }
     if (workspaceConfig?.allowedExternalLinks?.length) {
       processedPrompt = processedPrompt.replace(/\{\{allowedExternalLinks\}\}/g, workspaceConfig.allowedExternalLinks.join("\n"))
+    }
+    if (workspaceConfig?.adminEmail) {
+      processedPrompt = processedPrompt.replace(/\{\{adminEmail\}\}/g, workspaceConfig.adminEmail)
     }
 
     // Sostituzione URL workspace (PRIMA di altre sostituzioni)
@@ -454,14 +617,18 @@ Il nostro team ti contatterà via email (${email}) il prima possibile per risolv
       pushNotificationsConsent?: boolean
       pushNotificationsConsentAt?: Date | null
       channelName?: string
+      adminEmail?: string // 🆕 Support/escalation email
+      botIdentityResponse?: string // 🆕 Bot identity text
     }
   ): string {
     if (!text) return text
 
     return text
       .replace(/\{\{nameUser\}\}/g, customerData.nome || "Cliente")
+      .replace(/\{\{customerName\}\}/g, customerData.nome || "Cliente") // 🔧 Alias for templates using {{customerName}}
       .replace(/\{\{email\}\}/g, customerData.email || "")
       .replace(/\{\{phone\}\}/g, customerData.phone || "")
+      .replace(/\{\{customerPhone\}\}/g, customerData.phone || "") // 🔧 Alias for templates using {{customerPhone}}
       .replace(/\{\{discountUser\}\}/g, String(customerData.discountUser || 0))
       .replace(/\{\{agentName\}\}/g, customerData.agentName || "Non assegnato")
       .replace(/\{\{agentPhone\}\}/g, customerData.agentPhone || "N/A")
@@ -490,6 +657,8 @@ Il nostro team ti contatterà via email (${email}) il prima possibile per risolv
         /\{\{channelName\}\}/g,
         customerData.channelName || "Shop"
       )
+      .replace(/\{\{adminEmail\}\}/g, customerData.adminEmail || "support@echatbot.ai") // 🆕 Support email
+      .replace(/\{\{botIdentityResponse\}\}/g, customerData.botIdentityResponse || "Virtual Assistant") // 🆕 Bot identity
   }
 
   /**
@@ -521,6 +690,8 @@ Il nostro team ti contatterà via email (${email}) il prima possibile per risolv
       pushNotificationsConsent: customerData.push_notifications_consent,
       pushNotificationsConsentAt: customerData.push_notifications_consent_at,
       channelName: customerData.channelName,
+      adminEmail: customerData.adminEmail, // 🆕 For support/escalation links
+      botIdentityResponse: customerData.botIdentityResponse, // 🆕 For identity answers
     })
   } /**
    * Format token duration from environment variable

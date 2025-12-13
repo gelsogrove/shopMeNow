@@ -259,6 +259,7 @@ async function main() {
   }
 
   // Create agent configs for e-commerce workspace (ALL agents including PRODUCT_SEARCH, CART_MANAGEMENT, ORDER_TRACKING)
+  // ✅ NOTE: systemPrompt is NOT stored in DB - loaded from template files at runtime
   const ecommerceAgents = defaultAgents(ecommerceWorkspace.id)
   for (const config of ecommerceAgents) {
     await prisma.agentConfig.create({
@@ -268,7 +269,7 @@ async function main() {
         type: config.type,
         description: config.description,
         icon: config.icon,
-        systemPrompt: config.systemPrompt,
+        systemPrompt: "", // ✅ Empty - loaded from files at runtime
         model: config.model,
         temperature: config.temperature,
         maxTokens: config.maxTokens,
@@ -361,6 +362,7 @@ async function main() {
   }
 
   // Create agent configs for informational workspace (EXCLUDES PRODUCT_SEARCH, CART_MANAGEMENT, ORDER_TRACKING)
+  // ✅ NOTE: systemPrompt is NOT stored in DB - loaded from template files at runtime
   const ECOMMERCE_ONLY_TYPES = ["PRODUCT_SEARCH", "CART_MANAGEMENT", "ORDER_TRACKING"]
   const infoAgents = defaultAgents(infoWorkspace.id).filter(
     (agent) => !ECOMMERCE_ONLY_TYPES.includes(agent.type)
@@ -373,7 +375,7 @@ async function main() {
         type: config.type,
         description: config.description,
         icon: config.icon,
-        systemPrompt: config.systemPrompt,
+        systemPrompt: "", // ✅ Empty - loaded from files at runtime
         model: config.model,
         temperature: config.temperature,
         maxTokens: config.maxTokens,

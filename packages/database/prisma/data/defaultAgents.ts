@@ -1,6 +1,4 @@
 import { AgentType } from "@prisma/client"
-import * as fs from "fs"
-import * as path from "path"
 import { getAgentFunctionNames } from "../../src/config/agent-functions.config"
 
 interface DefaultAgent {
@@ -8,29 +6,13 @@ interface DefaultAgent {
   type: AgentType
   description: string
   icon: string // Lucide icon name
-  systemPrompt: string
+  // ❌ REMOVED: systemPrompt - now loaded from template files at runtime
   model: string
   temperature: number
   maxTokens: number
   order: number
   isActive: boolean
   availableFunctions: string[] | null
-}
-
-/**
- * Load prompt from markdown file
- * @param filename - Name of the markdown file in docs/prompts/templates/
- * @returns Prompt content as string
- */
-function loadPrompt(filename: string): string {
-  // Path: packages/database/prisma/data/ -> ../../../../docs/prompts/templates/
-  const promptPath = path.join(__dirname, "../../../../docs/prompts/templates", filename)
-  try {
-    return fs.readFileSync(promptPath, "utf-8")
-  } catch (error) {
-    console.error(`❌ Failed to load prompt: ${filename}`, error)
-    throw new Error(`Failed to load prompt file: ${filename}`)
-  }
 }
 
 export const defaultAgents = (
@@ -51,7 +33,7 @@ export const defaultAgents = (
     icon: "GitBranch",
     description:
       "Pure orchestration: intent classification, context interpretation for short responses (with CONFERMA keyword), and FAQ handling",
-    systemPrompt: loadPrompt("01-router.template.md"),
+
     model: "openai/gpt-4o-mini",
     temperature: 0, // ✅ Zero temperature = fully deterministic routing (no creativity needed)
     maxTokens: 500, // ✅ JSON response only
@@ -70,7 +52,7 @@ export const defaultAgents = (
     icon: "Search",
     description:
       "Specialist in product search with progressive filtering strategy (Regola 11): guides customers from categories to specific products",
-    systemPrompt: loadPrompt("02-product-search.template.md"),
+
     model: "openai/gpt-4o-mini",
     temperature: 0.2, // ✅ Low temperature for consistent product responses
     maxTokens: 2048,
@@ -89,7 +71,7 @@ export const defaultAgents = (
     icon: "ShoppingCart",
     description:
       "Specialist in cart operations: add/remove products, repeat orders, manage quantities",
-    systemPrompt: loadPrompt("03-cart-management.template.md"),
+
     model: "openai/gpt-4o-mini",
     temperature: 0.2, // ✅ Low temperature for consistent cart operations
     maxTokens: 2048,
@@ -108,7 +90,7 @@ export const defaultAgents = (
     icon: "Package",
     description:
       "Specialist in order tracking, history, invoices, and delivery status",
-    systemPrompt: loadPrompt("03-order-tracking.template.md"),
+
     model: "openai/gpt-4o-mini",
     temperature: 0.2, // ✅ Low temperature for consistent order responses
     maxTokens: 2048,
@@ -127,7 +109,7 @@ export const defaultAgents = (
     icon: "Headset",
     description:
       "Specialist in customer support, human escalation, complaints, and urgent issues",
-    systemPrompt: loadPrompt("04-customer-support.template.md"),
+
     model: "openai/gpt-4o-mini",
     temperature: 0.2, // ✅ Low temperature for empathetic but consistent support
     maxTokens: 2048,
@@ -146,7 +128,7 @@ export const defaultAgents = (
     icon: "FileText",
     description:
       "Specialist in creating concise conversation summaries for support team email notifications",
-    systemPrompt: loadPrompt("08-summary.template.md"),
+
     model: "openai/gpt-4o-mini",
     temperature: 0.2, // Low temperature for consistent, factual summaries
     maxTokens: 500,   // 250 words ≈ 350-500 tokens
@@ -165,7 +147,7 @@ export const defaultAgents = (
     icon: "User",
     description:
       "Specialist in managing customer profile information and notification preferences (enable/disable push notifications)",
-    systemPrompt: loadPrompt("05-profile-management.template.md"),
+
     model: "openai/gpt-4o-mini",
     temperature: 0.2, // ✅ Low temperature for consistent profile operations
     maxTokens: 500,
@@ -184,7 +166,7 @@ export const defaultAgents = (
     icon: "Globe",
     description:
       "Format and translation layer: formats responses for WhatsApp and translates to customer language (Italian, Spanish, Portuguese, English)",
-    systemPrompt: loadPrompt("07-translation.template.md"),
+
     model: "openai/gpt-4o-mini",
     temperature: 0.1, // Very low for consistency
     maxTokens: 1024,
@@ -203,7 +185,7 @@ export const defaultAgents = (
     icon: "Shield",
     description:
       "Security validation: detects dangerous content, SQL injection, XSS, offensive language. Blocks unsafe messages completely (no send, shows 🚫 icon)",
-    systemPrompt: loadPrompt("06-security.template.md"),
+
     model: "openai/gpt-4o-mini",
     temperature: 0, // Zero temperature = deterministic security checks
     maxTokens: 500, // Security checks don't need long responses

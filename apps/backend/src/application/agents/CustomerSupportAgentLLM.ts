@@ -10,7 +10,7 @@
  *
  * Architecture:
  * - Own LLM instance (OpenRouter + GPT-4o-mini)
- * - Own system prompt from database (agentConfig.CUSTOMER_SUPPORT)
+ * - Own system prompt from files (TemplateLoaderService loads from /templates/ecommerce/04-customer-support.template.md)
  * - Function execution via FAQRepository
  * - Returns English ONLY (Router handles translation)
  *
@@ -32,9 +32,12 @@
 import { PrismaClient } from "@echatbot/database"
 import axios from "axios"
 import { config } from "../../config"
-import { AgentConfigRepository } from "../../repositories/agent-config.repository"
 import { FAQRepository } from "../../repositories/faq.repository"
+import { TemplateLoaderService } from "../services/template-loader.service"
+import { PromptProcessorService } from "../../services/prompt-processor.service"
 import logger from "../../utils/logger"
+
+import { CustomerData } from "../../types/agent.types"
 
 export interface CustomerSupportLLMContext {
   workspaceId: string
@@ -42,6 +45,8 @@ export interface CustomerSupportLLMContext {
   customerName?: string
   customerLanguage?: string
   query: string
+  /** Pre-loaded customer data from Router (avoids duplicate DB queries) */
+  customerData?: CustomerData
 }
 
 export interface CustomerSupportLLMResponse {
@@ -60,14 +65,14 @@ export interface CustomerSupportLLMResponse {
 export class CustomerSupportAgentLLM {
   private prisma: PrismaClient
   private faqRepo: FAQRepository
-  private agentConfigRepo: AgentConfigRepository
+  private templateLoader: TemplateLoaderService
   private openRouterApiKey: string
   private openRouterBaseUrl: string
 
   constructor(prisma: PrismaClient) {
     this.prisma = prisma
     this.faqRepo = new FAQRepository(prisma)
-    this.agentConfigRepo = new AgentConfigRepository(prisma)
+    this.templateLoader = TemplateLoaderService.getInstance(prisma)
 
     // OpenRouter API configuration
     this.openRouterApiKey = process.env.OPENROUTER_API_KEY || ""
@@ -95,21 +100,14 @@ export class CustomerSupportAgentLLM {
         query: context.query.substring(0, 100),
       })
 
-      // STEP 1: Load system prompt from database
-      const agentConfig = await this.agentConfigRepo.findByType(
-        context.workspaceId,
-        "CUSTOMER_SUPPORT"
+      // STEP 1: Load system prompt from template files
+      let systemPrompt = await this.templateLoader.loadAndRenderTemplate(
+        "CUSTOMER_SUPPORT",
+        context.workspaceId
       )
 
-      if (!agentConfig || !agentConfig.isActive) {
-        throw new Error(
-          "CustomerSupportAgent configuration not found or inactive"
-        )
-      }
-
-      logger.info(`📋 Loaded CUSTOMER_SUPPORT prompt from database`, {
-        promptLength: agentConfig.systemPrompt.length,
-        model: agentConfig.model,
+      logger.info(`📋 Loaded CUSTOMER_SUPPORT template from files`, {
+        promptLength: systemPrompt.length,
       })
 
       // 🆕 STEP 1.5: Load workspace config for address and other dynamic fields
@@ -119,12 +117,12 @@ export class CustomerSupportAgentLLM {
           address: true,
           customAiRules: true,
           name: true,
+          botIdentityResponse: true,
+          notificationEmail: true,
         },
       })
 
       // Build dynamic context to inject into prompt
-      let systemPrompt = agentConfig.systemPrompt
-      
       // Inject address if available
       if (workspace?.address) {
         const addressSection = `\n\n## OUR LOCATION\nWhen customer asks "where are you?", "your address?", "dove siete?", "indirizzo?":\nRespond with: "${workspace.address}"\n`
@@ -140,11 +138,76 @@ export class CustomerSupportAgentLLM {
         logger.info(`⚙️ Injected custom AI rules into CUSTOMER_SUPPORT prompt`)
       }
 
+      // 🔧 STEP 1.6: Replace ALL variables ({{companyName}}, {{nameUser}}, etc.)
+      // CRITICAL: Must call preProcessPrompt to render variables before passing to LLM
+      const promptProcessor = new PromptProcessorService()
+      
+      // 🔧 OPTIMIZATION: Use pre-loaded customerData from Router if available (avoids duplicate DB queries)
+      // 🔴 CRITICAL FIX: Merge Router data with workspace fallbacks to ensure no empty values
+      const baseCustomerData = {
+        nameUser: context.customerName || "",
+        email: "",
+        phone: "",
+        discountUser: 0,
+        companyName: workspace?.name || "",
+        lastordercode: "",
+        languageUser: context.customerLanguage || "it",
+        agentName: "Non assegnato",
+        agentPhone: "N/A",
+        agentEmail: "N/A",
+        botIdentityResponse: workspace?.botIdentityResponse || "",
+        adminEmail: workspace?.notificationEmail || "", // 🆕 For support/escalation
+      }
+      
+      // Merge: Router data takes priority, but fallback to local workspace data if empty
+      const customerDataForPrompt = context.customerData ? {
+        ...baseCustomerData,
+        ...context.customerData,
+        // 🔴 CRITICAL: Ensure companyName and botIdentityResponse are NEVER empty
+        companyName: context.customerData.companyName || workspace?.name || baseCustomerData.companyName,
+        botIdentityResponse: context.customerData.botIdentityResponse || workspace?.botIdentityResponse || "",
+        adminEmail: context.customerData.adminEmail || workspace?.notificationEmail || "", // 🆕 For support/escalation
+      } : baseCustomerData
+      
+      // 🔍 DEBUG: Log what we're passing to preProcessPrompt
+      logger.info(`📋 CustomerSupportAgent customerDataForPrompt:`, {
+        companyName: customerDataForPrompt.companyName,
+        nameUser: customerDataForPrompt.nameUser,
+        botIdentityResponse: customerDataForPrompt.botIdentityResponse?.substring(0, 50) + "...",
+        hasRouterData: !!context.customerData,
+        workspaceName: workspace?.name,
+      })
+      
+      const processedPrompt = await promptProcessor.preProcessPrompt(
+        systemPrompt,
+        context.workspaceId,
+        customerDataForPrompt,
+        {
+          faqs: "", // FAQ loaded via functions, not in prompt
+          products: "",
+          categories: "",
+          services: "",
+          offers: "",
+        },
+        undefined, // workspaceUrl
+        {
+          address: workspace?.address || "",
+          customAiRules: workspace?.customAiRules || "",
+          botIdentityResponse: context.customerData?.botIdentityResponse || workspace?.botIdentityResponse || "",
+          adminEmail: context.customerData?.adminEmail || workspace?.notificationEmail || "", // 🆕 For support/escalation
+        }
+      )
+
+      logger.info(`✅ Variables replaced in CUSTOMER_SUPPORT prompt`, {
+        originalLength: systemPrompt.length,
+        processedLength: processedPrompt.length,
+      })
+
       // STEP 2: Build messages for LLM
       const messages: any[] = [
         {
           role: "system" as const,
-          content: systemPrompt,
+          content: processedPrompt,
         },
         {
           role: "user" as const,
@@ -157,11 +220,11 @@ export class CustomerSupportAgentLLM {
 
       // STEP 4: Call LLM (OpenRouter)
       const llmResponse = await this.callLLM({
-        model: agentConfig.model,
+        model: "gpt-4o-mini",
         messages,
         functions,
-        temperature: agentConfig.temperature,
-        maxTokens: agentConfig.maxTokens || 2000,
+        temperature: 0.7,
+        maxTokens: 2000,
       })
 
       let totalTokens = llmResponse.tokensUsed
@@ -242,11 +305,11 @@ export class CustomerSupportAgentLLM {
           })
 
           const finalLLMResponse = await this.callLLM({
-            model: agentConfig.model,
+            model: "gpt-4o-mini",
             messages,
             functions,
-            temperature: agentConfig.temperature,
-            maxTokens: agentConfig.maxTokens || 2000,
+            temperature: 0.7,
+            maxTokens: 2000,
           })
 
           totalTokens += finalLLMResponse.tokensUsed
@@ -269,7 +332,7 @@ export class CustomerSupportAgentLLM {
         tokensUsed: totalTokens,
         executionTimeMs,
         functionCalls,
-        systemPrompt, // 🆕 Include processed prompt for debugging
+        systemPrompt: processedPrompt, // 🔧 FIX: Return PROCESSED prompt (with variables replaced), not raw template
       }
     } catch (error) {
       const executionTimeMs = Date.now() - startTime

@@ -10,7 +10,7 @@
  *
  * Architecture:
  * - Own LLM instance (OpenRouter + GPT-4o-mini)
- * - Own system prompt from database (agentConfig.CART_MANAGEMENT)
+ * - Own system prompt from files (TemplateLoaderService loads from /templates/ecommerce/03-cart-management.template.md)
  * - Function execution via CartManagementAgent
  * - Returns English ONLY (Router handles translation)
  *
@@ -32,13 +32,17 @@
 import { PrismaClient } from "@echatbot/database"
 import axios from "axios"
 import { config } from "../../config"
-import { AgentConfigRepository } from "../../repositories/agent-config.repository"
 import { CartRepository } from "../../repositories/cart.repository"
 import { OrderRepository } from "../../repositories/order.repository"
 import { ProductRepository } from "../../repositories/product.repository"
 import { ServiceRepository } from "../../repositories/service.repository"
+import { TemplateLoaderService } from "../services/template-loader.service"
+import { PromptProcessorService } from "../../services/prompt-processor.service"
+import { getSystemContextService, SystemContextService } from "../../services/system-context.service"
 import logger from "../../utils/logger"
 import { CartManagementAgent } from "./CartManagementAgent"
+
+import { CustomerData } from "../../types/agent.types"
 
 export interface CartLLMContext {
   workspaceId: string
@@ -49,6 +53,8 @@ export interface CartLLMContext {
   query: string
   conversationHistory?: Array<{ role: string; content: string }> // Last 2-3 messages for context
   selectedSku?: string // Feature 123: Product code from search memory
+  /** Pre-loaded customer data from Router (avoids duplicate DB queries) */
+  customerData?: CustomerData
 }
 
 export interface CartLLMResponse {
@@ -68,7 +74,8 @@ export interface CartLLMResponse {
 export class CartManagementAgentLLM {
   private prisma: PrismaClient
   private cartManagementAgent: CartManagementAgent
-  private agentConfigRepo: AgentConfigRepository
+  private templateLoader: TemplateLoaderService
+  private systemContextService: SystemContextService
   private openRouterApiKey: string
   private openRouterBaseUrl: string
 
@@ -87,7 +94,8 @@ export class CartManagementAgentLLM {
       orderRepo
     )
 
-    this.agentConfigRepo = new AgentConfigRepository(prisma)
+    this.templateLoader = TemplateLoaderService.getInstance(prisma)
+    this.systemContextService = getSystemContextService(prisma)
 
     // OpenRouter API configuration
     this.openRouterApiKey = process.env.OPENROUTER_API_KEY || ""
@@ -113,25 +121,101 @@ export class CartManagementAgentLLM {
         query: context.query.substring(0, 100),
       })
 
-      // STEP 1: Load system prompt from database
-      const agentConfig = await this.agentConfigRepo.findByType(
-        context.workspaceId,
-        "CART_MANAGEMENT"
+      // STEP 1: Load system prompt from template files
+      let systemPromptRaw = await this.templateLoader.loadAndRenderTemplate(
+        "CART_MANAGEMENT",
+        context.workspaceId
       )
 
-      if (!agentConfig || !agentConfig.isActive) {
-        throw new Error(
-          "CartManagementAgent configuration not found or inactive"
-        )
-      }
-
-      logger.info(`📋 Loaded CART_MANAGEMENT prompt from database`, {
-        promptLength: agentConfig.systemPrompt.length,
-        model: agentConfig.model,
+      logger.info(`📋 Loaded CART_MANAGEMENT template from files`, {
+        promptLength: systemPromptRaw.length,
       })
 
-      // Store the processed system prompt for debugging
-      const systemPrompt = agentConfig.systemPrompt
+      // 🆕 STEP 1.5: Load workspace config for dynamic fields (customAiRules, botIdentityResponse, etc.)
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: context.workspaceId },
+        select: {
+          name: true,
+          address: true,
+          customAiRules: true,
+          botIdentityResponse: true,
+        },
+      })
+
+      // 🔧 STEP 1.6: Replace ALL variables ({{companyName}}, {{nameUser}}, etc.)
+      // CRITICAL: Must call preProcessPrompt to render variables before passing to LLM
+      const promptProcessor = new PromptProcessorService()
+      
+      // 🔧 OPTIMIZATION: Use pre-loaded customerData from Router if available (avoids duplicate DB queries)
+      // 🔴 CRITICAL FIX: Merge Router data with workspace fallbacks to ensure no empty values
+      const baseCustomerData = {
+        nameUser: context.customerName || "",
+        email: "",
+        phone: "",
+        discountUser: context.customerDiscount || 0,
+        companyName: workspace?.name || "",
+        lastordercode: "",
+        languageUser: context.customerLanguage || "it",
+        agentName: "Non assegnato",
+        agentPhone: "N/A",
+        agentEmail: "N/A",
+        botIdentityResponse: workspace?.botIdentityResponse || "",
+      }
+      
+      // Merge: Router data takes priority, but fallback to local workspace data if empty
+      const customerDataForPrompt = context.customerData ? {
+        ...baseCustomerData,
+        ...context.customerData,
+        // 🔴 CRITICAL: Ensure companyName is NEVER empty
+        companyName: context.customerData.companyName || workspace?.name || baseCustomerData.companyName,
+      } : baseCustomerData
+      
+      // 🔍 DEBUG: Log what we're passing to preProcessPrompt
+      logger.info(`📋 CartManagementAgent customerDataForPrompt:`, {
+        companyName: customerDataForPrompt.companyName,
+        nameUser: customerDataForPrompt.nameUser,
+        hasRouterData: !!context.customerData,
+        workspaceName: workspace?.name,
+      })
+      
+      // 🆕 Load products with SKU for cart operations
+      const productRepo = new ProductRepository()
+      const productsResult = await productRepo.findAll(context.workspaceId)
+      const productsRaw = productsResult.products || []
+      
+      // Format products with SKU for LLM to use in addItemToCart
+      const productsFormatted = productsRaw
+        .filter((p: any) => p.isActive)
+        .map((p: any) => `- ${p.name} | SKU: ${p.sku} | €${p.price?.toFixed(2)}`)
+        .join("\n")
+      
+      logger.info(`📦 Loaded ${productsRaw.length} products for CartManagement`, {
+        activeProducts: productsRaw.filter((p: any) => p.isActive).length,
+      })
+      
+      const systemPrompt = await promptProcessor.preProcessPrompt(
+        systemPromptRaw,
+        context.workspaceId,
+        customerDataForPrompt,
+        {
+          faqs: "",
+          products: productsFormatted, // 🆕 Include products with SKU
+          categories: "",
+          services: "",
+          offers: "",
+        },
+        undefined, // workspaceUrl
+        {
+          address: workspace?.address || "",
+          customAiRules: workspace?.customAiRules || "",
+          botIdentityResponse: context.customerData?.botIdentityResponse || workspace?.botIdentityResponse || "",
+        }
+      )
+
+      logger.info(`✅ Variables replaced in CART_MANAGEMENT prompt`, {
+        originalLength: systemPromptRaw.length,
+        processedLength: systemPrompt.length,
+      })
 
       // STEP 2: Build messages for LLM (with conversation history for context)
       const messages: any[] = [
@@ -148,7 +232,7 @@ export class CartManagementAgentLLM {
           content: `⚠️ IMPORTANT: The user just selected a product from the catalog.
 Product Code: ${context.selectedSku}
 
-When the user says "yes" or "sì" or confirms they want to add the product to cart, 
+When the user says "yes" or "sì" or confirms they want to add the product to cart,
 you MUST call addToCart() with this EXACT product code: "${context.selectedSku}"
 
 DO NOT use product names - ALWAYS use the product code provided above.`,
@@ -184,11 +268,11 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
 
       // STEP 4: Call LLM (OpenRouter)
       const llmResponse = await this.callLLM({
-        model: agentConfig.model,
+        model: "gpt-4o-mini",
         messages,
         functions,
-        temperature: agentConfig.temperature,
-        maxTokens: agentConfig.maxTokens || 2000,
+        temperature: 0.7,
+        maxTokens: 2000,
       })
 
       let totalTokens = llmResponse.tokensUsed
@@ -268,11 +352,11 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
 
         // Call LLM again with function result
         const nextLLMResponse = await this.callLLM({
-          model: agentConfig.model,
+          model: "gpt-4o-mini",
           messages,
           functions,
-          temperature: agentConfig.temperature,
-          maxTokens: agentConfig.maxTokens || 2000,
+          temperature: 0.7,
+          maxTokens: 2000,
         })
 
         totalTokens += nextLLMResponse.tokensUsed
@@ -339,7 +423,7 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
         executionTimeMs,
         functionCalls,
         systemPrompt, // 🆕 Include processed prompt for debugging
-        model: agentConfig.model, // 🆕 Include model for debugging timeline
+        model: "gpt-4o-mini", // 🆕 Include model for debugging timeline
       }
     } catch (error) {
       const executionTimeMs = Date.now() - startTime
@@ -482,6 +566,9 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
           const cartAfterAdd = await this.cartManagementAgent.getCart(agentContext)
           const allSucceeded = results.every((r) => r.success)
           
+          // Update system context with new cart state
+          await this.systemContextService.refreshCartSummary(context.workspaceId, context.customerId)
+          
           return {
             success: allSucceeded,
             message: allSucceeded ? "Items added to cart" : "Some items could not be added",
@@ -525,6 +612,10 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
           
           // Get updated cart
           const cartAfterRemove = await this.cartManagementAgent.getCart(agentContext)
+          
+          // Update system context with new cart state
+          await this.systemContextService.refreshCartSummary(context.workspaceId, context.customerId)
+          
           return {
             success: removeResult.success,
             message: removeResult.success ? `Removed "${itemToRemove.name}" from cart` : removeResult.error,
@@ -568,6 +659,10 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
           if (args.newQuantity === 0) {
             const removeResult = await this.cartManagementAgent.removeFromCart(agentContext, itemToUpdate.id)
             const cartAfterRemove = await this.cartManagementAgent.getCart(agentContext)
+            
+            // Update system context with new cart state
+            await this.systemContextService.refreshCartSummary(context.workspaceId, context.customerId)
+            
             return {
               success: removeResult.success,
               message: `Removed "${itemToUpdate.name}" from cart`,
@@ -583,6 +678,10 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
           
           // Get updated cart
           const cartAfterUpdate = await this.cartManagementAgent.getCart(agentContext)
+          
+          // Update system context with new cart state
+          await this.systemContextService.refreshCartSummary(context.workspaceId, context.customerId)
+          
           return {
             success: updateResult.success,
             message: updateResult.success 
@@ -594,6 +693,10 @@ DO NOT use product names - ALWAYS use the product code provided above.`,
 
         case "clearCart": {
           const clearResult = await this.cartManagementAgent.resetCart(agentContext)
+          
+          // Update system context with empty cart
+          await this.systemContextService.refreshCartSummary(context.workspaceId, context.customerId)
+          
           return {
             success: clearResult.success,
             message: "Cart cleared",

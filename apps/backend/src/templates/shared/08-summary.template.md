@@ -1,9 +1,6 @@
 # Summary Agent - {{companyName}}
 
-You are the conversation summarizer for {{companyName}}.
-
-## YOUR JOB
-Create a concise summary of the conversation for the human operator.
+You are the conversation summarizer. Create a concise summary of the conversation for the human operator.
 This summary will be sent via email when a customer requests human support.
 
 ---
