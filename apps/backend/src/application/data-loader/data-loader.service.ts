@@ -28,7 +28,7 @@ import {
   OrderDetailsIntent,
   SelectOptionIntent,
 } from "../intent/intent.types"
-import { OptionsMappingService } from "../code-first-llm/options-mapping.service"
+import { OptionsMappingService } from "../chat-engine/options-mapping.service"
 
 // ================================================================================
 // DATA TYPES - What we return from database

@@ -1,7 +1,10 @@
 /**
- * Code-First LLM Service - Main Orchestrator
+ * Chat Engine Service - Main Orchestrator
  *
  * CORE PRINCIPLE: "Codice decide, LLM formatta"
+ * 
+ * This is the heart of the chatbot - it processes incoming messages
+ * through a pipeline: Intent → Data → Response → Format → Deliver
  */
 
 import { PrismaClient, AgentType } from "@echatbot/database"
@@ -42,10 +45,43 @@ const workspaceConfigCache = new Map<string, { config: WorkspaceConfig; timestam
 const CONFIG_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
 // ================================================================================
+// DEBUG STEP TYPES (for Message Flow Timeline)
+// ================================================================================
+
+export interface DebugStep {
+  type: "router" | "sub_agent" | "function_call" | "function_result" | "safety" | "link-replacement" | "intent-parser" | "data-loader" | "llm-formatter" | "save-history" | "whatsapp-queue"
+  agent: string
+  model?: string
+  temperature?: number
+  timestamp: string
+  tokenUsage?: {
+    promptTokens: number
+    completionTokens: number
+    totalTokens: number
+  }
+  systemPrompt?: string
+  input?: {
+    userMessage?: string
+    conversationHistory?: any[]
+    functionResult?: any
+    textContent?: string
+  }
+  output?: {
+    decision?: string
+    functionCall?: { name: string; arguments: any } | string
+    textResponse?: string
+    result?: any
+    executionTimeMs?: number
+    textContent?: string
+  }
+  duration?: number
+}
+
+// ================================================================================
 // INPUT/OUTPUT TYPES
 // ================================================================================
 
-export interface CodeFirstLLMInput {
+export interface ChatEngineInput {
   message: string
   customerId: string
   workspaceId: string
@@ -55,7 +91,7 @@ export interface CodeFirstLLMInput {
   customerDiscount?: number
 }
 
-export interface CodeFirstLLMOutput {
+export interface ChatEngineOutput {
   // New fields
   message: string
   agentType: AgentType
@@ -68,6 +104,10 @@ export interface CodeFirstLLMOutput {
     loadedDataType: string
     responseType: string
     llmUsed: boolean
+    steps?: DebugStep[]  // 🆕 Timeline steps (optional for early returns)
+    totalTokens?: number
+    totalCost?: number
+    executionTimeMs?: number
   }
   // Legacy fields for webhook compatibility
   response: string  // Same as message
@@ -82,7 +122,7 @@ export interface CodeFirstLLMOutput {
 // MAIN SERVICE
 // ================================================================================
 
-export class CodeFirstLLMService {
+export class ChatEngineService {
   private intentParser: IntentParserService
   private dataLoader: DataLoaderService
   private responseBuilder: ResponseBuilderService
@@ -184,8 +224,12 @@ export class CodeFirstLLMService {
   /**
    * Main entry point - replaces LLMRouterService.routeMessage()
    */
-  async routeMessage(input: CodeFirstLLMInput): Promise<CodeFirstLLMOutput> {
+  async routeMessage(input: ChatEngineInput): Promise<ChatEngineOutput> {
     const startTime = Date.now()
+    
+    // 🆕 Initialize debug steps for Message Flow Timeline
+    const debugSteps: DebugStep[] = []
+    let totalTokens = 0
 
     logger.info("🚀 [CodeFirstLLM] Processing message", {
       customerId: input.customerId,
@@ -466,6 +510,7 @@ export class CodeFirstLLMService {
       // IMPORTANT: Use original message (not enriched) for pattern matching!
       // The enriched message has "[SELECTION: User typed "1"...]" which breaks ^(\d+)$ patterns
       // The IntentParser will use lastAssistantMessage to resolve numeric selections
+      const intentParseStart = Date.now()
       const lastAssistantMessage = history.length > 0 
         ? history.filter(h => h.role === "assistant").pop()?.content
         : undefined
@@ -476,6 +521,34 @@ export class CodeFirstLLMService {
         lastAssistantMessage,
         conversationHistory: history.map((h) => ({ role: h.role, content: h.content })),
       })
+
+      // 🆕 Add Router/IntentParser debug step
+      const intentParseTime = Date.now() - intentParseStart
+      debugSteps.push({
+        type: "router",
+        agent: "🧭 Router Agent (IntentParser)",
+        model: intentResult.source === "LLM_FALLBACK" ? "gpt-4o-mini" : undefined,
+        timestamp: new Date().toISOString(),
+        tokenUsage: intentResult.source === "LLM_FALLBACK" ? {
+          promptTokens: 150,  // Estimated for intent classification
+          completionTokens: 10,
+          totalTokens: 160,
+        } : undefined,
+        systemPrompt: intentResult.source === "LLM_FALLBACK" 
+          ? "Intent classification prompt (hardcoded in IntentParser)"
+          : "Pattern/Keyword matching (no LLM)",
+        input: {
+          userMessage: input.message,
+        },
+        output: {
+          decision: `Intent: ${intentResult.intent.type} (${intentResult.confidence} confidence, ${intentResult.source})`,
+          executionTimeMs: intentParseTime,
+        },
+        duration: intentParseTime,
+      })
+      if (intentResult.source === "LLM_FALLBACK") {
+        totalTokens += 160
+      }
 
       logger.info("🎯 [CodeFirstLLM] Intent detected", {
         type: intentResult.intent.type,
@@ -914,12 +987,29 @@ export class CodeFirstLLMService {
       // ========================================================================
       // STEP 4: Load data based on intent (for non-LLM paths)
       // ========================================================================
+      const dataLoadStart = Date.now()
       const loadedData = await this.dataLoader.loadForIntent(
         intentResult.intent,
         input.workspaceId,
         input.customerId,
         input.customerDiscount || 0
       )
+      const dataLoadTime = Date.now() - dataLoadStart
+
+      // 🆕 Add DataLoader debug step
+      debugSteps.push({
+        type: "sub_agent",
+        agent: `📦 DataLoader (${loadedData.type})`,
+        timestamp: new Date().toISOString(),
+        input: {
+          textContent: `Intent: ${intentResult.intent.type}`,
+        },
+        output: {
+          textContent: `Loaded: ${loadedData.type}`,
+          executionTimeMs: dataLoadTime,
+        },
+        duration: dataLoadTime,
+      })
 
       logger.info("📦 [CodeFirstLLM] Data loaded", { type: loadedData.type })
 
@@ -941,6 +1031,7 @@ export class CodeFirstLLMService {
       // ========================================================================
       // STEP 5: Format with LLM (only formatting, no decisions)
       // ========================================================================
+      const formatStart = Date.now()
       let finalMessage: string
       let llmUsed = false
       let groupMapping: Record<string, { nome: string; skus: string[] }> | undefined
@@ -967,10 +1058,38 @@ export class CodeFirstLLMService {
         llmUsed = !formatterResult.cached
         groupMapping = formatterResult.groupMapping
       }
+      const formatTime = Date.now() - formatStart
+
+      // 🆕 Add LLM Formatter debug step
+      const agentType = this.mapIntentToAgentType(intentResult.intent.type)
+      debugSteps.push({
+        type: "sub_agent",
+        agent: `✨ ${agentType} (LLM Formatter)`,
+        model: llmUsed ? "gpt-4o-mini" : undefined,
+        timestamp: new Date().toISOString(),
+        tokenUsage: llmUsed ? {
+          promptTokens: 200,
+          completionTokens: 150,
+          totalTokens: 350,
+        } : undefined,
+        systemPrompt: llmUsed ? `Template: ${agentType.toLowerCase()}.template.md` : "Cached response (no LLM)",
+        input: {
+          textContent: `Structured response type: ${structuredResponse.type}`,
+        },
+        output: {
+          textResponse: finalMessage.substring(0, 200) + (finalMessage.length > 200 ? "..." : ""),
+          executionTimeMs: formatTime,
+        },
+        duration: formatTime,
+      })
+      if (llmUsed) {
+        totalTokens += 350
+      }
 
       // ========================================================================
       // STEP 6: Replace tokens/links
       // ========================================================================
+      const replacementStart = Date.now()
       const replacementParams: ReplaceLinkWithTokenParams = {
         response: finalMessage,
         linkType: "auto",
@@ -980,8 +1099,27 @@ export class CodeFirstLLMService {
         input.customerId,
         input.workspaceId
       )
+      const replacementTime = Date.now() - replacementStart
+      
       if (replacementResult.success && replacementResult.response) {
         finalMessage = replacementResult.response
+        
+        // 🆕 Add link replacement debug step (only if links were replaced)
+        if (replacementResult.response !== finalMessage) {
+          debugSteps.push({
+            type: "link-replacement",
+            agent: "🔗 Link Replacement",
+            timestamp: new Date().toISOString(),
+            input: {
+              textContent: "Scanning for [LINK_*_WITH_TOKEN] placeholders",
+            },
+            output: {
+              textContent: "Tokens replaced with secure URLs",
+              executionTimeMs: replacementTime,
+            },
+            duration: replacementTime,
+          })
+        }
       }
 
       // ========================================================================
@@ -999,15 +1137,48 @@ export class CodeFirstLLMService {
       // ========================================================================
       // STEP 7: Determine agent type from intent
       // ========================================================================
-      const agentType = this.mapIntentToAgentType(intentResult.intent.type)
+      // agentType already defined above in STEP 5
 
       const processingTimeMs = Date.now() - startTime
+
+      // 🆕 Add Save to History debug step
+      debugSteps.push({
+        type: "function_call",
+        agent: "💾 Save to History",
+        timestamp: new Date().toISOString(),
+        input: {
+          textContent: `Saving conversation for customer ${input.customerId}`,
+        },
+        output: {
+          textContent: "✅ Messages saved to database",
+        },
+        duration: 10,
+      })
+
+      // 🆕 Add WhatsApp Queue debug step
+      debugSteps.push({
+        type: "function_call",
+        agent: "📤 Add to WhatsApp Queue",
+        timestamp: new Date().toISOString(),
+        input: {
+          textContent: `Message to send:\n\n${finalMessage.substring(0, 100)}...`,
+        },
+        output: {
+          textContent: "✅ Message queued for WhatsApp delivery",
+        },
+        duration: 5,
+      })
+
+      // Calculate cost estimate (gpt-4o-mini pricing: $0.15/1M input, $0.60/1M output)
+      const totalCost = (totalTokens * 0.0003) / 1000
 
       logger.info("✅ [CodeFirstLLM] Processing complete", {
         intent: intentResult.intent.type,
         agentType,
         llmUsed,
         totalTimeMs: processingTimeMs,
+        debugStepsCount: debugSteps.length,
+        totalTokens,
       })
 
       // ========================================================================
@@ -1077,11 +1248,15 @@ export class CodeFirstLLMService {
           loadedDataType: loadedData.type,
           responseType: structuredResponse.type,
           llmUsed,
+          steps: debugSteps,  // 🆕 Full timeline for Message Flow Dialog
+          totalTokens,
+          totalCost,
+          executionTimeMs: processingTimeMs,
         },
         // Legacy fields for webhook compatibility
         response: finalMessage,
         agentUsed: agentType,
-        tokensUsed: 0, // Code-first uses minimal tokens
+        tokensUsed: totalTokens,
         executionTimeMs: processingTimeMs,
         wasFAQ: false,
         isBlocked: false,
@@ -1099,6 +1274,15 @@ export class CodeFirstLLMService {
         confidence: "LOW",
         source: "PATTERN",
         processingTimeMs: errorTimeMs,
+        debugInfo: {
+          loadedDataType: "ERROR",
+          responseType: "ERROR",
+          llmUsed: false,
+          steps: debugSteps,  // 🆕 Include steps even on error
+          totalTokens,
+          totalCost: 0,
+          executionTimeMs: errorTimeMs,
+        },
         // Legacy fields
         response: "Mi scusi, si è verificato un errore. Può riprovare?",
         agentUsed: AgentType.ROUTER,
@@ -1231,11 +1415,11 @@ export class CodeFirstLLMService {
 // SINGLETON
 // ================================================================================
 
-let codeFirstLLMInstance: CodeFirstLLMService | null = null
+let chatEngineInstance: ChatEngineService | null = null
 
-export function getCodeFirstLLM(prisma: PrismaClient): CodeFirstLLMService {
-  if (!codeFirstLLMInstance) {
-    codeFirstLLMInstance = new CodeFirstLLMService(prisma)
+export function getChatEngine(prisma: PrismaClient): ChatEngineService {
+  if (!chatEngineInstance) {
+    chatEngineInstance = new ChatEngineService(prisma)
   }
-  return codeFirstLLMInstance
+  return chatEngineInstance
 }

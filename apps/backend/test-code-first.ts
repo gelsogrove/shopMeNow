@@ -1,11 +1,11 @@
 /**
- * Test Script for Code-First LLM Architecture
+ * Test Script for Chat Engine
  * 
  * Run with: npx ts-node test-code-first.ts
  */
 
 import { prisma } from "./src/lib/prisma"
-import { CodeFirstLLMService } from "./src/application/code-first-llm"
+import { ChatEngineService } from "./src/application/chat-engine"
 
 const TEST_MESSAGES = [
   "mostrami le categorie",
@@ -16,7 +16,7 @@ const TEST_MESSAGES = [
 ]
 
 async function runTests() {
-  console.log("🧪 Code-First LLM Test Suite\n")
+  console.log("🧪 Chat Engine Test Suite\n")
   console.log("=".repeat(60))
 
   // Get test data
@@ -34,7 +34,7 @@ async function runTests() {
   console.log(`👤 Customer: ${customer.name}`)
   console.log("=".repeat(60))
 
-  const service = new CodeFirstLLMService(prisma)
+  const chatEngine = new ChatEngineService(prisma)
 
   for (let i = 0; i < TEST_MESSAGES.length; i++) {
     const msg = TEST_MESSAGES[i]
@@ -42,7 +42,7 @@ async function runTests() {
     console.log("-".repeat(40))
 
     try {
-      const result = await service.routeMessage({
+      const result = await chatEngine.routeMessage({
         message: msg,
         customerId: customer.id,
         workspaceId: workspace.id,

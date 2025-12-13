@@ -186,13 +186,13 @@ async function simulateMessage(message: string): Promise<{
       log(`💬 Created chat session: ${session.id}`, colors.magenta)
     }
     
-    // Importa dinamicamente il servizio - CORRETTO PATH E PASSA PRISMA
-    const { CodeFirstLLMService } = await import('../src/application/code-first-llm/code-first-llm.service')
+    // Import ChatEngineService dinamicamente
+    const { ChatEngineService } = await import('../src/application/chat-engine/chat-engine.service')
     
-    const codeFirstLLM = new CodeFirstLLMService(prisma as any)
+    const chatEngine = new ChatEngineService(prisma as any)
     
     // Processa il messaggio
-    const result = await codeFirstLLM.processMessage({
+    const result = await chatEngine.routeMessage({
       workspaceId: CONFIG.workspaceId,
       customerId: customer.id,
       message,
