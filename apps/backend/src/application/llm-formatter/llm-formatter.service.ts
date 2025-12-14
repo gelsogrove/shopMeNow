@@ -22,7 +22,7 @@ import {
   ListItem,
   GroupedItems,
 } from "../response-builder/response-builder.service"
-import { ProductData, OrderData, CartData, WorkspaceIdentityData, WorkspaceLocationData } from "../data-loader/data-loader.service"
+import { ProductData, OrderData, CartData, WorkspaceIdentityData, WorkspaceLocationData, FAQData } from "../data-loader/data-loader.service"
 
 // ================================================================================
 // FORMATTER RESULT
@@ -473,6 +473,10 @@ export class LLMFormatterService {
         parts.push(this.formatLocationPrompt(response))
         break
 
+      case "FAQ":
+        parts.push(this.formatFAQPrompt(response))
+        break
+
       default:
         parts.push(`Dati: ${JSON.stringify(response.data)}`)
     }
@@ -709,6 +713,45 @@ CRITICO:
     if (location.email) {
       lines.push(`Email: ${location.email}`)
     }
+
+    return lines.join("\n")
+  }
+
+  /**
+   * Format FAQ response - LLM will find the best matching answer
+   */
+  private formatFAQPrompt(response: StructuredResponse): string {
+    const data = response.data as any
+    const faqs: FAQData[] = data?.faqs || []
+    const query: string = data?.query || ""
+
+    if (faqs.length === 0) {
+      return `Domanda utente: "${query}"\n\nNon ci sono FAQ disponibili. Rispondi in modo utile e generale.`
+    }
+
+    const lines = [
+      `DOMANDA UTENTE: "${query}"`,
+      "",
+      "FAQ DISPONIBILI:",
+      ""
+    ]
+
+    for (let i = 0; i < faqs.length; i++) {
+      const faq = faqs[i]
+      lines.push(`[${i + 1}] Domanda: ${faq.question}`)
+      lines.push(`    Risposta: ${faq.answer}`)
+      if (faq.keywords && faq.keywords.length > 0) {
+        lines.push(`    Keywords: ${faq.keywords.join(", ")}`)
+      }
+      lines.push("")
+    }
+
+    lines.push("ISTRUZIONI:")
+    lines.push("1. Analizza la domanda dell'utente")
+    lines.push("2. Trova la FAQ più pertinente (usa semantica, non solo keyword match)")
+    lines.push("3. Rispondi usando la risposta della FAQ trovata, adattando il tono")
+    lines.push("4. Se nessuna FAQ è rilevante, rispondi che non hai informazioni specifiche")
+    lines.push("5. Sii conciso e diretto")
 
     return lines.join("\n")
   }

@@ -27,6 +27,7 @@ import {
   UpdateCartQuantityIntent,
   OrderDetailsIntent,
   SelectOptionIntent,
+  AskFAQIntent,
 } from "../intent/intent.types"
 import { OptionsMappingService } from "../chat-engine/options-mapping.service"
 
@@ -107,6 +108,22 @@ export interface WorkspaceLocationData {
   email?: string
 }
 
+export interface FAQData {
+  id: string
+  question: string
+  answer: string
+  keywords: string[]
+  category?: string
+}
+
+export interface CustomerProfileData {
+  name: string
+  email?: string
+  phone?: string
+  discount: number  // Percentage discount (0-100)
+  language?: string
+}
+
 // ================================================================================
 // LOADED DATA UNION TYPE
 // ================================================================================
@@ -120,6 +137,8 @@ export type LoadedData =
   | { type: "ORDER_DETAIL"; order: OrderData | null }
   | { type: "IDENTITY"; identity: WorkspaceIdentityData }
   | { type: "LOCATION"; location: WorkspaceLocationData }
+  | { type: "FAQ"; faqs: FAQData[]; query: string }
+  | { type: "PROFILE"; profile: CustomerProfileData }
   | { type: "EMPTY"; reason: string }
   | { type: "ERROR"; error: string }
 
@@ -199,6 +218,12 @@ export class DataLoaderService {
         case "ASK_LOCATION":
         case "ASK_CONTACT":
           return this.loadWorkspaceLocation(workspaceId)
+        case "ASK_FAQ":
+          // Load FAQs and pass the user query for context matching
+          return this.loadFAQs(workspaceId, (intent as AskFAQIntent).query || "")
+        case "VIEW_PROFILE":
+          // Load customer profile (includes discount info)
+          return this.loadCustomerProfile(workspaceId, customerId)
         default:
           return { type: "EMPTY", reason: "support_intent" }
       }
@@ -833,6 +858,95 @@ export class DataLoaderService {
     } catch (error) {
       logger.error("❌ [DataLoader] Error loading workspace location", { error })
       return { type: "ERROR", error: "Failed to load location info" }
+    }
+  }
+
+  /**
+   * Load FAQs for the workspace
+   * Returns all active FAQs for LLM to match against user query
+   */
+  private async loadFAQs(workspaceId: string, query: string): Promise<LoadedData> {
+    try {
+      const faqs = await this.prisma.fAQ.findMany({
+        where: {
+          workspaceId,
+          isActive: true,
+        },
+        select: {
+          id: true,
+          question: true,
+          answer: true,
+          keywords: true,
+          category: true,
+        },
+        orderBy: { order: "asc" },
+      })
+
+      logger.info("📦 [DataLoader] Loaded FAQs", {
+        workspaceId,
+        faqCount: faqs.length,
+        query,
+      })
+
+      return {
+        type: "FAQ",
+        faqs: faqs.map((faq) => ({
+          id: faq.id,
+          question: faq.question,
+          answer: faq.answer,
+          keywords: faq.keywords,
+          category: faq.category || undefined,
+        })),
+        query,
+      }
+    } catch (error) {
+      logger.error("❌ [DataLoader] Error loading FAQs", { error })
+      return { type: "ERROR", error: "Failed to load FAQs" }
+    }
+  }
+
+  /**
+   * Load customer profile (includes discount information)
+   */
+  private async loadCustomerProfile(workspaceId: string, customerId: string): Promise<LoadedData> {
+    try {
+      const customer = await this.prisma.customers.findFirst({
+        where: {
+          id: customerId,
+          workspaceId,
+        },
+        select: {
+          name: true,
+          email: true,
+          phoneNumber: true,
+          discount: true,
+          language: true,
+        },
+      })
+
+      if (!customer) {
+        return { type: "ERROR", error: "Customer not found" }
+      }
+
+      logger.info("📦 [DataLoader] Loaded customer profile", {
+        workspaceId,
+        customerId,
+        discount: customer.discount,
+      })
+
+      return {
+        type: "PROFILE",
+        profile: {
+          name: customer.name,
+          email: customer.email || undefined,
+          phone: customer.phoneNumber || undefined,
+          discount: customer.discount || 0,
+          language: customer.language || undefined,
+        },
+      }
+    } catch (error) {
+      logger.error("❌ [DataLoader] Error loading customer profile", { error })
+      return { type: "ERROR", error: "Failed to load profile" }
     }
   }
 

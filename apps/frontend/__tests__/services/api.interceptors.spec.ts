@@ -114,21 +114,9 @@ describe("API Interceptors", () => {
     })
   })
 
-  describe("Request Interceptor - Session ID Header", () => {
-    it("should add x-session-id header from sessionStorage", async () => {
-      // Setup
-      const sessionId = "session-abc-123"
-      sessionStorage.setItem("sessionId", sessionId)
-      mockAxios.onGet("/test").reply(200, { success: true })
-
-      // Act
-      await api.get("/test")
-
-      // Assert
-      const requestHeaders = mockAxios.history.get[0]?.headers
-      expect(requestHeaders?.["x-session-id"]).toBe(sessionId)
-    })
-  })
+  // NOTE: x-session-id header removed as per Feature #183 (JWT-only authentication)
+  // The session ID is no longer required for API requests since auth is handled
+  // entirely through JWT tokens in the Authorization header
 
   describe("Response Interceptor - 401 Handling", () => {
     it("should clear auth data and redirect on 401 error", async () => {
@@ -198,22 +186,20 @@ describe("API Interceptors", () => {
       // Setup - all auth data present
       const token = "jwt-token-123"
       const workspaceId = "ws-full-test"
-      const sessionId = "sess-full-test"
+      // NOTE: sessionId removed as per Feature #183 (JWT-only auth)
 
       localStorage.setItem("token", token)
       localStorage.setItem("currentWorkspace", JSON.stringify({ id: workspaceId }))
-      sessionStorage.setItem("sessionId", sessionId)
 
       mockAxios.onPost("/workspaces/ws-full-test/products").reply(201, { id: "prod-1" })
 
       // Act
       await api.post("/workspaces/ws-full-test/products", { name: "Test Product" })
 
-      // Assert all headers
+      // Assert all headers (no x-session-id since Feature #183)
       const requestHeaders = mockAxios.history.post[0]?.headers
       expect(requestHeaders?.Authorization).toBe(`Bearer ${token}`)
       expect(requestHeaders?.["x-workspace-id"]).toBe(workspaceId)
-      expect(requestHeaders?.["x-session-id"]).toBe(sessionId)
     })
   })
 })

@@ -333,13 +333,15 @@ export function isSupportIntent(intent: Intent): intent is
   | AskLocationIntent 
   | AskFAQIntent 
   | RequestHumanIntent
-  | AskContactIntent {
+  | AskContactIntent
+  | ViewProfileIntent {
   return [
     "ASK_IDENTITY",
     "ASK_LOCATION",
     "ASK_FAQ",
     "REQUEST_HUMAN",
-    "ASK_CONTACT"
+    "ASK_CONTACT",
+    "VIEW_PROFILE"
   ].includes(intent.type)
 }
 

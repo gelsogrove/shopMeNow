@@ -24,6 +24,8 @@ import {
   OrderData,
   WorkspaceIdentityData,
   WorkspaceLocationData,
+  FAQData,
+  CustomerProfileData,
 } from "../data-loader/data-loader.service"
 
 // ================================================================================
@@ -44,6 +46,8 @@ export type ResponseType =
   | "ORDER_NOT_FOUND"
   | "IDENTITY"
   | "LOCATION"
+  | "FAQ"  // FAQ response - LLM matches user query to FAQ answers
+  | "PROFILE"  // Customer profile with discount info
   | "GREETING"
   | "GOODBYE"
   | "THANKS"
@@ -79,6 +83,9 @@ export interface ResponseData {
   // For workspace info
   identity?: WorkspaceIdentityData
   location?: WorkspaceLocationData
+
+  // For customer info
+  profile?: CustomerProfileData
 
   // For errors
   errorMessage?: string
@@ -199,6 +206,12 @@ export class ResponseBuilderService {
 
       case "LOCATION":
         return this.buildLocationResponse(loadedData.location, context)
+
+      case "FAQ":
+        return this.buildFAQResponse(loadedData.faqs, loadedData.query, context)
+
+      case "PROFILE":
+        return this.buildProfileResponse(loadedData.profile, context)
 
       case "EMPTY":
         return this.buildEmptyResponse(intent.type, loadedData.reason, context)
@@ -614,6 +627,45 @@ export class ResponseBuilderService {
     return {
       type: "LOCATION",
       data: { location },
+      formatting: {
+        ...DEFAULT_FORMATTING,
+        showNumbers: false,
+        showPrices: false,
+      },
+      context,
+    }
+  }
+
+  /**
+   * Build FAQ response - passes FAQs to LLM for matching
+   * LLM will find the best matching FAQ answer for the user's query
+   */
+  private buildFAQResponse(
+    faqs: FAQData[],
+    query: string,
+    context: ResponseContext
+  ): StructuredResponse {
+    if (!faqs || faqs.length === 0) {
+      // No FAQs configured - return NEEDS_LLM_FORMAT for general response
+      return {
+        type: "NEEDS_LLM_FORMAT",
+        data: {},
+        formatting: {
+          ...DEFAULT_FORMATTING,
+          showNumbers: false,
+        },
+        context,
+        template: `The user asked: "${query}". There are no FAQs configured. Provide a helpful general response.`,
+      }
+    }
+
+    // Pass FAQs to LLM for semantic matching
+    return {
+      type: "FAQ",
+      data: {
+        faqs,
+        query,
+      } as any, // Extend ResponseData type as needed
       formatting: {
         ...DEFAULT_FORMATTING,
         showNumbers: false,
