@@ -436,12 +436,14 @@ export class ChatEngineService {
               )
               
               // Save new options mapping (for next selection if user picks a product)
+              // 🔧 FIX: Do NOT pass groupMapping here! We're showing PRODUCTS, not groups.
+              // If we pass groupMapping, the system thinks next selection is a group, not a product.
               await this.optionsMappingService.saveMapping({
                 workspaceId: input.workspaceId,
                 conversationId,
                 customerId: input.customerId,
                 responseText: formatterResult.text,
-                groupMapping: formatterResult.groupMapping,
+                // groupMapping: undefined - intentionally NOT passing groupMapping for product lists
               })
               
               logger.info("✅ [CodeFirstLLM] FAST-PATH groupMapping complete", {
