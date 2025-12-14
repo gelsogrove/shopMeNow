@@ -324,9 +324,10 @@ export function LoginPage() {
         }
 
         // 🆕 SAVE SESSION ID for x-session-id header
+        // Using localStorage to persist across page refreshes
         if (response.data.sessionId) {
-          sessionStorage.setItem("sessionId", response.data.sessionId)
-          logger.info(`✅ SessionId saved to sessionStorage`)
+          localStorage.setItem("sessionId", response.data.sessionId)
+          logger.info(`✅ SessionId saved to localStorage`)
         } else {
           logger.warn("⚠️ No sessionId in login response")
         }

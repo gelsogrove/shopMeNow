@@ -526,7 +526,15 @@ export function matchNumericSelection(
  * - Can semantically match user intent
  */
 export function matchAllPatterns(message: string, context: ConversationContext): Intent | null {
-  // ONLY match pure numeric selection - everything else goes to LLM
+  // STEP 1: Match CONFIRM/REJECT patterns first (critical for cart flow)
+  // These must be checked BEFORE anything else!
+  const confirm = matchConfirmPattern(message)
+  if (confirm) return confirm
+  
+  const reject = matchRejectPattern(message)
+  if (reject) return reject
+  
+  // STEP 2: Match pure numeric selection
   // Note: This is also handled by MessagePreprocessor, but kept for backwards compatibility
   const numeric = matchNumericSelection(message, context)
   if (numeric) return numeric

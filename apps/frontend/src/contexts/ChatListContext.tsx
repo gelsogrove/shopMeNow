@@ -47,7 +47,7 @@ export function ChatListProvider({ children }: { children: ReactNode }) {
   }
 
   // Get sessionId from sessionStorage (unique per browser session)
-  const sessionId = sessionStorage.getItem("sessionId")
+  const sessionId = localStorage.getItem("sessionId")
 
   // Use React Query to handle chat list fetching
   // 🚀 WEBSOCKET: No polling - updates via WebSocket events

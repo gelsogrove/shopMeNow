@@ -121,7 +121,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
     socket.on("new-message", (message: WebSocketMessage) => {
       logger.info("[WebSocket] New message:", message)
       // Get sessionId from sessionStorage
-      const sessionId = sessionStorage.getItem("sessionId")
+      const sessionId = localStorage.getItem("sessionId")
 
       // Invalidate messages for this chat
       queryClient.invalidateQueries({
@@ -156,7 +156,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
     socket.on("chat-updated", (chat: WebSocketChat) => {
       logger.info("[WebSocket] Chat updated:", chat)
       // Get sessionId from sessionStorage
-      const sessionId = sessionStorage.getItem("sessionId")
+      const sessionId = localStorage.getItem("sessionId")
 
       // 🔥 Force immediate refetch by invalidating AND refetching
       queryClient.invalidateQueries({
@@ -187,7 +187,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
         timestamp: string
       }) => {
         logger.info("[WebSocket] User blocked:", data)
-        const sessionId = sessionStorage.getItem("sessionId")
+        const sessionId = localStorage.getItem("sessionId")
 
         // Invalidate customer-related queries
         queryClient.invalidateQueries({
@@ -212,7 +212,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
         timestamp: string
       }) => {
         logger.info("[WebSocket] User unblocked:", data)
-        const sessionId = sessionStorage.getItem("sessionId")
+        const sessionId = localStorage.getItem("sessionId")
 
         // Invalidate customer-related queries
         queryClient.invalidateQueries({
@@ -239,7 +239,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
         timestamp: string
       }) => {
         logger.info("[WebSocket] New customer:", data)
-        const sessionId = sessionStorage.getItem("sessionId")
+        const sessionId = localStorage.getItem("sessionId")
 
         // Invalidate chat list and customer queries
         queryClient.invalidateQueries({

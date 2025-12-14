@@ -2,10 +2,12 @@
  * Subscription Billing Routes
  * Feature 185: Subscription & Billing System
  *
+ * ARCHITECTURE: JWT Token Only (No SessionId) - See spec #183
+ *
  * SECURITY MIDDLEWARE STACK:
  * - Public routes: None
- * - Read routes: authMiddleware → sessionValidationMiddleware → validateWorkspaceOperation
- * - Write routes (Owner): authMiddleware → sessionValidationMiddleware → validateWorkspaceOperation → requireOwnerForBilling
+ * - Read routes: authMiddleware → validateWorkspaceOperation
+ * - Write routes (Owner): authMiddleware → validateWorkspaceOperation → requireOwnerForBilling
  *
  * Routes:
  * - GET  /api/billing/plans                              - Public: Get available plans
@@ -20,7 +22,6 @@ import { Router } from "express"
 import { prisma } from "@echatbot/database"
 import { SubscriptionBillingController } from "../controllers/subscription-billing.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"
-import { sessionValidationMiddleware } from "../middlewares/session-validation.middleware"
 import { validateWorkspaceOperation } from "../../../middlewares/workspace-validation.middleware"
 import { requireOwnerForBilling } from "../middlewares/billing.middleware"
 
@@ -91,12 +92,6 @@ export const billingRoutes = Router({ mergeParams: true })
  *         schema:
  *           type: string
  *         description: Workspace ID
- *       - in: header
- *         name: x-session-id
- *         required: true
- *         schema:
- *           type: string
- *         description: Session ID for validation
  *     responses:
  *       200:
  *         description: Billing overview with plan info, credit balance, usage stats
@@ -108,7 +103,6 @@ export const billingRoutes = Router({ mergeParams: true })
 billingRoutes.get(
   "/",
   authMiddleware,
-  sessionValidationMiddleware,
   validateWorkspaceOperation,
   controller.getBillingOverview
 )
@@ -127,11 +121,6 @@ billingRoutes.get(
  *         required: true
  *         schema:
  *           type: string
- *       - in: header
- *         name: x-session-id
- *         required: true
- *         schema:
- *           type: string
  *     responses:
  *       200:
  *         description: Current credit balance and low balance warning
@@ -139,7 +128,6 @@ billingRoutes.get(
 billingRoutes.get(
   "/balance",
   authMiddleware,
-  sessionValidationMiddleware,
   validateWorkspaceOperation,
   controller.getBalance
 )
@@ -155,11 +143,6 @@ billingRoutes.get(
  *     parameters:
  *       - in: path
  *         name: workspaceId
- *         required: true
- *         schema:
- *           type: string
- *       - in: header
- *         name: x-session-id
  *         required: true
  *         schema:
  *           type: string
@@ -201,7 +184,6 @@ billingRoutes.get(
 billingRoutes.get(
   "/transactions",
   authMiddleware,
-  sessionValidationMiddleware,
   validateWorkspaceOperation,
   controller.getTransactions
 )
@@ -217,11 +199,6 @@ billingRoutes.get(
  *     parameters:
  *       - in: path
  *         name: workspaceId
- *         required: true
- *         schema:
- *           type: string
- *       - in: header
- *         name: x-session-id
  *         required: true
  *         schema:
  *           type: string
@@ -250,7 +227,6 @@ billingRoutes.get(
 billingRoutes.post(
   "/recharge",
   authMiddleware,
-  sessionValidationMiddleware,
   validateWorkspaceOperation,
   requireOwnerForBilling,
   controller.rechargeCredit
@@ -267,11 +243,6 @@ billingRoutes.post(
  *     parameters:
  *       - in: path
  *         name: workspaceId
- *         required: true
- *         schema:
- *           type: string
- *       - in: header
- *         name: x-session-id
  *         required: true
  *         schema:
  *           type: string
@@ -299,7 +270,6 @@ billingRoutes.post(
 billingRoutes.post(
   "/upgrade",
   authMiddleware,
-  sessionValidationMiddleware,
   validateWorkspaceOperation,
   requireOwnerForBilling,
   controller.upgradePlan
@@ -329,11 +299,6 @@ billingRoutes.post(
  *         required: true
  *         schema:
  *           type: string
- *       - in: header
- *         name: x-session-id
- *         required: true
- *         schema:
- *           type: string
  *     requestBody:
  *       required: true
  *       content:
@@ -358,7 +323,6 @@ billingRoutes.post(
 billingRoutes.post(
   "/change-plan",
   authMiddleware,
-  sessionValidationMiddleware,
   validateWorkspaceOperation,
   requireOwnerForBilling,
   controller.changePlan
@@ -383,11 +347,6 @@ billingRoutes.post(
  *         required: true
  *         schema:
  *           type: string
- *       - in: header
- *         name: x-session-id
- *         required: true
- *         schema:
- *           type: string
  *     responses:
  *       200:
  *         description: Subscription status
@@ -395,7 +354,6 @@ billingRoutes.post(
 billingRoutes.get(
   "/subscription/status",
   authMiddleware,
-  sessionValidationMiddleware,
   validateWorkspaceOperation,
   controller.getSubscriptionStatus
 )
@@ -418,11 +376,6 @@ billingRoutes.get(
  *         required: true
  *         schema:
  *           type: string
- *       - in: header
- *         name: x-session-id
- *         required: true
- *         schema:
- *           type: string
  *     responses:
  *       200:
  *         description: Pause scheduled
@@ -434,7 +387,6 @@ billingRoutes.get(
 billingRoutes.post(
   "/subscription/pause",
   authMiddleware,
-  sessionValidationMiddleware,
   validateWorkspaceOperation,
   requireOwnerForBilling,
   controller.pauseSubscription
@@ -458,11 +410,6 @@ billingRoutes.post(
  *         required: true
  *         schema:
  *           type: string
- *       - in: header
- *         name: x-session-id
- *         required: true
- *         schema:
- *           type: string
  *     responses:
  *       200:
  *         description: Subscription resumed
@@ -474,7 +421,6 @@ billingRoutes.post(
 billingRoutes.post(
   "/subscription/resume",
   authMiddleware,
-  sessionValidationMiddleware,
   validateWorkspaceOperation,
   requireOwnerForBilling,
   controller.resumeSubscription
@@ -495,11 +441,6 @@ billingRoutes.post(
  *     parameters:
  *       - in: path
  *         name: workspaceId
- *         required: true
- *         schema:
- *           type: string
- *       - in: header
- *         name: x-session-id
  *         required: true
  *         schema:
  *           type: string
@@ -526,7 +467,6 @@ billingRoutes.post(
 billingRoutes.post(
   "/plan/downgrade",
   authMiddleware,
-  sessionValidationMiddleware,
   validateWorkspaceOperation,
   requireOwnerForBilling,
   controller.scheduleDowngrade
@@ -549,11 +489,6 @@ billingRoutes.post(
  *         required: true
  *         schema:
  *           type: string
- *       - in: header
- *         name: x-session-id
- *         required: true
- *         schema:
- *           type: string
  *     responses:
  *       200:
  *         description: Pending change cancelled
@@ -565,7 +500,6 @@ billingRoutes.post(
 billingRoutes.delete(
   "/plan/pending",
   authMiddleware,
-  sessionValidationMiddleware,
   validateWorkspaceOperation,
   requireOwnerForBilling,
   controller.cancelPendingPlanChange

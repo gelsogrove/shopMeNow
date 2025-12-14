@@ -229,13 +229,21 @@ export class CartManagementAgentLLM {
       if (context.selectedSku) {
         messages.push({
           role: "system" as const,
-          content: `⚠️ IMPORTANT: The user just selected a product from the catalog.
-Product Code: ${context.selectedSku}
+          content: `🚨 AZIONE IMMEDIATA RICHIESTA 🚨
 
-When the user says "yes" or "sì" or confirms they want to add the product to cart,
-you MUST call addToCart() with this EXACT product code: "${context.selectedSku}"
+Il cliente ha GIÀ CONFERMATO di voler aggiungere questo prodotto al carrello.
+NON chiedere ulteriori conferme. DEVI procedere IMMEDIATAMENTE.
 
-DO NOT use product names - ALWAYS use the product code provided above.`,
+Codice Prodotto: ${context.selectedSku}
+
+ISTRUZIONI:
+1. Chiama SUBITO la funzione addToCart() con productCode: "${context.selectedSku}"
+2. NON chiedere "Sei sicuro?" - il cliente ha già detto SÌ
+3. NON chiedere la quantità - usa quella specificata nel messaggio
+4. Dopo l'aggiunta, mostra il messaggio di conferma
+
+ESEMPIO DI CHIAMATA:
+addToCart({ productCode: "${context.selectedSku}", quantity: <numero dal messaggio> })`,
         })
 
         logger.info(

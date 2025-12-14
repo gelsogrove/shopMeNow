@@ -85,6 +85,8 @@ export interface ResponseData {
   
   // 🆕 For smart grouping (PRODUCT_NEEDS_SMART_GROUPING)
   categoryName?: string
+  productGroups?: Array<{ number: number; name: string; productCount: number }>
+  groupMapping?: Record<string, { nome: string; skus: string[] }>
 }
 
 export interface ListItem {
@@ -263,6 +265,37 @@ export class ResponseBuilderService {
       }
     }
 
+    // 🎯 OPTIMIZATION: If only 1 product, skip list and show detail directly
+    if (products.length === 1) {
+      const product = products[0]
+      logger.info("🎯 [ResponseBuilder] Single product found - showing detail directly", {
+        productName: product.name,
+        sku: product.sku,
+      })
+      return {
+        type: "PRODUCT_DETAIL",
+        data: {
+          product: {
+            id: product.id,
+            name: product.name,
+            sku: product.sku,
+            price: product.price,
+            priceWithDiscount: product.priceWithDiscount,
+            description: product.description,
+            stock: product.stock,
+            isAvailable: product.isAvailable,
+            categoryName: product.categoryName,
+            region: product.region,
+            formato: product.formato,
+            certifications: product.certifications || [],
+            allergens: product.allergens || [],
+          },
+        },
+        formatting: DEFAULT_FORMATTING,
+        context,
+      }
+    }
+
     // RULE: If >5 products, try to group by category
     // But only if we can create 2+ meaningful groups
     if (products.length > DEFAULT_FORMATTING.maxItemsBeforeGroup) {
@@ -328,14 +361,20 @@ export class ResponseBuilderService {
     }
 
     // If ALL products are in the SAME category (1 group with 6+ items),
-    // we need SMART GROUPING by LLM (e.g., "Formaggi Freschi" vs "Formaggi Stagionati")
+    // we use CODE-FIRST grouping based on product attributes
+    // The LLM only formats the text, NOT the grouping logic!
     if (groupMap.size === 1 && products.length >= 6) {
-      // Pass raw products to LLM for intelligent grouping
+      const categoryName = products[0].categoryName || "Prodotti"
+      
+      // 🔧 CODE-FIRST GROUPING: Group by common attributes (region, formato, description keywords)
+      const productGroups = this.createSmartGroups(products, categoryName)
+      
+      // Build items list with group info
       const items: ListItem[] = products.map((p, index) => ({
         number: index + 1,
         id: p.id,
         name: p.name,
-        sku: p.sku, // Include SKU for cart operations
+        sku: p.sku,
         price: p.price,
         priceWithDiscount: p.priceWithDiscount,
         stock: p.stock,
@@ -343,12 +382,36 @@ export class ResponseBuilderService {
         extra: p.region || p.formato,
       }))
       
+      // 🆕 Pre-compute groupMapping here, not in LLM!
+      const groupMapping: Record<string, { nome: string; skus: string[] }> = {}
+      productGroups.forEach((group, index) => {
+        groupMapping[String(index + 1)] = {
+          nome: group.name,
+          skus: group.products.map(p => p.sku).filter(Boolean) as string[],
+        }
+      })
+      
+      logger.info("🏗️ [ResponseBuilder] CODE-FIRST grouping created", {
+        categoryName,
+        groupCount: productGroups.length,
+        groups: productGroups.map(g => ({ name: g.name, count: g.products.length })),
+        totalSkus: Object.values(groupMapping).reduce((sum, g) => sum + g.skus.length, 0),
+      })
+      
       return {
         type: "PRODUCT_NEEDS_SMART_GROUPING",
         data: {
           items,
           count: products.length,
-          categoryName: products[0].categoryName || "Prodotti",
+          categoryName,
+          // 🆕 Pass pre-computed groups to formatter
+          productGroups: productGroups.map((g, i) => ({
+            number: i + 1,
+            name: g.name,
+            productCount: g.products.length,
+          })),
+          // 🆕 Pass groupMapping directly - NO LLM needed for this!
+          groupMapping,
         },
         formatting: {
           ...DEFAULT_FORMATTING,
@@ -605,6 +668,91 @@ export class ResponseBuilderService {
       },
       context,
     }
+  }
+
+  /**
+   * 🆕 CODE-FIRST Smart Grouping - Groups products by attributes WITHOUT LLM
+   * 
+   * Grouping strategy (in order of priority):
+   * 1. If "formato" exists (e.g., "Stagionato", "Fresco") → group by formato
+   * 2. If "region" exists (e.g., "Toscana", "Piemonte") → group by region
+   * 3. Otherwise → group by first word of description or "Altri"
+   */
+  private createSmartGroups(
+    products: ProductData[],
+    categoryName: string
+  ): Array<{ name: string; products: ProductData[] }> {
+    const groupMap = new Map<string, ProductData[]>()
+    
+    // Determine grouping strategy based on available data
+    const hasFormato = products.some(p => p.formato && p.formato.trim() !== "")
+    const hasRegion = products.some(p => p.region && p.region.trim() !== "")
+    
+    logger.info("🧠 [ResponseBuilder] createSmartGroups analyzing", {
+      categoryName,
+      productCount: products.length,
+      hasFormato,
+      hasRegion,
+      sampleProducts: products.slice(0, 3).map(p => ({
+        name: p.name,
+        formato: p.formato,
+        region: p.region,
+      })),
+    })
+    
+    for (const product of products) {
+      let groupKey: string
+      
+      if (hasFormato && product.formato && product.formato.trim() !== "") {
+        // Strategy 1: Group by formato (e.g., "Stagionato", "Fresco")
+        groupKey = product.formato.trim()
+      } else if (hasRegion && product.region && product.region.trim() !== "") {
+        // Strategy 2: Group by region (e.g., "Toscana", "Piemonte")
+        groupKey = product.region.trim()
+      } else {
+        // Strategy 3: Group by first significant word in name/description
+        // Or use "Altri" as fallback
+        const nameWords = product.name.split(" ")
+        // Skip common words like "Formaggio", use second word if available
+        groupKey = nameWords.length > 1 ? nameWords[1] : nameWords[0] || "Altri"
+      }
+      
+      if (!groupMap.has(groupKey)) {
+        groupMap.set(groupKey, [])
+      }
+      groupMap.get(groupKey)!.push(product)
+    }
+    
+    // Convert to array and sort by group size (largest first)
+    const groups = Array.from(groupMap.entries())
+      .map(([name, prods]) => ({ name, products: prods }))
+      .sort((a, b) => b.products.length - a.products.length)
+    
+    // If we ended up with too many small groups (>5 groups), consolidate
+    if (groups.length > 5) {
+      const consolidatedGroups: Array<{ name: string; products: ProductData[] }> = []
+      const mainGroups = groups.slice(0, 4)
+      const otherProducts = groups.slice(4).flatMap(g => g.products)
+      
+      consolidatedGroups.push(...mainGroups)
+      if (otherProducts.length > 0) {
+        consolidatedGroups.push({ name: "Altri", products: otherProducts })
+      }
+      
+      logger.info("🧠 [ResponseBuilder] Consolidated to 5 groups", {
+        originalGroupCount: groups.length,
+        finalGroupCount: consolidatedGroups.length,
+      })
+      
+      return consolidatedGroups
+    }
+    
+    logger.info("🧠 [ResponseBuilder] Smart groups created", {
+      groupCount: groups.length,
+      groups: groups.map(g => ({ name: g.name, count: g.products.length })),
+    })
+    
+    return groups
   }
 }
 

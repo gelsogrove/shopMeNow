@@ -57,8 +57,8 @@ api.interceptors.request.use(
       logger.warn(`⚠️ No JWT token in localStorage - request may fail authentication`)
     }
 
-    // Add x-session-id header if present in sessionStorage
-    const sessionId = sessionStorage.getItem("sessionId")
+    // Add x-session-id header if present in localStorage
+    const sessionId = localStorage.getItem("sessionId")
     if (sessionId) {
       config.headers["x-session-id"] = sessionId
       logger.info(`🔐 Added x-session-id header`)

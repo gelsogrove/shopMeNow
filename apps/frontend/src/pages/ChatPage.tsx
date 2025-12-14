@@ -132,7 +132,7 @@ export function ChatPage() {
   }, [])
 
   // Get sessionId from sessionStorage (unique per browser session)
-  const userSessionId = sessionStorage.getItem("sessionId")
+  const userSessionId = localStorage.getItem("sessionId")
 
   // Clean any stale locks on mount
   useEffect(() => {

@@ -124,13 +124,43 @@ export class OptionsMappingService {
       let mapping = forceClear ? null : this.extractFromResponse(responseText)
 
       // 🆕 If we have a groupMapping from LLM, add it to the mapping
-      if (groupMapping && mapping) {
+      // 🔧 FIX: Create/replace mapping options with groupMapping data (which has SKUs!)
+      // The extractFromResponse only gets labels from text, NOT the SKUs
+      if (groupMapping) {
+        // ALWAYS use groupMapping to create options (it has the SKUs!)
+        const optionsFromGroupMapping = Object.entries(groupMapping).map(([num, group]) => ({
+          number: parseInt(num),
+          label: group.nome,
+          skus: group.skus,
+        }))
+        
+        if (!mapping) {
+          // Create a new mapping from scratch
+          mapping = {
+            type: "numbered",
+            options: optionsFromGroupMapping,
+            listType: "GROUPS",
+          }
+          logger.info("📋 [OptionsMapping] Created new mapping from groupMapping", {
+            conversationId,
+            groupCount: Object.keys(groupMapping).length,
+          })
+        } else {
+          // Replace options with groupMapping options (they have SKUs!)
+          mapping.options = optionsFromGroupMapping
+          logger.info("📋 [OptionsMapping] Replaced options with groupMapping (added SKUs)", {
+            conversationId,
+            optionCount: optionsFromGroupMapping.length,
+          })
+        }
+        
         mapping.groupMapping = groupMapping
         mapping.listType = "GROUPS" // Mark as smart grouping
-        logger.info("📋 [OptionsMapping] Adding LLM groupMapping to options", {
+        logger.info("📋 [OptionsMapping] Final mapping with groupMapping", {
           conversationId,
           groupCount: Object.keys(groupMapping).length,
           totalSkus: Object.values(groupMapping).reduce((sum, g) => sum + (g.skus?.length || 0), 0),
+          firstOption: mapping.options?.[0],
         })
       }
 

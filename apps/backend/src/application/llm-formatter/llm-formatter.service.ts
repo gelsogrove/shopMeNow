@@ -191,25 +191,39 @@ export class LLMFormatterService {
       let text = llmResponse.data.choices[0]?.message?.content || ""
       const tokensUsed = llmResponse.data.usage?.total_tokens || 0
 
-      // Extract group mapping JSON if present (for smart grouping responses)
+      // 🔧 FIX: PREFER LLM-generated groupMapping (semantically meaningful like "Freschi/Stagionati")
+      // over CODE-generated groupMapping (which may group by formato like "200g/250g")
+      // The LLM groups are more user-friendly and match what the user sees in the text!
       let groupMapping: Record<string, { nome: string; skus: string[] }> | undefined
+      
+      // FIRST: Try to extract from LLM response (preferred - semantically meaningful)
       const jsonMatch = text.match(/---JSON_MAPPING---\s*([\s\S]*?)\s*---END_JSON---/)
       if (jsonMatch && jsonMatch[1]) {
         try {
           groupMapping = JSON.parse(jsonMatch[1].trim())
-          logger.info("📝 [LLMFormatter] Extracted group mapping from LLM response", {
+          logger.info("📝 [LLMFormatter] Using LLM-generated groupMapping (semantically meaningful)", {
             groups: Object.keys(groupMapping || {}),
             totalSkus: Object.values(groupMapping || {}).reduce((sum, g) => sum + (g.skus?.length || 0), 0),
           })
-          // Remove JSON block from visible text
-          text = text.replace(/---JSON_MAPPING---[\s\S]*?---END_JSON---/g, "").trim()
         } catch (parseError) {
-          logger.warn("⚠️ [LLMFormatter] Failed to parse group mapping JSON", { 
+          logger.warn("⚠️ [LLMFormatter] Failed to parse LLM group mapping JSON, falling back to code", { 
             jsonContent: jsonMatch[1].substring(0, 200),
             error: parseError 
           })
         }
       }
+      
+      // FALLBACK: Use CODE-computed groupMapping if LLM didn't generate one
+      if (!groupMapping && (response.data as any)?.groupMapping) {
+        groupMapping = (response.data as any).groupMapping
+        logger.info("📝 [LLMFormatter] Using CODE-computed groupMapping (fallback)", {
+          groups: Object.keys(groupMapping || {}),
+          totalSkus: Object.values(groupMapping || {}).reduce((sum, g) => sum + (g.skus?.length || 0), 0),
+        })
+      }
+      
+      // Always remove JSON block from visible text (if LLM generated one)
+      text = text.replace(/---JSON_MAPPING---[\s\S]*?---END_JSON---/g, "").trim()
 
       // Clean up any formatting artifacts
       text = text.replace(/---BEGIN OUTPUT---\n?/g, "").replace(/\n?---END OUTPUT---/g, "").trim()
@@ -218,6 +232,7 @@ export class LLMFormatterService {
         type: response.type,
         tokensUsed,
         hasGroupMapping: !!groupMapping,
+        groupMappingSource: jsonMatch ? "LLM" : ((response.data as any)?.groupMapping ? "CODE" : "NONE"),
         ms: Date.now() - startTime,
       })
 
@@ -494,23 +509,16 @@ export class LLMFormatterService {
     const items = response.data.items || []
     const lines = ["PRODOTTI:"]
     for (const item of items) {
-      // Include SKU for cart operations: "1. Pecorino Romano DOP (FORM-002) - €6.20"
-      let line = `${item.number}. ${item.name}`
-      if (item.sku) {
-        line += ` (${item.sku})`
-      }
-      line += ` - €${item.price?.toFixed(2)}`
+      // Clean format for user: "**1.** Pecorino Romano DOP - €6.20" (NO SKU, NO category)
+      let line = `**${item.number}.** ${item.name} - €${item.price?.toFixed(2)}`
       if (item.priceWithDiscount) {
-        line += ` (scontato: €${item.priceWithDiscount.toFixed(2)})`
-      }
-      if (item.extra) {
-        line += ` [${item.extra}]`
+        line += ` 🏷️ ~~€${item.price?.toFixed(2)}~~ **€${item.priceWithDiscount.toFixed(2)}**`
       }
       lines.push(line)
     }
-    // Add selection prompt with SKU hint
+    // Add selection prompt - user-friendly, no technical details
     lines.push("")
-    lines.push("IMPORTANTE: Dopo la lista, chiedi 'A che prodotto sei interessato?' o simile. I codici tra parentesi servono per aggiungere al carrello.")
+    lines.push("IMPORTANTE: Dopo la lista, chiedi 'A quale prodotto sei interessato? 🛒' o simile. NON mostrare codici SKU o categorie all'utente.")
     return lines.join("\n")
   }
 
@@ -519,14 +527,10 @@ export class LLMFormatterService {
     const lines = ["PRODOTTI RAGGRUPPATI:"]
     for (const group of groups) {
       lines.push("")
-      lines.push(`📁 ${group.groupName} (${group.variantCount} varianti):`)
+      lines.push(`📁 **${group.groupName}** (${group.variantCount} varianti):`)
       for (const item of group.items) {
-        // Include SKU: "1. Pecorino Romano DOP (FORM-002) - €6.20"
-        let line = `   ${item.number}. ${item.name}`
-        if (item.sku) {
-          line += ` (${item.sku})`
-        }
-        line += ` - €${item.price?.toFixed(2)}`
+        // Clean format for user: "**1.** Pecorino Romano DOP - €6.20" (NO SKU visible)
+        let line = `   **${item.number}.** ${item.name} - €${item.price?.toFixed(2)}`
         if (item.priceWithDiscount) {
           line += ` (scontato: €${item.priceWithDiscount.toFixed(2)})`
         }
@@ -615,10 +619,10 @@ CRITICO:
     if (p.certifications.length > 0) {
       lines.push(`Certificazioni: ${p.certifications.join(", ")}`)
     }
-    lines.push(`Disponibilità: ${p.isAvailable ? "Disponibile" : "Non disponibile"}`)
-    // Add cart prompt with SKU hint
+    lines.push(`Disponibilità: ${p.isAvailable ? "✅ Disponibile" : "❌ Non disponibile"}`)
+    // Add cart prompt with quantity question
     lines.push("")
-    lines.push(`IMPORTANTE: Il codice prodotto è ${p.sku || "N/A"}. Dopo i dettagli, chiedi 'Vuoi aggiungerlo al carrello?' o simile`)
+    lines.push(`IMPORTANTE: Dopo i dettagli, chiedi 'Vuoi aggiungerlo al carrello? Se sì, quanti? 🛒' oppure 'Lo aggiungo al carrello? Dimmi quanti ne vuoi! 🛍️'. NON mostrare codici SKU all'utente.`)
 
     return lines.join("\n")
   }

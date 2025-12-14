@@ -5,6 +5,9 @@
  * CRITICAL: Billing is per OWNER (User), not per Workspace!
  * These routes use userId from JWT token, NO workspaceId required.
  *
+ * ARCHITECTURE: JWT Token Only (No SessionId) - See spec #183
+ * Routes use ONLY authMiddleware for JWT validation.
+ *
  * Routes:
  * - GET  /api/subscription-billing                    - Get billing overview for user
  * - GET  /api/subscription-billing/balance            - Quick balance check
@@ -22,7 +25,6 @@ import { Router } from "express"
 import { prisma } from "@echatbot/database"
 import { SubscriptionBillingController } from "../controllers/subscription-billing.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"
-import { sessionValidationMiddleware } from "../middlewares/session-validation.middleware"
 
 const controller = new SubscriptionBillingController(prisma)
 
@@ -30,6 +32,7 @@ export const ownerBillingRoutes = Router()
 
 // All routes require auth (userId from JWT token)
 // NO workspace validation needed - billing is per owner
+// NO sessionId validation - JWT only (spec #183)
 
 /**
  * @swagger
@@ -39,13 +42,6 @@ export const ownerBillingRoutes = Router()
  *     tags: [Owner Billing]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: header
- *         name: x-session-id
- *         required: true
- *         schema:
- *           type: string
- *         description: Session ID for validation
  *     responses:
  *       200:
  *         description: Billing overview with plan info, credit balance, usage stats
@@ -55,7 +51,6 @@ export const ownerBillingRoutes = Router()
 ownerBillingRoutes.get(
   "/",
   authMiddleware,
-  sessionValidationMiddleware,
   controller.getOwnerBillingOverview
 )
 
@@ -67,12 +62,6 @@ ownerBillingRoutes.get(
  *     tags: [Owner Billing]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: header
- *         name: x-session-id
- *         required: true
- *         schema:
- *           type: string
  *     responses:
  *       200:
  *         description: Current credit balance and low balance warning
@@ -80,7 +69,6 @@ ownerBillingRoutes.get(
 ownerBillingRoutes.get(
   "/balance",
   authMiddleware,
-  sessionValidationMiddleware,
   controller.getOwnerBalance
 )
 
@@ -92,12 +80,6 @@ ownerBillingRoutes.get(
  *     tags: [Owner Billing]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: header
- *         name: x-session-id
- *         required: true
- *         schema:
- *           type: string
  *     responses:
  *       200:
  *         description: Subscription status including pause state, pending changes
@@ -105,7 +87,6 @@ ownerBillingRoutes.get(
 ownerBillingRoutes.get(
   "/status",
   authMiddleware,
-  sessionValidationMiddleware,
   controller.getOwnerSubscriptionStatus
 )
 
@@ -118,11 +99,6 @@ ownerBillingRoutes.get(
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: header
- *         name: x-session-id
- *         required: true
- *         schema:
- *           type: string
  *       - in: query
  *         name: page
  *         schema:
@@ -145,7 +121,6 @@ ownerBillingRoutes.get(
 ownerBillingRoutes.get(
   "/transactions",
   authMiddleware,
-  sessionValidationMiddleware,
   controller.getOwnerTransactions
 )
 
@@ -157,12 +132,6 @@ ownerBillingRoutes.get(
  *     tags: [Owner Billing]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: header
- *         name: x-session-id
- *         required: true
- *         schema:
- *           type: string
  *     requestBody:
  *       required: true
  *       content:
@@ -185,7 +154,6 @@ ownerBillingRoutes.get(
 ownerBillingRoutes.post(
   "/recharge",
   authMiddleware,
-  sessionValidationMiddleware,
   controller.rechargeOwnerCredit
 )
 
@@ -197,12 +165,6 @@ ownerBillingRoutes.post(
  *     tags: [Owner Billing]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: header
- *         name: x-session-id
- *         required: true
- *         schema:
- *           type: string
  *     responses:
  *       200:
  *         description: Pause scheduled
@@ -212,7 +174,6 @@ ownerBillingRoutes.post(
 ownerBillingRoutes.post(
   "/pause",
   authMiddleware,
-  sessionValidationMiddleware,
   controller.pauseOwnerSubscription
 )
 
@@ -224,12 +185,6 @@ ownerBillingRoutes.post(
  *     tags: [Owner Billing]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: header
- *         name: x-session-id
- *         required: true
- *         schema:
- *           type: string
  *     responses:
  *       200:
  *         description: Subscription resumed
@@ -239,7 +194,6 @@ ownerBillingRoutes.post(
 ownerBillingRoutes.post(
   "/resume",
   authMiddleware,
-  sessionValidationMiddleware,
   controller.resumeOwnerSubscription
 )
 
@@ -251,12 +205,6 @@ ownerBillingRoutes.post(
  *     tags: [Owner Billing]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: header
- *         name: x-session-id
- *         required: true
- *         schema:
- *           type: string
  *     requestBody:
  *       required: true
  *       content:
@@ -278,7 +226,6 @@ ownerBillingRoutes.post(
 ownerBillingRoutes.post(
   "/upgrade",
   authMiddleware,
-  sessionValidationMiddleware,
   controller.upgradeOwnerPlan
 )
 
@@ -290,12 +237,6 @@ ownerBillingRoutes.post(
  *     tags: [Owner Billing]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: header
- *         name: x-session-id
- *         required: true
- *         schema:
- *           type: string
  *     requestBody:
  *       required: true
  *       content:
@@ -317,7 +258,6 @@ ownerBillingRoutes.post(
 ownerBillingRoutes.post(
   "/downgrade",
   authMiddleware,
-  sessionValidationMiddleware,
   controller.scheduleOwnerDowngrade
 )
 
@@ -329,12 +269,6 @@ ownerBillingRoutes.post(
  *     tags: [Owner Billing]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: header
- *         name: x-session-id
- *         required: true
- *         schema:
- *           type: string
  *     responses:
  *       200:
  *         description: Pending change cancelled
@@ -344,7 +278,6 @@ ownerBillingRoutes.post(
 ownerBillingRoutes.delete(
   "/pending-change",
   authMiddleware,
-  sessionValidationMiddleware,
   controller.cancelOwnerPendingChange
 )
 
@@ -357,11 +290,6 @@ ownerBillingRoutes.delete(
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: header
- *         name: x-session-id
- *         required: true
- *         schema:
- *           type: string
  *       - in: query
  *         name: page
  *         schema:
@@ -379,7 +307,6 @@ ownerBillingRoutes.delete(
 ownerBillingRoutes.get(
   "/invoices",
   authMiddleware,
-  sessionValidationMiddleware,
   controller.getOwnerInvoices
 )
 
@@ -391,12 +318,6 @@ ownerBillingRoutes.get(
  *     tags: [Owner Billing]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: header
- *         name: x-session-id
- *         required: true
- *         schema:
- *           type: string
  *     responses:
  *       200:
  *         description: Current month invoice with real-time consumption
@@ -404,7 +325,6 @@ ownerBillingRoutes.get(
 ownerBillingRoutes.get(
   "/invoices/current",
   authMiddleware,
-  sessionValidationMiddleware,
   controller.getCurrentInvoice
 )
 
@@ -417,11 +337,6 @@ ownerBillingRoutes.get(
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: header
- *         name: x-session-id
- *         required: true
- *         schema:
- *           type: string
  *       - in: path
  *         name: invoiceId
  *         required: true
@@ -436,6 +351,5 @@ ownerBillingRoutes.get(
 ownerBillingRoutes.get(
   "/invoices/:invoiceId",
   authMiddleware,
-  sessionValidationMiddleware,
   controller.getInvoiceById
 )
