@@ -22,6 +22,7 @@ import {
   ShowCategoryIntent,
   ShowProductIntent,
   SearchProductsIntent,
+  ShowOffersIntent,
   AddToCartIntent,
   RemoveFromCartIntent,
   UpdateCartQuantityIntent,
@@ -124,6 +125,16 @@ export interface CustomerProfileData {
   language?: string
 }
 
+export interface OfferData {
+  id: string
+  name: string
+  description?: string
+  discountPercent: number
+  categoryName?: string
+  startDate: Date
+  endDate: Date
+}
+
 // ================================================================================
 // LOADED DATA UNION TYPE
 // ================================================================================
@@ -139,6 +150,7 @@ export type LoadedData =
   | { type: "LOCATION"; location: WorkspaceLocationData }
   | { type: "FAQ"; faqs: FAQData[]; query: string }
   | { type: "PROFILE"; profile: CustomerProfileData }
+  | { type: "OFFERS"; offers: OfferData[] }
   | { type: "EMPTY"; reason: string }
   | { type: "ERROR"; error: string }
 
@@ -175,6 +187,8 @@ export class DataLoaderService {
           return this.loadProductByName(workspaceId, customerDiscount, (intent as ShowProductIntent).productName)
         case "SEARCH_PRODUCTS":
           return this.loadProductSearch(workspaceId, customerDiscount, (intent as SearchProductsIntent).query)
+        case "SHOW_OFFERS":
+          return this.loadOffers(workspaceId)
         default:
           return this.loadProducts(workspaceId, customerDiscount)
       }
@@ -918,7 +932,7 @@ export class DataLoaderService {
         select: {
           name: true,
           email: true,
-          phoneNumber: true,
+          phone: true,
           discount: true,
           language: true,
         },
@@ -939,7 +953,7 @@ export class DataLoaderService {
         profile: {
           name: customer.name,
           email: customer.email || undefined,
-          phone: customer.phoneNumber || undefined,
+          phone: customer.phone || undefined,
           discount: customer.discount || 0,
           language: customer.language || undefined,
         },
@@ -947,6 +961,48 @@ export class DataLoaderService {
     } catch (error) {
       logger.error("❌ [DataLoader] Error loading customer profile", { error })
       return { type: "ERROR", error: "Failed to load profile" }
+    }
+  }
+
+  /**
+   * Load active offers for a workspace
+   */
+  private async loadOffers(workspaceId: string): Promise<LoadedData> {
+    try {
+      const now = new Date()
+      
+      const offers = await this.prisma.offers.findMany({
+        where: {
+          workspaceId,
+          startDate: { lte: now },
+          endDate: { gte: now },
+        },
+        include: {
+          category: true,
+        },
+        orderBy: { endDate: "asc" },
+      })
+
+      logger.info("📦 [DataLoader] Loaded offers", {
+        workspaceId,
+        count: offers.length,
+      })
+
+      return {
+        type: "OFFERS",
+        offers: offers.map((offer) => ({
+          id: offer.id,
+          name: offer.name,
+          description: offer.description || undefined,
+          discountPercent: offer.discountPercent || 0,
+          categoryName: offer.category?.name || undefined,
+          startDate: offer.startDate,
+          endDate: offer.endDate,
+        })),
+      }
+    } catch (error) {
+      logger.error("❌ [DataLoader] Error loading offers", { error })
+      return { type: "ERROR", error: "Failed to load offers" }
     }
   }
 

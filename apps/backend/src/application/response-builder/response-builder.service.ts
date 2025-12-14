@@ -26,6 +26,7 @@ import {
   WorkspaceLocationData,
   FAQData,
   CustomerProfileData,
+  OfferData,
 } from "../data-loader/data-loader.service"
 
 // ================================================================================
@@ -48,6 +49,7 @@ export type ResponseType =
   | "LOCATION"
   | "FAQ"  // FAQ response - LLM matches user query to FAQ answers
   | "PROFILE"  // Customer profile with discount info
+  | "OFFERS"  // Active offers list
   | "GREETING"
   | "GOODBYE"
   | "THANKS"
@@ -86,6 +88,9 @@ export interface ResponseData {
 
   // For customer info
   profile?: CustomerProfileData
+
+  // For offers
+  offers?: OfferData[]
 
   // For errors
   errorMessage?: string
@@ -212,6 +217,9 @@ export class ResponseBuilderService {
 
       case "PROFILE":
         return this.buildProfileResponse(loadedData.profile, context)
+
+      case "OFFERS":
+        return this.buildOffersResponse(loadedData.offers, context)
 
       case "EMPTY":
         return this.buildEmptyResponse(intent.type, loadedData.reason, context)
@@ -670,6 +678,53 @@ export class ResponseBuilderService {
         ...DEFAULT_FORMATTING,
         showNumbers: false,
         showPrices: false,
+      },
+      context,
+    }
+  }
+
+  /**
+   * Build profile response - shows customer discount info
+   */
+  private buildProfileResponse(
+    profile: CustomerProfileData,
+    context: ResponseContext
+  ): StructuredResponse {
+    return {
+      type: "PROFILE",
+      data: { profile },
+      formatting: {
+        ...DEFAULT_FORMATTING,
+        showNumbers: false,
+        showPrices: false,
+      },
+      context,
+    }
+  }
+
+  /**
+   * Build offers response - shows active offers/promotions
+   */
+  private buildOffersResponse(
+    offers: OfferData[],
+    context: ResponseContext
+  ): StructuredResponse {
+    if (offers.length === 0) {
+      return {
+        type: "NO_RESULTS",
+        data: { errorMessage: "No active offers" },
+        formatting: { ...DEFAULT_FORMATTING, showNumbers: false },
+        context,
+      }
+    }
+
+    return {
+      type: "OFFERS",
+      data: { offers, count: offers.length },
+      formatting: {
+        ...DEFAULT_FORMATTING,
+        showNumbers: false,  // Offers don't need numbered selection
+        showPrices: true,
       },
       context,
     }

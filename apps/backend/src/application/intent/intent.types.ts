@@ -50,6 +50,10 @@ export interface SearchProductsIntent {
   query: string
 }
 
+export interface ShowOffersIntent {
+  type: "SHOW_OFFERS"
+}
+
 // =============================================================================
 // CART INTENTS
 // =============================================================================
@@ -208,6 +212,7 @@ export type Intent =
   | ShowGroupIntent
   | ShowProductIntent
   | SearchProductsIntent
+  | ShowOffersIntent
   
   // Cart
   | ViewCartIntent
@@ -297,13 +302,15 @@ export function isProductSearchIntent(intent: Intent): intent is
   | ShowCategoryIntent 
   | ShowGroupIntent
   | ShowProductIntent 
-  | SearchProductsIntent {
+  | SearchProductsIntent
+  | ShowOffersIntent {
   return [
     "SHOW_CATEGORIES",
     "SHOW_CATEGORY",
     "SHOW_GROUP",
     "SHOW_PRODUCT",
-    "SEARCH_PRODUCTS"
+    "SEARCH_PRODUCTS",
+    "SHOW_OFFERS"
   ].includes(intent.type)
 }
 

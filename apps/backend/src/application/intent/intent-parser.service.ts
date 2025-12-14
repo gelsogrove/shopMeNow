@@ -289,6 +289,7 @@ SUPPORT:
 - ASK_IDENTITY - User asks who you are
 - ASK_LOCATION - User asks where the store is located
 - ASK_FAQ:query - User has a question about policies, shipping, etc.
+- VIEW_PROFILE - User asks about their discount, profile, or personal info
 - REQUEST_HUMAN - User wants to talk to a human
 
 OTHER:
@@ -309,6 +310,7 @@ Examples:
 - "VIEW_CART"
 - "VIEW_ORDERS"
 - "REPEAT_ORDER"
+- "VIEW_PROFILE" (when user asks "che sconto ho?", "il mio sconto", "my discount")
 - "ASK_FAQ:shipping policy"
 - "UNKNOWN"
 
@@ -438,6 +440,9 @@ ${context.lastAssistantMessage ? `\nLast bot message: "${context.lastAssistantMe
       case "ASK_FAQ":
         return { type: "ASK_FAQ", query: param?.trim() || "" }
         
+      case "VIEW_PROFILE":
+        return { type: "VIEW_PROFILE" }
+        
       case "REQUEST_HUMAN":
         return { type: "REQUEST_HUMAN" }
         
@@ -452,8 +457,8 @@ ${context.lastAssistantMessage ? `\nLast bot message: "${context.lastAssistantMe
         return null
         
       case "SHOW_OFFERS":
-        // Offers are handled by product search
-        return { type: "SEARCH_PRODUCTS", query: "offers" }
+        // Return SHOW_OFFERS intent to load active offers
+        return { type: "SHOW_OFFERS" }
         
       case "UNKNOWN":
       default:

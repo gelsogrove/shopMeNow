@@ -22,7 +22,7 @@ import {
   ListItem,
   GroupedItems,
 } from "../response-builder/response-builder.service"
-import { ProductData, OrderData, CartData, WorkspaceIdentityData, WorkspaceLocationData, FAQData } from "../data-loader/data-loader.service"
+import { ProductData, OrderData, CartData, WorkspaceIdentityData, WorkspaceLocationData, FAQData, CustomerProfileData, OfferData } from "../data-loader/data-loader.service"
 
 // ================================================================================
 // FORMATTER RESULT
@@ -477,6 +477,14 @@ export class LLMFormatterService {
         parts.push(this.formatFAQPrompt(response))
         break
 
+      case "PROFILE":
+        parts.push(this.formatProfilePrompt(response))
+        break
+
+      case "OFFERS":
+        parts.push(this.formatOffersPrompt(response))
+        break
+
       default:
         parts.push(`Dati: ${JSON.stringify(response.data)}`)
     }
@@ -752,6 +760,72 @@ CRITICO:
     lines.push("3. Rispondi usando la risposta della FAQ trovata, adattando il tono")
     lines.push("4. Se nessuna FAQ è rilevante, rispondi che non hai informazioni specifiche")
     lines.push("5. Sii conciso e diretto")
+
+    return lines.join("\n")
+  }
+
+  /**
+   * Format profile response - shows customer discount info
+   */
+  private formatProfilePrompt(response: StructuredResponse): string {
+    const profile = response.data.profile
+    if (!profile) return "Informazioni profilo non disponibili"
+
+    const lines = ["IL TUO PROFILO:"]
+    lines.push(`Nome: ${profile.name}`)
+    
+    if (profile.discount > 0) {
+      lines.push(`Sconto personale: ${profile.discount}%`)
+      lines.push("")
+      lines.push("ISTRUZIONI:")
+      lines.push("- Conferma al cliente il suo sconto personale")
+      lines.push("- Spiega che lo sconto viene applicato automaticamente ai prezzi")
+      lines.push("- Sii cordiale e positivo")
+    } else {
+      lines.push("Sconto personale: Nessuno sconto attivo")
+      lines.push("")
+      lines.push("ISTRUZIONI:")
+      lines.push("- Informa il cliente che non ha sconti attivi al momento")
+      lines.push("- Suggerisci di contattare l'assistenza per informazioni su promozioni")
+    }
+
+    return lines.join("\n")
+  }
+
+  /**
+   * Format offers response - shows active promotions
+   */
+  private formatOffersPrompt(response: StructuredResponse): string {
+    const offers = response.data.offers || []
+    if (offers.length === 0) {
+      return "Non ci sono offerte attive al momento."
+    }
+
+    const lines = ["OFFERTE ATTIVE:"]
+    
+    for (const offer of offers) {
+      lines.push("")
+      lines.push(`🎉 **${offer.name}**`)
+      if (offer.description) {
+        lines.push(`   ${offer.description}`)
+      }
+      if (offer.discountPercent && offer.discountPercent > 0) {
+        lines.push(`   Sconto: ${offer.discountPercent}%`)
+      }
+      if (offer.categoryName) {
+        lines.push(`   Categoria: ${offer.categoryName}`)
+      }
+      if (offer.endDate) {
+        const endDate = new Date(offer.endDate)
+        lines.push(`   Valida fino al: ${endDate.toLocaleDateString("it-IT")}`)
+      }
+    }
+
+    lines.push("")
+    lines.push("ISTRUZIONI:")
+    lines.push("- Presenta le offerte in modo accattivante")
+    lines.push("- Enfatizza i vantaggi per il cliente")
+    lines.push("- Suggerisci di esplorare i prodotti in offerta")
 
     return lines.join("\n")
   }

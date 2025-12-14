@@ -565,6 +565,195 @@ git push origin main
 
 ---
 
+## 📊 Monitoring & Logs (GRATIS)
+
+### 1️⃣ PM2 Logs (Metodo principale)
+
+```bash
+# SSH sul server
+ssh -i ~/.ssh/echatbot-key ubuntu@$(terraform output -raw ec2_public_ip)
+
+# Logs in tempo reale (tutti i processi)
+pm2 logs
+
+# Solo backend
+pm2 logs backend
+
+# Ultimi 100 errori
+pm2 logs backend --lines 100 --err
+
+# Dashboard interattiva (CPU, RAM, logs)
+pm2 monit
+
+# Info dettagliate processo
+pm2 info backend
+
+# Status tutti i processi
+pm2 status
+
+# Restart count (quante volte è crashato)
+pm2 list
+```
+
+### 2️⃣ GitHub Actions Logs
+
+```bash
+# Lista ultimi deploy
+gh run list
+
+# Vedi logs ultimo deploy
+gh run view
+
+# Vedi logs deploy specifico
+gh run view RUN_ID
+
+# Oppure vai su GitHub:
+# https://github.com/YOUR_REPO/actions
+```
+
+### 3️⃣ CloudWatch Logs (AWS Console)
+
+```bash
+# Da terminale
+aws logs tail /aws/ec2/echatbot --follow
+
+# Oppure AWS Console:
+# https://console.aws.amazon.com/cloudwatch/
+# → Log groups → /aws/ec2/echatbot
+```
+
+### 🚨 Alert Automatici (Email)
+
+**Ricevi email quando**:
+- ✅ CPU > 80% per 10 minuti
+- ✅ Memoria > 85%
+- ✅ Database connections > 80
+- ✅ Costi > €48 (80% budget)
+- ✅ Costi > €60 (100% budget)
+
+**Configurazione** (già nel Terraform):
+```hcl
+# CloudWatch Alarms + SNS Email
+# Nessuna configurazione manuale necessaria
+```
+
+### 📈 Monitoring Dashboard
+
+```bash
+# AWS Console → CloudWatch → Dashboards
+# Vedi in tempo reale:
+# - CPU Usage
+# - Memory Usage
+# - Network Traffic
+# - Database Connections
+# - Disk Usage
+```
+
+### 💰 Costi Monitoring
+
+```
+PM2 logs          → €0 (gratis)
+GitHub Actions    → €0 (2000 min/mese gratis)
+CloudWatch basic  → €0 (10 metriche gratis)
+Email alerts      → €0 (SNS gratis)
+CloudWatch Logs   → €0.50/GB (raramente superi 1GB)
+
+Totale: €0-2/mese (quasi sempre €0)
+```
+
+---
+
+## 🔍 Workflow Debug Errori
+
+### Scenario 1: App crasha in produzione
+
+```bash
+# 1. Ricevi email alert
+📧 "echatbot-backend CPU > 80%"
+
+# 2. SSH e controlla PM2
+ssh -i ~/.ssh/echatbot-key ubuntu@$EC2_IP
+pm2 status
+# Vedi: restart count aumentato
+
+# 3. Vedi logs errore
+pm2 logs backend --lines 50 --err
+
+# Output esempio:
+# Error: ECONNREFUSED - Database connection failed
+# at Database.connect (/opt/echatbot/backend/src/db.js:45)
+
+# 4. Fix locale
+vim src/db.js  # Fix il bug
+git commit -m "fix: database connection retry"
+git push
+
+# 5. GitHub Actions fa deploy automatico
+# 6. Verifica fix
+pm2 logs backend --lines 20
+# ✅ No more errors
+```
+
+### Scenario 2: Deploy fallisce
+
+```bash
+# 1. Vedi errore su GitHub Actions
+gh run list
+# ❌ Deploy to Production - failed
+
+# 2. Vedi logs
+gh run view
+
+# Output esempio:
+# Error: npm install failed
+# Missing dependency: @prisma/client
+
+# 3. Fix package.json
+npm install @prisma/client
+git commit -m "fix: add missing dependency"
+git push
+
+# 4. Deploy automatico riprova
+# ✅ Success
+```
+
+### Scenario 3: Performance lenta
+
+```bash
+# 1. SSH sul server
+ssh -i ~/.ssh/echatbot-key ubuntu@$EC2_IP
+
+# 2. Controlla risorse
+pm2 monit
+# Vedi: Memory 95% (problema!)
+
+# 3. Controlla processi
+top
+htop
+
+# 4. Restart PM2 (libera memoria)
+pm2 restart all
+
+# 5. Se persiste, upgrade istanza
+# Terraform: instance_type = "t3.small"
+terraform apply
+```
+
+### Scenario 4: Database lento
+
+```bash
+# 1. Controlla CloudWatch
+# AWS Console → RDS → echatbot-db → Monitoring
+
+# 2. Vedi query lente
+aws rds describe-db-log-files --db-instance-identifier echatbot-db
+
+# 3. Ottimizza query o upgrade DB
+# Terraform: instance_class = "db.t3.small"
+```
+
+---
+
 ## 🆘 Troubleshooting
 
 ### Terraform apply fallisce
@@ -587,4 +776,23 @@ gh secret list  # Verifica secrets (devono essere 14)
 ssh -i ~/.ssh/echatbot-key ubuntu@$EC2_IP
 pm2 logs backend
 pm2 restart backend
+```
+
+### PM2 non salva configurazione
+```bash
+pm2 save
+pm2 startup  # Rigenera startup script
+```
+
+### Memoria piena
+```bash
+# Libera spazio
+sudo apt-get clean
+sudo apt-get autoremove
+
+# Controlla spazio
+df -h
+
+# Pulisci logs vecchi
+pm2 flush
 ```

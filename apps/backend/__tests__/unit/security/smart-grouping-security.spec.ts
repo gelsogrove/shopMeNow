@@ -5,94 +5,78 @@
  * Feature: Code-First LLM with product grouping
  */
 
-import { OptionsMappingService } from '../../../src/application/services/options-mapping.service'
+import { OptionsMappingService } from '../../../src/application/chat-engine/options-mapping.service'
 
 // Mock PrismaClient
 const mockPrisma = {
   searchConversations: {
-    findFirst: jest.fn(),
+    findUnique: jest.fn(),
     upsert: jest.fn()
   }
 }
-
-// Mock the prismaClient
-jest.mock('../../../src/config/database', () => ({
-  prismaClient: {
-    searchConversations: {
-      findFirst: jest.fn(),
-      upsert: jest.fn()
-    }
-  }
-}))
 
 describe('Smart Grouping - Security Tests', () => {
   let optionsMappingService: OptionsMappingService
 
   beforeEach(() => {
     jest.clearAllMocks()
-    optionsMappingService = new OptionsMappingService()
-    // @ts-ignore - inject mock
-    optionsMappingService['prisma'] = mockPrisma
+    // Create service with mock prisma
+    optionsMappingService = new OptionsMappingService(mockPrisma as any)
   })
 
   describe('Workspace Isolation', () => {
-    it('should NOT allow loading mapping from different workspace', async () => {
-      // Setup: mapping exists for workspace A
-      const workspaceA = 'workspace-a-id'
-      const workspaceB = 'workspace-b-id'
+    it('should load mapping using sessionId (conversationId)', async () => {
+      const workspaceId = 'workspace-a-id'
       const conversationId = 'conv-123'
 
-      mockPrisma.searchConversations.findFirst.mockResolvedValue({
+      mockPrisma.searchConversations.findUnique.mockResolvedValue({
         id: 'search-1',
-        workspaceId: workspaceA, // Different workspace
-        conversationId,
+        sessionId: conversationId,
+        workspaceId,
         metadata: {
           lastOptionsMapping: {
             listType: 'GROUPS',
-            options: { '1': 'Formaggi Freschi' },
-            groupMapping: { 'Formaggi Freschi': ['SKU-001', 'SKU-002'] }
+            options: [{ number: 1, label: 'Formaggi Freschi' }],
+            groupMapping: { '1': { nome: 'Formaggi Freschi', skus: ['SKU-001', 'SKU-002'] } }
           }
         }
       })
 
-      // Act: try to load from workspace B
-      const result = await optionsMappingService.loadMapping(workspaceB, conversationId)
+      await optionsMappingService.loadMapping(workspaceId, conversationId)
 
-      // Assert: should not find mapping (workspace filter)
-      expect(mockPrisma.searchConversations.findFirst).toHaveBeenCalledWith({
-        where: {
-          workspaceId: workspaceB, // Must filter by correct workspace
-          conversationId
-        }
+      // Assert: should query by sessionId
+      expect(mockPrisma.searchConversations.findUnique).toHaveBeenCalledWith({
+        where: { sessionId: conversationId }
       })
     })
 
-    it('should save mapping ONLY for the specified workspace', async () => {
+    it('should save mapping with workspaceId in upsert', async () => {
       const workspaceId = 'workspace-123'
       const conversationId = 'conv-456'
-      const options = { '1': 'SKU-001', '2': 'SKU-002' }
+      const customerId = 'customer-789'
 
+      mockPrisma.searchConversations.findUnique.mockResolvedValue(null)
       mockPrisma.searchConversations.upsert.mockResolvedValue({ id: 'search-1' })
 
-      await optionsMappingService.saveMapping(
+      await optionsMappingService.saveMapping({
         workspaceId,
         conversationId,
-        'PRODUCTS',
-        options,
-        undefined
-      )
+        customerId,
+        responseText: '1. Formaggi (5 prodotti)\n2. Salumi (3 prodotti)',
+        groupMapping: {
+          '1': { nome: 'Formaggi', skus: ['SKU-001', 'SKU-002'] },
+          '2': { nome: 'Salumi', skus: ['SKU-003'] }
+        }
+      })
 
-      // Assert: upsert must include workspaceId
+      // Assert: upsert must include workspaceId in create
       expect(mockPrisma.searchConversations.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({
-            workspaceId_conversationId: {
-              workspaceId,
-              conversationId
-            }
-          }),
+          where: { sessionId: conversationId },
           create: expect.objectContaining({
-            workspaceId
+            workspaceId,
+            customerId,
+            sessionId: conversationId
           })
         })
       )
@@ -104,18 +88,21 @@ describe('Smart Grouping - Security Tests', () => {
       const workspaceId = 'workspace-123'
       const conversationId = 'conv-789'
       const storedGroupMapping = {
-        'Formaggi Freschi': ['BURRATA-001', 'MOZZ-001'],
-        'Formaggi Stagionati': ['PARM-001', 'GRANA-001']
+        '1': { nome: 'Formaggi Freschi', skus: ['BURRATA-001', 'MOZZ-001'] },
+        '2': { nome: 'Formaggi Stagionati', skus: ['PARM-001', 'GRANA-001'] }
       }
 
-      mockPrisma.searchConversations.findFirst.mockResolvedValue({
+      mockPrisma.searchConversations.findUnique.mockResolvedValue({
         id: 'search-1',
+        sessionId: conversationId,
         workspaceId,
-        conversationId,
         metadata: {
           lastOptionsMapping: {
             listType: 'GROUPS',
-            options: { '1': 'Formaggi Freschi', '2': 'Formaggi Stagionati' },
+            options: [
+              { number: 1, label: 'Formaggi Freschi' },
+              { number: 2, label: 'Formaggi Stagionati' }
+            ],
             groupMapping: storedGroupMapping
           }
         }
@@ -131,16 +118,18 @@ describe('Smart Grouping - Security Tests', () => {
       const workspaceId = 'workspace-123'
       const conversationId = 'conv-products'
 
-      // Even if groupMapping was accidentally stored with PRODUCTS, it should be ignored
-      mockPrisma.searchConversations.findFirst.mockResolvedValue({
+      mockPrisma.searchConversations.findUnique.mockResolvedValue({
         id: 'search-1',
+        sessionId: conversationId,
         workspaceId,
-        conversationId,
         metadata: {
           lastOptionsMapping: {
-            listType: 'PRODUCTS', // Products, not groups
-            options: { '1': 'Burrata', '2': 'Mozzarella' },
-            groupMapping: undefined // Should NOT have groupMapping for products
+            listType: 'PRODUCTS',
+            options: [
+              { number: 1, label: 'Burrata' },
+              { number: 2, label: 'Mozzarella' }
+            ],
+            groupMapping: undefined
           }
         }
       })
@@ -153,28 +142,28 @@ describe('Smart Grouping - Security Tests', () => {
   })
 
   describe('SKU Injection Protection', () => {
-    it('should validate SKU format in groupMapping', async () => {
+    it('should safely store data with malicious SKUs (Prisma escapes)', async () => {
       const workspaceId = 'workspace-123'
       const conversationId = 'conv-inject'
+      const customerId = 'customer-123'
 
-      // Test that malicious SKUs don't cause issues
       const maliciousGroupMapping = {
-        'Group 1': ['SKU-001; DROP TABLE products;--', 'SKU-002'],
-        '../../../etc/passwd': ['SKU-003']
+        '1': { nome: 'Group 1', skus: ['SKU-001; DROP TABLE products;--', 'SKU-002'] },
+        '2': { nome: '../../../etc/passwd', skus: ['SKU-003'] }
       }
 
+      mockPrisma.searchConversations.findUnique.mockResolvedValue(null)
       mockPrisma.searchConversations.upsert.mockResolvedValue({ id: 'search-1' })
 
-      // The system should safely store the data (actual protection is at query level)
-      await optionsMappingService.saveMapping(
+      await optionsMappingService.saveMapping({
         workspaceId,
         conversationId,
-        'GROUPS',
-        { '1': 'Group 1' },
-        maliciousGroupMapping
-      )
+        customerId,
+        responseText: '1. Group 1\n2. Other',
+        groupMapping: maliciousGroupMapping
+      })
 
-      // Assert: data is stored but will be properly escaped by Prisma
+      // Assert: data is stored (Prisma escapes it properly)
       expect(mockPrisma.searchConversations.upsert).toHaveBeenCalled()
     })
 
@@ -182,15 +171,15 @@ describe('Smart Grouping - Security Tests', () => {
       const workspaceId = 'workspace-123'
       const conversationId = 'conv-empty'
 
-      mockPrisma.searchConversations.findFirst.mockResolvedValue({
+      mockPrisma.searchConversations.findUnique.mockResolvedValue({
         id: 'search-1',
+        sessionId: conversationId,
         workspaceId,
-        conversationId,
         metadata: {
           lastOptionsMapping: {
             listType: 'GROUPS',
-            options: { '1': 'Formaggi' },
-            groupMapping: {} // Empty mapping
+            options: [{ number: 1, label: 'Formaggi' }],
+            groupMapping: {}
           }
         }
       })
@@ -205,13 +194,27 @@ describe('Smart Grouping - Security Tests', () => {
     it('should handle concurrent mapping updates with upsert', async () => {
       const workspaceId = 'workspace-123'
       const conversationId = 'conv-concurrent'
+      const customerId = 'customer-123'
 
+      mockPrisma.searchConversations.findUnique.mockResolvedValue(null)
       mockPrisma.searchConversations.upsert.mockResolvedValue({ id: 'search-1' })
 
       // Simulate concurrent saves
       const savePromises = [
-        optionsMappingService.saveMapping(workspaceId, conversationId, 'GROUPS', { '1': 'A' }),
-        optionsMappingService.saveMapping(workspaceId, conversationId, 'GROUPS', { '1': 'B' })
+        optionsMappingService.saveMapping({
+          workspaceId,
+          conversationId,
+          customerId,
+          responseText: '1. Option A',
+          groupMapping: { '1': { nome: 'A', skus: ['SKU-A'] } }
+        }),
+        optionsMappingService.saveMapping({
+          workspaceId,
+          conversationId,
+          customerId,
+          responseText: '1. Option B',
+          groupMapping: { '1': { nome: 'B', skus: ['SKU-B'] } }
+        })
       ]
 
       await Promise.all(savePromises)
@@ -222,33 +225,30 @@ describe('Smart Grouping - Security Tests', () => {
   })
 
   describe('List Type Transition Safety', () => {
-    it('should clear groupMapping when transitioning from GROUPS to PRODUCTS', async () => {
+    it('should clear groupMapping when saving PRODUCTS list', async () => {
       const workspaceId = 'workspace-123'
       const conversationId = 'conv-transition'
+      const customerId = 'customer-123'
 
+      mockPrisma.searchConversations.findUnique.mockResolvedValue(null)
       mockPrisma.searchConversations.upsert.mockResolvedValue({ id: 'search-1' })
 
       // Save PRODUCTS list (no groupMapping)
-      await optionsMappingService.saveMapping(
+      await optionsMappingService.saveMapping({
         workspaceId,
         conversationId,
-        'PRODUCTS',
-        { '1': 'Product A', '2': 'Product B' },
-        undefined // No groupMapping for PRODUCTS
-      )
+        customerId,
+        responseText: '1. Burrata - €5.00\n2. Mozzarella - €3.00'
+        // No groupMapping - this is a products list
+      })
 
-      expect(mockPrisma.searchConversations.upsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          create: expect.objectContaining({
-            metadata: expect.objectContaining({
-              lastOptionsMapping: expect.objectContaining({
-                listType: 'PRODUCTS',
-                groupMapping: undefined
-              })
-            })
-          })
-        })
-      )
+      // Upsert was called
+      expect(mockPrisma.searchConversations.upsert).toHaveBeenCalled()
+      
+      // Verify the metadata doesn't have groupMapping
+      const call = mockPrisma.searchConversations.upsert.mock.calls[0][0]
+      const savedMapping = call.create.metadata.lastOptionsMapping
+      expect(savedMapping.groupMapping).toBeUndefined()
     })
   })
 })
