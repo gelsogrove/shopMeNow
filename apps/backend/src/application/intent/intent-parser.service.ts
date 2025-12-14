@@ -287,6 +287,7 @@ ORDERS:
 
 SUPPORT:
 - ASK_IDENTITY - User asks who you are
+- SHOW_AGENT_INFO - User asks who their assigned sales agent is
 - ASK_LOCATION - User asks where the store is located
 - ASK_FAQ:query - User has a question about policies, shipping, etc.
 - VIEW_PROFILE - User asks about their discount, profile, or personal info
@@ -312,6 +313,7 @@ Examples:
 - "REPEAT_ORDER"
 - "VIEW_PROFILE" (when user asks "che sconto ho?", "il mio sconto", "my discount")
 - "ASK_FAQ:shipping policy"
+- "SHOW_AGENT_INFO"
 - "UNKNOWN"
 
 ${context.lastAssistantMessage ? `\nLast bot message: "${context.lastAssistantMessage.substring(0, 200)}..."` : ''}`
@@ -433,6 +435,9 @@ ${context.lastAssistantMessage ? `\nLast bot message: "${context.lastAssistantMe
         
       case "ASK_IDENTITY":
         return { type: "ASK_IDENTITY" }
+
+      case "SHOW_AGENT_INFO":
+        return { type: "SHOW_AGENT_INFO" }
         
       case "ASK_LOCATION":
         return { type: "ASK_LOCATION" }

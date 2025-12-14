@@ -995,7 +995,7 @@ export class WhatsAppWebhookController {
         tokensUsed: routerResult.tokensUsed,
         executionTimeMs: routerResult.executionTimeMs,
         wasFAQ: routerResult.wasFAQ,
-        responseLength: routerResult.response.length,
+        responseLength: routerResult.response?.length ?? 0,
         isBlocked: routerResult.isBlocked, // 🆕 P1: Log if customer was blocked
       })
 

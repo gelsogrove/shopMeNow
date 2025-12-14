@@ -15,8 +15,8 @@ import dotenv from "dotenv"
 import nodemailer from "nodemailer"
 import path from "path"
 
-// Load environment variables
-dotenv.config({ path: path.join(__dirname, "../.env") })
+// Load environment variables from root .env
+dotenv.config({ path: path.join(__dirname, "../../../.env") })
 
 interface SmtpConfig {
   host: string

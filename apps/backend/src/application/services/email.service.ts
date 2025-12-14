@@ -571,6 +571,208 @@ The eChatbot Team
     }
   }
 
+  /**
+   * Send invoice email with PDF attachment
+   * @see Feature 202 - Order Selection & Invoice Actions
+   * 
+   * PDF naming convention:
+   * - Invoice: {orderCode}_fattura.pdf
+   * - Credit note: {orderCode}_notadicredito{N}.pdf
+   */
+  async sendInvoiceEmail(data: {
+    to: string
+    orderCode: string
+    customerName: string
+    orderTotal: number
+    invoicePdf: Buffer
+    creditNotePdfs?: { fileName: string; content: Buffer }[] // Optional credit notes
+    workspaceName?: string
+  }): Promise<boolean> {
+    try {
+      const invoiceFileName = `${data.orderCode}_fattura.pdf`
+      
+      // Build attachments array
+      const attachments: { filename: string; content: Buffer }[] = []
+      
+      // Add invoice PDF
+      attachments.push({
+        filename: invoiceFileName,
+        content: data.invoicePdf,
+      })
+      
+      // Add credit note PDFs if present
+      if (data.creditNotePdfs && data.creditNotePdfs.length > 0) {
+        for (const cn of data.creditNotePdfs) {
+          attachments.push({
+            filename: cn.fileName,
+            content: cn.content,
+          })
+        }
+      }
+
+      const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invoice ${data.orderCode}</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 30px; text-align: center; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 8px 8px 0 0;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">📄 Invoice ${data.orderCode}</h1>
+            </td>
+          </tr>
+          
+          <!-- Body -->
+          <tr>
+            <td style="padding: 40px 30px;">
+              <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #333333;">
+                Hi <strong>${data.customerName}</strong>,
+              </p>
+              
+              <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #333333;">
+                Attached you will find the invoice for your order <strong>${data.orderCode}</strong>.
+              </p>
+              
+              <div style="background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 0 5px 5px 0;">
+                <p style="margin: 0; font-size: 18px; color: #166534;">
+                  <strong>Order total: €${data.orderTotal.toFixed(2)}</strong>
+                </p>
+              </div>
+              
+              ${data.creditNotePdfs && data.creditNotePdfs.length > 0 ? `
+              <p style="margin: 20px 0; font-size: 16px; line-height: 1.6; color: #333333;">
+                📋 We've also attached <strong>${data.creditNotePdfs.length} credit note(s)</strong> related to this order.
+              </p>
+              ` : ''}
+              
+              <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #333333;">
+                If you have any questions, feel free to contact us.
+              </p>
+              
+              <p style="margin: 0; font-size: 16px; line-height: 1.6; color: #333333;">
+                Thank you for your purchase.
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 30px; text-align: center; background-color: #f8f9fa; border-radius: 0 0 8px 8px;">
+              <p style="margin: 0; font-size: 14px; color: #666666;">
+                © 2025 ${data.workspaceName || "eChatbot"}. Tutti i diritti riservati.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`
+
+      const textContent = `
+    Invoice ${data.orderCode}
+
+    Hi ${data.customerName},
+
+    Attached you will find the invoice for your order ${data.orderCode}.
+
+    Order total: €${data.orderTotal.toFixed(2)}
+
+    ${data.creditNotePdfs && data.creditNotePdfs.length > 0 ? `We've also attached ${data.creditNotePdfs.length} credit note(s) related to this order.\n` : ''}
+
+    If you have any questions, feel free to contact us.
+
+    Thank you for your purchase.
+
+---
+© 2025 ${data.workspaceName || "eChatbot"}. All rights reserved.
+`
+
+      const mailOptions: nodemailer.SendMailOptions = {
+        from: `"${data.workspaceName || "eChatbot"}" <${process.env.SMTP_FROM || "noreply@echatbot.ai"}>`,
+        to: data.to,
+        subject: `📄 Invoice ${data.orderCode}`,
+        html: htmlContent,
+        text: textContent,
+        attachments,
+      }
+
+      const info = await this.transporter.sendMail(mailOptions)
+      logger.info(`✅ [EmailService] Invoice email sent to ${data.to} for order ${data.orderCode}. MessageID: ${info.messageId}`)
+      return true
+    } catch (error) {
+      logger.error(`❌ [EmailService] Failed to send invoice email for order ${data.orderCode}:`, error)
+      return false
+    }
+  }
+
+  /**
+   * Generate a placeholder PDF for MVP testing
+   * This creates a simple text-based placeholder that looks like a PDF
+   * In production, this would be replaced with actual PDF generation (e.g., pdfkit)
+   */
+  private generatePlaceholderInvoicePdf(orderCode: string, total: number, customerName: string): Buffer {
+    // Simple placeholder - in production use pdfkit or similar
+    const content = `
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 200 >>
+stream
+BT
+/F1 24 Tf
+50 700 Td
+(FATTURA - ${orderCode}) Tj
+/F1 14 Tf
+0 -40 Td
+(Cliente: ${customerName}) Tj
+0 -25 Td
+(Totale: EUR ${total.toFixed(2)}) Tj
+0 -50 Td
+(Documento generato automaticamente) Tj
+0 -20 Td
+(Data: ${new Date().toLocaleDateString("it-IT")}) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000266 00000 n 
+0000000518 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+595
+%%EOF
+`
+    return Buffer.from(content, 'utf-8')
+  }
+
   async verifyConnection(): Promise<boolean> {
     try {
       await this.transporter.verify()

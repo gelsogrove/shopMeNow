@@ -1,7 +1,6 @@
 import { prisma } from "@echatbot/database"
 import logger from "../../utils/logger"
-
-// prisma imported
+import { EmailService } from "../../application/services/email.service"
 
 export interface SendInvoiceRequest {
   customerId: string
@@ -18,9 +17,112 @@ export interface SendInvoiceResponse {
   error?: string
 }
 
+async function generatePdfBuffer(build: (doc: any) => void): Promise<Buffer> {
+  const PDFDocument = require("pdfkit")
+
+  return await new Promise<Buffer>((resolve, reject) => {
+    const doc = new PDFDocument({ size: "A4", margin: 50 })
+    const chunks: Buffer[] = []
+
+    doc.on("data", (chunk: Buffer) => chunks.push(chunk))
+    doc.on("end", () => resolve(Buffer.concat(chunks)))
+    doc.on("error", (err: unknown) => reject(err))
+
+    build(doc)
+    doc.end()
+  })
+}
+
+async function generateInvoicePdf(params: {
+  workspaceName: string
+  orderCode: string
+  createdAt: Date
+  customerName?: string | null
+  customerEmail?: string | null
+  customerPhone?: string | null
+  items: Array<{ name: string; quantity: number; unitPrice: number; totalPrice: number }>
+  orderTotal: number
+}): Promise<Buffer> {
+  return generatePdfBuffer((doc) => {
+    doc.fontSize(20).font("Helvetica-Bold").text("INVOICE", { align: "center" })
+    doc.moveDown(0.5)
+    doc.fontSize(10).font("Helvetica").text(params.workspaceName, { align: "center" })
+    doc.moveDown(0.5)
+    doc.text(`Invoice Number: ${params.orderCode}`, { align: "center" })
+    doc.text(`Invoice Date: ${new Date(params.createdAt).toLocaleDateString("en-US")}`, {
+      align: "center",
+    })
+
+    doc.moveDown(2)
+    doc.fontSize(12).font("Helvetica-Bold").text("BILL TO")
+    doc.moveDown(0.25)
+    doc.fontSize(10).font("Helvetica")
+    if (params.customerName) doc.text(params.customerName)
+    if (params.customerEmail) doc.text(`Email: ${params.customerEmail}`)
+    if (params.customerPhone) doc.text(`Phone: ${params.customerPhone}`)
+
+    doc.moveDown(2)
+    doc.fontSize(12).font("Helvetica-Bold").text("ITEMS")
+    doc.moveDown(0.5)
+
+    // Simple table header
+    doc.fontSize(10).font("Helvetica-Bold")
+    doc.text("Item", 50, doc.y, { continued: true })
+    doc.text("Qty", 300, doc.y, { width: 50, align: "right", continued: true })
+    doc.text("Unit", 360, doc.y, { width: 70, align: "right", continued: true })
+    doc.text("Total", 440, doc.y, { width: 100, align: "right" })
+    doc.moveDown(0.25)
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke()
+    doc.moveDown(0.5)
+
+    doc.fontSize(10).font("Helvetica")
+    for (const item of params.items) {
+      doc.text(item.name, 50, doc.y, { continued: true })
+      doc.text(String(item.quantity), 300, doc.y, { width: 50, align: "right", continued: true })
+      doc.text(`€${item.unitPrice.toFixed(2)}`, 360, doc.y, { width: 70, align: "right", continued: true })
+      doc.text(`€${item.totalPrice.toFixed(2)}`, 440, doc.y, { width: 100, align: "right" })
+    }
+
+    doc.moveDown(1)
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke()
+    doc.moveDown(0.5)
+    doc.fontSize(12).font("Helvetica-Bold").text(`Grand Total: €${params.orderTotal.toFixed(2)}`, {
+      align: "right",
+    })
+  })
+}
+
+async function generateCreditNotePdf(params: {
+  workspaceName: string
+  orderCode: string
+  creditNoteCode: string
+  amount: number
+  reason: string
+  createdAt: Date
+}): Promise<Buffer> {
+  return generatePdfBuffer((doc) => {
+    doc.fontSize(20).font("Helvetica-Bold").text("CREDIT NOTE", { align: "center" })
+    doc.moveDown(0.5)
+    doc.fontSize(10).font("Helvetica").text(params.workspaceName, { align: "center" })
+    doc.moveDown(1)
+
+    doc.fontSize(12).font("Helvetica-Bold").text(`Credit Note: ${params.creditNoteCode}`)
+    doc.fontSize(10).font("Helvetica")
+    doc.text(`Order: ${params.orderCode}`)
+    doc.text(`Date: ${new Date(params.createdAt).toLocaleDateString("en-US")}`)
+    doc.text(`Amount: €${params.amount.toFixed(2)}`)
+    doc.moveDown(1)
+    doc.fontSize(10).font("Helvetica-Bold").text("Reason")
+    doc.fontSize(10).font("Helvetica").text(params.reason || "-")
+  })
+}
+
 /**
  * Send invoice PDF via email for specific order
- * TODO: Integration with PDF generator and email service
+ * @see Feature 202 - Order Selection & Invoice Actions
+ * 
+ * PDF naming: {orderCode}_fattura.pdf
+ * Credit notes: {orderCode}_notadicredito{N}.pdf
  */
 export async function sendInvoice(
   request: SendInvoiceRequest
@@ -30,7 +132,7 @@ export async function sendInvoice(
 
     const { customerId, workspaceId, orderId, email } = request
 
-    // Find order with customer details
+    // Find order with customer details and credit notes
     const order = await prisma.orders.findFirst({
       where: {
         OR: [{ id: orderId }, { orderCode: orderId }],
@@ -39,12 +141,14 @@ export async function sendInvoice(
       },
       include: {
         customer: true,
+        workspace: true,
         items: {
           include: {
             product: true,
             service: true,
           },
         },
+        creditNotes: true,
       },
     })
 
@@ -53,7 +157,7 @@ export async function sendInvoice(
       return {
         success: false,
         error: "Order not found",
-        message: `Ordine ${orderId} non trovato. Verifica il codice ordine.`,
+        message: `Order ${orderId} was not found. Please check the order code.`,
       }
     }
 
@@ -67,37 +171,84 @@ export async function sendInvoice(
       return {
         success: false,
         error: "No email available",
-        message:
-          "Email non disponibile. Per favore fornisci un indirizzo email.",
+        message: "No email is available. Please provide an email address.",
       }
     }
 
-    // TODO: Generate PDF invoice
-    // For now, create a mock invoice URL
-    const invoiceUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/invoice-public?orderId=${order.id}&token=mock-token`
+    // Calculate order total
+    const orderTotal = order.items.reduce((sum, item) => sum + item.totalPrice, 0)
 
-    logger.info(
-      `[SEND_INVOICE] Invoice URL generated: ${invoiceUrl} for ${recipientEmail}`
-    )
+    const workspaceName = order.workspace?.name || "eChatbot"
 
-    // TODO: Send email with PDF attachment
-    // const emailService = new EmailService()
-    // await emailService.sendInvoice({
-    //   to: recipientEmail,
-    //   orderCode: order.orderCode,
-    //   invoiceUrl: invoiceUrl,
-    //   pdfAttachment: generatedPDF
-    // })
+    const invoicePdf = await generateInvoicePdf({
+      workspaceName,
+      orderCode: order.orderCode,
+      createdAt: order.createdAt,
+      customerName: order.customer?.name || undefined,
+      customerEmail: order.customer?.email || undefined,
+      customerPhone: order.customer?.phone || undefined,
+      items: order.items.map((it) => ({
+        name: it.product?.name || it.service?.name || "Item",
+        quantity: it.quantity,
+        unitPrice: it.unitPrice,
+        totalPrice: it.totalPrice,
+      })),
+      orderTotal,
+    })
 
-    // For now, just log and return success
+    // Prepare credit note PDFs if any
+    const creditNotePdfs: { fileName: string; content: Buffer }[] = []
+    if (order.creditNotes && order.creditNotes.length > 0) {
+      for (let i = 0; i < order.creditNotes.length; i++) {
+        const cn = order.creditNotes[i]
+        const fileName = `${order.orderCode}_notadicredito${i + 1}.pdf`
+        const content = await generateCreditNotePdf({
+          workspaceName,
+          orderCode: order.orderCode,
+          creditNoteCode: cn.creditNoteCode,
+          amount: cn.amount,
+          reason: cn.reason,
+          createdAt: cn.createdAt,
+        })
+        creditNotePdfs.push({ fileName, content })
+      }
+    }
+
+    // Send email with invoice (and credit notes if any)
+    const emailService = new EmailService()
+    const emailSent = await emailService.sendInvoiceEmail({
+      to: recipientEmail,
+      orderCode: order.orderCode,
+      customerName: order.customer.name || "Customer",
+      orderTotal,
+      invoicePdf,
+      creditNotePdfs: creditNotePdfs.length > 0 ? creditNotePdfs : undefined,
+      workspaceName,
+    })
+
+    if (!emailSent) {
+      logger.error(`[SEND_INVOICE] Failed to send email to ${recipientEmail}`)
+      return {
+        success: false,
+        error: "Email sending failed",
+        message: "Failed to send the email. Please try again later.",
+      }
+    }
+
     logger.info(
       `[SEND_INVOICE] ✅ Invoice sent to ${recipientEmail} for order ${order.orderCode}`
     )
 
+    // Build response message
+    let message = `✅ Invoice for order ${order.orderCode} has been emailed to ${recipientEmail}.`
+    if (creditNotePdfs.length > 0) {
+      message += ` It also includes ${creditNotePdfs.length} credit note(s).`
+    }
+    message += " Please check your inbox."
+
     return {
       success: true,
-      message: `Fattura per ordine ${order.orderCode} inviata a ${recipientEmail}. Controlla la tua casella email.`,
-      invoiceUrl: invoiceUrl,
+      message,
       sentTo: recipientEmail,
     }
   } catch (error) {
@@ -105,10 +256,7 @@ export async function sendInvoice(
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
-      message:
-        "Errore nell'invio della fattura. Riprova più tardi o contatta l'assistenza.",
+      message: "Failed to send the invoice. Please try again later or contact support.",
     }
-  } finally {
-    await prisma.$disconnect()
   }
 }

@@ -32,7 +32,7 @@ export interface OptionItem {
  * Type of list displayed to user
  * Using UPPERCASE to match intent.types.ts ListType
  */
-export type ListType = "CATEGORIES" | "GROUPS" | "PRODUCTS" | "ORDERS" | "CART_ITEMS" | "SERVICES" | "binary" | "unknown"
+export type ListType = "CATEGORIES" | "GROUPS" | "PRODUCTS" | "ORDERS" | "CART_ITEMS" | "SERVICES" | "ORDER_ACTIONS" | "binary" | "unknown"
 
 /**
  * Pending action after user confirmation (sì/no)
@@ -56,6 +56,8 @@ export interface OptionsMapping {
   // 🆕 For smart grouping: mapping of group number -> product SKUs
   // Created by LLM when grouping products, used to resolve "1" -> products in group 1
   groupMapping?: Record<string, { nome: string; skus: string[] }>
+  // 🆕 Current order code for ORDER_ACTIONS (fattura, ripeti, nota credito)
+  currentOrderCode?: string
 }
 
 export class OptionsMappingService {
@@ -117,11 +119,50 @@ export class OptionsMappingService {
     forceClear?: boolean
     // 🆕 For smart grouping: LLM-generated mapping of group number -> SKUs
     groupMapping?: Record<string, { nome: string; skus: string[] }>
+    // 🆕 For product lists: items with SKUs from StructuredResponse
+    // This avoids parsing text and losing SKU information
+    items?: Array<{ number: number; name: string; sku?: string; id?: string }>
+    // 🆕 List type (PRODUCTS, ORDERS, CATEGORIES, etc.)
+    listType?: ListType
   }): Promise<void> {
-    const { workspaceId, conversationId, customerId, responseText, forceClear, groupMapping } = options
+    const { workspaceId, conversationId, customerId, responseText, forceClear, groupMapping, items, listType: explicitListType } = options
 
     try {
       let mapping = forceClear ? null : this.extractFromResponse(responseText)
+
+      // 🆕 If we have items with SKUs from StructuredResponse, use them!
+      // This is more reliable than parsing from text
+      if (items && items.length > 0) {
+        const optionsFromItems = items.map(item => ({
+          number: item.number,
+          label: item.name,
+          skus: item.sku ? [item.sku] : undefined,
+          id: item.id,
+        }))
+        
+        if (!mapping) {
+          mapping = {
+            type: "numbered",
+            options: optionsFromItems,
+            listType: explicitListType || "PRODUCTS",
+          }
+        } else {
+          // Merge SKUs into existing options
+          mapping.options = mapping.options.map(opt => {
+            const itemMatch = items.find(i => i.number === opt.number)
+            if (itemMatch && itemMatch.sku) {
+              return { ...opt, skus: [itemMatch.sku], id: itemMatch.id }
+            }
+            return opt
+          })
+        }
+        
+        logger.info("📋 [OptionsMapping] Using items with SKUs from StructuredResponse", {
+          conversationId,
+          itemCount: items.length,
+          firstItem: { number: items[0].number, name: items[0].name?.substring(0, 20), sku: items[0].sku },
+        })
+      }
 
       // 🆕 If we have a groupMapping from LLM, add it to the mapping
       // 🔧 FIX: Create/replace mapping options with groupMapping data (which has SKUs!)
@@ -319,6 +360,62 @@ export class OptionsMappingService {
   }
 
   /**
+   * Set current order code for order actions (fattura, ripeti, nota credito)
+   * This is used to know which order the user is referring to when selecting an action
+   */
+  async setCurrentOrderCode(options: {
+    workspaceId: string
+    conversationId: string
+    orderCode: string
+  }): Promise<void> {
+    const { workspaceId, conversationId, orderCode } = options
+
+    try {
+      logger.debug("📦 [OptionsMapping] Setting current order code", {
+        conversationId,
+        orderCode,
+      })
+
+      const existing = await this.prisma.searchConversations.findUnique({
+        where: { sessionId: conversationId },
+      })
+
+      const currentMetadata = (existing?.metadata as any) || {}
+      const currentMapping = currentMetadata.lastOptionsMapping || {}
+
+      const updatedMetadata = {
+        ...currentMetadata,
+        lastOptionsMapping: {
+          ...currentMapping,
+          currentOrderCode: orderCode,
+        },
+      }
+
+      await this.prisma.searchConversations.upsert({
+        where: { sessionId: conversationId },
+        create: {
+          sessionId: conversationId,
+          workspaceId,
+          customerId: existing?.customerId || "unknown",
+          metadata: updatedMetadata,
+          activeAgent: null,
+          expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        } as any,
+        update: {
+          metadata: updatedMetadata,
+        } as any,
+      })
+
+      logger.debug("✅ [OptionsMapping] Current order code set successfully", { orderCode })
+    } catch (error) {
+      logger.error("❌ [OptionsMapping] Failed to set current order code", {
+        conversationId,
+        error,
+      })
+    }
+  }
+
+  /**
    * Extract numbered list or yes/no pattern from assistant response
    *
    * Detects patterns like:
@@ -411,26 +508,44 @@ export class OptionsMappingService {
   /**
    * Detect what type of list was displayed
    * Returns UPPERCASE ListType to match intent.types.ts
+   * 
+   * IMPORTANT: Order of checks matters! More specific patterns first.
    */
   private detectListType(responseText: string, options: OptionItem[]): ListType {
     const lower = responseText.toLowerCase()
 
-    // Check for price indicators → products
-    const hasPrice = /€|euro/i.test(responseText)
-    if (hasPrice) {
-      return "PRODUCTS"
+    // Check for ORDER_ACTIONS first (most specific)
+    // These are action menus shown after order details with options like invoice/repeat
+    // Check options FIRST - if options contain action keywords, it's ORDER_ACTIONS
+    const hasActionOptions = options.some((o) => 
+      /fattura|invoice|scarica|download|ripeti|repeat|nota di credito|credit note/i.test(o.label)
+    )
+    // Also check for action prompts in text
+    const hasActionPrompt = /cosa (vuoi|desideri|vorresti) fare\??|what would you like to do\??|cosa posso fare/i.test(lower)
+    
+    if (hasActionOptions && (hasActionPrompt || options.length <= 3)) {
+      // If we have action-like options AND (action prompt OR small list), it's ORDER_ACTIONS
+      return "ORDER_ACTIONS"
     }
 
-    // Check for group indicators FIRST (more specific than category)
+    // Check for ORDERS before PRODUCTS (orders also have prices!)
+    // Look for order code patterns in OPTIONS: #ORD-xxx, ORD-xxx
+    const hasOrderCodeInOptions = options.some((o) => /#?ORD-\d+/i.test(o.label))
+    // Or order list indicators in text (but NOT just "ordine" which appears in "Ripeti ordine")
+    const hasOrderListCue = /lista.*ordin[ei]|ordin[ei].*lista|tuoi ordin[ei]|your orders|#ORD-|ORD-\d|\[consegnato\]|\[confermato\]|\[delivered\]|\[confirmed\]/i.test(lower)
+    
+    if (hasOrderCodeInOptions || hasOrderListCue) {
+      return "ORDERS"
+    }
+
+    // Check for group indicators (more specific than category)
     // Groups are sub-divisions created by LLM within a category
-    // Multilingual: "gruppi", "groups", "grupos", "sub-groups", etc.
     const hasGroupCue = /grupp[oi]|groups?|sub-?categor|sottocategor|grupos/i.test(lower)
     if (hasGroupCue) {
       return "GROUPS"
     }
 
     // Check for category indicators
-    // Multilingual: "categorie", "categories", "categorías", "catalog", etc.
     const hasCategoryCue =
       /categori[ae]s?|catalogo?|disponibil|catalog/i.test(lower) ||
       (options.some((o) => /\(\d+\s*(prodotti|items|productos|products)\)/i.test(o.label)) &&
@@ -440,10 +555,10 @@ export class OptionsMappingService {
       return "CATEGORIES"
     }
 
-    // Check for order indicators
-    const hasOrderCue = /ordin[ei]|#[A-Z0-9]/i.test(lower)
-    if (hasOrderCue) {
-      return "ORDERS"
+    // Check for price indicators → products (AFTER orders check)
+    const hasPrice = /€|euro/i.test(responseText)
+    if (hasPrice) {
+      return "PRODUCTS"
     }
 
     // Check for cart indicators
@@ -470,6 +585,7 @@ export class OptionsMappingService {
    */
   static cleanLabel(label: string): string {
     return label
+      .replace(/^#/, "") // Strip # prefix from order codes (e.g., #ORD-048-2025-9 → ORD-048-2025-9)
       .replace(/\s*\(\d+\s*(prodotti|items|servizi)?\)\s*/gi, " ") // (7 prodotti)
       .replace(/\s*-\s*€[\d.,]+.*$/i, "") // - €12.50 [...]
       .replace(/\s*\([A-Z0-9-]+\)\s*$/i, "") // (FROZ-CAR-001) at end

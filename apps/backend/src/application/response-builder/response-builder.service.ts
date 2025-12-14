@@ -27,6 +27,7 @@ import {
   FAQData,
   CustomerProfileData,
   OfferData,
+  AgentInfoData,
 } from "../data-loader/data-loader.service"
 
 // ================================================================================
@@ -45,6 +46,8 @@ export type ResponseType =
   | "ORDER_LIST"
   | "ORDER_DETAIL"
   | "ORDER_NOT_FOUND"
+  | "ORDER_ACTION"  // Action to execute (SEND_INVOICE, REPEAT_ORDER, SEND_CREDIT_NOTES)
+  | "AGENT_INFO"    // Customer's sales agent information
   | "IDENTITY"
   | "LOCATION"
   | "FAQ"  // FAQ response - LLM matches user query to FAQ answers
@@ -88,6 +91,7 @@ export interface ResponseData {
 
   // For customer info
   profile?: CustomerProfileData
+  agentInfo?: AgentInfoData  // Sales agent info for B2B customers
 
   // For offers
   offers?: OfferData[]
@@ -99,6 +103,9 @@ export interface ResponseData {
   categoryName?: string
   productGroups?: Array<{ number: number; name: string; productCount: number }>
   groupMapping?: Record<string, { nome: string; skus: string[] }>
+
+  // 🆕 For order actions (SEND_INVOICE, REPEAT_ORDER, etc.)
+  action?: "SEND_INVOICE" | "REPEAT_ORDER" | "SEND_CREDIT_NOTES"
 }
 
 export interface ListItem {
@@ -220,6 +227,12 @@ export class ResponseBuilderService {
 
       case "OFFERS":
         return this.buildOffersResponse(loadedData.offers, context)
+
+      case "ORDER_ACTION":
+        return this.buildOrderActionResponse(loadedData.action, context)
+
+      case "AGENT_INFO":
+        return this.buildAgentInfoResponse(loadedData.agentInfo, context)
 
       case "EMPTY":
         return this.buildEmptyResponse(intent.type, loadedData.reason, context)
@@ -603,6 +616,45 @@ export class ResponseBuilderService {
       formatting: {
         ...DEFAULT_FORMATTING,
         showNumbers: false,
+      },
+      context,
+    }
+  }
+
+  /**
+   * Build response for order actions (SEND_INVOICE, REPEAT_ORDER, SEND_CREDIT_NOTES)
+   * Returns ORDER_ACTION type for the chat-engine to execute the calling function
+   */
+  private buildOrderActionResponse(
+    action: "SEND_INVOICE" | "REPEAT_ORDER" | "SEND_CREDIT_NOTES",
+    context: ResponseContext
+  ): StructuredResponse {
+    return {
+      type: "ORDER_ACTION",
+      data: { action },
+      formatting: {
+        ...DEFAULT_FORMATTING,
+        showNumbers: false,
+      },
+      context,
+    }
+  }
+
+  /**
+   * Build agent info response for "who is my agent?" queries
+   * @see Feature 202 - Agent Variables
+   */
+  private buildAgentInfoResponse(
+    agentInfo: AgentInfoData,
+    context: ResponseContext
+  ): StructuredResponse {
+    return {
+      type: "AGENT_INFO",
+      data: { agentInfo },
+      formatting: {
+        ...DEFAULT_FORMATTING,
+        showNumbers: false,
+        showPrices: false,
       },
       context,
     }

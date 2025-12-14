@@ -87,6 +87,8 @@ export interface OrderData {
   itemCount: number
   createdAt: Date
   items?: OrderItemData[]
+  hasCreditNotes?: boolean
+  creditNotesCount?: number
 }
 
 export interface OrderItemData {
@@ -135,6 +137,19 @@ export interface OfferData {
   endDate: Date
 }
 
+/**
+ * Agent info for B2B customers
+ * @see Feature 202 - Agent Variables
+ */
+export interface AgentInfoData {
+  hasAgent: boolean
+  name?: string
+  email?: string
+  phone?: string
+  reason?: "workspace_no_agents" | "no_agent_assigned"
+  message?: string
+}
+
 // ================================================================================
 // LOADED DATA UNION TYPE
 // ================================================================================
@@ -151,6 +166,8 @@ export type LoadedData =
   | { type: "FAQ"; faqs: FAQData[]; query: string }
   | { type: "PROFILE"; profile: CustomerProfileData }
   | { type: "OFFERS"; offers: OfferData[] }
+  | { type: "ORDER_ACTION"; action: "SEND_INVOICE" | "REPEAT_ORDER" | "SEND_CREDIT_NOTES"; orderCode?: string }
+  | { type: "AGENT_INFO"; agentInfo: AgentInfoData }
   | { type: "EMPTY"; reason: string }
   | { type: "ERROR"; error: string }
 
@@ -238,6 +255,9 @@ export class DataLoaderService {
         case "VIEW_PROFILE":
           // Load customer profile (includes discount info)
           return this.loadCustomerProfile(workspaceId, customerId)
+        case "SHOW_AGENT_INFO":
+          // Load agent info for B2B customers
+          return this.loadAgentInfo(workspaceId, customerId)
         default:
           return { type: "EMPTY", reason: "support_intent" }
       }
@@ -265,11 +285,32 @@ export class DataLoaderService {
         
         case "PRODUCTS":
           // User selected a product → load product detail
+          // 🆕 FIX: Use SKU if available (more reliable than name search)
+          if (selectIntent.skus && selectIntent.skus.length > 0) {
+            logger.info("📦 [DataLoader] Loading product by SKU (reliable)", {
+              sku: selectIntent.skus[0],
+            })
+            return this.loadProductBySku(workspaceId, customerDiscount, selectIntent.skus[0])
+          }
+          // Fallback to name search (less reliable)
           return this.loadProductByName(workspaceId, customerDiscount, cleanedValue)
         
         case "ORDERS":
           // User selected an order → load order details
+          // FALLBACK: If cleanedValue looks like an action (not an order code), treat it as an action
+          // This handles legacy mappings where ORDER_ACTIONS was saved as ORDERS
+          if (/fattura|invoice|ripeti|repeat|nota di credito|nota credito|credit note/i.test(cleanedValue)) {
+            logger.info("📦 [DataLoader] ORDERS listType but value looks like action, treating as ORDER_ACTION", {
+              cleanedValue,
+            })
+            return this.parseOrderAction(cleanedValue)
+          }
           return this.loadOrderStatus(workspaceId, customerId, cleanedValue)
+        
+        case "ORDER_ACTIONS":
+          // User selected an action from order detail options
+          // Parse the action from the label
+          return this.parseOrderAction(cleanedValue)
         
         case "CART_ITEMS":
           // User selected a cart item → could be for removal/update
@@ -414,6 +455,59 @@ export class DataLoaderService {
     } catch (error) {
       logger.error("❌ [DataLoader] Error loading products by category", { error })
       return { type: "ERROR", error: "Failed to load products" }
+    }
+  }
+
+  /**
+   * 🆕 Load product by SKU (exact match - more reliable than name search)
+   */
+  private async loadProductBySku(
+    workspaceId: string,
+    customerDiscount: number,
+    sku: string
+  ): Promise<LoadedData> {
+    try {
+      const product = await this.prisma.products.findFirst({
+        where: {
+          workspaceId,
+          isActive: true,
+          sku: sku,
+        },
+        select: {
+          id: true,
+          name: true,
+          sku: true,
+          description: true,
+          price: true,
+          stock: true,
+          imageUrl: true,
+          region: true,
+          formato: true,
+          certifications: true,
+          allergens: true,
+          productCategories: {
+            select: {
+              category: { select: { id: true, name: true } },
+            },
+          },
+        },
+      })
+
+      if (!product) {
+        logger.warn("📦 [DataLoader] Product not found by SKU, falling back to name search", { sku })
+        return { type: "PRODUCT_DETAIL", product: null }
+      }
+
+      logger.info("📦 [DataLoader] Product found by SKU", { 
+        sku, 
+        productName: product.name 
+      })
+      
+      const productData = this.mapProduct(product, customerDiscount)
+      return { type: "PRODUCT_DETAIL", product: productData }
+    } catch (error) {
+      logger.error("❌ [DataLoader] Error loading product by SKU", { sku, error })
+      return { type: "ERROR", error: "Failed to load product" }
     }
   }
 
@@ -793,6 +887,14 @@ export class DataLoaderService {
               product: { select: { name: true } },
             },
           },
+          creditNotes: {
+            select: {
+              id: true,
+              creditNoteCode: true,
+              amount: true,
+              reason: true,
+            },
+          },
         },
       })
 
@@ -813,12 +915,43 @@ export class DataLoaderService {
             unitPrice: item.unitPrice,
             totalPrice: item.totalPrice,
           })),
+          hasCreditNotes: order.creditNotes && order.creditNotes.length > 0,
+          creditNotesCount: order.creditNotes?.length || 0,
         },
       }
     } catch (error) {
       logger.error("❌ [DataLoader] Error loading order", { error })
       return { type: "ERROR", error: "Failed to load order" }
     }
+  }
+
+  /**
+   * Parse order action from user selection
+   * Maps numbered action to calling function (multilingual support via LLM translation layer)
+   * Base labels are in English, translated by LLM formatter
+   */
+  private parseOrderAction(selectedLabel: string): LoadedData {
+    const lower = selectedLabel.toLowerCase()
+    
+    logger.info("📦 [DataLoader] Parsing order action", { selectedLabel })
+    
+    // Invoice: English "invoice" or Italian "fattura"
+    if (lower.includes("invoice") || lower.includes("fattura")) {
+      return { type: "ORDER_ACTION", action: "SEND_INVOICE" }
+    }
+    
+    // Repeat order: English "repeat" or Italian "ripeti"
+    if (lower.includes("repeat") || lower.includes("ripeti")) {
+      return { type: "ORDER_ACTION", action: "REPEAT_ORDER" }
+    }
+    
+    // Credit note: English "credit note" or Italian "nota di credito"
+    if (lower.includes("credit note") || lower.includes("nota di credito") || lower.includes("nota credito")) {
+      return { type: "ORDER_ACTION", action: "SEND_CREDIT_NOTES" }
+    }
+    
+    logger.warn("⚠️ [DataLoader] Unknown order action", { selectedLabel })
+    return { type: "EMPTY", reason: "unknown_order_action" }
   }
 
   // ================================================================================
@@ -961,6 +1094,104 @@ export class DataLoaderService {
     } catch (error) {
       logger.error("❌ [DataLoader] Error loading customer profile", { error })
       return { type: "ERROR", error: "Failed to load profile" }
+    }
+  }
+
+  /**
+   * Load agent info for B2B customer
+   * @see Feature 202 - Agent Variables
+   * 
+   * Returns agent details if:
+   * 1. Workspace has hasSalesAgents=true
+   * 2. Customer has a salesId assigned
+   * 
+   * Otherwise returns a message indicating no agent is assigned
+   */
+  private async loadAgentInfo(workspaceId: string, customerId: string): Promise<LoadedData> {
+    try {
+      // First check if workspace has sales agents enabled
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: {
+          hasSalesAgents: true,
+          name: true,
+        },
+      })
+
+      if (!workspace) {
+        return { type: "ERROR", error: "Workspace not found" }
+      }
+
+      // If workspace doesn't use sales agents, return appropriate message
+      if (!workspace.hasSalesAgents) {
+        logger.info("📦 [DataLoader] Workspace doesn't use sales agents", { workspaceId })
+        return {
+          type: "AGENT_INFO",
+          agentInfo: {
+            hasAgent: false,
+            reason: "workspace_no_agents",
+            message: "This workspace doesn't use dedicated sales agents. For assistance, please contact our support team.",
+          },
+        }
+      }
+
+      // Load customer with agent info
+      const customer = await this.prisma.customers.findFirst({
+        where: {
+          id: customerId,
+          workspaceId,
+        },
+        select: {
+          salesId: true,
+          sales: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true,
+            },
+          },
+        },
+      })
+
+      if (!customer) {
+        return { type: "ERROR", error: "Customer not found" }
+      }
+
+      // If customer has no assigned agent
+      if (!customer.salesId || !customer.sales) {
+        logger.info("📦 [DataLoader] Customer has no assigned agent", { workspaceId, customerId })
+        return {
+          type: "AGENT_INFO",
+          agentInfo: {
+            hasAgent: false,
+            reason: "no_agent_assigned",
+            message: "You don't have a dedicated agent assigned yet. For assistance, please contact our support team.",
+          },
+        }
+      }
+
+      // Return agent info
+      const agent = customer.sales
+      logger.info("📦 [DataLoader] Loaded agent info", {
+        workspaceId,
+        customerId,
+        agentId: agent.id,
+      })
+
+      return {
+        type: "AGENT_INFO",
+        agentInfo: {
+          hasAgent: true,
+          name: `${agent.firstName || ""} ${agent.lastName || ""}`.trim(),
+          email: agent.email || undefined,
+          phone: agent.phone || undefined,
+        },
+      }
+    } catch (error) {
+      logger.error("❌ [DataLoader] Error loading agent info", { error })
+      return { type: "ERROR", error: "Failed to load agent info" }
     }
   }
 

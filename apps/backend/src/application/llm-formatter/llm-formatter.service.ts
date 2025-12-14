@@ -22,7 +22,7 @@ import {
   ListItem,
   GroupedItems,
 } from "../response-builder/response-builder.service"
-import { ProductData, OrderData, CartData, WorkspaceIdentityData, WorkspaceLocationData, FAQData, CustomerProfileData, OfferData } from "../data-loader/data-loader.service"
+import { ProductData, OrderData, CartData, WorkspaceIdentityData, WorkspaceLocationData, FAQData, CustomerProfileData, OfferData, AgentInfoData } from "../data-loader/data-loader.service"
 
 // ================================================================================
 // FORMATTER RESULT
@@ -49,21 +49,21 @@ export interface FormatterOptions {
 // PROMPT TEMPLATES (in Italian - base language)
 // ================================================================================
 
-const BASE_SYSTEM_PROMPT = `Sei un assistente e-commerce. Il tuo UNICO compito è formattare i dati forniti in linguaggio naturale.
+const BASE_SYSTEM_PROMPT = `You are an e-commerce assistant. Your ONLY task is to format the provided data into natural language.
 
-REGOLE CRITICHE:
-1. NON inventare dati - usa SOLO i dati forniti
-2. NON aggiungere o rimuovere elementi dalla lista
-3. NON cambiare prezzi, quantità o nomi
-4. Formatta in modo naturale e amichevole
-5. Usa la lingua richiesta per la risposta
-6. MANTIENI la numerazione esattamente come fornita
-7. I numeri servono al cliente per selezionare - NON cambiarli
+CRITICAL RULES:
+1. DO NOT invent data - use ONLY the provided data
+2. DO NOT add or remove items from the list
+3. DO NOT change prices, quantities or names
+4. Format naturally and friendly
+5. Use the requested language for the response
+6. KEEP the numbering exactly as provided
+7. Numbers are for customer selection - DO NOT change them
 
-FORMATO OUTPUT:
-- Liste: mantieni numerazione (1, 2, 3...)
-- Prezzi: €XX.XX
-- Mostra totale "(N elementi)" se richiesto
+OUTPUT FORMAT:
+- Lists: keep numbering (1, 2, 3...)
+- Prices: €XX.XX
+- Show total "(N items)" if requested
 - Emoji: 🛒 🍷 📦 ✅ ❌ etc.`
 
 /**
@@ -77,8 +77,8 @@ function buildSystemPrompt(customAiRules?: string | null): string {
   
   return `${BASE_SYSTEM_PROMPT}
 
-## 🤖 REGOLE PERSONALIZZATE (PRIORITÀ ALTA)
-Le seguenti regole sono state definite dal proprietario del negozio e hanno la priorità sulle regole generali:
+## 🤖 CUSTOM RULES (HIGH PRIORITY)
+The following rules have been defined by the shop owner and take priority over general rules:
 
 ${customAiRules}`
 }
@@ -485,24 +485,28 @@ export class LLMFormatterService {
         parts.push(this.formatOffersPrompt(response))
         break
 
+      case "AGENT_INFO":
+        parts.push(this.formatAgentInfoPrompt(response))
+        break
+
       default:
         parts.push(`Dati: ${JSON.stringify(response.data)}`)
     }
 
     // Add formatting instructions
     parts.push("")
-    parts.push("ISTRUZIONI FORMATTAZIONE:")
+    parts.push("FORMATTING INSTRUCTIONS:")
     if (response.formatting.showNumbers) {
-      parts.push("- Usa lista numerata (1, 2, 3...) per permettere selezione")
+      parts.push("- Use numbered list (1, 2, 3...) to allow selection")
     }
     if (response.formatting.showPrices) {
-      parts.push("- Mostra i prezzi in formato €XX.XX")
+      parts.push("- Show prices in €XX.XX format")
     }
     if (response.formatting.showTotal && response.data.count !== undefined) {
-      parts.push(`- Mostra totale: "(${response.data.count} elementi)"`)
+      parts.push(`- Show total: "(${response.data.count} items)"`)
     }
     if (response.context.hasDiscount) {
-      parts.push(`- Il cliente ha uno sconto del ${response.context.discountPercent}%, mostra entrambi i prezzi`)
+      parts.push(`- Customer has a ${response.context.discountPercent}% discount, show both prices`)
     }
 
     return parts.join("\n")
@@ -510,7 +514,7 @@ export class LLMFormatterService {
 
   private formatCategoryListPrompt(response: StructuredResponse): string {
     const items = response.data.items || []
-    const lines = ["CATEGORIE DISPONIBILI:"]
+    const lines = ["AVAILABLE CATEGORIES:"]
     for (const item of items) {
       lines.push(`${item.number}. ${item.name}${item.extra ? ` (${item.extra})` : ""}`)
     }
@@ -519,7 +523,7 @@ export class LLMFormatterService {
 
   private formatProductListPrompt(response: StructuredResponse): string {
     const items = response.data.items || []
-    const lines = ["PRODOTTI:"]
+    const lines = ["PRODUCTS:"]
     for (const item of items) {
       // Clean format for user: "**1.** Pecorino Romano DOP - €6.20" (NO SKU, NO category)
       let line = `**${item.number}.** ${item.name} - €${item.price?.toFixed(2)}`
@@ -530,21 +534,21 @@ export class LLMFormatterService {
     }
     // Add selection prompt - user-friendly, no technical details
     lines.push("")
-    lines.push("IMPORTANTE: Dopo la lista, chiedi 'A quale prodotto sei interessato? 🛒' o simile. NON mostrare codici SKU o categorie all'utente.")
+    lines.push("IMPORTANT: After the list, ask 'Which product are you interested in? 🛒' or similar. DO NOT show SKU codes or categories to the user.")
     return lines.join("\n")
   }
 
   private formatProductGroupedPrompt(response: StructuredResponse): string {
     const groups = response.data.groups || []
-    const lines = ["PRODOTTI RAGGRUPPATI:"]
+    const lines = ["GROUPED PRODUCTS:"]
     for (const group of groups) {
       lines.push("")
-      lines.push(`📁 **${group.groupName}** (${group.variantCount} varianti):`)
+      lines.push(`📁 **${group.groupName}** (${group.variantCount} variants):`)
       for (const item of group.items) {
         // Clean format for user: "**1.** Pecorino Romano DOP - €6.20" (NO SKU visible)
         let line = `   **${item.number}.** ${item.name} - €${item.price?.toFixed(2)}`
         if (item.priceWithDiscount) {
-          line += ` (scontato: €${item.priceWithDiscount.toFixed(2)})`
+          line += ` (discounted: €${item.priceWithDiscount.toFixed(2)})`
         }
         lines.push(line)
       }
@@ -561,89 +565,89 @@ export class LLMFormatterService {
    */
   private formatSmartGroupingPrompt(response: StructuredResponse): string {
     const items = response.data.items || []
-    const categoryName = response.data.categoryName || "Prodotti"
+    const categoryName = response.data.categoryName || "Products"
     
     // Build product list with SKUs for LLM to use in grouping
     const productList = items.map((item: any) => {
       const sku = item.sku || item.code || 'N/A'
-      let line = `- ${item.name} (SKU: ${sku}, prezzo: €${item.price?.toFixed(2) || 'N/A'})`
+      let line = `- ${item.name} (SKU: ${sku}, price: €${item.price?.toFixed(2) || 'N/A'})`
       if (item.description) line += ` - ${item.description.substring(0, 80)}`
       return line
     }).join("\n")
 
-    return `RAGGRUPPAMENTO PRODOTTI:
+    return `PRODUCT GROUPING:
 
-Categoria: ${categoryName}
-Prodotti (${items.length} totali):
+Category: ${categoryName}
+Products (${items.length} total):
 ${productList}
 
-COMPITO: Crea 2-4 gruppi logici basandoti sulle caratteristiche dei prodotti.
+TASK: Create 2-4 logical groups based on product characteristics.
 
-REGOLE:
-- Ogni prodotto in UN SOLO gruppo
-- Somma prodotti nei gruppi = ${items.length}
-- Usa caratteristiche reali (freschi/stagionati, morbidi/duri, piccanti/delicati)
-- NON usare DOP/IGP come criterio di raggruppamento
+RULES:
+- Each product in ONE group only
+- Sum of products in groups = ${items.length}
+- Use real characteristics (fresh/aged, soft/hard, spicy/mild)
+- DO NOT use DOP/IGP as grouping criteria
 
-FORMATO RISPOSTA (ESATTO - MANTIENI QUESTO FORMATO):
+RESPONSE FORMAT (EXACT - KEEP THIS FORMAT):
 
-Ecco i gruppi di ${categoryName}:
+Here are the ${categoryName} groups:
 
-1. NomeGruppo1 (N prodotti)
-2. NomeGruppo2 (N prodotti)
+1. GroupName1 (N products)
+2. GroupName2 (N products)
 
-Quale gruppo ti interessa?
+Which group are you interested in?
 
 ---JSON_MAPPING---
-{"1":{"nome":"NomeGruppo1","skus":["SKU1","SKU2"]},"2":{"nome":"NomeGruppo2","skus":["SKU3","SKU4"]}}
+{"1":{"nome":"GroupName1","skus":["SKU1","SKU2"]},"2":{"nome":"GroupName2","skus":["SKU3","SKU4"]}}
 ---END_JSON---
 
-CRITICO: 
-- Mostra SOLO gruppi numerati, NO singoli prodotti, NO prezzi
-- Dopo "Quale gruppo ti interessa?" DEVI aggiungere il JSON_MAPPING
-- Nel JSON usa i numeri dei gruppi (1, 2, 3...) come chiavi
-- Includi TUTTI gli SKU, ogni prodotto deve apparire in un solo gruppo`
+CRITICAL: 
+- Show ONLY numbered groups, NO individual products, NO prices
+- After "Which group are you interested in?" you MUST add the JSON_MAPPING
+- In JSON use group numbers (1, 2, 3...) as keys
+- Include ALL SKUs, each product must appear in only one group`
   }
 
   private formatProductDetailPrompt(response: StructuredResponse): string {
     const p = response.data.product
-    if (!p) return "Prodotto non trovato"
+    if (!p) return "Product not found"
 
     const lines = [
-      "DETTAGLIO PRODOTTO:",
-      `Nome: ${p.name}`,
-      `Codice: ${p.sku || "N/A"}`, // 🆕 SKU for cart operations
-      `Prezzo: €${p.price.toFixed(2)}`,
+      "PRODUCT DETAIL:",
+      `Name: ${p.name}`,
+      `Code: ${p.sku || "N/A"}`, // 🆕 SKU for cart operations
+      `Price: €${p.price.toFixed(2)}`,
     ]
 
     if (p.priceWithDiscount) {
-      lines.push(`Prezzo scontato: €${p.priceWithDiscount.toFixed(2)}`)
+      lines.push(`Discounted price: €${p.priceWithDiscount.toFixed(2)}`)
     }
     if (p.description) {
-      lines.push(`Descrizione: ${p.description}`)
+      lines.push(`Description: ${p.description}`)
     }
     if (p.region) {
-      lines.push(`Regione: ${p.region}`)
+      lines.push(`Region: ${p.region}`)
     }
     if (p.formato) {
-      lines.push(`Formato: ${p.formato}`)
+      lines.push(`Format: ${p.formato}`)
     }
     if (p.certifications.length > 0) {
-      lines.push(`Certificazioni: ${p.certifications.join(", ")}`)
+      lines.push(`Certifications: ${p.certifications.join(", ")}`)
     }
-    lines.push(`Disponibilità: ${p.isAvailable ? "✅ Disponibile" : "❌ Non disponibile"}`)
+    lines.push(`Availability: ${p.isAvailable ? "✅ Available" : "❌ Not available"}`)
     // Add cart prompt with quantity question
     lines.push("")
-    lines.push(`IMPORTANTE: Dopo i dettagli, chiedi 'Vuoi aggiungerlo al carrello? Se sì, quanti? 🛒' oppure 'Lo aggiungo al carrello? Dimmi quanti ne vuoi! 🛍️'. NON mostrare codici SKU all'utente.`)
+    lines.push(`IMPORTANT: After the details, ask 'Would you like to add it to cart? If yes, how many? 🛒' or 'Shall I add it to cart? Tell me how many you want! 🛍️'. DO NOT show SKU codes to the user.`)
 
     return lines.join("\n")
   }
 
   private formatCartPrompt(response: StructuredResponse): string {
     const cart = response.data.cart
-    if (!cart) return "Carrello non trovato"
+    if (!cart) return "Cart not found"
 
-    const lines = ["CARRELLO:"]
+    const lines = ["CART:"]
     let totalQuantity = 0
     for (const item of response.data.items || []) {
       // item.extra contains quantity in format "8×"
@@ -654,38 +658,52 @@ CRITICO:
       lines.push(`${item.number}. ${item.extra || "1×"} ${item.name} - €${item.price?.toFixed(2)}`)
     }
     lines.push("")
-    lines.push(`TOTALE: €${cart.totalAmount.toFixed(2)} (${totalQuantity} articol${totalQuantity === 1 ? "o" : "i"})`)
+    lines.push(`TOTAL: €${cart.totalAmount.toFixed(2)} (${totalQuantity} item${totalQuantity === 1 ? "" : "s"})`)
 
     return lines.join("\n")
   }
 
   private formatOrderListPrompt(response: StructuredResponse): string {
     const items = response.data.items || []
-    const lines = ["I TUOI ORDINI:"]
+    const lines = ["YOUR ORDERS:"]
     for (const item of items) {
       lines.push(`${item.number}. ${item.name} - €${item.price?.toFixed(2)} [${item.extra}]`)
     }
+    // Add selection prompt so user knows to type a number
+    lines.push("")
+    lines.push("IMPORTANT: After the list, ask 'Which order would you like to view? Type the number.' or similar.")
     return lines.join("\n")
   }
 
   private formatOrderDetailPrompt(response: StructuredResponse): string {
     const order = response.data.order
-    if (!order) return "Ordine non trovato"
+    if (!order) return "Order not found"
 
     const lines = [
-      "DETTAGLIO ORDINE:",
-      `Codice: #${order.code}`,
-      `Stato: ${order.status}`,
-      `Totale: €${order.totalAmount.toFixed(2)}`,
-      `Data: ${order.createdAt.toLocaleDateString()}`,
+      "ORDER DETAIL:",
+      `Code: #${order.code}`,
+      `Status: ${order.status}`,
+      `Total: €${order.totalAmount.toFixed(2)}`,
+      `Date: ${order.createdAt.toLocaleDateString()}`,
     ]
 
     if (order.items && order.items.length > 0) {
       lines.push("")
-      lines.push("Articoli:")
+      lines.push("Items:")
       for (const item of order.items) {
         lines.push(`• ${item.quantity}× ${item.productName} - €${item.totalPrice.toFixed(2)}`)
       }
+    }
+
+    // Add action options (MUST be numbered for fast-path selection)
+    lines.push("")
+    lines.push("What would you like to do?")
+    lines.push("1. 📄 Download invoice")
+    lines.push("2. 🔄 Repeat order")
+    
+    // Only show credit note option if order has credit notes
+    if (order.hasCreditNotes) {
+      lines.push("3. 📋 Download credit note")
     }
 
     return lines.join("\n")
@@ -693,12 +711,12 @@ CRITICO:
 
   private formatIdentityPrompt(response: StructuredResponse): string {
     const identity = response.data.identity
-    if (!identity) return "Informazioni non disponibili"
+    if (!identity) return "Information not available"
 
-    const lines = ["CHI SIAMO:"]
-    lines.push(`Nome: ${identity.name}`)
+    const lines = ["WHO WE ARE:"]
+    lines.push(`Name: ${identity.name}`)
     if (identity.description) {
-      lines.push(`Descrizione: ${identity.description}`)
+      lines.push(`Description: ${identity.description}`)
     }
     if (identity.botName) {
       lines.push(`Bot: ${identity.botName}`)
@@ -709,14 +727,14 @@ CRITICO:
 
   private formatLocationPrompt(response: StructuredResponse): string {
     const location = response.data.location
-    if (!location) return "Informazioni non disponibili"
+    if (!location) return "Information not available"
 
-    const lines = ["DOVE SIAMO:"]
+    const lines = ["WHERE WE ARE:"]
     if (location.address) {
-      lines.push(`Indirizzo: ${location.address}`)
+      lines.push(`Address: ${location.address}`)
     }
     if (location.phone) {
-      lines.push(`Telefono: ${location.phone}`)
+      lines.push(`Phone: ${location.phone}`)
     }
     if (location.email) {
       lines.push(`Email: ${location.email}`)
@@ -734,32 +752,32 @@ CRITICO:
     const query: string = data?.query || ""
 
     if (faqs.length === 0) {
-      return `Domanda utente: "${query}"\n\nNon ci sono FAQ disponibili. Rispondi in modo utile e generale.`
+      return `User question: "${query}"\n\nNo FAQs available. Respond in a helpful and general way.`
     }
 
     const lines = [
-      `DOMANDA UTENTE: "${query}"`,
+      `USER QUESTION: "${query}"`,
       "",
-      "FAQ DISPONIBILI:",
+      "AVAILABLE FAQs:",
       ""
     ]
 
     for (let i = 0; i < faqs.length; i++) {
       const faq = faqs[i]
-      lines.push(`[${i + 1}] Domanda: ${faq.question}`)
-      lines.push(`    Risposta: ${faq.answer}`)
+      lines.push(`[${i + 1}] Question: ${faq.question}`)
+      lines.push(`    Answer: ${faq.answer}`)
       if (faq.keywords && faq.keywords.length > 0) {
         lines.push(`    Keywords: ${faq.keywords.join(", ")}`)
       }
       lines.push("")
     }
 
-    lines.push("ISTRUZIONI:")
-    lines.push("1. Analizza la domanda dell'utente")
-    lines.push("2. Trova la FAQ più pertinente (usa semantica, non solo keyword match)")
-    lines.push("3. Rispondi usando la risposta della FAQ trovata, adattando il tono")
-    lines.push("4. Se nessuna FAQ è rilevante, rispondi che non hai informazioni specifiche")
-    lines.push("5. Sii conciso e diretto")
+    lines.push("INSTRUCTIONS:")
+    lines.push("1. Analyze the user's question")
+    lines.push("2. Find the most relevant FAQ (use semantics, not just keyword match)")
+    lines.push("3. Respond using the found FAQ answer, adapting the tone")
+    lines.push("4. If no FAQ is relevant, respond that you don't have specific information")
+    lines.push("5. Be concise and direct")
 
     return lines.join("\n")
   }
@@ -769,24 +787,24 @@ CRITICO:
    */
   private formatProfilePrompt(response: StructuredResponse): string {
     const profile = response.data.profile
-    if (!profile) return "Informazioni profilo non disponibili"
+    if (!profile) return "Profile information not available"
 
-    const lines = ["IL TUO PROFILO:"]
-    lines.push(`Nome: ${profile.name}`)
+    const lines = ["YOUR PROFILE:"]
+    lines.push(`Name: ${profile.name}`)
     
     if (profile.discount > 0) {
-      lines.push(`Sconto personale: ${profile.discount}%`)
+      lines.push(`Personal discount: ${profile.discount}%`)
       lines.push("")
-      lines.push("ISTRUZIONI:")
-      lines.push("- Conferma al cliente il suo sconto personale")
-      lines.push("- Spiega che lo sconto viene applicato automaticamente ai prezzi")
-      lines.push("- Sii cordiale e positivo")
+      lines.push("INSTRUCTIONS:")
+      lines.push("- Confirm the customer's personal discount")
+      lines.push("- Explain that the discount is automatically applied to prices")
+      lines.push("- Be friendly and positive")
     } else {
-      lines.push("Sconto personale: Nessuno sconto attivo")
+      lines.push("Personal discount: No active discount")
       lines.push("")
-      lines.push("ISTRUZIONI:")
-      lines.push("- Informa il cliente che non ha sconti attivi al momento")
-      lines.push("- Suggerisci di contattare l'assistenza per informazioni su promozioni")
+      lines.push("INSTRUCTIONS:")
+      lines.push("- Inform the customer they have no active discounts at the moment")
+      lines.push("- Suggest contacting support for information on promotions")
     }
 
     return lines.join("\n")
@@ -798,10 +816,10 @@ CRITICO:
   private formatOffersPrompt(response: StructuredResponse): string {
     const offers = response.data.offers || []
     if (offers.length === 0) {
-      return "Non ci sono offerte attive al momento."
+      return "There are no active offers at the moment."
     }
 
-    const lines = ["OFFERTE ATTIVE:"]
+    const lines = ["ACTIVE OFFERS:"]
     
     for (const offer of offers) {
       lines.push("")
@@ -810,22 +828,73 @@ CRITICO:
         lines.push(`   ${offer.description}`)
       }
       if (offer.discountPercent && offer.discountPercent > 0) {
-        lines.push(`   Sconto: ${offer.discountPercent}%`)
+        lines.push(`   Discount: ${offer.discountPercent}%`)
       }
       if (offer.categoryName) {
-        lines.push(`   Categoria: ${offer.categoryName}`)
+        lines.push(`   Category: ${offer.categoryName}`)
       }
       if (offer.endDate) {
         const endDate = new Date(offer.endDate)
-        lines.push(`   Valida fino al: ${endDate.toLocaleDateString("it-IT")}`)
+        lines.push(`   Valid until: ${endDate.toLocaleDateString()}`)
       }
     }
 
     lines.push("")
-    lines.push("ISTRUZIONI:")
-    lines.push("- Presenta le offerte in modo accattivante")
-    lines.push("- Enfatizza i vantaggi per il cliente")
-    lines.push("- Suggerisci di esplorare i prodotti in offerta")
+    lines.push("INSTRUCTIONS:")
+    lines.push("- Present the offers in an appealing way")
+    lines.push("- Emphasize the benefits for the customer")
+    lines.push("- Suggest exploring the products on offer")
+
+    return lines.join("\n")
+  }
+
+  /**
+   * Format agent info response - shows sales agent information
+   * @see Feature 202 - Agent Variables
+   */
+  private formatAgentInfoPrompt(response: StructuredResponse): string {
+    const agentInfo = response.data.agentInfo
+    if (!agentInfo) return "Agent information not available"
+
+    const lines: string[] = []
+
+    if (agentInfo.hasAgent) {
+      lines.push("YOUR SALES AGENT:")
+      lines.push(`Name: ${agentInfo.name}`)
+      
+      if (agentInfo.email) {
+        lines.push(`Email: ${agentInfo.email}`)
+      }
+      if (agentInfo.phone) {
+        lines.push(`Phone: ${agentInfo.phone}`)
+      }
+      
+      lines.push("")
+      lines.push("INSTRUCTIONS:")
+      lines.push("- Present the agent's contact information clearly")
+      lines.push("- Encourage the customer to reach out for personalized assistance")
+      lines.push("- Be friendly and helpful")
+    } else {
+      // No agent assigned or workspace doesn't use agents
+      if (agentInfo.reason === "workspace_no_agents") {
+        lines.push("NO DEDICATED AGENTS:")
+        lines.push("This business doesn't use dedicated sales agents.")
+        lines.push("")
+        lines.push("INSTRUCTIONS:")
+        lines.push("- Explain that the business doesn't use dedicated sales agents")
+        lines.push("- Offer to help with any questions via the chatbot")
+        lines.push("- Suggest contacting general support if needed")
+      } else {
+        // no_agent_assigned
+        lines.push("NO AGENT ASSIGNED:")
+        lines.push("You don't have a dedicated agent assigned yet.")
+        lines.push("")
+        lines.push("INSTRUCTIONS:")
+        lines.push("- Explain that no agent has been assigned yet")
+        lines.push("- Reassure the customer that they can still get help")
+        lines.push("- Offer to assist with any questions via the chatbot")
+      }
+    }
 
     return lines.join("\n")
   }
@@ -855,7 +924,7 @@ CRITICO:
 
   private fallbackCategoryList(response: StructuredResponse): string {
     const items = response.data.items || []
-    const lines = [`📋 Categorie (${items.length}):`]
+    const lines = [`📋 Categories (${items.length}):`]
     for (const item of items) {
       lines.push(`${item.number}. ${item.name}`)
     }
@@ -864,7 +933,7 @@ CRITICO:
 
   private fallbackProductList(response: StructuredResponse): string {
     const items = response.data.items || []
-    const lines = [`🍷 Prodotti (${items.length}):`]
+    const lines = [`🍷 Products (${items.length}):`]
     for (const item of items) {
       lines.push(`${item.number}. ${item.name} - €${item.price?.toFixed(2)}`)
     }
@@ -874,13 +943,13 @@ CRITICO:
   private fallbackCart(response: StructuredResponse): string {
     const cart = response.data.cart
     if (!cart || cart.isEmpty) {
-      return "🛒 Carrello vuoto"
+      return "🛒 Empty cart"
     }
-    const lines = ["🛒 Carrello:"]
+    const lines = ["🛒 Cart:"]
     for (const item of cart.items) {
       lines.push(`• ${item.quantity}× ${item.productName} - €${item.totalPrice.toFixed(2)}`)
     }
-    lines.push(`\nTotale: €${cart.totalAmount.toFixed(2)}`)
+    lines.push(`\nTotal: €${cart.totalAmount.toFixed(2)}`)
     return lines.join("\n")
   }
 

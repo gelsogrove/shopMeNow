@@ -144,6 +144,48 @@ export class ChatEngineService {
   }
 
   /**
+   * Helper: Replace user variables in calling function messages
+   * This handles {{nameUser}}, {{agentPhone}}, etc. that are NOT processed by PromptProcessor
+   * because calling functions return raw messages with placeholders.
+   */
+  private async replaceUserVariables(
+    message: string,
+    customerId: string,
+    workspaceId: string,
+    customerName?: string
+  ): Promise<string> {
+    let result = message
+
+    // Replace {{nameUser}} with customer name
+    if (result.includes("{{nameUser}}")) {
+      const name = customerName || await this.getCustomerName(customerId)
+      result = result.replace(/\{\{nameUser\}\}/g, name || "Customer")
+    }
+
+    // Replace {{agentPhone}} with workspace whatsapp phone
+    if (result.includes("{{agentPhone}}")) {
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { whatsappPhoneNumber: true },
+      })
+      result = result.replace(/\{\{agentPhone\}\}/g, workspace?.whatsappPhoneNumber || "support")
+    }
+
+    return result
+  }
+
+  /**
+   * Helper: Get customer name from database
+   */
+  private async getCustomerName(customerId: string): Promise<string | null> {
+    const customer = await this.prisma.customers.findUnique({
+      where: { id: customerId },
+      select: { name: true },
+    })
+    return customer?.name || null
+  }
+
+  /**
    * Helper: formatta con LLM includendo customAiRules dal workspace
    */
   private async formatWithCustomRules(
@@ -518,6 +560,67 @@ export class ChatEngineService {
               }
             )
             
+            // 📦 Handle ORDER_ACTION - execute calling function directly
+            if (structuredResponse.type === "ORDER_ACTION") {
+              const action = (structuredResponse.data as { action: string }).action
+              const orderCode = optionsMapping.currentOrderCode
+              
+              logger.info("📦 [CodeFirstLLM] ORDER_ACTION detected, executing calling function", {
+                action,
+                orderCode,
+              })
+              
+              if (!orderCode) {
+                logger.warn("⚠️ [CodeFirstLLM] No order code found for ORDER_ACTION")
+                return {
+                  message: "Mi dispiace, non ho trovato l'ordine di riferimento. Puoi dirmi il codice ordine?",
+                  agentType: AgentType.ORDER_TRACKING,
+                  wasHandled: true,
+                  intent: "ORDER_ACTION",
+                  confidence: "HIGH",
+                  source: "PATTERN",
+                  processingTimeMs: Date.now() - startTime,
+                  llmUsed: false,
+                }
+              }
+              
+              // Execute the appropriate calling function
+              const actionResult = await this.executeOrderAction(
+                action,
+                orderCode,
+                input.workspaceId,
+                input.customerId
+              )
+              
+              // 🔧 Replace user variables in the message ({{nameUser}}, {{agentPhone}}, etc.)
+              const processedMessage = await this.replaceUserVariables(
+                actionResult.message,
+                input.customerId,
+                input.workspaceId,
+                input.customerName
+              )
+              
+              // Save messages to history
+              await this.saveMessages(
+                input.workspaceId,
+                input.customerId,
+                conversationId,
+                input.message,
+                processedMessage
+              )
+              
+              return {
+                message: processedMessage,
+                agentType: AgentType.ORDER_TRACKING,
+                wasHandled: true,
+                intent: "ORDER_ACTION",
+                confidence: "HIGH",
+                source: "PATTERN",
+                processingTimeMs: Date.now() - startTime,
+                llmUsed: false,
+              }
+            }
+            
             // Format with LLM
             let finalMessage = structuredResponse.text || ""
             let llmUsed = false
@@ -564,12 +667,25 @@ export class ChatEngineService {
             
             // Save options mapping for next selection
             // 🔧 FIX: Pass groupMapping from formatter result for smart grouping!
+            // 🆕 FIX: Pass items with SKUs for product lists - no more text parsing!
+            const itemsWithSkus = structuredResponse.data.items?.map((item: any) => ({
+              number: item.number,
+              name: item.name,
+              sku: item.sku,
+              id: item.id,
+            }))
+            
             await this.optionsMappingService.saveMapping({
               workspaceId: input.workspaceId,
               conversationId,
               customerId: input.customerId,
               responseText: responseWithSkus,
               groupMapping: groupMappingFromFormatter,
+              items: itemsWithSkus,
+              listType: structuredResponse.type === "PRODUCT_LIST" ? "PRODUCTS" 
+                      : structuredResponse.type === "ORDER_LIST" ? "ORDERS"
+                      : structuredResponse.type === "CATEGORY_LIST" ? "CATEGORIES"
+                      : undefined,
             })
             
             // 🛒 Set pending action for PRODUCT_DETAIL (add to cart prompt)
@@ -588,6 +704,19 @@ export class ChatEngineService {
               logger.info("🛒 [CodeFirstLLM] FAST-PATH: Set pending ADD_TO_CART action", {
                 productId: product.sku || product.id,
                 productName: product.name,
+              })
+            }
+            
+            // 📦 Save order code for ORDER_DETAIL (for order actions: fattura, ripeti, nota credito)
+            if (structuredResponse.type === "ORDER_DETAIL" && structuredResponse.data.order) {
+              const order = structuredResponse.data.order
+              await this.optionsMappingService.setCurrentOrderCode({
+                workspaceId: input.workspaceId,
+                conversationId,
+                orderCode: order.code,
+              })
+              logger.info("📦 [CodeFirstLLM] FAST-PATH: Set current order code for actions", {
+                orderCode: order.code,
               })
             }
             
@@ -851,30 +980,33 @@ export class ChatEngineService {
             .pop()?.content?.toLowerCase() || ""
           
           logger.info("🔍 [CodeFirstLLM] CONFIRM without pendingAction - checking context", {
-            lastAssistantMessagePreview: lastAssistantMessage.substring(0, 100),
+            lastAssistantMessagePreview: lastAssistantMessage.substring(0, 200),
           })
           
+          // 🎯 PRIORITY ORDER: Most specific patterns first!
+          // Check for "confermo/ok per procedere" prompts FIRST (e.g., after RepeatOrder)
+          if (lastAssistantMessage.includes("confermo") || 
+              lastAssistantMessage.includes("procedere con l'ordine") ||
+              lastAssistantMessage.includes("checkout")) {
+            logger.info("🎯 [CodeFirstLLM] Context: User confirmed order → START_CHECKOUT")
+            intentResult.intent = { type: "START_CHECKOUT" }
+          }
           // If bot asked "Vuoi vedere i nostri prodotti?" → show categories
-          if (lastAssistantMessage.includes("prodotti") || 
+          else if (lastAssistantMessage.includes("prodotti") || 
               lastAssistantMessage.includes("catalogo") ||
               lastAssistantMessage.includes("categorie")) {
             logger.info("🎯 [CodeFirstLLM] Context: User wants to see products → SHOW_CATEGORIES")
-            intentResult.intent = { type: "SHOW_CATEGORIES" }  // 🔧 Use correct intent type
+            intentResult.intent = { type: "SHOW_CATEGORIES" }
           }
           // If bot asked "Vuoi vedere il carrello?" → show cart
-          else if (lastAssistantMessage.includes("carrello")) {
+          else if (lastAssistantMessage.includes("carrello") && !lastAssistantMessage.includes("ordine")) {
             logger.info("🎯 [CodeFirstLLM] Context: User wants to see cart → VIEW_CART")
             intentResult.intent = { type: "VIEW_CART" }
-          }
-          // If bot asked "Vuoi procedere con l'ordine?" → start checkout
-          else if (lastAssistantMessage.includes("ordine") || lastAssistantMessage.includes("checkout")) {
-            logger.info("🎯 [CodeFirstLLM] Context: User wants to checkout → START_CHECKOUT")
-            intentResult.intent = { type: "START_CHECKOUT" }
           }
           // Default: show categories (most common case)
           else {
             logger.info("🎯 [CodeFirstLLM] Context: Unknown, defaulting to SHOW_CATEGORIES")
-            intentResult.intent = { type: "SHOW_CATEGORIES" }  // 🔧 Use correct intent type
+            intentResult.intent = { type: "SHOW_CATEGORIES" }
           }
         }
       }
@@ -1553,13 +1685,119 @@ export class ChatEngineService {
    * Get message when e-commerce is disabled
    */
   private getEcommerceDisabledMessage(language: string): string {
-    const messages: Record<string, string> = {
-      it: "Mi dispiace, al momento non gestiamo vendite online. Posso aiutarti con informazioni o supporto. Come posso assisterti?",
-      en: "Sorry, we don't handle online sales at the moment. I can help you with information or support. How can I assist you?",
-      es: "Lo siento, no gestionamos ventas en línea por el momento. Puedo ayudarte con información o soporte. ¿Cómo puedo asistirte?",
-      pt: "Desculpe, não gerenciamos vendas online no momento. Posso ajudá-lo com informações ou suporte. Como posso ajudá-lo?",
+    // NOTE: Do not hardcode translations here; translation layer handles localization.
+    return "Sorry, we don't handle online sales at the moment. I can help you with information or support. How can I assist you?"
+  }
+
+  /**
+   * Execute order action (calling functions for invoice, repeat order, credit notes)
+   * @see Feature 202 - Order Selection & Invoice Actions
+   */
+  private async executeOrderAction(
+    action: string,
+    orderCode: string,
+    workspaceId: string,
+    customerId: string
+  ): Promise<{ message: string; success: boolean }> {
+    logger.info("📦 [executeOrderAction] Executing order action", {
+      action,
+      orderCode,
+      workspaceId,
+      customerId,
+    })
+
+    try {
+      switch (action) {
+        case "SEND_INVOICE": {
+          // Import and call sendInvoice calling function
+          const { sendInvoice } = await import("../../domain/calling-functions/sendInvoice")
+          const result = await sendInvoice({
+            customerId,
+            workspaceId,
+            orderId: orderCode,  // sendInvoice accepts orderCode or orderId
+          })
+          return {
+            message: result.message || "Invoice sent successfully!",
+            success: result.success,
+          }
+        }
+
+        case "REPEAT_ORDER": {
+          // Import and call repeatOrder calling function
+          const { repeatOrder } = await import("../../domain/calling-functions/repeatOrder")
+          const result = await repeatOrder({
+            customerId,
+            workspaceId,
+            orderCode,
+          })
+          
+          // Handle stock unavailability (ABORT message per spec)
+          if (!result.success && result.error?.includes("stock")) {
+            return {
+              message: "Sorry, the order can't be repeated because one or more items are out of stock. Do you want me to help you find a similar product?",
+              success: false,
+            }
+          }
+          
+          return {
+            message: result.message,
+            success: result.success,
+          }
+        }
+
+        case "SEND_CREDIT_NOTES": {
+          // Get credit notes for this order
+          const creditNotes = await this.prisma.creditNote.findMany({
+            where: {
+              order: {
+                orderCode,
+                workspaceId,
+                customerId,
+              },
+            },
+            include: {
+              order: true,
+            },
+          })
+
+          if (creditNotes.length === 0) {
+            return {
+              message: "There are no credit notes available for this order.",
+              success: false,
+            }
+          }
+
+          // Format credit notes list for download
+          // Per spec: naming is {orderCode}_notadicredito{N}.pdf
+          const notesList = creditNotes.map((cn, index) => {
+            const fileName = `${orderCode}_notadicredito${index + 1}.pdf`
+            return `📋 ${fileName} - €${cn.amount.toFixed(2)}`
+          }).join("\n")
+
+          return {
+            message: `I found ${creditNotes.length} credit note(s) for order ${orderCode}:\n\n${notesList}\n\nI emailed the credit notes to you.`,
+            success: true,
+          }
+        }
+
+        default:
+          logger.warn("⚠️ [executeOrderAction] Unknown action", { action })
+          return {
+            message: "Sorry, I didn't understand which action you want to run. Can you try again?",
+            success: false,
+          }
+      }
+    } catch (error) {
+      logger.error("❌ [executeOrderAction] Error executing action", { 
+        error, 
+        action, 
+        orderCode 
+      })
+      return {
+        message: "Sorry, something went wrong. Please try again later or contact support.",
+        success: false,
+      }
     }
-    return messages[language] || messages.it
   }
 
   /**

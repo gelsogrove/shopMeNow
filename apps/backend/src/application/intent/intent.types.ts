@@ -17,8 +17,10 @@ export type ListType =
   | "PRODUCTS"      // "1. Mozzarella - €7.10"
   | "GROUPS"        // "1. Formaggi Freschi (3)"
   | "ORDERS"        // "1. #ORD-001 - 05/12/2024"
+  | "ORDER_ACTIONS" // "1. Scarica fattura" (actions for a specific order)
   | "CART_ITEMS"    // "1. Mozzarella × 2"
   | "SERVICES"      // "1. Confezione Regalo - €30.00"
+  | "unknown"       // Fallback for unrecognized list types
 
 // =============================================================================
 // PRODUCT SEARCH INTENTS
@@ -131,6 +133,15 @@ export interface AskContactIntent {
 }
 
 // =============================================================================
+// AGENT INFO INTENT (B2B feature)
+// @see Feature 202 - Order Selection & Agent Variables
+// =============================================================================
+
+export interface ShowAgentInfoIntent {
+  type: "SHOW_AGENT_INFO"
+}
+
+// =============================================================================
 // SELECTION INTENTS (from numbered lists)
 // =============================================================================
 
@@ -232,6 +243,7 @@ export type Intent =
   | AskFAQIntent
   | RequestHumanIntent
   | AskContactIntent
+  | ShowAgentInfoIntent
   
   // Selection
   | SelectOptionIntent
@@ -341,6 +353,7 @@ export function isSupportIntent(intent: Intent): intent is
   | AskFAQIntent 
   | RequestHumanIntent
   | AskContactIntent
+  | ShowAgentInfoIntent
   | ViewProfileIntent {
   return [
     "ASK_IDENTITY",
@@ -348,6 +361,7 @@ export function isSupportIntent(intent: Intent): intent is
     "ASK_FAQ",
     "REQUEST_HUMAN",
     "ASK_CONTACT",
+    "SHOW_AGENT_INFO",
     "VIEW_PROFILE"
   ].includes(intent.type)
 }
