@@ -159,7 +159,7 @@ export class ConversationManager {
    */
   async saveAssistantMessage(
     params: Omit<SaveMessageParams, "role">
-  ): Promise<void> {
+  ): Promise<string | undefined> {
     try {
       let deliveryStatus = params.deliveryStatus || "not_queued" // Default: not queued unless enqueueing succeeds
       let customerPhone: string | null = null
@@ -172,7 +172,7 @@ export class ConversationManager {
           agentType: params.agentType,
         })
         // Don't save empty messages - this is a critical bug upstream
-        return
+        return undefined
       }
 
       // 🆕 Feature 181: If message is already marked as blocked, skip enqueueing entirely
@@ -246,8 +246,12 @@ export class ConversationManager {
           await this.conversationRepo.updateDeliveryStatus(messageId, "not_queued")
         }
       }
+      
+      // 🆕 Return the message ID for translation update
+      return messageId
     } catch (error) {
       logger.error("❌ Failed to save assistant message", error)
+      return undefined
     }
   }
 

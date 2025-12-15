@@ -453,6 +453,14 @@ export class LLMFormatterService {
         parts.push(this.formatProductDetailPrompt(response))
         break
 
+      case "SERVICE_LIST":
+        parts.push(this.formatServiceListPrompt(response))
+        break
+
+      case "SERVICE_DETAIL":
+        parts.push(this.formatServiceDetailPrompt(response))
+        break
+
       case "CART_VIEW":
         parts.push(this.formatCartPrompt(response))
         break
@@ -607,6 +615,43 @@ CRITICAL:
 - After "Which group are you interested in?" you MUST add the JSON_MAPPING
 - In JSON use group numbers (1, 2, 3...) as keys
 - Include ALL SKUs, each product must appear in only one group`
+  }
+
+  private formatServiceListPrompt(response: StructuredResponse): string {
+    const items = response.data.items || []
+    const itemsText = items
+      .map((item) => `${item.number}. ${item.name}${item.price ? ` - €${item.price.toFixed(2)}` : ""}${item.extra ? ` (${item.extra})` : ""}`)
+      .join("\n")
+
+    return `Servizi disponibili:\n${itemsText}`
+  }
+
+  private formatServiceDetailPrompt(response: StructuredResponse): string {
+    const s = response.data.service
+    if (!s) return "Service not found"
+
+    const lines = [
+      "SERVICE DETAIL:",
+      `Name: ${s.name}`,
+      `Code: ${s.code}`,
+      `Price: €${s.price.toFixed(2)}`,
+    ]
+
+    if (s.priceWithDiscount) {
+      lines.push(`Discounted price: €${s.priceWithDiscount.toFixed(2)}`)
+    }
+    if (s.description) {
+      lines.push(`Description: ${s.description}`)
+    }
+    if (s.duration) {
+      lines.push(`Duration: ${s.duration} minutes`)
+    }
+    lines.push(`Availability: ${s.isAvailable ? "✅ Available" : "❌ Not available"}`)
+    // Add cart prompt
+    lines.push("")
+    lines.push(`IMPORTANT: After the details, ask 'Would you like to add this service to your order?' or 'Shall I add it to your cart?'. DO NOT show service codes to the user.`)
+
+    return lines.join("\n")
   }
 
   private formatProductDetailPrompt(response: StructuredResponse): string {
@@ -812,6 +857,7 @@ CRITICAL:
 
   /**
    * Format offers response - shows active promotions
+   * 🆕 Now includes numbered options to view discounted products
    */
   private formatOffersPrompt(response: StructuredResponse): string {
     const offers = response.data.offers || []
@@ -839,11 +885,26 @@ CRITICAL:
       }
     }
 
+    // 🆕 Add numbered options for offers with categories
+    const items = response.data.items || []
+    if (items.length > 0) {
+      lines.push("")
+      lines.push("ACTIONS:")
+      for (const item of items) {
+        lines.push(`${item.number}. ${item.name}`)
+      }
+    }
+
     lines.push("")
     lines.push("INSTRUCTIONS:")
     lines.push("- Present the offers in an appealing way")
     lines.push("- Emphasize the benefits for the customer")
-    lines.push("- Suggest exploring the products on offer")
+    if (items.length > 0) {
+      lines.push("- Show the numbered options so the customer can easily select to view products")
+      lines.push("- If customer replies with a number, they want to see the discounted products")
+    } else {
+      lines.push("- Suggest exploring the products on offer")
+    }
 
     return lines.join("\n")
   }
@@ -911,6 +972,9 @@ CRITICAL:
       case "CATEGORY_LIST":
         return this.fallbackCategoryList(response)
 
+      case "SERVICE_LIST":  // 🆕
+        return this.fallbackServiceList(response)
+
       case "PRODUCT_LIST":
         return this.fallbackProductList(response)
 
@@ -927,6 +991,15 @@ CRITICAL:
     const lines = [`📋 Categories (${items.length}):`]
     for (const item of items) {
       lines.push(`${item.number}. ${item.name}`)
+    }
+    return lines.join("\n")
+  }
+
+  private fallbackServiceList(response: StructuredResponse): string {
+    const items = response.data.items || []
+    const lines = [`📦 Servizi (${items.length}):`]
+    for (const item of items) {
+      lines.push(`${item.number}. ${item.name}${item.price ? ` - €${item.price.toFixed(2)}` : ""}${item.extra ? ` (${item.extra})` : ""}`)
     }
     return lines.join("\n")
   }

@@ -65,9 +65,9 @@ export interface OptionsMapping {
  * - Rejection: "no"
  */
 export class MessagePreprocessorService {
-  // Universal patterns ONLY - no language-specific words
-  private static readonly CONFIRMATION = /^(sì|si|yes|ok|okay)$/i
-  private static readonly CONFIRMATION_WITH_QUANTITY = /^(sì|si|yes|ok|okay)[,\s!.]*\s*(\d+)/i
+  // Universal patterns - includes common Italian/English confirmations
+  private static readonly CONFIRMATION = /^(sì|si|yes|ok|okay|confermo|conferma|certo|esatto|perfetto|va bene|d'accordo)$/i
+  private static readonly CONFIRMATION_WITH_QUANTITY = /^(sì|si|yes|ok|okay|confermo)[,\s!.]*\s*(\d+)/i
   private static readonly REJECTION = /^no$/i
   private static readonly NUMBER = /^(\d+)$/
 

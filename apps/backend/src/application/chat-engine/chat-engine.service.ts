@@ -27,6 +27,17 @@ import {
 } from "../../services/message-preprocessor.service"
 import { CartManagementAgentLLM } from "../agents/CartManagementAgentLLM"
 import { SystemContextService, getSystemContextService } from "../../services/system-context.service"
+import { 
+  ConversationStateService, 
+  ConversationState,
+  StateContext,
+  CONFIRM_TRIGGERS_CHECKOUT,
+  NUMERIC_MEANS_PRODUCT,
+  NUMERIC_MEANS_ORDER,
+  NUMERIC_MEANS_CATEGORY,
+  NUMERIC_MEANS_ORDER_ACTION,
+} from "./conversation-state.service"
+import { TranslationAgent } from "../agents/TranslationAgent"
 
 // ================================================================================
 // WORKSPACE CONFIG CACHE
@@ -65,6 +76,7 @@ export interface DebugStep {
     conversationHistory?: any[]
     functionResult?: any
     textContent?: string
+    targetLanguage?: string  // 🆕 For Translation Agent
   }
   output?: {
     decision?: string
@@ -73,6 +85,7 @@ export interface DebugStep {
     result?: any
     executionTimeMs?: number
     textContent?: string
+    translated?: boolean  // 🆕 For Translation Agent
   }
   duration?: number
 }
@@ -123,24 +136,38 @@ export interface ChatEngineOutput {
 // ================================================================================
 
 export class ChatEngineService {
+  // Core pipeline services
   private intentParser: IntentParserService
   private dataLoader: DataLoaderService
   private responseBuilder: ResponseBuilderService
   private llmFormatter: LLMFormatterService
+  
+  // Support services
   private conversationManager: ConversationManager
   private linkReplacementService: LinkReplacementService
   private optionsMappingService: OptionsMappingService
   private systemContextService: SystemContextService
+  private conversationStateService: ConversationStateService
+  
+  // Translation layer (applied as final step in routeMessage wrapper)
+  private translationAgent: TranslationAgent
 
   constructor(private prisma: PrismaClient) {
+    // Initialize core pipeline
     this.intentParser = getIntentParser(prisma)
     this.dataLoader = getDataLoader(prisma)
     this.responseBuilder = getResponseBuilder(prisma)
     this.llmFormatter = getLLMFormatter(prisma)
+    
+    // Initialize support services
     this.conversationManager = new ConversationManager(prisma)
     this.linkReplacementService = new LinkReplacementService()
     this.optionsMappingService = getOptionsMappingService(prisma)
     this.systemContextService = getSystemContextService(prisma)
+    this.conversationStateService = new ConversationStateService(prisma)
+    
+    // Initialize translation layer
+    this.translationAgent = new TranslationAgent(prisma)
   }
 
   /**
@@ -200,6 +227,131 @@ export class ChatEngineService {
       conversationHistory,
       { customAiRules: workspaceConfig.customAiRules }
     )
+  }
+
+  /**
+   * ============================================================================
+   * TRANSLATION LAYER (Single Responsibility: Translate final response)
+   * ============================================================================
+   * 
+   * Translates the formatted response to customer's preferred language.
+   * This method is called ONLY from routeMessage() wrapper to ensure
+   * ALL responses pass through translation before reaching the customer.
+   * 
+   * Design Pattern: Decorator - wraps response with translation
+   * 
+   * @param message - The formatted message to translate
+   * @param workspaceId - Workspace ID for loading TRANSLATION agent config
+   * @param targetLanguage - Customer's language code (e.g., "pt", "en", "es")
+   * @param debugSteps - Array to push translation debug step for timeline
+   * @param customerName - Optional customer name for personalization
+   * @returns Object with translated message and tokens used
+   */
+  private async applyTranslation(
+    message: string,
+    workspaceId: string,
+    targetLanguage: string,
+    debugSteps: DebugStep[],
+    customerName?: string
+  ): Promise<{ message: string; tokensUsed: number }> {
+    const startTime = Date.now()
+    
+    try {
+      // Call TranslationAgent to translate message
+      const result = await this.translationAgent.process({
+        workspaceId,
+        message,
+        targetLanguage: targetLanguage || "it",
+        customerName,
+      })
+      
+      const executionTimeMs = Date.now() - startTime
+      
+      // Add debug step for Message Flow Timeline
+      this.pushTranslationDebugStep(debugSteps, {
+        model: result.model || "gpt-4o-mini",
+        inputMessage: message,
+        outputMessage: result.message,
+        targetLanguage: targetLanguage || "it",
+        translated: result.translated,
+        tokensUsed: result.tokensUsed,
+        executionTimeMs,
+        systemPrompt: result.systemPrompt,
+      })
+      
+      logger.info("🌍 [ChatEngine] Translation applied", {
+        targetLanguage,
+        translated: result.translated,
+        tokensUsed: result.tokensUsed,
+        executionTimeMs,
+      })
+      
+      return { 
+        message: result.message, 
+        tokensUsed: result.tokensUsed || 0 
+      }
+    } catch (error) {
+      // Log error but don't fail - return original message
+      logger.error("⚠️ [ChatEngine] Translation failed, using original", { error })
+      
+      // Track error in timeline
+      this.pushTranslationDebugStep(debugSteps, {
+        model: "error",
+        inputMessage: message,
+        outputMessage: message,
+        targetLanguage: targetLanguage || "it",
+        translated: false,
+        tokensUsed: 0,
+        executionTimeMs: Date.now() - startTime,
+        error: error instanceof Error ? error.message : "Unknown error",
+      })
+      
+      return { message, tokensUsed: 0 }
+    }
+  }
+
+  /**
+   * Helper: Push translation debug step to timeline
+   * Extracted to reduce code duplication in applyTranslation
+   */
+  private pushTranslationDebugStep(
+    debugSteps: DebugStep[],
+    data: {
+      model: string
+      inputMessage: string
+      outputMessage: string
+      targetLanguage: string
+      translated: boolean
+      tokensUsed?: number
+      executionTimeMs: number
+      systemPrompt?: string
+      error?: string
+    }
+  ): void {
+    debugSteps.push({
+      type: "sub_agent",
+      agent: "🌍 Translation Agent",
+      model: data.model,
+      timestamp: new Date().toISOString(),
+      tokenUsage: data.tokensUsed ? {
+        promptTokens: Math.floor(data.tokensUsed * 0.7),
+        completionTokens: Math.floor(data.tokensUsed * 0.3),
+        totalTokens: data.tokensUsed,
+      } : undefined,
+      systemPrompt: data.error 
+        ? `ERROR: ${data.error}` 
+        : (data.systemPrompt || "Translate to target language"),
+      input: {
+        textContent: data.inputMessage.substring(0, 200) + (data.inputMessage.length > 200 ? "..." : ""),
+        targetLanguage: data.targetLanguage,
+      },
+      output: {
+        textResponse: data.outputMessage.substring(0, 200) + (data.outputMessage.length > 200 ? "..." : ""),
+        translated: data.translated,
+        executionTimeMs: data.executionTimeMs,
+      },
+      duration: data.executionTimeMs,
+    })
   }
 
   /**
@@ -264,16 +416,138 @@ export class ChatEngineService {
   }
 
   /**
-   * Main entry point - replaces LLMRouterService.routeMessage()
+   * ============================================================================
+   * MAIN ENTRY POINT (Public API)
+   * ============================================================================
+   * 
+   * Design Pattern: Decorator/Wrapper
+   * 
+   * This wrapper ensures ALL responses pass through the Translation Layer
+   * before being returned to the customer. This is the SINGLE point where
+   * translation happens, regardless of which internal path the message took.
+   * 
+   * Flow:
+   *   1. processMessageInternal() → Business logic, returns Italian response
+   *   2. applyTranslation() → Translates to customer's language
+   *   3. Return final translated response
+   * 
+   * @param input - Customer message and context
+   * @returns Translated response ready for delivery
    */
   async routeMessage(input: ChatEngineInput): Promise<ChatEngineOutput> {
-    const startTime = Date.now()
+    // STEP 1: Process message through business logic pipeline
+    const result = await this.processMessageInternal(input)
     
-    // 🆕 Initialize debug steps for Message Flow Timeline
+    // STEP 2: Apply Translation Layer (SINGLE translation point)
+    const debugSteps = result.debugInfo?.steps || []
+    const targetLanguage = input.customerLanguage || "it"
+    
+    // Only translate if target language is NOT Italian (base language)
+    let translationResult = { message: result.message, tokensUsed: 0 }
+    if (targetLanguage.toLowerCase() !== "it") {
+      translationResult = await this.applyTranslation(
+        result.message,
+        input.workspaceId,
+        targetLanguage,
+        debugSteps,
+        input.customerName
+      )
+      
+      // 🌍 STEP 2B: Update the saved message with translated version
+      // Use the message ID saved from processMessageInternal
+      const messageIdToUpdate = (result as any)._assistantMessageId
+      
+      if (messageIdToUpdate) {
+        try {
+          logger.info("🌍 [ChatEngine] Attempting to update message", {
+            messageId: messageIdToUpdate,
+            targetLanguage,
+            hasId: !!messageIdToUpdate,
+          })
+          
+          // Build updated debugInfo with translation step
+          const updatedDebugInfo = result.debugInfo ? {
+            ...result.debugInfo,
+            steps: debugSteps, // Now includes translation step
+            totalTokens: (result.debugInfo.totalTokens || 0) + translationResult.tokensUsed,
+          } : undefined
+          
+          await this.prisma.conversationMessage.update({
+            where: { id: messageIdToUpdate },
+            data: { 
+              content: translationResult.message,
+              debugInfo: updatedDebugInfo ? JSON.stringify(updatedDebugInfo) : undefined,
+            }
+          })
+          
+          logger.info("🌍 [ChatEngine] ✅ Updated saved message with translation", {
+            messageId: messageIdToUpdate,
+            targetLanguage,
+            newContentLength: translationResult.message.length,
+            debugStepsCount: debugSteps.length,
+          })
+        } catch (error: any) {
+          logger.error("⚠️ [ChatEngine] Failed to update message translation", { 
+            error: error.message || error,
+            messageId: messageIdToUpdate,
+            errorCode: error.code,
+          })
+          // Continue anyway - the translated message will be returned to user
+        }
+      } else {
+        logger.warn("⚠️ [ChatEngine] No message ID to update translation", {
+          hasResult: !!result,
+          hasAssistantMessageId: !!(result as any)._assistantMessageId,
+        })
+      }
+    }
+    
+    // STEP 3: Return translated result with updated metrics
+    // Remove the internal _assistantMessageId before returning
+    const { _assistantMessageId, ...cleanResult } = result as any
+    
+    return {
+      ...cleanResult,
+      message: translationResult.message,
+      response: translationResult.message,
+      tokensUsed: cleanResult.tokensUsed + translationResult.tokensUsed,
+      debugInfo: cleanResult.debugInfo ? {
+        ...cleanResult.debugInfo,
+        steps: debugSteps,
+        totalTokens: (cleanResult.debugInfo.totalTokens || 0) + translationResult.tokensUsed,
+      } : undefined,
+    }
+  }
+
+  /**
+   * ============================================================================
+   * INTERNAL MESSAGE PROCESSOR (Private - Business Logic)
+   * ============================================================================
+   * 
+   * Contains all message processing logic. Returns response in Italian (base language).
+   * Translation is handled by the routeMessage() wrapper.
+   * 
+   * Pipeline Steps:
+   *   0. Load workspace config
+   *   1. Preprocess (detect numbers, confirmations)
+   *   2. FAST-PATH: Handle confirmations, numeric selections
+   *   3. Parse intent with LLM
+   *   4. Load data based on intent
+   *   5. Build structured response
+   *   6. Format with LLM
+   *   7. Replace links/tokens
+   *   8. Save to history
+   *   9. Update FSM state
+   * 
+   * @param input - Customer message and context
+   * @returns Response in Italian (base language)
+   */
+  private async processMessageInternal(input: ChatEngineInput): Promise<ChatEngineOutput> {
+    const startTime = Date.now()
     const debugSteps: DebugStep[] = []
     let totalTokens = 0
 
-    logger.info("🚀 [CodeFirstLLM] Processing message", {
+    logger.info("🚀 [ChatEngine] Processing message", {
       customerId: input.customerId,
       workspaceId: input.workspaceId,
       messagePreview: input.message.substring(0, 50),
@@ -285,7 +559,7 @@ export class ChatEngineService {
       // ========================================================================
       const workspaceConfig = await this.loadWorkspaceConfig(input.workspaceId)
       
-      logger.info("⚙️ [CodeFirstLLM] Workspace config", {
+      logger.info("⚙️ [ChatEngine] Workspace config loaded", {
         sellsProducts: workspaceConfig.sellsProductsAndServices,
         hasSalesAgents: workspaceConfig.hasSalesAgents,
       })
@@ -293,12 +567,9 @@ export class ChatEngineService {
       // ========================================================================
       // STEP 0.5: Preprocess short inputs (numbers, yes/no)
       // ========================================================================
-      // The preprocessor only DETECTS patterns and ENRICHES the message
-      // The LLM does the actual work with conversation history
-      
       const conversationId = input.conversationId || `temp-${input.customerId}`
       
-      logger.debug("🔍 [CodeFirstLLM] Processing message", {
+      logger.debug("🔍 [ChatEngine] Processing message", {
         conversationId,
         message: input.message.substring(0, 50),
       })
@@ -306,7 +577,7 @@ export class ChatEngineService {
       // Preprocess: detect short inputs and enrich message for LLM
       const preprocessResult = messagePreprocessorService.process(input.message)
 
-      logger.info("🔍 [CodeFirstLLM] Preprocess result", {
+      logger.info("🔍 [ChatEngine] Preprocess result", {
         isShortInput: preprocessResult.isShortInput,
         inputType: preprocessResult.inputType,
         extractedNumber: preprocessResult.extractedNumber,
@@ -328,30 +599,33 @@ export class ChatEngineService {
         const pendingAction = optionsMapping?.pendingAction
         
         if (pendingAction && pendingAction.type === "ADD_TO_CART" && pendingAction.productId) {
-          logger.info("🛒 [CodeFirstLLM] FAST-PATH: Confirmation detected with pending ADD_TO_CART", {
+          logger.info("🛒 [ChatEngine] FAST-PATH: Confirmation detected with pending ADD_TO_CART", {
             inputType: preprocessResult.inputType,
             extractedQuantity: preprocessResult.extractedQuantity,
             productId: pendingAction.productId,
             productName: pendingAction.productName,
+            itemType: pendingAction.itemType || "PRODUCT",
           })
           
           // Extract quantity: from message if present, otherwise default to 1
           const quantity = preprocessResult.extractedQuantity || pendingAction.quantity || 1
+          const itemLabel = pendingAction.itemType === "SERVICE" ? "servizio" : "prodotto"
           
-          // Delegate to CartManagementAgentLLM with selectedSku
+          // Delegate to CartManagementAgentLLM with selectedSku and itemType
           const cartAgent = new CartManagementAgentLLM(this.prisma)
           const cartResponse = await cartAgent.handleQuery({
             workspaceId: input.workspaceId,
             customerId: input.customerId,
-            query: `aggiungi ${quantity} ${pendingAction.productName || "prodotto"} al carrello`,
+            query: `aggiungi ${quantity} ${pendingAction.productName || itemLabel} al carrello`,
             customerName: input.customerName || "",
             customerLanguage: input.customerLanguage || "it",
-            selectedSku: pendingAction.productId, // SKU for precise cart addition
+            selectedSku: pendingAction.productId, // SKU/code for precise cart addition
+            selectedItemType: pendingAction.itemType || "PRODUCT", // 🆕 Pass item type
           })
           
           // 🧹 CRITICAL: Clear pendingAction after execution to prevent re-use
           await this.optionsMappingService.clearPendingAction(conversationId)
-          logger.info("🧹 [CodeFirstLLM] Cleared pendingAction after ADD_TO_CART execution")
+          logger.info("🧹 [ChatEngine] Cleared pendingAction after ADD_TO_CART execution")
           
           const processingTimeMs = Date.now() - startTime
           
@@ -374,8 +648,8 @@ export class ChatEngineService {
             debugInfo: {
               loadedDataType: "PENDING_ACTION_EXECUTED",
               responseType: "CART_OPERATION",
-              llmUsed: true,
-              fastPath: "CONFIRMATION_WITH_QUANTITY",
+              // llmUsed: true, // RIMOSSO: non esiste nel tipo
+              // fastPath: "CONFIRMATION_WITH_QUANTITY", // RIMOSSO: non esiste nel tipo
             },
             response: cartResponse.output,
             agentUsed: AgentType.CART_MANAGEMENT,
@@ -385,6 +659,32 @@ export class ChatEngineService {
             isBlocked: false,
           }
         }
+      }
+
+      // ========================================================================
+      // STEP 0.7: Load ChatSession for FSM state management
+      // ========================================================================
+      // 🆕 Load chatSession early so FSM can be used in FAST-PATH
+      const chatSession = await this.prisma.chatSession.findFirst({
+        where: { 
+          workspaceId: input.workspaceId,
+          customerId: input.customerId,
+          status: "active",
+        },
+        select: { id: true },
+      })
+      
+      let fsmState: StateContext = {
+        state: ConversationState.IDLE,
+        stateEnteredAt: new Date().toISOString(),
+      }
+      
+      if (chatSession) {
+        fsmState = await this.conversationStateService.getState(chatSession.id)
+        logger.debug("🔄 [FSM] Loaded conversation state (early)", {
+          chatSessionId: chatSession.id.substring(0, 8),
+          state: fsmState.state,
+        })
       }
 
       // ========================================================================
@@ -420,7 +720,7 @@ export class ChatEngineService {
           })
           
           if (selectedGroup && selectedGroup.skus?.length > 0) {
-            logger.info("🎯 [CodeFirstLLM] FAST-PATH: Using groupMapping to resolve selection", {
+            logger.info("🎯 [ChatEngine] FAST-PATH: Using groupMapping to resolve selection", {
               number: preprocessResult.extractedNumber,
               groupName: selectedGroup.nome,
               skuCount: selectedGroup.skus.length,
@@ -477,20 +777,29 @@ export class ChatEngineService {
                 finalMessage
               )
               
-              // Save new options mapping (for next selection if user picks a product)
-              // 🔧 FIX: Do NOT pass groupMapping here! We're showing PRODUCTS, not groups.
-              // If we pass groupMapping, the system thinks next selection is a group, not a product.
+              // 🔧 CRITICAL: Save new options mapping with items and listType
+              // This ensures next "1" is interpreted as product selection, not group selection!
+              const itemsWithSkus = structuredResponse.data?.items?.map((item: any) => ({
+                number: item.number,
+                name: item.name,
+                sku: item.sku,
+              }))
+              
               await this.optionsMappingService.saveMapping({
                 workspaceId: input.workspaceId,
                 conversationId,
                 customerId: input.customerId,
                 responseText: formatterResult.text,
+                items: itemsWithSkus,  // 🔧 Pass items with SKUs
+                listType: "PRODUCTS",  // 🔧 Mark as product list for next selection
                 // groupMapping: undefined - intentionally NOT passing groupMapping for product lists
               })
               
-              logger.info("✅ [CodeFirstLLM] FAST-PATH groupMapping complete", {
+              logger.info("✅ [ChatEngine] FAST-PATH groupMapping complete", {
                 groupName: selectedGroup.nome,
                 productsReturned: products.length,
+                savedItemsCount: itemsWithSkus?.length || 0,
+                savedListType: "PRODUCTS",
                 timeMs: processingTimeMs,
               })
               
@@ -506,10 +815,12 @@ export class ChatEngineService {
                   loadedDataType: "PRODUCTS_FROM_GROUP",
                   responseType: structuredResponse.type,
                   llmUsed: !formatterResult.cached,
+                  steps: debugSteps,
+                  totalTokens: formatterResult.tokensUsed || 0,
                 },
                 response: finalMessage,
                 agentUsed: AgentType.PRODUCT_SEARCH,
-                tokensUsed: formatterResult.tokensUsed,
+                tokensUsed: formatterResult.tokensUsed || 0,
                 executionTimeMs: processingTimeMs,
                 wasFAQ: false,
                 isBlocked: false,
@@ -525,20 +836,22 @@ export class ChatEngineService {
           )
           
           if (selectedOption) {
-            logger.info("🎯 [CodeFirstLLM] FAST-PATH: Resolved selection from options mapping", {
+            logger.info("🎯 [ChatEngine] FAST-PATH: Resolved selection from options mapping", {
               number: preprocessResult.extractedNumber,
               label: selectedOption.label,
               skus: selectedOption.skus,
+              id: (selectedOption as any).id,  // 🆕 For ORDER_ACTIONS
               listType: optionsMapping.listType,
             })
             
-            // Create SELECT_OPTION intent with SKUs
+            // Create SELECT_OPTION intent with SKUs and optionId
             const selectIntent: import("../intent/intent.types").SelectOptionIntent = {
               type: "SELECT_OPTION",
               number: preprocessResult.extractedNumber,
               resolvedValue: selectedOption.label,
               listType: (optionsMapping.listType as import("../intent/intent.types").ListType) || "CATEGORIES",
               skus: selectedOption.skus,
+              optionId: (selectedOption as any).id,  // 🆕 For ORDER_ACTIONS: "SEND_INVOICE", "REPEAT_ORDER"
             }
             
             // Load data using this intent
@@ -565,13 +878,13 @@ export class ChatEngineService {
               const action = (structuredResponse.data as { action: string }).action
               const orderCode = optionsMapping.currentOrderCode
               
-              logger.info("📦 [CodeFirstLLM] ORDER_ACTION detected, executing calling function", {
+              logger.info("📦 [ChatEngine] ORDER_ACTION detected, executing calling function", {
                 action,
                 orderCode,
               })
               
               if (!orderCode) {
-                logger.warn("⚠️ [CodeFirstLLM] No order code found for ORDER_ACTION")
+                logger.warn("⚠️ [ChatEngine] No order code found for ORDER_ACTION")
                 return {
                   message: "Mi dispiace, non ho trovato l'ordine di riferimento. Puoi dirmi il codice ordine?",
                   agentType: AgentType.ORDER_TRACKING,
@@ -617,7 +930,7 @@ export class ChatEngineService {
                 confidence: "HIGH",
                 source: "PATTERN",
                 processingTimeMs: Date.now() - startTime,
-                llmUsed: false,
+                // llmUsed: false, // RIMOSSO: non esiste nel tipo
               }
             }
             
@@ -675,6 +988,19 @@ export class ChatEngineService {
               id: item.id,
             }))
             
+            // 🔍 DEBUG: Check what listType we're passing
+            const computedListType = structuredResponse.type === "PRODUCT_LIST" ? "PRODUCTS" 
+                      : structuredResponse.type === "ORDER_LIST" ? "ORDERS"
+                      : structuredResponse.type === "CATEGORY_LIST" ? "CATEGORIES"
+                      : structuredResponse.type === "SERVICE_LIST" ? "SERVICES"
+                      : structuredResponse.type === "OFFERS" ? "OFFER_CATEGORIES"  // 🆕
+                      : undefined
+            logger.info("📋 [ChatEngine] DEBUG: About to save mapping", {
+              structuredResponseType: structuredResponse.type,
+              computedListType,
+              itemsCount: itemsWithSkus?.length || 0,
+            })
+            
             await this.optionsMappingService.saveMapping({
               workspaceId: input.workspaceId,
               conversationId,
@@ -685,8 +1011,58 @@ export class ChatEngineService {
               listType: structuredResponse.type === "PRODUCT_LIST" ? "PRODUCTS" 
                       : structuredResponse.type === "ORDER_LIST" ? "ORDERS"
                       : structuredResponse.type === "CATEGORY_LIST" ? "CATEGORIES"
+                      : structuredResponse.type === "SERVICE_LIST" ? "SERVICES"
+                      : structuredResponse.type === "OFFERS" ? "OFFER_CATEGORIES"  // 🆕
                       : undefined,
             })
+            
+            // 🆕 FSM: Update conversation state based on response type
+            if (chatSession) {
+              let newFsmState: ConversationState | null = null
+              const fsmContext: Partial<StateContext> = {}
+              
+              switch (structuredResponse.type) {
+                case "CATEGORY_LIST":
+                  newFsmState = ConversationState.BROWSING_CATEGORIES
+                  break
+                case "PRODUCT_LIST":
+                  newFsmState = ConversationState.BROWSING_PRODUCTS
+                  break
+                case "SERVICE_LIST":  // 🆕
+                  newFsmState = ConversationState.BROWSING_SERVICES
+                  break
+                case "ORDER_LIST":
+                  newFsmState = ConversationState.BROWSING_ORDERS
+                  break
+                case "PRODUCT_DETAIL":
+                  newFsmState = ConversationState.VIEWING_PRODUCT
+                  if (structuredResponse.data.product) {
+                    fsmContext.selectedProductId = structuredResponse.data.product.id
+                    fsmContext.selectedProductSku = structuredResponse.data.product.sku
+                    fsmContext.selectedProductName = structuredResponse.data.product.name
+                  }
+                  break
+                case "ORDER_DETAIL":
+                  newFsmState = ConversationState.VIEWING_ORDER
+                  if (structuredResponse.data.order) {
+                    fsmContext.selectedOrderId = structuredResponse.data.order.id
+                    fsmContext.selectedOrderCode = structuredResponse.data.order.code
+                  }
+                  break
+                case "CART_VIEW":
+                case "CART_UPDATED":
+                  newFsmState = ConversationState.VIEWING_CART
+                  break
+              }
+              
+              if (newFsmState) {
+                await this.conversationStateService.setState(chatSession.id, newFsmState, fsmContext)
+                logger.info("🔄 [FSM] FAST-PATH state updated", {
+                  newState: newFsmState,
+                  responseType: structuredResponse.type,
+                })
+              }
+            }
             
             // 🛒 Set pending action for PRODUCT_DETAIL (add to cart prompt)
             if (structuredResponse.type === "PRODUCT_DETAIL" && structuredResponse.data.product) {
@@ -701,22 +1077,62 @@ export class ChatEngineService {
                   quantity: 1,
                 },
               })
-              logger.info("🛒 [CodeFirstLLM] FAST-PATH: Set pending ADD_TO_CART action", {
+              logger.info("🛒 [ChatEngine] FAST-PATH: Set pending ADD_TO_CART action", {
                 productId: product.sku || product.id,
                 productName: product.name,
               })
             }
             
-            // 📦 Save order code for ORDER_DETAIL (for order actions: fattura, ripeti, nota credito)
+            // 🆕 Set pending action for SERVICE_DETAIL (add to cart prompt)
+            if (structuredResponse.type === "SERVICE_DETAIL" && structuredResponse.data.service) {
+              const service = structuredResponse.data.service
+              await this.optionsMappingService.setPendingAction({
+                workspaceId: input.workspaceId,
+                conversationId,
+                pendingAction: {
+                  type: "ADD_TO_CART",
+                  productId: service.code || service.id, // For services, use code
+                  productName: service.name,
+                  quantity: 1,
+                  itemType: "SERVICE", // 🆕 Mark as service for CartManagementAgent
+                },
+              })
+              logger.info("🛒 [ChatEngine] FAST-PATH: Set pending ADD_TO_CART action for service", {
+                serviceId: service.code || service.id,
+                serviceName: service.name,
+              })
+            }
+            
+            // 📦 Save order code AND order actions for ORDER_DETAIL
+            // 🔧 CRITICAL: We must save the ACTION options explicitly, not extract from text
+            // Because the text contains order items BEFORE actions, and extractFromResponse picks the first numbers
             if (structuredResponse.type === "ORDER_DETAIL" && structuredResponse.data.order) {
               const order = structuredResponse.data.order
+              
+              // Save order code
               await this.optionsMappingService.setCurrentOrderCode({
                 workspaceId: input.workspaceId,
                 conversationId,
                 orderCode: order.code,
               })
-              logger.info("📦 [CodeFirstLLM] FAST-PATH: Set current order code for actions", {
+              
+              // 🆕 CRITICAL: Save explicit action options so "1" = Fattura, "2" = Ripeti
+              // This overrides the extracted options (which would be order items)
+              await this.optionsMappingService.saveMapping({
+                workspaceId: input.workspaceId,
+                conversationId,
+                customerId: input.customerId,
+                responseText: "", // Empty - we're providing explicit items
+                items: [
+                  { number: 1, name: "📄 Scarica fattura", id: "SEND_INVOICE" },
+                  { number: 2, name: "🔄 Ripeti ordine", id: "REPEAT_ORDER" },
+                ],
+                listType: "ORDER_ACTIONS",
+              })
+              
+              logger.info("📦 [ChatEngine] FAST-PATH: Set order actions for ORDER_DETAIL", {
                 orderCode: order.code,
+                actions: ["SEND_INVOICE", "REPEAT_ORDER"],
               })
             }
             
@@ -732,6 +1148,8 @@ export class ChatEngineService {
                 loadedDataType: loadedData.type,
                 responseType: structuredResponse.type,
                 llmUsed,
+                steps: debugSteps,
+                totalTokens: 0,
               },
               response: finalMessage,
               agentUsed: agentType,
@@ -751,11 +1169,25 @@ export class ChatEngineService {
       // Otherwise history is empty for temp conversations!
       const history = await this.conversationManager.loadHistory(input.workspaceId, conversationId)
 
-      logger.debug("📜 [CodeFirstLLM] History loaded", { 
+      logger.debug("📜 [ChatEngine] History loaded", { 
         historyLength: history.length,
         conversationId,
         usedInputConversationId: !!input.conversationId,
       })
+
+      // ========================================================================
+      // STEP 1.5: FSM State already loaded in STEP 0.7
+      // ========================================================================
+      // Re-load FSM state here in case it changed (e.g., from FAST-PATH)
+      if (chatSession) {
+        fsmState = await this.conversationStateService.getState(chatSession.id)
+        logger.info("🔄 [FSM] Refreshed conversation state", {
+          chatSessionId: chatSession.id.substring(0, 8),
+          state: fsmState.state,
+          pendingAction: fsmState.pendingAction?.type,
+          selectedOrderCode: fsmState.selectedOrderCode,
+        })
+      }
 
       // ========================================================================
       // STEP 2: Parse intent using ORIGINAL message for pattern matching
@@ -803,7 +1235,7 @@ export class ChatEngineService {
         totalTokens += 160
       }
 
-      logger.info("🎯 [CodeFirstLLM] Intent detected", {
+      logger.info("🎯 [ChatEngine] Intent detected", {
         type: intentResult.intent.type,
         confidence: intentResult.confidence,
         source: intentResult.source,
@@ -820,7 +1252,7 @@ export class ChatEngineService {
       if (intentResult.intent.type === "UNKNOWN" && workspaceConfig.sellsProductsAndServices) {
         const originalMessage = (intentResult.intent as any).originalMessage || input.message
         
-        logger.info("🔄 [CodeFirstLLM] UNKNOWN intent after LLM fallback - trying semantic product search", {
+        logger.info("🔄 [ChatEngine] UNKNOWN intent after LLM fallback - trying semantic product search", {
           originalIntent: "UNKNOWN",
           source: intentResult.source,
           query: originalMessage
@@ -846,7 +1278,7 @@ export class ChatEngineService {
           conversationId
         )
         if (existingMapping?.pendingAction) {
-          logger.info("🧹 [CodeFirstLLM] Clearing stale pendingAction - intent changed", {
+          logger.info("🧹 [ChatEngine] Clearing stale pendingAction - intent changed", {
             previousAction: existingMapping.pendingAction.type,
             newIntent: intentResult.intent.type,
           })
@@ -867,7 +1299,7 @@ export class ChatEngineService {
         if (optionsMapping?.pendingAction) {
           const { pendingAction } = optionsMapping
           
-          logger.info("✅ [CodeFirstLLM] Processing CONFIRM/REJECT with pendingAction", {
+          logger.info("✅ [ChatEngine] Processing CONFIRM/REJECT with pendingAction", {
             intentType: intentResult.intent.type,
             actionType: pendingAction.type,
             productId: pendingAction.productId,
@@ -878,7 +1310,7 @@ export class ChatEngineService {
             // User said "no" - clear pending action and acknowledge
             // 🧹 CRITICAL: Clear pendingAction after rejection
             await this.optionsMappingService.clearPendingAction(conversationId)
-            logger.info("🧹 [CodeFirstLLM] Cleared pendingAction after REJECT")
+            logger.info("🧹 [ChatEngine] Cleared pendingAction after REJECT")
             
             const processingTimeMs = Date.now() - startTime
             const rejectMessage = "Ok, nessun problema! Posso aiutarti con altro?"
@@ -902,7 +1334,7 @@ export class ChatEngineService {
               debugInfo: {
                 loadedDataType: "PENDING_ACTION_REJECTED",
                 responseType: "ACKNOWLEDGMENT",
-                llmUsed: false,
+                // llmUsed: false, // RIMOSSO: non esiste nel tipo
               },
               response: rejectMessage,
               agentUsed: AgentType.ROUTER,
@@ -918,22 +1350,24 @@ export class ChatEngineService {
             // Extract quantity from message if present (e.g., "sì, 2 pezzi")
             const quantityMatch = input.message.match(/(\d+)\s*(pezz[oi]|unit[aà]|x)?/i)
             const quantity = quantityMatch ? parseInt(quantityMatch[1]) : (pendingAction.quantity || 1)
+            const itemLabel = pendingAction.itemType === "SERVICE" ? "servizio" : "prodotto"
             
             // Delegate to CartManagementAgentLLM for intelligent cart handling
-            // 🔧 CRITICAL: Pass selectedSku so CartManagementAgent knows EXACTLY which product to add
+            // 🔧 CRITICAL: Pass selectedSku and itemType so CartManagementAgent knows EXACTLY what to add
             const cartAgent = new CartManagementAgentLLM(this.prisma)
             const cartResponse = await cartAgent.handleQuery({
               workspaceId: input.workspaceId,
               customerId: input.customerId,
-              query: `aggiungi ${quantity} ${pendingAction.productName || "prodotto"} al carrello`,
+              query: `aggiungi ${quantity} ${pendingAction.productName || itemLabel} al carrello`,
               customerName: input.customerName || "",
               customerLanguage: input.customerLanguage || "it",
-              selectedSku: pendingAction.productId, // 🔧 SKU for precise cart addition
+              selectedSku: pendingAction.productId, // 🔧 SKU/code for precise cart addition
+              selectedItemType: pendingAction.itemType || "PRODUCT", // 🆕 Pass item type
             })
             
             // 🧹 CRITICAL: Clear pendingAction after execution
             await this.optionsMappingService.clearPendingAction(conversationId)
-            logger.info("🧹 [CodeFirstLLM] Cleared pendingAction after ADD_TO_CART execution (STEP 2.6)")
+            logger.info("🧹 [ChatEngine] Cleared pendingAction after ADD_TO_CART execution (STEP 2.6)")
             
             const processingTimeMs = Date.now() - startTime
             
@@ -970,42 +1404,94 @@ export class ChatEngineService {
           if (pendingAction.type === "CONFIRM_ORDER") {
             // User confirmed checkout - delegate to checkout flow
             intentResult.intent = { type: "START_CHECKOUT" }
-            logger.info("✅ [CodeFirstLLM] CONFIRM_ORDER → START_CHECKOUT")
+            logger.info("✅ [ChatEngine] CONFIRM_ORDER → START_CHECKOUT")
           }
         } else if (intentResult.intent.type === "CONFIRM") {
-          // 🎯 CONTEXT-AWARE CONFIRM: No pendingAction, but user said "sì"
-          // Look at the last assistant message to understand what we're confirming
-          const lastAssistantMessage = history
-            .filter(h => h.role === "assistant")
-            .pop()?.content?.toLowerCase() || ""
+          // ========================================================================
+          // 🆕 FSM-BASED CONFIRM HANDLING (replaces context guessing)
+          // ========================================================================
+          // Use FSM state to determine what CONFIRM means, not text parsing
           
-          logger.info("🔍 [CodeFirstLLM] CONFIRM without pendingAction - checking context", {
-            lastAssistantMessagePreview: lastAssistantMessage.substring(0, 200),
+          logger.info("🔄 [FSM] CONFIRM intent detected - checking FSM state", {
+            fsmState: fsmState.state,
+            pendingAction: fsmState.pendingAction?.type,
           })
           
-          // 🎯 PRIORITY ORDER: Most specific patterns first!
-          // Check for "confermo/ok per procedere" prompts FIRST (e.g., after RepeatOrder)
-          if (lastAssistantMessage.includes("confermo") || 
-              lastAssistantMessage.includes("procedere con l'ordine") ||
-              lastAssistantMessage.includes("checkout")) {
-            logger.info("🎯 [CodeFirstLLM] Context: User confirmed order → START_CHECKOUT")
+          // 🎯 FSM Priority 1: Check if current state triggers checkout on CONFIRM
+          if (this.conversationStateService.shouldConfirmTriggerCheckout(fsmState.state)) {
+            logger.info("🔄 [FSM] State triggers checkout: CONFIRM → START_CHECKOUT", {
+              state: fsmState.state,
+            })
             intentResult.intent = { type: "START_CHECKOUT" }
+            
+            // Update FSM state to IN_CHECKOUT
+            if (chatSession) {
+              await this.conversationStateService.setState(
+                chatSession.id,
+                ConversationState.IN_CHECKOUT
+              )
+            }
           }
-          // If bot asked "Vuoi vedere i nostri prodotti?" → show categories
-          else if (lastAssistantMessage.includes("prodotti") || 
-              lastAssistantMessage.includes("catalogo") ||
-              lastAssistantMessage.includes("categorie")) {
-            logger.info("🎯 [CodeFirstLLM] Context: User wants to see products → SHOW_CATEGORIES")
+          // 🎯 FSM Priority 2: Check FSM pendingAction
+          else if (fsmState.pendingAction?.type === "CONFIRM_ORDER") {
+            logger.info("🔄 [FSM] PendingAction CONFIRM_ORDER → START_CHECKOUT")
+            intentResult.intent = { type: "START_CHECKOUT" }
+            
+            if (chatSession) {
+              await this.conversationStateService.setState(
+                chatSession.id,
+                ConversationState.IN_CHECKOUT
+              )
+            }
+          }
+          // 🎯 FSM Priority 3: Browsing products/categories → user wants to see them
+          else if (fsmState.state === ConversationState.BROWSING_CATEGORIES ||
+                   fsmState.state === ConversationState.BROWSING_PRODUCTS) {
+            logger.info("🔄 [FSM] Browsing state: CONFIRM stays in current flow")
+            // Don't change intent - let it fall through to show categories
             intentResult.intent = { type: "SHOW_CATEGORIES" }
           }
-          // If bot asked "Vuoi vedere il carrello?" → show cart
-          else if (lastAssistantMessage.includes("carrello") && !lastAssistantMessage.includes("ordine")) {
-            logger.info("🎯 [CodeFirstLLM] Context: User wants to see cart → VIEW_CART")
-            intentResult.intent = { type: "VIEW_CART" }
+          // 🎯 FSM Priority 4: Viewing cart → CONFIRM means checkout
+          else if (fsmState.state === ConversationState.VIEWING_CART) {
+            logger.info("🔄 [FSM] Viewing cart: CONFIRM → START_CHECKOUT")
+            intentResult.intent = { type: "START_CHECKOUT" }
+            
+            if (chatSession) {
+              await this.conversationStateService.setState(
+                chatSession.id,
+                ConversationState.IN_CHECKOUT
+              )
+            }
           }
-          // Default: show categories (most common case)
+          // 🎯 FSM Fallback: Use context guessing only if FSM state is IDLE
+          else if (fsmState.state === ConversationState.IDLE) {
+            // Fallback to old context-based logic for IDLE state
+            const lastAssistantMessage = history
+              .filter(h => h.role === "assistant")
+              .pop()?.content?.toLowerCase() || ""
+            
+            logger.info("🔄 [FSM] IDLE state - falling back to context guessing", {
+              lastMessagePreview: lastAssistantMessage.substring(0, 100),
+            })
+            
+            if (lastAssistantMessage.includes("confermo") || 
+                lastAssistantMessage.includes("procedere con l'ordine") ||
+                lastAssistantMessage.includes("checkout")) {
+              intentResult.intent = { type: "START_CHECKOUT" }
+            } else if (lastAssistantMessage.includes("prodotti") || 
+                       lastAssistantMessage.includes("catalogo")) {
+              intentResult.intent = { type: "SHOW_CATEGORIES" }
+            } else if (lastAssistantMessage.includes("carrello") && !lastAssistantMessage.includes("ordine")) {
+              intentResult.intent = { type: "VIEW_CART" }
+            } else {
+              intentResult.intent = { type: "SHOW_CATEGORIES" }
+            }
+          }
+          // 🎯 Default: Show categories
           else {
-            logger.info("🎯 [CodeFirstLLM] Context: Unknown, defaulting to SHOW_CATEGORIES")
+            logger.info("🔄 [FSM] Unknown state, defaulting to SHOW_CATEGORIES", {
+              state: fsmState.state,
+            })
             intentResult.intent = { type: "SHOW_CATEGORIES" }
           }
         }
@@ -1016,7 +1502,7 @@ export class ChatEngineService {
       // ========================================================================
       if (this.isEcommerceIntent(intentResult.intent.type) && !workspaceConfig.sellsProductsAndServices) {
         // E-commerce not enabled - redirect to support response
-        logger.info("🚫 [CodeFirstLLM] E-commerce disabled, redirecting to support", {
+        logger.info("🚫 [ChatEngine] E-commerce disabled, redirecting to support", {
           intentType: intentResult.intent.type,
         })
         
@@ -1053,7 +1539,7 @@ export class ChatEngineService {
       if (intentResult.intent.type === "ADD_TO_CART") {
         const addIntent = intentResult.intent as AddToCartIntent
         if (!addIntent.productId && addIntent.productName) {
-          logger.info("🛒 [CodeFirstLLM] ADD_TO_CART needs LLM intelligence - delegating to CartManagementAgentLLM", {
+          logger.info("🛒 [ChatEngine] ADD_TO_CART needs LLM intelligence - delegating to CartManagementAgentLLM", {
             productName: addIntent.productName,
             quantity: addIntent.quantity,
           })
@@ -1114,7 +1600,7 @@ export class ChatEngineService {
       if (intentResult.intent.type === "REPEAT_ORDER") {
         const repeatIntent = intentResult.intent as RepeatOrderIntent
         
-        logger.info("🔄 [CodeFirstLLM] REPEAT_ORDER intent detected", {
+        logger.info("🔄 [ChatEngine] REPEAT_ORDER intent detected", {
           orderCode: repeatIntent.orderCode || "(last order)",
         })
 
@@ -1270,7 +1756,23 @@ export class ChatEngineService {
           pendingAction: { type: "CONFIRM_ORDER" },
         })
 
-        logger.info("🔄 [CodeFirstLLM] REPEAT_ORDER completed", {
+        // 🆕 FSM: Set state to AWAITING_ORDER_CONFIRM after REPEAT_ORDER
+        // This ensures next "conferma" triggers checkout, not cart view
+        if (chatSession) {
+          await this.conversationStateService.setState(
+            chatSession.id,
+            ConversationState.AWAITING_ORDER_CONFIRM,
+            {
+              pendingAction: { type: "CONFIRM_ORDER", orderCode: orderToRepeat.orderCode },
+              selectedOrderCode: orderToRepeat.orderCode,
+            }
+          )
+          logger.info("🔄 [FSM] State updated to AWAITING_ORDER_CONFIRM", {
+            orderCode: orderToRepeat.orderCode,
+          })
+        }
+
+        logger.info("🔄 [ChatEngine] REPEAT_ORDER completed", {
           orderCode: orderToRepeat.orderCode,
           addedItems: addedItems.length,
           failedItems: failedItems.length,
@@ -1325,7 +1827,7 @@ export class ChatEngineService {
         duration: dataLoadTime,
       })
 
-      logger.info("📦 [CodeFirstLLM] Data loaded", { type: loadedData.type })
+      logger.info("📦 [ChatEngine] Data loaded", { type: loadedData.type })
 
       // ========================================================================
       // STEP 4: Build structured response
@@ -1340,7 +1842,7 @@ export class ChatEngineService {
         }
       )
 
-      logger.info("🏗️ [CodeFirstLLM] Response built", { type: structuredResponse.type })
+      logger.info("🏗️ [ChatEngine] Response built", { type: structuredResponse.type })
 
       // ========================================================================
       // STEP 5: Format with LLM (only formatting, no decisions)
@@ -1509,7 +2011,7 @@ export class ChatEngineService {
       // ========================================================================
       // STEP 8: Save messages to conversation history (with debugInfo for timeline)
       // ========================================================================
-      await this.saveMessages(
+      const savedMessages = await this.saveMessages(
         input.workspaceId,
         input.customerId,
         conversationId,  // 🔧 Use conversationId for consistent history
@@ -1520,22 +2022,54 @@ export class ChatEngineService {
         debugInfo  // 🆕 Pass debugInfo for Message Flow Dialog
       )
 
+      // Store the assistant message ID for later use (needed for translation update)
+      const assistantMessageId = savedMessages?.assistantMessageId
+
       // ========================================================================
       // STEP 9: 🆕 Save options mapping for FAST-PATH on next message
       // Uses responseWithSkus to preserve SKU info for selection resolution
       // 🆕 Also passes groupMapping from LLM for smart grouping resolution
+      // 🔧 CRITICAL: Pass items with SKUs for proper product selection!
       // ========================================================================
+      // Extract items with SKUs from structuredResponse for proper mapping
+      const itemsWithSkus = structuredResponse.data?.items?.map((item: any) => ({
+        number: item.number,
+        name: item.name,
+        sku: item.sku,
+        id: item.id,
+      }))
+      
+      // Determine listType from response type
+      const responseListType = structuredResponse.type === "PRODUCT_LIST" ? "PRODUCTS" 
+                             : structuredResponse.type === "ORDER_LIST" ? "ORDERS"
+                             : structuredResponse.type === "CATEGORY_LIST" ? "CATEGORIES"
+                             : structuredResponse.type === "SERVICE_LIST" ? "SERVICES"
+                             : structuredResponse.type === "OFFERS" ? "OFFER_CATEGORIES"  // 🆕 Offers with category selection
+                             : undefined
+      
       await this.optionsMappingService.saveMapping({
         workspaceId: input.workspaceId,
         conversationId,
         customerId: input.customerId,
         responseText: responseWithSkus, // Use response WITH SKUs for mapping
         groupMapping, // 🆕 Pass LLM-generated group mapping if available
+        items: itemsWithSkus, // 🔧 Pass items with SKUs for reliable selection
+        listType: responseListType, // 🔧 Pass list type for proper intent creation
       })
+
+      // Log what we saved for debugging
+      if (itemsWithSkus && itemsWithSkus.length > 0) {
+        logger.info("📋 [ChatEngine] Saved items with SKUs for FAST-PATH", {
+          conversationId,
+          listType: responseListType,
+          itemCount: itemsWithSkus.length,
+          firstItem: { number: itemsWithSkus[0].number, name: itemsWithSkus[0].name?.substring(0, 20), sku: itemsWithSkus[0].sku },
+        })
+      }
 
       // Log if we saved a group mapping
       if (groupMapping) {
-        logger.info("🗂️ [CodeFirstLLM] Saved smart grouping mapping", {
+        logger.info("🗂️ [ChatEngine] Saved smart grouping mapping", {
           conversationId,
           groups: Object.keys(groupMapping),
           example: Object.entries(groupMapping)[0],
@@ -1557,10 +2091,117 @@ export class ChatEngineService {
             quantity: 1,
           },
         })
-        logger.info("🛒 [CodeFirstLLM] Set pending ADD_TO_CART action", {
+        logger.info("🛒 [ChatEngine] Set pending ADD_TO_CART action", {
           productId: product.sku || product.id,
           productName: product.name,
         })
+      }
+
+      // ========================================================================
+      // STEP 9.52: 🛒 Set pending action for SERVICE_DETAIL (add to cart prompt)
+      // ========================================================================
+      if (structuredResponse.type === "SERVICE_DETAIL" && structuredResponse.data.service) {
+        const service = structuredResponse.data.service
+        await this.optionsMappingService.setPendingAction({
+          workspaceId: input.workspaceId,
+          conversationId,
+          pendingAction: {
+            type: "ADD_TO_CART",
+            productId: service.code || service.id, // For services, use code
+            productName: service.name,
+            quantity: 1,
+            itemType: "SERVICE", // 🆕 Mark as service for CartManagementAgent
+          },
+        })
+        logger.info("🛒 [ChatEngine] Set pending ADD_TO_CART action for service", {
+          serviceId: service.code || service.id,
+          serviceName: service.name,
+        })
+      }
+
+      // ========================================================================
+      // STEP 9.55: 📦 Set order actions for ORDER_DETAIL
+      // ========================================================================
+      if (structuredResponse.type === "ORDER_DETAIL" && structuredResponse.data.order) {
+        const order = structuredResponse.data.order
+        
+        // Save order code
+        await this.optionsMappingService.setCurrentOrderCode({
+          workspaceId: input.workspaceId,
+          conversationId,
+          orderCode: order.code,
+        })
+        
+        // 🆕 CRITICAL: Save explicit action options so "1" = Fattura, "2" = Ripeti
+        await this.optionsMappingService.saveMapping({
+          workspaceId: input.workspaceId,
+          conversationId,
+          customerId: input.customerId,
+          responseText: "", // Empty - we're providing explicit items
+          items: [
+            { number: 1, name: "📄 Scarica fattura", id: "SEND_INVOICE" },
+            { number: 2, name: "🔄 Ripeti ordine", id: "REPEAT_ORDER" },
+          ],
+          listType: "ORDER_ACTIONS",
+        })
+        
+        logger.info("📦 [ChatEngine] Set order actions for ORDER_DETAIL", {
+          orderCode: order.code,
+          actions: ["SEND_INVOICE", "REPEAT_ORDER"],
+        })
+      }
+
+      // ========================================================================
+      // STEP 9.6: 🆕 FSM - Update conversation state based on response type
+      // ========================================================================
+      if (chatSession) {
+        let newFsmState: ConversationState | null = null
+        const fsmContext: Partial<StateContext> = {}
+        
+        switch (structuredResponse.type) {
+          case "CATEGORY_LIST":
+            newFsmState = ConversationState.BROWSING_CATEGORIES
+            break
+          case "PRODUCT_LIST":
+          case "PRODUCT_GROUPED":
+          case "PRODUCT_NEEDS_SMART_GROUPING":
+            newFsmState = ConversationState.BROWSING_PRODUCTS
+            break
+          case "ORDER_LIST":
+            newFsmState = ConversationState.BROWSING_ORDERS
+            break
+          case "PRODUCT_DETAIL":
+            newFsmState = ConversationState.VIEWING_PRODUCT
+            if (structuredResponse.data.product) {
+              fsmContext.selectedProductId = structuredResponse.data.product.id
+              fsmContext.selectedProductSku = structuredResponse.data.product.sku
+              fsmContext.selectedProductName = structuredResponse.data.product.name
+            }
+            break
+          case "ORDER_DETAIL":
+            newFsmState = ConversationState.VIEWING_ORDER
+            if (structuredResponse.data.order) {
+              fsmContext.selectedOrderId = structuredResponse.data.order.id
+              fsmContext.selectedOrderCode = structuredResponse.data.order.code
+            }
+            break
+          case "CART_VIEW":
+          case "CART_UPDATED":
+            newFsmState = ConversationState.VIEWING_CART
+            break
+          case "CART_EMPTY":
+            // 🔧 When cart is empty, go back to IDLE - next "sì" should NOT trigger checkout!
+            newFsmState = ConversationState.IDLE
+            break
+        }
+        
+        if (newFsmState) {
+          await this.conversationStateService.setState(chatSession.id, newFsmState, fsmContext)
+          logger.info("🔄 [FSM] Normal flow state updated", {
+            newState: newFsmState,
+            responseType: structuredResponse.type,
+          })
+        }
       }
 
       return {
@@ -1572,7 +2213,11 @@ export class ChatEngineService {
         confidence: intentResult.confidence,
         source: intentResult.source,
         processingTimeMs,
-        debugInfo,  // 🆕 Already built above, includes timeline steps
+        debugInfo: {
+          ...debugInfo,
+          steps: debugSteps,
+          totalTokens,
+        },
         // Legacy fields for webhook compatibility
         response: finalMessage,
         agentUsed: agentType,
@@ -1580,9 +2225,11 @@ export class ChatEngineService {
         executionTimeMs: processingTimeMs,
         wasFAQ: false,
         isBlocked: false,
-      }
+        // 🆕 Store assistant message ID for translation layer
+        _assistantMessageId: assistantMessageId,
+      } as any
     } catch (error) {
-      logger.error("❌ [CodeFirstLLM] Error processing message", { error })
+      logger.error("❌ [ChatEngine] Error processing message", { error })
       const errorTimeMs = Date.now() - startTime
 
       return {
@@ -1644,6 +2291,10 @@ export class ChatEngineService {
       SEARCH_PRODUCTS: AgentType.PRODUCT_SEARCH,
       SHOW_OFFERS: AgentType.PRODUCT_SEARCH,
       SHOW_NEW_ARRIVALS: AgentType.PRODUCT_SEARCH,
+
+      // Service intents
+      VIEW_SERVICES: AgentType.PRODUCT_SEARCH,
+      SHOW_SERVICE: AgentType.PRODUCT_SEARCH,
 
       // Cart intents
       VIEW_CART: AgentType.CART_MANAGEMENT,
@@ -1803,6 +2454,7 @@ export class ChatEngineService {
   /**
    * Save messages to conversation history
    * 🆕 Now includes debugInfo for Message Flow Dialog timeline
+   * 🆕 Returns assistant message ID for potential translation updates
    */
   private async saveMessages(
     workspaceId: string,
@@ -1813,7 +2465,7 @@ export class ChatEngineService {
     agentType?: string,
     tokensUsed?: number,
     debugInfo?: any
-  ): Promise<void> {
+  ): Promise<{ assistantMessageId?: string }> {
     try {
       // Save user message
       await this.conversationManager.saveUserMessage({
@@ -1842,7 +2494,7 @@ export class ChatEngineService {
       }
       
       // Save assistant response with debugInfo for timeline
-      await this.conversationManager.saveAssistantMessage({
+      const assistantMessageId = await this.conversationManager.saveAssistantMessage({
         workspaceId,
         customerId,
         conversationId,
@@ -1856,10 +2508,15 @@ export class ChatEngineService {
         hasDebugInfo: true,
         debugStepsCount: finalDebugInfo?.steps?.length || 0,
         wasFastPath: !debugInfo,
+        assistantMessageId,
       })
+      
+      // Return the assistant message ID
+      return { assistantMessageId }
     } catch (error) {
       // Don't fail the request if saving fails
       logger.error("❌ [ChatEngine] Failed to save messages", { error })
+      return {}
     }
   }
 

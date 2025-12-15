@@ -53,6 +53,7 @@ export interface CartLLMContext {
   query: string
   conversationHistory?: Array<{ role: string; content: string }> // Last 2-3 messages for context
   selectedSku?: string // Feature 123: Product code from search memory
+  selectedItemType?: "PRODUCT" | "SERVICE" // 🆕 Distinguish products from services
   /** Pre-loaded customer data from Router (avoids duplicate DB queries) */
   customerData?: CustomerData
 }
@@ -227,29 +228,35 @@ export class CartManagementAgentLLM {
 
       // 🔧 Feature 123: If we have selectedSku from search, inject it
       if (context.selectedSku) {
+        const isService = context.selectedItemType === "SERVICE"
+        const itemLabel = isService ? "Servizio" : "Prodotto"
+        const itemTypeParam = isService ? ', type: "SERVICE"' : ', type: "PRODUCT"'
+        
         messages.push({
           role: "system" as const,
           content: `🚨 AZIONE IMMEDIATA RICHIESTA 🚨
 
-Il cliente ha GIÀ CONFERMATO di voler aggiungere questo prodotto al carrello.
+Il cliente ha GIÀ CONFERMATO di voler aggiungere questo ${itemLabel.toLowerCase()} al carrello.
 NON chiedere ulteriori conferme. DEVI procedere IMMEDIATAMENTE.
 
-Codice Prodotto: ${context.selectedSku}
+Codice ${itemLabel}: ${context.selectedSku}
+Tipo: ${isService ? "SERVICE" : "PRODUCT"}
 
 ISTRUZIONI:
-1. Chiama SUBITO la funzione addToCart() con productCode: "${context.selectedSku}"
+1. Chiama SUBITO la funzione addToCart() con code: "${context.selectedSku}"${itemTypeParam}
 2. NON chiedere "Sei sicuro?" - il cliente ha già detto SÌ
 3. NON chiedere la quantità - usa quella specificata nel messaggio
 4. Dopo l'aggiunta, mostra il messaggio di conferma
 
 ESEMPIO DI CHIAMATA:
-addToCart({ productCode: "${context.selectedSku}", quantity: <numero dal messaggio> })`,
+addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal messaggio>${itemTypeParam} }] })`,
         })
 
         logger.info(
           `📦 Injected selectedSku into CartManagementAgent`,
           {
             selectedSku: context.selectedSku,
+            selectedItemType: context.selectedItemType || "PRODUCT",
           }
         )
       }

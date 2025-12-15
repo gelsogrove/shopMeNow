@@ -978,6 +978,8 @@ export class WhatsAppWebhookController {
         customerId: customer.id,
         conversationId: chatSession.id,
         messageLength: messageMarkdown.length,
+        customerLanguage: customer.language, // 🔍 DEBUG: What language is in DB?
+        customerName: customer.name,
       })
 
       const chatEngine = getChatEngine(prisma)

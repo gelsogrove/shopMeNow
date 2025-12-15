@@ -285,9 +285,13 @@ ORDERS:
 - ORDER_DETAILS:orderCode - User wants details of a specific order
 - REPEAT_ORDER - User wants to repeat/reorder a previous order
 
+SERVICES:
+- VIEW_SERVICES - User wants to see all available services (che servizi avete?, quali servizi?, servizi?)
+- SHOW_SERVICE:serviceName - User wants details about a specific service
+
 SUPPORT:
 - ASK_IDENTITY - User asks who you are
-- SHOW_AGENT_INFO - User asks who their assigned sales agent is
+- SHOW_AGENT_INFO - User wants to know their assigned sales agent
 - ASK_LOCATION - User asks where the store is located
 - ASK_FAQ:query - User has a question about policies, shipping, etc.
 - VIEW_PROFILE - User asks about their discount, profile, or personal info
@@ -304,6 +308,8 @@ Examples:
 - "SHOW_CATEGORIES"
 - "SHOW_CATEGORY:Formaggi"
 - "SEARCH_PRODUCTS:formaggio stagionato"
+- "VIEW_SERVICES" (when user asks "che servizi avete?", "quali servizi?", "servizi?")
+- "SHOW_SERVICE:Spedizione" (when user asks about a specific service)
 - "ADD_TO_CART:4:Pecorino Romano"
 - "REMOVE_FROM_CART:Pecorino"
 - "CLEAR_CART"
@@ -464,6 +470,15 @@ ${context.lastAssistantMessage ? `\nLast bot message: "${context.lastAssistantMe
       case "SHOW_OFFERS":
         // Return SHOW_OFFERS intent to load active offers
         return { type: "SHOW_OFFERS" }
+        
+      case "VIEW_SERVICES":
+        return { type: "VIEW_SERVICES" }
+        
+      case "SHOW_SERVICE":
+        if (param) {
+          return { type: "SHOW_SERVICE", serviceName: param.trim() }
+        }
+        return { type: "VIEW_SERVICES" }
         
       case "UNKNOWN":
       default:

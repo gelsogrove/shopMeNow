@@ -1,16 +1,27 @@
 # Multi-Agent Flow Architecture
 
-**Version**: 1.0.0  
-**Last Updated**: 2025-11-13  
+**Version**: 1.1.0  
+**Last Updated**: 2025-01-XX  
 **Related**: Constitution v1.8.0 Principles IX, X
 
 ---
 
 ## 🎯 Overview
 
-eChatbot uses a **multi-agent architecture** with Router Agent orchestrating specialist agents (ProductSearch, Cart, OrderTracking, CustomerSupport) and Safety Agent for final validation/translation.
+eChatbot uses a **multi-agent architecture** with two distinct message processing flows:
 
-**Key Innovation**: **Validation-Only Router Pattern** - Router validates specialist responses WITHOUT making expensive LLM call, saving 25% tokens (~5000 per request) and 800ms latency.
+### 1. Router Flow (`llm-router.service.ts`)
+- **Agents**: Router → Specialist Agents → SafetyTranslationAgent
+- **SafetyTranslationAgent** combines: safety validation + translation
+- Used for: complex routing, multiple agent coordination
+
+### 2. ChatEngine Flow (`chat-engine.service.ts`) ⬅️ **NEW**
+- **Pattern**: Wrapper (routeMessage → processMessageInternal → applyTranslation)
+- **TranslationAgent** is separate: ONLY translation
+- Used for: code-first LLM processing
+- **Key Innovation**: Single translation point via wrapper pattern (see section below)
+
+**Key Innovation (Router Flow)**: **Validation-Only Router Pattern** - Router validates specialist responses WITHOUT making expensive LLM call, saving 25% tokens (~5000 per request) and 800ms latency.
 
 ---
 
@@ -501,4 +512,96 @@ describe("Multi-Agent Flow", () => {
 
 ---
 
-**Version**: 1.0.0 | **Created**: 2025-11-13 | **Maintained By**: Architecture Team
+## 🌍 Translation Layer Architecture (Updated 2025-01)
+
+### ChatEngine Wrapper Pattern
+
+The `ChatEngineService` uses a **Decorator/Wrapper Pattern** to ensure ALL responses pass through translation:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    ChatEngine Translation Flow                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  External Call: routeMessage(input)                              │
+│       │                                                          │
+│       ▼                                                          │
+│  ┌─────────────────────────────────────────┐                    │
+│  │  routeMessage() - PUBLIC WRAPPER        │                    │
+│  │  • Calls processMessageInternal()       │                    │
+│  │  • Applies applyTranslation() ONCE      │                    │
+│  │  • Returns translated message           │                    │
+│  └─────────────────┬───────────────────────┘                    │
+│                    │                                             │
+│       ┌────────────┴────────────┐                               │
+│       ▼                         ▼                                │
+│  ┌─────────────────┐    ┌─────────────────┐                     │
+│  │ processMessage  │    │ applyTranslation│                     │
+│  │ Internal()      │    │ ()              │                     │
+│  │ PRIVATE         │    │                 │                     │
+│  │ • All business  │    │ • TranslationAgent                    │
+│  │   logic         │    │ • Push debug step                     │
+│  │ • Returns       │    │ • "🌍 Translation                     │
+│  │   Italian       │    │    Agent" in timeline                 │
+│  │   response      │    │                 │                     │
+│  └─────────────────┘    └─────────────────┘                     │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Why Wrapper Pattern?
+
+**Problem**: `processMessageInternal()` has 20+ early return statements. Adding translation to each return would be:
+- ❌ Error-prone (easy to miss one)
+- ❌ Code duplication
+- ❌ Hard to maintain
+
+**Solution**: Single translation point in wrapper:
+```typescript
+// PUBLIC wrapper - ONLY entry point
+async routeMessage(input: RouteMessageInput): Promise<RouteMessageResult> {
+  // 1. Process message (returns Italian)
+  const result = await this.processMessageInternal(input)
+  
+  // 2. Apply translation ONCE (to customer's language)
+  const translatedMessage = await this.applyTranslation(
+    result.message,
+    customer.preferredLanguage,
+    result.debugSteps
+  )
+  
+  return { ...result, message: translatedMessage }
+}
+```
+
+### TranslationAgent vs SafetyTranslationAgent
+
+| Agent | Location | Purpose |
+|-------|----------|---------|
+| **TranslationAgent** | `chat-engine.service.ts` | Translation ONLY - converts Italian to customer language |
+| **SafetyTranslationAgent** | `llm-router.service.ts` | Safety + Translation combined for router-based flow |
+
+### Debug Step in Message Flow Timeline
+
+The translation step appears as:
+```json
+{
+  "type": "translation",
+  "agent": "🌍 Translation Agent",
+  "input": "Risposta in italiano...",
+  "output": "Response in customer's language...",
+  "targetLanguage": "en"
+}
+```
+
+### Key Files
+
+| File | Responsibility |
+|------|----------------|
+| `chat-engine.service.ts` | `routeMessage()` wrapper, `applyTranslation()` |
+| `TranslationAgent.ts` | LLM-based translation to customer's `preferredLanguage` |
+| `MessageFlowDialog.tsx` | Frontend displays "🌍 Translation Agent" step |
+
+---
+
+**Version**: 1.1.0 | **Created**: 2025-11-13 | **Updated**: 2025-01-XX | **Maintained By**: Architecture Team

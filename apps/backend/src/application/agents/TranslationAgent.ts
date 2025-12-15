@@ -60,13 +60,21 @@ export class TranslationAgent {
   async process(options: ProcessOptions): Promise<TranslationResult> {
     const startTime = Date.now()
 
+    // 🔍 DEBUG: Log exactly what language we received
+    logger.info(`🌍 TranslationAgent.process() called`, {
+      targetLanguage: options.targetLanguage,
+      workspaceId: options.workspaceId,
+      customerName: options.customerName,
+      messageLength: options.message?.length,
+    })
+
     try {
       // 1. Normalize target language
       const normalizedLanguage = this.normalizeLanguage(options.targetLanguage)
       
       // 🆕 ALWAYS translate to target language - input may be mixed Italian/English
       // The Translation Agent will translate EVERYTHING to the target language
-      logger.info(`🌍 TranslationAgent - Translating to ${normalizedLanguage.toUpperCase()}`)
+      logger.info(`🌍 TranslationAgent - Translating to ${normalizedLanguage.toUpperCase()} (original input: ${options.targetLanguage})`)
 
       // 2. Load TRANSLATION agent config from database
       const translationAgent = await this.agentConfigRepo.findByType(
@@ -257,11 +265,14 @@ export class TranslationAgent {
     const mapping: Record<string, string> = {
       italian: "it",
       it: "it",
+      ita: "it", // 🆕 Handle ITA code for Italian
       spanish: "es",
       es: "es",
       esp: "es",
+      spa: "es", // 🆕 Handle SPA code for Spanish
       portuguese: "pt",
       pt: "pt",
+      prt: "pt", // 🆕 Handle PRT code for Portuguese
       english: "en",
       en: "en",
       eng: "en",

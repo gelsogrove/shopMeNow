@@ -40,6 +40,7 @@ export type ResponseType =
   | "PRODUCT_GROUPED"
   | "PRODUCT_NEEDS_SMART_GROUPING"  // LLM creates logical groups (e.g., "Formaggi Freschi" vs "Stagionati")
   | "PRODUCT_DETAIL"
+  | "SERVICE_LIST"    // 🆕 Service list (numbered)
   | "CART_VIEW"
   | "CART_EMPTY"
   | "CART_UPDATED"
@@ -203,6 +204,12 @@ export class ResponseBuilderService {
 
       case "PRODUCT_DETAIL":
         return this.buildProductDetail(loadedData.product, context)
+
+      case "SERVICES":
+        return this.buildServiceList(loadedData.services, context)
+
+      case "SERVICE_DETAIL":
+        return this.buildServiceDetail(loadedData.service, context)
 
       case "CART":
         return this.buildCartResponse(loadedData.cart, context)
@@ -517,6 +524,82 @@ export class ResponseBuilderService {
   }
 
   // ================================================================================
+  // SERVICE BUILDERS
+  // ================================================================================
+
+  private buildServiceList(
+    services: ServiceData[],
+    context: ResponseContext
+  ): StructuredResponse {
+    if (services.length === 0) {
+      return {
+        type: "NO_RESULTS",
+        data: { errorMessage: "No services available" },
+        formatting: { ...DEFAULT_FORMATTING, showNumbers: false },
+        context,
+      }
+    }
+
+    // 🎯 OPTIMIZATION: If only 1 service, skip list and show detail directly
+    if (services.length === 1) {
+      const service = services[0]
+      logger.info("🎯 [ResponseBuilder] Single service found - showing detail directly", {
+        serviceName: service.name,
+        code: service.code,
+      })
+      return this.buildServiceDetail(service, context)
+    }
+
+    const items: ListItem[] = services.map((svc, index) => ({
+      number: index + 1,
+      id: svc.id,
+      name: svc.name,
+      price: svc.price,
+      sku: svc.code,  // Use code as SKU for cart operations
+      extra: svc.currency,
+    }))
+
+    return {
+      type: "SERVICE_LIST",  // 🆕 Use SERVICE_LIST type to distinguish from CATEGORY_LIST
+      data: {
+        items,
+        count: services.length,
+      },
+      formatting: {
+        ...DEFAULT_FORMATTING,
+        showPrices: true,
+        showStock: false,  // Services don't have stock
+      },
+      context,
+    }
+  }
+
+  private buildServiceDetail(
+    service: ServiceData | null,
+    context: ResponseContext
+  ): StructuredResponse {
+    if (!service) {
+      return {
+        type: "NO_RESULTS",
+        data: { errorMessage: "Service not found" },
+        formatting: { ...DEFAULT_FORMATTING, showNumbers: false },
+        context,
+      }
+    }
+
+    return {
+      type: "SERVICE_DETAIL",  // Use dedicated SERVICE_DETAIL type
+      data: { service },  // Pass service data directly
+      formatting: {
+        ...DEFAULT_FORMATTING,
+        showNumbers: false,  // No selection needed
+        showStock: false,  // Services don't have stock
+      },
+      context,
+    }
+  }
+
+  // ================================================================================
   // CART BUILDERS
   // ================================================================================
 
@@ -756,6 +839,7 @@ export class ResponseBuilderService {
 
   /**
    * Build offers response - shows active offers/promotions
+   * 🆕 Now includes numbered options to view products for each offer with a category
    */
   private buildOffersResponse(
     offers: OfferData[],
@@ -770,12 +854,26 @@ export class ResponseBuilderService {
       }
     }
 
+    // 🆕 Create numbered items for offers that have categories (can show products)
+    const offersWithCategories = offers.filter(o => o.categoryName)
+    const items: ListItem[] = offersWithCategories.map((offer, index) => ({
+      number: index + 1,
+      id: offer.id,
+      name: `Vedi prodotti ${offer.categoryName} in sconto (-${offer.discountPercent}%)`,
+      sku: offer.categoryName, // Store category name as SKU for resolution
+      extra: offer.categoryName, // Category name for filtering
+    }))
+
     return {
       type: "OFFERS",
-      data: { offers, count: offers.length },
+      data: { 
+        offers, 
+        count: offers.length,
+        items: items.length > 0 ? items : undefined, // 🆕 Include items for selection
+      },
       formatting: {
         ...DEFAULT_FORMATTING,
-        showNumbers: false,  // Offers don't need numbered selection
+        showNumbers: items.length > 0,  // 🆕 Enable numbered selection if we have categories
         showPrices: true,
       },
       context,

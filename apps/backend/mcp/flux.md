@@ -643,6 +643,79 @@ Questo esempio mostra il flusso completo. **I nomi dei prodotti sono generici** 
 
 ---
 
+## 🌍 Translation Layer - Wrapper Pattern (Updated 2025-01)
+
+### Principio: "Codice decide, LLM formatta, Translation traduce"
+
+Il `ChatEngineService` usa un **Decorator/Wrapper Pattern** per garantire che TUTTE le risposte passino per la traduzione:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                 ChatEngine Translation Wrapper                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  📥 Chiamata esterna: routeMessage(input)                       │
+│       │                                                          │
+│       ▼                                                          │
+│  ┌─────────────────────────────────────────┐                    │
+│  │  routeMessage() - PUBLIC WRAPPER        │                    │
+│  │  • Chiama processMessageInternal()      │                    │
+│  │  • Applica applyTranslation() UNA VOLTA │                    │
+│  │  • Ritorna messaggio tradotto           │                    │
+│  └─────────────────┬───────────────────────┘                    │
+│                    │                                             │
+│       ┌────────────┴────────────┐                               │
+│       ▼                         ▼                                │
+│  ┌─────────────────┐    ┌─────────────────┐                     │
+│  │ processMessage  │    │ applyTranslation│                     │
+│  │ Internal()      │    │ ()              │                     │
+│  │ PRIVATE         │    │                 │                     │
+│  │ ~2400 linee     │    │ TranslationAgent│                     │
+│  │ • 20+ return    │    │ Converte ITA →  │                     │
+│  │   statements    │    │ lingua cliente  │                     │
+│  │ • Ritorna       │    │                 │                     │
+│  │   ITALIANO      │    │ Push debug step │                     │
+│  └─────────────────┘    │ "🌍 Translation │                     │
+│                         │    Agent"       │                     │
+│                         └─────────────────┘                     │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Perché Wrapper Pattern?
+
+**Problema**: `processMessageInternal()` ha 20+ punti di ritorno. Aggiungere traduzione a ogni return sarebbe:
+- ❌ Errore-prone (facile dimenticarne uno)
+- ❌ Duplicazione codice
+- ❌ Difficile da mantenere
+
+**Soluzione**: Un SOLO punto di traduzione nel wrapper:
+```typescript
+// PUBLIC wrapper - UNICO entry point
+async routeMessage(input: RouteMessageInput): Promise<RouteMessageResult> {
+  // 1. Processa messaggio (ritorna ITALIANO)
+  const result = await this.processMessageInternal(input)
+  
+  // 2. Applica traduzione UNA VOLTA (in lingua cliente)
+  const translatedMessage = await this.applyTranslation(
+    result.message,
+    customer.preferredLanguage,
+    result.debugSteps
+  )
+  
+  return { ...result, message: translatedMessage }
+}
+```
+
+### File Coinvolti
+
+| File | Responsabilità |
+|------|----------------|
+| `chat-engine.service.ts` | Wrapper `routeMessage()`, `applyTranslation()` |
+| `TranslationAgent.ts` | Traduzione LLM-based in `preferredLanguage` cliente |
+
+---
+
 ## 📝 Note Finali
 
 1. **Domain-agnostic**: Il sistema funziona per qualsiasi tipo di prodotto/servizio

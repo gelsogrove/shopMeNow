@@ -17,12 +17,14 @@ import {
   isProductSearchIntent,
   isCartIntent,
   isOrderIntent,
+  isServiceIntent,
   isSupportIntent,
   isSelectionIntent,
   ShowCategoryIntent,
   ShowProductIntent,
   SearchProductsIntent,
   ShowOffersIntent,
+  ShowServiceIntent,
   AddToCartIntent,
   RemoveFromCartIntent,
   UpdateCartQuantityIntent,
@@ -58,6 +60,19 @@ export interface ProductData {
   formato?: string
   certifications: string[]
   allergens: string[]
+  isAvailable: boolean
+}
+
+export interface ServiceData {
+  id: string
+  name: string
+  code: string
+  description?: string
+  price: number
+  priceWithDiscount?: number
+  currency: string
+  duration?: number
+  imageUrl?: string[]
   isAvailable: boolean
 }
 
@@ -158,6 +173,8 @@ export type LoadedData =
   | { type: "CATEGORIES"; categories: CategoryData[] }
   | { type: "PRODUCTS"; products: ProductData[] }
   | { type: "PRODUCT_DETAIL"; product: ProductData | null }
+  | { type: "SERVICES"; services: ServiceData[] }
+  | { type: "SERVICE_DETAIL"; service: ServiceData | null }
   | { type: "CART"; cart: CartData }
   | { type: "ORDER_LIST"; orders: OrderData[] }
   | { type: "ORDER_DETAIL"; order: OrderData | null }
@@ -205,7 +222,7 @@ export class DataLoaderService {
         case "SEARCH_PRODUCTS":
           return this.loadProductSearch(workspaceId, customerDiscount, (intent as SearchProductsIntent).query)
         case "SHOW_OFFERS":
-          return this.loadOffers(workspaceId)
+          return this.loadOffers(workspaceId, customerDiscount)  // 🆕 Pass discount for single-offer optimization
         default:
           return this.loadProducts(workspaceId, customerDiscount)
       }
@@ -238,6 +255,18 @@ export class DataLoaderService {
           return this.loadOrderStatus(workspaceId, customerId, (intent as OrderDetailsIntent).orderCode)
         default:
           return this.loadOrders(workspaceId, customerId)
+      }
+    }
+
+    // Service Intents
+    if (isServiceIntent(intent)) {
+      switch (intent.type) {
+        case "VIEW_SERVICES":
+          return this.loadServices(workspaceId)
+        case "SHOW_SERVICE":
+          return this.loadServiceByName(workspaceId, (intent as ShowServiceIntent).serviceName)
+        default:
+          return this.loadServices(workspaceId)
       }
     }
 
@@ -297,20 +326,35 @@ export class DataLoaderService {
         
         case "ORDERS":
           // User selected an order → load order details
-          // FALLBACK: If cleanedValue looks like an action (not an order code), treat it as an action
-          // This handles legacy mappings where ORDER_ACTIONS was saved as ORDERS
-          if (/fattura|invoice|ripeti|repeat|nota di credito|nota credito|credit note/i.test(cleanedValue)) {
-            logger.info("📦 [DataLoader] ORDERS listType but value looks like action, treating as ORDER_ACTION", {
-              cleanedValue,
-            })
-            return this.parseOrderAction(cleanedValue)
+          // 🆕 CLEAN ARCHITECTURE: Use optionId if available (saved from ResponseBuilder)
+          if (selectIntent.optionId) {
+            // If optionId is an action (SEND_INVOICE, REPEAT_ORDER), treat as action
+            if (["SEND_INVOICE", "REPEAT_ORDER", "SEND_CREDIT_NOTES"].includes(selectIntent.optionId)) {
+              logger.info("📦 [DataLoader] ORDERS with action optionId", { optionId: selectIntent.optionId })
+              return { type: "ORDER_ACTION", action: selectIntent.optionId as "SEND_INVOICE" | "REPEAT_ORDER" | "SEND_CREDIT_NOTES" }
+            }
           }
           return this.loadOrderStatus(workspaceId, customerId, cleanedValue)
         
         case "ORDER_ACTIONS":
           // User selected an action from order detail options
-          // Parse the action from the label
-          return this.parseOrderAction(cleanedValue)
+          // 🆕 CLEAN ARCHITECTURE: Use optionId (e.g., "SEND_INVOICE", "REPEAT_ORDER")
+          // This is set by ResponseBuilder when building ORDER_DETAIL response
+          if (selectIntent.optionId) {
+            logger.info("📦 [DataLoader] Using optionId for order action", {
+              optionId: selectIntent.optionId,
+            })
+            return { 
+              type: "ORDER_ACTION", 
+              action: selectIntent.optionId as "SEND_INVOICE" | "REPEAT_ORDER" | "SEND_CREDIT_NOTES"
+            }
+          }
+          // 🆕 If no optionId, this is an error - should not happen with clean architecture
+          logger.error("📦 [DataLoader] ORDER_ACTIONS without optionId - mapping not saved correctly", {
+            cleanedValue,
+            selectIntent,
+          })
+          return { type: "EMPTY", reason: "missing_option_id" }
         
         case "CART_ITEMS":
           // User selected a cart item → could be for removal/update
@@ -328,7 +372,32 @@ export class DataLoaderService {
         
         case "SERVICES":
           // User selected a service
+          // 🔧 FIX: Use code (SKU) if available (more reliable than name search)
+          if (selectIntent.skus && selectIntent.skus.length > 0) {
+            logger.info("📦 [DataLoader] Loading service by code (reliable)", {
+              code: selectIntent.skus[0],
+            })
+            return this.loadServiceByCode(workspaceId, selectIntent.skus[0])
+          }
+          // Fallback to name search (less reliable)
           return this.loadServiceByName(workspaceId, cleanedValue)
+        
+        case "OFFER_CATEGORIES":
+          // 🆕 User selected to view products from an offer category
+          // The category name is stored in skus[0] (see buildOffersResponse)
+          if (selectIntent.skus && selectIntent.skus.length > 0) {
+            const categoryName = selectIntent.skus[0]
+            logger.info("📦 [DataLoader] Loading products for offer category", {
+              categoryName,
+            })
+            return this.loadProductsByCategory(workspaceId, customerDiscount, categoryName)
+          }
+          // Fallback to cleanedValue (the option label)
+          const categoryMatch = cleanedValue.match(/prodotti\\s+([\\w\\s]+)\\s+in sconto/i)
+          if (categoryMatch) {
+            return this.loadProductsByCategory(workspaceId, customerDiscount, categoryMatch[1].trim())
+          }
+          return { type: "EMPTY", reason: "offer_category_not_found" }
         
         default:
           logger.warn("📦 [DataLoader] Unknown listType for selection", { listType: selectIntent.listType })
@@ -370,6 +439,149 @@ export class DataLoaderService {
     } catch (error) {
       logger.error("❌ [DataLoader] Error loading categories", { error })
       return { type: "ERROR", error: "Failed to load categories" }
+    }
+  }
+
+  private async loadServices(workspaceId: string): Promise<LoadedData> {
+    try {
+      const services = await this.prisma.services.findMany({
+        where: { workspaceId, isActive: true },
+        select: {
+          id: true,
+          name: true,
+          code: true,
+          description: true,
+          price: true,
+          currency: true,
+          duration: true,
+          imageUrl: true,
+        },
+        orderBy: { name: "asc" },
+      })
+
+      const serviceData: ServiceData[] = services.map((s) => ({
+        id: s.id,
+        name: s.name,
+        code: s.code,
+        description: s.description || undefined,
+        price: s.price,
+        currency: s.currency || "EUR",
+        duration: s.duration || 60,
+        imageUrl: s.imageUrl || [],
+        isAvailable: true,  // Services are always available if active
+        priceWithDiscount: s.price,  // Services don't have discounts
+      }))
+
+      logger.info("📦 [DataLoader] Loaded services", { 
+        workspaceId,
+        count: serviceData.length 
+      })
+
+      return { type: "SERVICES", services: serviceData }
+    } catch (error) {
+      logger.error("❌ [DataLoader] Error loading services", { error })
+      return { type: "ERROR", error: "Failed to load services" }
+    }
+  }
+
+  private async loadServiceByName(workspaceId: string, serviceName: string): Promise<LoadedData> {
+    try {
+      const service = await this.prisma.services.findFirst({
+        where: {
+          workspaceId,
+          isActive: true,
+          name: { contains: serviceName, mode: "insensitive" }
+        },
+        select: {
+          id: true,
+          name: true,
+          code: true,
+          description: true,
+          price: true,
+          currency: true,
+          duration: true,
+          imageUrl: true,
+        },
+      })
+
+      if (!service) {
+        return { type: "ERROR", error: `Service "${serviceName}" not found` }
+      }
+
+      const serviceData: ServiceData = {
+        id: service.id,
+        name: service.name,
+        code: service.code,
+        description: service.description || undefined,
+        price: service.price,
+        currency: service.currency || "EUR",
+        duration: service.duration || 60,
+        imageUrl: service.imageUrl || [],
+        isAvailable: true,
+        priceWithDiscount: service.price,
+      }
+
+      logger.info("📦 [DataLoader] Loaded service detail", {
+        workspaceId,
+        serviceName,
+        code: service.code
+      })
+
+      return { type: "SERVICE_DETAIL", service: serviceData }
+    } catch (error) {
+      logger.error("❌ [DataLoader] Error loading service by name", { error, serviceName })
+      return { type: "ERROR", error: "Failed to load service" }
+    }
+  }
+
+  private async loadServiceByCode(workspaceId: string, serviceCode: string): Promise<LoadedData> {
+    try {
+      const service = await this.prisma.services.findFirst({
+        where: {
+          workspaceId,
+          isActive: true,
+          code: serviceCode,
+        },
+        select: {
+          id: true,
+          name: true,
+          code: true,
+          description: true,
+          price: true,
+          currency: true,
+          duration: true,
+          imageUrl: true,
+        },
+      })
+
+      if (!service) {
+        logger.warn("⚠️ [DataLoader] Service code not found", { serviceCode })
+        return { type: "ERROR", error: `Service code "${serviceCode}" not found` }
+      }
+
+      const serviceData: ServiceData = {
+        id: service.id,
+        name: service.name,
+        code: service.code,
+        description: service.description || undefined,
+        price: service.price,
+        currency: service.currency || "EUR",
+        duration: service.duration || 60,
+        imageUrl: service.imageUrl || [],
+        isAvailable: true,
+        priceWithDiscount: service.price,
+      }
+
+      logger.info("📦 [DataLoader] Loaded service by code", {
+        workspaceId,
+        serviceCode,
+        serviceName: service.name
+      })
+
+      return { type: "SERVICE_DETAIL", service: serviceData }
+    } catch (error) {
+      logger.error("❌ [DataLoader] Error loading service by code", { error, serviceCode })
+      return { type: "ERROR", error: "Failed to load service" }
     }
   }
 
@@ -926,32 +1138,13 @@ export class DataLoaderService {
   }
 
   /**
-   * Parse order action from user selection
-   * Maps numbered action to calling function (multilingual support via LLM translation layer)
-   * Base labels are in English, translated by LLM formatter
+   * @deprecated Use optionId from selectIntent instead
+   * This method had hardcoded language patterns which break multilingual support
+   * Kept only for reference - should not be called
    */
   private parseOrderAction(selectedLabel: string): LoadedData {
-    const lower = selectedLabel.toLowerCase()
-    
-    logger.info("📦 [DataLoader] Parsing order action", { selectedLabel })
-    
-    // Invoice: English "invoice" or Italian "fattura"
-    if (lower.includes("invoice") || lower.includes("fattura")) {
-      return { type: "ORDER_ACTION", action: "SEND_INVOICE" }
-    }
-    
-    // Repeat order: English "repeat" or Italian "ripeti"
-    if (lower.includes("repeat") || lower.includes("ripeti")) {
-      return { type: "ORDER_ACTION", action: "REPEAT_ORDER" }
-    }
-    
-    // Credit note: English "credit note" or Italian "nota di credito"
-    if (lower.includes("credit note") || lower.includes("nota di credito") || lower.includes("nota credito")) {
-      return { type: "ORDER_ACTION", action: "SEND_CREDIT_NOTES" }
-    }
-    
-    logger.warn("⚠️ [DataLoader] Unknown order action", { selectedLabel })
-    return { type: "EMPTY", reason: "unknown_order_action" }
+    logger.error("📦 [DataLoader] parseOrderAction called - should use optionId instead!", { selectedLabel })
+    return { type: "EMPTY", reason: "deprecated_parse_order_action" }
   }
 
   // ================================================================================
@@ -1197,8 +1390,9 @@ export class DataLoaderService {
 
   /**
    * Load active offers for a workspace
+   * 🆕 If there's only ONE offer with a category, directly load the products (more fluid UX)
    */
-  private async loadOffers(workspaceId: string): Promise<LoadedData> {
+  private async loadOffers(workspaceId: string, customerDiscount: number = 0): Promise<LoadedData> {
     try {
       const now = new Date()
       
@@ -1218,6 +1412,18 @@ export class DataLoaderService {
         workspaceId,
         count: offers.length,
       })
+
+      // 🆕 If there's only ONE offer with a category, load products directly (skip selection step)
+      const offersWithCategories = offers.filter(o => o.category?.name)
+      if (offersWithCategories.length === 1) {
+        const singleOffer = offersWithCategories[0]
+        logger.info("📦 [DataLoader] Single offer with category - loading products directly", {
+          offerName: singleOffer.name,
+          categoryName: singleOffer.category?.name,
+          discount: singleOffer.discountPercent,
+        })
+        return this.loadProductsByCategory(workspaceId, customerDiscount, singleOffer.category!.name)
+      }
 
       return {
         type: "OFFERS",

@@ -26,13 +26,14 @@ export interface OptionItem {
   label: string
   count?: number // e.g., "Formaggi (7 prodotti)" → count: 7
   skus?: string[] // e.g., "Condimenti Freschi [SKUS:COND-003,COND-004,COND-005]" → skus: ["COND-003", "COND-004", "COND-005"]
+  id?: string // 🆕 For actions: the ID of the option (e.g., "SEND_INVOICE", "REPEAT_ORDER")
 }
 
 /**
  * Type of list displayed to user
  * Using UPPERCASE to match intent.types.ts ListType
  */
-export type ListType = "CATEGORIES" | "GROUPS" | "PRODUCTS" | "ORDERS" | "CART_ITEMS" | "SERVICES" | "ORDER_ACTIONS" | "binary" | "unknown"
+export type ListType = "CATEGORIES" | "GROUPS" | "PRODUCTS" | "ORDERS" | "CART_ITEMS" | "SERVICES" | "ORDER_ACTIONS" | "OFFER_CATEGORIES" | "binary" | "unknown"
 
 /**
  * Pending action after user confirmation (sì/no)
@@ -43,6 +44,7 @@ export interface PendingAction {
   productName?: string
   quantity?: number
   orderId?: string
+  itemType?: "PRODUCT" | "SERVICE" // 🆕 Distinguish products from services
 }
 
 /**
@@ -91,11 +93,12 @@ export class OptionsMappingService {
 
       const mapping = (searchConv?.metadata as any)?.lastOptionsMapping || null
 
-      logger.debug("📋 [OptionsMapping] Loaded mapping", {
+      logger.info("📋 [OptionsMapping] Loaded mapping", {
         conversationId,
         hasMapping: !!mapping,
         listType: mapping?.listType,
         optionsCount: mapping?.options?.length,
+        currentOrderCode: mapping?.currentOrderCode,  // 🔍 DEBUG: Log orderCode
       })
 
       return mapping
@@ -127,12 +130,21 @@ export class OptionsMappingService {
   }): Promise<void> {
     const { workspaceId, conversationId, customerId, responseText, forceClear, groupMapping, items, listType: explicitListType } = options
 
-    try {
-      let mapping = forceClear ? null : this.extractFromResponse(responseText)
+    // 🔍 DEBUG: Log what we receive
+    logger.info("📋 [OptionsMapping] saveMapping CALLED with params", {
+      conversationId,
+      hasItems: !!(items && items.length > 0),
+      itemCount: items?.length || 0,
+      explicitListType,
+      responseTextPreview: responseText.substring(0, 50),
+    })
 
-      // 🆕 If we have items with SKUs from StructuredResponse, use them!
-      // This is more reliable than parsing from text
-      if (items && items.length > 0) {
+    try {
+      let mapping: OptionsMapping | null = null
+
+      // 🆕 CLEAN ARCHITECTURE: If we have items + explicitListType, use them directly
+      // NO hardcoded regex detection needed - the ResponseBuilder knows the type!
+      if (items && items.length > 0 && explicitListType) {
         const optionsFromItems = items.map(item => ({
           number: item.number,
           label: item.name,
@@ -140,14 +152,24 @@ export class OptionsMappingService {
           id: item.id,
         }))
         
-        if (!mapping) {
-          mapping = {
-            type: "numbered",
-            options: optionsFromItems,
-            listType: explicitListType || "PRODUCTS",
-          }
-        } else {
-          // Merge SKUs into existing options
+        mapping = {
+          type: "numbered",
+          options: optionsFromItems,
+          listType: explicitListType,
+        }
+        
+        logger.info("📋 [OptionsMapping] Using explicit items + listType (clean path)", {
+          conversationId,
+          itemCount: items.length,
+          listType: explicitListType,
+          firstItem: { number: items[0].number, name: items[0].name?.substring(0, 20), sku: items[0].sku },
+        })
+      } else {
+        // Fallback: try to extract from response text (legacy path)
+        mapping = forceClear ? null : this.extractFromResponse(responseText)
+        
+        // If we have items without explicit type, add SKUs to extracted mapping
+        if (mapping && items && items.length > 0) {
           mapping.options = mapping.options.map(opt => {
             const itemMatch = items.find(i => i.number === opt.number)
             if (itemMatch && itemMatch.sku) {
@@ -157,11 +179,15 @@ export class OptionsMappingService {
           })
         }
         
-        logger.info("📋 [OptionsMapping] Using items with SKUs from StructuredResponse", {
-          conversationId,
-          itemCount: items.length,
-          firstItem: { number: items[0].number, name: items[0].name?.substring(0, 20), sku: items[0].sku },
-        })
+        // Override listType if explicit one provided
+        if (mapping && explicitListType) {
+          logger.info("📋 [OptionsMapping] Overriding listType with explicit value", {
+            explicitListType,
+            previousListType: mapping.listType,
+            conversationId,
+          })
+          mapping.listType = explicitListType
+        }
       }
 
       // 🆕 If we have a groupMapping from LLM, add it to the mapping
@@ -232,9 +258,18 @@ export class OptionsMappingService {
       })
 
       const currentMetadata = (existing?.metadata as any) || {}
+      const existingMapping = currentMetadata.lastOptionsMapping || {}
+      
+      // 🔧 CRITICAL: Preserve currentOrderCode when updating mapping
+      // This ensures ORDER_ACTIONS can still access the order code
+      const updatedMapping = mapping ? {
+        ...mapping,
+        currentOrderCode: existingMapping.currentOrderCode,
+      } : null
+      
       const updatedMetadata = {
         ...currentMetadata,
-        lastOptionsMapping: mapping,
+        lastOptionsMapping: updatedMapping,
       }
 
       await this.prisma.searchConversations.upsert({
@@ -467,11 +502,11 @@ export class OptionsMappingService {
 
     // Need at least 2 options to be a list
     if (options.length >= 2) {
-      const listType = this.detectListType(responseText, options)
-
-      logger.debug("📋 [OptionsMapping] Extracted numbered list", {
+      // 🆕 CLEAN ARCHITECTURE: Don't try to detect listType from text!
+      // The ResponseBuilder should always pass explicitListType.
+      // If we reach this fallback, use "unknown" and log a warning.
+      logger.warn("📋 [OptionsMapping] extractFromResponse fallback - no explicitListType provided", {
         optionsCount: options.length,
-        listType,
         firstThree: options.slice(0, 3).map((o) => ({ 
           label: o.label.substring(0, 30),
           skus: o.skus
@@ -481,92 +516,25 @@ export class OptionsMappingService {
       return {
         type: "numbered",
         options: options.slice(0, 30), // Limit to 30 options
-        listType,
+        listType: "unknown", // 🆕 Don't guess - let the caller provide explicitListType
       }
     }
 
-    // Check for binary yes/no prompt
-    const lower = responseText.toLowerCase()
-    const hasYesNoPrompt =
-      /vuoi|confermi|procedo|aggiungo|desideri/i.test(lower) ||
-      /\?\s*$/m.test(responseText)
-
-    if (hasYesNoPrompt && /\b(sì|si|no|ok)\b/i.test(lower)) {
-      return {
-        type: "binary",
-        options: [
-          { number: 1, label: "sì" },
-          { number: 2, label: "no" },
-        ],
-        listType: "binary",
-      }
-    }
+    // 🆕 REMOVED: Binary yes/no detection with hardcoded Italian words
+    // The FSM and pendingAction system handles confirmations properly
+    // If we need binary detection, it should be language-agnostic
 
     return null
   }
 
   /**
-   * Detect what type of list was displayed
-   * Returns UPPERCASE ListType to match intent.types.ts
-   * 
-   * IMPORTANT: Order of checks matters! More specific patterns first.
+   * @deprecated This method uses hardcoded language patterns
+   * Use explicitListType from ResponseBuilder instead
    */
   private detectListType(responseText: string, options: OptionItem[]): ListType {
-    const lower = responseText.toLowerCase()
-
-    // Check for ORDER_ACTIONS first (most specific)
-    // These are action menus shown after order details with options like invoice/repeat
-    // Check options FIRST - if options contain action keywords, it's ORDER_ACTIONS
-    const hasActionOptions = options.some((o) => 
-      /fattura|invoice|scarica|download|ripeti|repeat|nota di credito|credit note/i.test(o.label)
-    )
-    // Also check for action prompts in text
-    const hasActionPrompt = /cosa (vuoi|desideri|vorresti) fare\??|what would you like to do\??|cosa posso fare/i.test(lower)
-    
-    if (hasActionOptions && (hasActionPrompt || options.length <= 3)) {
-      // If we have action-like options AND (action prompt OR small list), it's ORDER_ACTIONS
-      return "ORDER_ACTIONS"
-    }
-
-    // Check for ORDERS before PRODUCTS (orders also have prices!)
-    // Look for order code patterns in OPTIONS: #ORD-xxx, ORD-xxx
-    const hasOrderCodeInOptions = options.some((o) => /#?ORD-\d+/i.test(o.label))
-    // Or order list indicators in text (but NOT just "ordine" which appears in "Ripeti ordine")
-    const hasOrderListCue = /lista.*ordin[ei]|ordin[ei].*lista|tuoi ordin[ei]|your orders|#ORD-|ORD-\d|\[consegnato\]|\[confermato\]|\[delivered\]|\[confirmed\]/i.test(lower)
-    
-    if (hasOrderCodeInOptions || hasOrderListCue) {
-      return "ORDERS"
-    }
-
-    // Check for group indicators (more specific than category)
-    // Groups are sub-divisions created by LLM within a category
-    const hasGroupCue = /grupp[oi]|groups?|sub-?categor|sottocategor|grupos/i.test(lower)
-    if (hasGroupCue) {
-      return "GROUPS"
-    }
-
-    // Check for category indicators
-    const hasCategoryCue =
-      /categori[ae]s?|catalogo?|disponibil|catalog/i.test(lower) ||
-      (options.some((o) => /\(\d+\s*(prodotti|items|productos|products)\)/i.test(o.label)) &&
-       !hasGroupCue) // Only category if NOT groups
-
-    if (hasCategoryCue) {
-      return "CATEGORIES"
-    }
-
-    // Check for price indicators → products (AFTER orders check)
-    const hasPrice = /€|euro/i.test(responseText)
-    if (hasPrice) {
-      return "PRODUCTS"
-    }
-
-    // Check for cart indicators
-    const hasCartCue = /carrello|cart/i.test(lower)
-    if (hasCartCue) {
-      return "CART_ITEMS"
-    }
-
+    // 🆕 CLEAN ARCHITECTURE: This method should NOT be called!
+    // All list types should come from ResponseBuilder via explicitListType
+    logger.warn("📋 [OptionsMapping] detectListType called - should use explicitListType instead")
     return "unknown"
   }
   /**

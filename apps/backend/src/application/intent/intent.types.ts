@@ -151,6 +151,7 @@ export interface SelectOptionIntent {
   resolvedValue: string  // The actual name/code extracted from history
   listType: ListType
   skus?: string[]  // 🆕 For smart grouping: SKUs of products in the selected group
+  optionId?: string  // 🆕 For actions: the ID of the selected option (e.g., "SEND_INVOICE", "REPEAT_ORDER")
 }
 
 // =============================================================================
@@ -345,6 +346,12 @@ export function isOrderIntent(intent: Intent): intent is
   | ViewOrdersIntent 
   | OrderDetailsIntent {
   return ["VIEW_ORDERS", "ORDER_DETAILS"].includes(intent.type)
+}
+
+export function isServiceIntent(intent: Intent): intent is 
+  | ViewServicesIntent 
+  | ShowServiceIntent {
+  return ["VIEW_SERVICES", "SHOW_SERVICE"].includes(intent.type)
 }
 
 export function isSupportIntent(intent: Intent): intent is 
