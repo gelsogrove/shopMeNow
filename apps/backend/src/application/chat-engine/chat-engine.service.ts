@@ -9,7 +9,15 @@
 
 import { PrismaClient, AgentType } from "@echatbot/database"
 import logger from "../../utils/logger"
-import { IntentParserService, getIntentParser, Intent, SearchProductsIntent, AddToCartIntent, RepeatOrderIntent } from "../intent"
+import {
+  IntentParserService,
+  getIntentParser,
+  Intent,
+  SearchProductsIntent,
+  AddToCartIntent,
+  RepeatOrderIntent,
+  RequestHumanIntent,
+} from "../intent"
 import { DataLoaderService, getDataLoader, LoadedData } from "../data-loader"
 import { ResponseBuilderService, getResponseBuilder, StructuredResponse } from "../response-builder"
 import { LLMFormatterService, getLLMFormatter, FormatterResult } from "../llm-formatter"
@@ -41,7 +49,6 @@ import { TranslationAgent } from "../agents/TranslationAgent"
 import { CatalogQueryService, CatalogQueryLoadedData } from "../catalog-query/catalog-query.service"
 
 type PipelineLoadedData = LoadedData | CatalogQueryLoadedData
-import { CatalogQueryService, CatalogQueryLoadedData } from "../catalog-query/catalog-query.service"
 
 // ================================================================================
 // WORKSPACE CONFIG CACHE
@@ -51,9 +58,13 @@ interface WorkspaceConfig {
   sellsProductsAndServices: boolean
   hasSalesAgents: boolean
   hasSuppliers: boolean
+  hasHumanSupport: boolean
+  humanSupportInstructions: string | null
+  operatorContactMethod: string | null
   welcomeMessage: any
   botIdentityResponse: string | null
   customAiRules: string | null  // Custom AI rules that override default behavior
+  adminEmail: string | null
 }
 
 const workspaceConfigCache = new Map<string, { config: WorkspaceConfig; timestamp: number }>()
@@ -234,6 +245,210 @@ export class ChatEngineService {
     return customer?.name || null
   }
 
+  private getHumanSupportTemplate(
+    workspaceConfig: WorkspaceConfig,
+    options?: { reason?: string }
+  ): string {
+    const reason = options?.reason?.toLowerCase()
+    const hasSupport = workspaceConfig.hasHumanSupport
+    if (!hasSupport) {
+      if (workspaceConfig.humanSupportInstructions?.trim()) {
+        return workspaceConfig.humanSupportInstructions.trim()
+      }
+      return `Ciao {{nameUser}}, manda una email a {{adminEmail}} con i dettagli e ti risponderemo il prima possibile.`
+    }
+
+    const isFrustration =
+      reason === "frustration" ||
+      reason === "frustrated" ||
+      reason === "angry" ||
+      reason === "complaint"
+
+    if (isFrustration) {
+      if (workspaceConfig.hasSalesAgents) {
+        return `Ciao {{nameUser}}, capisco la tua frustrazione e mi dispiace per l'inconveniente.\nMi sto mettendo in contatto con l'agente {{agentName}}. Ti richiamera' al piu' presto (tel: {{agentPhone}} - email: {{agentEmail}}).\nDisattivo il chatbot finche' non ricevi risposta.`
+      }
+      return `Ciao {{nameUser}}, capisco la tua frustrazione e voglio risolvere subito.\nMi sto mettendo in contatto con il nostro operatore. Ti rispondera' al piu' presto e disattivo il chatbot finche' non ricevi assistenza.`
+    }
+
+    if (workspaceConfig.humanSupportInstructions?.trim()) {
+      return workspaceConfig.humanSupportInstructions.trim()
+    }
+
+    if (workspaceConfig.hasSalesAgents) {
+      return `Ciao {{nameUser}}, mi sto mettendo in contatto con l'agente {{agentName}}.\nTi rispondera' a breve. Metto in pausa il chatbot finche' non ricevi assistenza.`
+    }
+    return `Ciao {{nameUser}}, mi sto mettendo in contatto con il nostro operatore.\nTi rispondera' al piu' presto. Metto in pausa il chatbot finche' non ricevi assistenza.`
+  }
+
+  private applyHumanSupportPlaceholders(
+    template: string,
+    replacements: Record<string, string | undefined>
+  ): string {
+    let result = template
+
+    for (const [key, value] of Object.entries(replacements)) {
+      const safeValue = value ?? ""
+      result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), safeValue)
+    }
+
+    return result
+  }
+
+  private async handleHumanSupportRequest(params: {
+    input: ChatEngineInput
+    workspaceConfig: WorkspaceConfig
+    conversationId: string
+    debugSteps: DebugStep[]
+    totalTokens: number
+    startTime: number
+    requestIntent: RequestHumanIntent
+    intentConfidence: "HIGH" | "MEDIUM" | "LOW"
+    intentSource: "PATTERN" | "KEYWORD" | "LLM_FALLBACK"
+  }): Promise<ChatEngineOutput> {
+    const {
+      input,
+      workspaceConfig,
+      conversationId,
+      debugSteps,
+      totalTokens,
+      startTime,
+      requestIntent,
+      intentConfidence,
+      intentSource,
+    } = params
+
+    const customer = await this.prisma.customers.findUnique({
+      where: { id: input.customerId },
+      select: {
+        name: true,
+        phone: true,
+        sales: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+    })
+
+    const customerName =
+      input.customerName || customer?.name || "Cliente"
+
+    let agentName = ""
+    let agentEmail = ""
+    let agentPhone = ""
+
+    if (customer?.sales) {
+      const first = customer.sales.firstName?.trim() || ""
+      const last = customer.sales.lastName?.trim() || ""
+      agentName = [first, last].filter(Boolean).join(" ").trim()
+      agentEmail = customer.sales.email || ""
+      agentPhone = customer.sales.phone || ""
+    } else if (workspaceConfig.hasSalesAgents) {
+      logger.warn("⚠️ [ChatEngine] No sales agent assigned for customer requesting human support", {
+        customerId: input.customerId,
+      })
+    }
+
+    const template = this.getHumanSupportTemplate(workspaceConfig, {
+      reason: requestIntent.reason,
+    })
+
+    const adminEmail =
+      workspaceConfig.adminEmail || "support@echatbot.ai"
+
+    const finalMessage = this.applyHumanSupportPlaceholders(template, {
+      nameUser: customerName,
+      agentName,
+      agentEmail,
+      agentPhone,
+      adminEmail,
+    }).trim()
+
+    if (workspaceConfig.hasHumanSupport) {
+      try {
+        debugSteps.push({
+          type: "function_call",
+          agent: "📞 contactOperator",
+          timestamp: new Date().toISOString(),
+          input: {
+            textContent: requestIntent.reason || input.message,
+          },
+        })
+
+        const { contactOperator } = await import("../../domain/calling-functions/contactOperator")
+        const contactResult = await contactOperator({
+          phoneNumber: customer?.phone || "",
+          workspaceId: input.workspaceId,
+          customerId: input.customerId,
+          reason: requestIntent.reason || input.message,
+        })
+
+        debugSteps.push({
+          type: "function_result",
+          agent: "📞 contactOperator",
+          timestamp: new Date().toISOString(),
+          output: {
+            result: {
+              success: contactResult.success,
+              summaryAgentExecuted: contactResult.summaryAgentExecuted,
+            },
+          },
+        })
+      } catch (error) {
+        logger.error("❌ [ChatEngine] contactOperator failed during human support handling", {
+          error,
+          customerId: input.customerId,
+          workspaceId: input.workspaceId,
+        })
+      }
+    }
+
+    const processingTimeMs = Date.now() - startTime
+
+    const debugInfo = {
+      loadedDataType: "HUMAN_SUPPORT",
+      responseType: "HUMAN_SUPPORT",
+      llmUsed: false,
+      steps: debugSteps,
+      totalTokens,
+      totalCost: (totalTokens * 0.0003) / 1000,
+      executionTimeMs: processingTimeMs,
+    }
+
+    const savedMessages = await this.saveMessages(
+      input.workspaceId,
+      input.customerId,
+      conversationId,
+      input.message,
+      finalMessage,
+      AgentType.CUSTOMER_SUPPORT,
+      totalTokens,
+      debugInfo
+    )
+
+    return {
+      message: finalMessage,
+      agentType: AgentType.CUSTOMER_SUPPORT,
+      wasHandled: true,
+      intent: "REQUEST_HUMAN",
+      confidence: intentConfidence,
+      source: intentSource,
+      processingTimeMs,
+      debugInfo,
+      response: finalMessage,
+      agentUsed: AgentType.CUSTOMER_SUPPORT,
+      tokensUsed: totalTokens,
+      executionTimeMs: processingTimeMs,
+      wasFAQ: false,
+      isBlocked: false,
+      _assistantMessageId: savedMessages?.assistantMessageId,
+    } as any
+  }
+
   /**
    * Helper: formatta con LLM includendo customAiRules dal workspace
    */
@@ -391,9 +606,16 @@ export class ChatEngineService {
         sellsProductsAndServices: true,
         hasSalesAgents: true,
         hasSuppliers: true,
+        hasHumanSupport: true,
+        humanSupportInstructions: true,
+        operatorContactMethod: true,
         welcomeMessage: true,
         botIdentityResponse: true,
         customAiRules: true,  // Custom AI rules that override default behavior
+        notificationEmail: true,
+        whatsappSettings: {
+          select: { adminEmail: true },
+        },
       },
     })
 
@@ -401,9 +623,16 @@ export class ChatEngineService {
       sellsProductsAndServices: workspace?.sellsProductsAndServices ?? true,
       hasSalesAgents: workspace?.hasSalesAgents ?? false,
       hasSuppliers: workspace?.hasSuppliers ?? false,
+       hasHumanSupport: workspace?.hasHumanSupport ?? false,
+       humanSupportInstructions: workspace?.humanSupportInstructions ?? null,
+       operatorContactMethod: workspace?.operatorContactMethod ?? null,
       welcomeMessage: workspace?.welcomeMessage,
       botIdentityResponse: workspace?.botIdentityResponse ?? null,
       customAiRules: workspace?.customAiRules ?? null,
+      adminEmail:
+        workspace?.whatsappSettings?.adminEmail ||
+        workspace?.notificationEmail ||
+        null,
     }
 
     workspaceConfigCache.set(workspaceId, { config, timestamp: Date.now() })
@@ -1946,6 +2175,20 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         }
       }
 
+      if (intentResult.intent.type === "REQUEST_HUMAN") {
+        return await this.handleHumanSupportRequest({
+          input,
+          workspaceConfig,
+          conversationId,
+          debugSteps,
+          totalTokens,
+          startTime,
+          requestIntent: intentResult.intent as RequestHumanIntent,
+          intentConfidence: intentResult.confidence,
+          intentSource: intentResult.source,
+        })
+      }
+
       // ========================================================================
       // STEP 3: Handle CART intents with LLM intelligence
       // ========================================================================
@@ -2883,6 +3126,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       ASK_IDENTITY: AgentType.CUSTOMER_SUPPORT,
       ASK_LOCATION: AgentType.CUSTOMER_SUPPORT,
       ASK_CONTACT: AgentType.CUSTOMER_SUPPORT,
+      REQUEST_HUMAN: AgentType.CUSTOMER_SUPPORT,
       ASK_HOURS: AgentType.CUSTOMER_SUPPORT,
       ASK_SHIPPING: AgentType.CUSTOMER_SUPPORT,
       ASK_PAYMENT: AgentType.CUSTOMER_SUPPORT,

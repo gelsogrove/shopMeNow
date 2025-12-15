@@ -205,9 +205,10 @@ async function main() {
       planStartedAt: new Date(),
       // ✅ E-COMMERCE workspace
       sellsProductsAndServices: true,
-      hasSalesAgents: false,
+      hasSalesAgents: true,
       hasHumanSupport: true,
-      humanSupportInstructions: "Please send an email to {{adminEmail}} and we will get back to you.",
+      humanSupportInstructions:
+        "Ciao {{nameUser}}, mi sto mettendo in contatto con l'agente {{agentName}}. Ti richiamera' al piu' presto (tel: {{agentPhone}} - email: {{agentEmail}}). Disattivo il chatbot finche' non ricevi risposta.",
       operatorContactMethod: "EMAIL",
       toneOfVoice: "FRIENDLY",
       botIdentityResponse: "I'm the BellItalia VIP virtual assistant, here to help you discover and purchase authentic Italian gourmet products!",
@@ -310,7 +311,8 @@ async function main() {
       sellsProductsAndServices: false,
       hasSalesAgents: false,
       hasHumanSupport: true,
-      humanSupportInstructions: "Please send an email to {{adminEmail}} for assistance.",
+      humanSupportInstructions:
+        "Ciao {{nameUser}}, mi sto mettendo in contatto con il nostro operatore. Ti rispondera' al piu' presto. Disattivo il chatbot finche' non ricevi assistenza.",
       operatorContactMethod: "EMAIL",
       toneOfVoice: "PROFESSIONAL",
       botIdentityResponse: "I'm the BellItalia assistant, here to provide information about our Italian gourmet products!",

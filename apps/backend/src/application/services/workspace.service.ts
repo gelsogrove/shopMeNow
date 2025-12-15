@@ -268,12 +268,17 @@ For privacy inquiries, please contact our support team.`
     
     // Default human support instructions - use placeholder as default
     if (!data.humanSupportInstructions) {
-      if (data.hasSalesAgents) {
-        // With Sales Team: agent info placeholder
-        data.humanSupportInstructions = `Hello {{nameUser}}, I'm sorry for the issue! 😔\nI understand your frustration.\n\nYour dedicated agent is:\n• {{agentName}}\n• 📞 {{agentPhone}}\n• ✉️ {{agentEmail}}\n\n⏸️ Chat is now paused.\nYour agent will contact you as soon as possible!`
+      if (data.hasHumanSupport) {
+        if (data.hasSalesAgents) {
+          data.humanSupportInstructions =
+            `Ciao {{nameUser}}, mi sto mettendo in contatto con l'agente {{agentName}}.\nTi richiamera' al piu' presto (tel: {{agentPhone}} - email: {{agentEmail}}).\nMetto in pausa il chatbot finche' non ricevi risposta.`
+        } else {
+          data.humanSupportInstructions =
+            `Ciao {{nameUser}}, mi sto mettendo in contatto con il nostro operatore.\nTi rispondera' al piu' presto.\nMetto in pausa il chatbot finche' non ricevi assistenza.`
+        }
       } else {
-        // Without Sales Team: email contact placeholder
-        data.humanSupportInstructions = "Please send an email to {{adminEmail}} and we will write you back as soon as possible."
+        data.humanSupportInstructions =
+          "Mi dispiace per il disagio. Puoi inviarci una mail a {{adminEmail}} e ti risponderemo il prima possibile."
       }
     }
     

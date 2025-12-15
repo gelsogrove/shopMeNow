@@ -301,7 +301,9 @@ SUPPORT:
 - ASK_LOCATION - User asks where the store is located
 - ASK_FAQ:query - User has a question about policies, shipping, etc.
 - VIEW_PROFILE - User asks about their discount, profile, or personal info
-- REQUEST_HUMAN - User wants to talk to a human
+- REQUEST_HUMAN - User wants to talk to a human OR is frustrated/angry.
+  • If the user sounds angry, frustrated, or repeatedly complains about issues (caps lock, "sono stufo", "pessimo servizio", "non funziona mai", damaged goods, etc.) respond with "REQUEST_HUMAN:frustration".
+  • If they explicitly ask for a person/operator but are calm, use "REQUEST_HUMAN".
 
 OTHER:
 - CONFIRM - User is confirming something (yes, ok, sure)
@@ -463,8 +465,13 @@ ${context.lastAssistantMessage ? `\nLast bot message: "${context.lastAssistantMe
       case "VIEW_PROFILE":
         return { type: "VIEW_PROFILE" }
         
-      case "REQUEST_HUMAN":
-        return { type: "REQUEST_HUMAN" }
+      case "REQUEST_HUMAN": {
+        const reason = param?.trim()
+        return {
+          type: "REQUEST_HUMAN",
+          reason: reason ? reason.toLowerCase() : undefined,
+        }
+      }
         
       case "CONFIRM":
         return { type: "CONFIRM" }
