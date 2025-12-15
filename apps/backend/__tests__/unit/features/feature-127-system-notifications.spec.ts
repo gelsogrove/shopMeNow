@@ -28,6 +28,14 @@ jest.mock("../../../src/services/llm-router.service", () => ({
   })),
 }))
 
+const mockEnqueue = jest.fn().mockResolvedValue({ id: "queue-123" })
+
+jest.mock("../../../src/services/whatsapp-queue.service", () => ({
+  WhatsAppQueueService: jest.fn().mockImplementation(() => ({
+    enqueue: mockEnqueue,
+  })),
+}))
+
 import { Request, Response } from "express"
 import {
   PushController,
@@ -100,6 +108,13 @@ describe("Feature 127: System Notifications Unified Endpoint", () => {
           customerId: mockCustomer.id,
         })
       )
+
+      expect(mockEnqueue).toHaveBeenCalledWith({
+        workspaceId: "workspace-789",
+        customerId: mockCustomer.id,
+        phoneNumber: "+390212345678",
+        messageContent: "🤖 Ciao Mario, il chatbot è ora disponibile!",
+      })
 
       expect(mockRes.status).toHaveBeenCalledWith(200)
       expect(mockRes.json).toHaveBeenCalledWith(

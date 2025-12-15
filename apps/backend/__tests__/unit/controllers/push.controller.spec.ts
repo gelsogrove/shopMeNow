@@ -20,6 +20,7 @@ describe("PushController - sendSystemNotification", () => {
   let mockRequest: Partial<Request>
   let mockResponse: Partial<Response>
   let mockLLMRouterService: any
+  let mockWhatsAppQueueService: any
 
   beforeEach(() => {
     // Setup mocks
@@ -37,8 +38,16 @@ describe("PushController - sendSystemNotification", () => {
       routeMessage: jest.fn(),
     }
 
+    mockWhatsAppQueueService = {
+      enqueue: jest.fn().mockResolvedValue({ id: "queue-123" }),
+    }
+
     // Create controller with mocked dependencies
-    pushController = new PushController(mockPrisma, mockLLMRouterService)
+    pushController = new PushController(
+      mockPrisma,
+      mockLLMRouterService,
+      mockWhatsAppQueueService
+    )
 
     mockRequest = {
       params: {
@@ -125,12 +134,21 @@ describe("PushController - sendSystemNotification", () => {
           conversationId: "session-789",
           messageId: expect.stringContaining("system-chatbot_reactivated-"),
           message:
-            "🤖 Ciao Maria Garcia, il chatbot è ora disponibile, come posso aiutarti oggi?",
+            "🤖 Ciao Maria Garcia, da questo momento la tua chat è attiva. Sono qui per aiutarti!",
           customerLanguage: "ESP",
           customerName: "Maria Garcia",
           isSystemMessage: true, // 🚀 Fast-path: Skip Router/SubLLM
         })
       )
+
+      // Assert: Verify WhatsApp queue message
+      expect(mockWhatsAppQueueService.enqueue).toHaveBeenCalledWith({
+        workspaceId: "workspace-123",
+        customerId: "customer-456",
+        phoneNumber: "+34666777888",
+        messageContent:
+          "🤖 ¡Hola Maria Garcia, el chatbot ya está disponible, ¿cómo puedo ayudarte hoy?",
+      })
 
       // Assert: Verify response sent to frontend
       expect(mockResponse.status).toHaveBeenCalledWith(200)
@@ -399,6 +417,19 @@ describe("PushController - sendSystemNotification", () => {
 
       // Assert: Both customers notified
       expect(mockLLMRouterService.routeMessage).toHaveBeenCalledTimes(2)
+      expect(mockWhatsAppQueueService.enqueue).toHaveBeenCalledTimes(2)
+      expect(mockWhatsAppQueueService.enqueue).toHaveBeenNthCalledWith(1, {
+        workspaceId: "workspace-123",
+        customerId: "customer-1",
+        phoneNumber: "+34111222333",
+        messageContent: "Notification sent",
+      })
+      expect(mockWhatsAppQueueService.enqueue).toHaveBeenNthCalledWith(2, {
+        workspaceId: "workspace-123",
+        customerId: "customer-2",
+        phoneNumber: "+34444555666",
+        messageContent: "Notification sent",
+      })
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: true,
         sent: 2,

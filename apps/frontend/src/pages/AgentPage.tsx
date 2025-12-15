@@ -321,17 +321,6 @@ export function AgentPage() {
                                     Use OpenRouter API (requires API key, costs
                                     apply)
                                   </li>
-                                  <li>
-                                    <span className="font-medium">
-                                      🏠 LOCAL Models:
-                                    </span>{" "}
-                                    Run on your Mac with Ollama (FREE, private,
-                                    no internet needed)
-                                  </li>
-                                  <li className="text-xs text-muted-foreground">
-                                    Models starting with "LOCAL:" automatically
-                                    use Ollama
-                                  </li>
                                 </ul>
                               </div>
                             </TooltipContent>
@@ -375,14 +364,6 @@ export function AgentPage() {
                         </option>
                         <option value="anthropic/claude-3.5-sonnet">
                           anthropic/claude-3.5-sonnet
-                        </option>
-
-                        {/* LOCAL MODELS - Ollama (for server deployment) */}
-                        <option value="LOCAL:llama3.2:3b">
-                          🏠 LOCAL: llama3.2:3b
-                        </option>
-                        <option value="LOCAL:qwen3-coder:480b-cloud">
-                          🏠 LOCAL: qwen3-coder (cloud test)
                         </option>
                       </select>
                     </div>

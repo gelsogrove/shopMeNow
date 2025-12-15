@@ -346,9 +346,6 @@ export function AgentSettingsPage() {
                         <SelectItem value="google/gemini-pro-1.5">
                           Gemini Pro 1.5
                         </SelectItem>
-                        <SelectItem value="meta-llama/llama-3.1-70b-instruct">
-                          Llama 3.1 70B
-                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

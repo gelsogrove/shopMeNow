@@ -390,9 +390,7 @@ export class LLMService {
           customerId: customer.id,
           language: userLanguage,
           usingAgentModel: agentModel, // 📊 Same model as agent
-          usingProvider: llmConfig.useLocal
-            ? "Ollama (local)"
-            : "OpenRouter (cloud)",
+          usingProvider: "OpenRouter (cloud)",
         })
 
         // Build list of allowed system links (all other links will be blocked)
@@ -415,7 +413,7 @@ export class LLMService {
             userLanguage,
             allowedLinks,
             llmConfig.model, // Use same model as agent
-            llmConfig.baseURL, // Use same baseURL as agent (Ollama or OpenRouter)
+            llmConfig.baseURL, // Use same baseURL as agent (OpenRouter)
             llmConfig.apiKey // Use same API key as agent
           )
 
@@ -908,15 +906,13 @@ export class LLMService {
         `🔢 [MESSAGES] Total messages sent to LLM: ${messages.length}`
       )
 
-      // 🤖 Get LLM configuration (supports local Ollama or cloud OpenRouter)
-      // If model starts with "LOCAL:" → automatically uses Ollama
-      // FIX: workspace has agentConfigs (array), not agentConfig (singular)
+      // 🤖 Get LLM configuration (OpenRouter cloud)
       const agentConfig = (workspace as any).agentConfigs?.[0]
       const agentModel = agentConfig?.model
       logger.info(`📊 Agent model from DB: "${agentModel}"`)
       const llmConfig = getLLMConfig(agentModel)
       logger.info(
-        `🤖 Using ${llmConfig.useLocal ? "LOCAL" : "CLOUD"} LLM: ${llmConfig.model} at ${llmConfig.baseURL}`
+        `🤖 Using OpenRouter: ${llmConfig.model} at ${llmConfig.baseURL}`
       )
 
       // Debug API key
@@ -942,7 +938,7 @@ export class LLMService {
       })
       logger.info("***language", language)
       logger.info(
-        `🌐 ${llmConfig.useLocal ? "Ollama" : "OpenRouter"} status:`,
+        `🌐 OpenRouter status:`,
         response.status
       )
 
@@ -955,7 +951,7 @@ export class LLMService {
 
       const data = await response.json()
       logger.info(
-        `🌐 ${llmConfig.useLocal ? "Ollama" : "OpenRouter"} response:`,
+        `🌐 OpenRouter response:`,
         JSON.stringify(data, null, 2)
       )
 

@@ -319,7 +319,7 @@ export class MessageSendingService {
 
     logger.info("🔒 [MESSAGE-SEND] Security layer using agent model", {
       agentModel,
-      provider: llmConfig.useLocal ? "Ollama (local)" : "OpenRouter (cloud)",
+      provider: "OpenRouter (cloud)",
     })
 
     return await translationSecurityService.processResponse(
