@@ -829,6 +829,7 @@ export class ChatEngineService {
                   customerName: input.customerName,
                   customerLanguage: input.customerLanguage || "it",
                   workspaceId: input.workspaceId,
+                  customerDiscount: input.customerDiscount,
                 }
               )
               
@@ -951,6 +952,7 @@ export class ChatEngineService {
                 workspaceId: input.workspaceId,
                 customerLanguage: input.customerLanguage,
                 customerName: input.customerName,
+                customerDiscount: input.customerDiscount,
               }
             )
             
