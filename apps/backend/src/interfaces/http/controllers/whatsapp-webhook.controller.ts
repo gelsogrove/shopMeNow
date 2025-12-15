@@ -258,6 +258,7 @@ export class WhatsAppWebhookController {
           workspaceId: true,
           isActive: true,
           activeChatbot: true, // 🔒 CRITICAL: Load chatbot status
+          discount: true, // 💰 Load customer discount for cart pricing
           workspace: {
             select: {
               id: true,
@@ -1013,6 +1014,7 @@ export class WhatsAppWebhookController {
         messageLength: messageMarkdown.length,
         customerLanguage: customer.language, // 🔍 DEBUG: What language is in DB?
         customerName: customer.name,
+        customerDiscount: customer.discount, // 💰 DEBUG: What discount is configured?
       })
 
       const chatEngine = getChatEngine(prisma)
@@ -1023,6 +1025,7 @@ export class WhatsAppWebhookController {
         message: messageMarkdown,
         customerLanguage: customer.language || "it",
         customerName: customer.name,
+        customerDiscount: customer.discount || 0, // 💰 Pass customer discount
       })
 
       logger.info("[WEBHOOK] ✅ ChatEngineService completed", {
