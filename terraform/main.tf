@@ -253,3 +253,64 @@ resource "aws_acm_certificate" "main" {
     Name = "shopme-cert"
   }
 }
+
+# S3 Bucket for Uploads (Images, Invoices)
+resource "aws_s3_bucket" "uploads" {
+  bucket = "${var.project_name}-uploads-prod"
+
+  tags = {
+    Name        = "${var.project_name}-uploads"
+    Environment = "production"
+  }
+}
+
+# S3 Bucket Versioning
+resource "aws_s3_bucket_versioning" "uploads" {
+  bucket = aws_s3_bucket.uploads.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# S3 Bucket Lifecycle (Delete temp files after 1 day)
+resource "aws_s3_bucket_lifecycle_configuration" "uploads" {
+  bucket = aws_s3_bucket.uploads.id
+
+  rule {
+    id     = "delete-temp-files"
+    status = "Enabled"
+
+    filter {
+      prefix = "temp/"
+    }
+
+    expiration {
+      days = 1
+    }
+  }
+}
+
+# S3 Bucket for Backups
+resource "aws_s3_bucket" "backups" {
+  bucket = "${var.project_name}-backups-prod"
+
+  tags = {
+    Name        = "${var.project_name}-backups"
+    Environment = "production"
+  }
+}
+
+# S3 Backup Lifecycle (Delete after 7 days)
+resource "aws_s3_bucket_lifecycle_configuration" "backups" {
+  bucket = aws_s3_bucket.backups.id
+
+  rule {
+    id     = "delete-old-backups"
+    status = "Enabled"
+
+    expiration {
+      days = 7
+    }
+  }
+}

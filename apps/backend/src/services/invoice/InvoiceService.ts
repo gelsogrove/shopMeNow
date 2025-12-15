@@ -31,12 +31,13 @@ export class InvoiceService {
    * Genera fattura PDF per ordine
    */
   async generateInvoice(orderId: string): Promise<string> {
-    // 1. Recupera dati ordine
+    // 1. Recupera dati ordine con channel
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: {
         workspace: true,
         customer: true,
+        channel: true,
         items: {
           include: {
             product: true,
@@ -99,107 +100,213 @@ export class InvoiceService {
   }
 
   /**
-   * Crea PDF fattura
+   * Crea PDF fattura con logo e branding
    */
   private async createPDF(data: InvoiceData): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ margin: 50 });
-      const chunks: Buffer[] = [];
+    return new Promise(async (resolve, reject) => {
+      try {
+        const doc = new PDFDocument({ margin: 50, size: 'A4' });
+        const chunks: Buffer[] = [];
 
-      doc.on('data', chunk => chunks.push(chunk));
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
-      doc.on('error', reject);
+        doc.on('data', chunk => chunks.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', reject);
 
-      // Header
-      doc.fontSize(20).text('FATTURA', { align: 'center' });
-      doc.moveDown();
+        const pageWidth = doc.page.width;
+        const margin = 50;
+        const contentWidth = pageWidth - (margin * 2);
 
-      // Workspace info
-      doc.fontSize(12).text(data.workspaceName, { bold: true });
-      if (data.workspaceAddress) {
-        doc.fontSize(10).text(data.workspaceAddress);
+        // === HEADER CON LOGO ===
+        let yPos = margin;
+
+        // Logo (se presente)
+        const order = await prisma.order.findUnique({
+          where: { id: data.orderId },
+          include: {
+            workspace: true,
+            channel: true
+          }
+        });
+
+        const logoUrl = order?.channel?.logoUrl || order?.workspace?.logoUrl;
+        
+        if (logoUrl) {
+          try {
+            const storage = getStorageService();
+            const logoKey = this.extractKeyFromUrl(logoUrl);
+            const logoBuffer = await storage.get(logoKey);
+            
+            // Logo a sinistra
+            doc.image(logoBuffer, margin, yPos, { width: 80, height: 80 });
+          } catch (err) {
+            console.warn('Logo not found, skipping');
+          }
+        }
+
+        // Workspace info a destra
+        const rightX = pageWidth - margin - 200;
+        doc.fontSize(14).font('Helvetica-Bold').text(data.workspaceName, rightX, yPos, { width: 200, align: 'right' });
+        yPos += 20;
+        
+        if (data.workspaceAddress) {
+          doc.fontSize(9).font('Helvetica').text(data.workspaceAddress, rightX, yPos, { width: 200, align: 'right' });
+          yPos += 15;
+        }
+        if (data.workspaceVAT) {
+          doc.text(`P.IVA: ${data.workspaceVAT}`, rightX, yPos, { width: 200, align: 'right' });
+          yPos += 15;
+        }
+
+        yPos = Math.max(yPos, margin + 100); // Spazio minimo per logo
+        doc.moveDown(2);
+
+        // === TITOLO FATTURA ===
+        yPos = doc.y;
+        doc.fontSize(24).font('Helvetica-Bold')
+           .fillColor('#2c3e50')
+           .text('FATTURA', margin, yPos, { align: 'center' });
+        doc.fillColor('#000000');
+        yPos += 40;
+
+        // === DETTAGLI FATTURA ===
+        doc.fontSize(10).font('Helvetica');
+        doc.text(`Fattura N°: `, margin, yPos, { continued: true })
+           .font('Helvetica-Bold').text(data.orderNumber);
+        yPos += 15;
+        
+        doc.font('Helvetica').text(`Data: `, margin, yPos, { continued: true })
+           .font('Helvetica-Bold').text(data.orderDate.toLocaleDateString('it-IT'));
+        yPos += 30;
+
+        // === BOX CLIENTE ===
+        doc.rect(margin, yPos, contentWidth, 80)
+           .fillAndStroke('#f8f9fa', '#dee2e6');
+        
+        yPos += 15;
+        doc.fillColor('#000000')
+           .fontSize(11).font('Helvetica-Bold')
+           .text('CLIENTE', margin + 15, yPos);
+        yPos += 20;
+        
+        doc.fontSize(10).font('Helvetica')
+           .text(data.customerName, margin + 15, yPos);
+        yPos += 15;
+        doc.text(data.customerEmail, margin + 15, yPos);
+        yPos += 15;
+        
+        if (data.customerPhone) {
+          doc.text(data.customerPhone, margin + 15, yPos);
+          yPos += 15;
+        }
+        if (data.customerAddress) {
+          doc.text(data.customerAddress, margin + 15, yPos, { width: contentWidth - 30 });
+        }
+        
+        yPos += 40;
+
+        // === TABELLA ITEMS ===
+        const tableTop = yPos;
+        const colDesc = margin;
+        const colQty = pageWidth - margin - 200;
+        const colPrice = pageWidth - margin - 130;
+        const colTotal = pageWidth - margin - 60;
+
+        // Header tabella
+        doc.rect(margin, tableTop, contentWidth, 25)
+           .fillAndStroke('#2c3e50', '#2c3e50');
+        
+        doc.fillColor('#ffffff')
+           .fontSize(10).font('Helvetica-Bold')
+           .text('Descrizione', colDesc + 10, tableTop + 8)
+           .text('Qtà', colQty, tableTop + 8)
+           .text('Prezzo', colPrice, tableTop + 8)
+           .text('Totale', colTotal, tableTop + 8);
+
+        yPos = tableTop + 25;
+        doc.fillColor('#000000').font('Helvetica');
+
+        // Righe items
+        let isEven = false;
+        for (const item of data.items) {
+          // Alternating row colors
+          if (isEven) {
+            doc.rect(margin, yPos, contentWidth, 25).fill('#f8f9fa');
+          }
+          
+          doc.fillColor('#000000')
+             .text(item.name, colDesc + 10, yPos + 8, { width: colQty - colDesc - 20 })
+             .text(item.quantity.toString(), colQty, yPos + 8)
+             .text(`€${item.price.toFixed(2)}`, colPrice, yPos + 8)
+             .text(`€${item.total.toFixed(2)}`, colTotal, yPos + 8);
+          
+          yPos += 25;
+          isEven = !isEven;
+        }
+
+        // Linea finale tabella
+        doc.moveTo(margin, yPos).lineTo(pageWidth - margin, yPos).stroke('#dee2e6');
+        yPos += 30;
+
+        // === TOTALI ===
+        const totalsX = pageWidth - margin - 150;
+        
+        doc.fontSize(10).font('Helvetica')
+           .text('Subtotale:', totalsX, yPos)
+           .text(`€${data.subtotal.toFixed(2)}`, totalsX + 80, yPos, { align: 'right' });
+        yPos += 20;
+
+        doc.text('IVA (22%):', totalsX, yPos)
+           .text(`€${data.tax.toFixed(2)}`, totalsX + 80, yPos, { align: 'right' });
+        yPos += 25;
+
+        // Box totale
+        doc.rect(totalsX - 10, yPos - 5, 160, 30)
+           .fillAndStroke('#2c3e50', '#2c3e50');
+        
+        doc.fillColor('#ffffff')
+           .fontSize(12).font('Helvetica-Bold')
+           .text('TOTALE:', totalsX, yPos + 5)
+           .text(`€${data.total.toFixed(2)}`, totalsX + 80, yPos + 5, { align: 'right' });
+
+        // === FOOTER ===
+        const footerY = doc.page.height - 80;
+        doc.fillColor('#7f8c8d')
+           .fontSize(8).font('Helvetica')
+           .text(
+             'Grazie per il tuo acquisto! Per qualsiasi informazione contattaci.',
+             margin,
+             footerY,
+             { align: 'center', width: contentWidth }
+           );
+        
+        doc.fontSize(7)
+           .text(
+             `Documento generato automaticamente il ${new Date().toLocaleString('it-IT')}`,
+             margin,
+             footerY + 15,
+             { align: 'center', width: contentWidth }
+           );
+
+        doc.end();
+      } catch (error) {
+        reject(error);
       }
-      if (data.workspaceVAT) {
-        doc.text(`P.IVA: ${data.workspaceVAT}`);
-      }
-      doc.moveDown();
-
-      // Invoice details
-      doc.fontSize(10);
-      doc.text(`Fattura N°: ${data.orderNumber}`);
-      doc.text(`Data: ${data.orderDate.toLocaleDateString('it-IT')}`);
-      doc.moveDown();
-
-      // Customer info
-      doc.fontSize(12).text('Cliente:', { bold: true });
-      doc.fontSize(10).text(data.customerName);
-      doc.text(data.customerEmail);
-      if (data.customerPhone) {
-        doc.text(data.customerPhone);
-      }
-      if (data.customerAddress) {
-        doc.text(data.customerAddress);
-      }
-      doc.moveDown(2);
-
-      // Items table
-      const tableTop = doc.y;
-      const itemX = 50;
-      const qtyX = 300;
-      const priceX = 370;
-      const totalX = 450;
-
-      // Table header
-      doc.fontSize(10).font('Helvetica-Bold');
-      doc.text('Descrizione', itemX, tableTop);
-      doc.text('Qtà', qtyX, tableTop);
-      doc.text('Prezzo', priceX, tableTop);
-      doc.text('Totale', totalX, tableTop);
-      
-      doc.moveTo(itemX, tableTop + 15)
-         .lineTo(550, tableTop + 15)
-         .stroke();
-
-      // Table rows
-      doc.font('Helvetica');
-      let y = tableTop + 25;
-      
-      for (const item of data.items) {
-        doc.text(item.name, itemX, y, { width: 240 });
-        doc.text(item.quantity.toString(), qtyX, y);
-        doc.text(`€${item.price.toFixed(2)}`, priceX, y);
-        doc.text(`€${item.total.toFixed(2)}`, totalX, y);
-        y += 25;
-      }
-
-      // Totals
-      doc.moveDown(2);
-      const totalsX = 400;
-      y = doc.y;
-
-      doc.text('Subtotale:', totalsX, y);
-      doc.text(`€${data.subtotal.toFixed(2)}`, totalX, y);
-      y += 20;
-
-      doc.text('IVA:', totalsX, y);
-      doc.text(`€${data.tax.toFixed(2)}`, totalX, y);
-      y += 20;
-
-      doc.fontSize(12).font('Helvetica-Bold');
-      doc.text('TOTALE:', totalsX, y);
-      doc.text(`€${data.total.toFixed(2)}`, totalX, y);
-
-      // Footer
-      doc.fontSize(8).font('Helvetica');
-      doc.text(
-        'Grazie per il tuo acquisto!',
-        50,
-        doc.page.height - 50,
-        { align: 'center' }
-      );
-
-      doc.end();
     });
+  }
+
+  /**
+   * Estrae key da URL
+   */
+  private extractKeyFromUrl(url: string): string {
+    // http://localhost:3001/uploads/workspaces/123/logo.png → workspaces/123/logo.png
+    // https://bucket.s3.amazonaws.com/workspaces/123/logo.png → workspaces/123/logo.png
+    if (url.includes('/uploads/')) {
+      return url.split('/uploads/')[1];
+    }
+    if (url.includes('.amazonaws.com/')) {
+      return url.split('.amazonaws.com/')[1].split('?')[0];
+    }
+    return url;
   }
 
   /**

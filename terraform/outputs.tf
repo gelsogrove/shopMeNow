@@ -37,3 +37,13 @@ output "domain_url" {
   description = "Domain URL (after DNS propagation)"
   value       = "https://${var.domain_name}"
 }
+
+output "s3_uploads_bucket" {
+  description = "S3 bucket for uploads (images, invoices)"
+  value       = aws_s3_bucket.uploads.bucket
+}
+
+output "s3_backups_bucket" {
+  description = "S3 bucket for backups"
+  value       = aws_s3_bucket.backups.bucket
+}

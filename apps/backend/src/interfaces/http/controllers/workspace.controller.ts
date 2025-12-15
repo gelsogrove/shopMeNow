@@ -4,6 +4,7 @@ import { SubscriptionBillingService } from "../../../application/services/subscr
 import { WorkspaceService } from "../../../application/services/workspace.service"
 import { workspaceMemberService } from "../../../application/services/workspace-member.service"
 import logger from "../../../utils/logger"
+import { getStorageService } from "../../../services/storage"
 
 // prisma imported
 
@@ -407,13 +408,35 @@ export class WorkspaceController {
         return res.status(400).json({ error: "No file uploaded" })
       }
 
-      // File path is relative to uploads/ directory served by express.static
-      const logoUrl = `/uploads/channels/${file.filename}`
+      // Get current workspace to check for old logo
+      const currentWorkspace = await prisma.workspace.findUnique({
+        where: { id },
+        select: { logoKey: true }
+      })
 
-      // Update workspace with new logo
-      const workspace = await this.workspaceService.update(id, { logoUrl })
+      // Delete old logo if exists
+      if (currentWorkspace?.logoKey) {
+        const storage = getStorageService()
+        await storage.delete(currentWorkspace.logoKey)
+        logger.info(`Deleted old logo: ${currentWorkspace.logoKey}`)
+      }
 
-      logger.info(`✅ Logo uploaded for workspace ${id}: ${logoUrl}`)
+      // Upload new logo via Storage Service
+      const storage = getStorageService()
+      const uploadedFile = await storage.upload(file.buffer, {
+        filename: `${id}-logo-${Date.now()}.${file.originalname.split('.').pop()}`,
+        folder: `workspaces/${id}`,
+        contentType: file.mimetype,
+        isPublic: true
+      })
+
+      // Update workspace with new logo URL and key
+      const workspace = await this.workspaceService.update(id, { 
+        logoUrl: uploadedFile.url,
+        logoKey: uploadedFile.key
+      })
+
+      logger.info(`✅ Logo uploaded for workspace ${id}: ${uploadedFile.url}`)
       return res.json({ logoUrl: workspace.logoUrl })
     } catch (error) {
       logger.error("Error uploading workspace logo:", error)

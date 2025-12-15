@@ -32,3 +32,9 @@ variable "domain_name" {
   type        = string
   default     = "echatbot.ai"
 }
+
+variable "project_name" {
+  description = "Project name for resource naming"
+  type        = string
+  default     = "echatbot"
+}

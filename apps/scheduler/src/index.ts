@@ -10,6 +10,7 @@ import {
   whatsappQueueCleanupJob,
   softDeleteCleanupJob,
 } from './jobs'
+import { setupStorageCleanup } from './jobs/storage-cleanup'
 import logger from './utils/logger'
 
 // eChatbot Scheduler Microservice
@@ -32,6 +33,9 @@ async function main() {
 
   // Connect to database
   await connectDatabase()
+
+  // Setup storage cleanup jobs
+  setupStorageCleanup()
 
   // ═══════════════════════════════════════════════════════════════════════════
   // Job 1: WhatsApp Challenge Queue - every 3 seconds
@@ -100,6 +104,9 @@ async function main() {
   logger.info('   5. WhatsApp Queue Cleanup     - daily at 23:15')
   logger.info('   6. Soft Delete Cleanup        - daily at 23:20')
   logger.info('   7. Monthly Billing            - 1st of month at 23:30')
+  logger.info('   8. Orphaned Files Cleanup     - daily at 03:00')
+  logger.info('   9. Temp Files Cleanup         - every hour')
+  logger.info('  10. Invoice Cleanup            - daily at 04:00')
 
   // Graceful shutdown
   process.on('SIGINT', async () => {

@@ -45,6 +45,7 @@ export interface WorkspaceProps {
   customAiRules?: string | null
   // 🆕 Logo
   logoUrl?: string | null
+  logoKey?: string | null // 💾 S3 key for cleanup
 }
 
 export class Workspace extends Entity<WorkspaceProps> {

@@ -5,6 +5,7 @@ import { prisma } from "../../../lib/prisma"
 import { cleanupRemovedImages } from "../../../utils/fileManager"
 import logger from "../../../utils/logger"
 import { Readable } from "stream"
+import { getStorageService } from "../../../services/storage"
 
 export class ProductController {
   private productService: ProductService
@@ -297,8 +298,10 @@ export class ProductController {
         delete productData.code
       }
 
-      // Handle multiple image uploads and existing images
+      // Handle multiple image uploads with Storage Service
+      const storage = getStorageService()
       let allImageUrls: string[] = []
+      let allImageKeys: string[] = []
 
       // Add existing images first (if reordered)
       if (req.body.existingImageUrls) {
@@ -313,17 +316,24 @@ export class ProductController {
         }
       }
 
-      // Add new uploaded images
+      // Add new uploaded images via Storage Service
       if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-        const newImagePaths = (req.files as Express.Multer.File[]).map(
-          (file) => `/uploads/products/${file.filename}`
-        )
-        allImageUrls = [...allImageUrls, ...newImagePaths]
-        logger.info(`New images uploaded:`, newImagePaths)
+        for (const file of req.files as Express.Multer.File[]) {
+          const uploadedFile = await storage.upload(file.buffer, {
+            filename: file.filename,
+            folder: `products/${workspaceId}`,
+            contentType: file.mimetype,
+            isPublic: true
+          })
+          allImageUrls.push(uploadedFile.url)
+          allImageKeys.push(uploadedFile.key)
+        }
+        logger.info(`New images uploaded via Storage Service:`, allImageUrls)
       }
 
-      // Always set imageUrl (even if empty array)
+      // Always set imageUrl and imageKey
       productData.imageUrl = allImageUrls
+      productData.imageKey = allImageKeys.length > 0 ? allImageKeys[0] : null
       logger.info(`Total images for product:`, allImageUrls)
 
       const product = await this.productService.createProduct(
@@ -490,12 +500,10 @@ export class ProductController {
         return res.status(404).json({ message: "Product not found" })
       }
 
-      const oldImageUrls = Array.isArray(currentProduct.imageUrl)
-        ? currentProduct.imageUrl
-        : []
-
-      // Handle multiple image uploads and existing images for update
+      const storage = getStorageService()
+      const oldImageKey = currentProduct.imageKey
       let allImageUrls: string[] = []
+      let newImageKey: string | null = null
 
       // Add existing images first (if provided)
       if (req.body.existingImageUrls) {
@@ -510,46 +518,35 @@ export class ProductController {
         }
       }
 
-      // Add new uploaded images
+      // Add new uploaded images via Storage Service
       if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-        logger.info(`Received ${req.files.length} files from multer:`)
-        req.files.forEach((file, index) => {
-          logger.info(`File ${index}:`, {
+        logger.info(`Received ${req.files.length} files from multer`)
+        
+        // Delete old image if replacing
+        if (oldImageKey) {
+          await storage.delete(oldImageKey)
+          logger.info(`Deleted old image: ${oldImageKey}`)
+        }
+
+        for (const file of req.files as Express.Multer.File[]) {
+          const uploadedFile = await storage.upload(file.buffer, {
             filename: file.filename,
-            originalname: file.originalname,
-            mimetype: file.mimetype,
-            size: file.size,
-            path: file.path,
+            folder: `products/${workspaceId}`,
+            contentType: file.mimetype,
+            isPublic: true
           })
-        })
-
-        const newImagePaths = (req.files as Express.Multer.File[]).map(
-          (file) => `/uploads/products/${file.filename}`
-        )
-        allImageUrls = [...allImageUrls, ...newImagePaths]
-        logger.info(
-          `New images uploaded for update:`,
-          JSON.stringify(newImagePaths)
-        )
+          allImageUrls.push(uploadedFile.url)
+          if (!newImageKey) newImageKey = uploadedFile.key
+        }
+        logger.info(`New images uploaded via Storage Service:`, allImageUrls)
       }
 
-      // Always set imageUrl to reflect current state (even if empty)
+      // Always set imageUrl and update imageKey if changed
       productData.imageUrl = allImageUrls
-      logger.info(
-        `Total images for product update:`,
-        JSON.stringify(allImageUrls)
-      )
-      logger.info(
-        `imageUrl type check: isArray=${Array.isArray(productData.imageUrl)}, length=${productData.imageUrl.length}`
-      )
-
-      // Clean up removed images from filesystem
-      const deletedCount = cleanupRemovedImages(oldImageUrls, allImageUrls)
-      if (deletedCount > 0) {
-        logger.info(
-          `Cleaned up ${deletedCount} removed image(s) from filesystem`
-        )
+      if (newImageKey) {
+        productData.imageKey = newImageKey
       }
+      logger.info(`Total images for product update:`, allImageUrls)
 
       const updatedProduct = await this.productService.updateProduct(
         id,
@@ -602,16 +599,11 @@ export class ProductController {
         return res.status(404).json({ message: "Product not found" })
       }
 
-      // Clean up all product images from filesystem before deleting
-      if (
-        existingProduct.imageUrl &&
-        Array.isArray(existingProduct.imageUrl) &&
-        existingProduct.imageUrl.length > 0
-      ) {
-        const deletedCount = cleanupRemovedImages(existingProduct.imageUrl, [])
-        logger.info(
-          `Cleaned up ${deletedCount} image(s) from deleted product ${id}`
-        )
+      // Delete image from storage if exists
+      if (existingProduct.imageKey) {
+        const storage = getStorageService()
+        await storage.delete(existingProduct.imageKey)
+        logger.info(`Deleted image from storage: ${existingProduct.imageKey}`)
       }
 
       await this.productService.deleteProduct(id, workspaceId)

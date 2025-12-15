@@ -16,6 +16,7 @@ export class Product {
   supplierId: string | null
   workspaceId: string
   imageUrl: string[]
+  imageKey: string | null // 💾 S3 key for cleanup
   certifications: string[] // Array: ["bio", "vegan", "gluten-free", "halal", "whole-grain", "DOP"]
   transportType: string
   region: string | null // ✅ Feature 123 - Geographic region (Campania, Puglia, etc.)
@@ -42,6 +43,7 @@ export class Product {
     this.supplierId = data.supplierId || null
     this.workspaceId = data.workspaceId || ""
     this.imageUrl = data.imageUrl || []
+    this.imageKey = data.imageKey || null
     this.certifications = data.certifications || []
     this.transportType = data.transportType || "Temperatura ambiente"
     this.region = data.region || null // ✅ Feature 123 - Geographic region
