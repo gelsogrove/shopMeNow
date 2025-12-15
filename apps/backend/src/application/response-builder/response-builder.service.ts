@@ -175,18 +175,21 @@ export class ResponseBuilderService {
       customerName?: string
       customerLanguage?: string
       workspaceId: string
+      customerDiscount?: number  // Customer's discount percentage (0-100)
     }
   ): StructuredResponse {
     logger.info("🏗️ [ResponseBuilder] Building response", {
       intentType: intent.type,
       dataType: loadedData.type,
+      customerDiscount: options.customerDiscount,
     })
 
+    const discountPercent = options.customerDiscount || 0
     const context: ResponseContext = {
       intentType: intent.type,
       customerLanguage: options.customerLanguage || "it",
-      hasDiscount: false,
-      discountPercent: 0,
+      hasDiscount: discountPercent > 0,
+      discountPercent,
     }
 
     // Handle errors first

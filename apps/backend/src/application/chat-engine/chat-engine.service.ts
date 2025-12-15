@@ -2211,6 +2211,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           customerName: input.customerName,
           customerLanguage: input.customerLanguage || "it",
           workspaceId: input.workspaceId,
+          customerDiscount: input.customerDiscount,
         }
       )
 
