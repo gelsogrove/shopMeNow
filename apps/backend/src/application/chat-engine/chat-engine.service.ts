@@ -27,7 +27,7 @@ import {
 } from "../../services/message-preprocessor.service"
 import { CartManagementAgentLLM } from "../agents/CartManagementAgentLLM"
 import { SystemContextService, getSystemContextService } from "../../services/system-context.service"
-import { 
+import {
   ConversationStateService, 
   ConversationState,
   StateContext,
@@ -38,6 +38,10 @@ import {
   NUMERIC_MEANS_ORDER_ACTION,
 } from "./conversation-state.service"
 import { TranslationAgent } from "../agents/TranslationAgent"
+import { CatalogQueryService, CatalogQueryLoadedData } from "../catalog-query/catalog-query.service"
+
+type PipelineLoadedData = LoadedData | CatalogQueryLoadedData
+import { CatalogQueryService, CatalogQueryLoadedData } from "../catalog-query/catalog-query.service"
 
 // ================================================================================
 // WORKSPACE CONFIG CACHE
@@ -157,6 +161,7 @@ export class ChatEngineService {
   private dataLoader: DataLoaderService
   private responseBuilder: ResponseBuilderService
   private llmFormatter: LLMFormatterService
+  private catalogQueryService: CatalogQueryService
   
   // Support services
   private conversationManager: ConversationManager
@@ -181,6 +186,7 @@ export class ChatEngineService {
     this.optionsMappingService = getOptionsMappingService(prisma)
     this.systemContextService = getSystemContextService(prisma)
     this.conversationStateService = new ConversationStateService(prisma)
+    this.catalogQueryService = new CatalogQueryService(prisma)
     
     // Initialize translation layer
     this.translationAgent = new TranslationAgent(prisma)
@@ -429,6 +435,11 @@ export class ChatEngineService {
       "REPEAT_ORDER",  // Re-order products from previous order
     ]
     return ecommerceIntents.includes(intentType)
+  }
+
+  private shouldUseCatalogQuery(intent: Intent): boolean {
+    const supportedIntents = new Set(["SEARCH_PRODUCTS"])
+    return supportedIntents.has(intent.type)
   }
 
   /**
@@ -2221,45 +2232,126 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       // ========================================================================
       // STEP 4: Load data based on intent (for non-LLM paths)
       // ========================================================================
-      const dataLoadStart = Date.now()
-      const loadedData = await this.dataLoader.loadForIntent(
-        intentResult.intent,
-        input.workspaceId,
-        input.customerId,
-        input.customerDiscount || 0
-      )
-      const dataLoadTime = Date.now() - dataLoadStart
+      let loadedData: PipelineLoadedData | null = null
+      let structuredResponseOverride: StructuredResponse | null = null
 
-      // 🆕 Add DataLoader debug step
-      debugSteps.push({
-        type: "sub_agent",
-        agent: `📦 DataLoader (${loadedData.type})`,
-        timestamp: new Date().toISOString(),
-        input: {
-          textContent: `Intent: ${intentResult.intent.type}`,
-        },
-        output: {
-          textContent: `Loaded: ${loadedData.type}`,
-          executionTimeMs: dataLoadTime,
-        },
-        duration: dataLoadTime,
-      })
+      if (this.shouldUseCatalogQuery(intentResult.intent)) {
+        const catalogStart = Date.now()
+        try {
+          const catalogResult = await this.catalogQueryService.process({
+            workspaceId: input.workspaceId,
+            message: input.message,
+            customerDiscount: input.customerDiscount || 0,
+            intentType: intentResult.intent.type,
+            customerLanguage: input.customerLanguage || "it",
+          })
 
-      logger.info("📦 [ChatEngine] Data loaded", { type: loadedData.type })
+          loadedData = catalogResult.loadedData
+          structuredResponseOverride = catalogResult.structuredResponse
+
+          if (catalogResult.tokenUsage?.totalTokens) {
+            totalTokens += catalogResult.tokenUsage.totalTokens
+          }
+
+          const catalogDuration = Date.now() - catalogStart
+          const queryPreviewRaw = JSON.stringify(catalogResult.query)
+          const queryPreview =
+            queryPreviewRaw.length > 200
+              ? `${queryPreviewRaw.substring(0, 200)}...`
+              : queryPreviewRaw
+          debugSteps.push({
+            type: "sub_agent",
+            agent: "🧱 Catalog QueryBuilder",
+            model: catalogResult.model,
+            timestamp: new Date().toISOString(),
+            tokenUsage: catalogResult.tokenUsage
+              ? {
+                  promptTokens: catalogResult.tokenUsage.promptTokens || 0,
+                  completionTokens: catalogResult.tokenUsage.completionTokens || 0,
+                  totalTokens: catalogResult.tokenUsage.totalTokens || 0,
+                }
+              : undefined,
+            input: {
+              userMessage: input.message,
+            },
+            output: {
+              decision: `CatalogQuery: ${queryPreview}`,
+              executionTimeMs: catalogDuration,
+            },
+            duration: catalogDuration,
+          })
+
+          const executorSummary =
+            catalogResult.resultType === "LIST"
+              ? `Items: ${catalogResult.loadedData.products?.length || 0}`
+              : catalogResult.resultType === "GROUPED"
+                ? `Groups: ${catalogResult.loadedData.groups?.length || 0}`
+                : catalogResult.resultType === "AGGREGATE"
+                  ? `Value: ${catalogResult.structuredResponse.data.aggregateResult?.value}`
+                  : "Empty result"
+
+          debugSteps.push({
+            type: "function_call",
+            agent: "🧮 Catalog QueryExecutor",
+            timestamp: new Date().toISOString(),
+            output: {
+              textContent: `Result: ${catalogResult.resultType} (${executorSummary})`,
+              executionTimeMs: catalogDuration,
+            },
+            duration: catalogDuration,
+          })
+
+          logger.info("📦 [ChatEngine] Catalog query executed", {
+            resultType: catalogResult.resultType,
+          })
+        } catch (error) {
+          logger.error("❌ [ChatEngine] Catalog query processing failed", {
+            error,
+          })
+        }
+      }
+
+      if (!loadedData) {
+        const dataLoadStart = Date.now()
+        loadedData = await this.dataLoader.loadForIntent(
+          intentResult.intent,
+          input.workspaceId,
+          input.customerId,
+          input.customerDiscount || 0
+        )
+        const dataLoadTime = Date.now() - dataLoadStart
+
+        // 🆕 Add DataLoader debug step
+        debugSteps.push({
+          type: "sub_agent",
+          agent: `📦 DataLoader (${loadedData.type})`,
+          timestamp: new Date().toISOString(),
+          input: {
+            textContent: `Intent: ${intentResult.intent.type}`,
+          },
+          output: {
+            textContent: `Loaded: ${loadedData.type}`,
+            executionTimeMs: dataLoadTime,
+          },
+          duration: dataLoadTime,
+        })
+      }
+
+      const finalLoadedData = loadedData!
+
+      logger.info("📦 [ChatEngine] Data loaded", { type: finalLoadedData.type })
 
       // ========================================================================
       // STEP 4: Build structured response
       // ========================================================================
-      const structuredResponse = this.responseBuilder.build(
-        intentResult.intent,
-        loadedData,
-        {
+      const structuredResponse =
+        structuredResponseOverride ??
+        this.responseBuilder.build(intentResult.intent, finalLoadedData as LoadedData, {
           customerName: input.customerName,
           customerLanguage: input.customerLanguage || "it",
           workspaceId: input.workspaceId,
           customerDiscount: input.customerDiscount,
-        }
-      )
+        })
 
       logger.info("🏗️ [ChatEngine] Response built", { type: structuredResponse.type })
 
@@ -2418,7 +2510,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
 
       // 🆕 Build debugInfo for timeline visualization
       const debugInfo = {
-        loadedDataType: loadedData.type,
+        loadedDataType: finalLoadedData.type,
         responseType: structuredResponse.type,
         llmUsed,
         steps: debugSteps,  // 🆕 Full timeline for Message Flow Dialog

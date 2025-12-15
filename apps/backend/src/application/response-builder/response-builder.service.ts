@@ -39,6 +39,7 @@ export type ResponseType =
   | "PRODUCT_LIST"
   | "PRODUCT_GROUPED"
   | "PRODUCT_NEEDS_SMART_GROUPING"  // LLM creates logical groups (e.g., "Formaggi Freschi" vs "Stagionati")
+  | "CATALOG_AGGREGATE"
   | "PRODUCT_DETAIL"
   | "SERVICE_LIST"    // 🆕 Service list (numbered)
   | "CART_VIEW"
@@ -99,6 +100,13 @@ export interface ResponseData {
 
   // For errors
   errorMessage?: string
+
+  // For aggregate results
+  aggregateResult?: {
+    type: "min" | "max" | "count"
+    field: string
+    value: number
+  }
   
   // 🆕 For smart grouping (PRODUCT_NEEDS_SMART_GROUPING)
   categoryName?: string
@@ -148,7 +156,7 @@ export interface ResponseContext {
 // DEFAULT FORMATTING
 // ================================================================================
 
-const DEFAULT_FORMATTING: FormattingInstructions = {
+export const RESPONSE_DEFAULT_FORMATTING: FormattingInstructions = {
   showNumbers: true,
   showPrices: true,
   showStock: false, // Only show for cart
@@ -157,6 +165,8 @@ const DEFAULT_FORMATTING: FormattingInstructions = {
   includeEmoji: true,
   maxItemsBeforeGroup: 5, // AC-10: 6+ prodotti = grouping (soglia = 5, quindi >5 = group)
 }
+
+const DEFAULT_FORMATTING = RESPONSE_DEFAULT_FORMATTING
 
 // ================================================================================
 // RESPONSE BUILDER SERVICE
@@ -497,7 +507,7 @@ export class ResponseBuilderService {
     }
 
     let itemNumber = 1
-    const groups: GroupedItems[] = []
+    const rawGroups: GroupedItems[] = []
 
     for (const [groupName, groupProducts] of groupMap) {
       const items: ListItem[] = groupProducts.map((p) => ({
@@ -511,18 +521,33 @@ export class ResponseBuilderService {
         extra: p.region || p.formato,
       }))
 
-      groups.push({
+      rawGroups.push({
         groupName,
         variantCount: groupProducts.length,
         items,
       })
     }
 
+    const groups = rawGroups
+      .sort((a, b) => b.variantCount - a.variantCount)
+      .slice(0, 4)
+
+    const groupMapping: Record<string, { nome: string; skus: string[] }> = {}
+    groups.forEach((group, index) => {
+      groupMapping[String(index + 1)] = {
+        nome: group.groupName,
+        skus: group.items
+          .map((item) => item.sku)
+          .filter((sku): sku is string => Boolean(sku)),
+      }
+    })
+
     return {
       type: "PRODUCT_GROUPED",
       data: {
         groups,
-        count: products.length,
+        count: groups.reduce((sum, group) => sum + group.variantCount, 0),
+        groupMapping,
       },
       formatting: {
         ...DEFAULT_FORMATTING,
@@ -785,6 +810,21 @@ export class ResponseBuilderService {
     identity: WorkspaceIdentityData,
     context: ResponseContext
   ): StructuredResponse {
+    const identityText = identity.botName?.trim()
+    if (identityText) {
+      return {
+        type: "SIMPLE_TEXT",
+        data: { identity },
+        formatting: {
+          ...DEFAULT_FORMATTING,
+          showNumbers: false,
+          showPrices: false,
+        },
+        context,
+        text: identityText,
+      }
+    }
+
     return {
       type: "IDENTITY",
       data: { identity },

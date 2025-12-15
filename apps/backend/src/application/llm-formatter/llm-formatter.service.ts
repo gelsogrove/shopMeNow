@@ -192,6 +192,13 @@ export class LLMFormatterService {
       let text = llmResponse.data.choices[0]?.message?.content || ""
       const tokensUsed = llmResponse.data.usage?.total_tokens || 0
 
+      if (response.type === "PRODUCT_GROUPED") {
+        const mappingBlock = this.buildGroupMappingBlock(response)
+        if (!text.includes("---JSON_MAPPING---")) {
+          text = `${text.trim()}\n\n---JSON_MAPPING---\n${mappingBlock}\n---END_JSON---`
+        }
+      }
+
       // 🔧 FIX: PREFER LLM-generated groupMapping (semantically meaningful like "Freschi/Stagionati")
       // over CODE-generated groupMapping (which may group by formato like "200g/250g")
       // The LLM groups are more user-friendly and match what the user sees in the text!
@@ -290,6 +297,9 @@ export class LLMFormatterService {
 
       case "HUMAN_SUPPORT":
         return this.getHumanSupport(targetLanguage)
+
+      case "SIMPLE_TEXT":
+        return response.text || ""
 
       default:
         return null // Need LLM for complex formatting
@@ -446,6 +456,10 @@ export class LLMFormatterService {
         parts.push(this.formatProductGroupedPrompt(response))
         break
 
+      case "CATALOG_AGGREGATE":
+        parts.push(this.formatCatalogAggregatePrompt(response))
+        break
+
       case "PRODUCT_NEEDS_SMART_GROUPING":
         parts.push(this.formatSmartGroupingPrompt(response))
         break
@@ -551,17 +565,55 @@ export class LLMFormatterService {
 
   private formatProductGroupedPrompt(response: StructuredResponse): string {
     const groups = response.data.groups || []
-    const lines = ["GROUPED PRODUCTS:"]
-    for (const group of groups) {
-      lines.push("")
-      lines.push(`📁 **${group.groupName}** (${group.variantCount} variants):`)
-      for (const item of group.items) {
-        // Show only the final price (discounted if applicable) - DO NOT show both prices
-        const displayPrice = item.priceWithDiscount || item.price
-        lines.push(`   **${item.number}.** ${item.name} - €${displayPrice?.toFixed(2)}`)
-      }
+    const lines: string[] = []
+    groups.forEach((group, index) => {
+      lines.push(`${index + 1}. ${group.groupName} (${group.variantCount} prodotti)`)
+    })
+
+    const mappingBlock = this.buildGroupMappingBlock(response)
+
+    return [
+      "GRUPPI DISPONIBILI (non elencare i singoli prodotti):",
+      ...lines,
+      "",
+      "Regole output:",
+      "- Mostra SOLO i gruppi sopra indicati con il relativo numero di prodotti.",
+      "- Non inserire l'elenco dei singoli prodotti né riepiloghi \"Prezzi finali\".",
+      "- Chiudi sempre con la domanda: \"Quale gruppo ti interessa?\"",
+      "- Dopo la domanda aggiungi SEMPRE e SENZA MODIFICHE il blocco JSON seguente.",
+      "",
+      "---JSON_MAPPING---",
+      mappingBlock,
+      "---END_JSON---",
+    ].join("\n")
+  }
+
+  private formatCatalogAggregatePrompt(response: StructuredResponse): string {
+    const aggregate = response.data.aggregateResult
+    if (!aggregate) {
+      return "Aggregate result not available."
     }
-    return lines.join("\n")
+
+    const typeLabel =
+      aggregate.type === "min"
+        ? "valore minimo"
+        : aggregate.type === "max"
+          ? "valore massimo"
+          : "conteggio totale"
+
+    const valueLabel =
+      aggregate.field === "price" && aggregate.type !== "count"
+        ? `€${aggregate.value.toFixed(2)}`
+        : aggregate.value.toString()
+
+    return [
+      "Risultato aggregato catalogo:",
+      `- Tipo: ${typeLabel} (${aggregate.type})`,
+      `- Campo: ${aggregate.field}`,
+      `- Valore: ${valueLabel}`,
+      "",
+      "Spiega questo dato al cliente in modo naturale e rassicurante.",
+    ].join("\n")
   }
 
   /**
@@ -1079,6 +1131,33 @@ CRITICAL:
       fr: "Français",
     }
     return names[code] || "Italiano"
+  }
+  private buildGroupMappingData(response: StructuredResponse): Record<string, { nome: string; skus: string[] }> {
+    const existing = (response.data as any)?.groupMapping
+    if (existing && Object.keys(existing).length > 0) {
+      return existing
+    }
+
+    if (!Array.isArray(response.data.groups)) {
+      return {}
+    }
+
+    const mapping: Record<string, { nome: string; skus: string[] }> = {}
+    response.data.groups.forEach((group: GroupedItems, index: number) => {
+      mapping[String(index + 1)] = {
+        nome: group.groupName,
+        skus: (group.items || [])
+          .map((item) => item.sku)
+          .filter((sku): sku is string => Boolean(sku)),
+      }
+    })
+
+    return mapping
+  }
+
+  private buildGroupMappingBlock(response: StructuredResponse): string {
+    const data = this.buildGroupMappingData(response)
+    return JSON.stringify(data || {})
   }
 }
 
