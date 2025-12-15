@@ -695,6 +695,21 @@ export class ChatEngineService {
           await this.optionsMappingService.clearPendingAction(conversationId)
           logger.info("🧹 [ChatEngine] Cleared pendingAction after ADD_TO_CART execution")
           
+          // 🛒 CRITICAL: Save CART_ACTIONS mapping so "1" triggers CONFIRM_ORDER, not product search!
+          await this.optionsMappingService.saveMapping({
+            workspaceId: input.workspaceId,
+            conversationId,
+            customerId: input.customerId,
+            responseText: "",
+            items: [
+              { number: 1, name: "✅ Confermare l'ordine", id: "CONFIRM_ORDER" },
+              { number: 2, name: "🛍️ Esplorare il catalogo", id: "SHOW_PRODUCTS" },
+              { number: 3, name: "🗑️ Rimuovere un articolo", id: "REMOVE_FROM_CART" },
+            ],
+            listType: "CART_ACTIONS",
+          })
+          logger.info("🛒 [ChatEngine] Set CART_ACTIONS mapping after ADD_TO_CART")
+          
           const processingTimeMs = Date.now() - startTime
           
           await this.saveMessages(
@@ -1741,6 +1756,21 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             await this.optionsMappingService.clearPendingAction(conversationId)
             logger.info("🧹 [ChatEngine] Cleared pendingAction after ADD_TO_CART execution (STEP 2.6)")
             
+            // 🛒 CRITICAL: Save CART_ACTIONS mapping so "1" triggers CONFIRM_ORDER, not product search!
+            await this.optionsMappingService.saveMapping({
+              workspaceId: input.workspaceId,
+              conversationId,
+              customerId: input.customerId,
+              responseText: "",
+              items: [
+                { number: 1, name: "✅ Confermare l'ordine", id: "CONFIRM_ORDER" },
+                { number: 2, name: "🛍️ Esplorare il catalogo", id: "SHOW_PRODUCTS" },
+                { number: 3, name: "🗑️ Rimuovere un articolo", id: "REMOVE_FROM_CART" },
+              ],
+              listType: "CART_ACTIONS",
+            })
+            logger.info("🛒 [ChatEngine] Set CART_ACTIONS mapping after ADD_TO_CART (STEP 2.6)")
+            
             const processingTimeMs = Date.now() - startTime
             
             await this.saveMessages(
@@ -1940,10 +1970,24 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             cartResponse.output
           )
           
-          // 🧹 NOTE: We intentionally do NOT set pendingAction for VIEW_CART
-          // The pendingAction mechanism is for actions that require explicit confirmation
-          // (ADD_TO_CART, CONFIRM_ORDER). For general questions like "Vuoi vedere i prodotti?",
-          // the LLM should interpret "sì" based on conversation context.
+          // 🛒 CRITICAL: Save CART_ACTIONS mapping if cart was shown
+          // Check if response contains cart options (the LLM shows cart after operations)
+          if (cartResponse.output.includes("Cosa vuoi fare?") || 
+              cartResponse.output.includes("Ecco il tuo carrello")) {
+            await this.optionsMappingService.saveMapping({
+              workspaceId: input.workspaceId,
+              conversationId,
+              customerId: input.customerId,
+              responseText: "",
+              items: [
+                { number: 1, name: "✅ Confermare l'ordine", id: "CONFIRM_ORDER" },
+                { number: 2, name: "🛍️ Esplorare il catalogo", id: "SHOW_PRODUCTS" },
+                { number: 3, name: "🗑️ Rimuovere un articolo", id: "REMOVE_FROM_CART" },
+              ],
+              listType: "CART_ACTIONS",
+            })
+            logger.info("🛒 [ChatEngine] Set CART_ACTIONS mapping after ADD_TO_CART (LLM fallback)")
+          }
           
           return {
             message: cartResponse.output,
