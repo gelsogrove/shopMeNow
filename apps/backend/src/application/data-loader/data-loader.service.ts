@@ -228,6 +228,8 @@ export class DataLoaderService {
     if (isProductSearchIntent(intent)) {
       switch (intent.type) {
         case "SHOW_CATEGORIES":
+        case "SHOW_PRODUCTS":
+          // SHOW_PRODUCTS → show categories (user navigates from there)
           return this.loadCategories(workspaceId)
         case "SHOW_CATEGORY":
           return this.loadProductsByCategory(workspaceId, customerDiscount, (intent as ShowCategoryIntent).categoryName)
@@ -946,6 +948,11 @@ export class DataLoaderService {
           productCategories: {
             select: {
               category: { select: { id: true, name: true } },
+            },
+          },
+          productCertifications: {
+            select: {
+              certification: { select: { name: true } },
             },
           },
         },
@@ -1916,13 +1923,19 @@ export class DataLoaderService {
     customerDiscount: number
   ): Promise<ProductData[]> {
     try {
-      // Build a compact list of products with categories for the LLM
-      const productList = products.map((p, i) => ({
-        idx: i,
-        name: p.name,
-        category: p.productCategories?.[0]?.category?.name || "Altro",
-        desc: (p.description || "").substring(0, 100),
-      }))
+      // Build a compact list of products with categories and certifications for the LLM
+      const productList = products.map((p, i) => {
+        // Extract certifications from relation (productCertifications -> certification.name)
+        const certs = p.productCertifications?.map((pc: any) => pc.certification?.name).filter(Boolean) || []
+        return {
+          idx: i,
+          name: p.name,
+          category: p.productCategories?.[0]?.category?.name || "Altro",
+          region: p.region || "",
+          certifications: certs.length > 0 ? certs.join(", ") : "",
+          desc: (p.description || "").substring(0, 100),
+        }
+      })
 
       // Ask LLM to identify matching product indices
       const openRouterApiKey = process.env.OPENROUTER_API_KEY
@@ -1952,9 +1965,8 @@ HOW TO HANDLE QUERIES:
 
 2. QUALIFIED/SUBSET queries - user wants a SPECIFIC SUBSET:
    - Query has a qualifier (fresh, aged, organic, premium, frozen, etc.)
-   - Analyze product NAMES and DESCRIPTIONS to find matches
-   - Use your knowledge to understand product characteristics from names/descriptions
-   - Return ONLY products matching BOTH the category AND the qualifier
+   - Analyze product NAMES, DESCRIPTIONS, and CERTIFICATIONS [Cert: xxx]
+   - Return ONLY products matching BOTH the category/type AND the qualifier
 
 3. PRODUCT NAME queries - user searching for a specific product:
    - Return products whose name matches or contains the query
@@ -1962,10 +1974,17 @@ HOW TO HANDLE QUERIES:
 4. SEMANTIC queries - user uses synonyms or related terms:
    - Map the term to the appropriate category or product type using your knowledge
 
+5. CERTIFICATION queries (BIO, DOP, IGP, etc.):
+   - CRITICAL: "BIO" and "Biologico" mean ORGANIC certification ONLY
+   - "DOP" (Denominazione di Origine Protetta) is NOT the same as BIO
+   - "IGP" (Indicazione Geografica Protetta) is NOT the same as BIO
+   - For certification queries, ONLY return products with EXACTLY that certification in [Cert: xxx]
+   - If user asks for "prodotti BIO", return ONLY products with "Bio" or "Biologico" in [Cert: ...]
+
 RULES:
 - Return a JSON array of matching product indices, e.g. [0, 3, 5, 8]
 - Be INCLUSIVE for category queries (return all in category)
-- Be STRICT for qualified queries (must match the qualifier)
+- Be STRICT for certification and qualified queries (must have the exact certification)
 - If nothing matches, return []
 - Analyze the actual product data provided, don't assume`,
             },
@@ -1974,7 +1993,13 @@ RULES:
               content: `Query: "${query}"
 
 Products:
-${productList.map((p) => `${p.idx}. ${p.name} (${p.category}) - ${p.desc}`).join("\n")}
+${productList.map((p) => {
+  const parts = [`${p.idx}. ${p.name} (${p.category})`]
+  if (p.region) parts.push(`[Regione: ${p.region}]`)
+  if (p.certifications) parts.push(`[Cert: ${p.certifications}]`)
+  if (p.desc) parts.push(`- ${p.desc}`)
+  return parts.join(" ")
+}).join("\n")}
 
 Return ONLY the JSON array of indices for products that match "${query}":`,
             },
@@ -2046,8 +2071,14 @@ Return ONLY the JSON array of indices for products that match "${query}":`,
 
   private mapProduct(p: any, customerDiscount: number): ProductData {
     const discountedPrice = customerDiscount > 0 ? p.price * (1 - customerDiscount / 100) : undefined
-    // Handle certifications which can be Json
-    const certs = Array.isArray(p.certifications) ? p.certifications.map(String) : []
+    // Extract certifications from productCertifications relation (preferred) or fallback to deprecated field
+    let certs: string[] = []
+    if (p.productCertifications && Array.isArray(p.productCertifications)) {
+      certs = p.productCertifications.map((pc: any) => pc.certification?.name).filter(Boolean)
+    } else if (Array.isArray(p.certifications)) {
+      // Fallback to deprecated field
+      certs = p.certifications.map(String)
+    }
     const allergenList = Array.isArray(p.allergens) ? p.allergens.map(String) : []
     return {
       id: p.id,

@@ -157,11 +157,15 @@ export class CartManagementAgent {
         }
       }
 
+      // Calculate discount multiplier ONCE for consistent pricing
+      const discountPercent = context.customerDiscount || 0
+      const discountMultiplier = 1 - discountPercent / 100
+
       // 🔍 CRITICAL FIX: productId is actually a code (e.g., "SALUMI-006" or "GFT001")
       // Search in appropriate repository based on type
       let item: any = null
       let itemName: string = ""
-      let itemPrice: number = 0
+      let itemPrice: number = 0  // This will be the DISCOUNTED price
       let itemId: string = ""
 
       if (type === "PRODUCT") {
@@ -198,7 +202,9 @@ export class CartManagementAgent {
 
         item = product
         itemName = product.name
-        itemPrice = product.price
+        // Apply customer discount and round UP to nearest 10 cents (matching getCart logic)
+        let discountedPrice = product.price * discountMultiplier
+        itemPrice = Math.ceil(discountedPrice * 10) / 10
         itemId = product.id
       } else if (type === "SERVICE") {
         const service = await this.serviceRepo.findByServiceCode(
@@ -225,7 +231,9 @@ export class CartManagementAgent {
         // Services don't have stock checks
         item = service
         itemName = service.name
-        itemPrice = service.price
+        // Apply customer discount and round UP to nearest 10 cents (matching getCart logic)
+        let discountedPrice = service.price * discountMultiplier
+        itemPrice = Math.ceil(discountedPrice * 10) / 10
         itemId = service.id
       }
 

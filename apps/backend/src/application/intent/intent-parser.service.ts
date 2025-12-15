@@ -266,13 +266,18 @@ Classify the user message into ONE of these intents:
 PRODUCT_SEARCH:
 - SHOW_CATEGORIES - User wants to see all categories
 - SHOW_CATEGORY:categoryName - User wants to see products in a specific category
-- SEARCH_PRODUCTS:query - User is searching for products
+- SHOW_PRODUCTS - User wants to see ALL products (lista prodotti, mostra prodotti, tutti i prodotti)
+- SEARCH_PRODUCTS:query - User is searching for SPECIFIC products (not "all products")
 - SHOW_OFFERS - User wants to see offers/discounts/promotions
 
 AVAILABLE CATEGORIES: ${categoryNames}
 NOTE: Use semantic understanding to map user queries to actual categories.
 The user may use synonyms, related terms, or different languages.
 Map their intent to the matching category from the list above.
+
+IMPORTANT: 
+- "dammi lista prodotti", "mostra tutti i prodotti", "che prodotti avete" = SHOW_PRODUCTS
+- "prodotti BIO", "formaggi freschi", "cerca pecorino" = SEARCH_PRODUCTS:query
 
 CART:
 - VIEW_CART - User wants to see their cart, check cart contents
@@ -386,6 +391,9 @@ ${context.lastAssistantMessage ? `\nLast bot message: "${context.lastAssistantMe
           return { type: "SHOW_CATEGORY", categoryName: param.trim() }
         }
         return { type: "SHOW_CATEGORIES" }
+        
+      case "SHOW_PRODUCTS":
+        return { type: "SHOW_PRODUCTS" }
         
       case "SEARCH_PRODUCTS":
         return { type: "SEARCH_PRODUCTS", query: param?.trim() || "" }

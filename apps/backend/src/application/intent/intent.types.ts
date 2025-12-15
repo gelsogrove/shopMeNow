@@ -56,6 +56,10 @@ export interface ShowOffersIntent {
   type: "SHOW_OFFERS"
 }
 
+export interface ShowProductsIntent {
+  type: "SHOW_PRODUCTS"
+}
+
 // =============================================================================
 // CART INTENTS
 // =============================================================================
@@ -223,6 +227,7 @@ export type Intent =
   | ShowCategoryIntent
   | ShowGroupIntent
   | ShowProductIntent
+  | ShowProductsIntent
   | SearchProductsIntent
   | ShowOffersIntent
   
@@ -315,6 +320,7 @@ export function isProductSearchIntent(intent: Intent): intent is
   | ShowCategoryIntent 
   | ShowGroupIntent
   | ShowProductIntent 
+  | ShowProductsIntent
   | SearchProductsIntent
   | ShowOffersIntent {
   return [
@@ -322,6 +328,7 @@ export function isProductSearchIntent(intent: Intent): intent is
     "SHOW_CATEGORY",
     "SHOW_GROUP",
     "SHOW_PRODUCT",
+    "SHOW_PRODUCTS",
     "SEARCH_PRODUCTS",
     "SHOW_OFFERS"
   ].includes(intent.type)

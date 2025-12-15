@@ -59,10 +59,11 @@ CRITICAL RULES:
 5. Use the requested language for the response
 6. KEEP the numbering exactly as provided
 7. Numbers are for customer selection - DO NOT change them
+8. PRICES ARE FINAL - DO NOT calculate or mention any discounts on prices! The prices shown already include any applicable discounts. Never write "con sconto del X%" or "discounted price" - just show the price as-is.
 
 OUTPUT FORMAT:
 - Lists: keep numbering (1, 2, 3...)
-- Prices: €XX.XX
+- Prices: €XX.XX (show exactly as provided - DO NOT modify or add discount calculations!)
 - Show total "(N items)" if requested
 - Emoji: 🛒 🍷 📦 ✅ ❌ etc.`
 
@@ -524,8 +525,11 @@ export class LLMFormatterService {
     const items = response.data.items || []
     const lines = ["AVAILABLE CATEGORIES:"]
     for (const item of items) {
-      lines.push(`${item.number}. ${item.name}${item.extra ? ` (${item.extra})` : ""}`)
+      // Show only category name and product count - NO prices! Numbers in BOLD
+      lines.push(`**${item.number}.** ${item.name}${item.extra ? ` (${item.extra})` : ""}`)
     }
+    lines.push("")
+    lines.push("IMPORTANT: After the list, ask 'Quale categoria vuoi esplorare? 🛍️' or 'Which category would you like to explore?'. DO NOT show any prices for categories. Numbers MUST be bold like **1.** **2.** etc.")
     return lines.join("\n")
   }
 
@@ -533,16 +537,15 @@ export class LLMFormatterService {
     const items = response.data.items || []
     const lines = ["PRODUCTS:"]
     for (const item of items) {
-      // Clean format for user: "**1.** Pecorino Romano DOP - €6.20" (NO SKU, NO category)
-      let line = `**${item.number}.** ${item.name} - €${item.price?.toFixed(2)}`
-      if (item.priceWithDiscount) {
-        line += ` 🏷️ ~~€${item.price?.toFixed(2)}~~ **€${item.priceWithDiscount.toFixed(2)}**`
-      }
+      // Show only the final price (discounted if applicable)
+      // Customer discount is already applied in priceWithDiscount
+      const displayPrice = item.priceWithDiscount || item.price
+      const line = `**${item.number}.** ${item.name} - €${displayPrice?.toFixed(2)}`
       lines.push(line)
     }
     // Add selection prompt - user-friendly, no technical details
     lines.push("")
-    lines.push("IMPORTANT: After the list, ask 'Which product are you interested in? 🛒' or similar. DO NOT show SKU codes or categories to the user.")
+    lines.push("IMPORTANT: After the list, ask 'Which product are you interested in? 🛒' or similar. DO NOT show SKU codes or categories to the user. Numbers MUST be bold like **1.** **2.** etc.")
     return lines.join("\n")
   }
 
@@ -553,12 +556,9 @@ export class LLMFormatterService {
       lines.push("")
       lines.push(`📁 **${group.groupName}** (${group.variantCount} variants):`)
       for (const item of group.items) {
-        // Clean format for user: "**1.** Pecorino Romano DOP - €6.20" (NO SKU visible)
-        let line = `   **${item.number}.** ${item.name} - €${item.price?.toFixed(2)}`
-        if (item.priceWithDiscount) {
-          line += ` (discounted: €${item.priceWithDiscount.toFixed(2)})`
-        }
-        lines.push(line)
+        // Show only the final price (discounted if applicable) - DO NOT show both prices
+        const displayPrice = item.priceWithDiscount || item.price
+        lines.push(`   **${item.number}.** ${item.name} - €${displayPrice?.toFixed(2)}`)
       }
     }
     return lines.join("\n")
@@ -658,16 +658,16 @@ CRITICAL:
     const p = response.data.product
     if (!p) return "Product not found"
 
+    // Show only the final price (discounted if applicable)
+    const displayPrice = p.priceWithDiscount || p.price
+    
     const lines = [
       "PRODUCT DETAIL:",
       `Name: ${p.name}`,
-      `Code: ${p.sku || "N/A"}`, // 🆕 SKU for cart operations
-      `Price: €${p.price.toFixed(2)}`,
+      `Price: €${displayPrice.toFixed(2)}`,
     ]
 
-    if (p.priceWithDiscount) {
-      lines.push(`Discounted price: €${p.priceWithDiscount.toFixed(2)}`)
-    }
+    // Don't show both prices - only show final price
     if (p.description) {
       lines.push(`Description: ${p.description}`)
     }

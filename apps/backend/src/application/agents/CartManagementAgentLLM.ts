@@ -976,7 +976,7 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
 
   /**
    * Format cart response as a readable text for WhatsApp
-   * Returns formatted string with emoji and prices
+   * Returns formatted string with emoji and prices (already discounted from CartManagementAgent)
    */
   private formatCartResponse(cartResult: any): { formattedCart: string; cartData: any } {
     if (!cartResult.success) {
@@ -994,17 +994,21 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
     }
 
     const cart = cartResult.cart
-    const lines: string[] = ["🛒 Il tuo carrello:"]
+    const lines: string[] = ["Ecco il tuo carrello:", ""]
 
+    let itemNumber = 1
+    let totalItems = 0
     for (const item of cart.items) {
       const name = item.name || item.product?.name || item.service?.name || "Unknown"
       const quantity = item.quantity || 1
+      totalItems += quantity
+      // unitPrice is already discounted (from CartManagementAgent.getCart)
       const unitPrice = item.unitPrice || item.product?.price || item.service?.price || 0
-      const itemTotal = unitPrice * quantity
+      const itemTotal = item.total || (unitPrice * quantity)
       
-      // Format price with comma for Italian locale
-      const formattedPrice = itemTotal.toFixed(2).replace(".", ",")
-      lines.push(`- ${quantity}x ${name} - ${formattedPrice}€`)
+      // Format price with € prefix
+      lines.push(`**${itemNumber}.** ${quantity}× ${name} - €${itemTotal.toFixed(2)}`)
+      itemNumber++
     }
 
     // Add total
@@ -1013,9 +1017,24 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
       return sum + (price * (item.quantity || 1))
     }, 0)
     
-    const formattedTotal = total.toFixed(2).replace(".", ",")
     lines.push("")
-    lines.push(`💰 Totale: ${formattedTotal}€`)
+    lines.push(`Totale: €${total.toFixed(2)} (${totalItems} articoli)`)
+    
+    // Show discount message if applicable
+    const discountPercent = cart.discountApplied || 0
+    if (discountPercent > 0) {
+      lines.push("")
+      lines.push(`💰 Stai usufruendo del tuo sconto riservato del ${discountPercent}%! I prezzi mostrati includono già lo sconto.`)
+    }
+    
+    // ALWAYS add cart action options
+    lines.push("")
+    lines.push("Cosa vuoi fare?")
+    lines.push("1. ✅ Confermare l'ordine")
+    lines.push("2. 🛍️ Esplorare il catalogo")
+    lines.push("3. 🗑️ Rimuovere un articolo")
+    lines.push("")
+    lines.push("Rispondi con il numero o scrivi cosa desideri!")
 
     return {
       formattedCart: lines.join("\n"),
