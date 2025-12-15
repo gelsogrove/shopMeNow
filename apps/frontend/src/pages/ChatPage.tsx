@@ -217,8 +217,6 @@ export function ChatPage() {
   }, [selectedChat, setIsChatbotActive])
   const [isInputDisabled, setIsInputDisabled] = useState(false)
   const [showActiveChatbotDialog, setShowActiveChatbotDialog] = useState(false)
-  const [showActiveChatbotNotifyDialog, setShowActiveChatbotNotifyDialog] =
-    useState(false)
 
   // 🆕 State for unified notification dialog (discount + chatbot + account changes)
   const [showNotificationDialog, setShowNotificationDialog] = useState(false)
@@ -594,25 +592,13 @@ export function ChatPage() {
       return
     }
 
-    // 🆕 If turning on the chatbot, SEMPRE show notification popup
     if (checked) {
-      const originalData = getOriginalCustomerData(selectedChat.customerId)
-
-      // SEMPRE mostra popup quando si attiva il chatbot (OFF → ON)
-      setNotificationChanges({
-        discountChanged: false,
-        chatbotActivated: true,
-        accountActivated: false,
-        oldDiscount: originalData?.discount || 0,
-        newDiscount: originalData?.discount || 0,
-      })
-      setShowNotificationDialog(true)
-      // Store the action to complete after notification
-      ;(window as any).__pendingChatbotToggle = checked
+      setHasToggledChatbot(true)
+      await updateActiveChatbotStatus(true)
       return
     }
 
-    await updateActiveChatbotStatus(checked)
+    await updateActiveChatbotStatus(false)
   }
 
   // Function to confirm turning off the chatbot
@@ -622,18 +608,11 @@ export function ChatPage() {
     await updateActiveChatbotStatus(false)
   }
 
-  // Function to handle activation with or without notification
-  const handleActiveChatbotNotifyConfirm = async (shouldNotify: boolean) => {
-    setShowActiveChatbotNotifyDialog(false)
-    await updateActiveChatbotStatus(true, shouldNotify)
-  }
-
   // 🆕 Unified notification handler (for both discount and chatbot changes)
   const handleNotificationConfirm = async (shouldNotify: boolean) => {
     setShowNotificationDialog(false)
 
-    if (!shouldNotify || !selectedChat || !workspaceId) {
-      // User clicked "Skip" - still reload to show updated data
+    if (!selectedChat || !workspaceId) {
       window.location.reload()
       return
     }
@@ -641,6 +620,29 @@ export function ChatPage() {
     const customerId = selectedChat.customerId
 
     try {
+      console.log('📋 handleNotificationConfirm called:', {
+        shouldNotify,
+        notificationChanges,
+        customerId,
+        workspaceId,
+      })
+
+      // If chatbot was activated, update it even if not sending notification
+      if (notificationChanges?.chatbotActivated && !shouldNotify) {
+        console.log('❌ Path: chatbotActivated=true but shouldNotify=false → save only')
+        await updateActiveChatbotStatus(true, false)
+        return
+      }
+
+      if (!shouldNotify) {
+        console.log('❌ Path: shouldNotify=false → reload')
+        // User clicked "Skip" for other notifications - reload to show updated data
+        window.location.reload()
+        return
+      }
+      
+      console.log('✅ Path: shouldNotify=true → processing notifications...')
+
       // Send discount notification if changed
       if (notificationChanges?.discountChanged) {
         await pushNotificationService.sendDiscountChange(
@@ -656,9 +658,11 @@ export function ChatPage() {
 
       // 🔔 Send chatbot reactivation notification
       if (notificationChanges?.chatbotActivated) {
+        console.log('🚀 SENDING CHATBOT REACTIVATION:', { workspaceId, customerId })
         await pushNotificationService.sendChatbotReactivation(workspaceId, [
           customerId,
         ])
+        console.log('✅ CHATBOT REACTIVATION SENT')
         toast.success("Chatbot reactivation notification sent", {
           duration: 2000,
         })
@@ -672,15 +676,6 @@ export function ChatPage() {
         toast.success("Account activation notification sent", {
           duration: 2000,
         })
-      }
-
-      // Complete pending chatbot toggle if exists
-      if ((window as any).__pendingChatbotToggle !== undefined) {
-        await updateActiveChatbotStatus(
-          (window as any).__pendingChatbotToggle,
-          false
-        ) // Already notified
-        delete (window as any).__pendingChatbotToggle
       }
 
       // NO FETCH HERE - data already updated by handleSaveCustomer!
@@ -703,58 +698,23 @@ export function ChatPage() {
     if (!selectedChat?.customerId || !workspaceId) return
 
     try {
-      setLoading(true)
-
-      // Update UI immediately for better responsiveness
-      setIsChatbotActive(status)
-
+      logger.info(`🔄 Updating chatbot status to ${status} for customer ${selectedChat.customerId}`)
+      
       // Update the customer in the backend
       const response = await api.put(
         `/workspaces/${workspaceId}/customers/${selectedChat.customerId}`,
         { activeChatbot: status }
       )
 
-      if (response.status === 200) {
-        // Log the response for debugging
-        logger.info("Update chatbot response:", response.data)
+      logger.info(`✅ API Response:`, response.status, response.data)
 
-        // Update context state
-        updateActiveChatbot(selectedChat.id, status)
-
-        // NOTE: Backend automatically sends chatbot reactivation notification
-        // when activeChatbot changes from false -> true (no manual call needed)
-
-        // ✅ Show success toast
-        toast.success(
-          `Chatbot ${status ? "enabled" : "disabled"} for ${
-            selectedChat.customerName
-          }`,
-          { duration: 2000 }
-        )
-
-        logger.info("✅ Chatbot status updated successfully")
-      } else {
-        // Log error for debugging
-        logger.error("Failed to update chatbot status:", {
-          status: response.status,
-          data: response.data,
-        })
-        toast.error(response.data.error || "Failed to update chatbot status", {
-          duration: 1000,
-        })
-      }
+      // Reload page immediately to get fresh data from server
+      setTimeout(() => {
+        window.location.reload()
+      }, 300)
     } catch (error) {
-      logger.error("Error updating chatbot status:", error)
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to update chatbot status",
-        {
-          duration: 1000,
-        }
-      )
-    } finally {
-      setLoading(false)
+      logger.error("❌ Error updating chatbot status:", error)
+      toast.error("Failed to update chatbot status")
     }
   }
 
@@ -1182,7 +1142,7 @@ export function ChatPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-12 gap-6 h-[calc(100vh-12rem)]">
+      <div className="grid grid-cols-12 gap-4 h-[calc(100vh-12rem)]">
         {/* Chat List - Vertical Sidebar */}
         <div className="col-span-3 flex flex-col gap-3">
           {/* Channel Logo & Name */}
@@ -1213,7 +1173,7 @@ export function ChatPage() {
             type="search"
             placeholder="Search chats..."
             value={clientSearchTerm}
-            className="h-8 text-sm w-full max-w-xs"
+            className="h-8 text-sm w-full max-w-[calc(100%-50px)]"
             onChange={(e) => {
               const newParams = new URLSearchParams(searchParams)
               if (e.target.value) {
@@ -1742,34 +1702,6 @@ export function ChatPage() {
         cancelLabel="Cancel"
         variant="destructive"
       />
-
-      {/* Chatbot Notification Confirmation Dialog */}
-      <AlertDialog
-        open={showActiveChatbotNotifyDialog}
-        onOpenChange={setShowActiveChatbotNotifyDialog}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Send Notification?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Would you like to notify {selectedChat?.customerName} that the
-              chatbot is now active?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => handleActiveChatbotNotifyConfirm(false)}
-            >
-              No, just enable
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => handleActiveChatbotNotifyConfirm(true)}
-            >
-              Yes, notify user
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* 🆕 Unified Notification Dialog (Discount + Chatbot changes) */}
       <NotificationDialog

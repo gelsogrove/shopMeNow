@@ -359,24 +359,14 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
     try {
       const result = await rechargeCredit(effectiveWorkspaceId, rechargeAmount)
 
-      if (result.upgradedToPlan) {
-        toast.success(`Credit recharged! Plan upgraded to ${result.upgradedToPlan}. New balance: ${formatCurrency(result.newBalance)}`)
-      } else {
-        toast.success(`Credit recharged! New balance: ${formatCurrency(result.newBalance)}`)
-      }
-
-      // Update local balance AND totalRecharges immediately with result from API
-      updateBalanceLocally(result.newBalance, rechargeAmount)
-
       // Close dialog and reset
       setShowRechargeDialog(false)
       setRechargeAmount(25)
 
-      // Refresh full overview to get updated transactions and totals
-      // Use setTimeout to ensure backend has committed the transaction
+      // Reload page to refresh all data (same as plan change)
       setTimeout(() => {
-        refreshOverview()
-      }, 500)
+        window.location.reload()
+      }, 300)
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || "Failed to recharge credit"
       toast.error(errorMessage)

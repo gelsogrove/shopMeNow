@@ -1,6 +1,7 @@
 import { prisma, PrismaClient } from "@echatbot/database"
 import { Request, Response } from "express"
 import { LLMRouterService } from "../../../services/llm-router.service"
+import { WhatsAppQueueService } from "../../../services/whatsapp-queue.service"
 import logger from "../../../utils/logger"
 
 /**
@@ -21,7 +22,7 @@ const NOTIFICATION_TEMPLATES: Record<
   (data: any) => string
 > = {
   [SystemNotificationType.CHATBOT_REACTIVATED]: (data) =>
-    `🤖 Ciao ${data.customerName}, il chatbot è ora disponibile, come posso aiutarti oggi?`,
+    `🤖 Ciao ${data.customerName}, da questo momento la tua chat è attiva. Sono qui per aiutarti!`,
 
   [SystemNotificationType.ACCOUNT_ACTIVATED]: (data) =>
     `👋 Benvenuto ${data.customerName}! Il tuo account è ora attivo. Puoi iniziare a fare acquisti.`,
@@ -36,11 +37,14 @@ const NOTIFICATION_TEMPLATES: Record<
 export class PushController {
   private prisma: PrismaClient
   private llmRouterService: LLMRouterService
+  private whatsappQueueService: WhatsAppQueueService
 
-  constructor(prisma?: PrismaClient, llmRouterService?: LLMRouterService) {
+  constructor(prisma?: PrismaClient, llmRouterService?: LLMRouterService, whatsappQueueService?: WhatsAppQueueService) {
     this.prisma = prisma
     this.llmRouterService =
       llmRouterService || new LLMRouterService(this.prisma)
+    this.whatsappQueueService =
+      whatsappQueueService || new WhatsAppQueueService(this.prisma)
   }
   /**
    * Send system notification to customers
@@ -59,6 +63,14 @@ export class PushController {
     try {
       const { workspaceId } = req.params
       const { type, customerIds, templateData = {} } = req.body
+
+      logger.info(`[PUSH-CONTROLLER] 🔔 sendSystemNotification called`, {
+        workspaceId,
+        type,
+        customerIds,
+        templateData,
+        body: req.body,
+      })
 
       // Validation
       if (
@@ -160,6 +172,14 @@ export class PushController {
             ...templateData,
           })
 
+          logger.info(`[PUSH-CONTROLLER] 📤 Calling routeMessage for ${customer.name}`, {
+            workspaceId,
+            customerId: customer.id,
+            conversationId: chatSession.id,
+            notificationMessage,
+            customerLanguage: customer.language,
+          })
+
           const result = await this.llmRouterService.routeMessage({
             workspaceId,
             customerId: customer.id,
@@ -171,6 +191,13 @@ export class PushController {
             isSystemMessage: true,
           })
 
+          logger.info(`[PUSH-CONTROLLER] 📥 routeMessage result for ${customer.name}`, {
+            response: result.response,
+            isBlocked: result.isBlocked,
+            agentUsed: result.agentUsed,
+            tokensUsed: result.tokensUsed,
+          })
+
           if (result.isBlocked) {
             results.failed++
             results.errors.push(
@@ -180,6 +207,29 @@ export class PushController {
               `[PUSH-CONTROLLER] Notification blocked for ${customer.name}`
             )
           } else {
+            // ✅ NEW: Enqueue message in WhatsApp queue for actual delivery
+            try {
+              await this.whatsappQueueService.enqueue({
+                workspaceId,
+                customerId: customer.id,
+                phoneNumber: customer.phone,
+                messageContent: result.response, // Use translated message from LLM router
+              })
+              logger.info(
+                `[PUSH-CONTROLLER] Message queued for WhatsApp delivery to ${customer.name}`
+              )
+            } catch (queueError) {
+              logger.error(
+                `[PUSH-CONTROLLER] Failed to enqueue message for ${customer.name}:`,
+                queueError
+              )
+              results.failed++
+              results.errors.push(
+                `Customer ${customer.name}: Failed to queue message for delivery`
+              )
+              continue
+            }
+
             results.sent++
           }
         } catch (error) {
