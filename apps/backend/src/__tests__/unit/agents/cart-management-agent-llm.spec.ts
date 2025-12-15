@@ -129,12 +129,14 @@ describe("CartManagementAgentLLM", () => {
               name: "Mozzarella di Bufala",
               quantity: 2,
               unitPrice: 8.5,
+              total: 17.0,
               product: { name: "Mozzarella di Bufala", price: 8.5 },
             },
             {
               name: "Prosciutto Crudo",
               quantity: 1,
               unitPrice: 15.0,
+              total: 15.0,
               product: { name: "Prosciutto Crudo", price: 15.0 },
             },
           ],
@@ -142,10 +144,14 @@ describe("CartManagementAgentLLM", () => {
         },
       })
 
-      expect(result.formattedCart).toContain("🛒 Il tuo carrello:")
-      expect(result.formattedCart).toContain("2x Mozzarella di Bufala - 17,00€")
-      expect(result.formattedCart).toContain("1x Prosciutto Crudo - 15,00€")
-      expect(result.formattedCart).toContain("💰 Totale: 32,00€")
+      // New format: "Ecco il tuo carrello:" with €XX.XX prices and bold numbers
+      expect(result.formattedCart).toContain("Ecco il tuo carrello:")
+      expect(result.formattedCart).toContain("2× Mozzarella di Bufala - €17.00")
+      expect(result.formattedCart).toContain("1× Prosciutto Crudo - €15.00")
+      expect(result.formattedCart).toContain("Totale: €32.00")
+      // Should always have action options
+      expect(result.formattedCart).toContain("Cosa vuoi fare?")
+      expect(result.formattedCart).toContain("1. ✅ Confermare l'ordine")
     })
 
     it("should handle error response", () => {
@@ -159,7 +165,7 @@ describe("CartManagementAgentLLM", () => {
       expect(result.formattedCart).toBe("❌ Error loading cart")
     })
 
-    it("should use Italian locale for prices (comma separator)", () => {
+    it("should format prices with euro symbol prefix", () => {
       const formatCartResponse = (agent as any).formatCartResponse.bind(agent)
 
       const result = formatCartResponse({
@@ -171,6 +177,7 @@ describe("CartManagementAgentLLM", () => {
               name: "Panettone",
               quantity: 1,
               unitPrice: 25.99,
+              total: 25.99,
               product: { name: "Panettone", price: 25.99 },
             },
           ],
@@ -178,9 +185,10 @@ describe("CartManagementAgentLLM", () => {
         },
       })
 
-      // Italian format uses comma for decimals
-      expect(result.formattedCart).toContain("25,99€")
-      expect(result.formattedCart).not.toContain("25.99€")
+      // Format uses €XX.XX (euro prefix with dot separator)
+      expect(result.formattedCart).toContain("€25.99")
+      // Should show discount message only if discountApplied > 0
+      expect(result.formattedCart).not.toContain("sconto riservato")
     })
   })
 
