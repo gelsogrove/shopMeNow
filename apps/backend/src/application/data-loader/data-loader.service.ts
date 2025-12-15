@@ -184,9 +184,23 @@ export type LoadedData =
   | { type: "PROFILE"; profile: CustomerProfileData }
   | { type: "OFFERS"; offers: OfferData[] }
   | { type: "ORDER_ACTION"; action: "SEND_INVOICE" | "REPEAT_ORDER" | "SEND_CREDIT_NOTES"; orderCode?: string }
+  | { type: "CART_ACTION"; action: "CONFIRM_ORDER" | "SHOW_PRODUCTS" | "REMOVE_FROM_CART" }
+  | { type: "CART_REMOVAL_OPTIONS"; items: CartRemovalItemData[] }
   | { type: "AGENT_INFO"; agentInfo: AgentInfoData }
+  | { type: "NEEDS_LLM_CONTEXT"; label: string; originalListType: string; inferAttempted: string | null }
   | { type: "EMPTY"; reason: string }
   | { type: "ERROR"; error: string }
+
+/**
+ * Cart item data for removal selection
+ */
+export interface CartRemovalItemData {
+  id: string
+  name: string
+  quantity: number
+  price: number
+  isService: boolean
+}
 
 // ================================================================================
 // DATA LOADER SERVICE
@@ -356,8 +370,47 @@ export class DataLoaderService {
           })
           return { type: "EMPTY", reason: "missing_option_id" }
         
+        case "CART_ACTIONS":
+          // User selected a cart action from cart view options
+          // Options: 1=CONFIRM_ORDER, 2=SHOW_PRODUCTS, 3=REMOVE_FROM_CART
+          if (selectIntent.optionId) {
+            logger.info("📦 [DataLoader] Processing CART_ACTION", {
+              optionId: selectIntent.optionId,
+            })
+            
+            switch (selectIntent.optionId) {
+              case "CONFIRM_ORDER":
+                // User wants to confirm the order
+                return { type: "CART_ACTION", action: "CONFIRM_ORDER" as const }
+              
+              case "SHOW_PRODUCTS":
+              case "SHOW_CATEGORIES":
+                // User wants to see more products
+                return this.loadCategories(workspaceId)
+              
+              case "REMOVE_FROM_CART":
+                // User wants to remove an item → show cart items with removal options
+                return this.loadCartForRemoval(workspaceId, customerId, customerDiscount)
+              
+              default:
+                logger.warn("📦 [DataLoader] Unknown CART_ACTION", { optionId: selectIntent.optionId })
+                return { type: "EMPTY", reason: "unknown_cart_action" }
+            }
+          }
+          logger.error("📦 [DataLoader] CART_ACTIONS without optionId", { selectIntent })
+          return { type: "EMPTY", reason: "missing_option_id" }
+        
         case "CART_ITEMS":
-          // User selected a cart item → could be for removal/update
+          // User selected a cart item for removal
+          // The optionId contains the cart item ID to remove
+          if (selectIntent.optionId) {
+            logger.info("🗑️ [DataLoader] CART_ITEMS selection - removing item", {
+              cartItemId: selectIntent.optionId,
+              itemName: selectIntent.label,
+            })
+            return this.removeCartItem(workspaceId, customerId, selectIntent.optionId, customerDiscount)
+          }
+          // Fallback: just show cart
           return this.loadCart(workspaceId, customerId, customerDiscount)
         
         case "GROUPS":
@@ -400,13 +453,106 @@ export class DataLoaderService {
           return { type: "EMPTY", reason: "offer_category_not_found" }
         
         default:
-          logger.warn("📦 [DataLoader] Unknown listType for selection", { listType: selectIntent.listType })
-          return { type: "EMPTY", reason: `unknown_list_type_${selectIntent.listType}` }
+          // ========================================================================
+          // 🧠 HYBRID FALLBACK: Try inference first, then LLM context
+          // This makes the system FLUID - doesn't require explicit IF for every type
+          // ========================================================================
+          logger.info("🧠 [DataLoader] Unknown listType - attempting inference", { 
+            listType: selectIntent.listType,
+            label: cleanedValue,
+          })
+          
+          // Step 1: Try to infer action from label text
+          const inferredAction = this.inferActionFromLabel(cleanedValue, workspaceId, customerId, customerDiscount)
+          if (inferredAction) {
+            logger.info("🧠 [DataLoader] ✅ Inference successful", {
+              label: cleanedValue,
+              inferredType: inferredAction.type,
+            })
+            return inferredAction
+          }
+          
+          // Step 2: Can't infer - return NEEDS_LLM_CONTEXT for ChatEngine to handle
+          logger.info("🧠 [DataLoader] Inference failed - needs LLM context", {
+            label: cleanedValue,
+            listType: selectIntent.listType,
+          })
+          return { 
+            type: "NEEDS_LLM_CONTEXT", 
+            label: cleanedValue,
+            originalListType: selectIntent.listType || "unknown",
+            inferAttempted: "label_patterns",
+          }
       }
     }
 
     // Default - simple intents
     return { type: "EMPTY", reason: intent.type }
+  }
+
+  // ================================================================================
+  // 🧠 INFERENCE ENGINE - Try to understand user intent from label text
+  // ================================================================================
+  
+  /**
+   * Attempts to infer the user's action from the selected option label
+   * This is the FIRST step in the hybrid fallback - fast and deterministic
+   * 
+   * @returns LoadedData if inference successful, null otherwise
+   */
+  private inferActionFromLabel(
+    label: string,
+    workspaceId: string,
+    customerId: string,
+    customerDiscount: number
+  ): LoadedData | null {
+    const lowerLabel = label.toLowerCase()
+    
+    logger.debug("🧠 [Inference] Analyzing label", { label, lowerLabel })
+    
+    // ========================================================================
+    // CART ACTIONS - Confirm, Browse, Remove
+    // ========================================================================
+    if (lowerLabel.includes("conferma") || lowerLabel.includes("ordine") && lowerLabel.includes("conferma")) {
+      logger.info("🧠 [Inference] Matched: CONFIRM_ORDER")
+      return { type: "CART_ACTION", action: "CONFIRM_ORDER" }
+    }
+    
+    if (lowerLabel.includes("catalogo") || lowerLabel.includes("esplorare") || 
+        lowerLabel.includes("altri prodotti") || lowerLabel.includes("vedere prodotti")) {
+      logger.info("🧠 [Inference] Matched: SHOW_PRODUCTS (will load categories)")
+      // Return categories so user can browse
+      return null // Let it go to LLM to load categories dynamically
+    }
+    
+    if (lowerLabel.includes("rimuov") || lowerLabel.includes("elimina") || lowerLabel.includes("togli")) {
+      logger.info("🧠 [Inference] Matched: REMOVE_FROM_CART")
+      return { type: "CART_ACTION", action: "REMOVE_FROM_CART" }
+    }
+    
+    // ========================================================================
+    // ORDER ACTIONS - Invoice, Repeat, Credit Note
+    // ========================================================================
+    if (lowerLabel.includes("fattura") || lowerLabel.includes("invoice") || lowerLabel.includes("scarica fattura")) {
+      logger.info("🧠 [Inference] Matched: SEND_INVOICE")
+      return { type: "ORDER_ACTION", action: "SEND_INVOICE" }
+    }
+    
+    if (lowerLabel.includes("ripeti") || lowerLabel.includes("repeat") || lowerLabel.includes("riordina")) {
+      logger.info("🧠 [Inference] Matched: REPEAT_ORDER")
+      return { type: "ORDER_ACTION", action: "REPEAT_ORDER" }
+    }
+    
+    if (lowerLabel.includes("nota di credito") || lowerLabel.includes("credit")) {
+      logger.info("🧠 [Inference] Matched: SEND_CREDIT_NOTES")
+      return { type: "ORDER_ACTION", action: "SEND_CREDIT_NOTES" }
+    }
+    
+    // ========================================================================
+    // No match found
+    // ========================================================================
+    logger.debug("🧠 [Inference] No pattern matched", { label })
+    return null
   }
 
   // ================================================================================
@@ -844,6 +990,7 @@ export class DataLoaderService {
           items: {
             include: {
               product: { select: { id: true, name: true, price: true, stock: true } },
+              service: { select: { id: true, name: true, price: true } },
             },
           },
         },
@@ -857,17 +1004,50 @@ export class DataLoaderService {
       }
 
       const cartItems: CartItemData[] = cart.items.map((item) => {
+        // Handle both products and services in cart
+        const isService = item.itemType === "SERVICE" && item.service
+        const isProduct = item.product
+        
+        if (!isProduct && !isService) {
+          logger.warn("⚠️ [DataLoader] Cart item has no product or service", { itemId: item.id })
+          // Return a placeholder for orphaned items
+          return {
+            id: item.id,
+            productId: "",
+            productName: "[Item rimosso]",
+            quantity: item.quantity,
+            unitPrice: 0,
+            totalPrice: 0,
+            stock: 0,
+          }
+        }
+        
+        if (isService) {
+          // Service item - no discount, no stock
+          const servicePrice = item.service!.price
+          return {
+            id: item.id,
+            productId: item.serviceId || "",
+            productName: `🎁 ${item.service!.name}`,
+            quantity: item.quantity,
+            unitPrice: servicePrice,
+            totalPrice: servicePrice * item.quantity,
+            stock: 999, // Services always available
+          }
+        }
+        
+        // Product item - apply discount if applicable
         const unitPrice = customerDiscount > 0
-          ? item.product.price * (1 - customerDiscount / 100)
-          : item.product.price
+          ? item.product!.price * (1 - customerDiscount / 100)
+          : item.product!.price
         return {
           id: item.id,
           productId: item.productId || "",
-          productName: item.product.name,
+          productName: item.product!.name,
           quantity: item.quantity,
           unitPrice,
           totalPrice: unitPrice * item.quantity,
-          stock: item.product.stock,
+          stock: item.product!.stock,
         }
       })
 
@@ -878,8 +1058,79 @@ export class DataLoaderService {
         cart: { id: cart.id, items: cartItems, itemCount: cartItems.length, totalAmount, isEmpty: cartItems.length === 0 },
       }
     } catch (error) {
-      logger.error("❌ [DataLoader] Error loading cart", { error })
+      logger.error("❌ [DataLoader] Error loading cart", { 
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+        customerId,
+        workspaceId,
+      })
       return { type: "ERROR", error: "Failed to load cart" }
+    }
+  }
+
+  /**
+   * Load cart items formatted for removal selection
+   * Shows numbered list of products and services that can be removed
+   */
+  private async loadCartForRemoval(
+    workspaceId: string,
+    customerId: string,
+    customerDiscount: number
+  ): Promise<LoadedData> {
+    try {
+      const cart = await this.prisma.carts.findFirst({
+        where: { customerId, workspaceId },
+        include: {
+          items: {
+            include: {
+              product: { select: { id: true, name: true, price: true } },
+              service: { select: { id: true, name: true, price: true } },
+            },
+          },
+        },
+      })
+
+      if (!cart || cart.items.length === 0) {
+        return { type: "EMPTY", reason: "cart_empty_for_removal" }
+      }
+
+      const removalItems: CartRemovalItemData[] = cart.items.map((item) => {
+        const isService = item.itemType === "SERVICE" && item.service
+        
+        if (isService) {
+          return {
+            id: item.id,
+            name: item.service!.name,
+            quantity: item.quantity,
+            price: item.service!.price,
+            isService: true,
+          }
+        }
+        
+        // Product
+        const price = customerDiscount > 0
+          ? item.product!.price * (1 - customerDiscount / 100)
+          : item.product!.price
+        
+        return {
+          id: item.id,
+          name: item.product?.name || "[Prodotto rimosso]",
+          quantity: item.quantity,
+          price,
+          isService: false,
+        }
+      })
+
+      logger.info("🗑️ [DataLoader] Loaded cart for removal", {
+        itemCount: removalItems.length,
+        products: removalItems.filter(i => !i.isService).length,
+        services: removalItems.filter(i => i.isService).length,
+      })
+
+      return { type: "CART_REMOVAL_OPTIONS", items: removalItems }
+    } catch (error) {
+      logger.error("❌ [DataLoader] Error loading cart for removal", { error })
+      return { type: "ERROR", error: "Failed to load cart for removal" }
     }
   }
 
@@ -995,17 +1246,86 @@ export class DataLoaderService {
       const cart = await this.prisma.carts.findFirst({ where: { customerId, workspaceId } })
       if (!cart) return { type: "ERROR", error: "Cart not found" }
 
-      const product = await this.prisma.products.findFirst({
-        where: { workspaceId, name: { contains: intent.productName, mode: "insensitive" } },
+      // Clean the product name (remove emoji prefix like "🎁 ")
+      const cleanName = intent.productName.replace(/^[🎁🛒✅❌⚠️]\s*/g, "").trim()
+      
+      logger.info("🛒 [DataLoader] Removing from cart", {
+        originalName: intent.productName,
+        cleanName,
+        cartId: cart.id,
       })
+
+      // Try to find as product first
+      const product = await this.prisma.products.findFirst({
+        where: { workspaceId, name: { contains: cleanName, mode: "insensitive" } },
+      })
+      
       if (product) {
         await this.prisma.cartItems.deleteMany({ where: { cartId: cart.id, productId: product.id } })
+        logger.info("✅ [DataLoader] Removed product from cart", { productName: product.name })
+        return this.loadCart(workspaceId, customerId, 0)
       }
 
-      return this.loadCart(workspaceId, customerId, 0)
+      // If not found as product, try to find as service
+      const service = await this.prisma.services.findFirst({
+        where: { workspaceId, name: { contains: cleanName, mode: "insensitive" } },
+      })
+      
+      if (service) {
+        await this.prisma.cartItems.deleteMany({ where: { cartId: cart.id, serviceId: service.id } })
+        logger.info("✅ [DataLoader] Removed service from cart", { serviceName: service.name })
+        return this.loadCart(workspaceId, customerId, 0)
+      }
+
+      logger.warn("⚠️ [DataLoader] Item not found for removal", { cleanName, workspaceId })
+      return { type: "ERROR", error: `Item "${cleanName}" not found in catalog` }
     } catch (error) {
       logger.error("❌ [DataLoader] Error removing from cart", { error })
       return { type: "ERROR", error: "Failed to remove from cart" }
+    }
+  }
+
+  /**
+   * Remove a cart item by its ID (from CART_ITEMS selection)
+   */
+  private async removeCartItem(
+    workspaceId: string,
+    customerId: string,
+    cartItemId: string,
+    customerDiscount: number
+  ): Promise<LoadedData> {
+    try {
+      // Find the cart item to get its name for confirmation message
+      const cartItem = await this.prisma.cartItems.findUnique({
+        where: { id: cartItemId },
+        include: {
+          product: { select: { name: true } },
+          service: { select: { name: true } },
+        },
+      })
+
+      if (!cartItem) {
+        logger.warn("⚠️ [DataLoader] Cart item not found for removal", { cartItemId })
+        return { type: "ERROR", error: "Articolo non trovato nel carrello" }
+      }
+
+      const itemName = cartItem.service?.name || cartItem.product?.name || "Articolo"
+      const isService = !!cartItem.serviceId
+
+      // Delete the cart item
+      await this.prisma.cartItems.delete({ where: { id: cartItemId } })
+
+      logger.info("✅ [DataLoader] Cart item removed by ID", {
+        cartItemId,
+        itemName,
+        isService,
+      })
+
+      // Return updated cart
+      return this.loadCart(workspaceId, customerId, customerDiscount)
+    } catch (error) {
+      logger.error("❌ [DataLoader] Error removing cart item by ID", { error, cartItemId })
+      return { type: "ERROR", error: "Failed to remove cart item" }
     }
   }
 
@@ -1019,18 +1339,32 @@ export class DataLoaderService {
       const cart = await this.prisma.carts.findFirst({ where: { customerId, workspaceId } })
       if (!cart) return { type: "ERROR", error: "Cart not found" }
 
+      // Clean the product name (remove emoji prefix like "🎁 ")
+      const cleanName = intent.productName.replace(/^[🎁🛒✅❌⚠️]\s*/g, "").trim()
+
       if (intent.quantity <= 0) {
-        return this.handleCartRemove(workspaceId, customerId, { type: "REMOVE_FROM_CART", productName: intent.productName })
+        return this.handleCartRemove(workspaceId, customerId, { type: "REMOVE_FROM_CART", productName: cleanName })
       }
 
+      // Try to find as product first
       const product = await this.prisma.products.findFirst({
-        where: { workspaceId, name: { contains: intent.productName, mode: "insensitive" } },
+        where: { workspaceId, name: { contains: cleanName, mode: "insensitive" } },
       })
       if (product) {
         await this.prisma.cartItems.updateMany({ where: { cartId: cart.id, productId: product.id }, data: { quantity: intent.quantity } })
+        return this.loadCart(workspaceId, customerId, customerDiscount)
       }
 
-      return this.loadCart(workspaceId, customerId, customerDiscount)
+      // If not found as product, try to find as service
+      const service = await this.prisma.services.findFirst({
+        where: { workspaceId, name: { contains: cleanName, mode: "insensitive" } },
+      })
+      if (service) {
+        await this.prisma.cartItems.updateMany({ where: { cartId: cart.id, serviceId: service.id }, data: { quantity: intent.quantity } })
+        return this.loadCart(workspaceId, customerId, customerDiscount)
+      }
+
+      return { type: "ERROR", error: `Item "${cleanName}" not found in catalog` }
     } catch (error) {
       logger.error("❌ [DataLoader] Error updating cart", { error })
       return { type: "ERROR", error: "Failed to update cart" }

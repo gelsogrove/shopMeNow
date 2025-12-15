@@ -54,14 +54,37 @@ Vuoi continuare a fare acquisti o procedere con l'ordine?
 🛒 Il tuo carrello:
 
 1. [quantity]x [product] - €[price]
-2. [quantity]x [product] - €[price]
+2. [quantity]x 🎁 [service] - €[price]
+...
 
 ━━━━━━━━━━━━━━━━━━━━
 📦 Totale articoli: [count]
 💰 Totale: €[total]
 ━━━━━━━━━━━━━━━━━━━━
 
-Vuoi procedere con l'ordine?
+Cosa vuoi fare?
+1. ✅ Confermare l'ordine
+2. 🛍️ Vedere altri prodotti  
+3. 🗑️ Rimuovere un articolo
+
+Rispondi con il numero o scrivi cosa desideri!
+```
+
+**NOTA:** I servizi nel carrello sono indicati con 🎁 (es: "🎁 Confezione Regalo").
+Quando il cliente chiede di rimuovere un servizio, cerca per nome esatto (senza emoji).
+
+**WHEN USER ASKS TO REMOVE (opzione 3 o richiesta generica "voglio cancellare"):**
+```
+Ecco cosa hai nel carrello:
+
+🛍️ PRODOTTI:
+1. [product_name]
+2. [product_name]
+
+🎁 SERVIZI:
+3. [service_name]
+
+Quale vuoi rimuovere? Scrivi il numero o il nome.
 ```
 
 ## 🏢 WORKSPACE: {{workspaceName}}

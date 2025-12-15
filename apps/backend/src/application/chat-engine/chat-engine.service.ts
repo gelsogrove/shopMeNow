@@ -56,6 +56,22 @@ const workspaceConfigCache = new Map<string, { config: WorkspaceConfig; timestam
 const CONFIG_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
 // ================================================================================
+// CUSTOMER-LEVEL LOCKS (Concurrency Safety - Principle VI)
+// ================================================================================
+
+/**
+ * In-memory lock per customer to prevent race conditions when same customer
+ * sends multiple messages simultaneously. Each customer can only have ONE
+ * message being processed at a time - subsequent messages wait in queue.
+ * 
+ * Pattern: Promise-based sequential processing per customer
+ * - If lock exists: wait for it to release
+ * - Acquire lock before processing
+ * - Release lock after processing (success or error)
+ */
+const customerProcessingLocks = new Map<string, Promise<void>>()
+
+// ================================================================================
 // DEBUG STEP TYPES (for Message Flow Timeline)
 // ================================================================================
 
@@ -416,62 +432,109 @@ export class ChatEngineService {
   }
 
   /**
+   * Normalize language code from DB format (ITA, ENG, PRT) to ISO format (it, en, pt)
+   * This is critical to avoid translating Italian to Italian when DB has "ITA"
+   */
+  private normalizeLanguageCode(language: string): string {
+    const normalized = language?.toLowerCase?.() || "it"
+    
+    const mapping: Record<string, string> = {
+      // Italian
+      it: "it", ita: "it", italian: "it",
+      // English  
+      en: "en", eng: "en", english: "en",
+      // Spanish
+      es: "es", esp: "es", spa: "es", spanish: "es",
+      // Portuguese
+      pt: "pt", prt: "pt", portuguese: "pt",
+      // French
+      fr: "fr", fra: "fr", french: "fr",
+      // German
+      de: "de", deu: "de", ger: "de", german: "de",
+    }
+    
+    return mapping[normalized] || "it"  // Default to Italian if unknown
+  }
+
+  /**
    * ============================================================================
    * MAIN ENTRY POINT (Public API)
    * ============================================================================
    * 
-   * Design Pattern: Decorator/Wrapper
+   * Design Pattern: Decorator/Wrapper with Customer-Level Lock
    * 
-   * This wrapper ensures ALL responses pass through the Translation Layer
-   * before being returned to the customer. This is the SINGLE point where
-   * translation happens, regardless of which internal path the message took.
+   * This wrapper ensures:
+   * 1. CONCURRENCY SAFETY: Only ONE message per customer processed at a time
+   * 2. TRANSLATION: ALL responses pass through Translation Layer
    * 
    * Flow:
+   *   0. Acquire customer lock (wait if another message is processing)
    *   1. processMessageInternal() → Business logic, returns Italian response
    *   2. applyTranslation() → Translates to customer's language
-   *   3. Return final translated response
+   *   3. Release customer lock
+   *   4. Return final translated response
    * 
    * @param input - Customer message and context
    * @returns Translated response ready for delivery
    */
   async routeMessage(input: ChatEngineInput): Promise<ChatEngineOutput> {
-    // STEP 1: Process message through business logic pipeline
-    const result = await this.processMessageInternal(input)
+    // 🔒 CONCURRENCY LOCK: Ensure sequential processing per customer
+    const lockKey = `customer:${input.customerId}`
     
-    // STEP 2: Apply Translation Layer (SINGLE translation point)
-    const debugSteps = result.debugInfo?.steps || []
-    const targetLanguage = input.customerLanguage || "it"
+    // Wait for any existing lock to release
+    while (customerProcessingLocks.has(lockKey)) {
+      logger.info(`🔒 [ChatEngine] Waiting for lock: ${lockKey}`)
+      await customerProcessingLocks.get(lockKey)
+    }
     
-    // Only translate if target language is NOT Italian (base language)
-    let translationResult = { message: result.message, tokensUsed: 0 }
-    if (targetLanguage.toLowerCase() !== "it") {
-      translationResult = await this.applyTranslation(
+    // Create and set our lock
+    let releaseLock: () => void
+    const lockPromise = new Promise<void>((resolve) => {
+      releaseLock = resolve
+    })
+    customerProcessingLocks.set(lockKey, lockPromise)
+    
+    logger.info(`🔒 [ChatEngine] Lock acquired: ${lockKey}`)
+    
+    try {
+      // STEP 1: Process message through business logic pipeline
+      const result = await this.processMessageInternal(input)
+    
+      // STEP 2: Apply Translation Layer (SINGLE translation point)
+      const debugSteps = result.debugInfo?.steps || []
+      const rawTargetLanguage = input.customerLanguage || "it"
+    
+      // Normalize language code (handles ITA, ENG, PRT, SPA, etc.)
+      const normalizedLanguage = this.normalizeLanguageCode(rawTargetLanguage)
+    
+      // Always apply translation layer (even for Italian - ensures consistent flow)
+      const translationResult = await this.applyTranslation(
         result.message,
         input.workspaceId,
-        targetLanguage,
+        normalizedLanguage,  // Pass normalized code (pt, en, es, it) 
         debugSteps,
         input.customerName
       )
-      
+    
       // 🌍 STEP 2B: Update the saved message with translated version
       // Use the message ID saved from processMessageInternal
       const messageIdToUpdate = (result as any)._assistantMessageId
-      
+    
       if (messageIdToUpdate) {
         try {
           logger.info("🌍 [ChatEngine] Attempting to update message", {
             messageId: messageIdToUpdate,
-            targetLanguage,
+            targetLanguage: normalizedLanguage,
             hasId: !!messageIdToUpdate,
           })
-          
+        
           // Build updated debugInfo with translation step
           const updatedDebugInfo = result.debugInfo ? {
             ...result.debugInfo,
             steps: debugSteps, // Now includes translation step
             totalTokens: (result.debugInfo.totalTokens || 0) + translationResult.tokensUsed,
           } : undefined
-          
+        
           await this.prisma.conversationMessage.update({
             where: { id: messageIdToUpdate },
             data: { 
@@ -479,10 +542,10 @@ export class ChatEngineService {
               debugInfo: updatedDebugInfo ? JSON.stringify(updatedDebugInfo) : undefined,
             }
           })
-          
+        
           logger.info("🌍 [ChatEngine] ✅ Updated saved message with translation", {
             messageId: messageIdToUpdate,
-            targetLanguage,
+            targetLanguage: normalizedLanguage,
             newContentLength: translationResult.message.length,
             debugStepsCount: debugSteps.length,
           })
@@ -500,22 +563,27 @@ export class ChatEngineService {
           hasAssistantMessageId: !!(result as any)._assistantMessageId,
         })
       }
-    }
     
-    // STEP 3: Return translated result with updated metrics
-    // Remove the internal _assistantMessageId before returning
-    const { _assistantMessageId, ...cleanResult } = result as any
+      // STEP 3: Return translated result with updated metrics
+      // Remove the internal _assistantMessageId before returning
+      const { _assistantMessageId, ...cleanResult } = result as any
     
-    return {
-      ...cleanResult,
-      message: translationResult.message,
-      response: translationResult.message,
-      tokensUsed: cleanResult.tokensUsed + translationResult.tokensUsed,
-      debugInfo: cleanResult.debugInfo ? {
-        ...cleanResult.debugInfo,
-        steps: debugSteps,
-        totalTokens: (cleanResult.debugInfo.totalTokens || 0) + translationResult.tokensUsed,
-      } : undefined,
+      return {
+        ...cleanResult,
+        message: translationResult.message,
+        response: translationResult.message,
+        tokensUsed: cleanResult.tokensUsed + translationResult.tokensUsed,
+        debugInfo: cleanResult.debugInfo ? {
+          ...cleanResult.debugInfo,
+          steps: debugSteps,
+          totalTokens: (cleanResult.debugInfo.totalTokens || 0) + translationResult.tokensUsed,
+        } : undefined,
+      }
+    } finally {
+      // 🔓 ALWAYS release lock, even on error
+      customerProcessingLocks.delete(lockKey)
+      releaseLock!()
+      logger.info(`🔓 [ChatEngine] Lock released: ${lockKey}`)
     }
   }
 
@@ -686,6 +754,19 @@ export class ChatEngineService {
           state: fsmState.state,
         })
       }
+
+      // ========================================================================
+      // NOTE: NO automatic context reset for text input
+      // ========================================================================
+      // Principle XV: "User Context Freedom" - Users can switch context at ANY time
+      // BUT we DON'T clear optionsMapping preemptively because:
+      // 1. User might reference items from the current list ("cancella Confezione Regalo")
+      // 2. Intent Parser needs context to understand relative references
+      // 3. The LLM will naturally handle context switches
+      // 
+      // optionsMapping is cleared ONLY when:
+      // - A new list is shown (overwrites old mapping)
+      // - User explicitly starts a new flow (handled by FSM transitions)
 
       // ========================================================================
       // STEP 0.75: FAST-PATH - Resolve numeric selections from options mapping
@@ -934,6 +1015,218 @@ export class ChatEngineService {
               }
             }
             
+            // 🛒 Handle CART_ACTION - execute cart action directly
+            if (structuredResponse.type === "CART_ACTION") {
+              const action = (structuredResponse.data as { action: string }).action
+              
+              logger.info("🛒 [ChatEngine] CART_ACTION detected", { action })
+              
+              if (action === "CONFIRM_ORDER") {
+                // Trigger checkout flow - set pending action and ask for confirmation
+                await this.optionsMappingService.setPendingAction({
+                  workspaceId: input.workspaceId,
+                  conversationId,
+                  pendingAction: { type: "CONFIRM_ORDER" },
+                })
+                
+                const confirmMessage = "Perfetto! Vuoi confermare l'ordine? Risponda 'sì' per procedere o 'no' per annullare."
+                
+                await this.saveMessages(
+                  input.workspaceId,
+                  input.customerId,
+                  conversationId,
+                  input.message,
+                  confirmMessage
+                )
+                
+                return {
+                  message: confirmMessage,
+                  agentType: AgentType.CART_MANAGEMENT,
+                  wasHandled: true,
+                  intent: "CART_ACTION",
+                  confidence: "HIGH",
+                  source: "PATTERN",
+                  processingTimeMs: Date.now() - startTime,
+                }
+              }
+              
+              // Other actions (SHOW_PRODUCTS) → let normal flow handle it (returns categories)
+            }
+            
+            // 🗑️ Handle CART_REMOVAL_OPTIONS - format removal options
+            if (structuredResponse.type === "CART_REMOVAL_OPTIONS") {
+              const items = (structuredResponse.data as { items: any[] }).items || []
+              
+              if (items.length === 0) {
+                const emptyMsg = "Il tuo carrello è vuoto, non c'è nulla da rimuovere."
+                await this.saveMessages(
+                  input.workspaceId,
+                  input.customerId,
+                  conversationId,
+                  input.message,
+                  emptyMsg
+                )
+                return {
+                  message: emptyMsg,
+                  agentType: AgentType.CART_MANAGEMENT,
+                  wasHandled: true,
+                  intent: "CART_REMOVAL_OPTIONS",
+                  confidence: "HIGH",
+                  source: "PATTERN",
+                  processingTimeMs: Date.now() - startTime,
+                }
+              }
+              
+              // Build formatted list
+              const products = items.filter((i: any) => !i.isService)
+              const services = items.filter((i: any) => i.isService)
+              
+              let removalMessage = "Quale articolo vuoi rimuovere?\n\n"
+              let optionNumber = 1
+              const mappingItems: Array<{ number: number; name: string; id: string }> = []
+              
+              if (products.length > 0) {
+                removalMessage += "🛍️ **PRODOTTI:**\n"
+                for (const p of products) {
+                  removalMessage += `${optionNumber}. ${p.name} (${p.quantity}×) - €${(p.price * p.quantity).toFixed(2)}\n`
+                  mappingItems.push({ number: optionNumber, name: p.name, id: p.id })
+                  optionNumber++
+                }
+                removalMessage += "\n"
+              }
+              
+              if (services.length > 0) {
+                removalMessage += "🎁 **SERVIZI:**\n"
+                for (const s of services) {
+                  removalMessage += `${optionNumber}. ${s.name} (${s.quantity}×) - €${(s.price * s.quantity).toFixed(2)}\n`
+                  mappingItems.push({ number: optionNumber, name: s.name, id: s.id })
+                  optionNumber++
+                }
+              }
+              
+              removalMessage += "\nRispondi con il numero dell'articolo da rimuovere."
+              
+              // Save mapping for removal selection
+              await this.optionsMappingService.saveMapping({
+                workspaceId: input.workspaceId,
+                conversationId,
+                customerId: input.customerId,
+                responseText: "",
+                items: mappingItems,
+                listType: "CART_ITEMS",
+              })
+              
+              await this.saveMessages(
+                input.workspaceId,
+                input.customerId,
+                conversationId,
+                input.message,
+                removalMessage
+              )
+              
+              return {
+                message: removalMessage,
+                agentType: AgentType.CART_MANAGEMENT,
+                wasHandled: true,
+                intent: "CART_REMOVAL_OPTIONS",
+                confidence: "HIGH",
+                source: "PATTERN",
+                processingTimeMs: Date.now() - startTime,
+              }
+            }
+            
+            // ========================================================================
+            // 🧠 Handle NEEDS_LLM_CONTEXT - Hybrid fallback when inference failed
+            // Pass to LLM with conversation history to understand user intent
+            // ========================================================================
+            if (structuredResponse.type === "NEEDS_LLM_CONTEXT") {
+              const contextData = structuredResponse.data as { 
+                label: string
+                originalListType: string
+                inferAttempted: string | null
+              }
+              
+              debugSteps.push({
+                step: "HYBRID_FALLBACK",
+                timestamp: Date.now(),
+                details: {
+                  label: contextData.label,
+                  originalListType: contextData.originalListType,
+                  inferAttempted: contextData.inferAttempted,
+                  action: "Passing to LLM with context",
+                },
+              })
+              
+              logger.info("🧠 [ChatEngine] NEEDS_LLM_CONTEXT - passing to LLM with history", {
+                label: contextData.label,
+                originalListType: contextData.originalListType,
+                conversationId,
+              })
+              
+              // Load conversation history for context
+              const history = await this.conversationManager.loadHistory(input.workspaceId, conversationId)
+              
+              // Build a contextual prompt for the LLM
+              const contextPrompt = `L'utente ha selezionato l'opzione: "${contextData.label}"
+              
+Basandoti sulla conversazione precedente, rispondi in modo appropriato a questa selezione.
+Se l'utente vuole:
+- Confermare un ordine → chiedi conferma
+- Vedere prodotti/catalogo → mostra le categorie disponibili
+- Rimuovere un articolo → chiedi quale articolo vuole rimuovere
+- Scaricare fattura → conferma l'invio
+- Ripetere un ordine → chiedi conferma
+- Altro → rispondi in modo utile
+
+Rispondi in modo naturale e fluido, come un assistente esperto.`
+
+              // Use LLM Router to get contextual response
+              const llmResponse = await this.llmRouterService.routeMessage({
+                workspaceId: input.workspaceId,
+                customerId: input.customerId,
+                customerName: input.customerName || "Cliente",
+                customerLanguage: input.customerLanguage || "it",
+                message: contextPrompt,
+                conversationHistory: history,
+                customerDiscount: input.customerDiscount || 0,
+              })
+              
+              debugSteps.push({
+                step: "LLM_CONTEXT_RESPONSE",
+                timestamp: Date.now(),
+                details: {
+                  responseLength: llmResponse.message?.length || 0,
+                  tokensUsed: llmResponse.tokensUsed || 0,
+                  agentUsed: llmResponse.agentUsed,
+                },
+              })
+              
+              const finalMessage = llmResponse.message || "Mi dispiace, non ho capito. Puoi ripetere?"
+              
+              await this.saveMessages(
+                input.workspaceId,
+                input.customerId,
+                conversationId,
+                input.message,
+                finalMessage
+              )
+              
+              return {
+                message: finalMessage,
+                agentType: AgentType.ROUTER,
+                wasHandled: true,
+                intent: "LLM_CONTEXT_FALLBACK",
+                confidence: "MEDIUM",
+                source: "LLM_CONTEXT",
+                processingTimeMs: Date.now() - startTime,
+                debugInfo: {
+                  steps: debugSteps,
+                  hybridFallback: true,
+                  originalLabel: contextData.label,
+                },
+              }
+            }
+            
             // Format with LLM
             let finalMessage = structuredResponse.text || ""
             let llmUsed = false
@@ -1136,6 +1429,31 @@ export class ChatEngineService {
               })
             }
             
+            // 🛒 Save CART_ACTIONS for CART_VIEW (guided cart options)
+            if (structuredResponse.type === "CART_VIEW" || structuredResponse.type === "CART_UPDATED") {
+              // Get cart items count for logging
+              const cartItems = structuredResponse.data.items || []
+              
+              // Save explicit cart action options - always 1, 2, 3 (cart items use bullet points)
+              await this.optionsMappingService.saveMapping({
+                workspaceId: input.workspaceId,
+                conversationId,
+                customerId: input.customerId,
+                responseText: "", // Empty - we're providing explicit items
+                items: [
+                  { number: 1, name: "✅ Confermare l'ordine", id: "CONFIRM_ORDER" },
+                  { number: 2, name: "🛍️ Esplorare il catalogo", id: "SHOW_PRODUCTS" },
+                  { number: 3, name: "🗑️ Rimuovere un articolo", id: "REMOVE_FROM_CART" },
+                ],
+                listType: "CART_ACTIONS",
+              })
+              
+              logger.info("🛒 [ChatEngine] FAST-PATH: Set cart actions for CART_VIEW", {
+                actions: ["CONFIRM_ORDER", "SHOW_PRODUCTS", "REMOVE_FROM_CART"],
+                cartItemCount: cartItems.length,
+              })
+            }
+            
             return {
               message: finalMessage,
               agentType,
@@ -1157,6 +1475,57 @@ export class ChatEngineService {
               executionTimeMs: processingTimeMs,
               wasFAQ: false,
               isBlocked: false,
+            }
+          } else {
+            // ========================================================================
+            // 🚫 INVALID OPTION NUMBER - User selected a number not in the list
+            // Instead of falling through to search, return a helpful error message
+            // ========================================================================
+            const maxOption = optionsMapping.options.length
+            const selectedNumber = preprocessResult.extractedNumber
+            
+            logger.info("🚫 [ChatEngine] Invalid option number selected", {
+              selectedNumber,
+              maxOption,
+              listType: optionsMapping.listType,
+              availableOptions: optionsMapping.options.map(o => o.number),
+            })
+            
+            // Build a friendly error message based on the context
+            let invalidMessage: string
+            if (optionsMapping.listType === "CART_ACTIONS") {
+              invalidMessage = `⚠️ Opzione non valida. Per favore scegli 1, 2 o 3:\n1. ✅ Confermare l'ordine\n2. 🛍️ Esplorare il catalogo\n3. 🗑️ Rimuovere un articolo`
+            } else if (optionsMapping.listType === "ORDER_ACTIONS") {
+              invalidMessage = `⚠️ Opzione non valida. Per favore scegli 1 o 2:\n1. 📄 Scarica fattura\n2. 🔄 Ripeti ordine`
+            } else {
+              invalidMessage = `⚠️ Opzione non valida. Per favore scegli un numero da 1 a ${maxOption}.`
+            }
+            
+            const processingTimeMs = Date.now() - startTime
+            
+            // Save messages to history
+            await this.saveMessages(
+              input.workspaceId,
+              input.customerId,
+              conversationId,
+              input.message,
+              invalidMessage
+            )
+            
+            return {
+              message: invalidMessage,
+              agentType: AgentType.ROUTER,
+              wasHandled: true,
+              intent: "INVALID_OPTION",
+              confidence: "HIGH",
+              source: "PATTERN",
+              processingTimeMs,
+              debugInfo: {
+                invalidOption: selectedNumber,
+                maxOption,
+                listType: optionsMapping.listType,
+                steps: debugSteps,
+              },
             }
           }
         }
@@ -1347,8 +1716,9 @@ export class ChatEngineService {
           
           // User said "yes" - execute the pending action
           if (pendingAction.type === "ADD_TO_CART" && pendingAction.productId) {
-            // Extract quantity from message if present (e.g., "sì, 2 pezzi")
-            const quantityMatch = input.message.match(/(\d+)\s*(pezz[oi]|unit[aà]|x)?/i)
+            // Extract quantity from message if present (e.g., "sì, 2 pezzi", "yes, 2 pieces", "sí, 2 unidades")
+            // Multilingual: pezzi/pezz|pieces|units|unidades|peças|stück
+            const quantityMatch = input.message.match(/(\d+)\s*(pezz[oi]|unit[aà]|pieces?|units?|unidades?|peças?|stück|x)?/i)
             const quantity = quantityMatch ? parseInt(quantityMatch[1]) : (pendingAction.quantity || 1)
             const itemLabel = pendingAction.itemType === "SERVICE" ? "servizio" : "prodotto"
             
@@ -1463,27 +1833,29 @@ export class ChatEngineService {
               )
             }
           }
-          // 🎯 FSM Fallback: Use context guessing only if FSM state is IDLE
+          // 🎯 FSM Fallback: Use listType from optionsMapping (no text matching!)
           else if (fsmState.state === ConversationState.IDLE) {
-            // Fallback to old context-based logic for IDLE state
-            const lastAssistantMessage = history
-              .filter(h => h.role === "assistant")
-              .pop()?.content?.toLowerCase() || ""
+            // Use structured listType instead of text matching (language-agnostic)
+            const optionsMapping = await this.optionsMappingService.loadMapping(
+              input.workspaceId,
+              conversationId
+            )
+            const lastListType = optionsMapping?.listType
             
-            logger.info("🔄 [FSM] IDLE state - falling back to context guessing", {
-              lastMessagePreview: lastAssistantMessage.substring(0, 100),
+            logger.info("🔄 [FSM] IDLE state - using listType from optionsMapping", {
+              listType: lastListType,
+              hasPendingAction: !!optionsMapping?.pendingAction,
             })
             
-            if (lastAssistantMessage.includes("confermo") || 
-                lastAssistantMessage.includes("procedere con l'ordine") ||
-                lastAssistantMessage.includes("checkout")) {
+            // Map listType to intent (language-agnostic!)
+            if (lastListType === "CART_ITEMS" || optionsMapping?.pendingAction?.type === "CHECKOUT") {
               intentResult.intent = { type: "START_CHECKOUT" }
-            } else if (lastAssistantMessage.includes("prodotti") || 
-                       lastAssistantMessage.includes("catalogo")) {
+            } else if (lastListType === "PRODUCTS" || lastListType === "CATEGORIES" || lastListType === "GROUPS") {
               intentResult.intent = { type: "SHOW_CATEGORIES" }
-            } else if (lastAssistantMessage.includes("carrello") && !lastAssistantMessage.includes("ordine")) {
-              intentResult.intent = { type: "VIEW_CART" }
+            } else if (lastListType === "ORDERS" || lastListType === "ORDER_ACTIONS") {
+              intentResult.intent = { type: "VIEW_ORDERS" }
             } else {
+              // Default fallback
               intentResult.intent = { type: "SHOW_CATEGORIES" }
             }
           }
@@ -2030,51 +2402,108 @@ export class ChatEngineService {
       // Uses responseWithSkus to preserve SKU info for selection resolution
       // 🆕 Also passes groupMapping from LLM for smart grouping resolution
       // 🔧 CRITICAL: Pass items with SKUs for proper product selection!
+      // 🔧 CART_VIEW/CART_UPDATED/ORDER_DETAIL have specific action mappings
       // ========================================================================
-      // Extract items with SKUs from structuredResponse for proper mapping
-      const itemsWithSkus = structuredResponse.data?.items?.map((item: any) => ({
-        number: item.number,
-        name: item.name,
-        sku: item.sku,
-        id: item.id,
-      }))
       
-      // Determine listType from response type
-      const responseListType = structuredResponse.type === "PRODUCT_LIST" ? "PRODUCTS" 
-                             : structuredResponse.type === "ORDER_LIST" ? "ORDERS"
-                             : structuredResponse.type === "CATEGORY_LIST" ? "CATEGORIES"
-                             : structuredResponse.type === "SERVICE_LIST" ? "SERVICES"
-                             : structuredResponse.type === "OFFERS" ? "OFFER_CATEGORIES"  // 🆕 Offers with category selection
-                             : undefined
-      
-      await this.optionsMappingService.saveMapping({
-        workspaceId: input.workspaceId,
-        conversationId,
-        customerId: input.customerId,
-        responseText: responseWithSkus, // Use response WITH SKUs for mapping
-        groupMapping, // 🆕 Pass LLM-generated group mapping if available
-        items: itemsWithSkus, // 🔧 Pass items with SKUs for reliable selection
-        listType: responseListType, // 🔧 Pass list type for proper intent creation
-      })
-
-      // Log what we saved for debugging
-      if (itemsWithSkus && itemsWithSkus.length > 0) {
-        logger.info("📋 [ChatEngine] Saved items with SKUs for FAST-PATH", {
+      // For CART_VIEW/CART_UPDATED: save CART_ACTIONS mapping
+      if (structuredResponse.type === "CART_VIEW" || structuredResponse.type === "CART_UPDATED") {
+        const cartItems = structuredResponse.data.items || []
+        
+        await this.optionsMappingService.saveMapping({
+          workspaceId: input.workspaceId,
           conversationId,
-          listType: responseListType,
-          itemCount: itemsWithSkus.length,
-          firstItem: { number: itemsWithSkus[0].number, name: itemsWithSkus[0].name?.substring(0, 20), sku: itemsWithSkus[0].sku },
+          customerId: input.customerId,
+          responseText: "", // Empty - we're providing explicit items
+          items: [
+            { number: 1, name: "✅ Confermare l'ordine", id: "CONFIRM_ORDER" },
+            { number: 2, name: "🛍️ Esplorare il catalogo", id: "SHOW_PRODUCTS" },
+            { number: 3, name: "🗑️ Rimuovere un articolo", id: "REMOVE_FROM_CART" },
+          ],
+          listType: "CART_ACTIONS",
+        })
+        
+        logger.info("🛒 [ChatEngine] STEP 9: Saved CART_ACTIONS mapping", {
+          responseType: structuredResponse.type,
+          cartItemCount: cartItems.length,
+          conversationId,
+        })
+      } 
+      // For ORDER_DETAIL: save ORDER_ACTIONS mapping  
+      else if (structuredResponse.type === "ORDER_DETAIL") {
+        const order = structuredResponse.data.order
+        const items = [
+          { number: 1, name: "📄 Scarica fattura", id: "SEND_INVOICE" },
+          { number: 2, name: "🔄 Ripeti ordine", id: "REPEAT_ORDER" },
+        ]
+        
+        // Add credit note option if order has credit notes
+        if (order?.hasCreditNotes) {
+          items.push({ number: 3, name: "📋 Scarica nota di credito", id: "SEND_CREDIT_NOTES" })
+        }
+        
+        await this.optionsMappingService.saveMapping({
+          workspaceId: input.workspaceId,
+          conversationId,
+          customerId: input.customerId,
+          responseText: "",
+          items,
+          listType: "ORDER_ACTIONS",
+          currentOrderCode: order?.code,
+        })
+        
+        logger.info("📦 [ChatEngine] STEP 9: Saved ORDER_ACTIONS mapping", {
+          responseType: structuredResponse.type,
+          orderCode: order?.code,
+          conversationId,
         })
       }
-
-      // Log if we saved a group mapping
-      if (groupMapping) {
-        logger.info("🗂️ [ChatEngine] Saved smart grouping mapping", {
+      // For other types: normal saveMapping
+      else {
+        // Extract items with SKUs from structuredResponse for proper mapping
+        const itemsWithSkus = structuredResponse.data?.items?.map((item: any) => ({
+          number: item.number,
+          name: item.name,
+          sku: item.sku,
+          id: item.id,
+        }))
+        
+        // Determine listType from response type
+        const responseListType = structuredResponse.type === "PRODUCT_LIST" ? "PRODUCTS" 
+                               : structuredResponse.type === "ORDER_LIST" ? "ORDERS"
+                               : structuredResponse.type === "CATEGORY_LIST" ? "CATEGORIES"
+                               : structuredResponse.type === "SERVICE_LIST" ? "SERVICES"
+                               : structuredResponse.type === "OFFERS" ? "OFFER_CATEGORIES"  // 🆕 Offers with category selection
+                               : undefined
+        
+        await this.optionsMappingService.saveMapping({
+          workspaceId: input.workspaceId,
           conversationId,
-          groups: Object.keys(groupMapping),
-          example: Object.entries(groupMapping)[0],
+          customerId: input.customerId,
+          responseText: responseWithSkus, // Use response WITH SKUs for mapping
+          groupMapping, // 🆕 Pass LLM-generated group mapping if available
+          items: itemsWithSkus, // 🔧 Pass items with SKUs for reliable selection
+          listType: responseListType, // 🔧 Pass list type for proper intent creation
         })
-      }
+
+        // Log what we saved for debugging
+        if (itemsWithSkus && itemsWithSkus.length > 0) {
+          logger.info("📋 [ChatEngine] Saved items with SKUs for FAST-PATH", {
+            conversationId,
+            listType: responseListType,
+            itemCount: itemsWithSkus.length,
+            firstItem: { number: itemsWithSkus[0].number, name: itemsWithSkus[0].name?.substring(0, 20), sku: itemsWithSkus[0].sku },
+          })
+        }
+
+        // Log if we saved a group mapping
+        if (groupMapping) {
+          logger.info("🗂️ [ChatEngine] Saved smart grouping mapping", {
+            conversationId,
+            groups: Object.keys(groupMapping),
+            example: Object.entries(groupMapping)[0],
+          })
+        }
+      } // End of shouldSkipSaveMapping else block
 
       // ========================================================================
       // STEP 9.5: 🛒 Set pending action for PRODUCT_DETAIL (add to cart prompt)

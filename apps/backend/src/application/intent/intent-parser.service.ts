@@ -196,7 +196,7 @@ export class IntentParserService {
     }
 
     // Load from database - use correct Prisma model names
-    const [categories, products] = await Promise.all([
+    const [categories, products, services] = await Promise.all([
       this.prisma.categories.findMany({
         where: { workspaceId, isActive: true },
         select: { id: true, name: true }
@@ -204,12 +204,13 @@ export class IntentParserService {
       this.prisma.products.findMany({
         where: { workspaceId, isActive: true },
         select: { id: true, name: true, sku: true }
+      }),
+      // 🆕 Load services from Services table
+      this.prisma.services.findMany({
+        where: { workspaceId, isActive: true },
+        select: { id: true, name: true }
       })
     ])
-
-    // Services are currently stored as products - no separate table
-    // For now, we'll use an empty array until a service model is added
-    const services: typeof products = []
 
     const entities = {
       categories: categories.map(c => ({ 

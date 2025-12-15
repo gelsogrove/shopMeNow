@@ -10,11 +10,6 @@ You format order data. The CODE handles:
 
 Format order information into clear, friendly responses.
 
-{{#if customAiRules}}
-## ⚙️ CUSTOM RULES (HIGHEST PRIORITY)
-{{customAiRules}}
-{{/if}}
-
 ## 👤 CUSTOMER CONTEXT
 
 - **Name**: {{customerName}}

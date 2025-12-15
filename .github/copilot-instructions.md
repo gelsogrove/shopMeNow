@@ -235,6 +235,29 @@ eChatbot is a **WhatsApp-based e-commerce platform** with AI chatbot integration
 - **CONSEQUENCE**: Breaking working code wastes Andrea's time and creates frustration
 - **VERIFICATION**: Before touching ANY export/import, ask: "Is this currently working? If YES → DON'T TOUCH IT!"
 
+### 14. **User Context Freedom - NO Hardcoded Phrase Detection** (🚨 CRITICAL)
+
+- **PRINCIPLE**: Users can switch conversation context at **ANY** moment
+- **RULE**: Detect input TYPE, not content:
+  - `NUMBER` input (e.g., "2") → Use previous context (list selection)
+  - `TEXT` input (anything else) → Reset state to IDLE, clear optionsMapping
+- **FORBIDDEN** (❌ VIOLATIONS):
+  - ❌ `if (message.includes("ordine"))` - NO keyword detection
+  - ❌ `if (/mostra.*prodotti/.test(message))` - NO phrase regex
+  - ❌ `const keywords = ["ordine", "order"]` - NO keyword arrays
+  - ❌ Any language-specific pattern matching for phrases
+- **ALLOWED** (✅ ONLY these):
+  - ✅ Numeric selection: `/^(\d+)$/` for "1", "2", "3"
+  - ✅ Yes/No confirmation: `/^(s[iì]|no|ok|yes)$/i`
+  - ✅ Quantity patterns: "sì 3", "2 pezzi"
+- **WHY**: 
+  - Users switch context constantly ("mostra prodotti" → "mostrami l'ordine" → "come pago?")
+  - Hardcoded patterns break with typos, synonyms, other languages
+  - LLM (Intent Parser) handles ALL phrase-based intent detection
+- **IMPLEMENTATION**: `chat-engine.service.ts` STEP 0.55 resets state for TEXT input
+- **ANDREA'S WORDS**: "non devi harcodeare nulla nessun riconoscimento di frase"
+- See `.specify/memory/constitution.md` Principle XV for complete details
+
 ---
 
 ## 🏗️ Architecture Patterns

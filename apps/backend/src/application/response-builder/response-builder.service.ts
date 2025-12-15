@@ -238,8 +238,39 @@ export class ResponseBuilderService {
       case "ORDER_ACTION":
         return this.buildOrderActionResponse(loadedData.action, context)
 
+      case "CART_ACTION":
+        // CART_ACTION is handled directly in chat-engine, this is a fallback
+        return {
+          type: "CART_ACTION",
+          data: { action: loadedData.action },
+          formatting: DEFAULT_FORMATTING,
+          context,
+        }
+
+      case "CART_REMOVAL_OPTIONS":
+        // CART_REMOVAL_OPTIONS is handled directly in chat-engine, this is a fallback
+        return {
+          type: "CART_REMOVAL_OPTIONS",
+          data: { items: loadedData.items },
+          formatting: DEFAULT_FORMATTING,
+          context,
+        }
+
       case "AGENT_INFO":
         return this.buildAgentInfoResponse(loadedData.agentInfo, context)
+
+      case "NEEDS_LLM_CONTEXT":
+        // 🧠 Hybrid fallback: inference failed, needs LLM to understand from context
+        return {
+          type: "NEEDS_LLM_CONTEXT",
+          data: { 
+            label: loadedData.label,
+            originalListType: loadedData.originalListType,
+            inferAttempted: loadedData.inferAttempted,
+          },
+          formatting: DEFAULT_FORMATTING,
+          context,
+        }
 
       case "EMPTY":
         return this.buildEmptyResponse(intent.type, loadedData.reason, context)

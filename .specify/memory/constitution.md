@@ -1,6 +1,33 @@
 <!--
   SYNC IMPACT REPORT
 
+  Version Change: 2.1.0 → 2.2.0 (MINOR)
+  Rationale: Added Principle XV "User Context Freedom" - CRITICAL architectural principle that users can switch conversation context at ANY time. Text input = fresh context (reset state). Number input = use previous context (list selection).
+  Date: 2025-12-15
+
+  Modified Principles:
+  - ADDED Principle XV: User Context Freedom (MUST - CRITICAL)
+    - Users can change context mid-conversation at ANY moment
+    - TEXT input → Reset FSM state to IDLE, clear optionsMapping
+    - NUMBER input → Use previous context (list selection)
+    - NO hardcoded phrase detection (only yes/no/numbers allowed)
+    - Intent Parser handles fresh context interpretation
+
+  Added Sections:
+  - Principle XV: User Context Freedom
+    - Input Classification: text vs number (only regex allowed)
+    - State Reset Pattern: clearMapping + setState(IDLE)
+    - Implementation in ChatEngine STEP 0.55
+    - Examples: product list → service question → reset state
+    - Anti-patterns: NO hardcoded if/regex/include for phrases
+
+  Templates Requiring Updates:
+  - ✅ `pattern-matcher.ts` - Already minimal (only numeric matching)
+  - ✅ `chat-engine.service.ts` - STEP 0.55 added for state reset
+  - ⚠️ `message-preprocessor.service.ts` - Verify inputType detection
+
+  ---
+
   Version Change: 2.0.0 → 2.1.0 (MINOR)
   Rationale: Added Principle XIV "Context Interpretation Pattern" - CRITICAL pattern for Router Agent to interpret short customer responses ("SI", "NO", "1") by reading conversation history and converting them to explicit messages for specialist agents
   Date: 2025-11-16
@@ -3920,4 +3947,241 @@ contextualizedMessage = "L'utente conferma di voler aggiungere prodotti al carre
 
 ---
 
-**Version**: 2.1.0 | **Ratified**: 2025-11-12 | **Last Amended**: 2025-11-16
+### Principle XV: User Context Freedom (MUST - CRITICAL)
+
+**Architectural Mandate**: Users can switch conversation context at **ANY** moment. The system MUST handle this gracefully without hardcoded phrase detection.
+
+---
+
+#### Core Philosophy
+
+> "L'utente è LIBERO di cambiare contesto in qualsiasi momento."
+
+Users are having natural conversations. They might:
+- Be browsing products → suddenly ask about an order
+- Be adding to cart → ask "come pago?"
+- Be mid-checkout → ask "avete anche questo prodotto?"
+- Be reviewing order → ask for shipping services
+
+**The system MUST adapt, not force users into rigid flows.**
+
+---
+
+#### Input Classification Rules
+
+**ONLY TWO input types are recognized deterministically:**
+
+| Input Type | Detection Method | Action |
+|------------|------------------|--------|
+| **NUMBER** | Regex: `/^(\d+)$/` | USE previous context (list selection) |
+| **TEXT** | Everything else | RESET state, fresh Intent Parser |
+
+**Special Cases (allowed):**
+- Yes/No confirmation: `/^(s[iì]|no|ok|yes)$/i`
+- Quantity confirmation: "sì 3", "si, 2 pezzi"
+
+**FORBIDDEN:**
+- ❌ NO hardcoded phrase detection (if message.includes("ordine"))
+- ❌ NO regex for specific phrases (if /mostra.*prodotti/.test())
+- ❌ NO keyword arrays (const orderWords = ["ordine", "order", "pedido"])
+- ❌ NO language-specific patterns (except yes/no/numbers)
+
+---
+
+#### State Reset Pattern
+
+**Location**: `chat-engine.service.ts` STEP 0.55 (after preprocessing, before fast-paths)
+
+```typescript
+// STEP 0.55: Reset context when user writes FREE TEXT
+if (preprocessResult.inputType === "text" || preprocessResult.inputType === "unknown") {
+  // Clear previous list context
+  await this.optionsMappingService.clearMapping(conversationId)
+  
+  // Reset FSM to IDLE - fresh start
+  if (chatSession) {
+    await this.conversationStateService.setState(chatSession.id, ConversationState.IDLE, {})
+  }
+  
+  logger.info("🔄 [ChatEngine] TEXT input → Reset state to IDLE")
+}
+```
+
+**Why this works:**
+1. User writes "mostrami l'ordine" (TEXT) → state reset → Intent Parser → ORDER_TRACKING
+2. User writes "2" (NUMBER) → keep context → use optionsMapping → select item #2
+
+---
+
+#### Flow Examples
+
+**Example 1: Product browsing → Order question**
+```
+User: "mostra prodotti"           → TEXT → reset → PRODUCT_SEARCH → shows list
+User: "2"                         → NUMBER → keep context → select product #2
+User: "mostrami il mio ordine"    → TEXT → reset → ORDER_TRACKING → shows order
+```
+
+**Example 2: Mid-checkout context switch**
+```
+User: "aggiungi al carrello"      → TEXT → reset → CART_MANAGEMENT
+Assistant: "Quale prodotto vuoi aggiungere? 1. Parmigiano 2. Salame"
+User: "ma avete servizi?"         → TEXT → reset → SERVICE_SEARCH → shows services
+```
+
+**Example 3: Number selection preserves context**
+```
+Assistant: "Ecco i prodotti: 1. Pasta 2. Olio 3. Vino"
+User: "2"                         → NUMBER → optionsMapping used → Olio selected
+User: "voglio anche il 3"         → TEXT (has words!) → reset → Intent Parser
+                                    → Intent: "voglio anche il 3" parsed fresh
+```
+
+---
+
+#### Pattern Matcher Constraints
+
+**File**: `pattern-matcher.ts`
+
+```typescript
+/**
+ * CRITICAL: Avoid hardcoded multilingual patterns.
+ * This module intentionally supports ONLY:
+ * - Pure numeric selection ("1", "2", "3")
+ * - Yes/No confirmation ("sì", "no", "ok")
+ * - Quantity patterns ("sì 3", "2 pezzi")
+ * 
+ * ALL other intent detection goes to Intent Parser (LLM-based).
+ */
+export function matchAllPatterns(message: string, context: ConversationContext): Intent | null {
+  // ONLY numeric selection - nothing else!
+  return matchNumericSelection(message, context)
+}
+```
+
+**Why minimal?**
+- Multilingual support: "ordine", "order", "pedido", "encomenda" - can't hardcode all
+- Natural language variance: "mostrami", "fammi vedere", "voglio", "dammi"
+- LLM handles nuance: sarcasm, typos, context-dependent meaning
+
+---
+
+#### Anti-Patterns (VIOLATIONS)
+
+**❌ WRONG - Hardcoded phrase detection:**
+```typescript
+// VIOLATION: Language-specific hardcoding
+if (message.toLowerCase().includes("ordine")) {
+  return { intent: "ORDER_TRACKING" }
+}
+
+// VIOLATION: Keyword arrays
+const productKeywords = ["prodotto", "product", "producto"]
+if (productKeywords.some(k => message.includes(k))) { ... }
+
+// VIOLATION: Regex for phrases
+if (/mostra.*ordini?/i.test(message)) { ... }
+```
+
+**✅ CORRECT - Let Intent Parser handle it:**
+```typescript
+// Only detect input TYPE, not content
+if (preprocessResult.inputType === "text") {
+  // Reset state, let Intent Parser figure out intent
+  await this.optionsMappingService.clearMapping(conversationId)
+}
+
+// Intent Parser uses LLM to understand ANY language
+const intent = await intentParserService.parseIntent(message, workspaceId)
+```
+
+---
+
+#### Testing Requirements
+
+**Unit Tests MUST verify:**
+
+```typescript
+describe("User Context Freedom", () => {
+  it("TEXT input should reset state", async () => {
+    // Setup: User was browsing products (state = BROWSING_PRODUCTS)
+    await setState(chatSessionId, ConversationState.BROWSING_PRODUCTS)
+    await setOptionsMapping(conversationId, productListMapping)
+    
+    // Action: User sends TEXT
+    await chatEngine.routeMessage({ message: "mostrami l'ordine" })
+    
+    // Verify: State reset to IDLE
+    const state = await getState(chatSessionId)
+    expect(state).toBe(ConversationState.IDLE)
+    
+    // Verify: optionsMapping cleared
+    const mapping = await getOptionsMapping(conversationId)
+    expect(mapping).toBeNull()
+  })
+  
+  it("NUMBER input should preserve context", async () => {
+    // Setup: Product list shown
+    await setState(chatSessionId, ConversationState.BROWSING_PRODUCTS)
+    await setOptionsMapping(conversationId, { "1": "PROD-001", "2": "PROD-002" })
+    
+    // Action: User sends NUMBER
+    await chatEngine.routeMessage({ message: "2" })
+    
+    // Verify: Context used (product selected)
+    expect(response).toContain("PROD-002")
+  })
+  
+  it("Mid-flow context switch should work", async () => {
+    // User is in cart flow, asks about services
+    await setState(chatSessionId, ConversationState.ADDING_TO_CART)
+    
+    await chatEngine.routeMessage({ message: "avete servizi di spedizione?" })
+    
+    // State reset, service search executed
+    const state = await getState(chatSessionId)
+    expect(state).toBe(ConversationState.IDLE) // Or SERVICE_BROWSING
+  })
+})
+```
+
+---
+
+#### Rationale
+
+**Problem**: Users don't follow rigid conversation flows. They context-switch constantly.
+
+**Previous Approach (WRONG)**: Hardcoded phrase detection for "ordine", "carrello", etc.
+- Breaks with typos, synonyms, other languages
+- Maintenance nightmare (add every keyword in every language)
+- Fails natural conversation patterns
+
+**Current Approach (CORRECT)**: Detect input TYPE, not content
+- NUMBER → Use context (list selection)
+- TEXT → Reset state, fresh Intent Parser
+- LLM handles language/nuance/context interpretation
+
+**Benefits:**
+- ✅ Works in any language (LLM is multilingual)
+- ✅ Handles typos, synonyms, natural variation
+- ✅ Zero maintenance for phrase lists
+- ✅ Users feel free, not constrained
+
+---
+
+#### Compliance Checklist
+
+**Before deploying context freedom pattern:**
+
+- [ ] `pattern-matcher.ts` has ONLY numeric/yes-no matching
+- [ ] `chat-engine.service.ts` has STEP 0.55 state reset for TEXT input
+- [ ] NO `if (message.includes("keyword"))` anywhere in chat flow
+- [ ] NO language-specific regex patterns for phrases
+- [ ] Tests cover: TEXT→reset, NUMBER→preserve, mid-flow switch
+- [ ] Intent Parser handles ALL phrase-based intent detection
+
+**Violations Block Deployment**: Any hardcoded phrase detection is CRITICAL bug.
+
+---
+
+**Version**: 2.2.0 | **Ratified**: 2025-11-12 | **Last Amended**: 2025-12-15

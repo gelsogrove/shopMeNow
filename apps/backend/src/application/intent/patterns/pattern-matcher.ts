@@ -3,8 +3,19 @@
  *
  * Evaluated BEFORE any LLM call.
  *
- * CRITICAL: Avoid hardcoded multilingual patterns.
- * This module intentionally supports ONLY pure numeric selection for list choices.
+ * ⚠️ PRINCIPLE XV: USER CONTEXT FREEDOM (Constitution v2.2.0)
+ * 
+ * CRITICAL CONSTRAINTS:
+ * - ✅ ONLY numeric selection allowed (e.g., "1", "2", "3")
+ * - ✅ ONLY yes/no confirmation allowed (e.g., "sì", "no", "ok")
+ * - ❌ NO hardcoded phrase detection (if message.includes("ordine"))
+ * - ❌ NO language-specific regex patterns (/mostra.*prodotti/)
+ * - ❌ NO keyword arrays (["ordine", "order", "pedido"])
+ * 
+ * WHY: Users can switch context at ANY moment. TEXT input = reset state.
+ * All phrase-based intent detection goes to Intent Parser (LLM-based).
+ * 
+ * See: .specify/memory/constitution.md → Principle XV
  */
 
 import { Intent, ListType, ConversationContext } from "../intent.types"

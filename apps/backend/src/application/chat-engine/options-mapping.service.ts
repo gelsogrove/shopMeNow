@@ -33,7 +33,7 @@ export interface OptionItem {
  * Type of list displayed to user
  * Using UPPERCASE to match intent.types.ts ListType
  */
-export type ListType = "CATEGORIES" | "GROUPS" | "PRODUCTS" | "ORDERS" | "CART_ITEMS" | "SERVICES" | "ORDER_ACTIONS" | "OFFER_CATEGORIES" | "binary" | "unknown"
+export type ListType = "CATEGORIES" | "GROUPS" | "PRODUCTS" | "ORDERS" | "CART_ITEMS" | "SERVICES" | "ORDER_ACTIONS" | "CART_ACTIONS" | "OFFER_CATEGORIES" | "binary" | "unknown"
 
 /**
  * Pending action after user confirmation (sì/no)
@@ -388,6 +388,40 @@ export class OptionsMappingService {
       logger.debug("✅ [OptionsMapping] Pending action cleared")
     } catch (error) {
       logger.error("❌ [OptionsMapping] Failed to clear pending action", {
+        conversationId,
+        error,
+      })
+    }
+  }
+
+  /**
+   * Clear entire mapping when user switches context (text input resets state)
+   * Principle XV: User Context Freedom - TEXT input = fresh start
+   */
+  async clearMapping(conversationId: string): Promise<void> {
+    try {
+      const existing = await this.prisma.searchConversations.findUnique({
+        where: { sessionId: conversationId },
+      })
+
+      if (!existing) return
+
+      const currentMetadata = (existing.metadata as any) || {}
+
+      // Clear lastOptionsMapping entirely
+      const updatedMetadata = {
+        ...currentMetadata,
+        lastOptionsMapping: null,
+      }
+
+      await this.prisma.searchConversations.update({
+        where: { sessionId: conversationId },
+        data: { metadata: updatedMetadata } as any,
+      })
+
+      logger.debug("✅ [OptionsMapping] Mapping cleared (context reset)")
+    } catch (error) {
+      logger.error("❌ [OptionsMapping] Failed to clear mapping", {
         conversationId,
         error,
       })

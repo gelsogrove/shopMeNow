@@ -31,6 +31,7 @@ export type BlockReason =
   | "WORKSPACE_INACTIVE"
   | "NO_OWNER"
   | "OWNER_NOT_FOUND"
+  | "OWNER_DELETED"
   // | "CANCELLED" // TODO: Add when CANCELLED status is added to schema
 
 export interface AccessCheckResult {
@@ -82,6 +83,7 @@ export class WorkspaceAccessService {
           owner: {
             select: {
               id: true,
+              deletedAt: true,
               subscriptionStatus: true,
               creditBalance: true,
             },
@@ -127,6 +129,22 @@ export class WorkspaceAccessService {
 
       const owner = workspace.owner
       const creditBalance = Number(owner.creditBalance)
+
+      // 2b. Check if owner is soft-deleted (deletedAt not null)
+      if (owner.deletedAt) {
+        logger.warn(`[ACCESS] 🚨 Owner soft-deleted for workspace: ${workspace.name} (owner: ${workspace.ownerId})`)
+        return {
+          canProcess: false,
+          blockReason: "OWNER_DELETED",
+          message: "Account owner has been deleted. Contact support.",
+          details: {
+            subscriptionStatus: owner.subscriptionStatus,
+            creditBalance,
+            channelStatus: workspace.channelStatus,
+            ownerId: workspace.ownerId,
+          },
+        }
+      }
 
       // 3. Check owner subscription status - PAUSED
       if (owner.subscriptionStatus === "PAUSED") {

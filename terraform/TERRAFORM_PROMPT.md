@@ -561,6 +561,8 @@ git push origin main
 - `DEPLOY_GUIDE.md` - Guida step-by-step dettagliata
 - `ENV_MANAGEMENT.md` - Gestione variabili d'ambiente
 - `MULTI_TENANT_GUIDE.md` - Architettura multi-cliente
+- `STORAGE_SERVICE.md` - Storage unificato (Local/S3)
+- `STORAGE_ARCHITECTURE.md` - Architettura completa storage + cleanup
 - `terraform-outputs.txt` - Output Terraform (dopo apply)
 
 ---

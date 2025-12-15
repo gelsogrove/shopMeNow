@@ -86,6 +86,8 @@ function parseProductList(message: string): ListItem[] | null {
 
 /**
  * Parse group list from message
+ * Groups have format: "1. Name (N items/prodotti/productos/itens)" - with count in parentheses
+ * Categories have format: "1. Name" - no count
  */
 function parseGroupList(message: string): ListItem[] | null {
   const items: ListItem[] = []
@@ -93,10 +95,11 @@ function parseGroupList(message: string): ListItem[] | null {
   
   let match
   while ((match = regex.exec(message)) !== null) {
-    // Skip if this looks like a category list (has "prodotti" etc.)
-    const fullMatch = match[0].toLowerCase()
-    if (fullMatch.includes("prodott") || fullMatch.includes("items") || fullMatch.includes("product")) {
-      // This is a category list, not a group list - skip
+    // Group lists MUST have a count in parentheses - that's the distinguishing feature
+    // The regex already captures this, so if we have match[3] (the count), it's a group
+    const count = parseInt(match[3], 10)
+    if (isNaN(count) || count <= 0) {
+      // No valid count = not a group list
       continue
     }
     
@@ -104,7 +107,7 @@ function parseGroupList(message: string): ListItem[] | null {
       number: parseInt(match[1], 10),
       value: match[2].trim(),
       metadata: {
-        count: parseInt(match[3], 10)
+        count: count
       }
     })
   }
@@ -238,17 +241,14 @@ export function buildContextFromHistory(
 /**
  * Extract active category from context
  * Looks for patterns like "nella categoria X" or "category X"
+ * Supports: IT, ES, PT, EN, DE, FR
  */
 export function extractActiveCategory(message: string): string | null {
-  // Italian patterns
-  const itMatch = message.match(/(?:categoria|categor[ií]a)\s+['"]?([^'",:.\n]+)['"]?/i)
-  if (itMatch) return itMatch[1].trim()
+  // Multilingual patterns: categoria (IT/PT), categoría (ES), category (EN), Kategorie (DE), catégorie (FR)
+  const multiMatch = message.match(/(?:categoria|categor[ií]a|category|kategorie|catégorie)\s+['"]?([^'",:.\n]+)['"]?/i)
+  if (multiMatch) return multiMatch[1].trim()
   
-  // English patterns
-  const enMatch = message.match(/(?:category)\s+['"]?([^'",:.\n]+)['"]?/i)
-  if (enMatch) return enMatch[1].trim()
-  
-  // Header patterns like "**Formaggi** (7 prodotti)"
+  // Header patterns like "**Formaggi** (7 prodotti)" - language agnostic (uses markdown format)
   const headerMatch = message.match(/^\*\*([^*]+)\*\*\s*\(/m)
   if (headerMatch) return headerMatch[1].trim()
   

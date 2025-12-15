@@ -64,14 +64,3 @@ Quale gruppo ti interessa?
 
 **Note:** The [SKU:...] tags are parsed by the system and NOT shown to the customer. Include them always!
 
----
-
-## PRODUCTS AVAILABLE
-{{products}}
-
-## SERVICES AVAILABLE
-{{services}}
-
-## CATEGORIES AVAILABLE
-{{categories}}
-

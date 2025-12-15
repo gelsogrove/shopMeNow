@@ -694,16 +694,33 @@ CRITICAL:
 
     const lines = ["CART:"]
     let totalQuantity = 0
-    for (const item of response.data.items || []) {
+    const items = response.data.items || []
+    
+    for (const item of items) {
       // item.extra contains quantity in format "8×"
       const quantityMatch = item.extra?.match(/(\d+)/)
       const quantity = quantityMatch ? parseInt(quantityMatch[1]) : 1
       totalQuantity += quantity
-      // Show: "1. 8× Pecorino Romano DOP - €49.60"
-      lines.push(`${item.number}. ${item.extra || "1×"} ${item.name} - €${item.price?.toFixed(2)}`)
+      // Show with bullet point: "• 8× Pecorino Romano DOP - €49.60"
+      lines.push(`• ${item.extra || "1×"} ${item.name} - €${item.price?.toFixed(2)}`)
     }
     lines.push("")
     lines.push(`TOTAL: €${cart.totalAmount.toFixed(2)} (${totalQuantity} item${totalQuantity === 1 ? "" : "s"})`)
+    
+    // Add discount message if customer has discount
+    if (response.context.hasDiscount && response.context.discountPercent && response.context.discountPercent > 0) {
+      lines.push("")
+      lines.push(`💰 Stai usufruendo del tuo sconto riservato del ${response.context.discountPercent}%! I prezzi mostrati includono già lo sconto.`)
+    }
+    
+    // Add cart action options - numbered 1, 2, 3 (cart items use bullet points)
+    lines.push("")
+    lines.push("Cosa vuoi fare?")
+    lines.push("1. ✅ Confermare l'ordine")
+    lines.push("2. 🛍️ Esplorare il catalogo")
+    lines.push("3. 🗑️ Rimuovere un articolo")
+    lines.push("")
+    lines.push("Rispondi con il numero o scrivi cosa desideri!")
 
     return lines.join("\n")
   }
@@ -1016,13 +1033,35 @@ CRITICAL:
   private fallbackCart(response: StructuredResponse): string {
     const cart = response.data.cart
     if (!cart || cart.isEmpty) {
-      return "🛒 Empty cart"
+      return "🛒 Il tuo carrello è vuoto"
     }
-    const lines = ["🛒 Cart:"]
+    const lines = ["🛒 Il tuo carrello:"]
+    lines.push("")
     for (const item of cart.items) {
+      // Use bullet points for cart items (no numbers)
       lines.push(`• ${item.quantity}× ${item.productName} - €${item.totalPrice.toFixed(2)}`)
     }
-    lines.push(`\nTotal: €${cart.totalAmount.toFixed(2)}`)
+    lines.push("")
+    lines.push(`━━━━━━━━━━━━━━━━━━━━`)
+    lines.push(`📦 Totale articoli: ${cart.itemCount}`)
+    lines.push(`💰 Totale: €${cart.totalAmount.toFixed(2)}`)
+    lines.push(`━━━━━━━━━━━━━━━━━━━━`)
+    
+    // Add discount message if customer has discount
+    if (response.context.hasDiscount && response.context.discountPercent && response.context.discountPercent > 0) {
+      lines.push("")
+      lines.push(`💰 Stai usufruendo del tuo sconto riservato del ${response.context.discountPercent}%! I prezzi mostrati includono già lo sconto.`)
+    }
+    
+    // Add cart action options - numbered 1, 2, 3 (cart items use bullet points)
+    lines.push("")
+    lines.push("Cosa vuoi fare?")
+    lines.push("1. ✅ Confermare l'ordine")
+    lines.push("2. 🛍️ Esplorare il catalogo")
+    lines.push("3. 🗑️ Rimuovere un articolo")
+    lines.push("")
+    lines.push("Rispondi con il numero o scrivi cosa desideri!")
+    
     return lines.join("\n")
   }
 

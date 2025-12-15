@@ -891,21 +891,54 @@ export class WhatsAppWebhookController {
       }
 
       // 🔒 Feature 197: Check workspace access BEFORE billing
-      // This handles: PAUSED, PAYMENT_FAILED, CREDIT_EXHAUSTED (< -€10)
-      // WIP mode (channelStatus=false) is handled separately with message
+      // This handles: PAUSED, PAYMENT_FAILED, CREDIT_EXHAUSTED (< -€10), CHANNEL_DISABLED (WIP)
       const { WorkspaceAccessService } = await import(
         "../../../application/services/workspace-access.service"
       )
       const workspaceAccessService = new WorkspaceAccessService(prisma)
       
-      // Skip channel check - WIP mode handled separately above
+      // Check ALL access conditions including channel status
       const accessResult = await workspaceAccessService.canProcessMessages(
         customer.workspaceId,
-        true // skipChannelCheck - WIP handled by activeChatbot check
+        false // DO check channelStatus - WIP mode needs special handling
       )
 
       if (!accessResult.canProcess) {
-        // Silent block for billing issues (PAUSED, PAYMENT_FAILED, CREDIT_EXHAUSTED)
+        // 🚧 CHANNEL_DISABLED → Send WIP message (not silent like billing blocks)
+        if (accessResult.blockReason === "CHANNEL_DISABLED") {
+          logger.info("[WEBHOOK] 🚧 Channel disabled (WIP mode) - sending maintenance message", {
+            workspaceId: customer.workspaceId,
+            customerId: customer.id,
+          })
+          
+          // Save WIP message to history so operator can see customer tried to contact
+          await prisma.conversationMessage.create({
+            data: {
+              workspaceId: customer.workspaceId,
+              customerId: customer.id,
+              conversationId: chatSession.id,
+              role: "user",
+              content: messageMarkdown,
+              agentType: "NONE",
+              tokensUsed: 0,
+              debugInfo: JSON.stringify({
+                channelDisabled: true,
+                reason: "workspace.channelStatus = false (WIP mode)",
+                timestamp: new Date().toISOString(),
+                source: "whatsapp-webhook",
+              }),
+            },
+          })
+          
+          res.status(200).json({
+            status: "channel_disabled",
+            code: "CHANNEL_DISABLED",
+            message: "Channel is in maintenance mode. Your message has been saved.",
+          })
+          return
+        }
+        
+        // Silent block for billing issues (PAUSED, PAYMENT_FAILED, CREDIT_EXHAUSTED, OWNER_DELETED)
         logger.warn("[WEBHOOK] 🚫 Feature 197: Workspace blocked - SILENT BLOCK", {
           workspaceId: customer.workspaceId,
           customerId: customer.id,

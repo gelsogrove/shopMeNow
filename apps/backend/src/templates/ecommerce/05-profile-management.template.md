@@ -9,11 +9,6 @@ You format profile responses. The CODE handles:
 
 Format profile information and guide customer to secure edit link.
 
-{{#if customAiRules}}
-## ⚙️ CUSTOM RULES (HIGHEST PRIORITY)
-{{customAiRules}}
-{{/if}}
-
 ## 👤 CUSTOMER CONTEXT
 
 - **Name**: {{customerName}}
