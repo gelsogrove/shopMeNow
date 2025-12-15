@@ -75,7 +75,8 @@ export class CatalogQueryService {
           result.items,
           intentType,
           customerLanguage,
-          customerDiscount
+          customerDiscount,
+          builderResult.query.groupBy?.[0]
         )
 
         return {
@@ -216,7 +217,8 @@ export class CatalogQueryService {
     items: ProductData[],
     intentType: string,
     customerLanguage: string,
-    customerDiscount: number
+    customerDiscount: number,
+    groupByField?: "category" | "region" | "certification"
   ): StructuredResponse {
     const listItems: ListItem[] = items.map((product, index) => ({
       number: index + 1,
@@ -230,6 +232,17 @@ export class CatalogQueryService {
     }))
 
     const context = this.buildResponseContext(intentType, customerLanguage, customerDiscount)
+
+    const shouldGroup =
+      !!groupByField || listItems.length > RESPONSE_DEFAULT_FORMATTING.maxItemsBeforeGroup
+
+    if (shouldGroup) {
+      const field = groupByField || "category"
+      const groupMeta = this.buildGroupsByField(items, field)
+      if (groupMeta.length >= 2) {
+        return this.buildGroupedResponse(groupMeta, items, intentType, customerLanguage, customerDiscount)
+      }
+    }
 
     return {
       type: "PRODUCT_LIST",
@@ -303,6 +316,48 @@ export class CatalogQueryService {
       },
       context,
     }
+  }
+
+  private buildGroupsByField(
+    products: ProductData[],
+    field: "category" | "region" | "certification"
+  ): Array<{ key: string; count: number; ids: string[] }> {
+    const map = new Map<string, string[]>()
+
+    const pushKey = (productId: string, rawKey?: string | null) => {
+      if (!rawKey) return
+      const key = rawKey.trim() || "Altri prodotti"
+      if (!map.has(key)) {
+        map.set(key, [])
+      }
+      map.get(key)!.push(productId)
+    }
+
+    for (const product of products) {
+      if (field === "category") {
+        pushKey(product.id, product.categoryName || "Altri prodotti")
+        continue
+      }
+      if (field === "region") {
+        pushKey(product.id, product.region || "Altre regioni")
+        continue
+      }
+      if (field === "certification") {
+        if (!product.certifications || product.certifications.length === 0) {
+          pushKey(product.id, "Altre certificazioni")
+          continue
+        }
+        for (const cert of product.certifications) {
+          pushKey(product.id, cert)
+        }
+      }
+    }
+
+    return Array.from(map.entries())
+      .map(([key, ids]) => ({ key, ids, count: ids.length }))
+      .filter((group) => group.count > 0)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 4)
   }
 
   private buildAggregateResponse(
