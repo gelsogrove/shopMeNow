@@ -12,11 +12,19 @@ import { CatalogQueryBuilder } from "./query-builder.service"
 import { CatalogQuery } from "./catalog-query.schema"
 import { executeCatalogQuery, CatalogQueryResult } from "./query-executor"
 
+type GroupField = "category" | "region" | "certification"
+type GroupDescriptor = {
+  key: string
+  ids: string[]
+  count: number
+  isFallback?: boolean
+}
+
 export interface CatalogQueryLoadedData {
   type: "CATALOG_QUERY_RESULT"
   resultType: CatalogQueryResult["type"]
   products?: ProductData[]
-  groups?: Array<{ key: string; count: number; ids: string[] }>
+  groups?: Array<GroupDescriptor>
 }
 
 export interface CatalogQueryProcessingResult {
@@ -214,13 +222,13 @@ export class CatalogQueryService {
   }
 
   private buildListResponse(
-    items: ProductData[],
+    products: ProductData[],
     intentType: string,
     customerLanguage: string,
     customerDiscount: number,
-    groupByField?: "category" | "region" | "certification"
+    groupByField?: GroupField
   ): StructuredResponse {
-    const listItems: ListItem[] = items.map((product, index) => ({
+    const listItems: ListItem[] = products.map((product, index) => ({
       number: index + 1,
       id: product.id,
       name: product.name,
@@ -237,10 +245,17 @@ export class CatalogQueryService {
       !!groupByField || listItems.length > RESPONSE_DEFAULT_FORMATTING.maxItemsBeforeGroup
 
     if (shouldGroup) {
-      const field = groupByField || "category"
-      const groupMeta = this.buildGroupsByField(items, field)
-      if (groupMeta.length >= 2) {
-        return this.buildGroupedResponse(groupMeta, items, intentType, customerLanguage, customerDiscount)
+      const preferredField: GroupField = groupByField || "category"
+      const groupedResponse = this.tryBuildGroupedResponse(
+        products,
+        preferredField,
+        intentType,
+        customerLanguage,
+        customerDiscount,
+        Boolean(groupByField)
+      )
+      if (groupedResponse) {
+        return groupedResponse
       }
     }
 
@@ -248,15 +263,42 @@ export class CatalogQueryService {
       type: "PRODUCT_LIST",
       data: {
         items: listItems,
-        count: items.length,
+        count: products.length,
       },
       formatting: { ...RESPONSE_DEFAULT_FORMATTING },
       context,
     }
   }
 
+  private tryBuildGroupedResponse(
+    products: ProductData[],
+    field: GroupField,
+    intentType: string,
+    customerLanguage: string,
+    customerDiscount: number,
+    forceField: boolean
+  ): StructuredResponse | null {
+    let meta = this.buildGroupsByField(products, field)
+
+    if (!this.hasValidGroups(meta)) {
+      return null
+    }
+
+    if (!forceField && this.shouldFallbackGroupedResult(meta)) {
+      if (field === "category") {
+        return null
+      }
+      meta = this.buildGroupsByField(products, "category")
+      if (!this.hasValidGroups(meta) || this.shouldFallbackGroupedResult(meta)) {
+        return null
+      }
+    }
+
+    return this.buildGroupedResponse(meta, products, intentType, customerLanguage, customerDiscount)
+  }
+
   private buildGroupedResponse(
-    groups: Array<{ key: string; count: number; ids: string[] }>,
+    groups: GroupDescriptor[],
     products: ProductData[],
     intentType: string,
     customerLanguage: string,
@@ -318,43 +360,63 @@ export class CatalogQueryService {
     }
   }
 
-  private buildGroupsByField(
-    products: ProductData[],
-    field: "category" | "region" | "certification"
-  ): Array<{ key: string; count: number; ids: string[] }> {
-    const map = new Map<string, string[]>()
+  private buildGroupsByField(products: ProductData[], field: GroupField): GroupDescriptor[] {
+    const fallbackLabels: Record<GroupField, string> = {
+      category: "Altre categorie",
+      region: "Altre regioni",
+      certification: "Altre certificazioni",
+    }
 
-    const pushKey = (productId: string, rawKey?: string | null) => {
-      if (!rawKey) return
-      const key = rawKey.trim() || "Altri prodotti"
-      if (!map.has(key)) {
-        map.set(key, [])
+    const map = new Map<
+      string,
+      {
+        ids: string[]
+        isFallback: boolean
       }
-      map.get(key)!.push(productId)
+    >()
+
+    const pushKey = (productId: string, rawKey: string | null | undefined, fallbackLabel: string) => {
+      const trimmed = rawKey?.trim()
+      const key = trimmed && trimmed.length > 0 ? trimmed : fallbackLabel
+      const usedFallback = !trimmed || trimmed.length === 0
+
+      const existing = map.get(key)
+      if (!existing) {
+        map.set(key, { ids: [productId], isFallback: usedFallback })
+        return
+      }
+
+      existing.ids.push(productId)
+      existing.isFallback = existing.isFallback && usedFallback
     }
 
     for (const product of products) {
       if (field === "category") {
-        pushKey(product.id, product.categoryName || "Altri prodotti")
+        pushKey(product.id, product.categoryName, fallbackLabels.category)
         continue
       }
       if (field === "region") {
-        pushKey(product.id, product.region || "Altre regioni")
+        pushKey(product.id, product.region, fallbackLabels.region)
         continue
       }
       if (field === "certification") {
         if (!product.certifications || product.certifications.length === 0) {
-          pushKey(product.id, "Altre certificazioni")
+          pushKey(product.id, null, fallbackLabels.certification)
           continue
         }
         for (const cert of product.certifications) {
-          pushKey(product.id, cert)
+          pushKey(product.id, cert, fallbackLabels.certification)
         }
       }
     }
 
     return Array.from(map.entries())
-      .map(([key, ids]) => ({ key, ids, count: ids.length }))
+      .map(([key, entry]) => ({
+        key,
+        ids: entry.ids,
+        count: entry.ids.length,
+        isFallback: entry.isFallback,
+      }))
       .filter((group) => group.count > 0)
       .sort((a, b) => b.count - a.count)
       .slice(0, 4)
@@ -413,5 +475,28 @@ export class CatalogQueryService {
       hasDiscount: (customerDiscount || 0) > 0,
       discountPercent: customerDiscount || 0,
     }
+  }
+
+  private hasValidGroups(groups: GroupDescriptor[]): boolean {
+    if (!groups || groups.length < 2) {
+      return false
+    }
+    return groups.some((group) => group.count > 0)
+  }
+
+  private shouldFallbackGroupedResult(groups: GroupDescriptor[]): boolean {
+    if (!groups || groups.length === 0) {
+      return true
+    }
+    const total = groups.reduce((sum, group) => sum + group.count, 0)
+    if (total === 0) {
+      return true
+    }
+    const [largest] = groups
+    if (!largest) {
+      return true
+    }
+    const ratio = largest.count / total
+    return !!largest.isFallback && ratio >= 0.7
   }
 }

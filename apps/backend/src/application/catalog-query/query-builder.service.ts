@@ -18,13 +18,53 @@ Your job: convert the user message into a JSON object that matches the CatalogQu
 Rules:
 - Output ONLY valid JSON. No prose.
 - Do NOT use markdown.
+- When the user asks to group items (e.g., "raggruppati per regione", "group by category", "divisi per certificazione"), set the \`groupBy\` array with the requested field ("region", "category", or "certification").
 - Never invent categories/regions/certifications; if unknown, prefer text filter.
 - If request is ambiguous, return: {"entity":"products","intent":"list","filters":[{"field":"text","op":"contains","value":"<user_terms>"}]}
-- You MUST NOT include additional keys.`
+- You MUST NOT include additional keys.
+
+Examples:
+- "Mostra i prodotti raggruppati per categoria" → {"entity":"products","intent":"list","groupBy":["category"]}
+- "Lista prodotti raggruppati per regione d'Italia" → {"entity":"products","intent":"list","groupBy":["region"]}
+- "Prodotti divisi per certificazioni" → {"entity":"products","intent":"list","groupBy":["certification"]}`
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 const MODEL = "openai/gpt-4o-mini"
 const MAX_RETRIES = 2
+
+type GroupField = "category" | "region" | "certification"
+
+function normalizeForMatch(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+}
+
+function detectGroupByField(message: string): GroupField | undefined {
+  const normalized = normalizeForMatch(message)
+
+  const groupingMarkers = ["raggrupp", "divisi", "divise", "gruppate", "group", "organizza", "ordina"]
+  const hasGroupingIntent = groupingMarkers.some((marker) => normalized.includes(marker))
+
+  const regionKeywords = ["regione", "regione ditalia", "regioni", "region"]
+  const categoryKeywords = ["categoria", "categorie", "category", "categories"]
+  const certificationKeywords = ["certific", "dop", "igp", "docg", "igt", "organic certification"]
+
+  if (regionKeywords.some((kw) => normalized.includes(kw)) && (hasGroupingIntent || normalized.includes("per regione"))) {
+    return "region"
+  }
+
+  if (categoryKeywords.some((kw) => normalized.includes(kw)) && (hasGroupingIntent || normalized.includes("per categoria"))) {
+    return "category"
+  }
+
+  if (certificationKeywords.some((kw) => normalized.includes(kw)) && (hasGroupingIntent || normalized.includes("per certificazione"))) {
+    return "certification"
+  }
+
+  return undefined
+}
 
 function sanitizeJsonPayload(content: string): string {
   const trimmed = content.trim()
@@ -89,6 +129,14 @@ export class CatalogQueryBuilder {
           throw new Error(`Schema validation failed: ${validation.error.message}`)
         }
 
+        const enrichedQuery = { ...validation.data }
+        if (!enrichedQuery.groupBy || enrichedQuery.groupBy.length === 0) {
+          const inferredGroup = detectGroupByField(userMessage)
+          if (inferredGroup) {
+            enrichedQuery.groupBy = [inferredGroup]
+          }
+        }
+
         const usage = data.usage
         const normalizedUsage = usage
           ? {
@@ -99,7 +147,7 @@ export class CatalogQueryBuilder {
           : undefined
 
         return {
-          query: validation.data,
+          query: enrichedQuery,
           rawResponse: sanitized,
           model: data.model || MODEL,
           usage: normalizedUsage,
