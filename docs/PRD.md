@@ -1,7 +1,7 @@
 # shopME - Product Requirements Document (PRD)
 
-> **Versione**: 2.0  
-> **Ultimo aggiornamento**: Dicembre 2025  
+> **Versione**: 2.1  
+> **Ultimo aggiornamento**: 15 Dicembre 2025  
 > **Autore**: Andrea Gelsomino  
 > **Status**: In Development
 
@@ -114,6 +114,8 @@ Una piattaforma SaaS che trasforma WhatsApp in un canale di vendita automatizzat
 | **Team** | Multi-user workspace, Inviti, Ruoli |
 | **Security** | 2FA, JWT, Workspace isolation |
 | **Analytics** | Dashboard base, Usage tracking |
+| **Storage** | Unified storage (Local dev / S3 prod), Image upload, Cleanup scheduler |
+| **Invoices** | PDF generation, Storage integration, Signed URLs |
 
 ### ❌ Out of Scope (Future / V2)
 
@@ -370,7 +372,28 @@ Postcondizioni: Chatbot riprende a funzionare
 | RF-042 | OAuth | Login con Google (optional) |
 | RF-043 | Session | Validazione sessione con timeout |
 | RF-044 | Workspace Isolation | Ogni query filtrata per workspaceId |
+### 8.8 Modulo Storage Service
 
+| RF-ID | Requisito | Dettaglio |
+|-------|-----------|----------|
+| RF-070 | Unified Interface | `IStorageService` interface comune per Local e S3 |
+| RF-071 | Auto-Switch | `getStorageService()` ritorna LocalAdapter in dev, S3Adapter in prod (basato su NODE_ENV) |
+| RF-072 | Product Images | Upload immagini prodotti in `products/{workspaceId}/` con tracking `imageKey` |
+| RF-073 | Service Images | Upload immagini servizi in `services/{workspaceId}/` con tracking `imageKey` |
+| RF-074 | Workspace Logo | Upload logo workspace in `workspaces/{workspaceId}/` con tracking `logoKey` |
+| RF-075 | Invoices | Upload fatture PDF in `invoices/{workspaceId}/` con signed URLs |
+| RF-076 | Temp Files | File temporanei con lifecycle 24h auto-delete |
+| RF-077 | Cleanup Scheduler | Job automatici per pulizia file orfani (03:00 daily) e temp files (hourly) |
+
+### 8.9 Modulo Invoice Service
+
+| RF-ID | Requisito | Dettaglio |
+|-------|-----------|----------|
+| RF-080 | PDF Generation | Generazione fattura PDF con pdfkit (logo, dettagli ordine, totali) |
+| RF-081 | Storage Integration | Salvataggio fattura via Storage Service (Local o S3) |
+| RF-082 | Signed URLs | URL firmati con scadenza per download sicuro (default 1h) |
+| RF-083 | Order Integration | `invoiceUrl`, `invoiceKey`, `invoiceDate` salvati in Orders table |
+| RF-084 | Cancelled Cleanup | Job scheduler elimina fatture ordini cancellati (04:00 daily) |
 ---
 
 ## 9. Requisitos No Funcionales
@@ -597,6 +620,10 @@ AND non vede MAI i prodotti del workspace B
 - [x] Scheduler Microservice (Feature 186)
 - [x] Soft Delete (Feature 196)
 - [x] Owner-based Billing (Feature 198)
+- [x] Channel Wizard (Feature 199)
+- [x] Storage Service (Local/S3) 
+- [x] Invoice Generation (PDF)
+- [x] Terraform AWS Infrastructure
 
 ---
 
@@ -609,11 +636,13 @@ AND non vede MAI i prodotti del workspace B
 | **Frontend** | React 18 + TypeScript + Vite + Tailwind + shadcn/ui |
 | **Backend** | Node.js 18 + Express + Prisma ORM |
 | **Database** | PostgreSQL |
-| **AI** | OpenRouter (GPT-4-mini) |
+| **AI** | OpenRouter (Claude, GPT-4) |
 | **Auth** | JWT + TOTP (2FA) |
 | **Payments** | PayPal API |
 | **Messaging** | WhatsApp Business API |
-| **Hosting** | Docker + PM2 |
+| **Storage** | Local (dev) / AWS S3 (prod) |
+| **PDF** | pdfkit |
+| **Hosting** | AWS EC2 + RDS (Terraform) |
 
 ### Struttura Monorepo
 
@@ -621,13 +650,18 @@ AND non vede MAI i prodotti del workspace B
 shopME/
 ├── apps/
 │   ├── backend/         # API server (Express)
-│   ├── frontend/        # Dashboard (React)
-│   ├── scheduler/       # Cron jobs (Node)
-│   └── backoffice/      # Admin panel
+│   ├── frontend/        # Dashboard (React) - WIP
+│   ├── backoffice/      # Admin panel (React)
+│   └── scheduler/       # Cron jobs (Node)
 ├── packages/
-│   └── database/        # Prisma schema
+│   └── database/        # Prisma schema (@echatbot/database)
 ├── docs/                # Documentation
-└── specs/               # Feature specs
+│   ├── architecture/    # System design docs
+│   ├── security/        # Security audits
+│   ├── setup/           # Deployment guides
+│   ├── prompts/         # LLM prompt templates
+│   └── archived/        # Old specs & completed tasks
+└── terraform/           # AWS infrastructure (EC2, RDS, S3)
 ```
 
 ### Database Schema (Entità Principali)
@@ -658,15 +692,15 @@ User (Owner)
 | **Agent** | Componente LLM specializzato (Router, Product, Safety, Translation) |
 | **Credit** | Saldo prepagato per pagare i consumi |
 
-### B. Feature Specs Reference
+### B. Documentation Reference
 
-Tutte le specifiche dettagliate delle feature sono in `/specs/`:
+Tutta la documentazione attiva è in `/docs/`:
 
-- `174-router/` - Multi-agent LLM architecture
-- `185-subscription-billing-system/` - Billing system
-- `196-soft-delete/` - Soft delete implementation
-- `197-billing-subscription-separation/` - Invoice separation
-- `198-billing-owner-refactor/` - Owner-based billing
+- `architecture/` - System design (billing, storage, multi-agent)
+- `security/` - Security audits and reports
+- `setup/` - Production deployment guides
+- `prompts/` - LLM prompt templates
+- `archived/specs/` - Historical feature specifications
 
 ---
 
