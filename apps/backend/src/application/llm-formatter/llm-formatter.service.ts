@@ -57,12 +57,13 @@ CRITICAL RULES:
 3. DO NOT change prices, quantities or names
 4. Format naturally and friendly
 5. Use the requested language for the response
-6. KEEP the numbering exactly as provided
-7. Numbers are for customer selection - DO NOT change them
+6. For CART items: use dashes (-) NOT numbers. Cart products should NOT be numbered.
+7. For MENU OPTIONS (Cosa vuoi fare?): KEEP numbered exactly as provided (1, 2, 3...)
 8. PRICES ARE FINAL - DO NOT calculate or mention any discounts on prices! The prices shown already include any applicable discounts. Never write "con sconto del X%" or "discounted price" - just show the price as-is.
 
 OUTPUT FORMAT:
-- Lists: keep numbering (1, 2, 3...)
+- Cart items: use dash prefix (- Product - €XX.XX)
+- Menu options: keep numbering (1. ✅ Action)
 - Prices: €XX.XX (show exactly as provided - DO NOT modify or add discount calculations!)
 - Show total "(N items)" if requested
 - Emoji: 🛒 🍷 📦 ✅ ❌ etc.`
@@ -234,12 +235,28 @@ export class LLMFormatterService {
       text = text.replace(/---JSON_MAPPING---[\s\S]*?---END_JSON---/g, "").trim()
 
       // ⚙️ Some models still append raw JSON after the question. Strip trailing JSON blobs.
+      // Pattern 1: JSON blob after newline
       const trailingJsonMatch = text.match(/\n\{[\s\S]*\}\s*$/)
       if (trailingJsonMatch) {
         const cutIndex = text.lastIndexOf(trailingJsonMatch[0])
         if (cutIndex > -1) {
           text = text.substring(0, cutIndex).trim()
         }
+      }
+      
+      // Pattern 2: JSON blob on its own line at end (groupMapping format)
+      // Matches: {"1":{"nome":...}} at end of text
+      const rawJsonAtEnd = text.match(/\{"\d+":\s*\{"nome":[\s\S]*\}\}\s*$/)
+      if (rawJsonAtEnd) {
+        text = text.substring(0, text.lastIndexOf(rawJsonAtEnd[0])).trim()
+        logger.info("📝 [LLMFormatter] Stripped raw groupMapping JSON from response")
+      }
+      
+      // Pattern 3: Any JSON object at end of response that looks like groupMapping
+      const genericJsonEnd = text.match(/\n\s*\{["']\d["']\s*:\s*\{[\s\S]*?\}\s*\}\s*$/)
+      if (genericJsonEnd) {
+        text = text.substring(0, text.lastIndexOf(genericJsonEnd[0])).trim()
+        logger.info("📝 [LLMFormatter] Stripped generic JSON mapping from end of response")
       }
 
       // Clean up any formatting artifacts
@@ -297,6 +314,8 @@ export class LLMFormatterService {
 
       case "CART_EMPTY":
         return this.getCartEmpty(targetLanguage)
+      case "CART_VIEW":
+        return this.getCartViewTemplate(response)
 
       case "NO_RESULTS":
         return this.getNoResults(targetLanguage, response.data.errorMessage)
@@ -403,6 +422,61 @@ export class LLMFormatterService {
       pt: "🛒 Seu carrinho está vazio.\n\nGostaria de ver nossos produtos?",
     }
     return empty[lang] || empty["it"]
+  }
+
+  private getCartViewTemplate(response: StructuredResponse): string {
+    const cart = response.data.cart
+    const items = response.data.items || []
+    if (!cart || items.length === 0) {
+      return "🛒 Il tuo carrello è vuoto.\n\nVuoi vedere i nostri prodotti?"
+    }
+
+    const lines: string[] = ["Ecco il tuo carrello:"]
+
+    for (const item of items) {
+      lines.push(`- ${item.name} - €${item.price?.toFixed(2)}`)
+    }
+
+    if (cart.transport && cart.transport.totalTransportCost > 0) {
+      for (const [typeName, info] of Object.entries(cart.transport.byType)) {
+        lines.push(`- Trasporto ${typeName}: €${info.cost.toFixed(2)}`)
+      }
+    }
+
+    const grandTotal = Math.round(
+      (cart.totalAmount + (cart.transport?.totalTransportCost ?? 0)) * 100
+    ) / 100
+    lines.push("")
+    lines.push(`💰 TOTALE ORDINE: €${grandTotal.toFixed(2)}`)
+
+    if (response.context.hasDiscount && response.context.discountPercent > 0) {
+      lines.push("")
+      lines.push(
+        `🎁 Stai usufruendo del tuo sconto riservato del ${response.context.discountPercent}%! I prezzi mostrati includono già lo sconto.`
+      )
+    }
+
+    const hasRemovableItems = items.length > 1
+    let optionNumber = 1
+    const actions: string[] = [
+      `${optionNumber++}. ✅ Confermare l'ordine`,
+      `${optionNumber++}. 🛍️ Esplorare il catalogo`,
+    ]
+    if (hasRemovableItems) {
+      actions.push(`${optionNumber++}. 🗑️ Rimuovere un articolo`)
+    }
+    actions.push(`${optionNumber++}. 🧹 Cancella il carrello`)
+    if (response.context.showOptimizeOption) {
+      actions.push(`${optionNumber++}. 🚚 Ottimizza spedizione`)
+    }
+
+    lines.push("")
+    lines.push("Cosa vuoi fare?")
+    lines.push(...actions)
+    lines.push("")
+    lines.push("Rispondi con il numero o scrivi cosa desideri!")
+
+    return lines.join("\n")
   }
 
   private getNoResults(lang: string, detail?: string): string {
@@ -579,7 +653,8 @@ export class LLMFormatterService {
       lines.push(`**${index + 1}.** ${group.groupName} (${group.variantCount} prodotti)`)
     })
 
-    const mappingBlock = this.buildGroupMappingBlock(response)
+    // Note: groupMapping is computed and added automatically by the format() method
+    // after LLM response - NOT in the visible text to the user!
 
     return [
       "GRUPPI DISPONIBILI (non elencare i singoli prodotti):",
@@ -589,13 +664,9 @@ export class LLMFormatterService {
       "- Mostra SOLO i gruppi sopra indicati con il relativo numero di prodotti.",
       "- Mantieni i numeri in grassetto (es. **1.**, **2.**, ...).",
       "- Non inserire l'elenco dei singoli prodotti né riepiloghi \"Prezzi finali\".",
-      "- Chiudi sempre con la domanda tradotta nella lingua di output: \"Quale gruppo ti interessa?\" (o equivalente).",
-      "- Dopo la domanda aggiungi SEMPRE e SENZA MODIFICHE il blocco JSON seguente.",
+      "- Chiudi con la domanda tradotta nella lingua di output: \"Quale gruppo ti interessa?\" (o equivalente).",
       "- L'intera risposta deve essere nella lingua richiesta (rispetta il campo LINGUA OUTPUT).",
-      "",
-      "---JSON_MAPPING---",
-      mappingBlock,
-      "---END_JSON---",
+      "- ⚠️ NON INCLUDERE MAI JSON nella risposta visibile all'utente!",
     ].join("\n")
   }
 
@@ -768,40 +839,62 @@ CRITICAL:
     const cart = response.data.cart
     if (!cart) return "Cart not found"
 
-    const lines = ["CART:"]
-    let totalQuantity = 0
     const items = response.data.items || []
-    
-    for (const item of items) {
-      // item.extra contains quantity in format "8×"
-      const quantityMatch = item.extra?.match(/(\d+)/)
-      const quantity = quantityMatch ? parseInt(quantityMatch[1]) : 1
-      totalQuantity += quantity
-      // Show with bullet point: "• 8× Pecorino Romano DOP - €49.60"
-      lines.push(`• ${item.extra || "1×"} ${item.name} - €${item.price?.toFixed(2)}`)
+    const cartLines: string[] = items.map(
+      (item) => `- ${item.name} - €${item.price?.toFixed(2)}`
+    )
+
+    let totalTransportCost = 0
+    if (cart.transport && cart.transport.totalTransportCost > 0) {
+      for (const [typeName, info] of Object.entries(cart.transport.byType)) {
+        cartLines.push(`- Trasporto ${typeName}: €${info.cost.toFixed(2)}`)
+      }
+      totalTransportCost = cart.transport.totalTransportCost
     }
-    lines.push("")
-    lines.push(`TOTAL: €${cart.totalAmount.toFixed(2)} (${totalQuantity} item${totalQuantity === 1 ? "" : "s"})`)
-    
-    // Add discount message if customer has discount
-    if (response.context.hasDiscount && response.context.discountPercent && response.context.discountPercent > 0) {
-      lines.push("")
-      lines.push(`💰 Stai usufruendo del tuo sconto riservato del ${response.context.discountPercent}%! I prezzi mostrati includono già lo sconto.`)
-    }
-    
+
+    const grandTotal = Math.round((cart.totalAmount + totalTransportCost) * 100) / 100
+    const totalLine = `💰 TOTALE ORDINE: €${grandTotal.toFixed(2)}`
+
     const hasRemovableItems = items.length > 1
     let optionNumber = 1
+    const actionLines = [
+      `${optionNumber++}. ✅ Confermare l'ordine`,
+      `${optionNumber++}. 🛍️ Esplorare il catalogo`,
+    ]
+    if (hasRemovableItems) {
+      actionLines.push(`${optionNumber++}. 🗑️ Rimuovere un articolo`)
+    }
+    actionLines.push(`${optionNumber++}. 🧹 Cancella il carrello`)
+    if (response.context.showOptimizeOption) {
+      actionLines.push(`${optionNumber++}. 🚚 Ottimizza spedizione`)
+    }
+
+    const lines: string[] = [
+      "FORMAT RULES:",
+      "- Start with 'Ecco il tuo carrello:' translated to the customer's language.",
+      "- Render each entry from CART_LINES as-is using dash bullets (no numbering).",
+      "- After the dash list, show the TOTAL_LINE exactly once.",
+      "- Leave a blank line, then present the numbered options exactly as provided under ACTIONS (respecting the order).",
+      "- Close with 'Rispondi con il numero o scrivi cosa desideri!' translated to the customer's language.",
+      "",
+      "CART_LINES:",
+      ...cartLines,
+      "",
+      "TOTAL_LINE:",
+      totalLine,
+    ]
+
+    if (response.context.hasDiscount && response.context.discountPercent && response.context.discountPercent > 0) {
+      lines.push("")
+      lines.push("DISCOUNT_LINE:")
+      lines.push(
+        `🎁 Stai usufruendo del tuo sconto riservato del ${response.context.discountPercent}%! I prezzi mostrati includono già lo sconto.`
+      )
+    }
 
     lines.push("")
-    lines.push("Cosa vuoi fare?")
-    lines.push(`${optionNumber++}. ✅ Confermare l'ordine`)
-    lines.push(`${optionNumber++}. 🛍️ Esplorare il catalogo`)
-    if (hasRemovableItems) {
-      lines.push(`${optionNumber++}. 🗑️ Rimuovere un articolo`)
-    }
-    lines.push(`${optionNumber++}. 🧹 Cancella il carrello`)
-    lines.push("")
-    lines.push("Rispondi con il numero o scrivi cosa desideri!")
+    lines.push("ACTIONS:")
+    lines.push(...actionLines)
 
     return lines.join("\n")
   }

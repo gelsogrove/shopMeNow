@@ -33,6 +33,7 @@ import {
   AskFAQIntent,
 } from "../intent/intent.types"
 import { OptionsMappingService } from "../chat-engine/options-mapping.service"
+import { OrderOptimizationService } from "../services/order-optimization.service"
 
 // ================================================================================
 // DATA TYPES - What we return from database
@@ -87,12 +88,18 @@ export interface CartItemData {
   stock: number
 }
 
+export interface TransportCostBreakdown {
+  byType: Record<string, { itemCount: number; cost: number }>
+  totalTransportCost: number
+}
+
 export interface CartData {
   id: string
   items: CartItemData[]
   itemCount: number
-  totalAmount: number
+  totalAmount: number  // Product subtotal (without transport)
   isEmpty: boolean
+  transport?: TransportCostBreakdown  // Transport costs breakdown
 }
 
 export interface OrderData {
@@ -185,7 +192,7 @@ export type LoadedData =
   | { type: "PROFILE"; profile: CustomerProfileData }
   | { type: "OFFERS"; offers: OfferData[] }
   | { type: "ORDER_ACTION"; action: "SEND_INVOICE" | "REPEAT_ORDER" | "SEND_CREDIT_NOTES" | "ADD_ORDER_NOTE"; orderCode?: string }
-  | { type: "CART_ACTION"; action: "CONFIRM_ORDER" | "SHOW_PRODUCTS" | "REMOVE_FROM_CART" }
+  | { type: "CART_ACTION"; action: "CONFIRM_ORDER" | "SHOW_PRODUCTS" | "REMOVE_FROM_CART" | "OPTIMIZE_TRANSPORT" }
   | { type: "CART_REMOVAL_OPTIONS"; items: CartRemovalItemData[] }
   | { type: "AGENT_INFO"; agentInfo: AgentInfoData }
   | { type: "NEEDS_LLM_CONTEXT"; label: string; originalListType: string; inferAttempted: string | null }
@@ -415,6 +422,11 @@ export class DataLoaderService {
                 // User wants to empty the cart completely
                 return this.handleCartClear(workspaceId, customerId)
               
+              case "OPTIMIZE_TRANSPORT":
+                // User wants to optimize transport costs (Premium/Enterprise only)
+                logger.info("🚚 [DataLoader] OPTIMIZE_TRANSPORT selected")
+                return { type: "CART_ACTION", action: "OPTIMIZE_TRANSPORT" as const }
+              
               default:
                 logger.warn("📦 [DataLoader] Unknown CART_ACTION", { optionId: selectIntent.optionId })
                 return { type: "EMPTY", reason: "unknown_cart_action" }
@@ -474,6 +486,47 @@ export class DataLoaderService {
             return this.loadProductsByCategory(workspaceId, customerDiscount, categoryMatch[1].trim())
           }
           return { type: "EMPTY", reason: "offer_category_not_found" }
+        
+        case "ORDER_OPTIMIZATION_ACTIONS":
+          // 🚚 User selected an option from order optimization menu
+          // Options: 1=SHOW_FROZEN_PRODUCTS, 2=SHOW_REFRIGERATED_PRODUCTS, 3=SHOW_AMBIENT_PRODUCTS, 4=SHOW_CART
+          if (selectIntent.optionId) {
+            logger.info("🚚 [DataLoader] Processing ORDER_OPTIMIZATION_ACTION", {
+              optionId: selectIntent.optionId,
+            })
+            
+            switch (selectIntent.optionId) {
+              case "SHOW_FROZEN_PRODUCTS":
+                // Show products with Frozen transport type
+                return this.loadProductsByTransportType(workspaceId, customerDiscount, "Trasporto congelato")
+              
+              case "SHOW_REFRIGERATED_PRODUCTS":
+                // Show products with Refrigerated transport type
+                return this.loadProductsByTransportType(workspaceId, customerDiscount, "Trasporto refrigerato")
+              
+              case "SHOW_AMBIENT_PRODUCTS":
+                // Show products with Ambient Temperature transport type
+                return this.loadProductsByTransportType(workspaceId, customerDiscount, "Temperatura ambiente")
+
+              case "SHOW_TRANSPORT_PRODUCTS": {
+                const transportLabel =
+                  (selectIntent.optionMetadata as any)?.transportTypeName ||
+                  OptionsMappingService.cleanLabel(selectIntent.resolvedValue).replace(/mostra prodotti/i, "").trim()
+                const targetTransport = transportLabel || "Temperatura ambiente"
+                return this.loadProductsByTransportType(workspaceId, customerDiscount, targetTransport)
+              }
+              
+              case "SHOW_CART":
+                // Go back to cart view
+                return this.loadCart(workspaceId, customerId, customerDiscount)
+              
+              default:
+                logger.warn("🚚 [DataLoader] Unknown ORDER_OPTIMIZATION_ACTION", { optionId: selectIntent.optionId })
+                return { type: "EMPTY", reason: "unknown_optimization_action" }
+            }
+          }
+          logger.error("🚚 [DataLoader] ORDER_OPTIMIZATION_ACTIONS without optionId", { selectIntent })
+          return { type: "EMPTY", reason: "missing_option_id" }
         
         default:
           // ========================================================================
@@ -842,6 +895,88 @@ export class DataLoaderService {
   }
 
   /**
+   * 🚚 Load products by transport type (Frozen, Refrigerated, Ambient Temperature)
+   * Used for Order Optimization feature
+   */
+  private async loadProductsByTransportType(
+    workspaceId: string,
+    customerDiscount: number,
+    transportTypeName: string
+  ): Promise<LoadedData> {
+    try {
+      logger.info("🚚 [DataLoader] Loading products by transport type", {
+        workspaceId,
+        transportTypeName,
+      })
+      
+      const products = await this.prisma.products.findMany({
+        where: {
+          workspaceId,
+          isActive: true,
+          OR: [
+            { transportType: { contains: transportTypeName, mode: "insensitive" } },
+            {
+              productTransportTypes: {
+                some: {
+                  transportType: {
+                    name: { contains: transportTypeName, mode: "insensitive" },
+                  },
+                },
+              },
+            },
+          ],
+        },
+        select: {
+          id: true,
+          name: true,
+          sku: true,
+          description: true,
+          price: true,
+          stock: true,
+          imageUrl: true,
+          region: true,
+          formato: true,
+          transportType: true,
+          certifications: true,
+          allergens: true,
+          productCertifications: {
+            select: {
+              certification: { select: { name: true } },
+            },
+          },
+          productTransportTypes: {
+            select: {
+              transportType: { select: { name: true } },
+            },
+          },
+          productCategories: {
+            select: {
+              category: { select: { id: true, name: true } },
+            },
+          },
+        },
+        orderBy: { name: "asc" },
+        take: 20, // Limit to avoid too many results
+      })
+
+      logger.info("🚚 [DataLoader] Found products by transport type", {
+        transportTypeName,
+        count: products.length,
+      })
+
+      if (products.length === 0) {
+        return { type: "EMPTY", reason: `no_products_for_transport_${transportTypeName}` }
+      }
+
+      const productData = this.mapProducts(products, customerDiscount)
+      return { type: "PRODUCTS", products: productData }
+    } catch (error) {
+      logger.error("❌ [DataLoader] Error loading products by transport type", { error, transportTypeName })
+      return { type: "ERROR", error: "Failed to load products by transport type" }
+    }
+  }
+
+  /**
    * 🆕 Load product by SKU (exact match - more reliable than name search)
    */
   private async loadProductBySku(
@@ -1084,9 +1219,44 @@ export class DataLoaderService {
 
       const totalAmount = cartItems.reduce((sum, item) => sum + item.totalPrice, 0)
 
+      // Calculate transport costs (Feature: optimize-transport)
+      let transport: TransportCostBreakdown | undefined = undefined
+      try {
+        const orderOptimizationService = new OrderOptimizationService(this.prisma)
+        const isTransportConfigured = await orderOptimizationService.hasTransportPricesConfigured(workspaceId)
+        
+        if (isTransportConfigured && cartItems.length > 0) {
+          const analysis = await orderOptimizationService.analyzeCart(workspaceId, customerId)
+          
+          if (!analysis.isEmpty && analysis.transports.length > 0) {
+            const byType: Record<string, { itemCount: number; cost: number }> = {}
+            for (const t of analysis.transports) {
+              byType[t.transportTypeName] = { itemCount: t.productCount, cost: t.transportPrice }
+            }
+            transport = {
+              byType,
+              totalTransportCost: analysis.totalTransportCost,
+            }
+          }
+        }
+      } catch (transportError) {
+        logger.warn("⚠️ [DataLoader] Could not calculate transport costs", {
+          error: transportError instanceof Error ? transportError.message : transportError,
+          workspaceId,
+        })
+        // Continue without transport info
+      }
+
       return {
         type: "CART",
-        cart: { id: cart.id, items: cartItems, itemCount: cartItems.length, totalAmount, isEmpty: cartItems.length === 0 },
+        cart: { 
+          id: cart.id, 
+          items: cartItems, 
+          itemCount: cartItems.length, 
+          totalAmount, 
+          isEmpty: cartItems.length === 0,
+          transport,
+        },
       }
     } catch (error) {
       logger.error("❌ [DataLoader] Error loading cart", { 
@@ -2124,6 +2294,11 @@ Return ONLY the JSON array of indices for products that match "${query}":`,
       certs = p.certifications.map(String)
     }
     const allergenList = Array.isArray(p.allergens) ? p.allergens.map(String) : []
+    let transportType = p.transportType || undefined
+    if (!transportType && Array.isArray(p.productTransportTypes) && p.productTransportTypes.length > 0) {
+      transportType = p.productTransportTypes[0]?.transportType?.name || transportType
+    }
+
     return {
       id: p.id,
       name: p.name,
@@ -2139,7 +2314,7 @@ Return ONLY the JSON array of indices for products that match "${query}":`,
       formato: p.formato || undefined,
       certifications: certs,
       allergens: allergenList,
-      transportType: p.transportType || undefined,
+      transportType,
       isAvailable: p.stock > 0,
     }
   }

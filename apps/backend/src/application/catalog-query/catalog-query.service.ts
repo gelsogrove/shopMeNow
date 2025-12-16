@@ -12,7 +12,7 @@ import { CatalogQueryBuilder } from "./query-builder.service"
 import { CatalogQuery } from "./catalog-query.schema"
 import { executeCatalogQuery, CatalogQueryResult } from "./query-executor"
 
-type GroupField = "category" | "region" | "certification"
+type GroupField = "category" | "region" | "certification" | "transport"
 type GroupDescriptor = {
   key: string
   ids: string[]
@@ -173,11 +173,15 @@ export class CatalogQueryService {
           imageUrl: true,
           region: true,
           formato: true,
+          transportType: true,
           productCategories: {
             select: { category: { select: { id: true, name: true } } },
           },
           productCertifications: {
             select: { certification: { select: { name: true } } },
+          },
+          productTransportTypes: {
+            select: { transportType: { select: { name: true } } },
           },
           certifications: true,
           allergens: true,
@@ -217,6 +221,10 @@ export class CatalogQueryService {
       formato: product.formato || undefined,
       certifications: certs,
       allergens,
+      transportType:
+        product.transportType ||
+        product.productTransportTypes?.[0]?.transportType?.name ||
+        undefined,
       isAvailable: product.stock > 0,
     }
   }
@@ -228,6 +236,17 @@ export class CatalogQueryService {
     customerDiscount: number,
     groupByField?: GroupField
   ): StructuredResponse {
+    if (products.length === 1) {
+      const context = this.buildResponseContext(intentType, customerLanguage, customerDiscount)
+      return {
+        type: "PRODUCT_DETAIL",
+        data: {
+          product: products[0],
+        },
+        formatting: { ...RESPONSE_DEFAULT_FORMATTING },
+        context,
+      }
+    }
     const listItems: ListItem[] = products.map((product, index) => ({
       number: index + 1,
       id: product.id,
@@ -265,7 +284,7 @@ export class CatalogQueryService {
         items: listItems,
         count: products.length,
       },
-      formatting: { ...RESPONSE_DEFAULT_FORMATTING },
+      formatting: { ...RESPONSE_DEFAULT_FORMATTING, showTotal: false },
       context,
     }
   }

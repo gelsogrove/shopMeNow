@@ -108,4 +108,50 @@ export class TransportTypeRepository {
       orderBy: { name: "asc" },
     })
   }
+
+  /**
+   * Get active transport types with prices for a workspace
+   * Used for transport cost calculation in cart optimization
+   * @param workspaceId Workspace ID
+   * @returns Active transport types with prices
+   */
+  async findActiveWithPrices(
+    workspaceId: string
+  ): Promise<Array<{ id: string; name: string; price: number; isActive: boolean }>> {
+    const transportTypes = await this.prisma.transportType.findMany({
+      where: { 
+        workspaceId,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        isActive: true,
+      },
+      orderBy: { name: "asc" },
+    })
+    
+    // Convert Decimal to number for price
+    return transportTypes.map(t => ({
+      ...t,
+      price: Number(t.price),
+    }))
+  }
+
+  /**
+   * Check if workspace has transport types with prices configured
+   * @param workspaceId Workspace ID
+   * @returns true if at least one active transport type has price > 0
+   */
+  async hasConfiguredPrices(workspaceId: string): Promise<boolean> {
+    const count = await this.prisma.transportType.count({
+      where: {
+        workspaceId,
+        isActive: true,
+        price: { gt: 0 },
+      },
+    })
+    return count > 0
+  }
 }

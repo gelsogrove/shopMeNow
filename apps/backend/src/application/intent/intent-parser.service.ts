@@ -287,6 +287,7 @@ CART:
 - REMOVE_FROM_CART:productName - User wants to remove a specific product from cart
 - CLEAR_CART - User wants to empty/clear the entire cart
 - CHECKOUT - User wants to proceed to checkout/confirm order
+- EXAMPLES: "fammi vedere il carrello", "mostra il carrello", "show me my cart" → VIEW_CART
 
 ORDERS:
 - VIEW_ORDERS - User wants to see their orders

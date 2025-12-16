@@ -86,7 +86,7 @@ jest.mock("../../../src/services/calling-functions.service", () => ({
 import { addProduct, AddProductRequest } from "../../../src/domain/calling-functions/addProduct"
 import { searchProduct, SearchProductRequest } from "../../../src/domain/calling-functions/searchProduct"
 import { resetCart, ResetCartRequest } from "../../../src/domain/calling-functions/resetCart"
-import { confirmOrder, ConfirmOrderRequest } from "../../../src/domain/calling-functions/confirmOrder"
+import { confirmOrder, ConfirmOrderRequest } from "../../../src/domain/calling-functions/ConfirmOrder"
 import { contactOperator, ContactOperatorRequest } from "../../../src/domain/calling-functions/contactOperator"
 
 describe("WorkspaceId Filter in Calling Functions", () => {

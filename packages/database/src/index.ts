@@ -12,8 +12,15 @@ const envPaths = [
   path.resolve(__dirname, '../../../../.env'),
 ]
 for (const envPath of envPaths) {
-  dotenv.config({ path: envPath })
-  if (process.env.DATABASE_URL) break
+  const result = dotenv.config({ path: envPath })
+  if (result.parsed?.DATABASE_URL || process.env.DATABASE_URL) break
+}
+
+// Validate DATABASE_URL is set
+const DATABASE_URL = process.env.DATABASE_URL
+if (!DATABASE_URL) {
+  console.error('❌ DATABASE_URL is not set! Tried paths:', envPaths)
+  throw new Error('DATABASE_URL environment variable is required')
 }
 
 import { PrismaClient, Prisma } from './generated/prisma'
@@ -21,7 +28,7 @@ import { PrismaPg } from '@prisma/adapter-pg'
 
 // Initialize the PostgreSQL adapter
 const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: DATABASE_URL,
 })
 
 // Singleton Prisma client instance

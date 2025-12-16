@@ -18,12 +18,18 @@ const TextFilter = z.object({
   value: z.string().min(1),
 })
 
+const TransportFilter = z.object({
+  field: z.literal("transport"),
+  op: z.literal("eq"),
+  value: z.string().min(1),
+})
+
 export const CatalogQuerySchema = z
   .object({
     entity: z.enum(["products", "offers"]),
     intent: z.enum(["list", "grouped_list", "aggregate", "show_offers"]),
-    filters: z.array(z.union([PriceFilter, InFilter, TextFilter])).optional(),
-    groupBy: z.array(z.enum(["category", "region", "certification"])).optional(),
+    filters: z.array(z.union([PriceFilter, InFilter, TextFilter, TransportFilter])).optional(),
+    groupBy: z.array(z.enum(["category", "region", "certification", "transport"])).optional(),
     sort: z
       .object({
         field: z.literal("price"),

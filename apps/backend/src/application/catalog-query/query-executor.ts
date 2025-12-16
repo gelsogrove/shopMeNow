@@ -51,6 +51,12 @@ export function executeCatalogQuery(
       continue
     }
 
+    if (filter.field === "transport") {
+      const term = filter.value.toLowerCase()
+      list = list.filter((p) => (p.transportType || "").toLowerCase().includes(term))
+      continue
+    }
+
     if (filter.field === "text") {
       const term = filter.value.toLowerCase()
       list = list.filter((p) => {
@@ -159,7 +165,7 @@ function computeAggregate(
 
 function getGroupKeys(
   product: ProductData,
-  field: "category" | "region" | "certification"
+  field: "category" | "region" | "certification" | "transport"
 ): string[] {
   if (field === "category") {
     return product.categoryName ? [product.categoryName] : []
@@ -171,6 +177,10 @@ function getGroupKeys(
 
   if (field === "certification") {
     return product.certifications?.length ? product.certifications : []
+  }
+
+  if (field === "transport") {
+    return product.transportType ? [product.transportType] : []
   }
 
   return []

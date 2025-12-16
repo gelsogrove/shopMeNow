@@ -19,7 +19,10 @@ export type ListType =
   | "ORDERS"        // "1. #ORD-001 - 05/12/2024"
   | "ORDER_ACTIONS" // "1. Scarica fattura" (actions for a specific order)
   | "CART_ITEMS"    // "1. Mozzarella × 2"
+  | "CART_ACTIONS"  // "1. ✅ Confermare l'ordine" (cart view menu)
   | "SERVICES"      // "1. Confezione Regalo - €30.00"
+  | "OFFER_CATEGORIES" // "1. Vedi prodotti Formaggi in sconto"
+  | "ORDER_OPTIMIZATION_ACTIONS" // "1. 🧊 Mostra prodotti Congelati" (optimization menu)
   | "unknown"       // Fallback for unrecognized list types
 
 // =============================================================================

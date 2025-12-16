@@ -604,28 +604,32 @@ async function main() {
 
   console.log(`✅ Created ${certificationNames.length} certifications`)
 
-  // 6.6 Create Transport Types (Feature 179)
-  console.log("🚚 Creating transport types...")
+  // 6.6 Create Transport Types (Feature 179 + Transport Optimization)
+  console.log("🚚 Creating transport types with prices...")
 
-  const transportTypeNames = [
-    "Ambient Temperature", // Temperatura ambiente
-    "Refrigerated",        // Refrigerato
-    "Frozen",              // Congelato
+  // Transport types with prices (EUR, IVA inclusa)
+  // Prices based on optimize-cart.md spec: Ambiente=8€, Refrigerato=12€, Frozen=15€
+  const transportTypesData = [
+    { name: "Ambient Temperature", price: 8.00 },  // Temperatura ambiente
+    { name: "Refrigerated", price: 12.00 },        // Refrigerato
+    { name: "Frozen", price: 15.00 },              // Congelato
   ]
 
   const transportTypeMap = new Map<string, string>()
 
-  for (const typeName of transportTypeNames) {
+  for (const typeData of transportTypesData) {
     const transportType = await prisma.transportType.create({
       data: {
-        name: typeName,
+        name: typeData.name,
         workspaceId: workspace.id,
+        price: typeData.price,
+        isActive: true,
       },
     })
-    transportTypeMap.set(typeName, transportType.id)
+    transportTypeMap.set(typeData.name, transportType.id)
   }
 
-  console.log(`✅ Created ${transportTypeNames.length} transport types`)
+  console.log(`✅ Created ${transportTypesData.length} transport types with prices`)
 
   // Mapping: category name → supplier company name
   const categoryToSupplier: Record<string, string> = {

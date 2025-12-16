@@ -36,9 +36,11 @@ import { CartRepository } from "../../repositories/cart.repository"
 import { OrderRepository } from "../../repositories/order.repository"
 import { ProductRepository } from "../../repositories/product.repository"
 import { ServiceRepository } from "../../repositories/service.repository"
+import { TransportTypeRepository } from "../../repositories/transport-type.repository"
 import { TemplateLoaderService } from "../services/template-loader.service"
 import { PromptProcessorService } from "../../services/prompt-processor.service"
 import { getSystemContextService, SystemContextService } from "../../services/system-context.service"
+import { OrderOptimizationService } from "../services/order-optimization.service"
 import logger from "../../utils/logger"
 import { CartManagementAgent } from "./CartManagementAgent"
 
@@ -543,7 +545,12 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
       switch (functionName) {
         case "viewCart": {
           const cartResult = await this.cartManagementAgent.getCart(agentContext)
-          return this.formatCartResponse(cartResult)
+          // Use async version with transport costs when viewing cart
+          return await this.formatCartResponseWithTransport(
+            cartResult,
+            context.workspaceId,
+            context.customerId
+          )
         }
 
         case "addItemToCart":
@@ -584,10 +591,17 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
           // Update system context with new cart state
           await this.systemContextService.refreshCartSummary(context.workspaceId, context.customerId)
           
+          // Use async version with transport costs and Premium option 5
+          const formatted = await this.formatCartResponseWithTransport(
+            cartAfterAdd,
+            context.workspaceId,
+            context.customerId
+          )
+          
           return {
             success: allSucceeded,
             message: allSucceeded ? "Items added to cart" : "Some items could not be added",
-            ...this.formatCartResponse(cartAfterAdd),
+            ...formatted,
           }
         }
 
@@ -615,10 +629,15 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
           })
 
           if (!itemToRemove) {
+            const formatted = await this.formatCartResponseWithTransport(
+              cart,
+              context.workspaceId,
+              context.customerId
+            )
             return { 
               success: false, 
               error: `Product "${args.productName || args.sku}" not found in cart`,
-              ...this.formatCartResponse(cart)
+              ...formatted
             }
           }
 
@@ -631,10 +650,17 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
           // Update system context with new cart state
           await this.systemContextService.refreshCartSummary(context.workspaceId, context.customerId)
           
+          // Use async version with transport costs and Premium option 5
+          const formatted = await this.formatCartResponseWithTransport(
+            cartAfterRemove,
+            context.workspaceId,
+            context.customerId
+          )
+          
           return {
             success: removeResult.success,
             message: removeResult.success ? `Removed "${itemToRemove.name}" from cart` : removeResult.error,
-            ...this.formatCartResponse(cartAfterRemove),
+            ...formatted,
           }
         }
 
@@ -663,10 +689,15 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
           })
 
           if (!itemToUpdate) {
+            const formatted = await this.formatCartResponseWithTransport(
+              cart,
+              context.workspaceId,
+              context.customerId
+            )
             return { 
               success: false, 
               error: `Product "${args.productName || args.sku}" not found in cart`,
-              ...this.formatCartResponse(cart)
+              ...formatted
             }
           }
 
@@ -678,10 +709,17 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
             // Update system context with new cart state
             await this.systemContextService.refreshCartSummary(context.workspaceId, context.customerId)
             
+            // Use async version with transport costs and Premium option 5
+            const formatted = await this.formatCartResponseWithTransport(
+              cartAfterRemove,
+              context.workspaceId,
+              context.customerId
+            )
+            
             return {
               success: removeResult.success,
               message: `Removed "${itemToUpdate.name}" from cart`,
-              ...this.formatCartResponse(cartAfterRemove),
+              ...formatted,
             }
           }
 
@@ -697,12 +735,19 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
           // Update system context with new cart state
           await this.systemContextService.refreshCartSummary(context.workspaceId, context.customerId)
           
+          // Use async version with transport costs and Premium option 5
+          const formatted = await this.formatCartResponseWithTransport(
+            cartAfterUpdate,
+            context.workspaceId,
+            context.customerId
+          )
+          
           return {
             success: updateResult.success,
             message: updateResult.success 
               ? `Updated "${itemToUpdate.name}" quantity to ${args.newQuantity}` 
               : updateResult.error,
-            ...this.formatCartResponse(cartAfterUpdate),
+            ...formatted,
           }
         }
 
@@ -977,6 +1022,135 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
   /**
    * Format cart response as a readable text for WhatsApp
    * Returns formatted string with emoji and prices (already discounted from CartManagementAgent)
+   * Now includes transport costs breakdown (Feature: optimize-transport)
+   */
+  private async formatCartResponseWithTransport(
+    cartResult: any,
+    workspaceId: string,
+    customerId: string
+  ): Promise<{ formattedCart: string; cartData: any }> {
+    if (!cartResult.success) {
+      return {
+        formattedCart: "❌ Error loading cart",
+        cartData: cartResult,
+      }
+    }
+
+    if (cartResult.isEmpty || !cartResult.cart?.items?.length) {
+      return {
+        formattedCart: "🛒 Il tuo carrello è vuoto.",
+        cartData: cartResult,
+      }
+    }
+
+    const cart = cartResult.cart
+    const lines: string[] = ["Ecco il tuo carrello:", ""]
+
+    let totalItems = 0
+    for (const item of cart.items) {
+      const name = item.name || item.product?.name || item.service?.name || "Unknown"
+      const quantity = item.quantity || 1
+      totalItems += quantity
+      // unitPrice is already discounted (from CartManagementAgent.getCart)
+      const unitPrice = item.unitPrice || item.product?.price || item.service?.price || 0
+      const itemTotal = item.total || (unitPrice * quantity)
+      
+      // Format with dash only (no numbering on products)
+      lines.push(`- ${quantity}× ${name} - €${itemTotal.toFixed(2)}`)
+    }
+
+    // Calculate product subtotal
+    const productSubtotal = cart.total || cart.items.reduce((sum: number, item: any) => {
+      const price = item.unitPrice || item.product?.price || item.service?.price || 0
+      return sum + (price * (item.quantity || 1))
+    }, 0)
+    
+    lines.push("")
+    lines.push(`📋 Subtotale prodotti: €${productSubtotal.toFixed(2)} (${totalItems} articol${totalItems === 1 ? 'o' : 'i'})`)
+    
+    // 🚚 Transport costs (Feature: optimize-transport)
+    let totalTransportCost = 0
+    try {
+      const orderOptimizationService = new OrderOptimizationService(this.prisma)
+      const isTransportConfigured = await orderOptimizationService.hasTransportPricesConfigured(workspaceId)
+      
+      if (isTransportConfigured) {
+        const analysis = await orderOptimizationService.analyzeCart(workspaceId, customerId)
+        
+        if (!analysis.isEmpty && analysis.transports.length > 0) {
+          lines.push("")
+          lines.push("🚚 **Spedizione:**")
+          
+          for (const transport of analysis.transports) {
+            const emoji = transport.transportTypeName.toLowerCase().includes("frozen") || 
+                         transport.transportTypeName.toLowerCase().includes("congel") ? "🧊" :
+                         transport.transportTypeName.toLowerCase().includes("refriger") || 
+                         transport.transportTypeName.toLowerCase().includes("frigo") ? "❄️" : "📦"
+            lines.push(`   ${emoji} ${transport.transportTypeName}: €${transport.transportPrice.toFixed(2)}`)
+          }
+          
+          // Calculate total: productSubtotal + transport (no "Totale spedizione" line)
+          totalTransportCost = analysis.totalTransportCost
+          const grandTotal = Math.round((productSubtotal + totalTransportCost) * 100) / 100
+          lines.push("")
+          lines.push(`💰 **TOTALE ORDINE**: €${grandTotal.toFixed(2)}`)
+        }
+      }
+    } catch (error) {
+      // If transport calculation fails, just show products total
+      logger.warn("⚠️ Could not calculate transport costs", { error, workspaceId })
+      lines.push("")
+      lines.push(`💰 Totale: €${productSubtotal.toFixed(2)}`)
+    }
+    
+    // Show discount message if applicable
+    const discountPercent = cart.discountApplied || 0
+    if (discountPercent > 0) {
+      lines.push("")
+      lines.push(`🎁 Stai usufruendo del tuo sconto riservato del ${discountPercent}%! I prezzi mostrati includono già lo sconto.`)
+    }
+    
+    
+    const uniqueItemsCount = Array.isArray(cart.items) ? cart.items.length : 0
+    const allowRemoveOption = uniqueItemsCount > 1
+    let actionNumber = 1
+
+    // Check if workspace has Premium/Enterprise plan for optimization option
+    let showOptimizationOption = false
+    try {
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { planType: true }
+      })
+      showOptimizationOption = workspace?.planType === 'PREMIUM' || workspace?.planType === 'ENTERPRISE'
+    } catch (err) {
+      logger.warn("⚠️ Could not check workspace plan type", { error: err, workspaceId })
+    }
+
+    lines.push("")
+    lines.push("Cosa vuoi fare?")
+    lines.push(`${actionNumber++}. ✅ Confermare l'ordine`)
+    lines.push(`${actionNumber++}. 🛍️ Esplorare il catalogo`)
+    if (allowRemoveOption) {
+      lines.push(`${actionNumber++}. 🗑️ Rimuovere un articolo`)
+    }
+    lines.push(`${actionNumber++}. 🧹 Cancella il carrello`)
+    // Option 5: Order optimization (Premium/Enterprise only)
+    if (showOptimizationOption) {
+      lines.push(`${actionNumber++}. 🚚 Ottimizza spedizione`)
+    }
+    lines.push("")
+    lines.push("Rispondi con il numero o scrivi cosa desideri!")
+
+    return {
+      formattedCart: lines.join("\n"),
+      cartData: cartResult,
+    }
+  }
+
+  /**
+   * Format cart response as a readable text for WhatsApp (sync version)
+   * Returns formatted string with emoji and prices (already discounted from CartManagementAgent)
    */
   private formatCartResponse(cartResult: any): { formattedCart: string; cartData: any } {
     if (!cartResult.success) {
@@ -996,7 +1170,6 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
     const cart = cartResult.cart
     const lines: string[] = ["Ecco il tuo carrello:", ""]
 
-    let itemNumber = 1
     let totalItems = 0
     for (const item of cart.items) {
       const name = item.name || item.product?.name || item.service?.name || "Unknown"
@@ -1006,9 +1179,8 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
       const unitPrice = item.unitPrice || item.product?.price || item.service?.price || 0
       const itemTotal = item.total || (unitPrice * quantity)
       
-      // Format price with € prefix
-      lines.push(`**${itemNumber}.** ${quantity}× ${name} - €${itemTotal.toFixed(2)}`)
-      itemNumber++
+      // Format with dash only (no numbering on products)
+      lines.push(`- ${quantity}× ${name} - €${itemTotal.toFixed(2)}`)
     }
 
     // Add total
@@ -1024,7 +1196,7 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
     const discountPercent = cart.discountApplied || 0
     if (discountPercent > 0) {
       lines.push("")
-      lines.push(`💰 Stai usufruendo del tuo sconto riservato del ${discountPercent}%! I prezzi mostrati includono già lo sconto.`)
+      lines.push(`🎁 Stai usufruendo del tuo sconto riservato del ${discountPercent}%! I prezzi mostrati includono già lo sconto.`)
     }
     
     const uniqueItemsCount = Array.isArray(cart.items) ? cart.items.length : 0

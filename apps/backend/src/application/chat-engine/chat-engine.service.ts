@@ -644,6 +644,17 @@ export class ChatEngineService {
     }
   }
 
+  private getTransportEmoji(label?: string): string {
+    const normalized = (label || "").toLowerCase()
+    if (normalized.includes("congel") || normalized.includes("frozen")) {
+      return "🧊"
+    }
+    if (normalized.includes("refriger") || normalized.includes("frigo") || normalized.includes("cold")) {
+      return "❄️"
+    }
+    return "📦"
+  }
+
   private async routeGenericLLMFallback(params: {
     input: ChatEngineInput
     conversationId: string
@@ -700,7 +711,7 @@ export class ChatEngineService {
     }
   }
 
-  private buildCartActionOptions(hasRemovableItems: boolean) {
+  private async buildCartActionOptions(hasRemovableItems: boolean, workspaceId?: string) {
     const options: Array<{ number: number; name: string; id: string }> = []
     let nextNumber = 1
     options.push({ number: nextNumber++, name: "✅ Confermare l'ordine", id: "CONFIRM_ORDER" })
@@ -709,6 +720,22 @@ export class ChatEngineService {
       options.push({ number: nextNumber++, name: "🗑️ Rimuovere un articolo", id: "REMOVE_FROM_CART" })
     }
     options.push({ number: nextNumber++, name: "🧹 Cancella il carrello", id: "CLEAR_CART" })
+    
+    // Option 5: Order optimization (Premium/Enterprise only)
+    if (workspaceId) {
+      try {
+        const workspace = await this.prisma.workspace.findUnique({
+          where: { id: workspaceId },
+          select: { planType: true }
+        })
+        if (workspace?.planType === 'PREMIUM' || workspace?.planType === 'ENTERPRISE') {
+          options.push({ number: nextNumber++, name: "🚚 Ottimizza spedizione", id: "OPTIMIZE_TRANSPORT" })
+        }
+      } catch (err) {
+        logger.warn("⚠️ [ChatEngine] Could not check workspace plan type for optimization option", { error: err, workspaceId })
+      }
+    }
+    
     return options
   }
 
@@ -1255,7 +1282,7 @@ export class ChatEngineService {
       })
 
       // Preprocess: detect short inputs and enrich message for LLM
-      const preprocessResult = messagePreprocessorService.process(input.message)
+      let preprocessResult = messagePreprocessorService.process(input.message)
 
       logger.info("🔍 [ChatEngine] Preprocess result", {
         isShortInput: preprocessResult.isShortInput,
@@ -1400,7 +1427,7 @@ export class ChatEngineService {
           
           // 🛒 CRITICAL: Save CART_ACTIONS mapping so "1" triggers CONFIRM_ORDER, not product search!
           const cartItemCount = this.extractCartItemCountFromFunctionCalls(cartResponse.functionCalls)
-          const cartActions = this.buildCartActionOptions((cartItemCount ?? 2) > 1)
+          const cartActions = await this.buildCartActionOptions((cartItemCount ?? 2) > 1, input.workspaceId)
 
           await this.optionsMappingService.saveMapping({
             workspaceId: input.workspaceId,
@@ -1523,6 +1550,33 @@ export class ChatEngineService {
       // ========================================================================
       // STEP 0.7: Load ChatSession for FSM state management
       // ========================================================================
+
+      if (preprocessResult.inputType === "normal") {
+        const optionsMapping = await loadOptionsMapping()
+        if (optionsMapping?.options?.length) {
+          const normalizedMessage = OptionsMappingService.cleanLabel(input.message).toLowerCase()
+          const matchedOption = optionsMapping.options.find((opt) => {
+            const normalizedLabel = OptionsMappingService.cleanLabel(opt.label).toLowerCase()
+            return normalizedLabel === normalizedMessage
+          })
+
+          if (matchedOption) {
+            logger.info("🎯 [ChatEngine] Text-based selection matched option", {
+              label: matchedOption.label,
+              number: matchedOption.number,
+              listType: optionsMapping.listType,
+            })
+
+            preprocessResult = {
+              ...preprocessResult,
+              isShortInput: true,
+              inputType: "number",
+              extractedNumber: matchedOption.number,
+            }
+          }
+        }
+      }
+
       // 🆕 Load chatSession early so FSM can be used in FAST-PATH
       const chatSession = await this.prisma.chatSession.findFirst({
         where: { 
@@ -1743,6 +1797,7 @@ export class ChatEngineService {
                 customerLanguage: input.customerLanguage,
                 customerName: input.customerName,
                 customerDiscount: input.customerDiscount,
+                disableGrouping: selectIntent.listType === "ORDER_OPTIMIZATION_ACTIONS",
               }
             )
             
@@ -1919,6 +1974,115 @@ export class ChatEngineService {
                   response: confirmMessage,
                   agentUsed: AgentType.CART_MANAGEMENT,
                   tokensUsed: 0,
+                  executionTimeMs: Date.now() - startTime,
+                  wasFAQ: false,
+                  isBlocked: false,
+                  _assistantMessageId: savedMessages?.assistantMessageId,
+                }
+              }
+              
+              // 🚚 Handle OPTIMIZE_TRANSPORT - Premium/Enterprise feature
+              if (action === "OPTIMIZE_TRANSPORT") {
+                logger.info("🚚 [ChatEngine] OPTIMIZE_TRANSPORT action triggered")
+                
+                // Import the OrderOptimizationAgentLLM
+                const { OrderOptimizationAgentLLM } = await import("../agents/OrderOptimizationAgentLLM")
+                const optimizationAgent = new OrderOptimizationAgentLLM(this.prisma)
+                
+                const optimizationStart = Date.now()
+                const optimizationResult = await optimizationAgent.process({
+                  workspaceId: input.workspaceId,
+                  customerId: input.customerId,
+                  customerLanguage: input.customerLanguage || "it",
+                })
+                
+                // Persist response
+                const savedMessages = await this.saveMessages(
+                  input.workspaceId,
+                  input.customerId,
+                  conversationId,
+                  input.message,
+                  optimizationResult.explanation,
+                  AgentType.CART_MANAGEMENT,
+                  optimizationResult.tokensUsed || 0,
+                  {
+                    loadedDataType: "CART_ACTION",
+                    responseType: "OPTIMIZE_TRANSPORT",
+                    llmUsed: true,
+                    steps: [
+                      {
+                        type: "function_call",
+                        agent: "🚚 OrderOptimizationAgentLLM",
+                        timestamp: new Date().toISOString(),
+                        input: { customerId: input.customerId },
+                        output: {
+                          result: {
+                            success: optimizationResult.success,
+                            hasSuggestions: !!optimizationResult.recommendations?.length,
+                          },
+                          executionTimeMs: Date.now() - optimizationStart,
+                        },
+                        duration: Date.now() - optimizationStart,
+                      },
+                    ],
+                    totalTokens: optimizationResult.tokensUsed || 0,
+                    totalCost: 0,
+                    executionTimeMs: Date.now() - optimizationStart,
+                  }
+                )
+                
+                // Clear pending action
+                await this.optionsMappingService.clearPendingAction(conversationId)
+                
+                // 🚚 Save ORDER_OPTIMIZATION options for next interaction
+                const transports = optimizationResult.analysis?.transports ?? []
+                const optimizationOptions: Array<{ number: number; name: string; id: string; metadata?: Record<string, any> }> = []
+                let optionCounter = 1
+
+                if (transports.length > 0) {
+                  for (const transport of transports.slice(0, 3)) {
+                    optimizationOptions.push({
+                      number: optionCounter++,
+                      name: `${this.getTransportEmoji(transport.transportTypeName)} Mostra prodotti ${transport.transportTypeName}`,
+                      id: "SHOW_TRANSPORT_PRODUCTS",
+                      metadata: { transportTypeName: transport.transportTypeName },
+                    })
+                  }
+                } else {
+                  // Fallback options if analysis did not return transport names
+                  optimizationOptions.push(
+                    { number: optionCounter++, name: "🧊 Mostra prodotti Congelati", id: "SHOW_FROZEN_PRODUCTS", metadata: { transportTypeName: "Trasporto congelato" } },
+                    { number: optionCounter++, name: "❄️ Mostra prodotti Refrigerati", id: "SHOW_REFRIGERATED_PRODUCTS", metadata: { transportTypeName: "Trasporto refrigerato" } },
+                    { number: optionCounter++, name: "📦 Mostra prodotti Temperatura Ambiente", id: "SHOW_AMBIENT_PRODUCTS", metadata: { transportTypeName: "Temperatura ambiente" } },
+                  )
+                }
+
+                optimizationOptions.push({
+                  number: optionCounter++,
+                  name: "🛒 Torna al carrello",
+                  id: "SHOW_CART",
+                })
+
+                await this.optionsMappingService.saveMapping({
+                  workspaceId: input.workspaceId,
+                  conversationId,
+                  customerId: input.customerId,
+                  responseText: optimizationResult.explanation,
+                  items: optimizationOptions,
+                  listType: "ORDER_OPTIMIZATION_ACTIONS",
+                })
+                
+                return {
+                  message: optimizationResult.explanation,
+                  agentType: AgentType.CART_MANAGEMENT,
+                  wasHandled: true,
+                  intent: "CART_ACTION",
+                  confidence: "HIGH",
+                  source: "PATTERN",
+                  processingTimeMs: Date.now() - startTime,
+                  response: optimizationResult.explanation,
+                  agentUsed: AgentType.CART_MANAGEMENT,
+                  tokensUsed: optimizationResult.tokensUsed || 0,
                   executionTimeMs: Date.now() - startTime,
                   wasFAQ: false,
                   isBlocked: false,
@@ -2321,7 +2485,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             // 🛒 Save CART_ACTIONS for CART_VIEW (guided cart options)
             if (structuredResponse.type === "CART_VIEW" || structuredResponse.type === "CART_UPDATED") {
               const cartItems = structuredResponse.data.items || []
-              const cartActions = this.buildCartActionOptions(cartItems.length > 1)
+              const cartActions = await this.buildCartActionOptions(cartItems.length > 1, input.workspaceId)
               
               await this.optionsMappingService.saveMapping({
                 workspaceId: input.workspaceId,
@@ -2629,7 +2793,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             
             // 🛒 CRITICAL: Save CART_ACTIONS mapping so "1" triggers CONFIRM_ORDER, not product search!
             const cartItemCount = this.extractCartItemCountFromFunctionCalls(cartResponse.functionCalls)
-            const cartActions = this.buildCartActionOptions((cartItemCount ?? 2) > 1)
+            const cartActions = await this.buildCartActionOptions((cartItemCount ?? 2) > 1, input.workspaceId)
 
             await this.optionsMappingService.saveMapping({
               workspaceId: input.workspaceId,
@@ -2890,7 +3054,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           if (cartResponse.output.includes("Cosa vuoi fare?") || 
               cartResponse.output.includes("Ecco il tuo carrello")) {
             const cartItemCount = this.extractCartItemCountFromFunctionCalls(cartResponse.functionCalls)
-            const cartActions = this.buildCartActionOptions((cartItemCount ?? 2) > 1)
+            const cartActions = await this.buildCartActionOptions((cartItemCount ?? 2) > 1, input.workspaceId)
             
             await this.optionsMappingService.saveMapping({
               workspaceId: input.workspaceId,
@@ -3253,6 +3417,26 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       // ========================================================================
       // STEP 4: Build structured response
       // ========================================================================
+      
+      // Check if workspace has Premium/Enterprise plan for optimization option
+      let showOptimizeOption = false
+      if (finalLoadedData.type === "CART") {
+        try {
+          const workspace = await this.prisma.workspace.findUnique({
+            where: { id: input.workspaceId },
+            select: { planType: true }
+          })
+          const eligiblePlan = workspace?.planType === 'PREMIUM' || workspace?.planType === 'ENTERPRISE'
+          const transportTypes = finalLoadedData.cart?.transport
+            ? Object.keys(finalLoadedData.cart.transport.byType || {})
+            : []
+          const hasMultipleTransports = transportTypes.length >= 2
+          showOptimizeOption = eligiblePlan && hasMultipleTransports
+        } catch (err) {
+          logger.warn("⚠️ [ChatEngine] Could not check workspace plan type for optimization option", { error: err, workspaceId: input.workspaceId })
+        }
+      }
+      
       const structuredResponse =
         structuredResponseOverride ??
         this.responseBuilder.build(intentResult.intent, finalLoadedData as LoadedData, {
@@ -3260,6 +3444,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           customerLanguage: input.customerLanguage || "it",
           workspaceId: input.workspaceId,
           customerDiscount: input.customerDiscount,
+          showOptimizeOption,
         })
 
       logger.info("🏗️ [ChatEngine] Response built", { type: structuredResponse.type })
@@ -3456,7 +3641,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       // For CART_VIEW/CART_UPDATED: save CART_ACTIONS mapping
       if (structuredResponse.type === "CART_VIEW" || structuredResponse.type === "CART_UPDATED") {
         const cartItems = structuredResponse.data.items || []
-        const cartActions = this.buildCartActionOptions(cartItems.length > 1)
+        const cartActions = await this.buildCartActionOptions(cartItems.length > 1, input.workspaceId)
         
         await this.optionsMappingService.saveMapping({
           workspaceId: input.workspaceId,

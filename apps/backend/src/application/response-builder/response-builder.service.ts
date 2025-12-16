@@ -45,6 +45,8 @@ export type ResponseType =
   | "CART_VIEW"
   | "CART_EMPTY"
   | "CART_UPDATED"
+  | "CART_ACTION"  // Cart action (CONFIRM_ORDER, SHOW_PRODUCTS, REMOVE_FROM_CART, OPTIMIZE_TRANSPORT)
+  | "CART_REMOVAL_OPTIONS"  // Cart removal options list
   | "ORDER_LIST"
   | "ORDER_DETAIL"
   | "ORDER_NOT_FOUND"
@@ -150,6 +152,8 @@ export interface ResponseContext {
   customerLanguage: string
   hasDiscount: boolean
   discountPercent: number
+  showOptimizeOption?: boolean  // Show "Ottimizza spedizione" option for Premium/Enterprise
+  disableGrouping?: boolean     // Force simple lists even when count > threshold
 }
 
 // ================================================================================
@@ -186,6 +190,8 @@ export class ResponseBuilderService {
       customerLanguage?: string
       workspaceId: string
       customerDiscount?: number  // Customer's discount percentage (0-100)
+      showOptimizeOption?: boolean  // Show "Ottimizza spedizione" option for Premium/Enterprise
+      disableGrouping?: boolean
     }
   ): StructuredResponse {
     logger.info("🏗️ [ResponseBuilder] Building response", {
@@ -200,6 +206,8 @@ export class ResponseBuilderService {
       customerLanguage: options.customerLanguage || "it",
       hasDiscount: discountPercent > 0,
       discountPercent,
+      showOptimizeOption: options.showOptimizeOption,
+      disableGrouping: options.disableGrouping,
     }
 
     // Handle errors first
@@ -355,63 +363,10 @@ export class ResponseBuilderService {
 
     // 🎯 OPTIMIZATION: If only 1 product, skip list and show detail directly
     if (products.length === 1) {
-      const product = products[0]
-      logger.info("🎯 [ResponseBuilder] Single product found - showing detail directly", {
-        productName: product.name,
-        sku: product.sku,
-      })
+      const [product] = products
       return {
         type: "PRODUCT_DETAIL",
-        data: {
-          product: {
-            id: product.id,
-            name: product.name,
-            sku: product.sku,
-            price: product.price,
-            priceWithDiscount: product.priceWithDiscount,
-            description: product.description,
-            stock: product.stock,
-            isAvailable: product.isAvailable,
-            categoryName: product.categoryName,
-            region: product.region,
-            formato: product.formato,
-            certifications: product.certifications || [],
-            allergens: product.allergens || [],
-            transportType: product.transportType,
-          },
-        },
-        formatting: DEFAULT_FORMATTING,
-        context,
-      }
-    }
-
-    // 🎯 If a single product matches, skip the numbered list and show detail
-    if (products.length === 1) {
-      const product = products[0]
-      logger.info("🎯 [ResponseBuilder] Single product result - returning detail", {
-        productName: product.name,
-        sku: product.sku,
-      })
-      return {
-        type: "PRODUCT_DETAIL",
-        data: {
-          product: {
-            id: product.id,
-            name: product.name,
-            sku: product.sku,
-            price: product.price,
-            priceWithDiscount: product.priceWithDiscount,
-            description: product.description,
-            stock: product.stock,
-            isAvailable: product.isAvailable,
-            categoryName: product.categoryName,
-            region: product.region,
-            formato: product.formato,
-            certifications: product.certifications || [],
-            allergens: product.allergens || [],
-            transportType: product.transportType,
-          },
-        },
+        data: { product },
         formatting: DEFAULT_FORMATTING,
         context,
       }
@@ -419,7 +374,7 @@ export class ResponseBuilderService {
 
     // RULE: If >5 products, try to group by category
     // But only if we can create 2+ meaningful groups
-    if (products.length > DEFAULT_FORMATTING.maxItemsBeforeGroup) {
+    if (!context.disableGrouping && products.length > DEFAULT_FORMATTING.maxItemsBeforeGroup) {
       const grouped = this.buildGroupedProducts(products, context)
       
       // 🔧 FIX: PRODUCT_NEEDS_SMART_GROUPING should be returned directly!

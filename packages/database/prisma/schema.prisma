@@ -254,6 +254,8 @@ model TransportType {
   id                      String                   @id @default(uuid())
   name                    String
   workspaceId             String
+  price                   Decimal                  @db.Decimal(10, 2) @default(0)
+  isActive                Boolean                  @default(true)
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
   workspace               Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -262,6 +264,7 @@ model TransportType {
   @@unique([workspaceId, name])
   @@index([workspaceId])
   @@index([name])
+  @@index([isActive])
   @@map("TransportType")
 }
 
