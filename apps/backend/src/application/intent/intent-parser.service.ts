@@ -269,6 +269,7 @@ PRODUCT_SEARCH:
 - SHOW_PRODUCTS - User wants to see ALL products (lista prodotti, mostra prodotti, tutti i prodotti)
 - SEARCH_PRODUCTS:query - User is searching for SPECIFIC products (not "all products")
 - SHOW_OFFERS - User wants to see offers/discounts/promotions
+- PRODUCT_CONTEXT:question - User is asking for context/info/advice about the CURRENT product being shown (recipes, pairings, ingredients, availability, certifications, transport, etc.) without asking to modify cart. Only use if the last assistant message (or conversation state) indicates they are viewing a product detail.
 
 AVAILABLE CATEGORIES: ${categoryNames}
 NOTE: Use semantic understanding to map user queries to actual categories.
@@ -278,6 +279,7 @@ Map their intent to the matching category from the list above.
 IMPORTANT: 
 - "dammi lista prodotti", "mostra tutti i prodotti", "che prodotti avete" = SHOW_PRODUCTS
 - "prodotti BIO", "formaggi freschi", "cerca pecorino" = SEARCH_PRODUCTS:query
+- If the user asks "che ricetta posso fare?", "come si conserva?", "con cosa abbino questo?", and they are in a product detail context, return PRODUCT_CONTEXT with the question after the colon.
 
 CART:
 - VIEW_CART - User wants to see their cart, check cart contents
@@ -288,7 +290,7 @@ CART:
 
 ORDERS:
 - VIEW_ORDERS - User wants to see their orders
-- ORDER_DETAILS:orderCode - User wants details of a specific order
+- ORDER_DETAILS:orderCode - User wants details of a specific order. If the user asks for "ultimo ordine", "last order", "ordine più recente" or similar without providing a code, return ORDER_DETAILS with NO parameter (the system will automatically fetch the latest order).
 - REPEAT_ORDER - User wants to repeat/reorder a previous order
 
 SERVICES:
@@ -382,7 +384,8 @@ ${context.lastAssistantMessage ? `\nLast bot message: "${context.lastAssistantMe
   private parseClassification(classification: string): Intent | null {
     // Remove any surrounding quotes that the LLM might have added
     const cleanClassification = classification.replace(/^["'\s]+|["'\s]+$/g, "")
-    const [intentType, param] = cleanClassification.split(":")
+    const [intentType, ...rest] = cleanClassification.split(":")
+    const param = rest.length ? rest.join(":") : undefined
     
     switch (intentType.trim().toUpperCase()) {
       case "SHOW_CATEGORIES":
@@ -444,11 +447,12 @@ ${context.lastAssistantMessage ? `\nLast bot message: "${context.lastAssistantMe
         }
         return { type: "REPEAT_ORDER" }  // Repeat last order
         
-      case "ORDER_DETAILS":
-        if (param) {
-          return { type: "ORDER_DETAILS", orderCode: param.trim() }
-        }
-        return { type: "VIEW_ORDERS" }
+      case "ORDER_DETAILS": {
+        const orderCode = param?.trim()
+        return orderCode
+          ? { type: "ORDER_DETAILS", orderCode }
+          : { type: "ORDER_DETAILS" }
+      }
         
       case "ASK_IDENTITY":
         return { type: "ASK_IDENTITY" }
@@ -495,6 +499,9 @@ ${context.lastAssistantMessage ? `\nLast bot message: "${context.lastAssistantMe
           return { type: "SHOW_SERVICE", serviceName: param.trim() }
         }
         return { type: "VIEW_SERVICES" }
+
+      case "PRODUCT_CONTEXT":
+        return { type: "PRODUCT_CONTEXT", query: param?.trim() || "" }
         
       case "UNKNOWN":
       default:

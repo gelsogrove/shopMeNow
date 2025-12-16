@@ -60,6 +60,11 @@ export interface ShowProductsIntent {
   type: "SHOW_PRODUCTS"
 }
 
+export interface ProductContextIntent {
+  type: "PRODUCT_CONTEXT"
+  query: string
+}
+
 // =============================================================================
 // CART INTENTS
 // =============================================================================
@@ -102,7 +107,7 @@ export interface ViewOrdersIntent {
 
 export interface OrderDetailsIntent {
   type: "ORDER_DETAILS"
-  orderCode: string
+  orderCode?: string
 }
 
 export interface RepeatOrderIntent {
@@ -156,6 +161,7 @@ export interface SelectOptionIntent {
   listType: ListType
   skus?: string[]  // 🆕 For smart grouping: SKUs of products in the selected group
   optionId?: string  // 🆕 For actions: the ID of the selected option (e.g., "SEND_INVOICE", "REPEAT_ORDER")
+  optionMetadata?: Record<string, any> // 🆕 Additional payload for the selected option
 }
 
 // =============================================================================
@@ -228,6 +234,7 @@ export type Intent =
   | ShowGroupIntent
   | ShowProductIntent
   | ShowProductsIntent
+  | ProductContextIntent
   | SearchProductsIntent
   | ShowOffersIntent
   
@@ -321,6 +328,7 @@ export function isProductSearchIntent(intent: Intent): intent is
   | ShowGroupIntent
   | ShowProductIntent 
   | ShowProductsIntent
+  | ProductContextIntent
   | SearchProductsIntent
   | ShowOffersIntent {
   return [
@@ -329,6 +337,7 @@ export function isProductSearchIntent(intent: Intent): intent is
     "SHOW_GROUP",
     "SHOW_PRODUCT",
     "SHOW_PRODUCTS",
+    "PRODUCT_CONTEXT",
     "SEARCH_PRODUCTS",
     "SHOW_OFFERS"
   ].includes(intent.type)

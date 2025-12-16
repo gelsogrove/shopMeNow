@@ -20,10 +20,12 @@ Rules:
 - Do NOT use markdown.
 - When the user asks to group items (e.g., "raggruppati per regione", "group by category", "divisi per certificazione"), set the \`groupBy\` array with the requested field ("region", "category", or "certification").
 - Never invent categories/regions/certifications; if unknown, prefer text filter.
-- If request is ambiguous, return: {"entity":"products","intent":"list","filters":[{"field":"text","op":"contains","value":"<user_terms>"}]}
+- If the user simply wants to browse the catalog (e.g., "che prodotti avete?", "fammi vedere i prodotti", "mostra cosa vendete") return a plain list with NO filters: {"entity":"products","intent":"list"}
+- Use text filters ONLY when the user clearly specifies a keyword to search (e.g., "prodotti con pistacchio", "offerte sul tartufo").
 - You MUST NOT include additional keys.
 
 Examples:
+- "Che prodotti avete?" → {"entity":"products","intent":"list"}
 - "Mostra i prodotti raggruppati per categoria" → {"entity":"products","intent":"list","groupBy":["category"]}
 - "Lista prodotti raggruppati per regione d'Italia" → {"entity":"products","intent":"list","groupBy":["region"]}
 - "Prodotti divisi per certificazioni" → {"entity":"products","intent":"list","groupBy":["certification"]}`

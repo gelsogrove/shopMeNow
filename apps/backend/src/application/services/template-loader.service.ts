@@ -32,6 +32,7 @@ const TEMPLATE_FILES: Record<string, string> = {
   SECURITY: "06-security.template.md",
   TRANSLATION: "07-translation.template.md",
   SUMMARY_AGENT: "08-summary.template.md",
+  PRODUCT_CONTEXT: "09-product-context.template.md",
 }
 
 // Shared agents (always from root templates)

@@ -249,7 +249,9 @@ export class ResponseBuilderService {
         return this.buildOffersResponse(loadedData.offers, context)
 
       case "ORDER_ACTION":
-        return this.buildOrderActionResponse(loadedData.action, context)
+        return this.buildOrderActionResponse(loadedData.action, context, {
+          orderCode: loadedData.orderCode,
+        })
 
       case "CART_ACTION":
         // CART_ACTION is handled directly in chat-engine, this is a fallback
@@ -328,6 +330,7 @@ export class ResponseBuilderService {
         ...DEFAULT_FORMATTING,
         showPrices: false,
         showStock: false,
+        showTotal: false,
       },
       context,
     }
@@ -374,6 +377,39 @@ export class ResponseBuilderService {
             formato: product.formato,
             certifications: product.certifications || [],
             allergens: product.allergens || [],
+            transportType: product.transportType,
+          },
+        },
+        formatting: DEFAULT_FORMATTING,
+        context,
+      }
+    }
+
+    // 🎯 If a single product matches, skip the numbered list and show detail
+    if (products.length === 1) {
+      const product = products[0]
+      logger.info("🎯 [ResponseBuilder] Single product result - returning detail", {
+        productName: product.name,
+        sku: product.sku,
+      })
+      return {
+        type: "PRODUCT_DETAIL",
+        data: {
+          product: {
+            id: product.id,
+            name: product.name,
+            sku: product.sku,
+            price: product.price,
+            priceWithDiscount: product.priceWithDiscount,
+            description: product.description,
+            stock: product.stock,
+            isAvailable: product.isAvailable,
+            categoryName: product.categoryName,
+            region: product.region,
+            formato: product.formato,
+            certifications: product.certifications || [],
+            allergens: product.allergens || [],
+            transportType: product.transportType,
           },
         },
         formatting: DEFAULT_FORMATTING,
@@ -425,6 +461,7 @@ export class ResponseBuilderService {
       formatting: {
         ...DEFAULT_FORMATTING,
         showStock: products.some((p) => !p.isAvailable),
+        showTotal: false,
       },
       context,
     }
@@ -768,12 +805,13 @@ export class ResponseBuilderService {
    * Returns ORDER_ACTION type for the chat-engine to execute the calling function
    */
   private buildOrderActionResponse(
-    action: "SEND_INVOICE" | "REPEAT_ORDER" | "SEND_CREDIT_NOTES",
-    context: ResponseContext
+    action: "SEND_INVOICE" | "REPEAT_ORDER" | "SEND_CREDIT_NOTES" | "ADD_ORDER_NOTE",
+    context: ResponseContext,
+    extras?: { orderCode?: string }
   ): StructuredResponse {
     return {
       type: "ORDER_ACTION",
-      data: { action },
+      data: { action, orderCode: extras?.orderCode },
       formatting: {
         ...DEFAULT_FORMATTING,
         showNumbers: false,

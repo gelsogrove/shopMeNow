@@ -18,6 +18,7 @@
 import { prisma } from "@echatbot/database"
 import { PriceCalculationService } from "../../application/services/price-calculation.service"
 import logger from "../../utils/logger"
+import type { AgentOptionMapping } from "../../types/option-mapping.types"
 
 export interface ConfirmOrderRequest {
   customerId: string
@@ -32,6 +33,7 @@ export interface ConfirmOrderResult {
   itemsCount?: number
   timestamp: string
   error?: string
+  nextActions?: AgentOptionMapping
 }
 
 /**
@@ -276,19 +278,52 @@ Il cliente attende conferma e dettagli di pagamento.
     await prisma.$disconnect()
 
     // 9. Return success message (English - will be translated by Translation Agent)
+    const finalMessage = [
+      `✅ Grazie {{nameUser}}!`,
+      ``,
+      `📦 Il tuo ordine è stato registrato.`,
+      `• Codice ordine: **${order.orderCode}**`,
+      `• Totale: €${totalAmount.toFixed(2)}`,
+      `• Articoli nel carrello: ${order.items.length}`,
+      ``,
+      `🔐 Il tuo carrello è stato inviato. Controlla il tuo indirizzo di spedizione qui:`,
+      `[LINK_PROFILE_WITH_TOKEN]`,
+      `Per ragioni di sicurezza il link con il token resta valido {{TOKEN_DURATION}}.`,
+      ``,
+      `📲 Ti contatteremo al più presto su questo canale per la conferma e i dettagli del pagamento.`,
+      ``,
+      `Seleziona un'opzione:`,
+      `1. Aggiungere note all'ordine`,
+      `2. Vedere la lista degli ordini`,
+    ].join("\n")
+
+    const nextActions: AgentOptionMapping = {
+      type: "numbered",
+      listType: "ORDER_ACTIONS",
+      currentOrderCode: order.orderCode,
+      options: [
+        {
+          number: 1,
+          label: "Aggiungere note all'ordine",
+          id: "ADD_ORDER_NOTE",
+          metadata: { orderCode: order.orderCode },
+        },
+        {
+          number: 2,
+          label: "Vedere la lista degli ordini",
+          id: "VIEW_ORDERS",
+        },
+      ],
+    }
+
     return {
       success: true,
-      message:
-        `✅ Thank you {{nameUser}}!\n\n` +
-        `📦 **Order ${order.orderCode}** has been placed successfully!\n\n` +
-        `💰 Total: €${totalAmount.toFixed(2)}\n` +
-        `📝 Items: ${order.items.length}\n\n` +
-        `You will receive a confirmation email shortly.\n\n` +
-        `Once confirmed by {{agentName}}, we will send you payment details and estimated delivery time on this channel. 📱`,
+      message: finalMessage,
       orderCode: order.orderCode,
       orderTotal: totalAmount,
       itemsCount: order.items.length,
       timestamp: new Date().toISOString(),
+      nextActions,
     }
   } catch (error) {
     logger.error("❌ Error in ConfirmOrder:", error)

@@ -60,6 +60,7 @@ export interface ProductData {
   formato?: string
   certifications: string[]
   allergens: string[]
+  transportType?: string
   isAvailable: boolean
 }
 
@@ -183,7 +184,7 @@ export type LoadedData =
   | { type: "FAQ"; faqs: FAQData[]; query: string }
   | { type: "PROFILE"; profile: CustomerProfileData }
   | { type: "OFFERS"; offers: OfferData[] }
-  | { type: "ORDER_ACTION"; action: "SEND_INVOICE" | "REPEAT_ORDER" | "SEND_CREDIT_NOTES"; orderCode?: string }
+  | { type: "ORDER_ACTION"; action: "SEND_INVOICE" | "REPEAT_ORDER" | "SEND_CREDIT_NOTES" | "ADD_ORDER_NOTE"; orderCode?: string }
   | { type: "CART_ACTION"; action: "CONFIRM_ORDER" | "SHOW_PRODUCTS" | "REMOVE_FROM_CART" }
   | { type: "CART_REMOVAL_OPTIONS"; items: CartRemovalItemData[] }
   | { type: "AGENT_INFO"; agentInfo: AgentInfoData }
@@ -360,9 +361,25 @@ export class DataLoaderService {
             logger.info("📦 [DataLoader] Using optionId for order action", {
               optionId: selectIntent.optionId,
             })
-            return { 
-              type: "ORDER_ACTION", 
-              action: selectIntent.optionId as "SEND_INVOICE" | "REPEAT_ORDER" | "SEND_CREDIT_NOTES"
+            if (selectIntent.optionId === "VIEW_ORDERS") {
+              return this.loadOrders(workspaceId, customerId)
+            }
+            const metadataOrderCode = (selectIntent.optionMetadata as any)?.orderCode
+            if (selectIntent.optionId === "ADD_ORDER_NOTE") {
+              return {
+                type: "ORDER_ACTION",
+                action: "ADD_ORDER_NOTE",
+                orderCode: metadataOrderCode,
+              }
+            }
+            return {
+              type: "ORDER_ACTION",
+              action: selectIntent.optionId as
+                | "SEND_INVOICE"
+                | "REPEAT_ORDER"
+                | "SEND_CREDIT_NOTES"
+                | "ADD_ORDER_NOTE",
+              orderCode: metadataOrderCode,
             }
           }
           // 🆕 If no optionId, this is an error - should not happen with clean architecture
@@ -393,6 +410,10 @@ export class DataLoaderService {
               case "REMOVE_FROM_CART":
                 // User wants to remove an item → show cart items with removal options
                 return this.loadCartForRemoval(workspaceId, customerId, customerDiscount)
+              
+              case "CLEAR_CART":
+                // User wants to empty the cart completely
+                return this.handleCartClear(workspaceId, customerId)
               
               default:
                 logger.warn("📦 [DataLoader] Unknown CART_ACTION", { optionId: selectIntent.optionId })
@@ -751,6 +772,7 @@ export class DataLoaderService {
           imageUrl: true,
           region: true,
           formato: true,
+          transportType: true,
           certifications: true,
           allergens: true,
           productCategories: {
@@ -799,6 +821,7 @@ export class DataLoaderService {
           imageUrl: true,
           region: true,
           formato: true,
+          transportType: true,
           certifications: true,
           allergens: true,
           productCategories: {
@@ -843,6 +866,7 @@ export class DataLoaderService {
           imageUrl: true,
           region: true,
           formato: true,
+          transportType: true,
           certifications: true,
           allergens: true,
           productCategories: {
@@ -1422,34 +1446,52 @@ export class DataLoaderService {
     }
   }
 
-  private async loadOrderStatus(workspaceId: string, customerId: string, orderCode: string): Promise<LoadedData> {
+  private async loadOrderStatus(
+    workspaceId: string,
+    customerId: string,
+    orderCode?: string
+  ): Promise<LoadedData> {
     try {
-      const order = await this.prisma.orders.findFirst({
-        where: {
-          OR: [
-            { id: orderCode, customerId, workspaceId },
-            { orderCode: orderCode, customerId, workspaceId },
-          ],
-        },
-        include: {
-          items: {
-            select: {
-              quantity: true,
-              unitPrice: true,
-              totalPrice: true,
-              product: { select: { name: true } },
-            },
-          },
-          creditNotes: {
-            select: {
-              id: true,
-              creditNoteCode: true,
-              amount: true,
-              reason: true,
-            },
+      const includeConfig = {
+        items: {
+          select: {
+            quantity: true,
+            unitPrice: true,
+            totalPrice: true,
+            product: { select: { name: true } },
           },
         },
-      })
+        creditNotes: {
+          select: {
+            id: true,
+            creditNoteCode: true,
+            amount: true,
+            reason: true,
+          },
+        },
+      } as const
+
+      let order = null
+
+      if (orderCode && orderCode.trim().length > 0) {
+        order = await this.prisma.orders.findFirst({
+          where: {
+            OR: [
+              { id: orderCode, customerId, workspaceId },
+              { orderCode, customerId, workspaceId },
+            ],
+          },
+          include: includeConfig,
+        })
+      }
+
+      if (!order) {
+        order = await this.prisma.orders.findFirst({
+          where: { customerId, workspaceId },
+          orderBy: { createdAt: "desc" },
+          include: includeConfig,
+        })
+      }
 
       if (!order) return { type: "ORDER_DETAIL", order: null }
 
@@ -1836,6 +1878,7 @@ export class DataLoaderService {
           imageUrl: true,
           region: true,
           formato: true,
+          transportType: true,
           certifications: true,
           allergens: true,
           productCategories: {
@@ -1892,6 +1935,7 @@ export class DataLoaderService {
           imageUrl: true,
           region: true,
           formato: true,
+          transportType: true,
           certifications: true,
           allergens: true,
         },
@@ -2095,6 +2139,7 @@ Return ONLY the JSON array of indices for products that match "${query}":`,
       formato: p.formato || undefined,
       certifications: certs,
       allergens: allergenList,
+      transportType: p.transportType || undefined,
       isAvailable: p.stock > 0,
     }
   }

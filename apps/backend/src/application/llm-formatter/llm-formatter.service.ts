@@ -233,6 +233,15 @@ export class LLMFormatterService {
       // Always remove JSON block from visible text (if LLM generated one)
       text = text.replace(/---JSON_MAPPING---[\s\S]*?---END_JSON---/g, "").trim()
 
+      // ⚙️ Some models still append raw JSON after the question. Strip trailing JSON blobs.
+      const trailingJsonMatch = text.match(/\n\{[\s\S]*\}\s*$/)
+      if (trailingJsonMatch) {
+        const cutIndex = text.lastIndexOf(trailingJsonMatch[0])
+        if (cutIndex > -1) {
+          text = text.substring(0, cutIndex).trim()
+        }
+      }
+
       // Clean up any formatting artifacts
       text = text.replace(/---BEGIN OUTPUT---\n?/g, "").replace(/\n?---END OUTPUT---/g, "").trim()
 
@@ -567,7 +576,7 @@ export class LLMFormatterService {
     const groups = response.data.groups || []
     const lines: string[] = []
     groups.forEach((group, index) => {
-      lines.push(`${index + 1}. ${group.groupName} (${group.variantCount} prodotti)`)
+      lines.push(`**${index + 1}.** ${group.groupName} (${group.variantCount} prodotti)`)
     })
 
     const mappingBlock = this.buildGroupMappingBlock(response)
@@ -578,9 +587,11 @@ export class LLMFormatterService {
       "",
       "Regole output:",
       "- Mostra SOLO i gruppi sopra indicati con il relativo numero di prodotti.",
+      "- Mantieni i numeri in grassetto (es. **1.**, **2.**, ...).",
       "- Non inserire l'elenco dei singoli prodotti né riepiloghi \"Prezzi finali\".",
-      "- Chiudi sempre con la domanda: \"Quale gruppo ti interessa?\"",
+      "- Chiudi sempre con la domanda tradotta nella lingua di output: \"Quale gruppo ti interessa?\" (o equivalente).",
       "- Dopo la domanda aggiungi SEMPRE e SENZA MODIFICHE il blocco JSON seguente.",
+      "- L'intera risposta deve essere nella lingua richiesta (rispetta il campo LINGUA OUTPUT).",
       "",
       "---JSON_MAPPING---",
       mappingBlock,
@@ -653,8 +664,8 @@ RESPONSE FORMAT (EXACT - KEEP THIS FORMAT):
 
 Here are the ${categoryName} groups:
 
-1. GroupName1 (N products)
-2. GroupName2 (N products)
+**1.** GroupName1 (N products)
+**2.** GroupName2 (N products)
 
 Which group are you interested in?
 
@@ -664,6 +675,7 @@ Which group are you interested in?
 
 CRITICAL: 
 - Show ONLY numbered groups, NO individual products, NO prices
+- Numbers MUST be bold like **1.**, **2.**, ...
 - After "Which group are you interested in?" you MUST add the JSON_MAPPING
 - In JSON use group numbers (1, 2, 3...) as keys
 - Include ALL SKUs, each product must appear in only one group`
@@ -712,30 +724,42 @@ CRITICAL:
 
     // Show only the final price (discounted if applicable)
     const displayPrice = p.priceWithDiscount || p.price
-    
+    const targetLang = response.context.customerLanguage?.toLowerCase() || ""
+    const isItalian = targetLang.startsWith("it")
+    const italianQuestion = `Vuoi aggiungerlo al carrello? Se sì puoi indicare la quantità? (es. "Sì, 2")`
+    const englishQuestion = `Would you like to add it to cart? If yes, how many? (e.g., "Yes, 2")`
+    const questionInstruction = isItalian
+      ? `IMPORTANT: Chiudi con la frase esatta: ${italianQuestion}`
+      : `IMPORTANT: Close with the question "${englishQuestion}" translated to the output language, keeping the example format.`
+
     const lines = [
-      "PRODUCT DETAIL:",
-      `Name: ${p.name}`,
-      `Price: €${displayPrice.toFixed(2)}`,
+      "DETTAGLIO PRODOTTO:",
+      `**${p.name}**`,
+      `Prezzo: €${displayPrice.toFixed(2)}`,
     ]
 
     // Don't show both prices - only show final price
     if (p.description) {
-      lines.push(`Description: ${p.description}`)
+      lines.push(`Descrizione: ${p.description}`)
     }
     if (p.region) {
-      lines.push(`Region: ${p.region}`)
+      lines.push(`Regione: ${p.region}`)
     }
     if (p.formato) {
-      lines.push(`Format: ${p.formato}`)
+      lines.push(`Formato: ${p.formato}`)
     }
-    if (p.certifications.length > 0) {
-      lines.push(`Certifications: ${p.certifications.join(", ")}`)
+    if (p.certifications && p.certifications.length > 0) {
+      lines.push(`Certificazioni: ${p.certifications.join(", ")}`)
     }
-    lines.push(`Availability: ${p.isAvailable ? "✅ Available" : "❌ Not available"}`)
+    if (p.transportType) {
+      lines.push(`Tipo di trasporto: ${p.transportType}`)
+    }
+    lines.push(`Disponibilità: ${p.isAvailable ? "✅ Disponibile" : "❌ Non disponibile"}`)
     // Add cart prompt with quantity question
     lines.push("")
-    lines.push(`IMPORTANT: After the details, ask 'Would you like to add it to cart? If yes, how many? 🛒' or 'Shall I add it to cart? Tell me how many you want! 🛍️'. DO NOT show SKU codes to the user.`)
+    lines.push("IMPORTANT: Present the details exactly as above, keeping the product name as a standalone bold heading followed by 'Etichetta: valore' rows (Prezzo, Descrizione, Regione, Formato, Certificazioni, Tipo di trasporto, Disponibilità). Do not add numbering or bullet points.")
+    lines.push(questionInstruction)
+    lines.push("IMPORTANT: DO NOT show SKU codes to the user.")
 
     return lines.join("\n")
   }
@@ -765,12 +789,17 @@ CRITICAL:
       lines.push(`💰 Stai usufruendo del tuo sconto riservato del ${response.context.discountPercent}%! I prezzi mostrati includono già lo sconto.`)
     }
     
-    // Add cart action options - numbered 1, 2, 3 (cart items use bullet points)
+    const hasRemovableItems = items.length > 1
+    let optionNumber = 1
+
     lines.push("")
     lines.push("Cosa vuoi fare?")
-    lines.push("1. ✅ Confermare l'ordine")
-    lines.push("2. 🛍️ Esplorare il catalogo")
-    lines.push("3. 🗑️ Rimuovere un articolo")
+    lines.push(`${optionNumber++}. ✅ Confermare l'ordine`)
+    lines.push(`${optionNumber++}. 🛍️ Esplorare il catalogo`)
+    if (hasRemovableItems) {
+      lines.push(`${optionNumber++}. 🗑️ Rimuovere un articolo`)
+    }
+    lines.push(`${optionNumber++}. 🧹 Cancella il carrello`)
     lines.push("")
     lines.push("Rispondi con il numero o scrivi cosa desideri!")
 
@@ -779,13 +808,19 @@ CRITICAL:
 
   private formatOrderListPrompt(response: StructuredResponse): string {
     const items = response.data.items || []
-    const lines = ["YOUR ORDERS:"]
+    const lines = [
+      "FORMAT RULES:",
+      "- Start with a friendly heading like '📦 Ecco i tuoi ordini:'",
+      "- For each item render: `<number>. **<order code>** · €<amount> · stato <status>` (status already provided in the extra field).",
+      "- Keep numbering exactly as provided.",
+      "- DO NOT add any total line or item count.",
+      "- After the list, ask: 'Quale ordine desideri visualizzare? Digita il numero.'",
+      "",
+      "ORDERS DATA:",
+    ]
     for (const item of items) {
-      lines.push(`${item.number}. ${item.name} - €${item.price?.toFixed(2)} [${item.extra}]`)
+      lines.push(`${item.number}. ${item.name} | €${item.price?.toFixed(2)} | ${item.extra}`)
     }
-    // Add selection prompt so user knows to type a number
-    lines.push("")
-    lines.push("IMPORTANT: After the list, ask 'Which order would you like to view? Type the number.' or similar.")
     return lines.join("\n")
   }
 

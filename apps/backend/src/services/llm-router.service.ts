@@ -63,6 +63,7 @@ import { PromptProcessorService } from "./prompt-processor.service" // 🆕 Feat
 import { SecurityService } from "./security.service"
 import { getSystemContextService, SystemContextService } from "./system-context.service" // 🆕 System Context for hidden SKU mappings
 import { websocketService } from "./websocket.service"
+import type { AgentOptionMapping } from "../types/option-mapping.types"
 
 export interface RouteMessageParams {
   workspaceId: string
@@ -73,6 +74,8 @@ export interface RouteMessageParams {
   customerLanguage?: string
   customerName?: string
   isSystemMessage?: boolean // 🆕 Feature 127: If true, skip Router/SubLLM and go direct to Safety+Translation
+  conversationHistory?: Array<{ role: string; content: string }>
+  customerDiscount?: number
 }
 
 export interface RouteMessageResponse {
@@ -320,6 +323,7 @@ export class LLMRouterService {
     const startTime = Date.now()
     let totalTokens = 0
     let customerDiscount = 0
+    let explicitOptionMapping: AgentOptionMapping | null = null
 
     try {
       customerDiscount = await this.getCustomerDiscountPercent(
@@ -1293,7 +1297,9 @@ export class LLMRouterService {
         conversationId: params.conversationId,
         customerId: params.customerId,
         responseText: finalCleanResponse,
+        explicitMapping: explicitOptionMapping,
       })
+      explicitOptionMapping = null
 
       // ❌ TODO #1: MISSING - WhatsApp Queue Emission
       // CRITICAL: Messages are saved in DB but NEVER sent via WhatsApp!
@@ -1866,6 +1872,9 @@ export class LLMRouterService {
                 sessionId: `${params.workspaceId}-${params.customerId}`, // ✅ FIX: Use workspace+customer as session key for memory
                 customerData, // 🔧 OPTIMIZATION: Pass pre-loaded data to avoid duplicate DB queries
               })
+              if (subAgentResponse?.optionMapping) {
+                explicitOptionMapping = subAgentResponse.optionMapping
+              }
               break
             }
             case "CART_MANAGEMENT": {
@@ -1938,6 +1947,9 @@ export class LLMRouterService {
                 selectedSku, // 🔧 Feature 123: Pass product code from search memory
                 customerData, // 🔧 OPTIMIZATION: Pass pre-loaded data to avoid duplicate DB queries
               })
+              if (subAgentResponse?.optionMapping) {
+                explicitOptionMapping = subAgentResponse.optionMapping
+              }
               break
             }
             case "ORDER_TRACKING": {
@@ -1969,6 +1981,9 @@ export class LLMRouterService {
                 lastOrderCode: customerData.lastordercode, // ✅ Pass last order code
                 customerData, // 🔧 OPTIMIZATION: Pass pre-loaded data to avoid duplicate DB queries
               })
+              if (subAgentResponse?.optionMapping) {
+                explicitOptionMapping = subAgentResponse.optionMapping
+              }
               break
             }
             case "CUSTOMER_SUPPORT": {
@@ -2001,6 +2016,9 @@ export class LLMRouterService {
                 query: delegationQuery,
                 customerData, // 🔧 OPTIMIZATION: Pass pre-loaded data to avoid duplicate DB queries
               })
+              if (subAgentResponse?.optionMapping) {
+                explicitOptionMapping = subAgentResponse.optionMapping
+              }
 
               // 📧 ADD CUSTOMER SUPPORT AGENT DEBUG STEP
               debugSteps.push({
@@ -2109,6 +2127,9 @@ export class LLMRouterService {
                 query: delegationQuery,
                 conversationHistory: recentHistory, // ✅ Pass conversation context
               })
+              if (subAgentResponse?.optionMapping) {
+                explicitOptionMapping = subAgentResponse.optionMapping
+              }
               break
             }
             default:
@@ -2362,7 +2383,9 @@ export class LLMRouterService {
             conversationId: params.conversationId,
             customerId: params.customerId,
             responseText: subAgentFinalResponse,
+            explicitMapping: subAgentResponse.optionMapping,
           })
+          explicitOptionMapping = null
 
           logger.info(
             "🔍 DEBUG: Exiting functionCallingLoop with specialist response",
@@ -2860,7 +2883,9 @@ export class LLMRouterService {
         conversationId: params.conversationId,
         customerId: params.customerId,
         responseText: finalResponse,
+        explicitMapping: explicitOptionMapping,
       })
+      explicitOptionMapping = null
 
       // 🔔 CRITICAL: Notify WebSocket clients of new message
       websocketService.notifyNewMessage(params.workspaceId, {
@@ -2976,6 +3001,7 @@ export class LLMRouterService {
         query: cartQuery,
         customerName: options.params.customerName,
         customerLanguage: options.params.customerLanguage || "it",
+        customerDiscount,
       })
 
       // Apply Safety & Translation
@@ -3015,17 +3041,52 @@ export class LLMRouterService {
     customerId?: string
     responseText: string
     forceClear?: boolean
+    explicitMapping?: AgentOptionMapping | null
   }): Promise<void> {
-    const { workspaceId, conversationId, responseText, customerId } = options
-    const mapping = options.forceClear
-      ? null
-      : this.extractOptionMapping(responseText)
+    const {
+      workspaceId,
+      conversationId,
+      responseText,
+      customerId,
+      explicitMapping,
+      forceClear,
+    } = options
+
+    let mapping: any = null
+    const shouldUseExplicit =
+      !!explicitMapping &&
+      (explicitMapping.options?.length ||
+        explicitMapping.type === "binary")
+
+    if (!forceClear && shouldUseExplicit) {
+      mapping = {
+        type: explicitMapping?.type || "numbered",
+        listType: explicitMapping?.listType,
+        options: explicitMapping?.options?.map((opt) => ({
+          number: opt.number,
+          label: opt.label,
+          count: opt.count,
+          skus: opt.skus,
+          id: opt.id,
+          metadata: opt.metadata,
+        })),
+      }
+    } else if (!forceClear) {
+      mapping = this.extractOptionMapping(responseText)
+    }
 
     // 🔍 DEBUG: Log mapping extraction
     logger.info("📋 [OptionMapping] Extracting mapping from response", {
       conversationId,
       responsePreview: responseText?.substring(0, 200),
-      extractedMapping: mapping ? { type: mapping.type, optionsCount: mapping.options?.length, listType: mapping.listType } : null,
+      extractedMapping: mapping
+        ? {
+            type: mapping.type,
+            optionsCount: mapping.options?.length,
+            listType: mapping.listType,
+            fromExplicit: shouldUseExplicit,
+          }
+        : null,
     })
 
     const existing = await this.prisma.searchConversations.findUnique({
@@ -3033,9 +3094,19 @@ export class LLMRouterService {
     })
 
     const currentMetadata = (existing as any)?.metadata || {}
+    const existingMapping = currentMetadata.lastOptionsMapping || {}
+    const resolvedCurrentOrderCode =
+      explicitMapping && "currentOrderCode" in explicitMapping
+        ? explicitMapping.currentOrderCode
+        : existingMapping?.currentOrderCode
     const updatedMetadata = {
       ...currentMetadata,
-      lastOptionsMapping: mapping,
+      lastOptionsMapping: mapping
+        ? {
+            ...mapping,
+            currentOrderCode: resolvedCurrentOrderCode,
+          }
+        : null,
     }
 
     // Keep activeAgent/state; only adjust metadata
@@ -3540,4 +3611,3 @@ export class LLMRouterService {
   }
 
 }
-

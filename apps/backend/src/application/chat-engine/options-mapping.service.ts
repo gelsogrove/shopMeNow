@@ -27,6 +27,7 @@ export interface OptionItem {
   count?: number // e.g., "Formaggi (7 prodotti)" → count: 7
   skus?: string[] // e.g., "Condimenti Freschi [SKUS:COND-003,COND-004,COND-005]" → skus: ["COND-003", "COND-004", "COND-005"]
   id?: string // 🆕 For actions: the ID of the option (e.g., "SEND_INVOICE", "REPEAT_ORDER")
+  metadata?: Record<string, any> // 🆕 Additional payload per option (orderCode, etc.)
 }
 
 /**
@@ -39,12 +40,20 @@ export type ListType = "CATEGORIES" | "GROUPS" | "PRODUCTS" | "ORDERS" | "CART_I
  * Pending action after user confirmation (sì/no)
  */
 export interface PendingAction {
-  type: "ADD_TO_CART" | "VIEW_CART" | "CONFIRM_ORDER" | "REPEAT_ORDER" | "CANCEL_ORDER"
+  type:
+    | "ADD_TO_CART"
+    | "VIEW_CART"
+    | "CONFIRM_ORDER"
+    | "REPEAT_ORDER"
+    | "CANCEL_ORDER"
+    | "ADD_ORDER_NOTE"
+    | "SHOW_PRODUCTS"
   productId?: string
   productName?: string
   quantity?: number
   orderId?: string
   itemType?: "PRODUCT" | "SERVICE" // 🆕 Distinguish products from services
+  orderCode?: string
 }
 
 /**
@@ -124,7 +133,7 @@ export class OptionsMappingService {
     groupMapping?: Record<string, { nome: string; skus: string[] }>
     // 🆕 For product lists: items with SKUs from StructuredResponse
     // This avoids parsing text and losing SKU information
-    items?: Array<{ number: number; name: string; sku?: string; id?: string }>
+    items?: Array<{ number: number; name: string; sku?: string; id?: string; metadata?: Record<string, any> }>
     // 🆕 List type (PRODUCTS, ORDERS, CATEGORIES, etc.)
     listType?: ListType
   }): Promise<void> {
@@ -150,6 +159,7 @@ export class OptionsMappingService {
           label: item.name,
           skus: item.sku ? [item.sku] : undefined,
           id: item.id,
+          metadata: item.metadata,
         }))
         
         mapping = {
@@ -173,7 +183,10 @@ export class OptionsMappingService {
           mapping.options = mapping.options.map(opt => {
             const itemMatch = items.find(i => i.number === opt.number)
             if (itemMatch && itemMatch.sku) {
-              return { ...opt, skus: [itemMatch.sku], id: itemMatch.id }
+              return { ...opt, skus: [itemMatch.sku], id: itemMatch.id, metadata: itemMatch.metadata }
+            }
+            if (itemMatch) {
+              return { ...opt, id: itemMatch.id, metadata: itemMatch.metadata }
             }
             return opt
           })

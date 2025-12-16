@@ -1027,12 +1027,18 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
       lines.push(`💰 Stai usufruendo del tuo sconto riservato del ${discountPercent}%! I prezzi mostrati includono già lo sconto.`)
     }
     
-    // ALWAYS add cart action options
+    const uniqueItemsCount = Array.isArray(cart.items) ? cart.items.length : 0
+    const allowRemoveOption = uniqueItemsCount > 1
+    let actionNumber = 1
+
     lines.push("")
     lines.push("Cosa vuoi fare?")
-    lines.push("1. ✅ Confermare l'ordine")
-    lines.push("2. 🛍️ Esplorare il catalogo")
-    lines.push("3. 🗑️ Rimuovere un articolo")
+    lines.push(`${actionNumber++}. ✅ Confermare l'ordine`)
+    lines.push(`${actionNumber++}. 🛍️ Esplorare il catalogo`)
+    if (allowRemoveOption) {
+      lines.push(`${actionNumber++}. 🗑️ Rimuovere un articolo`)
+    }
+    lines.push(`${actionNumber++}. 🧹 Cancella il carrello`)
     lines.push("")
     lines.push("Rispondi con il numero o scrivi cosa desideri!")
 

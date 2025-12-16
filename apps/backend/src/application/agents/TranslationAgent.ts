@@ -264,18 +264,30 @@ export class TranslationAgent {
     // Map common language codes
     const mapping: Record<string, string> = {
       italian: "it",
+      italiano: "it",
       it: "it",
       ita: "it", // 🆕 Handle ITA code for Italian
       spanish: "es",
+      español: "es",
+      espanol: "es",
       es: "es",
       esp: "es",
       spa: "es", // 🆕 Handle SPA code for Spanish
       portuguese: "pt",
+      português: "pt",
+      portugues: "pt",
       pt: "pt",
       prt: "pt", // 🆕 Handle PRT code for Portuguese
       english: "en",
       en: "en",
       eng: "en",
+      french: "fr",
+      francais: "fr",
+      français: "fr",
+      fr: "fr",
+      german: "de",
+      deutsch: "de",
+      de: "de",
     }
 
     return mapping[normalized] || "en"
@@ -293,6 +305,8 @@ export class TranslationAgent {
       es: "Spanish",
       pt: "Portuguese",
       en: "English",
+      fr: "French",
+      de: "German",
     }
     return names[code] || "English"
   }

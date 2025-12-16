@@ -41,6 +41,7 @@ import logger from "../../utils/logger"
 import { LinkGeneratorService } from "../services/link-generator.service"
 
 import { CustomerData } from "../../types/agent.types"
+import type { AgentOptionMapping } from "../../types/option-mapping.types"
 
 export interface OrderTrackingLLMContext {
   workspaceId: string
@@ -65,6 +66,7 @@ export interface OrderTrackingLLMResponse {
   }>
   systemPrompt?: string // 🆕 Processed system prompt for debugging
   model?: string // 🆕 Model used for debugging timeline
+  optionMapping?: AgentOptionMapping
 }
 
 export class OrderTrackingAgentLLM {
@@ -106,6 +108,7 @@ export class OrderTrackingAgentLLM {
     context: OrderTrackingLLMContext
   ): Promise<OrderTrackingLLMResponse> {
     const startTime = Date.now()
+    let directOptionMapping: AgentOptionMapping | undefined
 
     try {
       logger.info(`📦 OrderTrackingAgentLLM: Processing query`, {
@@ -307,6 +310,10 @@ export class OrderTrackingAgentLLM {
           logger.info(`📝 Message preview: ${functionResult.message.substring(0, 200)}...`)
           finalResponse = functionResult.message
           
+          if (functionResult.nextActions) {
+            directOptionMapping = functionResult.nextActions as AgentOptionMapping
+          }
+          
           // 🔧 Replace customer variables in the response
           if (finalResponse.includes("{{nameUser}}") || finalResponse.includes("{{agentName}}")) {
             // Fetch agent name from customer's assigned sales rep
@@ -330,7 +337,7 @@ export class OrderTrackingAgentLLM {
           }
           
           // Generate proper PROFILE link (not cart link!) - for repeatOrder and showCheckout
-          if ((isRepeatOrder || isShowCheckout) && finalResponse && finalResponse.includes("[LINK_PROFILE_WITH_TOKEN]")) {
+          if ((isRepeatOrder || isShowCheckout || isConfirmOrder) && finalResponse && finalResponse.includes("[LINK_PROFILE_WITH_TOKEN]")) {
             try {
               const CallingFunctionsService = require("../../services/calling-functions.service").CallingFunctionsService
               const callingFunctionsService = new CallingFunctionsService()
@@ -459,6 +466,7 @@ export class OrderTrackingAgentLLM {
         functionCalls,
         systemPrompt, // 🆕 Include processed prompt for debugging
         model: "gpt-4o-mini", // 🆕 Include model for debugging timeline
+        optionMapping: directOptionMapping,
       }
     } catch (error) {
       const executionTimeMs = Date.now() - startTime

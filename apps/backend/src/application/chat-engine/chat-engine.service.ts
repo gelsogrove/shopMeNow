@@ -19,7 +19,7 @@ import {
   RequestHumanIntent,
 } from "../intent"
 import { DataLoaderService, getDataLoader, LoadedData } from "../data-loader"
-import { ResponseBuilderService, getResponseBuilder, StructuredResponse } from "../response-builder"
+import { ResponseBuilderService, getResponseBuilder, StructuredResponse, ListItem } from "../response-builder"
 import { LLMFormatterService, getLLMFormatter, FormatterResult } from "../llm-formatter"
 import { ConversationManager } from "../../services/conversation-manager.service"
 import { LinkReplacementService, ReplaceLinkWithTokenParams } from "../services/link-replacement.service"
@@ -27,6 +27,7 @@ import {
   OptionsMappingService,
   getOptionsMappingService,
   OptionsMapping,
+  ListType,
 } from "./options-mapping.service"
 import {
   MessagePreprocessorService,
@@ -34,6 +35,7 @@ import {
   messagePreprocessorService,
 } from "../../services/message-preprocessor.service"
 import { CartManagementAgentLLM } from "../agents/CartManagementAgentLLM"
+import { ProductContextAgentLLM, ProductContextData } from "../agents/ProductContextAgentLLM"
 import { SystemContextService, getSystemContextService } from "../../services/system-context.service"
 import {
   ConversationStateService, 
@@ -47,6 +49,8 @@ import {
 } from "./conversation-state.service"
 import { TranslationAgent } from "../agents/TranslationAgent"
 import { CatalogQueryService, CatalogQueryLoadedData } from "../catalog-query/catalog-query.service"
+import { confirmOrder } from "../../domain/calling-functions/ConfirmOrder"
+import { LLMRouterService } from "../../services/llm-router.service"
 
 type PipelineLoadedData = LoadedData | CatalogQueryLoadedData
 
@@ -65,6 +69,8 @@ interface WorkspaceConfig {
   botIdentityResponse: string | null
   customAiRules: string | null  // Custom AI rules that override default behavior
   adminEmail: string | null
+  workspaceName: string
+  address: string | null
 }
 
 const workspaceConfigCache = new Map<string, { config: WorkspaceConfig; timestamp: number }>()
@@ -180,6 +186,7 @@ export class ChatEngineService {
   private optionsMappingService: OptionsMappingService
   private systemContextService: SystemContextService
   private conversationStateService: ConversationStateService
+  private llmRouterService: LLMRouterService
   
   // Translation layer (applied as final step in routeMessage wrapper)
   private translationAgent: TranslationAgent
@@ -198,6 +205,7 @@ export class ChatEngineService {
     this.systemContextService = getSystemContextService(prisma)
     this.conversationStateService = new ConversationStateService(prisma)
     this.catalogQueryService = new CatalogQueryService(prisma)
+    this.llmRouterService = new LLMRouterService(prisma)
     
     // Initialize translation layer
     this.translationAgent = new TranslationAgent(prisma)
@@ -215,34 +223,123 @@ export class ChatEngineService {
     customerName?: string
   ): Promise<string> {
     let result = message
+    if (!result?.includes("{{")) return result
 
-    // Replace {{nameUser}} with customer name
-    if (result.includes("{{nameUser}}")) {
-      const name = customerName || await this.getCustomerName(customerId)
-      result = result.replace(/\{\{nameUser\}\}/g, name || "Customer")
+    let cachedCustomer: {
+      name?: string | null
+      sales?: {
+        firstName: string | null
+        lastName: string | null
+        email: string | null
+        phone: string | null
+      } | null
+    } | null = null
+    let cachedWorkspace: {
+      whatsappPhoneNumber?: string | null
+      notificationEmail?: string | null
+      whatsappSettings?: { adminEmail?: string | null } | null
+    } | null = null
+
+    const loadCustomer = async () => {
+      if (cachedCustomer) return cachedCustomer
+      cachedCustomer = await this.prisma.customers.findUnique({
+        where: { id: customerId },
+        select: {
+          name: true,
+          sales: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true,
+            },
+          },
+        },
+      })
+      return cachedCustomer
     }
 
-    // Replace {{agentPhone}} with workspace whatsapp phone
-    if (result.includes("{{agentPhone}}")) {
-      const workspace = await this.prisma.workspace.findUnique({
+    const loadWorkspace = async () => {
+      if (cachedWorkspace) return cachedWorkspace
+      cachedWorkspace = await this.prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { whatsappPhoneNumber: true },
+        select: {
+          whatsappPhoneNumber: true,
+          notificationEmail: true,
+          whatsappSettings: { select: { adminEmail: true } },
+        },
       })
-      result = result.replace(/\{\{agentPhone\}\}/g, workspace?.whatsappPhoneNumber || "support")
+      return cachedWorkspace
+    }
+
+    const ensureCustomerName = async () => {
+      if (customerName) return customerName
+      const customer = await loadCustomer()
+      return customer?.name || "Cliente"
+    }
+
+    if (result.includes("{{nameUser}}")) {
+      const resolvedName = await ensureCustomerName()
+      result = result.replace(/\{\{nameUser\}\}/g, resolvedName)
+    }
+
+    if (
+      result.includes("{{agentName}}") ||
+      result.includes("{{agentEmail}}") ||
+      result.includes("{{agentPhone}}")
+    ) {
+      const customer = await loadCustomer()
+      const workspace = await loadWorkspace()
+      const sales = customer?.sales
+
+      const agentName =
+        (sales
+          ? `${sales.firstName || ""} ${sales.lastName || ""}`.trim()
+          : "") || "Il nostro team"
+      const agentEmail =
+        sales?.email ||
+        workspace?.notificationEmail ||
+        workspace?.whatsappSettings?.adminEmail ||
+        "support@echatbot.ai"
+      const agentPhone =
+        sales?.phone || workspace?.whatsappPhoneNumber || "N/A"
+
+      result = result
+        .replace(/\{\{agentName\}\}/g, agentName)
+        .replace(/\{\{agentEmail\}\}/g, agentEmail)
+        .replace(/\{\{agentPhone\}\}/g, agentPhone)
+    }
+
+    if (result.includes("{{adminEmail}}")) {
+      const workspace = await loadWorkspace()
+      const adminEmail =
+        workspace?.whatsappSettings?.adminEmail ||
+        workspace?.notificationEmail ||
+        "support@echatbot.ai"
+      result = result.replace(/\{\{adminEmail\}\}/g, adminEmail)
+    }
+
+    if (result.includes("{{TOKEN_DURATION}}")) {
+      result = result.replace(
+        /\{\{TOKEN_DURATION\}\}/g,
+        this.formatTokenDuration(process.env.TOKEN_EXPIRATION || "1h")
+      )
     }
 
     return result
   }
 
-  /**
-   * Helper: Get customer name from database
-   */
-  private async getCustomerName(customerId: string): Promise<string | null> {
-    const customer = await this.prisma.customers.findUnique({
-      where: { id: customerId },
-      select: { name: true },
-    })
-    return customer?.name || null
+  private formatTokenDuration(duration: string): string {
+    const match = duration.match(/^(\d+)([mh])$/)
+    if (!match) return "15 minutes"
+
+    const value = parseInt(match[1], 10)
+    const unit = match[2]
+
+    if (unit === "m") {
+      return value === 1 ? "1 minute" : `${value} minutes`
+    }
+    return value === 1 ? "1 hour" : `${value} hours`
   }
 
   private getHumanSupportTemplate(
@@ -547,6 +644,276 @@ export class ChatEngineService {
     }
   }
 
+  private async routeGenericLLMFallback(params: {
+    input: ChatEngineInput
+    conversationId: string
+    history: Array<{ role: string; content: string }>
+    fallbackReason?: string
+    debugSteps: DebugStep[]
+  }): Promise<{ message: string; tokensUsed: number }> {
+    const { input, conversationId, history, fallbackReason, debugSteps } = params
+    const prompt = `Non riesco a soddisfare la richiesta dell'utente con le regole deterministiche.\nContesto:\n- Ultimo messaggio utente: "${input.message}"\n- Problema rilevato: ${
+      fallbackReason || "nessun risultato dal catalogo"
+    }\n\nScrivi una risposta empatica e informativa basata sui dati disponibili (FAQ, identity, servizi) evitando di promettere azioni non confermate. Invita l'utente a specificare meglio o suggerisci alternative rilevanti.`
+
+    try {
+      const llmResponse = await this.llmRouterService.routeMessage({
+        workspaceId: input.workspaceId,
+        customerId: input.customerId,
+        customerName: input.customerName || "Cliente",
+        customerLanguage: input.customerLanguage || "it",
+        message: prompt,
+        conversationHistory: history,
+        customerDiscount: input.customerDiscount || 0,
+        conversationId,
+        messageId: `${conversationId}-fallback-${Date.now()}`,
+      })
+
+      debugSteps.push({
+        type: "sub_agent",
+        agent: "LLMRouterFallback",
+        timestamp: new Date().toISOString(),
+        output: {
+          decision: "generic_fallback",
+          textResponse: llmResponse.message?.substring(0, 200),
+        },
+        tokenUsage: {
+          promptTokens: 0,
+          completionTokens: llmResponse.tokensUsed || 0,
+          totalTokens: llmResponse.tokensUsed || 0,
+        },
+      })
+
+      return {
+        message:
+          llmResponse.message ||
+          "Mi dispiace, non ho trovato informazioni utili. Posso aiutarti in altro modo?",
+        tokensUsed: llmResponse.tokensUsed || 0,
+      }
+    } catch (error) {
+      logger.error("❌ [ChatEngine] Generic LLM fallback failed", { error })
+      return {
+        message:
+          "Mi dispiace, al momento non riesco a trovare informazioni utili. Vuoi provare a riformulare la richiesta?",
+        tokensUsed: 0,
+      }
+    }
+  }
+
+  private buildCartActionOptions(hasRemovableItems: boolean) {
+    const options: Array<{ number: number; name: string; id: string }> = []
+    let nextNumber = 1
+    options.push({ number: nextNumber++, name: "✅ Confermare l'ordine", id: "CONFIRM_ORDER" })
+    options.push({ number: nextNumber++, name: "🛍️ Esplorare il catalogo", id: "SHOW_PRODUCTS" })
+    if (hasRemovableItems) {
+      options.push({ number: nextNumber++, name: "🗑️ Rimuovere un articolo", id: "REMOVE_FROM_CART" })
+    }
+    options.push({ number: nextNumber++, name: "🧹 Cancella il carrello", id: "CLEAR_CART" })
+    return options
+  }
+
+  private extractCartItemCountFromFunctionCalls(functionCalls?: Array<{ result?: any }>): number | null {
+    if (!functionCalls?.length) return null
+    for (let idx = functionCalls.length - 1; idx >= 0; idx--) {
+      const resultCartItems = functionCalls[idx]?.result?.cartData?.cart?.items
+      if (Array.isArray(resultCartItems)) {
+        return resultCartItems.length
+      }
+    }
+    return null
+  }
+
+  private async handleProductContextIntent(params: {
+    input: ChatEngineInput
+    conversationId: string
+    history: Array<{ role: string; content: string }>
+    chatSession: { id: string } | null
+    fsmState: StateContext
+    workspaceConfig: WorkspaceConfig
+    startTime: number
+    debugSteps: DebugStep[]
+  }): Promise<ChatEngineOutput | null> {
+    const { input, conversationId, history, chatSession, fsmState, workspaceConfig, startTime, debugSteps } = params
+
+    if (!chatSession) {
+      return null
+    }
+
+    const validStates = new Set<ConversationState>([
+      ConversationState.VIEWING_PRODUCT,
+      ConversationState.AWAITING_ADD_CONFIRM,
+    ])
+
+    if (!validStates.has(fsmState.state)) {
+      return null
+    }
+
+    const selectedProductId = fsmState.selectedProductId
+    const selectedProductSku = fsmState.selectedProductSku
+
+    if (!selectedProductId && !selectedProductSku) {
+      return null
+    }
+
+    const where: Record<string, any> = {
+      workspaceId: input.workspaceId,
+    }
+
+    if (selectedProductId) {
+      where.id = selectedProductId
+    } else if (selectedProductSku) {
+      where.sku = selectedProductSku
+    }
+
+    const productRecord = await this.prisma.products.findFirst({
+      where,
+      include: {
+        category: { select: { name: true } },
+        productCertifications: {
+          include: { certification: true },
+        },
+        productTransportTypes: {
+          include: { transportType: true },
+        },
+      },
+    })
+
+    if (!productRecord) {
+      logger.warn("⚠️ [ChatEngine] PRODUCT_CONTEXT intent but product not found", {
+        workspaceId: input.workspaceId,
+        productId: selectedProductId,
+        productSku: selectedProductSku,
+      })
+      return null
+    }
+
+    const certifications = new Set<string>()
+    for (const relation of productRecord.productCertifications || []) {
+      if (relation.certification?.name) {
+        certifications.add(relation.certification.name)
+      }
+    }
+    for (const inline of productRecord.certifications || []) {
+      if (inline) certifications.add(inline)
+    }
+
+    const transportType =
+      productRecord.productTransportTypes?.[0]?.transportType?.name ||
+      productRecord.transportType ||
+      null
+
+    const productData: ProductContextData = {
+      id: productRecord.id,
+      name: productRecord.name,
+      description: productRecord.description,
+      format: productRecord.formato,
+      price: productRecord.price,
+      region: productRecord.region,
+      certifications: Array.from(certifications),
+      transportType,
+      tags: [productRecord.category?.name, productRecord.region].filter(Boolean) as string[],
+      storageInfo: null,
+      pairingSuggestions: undefined,
+      ingredients: [],
+      allergens: productRecord.allergens || [],
+    }
+
+    const agent = new ProductContextAgentLLM(this.prisma)
+    const conversationHistory = history
+      .filter((msg) => msg.role === "assistant" || msg.role === "user")
+      .slice(-4)
+      .map((msg) => ({
+        role: msg.role as "assistant" | "user",
+        content: msg.content,
+      }))
+
+    const agentResponse = await agent.handleQuestion({
+      workspaceId: input.workspaceId,
+      customerId: input.customerId,
+      customerName: input.customerName,
+      customerLanguage: input.customerLanguage,
+      customerDiscount: input.customerDiscount,
+      question: input.message,
+      product: productData,
+      workspaceInfo: {
+        name: workspaceConfig.workspaceName,
+        botIdentityResponse: workspaceConfig.botIdentityResponse,
+        customAiRules: workspaceConfig.customAiRules,
+        sellsProductsAndServices: workspaceConfig.sellsProductsAndServices,
+        address: workspaceConfig.address,
+      },
+      conversationHistory,
+    })
+
+    const processingTimeMs = Date.now() - startTime
+
+    debugSteps.push({
+      type: "sub_agent",
+      agent: "🧀 ProductContextAgentLLM",
+      model: agentResponse.model,
+      timestamp: new Date().toISOString(),
+      tokenUsage: agentResponse.tokensUsed
+        ? {
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens: agentResponse.tokensUsed,
+          }
+        : undefined,
+      input: {
+        userMessage: input.message,
+      },
+      output: {
+        textResponse:
+          agentResponse.output.length > 200
+            ? `${agentResponse.output.substring(0, 200)}...`
+            : agentResponse.output,
+        executionTimeMs: agentResponse.executionTimeMs,
+      },
+      duration: agentResponse.executionTimeMs,
+    })
+
+    const usedTokens = agentResponse.tokensUsed || 0
+
+    const finalDebugInfo = {
+      loadedDataType: "PRODUCT_CONTEXT",
+      responseType: "PRODUCT_CONTEXT",
+      llmUsed: true,
+      steps: debugSteps,
+      totalTokens: usedTokens,
+      totalCost: (usedTokens * 0.0003) / 1000,
+      executionTimeMs: processingTimeMs,
+    }
+
+    const savedMessages = await this.saveMessages(
+      input.workspaceId,
+      input.customerId,
+      conversationId,
+      input.message,
+      agentResponse.output,
+      AgentType.PRODUCT_SEARCH,
+      agentResponse.tokensUsed,
+      finalDebugInfo,
+    )
+
+    return {
+      message: agentResponse.output,
+      agentType: AgentType.PRODUCT_SEARCH,
+      wasHandled: true,
+      intent: "PRODUCT_CONTEXT",
+      confidence: "HIGH",
+      source: "LLM_FALLBACK",
+      processingTimeMs,
+      debugInfo: finalDebugInfo,
+      response: agentResponse.output,
+      agentUsed: AgentType.PRODUCT_SEARCH,
+      tokensUsed: usedTokens,
+      executionTimeMs: processingTimeMs,
+      wasFAQ: false,
+      isBlocked: false,
+      _assistantMessageId: savedMessages?.assistantMessageId,
+    } as ChatEngineOutput
+  }
+
   /**
    * Helper: Push translation debug step to timeline
    * Extracted to reduce code duplication in applyTranslation
@@ -603,6 +970,7 @@ export class ChatEngineService {
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
       select: {
+        name: true,
         sellsProductsAndServices: true,
         hasSalesAgents: true,
         hasSuppliers: true,
@@ -613,6 +981,7 @@ export class ChatEngineService {
         botIdentityResponse: true,
         customAiRules: true,  // Custom AI rules that override default behavior
         notificationEmail: true,
+        address: true,
         whatsappSettings: {
           select: { adminEmail: true },
         },
@@ -633,6 +1002,8 @@ export class ChatEngineService {
         workspace?.whatsappSettings?.adminEmail ||
         workspace?.notificationEmail ||
         null,
+      workspaceName: workspace?.name || "Il nostro shop",
+      address: workspace?.address || null,
     }
 
     workspaceConfigCache.set(workspaceId, { config, timestamp: Date.now() })
@@ -662,6 +1033,7 @@ export class ChatEngineService {
       "ORDER_DETAILS",
       "TRACK_ORDER",
       "REPEAT_ORDER",  // Re-order products from previous order
+      "PRODUCT_CONTEXT",
     ]
     return ecommerceIntents.includes(intentType)
   }
@@ -895,15 +1267,105 @@ export class ChatEngineService {
       // Use enriched message for LLM (contains context hints for short inputs)
       const messageForLLM = preprocessResult.enrichedMessage
 
+      let cachedOptionsMapping: OptionsMapping | null | undefined
+      const loadOptionsMapping = async (): Promise<OptionsMapping | null> => {
+        if (cachedOptionsMapping === undefined) {
+          cachedOptionsMapping = await this.optionsMappingService.loadMapping(
+            input.workspaceId,
+            conversationId
+          )
+        }
+        return cachedOptionsMapping
+      }
+
+      // ========================================================================
+      // STEP 0.55: Pending action requiring free-text note (ADD_ORDER_NOTE)
+      // ========================================================================
+      const pendingMapping = await loadOptionsMapping()
+      if (pendingMapping?.pendingAction?.type === "ADD_ORDER_NOTE") {
+        const orderCode = pendingMapping.pendingAction.orderCode
+        const noteContent = input.message.trim()
+
+        if (!orderCode) {
+          logger.warn("⚠️ [ChatEngine] Pending ADD_ORDER_NOTE without orderCode")
+          await this.optionsMappingService.clearPendingAction(conversationId)
+        } else if (!noteContent) {
+          const promptMessage = "Scrivi la nota che vuoi aggiungere all'ordine."
+          const savedMessages = await this.saveMessages(
+            input.workspaceId,
+            input.customerId,
+            conversationId,
+            input.message,
+            promptMessage
+          )
+          return {
+            message: promptMessage,
+            agentType: AgentType.ORDER_TRACKING,
+            wasHandled: true,
+            intent: "ADD_ORDER_NOTE",
+            confidence: "HIGH",
+            source: "PATTERN",
+            processingTimeMs: Date.now() - startTime,
+            response: promptMessage,
+            agentUsed: AgentType.ORDER_TRACKING,
+            tokensUsed: 0,
+            executionTimeMs: Date.now() - startTime,
+            wasFAQ: false,
+            isBlocked: false,
+            _assistantMessageId: savedMessages?.assistantMessageId,
+          }
+        } else {
+          const { addOrderNote } = require("../../domain/calling-functions/addOrderNote")
+          const noteResult = await addOrderNote({
+            workspaceId: input.workspaceId,
+            customerId: input.customerId,
+            orderCode,
+            note: noteContent,
+          })
+
+          await this.optionsMappingService.clearPendingAction(conversationId)
+          cachedOptionsMapping = null
+
+          const processedMessage = await this.replaceUserVariables(
+            noteResult.message,
+            input.customerId,
+            input.workspaceId,
+            input.customerName
+          )
+
+          const savedMessages = await this.saveMessages(
+            input.workspaceId,
+            input.customerId,
+            conversationId,
+            input.message,
+            processedMessage
+          )
+
+          return {
+            message: processedMessage,
+            agentType: AgentType.ORDER_TRACKING,
+            wasHandled: true,
+            intent: "ADD_ORDER_NOTE",
+            confidence: "HIGH",
+            source: "PATTERN",
+            processingTimeMs: Date.now() - startTime,
+            response: processedMessage,
+            agentUsed: AgentType.ORDER_TRACKING,
+            tokensUsed: 0,
+            executionTimeMs: Date.now() - startTime,
+            wasFAQ: false,
+            isBlocked: false,
+            _assistantMessageId: savedMessages?.assistantMessageId,
+          }
+        }
+      }
+
       // ========================================================================
       // STEP 0.6: FAST-PATH for confirmation with quantity (e.g., "sì 3", "si, 2 pezzi")
       // ========================================================================
       // If preprocessor detected "confirmation_with_quantity", handle ADD_TO_CART directly
       if (preprocessResult.inputType === "confirmation_with_quantity" || preprocessResult.inputType === "confirmation") {
-        const optionsMapping = await this.optionsMappingService.loadMapping(
-          input.workspaceId,
-          conversationId
-        )
+        const optionsMapping = await loadOptionsMapping()
         const pendingAction = optionsMapping?.pendingAction
         
         if (pendingAction && pendingAction.type === "ADD_TO_CART" && pendingAction.productId) {
@@ -927,6 +1389,7 @@ export class ChatEngineService {
             query: `aggiungi ${quantity} ${pendingAction.productName || itemLabel} al carrello`,
             customerName: input.customerName || "",
             customerLanguage: input.customerLanguage || "it",
+            customerDiscount: input.customerDiscount || 0,
             selectedSku: pendingAction.productId, // SKU/code for precise cart addition
             selectedItemType: pendingAction.itemType || "PRODUCT", // 🆕 Pass item type
           })
@@ -936,23 +1399,25 @@ export class ChatEngineService {
           logger.info("🧹 [ChatEngine] Cleared pendingAction after ADD_TO_CART execution")
           
           // 🛒 CRITICAL: Save CART_ACTIONS mapping so "1" triggers CONFIRM_ORDER, not product search!
+          const cartItemCount = this.extractCartItemCountFromFunctionCalls(cartResponse.functionCalls)
+          const cartActions = this.buildCartActionOptions((cartItemCount ?? 2) > 1)
+
           await this.optionsMappingService.saveMapping({
             workspaceId: input.workspaceId,
             conversationId,
             customerId: input.customerId,
             responseText: "",
-            items: [
-              { number: 1, name: "✅ Confermare l'ordine", id: "CONFIRM_ORDER" },
-              { number: 2, name: "🛍️ Esplorare il catalogo", id: "SHOW_PRODUCTS" },
-              { number: 3, name: "🗑️ Rimuovere un articolo", id: "REMOVE_FROM_CART" },
-            ],
+            items: cartActions,
             listType: "CART_ACTIONS",
           })
-          logger.info("🛒 [ChatEngine] Set CART_ACTIONS mapping after ADD_TO_CART")
+          logger.info("🛒 [ChatEngine] Set CART_ACTIONS mapping after ADD_TO_CART", {
+            cartItemCount,
+            actions: cartActions.map((action) => action.id),
+          })
           
           const processingTimeMs = Date.now() - startTime
           
-          await this.saveMessages(
+          const savedMessages = await this.saveMessages(
             input.workspaceId,
             input.customerId,
             conversationId,  // 🔧 Use conversationId (not input.conversationId) for consistent history
@@ -980,6 +1445,77 @@ export class ChatEngineService {
             executionTimeMs: processingTimeMs,
             wasFAQ: false,
             isBlocked: false,
+            _assistantMessageId: savedMessages?.assistantMessageId,
+          }
+        } else if (pendingAction && pendingAction.type === "SHOW_PRODUCTS") {
+          logger.info("🛍️ [ChatEngine] FAST-PATH: Confirmation detected for SHOW_PRODUCTS prompt")
+          
+          await this.optionsMappingService.clearPendingAction(conversationId)
+          cachedOptionsMapping = null
+          
+          const showIntent: Intent = { type: "SHOW_PRODUCTS" } as Intent
+          const loadedData = await this.dataLoader.loadForIntent(
+            showIntent,
+            input.workspaceId,
+            input.customerId,
+            input.customerDiscount
+          )
+          
+          const structuredResponse = this.responseBuilder.build(showIntent, loadedData, {
+            workspaceId: input.workspaceId,
+            customerLanguage: input.customerLanguage || "it",
+            customerName: input.customerName,
+            customerDiscount: input.customerDiscount,
+          })
+          
+          const formatterResult = await this.formatWithCustomRules(
+            structuredResponse,
+            input.customerLanguage || "it",
+            workspaceConfig
+          )
+          
+          const finalMessage = formatterResult.text
+          const processingTimeMs = Date.now() - startTime
+          
+          const savedMessages = await this.saveMessages(
+            input.workspaceId,
+            input.customerId,
+            conversationId,
+            input.message,
+            finalMessage
+          )
+          
+          const categoryItems =
+            structuredResponse.data?.items?.map((item: ListItem) => ({
+              number: item.number,
+              name: item.name,
+              id: item.id,
+            })) || []
+          
+          await this.optionsMappingService.saveMapping({
+            workspaceId: input.workspaceId,
+            conversationId,
+            customerId: input.customerId,
+            responseText: formatterResult.text,
+            items: categoryItems,
+            listType: "CATEGORIES",
+          })
+          
+          return {
+            message: finalMessage,
+            agentType: AgentType.PRODUCT_SEARCH,
+            wasHandled: true,
+            intent: "SHOW_PRODUCTS",
+            confidence: "HIGH",
+            source: "PATTERN",
+            processingTimeMs,
+            response: finalMessage,
+            agentUsed: AgentType.PRODUCT_SEARCH,
+            tokensUsed: formatterResult.tokensUsed || 0,
+            executionTimeMs: processingTimeMs,
+            wasFAQ: false,
+            isBlocked: false,
+            _assistantMessageId: savedMessages?.assistantMessageId,
           }
         }
       }
@@ -1028,10 +1564,7 @@ export class ChatEngineService {
       // ========================================================================
       // If user typed a number, load options mapping from DB and resolve directly
       if (preprocessResult.inputType === "number" && preprocessResult.extractedNumber) {
-        const optionsMapping = await this.optionsMappingService.loadMapping(
-          input.workspaceId,
-          conversationId
-        )
+        const optionsMapping = await loadOptionsMapping()
         
         // 🔍 DEBUG: Log what we got from the database
         logger.info("🔍 [DEBUG] Loaded optionsMapping for number selection", {
@@ -1106,7 +1639,7 @@ export class ChatEngineService {
               const processingTimeMs = Date.now() - startTime
               
               // Save messages
-              await this.saveMessages(
+              const savedMessages = await this.saveMessages(
                 input.workspaceId,
                 input.customerId,
                 conversationId,  // 🔧 Use conversationId for consistent history
@@ -1161,6 +1694,7 @@ export class ChatEngineService {
                 executionTimeMs: processingTimeMs,
                 wasFAQ: false,
                 isBlocked: false,
+                _assistantMessageId: savedMessages?.assistantMessageId,
               }
             }
           }
@@ -1189,6 +1723,7 @@ export class ChatEngineService {
               listType: (optionsMapping.listType as import("../intent/intent.types").ListType) || "CATEGORIES",
               skus: selectedOption.skus,
               optionId: (selectedOption as any).id,  // 🆕 For ORDER_ACTIONS: "SEND_INVOICE", "REPEAT_ORDER"
+              optionMetadata: (selectedOption as any).metadata,
             }
             
             // Load data using this intent
@@ -1213,8 +1748,13 @@ export class ChatEngineService {
             
             // 📦 Handle ORDER_ACTION - execute calling function directly
             if (structuredResponse.type === "ORDER_ACTION") {
-              const action = (structuredResponse.data as { action: string }).action
-              const orderCode = optionsMapping.currentOrderCode
+              const orderActionData = structuredResponse.data as { action: string; orderCode?: string }
+              const action = orderActionData.action
+              const metadataOrderCode = optionsMapping.options?.find(opt => (opt as any).id === action)?.metadata?.orderCode
+              const orderCode =
+                orderActionData.orderCode ||
+                metadataOrderCode ||
+                optionsMapping.currentOrderCode
               
               logger.info("📦 [ChatEngine] ORDER_ACTION detected, executing calling function", {
                 action,
@@ -1240,7 +1780,8 @@ export class ChatEngineService {
                 action,
                 orderCode,
                 input.workspaceId,
-                input.customerId
+                input.customerId,
+                conversationId
               )
               
               // 🔧 Replace user variables in the message ({{nameUser}}, {{agentPhone}}, etc.)
@@ -1252,7 +1793,7 @@ export class ChatEngineService {
               )
               
               // Save messages to history
-              await this.saveMessages(
+              const savedMessages = await this.saveMessages(
                 input.workspaceId,
                 input.customerId,
                 conversationId,
@@ -1269,6 +1810,7 @@ export class ChatEngineService {
                 source: "PATTERN",
                 processingTimeMs: Date.now() - startTime,
                 // llmUsed: false, // RIMOSSO: non esiste nel tipo
+                _assistantMessageId: savedMessages?.assistantMessageId,
               }
             }
             
@@ -1279,31 +1821,108 @@ export class ChatEngineService {
               logger.info("🛒 [ChatEngine] CART_ACTION detected", { action })
               
               if (action === "CONFIRM_ORDER") {
-                // Trigger checkout flow - set pending action and ask for confirmation
-                await this.optionsMappingService.setPendingAction({
+                const confirmStart = Date.now()
+                const orderResult = await confirmOrder({
                   workspaceId: input.workspaceId,
-                  conversationId,
-                  pendingAction: { type: "CONFIRM_ORDER" },
+                  customerId: input.customerId,
                 })
-                
-                const confirmMessage = "Perfetto! Vuoi confermare l'ordine? Risponda 'sì' per procedere o 'no' per annullare."
-                
-                await this.saveMessages(
+
+                // Replace template variables
+                let confirmMessage = await this.replaceUserVariables(
+                  orderResult.message,
+                  input.customerId,
+                  input.workspaceId,
+                  input.customerName
+                )
+
+                const replacementResult = await this.linkReplacementService.replaceTokens(
+                  { response: confirmMessage, linkType: "auto" },
+                  input.customerId,
+                  input.workspaceId
+                )
+                if (replacementResult.success && replacementResult.response) {
+                  confirmMessage = replacementResult.response
+                }
+
+                // Persist response
+                const savedMessages = await this.saveMessages(
                   input.workspaceId,
                   input.customerId,
                   conversationId,
                   input.message,
-                  confirmMessage
+                  confirmMessage,
+                  AgentType.CART_MANAGEMENT,
+                  0,
+                  {
+                    loadedDataType: "CART_ACTION",
+                    responseType: "CONFIRM_ORDER",
+                    llmUsed: false,
+                    steps: [
+                      {
+                        type: "function_call",
+                        agent: "🧾 confirmOrder",
+                        timestamp: new Date().toISOString(),
+                        input: { textContent: "Finalize cart checkout" },
+                        output: {
+                          result: {
+                            success: orderResult.success,
+                            orderCode: orderResult.orderCode,
+                            total: orderResult.orderTotal,
+                          },
+                          executionTimeMs: Date.now() - confirmStart,
+                        },
+                        duration: Date.now() - confirmStart,
+                      },
+                    ],
+                    totalTokens: 0,
+                    totalCost: 0,
+                    executionTimeMs: Date.now() - confirmStart,
+                  }
                 )
-                
+
+                // Clear any pending checkout confirmations
+                await this.optionsMappingService.clearPendingAction(conversationId)
+
+                // Save next actions (notes / orders) if provided
+                if (orderResult.nextActions?.options?.length) {
+                  await this.optionsMappingService.saveMapping({
+                    workspaceId: input.workspaceId,
+                    conversationId,
+                    customerId: input.customerId,
+                    responseText: "",
+                    items: orderResult.nextActions.options.map((opt) => ({
+                      number: opt.number,
+                      name: opt.label,
+                      id: opt.id,
+                      metadata: opt.metadata,
+                    })),
+                    listType: (orderResult.nextActions.listType as ListType) || "ORDER_ACTIONS",
+                  })
+                } else {
+                  await this.optionsMappingService.saveMapping({
+                    workspaceId: input.workspaceId,
+                    conversationId,
+                    customerId: input.customerId,
+                    responseText: "",
+                    forceClear: true,
+                  })
+                }
+
                 return {
                   message: confirmMessage,
                   agentType: AgentType.CART_MANAGEMENT,
-                  wasHandled: true,
+                  wasHandled: orderResult.success,
                   intent: "CART_ACTION",
                   confidence: "HIGH",
                   source: "PATTERN",
                   processingTimeMs: Date.now() - startTime,
+                  response: confirmMessage,
+                  agentUsed: AgentType.CART_MANAGEMENT,
+                  tokensUsed: 0,
+                  executionTimeMs: Date.now() - startTime,
+                  wasFAQ: false,
+                  isBlocked: false,
+                  _assistantMessageId: savedMessages?.assistantMessageId,
                 }
               }
               
@@ -1316,7 +1935,7 @@ export class ChatEngineService {
               
               if (items.length === 0) {
                 const emptyMsg = "Il tuo carrello è vuoto, non c'è nulla da rimuovere."
-                await this.saveMessages(
+                const savedMessages = await this.saveMessages(
                   input.workspaceId,
                   input.customerId,
                   conversationId,
@@ -1331,6 +1950,7 @@ export class ChatEngineService {
                   confidence: "HIGH",
                   source: "PATTERN",
                   processingTimeMs: Date.now() - startTime,
+                  _assistantMessageId: savedMessages?.assistantMessageId,
                 }
               }
               
@@ -1373,7 +1993,7 @@ export class ChatEngineService {
                 listType: "CART_ITEMS",
               })
               
-              await this.saveMessages(
+              const savedMessages = await this.saveMessages(
                 input.workspaceId,
                 input.customerId,
                 conversationId,
@@ -1389,6 +2009,7 @@ export class ChatEngineService {
                 confidence: "HIGH",
                 source: "PATTERN",
                 processingTimeMs: Date.now() - startTime,
+                _assistantMessageId: savedMessages?.assistantMessageId,
               }
             }
             
@@ -1446,6 +2067,8 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
                 message: contextPrompt,
                 conversationHistory: history,
                 customerDiscount: input.customerDiscount || 0,
+                conversationId,
+                messageId: `${conversationId}-context-${Date.now()}`,
               })
               
               debugSteps.push({
@@ -1460,7 +2083,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
               
               const finalMessage = llmResponse.message || "Mi dispiace, non ho capito. Puoi ripetere?"
               
-              await this.saveMessages(
+              const savedMessages = await this.saveMessages(
                 input.workspaceId,
                 input.customerId,
                 conversationId,
@@ -1481,6 +2104,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
                   hybridFallback: true,
                   originalLabel: contextData.label,
                 },
+                _assistantMessageId: savedMessages?.assistantMessageId,
               }
             }
             
@@ -1499,13 +2123,21 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
               llmUsed = !formattedResult.cached
               groupMappingFromFormatter = formattedResult.groupMapping  // 🔧 Capture groupMapping
             } else if (structuredResponse.type === "NO_RESULTS") {
-              // Provide a meaningful fallback message for NO_RESULTS
               const errorMessage = (structuredResponse.data as { errorMessage?: string })?.errorMessage || "Nessun risultato trovato"
-              finalMessage = `Mi dispiace, ${errorMessage.toLowerCase()}. Posso aiutarti con qualcos'altro?`
-              logger.warn("⚠️ [ChatEngine] NO_RESULTS response, using fallback message", {
+              logger.warn("⚠️ [ChatEngine] NO_RESULTS response, delegating to generic fallback", {
                 errorMessage,
                 listType: optionsMapping?.listType,
               })
+              const fallback = await this.routeGenericLLMFallback({
+                input,
+                conversationId,
+                history,
+                fallbackReason: errorMessage,
+                debugSteps,
+              })
+              finalMessage = fallback.message
+              llmUsed = true
+              totalTokens += fallback.tokensUsed
             }
             
             // Save response WITH SKUs for next selection
@@ -1520,7 +2152,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             const agentType = AgentType.PRODUCT_SEARCH
             
             // Save messages to history
-            await this.saveMessages(
+            const savedMessages = await this.saveMessages(
               input.workspaceId,
               input.customerId,
               conversationId,  // 🔧 Use conversationId for consistent history
@@ -1674,8 +2306,8 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
                 customerId: input.customerId,
                 responseText: "", // Empty - we're providing explicit items
                 items: [
-                  { number: 1, name: "📄 Scarica fattura", id: "SEND_INVOICE" },
-                  { number: 2, name: "🔄 Ripeti ordine", id: "REPEAT_ORDER" },
+                  { number: 1, name: "📄 Scarica fattura", id: "SEND_INVOICE", metadata: { orderCode: order.code } },
+                  { number: 2, name: "🔄 Ripeti ordine", id: "REPEAT_ORDER", metadata: { orderCode: order.code } },
                 ],
                 listType: "ORDER_ACTIONS",
               })
@@ -1688,25 +2320,20 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             
             // 🛒 Save CART_ACTIONS for CART_VIEW (guided cart options)
             if (structuredResponse.type === "CART_VIEW" || structuredResponse.type === "CART_UPDATED") {
-              // Get cart items count for logging
               const cartItems = structuredResponse.data.items || []
+              const cartActions = this.buildCartActionOptions(cartItems.length > 1)
               
-              // Save explicit cart action options - always 1, 2, 3 (cart items use bullet points)
               await this.optionsMappingService.saveMapping({
                 workspaceId: input.workspaceId,
                 conversationId,
                 customerId: input.customerId,
                 responseText: "", // Empty - we're providing explicit items
-                items: [
-                  { number: 1, name: "✅ Confermare l'ordine", id: "CONFIRM_ORDER" },
-                  { number: 2, name: "🛍️ Esplorare il catalogo", id: "SHOW_PRODUCTS" },
-                  { number: 3, name: "🗑️ Rimuovere un articolo", id: "REMOVE_FROM_CART" },
-                ],
+                items: cartActions,
                 listType: "CART_ACTIONS",
               })
               
               logger.info("🛒 [ChatEngine] FAST-PATH: Set cart actions for CART_VIEW", {
-                actions: ["CONFIRM_ORDER", "SHOW_PRODUCTS", "REMOVE_FROM_CART"],
+                actions: cartActions.map((action) => action.id),
                 cartItemCount: cartItems.length,
               })
             }
@@ -1732,36 +2359,37 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
               executionTimeMs: processingTimeMs,
               wasFAQ: false,
               isBlocked: false,
+              _assistantMessageId: savedMessages?.assistantMessageId,
             }
           } else {
             // ========================================================================
             // 🚫 INVALID OPTION NUMBER - User selected a number not in the list
             // Instead of falling through to search, return a helpful error message
             // ========================================================================
-            const maxOption = optionsMapping.options.length
+            const availableOptions = optionsMapping.options || []
             const selectedNumber = preprocessResult.extractedNumber
             
             logger.info("🚫 [ChatEngine] Invalid option number selected", {
               selectedNumber,
-              maxOption,
               listType: optionsMapping.listType,
-              availableOptions: optionsMapping.options.map(o => o.number),
+              availableOptions: availableOptions.map(o => o.number),
             })
             
             // Build a friendly error message based on the context
             let invalidMessage: string
-            if (optionsMapping.listType === "CART_ACTIONS") {
-              invalidMessage = `⚠️ Opzione non valida. Per favore scegli 1, 2 o 3:\n1. ✅ Confermare l'ordine\n2. 🛍️ Esplorare il catalogo\n3. 🗑️ Rimuovere un articolo`
-            } else if (optionsMapping.listType === "ORDER_ACTIONS") {
-              invalidMessage = `⚠️ Opzione non valida. Per favore scegli 1 o 2:\n1. 📄 Scarica fattura\n2. 🔄 Ripeti ordine`
+            if (availableOptions.length > 0) {
+              const optionsText = availableOptions
+                .map(opt => `${opt.number}. ${opt.label || opt.name || opt.id}`)
+                .join("\n")
+              invalidMessage = `⚠️ Opzione non valida. Per favore scegli una delle seguenti opzioni:\n${optionsText}`
             } else {
-              invalidMessage = `⚠️ Opzione non valida. Per favore scegli un numero da 1 a ${maxOption}.`
+              invalidMessage = `⚠️ Opzione non valida. Per favore scegli un numero valido.`
             }
             
             const processingTimeMs = Date.now() - startTime
             
             // Save messages to history
-            await this.saveMessages(
+            const savedMessages = await this.saveMessages(
               input.workspaceId,
               input.customerId,
               conversationId,
@@ -1783,6 +2411,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
                 listType: optionsMapping.listType,
                 steps: debugSteps,
               },
+              _assistantMessageId: savedMessages?.assistantMessageId,
             }
           }
         }
@@ -1941,7 +2570,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             const processingTimeMs = Date.now() - startTime
             const rejectMessage = "Ok, nessun problema! Posso aiutarti con altro?"
             
-            await this.saveMessages(
+            const savedMessages = await this.saveMessages(
               input.workspaceId,
               input.customerId,
               conversationId,  // 🔧 Use conversationId for consistent history
@@ -1968,6 +2597,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
               executionTimeMs: processingTimeMs,
               wasFAQ: false,
               isBlocked: false,
+              _assistantMessageId: savedMessages?.assistantMessageId,
             }
           }
           
@@ -1988,6 +2618,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
               query: `aggiungi ${quantity} ${pendingAction.productName || itemLabel} al carrello`,
               customerName: input.customerName || "",
               customerLanguage: input.customerLanguage || "it",
+              customerDiscount: input.customerDiscount || 0,
               selectedSku: pendingAction.productId, // 🔧 SKU/code for precise cart addition
               selectedItemType: pendingAction.itemType || "PRODUCT", // 🆕 Pass item type
             })
@@ -1997,23 +2628,25 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             logger.info("🧹 [ChatEngine] Cleared pendingAction after ADD_TO_CART execution (STEP 2.6)")
             
             // 🛒 CRITICAL: Save CART_ACTIONS mapping so "1" triggers CONFIRM_ORDER, not product search!
+            const cartItemCount = this.extractCartItemCountFromFunctionCalls(cartResponse.functionCalls)
+            const cartActions = this.buildCartActionOptions((cartItemCount ?? 2) > 1)
+
             await this.optionsMappingService.saveMapping({
               workspaceId: input.workspaceId,
               conversationId,
               customerId: input.customerId,
               responseText: "",
-              items: [
-                { number: 1, name: "✅ Confermare l'ordine", id: "CONFIRM_ORDER" },
-                { number: 2, name: "🛍️ Esplorare il catalogo", id: "SHOW_PRODUCTS" },
-                { number: 3, name: "🗑️ Rimuovere un articolo", id: "REMOVE_FROM_CART" },
-              ],
+              items: cartActions,
               listType: "CART_ACTIONS",
             })
-            logger.info("🛒 [ChatEngine] Set CART_ACTIONS mapping after ADD_TO_CART (STEP 2.6)")
+            logger.info("🛒 [ChatEngine] Set CART_ACTIONS mapping after ADD_TO_CART (STEP 2.6)", {
+              cartItemCount,
+              actions: cartActions.map((action) => action.id),
+            })
             
             const processingTimeMs = Date.now() - startTime
             
-            await this.saveMessages(
+            const savedMessages = await this.saveMessages(
               input.workspaceId,
               input.customerId,
               conversationId,  // 🔧 Use conversationId for consistent history
@@ -2040,6 +2673,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
               executionTimeMs: processingTimeMs,
               wasFAQ: false,
               isBlocked: false,
+              _assistantMessageId: savedMessages?.assistantMessageId,
             }
           }
           
@@ -2189,6 +2823,33 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         })
       }
 
+      if (intentResult.intent.type === "PRODUCT_CONTEXT") {
+        const productContextHandled = await this.handleProductContextIntent({
+          input,
+          conversationId,
+          history,
+          chatSession,
+          fsmState,
+          workspaceConfig,
+          startTime,
+          debugSteps,
+        })
+
+        if (productContextHandled) {
+          return productContextHandled
+        }
+
+        logger.warn("⚠️ [ChatEngine] PRODUCT_CONTEXT intent could not be handled, falling back to generic search", {
+          workspaceId: input.workspaceId,
+          customerId: input.customerId,
+        })
+
+        intentResult.intent = {
+          type: "SEARCH_PRODUCTS",
+          query: input.message,
+        } as Intent
+      }
+
       // ========================================================================
       // STEP 3: Handle CART intents with LLM intelligence
       // ========================================================================
@@ -2216,7 +2877,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           const processingTimeMs = Date.now() - startTime
           
           // Save messages
-          await this.saveMessages(
+          const savedMessages = await this.saveMessages(
             input.workspaceId,
             input.customerId,
             conversationId,  // 🔧 Use conversationId for consistent history
@@ -2228,19 +2889,21 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           // Check if response contains cart options (the LLM shows cart after operations)
           if (cartResponse.output.includes("Cosa vuoi fare?") || 
               cartResponse.output.includes("Ecco il tuo carrello")) {
+            const cartItemCount = this.extractCartItemCountFromFunctionCalls(cartResponse.functionCalls)
+            const cartActions = this.buildCartActionOptions((cartItemCount ?? 2) > 1)
+            
             await this.optionsMappingService.saveMapping({
               workspaceId: input.workspaceId,
               conversationId,
               customerId: input.customerId,
               responseText: "",
-              items: [
-                { number: 1, name: "✅ Confermare l'ordine", id: "CONFIRM_ORDER" },
-                { number: 2, name: "🛍️ Esplorare il catalogo", id: "SHOW_PRODUCTS" },
-                { number: 3, name: "🗑️ Rimuovere un articolo", id: "REMOVE_FROM_CART" },
-              ],
+              items: cartActions,
               listType: "CART_ACTIONS",
             })
-            logger.info("🛒 [ChatEngine] Set CART_ACTIONS mapping after ADD_TO_CART (LLM fallback)")
+            logger.info("🛒 [ChatEngine] Set CART_ACTIONS mapping after ADD_TO_CART (LLM fallback)", {
+              cartItemCount,
+              actions: cartActions.map((action) => action.id),
+            })
           }
           
           return {
@@ -2262,6 +2925,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             executionTimeMs: processingTimeMs,
             wasFAQ: false,
             isBlocked: false,
+            _assistantMessageId: savedMessages?.assistantMessageId,
           }
         }
       }
@@ -2323,7 +2987,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           
           const processingTimeMs = Date.now() - startTime
           
-          await this.saveMessages(
+          const savedMessages = await this.saveMessages(
             input.workspaceId,
             input.customerId,
             conversationId,  // 🔧 Use conversationId for consistent history
@@ -2350,6 +3014,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             executionTimeMs: processingTimeMs,
             wasFAQ: false,
             isBlocked: false,
+            _assistantMessageId: savedMessages?.assistantMessageId,
           }
         }
 
@@ -2412,7 +3077,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         const processingTimeMs = Date.now() - startTime
 
         // Save messages
-        await this.saveMessages(
+        const savedMessages = await this.saveMessages(
           input.workspaceId,
           input.customerId,
           conversationId,  // 🔧 Use conversationId for consistent history
@@ -2469,6 +3134,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           executionTimeMs: processingTimeMs,
           wasFAQ: false,
           isBlocked: false,
+          _assistantMessageId: savedMessages?.assistantMessageId,
         }
       }
 
@@ -2790,17 +3456,14 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       // For CART_VIEW/CART_UPDATED: save CART_ACTIONS mapping
       if (structuredResponse.type === "CART_VIEW" || structuredResponse.type === "CART_UPDATED") {
         const cartItems = structuredResponse.data.items || []
+        const cartActions = this.buildCartActionOptions(cartItems.length > 1)
         
         await this.optionsMappingService.saveMapping({
           workspaceId: input.workspaceId,
           conversationId,
           customerId: input.customerId,
           responseText: "", // Empty - we're providing explicit items
-          items: [
-            { number: 1, name: "✅ Confermare l'ordine", id: "CONFIRM_ORDER" },
-            { number: 2, name: "🛍️ Esplorare il catalogo", id: "SHOW_PRODUCTS" },
-            { number: 3, name: "🗑️ Rimuovere un articolo", id: "REMOVE_FROM_CART" },
-          ],
+          items: cartActions,
           listType: "CART_ACTIONS",
         })
         
@@ -2808,19 +3471,20 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           responseType: structuredResponse.type,
           cartItemCount: cartItems.length,
           conversationId,
+          actions: cartActions.map((action) => action.id),
         })
       } 
       // For ORDER_DETAIL: save ORDER_ACTIONS mapping  
       else if (structuredResponse.type === "ORDER_DETAIL") {
         const order = structuredResponse.data.order
         const items = [
-          { number: 1, name: "📄 Scarica fattura", id: "SEND_INVOICE" },
-          { number: 2, name: "🔄 Ripeti ordine", id: "REPEAT_ORDER" },
+          { number: 1, name: "📄 Scarica fattura", id: "SEND_INVOICE", metadata: { orderCode: order?.code } },
+          { number: 2, name: "🔄 Ripeti ordine", id: "REPEAT_ORDER", metadata: { orderCode: order?.code } },
         ]
         
         // Add credit note option if order has credit notes
         if (order?.hasCreditNotes) {
-          items.push({ number: 3, name: "📋 Scarica nota di credito", id: "SEND_CREDIT_NOTES" })
+          items.push({ number: 3, name: "📋 Scarica nota di credito", id: "SEND_CREDIT_NOTES", metadata: { orderCode: order?.code } })
         }
         
         await this.optionsMappingService.saveMapping({
@@ -2837,6 +3501,19 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           responseType: structuredResponse.type,
           orderCode: order?.code,
           conversationId,
+        })
+      } else if (structuredResponse.type === "CART_EMPTY") {
+        await this.optionsMappingService.saveMapping({
+          workspaceId: input.workspaceId,
+          conversationId,
+          customerId: input.customerId,
+          responseText: "",
+          forceClear: true,
+        })
+        await this.optionsMappingService.setPendingAction({
+          workspaceId: input.workspaceId,
+          conversationId,
+          pendingAction: { type: "SHOW_PRODUCTS" },
         })
       }
       // For other types: normal saveMapping
@@ -2950,8 +3627,8 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           customerId: input.customerId,
           responseText: "", // Empty - we're providing explicit items
           items: [
-            { number: 1, name: "📄 Scarica fattura", id: "SEND_INVOICE" },
-            { number: 2, name: "🔄 Ripeti ordine", id: "REPEAT_ORDER" },
+            { number: 1, name: "📄 Scarica fattura", id: "SEND_INVOICE", metadata: { orderCode: order.code } },
+            { number: 2, name: "🔄 Ripeti ordine", id: "REPEAT_ORDER", metadata: { orderCode: order.code } },
           ],
           listType: "ORDER_ACTIONS",
         })
@@ -3102,6 +3779,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       SEARCH_PRODUCTS: AgentType.PRODUCT_SEARCH,
       SHOW_OFFERS: AgentType.PRODUCT_SEARCH,
       SHOW_NEW_ARRIVALS: AgentType.PRODUCT_SEARCH,
+      PRODUCT_CONTEXT: AgentType.PRODUCT_SEARCH,
 
       // Service intents
       VIEW_SERVICES: AgentType.PRODUCT_SEARCH,
@@ -3160,13 +3838,15 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
     action: string,
     orderCode: string,
     workspaceId: string,
-    customerId: string
+    customerId: string,
+    conversationId: string
   ): Promise<{ message: string; success: boolean }> {
     logger.info("📦 [executeOrderAction] Executing order action", {
       action,
       orderCode,
       workspaceId,
       customerId,
+      conversationId,
     })
 
     try {
@@ -3239,6 +3919,29 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
 
           return {
             message: `I found ${creditNotes.length} credit note(s) for order ${orderCode}:\n\n${notesList}\n\nI emailed the credit notes to you.`,
+            success: true,
+          }
+        }
+
+        case "ADD_ORDER_NOTE": {
+          if (!orderCode) {
+            return {
+              message: "Non ho trovato il codice ordine da aggiornare. Puoi ripetere quale ordine vuoi modificare?",
+              success: false,
+            }
+          }
+
+          await this.optionsMappingService.setPendingAction({
+            workspaceId,
+            conversationId,
+            pendingAction: {
+              type: "ADD_ORDER_NOTE",
+              orderCode,
+            },
+          })
+
+          return {
+            message: `Perfetto! Scrivi la nota che vuoi aggiungere all'ordine **${orderCode}**.`,
             success: true,
           }
         }

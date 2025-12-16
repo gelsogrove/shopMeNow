@@ -48,8 +48,8 @@ Quale prodotto ti interessa?
 
 **For count ≥6 (GROUPED):**
 ```
-1. Fresh Cheeses (4 items) [SKUS:SKU1,SKU2,SKU3,SKU4]
-2. Aged Cheeses (3 items) [SKUS:SKU5,SKU6,SKU7]
+**1.** Fresh Cheeses (4 items) [SKUS:SKU1,SKU2,SKU3,SKU4]
+**2.** Aged Cheeses (3 items) [SKUS:SKU5,SKU6,SKU7]
 
 Quale gruppo ti interessa?
 ```
@@ -57,10 +57,9 @@ Quale gruppo ti interessa?
 **Rules:**
 - ✅ **ALWAYS include [SKU:xxx] after each product** (system needs it for cart)
 - ✅ **ALWAYS include [SKUS:xxx,yyy] after each group** (system needs it for filtering)
-- NO emoji numbers (1️⃣) - use plain "1." only
+- NO emoji numbers (1️⃣) - use plain numbers in bold like **1.**, **2.**, ...
 - NO product details in lists - wait for selection
 - NO fluff text - be direct
 - ALWAYS group when ≥6
 
 **Note:** The [SKU:...] tags are parsed by the system and NOT shown to the customer. Include them always!
-
