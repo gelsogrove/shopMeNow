@@ -60,11 +60,8 @@ export function executeCatalogQuery(
     if (filter.field === "text") {
       const term = filter.value.toLowerCase()
       list = list.filter((p) => {
-        return (
-          p.name.toLowerCase().includes(term) ||
-          (p.description || "").toLowerCase().includes(term) ||
-          (p.categoryName || "").toLowerCase().includes(term)
-        )
+        // ONLY search in product name - per Andrea's request
+        return p.name.toLowerCase().includes(term)
       })
     }
   }

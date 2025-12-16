@@ -2137,140 +2137,32 @@ export class DataLoaderService {
     customerDiscount: number
   ): Promise<ProductData[]> {
     try {
-      // Build a compact list of products with categories and certifications for the LLM
-      const productList = products.map((p, i) => {
-        // Extract certifications from relation (productCertifications -> certification.name)
-        const certs = p.productCertifications?.map((pc: any) => pc.certification?.name).filter(Boolean) || []
-        return {
-          idx: i,
-          name: p.name,
-          category: p.productCategories?.[0]?.category?.name || "Altro",
-          region: p.region || "",
-          certifications: certs.length > 0 ? certs.join(", ") : "",
-          desc: (p.description || "").substring(0, 100),
-        }
+      // PURE CODE MATCHING - NO LLM!
+      // Match ONLY if product name contains the search term
+      const searchTerms = query.toLowerCase().trim().split(/\s+/).filter(t => t.length > 2)
+      
+      if (searchTerms.length === 0) {
+        logger.info("📦 [DataLoader] No valid search terms", { query })
+        return []
+      }
+
+      const matchingProducts = products.filter((p) => {
+        const productName = (p.name || "").toLowerCase()
+        // Product matches if name contains ANY of the search terms
+        return searchTerms.some((term) => productName.includes(term))
       })
 
-      // Ask LLM to identify matching product indices
-      const openRouterApiKey = process.env.OPENROUTER_API_KEY
-      if (!openRouterApiKey) {
-        logger.warn("⚠️ [DataLoader] OPENROUTER_API_KEY not set, cannot do semantic search")
-        return []
-      }
-
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${openRouterApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "openai/gpt-4o-mini",
-          messages: [
-            {
-              role: "system",
-              content: `You are a precise product filter for an e-commerce catalog. Given a search query and a product list, identify products that match the user's search intent.
-
-HOW TO HANDLE QUERIES:
-
-1. CATEGORY queries - user wants ALL products in a category:
-   - Look at the category in parentheses for each product
-   - Return ALL products belonging to that category
-
-2. QUALIFIED/SUBSET queries - user wants a SPECIFIC SUBSET:
-   - Query has a qualifier (fresh, aged, organic, premium, frozen, etc.)
-   - Analyze product NAMES, DESCRIPTIONS, and CERTIFICATIONS [Cert: xxx]
-   - Return ONLY products matching BOTH the category/type AND the qualifier
-
-3. PRODUCT NAME queries - user searching for a specific product:
-   - Return products whose name matches or contains the query
-
-4. SEMANTIC queries - user uses synonyms or related terms:
-   - Map the term to the appropriate category or product type using your knowledge
-
-5. CERTIFICATION queries (BIO, DOP, IGP, etc.):
-   - CRITICAL: "BIO" and "Biologico" mean ORGANIC certification ONLY
-   - "DOP" (Denominazione di Origine Protetta) is NOT the same as BIO
-   - "IGP" (Indicazione Geografica Protetta) is NOT the same as BIO
-   - For certification queries, ONLY return products with EXACTLY that certification in [Cert: xxx]
-   - If user asks for "prodotti BIO", return ONLY products with "Bio" or "Biologico" in [Cert: ...]
-
-RULES:
-- Return a JSON array of matching product indices, e.g. [0, 3, 5, 8]
-- Be INCLUSIVE for category queries (return all in category)
-- Be STRICT for certification and qualified queries (must have the exact certification)
-- If nothing matches, return []
-- Analyze the actual product data provided, don't assume`,
-            },
-            {
-              role: "user",
-              content: `Query: "${query}"
-
-Products:
-${productList.map((p) => {
-  const parts = [`${p.idx}. ${p.name} (${p.category})`]
-  if (p.region) parts.push(`[Regione: ${p.region}]`)
-  if (p.certifications) parts.push(`[Cert: ${p.certifications}]`)
-  if (p.desc) parts.push(`- ${p.desc}`)
-  return parts.join(" ")
-}).join("\n")}
-
-Return ONLY the JSON array of indices for products that match "${query}":`,
-            },
-          ],
-          temperature: 0.2,
-          max_tokens: 200,
-        }),
-        signal: AbortSignal.timeout(3000), // 3s timeout
-      })
-
-      if (!response.ok) {
-        logger.warn(`⚠️ [DataLoader] Semantic search LLM error: ${response.status}`)
-        return []
-      }
-
-      const data = await response.json()
-      const content = data.choices?.[0]?.message?.content?.trim() || "[]"
-
-      // Parse the JSON array of indices
-      let matchingIndices: number[] = []
-      try {
-        // Handle potential markdown code blocks
-        const jsonStr = content.replace(/```json?\n?|\n?```/g, "").trim()
-        matchingIndices = JSON.parse(jsonStr)
-        if (!Array.isArray(matchingIndices)) {
-          matchingIndices = []
-        }
-      } catch {
-        logger.warn(`⚠️ [DataLoader] Failed to parse semantic search result: ${content}`)
-        return []
-      }
-
-      // Debug: show what products were matched
-      const matchedNames = matchingIndices
-        .filter((idx) => idx >= 0 && idx < products.length)
-        .map((idx) => products[idx]?.name)
-
-      logger.info("📦 [DataLoader] Semantic search found matches", {
+      logger.info("📦 [DataLoader] Code-based name search", {
         query,
-        matchCount: matchingIndices.length,
+        searchTerms,
+        matchCount: matchingProducts.length,
         totalProducts: products.length,
-        matchedProducts: matchedNames.slice(0, 10), // First 10 for brevity
-        indices: matchingIndices,
+        matchedProducts: matchingProducts.map((p) => p.name),
       })
-
-      // Filter and return matching products
-      const matchingProducts = matchingIndices
-        .filter((idx) => idx >= 0 && idx < products.length)
-        .map((idx) => products[idx])
 
       return this.mapProducts(matchingProducts, customerDiscount)
     } catch (error) {
-      if (error instanceof Error && error.name === "TimeoutError") {
-        logger.warn("⏱️ [DataLoader] Semantic search timed out")
-      } else {
-        logger.error("❌ [DataLoader] Semantic search error", { error })
-      }
+      logger.error("❌ [DataLoader] Name search error", { error })
       return []
     }
   }
