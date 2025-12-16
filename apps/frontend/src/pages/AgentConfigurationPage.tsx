@@ -35,13 +35,12 @@ import { useWorkspace } from "@/hooks/use-workspace"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
 import {
-  Agent,
   exportAgentPrompts,
   getAgentConfigs,
-  getAgents,
   resetAgentPromptsToDefaults,
-  updateAgent,
-} from "@/services/agentApi"
+  updateAgentConfig,
+} from "@/services/agent-config-api"
+import { Agent, getAgents } from "@/services/agents-legacy-api"
 import {
   Bell,
   Bot,
@@ -256,8 +255,8 @@ export function AgentConfigurationPage() {
     if (!workspace?.id || !promptEditorAgent) return
 
     try {
-      const savedAgent = await updateAgent(workspace.id, promptEditorAgent.id, {
-        content: newPrompt,
+      const savedAgent = await updateAgentConfig(workspace.id, promptEditorAgent.id, {
+        systemPrompt: newPrompt,
       })
 
       // Update local state
@@ -286,15 +285,15 @@ export function AgentConfigurationPage() {
     if (!workspace?.id) return
 
     try {
-      const savedAgent = await updateAgent(workspace.id, updatedAgent.id, {
+      const savedAgent = await updateAgentConfig(workspace.id, updatedAgent.id, {
         name: updatedAgent.name,
-        content: updatedAgent.systemPrompt || "",
+        systemPrompt: updatedAgent.systemPrompt || "",
         temperature: updatedAgent.temperature,
         model: updatedAgent.model,
         maxTokens: updatedAgent.maxTokens,
         isActive: updatedAgent.isActive,
         order: updatedAgent.order,
-        agentType: updatedAgent.agentType,
+        type: updatedAgent.agentType,
       })
 
       // Update local state

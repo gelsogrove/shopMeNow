@@ -294,13 +294,6 @@ export function MinimalLayout() {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="p-2 cursor-pointer"
-                      onClick={() => navigate("/agents")}
-                    >
-                      <Bot className="mr-2 h-4 w-4 text-blue-600" />
-                      <span>Agents Configuration</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="p-2 cursor-pointer"
                       onClick={() => navigate("/settings")}
                     >
                       <Settings className="mr-2 h-4 w-4 text-gray-600" />

@@ -128,15 +128,7 @@ export function Sidebar() {
     },
   ]
 
-  // Add Agent Configuration when in impersonation mode (Feature 190)
-  const mainLinks = isImpersonating 
-    ? [...baseLinks, {
-        href: "/agents",
-        label: "Agent Configuration",
-        icon: Bot,
-        className: "text-purple-600 bg-purple-50", // Highlight to show it's admin-only
-      }]
-    : baseLinks
+  const mainLinks = baseLinks
 
   return (
     <aside className="fixed top-16 bottom-0 left-0 w-72 bg-gray-100 border-r">

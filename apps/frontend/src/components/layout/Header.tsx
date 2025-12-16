@@ -342,13 +342,6 @@ export function Header() {
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="p-2 cursor-pointer"
-                    onClick={() => navigate("/agents")}
-                  >
-                    <Bot className="mr-2 h-4 w-4" />
-                    <span>Agent Configuration</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="p-2 cursor-pointer"
                     onClick={() => navigate("/queue")}
                   >
                     <Send className="mr-2 h-4 w-4" />
