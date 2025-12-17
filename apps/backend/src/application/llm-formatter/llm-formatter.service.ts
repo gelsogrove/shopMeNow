@@ -425,10 +425,10 @@ export class LLMFormatterService {
 
   private getCartEmpty(lang: string): string {
     const empty: Record<string, string> = {
-      it: "🛒 Il tuo carrello è vuoto.\n\nVuoi vedere i nostri prodotti?",
-      en: "🛒 Your cart is empty.\n\nWould you like to see our products?",
-      es: "🛒 Tu carrito está vacío.\n\n¿Quieres ver nuestros productos?",
-      pt: "🛒 Seu carrinho está vazio.\n\nGostaria de ver nossos produtos?",
+      it: "Il tuo carrello è vuoto.\n\nVuoi vedere i nostri prodotti?",
+      en: "Your cart is empty.\n\nWould you like to see our products?",
+      es: "Tu carrito está vacío.\n\n¿Quieres ver nuestros productos?",
+      pt: "Seu carrinho está vazio.\n\nGostaria de ver nossos produtos?",
     }
     return empty[lang] || empty["it"]
   }
@@ -524,18 +524,21 @@ export class LLMFormatterService {
     const cart = response.data.cart
     const items = response.data.items || []
     if (!cart || items.length === 0) {
-      return "🛒 Il tuo carrello è vuoto.\n\nVuoi vedere i nostri prodotti?"
+      return "Il tuo carrello è vuoto.\n\nVuoi vedere i nostri prodotti?"
     }
 
-    const lines: string[] = ["Ecco il tuo carrello:"]
+    const lines: string[] = ["Ecco il tuo carrello:", "", "Prodotti:"]
 
     for (const item of items) {
-      lines.push(`- ${item.name} - €${item.price?.toFixed(2)}`)
+      const qty = item.quantity || 1
+      lines.push(`- ${qty}x ${item.name} - €${item.price?.toFixed(2)}`)
     }
 
     if (cart.transport && cart.transport.totalTransportCost > 0) {
+      lines.push("")
+      lines.push("Spedizione:")
       for (const [typeName, info] of Object.entries(cart.transport.byType)) {
-        lines.push(`- Trasporto ${typeName}: €${info.cost.toFixed(2)}`)
+        lines.push(`- ${typeName}: €${info.cost.toFixed(2)}`)
       }
     }
 
@@ -543,27 +546,29 @@ export class LLMFormatterService {
       (cart.totalAmount + (cart.transport?.totalTransportCost ?? 0)) * 100
     ) / 100
     lines.push("")
-    lines.push(`💰 TOTALE ORDINE: €${grandTotal.toFixed(2)}`)
+    lines.push(`<b>TOTALE ORDINE: €${grandTotal.toFixed(2)}</b>`)
 
     if (response.context.hasDiscount && response.context.discountPercent > 0) {
       lines.push("")
       lines.push(
-        `🎁 Stai usufruendo del tuo sconto riservato del ${response.context.discountPercent}%! I prezzi mostrati includono già lo sconto.`
+        `Stai usufruendo del tuo sconto riservato del ${response.context.discountPercent}%! I prezzi mostrati includono già lo sconto.`
       )
     }
 
     const hasRemovableItems = items.length > 1
     let optionNumber = 1
     const actions: string[] = [
-      `${optionNumber++}. ✅ Confermare l'ordine`,
-      `${optionNumber++}. 🛍️ Esplorare il catalogo`,
+      `<b>${optionNumber++}.</b> Confermare l'ordine`,
+      `<b>${optionNumber++}.</b> Esplorare il catalogo`,
+      `<b>${optionNumber++}.</b> Mostra servizi`,
+      `<b>${optionNumber++}.</b> Guarda le offerte`,
     ]
     if (hasRemovableItems) {
-      actions.push(`${optionNumber++}. 🗑️ Rimuovere un articolo`)
+      actions.push(`<b>${optionNumber++}.</b> Rimuovere un articolo`)
     }
-    actions.push(`${optionNumber++}. 🧹 Cancella il carrello`)
+    actions.push(`<b>${optionNumber++}.</b> Cancella il carrello`)
     if (response.context.showOptimizeOption) {
-      actions.push(`${optionNumber++}. 🚚 Ottimizza spedizione`)
+      actions.push(`<b>${optionNumber++}.</b> Ottimizza spedizione`)
     }
 
     lines.push("")
@@ -851,7 +856,7 @@ CRITICAL:
   private formatServiceListPrompt(response: StructuredResponse): string {
     const items = response.data.items || []
     const itemsText = items
-      .map((item) => `${item.number}. ${item.name}${item.price ? ` - €${item.price.toFixed(2)}` : ""}${item.extra ? ` (${item.extra})` : ""}`)
+      .map((item) => `<b>${item.number}.</b> ${item.name}${item.price ? ` - €${item.price.toFixed(2)}` : ""}${item.extra ? ` (${item.extra})` : ""}`)
       .join("\n")
 
     return `Servizi disponibili:\n${itemsText}\n\nIndica il numero del servizio che ti interessa.\n- Non aggiungere totali, sconti o riepiloghi aggiuntivi\n- Usa solo l'elenco numerato sopra e una domanda finale`
@@ -864,7 +869,6 @@ CRITICAL:
     const lines = [
       "SERVICE DETAIL:",
       `Name: ${s.name}`,
-      `Code: ${s.code}`,
       `Price: €${s.price.toFixed(2)}`,
     ]
 
@@ -874,13 +878,15 @@ CRITICAL:
     if (s.description) {
       lines.push(`Description: ${s.description}`)
     }
-    if (s.duration) {
-      lines.push(`Duration: ${s.duration} minutes`)
-    }
-    lines.push(`Availability: ${s.isAvailable ? "✅ Available" : "❌ Not available"}`)
+    // REMOVED: Duration and Availability - don't show to user
+    
     // Add cart prompt
     lines.push("")
-    lines.push(`IMPORTANT: After the details, ask 'Would you like to add this service to your order?' or 'Shall I add it to your cart?'. DO NOT show service codes to the user.`)
+    lines.push(`IMPORTANT: 
+- Show Name, Price, and Description to the user in a professional format
+- Do NOT show Duration or Availability 
+- After the details, ask 'Vuoi aggiungere questo servizio al tuo ordine?' 
+- DO NOT show service codes to the user.`)
 
     return lines.join("\n")
   }
@@ -1029,16 +1035,17 @@ CRITICAL:
     const hasRemovableItems = effectiveItems.length > 1
     let optionNumber = 1
     const actionLines = [
-      `${optionNumber++}. ✅ Confermare l'ordine`,
-      `${optionNumber++}. 🛍️ Esplorare il catalogo`,
-      `${optionNumber++}. 🧾 Mostra servizi`,
+      `${optionNumber++}. Confermare l'ordine`,
+      `${optionNumber++}. Esplorare il catalogo`,
+      `${optionNumber++}. Mostra servizi`,
+      `${optionNumber++}. Guarda le offerte`,
     ]
     if (hasRemovableItems) {
-      actionLines.push(`${optionNumber++}. 🗑️ Rimuovere un articolo`)
+      actionLines.push(`${optionNumber++}. Rimuovere un articolo`)
     }
-    actionLines.push(`${optionNumber++}. 🧹 Cancella il carrello`)
+    actionLines.push(`${optionNumber++}. Cancella il carrello`)
     if (response.context.showOptimizeOption) {
-      actionLines.push(`${optionNumber++}. 🚚 Ottimizza spedizione`)
+      actionLines.push(`${optionNumber++}. Ottimizza spedizione`)
     }
 
     const outputLines: string[] = [
@@ -1052,12 +1059,12 @@ CRITICAL:
     }
 
     outputLines.push(totalLine)
-    outputLines.push("🎁 Prezzi sono IVA esclusa")
+    outputLines.push("Prezzi sono IVA esclusa")
 
     if (response.context.hasDiscount && response.context.discountPercent && response.context.discountPercent > 0) {
       outputLines.push("")
       outputLines.push(
-        `🎁 Stai usufruendo del tuo sconto riservato del ${response.context.discountPercent}%! I prezzi mostrati includono già lo sconto.`
+        `Stai usufruendo del tuo sconto riservato del ${response.context.discountPercent}%! I prezzi mostrati includono già lo sconto.`
       )
     }
 
@@ -1376,7 +1383,7 @@ CRITICAL:
     const items = response.data.items || []
     const lines = [`📦 Servizi (${items.length}):`]
     for (const item of items) {
-      lines.push(`${item.number}. ${item.name}${item.price ? ` - €${item.price.toFixed(2)}` : ""}${item.extra ? ` (${item.extra})` : ""}`)
+      lines.push(`<b>${item.number}.</b> ${item.name}${item.price ? ` - €${item.price.toFixed(2)}` : ""}${item.extra ? ` (${item.extra})` : ""}`)
     }
     return lines.join("\n")
   }
@@ -1393,32 +1400,31 @@ CRITICAL:
   private fallbackCart(response: StructuredResponse): string {
     const cart = response.data.cart
     if (!cart || cart.isEmpty) {
-      return "🛒 Il tuo carrello è vuoto"
+      return "Il tuo carrello è vuoto"
     }
-    const lines = ["🛒 Il tuo carrello:"]
-    lines.push("")
+    const lines = ["Ecco il tuo carrello:", "", "Prodotti:"]
     for (const item of cart.items) {
-      // Use bullet points for cart items (no numbers)
-      lines.push(`• ${item.quantity}× ${item.productName} - €${item.totalPrice.toFixed(2)}`)
+      lines.push(`- ${item.quantity}x ${item.productName} - €${item.totalPrice.toFixed(2)}`)
     }
     lines.push("")
-    lines.push(`━━━━━━━━━━━━━━━━━━━━`)
-    lines.push(`📦 Totale articoli: ${cart.itemCount}`)
-    lines.push(`💰 Totale: €${cart.totalAmount.toFixed(2)}`)
-    lines.push(`━━━━━━━━━━━━━━━━━━━━`)
+    lines.push(`Totale articoli: ${cart.itemCount}`)
+    lines.push(`<b>Totale: €${cart.totalAmount.toFixed(2)}</b>`)
     
     // Add discount message if customer has discount
     if (response.context.hasDiscount && response.context.discountPercent && response.context.discountPercent > 0) {
       lines.push("")
-      lines.push(`💰 Stai usufruendo del tuo sconto riservato del ${response.context.discountPercent}%! I prezzi mostrati includono già lo sconto.`)
+      lines.push(`Stai usufruendo del tuo sconto riservato del ${response.context.discountPercent}%! I prezzi mostrati includono già lo sconto.`)
     }
     
     // Add cart action options - numbered 1, 2, 3 (cart items use bullet points)
     lines.push("")
     lines.push("Cosa vuoi fare?")
-    lines.push("1. ✅ Confermare l'ordine")
-    lines.push("2. 🛍️ Esplorare il catalogo")
-    lines.push("3. 🗑️ Rimuovere un articolo")
+    lines.push("<b>1.</b> Confermare l'ordine")
+    lines.push("<b>2.</b> Esplorare il catalogo")
+    lines.push("<b>3.</b> Mostra servizi")
+    lines.push("<b>4.</b> Guarda le offerte")
+    lines.push("<b>5.</b> Rimuovere un articolo")
+    lines.push("<b>6.</b> Cancella il carrello")
     lines.push("")
     lines.push("Rispondi con il numero o scrivi cosa desideri!")
     

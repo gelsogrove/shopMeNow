@@ -897,19 +897,22 @@ export class ChatEngineService {
     }
   }
 
-  private async buildCartActionOptions(hasRemovableItems: boolean, workspaceId?: string) {
+  private async buildCartActionOptions(hasRemovableItems: boolean, workspaceId?: string, uniqueTransportModes: number = 0) {
     const options: Array<{ number: number; name: string; id: string }> = []
     let nextNumber = 1
-    options.push({ number: nextNumber++, name: "✅ Confermare l'ordine", id: "CONFIRM_ORDER" })
-    options.push({ number: nextNumber++, name: "🛍️ Esplorare il catalogo", id: "SHOW_PRODUCTS" })
-    options.push({ number: nextNumber++, name: "🧾 Mostra servizi", id: "SHOW_SERVICES" })
+    options.push({ number: nextNumber++, name: "Conferma ordine", id: "CONFIRM_ORDER" })
+    options.push({ number: nextNumber++, name: "Esplorare il catalogo", id: "SHOW_PRODUCTS" })
+    options.push({ number: nextNumber++, name: "Mostra servizi", id: "SHOW_SERVICES" })
+    options.push({ number: nextNumber++, name: "Guarda le offerte", id: "SHOW_OFFERS" })
     if (hasRemovableItems) {
-      options.push({ number: nextNumber++, name: "🗑️ Rimuovere un articolo", id: "REMOVE_FROM_CART" })
+      options.push({ number: nextNumber++, name: "Rimuovere un articolo", id: "REMOVE_FROM_CART" })
     }
-    options.push({ number: nextNumber++, name: "🧹 Cancella il carrello", id: "CLEAR_CART" })
+    options.push({ number: nextNumber++, name: "Cancella il carrello", id: "CLEAR_CART" })
     
-    // Option 5: Order optimization (show when multiple transport modes may exist)
-    options.push({ number: nextNumber++, name: "🚚 Ottimizza spedizione", id: "OPTIMIZE_TRANSPORT" })
+    // Option: Order optimization (show only when 2+ different transport modes exist)
+    if (uniqueTransportModes >= 2) {
+      options.push({ number: nextNumber++, name: "Ottimizza spedizione", id: "OPTIMIZE_TRANSPORT" })
+    }
     
     return options
   }
@@ -923,6 +926,30 @@ export class ChatEngineService {
       }
     }
     return null
+  }
+
+  /**
+   * Count unique transport modes from cart data
+   * Returns 0 if no transport info available
+   */
+  private countUniqueTransportModes(cartData: any): number {
+    const transport = cartData?.cart?.transport || cartData?.transport
+    if (!transport?.byType) return 0
+    return Object.keys(transport.byType).length
+  }
+
+  /**
+   * Extract unique transport modes count from function calls (for LLM responses)
+   */
+  private extractTransportModesFromFunctionCalls(functionCalls?: Array<{ result?: any }>): number {
+    if (!functionCalls?.length) return 0
+    for (let idx = functionCalls.length - 1; idx >= 0; idx--) {
+      const cartData = functionCalls[idx]?.result?.cartData
+      if (cartData) {
+        return this.countUniqueTransportModes(cartData)
+      }
+    }
+    return 0
   }
 
   private async handleProductContextIntent(params: {
@@ -1613,7 +1640,8 @@ export class ChatEngineService {
           
           // 🛒 CRITICAL: Save CART_ACTIONS mapping so "1" triggers CONFIRM_ORDER, not product search!
           const cartItemCount = this.extractCartItemCountFromFunctionCalls(cartResponse.functionCalls)
-          const cartActions = await this.buildCartActionOptions((cartItemCount ?? 2) > 1, input.workspaceId)
+          const transportModes = this.extractTransportModesFromFunctionCalls(cartResponse.functionCalls)
+          const cartActions = await this.buildCartActionOptions((cartItemCount ?? 2) > 1, input.workspaceId, transportModes)
 
           await this.optionsMappingService.saveMapping({
             workspaceId: input.workspaceId,
@@ -2397,7 +2425,8 @@ export class ChatEngineService {
 
                 // Mirror CART_VIEW mappings/actions so numeric selections map correctly
                 const cartItems = structuredResp.data.items || []
-                const cartActions = await this.buildCartActionOptions(cartItems.length > 1, input.workspaceId)
+                const transportModes = this.countUniqueTransportModes(structuredResp.data)
+                const cartActions = await this.buildCartActionOptions(cartItems.length > 1, input.workspaceId, transportModes)
 
                 await this.optionsMappingService.saveMapping({
                   workspaceId: input.workspaceId,
@@ -2473,7 +2502,9 @@ export class ChatEngineService {
               if (products.length > 0) {
                 removalMessage += "🛍️ **PRODOTTI:**\n"
                 for (const p of products) {
-                  removalMessage += `${optionNumber}. ${p.name} (${p.quantity}×) - €${(p.price * p.quantity).toFixed(2)}\n`
+                  const qty = p.quantity || 1
+                  const price = p.price || 0
+                  removalMessage += `<b>${optionNumber}.</b> ${p.name} (${qty}×) - €${(price * qty).toFixed(2)}\n`
                   mappingItems.push({ number: optionNumber, name: p.name, id: p.id })
                   optionNumber++
                 }
@@ -2483,7 +2514,9 @@ export class ChatEngineService {
               if (services.length > 0) {
                 removalMessage += "🎁 **SERVIZI:**\n"
                 for (const s of services) {
-                  removalMessage += `${optionNumber}. ${s.name} (${s.quantity}×) - €${(s.price * s.quantity).toFixed(2)}\n`
+                  const qty = s.quantity || 1
+                  const price = s.price || 0
+                  removalMessage += `<b>${optionNumber}.</b> ${s.name} (${qty}×) - €${(price * qty).toFixed(2)}\n`
                   mappingItems.push({ number: optionNumber, name: s.name, id: s.id })
                   optionNumber++
                 }
@@ -2778,6 +2811,25 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
                 productName: product.name,
               })
               
+              // 📋 Save PRODUCT_DETAIL_ACTIONS for navigation shortcuts (1. Esplora, 2. Carrello)
+              const productDetailActions = [
+                { number: 1, name: "Esplora il catalogo", id: "SHOW_CATEGORIES", metadata: {} },
+                { number: 2, name: "Mostrami il carrello", id: "VIEW_CART", metadata: {} },
+              ]
+              
+              await this.optionsMappingService.saveMapping({
+                workspaceId: input.workspaceId,
+                conversationId,
+                customerId: input.customerId,
+                responseText: "",
+                items: productDetailActions,
+                listType: "PRODUCT_DETAIL_ACTIONS",
+              })
+              
+              logger.info("📋 [ChatEngine] FAST-PATH: Saved PRODUCT_DETAIL_ACTIONS mapping", {
+                conversationId,
+                actions: ["SHOW_CATEGORIES", "VIEW_CART"],
+              })
             }
             
             // 🆕 Set pending action for SERVICE_DETAIL (add to cart prompt)
@@ -2836,7 +2888,8 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             // 🛒 Save CART_ACTIONS for CART_VIEW (guided cart options)
             if (structuredResponse.type === "CART_VIEW" || structuredResponse.type === "CART_UPDATED") {
               const cartItems = structuredResponse.data.items || []
-              const cartActions = await this.buildCartActionOptions(cartItems.length > 1, input.workspaceId)
+              const transportModes = this.countUniqueTransportModes(structuredResponse.data)
+              const cartActions = await this.buildCartActionOptions(cartItems.length > 1, input.workspaceId, transportModes)
               
               await this.optionsMappingService.saveMapping({
                 workspaceId: input.workspaceId,
@@ -3145,7 +3198,8 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             
             // 🛒 CRITICAL: Save CART_ACTIONS mapping so "1" triggers CONFIRM_ORDER, not product search!
             const cartItemCount = this.extractCartItemCountFromFunctionCalls(cartResponse.functionCalls)
-            const cartActions = await this.buildCartActionOptions((cartItemCount ?? 2) > 1, input.workspaceId)
+            const transportModes = this.extractTransportModesFromFunctionCalls(cartResponse.functionCalls)
+            const cartActions = await this.buildCartActionOptions((cartItemCount ?? 2) > 1, input.workspaceId, transportModes)
 
             await this.optionsMappingService.saveMapping({
               workspaceId: input.workspaceId,
@@ -3408,7 +3462,8 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           if (cartResponse.output.includes("Cosa vuoi fare?") || 
               cartResponse.output.includes("Ecco il tuo carrello")) {
             const cartItemCount = this.extractCartItemCountFromFunctionCalls(cartResponse.functionCalls)
-            const cartActions = await this.buildCartActionOptions((cartItemCount ?? 2) > 1, input.workspaceId)
+            const transportModes = this.extractTransportModesFromFunctionCalls(cartResponse.functionCalls)
+            const cartActions = await this.buildCartActionOptions((cartItemCount ?? 2) > 1, input.workspaceId, transportModes)
             
             await this.optionsMappingService.saveMapping({
               workspaceId: input.workspaceId,
@@ -3673,8 +3728,21 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             customerLanguage: input.customerLanguage || "it",
           })
 
-          loadedData = catalogResult.loadedData
-          structuredResponseOverride = catalogResult.structuredResponse
+          const shouldUseCatalogResult =
+            catalogResult.resultType !== "EMPTY" &&
+            catalogResult.loadedData &&
+            catalogResult.loadedData.type !== "EMPTY"
+
+          if (shouldUseCatalogResult) {
+            loadedData = catalogResult.loadedData
+            structuredResponseOverride = catalogResult.structuredResponse
+          } else {
+            logger.info("📦 [ChatEngine] Catalog query empty - falling back to DataLoader", {
+              resultType: catalogResult.resultType,
+            })
+            loadedData = null
+            structuredResponseOverride = null
+          }
 
           if (catalogResult.tokenUsage?.totalTokens) {
             totalTokens += catalogResult.tokenUsage.totalTokens
@@ -3995,7 +4063,8 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       // For CART_VIEW/CART_UPDATED: save CART_ACTIONS mapping
       if (structuredResponse.type === "CART_VIEW" || structuredResponse.type === "CART_UPDATED") {
         const cartItems = structuredResponse.data.items || []
-        const cartActions = await this.buildCartActionOptions(cartItems.length > 1, input.workspaceId)
+        const transportModes = this.countUniqueTransportModes(structuredResponse.data)
+        const cartActions = await this.buildCartActionOptions(cartItems.length > 1, input.workspaceId, transportModes)
         
         await this.optionsMappingService.saveMapping({
           workspaceId: input.workspaceId,

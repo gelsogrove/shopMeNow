@@ -139,7 +139,7 @@ export function MessageRenderer({
                   detailsPart
                     .replace(/\n/g, "<br>")
                     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>"),
-                  { ALLOWED_TAGS: ["strong", "em", "br"] }
+                  { ALLOWED_TAGS: ["strong", "em", "br", "b"] }
                 )
               }}
             />
@@ -237,7 +237,7 @@ export function MessageRenderer({
 
       // SECURITY: Sanitize HTML to prevent XSS attacks
       const sanitized = DOMPurify.sanitize(formatted, {
-        ALLOWED_TAGS: ["strong", "em", "s", "br", "img"],
+        ALLOWED_TAGS: ["strong", "em", "s", "br", "img", "b"],
         ALLOWED_ATTR: ["style", "src", "alt", "width", "height", "class"],
         KEEP_CONTENT: true,
       })

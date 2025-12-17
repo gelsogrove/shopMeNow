@@ -194,6 +194,8 @@ export type LoadedData =
   | { type: "FAQ"; faqs: FAQData[]; query: string }
   | { type: "PROFILE"; profile: CustomerProfileData }
   | { type: "OFFERS"; offers: OfferData[] }
+  | { type: "SHOW_SERVICES"; action: "SHOW_SERVICES" }
+  | { type: "SHOW_OFFERS"; action: "SHOW_OFFERS" }
   | { type: "ORDER_ACTION"; action: "SEND_INVOICE" | "REPEAT_ORDER" | "SEND_CREDIT_NOTES" | "ADD_ORDER_NOTE"; orderCode?: string }
   | { type: "CART_ACTION"; action: "CONFIRM_ORDER" | "SHOW_PRODUCTS" | "REMOVE_FROM_CART" | "OPTIMIZE_TRANSPORT" }
   | { type: "CART_REMOVAL_OPTIONS"; items: CartRemovalItemData[] }
@@ -417,6 +419,14 @@ export class DataLoaderService {
               case "SHOW_CATEGORIES":
                 // User wants to see more products
                 return this.loadCategories(workspaceId)
+              
+              case "SHOW_SERVICES":
+                // User wants to see services
+                return this.loadServices(workspaceId)
+              
+              case "SHOW_OFFERS":
+                // User wants to see offers
+                return this.loadOffers(workspaceId, customerDiscount)
               
               case "REMOVE_FROM_CART":
                 // User wants to remove an item → show cart items with removal options
@@ -2127,10 +2137,13 @@ export class DataLoaderService {
         return []
       }
 
+      const sanitizedQuery = trimmedQuery.replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim()
+      const fuseQuery = sanitizedQuery.length > 0 ? sanitizedQuery : trimmedQuery
+
       const fuse = new Fuse(products, {
         keys: [
-          { name: "name", weight: 0.45 },
-          { name: "description", weight: 0.25 },
+          { name: "name", weight: 0.5 },
+          { name: "description", weight: 0.2 },
           { name: "productCategories.category.name", weight: 0.15 },
           { name: "region", weight: 0.05 },
           { name: "formato", weight: 0.05 },
@@ -2142,7 +2155,7 @@ export class DataLoaderService {
         minMatchCharLength: 2,
       })
 
-      const fuseResults = fuse.search(trimmedQuery)
+      const fuseResults = fuse.search(fuseQuery)
       let candidates = fuseResults.map((result) => result.item)
 
       if (candidates.length === 0) {
@@ -2156,7 +2169,8 @@ export class DataLoaderService {
       const limitedCandidates = candidates.slice(0, 25)
 
       logger.info("📦 [DataLoader] Fuzzy product search", {
-        query,
+        query: trimmedQuery,
+        sanitizedQuery: fuseQuery,
         totalProducts: products.length,
         fuseMatches: fuseResults.length,
         fallbackMatches: candidates.length,
@@ -2236,7 +2250,7 @@ export class DataLoaderService {
 
     for (const word of targetWords) {
       if (word.length <= 1) continue
-      if (this.wordSimilarity(word, token) >= 0.82) {
+      if (this.wordSimilarity(word, token) >= 0.66) {
         return true
       }
     }
@@ -2314,19 +2328,19 @@ export class DataLoaderService {
           }
         }
 
-        if (bestScore >= 0.72) {
-          matchCount++
-          totalScore += bestScore
-        }
+      if (bestScore >= 0.65) {
+        matchCount++
+        totalScore += bestScore
+      }
       }
 
       if (matchCount === 0) continue
 
       const ratio = matchCount / nameTokens.length
       const avgScore = totalScore / matchCount
+      const combinedScore = ratio * 0.6 + avgScore * 0.4
 
-      if (ratio >= 0.5 && avgScore >= 0.75) {
-        const combinedScore = ratio * 0.6 + avgScore * 0.4
+      if (combinedScore >= 0.58) {
         matches.push({ product, ratio, avgScore, combined: combinedScore })
       }
     }
@@ -2425,16 +2439,25 @@ export class DataLoaderService {
     return urls
   }
 
+  /**
+   * Return relative image path - frontend will resolve with IMG_BASE_URL
+   * DO NOT build full URL here - let frontend handle it
+   */
   private buildPublicImageUrl(imagePath?: string): string | undefined {
     if (!imagePath) return undefined
     const trimmed = imagePath.trim()
     if (!trimmed) return undefined
+    // If already absolute URL, extract just the path
     if (/^https?:\/\//i.test(trimmed)) {
-      return trimmed
+      try {
+        const url = new URL(trimmed)
+        return url.pathname // Extract /uploads/products/...
+      } catch {
+        return trimmed
+      }
     }
-    const normalizedPath = trimmed.startsWith("/") ? trimmed : `/${trimmed}`
-    const baseUrl = config.frontendUrl || config.appUrl
-    return `${baseUrl}${normalizedPath}`
+    // Return relative path - frontend will prepend IMG_BASE_URL (3001)
+    return trimmed.startsWith("/") ? trimmed : `/${trimmed}`
   }
 }
 
