@@ -114,7 +114,7 @@ describe("CartManagementAgentLLM", () => {
         cart: { items: [] },
       })
 
-      expect(result.formattedCart).toBe("🛒 Il tuo carrello è vuoto.")
+      expect(result.formattedCart).toBe("Il tuo carrello è vuoto.")
     })
 
     it("should format cart with items correctly", () => {
@@ -146,12 +146,12 @@ describe("CartManagementAgentLLM", () => {
 
       // New format: "Ecco il tuo carrello:" with €XX.XX prices and bold numbers
       expect(result.formattedCart).toContain("Ecco il tuo carrello:")
-      expect(result.formattedCart).toContain("2× Mozzarella di Bufala - €17.00")
-      expect(result.formattedCart).toContain("1× Prosciutto Crudo - €15.00")
+      expect(result.formattedCart).toContain("2x Mozzarella di Bufala - €17.00")
+      expect(result.formattedCart).toContain("1x Prosciutto Crudo - €15.00")
       expect(result.formattedCart).toContain("Totale: €32.00")
       // Should always have action options
       expect(result.formattedCart).toContain("Cosa vuoi fare?")
-      expect(result.formattedCart).toContain("1. ✅ Confermare l'ordine")
+      expect(result.formattedCart).toContain("<b>1.</b> Confermare l'ordine")
     })
 
     it("should handle error response", () => {
@@ -162,7 +162,7 @@ describe("CartManagementAgentLLM", () => {
         error: "Cart not found",
       })
 
-      expect(result.formattedCart).toBe("❌ Error loading cart")
+      expect(result.formattedCart).toBe("Errore nel caricamento del carrello")
     })
 
     it("should format prices with euro symbol prefix", () => {

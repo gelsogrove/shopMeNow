@@ -1247,13 +1247,16 @@ export class CallingFunctionsService {
         })
 
         // Build full image URL
-        const getFullImageUrl = (imageUrl: string | null): string | null => {
-          if (!imageUrl) return null
-          if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
-            return imageUrl
+        const getFullImageUrl = (imageUrl: string | string[] | null): string | null => {
+          // Handle array case - take first element
+          const urlString = Array.isArray(imageUrl) ? imageUrl[0] : imageUrl
+          
+          if (!urlString) return null
+          if (urlString.startsWith("http://") || urlString.startsWith("https://")) {
+            return urlString
           }
           const baseUrl = config.appUrl.replace(/\/+$/, "")
-          const path = imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`
+          const path = urlString.startsWith("/") ? urlString : `/${urlString}`
           return `${baseUrl}${path}`
         }
 
@@ -1276,7 +1279,7 @@ export class CallingFunctionsService {
             transportType: product.transportType,
             certifications: certifications,
             // ✅ Include full image URL for display
-            imageUrl: getFullImageUrl(product.imageUrl),
+            imageUrl: getFullImageUrl(Array.isArray(product.imageUrl) ? product.imageUrl[0] : product.imageUrl),
             isAvailable: product.stock > 0,
           },
           timestamp: new Date().toISOString(),

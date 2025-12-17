@@ -1045,7 +1045,7 @@ export class ChatEngineService {
       pairingSuggestions: undefined,
       ingredients: [],
       allergens: productRecord.allergens || [],
-      imageUrl: productRecord.imageUrl,
+      imageUrl: Array.isArray(productRecord.imageUrl) ? productRecord.imageUrl[0] : productRecord.imageUrl,
     }
 
     const agent = new ProductContextAgentLLM(this.prisma)
