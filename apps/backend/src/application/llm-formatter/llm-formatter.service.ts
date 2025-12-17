@@ -551,8 +551,9 @@ export class LLMFormatterService {
     if (response.context.hasDiscount && response.context.discountPercent > 0) {
       lines.push("")
       lines.push(
-        `Stai usufruendo del tuo sconto riservato del ${response.context.discountPercent}%! I prezzi mostrati includono già lo sconto.`
+        `ℹ️ Stai usufruendo del tuo sconto riservato del <b>${response.context.discountPercent}</b>%! I prezzi mostrati includono già lo sconto.`
       )
+      lines.push(`I prezzi sono IVA esclusa.`)
     }
 
     const hasRemovableItems = items.length > 1
@@ -868,22 +869,19 @@ CRITICAL:
 
     const lines = [
       "SERVICE DETAIL:",
-      `Name: ${s.name}`,
-      `Price: €${s.price.toFixed(2)}`,
+      `Servizio: ${s.name}`,
+      `Prezzo: €${s.price.toFixed(2)}`,
     ]
 
-    if (s.priceWithDiscount) {
-      lines.push(`Discounted price: €${s.priceWithDiscount.toFixed(2)}`)
-    }
     if (s.description) {
-      lines.push(`Description: ${s.description}`)
+      lines.push(`Descrizione: ${s.description}`)
     }
     // REMOVED: Duration and Availability - don't show to user
     
     // Add cart prompt
     lines.push("")
     lines.push(`IMPORTANT: 
-- Show Name, Price, and Description to the user in a professional format
+- Show Name, Price, and Description to the user in a professional format with line breaks
 - Do NOT show Duration or Availability 
 - After the details, ask 'Vuoi aggiungere questo servizio al tuo ordine?' 
 - DO NOT show service codes to the user.`)
@@ -1064,8 +1062,9 @@ CRITICAL:
     if (response.context.hasDiscount && response.context.discountPercent && response.context.discountPercent > 0) {
       outputLines.push("")
       outputLines.push(
-        `Stai usufruendo del tuo sconto riservato del ${response.context.discountPercent}%! I prezzi mostrati includono già lo sconto.`
+        `ℹ️ Stai usufruendo del tuo sconto riservato del <b>${response.context.discountPercent}</b>%! I prezzi mostrati includono già lo sconto.`
       )
+      outputLines.push(`I prezzi sono IVA esclusa.`)
     }
 
     outputLines.push("")

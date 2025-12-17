@@ -1228,7 +1228,7 @@ export class DataLoaderService {
           return {
             id: item.id,
             productId: item.serviceId || "",
-            productName: `🎁 ${item.service!.name}`,
+            productName: item.service!.name,
             quantity: item.quantity,
             unitPrice: servicePrice,
             totalPrice: servicePrice * item.quantity,

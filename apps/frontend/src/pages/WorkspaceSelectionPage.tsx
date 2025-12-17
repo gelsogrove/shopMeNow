@@ -20,7 +20,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { TeamMembersTable } from "@/components/workspace/TeamMembersTable"
-import { BillingSection } from "@/components/billing/BillingSection"
+import { BillingSection, PLAN_LIMITS } from "@/components/billing/BillingSection"
 import { UsageLimitsCard } from "@/components/billing/UsageLimitsCard"
 import type { Workspace } from "@/hooks/use-workspace"
 import { useWorkspace } from "@/hooks/use-workspace"
@@ -28,9 +28,9 @@ import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
-import { getBillingOverview } from "@/services/subscriptionBillingApi"
+import { getBillingOverview, PlanType } from "@/services/subscriptionBillingApi"
 import { LogOut, PlusCircle, MessageSquare, ShoppingCart, AlertTriangle, Smartphone, Crown, User, Ban, UserPlus, Clock, CreditCard, ArrowLeft, Check, ChevronRight, ChevronLeft, Store, Users, Headphones, Bot, X, HelpCircle, Trash2, Plus, Mail, Briefcase, ImagePlus, Pencil } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import {
   createWorkspace,
@@ -79,6 +79,22 @@ const WIZARD_STEPS = [
   { id: 8, title: "FAQs", description: "Common questions & answers", icon: HelpCircle },
 ] as const
 
+const PLAN_LABELS: Record<PlanType, string> = {
+  FREE_TRIAL: "Free Trial",
+  BASIC: "Basic",
+  PREMIUM: "Premium",
+  ENTERPRISE: "Enterprise",
+}
+
+const PLAN_TYPE_VALUES: PlanType[] = ["FREE_TRIAL", "BASIC", "PREMIUM", "ENTERPRISE"]
+
+const normalizePlanType = (value?: string | null): PlanType => {
+  if (value && PLAN_TYPE_VALUES.includes(value as PlanType)) {
+    return value as PlanType
+  }
+  return "FREE_TRIAL"
+}
+
 const initialWizardData: WizardFormData = {
   whatsappNumber: "",
   alias: "",
@@ -121,19 +137,17 @@ export function WorkspaceSelectionPage() {
   const [wizardData, setWizardData] = useState<WizardFormData>(initialWizardData)
   const [wizardOpen, setWizardOpen] = useState(false)
   
-  // Legacy state (kept for compatibility during transition)
-  const [newPhoneNumber, setNewPhoneNumber] = useState("")
-  const [alias, setAlias] = useState("")
-  const [welcomeMessage, setWelcomeMessage] = useState("")
-  const [isWelcomeMessageManuallyEdited, setIsWelcomeMessageManuallyEdited] = useState(false)
   const [userEmail, setUserEmail] = useState("") // Email from token (auto-filled)
   const [justCreatedId, setJustCreatedId] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState("")
   const [channelLimitError, setChannelLimitError] = useState(false)
+  const [channelLimitMessage, setChannelLimitMessage] = useState("")
   const [validationErrors, setValidationErrors] = useState<{
     whatsapp?: string
   }>({})
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
+  const [hasLoadedWorkspaces, setHasLoadedWorkspaces] = useState(false)
+  const [hasAutoOpenedWizard, setHasAutoOpenedWizard] = useState(false)
   
   // Logo upload state
   const [logoDialogOpen, setLogoDialogOpen] = useState(false)
@@ -222,7 +236,7 @@ export function WorkspaceSelectionPage() {
     }
   }
 
-  const resetWizard = () => {
+  const resetWizard = useCallback(() => {
     setWizardStep(1)
     setWizardData({
       ...initialWizardData,
@@ -231,40 +245,41 @@ export function WorkspaceSelectionPage() {
     setErrorMessage("")
     setChannelLimitError(false)
     setValidationErrors({})
-  }
-
-  const openWizardDialog = () => {
-    resetWizard()
-    setWizardOpen(true)
-    // Use setTimeout to ensure state is set before showing dialog
-    setTimeout(() => {
-      const dialog = document.getElementById("wizard-dialog") as HTMLDialogElement
-      if (dialog) dialog.showModal()
-    }, 0)
-  }
+  }, [userEmail])
 
   const closeWizardDialog = () => {
-    const dialog = document.getElementById("wizard-dialog") as HTMLDialogElement
-    if (dialog) dialog.close()
     setWizardOpen(false)
     resetWizard()
   }
+
+  useEffect(() => {
+    const dialog = document.getElementById("wizard-dialog") as HTMLDialogElement | null
+    if (!dialog) return
+
+    if (wizardOpen) {
+      if (!dialog.open) {
+        try {
+          dialog.showModal()
+        } catch (error) {
+          logger.error("Failed to open wizard dialog:", error)
+        }
+      }
+    } else if (dialog.open) {
+      dialog.close()
+    }
+
+    return () => {
+      if (dialog.open) {
+        dialog.close()
+      }
+    }
+  }, [wizardOpen])
 
   // Validation helpers
   const validateWhatsAppNumber = (phone: string): boolean => {
     // Must start with + and contain only digits after
     const whatsappRegex = /^\+[1-9]\d{6,14}$/
     return whatsappRegex.test(phone.replace(/\s/g, ''))
-  }
-
-  const handleWhatsAppChange = (value: string) => {
-    setNewPhoneNumber(value)
-    updateWizardData('whatsappNumber', value)
-    if (value && !validateWhatsAppNumber(value)) {
-      setValidationErrors(prev => ({ ...prev, whatsapp: 'Invalid format. Use +1234567890' }))
-    } else {
-      setValidationErrors(prev => ({ ...prev, whatsapp: undefined }))
-    }
   }
 
   const [isLoading, setIsLoading] = useState(false)
@@ -315,13 +330,6 @@ export function WorkspaceSelectionPage() {
     }
   }, [])
 
-  // Auto-generate welcome message when alias changes (only if not manually edited)
-  useEffect(() => {
-    if (!isWelcomeMessageManuallyEdited && alias.trim()) {
-      setWelcomeMessage(`Welcome to ${alias}! I'm your virtual assistant. How can I help you today?`)
-    }
-  }, [alias, isWelcomeMessageManuallyEdited])
-
   // 🔍 DEBUG: Log ALL localStorage keys on mount
   useEffect(() => {
     logger.info('🔍 [WorkspaceSelectionPage] MOUNT - Checking localStorage:')
@@ -351,8 +359,9 @@ export function WorkspaceSelectionPage() {
   }, [])
 
   // Get first workspace ID for role check (all workspaces share the same owner)
-  const firstWorkspaceId = workspaces.length > 0 ? workspaces[0].id : null
-  const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstWorkspaceId)
+const firstWorkspace = workspaces.length > 0 ? workspaces[0] : null
+const firstWorkspaceId = firstWorkspace?.id ?? null
+const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstWorkspaceId)
 
   // 🔍 DEBUG: Log role info
   useEffect(() => {
@@ -365,6 +374,61 @@ export function WorkspaceSelectionPage() {
     })
   }, [firstWorkspaceId, isSuperAdmin, isRoleLoading, role, workspaces.length])
 
+  const currentPlanType = normalizePlanType(
+    sharedBillingOverview?.billing?.planType || firstWorkspace?.planType
+  )
+  const currentChannelLimit =
+    sharedBillingOverview?.limits?.maxChannels ?? PLAN_LIMITS[currentPlanType].maxChannels
+  const currentChannelUsage =
+    sharedBillingOverview?.usage?.channelsCount ?? workspaces.length
+  const channelLimitReached = currentChannelUsage >= currentChannelLimit
+  const wizardBlocked = channelLimitError || channelLimitReached
+
+  useEffect(() => {
+    if (channelLimitReached) {
+      const defaultMessage = `Your ${PLAN_LABELS[currentPlanType]} plan allows ${currentChannelLimit} channel${currentChannelLimit > 1 ? "s" : ""}. You already have ${currentChannelUsage}.`
+      setChannelLimitError(true)
+      setChannelLimitMessage((prev) => prev || defaultMessage)
+    } else if (channelLimitError) {
+      setChannelLimitError(false)
+      setChannelLimitMessage("")
+    }
+  }, [
+    channelLimitReached,
+    channelLimitError,
+    currentChannelLimit,
+    currentChannelUsage,
+    currentPlanType,
+  ])
+
+  const openWizardDialog = useCallback(() => {
+    if (!wizardOpen) {
+      resetWizard()
+    }
+
+    if (channelLimitReached) {
+      const planLabel = PLAN_LABELS[currentPlanType]
+      const message = `Your ${planLabel} plan allows ${currentChannelLimit} channel${currentChannelLimit > 1 ? "s" : ""}. You already have ${currentChannelUsage}.`
+      setChannelLimitError(true)
+      setChannelLimitMessage(message)
+      toast.error(message)
+    } else {
+      setChannelLimitError(false)
+      setChannelLimitMessage("")
+    }
+
+    if (!wizardOpen) {
+      setWizardOpen(true)
+    }
+  }, [
+    channelLimitReached,
+    currentChannelLimit,
+    currentChannelUsage,
+    currentPlanType,
+    resetWizard,
+    wizardOpen,
+  ])
+
   // 🧹 Clear workspace on mount
   useEffect(() => {
     localStorage.removeItem("currentWorkspace")
@@ -374,6 +438,13 @@ export function WorkspaceSelectionPage() {
   useEffect(() => {
     loadWorkspaces()
   }, [])
+
+  useEffect(() => {
+    if (hasLoadedWorkspaces && workspaces.length === 0 && !hasAutoOpenedWizard) {
+      openWizardDialog()
+      setHasAutoOpenedWizard(true)
+    }
+  }, [hasLoadedWorkspaces, hasAutoOpenedWizard, openWizardDialog, workspaces.length])
 
   const loadWorkspaces = async () => {
     try {
@@ -450,6 +521,7 @@ export function WorkspaceSelectionPage() {
       setErrorMessage("Failed to load workspaces")
     } finally {
       setIsLoading(false)
+      setHasLoadedWorkspaces(true)
     }
   }
 
@@ -541,7 +613,11 @@ export function WorkspaceSelectionPage() {
       // Check if it's a channel limit error
       if (error?.response?.data?.code === "CHANNEL_LIMIT_EXCEEDED") {
         setChannelLimitError(true)
-        setErrorMessage(error.response.data.message)
+        const limitMsg =
+          error.response.data.message ||
+          `You've reached your channel limit (${currentChannelUsage}/${currentChannelLimit}). Upgrade to add more channels.`
+        setChannelLimitMessage(limitMsg)
+        setErrorMessage(limitMsg)
       } else {
         setErrorMessage("Failed to create channel")
       }
@@ -791,91 +867,64 @@ export function WorkspaceSelectionPage() {
                 Create your first WhatsApp channel to start receiving orders from your customers
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 space-y-6">
               {errorMessage && (
-                <div className="mb-4 p-4 text-red-700 bg-red-100 rounded-md">
+                <div className="p-4 text-red-700 bg-red-100 rounded-md">
                   {errorMessage}
                 </div>
               )}
 
-              <form onSubmit={handleCreateWorkspace} className="space-y-4">
-                <div>
-                  <Label htmlFor="whatsapp-number-inline" className="text-sm font-medium">
-                    WhatsApp Number <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="whatsapp-number-inline"
-                    type="text"
-                    placeholder="+34612345678"
-                    value={newPhoneNumber}
-                    onChange={(e) => handleWhatsAppChange(e.target.value)}
-                    className={`mt-1.5 ${validationErrors.whatsapp ? 'border-red-500 focus:ring-red-500' : ''}`}
-                    autoComplete="off"
-                  />
-                  {validationErrors.whatsapp && (
-                    <p className="text-xs text-red-500 mt-1">{validationErrors.whatsapp}</p>
-                  )}
-                  <p className="text-xs text-gray-500 mt-1">Include country code (e.g., +34 for Spain)</p>
-                </div>
-
-                <div>
-                  <Label htmlFor="channel-alias-inline" className="text-sm font-medium">
-                    Business Name <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="channel-alias-inline"
-                    type="text"
-                    placeholder=""
-                    value={alias}
-                    onChange={(e) => setAlias(e.target.value)}
-                    className="mt-1.5"
-                    autoComplete="off"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="welcome-message-inline" className="text-sm font-medium">
-                    Welcome Message
-                  </Label>
-                  <Textarea
-                    id="welcome-message-inline"
-                    placeholder="Enter your welcome message..."
-                    value={welcomeMessage}
-                    onChange={(e) => {
-                      setWelcomeMessage(e.target.value)
-                      setIsWelcomeMessageManuallyEdited(true)
-                    }}
-                    className="mt-1.5 min-h-[80px] resize-none"
-                    rows={3}
-                  />
-                  <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                    <span className="inline-block w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                    AI will automatically translate to customer's language
-                  </p>
-                </div>
-
-                {/* Admin email info (auto-filled from logged user) */}
-                {userEmail && (
-                  <div className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
-                    📧 Admin email: <span className="font-medium text-gray-700">{userEmail}</span>
+              <div className="grid gap-4 text-left sm:grid-cols-2">
+                <div className="p-4 border border-gray-200 rounded-xl bg-gray-50">
+                  <div className="flex items-center gap-3">
+                    <Store className="h-5 w-5 text-green-600" />
+                    <div>
+                      <p className="font-semibold text-gray-900">Catalog ready</p>
+                      <p className="text-sm text-gray-500">Import your Italian products and services.</p>
+                    </div>
                   </div>
-                )}
+                </div>
+                <div className="p-4 border border-gray-200 rounded-xl bg-gray-50">
+                  <div className="flex items-center gap-3">
+                    <Headphones className="h-5 w-5 text-green-600" />
+                    <div>
+                      <p className="font-semibold text-gray-900">Human handoff</p>
+                      <p className="text-sm text-gray-500">Let customers reach your operators with one tap.</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4 border border-gray-200 rounded-xl bg-gray-50">
+                  <div className="flex items-center gap-3">
+                    <Users className="h-5 w-5 text-green-600" />
+                    <div>
+                      <p className="font-semibold text-gray-900">Sales routing</p>
+                      <p className="text-sm text-gray-500">Assign leads to your agents automatically.</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4 border border-gray-200 rounded-xl bg-gray-50">
+                  <div className="flex items-center gap-3">
+                    <Bot className="h-5 w-5 text-green-600" />
+                    <div>
+                      <p className="font-semibold text-gray-900">AI tone & FAQs</p>
+                      <p className="text-sm text-gray-500">Configure tone of voice, identity, and FAQs.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
+              <div className="text-center space-y-3">
                 <Button
-                  type="submit"
-                  className="w-full bg-green-600 hover:bg-green-700 mt-6"
+                  onClick={openWizardDialog}
+                  className="w-full bg-green-600 hover:bg-green-700"
                   size="lg"
-                  disabled={
-                    !newPhoneNumber.trim() || 
-                    !alias.trim() || 
-                    !userEmail ||
-                    !!validationErrors.whatsapp ||
-                    isLoading
-                  }
                 >
-                  {isLoading ? "Creating..." : "🚀 Create My Channel"}
+                  Launch Setup Wizard
                 </Button>
-              </form>
+                <p className="text-sm text-gray-500">
+                  We’ll guide you through every step. You can update settings anytime in the channel settings.
+                </p>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -1187,14 +1236,15 @@ export function WorkspaceSelectionPage() {
                   <div>
                     <p className="font-medium text-amber-800">Upgrade Required</p>
                     <p className="text-sm text-amber-700 mt-1">
-                      {errorMessage || "You've reached your channel limit. Upgrade your plan to add more channels."}
+                      {channelLimitMessage || "You've reached your channel limit. Upgrade your plan to add more channels."}
                     </p>
                     <Button
                       size="sm"
                       className="mt-2 bg-amber-600 hover:bg-amber-700"
                       onClick={() => {
                         closeWizardDialog()
-                        document.querySelector('[class*="Subscription"]')?.scrollIntoView({ behavior: 'smooth' })
+                        setOpenChangePlanDialog(true)
+                        document.getElementById("billing-section")?.scrollIntoView({ behavior: 'smooth' })
                       }}
                     >
                       Change Plan
@@ -1205,6 +1255,35 @@ export function WorkspaceSelectionPage() {
 
               {/* Step Content */}
               <div className="flex-1 p-6 overflow-y-auto">
+                {wizardBlocked ? (
+                  <div className="max-w-lg mx-auto text-center space-y-4 py-20">
+                    <div className="mx-auto w-16 h-16 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center">
+                      <Crown className="w-8 h-8" />
+                    </div>
+                    <h3 className="text-2xl font-semibold text-gray-900">Upgrade required</h3>
+                    <p className="text-gray-600 text-sm">
+                      {channelLimitMessage ||
+                        `Your ${PLAN_LABELS[currentPlanType]} plan allows ${currentChannelLimit} channel${
+                          currentChannelLimit > 1 ? "s" : ""
+                        }. You already have ${currentChannelUsage}. You can't add another channel until you upgrade.`}
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                      <Button
+                        className="bg-amber-600 hover:bg-amber-700"
+                        onClick={() => {
+                          setOpenChangePlanDialog(true)
+                          document.getElementById("billing-section")?.scrollIntoView({ behavior: "smooth" })
+                        }}
+                      >
+                        Change Plan
+                      </Button>
+                      <Button variant="outline" onClick={closeWizardDialog}>
+                        Close
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
                 {/* STEP 1: Channel Details */}
                 {wizardStep === 1 && (
                   <div className="space-y-6">
@@ -1283,6 +1362,8 @@ export function WorkspaceSelectionPage() {
                     </div>
                   </div>
                 )}
+
+                {/* additional steps... existing content */}
 
                 {/* STEP 2: E-commerce */}
                 {wizardStep === 2 && (
@@ -1780,43 +1861,68 @@ export function WorkspaceSelectionPage() {
                     </p>
                   </div>
                 )}
+
+                  </>
+                )}
               </div>
 
               {/* Footer with navigation */}
               <div className="p-6 border-t bg-gray-50 flex items-center justify-end">
-                <div className="flex items-center gap-3">
-                  {wizardStep > 1 && (
+                {wizardBlocked ? (
+                  <div className="flex items-center gap-3">
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={handlePrevStep}
-                      className="gap-2"
+                      onClick={closeWizardDialog}
                     >
-                      <ChevronLeft className="w-4 h-4" />
-                      Back
+                      Close
                     </Button>
-                  )}
-                  
-                  {wizardStep < 8 ? (
                     <Button
-                      onClick={handleNextStep}
-                      disabled={!validateCurrentStep()}
-                      className="bg-green-600 hover:bg-green-700 gap-2"
+                      className="bg-amber-600 hover:bg-amber-700"
+                      onClick={() => {
+                        setOpenChangePlanDialog(true)
+                        document.getElementById("billing-section")?.scrollIntoView({ behavior: "smooth" })
+                        closeWizardDialog()
+                      }}
                     >
-                      Next
-                      <ChevronRight className="w-4 h-4" />
+                      Change Plan
                     </Button>
-                  ) : (
-                    <Button
-                      onClick={handleCreateWorkspace}
-                      disabled={isLoading || !validateCurrentStep()}
-                      className="bg-green-600 hover:bg-green-700 gap-2"
-                    >
-                      {isLoading ? "Creating..." : "Create Channel"}
-                      {!isLoading && <Check className="w-4 h-4" />}
-                    </Button>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    {wizardStep > 1 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handlePrevStep}
+                        className="gap-2"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                        Back
+                      </Button>
+                    )}
+                    
+                    {wizardStep < 8 ? (
+                      <Button
+                        onClick={handleNextStep}
+                        disabled={!validateCurrentStep()}
+                        className="bg-green-600 hover:bg-green-700 gap-2"
+                      >
+                        Next
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={handleCreateWorkspace}
+                        disabled={isLoading || !validateCurrentStep()}
+                        className="bg-green-600 hover:bg-green-700 gap-2"
+                      >
+                        {isLoading ? "Creating..." : "Create Channel"}
+                        {!isLoading && <Check className="w-4 h-4" />}
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1824,7 +1930,7 @@ export function WorkspaceSelectionPage() {
 
         {/* Subscription & Billing + Usage Limits Row - ONLY for Owner (SUPER_ADMIN) */}
         {firstWorkspaceId && !isRoleLoading && isSuperAdmin && (
-          <div className="mt-8 grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
+          <div id="billing-section" className="mt-8 grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
             {/* Main - Subscription & Billing */}
             <BillingSection 
               workspaceId={firstWorkspaceId} 

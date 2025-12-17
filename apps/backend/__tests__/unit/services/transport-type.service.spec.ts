@@ -62,13 +62,13 @@ describe("TransportTypeService - UNIT Tests", () => {
       mockRepository.findByName.mockResolvedValue({
         id: "existing",
         workspaceId: "workspace1",
-        name: "Refrigerated",
+        name: "Refrigerato",
         createdAt: new Date(),
         updatedAt: new Date(),
       })
 
       await expect(
-        service.create("workspace1", "Refrigerated")
+        service.create("workspace1", "Refrigerato")
       ).rejects.toThrow("Transport type already exists")
     })
 
@@ -77,12 +77,12 @@ describe("TransportTypeService - UNIT Tests", () => {
       mockRepository.create.mockResolvedValue({
         id: "tt2",
         workspaceId: "workspace2",
-        name: "Refrigerated",
+        name: "Refrigerato",
         createdAt: new Date(),
         updatedAt: new Date(),
       })
 
-      const result = await service.create("workspace2", "Refrigerated")
+      const result = await service.create("workspace2", "Refrigerato")
       expect(result.workspaceId).toBe("workspace2")
     })
 

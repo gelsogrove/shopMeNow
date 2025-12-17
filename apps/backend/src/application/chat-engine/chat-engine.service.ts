@@ -2500,11 +2500,11 @@ export class ChatEngineService {
               const mappingItems: Array<{ number: number; name: string; id: string }> = []
               
               if (products.length > 0) {
-                removalMessage += "🛍️ **PRODOTTI:**\n"
+                removalMessage += "Prodotti:\n"
                 for (const p of products) {
                   const qty = p.quantity || 1
                   const price = p.price || 0
-                  removalMessage += `<b>${optionNumber}.</b> ${p.name} (${qty}×) - €${(price * qty).toFixed(2)}\n`
+                  removalMessage += `<b>${optionNumber}.</b> ${qty}x ${p.name} - €${(price * qty).toFixed(2)}\n`
                   mappingItems.push({ number: optionNumber, name: p.name, id: p.id })
                   optionNumber++
                 }
@@ -2512,11 +2512,11 @@ export class ChatEngineService {
               }
               
               if (services.length > 0) {
-                removalMessage += "🎁 **SERVIZI:**\n"
+                removalMessage += "Servizi:\n"
                 for (const s of services) {
                   const qty = s.quantity || 1
                   const price = s.price || 0
-                  removalMessage += `<b>${optionNumber}.</b> ${s.name} (${qty}×) - €${(price * qty).toFixed(2)}\n`
+                  removalMessage += `<b>${optionNumber}.</b> ${qty}x ${s.name} - €${(price * qty).toFixed(2)}\n`
                   mappingItems.push({ number: optionNumber, name: s.name, id: s.id })
                   optionNumber++
                 }

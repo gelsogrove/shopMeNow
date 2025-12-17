@@ -919,11 +919,11 @@ export function LoginPage() {
         {/* Hero Section - Side by Side */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           
-          {/* Left Side - Text & Features (5 cols) */}
-          <div className="lg:col-span-5 space-y-8">
+          {/* Left Side - Text & Features (wider for hero text) */}
+          <div className="lg:col-span-7 space-y-8">
             {/* Hero Title */}
             <div className="space-y-4">
-              <h1 className="text-4xl lg:text-5xl font-bold text-slate-900 leading-tight">
+              <h1 className="text-4xl lg:text-5xl font-bold text-slate-900 leading-snug lg:leading-[1.35] text-balance">
                 <span className="block text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-emerald-500">
                   {t("hero.title")}
                 </span>
@@ -983,8 +983,8 @@ export function LoginPage() {
           </div>
 
           {/* Right Side - Image (7 cols) */}
-          <div className="lg:col-span-7">
-            <div className="relative">
+          <div className="lg:col-span-5 lg:pl-12">
+            <div className="relative overflow-visible lg:translate-x-28 lg:translate-y-8 lg:scale-[1.55] lg:origin-right">
               <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-100 rounded-3xl transform rotate-2"></div>
               <img 
                 src="/home.png" 

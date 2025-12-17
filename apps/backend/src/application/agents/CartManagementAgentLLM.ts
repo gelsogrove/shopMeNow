@@ -195,6 +195,20 @@ export class CartManagementAgentLLM {
       logger.info(`📦 Loaded ${productsRaw.length} products for CartManagement`, {
         activeProducts: productsRaw.filter((p: any) => p.isActive).length,
       })
+
+      // 🆕 Load services with serviceCode for cart operations
+      const serviceRepo = new ServiceRepository()
+      const servicesRaw = await serviceRepo.findAll(context.workspaceId)
+      
+      // Format services with serviceCode for LLM
+      const servicesFormatted = servicesRaw
+        .filter((s: any) => s.isActive)
+        .map((s: any) => `- ${s.name} | CODE: ${s.serviceCode} | €${s.price?.toFixed(2)}`)
+        .join("\n")
+      
+      logger.info(`🎁 Loaded ${servicesRaw.length} services for CartManagement`, {
+        activeServices: servicesRaw.filter((s: any) => s.isActive).length,
+      })
       
       const systemPrompt = await promptProcessor.preProcessPrompt(
         systemPromptRaw,
@@ -204,7 +218,7 @@ export class CartManagementAgentLLM {
           faqs: "",
           products: productsFormatted, // 🆕 Include products with SKU
           categories: "",
-          services: "",
+          services: servicesFormatted, // 🆕 Include services with CODE
           offers: "",
         },
         undefined, // workspaceUrl
@@ -1100,7 +1114,8 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
     const discountPercent = cart.discountApplied || 0
     if (discountPercent > 0) {
       lines.push("")
-      lines.push(`Stai usufruendo del tuo sconto riservato del ${discountPercent}%! I prezzi mostrati includono già lo sconto.`)
+      lines.push(`ℹ️ Stai usufruendo del tuo sconto riservato del <b>${discountPercent}</b>%! I prezzi mostrati includono già lo sconto.`)
+      lines.push(`I prezzi sono IVA esclusa.`)
     }
     
     
@@ -1191,7 +1206,8 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
     const discountPercent = cart.discountApplied || 0
     if (discountPercent > 0) {
       lines.push("")
-      lines.push(`Stai usufruendo del tuo sconto riservato del ${discountPercent}%! I prezzi mostrati includono già lo sconto.`)
+      lines.push(`ℹ️ Stai usufruendo del tuo sconto riservato del <b>${discountPercent}</b>%! I prezzi mostrati includono già lo sconto.`)
+      lines.push(`I prezzi sono IVA esclusa.`)
     }
     
     const uniqueItemsCount = Array.isArray(cart.items) ? cart.items.length : 0

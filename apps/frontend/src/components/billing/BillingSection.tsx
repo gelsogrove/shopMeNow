@@ -113,7 +113,7 @@ interface PlanLimitsConfig {
   maxCustomers: number
 }
 
-const PLAN_LIMITS: Record<PlanType, PlanLimitsConfig> = {
+export const PLAN_LIMITS: Record<PlanType, PlanLimitsConfig> = {
   FREE_TRIAL: { maxChannels: 1, maxProducts: 50, maxCustomers: 50 },
   BASIC: { maxChannels: 1, maxProducts: 50, maxCustomers: 50 },
   PREMIUM: { maxChannels: 2, maxProducts: 100, maxCustomers: 100 },

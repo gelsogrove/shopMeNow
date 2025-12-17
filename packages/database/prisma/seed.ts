@@ -610,9 +610,9 @@ async function main() {
   // Transport types with prices (EUR, IVA inclusa)
   // Prices based on optimize-cart.md spec: Ambiente=8€, Refrigerato=12€, Frozen=15€
   const transportTypesData = [
-    { name: "Ambient Temperature", price: 8.00 },  // Temperatura ambiente
-    { name: "Refrigerated", price: 12.00 },        // Refrigerato
-    { name: "Frozen", price: 15.00 },              // Congelato
+    { name: "Temperatura Ambiente", price: 8.00 },  // Ambient Temperature
+    { name: "Refrigerato", price: 12.00 },           // Refrigerated
+    { name: "Congelato", price: 15.00 },             // Frozen
   ]
 
   const transportTypeMap = new Map<string, string>()
