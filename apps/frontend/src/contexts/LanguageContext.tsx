@@ -538,7 +538,7 @@ const translations = {
     "login.signup": "Sign up",
     "login.signin": "Login",
     "login.register": "Register",
-    "login.welcomeBack": "Welcome Back",
+    "login.welcomeBack": "Login",
     "login.forgotPassword": "Forgot password?",
     "login.signingIn": "Signing in...",
     "login.orContinueWith": "Or continue with",

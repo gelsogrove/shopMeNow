@@ -21,6 +21,20 @@ Transport types (ALWAYS translate to {{languageUser}}):
 - "Frozen" → {{languageUser}} (es: "Congelato" in IT, "Congelado" in ES/PT)
 - "Standard" → {{languageUser}} (es: "Standard" in IT, "Estándar" in ES)
 
+Cart/Order terms (Italian → {{languageUser}}):
+- "Prodotti" → {{languageUser}} (Products in EN, Productos in ES, Produtos in PT)
+- "Servizi" → {{languageUser}} (Services in EN, Servicios in ES, Serviços in PT)
+- "totale ordine" → {{languageUser}} (order total in EN, total del pedido in ES)
+- "Spedizione" → {{languageUser}} (Shipping in EN, Envío in ES, Envio in PT)
+- "Ecco il tuo carrello" → {{languageUser}} (Here's your cart in EN)
+- "Cosa vuoi fare?" → {{languageUser}} (What would you like to do? in EN)
+- "Confermare l'ordine" → {{languageUser}} (Confirm order in EN)
+- "Esplorare il catalogo" → {{languageUser}} (Browse catalog in EN)
+- "Mostrami servizi" → {{languageUser}} (Show me services in EN)
+- "Vedere le offerte" → {{languageUser}} (See offers in EN)
+- "Cancellare il carrello" → {{languageUser}} (Clear cart in EN)
+- "Rimuovere un articolo" → {{languageUser}} (Remove an item in EN)
+
 Other English terms to translate:
 - "Total" → {{languageUser}}
 - "Order" → {{languageUser}}

@@ -28,17 +28,19 @@ export const formatRoundedCurrency = (
     step?: number
     minimumFractionDigits?: number
     maximumFractionDigits?: number
+    useSmartRound?: boolean
   } = {}
 ): string => {
   const {
     currencySymbol = "€",
-    locale = "it-IT",
+    locale = "en-US",
     step = DEFAULT_ROUNDING_STEP,
     minimumFractionDigits = 0,
     maximumFractionDigits = 0,
+    useSmartRound = true,
   } = options
 
-  const rounded = smartRoundPrice(value, step)
+  const rounded = useSmartRound ? smartRoundPrice(value, step) : value
 
   const formatter = new Intl.NumberFormat(locale, {
     minimumFractionDigits,

@@ -1,4 +1,5 @@
 import { useWorkspace } from "@/hooks/use-workspace";
+import { smartRoundPrice } from "../../../../shared/pricing";
 
 /**
  * Get the currency symbol based on the currency code
@@ -66,7 +67,8 @@ const getWorkspaceCurrency = (): string => {
 export const formatPrice = (price: number, currencyCode?: string): string => {
   const currency = currencyCode || getWorkspaceCurrency();
   const symbol = getCurrencySymbol(currency);
-  return `${symbol}${price.toFixed(2)}`;
+  const rounded = smartRoundPrice(price);
+  return `${symbol}${rounded.toFixed(0)}`;
 };
 
 /**

@@ -30,7 +30,7 @@
  */
 
 import { PrismaClient } from "@echatbot/database"
-import { formatRoundedCurrency, smartRoundPrice } from "@shared/pricing"
+import { formatRoundedCurrency, smartRoundPrice } from "../../../../../shared/pricing"
 import axios from "axios"
 import { config } from "../../config"
 import { CartRepository } from "../../repositories/cart.repository"
@@ -75,7 +75,8 @@ export interface CartLLMResponse {
   model?: string // 🆕 Model used for debugging timeline
 }
 
-const formatCartPrice = (value?: number | null) => formatRoundedCurrency(value ?? 0)
+const formatCartPrice = (value?: number | null, options?: { useSmartRound?: boolean }) =>
+  formatRoundedCurrency(value ?? 0, { minimumFractionDigits: 2, maximumFractionDigits: 2, ...options })
 
 export class CartManagementAgentLLM {
   private prisma: PrismaClient
@@ -1076,7 +1077,7 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
         totalItems += quantity
         const unitPrice = item.unitPrice || item.product?.price || 0
         const itemTotal = item.total || (unitPrice * quantity)
-        lines.push(`- ${quantity}x ${name} - ${formatCartPrice(itemTotal)}`)
+        lines.push(`- ${quantity}x ${name} - ${formatCartPrice(itemTotal, { useSmartRound: false })}`)
       }
     }
 
@@ -1087,7 +1088,7 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
       for (const item of services) {
         const name = item.name || item.service?.name || "Unknown"
         const itemTotal = item.total || item.service?.price || 0
-        lines.push(`- ${name} - ${formatCartPrice(itemTotal)}`)
+        lines.push(`- ${name} - ${formatCartPrice(itemTotal, { useSmartRound: false })}`)
       }
     }
 
@@ -1113,21 +1114,21 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
           for (const transport of analysis.transports) {
             // Translate transport type: "Refrigerated" → "Frigorifero"
             const transportName = transport.transportTypeName === "Refrigerated" ? "Frigorifero" : transport.transportTypeName
-            lines.push(`- ${transportName}: ${formatCartPrice(transport.transportPrice)}`)
+            lines.push(`- ${transportName}: ${formatCartPrice(transport.transportPrice, { useSmartRound: false })}`)
           }
           
           // Calculate total: productSubtotal + transport (no "Totale spedizione" line)
           totalTransportCost = analysis.totalTransportCost
           const grandTotal = Math.round((productSubtotal + totalTransportCost) * 100) / 100
           lines.push("")
-          lines.push(`<b>💰 totale ordine: ${formatCartPrice(grandTotal)}</b>`)
+          lines.push(`<b>💰 totale ordine: ${formatCartPrice(grandTotal, { useSmartRound: true })}</b>`)
         }
       }
     } catch (error) {
       // If transport calculation fails, just show products total
       logger.warn("Could not calculate transport costs", { error, workspaceId })
       lines.push("")
-      lines.push(`<b>💰 totale: ${formatCartPrice(productSubtotal)}</b>`)
+      lines.push(`<b>💰 totale: ${formatCartPrice(productSubtotal, { useSmartRound: true })}</b>`)
     }
     
     // Show discount message if applicable
@@ -1210,7 +1211,7 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
         totalItems += quantity
         const unitPrice = item.unitPrice || item.product?.price || 0
         const itemTotal = item.total || (unitPrice * quantity)
-        lines.push(`- ${quantity}x ${name} - €${itemTotal.toFixed(2)}`)
+        lines.push(`- ${quantity}x ${name} - ${formatCartPrice(itemTotal, { useSmartRound: false })}`)
       }
     }
 
@@ -1221,7 +1222,7 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
       for (const item of services) {
         const name = item.name || item.service?.name || "Unknown"
         const itemTotal = item.total || item.service?.price || 0
-        lines.push(`- ${name} - €${itemTotal.toFixed(2)}`)
+        lines.push(`- ${name} - ${formatCartPrice(itemTotal, { useSmartRound: false })}`)
       }
     }
 
@@ -1232,7 +1233,7 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
     }, 0)
     
     lines.push("")
-    lines.push(`<b>💰 totale ordine: €${total.toFixed(2)}</b>`)
+    lines.push(`<b>💰 totale ordine: ${formatCartPrice(total, { useSmartRound: true })}</b>`)
     
     // Show discount message if applicable
     const discountPercent = cart.discountApplied || 0

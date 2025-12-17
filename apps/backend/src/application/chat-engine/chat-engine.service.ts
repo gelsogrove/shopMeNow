@@ -8,6 +8,7 @@
  */
 
 import { PrismaClient, AgentType } from "@echatbot/database"
+import { formatRoundedCurrency } from "../../../../../shared/pricing"
 import logger from "../../utils/logger"
 import {
   IntentParserService,
@@ -77,6 +78,8 @@ interface WorkspaceConfig {
 
 const workspaceConfigCache = new Map<string, { config: WorkspaceConfig; timestamp: number }>()
 const CONFIG_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+const formatCartPrice = (value?: number | null) => formatRoundedCurrency(value ?? 0)
 
 // ================================================================================
 // CUSTOMER-LEVEL LOCKS (Concurrency Safety - Principle VI)
@@ -2505,7 +2508,7 @@ export class ChatEngineService {
                 for (const p of products) {
                   const qty = p.quantity || 1
                   const price = p.price || 0
-                  removalMessage += `${optionNumber}. ${qty}x ${p.name} - €${(price * qty).toFixed(2)}\n`
+                  removalMessage += `${optionNumber}. ${qty}x ${p.name} - ${formatCartPrice(price * qty)}\n`
                   mappingItems.push({ number: optionNumber, name: p.name, id: p.id })
                   optionNumber++
                 }
@@ -2517,7 +2520,7 @@ export class ChatEngineService {
                 for (const s of services) {
                   const price = s.price || 0
                   // Services don't show "1x" prefix
-                  removalMessage += `${optionNumber}. ${s.name} - €${price.toFixed(2)}\n`
+                  removalMessage += `${optionNumber}. ${s.name} - ${formatCartPrice(price)}\n`
                   mappingItems.push({ number: optionNumber, name: s.name, id: s.id })
                   optionNumber++
                 }
