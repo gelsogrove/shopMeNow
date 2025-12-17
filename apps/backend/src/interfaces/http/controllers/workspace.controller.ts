@@ -5,6 +5,7 @@ import { WorkspaceService } from "../../../application/services/workspace.servic
 import { workspaceMemberService } from "../../../application/services/workspace-member.service"
 import logger from "../../../utils/logger"
 import { getStorageService } from "../../../services/storage"
+import fs from "fs/promises"
 
 // prisma imported
 
@@ -423,7 +424,13 @@ export class WorkspaceController {
 
       // Upload new logo via Storage Service
       const storage = getStorageService()
-      const uploadedFile = await storage.upload(file.buffer, {
+      const fileBuffer = file.buffer ?? (file.path ? await fs.readFile(file.path) : null)
+
+      if (!fileBuffer) {
+        return res.status(400).json({ error: "Invalid file payload" })
+      }
+
+      const uploadedFile = await storage.upload(fileBuffer, {
         filename: `${id}-logo-${Date.now()}.${file.originalname.split('.').pop()}`,
         folder: `workspaces/${id}`,
         contentType: file.mimetype,
