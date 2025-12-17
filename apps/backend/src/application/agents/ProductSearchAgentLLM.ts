@@ -63,6 +63,11 @@ export interface ProductSearchLLMResponse {
   }>
   systemPrompt?: string // 🆕 Processed system prompt for debugging
   model?: string // 🆕 Model used for debugging timeline
+  selectedProduct?: { // 🆕 For pendingAction ADD_TO_CART handoff
+    sku: string
+    name: string
+    itemType: string
+  } | null
 }
 
 export class ProductSearchAgentLLM {
@@ -104,6 +109,9 @@ export class ProductSearchAgentLLM {
     const startTime = Date.now()
 
     try {
+      // 🆕 Track selected product for pendingAction handoff to chat-engine
+      let selectedProductForCart: { sku: string; name: string; itemType: string } | null = null
+
       logger.info(`🔍 ProductSearchAgentLLM: Processing query`, {
         workspaceId: context.workspaceId,
         customerId: context.customerId,
@@ -492,10 +500,31 @@ export class ProductSearchAgentLLM {
             productName: product.name,
             timestamp: new Date().toISOString(),
           }
+          
+          // 🆕 Store selectedProduct for pendingAction in chat-engine
+          selectedProductForCart = {
+            sku: product.sku,
+            name: product.name,
+            itemType: "PRODUCT",
+          }
 
           logger.info(`📦 Storing product details from function call`, {
             selectedSku: product.sku,
             productName: product.name,
+          })
+        }
+        
+        // Check for service details too
+        if (productDetailsFunctionCall?.result?.found && productDetailsFunctionCall?.result?.service) {
+          const service = productDetailsFunctionCall.result.service
+          selectedProductForCart = {
+            sku: service.code,
+            name: service.name,
+            itemType: "SERVICE",
+          }
+          logger.info(`📦 Storing service details from function call`, {
+            selectedCode: service.code,
+            serviceName: service.name,
           })
         }
 
@@ -554,6 +583,7 @@ export class ProductSearchAgentLLM {
         functionCalls,
         systemPrompt: processedPrompt, // 🆕 Include processed prompt for debugging
         model: "gpt-4o-mini", // 🆕 Default model from template
+        selectedProduct: selectedProductForCart, // 🆕 For pendingAction ADD_TO_CART handoff
       }
     } catch (error) {
       const executionTimeMs = Date.now() - startTime

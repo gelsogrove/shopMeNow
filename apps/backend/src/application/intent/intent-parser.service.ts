@@ -319,6 +319,7 @@ Examples:
 - "SHOW_CATEGORIES"
 - "SHOW_CATEGORY:Formaggi"
 - "SEARCH_PRODUCTS:formaggio stagionato"
+- "SHOW_OFFERS" (when user asks "che offerte avete?", "offerte?", "promozioni?", "sconti?", "what offers?", "deals?", "promotions?", "ofertas?", "promociones?")
 - "VIEW_SERVICES" (when user asks "che servizi avete?", "quali servizi?", "servizi?")
 - "SHOW_SERVICE:Spedizione" (when user asks about a specific service)
 - "ADD_TO_CART:4:Pecorino Romano"

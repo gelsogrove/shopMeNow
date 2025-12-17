@@ -30,7 +30,11 @@
  */
 
 import { PrismaClient } from "@echatbot/database"
-import { formatRoundedCurrency, smartRoundPrice } from "../../../../../shared/pricing"
+import {
+  DEFAULT_ROUNDING_STEP,
+  formatRoundedCurrency,
+  smartRoundPrice,
+} from "../../../../../shared/pricing"
 import axios from "axios"
 import { config } from "../../config"
 import { CartRepository } from "../../repositories/cart.repository"
@@ -76,7 +80,12 @@ export interface CartLLMResponse {
 }
 
 const formatCartPrice = (value?: number | null) =>
-  formatRoundedCurrency(value ?? 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  formatRoundedCurrency(value ?? 0, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    useSmartRound: true,
+    step: DEFAULT_ROUNDING_STEP,
+  })
 
 export class CartManagementAgentLLM {
   private prisma: PrismaClient

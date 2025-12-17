@@ -8,7 +8,10 @@
  */
 
 import { PrismaClient, AgentType } from "@echatbot/database"
-import { formatRoundedCurrency } from "../../../../../shared/pricing"
+import {
+  DEFAULT_ROUNDING_STEP,
+  formatRoundedCurrency,
+} from "../../../../../shared/pricing"
 import logger from "../../utils/logger"
 import {
   IntentParserService,
@@ -80,7 +83,12 @@ const workspaceConfigCache = new Map<string, { config: WorkspaceConfig; timestam
 const CONFIG_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
 const formatCartPrice = (value?: number | null) =>
-  formatRoundedCurrency(value ?? 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  formatRoundedCurrency(value ?? 0, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    useSmartRound: true,
+    step: DEFAULT_ROUNDING_STEP,
+  })
 
 // ================================================================================
 // CUSTOMER-LEVEL LOCKS (Concurrency Safety - Principle VI)
@@ -1694,12 +1702,15 @@ export class ChatEngineService {
             _assistantMessageId: savedMessages?.assistantMessageId,
           }
         } else if (pendingAction && pendingAction.type === "SHOW_PRODUCTS") {
-          logger.info("🛍️ [ChatEngine] FAST-PATH: Confirmation detected for SHOW_PRODUCTS prompt")
+          // 🔧 FIX: When user says "si" after "Vuoi vedere i nostri prodotti?", 
+          // show CATEGORIES (not grouped products limited to 4)
+          logger.info("🛍️ [ChatEngine] FAST-PATH: Confirmation detected for SHOW_PRODUCTS prompt → showing CATEGORIES")
           
           await this.optionsMappingService.clearPendingAction(conversationId)
           cachedOptionsMapping = null
           
-          const showIntent: Intent = { type: "SHOW_PRODUCTS" } as Intent
+          // Use SHOW_CATEGORIES instead of SHOW_PRODUCTS to show ALL categories
+          const showIntent: Intent = { type: "SHOW_CATEGORIES" } as Intent
           const loadedData = await this.dataLoader.loadForIntent(
             showIntent,
             input.workspaceId,

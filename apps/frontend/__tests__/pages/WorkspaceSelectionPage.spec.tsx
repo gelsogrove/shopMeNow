@@ -47,6 +47,12 @@ vi.mock("@/components/workspace/TeamMembersTable", () => ({
 
 vi.mock("@/components/billing/BillingSection", () => ({
   BillingSection: () => <div data-testid="billing-section">Billing</div>,
+  PLAN_LIMITS: {
+    FREE_TRIAL: { maxChannels: 1, maxProducts: 50, maxCustomers: 50 },
+    BASIC: { maxChannels: 1, maxProducts: 50, maxCustomers: 50 },
+    PREMIUM: { maxChannels: 2, maxProducts: 100, maxCustomers: 100 },
+    ENTERPRISE: { maxChannels: 999, maxProducts: 9999, maxCustomers: 9999 },
+  },
 }))
 
 vi.mock("@/components/billing/UsageLimitsCard", () => ({
@@ -92,9 +98,9 @@ describe("WorkspaceSelectionPage", () => {
         expect(workspaceApi.getWorkspaces).toHaveBeenCalled()
       })
 
-      // When there are no workspaces, show "Create My Channel" button in welcome form
+      // When there are no workspaces, show welcome card
       await waitFor(() => {
-        expect(screen.getByText(/Create My Channel/)).toBeInTheDocument()
+        expect(screen.getByText(/Welcome to eChatbot/)).toBeInTheDocument()
       })
     })
 
@@ -183,10 +189,10 @@ describe("WorkspaceSelectionPage", () => {
         expect(workspaceApi.getWorkspaces).toHaveBeenCalled()
       })
 
-      // User should see welcome form with "Create My Channel" button
+      // User should see welcome card with call-to-action
       // (because workspaces.length === 0)
-      const createButton = await screen.findByText(/Create My Channel/)
-      expect(createButton).toBeInTheDocument()
+      const welcomeText = await screen.findByText(/Welcome to eChatbot/)
+      expect(welcomeText).toBeInTheDocument()
     })
   })
 

@@ -65,10 +65,14 @@ export interface OptionsMapping {
  * - Rejection: "no"
  */
 export class MessagePreprocessorService {
-  // Universal patterns - includes common Italian/English confirmations
-  private static readonly CONFIRMATION = /^(sì|si|yes|ok|okay|confermo|conferma|certo|esatto|perfetto|va bene|d'accordo)$/i
-  private static readonly CONFIRMATION_WITH_QUANTITY = /^(sì|si|yes|ok|okay|confermo)[,\s!.]*\s*(\d+)/i
-  private static readonly REJECTION = /^no$/i
+  // Universal patterns - includes IT/EN/ES/PT confirmations
+  // 🇮🇹 Italian: sì, si, confermo, conferma, certo, esatto, perfetto, va bene, d'accordo
+  // 🇬🇧 English: yes, sure, right, perfect, alright, agreed, confirm
+  // 🇪🇸 Spanish: sí, claro, exacto, perfecto, de acuerdo, vale, confirmo
+  // 🇵🇹 Portuguese: sim, certo, exato, perfeito, de acordo, está bem, confirmo
+  private static readonly CONFIRMATION = /^(sì|si|sim|yes|ok|okay|confermo|confirmo|confirma|confirm|certo|claro|sure|esatto|exacto|exato|right|perfetto|perfecto|perfeito|perfect|va bene|alright|de acuerdo|de acordo|d'accordo|agreed|vale|está bem)$/i
+  private static readonly CONFIRMATION_WITH_QUANTITY = /^(sì|si|sim|yes|ok|okay|confermo|confirmo|confirm|claro|sure|certo|vale)[,\s!.]*\s*(\d+)/i
+  private static readonly REJECTION = /^(no|não|nao)$/i
   private static readonly NUMBER = /^(\d+)$/
 
   /**

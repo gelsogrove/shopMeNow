@@ -59,6 +59,7 @@ import { AgentLoggerService } from "./agent-logger.service"
 import { ConversationManager } from "./conversation-manager.service"
 import { FunctionExecutor } from "./function-executor.service"
 import { messagePreprocessorService, PreprocessResult } from "./message-preprocessor.service" // 🆕 FASE 2: Deterministic preprocessing
+import { OptionsMappingService } from "../application/chat-engine/options-mapping.service" // 🆕 For pendingAction ADD_TO_CART
 import { PromptProcessorService } from "./prompt-processor.service" // 🆕 Feature 124: Customer variables replacement
 import { SecurityService } from "./security.service"
 import { getSystemContextService, SystemContextService } from "./system-context.service" // 🆕 System Context for hidden SKU mappings
@@ -92,6 +93,11 @@ export interface RouteMessageResponse {
   faqId?: string
   debugInfo?: DebugInfoSteps // 🔧 NEW: Debug information with execution chain
   isBlocked?: boolean // 🆕 Feature 126: P1 flag - webhook should NOT send message if true
+  selectedProduct?: { // 🆕 For pendingAction ADD_TO_CART handoff from ProductSearchAgentLLM
+    sku: string
+    name: string
+    itemType: string
+  } | null
 }
 
 // 🔧 NEW: Debug Info Structure for Message Flow
@@ -200,6 +206,7 @@ export class LLMRouterService {
   private safetyAgent: SafetyTranslationAgent // Used for specific flows (welcome, queue)
   private translationAgent: TranslationAgent // Main translation layer (IT → target language)
   private systemContextService: SystemContextService // 🆕 System Context for hidden SKU mappings
+  private optionsMappingService: OptionsMappingService // 🆕 For pendingAction ADD_TO_CART
   private openRouterApiKey: string
   private openRouterBaseUrl = "https://openrouter.ai/api/v1"
   private maxFunctionIterations = 8 // FR-13: Increased from 5 to support repeat order confirmation flow (6-7 iterations needed)
@@ -218,6 +225,7 @@ export class LLMRouterService {
     this.promptBuilder = new PromptBuilderService(prisma) // 🆕 Dynamic prompt generation
     this.templateLoader = TemplateLoaderService.getInstance(prisma) // 🆕 Load templates from files
     this.systemContextService = getSystemContextService(prisma) // 🆕 System Context for SKU mappings
+    this.optionsMappingService = new OptionsMappingService(prisma) // 🆕 For pendingAction ADD_TO_CART
 
     this.openRouterApiKey = process.env.OPENROUTER_API_KEY || ""
     if (!this.openRouterApiKey) {
@@ -1337,6 +1345,7 @@ export class LLMRouterService {
         executionTimeMs,
         wasFAQ: false,
         debugInfo: debugInfo, // ✅ Return same debugInfo object that was saved
+        selectedProduct: result.selectedProduct, // 🆕 For pendingAction ADD_TO_CART handoff to chat-engine
       }
     } catch (error) {
       const executionTimeMs = Date.now() - startTime
@@ -1463,6 +1472,7 @@ export class LLMRouterService {
     agentUsed?: AgentType
     confidence?: number
     debugSteps: DebugStep[] // 🔧 NEW: Captured execution steps
+    selectedProduct?: { sku: string; name: string; itemType: string } | null // 🆕 For pendingAction ADD_TO_CART
   }> {
     const {
       routerAgent,
@@ -1483,6 +1493,9 @@ export class LLMRouterService {
     let totalTokens = 0
     let iterations = 0
     let agentUsed: AgentType = "ROUTER"
+    
+    // 🆕 Track selected product from ProductSearchAgentLLM for pendingAction
+    let selectedProductFromAgent: { sku: string; name: string; itemType: string } | null = null
 
     // 🔧 NEW: Track execution steps for debug timeline
     const debugSteps: DebugStep[] = []
@@ -1878,6 +1891,32 @@ export class LLMRouterService {
               })
               if (subAgentResponse?.optionMapping) {
                 explicitOptionMapping = subAgentResponse.optionMapping
+              }
+              // 🆕 Capture selectedProduct for pendingAction ADD_TO_CART handoff
+              if (subAgentResponse?.selectedProduct) {
+                selectedProductFromAgent = subAgentResponse.selectedProduct
+                logger.info("📦 [Router] Captured selectedProduct from ProductSearchAgentLLM", {
+                  sku: selectedProductFromAgent.sku,
+                  name: selectedProductFromAgent.name,
+                })
+                
+                // 🆕 Set pendingAction ADD_TO_CART for "SI" confirmation handling
+                await this.optionsMappingService.setPendingAction({
+                  workspaceId: params.workspaceId,
+                  conversationId: params.conversationId,
+                  pendingAction: {
+                    type: "ADD_TO_CART",
+                    productId: selectedProductFromAgent.sku,
+                    productName: selectedProductFromAgent.name,
+                    quantity: 1,
+                    itemType: selectedProductFromAgent.itemType || "PRODUCT",
+                  },
+                })
+                logger.info("🛒 [Router] Set pendingAction ADD_TO_CART for product detail confirmation", {
+                  productId: selectedProductFromAgent.sku,
+                  productName: selectedProductFromAgent.name,
+                  conversationId: params.conversationId,
+                })
               }
               break
             }
@@ -2409,6 +2448,7 @@ export class LLMRouterService {
             agentUsed,
             confidence: 0.9,
             debugSteps, // Contains: Router → SubAgent
+            selectedProduct: selectedProductFromAgent, // 🆕 For pendingAction ADD_TO_CART
           }
         }
 
@@ -2527,6 +2567,7 @@ export class LLMRouterService {
         agentUsed,
         confidence: 0.9,
         debugSteps, // 🔧 NEW: Return captured steps
+        selectedProduct: selectedProductFromAgent, // 🆕 For pendingAction ADD_TO_CART
       }
     }
 
@@ -2543,6 +2584,7 @@ export class LLMRouterService {
       agentUsed,
       confidence: 0.5,
       debugSteps, // 🔧 NEW: Return captured steps
+      selectedProduct: selectedProductFromAgent, // 🆕 For pendingAction ADD_TO_CART
     }
   }
 

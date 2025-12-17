@@ -23,7 +23,21 @@ import {
   ListItem,
   GroupedItems,
 } from "../response-builder/response-builder.service"
-import { ProductData, OrderData, CartData, WorkspaceIdentityData, WorkspaceLocationData, FAQData, CustomerProfileData, OfferData, AgentInfoData } from "../data-loader/data-loader.service"
+import {
+  ProductData,
+  OrderData,
+  CartData,
+  WorkspaceIdentityData,
+  WorkspaceLocationData,
+  FAQData,
+  CustomerProfileData,
+  OfferData,
+  AgentInfoData,
+} from "../data-loader/data-loader.service"
+import {
+  DEFAULT_ROUNDING_STEP,
+  formatRoundedCurrency,
+} from "../../../../../shared/pricing"
 
 // ================================================================================
 // FORMATTER RESULT
@@ -84,6 +98,19 @@ function buildSystemPrompt(customAiRules?: string | null): string {
 The following rules have been defined by the shop owner and take priority over general rules:
 
 ${customAiRules}`
+}
+
+const formatDisplayPrice = (value?: number | null, fallback: string = "€0.00") => {
+  if (typeof value !== "number" || !isFinite(value)) {
+    return fallback
+  }
+
+  return formatRoundedCurrency(value, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    useSmartRound: true,
+    step: DEFAULT_ROUNDING_STEP,
+  })
 }
 
 // ================================================================================
@@ -487,7 +514,7 @@ export class LLMFormatterService {
     const stockValue = product.stock !== undefined ? product.stock : (product.isAvailable ? "disponibile" : "esaurito")
     detailLines.push(`- Stock: ${stockValue}`)
     detailLines.push("")
-    detailLines.push(`💰 <b>Prezzo: ${displayPrice.toFixed(2)} Euro</b>`)
+    detailLines.push(`💰 <b>Prezzo: ${formatDisplayPrice(displayPrice)} Euro</b>`)
     detailLines.push("")
     detailLines.push(`Vuoi aggiungerlo al carrello? Se sì puoi indicare la quantità? (es. <b>Sì, 2</b>)`)
     detailLines.push("")
@@ -538,7 +565,7 @@ export class LLMFormatterService {
       lines.push("🛒 Prodotti:")
       for (const item of products) {
         const qty = item.quantity || 1
-        lines.push(`- ${qty}x ${item.name} - €${item.price?.toFixed(2)}`)
+        lines.push(`- ${qty}x ${item.name} - ${formatDisplayPrice(item.price)}`)
       }
     }
 
@@ -547,7 +574,7 @@ export class LLMFormatterService {
       if (products.length > 0) lines.push("")
       lines.push("🔧 Servizi:")
       for (const item of services) {
-        lines.push(`- ${item.name} - €${item.price?.toFixed(2)}`)
+        lines.push(`- ${item.name} - ${formatDisplayPrice(item.price)}`)
       }
     }
 
@@ -555,15 +582,13 @@ export class LLMFormatterService {
       lines.push("")
       lines.push("Spedizione:")
       for (const [typeName, info] of Object.entries(cart.transport.byType)) {
-        lines.push(`- ${typeName}: €${info.cost.toFixed(2)}`)
+        lines.push(`- ${typeName}: ${formatDisplayPrice(info.cost)}`)
       }
     }
 
-    const grandTotal = Math.round(
-      (cart.totalAmount + (cart.transport?.totalTransportCost ?? 0)) * 100
-    ) / 100
+    const grandTotal = cart.totalAmount + (cart.transport?.totalTransportCost ?? 0)
     lines.push("")
-    lines.push(`<b>💰 totale ordine: €${grandTotal.toFixed(2)}</b>`)
+    lines.push(`<b>💰 totale ordine: ${formatDisplayPrice(grandTotal)}</b>`)
 
     if (response.context.hasDiscount && response.context.discountPercent > 0) {
       lines.push("")
@@ -757,7 +782,9 @@ export class LLMFormatterService {
       // Show only the final price (discounted if applicable)
       // Customer discount is already applied in priceWithDiscount
       const displayPrice = item.priceWithDiscount || item.price
-      const line = `**${item.number}.** ${item.name} - €${displayPrice?.toFixed(2)}`
+      const hasDisplayPrice = typeof displayPrice === "number" && Number.isFinite(displayPrice)
+      const priceText = hasDisplayPrice ? ` - ${formatDisplayPrice(displayPrice)}` : ""
+      const line = `**${item.number}.** ${item.name}${priceText}`
       lines.push(line)
     }
     // Add selection prompt - user-friendly, no technical details
@@ -805,7 +832,7 @@ export class LLMFormatterService {
 
     const valueLabel =
       aggregate.field === "price" && aggregate.type !== "count"
-        ? `€${aggregate.value.toFixed(2)}`
+        ? formatDisplayPrice(aggregate.value)
         : aggregate.value.toString()
 
     return [
@@ -831,8 +858,12 @@ export class LLMFormatterService {
     
     // Build product list with SKUs for LLM to use in grouping
     const productList = items.map((item: any) => {
-      const sku = item.sku || item.code || 'N/A'
-      let line = `- ${item.name} (SKU: ${sku}, price: €${item.price?.toFixed(2) || 'N/A'})`
+      const sku = item.sku || item.code || "N/A"
+      const priceText =
+        typeof item.price === "number" && Number.isFinite(item.price)
+          ? formatDisplayPrice(item.price)
+          : "N/A"
+      let line = `- ${item.name} (SKU: ${sku}, price: ${priceText})`
       if (item.description) line += ` - ${item.description.substring(0, 80)}`
       return line
     }).join("\n")
@@ -875,7 +906,14 @@ CRITICAL:
   private formatServiceListPrompt(response: StructuredResponse): string {
     const items = response.data.items || []
     const itemsText = items
-      .map((item) => `${item.number}. ${item.name}${item.price ? ` - €${item.price.toFixed(2)}` : ""}${item.extra ? ` (${item.extra})` : ""}`)
+      .map((item) => {
+        const priceText =
+          typeof item.price === "number" && Number.isFinite(item.price)
+            ? ` - ${formatDisplayPrice(item.price)}`
+            : ""
+        const extraText = item.extra ? ` (${item.extra})` : ""
+        return `${item.number}. ${item.name}${priceText}${extraText}`
+      })
       .join("\n")
 
     return `Servizi disponibili:\n${itemsText}\n\nIndica il numero del servizio che ti interessa.\n- Non aggiungere totali, sconti o riepiloghi aggiuntivi\n- Usa solo l'elenco numerato sopra e una domanda finale`
@@ -888,7 +926,7 @@ CRITICAL:
     const lines = [
       "SERVICE DETAIL:",
       `Servizio: ${s.name}`,
-      `Prezzo: €${s.price.toFixed(2)}`,
+      `Prezzo: ${formatDisplayPrice(s.price)}`,
     ]
 
     if (s.description) {
@@ -920,7 +958,7 @@ CRITICAL:
 
     const detailLines: string[] = [
       `${p.name}`,
-      `Prezzo: €${displayPrice.toFixed(2)}`,
+      `Prezzo: ${formatDisplayPrice(displayPrice)}`,
     ]
 
     detailLines.push(`Foto: ${p.imageUrl ? `<img src="${p.imageUrl}" alt="${p.name}" />` : "(non disponibile)"}`)
@@ -1012,7 +1050,7 @@ CRITICAL:
       const qtyText = `${quantityValue}×`
       const displayName = cleanDisplayName(item.productName || item.name)
       const totalPriceValue = resolveLineTotal(item, quantityValue)
-      const priceText = `€${totalPriceValue.toFixed(2)}`
+      const priceText = formatDisplayPrice(totalPriceValue)
       const line = `- ${qtyText} ${displayName} · ${priceText}`
       if (isServiceFlag) {
         services.push(line)
@@ -1043,17 +1081,17 @@ CRITICAL:
           ? typeName === selectedName
           : Math.abs(info.cost - selectedCost) < 0.01
         const suffix = isSelected ? " (selezionato)" : ""
-        transportLines.push(`- ${typeName}${suffix}: €${info.cost.toFixed(2)}`)
+        transportLines.push(`- ${typeName}${suffix}: ${formatDisplayPrice(info.cost)}`)
       }
       totalTransportCost = cart.transport.totalTransportCost
       if (transportLines.length === 0) {
-        transportLines.push(`- Trasporto: €${cart.transport.totalTransportCost.toFixed(2)}`)
+        transportLines.push(`- Trasporto: ${formatDisplayPrice(cart.transport.totalTransportCost)}`)
       }
     }
     addSection("Trasporti", transportLines)
 
-    const grandTotal = Math.round((cart.totalAmount + totalTransportCost) * 100) / 100
-    const totalLine = `<b>💰 totale ordine: €${grandTotal.toFixed(2)}</b>`
+    const grandTotal = cart.totalAmount + totalTransportCost
+    const totalLine = `<b>💰 totale ordine: ${formatDisplayPrice(grandTotal)}</b>`
 
     const hasRemovableItems = effectiveItems.length > 1
     let optionNumber = 1
@@ -1124,7 +1162,11 @@ CRITICAL:
       "ORDERS DATA:",
     ]
     for (const item of items) {
-      lines.push(`${item.number}. ${item.name} | €${item.price?.toFixed(2)} | ${item.extra}`)
+      const priceText =
+        typeof item.price === "number" && Number.isFinite(item.price)
+          ? formatDisplayPrice(item.price)
+          : "€0.00"
+      lines.push(`${item.number}. ${item.name} | ${priceText} | ${item.extra}`)
     }
     return lines.join("\n")
   }
@@ -1137,7 +1179,7 @@ CRITICAL:
       "ORDER DETAIL:",
       `Code: #${order.code}`,
       `Status: ${order.status}`,
-      `Total: €${order.totalAmount.toFixed(2)}`,
+      `Total: ${formatDisplayPrice(order.totalAmount)}`,
       `Date: ${order.createdAt.toLocaleDateString()}`,
     ]
 
@@ -1145,7 +1187,7 @@ CRITICAL:
       lines.push("")
       lines.push("Items:")
       for (const item of order.items) {
-        lines.push(`• ${item.quantity}× ${item.productName} - €${item.totalPrice.toFixed(2)}`)
+        lines.push(`• ${item.quantity}× ${item.productName} - ${formatDisplayPrice(item.totalPrice)}`)
       }
     }
 
