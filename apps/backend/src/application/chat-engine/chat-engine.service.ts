@@ -79,7 +79,8 @@ interface WorkspaceConfig {
 const workspaceConfigCache = new Map<string, { config: WorkspaceConfig; timestamp: number }>()
 const CONFIG_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
-const formatCartPrice = (value?: number | null) => formatRoundedCurrency(value ?? 0)
+const formatCartPrice = (value?: number | null) =>
+  formatRoundedCurrency(value ?? 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 // ================================================================================
 // CUSTOMER-LEVEL LOCKS (Concurrency Safety - Principle VI)
@@ -912,10 +913,11 @@ export class ChatEngineService {
     }
     options.push({ number: nextNumber++, name: "Cancella il carrello", id: "CLEAR_CART" })
     
+    // TODO: "Ottimizza spedizione" feature - will be implemented later
     // Option: Order optimization (show only when 2+ different transport modes exist)
-    if (uniqueTransportModes >= 2) {
-      options.push({ number: nextNumber++, name: "Ottimizza spedizione", id: "OPTIMIZE_TRANSPORT" })
-    }
+    // if (uniqueTransportModes >= 2) {
+    //   options.push({ number: nextNumber++, name: "Ottimizza spedizione", id: "OPTIMIZE_TRANSPORT" })
+    // }
     
     return options
   }

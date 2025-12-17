@@ -94,6 +94,8 @@ export interface CartItemData {
 export interface TransportCostBreakdown {
   byType: Record<string, { itemCount: number; cost: number }>
   totalTransportCost: number
+  selectedTransportTypeName?: string | null
+  selectedTransportTypeId?: string | null
 }
 
 export interface CartData {
@@ -1272,6 +1274,8 @@ export class DataLoaderService {
             transport = {
               byType,
               totalTransportCost: analysis.totalTransportCost,
+              selectedTransportTypeName: analysis.selectedTransportTypeName,
+              selectedTransportTypeId: analysis.selectedTransportTypeId,
             }
           }
         }

@@ -15,14 +15,6 @@ export interface ServiceData {
 
 export const services: ServiceData[] = [
   {
-    name: "Spedizione",
-    code: "SHP001",
-    description: "Servizio di spedizione standard per ordini in Italia. Consegna in 3-5 giorni lavorativi.",
-    price: 5,
-    isActive: true,
-    imageUrl: ["/uploads/services/SHP001_1760565437670_4yuoes.jpg"],
-  },
-  {
     name: "Confezione Regalo",
     code: "GFT001",
     description: "Servizio di confezione regalo di lusso con messaggio personalizzato e materiali premium.",

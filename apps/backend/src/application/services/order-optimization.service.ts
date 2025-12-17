@@ -53,9 +53,11 @@ export interface TransportAnalysis {
   // Summary (all values are rounded integers)
   totalUnits: number             // Total quantity of items
   totalProductsCost: number      // Subtotal products (gross, IVA included)
-  totalTransportCost: number     // Sum of transport costs
+  totalTransportCost: number     // Selected transport cost applied to order
   grandTotal: number             // totalProductsCost + totalTransportCost
   shippingCostPerUnit: number    // Average shipping per unit
+  selectedTransportTypeId: string | null
+  selectedTransportTypeName: string | null
 
   // IVA breakdown (22%)
   ivaAmount: number              // IVA included in grandTotal
@@ -221,50 +223,60 @@ export class OrderOptimizationService {
       })
     }
 
-    // 6. Calculate transport costs
-    // Each transport type is a "bucket" with fixed price
+    // 6. Calculate transport costs (select the strictest requirement)
     const transports = Array.from(transportGroups.values())
-    const totalTransportCost = transports.reduce(
-      (sum, t) => sum + t.transportPrice,
-      0
+    const selectedTransport = transports.reduce<TransportBreakdown | null>(
+      (prev, current) => {
+        if (!prev) return current
+        return current.transportPrice > prev.transportPrice ? current : prev
+      },
+      null
     )
 
-    // 7. Calculate totals (ROUNDED)
-    const grandTotal = Math.round(totalProductsCost + totalTransportCost)
-    const roundedProductsCost = Math.round(totalProductsCost)
-    const roundedTransportCost = Math.round(totalTransportCost)
+    const selectedTransportCost = selectedTransport?.transportPrice ?? 0
+    const totalTransportCost = Math.round(selectedTransportCost * 100) / 100
+
+    // 7. Calculate totals (keep two decimals)
+    const roundedProductsCost = Math.round(totalProductsCost * 100) / 100
+    const grandTotal = Math.round((roundedProductsCost + totalTransportCost) * 100) / 100
 
     // IVA 22% (already included in prices)
     const ivaRate = 0.22
-    const netTotal = Math.round(grandTotal / (1 + ivaRate))
-    const ivaAmount = grandTotal - netTotal
+    const netTotal = Math.round((grandTotal / (1 + ivaRate)) * 100) / 100
+    const ivaAmount = Math.round((grandTotal - netTotal) * 100) / 100
 
-    // Shipping cost per unit (rounded)
+    // Shipping cost per unit (rounded to whole euros)
     const shippingCostPerUnit = totalUnits > 0
       ? Math.round(totalTransportCost / totalUnits)
       : 0
 
     // 8. Calculate allocation per item ("spalmatura")
     const allocationByItem: TransportAnalysis["allocationByItem"] = []
-    let allocatedShipping = 0
+    let allocatedShippingCents = 0
+    const totalTransportCostCents = Math.round(totalTransportCost * 100)
+    const productItems = cart.items.filter((item) => !!item.product)
+    const productItemsCount = productItems.length
+    let processedProducts = 0
 
-    for (let i = 0; i < cart.items.length; i++) {
-      const item = cart.items[i]
+    for (const item of cart.items) {
       if (!item.product) continue
 
+      processedProducts++
       const quantity = item.quantity || 1
       const productTotal = Math.round((item.product.price || 0) * quantity)
 
-      // Allocate shipping proportionally to quantity
-      let shippingAllocated = Math.round(shippingCostPerUnit * quantity)
+      // Allocate shipping proportionally to quantity (work in cents)
+      let shippingAllocatedCents = totalUnits > 0
+        ? Math.round((totalTransportCostCents * quantity) / totalUnits)
+        : 0
 
-      // Handle rounding difference on last item
-      if (i === cart.items.length - 1) {
-        const remainingShipping = roundedTransportCost - allocatedShipping
-        shippingAllocated = remainingShipping
+      // Handle rounding difference on last product item
+      if (processedProducts === productItemsCount) {
+        shippingAllocatedCents = totalTransportCostCents - allocatedShippingCents
       }
 
-      allocatedShipping += shippingAllocated
+      allocatedShippingCents += shippingAllocatedCents
+      const shippingAllocated = shippingAllocatedCents / 100
 
       allocationByItem.push({
         productId: item.productId!,
@@ -283,7 +295,7 @@ export class OrderOptimizationService {
       transports,
       totalUnits,
       totalProductsCost: roundedProductsCost,
-      totalTransportCost: roundedTransportCost,
+      totalTransportCost,
       grandTotal,
       shippingCostPerUnit,
       ivaAmount,
@@ -291,6 +303,8 @@ export class OrderOptimizationService {
       allocationByItem,
       isConfigured: true,
       isEmpty: false,
+      selectedTransportTypeId: selectedTransport?.transportTypeId ?? null,
+      selectedTransportTypeName: selectedTransport?.transportTypeName ?? null,
     }
   }
 
@@ -318,6 +332,8 @@ export class OrderOptimizationService {
       allocationByItem: [],
       isConfigured,
       isEmpty: true,
+      selectedTransportTypeId: null,
+      selectedTransportTypeName: null,
     }
   }
 
@@ -346,6 +362,11 @@ export class OrderOptimizationService {
       lines.push(
         `${emoji} **${transport.transportTypeName}**: €${transport.transportPrice.toFixed(2)} (${transport.totalQuantity} prodotti)`
       )
+    }
+
+    if (analysis.selectedTransportTypeName) {
+      lines.push("")
+      lines.push(`✅ **Spedizione applicata:** ${analysis.selectedTransportTypeName}`)
     }
 
     lines.push("")

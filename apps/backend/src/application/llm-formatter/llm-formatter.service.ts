@@ -585,9 +585,10 @@ export class LLMFormatterService {
       actions.push(`<b>${optionNumber++}.</b> Rimuovere un articolo`)
     }
     actions.push(`<b>${optionNumber++}.</b> Cancella il carrello`)
-    if (response.context.showOptimizeOption) {
-      actions.push(`<b>${optionNumber++}.</b> Ottimizza spedizione`)
-    }
+    // TODO: "Ottimizza spedizione" feature - will be implemented later
+    // if (response.context.showOptimizeOption) {
+    //   actions.push(`<b>${optionNumber++}.</b> Ottimizza spedizione`)
+    // }
 
     lines.push("")
     lines.push("Cosa vuoi fare?")
@@ -1003,9 +1004,10 @@ CRITICAL:
     const services: string[] = []
 
     effectiveItems.forEach((item: any) => {
-      const isServiceFlag = typeof item.isService === "boolean"
-        ? item.isService
-        : (item.productName || item.name || "").startsWith("🎁")
+      // Use itemType field for proper product/service detection
+      const isServiceFlag = item.itemType === "SERVICE" || item.type === "SERVICE" ||
+        (typeof item.isService === "boolean" ? item.isService : false) ||
+        (item.serviceCode && !item.sku)
       const quantityValue = resolveQuantity(item)
       const qtyText = `${quantityValue}×`
       const displayName = cleanDisplayName(item.productName || item.name)
@@ -1027,15 +1029,21 @@ CRITICAL:
       cartLines.push(...lines)
     }
 
-    addSection("Prodotti", products)
-    addSection("Servizi", services)
+    addSection("🛒 Prodotti", products)
+    addSection("🔧 Servizi", services)
 
     let totalTransportCost = 0
     const transportLines: string[] = []
     if (cart.transport && cart.transport.totalTransportCost > 0) {
       const entries = Object.entries(cart.transport.byType || {})
+      const selectedName = cart.transport.selectedTransportTypeName
+      const selectedCost = cart.transport.totalTransportCost
       for (const [typeName, info] of entries) {
-        transportLines.push(`- ${typeName}: €${info.cost.toFixed(2)}`)
+        const isSelected = selectedName
+          ? typeName === selectedName
+          : Math.abs(info.cost - selectedCost) < 0.01
+        const suffix = isSelected ? " (selezionato)" : ""
+        transportLines.push(`- ${typeName}${suffix}: €${info.cost.toFixed(2)}`)
       }
       totalTransportCost = cart.transport.totalTransportCost
       if (transportLines.length === 0) {
@@ -1059,9 +1067,10 @@ CRITICAL:
       actionLines.push(`${optionNumber++}. Rimuovere un articolo`)
     }
     actionLines.push(`${optionNumber++}. Cancella il carrello`)
-    if (response.context.showOptimizeOption) {
-      actionLines.push(`${optionNumber++}. Ottimizza spedizione`)
-    }
+    // TODO: "Ottimizza spedizione" feature - will be implemented later
+    // if (response.context.showOptimizeOption) {
+    //   actionLines.push(`${optionNumber++}. Ottimizza spedizione`)
+    // }
 
     const outputLines: string[] = [
       "Ecco il tuo carrello:",

@@ -72,25 +72,9 @@ export class TranslationAgent {
       // 1. Normalize target language
       const normalizedLanguage = this.normalizeLanguage(options.targetLanguage)
       
-      // 🔧 SKIP TRANSLATION for Italian to Italian with HTML
-      // LLM corrupts HTML tags during translation, so bypass if already in correct language
-      const isItalianTarget = normalizedLanguage === "it"
-      const hasHtmlTags = options.message?.includes("<img") || options.message?.includes("<a ")
-      
-      if (isItalianTarget && hasHtmlTags) {
-        logger.info("🔧 SKIPPING TranslationAgent - Italian target with HTML tags, returning as-is")
-        return {
-          translated: false,
-          originalLanguage: "it",
-          targetLanguage: normalizedLanguage,
-          message: options.message,
-          tokensUsed: 0,
-          executionTimeMs: Date.now() - startTime,
-        }
-      }
-      
       // 🆕 ALWAYS translate to target language - input may be mixed Italian/English
       // The Translation Agent will translate EVERYTHING to the target language
+      // NOTE: Never skip translation - content from DB may be in any language
       logger.info(`🌍 TranslationAgent - Translating to ${normalizedLanguage.toUpperCase()} (original input: ${options.targetLanguage})`)
 
       // 2. Load TRANSLATION agent config from database

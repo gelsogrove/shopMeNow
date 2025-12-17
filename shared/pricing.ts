@@ -37,7 +37,7 @@ export const formatRoundedCurrency = (
     step = DEFAULT_ROUNDING_STEP,
     minimumFractionDigits = 0,
     maximumFractionDigits = 0,
-    useSmartRound = true,
+    useSmartRound = false,
   } = options
 
   const rounded = useSmartRound ? smartRoundPrice(value, step) : value

@@ -164,27 +164,27 @@ describe("OrderOptimizationService", () => {
       // Products: 2×10 + 1×25 = 45
       expect(result.totalProductsCost).toBe(45)
 
-      // Transport: 8 (Ambient) + 15 (Frozen) = 23
-      expect(result.totalTransportCost).toBe(23)
+      // Transport: highest requirement (Frozen) = 15
+      expect(result.totalTransportCost).toBe(15)
+      expect(result.selectedTransportTypeName).toBe("Congelato")
 
-      // Grand total: 45 + 23 = 68
-      expect(result.grandTotal).toBe(68)
+      // Grand total: 45 + 15 = 60
+      expect(result.grandTotal).toBe(60)
 
       // Total units: 2 + 1 = 3
       expect(result.totalUnits).toBe(3)
 
-      // Shipping per unit: 23 / 3 = 7.67 → rounded to 8
-      expect(result.shippingCostPerUnit).toBe(8)
+      // Shipping per unit: 15 / 3 = 5
+      expect(result.shippingCostPerUnit).toBe(5)
     })
 
     it("should calculate IVA 22% correctly", async () => {
       const result = await service.analyzeCart(WORKSPACE_ID, CUSTOMER_ID)
 
-      // grandTotal = 68
-      // netTotal = 68 / 1.22 = 55.74 → rounded to 56
-      // ivaAmount = 68 - 56 = 12
-      expect(result.netTotal).toBe(56)
-      expect(result.ivaAmount).toBe(12)
+      // grandTotal = 60
+      // netTotal = 60 / 1.22 ≈ 49.18 → rounded to 49.18 (~49.18 but service rounds to 2 decimals)
+      expect(result.netTotal).toBeCloseTo(49.18, 2)
+      expect(result.ivaAmount).toBeCloseTo(10.82, 2)
     })
 
     it("should allocate shipping per item", async () => {
@@ -236,6 +236,8 @@ describe("OrderOptimizationService", () => {
         allocationByItem: [],
         isConfigured: false,
         isEmpty: true,
+        selectedTransportTypeId: null,
+        selectedTransportTypeName: null,
       }
 
       const result = service.formatAnalysisForDisplay(analysis)
@@ -260,6 +262,8 @@ describe("OrderOptimizationService", () => {
         allocationByItem: [],
         isConfigured: true,
         isEmpty: true,
+        selectedTransportTypeId: null,
+        selectedTransportTypeName: null,
       }
 
       const result = service.formatAnalysisForDisplay(analysis)
@@ -294,14 +298,16 @@ describe("OrderOptimizationService", () => {
         ],
         totalUnits: 3,
         totalProductsCost: 50,
-        totalTransportCost: 27,
-        grandTotal: 77,
-        shippingCostPerUnit: 9,
-        ivaAmount: 14,
-        netTotal: 63,
+        totalTransportCost: 15,
+        grandTotal: 65,
+        shippingCostPerUnit: 5,
+        ivaAmount: 12,
+        netTotal: 53,
         allocationByItem: [],
         isConfigured: true,
         isEmpty: false,
+        selectedTransportTypeId: "t1",
+        selectedTransportTypeName: "Congelato",
       }
 
       const result = service.formatAnalysisForDisplay(analysis)
@@ -312,14 +318,15 @@ describe("OrderOptimizationService", () => {
       expect(result).toContain("❄️") // Refrigerated emoji
       expect(result).toContain("€15.00")
       expect(result).toContain("€12.00")
+      expect(result).toContain("Spedizione applicata")
       expect(result).toContain("Subtotale prodotti")
       expect(result).toContain("€50.00")
       expect(result).toContain("Totale spedizione")
-      expect(result).toContain("€27.00")
+      expect(result).toContain("€15.00")
       expect(result).toContain("Totale ordine")
-      expect(result).toContain("€77.00")
+      expect(result).toContain("€65.00")
       expect(result).toContain("IVA 22%")
-      expect(result).toContain("€14.00")
+      expect(result).toContain("€15.00")
     })
   })
 })

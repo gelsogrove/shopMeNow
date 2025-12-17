@@ -211,15 +211,15 @@ export function ServicesPage() {
         <Input
           id="code"
           name="code"
-          placeholder="e.g., SHP001, GFT001, DLV001"
+          placeholder="e.g., GFT001, DLV001, INS001"
           defaultValue={service?.code}
           required
           pattern="[A-Z]{3}[0-9]{3}"
-          title="Code must be 3 uppercase letters followed by 3 numbers (e.g., SHP001)"
+          title="Code must be 3 uppercase letters followed by 3 numbers (e.g., GFT001)"
         />
         <p className="text-xs text-gray-500">
           Unique service code. Format: 3 uppercase letters + 3 numbers (e.g.,
-          SHP001 for Shipping, GFT001 for Gift Package)
+          GFT001 for Gift Package, INS001 for Installation)
         </p>
       </div>
       <div className="space-y-2">

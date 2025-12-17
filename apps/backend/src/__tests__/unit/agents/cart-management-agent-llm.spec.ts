@@ -151,8 +151,7 @@ describe("CartManagementAgentLLM", () => {
       expect(result.formattedCart).toContain("🛒 Prodotti:")
       expect(result.formattedCart).toContain("2x Mozzarella di Bufala - €17.00")
       expect(result.formattedCart).toContain("1x Prosciutto Crudo - €15.00")
-      // Totals are rounded to the closest 5 for customer-facing copy
-      expect(result.formattedCart).toContain("💰 totale ordine: €30.00")
+      expect(result.formattedCart).toContain("💰 totale ordine: €32.00")
       // Should always have action options
       expect(result.formattedCart).toContain("Cosa vuoi fare?")
       expect(result.formattedCart).toContain("<b>1.</b> Confermare l'ordine")

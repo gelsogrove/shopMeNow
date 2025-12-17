@@ -75,8 +75,8 @@ export interface CartLLMResponse {
   model?: string // 🆕 Model used for debugging timeline
 }
 
-const formatCartPrice = (value?: number | null, options?: { useSmartRound?: boolean }) =>
-  formatRoundedCurrency(value ?? 0, { minimumFractionDigits: 2, maximumFractionDigits: 2, ...options })
+const formatCartPrice = (value?: number | null) =>
+  formatRoundedCurrency(value ?? 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 export class CartManagementAgentLLM {
   private prisma: PrismaClient
@@ -1065,30 +1065,31 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
     const lines: string[] = ["Ecco il tuo carrello:", ""]
 
     let totalItems = 0
-    const products = cart.items.filter((item: any) => item.product)
-    const services = cart.items.filter((item: any) => item.service)
+    // Use itemType field for filtering (not item.product/item.service objects)
+    const products = cart.items.filter((item: any) => item.itemType === "PRODUCT" || (!item.itemType && item.product))
+    const services = cart.items.filter((item: any) => item.itemType === "SERVICE" || (!item.itemType && item.service))
 
-    // Display Products
+    // Display Products with emoji
     if (products.length > 0) {
-      lines.push("Prodotti:")
+      lines.push("🛒 Prodotti:")
       for (const item of products) {
         const name = item.name || item.product?.name || "Unknown"
         const quantity = item.quantity || 1
         totalItems += quantity
         const unitPrice = item.unitPrice || item.product?.price || 0
         const itemTotal = item.total || (unitPrice * quantity)
-        lines.push(`- ${quantity}x ${name} - ${formatCartPrice(itemTotal, { useSmartRound: false })}`)
+        lines.push(`- ${quantity}x ${name} - ${formatCartPrice(itemTotal)}`)
       }
     }
 
-    // Display Services (without quantity)
+    // Display Services (without quantity) with emoji
     if (services.length > 0) {
       if (products.length > 0) lines.push("")
-      lines.push("Servizi:")
+      lines.push("🔧 Servizi:")
       for (const item of services) {
         const name = item.name || item.service?.name || "Unknown"
         const itemTotal = item.total || item.service?.price || 0
-        lines.push(`- ${name} - ${formatCartPrice(itemTotal, { useSmartRound: false })}`)
+        lines.push(`- ${name} - ${formatCartPrice(itemTotal)}`)
       }
     }
 
@@ -1111,24 +1112,30 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
           lines.push("")
           lines.push("Spedizione:")
           
+          const selectedTransportId = analysis.selectedTransportTypeId
+          const selectedTransportCost = analysis.totalTransportCost
           for (const transport of analysis.transports) {
             // Translate transport type: "Refrigerated" → "Frigorifero"
             const transportName = transport.transportTypeName === "Refrigerated" ? "Frigorifero" : transport.transportTypeName
-            lines.push(`- ${transportName}: ${formatCartPrice(transport.transportPrice, { useSmartRound: false })}`)
+            const isSelected = selectedTransportId
+              ? transport.transportTypeId === selectedTransportId
+              : Math.abs(transport.transportPrice - selectedTransportCost) < 0.01
+            const selectionLabel = isSelected ? " (selezionata)" : ""
+            lines.push(`- ${transportName}${selectionLabel}: ${formatCartPrice(transport.transportPrice)}`)
           }
           
           // Calculate total: productSubtotal + transport (no "Totale spedizione" line)
           totalTransportCost = analysis.totalTransportCost
           const grandTotal = Math.round((productSubtotal + totalTransportCost) * 100) / 100
           lines.push("")
-          lines.push(`<b>💰 totale ordine: ${formatCartPrice(grandTotal, { useSmartRound: true })}</b>`)
+          lines.push(`<b>💰 totale ordine: ${formatCartPrice(grandTotal)}</b>`)
         }
       }
     } catch (error) {
       // If transport calculation fails, just show products total
       logger.warn("Could not calculate transport costs", { error, workspaceId })
       lines.push("")
-      lines.push(`<b>💰 totale: ${formatCartPrice(productSubtotal, { useSmartRound: true })}</b>`)
+      lines.push(`<b>💰 totale: ${formatCartPrice(productSubtotal)}</b>`)
     }
     
     // Show discount message if applicable
@@ -1143,17 +1150,18 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
     const uniqueItemsCount = Array.isArray(cart.items) ? cart.items.length : 0
     let actionNumber = 1
 
+    // TODO: "Ottimizza spedizione" feature - will be implemented later
     // Check if workspace has Premium/Enterprise plan for optimization option
-    let showOptimizationOption = false
-    try {
-      const workspace = await this.prisma.workspace.findUnique({
-        where: { id: workspaceId },
-        select: { planType: true }
-      })
-      showOptimizationOption = workspace?.planType === 'PREMIUM' || workspace?.planType === 'ENTERPRISE'
-    } catch (err) {
-      logger.warn("⚠️ Could not check workspace plan type", { error: err, workspaceId })
-    }
+    // let showOptimizationOption = false
+    // try {
+    //   const workspace = await this.prisma.workspace.findUnique({
+    //     where: { id: workspaceId },
+    //     select: { planType: true }
+    //   })
+    //   showOptimizationOption = workspace?.planType === 'PREMIUM' || workspace?.planType === 'ENTERPRISE'
+    // } catch (err) {
+    //   logger.warn("⚠️ Could not check workspace plan type", { error: err, workspaceId })
+    // }
 
     lines.push("")
     lines.push("Cosa vuoi fare?")
@@ -1162,10 +1170,11 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
     lines.push(`<b>${actionNumber++}.</b> Mostra servizi`)
     lines.push(`<b>${actionNumber++}.</b> Guarda le offerte`)
     lines.push(`<b>${actionNumber++}.</b> Cancella il carrello`)
+    // TODO: "Ottimizza spedizione" feature - will be implemented later
     // Option: Order optimization (Premium/Enterprise only)
-    if (showOptimizationOption) {
-      lines.push(`<b>${actionNumber++}.</b> Ottimizza spedizione`)
-    }
+    // if (showOptimizationOption) {
+    //   lines.push(`<b>${actionNumber++}.</b> Ottimizza spedizione`)
+    // }
     lines.push("")
     lines.push("Rispondi con il numero o scrivi cosa desideri!")
 
@@ -1211,7 +1220,7 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
         totalItems += quantity
         const unitPrice = item.unitPrice || item.product?.price || 0
         const itemTotal = item.total || (unitPrice * quantity)
-        lines.push(`- ${quantity}x ${name} - ${formatCartPrice(itemTotal, { useSmartRound: false })}`)
+        lines.push(`- ${quantity}x ${name} - ${formatCartPrice(itemTotal)}`)
       }
     }
 
@@ -1222,7 +1231,7 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
       for (const item of services) {
         const name = item.name || item.service?.name || "Unknown"
         const itemTotal = item.total || item.service?.price || 0
-        lines.push(`- ${name} - ${formatCartPrice(itemTotal, { useSmartRound: false })}`)
+        lines.push(`- ${name} - ${formatCartPrice(itemTotal)}`)
       }
     }
 
@@ -1233,7 +1242,7 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
     }, 0)
     
     lines.push("")
-    lines.push(`<b>💰 totale ordine: ${formatCartPrice(total, { useSmartRound: true })}</b>`)
+    lines.push(`<b>💰 totale ordine: ${formatCartPrice(total)}</b>`)
     
     // Show discount message if applicable
     const discountPercent = cart.discountApplied || 0
