@@ -251,4 +251,50 @@ describe('Smart Grouping - Security Tests', () => {
       expect(savedMapping.groupMapping).toBeUndefined()
     })
   })
+
+  describe('Pending Action Preservation', () => {
+    it('should keep existing pendingAction when saving new mapping', async () => {
+      const workspaceId = 'workspace-keep'
+      const conversationId = 'conv-keep'
+      const customerId = 'customer-keep'
+      const pendingAction = {
+        type: 'ADD_TO_CART' as const,
+        productId: 'SKU-123',
+        productName: 'Arancini Siciliani',
+        quantity: 1,
+      }
+
+      mockPrisma.searchConversations.findUnique.mockResolvedValue({
+        id: 'search-keep',
+        sessionId: conversationId,
+        workspaceId,
+        metadata: {
+          lastOptionsMapping: {
+            listType: 'PRODUCT_DETAIL_ACTIONS',
+            options: [
+              { number: 1, label: 'Esplora il catalogo' },
+              { number: 2, label: 'Mostrami il carrello' },
+            ],
+            pendingAction,
+          },
+        },
+      })
+      mockPrisma.searchConversations.upsert.mockResolvedValue({ id: 'search-keep' })
+
+      await optionsMappingService.saveMapping({
+        workspaceId,
+        conversationId,
+        customerId,
+        responseText: '1. Esplora il catalogo\n2. Mostrami il carrello',
+        items: [
+          { number: 1, name: 'Esplora il catalogo' },
+          { number: 2, name: 'Mostrami il carrello' },
+        ],
+        listType: 'PRODUCT_DETAIL_ACTIONS',
+      })
+
+      const upsertArgs = mockPrisma.searchConversations.upsert.mock.calls[0][0]
+      expect(upsertArgs.update.metadata.lastOptionsMapping.pendingAction).toEqual(pendingAction)
+    })
+  })
 })

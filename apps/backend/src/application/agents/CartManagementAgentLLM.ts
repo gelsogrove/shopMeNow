@@ -1177,7 +1177,7 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
     lines.push(`<b>${actionNumber++}.</b> Confermare l'ordine`)
     lines.push(`<b>${actionNumber++}.</b> Esplorare il catalogo`)
     lines.push(`<b>${actionNumber++}.</b> Mostra servizi`)
-    lines.push(`<b>${actionNumber++}.</b> Guarda le offerte`)
+    lines.push(`<b>${actionNumber++}.</b> Guardare le offerte`)
     lines.push(`<b>${actionNumber++}.</b> Cancella il carrello`)
     // TODO: "Ottimizza spedizione" feature - will be implemented later
     // Option: Order optimization (Premium/Enterprise only)
@@ -1185,7 +1185,7 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
     //   lines.push(`<b>${actionNumber++}.</b> Ottimizza spedizione`)
     // }
     lines.push("")
-    lines.push("Rispondi con il numero o scrivi cosa desideri!")
+    lines.push("Rispondi con il numero o scrivi cosa stai cercando")
 
     return {
       formattedCart: lines.join("\n"),

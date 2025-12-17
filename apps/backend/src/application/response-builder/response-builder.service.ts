@@ -59,6 +59,7 @@ export type ResponseType =
   | "FAQ"  // FAQ response - LLM matches user query to FAQ answers
   | "PROFILE"  // Customer profile with discount info
   | "OFFERS"  // Active offers list
+  | "OFFER_WITH_PRODUCTS"  // 🆕 Single offer with its products
   | "GREETING"
   | "GOODBYE"
   | "THANKS"
@@ -103,6 +104,8 @@ export interface ResponseData {
 
   // For offers
   offers?: OfferData[]
+  offer?: OfferData  // 🆕 Single offer (for OFFER_WITH_PRODUCTS)
+  products?: ProductData[]  // 🆕 Products for single offer
 
   // For errors
   errorMessage?: string
@@ -265,6 +268,9 @@ export class ResponseBuilderService {
 
       case "OFFERS":
         return this.buildOffersResponse(loadedData.offers, context)
+
+      case "OFFER_WITH_PRODUCTS":
+        return this.buildOfferWithProductsResponse(loadedData.offer, loadedData.products, context)
 
       case "ORDER_ACTION":
         return this.buildOrderActionResponse(loadedData.action, context, {
@@ -959,6 +965,51 @@ export class ResponseBuilderService {
       formatting: {
         ...DEFAULT_FORMATTING,
         showNumbers: items.length > 0,  // 🆕 Enable numbered selection if we have categories
+        showPrices: true,
+      },
+      context,
+    }
+  }
+
+  /**
+   * Build offer with products response - shows single offer with its products
+   * 🆕 For single-offer scenario: shows offer context (discount %) + product list
+   */
+  private buildOfferWithProductsResponse(
+    offer: OfferData,
+    products: ProductData[],
+    context: ResponseContext
+  ): StructuredResponse {
+    if (!offer) {
+      return {
+        type: "NO_RESULTS",
+        data: { errorMessage: "Offer not found" },
+        formatting: { ...DEFAULT_FORMATTING, showNumbers: false },
+        context,
+      }
+    }
+
+    // Create numbered items for products
+    const items: ListItem[] = products.map((product, index) => ({
+      number: index + 1,
+      id: product.id,
+      name: product.name,
+      sku: product.sku,
+      price: product.price,
+      extra: product.description,
+    }))
+
+    return {
+      type: "OFFER_WITH_PRODUCTS",
+      data: {
+        offer,
+        products,
+        items,
+        count: products.length,
+      },
+      formatting: {
+        ...DEFAULT_FORMATTING,
+        showNumbers: true,
         showPrices: true,
       },
       context,

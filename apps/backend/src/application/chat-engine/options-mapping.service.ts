@@ -287,12 +287,15 @@ export class OptionsMappingService {
 
       const currentMetadata = (existing?.metadata as any) || {}
       const existingMapping = currentMetadata.lastOptionsMapping || {}
-      
+      const existingPendingAction = existingMapping.pendingAction
+
       // 🔧 CRITICAL: Preserve currentOrderCode when updating mapping
       // This ensures ORDER_ACTIONS can still access the order code
       const updatedMapping = mapping ? {
         ...mapping,
         currentOrderCode: currentOrderCode ?? existingMapping.currentOrderCode,
+        // 🔧 Preserve pendingAction (e.g., ADD_TO_CART) when saving new list
+        pendingAction: mapping.pendingAction ?? existingPendingAction,
       } : null
       
       const updatedMetadata = {

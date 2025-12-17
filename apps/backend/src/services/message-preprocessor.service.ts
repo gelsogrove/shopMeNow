@@ -70,9 +70,9 @@ export class MessagePreprocessorService {
   // 🇬🇧 English: yes, sure, right, perfect, alright, agreed, confirm
   // 🇪🇸 Spanish: sí, claro, exacto, perfecto, de acuerdo, vale, confirmo
   // 🇵🇹 Portuguese: sim, certo, exato, perfeito, de acordo, está bem, confirmo
-  private static readonly CONFIRMATION = /^(sì|si|sim|yes|ok|okay|confermo|confirmo|confirma|confirm|certo|claro|sure|esatto|exacto|exato|right|perfetto|perfecto|perfeito|perfect|va bene|alright|de acuerdo|de acordo|d'accordo|agreed|vale|está bem)$/i
+  private static readonly CONFIRMATION = /^(sì|si|sim|yes|ok|okay|confermo|confirmo|confirma|confirm|certo|claro|sure|esatto|exacto|exato|right|perfetto|perfecto|perfeito|perfect|va bene|alright|de acuerdo|de acordo|d'accordo|agreed|vale|está bem|está bien)$/i
   private static readonly CONFIRMATION_WITH_QUANTITY = /^(sì|si|sim|yes|ok|okay|confermo|confirmo|confirm|claro|sure|certo|vale)[,\s!.]*\s*(\d+)/i
-  private static readonly REJECTION = /^(no|não|nao)$/i
+  private static readonly REJECTION = /^(no|não|nao|never)$/i
   private static readonly NUMBER = /^(\d+)$/
 
   /**

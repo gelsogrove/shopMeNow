@@ -196,6 +196,7 @@ export type LoadedData =
   | { type: "FAQ"; faqs: FAQData[]; query: string }
   | { type: "PROFILE"; profile: CustomerProfileData }
   | { type: "OFFERS"; offers: OfferData[] }
+  | { type: "OFFER_WITH_PRODUCTS"; offer: OfferData; products: ProductData[]; categoryName?: string }  // 🆕 Single offer with products
   | { type: "SHOW_SERVICES"; action: "SHOW_SERVICES" }
   | { type: "SHOW_OFFERS"; action: "SHOW_OFFERS" }
   | { type: "ORDER_ACTION"; action: "SEND_INVOICE" | "REPEAT_ORDER" | "SEND_CREDIT_NOTES" | "ADD_ORDER_NOTE"; orderCode?: string }
@@ -2006,16 +2007,35 @@ export class DataLoaderService {
         count: offers.length,
       })
 
-      // 🆕 If there's only ONE offer with a category, load products directly (skip selection step)
+      // 🆕 If there's only ONE offer with a category, include products WITH offer context
+      // This way user sees "20% off on Frozen!" + the actual products
       const offersWithCategories = offers.filter(o => o.category?.name)
       if (offersWithCategories.length === 1) {
         const singleOffer = offersWithCategories[0]
-        logger.info("📦 [DataLoader] Single offer with category - loading products directly", {
+        logger.info("📦 [DataLoader] Single offer with category - loading products WITH offer context", {
           offerName: singleOffer.name,
           categoryName: singleOffer.category?.name,
           discount: singleOffer.discountPercent,
         })
-        return this.loadProductsByCategory(workspaceId, customerDiscount, singleOffer.category!.name)
+        
+        // Load products for this category
+        const productsResult = await this.loadProductsByCategory(workspaceId, customerDiscount, singleOffer.category!.name)
+        
+        // Return OFFER_WITH_PRODUCTS type so formatter shows offer context + products
+        return {
+          type: "OFFER_WITH_PRODUCTS",
+          offer: {
+            id: singleOffer.id,
+            name: singleOffer.name,
+            description: singleOffer.description || undefined,
+            discountPercent: singleOffer.discountPercent || 0,
+            categoryName: singleOffer.category?.name || undefined,
+            startDate: singleOffer.startDate,
+            endDate: singleOffer.endDate,
+          },
+          products: productsResult.type === "PRODUCTS" ? productsResult.products : [],
+          categoryName: singleOffer.category?.name,
+        }
       }
 
       return {

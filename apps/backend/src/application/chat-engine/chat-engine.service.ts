@@ -915,7 +915,7 @@ export class ChatEngineService {
     options.push({ number: nextNumber++, name: "Conferma ordine", id: "CONFIRM_ORDER" })
     options.push({ number: nextNumber++, name: "Esplorare il catalogo", id: "SHOW_PRODUCTS" })
     options.push({ number: nextNumber++, name: "Mostra servizi", id: "SHOW_SERVICES" })
-    options.push({ number: nextNumber++, name: "Guarda le offerte", id: "SHOW_OFFERS" })
+    options.push({ number: nextNumber++, name: "Guardare le offerte", id: "SHOW_OFFERS" })
     if (hasRemovableItems) {
       options.push({ number: nextNumber++, name: "Rimuovere un articolo", id: "REMOVE_FROM_CART" })
     }
@@ -2740,6 +2740,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
                       : structuredResponse.type === "CATEGORY_LIST" ? "CATEGORIES"
                       : structuredResponse.type === "SERVICE_LIST" ? "SERVICES"
                       : structuredResponse.type === "OFFERS" ? "OFFER_CATEGORIES"  // 🆕
+                      : structuredResponse.type === "OFFER_WITH_PRODUCTS" ? "PRODUCTS"  // 🆕 Single offer shows products
                       : undefined
             logger.info("📋 [ChatEngine] DEBUG: About to save mapping", {
               structuredResponseType: structuredResponse.type,
@@ -2759,6 +2760,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
                       : structuredResponse.type === "CATEGORY_LIST" ? "CATEGORIES"
                       : structuredResponse.type === "SERVICE_LIST" ? "SERVICES"
                       : structuredResponse.type === "OFFERS" ? "OFFER_CATEGORIES"  // 🆕
+                      : structuredResponse.type === "OFFER_WITH_PRODUCTS" ? "PRODUCTS"  // 🆕 Single offer shows products
                       : undefined,
             })
             
@@ -4176,6 +4178,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
                                : structuredResponse.type === "CATEGORY_LIST" ? "CATEGORIES"
                                : structuredResponse.type === "SERVICE_LIST" ? "SERVICES"
                                : structuredResponse.type === "OFFERS" ? "OFFER_CATEGORIES"  // 🆕 Offers with category selection
+                               : structuredResponse.type === "OFFER_WITH_PRODUCTS" ? "PRODUCTS"  // 🆕 Single offer shows products
                                : undefined
         
         await this.optionsMappingService.saveMapping({

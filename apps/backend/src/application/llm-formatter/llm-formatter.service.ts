@@ -604,7 +604,7 @@ export class LLMFormatterService {
       `<b>${optionNumber++}.</b> Confermare l'ordine`,
       `<b>${optionNumber++}.</b> Esplorare il catalogo`,
       `<b>${optionNumber++}.</b> Mostra servizi`,
-      `<b>${optionNumber++}.</b> Guarda le offerte`,
+      `<b>${optionNumber++}.</b> Guardare le offerte`,
     ]
     if (hasRemovableItems) {
       actions.push(`<b>${optionNumber++}.</b> Rimuovere un articolo`)
@@ -619,7 +619,7 @@ export class LLMFormatterService {
     lines.push("Cosa vuoi fare?")
     lines.push(...actions)
     lines.push("")
-    lines.push("Rispondi con il numero o scrivi cosa desideri!")
+    lines.push("Rispondi con il numero o scrivi cosa stai cercando")
 
     return lines.join("\n")
   }
@@ -734,6 +734,10 @@ export class LLMFormatterService {
 
       case "OFFERS":
         parts.push(this.formatOffersPrompt(response))
+        break
+
+      case "OFFER_WITH_PRODUCTS":
+        parts.push(this.formatOfferWithProductsPrompt(response))
         break
 
       case "AGENT_INFO":
@@ -1099,7 +1103,7 @@ CRITICAL:
       `${optionNumber++}. Confermare l'ordine`,
       `${optionNumber++}. Esplorare il catalogo`,
       `${optionNumber++}. Mostra servizi`,
-      `${optionNumber++}. Guarda le offerte`,
+      `${optionNumber++}. Guardare le offerte`,
     ]
     if (hasRemovableItems) {
       actionLines.push(`${optionNumber++}. Rimuovere un articolo`)
@@ -1135,7 +1139,7 @@ CRITICAL:
     outputLines.push("Cosa vuoi fare?")
     outputLines.push(...actionLines)
     outputLines.push("")
-    outputLines.push("Rispondi con il numero o scrivi cosa desideri!")
+    outputLines.push("Rispondi con il numero o scrivi cosa stai cercando")
 
     const preformattedCart = outputLines.join("\n")
 
@@ -1361,6 +1365,64 @@ CRITICAL:
   }
 
   /**
+   * Format offer with products response - shows single offer context + product list
+   * 🆕 For single-offer scenario: emphasizes the discount before showing products
+   */
+  private formatOfferWithProductsPrompt(response: StructuredResponse): string {
+    const offer = response.data.offer
+    const products = response.data.products || []
+    const items = response.data.items || []
+
+    const lines: string[] = []
+
+    // First: highlight the offer prominently
+    lines.push("🎉 SPECIAL OFFER:")
+    lines.push(`**${offer.name}**`)
+    if (offer.description) {
+      lines.push(`${offer.description}`)
+    }
+    if (offer.discountPercent && offer.discountPercent > 0) {
+      lines.push(`💰 **${offer.discountPercent}% OFF** on ${offer.categoryName || 'selected products'}!`)
+    }
+    if (offer.endDate) {
+      const endDate = new Date(offer.endDate)
+      lines.push(`⏰ Valid until: ${endDate.toLocaleDateString()}`)
+      lines.push("")  // Extra blank line after date
+    }
+
+    lines.push("")
+    lines.push("PRODUCTS IN THIS OFFER (each on its own line):")
+
+    // List products with numbers - show original price strikethrough → new price
+    const discountPercent = offer.discountPercent || 0
+    for (const item of items) {
+      const product = products.find(p => p.sku === item.sku)
+      if (product) {
+        const originalPrice = product.price
+        const discountedPrice = originalPrice * (1 - discountPercent / 100)
+        lines.push(`**${item.number}.** ${product.name} - ~€${originalPrice.toFixed(2)}~ → €${discountedPrice.toFixed(2)} [SKU:${product.sku}]`)
+      } else {
+        lines.push(`**${item.number}.** ${item.name} - €${item.price?.toFixed(2) || 'N/A'} [SKU:${item.sku}]`)
+      }
+    }
+
+    lines.push("")
+    lines.push("INSTRUCTIONS:")
+    lines.push("- Start by presenting the offer/discount")
+    lines.push("- Mention the discount percentage (e.g., '20% di sconto!')")
+    lines.push("- Add a blank line after the expiry date")
+    lines.push("- CRITICAL: Each product MUST be on its own line (use newline/line break between products)")
+    lines.push("- Use **bold** for numbers (e.g., **1.**, **2.**)")
+    lines.push("- Show prices with strikethrough on original and arrow to new: ~€XX.XX~ → €YY.YY")
+    lines.push("- Do NOT put multiple products on the same line")
+    lines.push("- Do NOT add 'Totale: X items' at the end")
+    lines.push("- Do NOT add phrases like 'Non lasciarti sfuggire' or 'Non perdere questa occasione'")
+    lines.push("- Ask which product interests the customer")
+
+    return lines.join("\n")
+  }
+
+  /**
    * Format agent info response - shows sales agent information
    * @see Feature 202 - Agent Variables
    */
@@ -1515,11 +1577,11 @@ CRITICAL:
     lines.push("<b>1.</b> Confermare l'ordine")
     lines.push("<b>2.</b> Esplorare il catalogo")
     lines.push("<b>3.</b> Mostra servizi")
-    lines.push("<b>4.</b> Guarda le offerte")
+    lines.push("<b>4.</b> Guardare le offerte")
     lines.push("<b>5.</b> Rimuovere un articolo")
     lines.push("<b>6.</b> Cancella il carrello")
     lines.push("")
-    lines.push("Rispondi con il numero o scrivi cosa desideri!")
+    lines.push("Rispondi con il numero o scrivi cosa stai cercando!")
     
     return lines.join("\n")
   }
