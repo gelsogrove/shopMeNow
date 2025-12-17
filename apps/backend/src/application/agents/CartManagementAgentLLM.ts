@@ -30,6 +30,7 @@
  */
 
 import { PrismaClient } from "@echatbot/database"
+import { formatRoundedCurrency, smartRoundPrice } from "@shared/pricing"
 import axios from "axios"
 import { config } from "../../config"
 import { CartRepository } from "../../repositories/cart.repository"
@@ -73,6 +74,8 @@ export interface CartLLMResponse {
   systemPrompt?: string // 🆕 Processed system prompt for debugging
   model?: string // 🆕 Model used for debugging timeline
 }
+
+const formatCartPrice = (value?: number | null) => formatRoundedCurrency(value ?? 0)
 
 export class CartManagementAgentLLM {
   private prisma: PrismaClient
@@ -189,7 +192,7 @@ export class CartManagementAgentLLM {
       // Format products with SKU for LLM to use in addItemToCart
       const productsFormatted = productsRaw
         .filter((p: any) => p.isActive)
-        .map((p: any) => `- ${p.name} | SKU: ${p.sku} | €${p.price?.toFixed(2)}`)
+        .map((p: any) => `- ${p.name} | SKU: ${p.sku} | ${formatCartPrice(p.price)}`)
         .join("\n")
       
       logger.info(`📦 Loaded ${productsRaw.length} products for CartManagement`, {
@@ -203,7 +206,7 @@ export class CartManagementAgentLLM {
       // Format services with serviceCode for LLM
       const servicesFormatted = servicesRaw
         .filter((s: any) => s.isActive)
-        .map((s: any) => `- ${s.name} | CODE: ${s.serviceCode} | €${s.price?.toFixed(2)}`)
+        .map((s: any) => `- ${s.name} | CODE: ${s.serviceCode} | ${formatCartPrice(s.price)}`)
         .join("\n")
       
       logger.info(`🎁 Loaded ${servicesRaw.length} services for CartManagement`, {
@@ -808,7 +811,7 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
           const itemsSummary = orderDetails.items
             .map((item) => {
               const product = item.product
-              return `- ${product.name} x${item.quantity} (${item.unitPrice.toFixed(2)}€)`
+              return `- ${product.name} x${item.quantity} (${formatCartPrice(item.unitPrice)})`
             })
             .join("\n")
 
@@ -822,13 +825,13 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
             orderCode: orderDetails.orderCode,
             orderDate: orderDetails.createdAt.toISOString().split("T")[0],
             itemsCount: orderDetails.items.length,
-            totalPrice: totalPrice.toFixed(2),
+            totalPrice: smartRoundPrice(totalPrice).toString(),
             itemsSummary, // Formatted string ready for LLM
             items: orderDetails.items.map((item) => ({
               productName: item.product.name,
               quantity: item.quantity,
               unitPrice: item.unitPrice,
-              total: (item.unitPrice * item.quantity).toFixed(2),
+              total: smartRoundPrice(item.unitPrice * item.quantity).toString(),
             })),
           }
 
@@ -1073,7 +1076,7 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
         totalItems += quantity
         const unitPrice = item.unitPrice || item.product?.price || 0
         const itemTotal = item.total || (unitPrice * quantity)
-        lines.push(`- ${quantity}x ${name} - €${itemTotal.toFixed(2)}`)
+        lines.push(`- ${quantity}x ${name} - ${formatCartPrice(itemTotal)}`)
       }
     }
 
@@ -1084,7 +1087,7 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
       for (const item of services) {
         const name = item.name || item.service?.name || "Unknown"
         const itemTotal = item.total || item.service?.price || 0
-        lines.push(`- ${name} - €${itemTotal.toFixed(2)}`)
+        lines.push(`- ${name} - ${formatCartPrice(itemTotal)}`)
       }
     }
 
@@ -1110,21 +1113,21 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
           for (const transport of analysis.transports) {
             // Translate transport type: "Refrigerated" → "Frigorifero"
             const transportName = transport.transportTypeName === "Refrigerated" ? "Frigorifero" : transport.transportTypeName
-            lines.push(`- ${transportName}: €${transport.transportPrice.toFixed(2)}`)
+            lines.push(`- ${transportName}: ${formatCartPrice(transport.transportPrice)}`)
           }
           
           // Calculate total: productSubtotal + transport (no "Totale spedizione" line)
           totalTransportCost = analysis.totalTransportCost
           const grandTotal = Math.round((productSubtotal + totalTransportCost) * 100) / 100
           lines.push("")
-          lines.push(`<b>💰 totale ordine: €${grandTotal.toFixed(2)}</b>`)
+          lines.push(`<b>💰 totale ordine: ${formatCartPrice(grandTotal)}</b>`)
         }
       }
     } catch (error) {
       // If transport calculation fails, just show products total
       logger.warn("Could not calculate transport costs", { error, workspaceId })
       lines.push("")
-      lines.push(`<b>💰 totale: €${productSubtotal.toFixed(2)}</b>`)
+      lines.push(`<b>💰 totale: ${formatCartPrice(productSubtotal)}</b>`)
     }
     
     // Show discount message if applicable

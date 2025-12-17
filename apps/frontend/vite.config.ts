@@ -24,11 +24,15 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@shared": path.resolve(__dirname, "../../shared"),
     },
   },
   server: {
     port: 3000,
     strictPort: true,
+    fs: {
+      allow: [path.resolve(__dirname, ".."), path.resolve(__dirname, "../../shared")],
+    },
     proxy: {
       "/api": {
         target: "http://localhost:3001",

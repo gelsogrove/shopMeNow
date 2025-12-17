@@ -24,9 +24,13 @@
     "noEmitOnError": false,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "types": ["node", "jest"]
+    "types": ["node", "jest"],
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["../../shared/*"]
+    }
   },
-  "include": ["src/**/*", "src/types/**/*"],
+  "include": ["src/**/*", "src/types/**/*", "../../shared/**/*"],
   "exclude": [
     "node_modules",
     "**/*.spec.ts",

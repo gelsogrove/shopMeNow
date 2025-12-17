@@ -130,6 +130,7 @@ describe("CartManagementAgentLLM", () => {
               quantity: 2,
               unitPrice: 8.5,
               total: 17.0,
+              itemType: "PRODUCT", // 🎯 Required for product/service filtering
               product: { name: "Mozzarella di Bufala", price: 8.5 },
             },
             {
@@ -137,6 +138,7 @@ describe("CartManagementAgentLLM", () => {
               quantity: 1,
               unitPrice: 15.0,
               total: 15.0,
+              itemType: "PRODUCT", // 🎯 Required for product/service filtering
               product: { name: "Prosciutto Crudo", price: 15.0 },
             },
           ],
@@ -144,11 +146,12 @@ describe("CartManagementAgentLLM", () => {
         },
       })
 
-      // New format: "Ecco il tuo carrello:" with €XX.XX prices and bold numbers
+      // New format: "Ecco il tuo carrello:" with 🛒 Prodotti section
       expect(result.formattedCart).toContain("Ecco il tuo carrello:")
+      expect(result.formattedCart).toContain("🛒 Prodotti:")
       expect(result.formattedCart).toContain("2x Mozzarella di Bufala - €17.00")
       expect(result.formattedCart).toContain("1x Prosciutto Crudo - €15.00")
-      expect(result.formattedCart).toContain("Totale: €32.00")
+      expect(result.formattedCart).toContain("💰 totale ordine: €32.00")
       // Should always have action options
       expect(result.formattedCart).toContain("Cosa vuoi fare?")
       expect(result.formattedCart).toContain("<b>1.</b> Confermare l'ordine")
@@ -178,6 +181,7 @@ describe("CartManagementAgentLLM", () => {
               quantity: 1,
               unitPrice: 25.99,
               total: 25.99,
+              itemType: "PRODUCT", // 🎯 Required for product/service filtering
               product: { name: "Panettone", price: 25.99 },
             },
           ],
