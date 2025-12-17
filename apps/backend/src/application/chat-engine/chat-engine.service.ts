@@ -2492,19 +2492,20 @@ export class ChatEngineService {
               }
               
               // Build formatted list
-              const products = items.filter((i: any) => !i.isService)
-              const services = items.filter((i: any) => i.isService)
+              // 🎯 Use itemType for consistent product/service filtering
+              const products = items.filter((i: any) => i.itemType === "PRODUCT" || (!i.itemType && !i.isService))
+              const services = items.filter((i: any) => i.itemType === "SERVICE" || i.isService)
               
               let removalMessage = "Quale articolo vuoi rimuovere?\n\n"
               let optionNumber = 1
               const mappingItems: Array<{ number: number; name: string; id: string }> = []
               
               if (products.length > 0) {
-                removalMessage += "Prodotti:\n"
+                removalMessage += "🛒 Prodotti:\n"
                 for (const p of products) {
                   const qty = p.quantity || 1
                   const price = p.price || 0
-                  removalMessage += `<b>${optionNumber}.</b> ${qty}x ${p.name} - €${(price * qty).toFixed(2)}\n`
+                  removalMessage += `${optionNumber}. ${qty}x ${p.name} - €${(price * qty).toFixed(2)}\n`
                   mappingItems.push({ number: optionNumber, name: p.name, id: p.id })
                   optionNumber++
                 }
@@ -2512,11 +2513,11 @@ export class ChatEngineService {
               }
               
               if (services.length > 0) {
-                removalMessage += "Servizi:\n"
+                removalMessage += "🔧 Servizi:\n"
                 for (const s of services) {
-                  const qty = s.quantity || 1
                   const price = s.price || 0
-                  removalMessage += `<b>${optionNumber}.</b> ${qty}x ${s.name} - €${(price * qty).toFixed(2)}\n`
+                  // Services don't show "1x" prefix
+                  removalMessage += `${optionNumber}. ${s.name} - €${price.toFixed(2)}\n`
                   mappingItems.push({ number: optionNumber, name: s.name, id: s.id })
                   optionNumber++
                 }

@@ -1058,19 +1058,34 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
     }
 
     const cart = cartResult.cart
-    const lines: string[] = ["Ecco il tuo carrello:", "", "Prodotti:"]
+    const lines: string[] = ["Ecco il tuo carrello:", ""]
 
     let totalItems = 0
-    for (const item of cart.items) {
-      const name = item.name || item.product?.name || item.service?.name || "Unknown"
-      const quantity = item.quantity || 1
-      totalItems += quantity
-      // unitPrice is already discounted (from CartManagementAgent.getCart)
-      const unitPrice = item.unitPrice || item.product?.price || item.service?.price || 0
-      const itemTotal = item.total || (unitPrice * quantity)
-      
-      // Format with dash only (no numbering on products)
-      lines.push(`- ${quantity}x ${name} - €${itemTotal.toFixed(2)}`)
+    const products = cart.items.filter((item: any) => item.product)
+    const services = cart.items.filter((item: any) => item.service)
+
+    // Display Products
+    if (products.length > 0) {
+      lines.push("Prodotti:")
+      for (const item of products) {
+        const name = item.name || item.product?.name || "Unknown"
+        const quantity = item.quantity || 1
+        totalItems += quantity
+        const unitPrice = item.unitPrice || item.product?.price || 0
+        const itemTotal = item.total || (unitPrice * quantity)
+        lines.push(`- ${quantity}x ${name} - €${itemTotal.toFixed(2)}`)
+      }
+    }
+
+    // Display Services (without quantity)
+    if (services.length > 0) {
+      if (products.length > 0) lines.push("")
+      lines.push("Servizi:")
+      for (const item of services) {
+        const name = item.name || item.service?.name || "Unknown"
+        const itemTotal = item.total || item.service?.price || 0
+        lines.push(`- ${name} - €${itemTotal.toFixed(2)}`)
+      }
     }
 
     // Calculate product subtotal
@@ -1093,21 +1108,23 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
           lines.push("Spedizione:")
           
           for (const transport of analysis.transports) {
-            lines.push(`- ${transport.transportTypeName}: €${transport.transportPrice.toFixed(2)}`)
+            // Translate transport type: "Refrigerated" → "Frigorifero"
+            const transportName = transport.transportTypeName === "Refrigerated" ? "Frigorifero" : transport.transportTypeName
+            lines.push(`- ${transportName}: €${transport.transportPrice.toFixed(2)}`)
           }
           
           // Calculate total: productSubtotal + transport (no "Totale spedizione" line)
           totalTransportCost = analysis.totalTransportCost
           const grandTotal = Math.round((productSubtotal + totalTransportCost) * 100) / 100
           lines.push("")
-          lines.push(`<b>TOTALE ORDINE: €${grandTotal.toFixed(2)}</b>`)
+          lines.push(`<b>💰 totale ordine: €${grandTotal.toFixed(2)}</b>`)
         }
       }
     } catch (error) {
       // If transport calculation fails, just show products total
       logger.warn("Could not calculate transport costs", { error, workspaceId })
       lines.push("")
-      lines.push(`<b>Totale: €${productSubtotal.toFixed(2)}</b>`)
+      lines.push(`<b>💰 totale: €${productSubtotal.toFixed(2)}</b>`)
     }
     
     // Show discount message if applicable
@@ -1120,7 +1137,6 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
     
     
     const uniqueItemsCount = Array.isArray(cart.items) ? cart.items.length : 0
-    const allowRemoveOption = uniqueItemsCount > 1
     let actionNumber = 1
 
     // Check if workspace has Premium/Enterprise plan for optimization option
@@ -1141,9 +1157,6 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
     lines.push(`<b>${actionNumber++}.</b> Esplorare il catalogo`)
     lines.push(`<b>${actionNumber++}.</b> Mostra servizi`)
     lines.push(`<b>${actionNumber++}.</b> Guarda le offerte`)
-    if (allowRemoveOption) {
-      lines.push(`<b>${actionNumber++}.</b> Rimuovere un articolo`)
-    }
     lines.push(`<b>${actionNumber++}.</b> Cancella il carrello`)
     // Option: Order optimization (Premium/Enterprise only)
     if (showOptimizationOption) {
@@ -1178,19 +1191,35 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
     }
 
     const cart = cartResult.cart
-    const lines: string[] = ["Ecco il tuo carrello:", "", "Prodotti:"]
+    const lines: string[] = ["Ecco il tuo carrello:", ""]
 
     let totalItems = 0
-    for (const item of cart.items) {
-      const name = item.name || item.product?.name || item.service?.name || "Unknown"
-      const quantity = item.quantity || 1
-      totalItems += quantity
-      // unitPrice is already discounted (from CartManagementAgent.getCart)
-      const unitPrice = item.unitPrice || item.product?.price || item.service?.price || 0
-      const itemTotal = item.total || (unitPrice * quantity)
-      
-      // Format with dash only (no numbering on products)
-      lines.push(`- ${quantity}x ${name} - €${itemTotal.toFixed(2)}`)
+    // 🎯 Use itemType field (PRODUCT/SERVICE) for reliable filtering
+    const products = cart.items.filter((item: any) => item.itemType === "PRODUCT")
+    const services = cart.items.filter((item: any) => item.itemType === "SERVICE")
+
+    // Display Products
+    if (products.length > 0) {
+      lines.push("🛒 Prodotti:")
+      for (const item of products) {
+        const name = item.name || item.product?.name || "Unknown"
+        const quantity = item.quantity || 1
+        totalItems += quantity
+        const unitPrice = item.unitPrice || item.product?.price || 0
+        const itemTotal = item.total || (unitPrice * quantity)
+        lines.push(`- ${quantity}x ${name} - €${itemTotal.toFixed(2)}`)
+      }
+    }
+
+    // Display Services (without quantity prefix)
+    if (services.length > 0) {
+      if (products.length > 0) lines.push("")
+      lines.push("🔧 Servizi:")
+      for (const item of services) {
+        const name = item.name || item.service?.name || "Unknown"
+        const itemTotal = item.total || item.service?.price || 0
+        lines.push(`- ${name} - €${itemTotal.toFixed(2)}`)
+      }
     }
 
     // Add total
@@ -1200,7 +1229,7 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
     }, 0)
     
     lines.push("")
-    lines.push(`<b>Totale: €${total.toFixed(2)}</b> (${totalItems} articoli)`)
+    lines.push(`<b>💰 totale ordine: €${total.toFixed(2)}</b>`)
     
     // Show discount message if applicable
     const discountPercent = cart.discountApplied || 0
@@ -1218,12 +1247,9 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
     lines.push("Cosa vuoi fare?")
     lines.push(`<b>${actionNumber++}.</b> Confermare l'ordine`)
     lines.push(`<b>${actionNumber++}.</b> Esplorare il catalogo`)
-    lines.push(`<b>${actionNumber++}.</b> Mostra servizi`)
-    lines.push(`<b>${actionNumber++}.</b> Guarda le offerte`)
-    if (allowRemoveOption) {
-      lines.push(`<b>${actionNumber++}.</b> Rimuovere un articolo`)
-    }
-    lines.push(`<b>${actionNumber++}.</b> Cancella il carrello`)
+    lines.push(`<b>${actionNumber++}.</b> Mostrami servizi`)
+    lines.push(`<b>${actionNumber++}.</b> Vedere le offerte`)
+    lines.push(`<b>${actionNumber++}.</b> Cancellare il carrello`)
     lines.push("")
     lines.push("Rispondi con il numero o scrivi cosa desideri!")
 

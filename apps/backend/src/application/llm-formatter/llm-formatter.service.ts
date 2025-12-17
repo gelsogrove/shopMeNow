@@ -527,11 +527,28 @@ export class LLMFormatterService {
       return "Il tuo carrello è vuoto.\n\nVuoi vedere i nostri prodotti?"
     }
 
-    const lines: string[] = ["Ecco il tuo carrello:", "", "Prodotti:"]
+    const lines: string[] = ["Ecco il tuo carrello:", ""]
+    
+    // Separate products from services
+    const products = items.filter((item: any) => item.itemType === "PRODUCT" || item.type === "PRODUCT" || !item.itemType)
+    const services = items.filter((item: any) => item.itemType === "SERVICE" || item.type === "SERVICE")
 
-    for (const item of items) {
-      const qty = item.quantity || 1
-      lines.push(`- ${qty}x ${item.name} - €${item.price?.toFixed(2)}`)
+    // Display Products
+    if (products.length > 0) {
+      lines.push("🛒 Prodotti:")
+      for (const item of products) {
+        const qty = item.quantity || 1
+        lines.push(`- ${qty}x ${item.name} - €${item.price?.toFixed(2)}`)
+      }
+    }
+
+    // Display Services (without quantity "1x")
+    if (services.length > 0) {
+      if (products.length > 0) lines.push("")
+      lines.push("🔧 Servizi:")
+      for (const item of services) {
+        lines.push(`- ${item.name} - €${item.price?.toFixed(2)}`)
+      }
     }
 
     if (cart.transport && cart.transport.totalTransportCost > 0) {
@@ -546,7 +563,7 @@ export class LLMFormatterService {
       (cart.totalAmount + (cart.transport?.totalTransportCost ?? 0)) * 100
     ) / 100
     lines.push("")
-    lines.push(`<b>TOTALE ORDINE: €${grandTotal.toFixed(2)}</b>`)
+    lines.push(`<b>💰 totale ordine: €${grandTotal.toFixed(2)}</b>`)
 
     if (response.context.hasDiscount && response.context.discountPercent > 0) {
       lines.push("")
@@ -857,7 +874,7 @@ CRITICAL:
   private formatServiceListPrompt(response: StructuredResponse): string {
     const items = response.data.items || []
     const itemsText = items
-      .map((item) => `<b>${item.number}.</b> ${item.name}${item.price ? ` - €${item.price.toFixed(2)}` : ""}${item.extra ? ` (${item.extra})` : ""}`)
+      .map((item) => `${item.number}. ${item.name}${item.price ? ` - €${item.price.toFixed(2)}` : ""}${item.extra ? ` (${item.extra})` : ""}`)
       .join("\n")
 
     return `Servizi disponibili:\n${itemsText}\n\nIndica il numero del servizio che ti interessa.\n- Non aggiungere totali, sconti o riepiloghi aggiuntivi\n- Usa solo l'elenco numerato sopra e una domanda finale`
@@ -1028,7 +1045,7 @@ CRITICAL:
     addSection("Trasporti", transportLines)
 
     const grandTotal = Math.round((cart.totalAmount + totalTransportCost) * 100) / 100
-    const totalLine = `Totale ordine: €${grandTotal.toFixed(2)}`
+    const totalLine = `<b>💰 totale ordine: €${grandTotal.toFixed(2)}</b>`
 
     const hasRemovableItems = effectiveItems.length > 1
     let optionNumber = 1
@@ -1382,7 +1399,7 @@ CRITICAL:
     const items = response.data.items || []
     const lines = [`📦 Servizi (${items.length}):`]
     for (const item of items) {
-      lines.push(`<b>${item.number}.</b> ${item.name}${item.price ? ` - €${item.price.toFixed(2)}` : ""}${item.extra ? ` (${item.extra})` : ""}`)
+      lines.push(`${item.number}. ${item.name}${item.price ? ` - €${item.price.toFixed(2)}` : ""}${item.extra ? ` (${item.extra})` : ""}`)
     }
     return lines.join("\n")
   }
@@ -1401,13 +1418,31 @@ CRITICAL:
     if (!cart || cart.isEmpty) {
       return "Il tuo carrello è vuoto"
     }
-    const lines = ["Ecco il tuo carrello:", "", "Prodotti:"]
-    for (const item of cart.items) {
-      lines.push(`- ${item.quantity}x ${item.productName} - €${item.totalPrice.toFixed(2)}`)
+    const lines = ["Ecco il tuo carrello:", ""]
+    
+    // Separate products from services
+    const products = cart.items.filter((item: any) => item.itemType === "PRODUCT" || item.type === "PRODUCT" || (!item.itemType && !item.serviceCode))
+    const services = cart.items.filter((item: any) => item.itemType === "SERVICE" || item.type === "SERVICE" || item.serviceCode)
+    
+    // Display Products
+    if (products.length > 0) {
+      lines.push("🛒 Prodotti:")
+      for (const item of products) {
+        lines.push(`- ${item.quantity}x ${item.productName} - €${item.totalPrice.toFixed(2)}`)
+      }
     }
+    
+    // Display Services (without quantity)
+    if (services.length > 0) {
+      if (products.length > 0) lines.push("")
+      lines.push("🔧 Servizi:")
+      for (const item of services) {
+        lines.push(`- ${item.productName || (item as any).serviceName || "Servizio"} - €${item.totalPrice.toFixed(2)}`)
+      }
+    }
+    
     lines.push("")
-    lines.push(`Totale articoli: ${cart.itemCount}`)
-    lines.push(`<b>Totale: €${cart.totalAmount.toFixed(2)}</b>`)
+    lines.push(`<b>💰 totale ordine: €${cart.totalAmount.toFixed(2)}</b>`)
     
     // Add discount message if customer has discount
     if (response.context.hasDiscount && response.context.discountPercent && response.context.discountPercent > 0) {
