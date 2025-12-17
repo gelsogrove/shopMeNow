@@ -839,58 +839,98 @@ CRITICAL:
     const cart = response.data.cart
     if (!cart) return "Cart not found"
 
-    const items = response.data.items || []
-    
-    // Separate products from services
-    // Services are marked with 🎁 emoji in their name (added by data-loader)
+    const listItems = response.data.items || []
+    const cartItems = cart.items || []
+    const effectiveItems = cartItems.length ? cartItems : listItems
+
+    const cleanDisplayName = (value?: string) => {
+      if (!value) return "Articolo"
+      return value.replace(/^[🎁🛒✅❌⚠️📦\s]+/g, "").trim() || "Articolo"
+    }
+
+    const resolveQuantity = (item: any) => {
+      if (typeof item.quantity === "number" && Number.isFinite(item.quantity) && item.quantity > 0) {
+        return item.quantity
+      }
+      if (typeof item.extra === "string") {
+        const digits = item.extra.match(/\d+/)
+        if (digits?.[0]) {
+          const parsed = parseInt(digits[0], 10)
+          if (!Number.isNaN(parsed) && parsed > 0) {
+            return parsed
+          }
+        }
+      }
+      return 1
+    }
+
+    const resolveLineTotal = (item: any, quantity: number) => {
+      if (typeof item.totalPrice === "number" && Number.isFinite(item.totalPrice)) {
+        return item.totalPrice
+      }
+      if (typeof item.price === "number" && Number.isFinite(item.price)) {
+        return item.price
+      }
+      if (typeof item.unitPrice === "number" && Number.isFinite(item.unitPrice)) {
+        return item.unitPrice * quantity
+      }
+      return 0
+    }
+
     const products: string[] = []
     const services: string[] = []
-    
-    for (const item of items) {
-      const line = `- ${item.name} - €${item.price?.toFixed(2)}`
-      // Check if it's a service (marked with 🎁 emoji by data-loader)
-      const isService = item.name?.startsWith('🎁')
-      if (isService) {
+
+    effectiveItems.forEach((item: any) => {
+      const isServiceFlag = typeof item.isService === "boolean"
+        ? item.isService
+        : (item.productName || item.name || "").startsWith("🎁")
+      const quantityValue = resolveQuantity(item)
+      const qtyText = `${quantityValue}×`
+      const displayName = cleanDisplayName(item.productName || item.name)
+      const totalPriceValue = resolveLineTotal(item, quantityValue)
+      const priceText = `€${totalPriceValue.toFixed(2)}`
+      const line = `- ${qtyText} ${displayName} · ${priceText}`
+      if (isServiceFlag) {
         services.push(line)
       } else {
         products.push(line)
       }
-    }
+    })
 
     const cartLines: string[] = []
-    
-    // Add products section
-    if (products.length > 0) {
-      cartLines.push("**🛒 Prodotti:**")
-      cartLines.push(...products)
-    }
-    
-    // Add services section
-    if (services.length > 0) {
-      cartLines.push("")
-      cartLines.push("**🎁 Servizi:**")
-      cartLines.push(...services)
+    const addSection = (title: string, lines: string[]) => {
+      if (!lines.length) return
+      if (cartLines.length) cartLines.push("")
+      cartLines.push(`${title}:`)
+      cartLines.push(...lines)
     }
 
-    // Add transport section
+    addSection("Prodotti", products)
+    addSection("Servizi", services)
+
     let totalTransportCost = 0
+    const transportLines: string[] = []
     if (cart.transport && cart.transport.totalTransportCost > 0) {
-      cartLines.push("")
-      cartLines.push("**🚚 Trasporto:**")
-      for (const [typeName, info] of Object.entries(cart.transport.byType)) {
-        cartLines.push(`- ${typeName}: €${info.cost.toFixed(2)}`)
+      const entries = Object.entries(cart.transport.byType || {})
+      for (const [typeName, info] of entries) {
+        transportLines.push(`- ${typeName}: €${info.cost.toFixed(2)}`)
       }
       totalTransportCost = cart.transport.totalTransportCost
+      if (transportLines.length === 0) {
+        transportLines.push(`- Trasporto: €${cart.transport.totalTransportCost.toFixed(2)}`)
+      }
     }
+    addSection("Trasporti", transportLines)
 
     const grandTotal = Math.round((cart.totalAmount + totalTransportCost) * 100) / 100
-    const totalLine = `💰 TOTALE ORDINE: €${grandTotal.toFixed(2)}`
+    const totalLine = `Totale ordine: €${grandTotal.toFixed(2)}`
 
-    const hasRemovableItems = items.length > 1
+    const hasRemovableItems = effectiveItems.length > 1
     let optionNumber = 1
     const actionLines = [
       `${optionNumber++}. ✅ Confermare l'ordine`,
       `${optionNumber++}. 🛍️ Esplorare il catalogo`,
+      `${optionNumber++}. 🧾 Mostra servizi`,
     ]
     if (hasRemovableItems) {
       actionLines.push(`${optionNumber++}. 🗑️ Rimuovere un articolo`)
@@ -900,36 +940,34 @@ CRITICAL:
       actionLines.push(`${optionNumber++}. 🚚 Ottimizza spedizione`)
     }
 
-    // Build the EXACT output that must be shown - LLM just needs to translate if necessary
     const outputLines: string[] = [
       "Ecco il tuo carrello:",
-      ""
+      "",
     ]
-    
-    // Add all cart sections (products, services, transport)
-    outputLines.push(...cartLines)
-    
-    // Add total
-    outputLines.push("")
+
+    if (cartLines.length) {
+      outputLines.push(...cartLines)
+      outputLines.push("")
+    }
+
     outputLines.push(totalLine)
-    
-    // Add discount line if applicable
+    outputLines.push("🎁 Prezzi sono IVA esclusa")
+
     if (response.context.hasDiscount && response.context.discountPercent && response.context.discountPercent > 0) {
       outputLines.push("")
       outputLines.push(
         `🎁 Stai usufruendo del tuo sconto riservato del ${response.context.discountPercent}%! I prezzi mostrati includono già lo sconto.`
       )
     }
-    
-    // Add actions
+
     outputLines.push("")
     outputLines.push("Cosa vuoi fare?")
     outputLines.push(...actionLines)
     outputLines.push("")
     outputLines.push("Rispondi con il numero o scrivi cosa desideri!")
-    
+
     const preformattedCart = outputLines.join("\n")
-    
+
     const lines: string[] = [
       "INSTRUCTION: Copy the EXACT_OUTPUT below. Only translate to customer's language if needed. DO NOT reorganize, reorder, or flatten sections.",
       "",

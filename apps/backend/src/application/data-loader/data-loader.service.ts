@@ -86,6 +86,7 @@ export interface CartItemData {
   unitPrice: number
   totalPrice: number
   stock: number
+  isService?: boolean
 }
 
 export interface TransportCostBreakdown {
@@ -1186,6 +1187,7 @@ export class DataLoaderService {
             unitPrice: 0,
             totalPrice: 0,
             stock: 0,
+            isService: false,
           }
         }
         
@@ -1200,6 +1202,7 @@ export class DataLoaderService {
             unitPrice: servicePrice,
             totalPrice: servicePrice * item.quantity,
             stock: 999, // Services always available
+            isService: true,
           }
         }
         
@@ -1215,6 +1218,7 @@ export class DataLoaderService {
           unitPrice,
           totalPrice: unitPrice * item.quantity,
           stock: item.product!.stock,
+          isService: false,
         }
       })
 

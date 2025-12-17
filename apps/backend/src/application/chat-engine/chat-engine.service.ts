@@ -17,6 +17,7 @@ import {
   AddToCartIntent,
   RepeatOrderIntent,
   RequestHumanIntent,
+  AskFAQIntent,
 } from "../intent"
 import { DataLoaderService, getDataLoader, LoadedData } from "../data-loader"
 import { ResponseBuilderService, getResponseBuilder, StructuredResponse, ListItem } from "../response-builder"
@@ -397,6 +398,158 @@ export class ChatEngineService {
     return result
   }
 
+  private shouldCheckFaqBeforeHumanSupport(reason?: string): boolean {
+    if (!reason) return false
+    const normalized = reason.trim().toLowerCase()
+    return ["frustration", "frustrated", "angry", "complaint"].includes(normalized)
+  }
+
+  private async tryHandleFAQBeforeHumanSupport(params: {
+    input: ChatEngineInput
+    workspaceConfig: WorkspaceConfig
+    conversationId: string
+    debugSteps: DebugStep[]
+    startTime: number
+    requestIntent: RequestHumanIntent
+    intentConfidence: "HIGH" | "MEDIUM" | "LOW"
+    intentSource: "PATTERN" | "KEYWORD" | "LLM_FALLBACK"
+  }): Promise<ChatEngineOutput | null> {
+    const {
+      input,
+      workspaceConfig,
+      conversationId,
+      debugSteps,
+      startTime,
+      requestIntent,
+      intentConfidence,
+      intentSource,
+    } = params
+
+    if (!this.shouldCheckFaqBeforeHumanSupport(requestIntent.reason)) {
+      return null
+    }
+
+    try {
+      debugSteps.push({
+        type: "router",
+        agent: "🤖 FAQ Precheck",
+        timestamp: new Date().toISOString(),
+        input: {
+          userMessage: input.message,
+        },
+        output: {
+          decision: "faq_precheck_start",
+        },
+      })
+
+      const faqIntent: AskFAQIntent = {
+        type: "ASK_FAQ",
+        query: input.message.trim(),
+      }
+
+      const loadedData = await this.dataLoader.loadForIntent(
+        faqIntent,
+        input.workspaceId,
+        input.customerId,
+        input.customerDiscount || 0
+      )
+
+      if (loadedData.type !== "FAQ" || !loadedData.faqs?.length) {
+        return null
+      }
+
+      const structuredResponse = this.responseBuilder.build(faqIntent, loadedData, {
+        workspaceId: input.workspaceId,
+        customerLanguage: input.customerLanguage || "it",
+        customerName: input.customerName,
+        customerDiscount: input.customerDiscount,
+      })
+
+      if (structuredResponse.type !== "FAQ") {
+        return null
+      }
+
+      const formatterResult = await this.formatWithCustomRules(
+        structuredResponse,
+        input.customerLanguage || "it",
+        workspaceConfig
+      )
+
+      let finalMessage = formatterResult.text
+      const formatterTokens = formatterResult.tokensUsed || 0
+
+      const replacementResult = await this.linkReplacementService.replaceTokens(
+        { response: finalMessage, linkType: "auto" },
+        input.customerId,
+        input.workspaceId
+      )
+      if (replacementResult.success && replacementResult.response) {
+        finalMessage = replacementResult.response
+      }
+
+      finalMessage = finalMessage
+        .replace(/\s*\[SKU:[A-Z0-9-]+\]/gi, "")
+        .replace(/\s*\[SKUS?:[A-Z0-9-,]+\]/gi, "")
+
+      const processingTimeMs = Date.now() - startTime
+
+      debugSteps.push({
+        type: "router",
+        agent: "🤖 FAQ Precheck",
+        timestamp: new Date().toISOString(),
+        output: {
+          decision: "answered_with_faq",
+          executionTimeMs: processingTimeMs,
+        },
+      })
+
+      const debugInfo = {
+        loadedDataType: loadedData.type,
+        responseType: structuredResponse.type,
+        llmUsed: !formatterResult.cached,
+        steps: debugSteps,
+        totalTokens: formatterTokens,
+        executionTimeMs: processingTimeMs,
+      }
+
+      const savedMessages = await this.saveMessages(
+        input.workspaceId,
+        input.customerId,
+        conversationId,
+        input.message,
+        finalMessage,
+        AgentType.CUSTOMER_SUPPORT,
+        formatterTokens,
+        debugInfo
+      )
+
+      return {
+        message: finalMessage,
+        agentType: AgentType.CUSTOMER_SUPPORT,
+        wasHandled: true,
+        intent: "ASK_FAQ",
+        confidence: intentConfidence,
+        source: intentSource,
+        processingTimeMs,
+        debugInfo,
+        response: finalMessage,
+        agentUsed: AgentType.CUSTOMER_SUPPORT,
+        tokensUsed: formatterTokens,
+        executionTimeMs: processingTimeMs,
+        wasFAQ: true,
+        isBlocked: false,
+        _assistantMessageId: savedMessages?.assistantMessageId,
+      }
+    } catch (error) {
+      logger.error("⚠️ [ChatEngine] FAQ precheck failed, continuing with human support", {
+        error,
+        workspaceId: input.workspaceId,
+        customerId: input.customerId,
+      })
+      return null
+    }
+  }
+
   private async handleHumanSupportRequest(params: {
     input: ChatEngineInput
     workspaceConfig: WorkspaceConfig
@@ -453,6 +606,25 @@ export class ChatEngineService {
       logger.warn("⚠️ [ChatEngine] No sales agent assigned for customer requesting human support", {
         customerId: input.customerId,
       })
+    }
+
+    const faqPrecheckResult = await this.tryHandleFAQBeforeHumanSupport({
+      input,
+      workspaceConfig,
+      conversationId,
+      debugSteps,
+      startTime,
+      requestIntent,
+      intentConfidence,
+      intentSource,
+    })
+
+    if (faqPrecheckResult) {
+      logger.info("📚 [ChatEngine] Human support converted to FAQ response", {
+        workspaceId: input.workspaceId,
+        customerId: input.customerId,
+      })
+      return faqPrecheckResult
     }
 
     const template = this.getHumanSupportTemplate(workspaceConfig, {
