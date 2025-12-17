@@ -2279,6 +2279,118 @@ export class ChatEngineService {
               // Other actions (SHOW_PRODUCTS) → let normal flow handle it (returns categories)
             }
             
+            // 📋 Handle PRODUCT_DETAIL_ACTIONS - navigation shortcuts from product detail view
+            if (optionsMapping.listType === "PRODUCT_DETAIL_ACTIONS" && (selectedOption as any).id) {
+              const actionId = (selectedOption as any).id
+              logger.info("📋 [ChatEngine] PRODUCT_DETAIL_ACTIONS detected", { actionId })
+              
+              if (actionId === "SHOW_CATEGORIES") {
+                // Show categories
+                const categoriesIntent: import("../intent/intent.types").Intent = {
+                  type: "SHOW_CATEGORIES",
+                  confidence: "HIGH",
+                  source: "PATTERN",
+                }
+                
+                const loadedData = await this.dataLoader.loadForIntent(
+                  categoriesIntent,
+                  input.workspaceId,
+                  input.customerId,
+                  input.customerDiscount
+                )
+                
+                const structuredResp = this.responseBuilder.build(
+                  categoriesIntent,
+                  loadedData,
+                  {
+                    workspaceId: input.workspaceId,
+                    customerLanguage: input.customerLanguage,
+                    customerName: input.customerName,
+                    customerDiscount: input.customerDiscount,
+                  }
+                )
+                
+                const formatterResult = await this.formatWithCustomRules(
+                  structuredResp,
+                  input.customerLanguage || "it",
+                  workspaceConfig
+                )
+                const formattedText = formatterResult.text
+                
+                const savedMsgs = await this.saveMessages(
+                  input.workspaceId,
+                  input.customerId,
+                  conversationId,
+                  input.message,
+                  formattedText
+                )
+                
+                return {
+                  message: formattedText,
+                  agentType: AgentType.PRODUCT_SEARCH,
+                  wasHandled: true,
+                  intent: "SHOW_CATEGORIES",
+                  confidence: "HIGH",
+                  source: "PATTERN",
+                  processingTimeMs: Date.now() - startTime,
+                  _assistantMessageId: savedMsgs?.assistantMessageId,
+                }
+              }
+              
+              if (actionId === "VIEW_CART") {
+                // Show cart
+                const cartIntent: import("../intent/intent.types").Intent = {
+                  type: "VIEW_CART",
+                  confidence: "HIGH",
+                  source: "PATTERN",
+                }
+                
+                const loadedData = await this.dataLoader.loadForIntent(
+                  cartIntent,
+                  input.workspaceId,
+                  input.customerId,
+                  input.customerDiscount
+                )
+                
+                const structuredResp = this.responseBuilder.build(
+                  cartIntent,
+                  loadedData,
+                  {
+                    workspaceId: input.workspaceId,
+                    customerLanguage: input.customerLanguage,
+                    customerName: input.customerName,
+                    customerDiscount: input.customerDiscount,
+                  }
+                )
+                
+                const formatterResult = await this.formatWithCustomRules(
+                  structuredResp,
+                  input.customerLanguage || "it",
+                  workspaceConfig
+                )
+                const formattedText = formatterResult.text
+                
+                const savedMsgs = await this.saveMessages(
+                  input.workspaceId,
+                  input.customerId,
+                  conversationId,
+                  input.message,
+                  formattedText
+                )
+                
+                return {
+                  message: formattedText,
+                  agentType: AgentType.CART_MANAGEMENT,
+                  wasHandled: true,
+                  intent: "VIEW_CART",
+                  confidence: "HIGH",
+                  source: "PATTERN",
+                  processingTimeMs: Date.now() - startTime,
+                  _assistantMessageId: savedMsgs?.assistantMessageId,
+                }
+              }
+            }
+            
             // 🗑️ Handle CART_REMOVAL_OPTIONS - format removal options
             if (structuredResponse.type === "CART_REMOVAL_OPTIONS") {
               const items = (structuredResponse.data as { items: any[] }).items || []
@@ -2620,19 +2732,6 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
                 productName: product.name,
               })
               
-              // 🆕 Save PRODUCT_DETAIL_ACTIONS so "1" = catalogo, "2" = carrello
-              await this.optionsMappingService.saveMapping({
-                workspaceId: input.workspaceId,
-                conversationId,
-                customerId: input.customerId,
-                responseText: "",
-                items: [
-                  { number: 1, name: "Esplora il catalogo", id: "SHOW_CATEGORIES", metadata: {} },
-                  { number: 2, name: "Mostrami il carrello", id: "VIEW_CART", metadata: {} },
-                ],
-                listType: "PRODUCT_DETAIL_ACTIONS",
-              })
-              logger.info("📋 [ChatEngine] Set PRODUCT_DETAIL_ACTIONS for quick navigation")
             }
             
             // 🆕 Set pending action for SERVICE_DETAIL (add to cart prompt)
@@ -3896,6 +3995,25 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           orderCode: order?.code,
           conversationId,
         })
+      } else if (structuredResponse.type === "PRODUCT_DETAIL") {
+        const productDetailActions = [
+          { number: 1, name: "Esplora il catalogo", id: "SHOW_CATEGORIES", metadata: {} },
+          { number: 2, name: "Mostrami il carrello", id: "VIEW_CART", metadata: {} },
+        ]
+
+        await this.optionsMappingService.saveMapping({
+          workspaceId: input.workspaceId,
+          conversationId,
+          customerId: input.customerId,
+          responseText: "",
+          items: productDetailActions,
+          listType: "PRODUCT_DETAIL_ACTIONS",
+        })
+
+        logger.info("📋 [ChatEngine] STEP 9: Saved PRODUCT_DETAIL_ACTIONS mapping", {
+          conversationId,
+          responseType: structuredResponse.type,
+        })
       } else if (structuredResponse.type === "CART_EMPTY") {
         await this.optionsMappingService.saveMapping({
           workspaceId: input.workspaceId,
@@ -4111,7 +4229,10 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         _assistantMessageId: assistantMessageId,
       } as any
     } catch (error) {
-      logger.error("❌ [ChatEngine] Error processing message", { error })
+      logger.error("❌ [ChatEngine] Error processing message", {
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined,
+      })
       const errorTimeMs = Date.now() - startTime
 
       return {

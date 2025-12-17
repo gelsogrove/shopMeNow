@@ -23,6 +23,7 @@ export type ListType =
   | "SERVICES"      // "1. Confezione Regalo - €30.00"
   | "OFFER_CATEGORIES" // "1. Vedi prodotti Formaggi in sconto"
   | "ORDER_OPTIMIZATION_ACTIONS" // "1. 🧊 Mostra prodotti Congelati" (optimization menu)
+  | "PRODUCT_DETAIL_ACTIONS" // "1. Esplora il catalogo" while viewing a product
   | "unknown"       // Fallback for unrecognized list types
 
 // =============================================================================

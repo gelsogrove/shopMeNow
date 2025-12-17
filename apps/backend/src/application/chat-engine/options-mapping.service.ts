@@ -35,7 +35,20 @@ export interface OptionItem {
  * Type of list displayed to user
  * Using UPPERCASE to match intent.types.ts ListType
  */
-export type ListType = "CATEGORIES" | "GROUPS" | "PRODUCTS" | "ORDERS" | "CART_ITEMS" | "SERVICES" | "ORDER_ACTIONS" | "CART_ACTIONS" | "ORDER_OPTIMIZATION_ACTIONS" | "OFFER_CATEGORIES" | "binary" | "unknown"
+export type ListType =
+  | "CATEGORIES"
+  | "GROUPS"
+  | "PRODUCTS"
+  | "ORDERS"
+  | "CART_ITEMS"
+  | "SERVICES"
+  | "ORDER_ACTIONS"
+  | "CART_ACTIONS"
+  | "ORDER_OPTIMIZATION_ACTIONS"
+  | "OFFER_CATEGORIES"
+  | "PRODUCT_DETAIL_ACTIONS"
+  | "binary"
+  | "unknown"
 
 /**
  * Pending action after user confirmation (sì/no)

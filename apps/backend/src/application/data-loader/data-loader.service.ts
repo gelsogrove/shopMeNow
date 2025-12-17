@@ -531,6 +531,28 @@ export class DataLoaderService {
           logger.error("🚚 [DataLoader] ORDER_OPTIMIZATION_ACTIONS without optionId", { selectIntent })
           return { type: "EMPTY", reason: "missing_option_id" }
         
+        case "PRODUCT_DETAIL_ACTIONS":
+          if (selectIntent.optionId) {
+            logger.info("📦 [DataLoader] Processing PRODUCT_DETAIL_ACTION", {
+              optionId: selectIntent.optionId,
+            })
+
+            switch (selectIntent.optionId) {
+              case "SHOW_CATEGORIES":
+              case "SHOW_PRODUCTS":
+                return this.loadCategories(workspaceId)
+              case "VIEW_CART":
+                return this.loadCart(workspaceId, customerId, customerDiscount)
+              default:
+                logger.warn("📦 [DataLoader] Unknown PRODUCT_DETAIL_ACTION", {
+                  optionId: selectIntent.optionId,
+                })
+                return { type: "EMPTY", reason: "unknown_product_detail_action" }
+            }
+          }
+          logger.error("📦 [DataLoader] PRODUCT_DETAIL_ACTIONS without optionId", { selectIntent })
+          return { type: "EMPTY", reason: "missing_option_id" }
+        
         default:
           // ========================================================================
           // 🧠 HYBRID FALLBACK: Try inference first, then LLM context

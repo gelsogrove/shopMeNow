@@ -492,6 +492,7 @@ export class LLMFormatterService {
     detailLines.push(`Vuoi aggiungerlo al carrello? Se sì puoi indicare la quantità? (es. "Sì, 2")`)
     detailLines.push("")
     detailLines.push(`oppure`)
+    detailLines.push("")
     detailLines.push(`**1.** Esplora il catalogo`)
     detailLines.push(`**2.** Mostrami il carrello`)
     detailLines.push("")
