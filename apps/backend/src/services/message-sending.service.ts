@@ -15,6 +15,7 @@ import { prisma, PrismaClient } from "@echatbot/database"
 import logger from "../utils/logger"
 import translationSecurityService from "./translation-security.service"
 import { sendToWhatsApp } from "./whatsapp-api.service"
+import { config } from "../config"
 
 // Tipi di invio messaggi
 export type SendType =
@@ -303,14 +304,7 @@ export class MessageSendingService {
 
     const workspaceUrl = workspace?.url || ""
 
-    const allowedLinks = [
-      workspaceUrl,
-      `${workspaceUrl}/s/`, // Short URLs with tokens
-      `${workspaceUrl}/orders-public`,
-      `${workspaceUrl}/checkout-public`,
-      `${workspaceUrl}/api/`,
-      "https://wa.me/",
-    ]
+    const allowedLinks = this.buildAllowedLinks(workspaceUrl)
 
     // 🔧 Get LLM config from Agent Settings (same model/provider as agent)
     const { getLLMConfig } = await import("../config/llm.config")
@@ -425,6 +419,50 @@ export class MessageSendingService {
       logger.error("❌ [MESSAGE-SEND] Health check failed", error)
       return false
     }
+  }
+
+  private buildAllowedLinks(workspaceUrl?: string | null): string[] {
+    const links = new Set<string>()
+
+    const addIfValid = (value?: string | null) => {
+      if (!value) return
+      const trimmed = value.trim()
+      if (!trimmed) return
+      links.add(trimmed)
+    }
+
+    const addBaseVariants = (base?: string | null) => {
+      if (!base) return
+      const normalized = base.trim().replace(/\/+$/, "")
+      if (!normalized) return
+      addIfValid(normalized)
+      addIfValid(`${normalized}/`)
+      addIfValid(`${normalized}/uploads`)
+      addIfValid(`${normalized}/uploads/`)
+      addIfValid(`${normalized}/assets`)
+      addIfValid(`${normalized}/assets/`)
+    }
+
+    if (workspaceUrl) {
+      const normalizedWorkspace = workspaceUrl.trim().replace(/\/+$/, "")
+      addIfValid(normalizedWorkspace)
+      addIfValid(`${normalizedWorkspace}/s`)
+      addIfValid(`${normalizedWorkspace}/s/`)
+      addIfValid(`${normalizedWorkspace}/orders-public`)
+      addIfValid(`${normalizedWorkspace}/checkout-public`)
+      addIfValid(`${normalizedWorkspace}/api`)
+      addIfValid(`${normalizedWorkspace}/api/`)
+      // Add uploads path for product images
+      addIfValid(`${normalizedWorkspace}/uploads`)
+      addIfValid(`${normalizedWorkspace}/uploads/`)
+    }
+
+    addBaseVariants(config.frontendUrl)
+    addBaseVariants(config.appUrl)
+
+    addIfValid("https://wa.me/")
+
+    return Array.from(links)
   }
 }
 

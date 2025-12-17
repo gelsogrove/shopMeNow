@@ -104,6 +104,8 @@ export interface DebugStep {
   model?: string
   temperature?: number
   timestamp: string | number
+  step?: string  // 🆕 Additional step label
+  details?: Record<string, any>  // 🆕 Arbitrary details
   tokenUsage?: {
     promptTokens: number
     completionTokens: number
@@ -153,22 +155,28 @@ export interface ChatEngineOutput {
   source: "PATTERN" | "KEYWORD" | "LLM_FALLBACK" | "LLM_CONTEXT"
   processingTimeMs: number
   debugInfo?: {
-    loadedDataType: string
-    responseType: string
-    llmUsed: boolean
+    loadedDataType?: string
+    responseType?: string
+    llmUsed?: boolean
     steps?: DebugStep[]  // 🆕 Timeline steps (optional for early returns)
     totalTokens?: number
     totalCost?: number
     executionTimeMs?: number
+    hybridFallback?: boolean
+    originalLabel?: string
+    invalidOption?: number
+    maxOption?: number
+    listType?: ListType
+    step?: string
     [key: string]: any
   }
   // Legacy fields for webhook compatibility
-  response: string  // Same as message
-  agentUsed: string // String version of agentType
-  tokensUsed: number
-  executionTimeMs: number // Same as processingTimeMs
-  wasFAQ: boolean
-  isBlocked: boolean
+  response?: string  // Same as message (optional)
+  agentUsed?: string // String version of agentType (optional)
+  tokensUsed?: number
+  executionTimeMs?: number // Same as processingTimeMs (optional)
+  wasFAQ?: boolean
+  isBlocked?: boolean
   _assistantMessageId?: string
 }
 
@@ -1010,6 +1018,7 @@ export class ChatEngineService {
       pairingSuggestions: undefined,
       ingredients: [],
       allergens: productRecord.allergens || [],
+      imageUrl: productRecord.imageUrl,
     }
 
     const agent = new ProductContextAgentLLM(this.prisma)
@@ -1038,6 +1047,16 @@ export class ChatEngineService {
       },
       conversationHistory,
     })
+
+    // If ProductContextAgent failed, return null to trigger FAQ fallback
+    if (!agentResponse.success) {
+      logger.warn("⚠️ [ChatEngine] ProductContextAgent failed, will try FAQ fallback", {
+        workspaceId: input.workspaceId,
+        productId: productData.id,
+        question: input.message,
+      })
+      return null
+    }
 
     const processingTimeMs = Date.now() - startTime
 
@@ -1993,7 +2012,7 @@ export class ChatEngineService {
                   confidence: "HIGH",
                   source: "PATTERN",
                   processingTimeMs: Date.now() - startTime,
-                  llmUsed: false,
+                  debugInfo: { llmUsed: false },
                 }
               }
               
@@ -2356,6 +2375,8 @@ export class ChatEngineService {
               }
               
               debugSteps.push({
+                type: "router",
+                agent: "ChatEngine",
                 step: "HYBRID_FALLBACK",
                 timestamp: Date.now(),
                 details: {
@@ -2403,6 +2424,8 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
               })
               
               debugSteps.push({
+                type: "router",
+                agent: "UnifiedChatRouter",
                 step: "UNIFIED_ROUTER_RESPONSE",
                 timestamp: Date.now(),
                 details: {
@@ -2459,10 +2482,12 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
                 errorMessage,
                 listType: optionsMapping?.listType,
               })
+              // Load conversation history for context
+              const fallbackHistory = await this.conversationManager.loadHistory(input.workspaceId, conversationId)
               const fallback = await this.routeGenericLLMFallback({
                 input,
                 conversationId,
-                history,
+                history: fallbackHistory,
                 fallbackReason: errorMessage,
                 debugSteps,
               })
@@ -2594,6 +2619,20 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
                 productId: product.sku || product.id,
                 productName: product.name,
               })
+              
+              // 🆕 Save PRODUCT_DETAIL_ACTIONS so "1" = catalogo, "2" = carrello
+              await this.optionsMappingService.saveMapping({
+                workspaceId: input.workspaceId,
+                conversationId,
+                customerId: input.customerId,
+                responseText: "",
+                items: [
+                  { number: 1, name: "Esplora il catalogo", id: "SHOW_CATEGORIES", metadata: {} },
+                  { number: 2, name: "Mostrami il carrello", id: "VIEW_CART", metadata: {} },
+                ],
+                listType: "PRODUCT_DETAIL_ACTIONS",
+              })
+              logger.info("📋 [ChatEngine] Set PRODUCT_DETAIL_ACTIONS for quick navigation")
             }
             
             // 🆕 Set pending action for SERVICE_DETAIL (add to cart prompt)
@@ -3086,7 +3125,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             })
             
             // Map listType to intent (language-agnostic!)
-            if (lastListType === "CART_ITEMS" || optionsMapping?.pendingAction?.type === "CHECKOUT") {
+            if (lastListType === "CART_ITEMS" || optionsMapping?.pendingAction?.type === "CONFIRM_ORDER") {
               intentResult.intent = { type: "START_CHECKOUT" }
             } else if (lastListType === "PRODUCTS" || lastListType === "CATEGORIES" || lastListType === "GROUPS") {
               intentResult.intent = { type: "SHOW_CATEGORIES" }
@@ -3171,15 +3210,17 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           return productContextHandled
         }
 
-        logger.warn("⚠️ [ChatEngine] PRODUCT_CONTEXT intent could not be handled, falling back to generic search", {
+        // ProductContext failed - try FAQ first for questions like "when will it arrive?"
+        logger.warn("⚠️ [ChatEngine] PRODUCT_CONTEXT failed, trying FAQ fallback", {
           workspaceId: input.workspaceId,
           customerId: input.customerId,
+          question: input.message,
         })
 
         intentResult.intent = {
-          type: "SEARCH_PRODUCTS",
+          type: "ASK_FAQ",
           query: input.message,
-        } as Intent
+        } as AskFAQIntent
       }
 
       // ========================================================================
@@ -4206,7 +4247,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       switch (action) {
         case "SEND_INVOICE": {
           // Import and call sendInvoice calling function
-          const { sendInvoice } = await import("../../domain/calling-functions/sendInvoice")
+          const { sendInvoice } = await import("../../domain/calling-functions/SendInvoice")
           const result = await sendInvoice({
             customerId,
             workspaceId,

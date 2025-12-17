@@ -1,5 +1,6 @@
 import { PrismaClient } from "@echatbot/database"
 import axios from "axios"
+import { config } from "../../config"
 import { TemplateLoaderService } from "../services/template-loader.service"
 import { PromptProcessorService } from "../../services/prompt-processor.service"
 import logger from "../../utils/logger"
@@ -18,6 +19,7 @@ export interface ProductContextData {
   storageInfo?: string | null
   pairingSuggestions?: string[]
   allergens?: string[]
+  imageUrl?: string | null
 }
 
 export interface ProductContextWorkspaceInfo {
@@ -66,6 +68,18 @@ export class ProductContextAgentLLM {
     }
   }
 
+  /**
+   * Build full image URL from relative path
+   */
+  private getFullImageUrl(imageUrl: string | null | undefined): string {
+    if (!imageUrl) return "N/A"
+    if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
+      return imageUrl
+    }
+    const baseUrl = config.appUrl.replace(/\/+$/, "")
+    const path = imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`
+    return `${baseUrl}${path}`
+  }
   async handleQuestion(input: ProductContextAgentInput): Promise<ProductContextAgentResponse> {
     const start = Date.now()
     try {
@@ -164,8 +178,42 @@ export class ProductContextAgentLLM {
         }
       )
 
-      const content = response.data?.choices?.[0]?.message?.content?.trim() || ""
+      let content = response.data?.choices?.[0]?.message?.content?.trim() || ""
       const usage = response.data?.usage
+
+      // Post-process: ensure img tag is complete
+      // LLM sometimes outputs: URL" alt="Name" /> instead of <img src="URL" alt="Name" />
+      const fullImageUrl = this.getFullImageUrl(input.product.imageUrl)
+      logger.info("🖼️ ProductContextAgent: Checking image URL", {
+        fullImageUrl,
+        hasUrlInContent: content.includes(fullImageUrl),
+        contentPreview: content.substring(0, 300),
+      })
+      
+      if (fullImageUrl !== "N/A" && content.includes(fullImageUrl)) {
+        // Check if it's already correct (has <img src=" before URL)
+        const correctPattern = `<img src="${fullImageUrl}"`
+        if (!content.includes(correctPattern)) {
+          logger.info("🔧 Img tag is malformed, attempting fix...")
+          // Replace the broken pattern: URL" alt="X" /> → <img src="URL" alt="X" />
+          // Match: URL followed by " alt=" and anything until />
+          const escapedUrl = fullImageUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+          const brokenPattern = new RegExp(`${escapedUrl}"\\s*alt="([^"]*)"\\s*/>`, 'g')
+          const newContent = content.replace(
+            brokenPattern,
+            `<img src="${fullImageUrl}" alt="$1" />`
+          )
+          if (newContent !== content) {
+            content = newContent
+            logger.info("✅ Fixed malformed img tag in ProductContextAgent response")
+          } else {
+            // Try simpler approach: just wrap the URL with img tag if it appears on its own line
+            const simplePattern = new RegExp(`^(${escapedUrl})`, 'gm')
+            content = content.replace(simplePattern, `<img src="$1" alt="${input.product.name}" />`)
+            logger.info("✅ Applied simple img tag wrapper")
+          }
+        }
+      }
 
       return {
         success: true,
@@ -176,7 +224,15 @@ export class ProductContextAgentLLM {
         model: "openai/gpt-4o-mini",
       }
     } catch (error) {
-      logger.error("❌ ProductContextAgentLLM failed", { error })
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorStack = error instanceof Error ? error.stack : undefined
+      logger.error("❌ ProductContextAgentLLM failed", { 
+        error: errorMessage,
+        stack: errorStack,
+        workspaceId: input.workspaceId,
+        productId: input.product?.id,
+        productName: input.product?.name,
+      })
       return {
         success: false,
         output: "Mi dispiace, non riesco a recuperare altre informazioni su questo prodotto in questo momento.",
@@ -237,6 +293,7 @@ export class ProductContextAgentLLM {
       "PRODUCT_PAIRINGS",
       formatList(product.pairingSuggestions)
     )
+    result = replaceAll(result, "PRODUCT_IMAGE_URL", this.getFullImageUrl(product.imageUrl))
     result = result.replace("{{PRODUCT_FACTS}}", formattedFacts)
 
     return result

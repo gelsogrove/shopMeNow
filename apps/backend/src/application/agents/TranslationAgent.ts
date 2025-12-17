@@ -72,6 +72,23 @@ export class TranslationAgent {
       // 1. Normalize target language
       const normalizedLanguage = this.normalizeLanguage(options.targetLanguage)
       
+      // 🔧 SKIP TRANSLATION for Italian to Italian with HTML
+      // LLM corrupts HTML tags during translation, so bypass if already in correct language
+      const isItalianTarget = normalizedLanguage === "it"
+      const hasHtmlTags = options.message?.includes("<img") || options.message?.includes("<a ")
+      
+      if (isItalianTarget && hasHtmlTags) {
+        logger.info("🔧 SKIPPING TranslationAgent - Italian target with HTML tags, returning as-is")
+        return {
+          translated: false,
+          originalLanguage: "it",
+          targetLanguage: normalizedLanguage,
+          message: options.message,
+          tokensUsed: 0,
+          executionTimeMs: Date.now() - startTime,
+        }
+      }
+      
       // 🆕 ALWAYS translate to target language - input may be mixed Italian/English
       // The Translation Agent will translate EVERYTHING to the target language
       logger.info(`🌍 TranslationAgent - Translating to ${normalizedLanguage.toUpperCase()} (original input: ${options.targetLanguage})`)
@@ -127,6 +144,12 @@ export class TranslationAgent {
       const targetLanguageName = this.getLanguageName(normalizedLanguage)
       const userMessage = `Translate this message to ${targetLanguageName}. The input may be in Italian, English, or mixed. Output must be 100% in ${targetLanguageName}:\n\n"${options.message}"\n\nRespond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLanguage": "${normalizedLanguage}", "message": "..."}`
       
+      // 🔍 DEBUG: Log INPUT to TranslationAgent
+      logger.info("🔍 TranslationAgent INPUT", {
+        containsImgTag: options.message?.includes('<img'),
+        messagePreview: options.message?.substring(0, 500),
+      })
+
       // 5. Call OpenRouter LLM
       logger.info("🌍 Calling TranslationAgent LLM", {
         workspaceId: options.workspaceId,
@@ -166,6 +189,12 @@ export class TranslationAgent {
       const llmResponse = response.data.choices[0].message.content
       const tokensUsed = response.data.usage?.total_tokens || 0
       const executionTimeMs = Date.now() - startTime
+
+      // 🔍 DEBUG: Log OUTPUT from TranslationAgent LLM
+      logger.info("🔍 TranslationAgent OUTPUT", {
+        containsImgTag: llmResponse?.includes('<img'),
+        llmResponsePreview: llmResponse?.substring(0, 500),
+      })
 
       // 6. Parse JSON response
       let parsed: {

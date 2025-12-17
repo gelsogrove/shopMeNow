@@ -108,6 +108,14 @@ export const platformConfigData: PlatformConfigData[] = [
       "Allow new user registration. When false: show WIP popup, disable register button",
     isActive: true,
   },
+  {
+    type: "FLAG" as const,
+    key: "landingPageEnabled",
+    value: "true",
+    description:
+      "When true, /index redirects to landing page. When false, redirect users to /auth/login",
+    isActive: true,
+  },
 
   // ============================================================================
   // 📊 LIMITS (Plan-based thresholds)

@@ -5,6 +5,29 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>eChatbot - Create your sell AI agent !</title>
+    <script>
+      ;(function handleRootRedirect() {
+        const path = window.location.pathname
+        if (path !== "/" && path !== "/index.html") {
+          return
+        }
+
+        const loginUrl = `${window.location.origin}/auth/login`
+
+        fetch("/api/platform-config/flags/check")
+          .then((response) => (response.ok ? response.json() : null))
+          .then((payload) => {
+            const landingEnabled = payload?.data?.landingPageEnabled
+            const target = landingEnabled ? "/landing" : loginUrl
+            if (target && target !== window.location.pathname) {
+              window.location.replace(target)
+            }
+          })
+          .catch(() => {
+            window.location.replace(loginUrl)
+          })
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

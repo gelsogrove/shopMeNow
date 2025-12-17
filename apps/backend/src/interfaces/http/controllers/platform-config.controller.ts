@@ -175,10 +175,11 @@ export class PlatformConfigController {
    */
   async checkFlags(_req: Request, res: Response): Promise<Response> {
     try {
-      const [canLogin, canRegister] =
+      const [canLogin, canRegister, landingPageEnabled] =
         await Promise.all([
           platformConfigService.canLogin(),
           platformConfigService.canRegister(),
+          platformConfigService.isLandingPageEnabled(),
         ])
 
       return res.status(200).json({
@@ -186,6 +187,7 @@ export class PlatformConfigController {
         data: {
           canLogin,
           canRegister,
+          landingPageEnabled,
         },
       })
     } catch (error) {

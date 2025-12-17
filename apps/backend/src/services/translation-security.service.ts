@@ -15,6 +15,95 @@ ANY http:// or https:// links that are NOT in the ALLOWED LINKS list above, .ru,
 import axios from "axios"
 import logger from "../utils/logger"
 
+const ITALIAN_PROFANITY: string[] = [
+  "cazzo",
+  "troia",
+  "puttana",
+  "stronzo",
+  "stronza",
+  "minchia",
+  "vaffanculo",
+  "coglione",
+  "cogliona",
+  "fica",
+  "pene",
+  "pompino",
+  "succhiami",
+  "leccami",
+  "scopare",
+  "scopami",
+  "succhiare",
+  "fottere",
+  "frocio",
+  "puttanella",
+  "stronzetto",
+  "zoccola",
+]
+
+const ITALIAN_SPAM_TERMS: string[] = [
+  "subscribe",
+  "click here",
+  "link in bio",
+  "promo",
+  "discount",
+  "offer",
+  "free",
+  "gratis",
+  "urgent",
+  "urgente",
+  "regalo",
+  "offerta",
+  "invest",
+  "bitcoin",
+  "crypto",
+  "referral",
+  "bonus",
+  "click now",
+  "claim now",
+  "offerta limitata",
+  "promozione",
+]
+
+const ITALIAN_PHISHING_TERMS: string[] = [
+  ".ru",
+  ".tk",
+  ".xyz",
+  ".bit",
+  ".zip",
+  ".rar",
+  ".onion",
+  ".top",
+  ".app",
+  "telegram",
+  "t.me",
+  "whatsapp group",
+  "premio whatsapp",
+  "banco",
+  "banca",
+  "bank",
+  "password",
+  "contraseña",
+  "senha",
+  "otp",
+  "codice segreto",
+  "free gift",
+  "verify",
+  "verifica",
+  "confirmar",
+]
+
+const ITALIAN_ADULT_TERMS: string[] = [
+  "sexy",
+  "porno",
+  "porn",
+  "xxx",
+  "cam girl",
+  "nude",
+  "onlyfans",
+  "fansly",
+  "webcam",
+]
+
 // Prompt HARDCODED (non modificabile da DB)
 const TRANSLATION_SECURITY_PROMPT = `You are a SECURITY and TRANSLATION filter for a WhatsApp e-commerce chatbot.
 
@@ -51,6 +140,8 @@ win, ganar, guadagna, ganar dinero, easy money, fast money, hot girls, sexy girl
 
 ## TRANSLATION RULES
 - Keep formatting (emojis, line breaks, bullets)
+- **PRESERVE HTML TAGS** - Keep all <img>, <a>, <strong>, <em>, <br> tags exactly as they appear
+- DO NOT remove or modify HTML img src attributes
 - Translate category names, descriptions, and conversational text
 - **DO NOT translate Italian product names** - keep them in Italian (e.g., "Parmigiano Reggiano", "Prosciutto di Parma")
 - Translate product descriptions but preserve Italian food terminology
@@ -138,6 +229,9 @@ export class TranslationSecurityService {
   ): Promise<TranslationResult> {
     // Use provided apiKey or fallback to constructor's key
     const effectiveApiKey = apiKey || this.openRouterApiKey
+    const normalizedTarget = (targetLanguage || "it").toLowerCase()
+    const needsTranslation =
+      normalizedTarget !== "it" && !normalizedTarget.startsWith("it-")
 
     // Check if API key is available
     if (!effectiveApiKey) {
@@ -150,8 +244,14 @@ export class TranslationSecurityService {
     }
 
     try {
-      // Se già nella lingua target e italiano, salta traduzione ma filtra
-      const needsTranslation = targetLanguage.toLowerCase() !== "it"
+      // Se siamo già in italiano, applica solo i controlli di sicurezza senza LLM
+      if (!needsTranslation) {
+        logger.info("🔒 TranslationSecurity applying security-only mode", {
+          targetLanguage,
+          responseLength: response.length,
+        })
+        return this.applySecurityOnly(response, targetLanguage, allowedLinks)
+      }
 
       logger.info("🔒 TranslationSecurity processing", {
         targetLanguage,
@@ -189,6 +289,102 @@ export class TranslationSecurityService {
         reason: null,
       }
     }
+  }
+
+  private applySecurityOnly(
+    text: string,
+    targetLanguage: string,
+    allowedLinks: string[]
+  ): TranslationResult {
+    const lowerText = text.toLowerCase()
+
+    if (this.containsAny(lowerText, ITALIAN_PROFANITY)) {
+      return {
+        translatedText: this.getBlockMessage(targetLanguage),
+        blocked: true,
+        reason: "profanity",
+      }
+    }
+
+    if (this.containsAny(lowerText, ITALIAN_ADULT_TERMS)) {
+      return {
+        translatedText: this.getBlockMessage(targetLanguage),
+        blocked: true,
+        reason: "adult",
+      }
+    }
+
+    if (this.containsAny(lowerText, ITALIAN_SPAM_TERMS)) {
+      return {
+        translatedText: this.getBlockMessage(targetLanguage),
+        blocked: true,
+        reason: "spam",
+      }
+    }
+
+    if (
+      this.containsAny(lowerText, ITALIAN_PHISHING_TERMS) ||
+      this.hasDisallowedLinks(text, allowedLinks)
+    ) {
+      return {
+        translatedText: this.getBlockMessage(targetLanguage),
+        blocked: true,
+        reason: "phishing",
+      }
+    }
+
+    return {
+      translatedText: text,
+      blocked: false,
+      reason: null,
+    }
+  }
+
+  private containsAny(text: string, terms: string[]): boolean {
+    return terms.some((term) =>
+      text.includes(term.toLowerCase())
+    )
+  }
+
+  private hasDisallowedLinks(text: string, allowedLinks: string[]): boolean {
+    const matches = text.match(/https?:\/\/[^\s)]+/gi)
+    if (!matches || matches.length === 0) {
+      return false
+    }
+
+    const normalizedAllowed = allowedLinks
+      .map((link) => link.trim().toLowerCase().replace(/\/+$/, ""))
+      .filter(Boolean)
+
+    return matches.some((rawLink) => {
+      const normalizedLink = rawLink.trim().toLowerCase()
+      return !normalizedAllowed.some((allowed) =>
+        normalizedLink.startsWith(allowed)
+      )
+    })
+  }
+
+  private getBlockMessage(language: string): string {
+    const baseMessages: Record<string, string> = {
+      it: "Mi dispiace, non posso aiutarti con questo. Come posso aiutarti con i nostri prodotti?",
+      en: "I'm sorry, I can't help you with that. How can I assist you with our products?",
+      es: "Lo siento, no puedo ayudarte con eso. ¿Cómo puedo ayudarte con nuestros productos?",
+      pt: "Desculpe, não posso ajudar com isso. Como posso ajudá-lo com nossos produtos?",
+      de: "Es tut mir leid, damit kann ich Ihnen nicht helfen. Wie kann ich Ihnen mit unseren Produkten helfen?",
+      fr: "Désolé, je ne peux pas vous aider avec ça. Comment puis-je vous aider avec nos produits?",
+    }
+
+    const normalized = language?.toLowerCase() || "it"
+    if (baseMessages[normalized as keyof typeof baseMessages]) {
+      return baseMessages[normalized as keyof typeof baseMessages]
+    }
+    if (normalized.startsWith("it")) return baseMessages.it
+    if (normalized.startsWith("en")) return baseMessages.en
+    if (normalized.startsWith("es")) return baseMessages.es
+    if (normalized.startsWith("pt")) return baseMessages.pt
+    if (normalized.startsWith("de")) return baseMessages.de
+    if (normalized.startsWith("fr")) return baseMessages.fr
+    return baseMessages.it
   }
 
   /**

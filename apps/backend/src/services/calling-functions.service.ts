@@ -1,3 +1,4 @@
+import { config } from "../config"
 import { LinkGeneratorService } from "../application/services/link-generator.service"
 import { ReplaceLinkWithToken } from "../application/services/link-replacement.service"
 import { PriceCalculationService } from "../application/services/price-calculation.service"
@@ -1245,6 +1246,17 @@ export class CallingFunctionsService {
           customerDiscount,
         })
 
+        // Build full image URL
+        const getFullImageUrl = (imageUrl: string | null): string | null => {
+          if (!imageUrl) return null
+          if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
+            return imageUrl
+          }
+          const baseUrl = config.appUrl.replace(/\/+$/, "")
+          const path = imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`
+          return `${baseUrl}${path}`
+        }
+
         return {
           success: true,
           found: true,
@@ -1263,6 +1275,9 @@ export class CallingFunctionsService {
             region: product.region,
             transportType: product.transportType,
             certifications: certifications,
+            // ✅ Include full image URL for display
+            imageUrl: getFullImageUrl(product.imageUrl),
+            isAvailable: product.stock > 0,
           },
           timestamp: new Date().toISOString(),
         }

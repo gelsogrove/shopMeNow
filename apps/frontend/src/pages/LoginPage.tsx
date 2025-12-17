@@ -22,6 +22,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 import {
   AlertTriangle,
+  BarChart3,
   Bell,
   Globe,
   Mail,
@@ -928,77 +929,70 @@ export function LoginPage() {
         </div>
 
         {/* Two Columns: Why eChatbot (Left) + Video (Right) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           {/* Left Column - Why eChatbot Features */}
-          <div className="space-y-3">
-            <h3 className="text-lg font-semibold text-slate-900">
+          <div>
+            <h3 className="text-xl font-bold text-slate-900 mb-6 text-center lg:text-left">
               {t("hero.whyTitle")}
             </h3>
-            <div className="grid gap-3">
-              <div className="flex items-start gap-3 p-3 rounded-xl bg-white shadow-sm border border-slate-200">
-                <div className="p-2 rounded-lg bg-purple-100">
-                  <Zap className="w-5 h-5 text-purple-600" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="group p-5 rounded-2xl bg-gradient-to-br from-purple-50 to-white border border-purple-100 hover:shadow-lg hover:border-purple-200 transition-all duration-300">
+                <div className="w-12 h-12 rounded-xl bg-purple-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <Zap className="w-6 h-6 text-white" />
                 </div>
-                <div>
-                  <h4 className="font-semibold text-slate-900 text-sm">
-                    {t("features.24x7")}
-                  </h4>
-                  <p className="text-xs text-slate-600">
-                    {t("features.24x7.desc")}
-                  </p>
-                </div>
+                <h4 className="font-semibold text-slate-900 text-base mb-1">
+                  {t("features.24x7")}
+                </h4>
+                <p className="text-sm text-slate-500 leading-relaxed">
+                  {t("features.24x7.desc")}
+                </p>
               </div>
 
-              <div className="flex items-start gap-3 p-3 rounded-xl bg-white shadow-sm border border-slate-200">
-                <div className="p-2 rounded-lg bg-green-100">
-                  <Bell className="w-5 h-5 text-green-600" />
+              <div className="group p-5 rounded-2xl bg-gradient-to-br from-green-50 to-white border border-green-100 hover:shadow-lg hover:border-green-200 transition-all duration-300">
+                <div className="w-12 h-12 rounded-xl bg-green-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <Bell className="w-6 h-6 text-white" />
                 </div>
-                <div>
-                  <h4 className="font-semibold text-slate-900 text-sm">
-                    {t("features.pushNotifications")}
-                  </h4>
-                  <p className="text-xs text-slate-600">
-                    {t("features.pushNotifications.desc")}
-                  </p>
-                </div>
+                <h4 className="font-semibold text-slate-900 text-base mb-1">
+                  {t("features.pushNotifications")}
+                </h4>
+                <p className="text-sm text-slate-500 leading-relaxed">
+                  {t("features.pushNotifications.desc")}
+                </p>
               </div>
 
-              <div className="flex items-start gap-3 p-3 rounded-xl bg-white shadow-sm border border-slate-200">
-                <div className="p-2 rounded-lg bg-orange-100">
-                  <Globe className="w-5 h-5 text-orange-600" />
+              <div className="group p-5 rounded-2xl bg-gradient-to-br from-orange-50 to-white border border-orange-100 hover:shadow-lg hover:border-orange-200 transition-all duration-300">
+                <div className="w-12 h-12 rounded-xl bg-orange-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <Globe className="w-6 h-6 text-white" />
                 </div>
-                <div>
-                  <h4 className="font-semibold text-slate-900 text-sm">
-                    {t("features.multiLanguage")}
-                  </h4>
-                  <p className="text-xs text-slate-600">
-                    {t("features.multiLanguage.desc")}
-                  </p>
-                </div>
+                <h4 className="font-semibold text-slate-900 text-base mb-1">
+                  {t("features.multiLanguage")}
+                </h4>
+                <p className="text-sm text-slate-500 leading-relaxed">
+                  {t("features.multiLanguage.desc")}
+                </p>
               </div>
 
-              <div className="flex items-start gap-3 p-3 rounded-xl bg-white shadow-sm border border-slate-200">
-                <div className="p-2 rounded-lg bg-blue-100">
-                  <ShoppingCart className="w-5 h-5 text-blue-600" />
+              <div className="group p-5 rounded-2xl bg-gradient-to-br from-blue-50 to-white border border-blue-100 hover:shadow-lg hover:border-blue-200 transition-all duration-300">
+                <div className="w-12 h-12 rounded-xl bg-blue-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <ShoppingCart className="w-6 h-6 text-white" />
                 </div>
-                <div>
-                  <h4 className="font-semibold text-slate-900 text-sm">
-                    {t("features.ecommerce")}
-                  </h4>
-                  <p className="text-xs text-slate-600">
-                    {t("features.ecommerce.desc")}
-                  </p>
-                </div>
+                <h4 className="font-semibold text-slate-900 text-base mb-1">
+                  {t("features.ecommerce")}
+                </h4>
+                <p className="text-sm text-slate-500 leading-relaxed">
+                  {t("features.ecommerce.desc")}
+                </p>
               </div>
             </div>
           </div>
 
-          {/* Right Column - Video */}
+          {/* Right Column - Image */}
           <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-slate-900">
-            <video className="w-full h-auto" controls>
-              <source src="/video.mp4" type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>
+            <img 
+              src="/home.png" 
+              alt="eChatbot Dashboard" 
+              className="w-full h-auto"
+            />
           </div>
         </div>
 

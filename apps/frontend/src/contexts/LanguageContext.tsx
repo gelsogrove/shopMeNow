@@ -26,17 +26,15 @@ const translations = {
 
     // Features
     "features.pushNotifications": "Push Notifications",
-    "features.pushNotifications.desc":
-      "Invia campagne mirate e avvisi in tempo reale ai tuoi clienti via WhatsApp",
+    "features.pushNotifications.desc": "Campagne e avvisi via WhatsApp",
     "features.24x7": "24/7 Availability",
-    "features.24x7.desc":
-      "Non perdere mai una vendita—il tuo agente AI lavora 24 ore su 24",
-    "features.multiLanguage": "Multi-Language Support",
-    "features.multiLanguage.desc":
-      "Servi i clienti nella loro lingua preferita automaticamente",
-    "features.ecommerce": "Complete E-commerce Platform",
-    "features.ecommerce.desc":
-      "Gestisci prodotti, ordini, inventario e relazioni con i clienti in un unico posto",
+    "features.24x7.desc": "Il tuo agente AI sempre attivo",
+    "features.multiLanguage": "Multi-Language",
+    "features.multiLanguage.desc": "Supporto automatico multilingua",
+    "features.ecommerce": "E-commerce Platform",
+    "features.ecommerce.desc": "Prodotti, ordini e clienti in un posto",
+    "features.analytics": "Analytics",
+    "features.analytics.desc": "Monitora vendite e performance",
 
     // News Section
     "news.title": "Ultimi Aggiornamenti e Funzionalità",
@@ -356,17 +354,15 @@ const translations = {
 
     // Features
     "features.pushNotifications": "Push Notifications",
-    "features.pushNotifications.desc":
-      "Send targeted campaigns and real-time alerts to your customers via WhatsApp",
+    "features.pushNotifications.desc": "Campaigns and alerts via WhatsApp",
     "features.24x7": "24/7 Availability",
-    "features.24x7.desc":
-      "Never miss a sale—your AI agent works around the clock",
-    "features.multiLanguage": "Multi-Language Support",
-    "features.multiLanguage.desc":
-      "Serve customers in their preferred language automatically",
-    "features.ecommerce": "Complete E-commerce Platform",
-    "features.ecommerce.desc":
-      "Manage products, orders, inventory, and customer relationships in one place",
+    "features.24x7.desc": "Your AI agent always active",
+    "features.multiLanguage": "Multi-Language",
+    "features.multiLanguage.desc": "Automatic multilingual support",
+    "features.ecommerce": "E-commerce Platform",
+    "features.ecommerce.desc": "Products, orders and customers in one place",
+    "features.analytics": "Analytics",
+    "features.analytics.desc": "Monitor sales and performance",
 
     // News Section
     "news.title": "Latest Updates and Features",
@@ -684,17 +680,15 @@ const translations = {
 
     // Features
     "features.pushNotifications": "Push Notifications",
-    "features.pushNotifications.desc":
-      "Envía campañas dirigidas y alertas en tiempo real a tus clientes a través de WhatsApp",
+    "features.pushNotifications.desc": "Campañas y alertas vía WhatsApp",
     "features.24x7": "24/7 Availability",
-    "features.24x7.desc":
-      "Nunca pierdas una venta—tu agente de IA trabaja las 24 horas",
-    "features.multiLanguage": "Multi-Language Support",
-    "features.multiLanguage.desc":
-      "Atiende a los clientes en su idioma preferido automáticamente",
-    "features.ecommerce": "Complete E-commerce Platform",
-    "features.ecommerce.desc":
-      "Gestiona productos, pedidos, inventario y relaciones con clientes en un solo lugar",
+    "features.24x7.desc": "Tu agente IA siempre activo",
+    "features.multiLanguage": "Multi-Language",
+    "features.multiLanguage.desc": "Soporte multilingüe automático",
+    "features.ecommerce": "E-commerce Platform",
+    "features.ecommerce.desc": "Productos, pedidos y clientes en un lugar",
+    "features.analytics": "Analytics",
+    "features.analytics.desc": "Monitorea ventas y rendimiento",
 
     // News Section
     "news.title": "Últimas Actualizaciones y Funcionalidades",
@@ -957,17 +951,15 @@ const translations = {
 
     // Features
     "features.pushNotifications": "Push Notifications",
-    "features.pushNotifications.desc":
-      "Envie campanhas direcionadas e alertas em tempo real para seus clientes via WhatsApp",
+    "features.pushNotifications.desc": "Campanhas e alertas via WhatsApp",
     "features.24x7": "24/7 Availability",
-    "features.24x7.desc":
-      "Nunca perca uma venda—seu agente de IA funciona 24 horas por dia",
-    "features.multiLanguage": "Multi-Language Support",
-    "features.multiLanguage.desc":
-      "Atenda clientes em seu idioma preferido automaticamente",
-    "features.ecommerce": "Complete E-commerce Platform",
-    "features.ecommerce.desc":
-      "Gerencie produtos, pedidos, estoque e relacionamento com clientes em um só lugar",
+    "features.24x7.desc": "Seu agente IA sempre ativo",
+    "features.multiLanguage": "Multi-Language",
+    "features.multiLanguage.desc": "Suporte multilíngue automático",
+    "features.ecommerce": "E-commerce Platform",
+    "features.ecommerce.desc": "Produtos, pedidos e clientes em um lugar",
+    "features.analytics": "Analytics",
+    "features.analytics.desc": "Monitore vendas e desempenho",
 
     // News Section
     "news.title": "Últimas Atualizações e Funcionalidades",

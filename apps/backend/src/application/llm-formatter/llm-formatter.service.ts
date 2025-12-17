@@ -15,6 +15,7 @@
 
 import { PrismaClient } from "@echatbot/database"
 import axios from "axios"
+import { config } from "../../config"
 import logger from "../../utils/logger"
 import {
   StructuredResponse,
@@ -326,6 +327,14 @@ export class LLMFormatterService {
       case "HUMAN_SUPPORT":
         return this.getHumanSupport(targetLanguage)
 
+      case "PRODUCT_DETAIL": {
+        const detailTemplate = this.getProductDetailTemplate(response, targetLanguage)
+        if (detailTemplate) {
+          return detailTemplate
+        }
+        return null
+      }
+
       case "SIMPLE_TEXT":
         return response.text || ""
 
@@ -422,6 +431,89 @@ export class LLMFormatterService {
       pt: "🛒 Seu carrinho está vazio.\n\nGostaria de ver nossos produtos?",
     }
     return empty[lang] || empty["it"]
+  }
+
+  private getProductDetailTemplate(
+    response: StructuredResponse,
+    targetLanguage: string
+  ): string | null {
+    const isItalian = (targetLanguage || "").toLowerCase().startsWith("it")
+    if (!isItalian) {
+      return null
+    }
+
+    const product = response.data.product
+    if (!product) {
+      return null
+    }
+
+    const displayPrice = product.priceWithDiscount || product.price
+    const detailLines: string[] = []
+
+    // Descrizione discorsiva del prodotto
+    if (product.description) {
+      detailLines.push(`${product.name}: ${product.description}`)
+    } else {
+      detailLines.push(`${product.name}`)
+    }
+
+    // Immagine con URL completo
+    if (product.imageUrl) {
+      const fullImageUrl = this.getFullImageUrl(product.imageUrl)
+      detailLines.push(`<img src="${fullImageUrl}" alt="${product.name}" />`)
+    }
+
+    // Info compatte su righe con bullet
+    const codeAndFormat = []
+    if (product.code) codeAndFormat.push(`Codice: ${product.code}`)
+    if (product.formato) codeAndFormat.push(`Formato: ${product.formato}`)
+    if (codeAndFormat.length > 0) {
+      detailLines.push(`- ${codeAndFormat.join(" - ")}`)
+    }
+
+    detailLines.push(`- Prezzo: ${displayPrice.toFixed(2)} Euro`)
+
+    if (product.transportType) {
+      detailLines.push(`- Trasporto: ${product.transportType}`)
+    }
+
+    if (product.region) {
+      detailLines.push(`- Regione: ${product.region}`)
+    }
+
+    if (product.certifications && product.certifications.length > 0) {
+      detailLines.push(`- Certificazioni: ${product.certifications.join(", ")}`)
+    }
+
+    // Stock instead of availability
+    const stockValue = product.stock !== undefined ? product.stock : (product.isAvailable ? "disponibile" : "esaurito")
+    detailLines.push(`- Stock: ${stockValue}`)
+    detailLines.push("")
+    detailLines.push(`Vuoi aggiungerlo al carrello? Se sì puoi indicare la quantità? (es. "Sì, 2")`)
+    detailLines.push("")
+    detailLines.push(`oppure`)
+    detailLines.push(`**1.** Esplora il catalogo`)
+    detailLines.push(`**2.** Mostrami il carrello`)
+    detailLines.push("")
+    detailLines.push(`o scrivi quello che stai cercando!`)
+
+    return detailLines.join("\n")
+  }
+
+  /**
+   * Convert relative image path to full URL
+   * e.g., /uploads/products/img.jpg -> http://localhost:3001/uploads/products/img.jpg
+   */
+  private getFullImageUrl(imageUrl: string): string {
+    if (!imageUrl) return ""
+    // If already absolute URL, return as-is
+    if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
+      return imageUrl
+    }
+    // Build full URL from config.appUrl
+    const baseUrl = config.appUrl.replace(/\/+$/, "") // Remove trailing slashes
+    const path = imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`
+    return `${baseUrl}${path}`
   }
 
   private getCartViewTemplate(response: StructuredResponse): string {
@@ -793,46 +885,51 @@ CRITICAL:
     const p = response.data.product
     if (!p) return "Product not found"
 
-    // Show only the final price (discounted if applicable)
     const displayPrice = p.priceWithDiscount || p.price
     const targetLang = response.context.customerLanguage?.toLowerCase() || ""
     const isItalian = targetLang.startsWith("it")
     const italianQuestion = `Vuoi aggiungerlo al carrello? Se sì puoi indicare la quantità? (es. "Sì, 2")`
     const englishQuestion = `Would you like to add it to cart? If yes, how many? (e.g., "Yes, 2")`
-    const questionInstruction = isItalian
-      ? `IMPORTANT: Chiudi con la frase esatta: ${italianQuestion}`
-      : `IMPORTANT: Close with the question "${englishQuestion}" translated to the output language, keeping the example format.`
+    const closingQuestion = isItalian ? italianQuestion : englishQuestion
 
-    const lines = [
-      "DETTAGLIO PRODOTTO:",
-      `**${p.name}**`,
+    const detailLines: string[] = [
+      `${p.name}`,
       `Prezzo: €${displayPrice.toFixed(2)}`,
     ]
 
-    // Don't show both prices - only show final price
+    detailLines.push(`Foto: ${p.imageUrl ? `<img src="${p.imageUrl}" alt="${p.name}" />` : "(non disponibile)"}`)
+
     if (p.description) {
-      lines.push(`Descrizione: ${p.description}`)
+      detailLines.push(`Descrizione: ${p.description}`)
     }
     if (p.region) {
-      lines.push(`Regione: ${p.region}`)
+      detailLines.push(`Regione: ${p.region}`)
     }
     if (p.formato) {
-      lines.push(`Formato: ${p.formato}`)
+      detailLines.push(`Formato: ${p.formato}`)
     }
     if (p.certifications && p.certifications.length > 0) {
-      lines.push(`Certificazioni: ${p.certifications.join(", ")}`)
+      detailLines.push(`Certificazioni: ${p.certifications.join(", ")}`)
     }
     if (p.transportType) {
-      lines.push(`Tipo di trasporto: ${p.transportType}`)
+      detailLines.push(`Tipo di trasporto: ${p.transportType}`)
     }
-    lines.push(`Disponibilità: ${p.isAvailable ? "✅ Disponibile" : "❌ Non disponibile"}`)
-    // Add cart prompt with quantity question
-    lines.push("")
-    lines.push("IMPORTANT: Present the details exactly as above, keeping the product name as a standalone bold heading followed by 'Etichetta: valore' rows (Prezzo, Descrizione, Regione, Formato, Certificazioni, Tipo di trasporto, Disponibilità). Do not add numbering or bullet points.")
-    lines.push(questionInstruction)
-    lines.push("IMPORTANT: DO NOT show SKU codes to the user.")
+    detailLines.push(`Disponibilità: ${p.isAvailable ? "✅ Disponibile" : "❌ Non disponibile"}`)
+    detailLines.push("")
+    detailLines.push(closingQuestion)
 
-    return lines.join("\n")
+    const promptLines = [
+      "INSTRUCTION: Copy the EXACT_OUTPUT block below verbatim. Do NOT add bullet points, emojis extra, saluti o commenti.",
+      "INSTRUCTION: Non aggiungere testo prima o dopo l'EXACT_OUTPUT."
+    ]
+
+    if (!isItalian) {
+      promptLines.push("INSTRUCTION: Traduci l'EXACT_OUTPUT nella lingua del cliente mantenendo la struttura identica.")
+    }
+
+    promptLines.push("", "EXACT_OUTPUT:", ...detailLines)
+
+    return promptLines.join("\n")
   }
 
   private formatCartPrompt(response: StructuredResponse): string {

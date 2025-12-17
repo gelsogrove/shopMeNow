@@ -119,6 +119,9 @@ export interface ResponseData {
   productGroups?: Array<{ number: number; name: string; productCount: number }>
   groupMapping?: Record<string, { nome: string; skus: string[] }>
 
+  // For order actions
+  orderCode?: string
+
   // 🆕 For order actions (SEND_INVOICE, REPEAT_ORDER, etc.)
   action?: "SEND_INVOICE" | "REPEAT_ORDER" | "SEND_CREDIT_NOTES" | "ADD_ORDER_NOTE" | "CONFIRM_ORDER" | "SHOW_PRODUCTS" | "REMOVE_FROM_CART" | "OPTIMIZE_TRANSPORT"
   label?: string
@@ -279,9 +282,17 @@ export class ResponseBuilderService {
 
       case "CART_REMOVAL_OPTIONS":
         // CART_REMOVAL_OPTIONS is handled directly in chat-engine, this is a fallback
+        // Map CartRemovalItemData[] to ListItem[] (ensuring number is always present)
         return {
           type: "CART_REMOVAL_OPTIONS",
-          data: { items: loadedData.items },
+          data: { 
+            items: (loadedData.items || []).map((item, index) => ({
+              number: item.number ?? (index + 1),
+              id: item.id,
+              name: item.name,
+              price: item.price,
+            }))
+          },
           formatting: DEFAULT_FORMATTING,
           context,
         }

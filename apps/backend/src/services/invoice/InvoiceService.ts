@@ -1,12 +1,10 @@
 import PDFDocument from 'pdfkit';
 import { getStorageService } from '../storage';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@echatbot/database';
 
 export interface InvoiceData {
   orderId: string;
-  orderNumber: string;
+  orderCode: string;
   orderDate: Date;
   workspaceName: string;
   workspaceAddress?: string;
@@ -31,13 +29,12 @@ export class InvoiceService {
    * Genera fattura PDF per ordine
    */
   async generateInvoice(orderId: string): Promise<string> {
-    // 1. Recupera dati ordine con channel
+    // 1. Recupera dati ordine
     const order = await prisma.orders.findUnique({
       where: { id: orderId },
       include: {
         workspace: true,
         customer: true,
-        channel: true,
         items: {
           include: {
             product: true,
@@ -51,14 +48,19 @@ export class InvoiceService {
       throw new Error(`Order ${orderId} not found`);
     }
 
-    // 2. Prepara dati fattura
+    // 2. Calculate totals from items
+    const subtotal = order.items.reduce((sum, item) => sum + item.totalPrice, 0);
+    const tax = order.taxAmount || 0;
+    const total = order.totalAmount;
+
+    // 3. Prepara dati fattura
     const invoiceData: InvoiceData = {
       orderId: order.id,
-      orderNumber: order.orderNumber,
+      orderCode: order.orderCode,
       orderDate: order.createdAt,
       workspaceName: order.workspace.name,
       workspaceAddress: order.workspace.address || undefined,
-      workspaceVAT: order.workspace.vatNumber || undefined,
+      workspaceVAT: undefined, // vatNumber not in schema
       customerName: order.customer.name,
       customerEmail: order.customer.email,
       customerPhone: order.customer.phone || undefined,
@@ -66,32 +68,33 @@ export class InvoiceService {
       items: order.items.map(item => ({
         name: item.product?.name || item.service?.name || 'Item',
         quantity: item.quantity,
-        price: parseFloat(item.price.toString()),
-        total: parseFloat(item.total.toString())
+        price: item.unitPrice,
+        total: item.totalPrice
       })),
-      subtotal: parseFloat(order.subtotal.toString()),
-      tax: parseFloat(order.tax.toString()),
-      total: parseFloat(order.total.toString())
+      subtotal,
+      tax,
+      total
     };
 
-    // 3. Genera PDF
+    // 4. Genera PDF
     const pdfBuffer = await this.createPDF(invoiceData);
 
-    // 4. Salva con Storage Service
+    // 5. Salva con Storage Service
     const storage = getStorageService();
     const file = await storage.upload(pdfBuffer, {
-      filename: `${order.orderNumber}.pdf`,
+      filename: `${order.orderCode}.pdf`,
       folder: `invoices/${order.workspaceId}`,
       contentType: 'application/pdf',
       isPublic: false // Private, richiede signed URL
     });
 
-    // 5. Aggiorna ordine con URL fattura
+    // 6. Aggiorna ordine con URL fattura
     await prisma.orders.update({
       where: { id: orderId },
       data: {
         invoiceUrl: file.url,
-        invoiceKey: file.key
+        invoiceKey: file.key,
+        invoiceDate: new Date()
       }
     });
 
@@ -123,12 +126,11 @@ export class InvoiceService {
         const order = await prisma.orders.findUnique({
           where: { id: data.orderId },
           include: {
-            workspace: true,
-            channel: true
+            workspace: true
           }
         });
 
-        const logoUrl = order?.channel?.logoUrl || order?.workspace?.logoUrl;
+        const logoUrl = order?.workspace?.logoUrl;
         
         if (logoUrl) {
           try {
@@ -171,7 +173,7 @@ export class InvoiceService {
         // === DETTAGLI FATTURA ===
         doc.fontSize(10).font('Helvetica');
         doc.text(`Fattura N°: `, margin, yPos, { continued: true })
-           .font('Helvetica-Bold').text(data.orderNumber);
+           .font('Helvetica-Bold').text(data.orderCode);
         yPos += 15;
         
         doc.font('Helvetica').text(`Data: `, margin, yPos, { continued: true })

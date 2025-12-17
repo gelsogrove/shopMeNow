@@ -1,8 +1,73 @@
 import cron from 'node-cron';
-import { PrismaClient } from '@prisma/client';
-import { getStorageService } from '../../../backend/src/services/storage';
+import { prisma } from '@echatbot/database';
 
-const prisma = new PrismaClient();
+// Storage service interface for cleanup operations
+interface IStorageService {
+  list(prefix: string): Promise<string[]>;
+  delete(key: string): Promise<void>;
+}
+
+// Simple storage service implementation for scheduler
+// This avoids importing from backend which causes rootDir issues
+function getStorageService(): IStorageService {
+  const storageType = process.env.STORAGE_TYPE || 'local';
+  
+  if (storageType === 's3') {
+    // For S3, we'd need AWS SDK - for now just log and skip
+    console.warn('⚠️ S3 storage cleanup not yet implemented in scheduler');
+    return {
+      list: async () => [],
+      delete: async () => {},
+    };
+  }
+  
+  // Local storage implementation
+  const fs = require('fs');
+  const path = require('path');
+  const uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '../../../../backend/uploads');
+  
+  return {
+    list: async (prefix: string): Promise<string[]> => {
+      const dir = path.join(uploadsDir, prefix);
+      if (!fs.existsSync(dir)) return [];
+      
+      const files: string[] = [];
+      const items = fs.readdirSync(dir, { withFileTypes: true });
+      
+      for (const item of items) {
+        if (item.isFile()) {
+          files.push(`${prefix}/${item.name}`);
+        } else if (item.isDirectory()) {
+          const subFiles = await listRecursive(path.join(dir, item.name), `${prefix}/${item.name}`);
+          files.push(...subFiles);
+        }
+      }
+      return files;
+      
+      async function listRecursive(dirPath: string, prefix: string): Promise<string[]> {
+        const result: string[] = [];
+        if (!fs.existsSync(dirPath)) return result;
+        
+        const items = fs.readdirSync(dirPath, { withFileTypes: true });
+        for (const item of items) {
+          if (item.isFile()) {
+            result.push(`${prefix}/${item.name}`);
+          } else if (item.isDirectory()) {
+            const subFiles = await listRecursive(path.join(dirPath, item.name), `${prefix}/${item.name}`);
+            result.push(...subFiles);
+          }
+        }
+        return result;
+      }
+    },
+    delete: async (key: string): Promise<void> => {
+      const filePath = path.join(uploadsDir, key);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    },
+  };
+}
 
 /**
  * Job 1: Cleanup Orphaned Files

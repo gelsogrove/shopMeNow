@@ -10,7 +10,8 @@ import {
   RefreshCw,
   CheckCircle,
   XCircle,
-  Loader2
+  Loader2,
+  Home
 } from 'lucide-react'
 
 interface FlagConfig {
@@ -30,6 +31,7 @@ export function PlatformsPage() {
   const flagIcons: Record<string, { icon: React.ReactNode; title: string }> = {
     canLogin: { icon: <LogIn className="h-6 w-6" />, title: 'User Login' },
     canRegister: { icon: <UserPlus className="h-6 w-6" />, title: 'User Registration' },
+    landingPageEnabled: { icon: <Home className="h-6 w-6" />, title: 'Landing Page Redirect' },
   }
 
   const fetchConfig = async () => {
@@ -173,6 +175,9 @@ export function PlatformsPage() {
           </li>
           <li>
             <strong>User Registration:</strong> When disabled, new user registration is blocked
+          </li>
+          <li>
+            <strong>Landing Page:</strong> Controls whether /index.html redirects to the marketing landing or directly to /auth/login
           </li>
         </ul>
       </div>

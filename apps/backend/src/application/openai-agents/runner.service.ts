@@ -12,8 +12,19 @@
 import { run, RunResult } from "@openai/agents"
 import { PrismaClient } from "@echatbot/database"
 import { AgentContext, AgentMetrics } from "./types"
-import { createAgentSystem } from "./agents"
+import type { Agent } from "@openai/agents"
 import logger from "../../utils/logger"
+
+// Dynamically import createAgentSystem to avoid potential circular dependencies
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const agentsModule = require("./agents") as { createAgentSystem: (prisma: any, workspaceId: string) => Promise<{
+  triageAgent: Agent
+  productAgent: Agent
+  cartAgent: Agent
+  orderAgent: Agent
+  supportAgent: Agent
+}> }
+const createAgentSystem = agentsModule.createAgentSystem
 
 export interface RunAgentParams {
   workspaceId: string
@@ -49,7 +60,13 @@ export interface RunAgentResult {
  */
 export class AgentRunnerService {
   private prisma: PrismaClient
-  private agentSystems: Map<string, Awaited<ReturnType<typeof createAgentSystem>>> = new Map()
+  private agentSystems: Map<string, {
+    triageAgent: Agent
+    productAgent: Agent
+    cartAgent: Agent
+    orderAgent: Agent
+    supportAgent: Agent
+  }> = new Map()
 
   constructor(prisma: PrismaClient) {
     this.prisma = prisma

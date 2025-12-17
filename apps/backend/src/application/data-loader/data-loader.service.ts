@@ -34,6 +34,7 @@ import {
 } from "../intent/intent.types"
 import { OptionsMappingService } from "../chat-engine/options-mapping.service"
 import { OrderOptimizationService } from "../services/order-optimization.service"
+import { config } from "../../config"
 
 // ================================================================================
 // DATA TYPES - What we return from database
@@ -691,7 +692,7 @@ export class DataLoaderService {
         price: s.price,
         currency: s.currency || "EUR",
         duration: s.duration || 60,
-        imageUrl: s.imageUrl || [],
+        imageUrl: this.normalizeImageArray(s.imageUrl),
         isAvailable: true,  // Services are always available if active
         priceWithDiscount: s.price,  // Services don't have discounts
       }))
@@ -740,7 +741,7 @@ export class DataLoaderService {
         price: service.price,
         currency: service.currency || "EUR",
         duration: service.duration || 60,
-        imageUrl: service.imageUrl || [],
+        imageUrl: this.normalizeImageArray(service.imageUrl),
         isAvailable: true,
         priceWithDiscount: service.price,
       }
@@ -791,7 +792,7 @@ export class DataLoaderService {
         price: service.price,
         currency: service.currency || "EUR",
         duration: service.duration || 60,
-        imageUrl: service.imageUrl || [],
+        imageUrl: this.normalizeImageArray(service.imageUrl),
         isAvailable: true,
         priceWithDiscount: service.price,
       }
@@ -2086,48 +2087,6 @@ export class DataLoaderService {
     }
   }
 
-  /**
-   * Load a specific service by name
-   */
-  private async loadProductByName(
-    workspaceId: string,
-    serviceName: string
-  ): Promise<LoadedData> {
-    try {
-      const product = await this.prisma.products.findFirst({
-        where: {
-          workspaceId,
-          isActive: true,
-          name: { contains: serviceName, mode: "insensitive" },
-        },
-        select: {
-          id: true,
-          name: true,
-          sku: true,
-          description: true,
-          price: true,
-          stock: true,
-          imageUrl: true,
-          region: true,
-          formato: true,
-          transportType: true,
-          certifications: true,
-          allergens: true,
-        },
-      })
-
-      if (!product) {
-        return { type: "PRODUCT_DETAIL", product: null }
-      }
-
-      const serviceData = this.mapProduct(product, 0)
-      return { type: "PRODUCT_DETAIL", product: serviceData }
-    } catch (error) {
-      logger.error("❌ [DataLoader] Error loading service", { error })
-      return { type: "ERROR", error: "Failed to load service" }
-    }
-  }
-
   // ================================================================================
   // SEMANTIC FILTERING (LLM-powered)
   // ================================================================================
@@ -2247,7 +2206,7 @@ export class DataLoaderService {
       price: p.price,
       priceWithDiscount: discountedPrice,
       stock: p.stock,
-      imageUrl: Array.isArray(p.imageUrl) && p.imageUrl.length > 0 ? String(p.imageUrl[0]) : undefined,
+      imageUrl: this.getFirstImageUrl(p.imageUrl),
       categoryId: p.productCategories?.[0]?.category?.id,
       categoryName: p.productCategories?.[0]?.category?.name,
       region: p.region || undefined,
@@ -2257,6 +2216,39 @@ export class DataLoaderService {
       transportType,
       isAvailable: p.stock > 0,
     }
+  }
+
+  private getFirstImageUrl(imageField: unknown): string | undefined {
+    const urls = this.normalizeImageArray(imageField)
+    return urls[0]
+  }
+
+  private normalizeImageArray(imageField: unknown): string[] {
+    if (!imageField) return []
+    const entries = Array.isArray(imageField) ? imageField : [imageField]
+    const urls: string[] = []
+
+    for (const entry of entries) {
+      if (typeof entry !== "string") continue
+      const resolved = this.buildPublicImageUrl(entry)
+      if (resolved) {
+        urls.push(resolved)
+      }
+    }
+
+    return urls
+  }
+
+  private buildPublicImageUrl(imagePath?: string): string | undefined {
+    if (!imagePath) return undefined
+    const trimmed = imagePath.trim()
+    if (!trimmed) return undefined
+    if (/^https?:\/\//i.test(trimmed)) {
+      return trimmed
+    }
+    const normalizedPath = trimmed.startsWith("/") ? trimmed : `/${trimmed}`
+    const baseUrl = config.frontendUrl || config.appUrl
+    return `${baseUrl}${normalizedPath}`
   }
 }
 
