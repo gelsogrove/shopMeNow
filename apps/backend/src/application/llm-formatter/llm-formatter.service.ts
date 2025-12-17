@@ -758,7 +758,7 @@ CRITICAL:
       .map((item) => `${item.number}. ${item.name}${item.price ? ` - €${item.price.toFixed(2)}` : ""}${item.extra ? ` (${item.extra})` : ""}`)
       .join("\n")
 
-    return `Servizi disponibili:\n${itemsText}`
+    return `Servizi disponibili:\n${itemsText}\n\nIndica il numero del servizio che ti interessa.\n- Non aggiungere totali, sconti o riepiloghi aggiuntivi\n- Usa solo l'elenco numerato sopra e una domanda finale`
   }
 
   private formatServiceDetailPrompt(response: StructuredResponse): string {
@@ -840,14 +840,45 @@ CRITICAL:
     if (!cart) return "Cart not found"
 
     const items = response.data.items || []
-    const cartLines: string[] = items.map(
-      (item) => `- ${item.name} - €${item.price?.toFixed(2)}`
-    )
+    
+    // Separate products from services
+    // Services are marked with 🎁 emoji in their name (added by data-loader)
+    const products: string[] = []
+    const services: string[] = []
+    
+    for (const item of items) {
+      const line = `- ${item.name} - €${item.price?.toFixed(2)}`
+      // Check if it's a service (marked with 🎁 emoji by data-loader)
+      const isService = item.name?.startsWith('🎁')
+      if (isService) {
+        services.push(line)
+      } else {
+        products.push(line)
+      }
+    }
 
+    const cartLines: string[] = []
+    
+    // Add products section
+    if (products.length > 0) {
+      cartLines.push("**🛒 Prodotti:**")
+      cartLines.push(...products)
+    }
+    
+    // Add services section
+    if (services.length > 0) {
+      cartLines.push("")
+      cartLines.push("**🎁 Servizi:**")
+      cartLines.push(...services)
+    }
+
+    // Add transport section
     let totalTransportCost = 0
     if (cart.transport && cart.transport.totalTransportCost > 0) {
+      cartLines.push("")
+      cartLines.push("**🚚 Trasporto:**")
       for (const [typeName, info] of Object.entries(cart.transport.byType)) {
-        cartLines.push(`- Trasporto ${typeName}: €${info.cost.toFixed(2)}`)
+        cartLines.push(`- ${typeName}: €${info.cost.toFixed(2)}`)
       }
       totalTransportCost = cart.transport.totalTransportCost
     }
@@ -869,32 +900,42 @@ CRITICAL:
       actionLines.push(`${optionNumber++}. 🚚 Ottimizza spedizione`)
     }
 
-    const lines: string[] = [
-      "FORMAT RULES:",
-      "- Start with 'Ecco il tuo carrello:' translated to the customer's language.",
-      "- Render each entry from CART_LINES as-is using dash bullets (no numbering).",
-      "- After the dash list, show the TOTAL_LINE exactly once.",
-      "- Leave a blank line, then present the numbered options exactly as provided under ACTIONS (respecting the order).",
-      "- Close with 'Rispondi con il numero o scrivi cosa desideri!' translated to the customer's language.",
-      "",
-      "CART_LINES:",
-      ...cartLines,
-      "",
-      "TOTAL_LINE:",
-      totalLine,
+    // Build the EXACT output that must be shown - LLM just needs to translate if necessary
+    const outputLines: string[] = [
+      "Ecco il tuo carrello:",
+      ""
     ]
-
+    
+    // Add all cart sections (products, services, transport)
+    outputLines.push(...cartLines)
+    
+    // Add total
+    outputLines.push("")
+    outputLines.push(totalLine)
+    
+    // Add discount line if applicable
     if (response.context.hasDiscount && response.context.discountPercent && response.context.discountPercent > 0) {
-      lines.push("")
-      lines.push("DISCOUNT_LINE:")
-      lines.push(
+      outputLines.push("")
+      outputLines.push(
         `🎁 Stai usufruendo del tuo sconto riservato del ${response.context.discountPercent}%! I prezzi mostrati includono già lo sconto.`
       )
     }
-
-    lines.push("")
-    lines.push("ACTIONS:")
-    lines.push(...actionLines)
+    
+    // Add actions
+    outputLines.push("")
+    outputLines.push("Cosa vuoi fare?")
+    outputLines.push(...actionLines)
+    outputLines.push("")
+    outputLines.push("Rispondi con il numero o scrivi cosa desideri!")
+    
+    const preformattedCart = outputLines.join("\n")
+    
+    const lines: string[] = [
+      "INSTRUCTION: Copy the EXACT_OUTPUT below. Only translate to customer's language if needed. DO NOT reorganize, reorder, or flatten sections.",
+      "",
+      "EXACT_OUTPUT:",
+      preformattedCart
+    ]
 
     return lines.join("\n")
   }

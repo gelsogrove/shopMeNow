@@ -28,6 +28,7 @@ export interface OptionItem {
   skus?: string[] // e.g., "Condimenti Freschi [SKUS:COND-003,COND-004,COND-005]" → skus: ["COND-003", "COND-004", "COND-005"]
   id?: string // 🆕 For actions: the ID of the option (e.g., "SEND_INVOICE", "REPEAT_ORDER")
   metadata?: Record<string, any> // 🆕 Additional payload per option (orderCode, etc.)
+  name?: string // Optional display name for backward compatibility
 }
 
 /**
@@ -136,8 +137,9 @@ export class OptionsMappingService {
     items?: Array<{ number: number; name: string; sku?: string; id?: string; metadata?: Record<string, any> }>
     // 🆕 List type (PRODUCTS, ORDERS, CATEGORIES, etc.)
     listType?: ListType
+    currentOrderCode?: string
   }): Promise<void> {
-    const { workspaceId, conversationId, customerId, responseText, forceClear, groupMapping, items, listType: explicitListType } = options
+    const { workspaceId, conversationId, customerId, responseText, forceClear, groupMapping, items, listType: explicitListType, currentOrderCode } = options
 
     // 🔍 DEBUG: Log what we receive
     logger.info("📋 [OptionsMapping] saveMapping CALLED with params", {
@@ -277,7 +279,7 @@ export class OptionsMappingService {
       // This ensures ORDER_ACTIONS can still access the order code
       const updatedMapping = mapping ? {
         ...mapping,
-        currentOrderCode: existingMapping.currentOrderCode,
+        currentOrderCode: currentOrderCode ?? existingMapping.currentOrderCode,
       } : null
       
       const updatedMetadata = {

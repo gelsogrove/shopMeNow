@@ -28,6 +28,7 @@ import {
   CustomerProfileData,
   OfferData,
   AgentInfoData,
+  ServiceData,
 } from "../data-loader/data-loader.service"
 
 // ================================================================================
@@ -41,6 +42,7 @@ export type ResponseType =
   | "PRODUCT_NEEDS_SMART_GROUPING"  // LLM creates logical groups (e.g., "Formaggi Freschi" vs "Stagionati")
   | "CATALOG_AGGREGATE"
   | "PRODUCT_DETAIL"
+  | "SERVICE_DETAIL"
   | "SERVICE_LIST"    // 🆕 Service list (numbered)
   | "CART_VIEW"
   | "CART_EMPTY"
@@ -66,6 +68,7 @@ export type ResponseType =
   | "NO_RESULTS"
   | "SIMPLE_TEXT"
   | "NEEDS_LLM_FORMAT"
+  | "NEEDS_LLM_CONTEXT"
 
 export interface StructuredResponse {
   type: ResponseType
@@ -86,6 +89,7 @@ export interface ResponseData {
 
   // For single items
   product?: ProductData
+  service?: ServiceData
   order?: OrderData
   cart?: CartData
 
@@ -116,7 +120,10 @@ export interface ResponseData {
   groupMapping?: Record<string, { nome: string; skus: string[] }>
 
   // 🆕 For order actions (SEND_INVOICE, REPEAT_ORDER, etc.)
-  action?: "SEND_INVOICE" | "REPEAT_ORDER" | "SEND_CREDIT_NOTES"
+  action?: "SEND_INVOICE" | "REPEAT_ORDER" | "SEND_CREDIT_NOTES" | "ADD_ORDER_NOTE" | "CONFIRM_ORDER" | "SHOW_PRODUCTS" | "REMOVE_FROM_CART" | "OPTIMIZE_TRANSPORT"
+  label?: string
+  originalListType?: string
+  inferAttempted?: string | null
 }
 
 export interface ListItem {

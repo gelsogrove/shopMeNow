@@ -65,6 +65,10 @@ import { getSystemContextService, SystemContextService } from "./system-context.
 import { websocketService } from "./websocket.service"
 import type { AgentOptionMapping } from "../types/option-mapping.types"
 
+// NOTE: Runtime uses per-call scoped values; this declaration satisfies TS where
+// option mappings are built inside async flows.
+let explicitOptionMapping: AgentOptionMapping | null = null
+
 export interface RouteMessageParams {
   workspaceId: string
   customerId: string
@@ -2945,6 +2949,7 @@ export class LLMRouterService {
     const startTime = Date.now()
 
     try {
+      const customerDiscount = options.params.customerDiscount || 0
       // � ALWAYS read product code from metadata (source of truth)
       // ProductSearchAgent saves selectedSku after user picks from list
       const conversation = await this.prisma.searchConversations.findUnique({

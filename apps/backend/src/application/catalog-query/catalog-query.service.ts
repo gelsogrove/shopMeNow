@@ -384,6 +384,7 @@ export class CatalogQueryService {
       category: "Altre categorie",
       region: "Altre regioni",
       certification: "Altre certificazioni",
+      transport: "Altri trasporti",
     }
 
     const map = new Map<

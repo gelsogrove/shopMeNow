@@ -1044,7 +1044,7 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
     }
 
     const cart = cartResult.cart
-    const lines: string[] = ["Ecco il tuo carrello:", ""]
+    const lines: string[] = ["Ecco il tuo carrello:", "", "🛒 Prodotti:"]
 
     let totalItems = 0
     for (const item of cart.items) {
@@ -1065,9 +1065,6 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
       return sum + (price * (item.quantity || 1))
     }, 0)
     
-    lines.push("")
-    lines.push(`📋 Subtotale prodotti: €${productSubtotal.toFixed(2)} (${totalItems} articol${totalItems === 1 ? 'o' : 'i'})`)
-    
     // 🚚 Transport costs (Feature: optimize-transport)
     let totalTransportCost = 0
     try {
@@ -1079,7 +1076,7 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
         
         if (!analysis.isEmpty && analysis.transports.length > 0) {
           lines.push("")
-          lines.push("🚚 **Spedizione:**")
+          lines.push("🚚 Spedizione:")
           
           for (const transport of analysis.transports) {
             const emoji = transport.transportTypeName.toLowerCase().includes("frozen") || 
@@ -1093,7 +1090,7 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
           totalTransportCost = analysis.totalTransportCost
           const grandTotal = Math.round((productSubtotal + totalTransportCost) * 100) / 100
           lines.push("")
-          lines.push(`💰 **TOTALE ORDINE**: €${grandTotal.toFixed(2)}`)
+          lines.push(`💰 TOTALE ORDINE: €${grandTotal.toFixed(2)}`)
         }
       }
     } catch (error) {
@@ -1168,7 +1165,7 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
     }
 
     const cart = cartResult.cart
-    const lines: string[] = ["Ecco il tuo carrello:", ""]
+    const lines: string[] = ["Ecco il tuo carrello:", "", "🛒 Prodotti:"]
 
     let totalItems = 0
     for (const item of cart.items) {

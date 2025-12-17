@@ -208,6 +208,7 @@ export interface CartRemovalItemData {
   quantity: number
   price: number
   isService: boolean
+  number?: number
 }
 
 // ================================================================================
@@ -441,7 +442,7 @@ export class DataLoaderService {
           if (selectIntent.optionId) {
             logger.info("🗑️ [DataLoader] CART_ITEMS selection - removing item", {
               cartItemId: selectIntent.optionId,
-              itemName: selectIntent.label,
+              itemName: selectIntent.resolvedValue,
             })
             return this.removeCartItem(workspaceId, customerId, selectIntent.optionId, customerDiscount)
           }
@@ -2084,7 +2085,7 @@ export class DataLoaderService {
   /**
    * Load a specific service by name
    */
-  private async loadServiceByName(
+  private async loadProductByName(
     workspaceId: string,
     serviceName: string
   ): Promise<LoadedData> {
@@ -2139,7 +2140,49 @@ export class DataLoaderService {
     try {
       // PURE CODE MATCHING - NO LLM!
       // Match ONLY if product name contains the search term
-      const searchTerms = query.toLowerCase().trim().split(/\s+/).filter(t => t.length > 2)
+      
+      // Common synonyms/translations mapping (bidirectional)
+      const synonyms: Record<string, string[]> = {
+        // English to Italian
+        "buffalo": ["bufala", "buffalo"],
+        "mozzarella": ["mozzarella"],
+        "cheese": ["formaggio", "formaggi", "cheese"],
+        "ham": ["prosciutto", "ham"],
+        "salami": ["salame", "salami"],
+        "wine": ["vino", "wine"],
+        "oil": ["olio", "oil"],
+        "olive": ["oliva", "olive"],
+        "truffle": ["tartufo", "truffle"],
+        "pasta": ["pasta"],
+        "tomato": ["pomodoro", "pomodori", "tomato"],
+        "frozen": ["surgelat", "congela", "frozen"],
+        "fresh": ["fresc", "fresh"],
+        // Italian to Italian (common variations)
+        "bufala": ["bufala", "buffalo"],
+        "formaggio": ["formaggio", "formaggi", "cheese"],
+        "prosciutto": ["prosciutto", "ham"],
+        "salame": ["salame", "salami"],
+        "vino": ["vino", "wine"],
+        "olio": ["olio", "oil"],
+        "tartufo": ["tartufo", "truffle"],
+        "pomodoro": ["pomodoro", "pomodori", "tomato"],
+      }
+      
+      // Expand search terms with synonyms
+      const rawTerms = query.toLowerCase().trim().split(/\s+/).filter(t => t.length > 2)
+      const expandedTerms = new Set<string>()
+      
+      for (const term of rawTerms) {
+        expandedTerms.add(term)
+        // Check if term matches any synonym key
+        for (const [key, values] of Object.entries(synonyms)) {
+          if (term.includes(key) || key.includes(term)) {
+            values.forEach(v => expandedTerms.add(v))
+          }
+        }
+      }
+      
+      const searchTerms = Array.from(expandedTerms)
       
       if (searchTerms.length === 0) {
         logger.info("📦 [DataLoader] No valid search terms", { query })
@@ -2154,7 +2197,8 @@ export class DataLoaderService {
 
       logger.info("📦 [DataLoader] Code-based name search", {
         query,
-        searchTerms,
+        originalTerms: rawTerms,
+        expandedTerms: searchTerms,
         matchCount: matchingProducts.length,
         totalProducts: products.length,
         matchedProducts: matchingProducts.map((p) => p.name),

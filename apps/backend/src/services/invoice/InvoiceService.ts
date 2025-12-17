@@ -32,7 +32,7 @@ export class InvoiceService {
    */
   async generateInvoice(orderId: string): Promise<string> {
     // 1. Recupera dati ordine con channel
-    const order = await prisma.order.findUnique({
+    const order = await prisma.orders.findUnique({
       where: { id: orderId },
       include: {
         workspace: true,
@@ -87,7 +87,7 @@ export class InvoiceService {
     });
 
     // 5. Aggiorna ordine con URL fattura
-    await prisma.order.update({
+    await prisma.orders.update({
       where: { id: orderId },
       data: {
         invoiceUrl: file.url,
@@ -120,7 +120,7 @@ export class InvoiceService {
         let yPos = margin;
 
         // Logo (se presente)
-        const order = await prisma.order.findUnique({
+        const order = await prisma.orders.findUnique({
           where: { id: data.orderId },
           include: {
             workspace: true,
@@ -313,7 +313,7 @@ export class InvoiceService {
    * Get signed URL per scaricare fattura
    */
   async getInvoiceUrl(orderId: string, expiresIn: number = 3600): Promise<string> {
-    const order = await prisma.order.findUnique({
+    const order = await prisma.orders.findUnique({
       where: { id: orderId },
       select: { invoiceKey: true }
     });
@@ -330,7 +330,7 @@ export class InvoiceService {
    * Elimina fattura
    */
   async deleteInvoice(orderId: string): Promise<void> {
-    const order = await prisma.order.findUnique({
+    const order = await prisma.orders.findUnique({
       where: { id: orderId },
       select: { invoiceKey: true }
     });
@@ -342,7 +342,7 @@ export class InvoiceService {
     const storage = getStorageService();
     await storage.delete(order.invoiceKey);
 
-    await prisma.order.update({
+    await prisma.orders.update({
       where: { id: orderId },
       data: {
         invoiceUrl: null,

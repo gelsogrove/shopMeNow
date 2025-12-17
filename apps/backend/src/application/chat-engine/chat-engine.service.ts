@@ -51,6 +51,7 @@ import { TranslationAgent } from "../agents/TranslationAgent"
 import { CatalogQueryService, CatalogQueryLoadedData } from "../catalog-query/catalog-query.service"
 import { confirmOrder } from "../../domain/calling-functions/ConfirmOrder"
 import { LLMRouterService } from "../../services/llm-router.service"
+import { getUnifiedChatRouter, UnifiedChatRouter } from "../services/unified-chat-router.service"
 
 type PipelineLoadedData = LoadedData | CatalogQueryLoadedData
 
@@ -101,7 +102,7 @@ export interface DebugStep {
   agent: string
   model?: string
   temperature?: number
-  timestamp: string
+  timestamp: string | number
   tokenUsage?: {
     promptTokens: number
     completionTokens: number
@@ -148,7 +149,7 @@ export interface ChatEngineOutput {
   wasHandled: boolean
   intent: string
   confidence: "HIGH" | "MEDIUM" | "LOW"
-  source: "PATTERN" | "KEYWORD" | "LLM_FALLBACK"
+  source: "PATTERN" | "KEYWORD" | "LLM_FALLBACK" | "LLM_CONTEXT"
   processingTimeMs: number
   debugInfo?: {
     loadedDataType: string
@@ -158,6 +159,7 @@ export interface ChatEngineOutput {
     totalTokens?: number
     totalCost?: number
     executionTimeMs?: number
+    [key: string]: any
   }
   // Legacy fields for webhook compatibility
   response: string  // Same as message
@@ -166,6 +168,7 @@ export interface ChatEngineOutput {
   executionTimeMs: number // Same as processingTimeMs
   wasFAQ: boolean
   isBlocked: boolean
+  _assistantMessageId?: string
 }
 
 // ================================================================================
@@ -187,6 +190,7 @@ export class ChatEngineService {
   private systemContextService: SystemContextService
   private conversationStateService: ConversationStateService
   private llmRouterService: LLMRouterService
+  private unifiedChatRouter: UnifiedChatRouter // OpenAI SDK integration
   
   // Translation layer (applied as final step in routeMessage wrapper)
   private translationAgent: TranslationAgent
@@ -206,6 +210,7 @@ export class ChatEngineService {
     this.conversationStateService = new ConversationStateService(prisma)
     this.catalogQueryService = new CatalogQueryService(prisma)
     this.llmRouterService = new LLMRouterService(prisma)
+    this.unifiedChatRouter = getUnifiedChatRouter(prisma) // OpenAI SDK integration
     
     // Initialize translation layer
     this.translationAgent = new TranslationAgent(prisma)
@@ -668,7 +673,8 @@ export class ChatEngineService {
     }\n\nScrivi una risposta empatica e informativa basata sui dati disponibili (FAQ, identity, servizi) evitando di promettere azioni non confermate. Invita l'utente a specificare meglio o suggerisci alternative rilevanti.`
 
     try {
-      const llmResponse = await this.llmRouterService.routeMessage({
+      // Use UnifiedChatRouter for engine selection (Legacy vs OpenAI SDK)
+      const llmResponse = await this.unifiedChatRouter.routeMessage({
         workspaceId: input.workspaceId,
         customerId: input.customerId,
         customerName: input.customerName || "Cliente",
@@ -682,11 +688,11 @@ export class ChatEngineService {
 
       debugSteps.push({
         type: "sub_agent",
-        agent: "LLMRouterFallback",
+        agent: "UnifiedChatRouter",
         timestamp: new Date().toISOString(),
         output: {
           decision: "generic_fallback",
-          textResponse: llmResponse.message?.substring(0, 200),
+          textResponse: llmResponse.response?.substring(0, 200),
         },
         tokenUsage: {
           promptTokens: 0,
@@ -697,7 +703,7 @@ export class ChatEngineService {
 
       return {
         message:
-          llmResponse.message ||
+          llmResponse.response ||
           "Mi dispiace, non ho trovato informazioni utili. Posso aiutarti in altro modo?",
         tokensUsed: llmResponse.tokensUsed || 0,
       }
@@ -716,25 +722,14 @@ export class ChatEngineService {
     let nextNumber = 1
     options.push({ number: nextNumber++, name: "✅ Confermare l'ordine", id: "CONFIRM_ORDER" })
     options.push({ number: nextNumber++, name: "🛍️ Esplorare il catalogo", id: "SHOW_PRODUCTS" })
+    options.push({ number: nextNumber++, name: "🧾 Mostra servizi", id: "SHOW_SERVICES" })
     if (hasRemovableItems) {
       options.push({ number: nextNumber++, name: "🗑️ Rimuovere un articolo", id: "REMOVE_FROM_CART" })
     }
     options.push({ number: nextNumber++, name: "🧹 Cancella il carrello", id: "CLEAR_CART" })
     
-    // Option 5: Order optimization (Premium/Enterprise only)
-    if (workspaceId) {
-      try {
-        const workspace = await this.prisma.workspace.findUnique({
-          where: { id: workspaceId },
-          select: { planType: true }
-        })
-        if (workspace?.planType === 'PREMIUM' || workspace?.planType === 'ENTERPRISE') {
-          options.push({ number: nextNumber++, name: "🚚 Ottimizza spedizione", id: "OPTIMIZE_TRANSPORT" })
-        }
-      } catch (err) {
-        logger.warn("⚠️ [ChatEngine] Could not check workspace plan type for optimization option", { error: err, workspaceId })
-      }
-    }
+    // Option 5: Order optimization (show when multiple transport modes may exist)
+    options.push({ number: nextNumber++, name: "🚚 Ottimizza spedizione", id: "OPTIMIZE_TRANSPORT" })
     
     return options
   }
@@ -2222,8 +2217,8 @@ Se l'utente vuole:
 
 Rispondi in modo naturale e fluido, come un assistente esperto.`
 
-              // Use LLM Router to get contextual response
-              const llmResponse = await this.llmRouterService.routeMessage({
+              // Use UnifiedChatRouter for engine selection (Legacy vs OpenAI SDK)
+              const llmResponse = await this.unifiedChatRouter.routeMessage({
                 workspaceId: input.workspaceId,
                 customerId: input.customerId,
                 customerName: input.customerName || "Cliente",
@@ -2236,16 +2231,16 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
               })
               
               debugSteps.push({
-                step: "LLM_CONTEXT_RESPONSE",
+                step: "UNIFIED_ROUTER_RESPONSE",
                 timestamp: Date.now(),
                 details: {
-                  responseLength: llmResponse.message?.length || 0,
+                  responseLength: llmResponse.response?.length || 0,
                   tokensUsed: llmResponse.tokensUsed || 0,
                   agentUsed: llmResponse.agentUsed,
                 },
               })
               
-              const finalMessage = llmResponse.message || "Mi dispiace, non ho capito. Puoi ripetere?"
+              const finalMessage = llmResponse.response || "Mi dispiace, non ho capito. Puoi ripetere?"
               
               const savedMessages = await this.saveMessages(
                 input.workspaceId,
@@ -2532,6 +2527,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             // ========================================================================
             const availableOptions = optionsMapping.options || []
             const selectedNumber = preprocessResult.extractedNumber
+            const maxOption = availableOptions.reduce((max, opt) => Math.max(max, opt.number || 0), 0)
             
             logger.info("🚫 [ChatEngine] Invalid option number selected", {
               selectedNumber,
