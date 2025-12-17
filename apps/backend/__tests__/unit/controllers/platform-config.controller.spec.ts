@@ -35,6 +35,7 @@ jest.mock("../../../src/services/platform-config.service", () => ({
     invalidateCache: jest.fn(),
     canLogin: jest.fn(),
     canRegister: jest.fn(),
+    isLandingPageEnabled: jest.fn(),
   },
 }))
 
@@ -119,6 +120,9 @@ describe("PlatformConfigController", () => {
     it("should return all feature flags", async () => {
       ;(platformConfigService.canLogin as jest.Mock).mockResolvedValue(true)
       ;(platformConfigService.canRegister as jest.Mock).mockResolvedValue(false)
+      ;(
+        platformConfigService.isLandingPageEnabled as jest.Mock
+      ).mockResolvedValue(true)
 
       await platformConfigController.checkFlags(
         mockRequest as Request,
@@ -131,6 +135,7 @@ describe("PlatformConfigController", () => {
         data: {
           canLogin: true,
           canRegister: false,
+          landingPageEnabled: true,
         },
       })
     })
