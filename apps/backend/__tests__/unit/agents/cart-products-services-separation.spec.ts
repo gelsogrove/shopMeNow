@@ -1,3 +1,16 @@
+import {
+  DEFAULT_ROUNDING_STEP,
+  formatRoundedCurrency,
+} from "../../../../../shared/pricing"
+
+const formatTestPrice = (value?: number | null) =>
+  formatRoundedCurrency(value ?? 0, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    useSmartRound: true,
+    step: DEFAULT_ROUNDING_STEP,
+  })
+
 /**
  * Cart Products/Services Separation - Unit Tests
  *
@@ -153,7 +166,7 @@ describe("Cart Products/Services Separation - Critical Fix", () => {
 
       // Format like the actual code does
       const formatted = products
-        .map((item) => `${item.quantity}x ${item.name} - €${item.total.toFixed(2)}`)
+        .map((item) => `${item.quantity}x ${item.name} - ${formatTestPrice(item.total)}`)
         .join("\n")
 
       expect(formatted).toContain("2x Mozzarella di Bufala")
@@ -168,7 +181,7 @@ describe("Cart Products/Services Separation - Critical Fix", () => {
         .map((item) => {
           // Services don't show "1x" prefix when quantity is 1
           const qtyPrefix = item.quantity > 1 ? `${item.quantity}x ` : ""
-          return `${qtyPrefix}${item.name} - €${item.total.toFixed(2)}`
+          return `${qtyPrefix}${item.name} - ${formatTestPrice(item.total)}`
         })
         .join("\n")
 
@@ -190,7 +203,7 @@ describe("Cart Products/Services Separation - Critical Fix", () => {
       if (products.length > 0) {
         display += "🛒 Prodotti:\n"
         display += products
-          .map((item) => `${item.quantity}x ${item.name} - €${item.total.toFixed(2)}`)
+          .map((item) => `${item.quantity}x ${item.name} - ${formatTestPrice(item.total)}`)
           .join("\n")
         display += "\n\n"
       }
@@ -200,14 +213,14 @@ describe("Cart Products/Services Separation - Critical Fix", () => {
         display += services
           .map((item) => {
             const qtyPrefix = item.quantity > 1 ? `${item.quantity}x ` : ""
-            return `${qtyPrefix}${item.name} - €${item.total.toFixed(2)}`
+            return `${qtyPrefix}${item.name} - ${formatTestPrice(item.total)}`
           })
           .join("\n")
         display += "\n\n"
       }
 
       const total = mixedCartItems.reduce((sum, item) => sum + item.total, 0)
-      display += `💰 totale ordine: €${total.toFixed(2)}`
+      display += `💰 totale ordine: ${formatTestPrice(total)}`
 
       // Verify all sections present
       expect(display).toContain("🛒 Prodotti:")

@@ -1,3 +1,16 @@
+import {
+  DEFAULT_ROUNDING_STEP,
+  formatRoundedCurrency,
+} from "../../../../../shared/pricing"
+
+const formatTestPrice = (value?: number | null) =>
+  formatRoundedCurrency(value ?? 0, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    useSmartRound: true,
+    step: DEFAULT_ROUNDING_STEP,
+  })
+
 /**
  * LLMFormatterService - Cart Formatting Unit Tests
  *
@@ -42,7 +55,7 @@ describe("LLMFormatterService - Cart Templates", () => {
       lines.push("🛒 Prodotti:")
       for (const item of products) {
         const qty = item.quantity || 1
-        lines.push(`- ${qty}x ${item.name} - €${item.price?.toFixed(2)}`)
+        lines.push(`- ${qty}x ${item.name} - ${formatTestPrice(item.price)}`)
       }
     }
 
@@ -51,16 +64,13 @@ describe("LLMFormatterService - Cart Templates", () => {
       if (products.length > 0) lines.push("")
       lines.push("🔧 Servizi:")
       for (const item of services) {
-        lines.push(`- ${item.name} - €${item.price?.toFixed(2)}`)
+        lines.push(`- ${item.name} - ${formatTestPrice(item.price)}`)
       }
     }
 
-    const grandTotal =
-      Math.round(
-        (cart.totalAmount + (cart.transport?.totalTransportCost ?? 0)) * 100
-      ) / 100
+    const grandTotal = cart.totalAmount + (cart.transport?.totalTransportCost ?? 0)
     lines.push("")
-    lines.push(`<b>💰 totale ordine: €${grandTotal.toFixed(2)}</b>`)
+    lines.push(`<b>💰 totale ordine: ${formatTestPrice(grandTotal)}</b>`)
 
     lines.push("")
     lines.push("Cosa vuoi fare?")
@@ -98,9 +108,7 @@ describe("LLMFormatterService - Cart Templates", () => {
     if (products.length > 0) {
       lines.push("🛒 Prodotti:")
       for (const item of products) {
-        lines.push(
-          `- ${item.quantity}x ${item.productName} - €${item.totalPrice.toFixed(2)}`
-        )
+        lines.push(`- ${item.quantity}x ${item.productName} - ${formatTestPrice(item.totalPrice)}`)
       }
     }
 
@@ -110,13 +118,15 @@ describe("LLMFormatterService - Cart Templates", () => {
       lines.push("🔧 Servizi:")
       for (const item of services) {
         lines.push(
-          `- ${item.productName || item.serviceName || "Servizio"} - €${item.totalPrice.toFixed(2)}`
+          `- ${item.productName || item.serviceName || "Servizio"} - ${formatTestPrice(
+            item.totalPrice
+          )}`
         )
       }
     }
 
     lines.push("")
-    lines.push(`<b>💰 totale ordine: €${cart.totalAmount.toFixed(2)}</b>`)
+    lines.push(`<b>💰 totale ordine: ${formatTestPrice(cart.totalAmount)}</b>`)
 
     lines.push("")
     lines.push("Cosa vuoi fare?")

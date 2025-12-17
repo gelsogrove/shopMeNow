@@ -4,6 +4,10 @@ import { config } from "../../config"
 import { TemplateLoaderService } from "../services/template-loader.service"
 import { PromptProcessorService } from "../../services/prompt-processor.service"
 import logger from "../../utils/logger"
+import {
+  DEFAULT_ROUNDING_STEP,
+  formatRoundedCurrency,
+} from "../../../../../shared/pricing"
 
 export interface ProductContextData {
   id: string
@@ -50,6 +54,14 @@ export interface ProductContextAgentResponse {
   systemPrompt?: string
   model?: string
 }
+
+const formatProductPrice = (value?: number | null) =>
+  formatRoundedCurrency(value ?? 0, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    useSmartRound: true,
+    step: DEFAULT_ROUNDING_STEP,
+  })
 
 export class ProductContextAgentLLM {
   private templateLoader: TemplateLoaderService
@@ -278,11 +290,11 @@ export class ProductContextAgentLLM {
     let result = prompt
     result = replaceAll(result, "PRODUCT_NAME", product.name || "Prodotto")
     result = replaceAll(result, "PRODUCT_DESCRIPTION", product.description || "N/A")
-    result = replaceAll(
-      result,
-      "PRODUCT_PRICE",
-      typeof product.price === "number" ? `€${product.price.toFixed(2)}` : "N/A"
-    )
+    const priceText =
+      typeof product.price === "number" && Number.isFinite(product.price)
+        ? formatProductPrice(product.price)
+        : "N/A"
+    result = replaceAll(result, "PRODUCT_PRICE", priceText)
     result = replaceAll(result, "PRODUCT_REGION", product.region || "N/A")
     result = replaceAll(
       result,

@@ -190,7 +190,7 @@ describe("CartManagementAgentLLM", () => {
       })
 
       // Format uses €XX.XX (euro prefix with dot separator)
-      expect(result.formattedCart).toContain("€25.99")
+      expect(result.formattedCart).toContain("€26.00")
       // Should show discount message only if discountApplied > 0
       expect(result.formattedCart).not.toContain("sconto riservato")
     })

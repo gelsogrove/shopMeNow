@@ -1450,7 +1450,11 @@ CRITICAL:
     const items = response.data.items || []
     const lines = [`📦 Servizi (${items.length}):`]
     for (const item of items) {
-      lines.push(`${item.number}. ${item.name}${item.price ? ` - €${item.price.toFixed(2)}` : ""}${item.extra ? ` (${item.extra})` : ""}`)
+      const priceText =
+        typeof item.price === "number" && Number.isFinite(item.price)
+          ? ` - ${formatDisplayPrice(item.price)}`
+          : ""
+      lines.push(`${item.number}. ${item.name}${priceText}${item.extra ? ` (${item.extra})` : ""}`)
     }
     return lines.join("\n")
   }
@@ -1459,7 +1463,7 @@ CRITICAL:
     const items = response.data.items || []
     const lines = [`🍷 Products (${items.length}):`]
     for (const item of items) {
-      lines.push(`${item.number}. ${item.name} - €${item.price?.toFixed(2)}`)
+      lines.push(`${item.number}. ${item.name} - ${formatDisplayPrice(item.price)}`)
     }
     return lines.join("\n")
   }
@@ -1479,7 +1483,7 @@ CRITICAL:
     if (products.length > 0) {
       lines.push("🛒 Prodotti:")
       for (const item of products) {
-        lines.push(`- ${item.quantity}x ${item.productName} - €${item.totalPrice.toFixed(2)}`)
+        lines.push(`- ${item.quantity}x ${item.productName} - ${formatDisplayPrice(item.totalPrice)}`)
       }
     }
     
@@ -1488,12 +1492,16 @@ CRITICAL:
       if (products.length > 0) lines.push("")
       lines.push("🔧 Servizi:")
       for (const item of services) {
-        lines.push(`- ${item.productName || (item as any).serviceName || "Servizio"} - €${item.totalPrice.toFixed(2)}`)
+        lines.push(
+          `- ${item.productName || (item as any).serviceName || "Servizio"} - ${formatDisplayPrice(
+            item.totalPrice
+          )}`
+        )
       }
     }
     
     lines.push("")
-    lines.push(`<b>💰 totale ordine: €${cart.totalAmount.toFixed(2)}</b>`)
+    lines.push(`<b>💰 totale ordine: ${formatDisplayPrice(cart.totalAmount)}</b>`)
     
     // Add discount message if customer has discount
     if (response.context.hasDiscount && response.context.discountPercent && response.context.discountPercent > 0) {
