@@ -349,7 +349,7 @@ const translations = {
     // Hero Section
     "hero.title": "Is the way to sell changing?",
     "hero.subtitle":
-      "eChatbot brings intelligent e-commerce directly to WhatsApp. Our AI agent understands customer needs, recommends products, and closes sales 24/7—all through natural conversations.",
+      "eChatbot brings intelligent e-commerce directly to WhatsApp. Our AI agent understands customer needs, recommends products, all through natural conversations.",
     "hero.whyTitle": "Why eChatbot?",
 
     // Features

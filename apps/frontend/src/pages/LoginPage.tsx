@@ -940,22 +940,12 @@ export function LoginPage() {
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
-                    <Zap className="w-4 h-4 text-purple-600" />
+                  <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <ShoppingCart className="w-4 h-4 text-blue-600" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-slate-900 text-sm">{t("features.24x7")}</h4>
-                    <p className="text-xs text-slate-500">{t("features.24x7.desc")}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
-                    <Bell className="w-4 h-4 text-green-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-slate-900 text-sm">{t("features.pushNotifications")}</h4>
-                    <p className="text-xs text-slate-500">{t("features.pushNotifications.desc")}</p>
+                    <h4 className="font-semibold text-slate-900 text-sm">{t("features.ecommerce")}</h4>
+                    <p className="text-xs text-slate-500">{t("features.ecommerce.desc")}</p>
                   </div>
                 </div>
 
@@ -970,12 +960,22 @@ export function LoginPage() {
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                    <ShoppingCart className="w-4 h-4 text-blue-600" />
+                  <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+                    <Bell className="w-4 h-4 text-green-600" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-slate-900 text-sm">{t("features.ecommerce")}</h4>
-                    <p className="text-xs text-slate-500">{t("features.ecommerce.desc")}</p>
+                    <h4 className="font-semibold text-slate-900 text-sm">{t("features.pushNotifications")}</h4>
+                    <p className="text-xs text-slate-500">{t("features.pushNotifications.desc")}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                    <Zap className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-900 text-sm">{t("features.24x7")}</h4>
+                    <p className="text-xs text-slate-500">{t("features.24x7.desc")}</p>
                   </div>
                 </div>
               </div>
