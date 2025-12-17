@@ -69,16 +69,21 @@ export class ProductContextAgentLLM {
   }
 
   /**
-   * Build full image URL from relative path
+   * Get relative image path (frontend will resolve with IMG_BASE_URL)
    */
   private getFullImageUrl(imageUrl: string | null | undefined): string {
     if (!imageUrl) return "N/A"
+    // If already absolute URL, extract just the path
     if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
-      return imageUrl
+      try {
+        const url = new URL(imageUrl)
+        return url.pathname // Extract /uploads/products/...
+      } catch {
+        return imageUrl
+      }
     }
-    const baseUrl = config.appUrl.replace(/\/+$/, "")
-    const path = imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`
-    return `${baseUrl}${path}`
+    // Ensure path starts with /
+    return imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`
   }
   async handleQuestion(input: ProductContextAgentInput): Promise<ProductContextAgentResponse> {
     const start = Date.now()

@@ -471,8 +471,6 @@ export class LLMFormatterService {
       detailLines.push(`- ${codeAndFormat.join(" - ")}`)
     }
 
-    detailLines.push(`- Prezzo: ${displayPrice.toFixed(2)} Euro`)
-
     if (product.transportType) {
       detailLines.push(`- Trasporto: ${product.transportType}`)
     }
@@ -489,7 +487,9 @@ export class LLMFormatterService {
     const stockValue = product.stock !== undefined ? product.stock : (product.isAvailable ? "disponibile" : "esaurito")
     detailLines.push(`- Stock: ${stockValue}`)
     detailLines.push("")
-    detailLines.push(`Vuoi aggiungerlo al carrello? Se sì puoi indicare la quantità? (es. "Sì, 2")`)
+    detailLines.push(`💰 <b>Prezzo: ${displayPrice.toFixed(2)} Euro</b>`)
+    detailLines.push("")
+    detailLines.push(`Vuoi aggiungerlo al carrello? Se sì puoi indicare la quantità? (es. <b>Sì, 2</b>)`)
     detailLines.push("")
     detailLines.push(`oppure`)
     detailLines.push("")
@@ -502,19 +502,22 @@ export class LLMFormatterService {
   }
 
   /**
-   * Convert relative image path to full URL
-   * e.g., /uploads/products/img.jpg -> http://localhost:3001/uploads/products/img.jpg
+   * Get relative image path (frontend will resolve with IMG_BASE_URL)
+   * e.g., /uploads/products/img.jpg stays as /uploads/products/img.jpg
    */
   private getFullImageUrl(imageUrl: string): string {
     if (!imageUrl) return ""
-    // If already absolute URL, return as-is
+    // If already absolute URL, extract just the path
     if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
-      return imageUrl
+      try {
+        const url = new URL(imageUrl)
+        return url.pathname // Extract /uploads/products/...
+      } catch {
+        return imageUrl
+      }
     }
-    // Build full URL from config.appUrl
-    const baseUrl = config.appUrl.replace(/\/+$/, "") // Remove trailing slashes
-    const path = imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`
-    return `${baseUrl}${path}`
+    // Ensure path starts with /
+    return imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`
   }
 
   private getCartViewTemplate(response: StructuredResponse): string {

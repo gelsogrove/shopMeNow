@@ -108,6 +108,44 @@ function containsWord(text: string, word: string): boolean {
   return regex.test(text)
 }
 
+/**
+ * Compare normalized words between message and entity to measure similarity
+ */
+function computeWordMatchStats(
+  targetWords: string[],
+  messageWords: string[]
+): { ratio: number; avgScore: number } {
+  if (!targetWords.length || !messageWords.length) {
+    return { ratio: 0, avgScore: 0 }
+  }
+
+  let matchedCount = 0
+  let totalScore = 0
+
+  for (const targetWord of targetWords) {
+    if (targetWord.length <= 2) continue
+    let bestWordScore = 0
+
+    for (const messageWord of messageWords) {
+      if (messageWord.length <= 1) continue
+      const score = similarity(targetWord, messageWord)
+      if (score > bestWordScore) {
+        bestWordScore = score
+        if (bestWordScore === 1) break
+      }
+    }
+
+    if (bestWordScore >= 0.75) {
+      matchedCount++
+      totalScore += bestWordScore
+    }
+  }
+
+  const ratio = matchedCount / targetWords.length
+  const avgScore = matchedCount > 0 ? totalScore / matchedCount : 0
+  return { ratio, avgScore }
+}
+
 // =============================================================================
 // MATCHING FUNCTIONS
 // =============================================================================
@@ -254,6 +292,7 @@ export function matchProduct(
   
   for (const product of products) {
     const normalizedName = normalize(product.name)
+    const productWords = extractWords(product.name)
     
     // Check exact match
     if (normalizedMessage === normalizedName) {
@@ -271,9 +310,10 @@ export function matchProduct(
     
     // Check if message contains the product name as whole word
     if (containsWord(normalizedMessage, normalizedName)) {
-      const score = normalizedName.length / normalizedMessage.length
-      if (score > bestScore) {
-        bestScore = Math.min(score, 0.95)
+      const coverage = Math.min(1, normalizedName.length / Math.max(normalizedMessage.length, 1))
+      const confidence = Math.min(0.99, 0.85 + coverage * 0.15)
+      if (confidence > bestScore) {
+        bestScore = confidence
         bestMatch = {
           intent: { 
             type: "SHOW_PRODUCT", 
@@ -282,7 +322,42 @@ export function matchProduct(
           },
           matchedEntity: product,
           matchType: "EXACT",
-          confidence: bestScore
+          confidence
+        }
+      }
+    }
+
+    // Multi-word similarity (handles plural/singular variations)
+    const { ratio: wordMatchRatio, avgScore: avgWordScore } = computeWordMatchStats(productWords, messageWords)
+    if (wordMatchRatio === 1 && avgWordScore >= 0.85) {
+      const confidence = Math.min(0.99, 0.9 + avgWordScore * 0.09)
+      if (confidence > bestScore) {
+        bestScore = confidence
+        bestMatch = {
+          intent: { 
+            type: "SHOW_PRODUCT", 
+            productName: product.name,
+            productId: product.id 
+          },
+          matchedEntity: product,
+          matchType: "FUZZY",
+          confidence
+        }
+      }
+    } else if (wordMatchRatio >= 0.6 && avgWordScore >= 0.8) {
+      const blendedScore = wordMatchRatio * avgWordScore
+      const confidence = Math.min(0.94, 0.7 + blendedScore * 0.4)
+      if (confidence > bestScore) {
+        bestScore = confidence
+        bestMatch = {
+          intent: { 
+            type: "SHOW_PRODUCT", 
+            productName: product.name,
+            productId: product.id 
+          },
+          matchedEntity: product,
+          matchType: "FUZZY",
+          confidence
         }
       }
     }

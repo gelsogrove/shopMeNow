@@ -74,11 +74,16 @@ export function matchNumericSelection(
     `🎯 Pattern match: NUMERIC_SELECTION - "${message}" → ${selectedNumber} = "${selectedItem.value}"`
   )
 
+  const normalizedLastListType =
+    context.lastListType === "PRODUCT_DETAIL_ACTIONS"
+      ? ("CATEGORIES" as ListType)
+      : ((context.lastListType || "PRODUCTS") as ListType)
+
   return {
     type: "SELECT_OPTION",
     number: selectedNumber,
     resolvedValue: selectedItem.value,
-    listType: (context.lastListType || "PRODUCTS") as ListType,
+    listType: normalizedLastListType,
   }
 }
 

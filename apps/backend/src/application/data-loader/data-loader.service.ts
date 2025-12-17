@@ -11,6 +11,7 @@
  */
 
 import { PrismaClient } from "@echatbot/database"
+import Fuse from "fuse.js"
 import logger from "../../utils/logger"
 import {
   Intent,
@@ -497,36 +498,33 @@ export class DataLoaderService {
             logger.info("🚚 [DataLoader] Processing ORDER_OPTIMIZATION_ACTION", {
               optionId: selectIntent.optionId,
             })
-            
-            switch (selectIntent.optionId) {
-              case "SHOW_FROZEN_PRODUCTS":
-                // Show products with Frozen transport type
-                return this.loadProductsByTransportType(workspaceId, customerDiscount, "Trasporto congelato")
-              
-              case "SHOW_REFRIGERATED_PRODUCTS":
-                // Show products with Refrigerated transport type
-                return this.loadProductsByTransportType(workspaceId, customerDiscount, "Trasporto refrigerato")
-              
-              case "SHOW_AMBIENT_PRODUCTS":
-                // Show products with Ambient Temperature transport type
-                return this.loadProductsByTransportType(workspaceId, customerDiscount, "Temperatura ambiente")
 
-              case "SHOW_TRANSPORT_PRODUCTS": {
-                const transportLabel =
-                  (selectIntent.optionMetadata as any)?.transportTypeName ||
-                  OptionsMappingService.cleanLabel(selectIntent.resolvedValue).replace(/mostra prodotti/i, "").trim()
-                const targetTransport = transportLabel || "Temperatura ambiente"
-                return this.loadProductsByTransportType(workspaceId, customerDiscount, targetTransport)
-              }
-              
-              case "SHOW_CART":
-                // Go back to cart view
-                return this.loadCart(workspaceId, customerId, customerDiscount)
-              
-              default:
-                logger.warn("🚚 [DataLoader] Unknown ORDER_OPTIMIZATION_ACTION", { optionId: selectIntent.optionId })
-                return { type: "EMPTY", reason: "unknown_optimization_action" }
+            if (selectIntent.optionId === "SHOW_CART") {
+              return this.loadCart(workspaceId, customerId, customerDiscount)
             }
+
+            const transportOptionIds = new Set([
+              "SHOW_FROZEN_PRODUCTS",
+              "SHOW_REFRIGERATED_PRODUCTS",
+              "SHOW_AMBIENT_PRODUCTS",
+              "SHOW_TRANSPORT_PRODUCTS",
+            ])
+
+            if (transportOptionIds.has(selectIntent.optionId)) {
+              const targetTransport = this.resolveTransportTypeName(selectIntent)
+              if (!targetTransport) {
+                logger.warn("🚚 [DataLoader] Transport option missing metadata", {
+                  optionId: selectIntent.optionId,
+                  resolvedValue: selectIntent.resolvedValue,
+                  metadata: selectIntent.optionMetadata,
+                })
+                return { type: "EMPTY", reason: "missing_transport_type" }
+              }
+              return this.loadProductsByTransportType(workspaceId, customerDiscount, targetTransport)
+            }
+
+            logger.warn("🚚 [DataLoader] Unknown ORDER_OPTIMIZATION_ACTION", { optionId: selectIntent.optionId })
+            return { type: "EMPTY", reason: "unknown_optimization_action" }
           }
           logger.error("🚚 [DataLoader] ORDER_OPTIMIZATION_ACTIONS without optionId", { selectIntent })
           return { type: "EMPTY", reason: "missing_option_id" }
@@ -2123,77 +2121,243 @@ export class DataLoaderService {
     customerDiscount: number
   ): Promise<ProductData[]> {
     try {
-      // PURE CODE MATCHING - NO LLM!
-      // Match ONLY if product name contains the search term
-      
-      // Common synonyms/translations mapping (bidirectional)
-      const synonyms: Record<string, string[]> = {
-        // English to Italian
-        "buffalo": ["bufala", "buffalo"],
-        "mozzarella": ["mozzarella"],
-        "cheese": ["formaggio", "formaggi", "cheese"],
-        "ham": ["prosciutto", "ham"],
-        "salami": ["salame", "salami"],
-        "wine": ["vino", "wine"],
-        "oil": ["olio", "oil"],
-        "olive": ["oliva", "olive"],
-        "truffle": ["tartufo", "truffle"],
-        "pasta": ["pasta"],
-        "tomato": ["pomodoro", "pomodori", "tomato"],
-        "frozen": ["surgelat", "congela", "frozen"],
-        "fresh": ["fresc", "fresh"],
-        // Italian to Italian (common variations)
-        "bufala": ["bufala", "buffalo"],
-        "formaggio": ["formaggio", "formaggi", "cheese"],
-        "prosciutto": ["prosciutto", "ham"],
-        "salame": ["salame", "salami"],
-        "vino": ["vino", "wine"],
-        "olio": ["olio", "oil"],
-        "tartufo": ["tartufo", "truffle"],
-        "pomodoro": ["pomodoro", "pomodori", "tomato"],
-      }
-      
-      // Expand search terms with synonyms
-      const rawTerms = query.toLowerCase().trim().split(/\s+/).filter(t => t.length > 2)
-      const expandedTerms = new Set<string>()
-      
-      for (const term of rawTerms) {
-        expandedTerms.add(term)
-        // Check if term matches any synonym key
-        for (const [key, values] of Object.entries(synonyms)) {
-          if (term.includes(key) || key.includes(term)) {
-            values.forEach(v => expandedTerms.add(v))
-          }
-        }
-      }
-      
-      const searchTerms = Array.from(expandedTerms)
-      
-      if (searchTerms.length === 0) {
-        logger.info("📦 [DataLoader] No valid search terms", { query })
+      const trimmedQuery = query?.trim()
+      if (!trimmedQuery) {
+        logger.info("📦 [DataLoader] Empty search query", { query })
         return []
       }
 
-      const matchingProducts = products.filter((p) => {
-        const productName = (p.name || "").toLowerCase()
-        // Product matches if name contains ANY of the search terms
-        return searchTerms.some((term) => productName.includes(term))
+      const fuse = new Fuse(products, {
+        keys: [
+          { name: "name", weight: 0.45 },
+          { name: "description", weight: 0.25 },
+          { name: "productCategories.category.name", weight: 0.15 },
+          { name: "region", weight: 0.05 },
+          { name: "formato", weight: 0.05 },
+          { name: "productCertifications.certification.name", weight: 0.05 },
+        ],
+        threshold: 0.38,
+        ignoreLocation: true,
+        includeScore: true,
+        minMatchCharLength: 2,
       })
 
-      logger.info("📦 [DataLoader] Code-based name search", {
+      const fuseResults = fuse.search(trimmedQuery)
+      let candidates = fuseResults.map((result) => result.item)
+
+      if (candidates.length === 0) {
+        candidates = this.basicTextMatch(products, trimmedQuery)
+      }
+
+      if (candidates.length === 0) {
+        candidates = this.findSimilarProductsByName(products, trimmedQuery)
+      }
+
+      const limitedCandidates = candidates.slice(0, 25)
+
+      logger.info("📦 [DataLoader] Fuzzy product search", {
         query,
-        originalTerms: rawTerms,
-        expandedTerms: searchTerms,
-        matchCount: matchingProducts.length,
         totalProducts: products.length,
-        matchedProducts: matchingProducts.map((p) => p.name),
+        fuseMatches: fuseResults.length,
+        fallbackMatches: candidates.length,
+        returned: limitedCandidates.length,
       })
 
-      return this.mapProducts(matchingProducts, customerDiscount)
+      return this.mapProducts(limitedCandidates, customerDiscount)
     } catch (error) {
-      logger.error("❌ [DataLoader] Name search error", { error })
+      logger.error("❌ [DataLoader] Semantic search error", { error })
       return []
     }
+  }
+
+  private basicTextMatch(products: any[], query: string): any[] {
+    const tokens = this.tokenizeQuery(query)
+    if (tokens.length === 0) {
+      return []
+    }
+
+    return products.filter((product) => {
+      const categoryNames =
+        Array.isArray(product.productCategories) && product.productCategories.length > 0
+          ? product.productCategories.map((pc: any) => pc.category?.name || "").join(" ")
+          : ""
+
+      const certificationNames = Array.isArray(product.productCertifications)
+        ? product.productCertifications.map((pc: any) => pc.certification?.name || "").join(" ")
+        : Array.isArray(product.certifications)
+          ? product.certifications.join(" ")
+          : ""
+
+      const normalizedTarget = this.normalizeSearchText(
+        [
+          product.name || "",
+          product.description || "",
+          categoryNames,
+          certificationNames,
+          product.region || "",
+          product.formato || "",
+        ].join(" ")
+      )
+
+      const targetWords = normalizedTarget.split(" ").filter(Boolean)
+      const longTokens = tokens.filter((token) => token.length >= 4)
+      const tokensToCheck = longTokens.length > 0 ? longTokens : tokens
+      const matches = tokensToCheck.filter((token) =>
+        this.tokenMatchesTarget(token, normalizedTarget, targetWords)
+      ).length
+      return matches > 0
+    })
+  }
+
+  private tokenizeQuery(query: string): string[] {
+    return this.normalizeSearchText(query)
+      .split(/\s+/)
+      .filter((token) => token.length > 2)
+  }
+
+  private normalizeSearchText(value: string): string {
+    return (value || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^\p{L}\p{N}\s]/gu, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+  }
+
+  private tokenMatchesTarget(token: string, normalizedTarget: string, targetWords: string[]): boolean {
+    if (!token) {
+      return false
+    }
+
+    if (normalizedTarget.includes(token)) {
+      return true
+    }
+
+    for (const word of targetWords) {
+      if (word.length <= 1) continue
+      if (this.wordSimilarity(word, token) >= 0.82) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  private wordSimilarity(a: string, b: string): number {
+    const normalizedA = a.toLowerCase()
+    const normalizedB = b.toLowerCase()
+    if (normalizedA === normalizedB) {
+      return 1
+    }
+    const maxLen = Math.max(normalizedA.length, normalizedB.length)
+    if (maxLen === 0) {
+      return 1
+    }
+    const distance = this.levenshteinDistance(normalizedA, normalizedB)
+    return 1 - distance / maxLen
+  }
+
+  private levenshteinDistance(a: string, b: string): number {
+    const lenA = a.length
+    const lenB = b.length
+    const matrix: number[][] = Array.from({ length: lenA + 1 }, () => new Array(lenB + 1).fill(0))
+
+    for (let i = 0; i <= lenA; i++) {
+      matrix[i][0] = i
+    }
+    for (let j = 0; j <= lenB; j++) {
+      matrix[0][j] = j
+    }
+
+    for (let i = 1; i <= lenA; i++) {
+      for (let j = 1; j <= lenB; j++) {
+        if (a[i - 1] === b[j - 1]) {
+          matrix[i][j] = matrix[i - 1][j - 1]
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j - 1] + 1
+          )
+        }
+      }
+    }
+
+    return matrix[lenA][lenB]
+  }
+
+  private findSimilarProductsByName(products: any[], query: string): any[] {
+    const queryTokens = this.tokenizeQuery(query)
+    if (queryTokens.length === 0) {
+      return []
+    }
+
+    const matches: Array<{ product: any; ratio: number; avgScore: number; combined: number }> = []
+
+    for (const product of products) {
+      const normalizedName = this.normalizeSearchText(product.name || "")
+      if (!normalizedName) continue
+      const nameTokens = normalizedName.split(" ").filter((token) => token.length > 2)
+      if (nameTokens.length === 0) continue
+
+      let matchCount = 0
+      let totalScore = 0
+
+      for (const nameToken of nameTokens) {
+        let bestScore = 0
+        for (const queryToken of queryTokens) {
+          const similarity = this.wordSimilarity(nameToken, queryToken)
+          if (similarity > bestScore) {
+            bestScore = similarity
+            if (bestScore >= 0.99) break
+          }
+        }
+
+        if (bestScore >= 0.72) {
+          matchCount++
+          totalScore += bestScore
+        }
+      }
+
+      if (matchCount === 0) continue
+
+      const ratio = matchCount / nameTokens.length
+      const avgScore = totalScore / matchCount
+
+      if (ratio >= 0.5 && avgScore >= 0.75) {
+        const combinedScore = ratio * 0.6 + avgScore * 0.4
+        matches.push({ product, ratio, avgScore, combined: combinedScore })
+      }
+    }
+
+    matches.sort((a, b) => b.combined - a.combined)
+    return matches.slice(0, 15).map((entry) => entry.product)
+  }
+
+  /**
+   * Resolve the transport type name from selection metadata or label
+   */
+  private resolveTransportTypeName(selectIntent: SelectOptionIntent): string | null {
+    const metadataName = (selectIntent.optionMetadata as any)?.transportTypeName
+    if (typeof metadataName === "string" && metadataName.trim().length > 0) {
+      return metadataName.trim()
+    }
+
+    if (selectIntent.skus && selectIntent.skus.length > 0) {
+      const skuValue = selectIntent.skus[0]
+      if (typeof skuValue === "string" && skuValue.trim().length > 0) {
+        return skuValue.trim()
+      }
+    }
+
+    const cleanedLabel = OptionsMappingService.cleanLabel(selectIntent.resolvedValue)
+    if (!cleanedLabel) {
+      return null
+    }
+
+    const normalizedLabel = cleanedLabel.replace(/mostra prodotti/i, "").replace(/prodotti/i, "").trim()
+    return normalizedLabel || null
   }
 
   // ================================================================================

@@ -1,3 +1,4 @@
+import { IMG_BASE_URL } from "@/config"
 import { containsYouTubeLink, extractYouTubeLinks } from "@/utils/youtubeUtils"
 import DOMPurify from "dompurify"
 import { useState } from "react"
@@ -5,6 +6,20 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { YouTubePlayerModal } from "./YouTubePlayerModal"
 import { YouTubePreview } from "./YouTubePreview"
+
+/**
+ * Resolve image URL - if relative path, prepend IMG_BASE_URL (backend 3001)
+ */
+function resolveImageUrl(src: string): string {
+  if (!src) return ""
+  // Already absolute URL
+  if (src.startsWith("http://") || src.startsWith("https://")) {
+    return src
+  }
+  // Relative path - prepend backend base URL
+  const path = src.startsWith("/") ? src : `/${src}`
+  return `${IMG_BASE_URL}${path}`
+}
 
 /**
  * Opens a URL in a mobile-sized popup window
@@ -86,7 +101,7 @@ export function MessageRenderer({
     
     if (imgMatch) {
       // Product detail layout: image left, text right, title top
-      const imgUrl = imgMatch[1]
+      const imgUrl = resolveImageUrl(imgMatch[1]) // Resolve relative path to full URL
       const imgAlt = imgMatch[2]
       
       // Split content: before img = title/description, after img = details

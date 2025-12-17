@@ -2316,6 +2316,31 @@ export class ChatEngineService {
                   workspaceConfig
                 )
                 const formattedText = formatterResult.text
+
+                // Save mapping for category list so future selections use new options
+                const categoryItems = structuredResp.data?.items?.map((item: any) => ({
+                  number: item.number,
+                  name: item.name,
+                  sku: item.sku,
+                  id: item.id,
+                }))
+
+                await this.optionsMappingService.saveMapping({
+                  workspaceId: input.workspaceId,
+                  conversationId,
+                  customerId: input.customerId,
+                  responseText: formattedText,
+                  items: categoryItems,
+                  listType: "CATEGORIES",
+                })
+
+                if (chatSession) {
+                  await this.conversationStateService.setState(
+                    chatSession.id,
+                    ConversationState.BROWSING_CATEGORIES,
+                    {}
+                  )
+                }
                 
                 const savedMsgs = await this.saveMessages(
                   input.workspaceId,
@@ -2369,6 +2394,27 @@ export class ChatEngineService {
                   workspaceConfig
                 )
                 const formattedText = formatterResult.text
+
+                // Mirror CART_VIEW mappings/actions so numeric selections map correctly
+                const cartItems = structuredResp.data.items || []
+                const cartActions = await this.buildCartActionOptions(cartItems.length > 1, input.workspaceId)
+
+                await this.optionsMappingService.saveMapping({
+                  workspaceId: input.workspaceId,
+                  conversationId,
+                  customerId: input.customerId,
+                  responseText: "",
+                  items: cartActions,
+                  listType: "CART_ACTIONS",
+                })
+
+                if (chatSession) {
+                  await this.conversationStateService.setState(
+                    chatSession.id,
+                    ConversationState.VIEWING_CART,
+                    {}
+                  )
+                }
                 
                 const savedMsgs = await this.saveMessages(
                   input.workspaceId,

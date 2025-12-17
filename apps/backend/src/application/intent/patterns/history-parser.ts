@@ -223,7 +223,9 @@ export function buildContextFromHistory(
   if (lastAssistantMessage) {
     const listInfo = parseListFromMessage(lastAssistantMessage)
     if (listInfo) {
-      context.lastListType = listInfo.listType
+      const normalizedListType =
+        listInfo.listType === "PRODUCT_DETAIL_ACTIONS" ? "CATEGORIES" : listInfo.listType
+      context.lastListType = normalizedListType
       context.lastListItems = listInfo.items
       
       logger.info(`📋 Context updated from history:`, {

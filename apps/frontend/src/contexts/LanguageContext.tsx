@@ -347,7 +347,7 @@ const translations = {
     "header.tagline": "Talk to your customers through their favorite chat",
 
     // Hero Section
-    "hero.title": "Create your AI agent for WhatsApp",
+    "hero.title": "Is the way to sell changing?",
     "hero.subtitle":
       "eChatbot brings intelligent e-commerce directly to WhatsApp. Our AI agent understands customer needs, recommends products, and closes sales 24/7—all through natural conversations.",
     "hero.whyTitle": "Why eChatbot?",
