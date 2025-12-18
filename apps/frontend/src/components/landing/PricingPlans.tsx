@@ -2,10 +2,12 @@ import { Button } from "@/components/ui/button"
 import { PLAN_CONFIGS, getPlanFeaturesWithText } from "@/config/planFeatures"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { usePlatformConfig } from "@/hooks/usePlatformConfig"
+import { PlanType } from "@/services/subscriptionBillingApi"
 import { Check, MessageSquare, X } from "lucide-react"
 
 interface PricingPlan {
   name: string
+  planType: PlanType
   price: number
   originalPrice: number | null
   priceSuffix?: string
@@ -18,9 +20,11 @@ interface PricingPlan {
 
 interface PricingPlansProps {
   onStartFreeTrial?: () => void
+  currentPlan?: PlanType | null
+  onChangePlan?: () => void
 }
 
-export function PricingPlans({ onStartFreeTrial }: PricingPlansProps) {
+export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan }: PricingPlansProps) {
   const { t } = useLanguage()
   const { prices, isLoading, getPriceWithOriginal } = usePlatformConfig()
 
@@ -51,6 +55,7 @@ export function PricingPlans({ onStartFreeTrial }: PricingPlansProps) {
   const plans: PricingPlan[] = [
     {
       name: "Free",
+      planType: "FREE_TRIAL",
       price: freePrice.current,
       originalPrice: freePrice.original,
       priceSuffix: "/14 days",
@@ -62,6 +67,7 @@ export function PricingPlans({ onStartFreeTrial }: PricingPlansProps) {
     },
     {
       name: "Basic",
+      planType: "BASIC",
       price: basicPrice.current,
       originalPrice: basicPrice.original,
       description: t(PLAN_CONFIGS.BASIC.descriptionKey || "pricing.basic.desc"),
@@ -71,6 +77,7 @@ export function PricingPlans({ onStartFreeTrial }: PricingPlansProps) {
     },
     {
       name: "Premium",
+      planType: "PREMIUM",
       price: premiumPrice.current,
       originalPrice: premiumPrice.original,
       description: t(PLAN_CONFIGS.PREMIUM.descriptionKey || "pricing.premium.desc"),
@@ -80,6 +87,7 @@ export function PricingPlans({ onStartFreeTrial }: PricingPlansProps) {
     },
     {
       name: "Enterprise",
+      planType: "ENTERPRISE",
       price: enterprisePrice.current,
       originalPrice: enterprisePrice.original,
       priceSuffix: "/month",
@@ -89,6 +97,18 @@ export function PricingPlans({ onStartFreeTrial }: PricingPlansProps) {
       features: getPlanFeaturesWithText("ENTERPRISE", t),
     },
   ]
+
+  const planOrder: Record<PlanType, number> = {
+    FREE_TRIAL: 0,
+    BASIC: 1,
+    PREMIUM: 2,
+    ENTERPRISE: 3,
+  }
+
+  const currentOrder =
+    currentPlan && planOrder[currentPlan as PlanType] !== undefined
+      ? planOrder[currentPlan as PlanType]
+      : null
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -100,18 +120,28 @@ export function PricingPlans({ onStartFreeTrial }: PricingPlansProps) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-        {plans.map((plan) => (
-          <div
-            key={plan.name}
-            className={`relative rounded-2xl border-2 p-8 flex flex-col h-full min-h-[600px] ${
-              plan.isPopular
-                ? "border-blue-500 bg-gradient-to-br from-blue-50 to-green-50 shadow-xl scale-105"
-                : "border-gray-200 bg-white"
-            }`}
-          >
-            <div className="text-center mb-6 flex flex-col justify-between min-h-[110px]">
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                {plan.name}
+        {plans.map((plan) => {
+          const order = planOrder[plan.planType]
+          const isCurrent = currentOrder !== null && plan.planType === currentPlan
+          const isPast = currentOrder !== null && order < (currentOrder as number)
+          const isFuture = currentOrder !== null && order > (currentOrder as number)
+
+          const highlightClass = isCurrent
+            ? "border-blue-500 bg-gradient-to-br from-blue-50 via-white to-green-50 shadow-xl scale-105"
+            : plan.isPopular && !isPast
+            ? "border-blue-500 bg-gradient-to-br from-blue-50 to-green-50 shadow-xl scale-105"
+            : "border-gray-200 bg-white"
+
+          const disabledClass = isPast ? "opacity-60" : ""
+
+          return (
+            <div
+              key={plan.name}
+              className={`relative rounded-2xl border-2 p-8 flex flex-col h-full min-h-[600px] ${highlightClass} ${disabledClass}`}
+            >
+              <div className="text-center mb-6 flex flex-col justify-between min-h-[110px]">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  {plan.name}
               </h3>
               <div className="mb-3">
                 {plan.name === "Free" ? (
@@ -140,26 +170,59 @@ export function PricingPlans({ onStartFreeTrial }: PricingPlansProps) {
             </div>
 
             <div className="flex-grow mb-8">
-              <Button
-                className={`w-full ${
-                  plan.name === "Basic" || plan.name === "Premium"
-                    ? "bg-green-600 hover:bg-green-700 text-white"
-                    : ""
-                }`}
-                variant={plan.buttonVariant}
-                size="lg"
-                disabled={
-                  plan.name === "Premium" ||
-                  plan.name === "Enterprise" ||
-                  plan.name === "Basic"
-                }
-                onClick={plan.name === "Free" ? handleStartFreeTrial : undefined}
-              >
-                {plan.name === "Free" && "Start Free Trial"}
-                {plan.name === "Basic" && "Start Basic"}
-                {plan.name === "Premium" && "Start Premium"}
-                {plan.name === "Enterprise" && "Contact Sales"}
-              </Button>
+              {currentOrder === null ? (
+                <Button
+                  className={`w-full ${
+                    plan.name === "Basic" || plan.name === "Premium"
+                      ? "bg-green-600 hover:bg-green-700 text-white"
+                      : ""
+                  }`}
+                  variant={plan.buttonVariant}
+                  size="lg"
+                  disabled={
+                    plan.name === "Premium" ||
+                    plan.name === "Enterprise" ||
+                    plan.name === "Basic"
+                  }
+                  onClick={plan.name === "Free" ? handleStartFreeTrial : undefined}
+                >
+                  {plan.name === "Free" && "Start Free Trial"}
+                  {plan.name === "Basic" && "Start Basic"}
+                  {plan.name === "Premium" && "Start Premium"}
+                  {plan.name === "Enterprise" && "Contact Sales"}
+                </Button>
+              ) : (
+                <>
+                  {isPast ? (
+                    <div className="w-full rounded-xl border border-gray-200 bg-gray-50 text-gray-500 text-sm font-semibold py-3 text-center cursor-not-allowed">
+                      Included in your plan
+                    </div>
+                  ) : isCurrent ? (
+                    <div className="w-full rounded-xl border border-green-600 bg-green-50 text-green-700 text-sm font-semibold py-3 text-center">
+                      Current plan
+                    </div>
+                  ) : (
+                    <Button
+                      className={`w-full ${
+                        plan.planType === "ENTERPRISE"
+                          ? "border-green-500 text-green-600 hover:bg-green-50"
+                          : "bg-green-600 hover:bg-green-700 text-white"
+                      }`}
+                      variant={plan.planType === "ENTERPRISE" ? "outline" : "default"}
+                      size="lg"
+                      onClick={
+                        plan.planType === "ENTERPRISE"
+                          ? onChangePlan
+                          : onChangePlan
+                      }
+                    >
+                      {plan.planType === "ENTERPRISE"
+                        ? "Contact Sales"
+                        : `Upgrade to ${plan.name}`}
+                    </Button>
+                  )}
+                </>
+              )}
             </div>
 
             <div className="space-y-3">
@@ -181,7 +244,8 @@ export function PricingPlans({ onStartFreeTrial }: PricingPlansProps) {
               ))}
             </div>
           </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Usage-Based Pricing Details */}

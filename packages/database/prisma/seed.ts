@@ -125,7 +125,7 @@ async function main() {
       lastName: "Romano",
       status: "ACTIVE",
       role: "ADMIN",
-      planType: "PREMIUM", // ✅ Premium plan (not free trial)
+      planType: "ENTERPRISE", // ✅ Enterprise plan (full feature set)
       creditBalance: 186.90, // ✅ Reflects final balance from billing history
       isDeveloperUser: true, // ✅ Developer User - skip 2FA for testing
       twoFactorEnabled: false, // ❌ 2FA disabled by default - enable via Settings UI
@@ -247,6 +247,8 @@ async function main() {
   for (const lang of [
     { code: "IT", name: "Italiano", isDefault: true },
     { code: "ENG", name: "English", isDefault: false },
+    { code: "ESP", name: "Español", isDefault: false },
+    { code: "PRT", name: "Português", isDefault: false },
   ]) {
     await prisma.languages.create({
       data: {
@@ -258,30 +260,6 @@ async function main() {
       },
     })
   }
-
-  // Create agent configs for e-commerce workspace (ALL agents including PRODUCT_SEARCH, CART_MANAGEMENT, ORDER_TRACKING)
-  // ✅ NOTE: systemPrompt is NOT stored in DB - loaded from template files at runtime
-  const ecommerceAgents = defaultAgents(ecommerceWorkspace.id)
-  for (const config of ecommerceAgents) {
-    await prisma.agentConfig.create({
-      data: {
-        workspaceId: config.workspaceId,
-        name: config.name,
-        type: config.type,
-        description: config.description,
-        icon: config.icon,
-        systemPrompt: "", // ✅ Empty - loaded from files at runtime
-        model: config.model,
-        temperature: config.temperature,
-        maxTokens: config.maxTokens,
-        order: config.order,
-        isActive: config.isActive,
-        availableFunctions: config.availableFunctions || null,
-      },
-    })
-  }
-
-  console.log(`✅ E-commerce workspace configured with ${ecommerceAgents.length} agents`)
 
   // 2.8. Create Informational Workspace for Admin User (BellItalia)
   console.log("🏢 Creating Informational workspace (BellItalia) for admin user...")
@@ -302,12 +280,10 @@ async function main() {
       welcomeMessage: "Welcome to BellItalia! Ask me anything about our products and services.",
       wipMessage: "Sorry, I'm currently being improved. Please try again later.",
       ownerId: adminUser.id,
-      // ✅ PREMIUM plan
       planType: "PREMIUM",
-      creditBalance: 171.00, // ✅ Reflects final balance from billing history
+      creditBalance: 171.0,
       trialEndsAt: null,
       planStartedAt: new Date(),
-      // ✅ INFORMATIONAL workspace (no e-commerce)
       sellsProductsAndServices: false,
       hasSalesAgents: false,
       hasHumanSupport: true,
@@ -347,10 +323,251 @@ async function main() {
     },
   })
 
+  // Create demo customers for informational workspace (multilingual)
+  console.log("👥 Creating informational customers for multi-language tests...")
+  const infoDemoCustomers = [
+    {
+      name: "Luca Informazioni",
+      email: "luca.info@bellitalia.com",
+      phone: "+39 06 1234 5671",
+      language: "IT",
+      company: "Trattoria Milano",
+      address: "Via Torino 18, Milano",
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 15),
+    },
+    {
+      name: "Emily Johnson",
+      email: "emily.johnson@foodbuyers.uk",
+      phone: "+44 20 1234 8899",
+      language: "ENG",
+      company: "London Catering Co.",
+      address: "221B Baker Street, London",
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 12),
+    },
+    {
+      name: "Carlos López",
+      email: "carlos.logistica@sevilla.es",
+      phone: "+34 622 89 45 11",
+      language: "ESP",
+      company: "Tapas Sur",
+      address: "Calle Feria 45, Sevilla",
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 9),
+    },
+    {
+      name: "Ana Silva",
+      email: "ana.silva@porto-rest.pt",
+      phone: "+351 965 778 201",
+      language: "PRT",
+      company: "Porto Delights",
+      address: "Rua das Flores 12, Porto",
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7),
+    },
+  ]
+
+  const createdInfoCustomers: {
+    record: any
+    template: (typeof infoDemoCustomers)[number]
+  }[] = []
+
+  for (const customer of infoDemoCustomers) {
+    const created = await prisma.customers.create({
+      data: {
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        language: customer.language,
+        company: customer.company,
+        address: customer.address,
+        workspaceId: infoWorkspace.id,
+        isActive: true,
+        activeChatbot: true,
+        currency: "EUR",
+        discount: 0,
+        push_notifications_consent: true,
+        push_notifications_consent_at: new Date(),
+        createdAt: customer.createdAt,
+        updatedAt: customer.createdAt,
+      },
+    })
+    createdInfoCustomers.push({ record: created, template: customer })
+  }
+
+  console.log(
+    `✅ Created ${createdInfoCustomers.length} informational customers with multilingual profiles`
+  )
+
+  // Create small chat history per language for informational workspace
+  const infoChatSamples = [
+    {
+      language: "IT",
+      inbound: "Ciao, vorrei sapere come spedite i prodotti freschi.",
+      assistant:
+        "Ciao! Per i prodotti freschi usiamo trasporto refrigerato dedicato con consegne 48h in tutta Italia.",
+      history: [
+        {
+          role: "user",
+          content: "Effettuate consegne refrigerate anche il lunedì?",
+          minutesAgo: 180,
+        },
+        {
+          role: "assistant",
+          content:
+            "Sì, i mezzi refrigerati partono ogni lunedì e giovedì da Barcellona verso il Nord Italia.",
+          minutesAgo: 179,
+        },
+      ],
+    },
+    {
+      language: "ENG",
+      inbound: "Hello, do you have tracking for informational shipments?",
+      assistant:
+        "Yes, every parcel includes a tracking link so you can follow the delivery in real time.",
+      history: [
+        {
+          role: "user",
+          content: "Can you send brochures directly to my clients in London?",
+          minutesAgo: 200,
+        },
+        {
+          role: "assistant",
+          content:
+            "Of course, we can drop-ship samples or brochures directly to your customer with neutral packaging.",
+          minutesAgo: 199,
+        },
+      ],
+    },
+    {
+      language: "ESP",
+      inbound:
+        "Hola, necesito información sobre envíos combinados de ambiente y refrigerado.",
+      assistant:
+        "Podemos preparar pedidos mixtos: agrupamos los productos ambiente y enviamos la parte refrigerada en un segundo pallet.",
+      history: [
+        {
+          role: "user",
+          content: "¿Trabajan con entregas en Sevilla dentro de franjas horarias?",
+          minutesAgo: 165,
+        },
+        {
+          role: "assistant",
+          content:
+            "Sí, podemos coordinar franjas de mañana o tarde con nuestros transportistas locales.",
+          minutesAgo: 164,
+        },
+      ],
+    },
+    {
+      language: "PRT",
+      inbound: "Olá! Gostaria de saber se enviam com camiões frigoríficos.",
+      assistant:
+        "Olá! Trabalhamos com camiões frigoríficos certificados e entregamos em Portugal continental duas vezes por semana.",
+      history: [
+        {
+          role: "user",
+          content:
+            "Conseguem entregar diretamente aos meus restaurantes com prova de entrega?",
+          minutesAgo: 140,
+        },
+        {
+          role: "assistant",
+          content:
+            "Sim, fornecemos POD digital assinada e podemos enviar a cópia por e-mail assim que o motorista conclui a entrega.",
+          minutesAgo: 139,
+        },
+      ],
+    },
+  ]
+
+  for (const chatData of infoChatSamples) {
+    const customer = createdInfoCustomers.find(
+      (c) => c.template.language === chatData.language
+    )
+    if (!customer) {
+      console.log(`   ⚠️ No informational customer for language ${chatData.language}`)
+      continue
+    }
+
+    const session = await prisma.chatSession.create({
+      data: {
+        customerId: customer.record.id,
+        workspaceId: infoWorkspace.id,
+        status: "active",
+        context: {
+          language: chatData.language.toLowerCase(),
+          customerName: customer.record.name,
+        },
+      },
+    })
+
+    await prisma.message.create({
+      data: {
+        chatSessionId: session.id,
+        direction: "INBOUND",
+        content: chatData.inbound,
+        type: "TEXT",
+        createdAt: new Date(Date.now() - 1000 * 60 * 3),
+      },
+    })
+
+    await prisma.message.create({
+      data: {
+        chatSessionId: session.id,
+        direction: "OUTBOUND",
+        content: chatData.assistant,
+        type: "TEXT",
+        aiGenerated: true,
+        metadata: {
+          agentSelected: "CUSTOMER_SUPPORT",
+          workspace: "BellItalia Info",
+        },
+        createdAt: new Date(Date.now() - 1000 * 60 * 2),
+      },
+    })
+
+    await prisma.conversationMessage.createMany({
+      data: chatData.history.map((entry, index) => ({
+        conversationId: session.id,
+        workspaceId: infoWorkspace.id,
+        customerId: customer.record.id,
+        role: entry.role as "user" | "assistant",
+        content: entry.content,
+        createdAt: new Date(
+          Date.now() - 1000 * 60 * (entry.minutesAgo ?? 60) + index * 500
+        ),
+      })),
+    })
+  }
+
+  // Create agent configs for e-commerce workspace (ALL agents including PRODUCT_SEARCH, CART_MANAGEMENT, ORDER_TRACKING)
+  // ✅ NOTE: systemPrompt is NOT stored in DB - loaded from template files at runtime
+  const ecommerceAgents = defaultAgents(ecommerceWorkspace.id)
+  for (const config of ecommerceAgents) {
+    await prisma.agentConfig.create({
+      data: {
+        workspaceId: config.workspaceId,
+        name: config.name,
+        type: config.type,
+        description: config.description,
+        icon: config.icon,
+        systemPrompt: "", // ✅ Empty - loaded from files at runtime
+        model: config.model,
+        temperature: config.temperature,
+        maxTokens: config.maxTokens,
+        order: config.order,
+        isActive: config.isActive,
+        availableFunctions: config.availableFunctions || null,
+      },
+    })
+  }
+
+  console.log(`✅ E-commerce workspace configured with ${ecommerceAgents.length} agents`)
+
   // Create languages for informational workspace
   for (const lang of [
     { code: "IT", name: "Italiano", isDefault: true },
     { code: "ENG", name: "English", isDefault: false },
+    { code: "ESP", name: "Español", isDefault: false },
+    { code: "PRT", name: "Português", isDefault: false },
   ]) {
     await prisma.languages.create({
       data: {
@@ -410,6 +627,26 @@ async function main() {
     { category: "Products", question: "Do you only supply food, or also beverages and wines?", answer: "We supply food products, beverages, and Mediterranean/Italian wines." },
     { category: "Customers", question: "I'm a small restaurant — can I still place an order?", answer: "Yes — BellItalia works with restaurants of different sizes and tailors service to their specific needs." },
     { category: "Contact", question: "How long does it take to get a response when I contact you?", answer: "Once you send a message via our contact form, we commit to responding within 24 hours." },
+    { category: "Transport", question: "Do you offer refrigerated transport for dairy products?", answer: "Yes, we maintain the cold chain between 2–4 °C using certified refrigerated carriers so cheeses and fresh products arrive safely." },
+    { category: "Transport", question: "How do you ship frozen goods to ensure -18 °C stability?", answer: "Frozen SKUs travel in -18 °C trucks with temperature probes and seals; if the seal is broken the shipment is replaced." },
+    { category: "Transport", question: "Can ambient and refrigerated goods travel in the same delivery?", answer: "We consolidate ambient items on one pallet and refrigerate the rest, dispatching both pallets on the same route so you receive everything together." },
+    { category: "Transport", question: "What is the average transit time from Barcelona to Northern Italy?", answer: "Transit to Milan/Turin averages 48–72 hours with two departures per week; Central Spain deliveries remain within 24–48 hours." },
+    { category: "Transport", question: "Do you provide ADR-certified carriers for wine or spirits pallets?", answer: "Yes, for alcohol shipments we work with ADR partners able to move wine or spirits under the correct documentation." },
+    { category: "Transport", question: "Can you arrange tail-lift trucks for pallet deliveries?", answer: "When clients lack a dock we can send trucks equipped with tail-lift to unload pallets safely at street level." },
+    { category: "Transport", question: "Is it possible to request temperature data loggers with each shipment?", answer: "We can include a data logger and share the temperature report along with the POD for full traceability." },
+    { category: "Transport", question: "Do you deliver on Saturdays for urgent restocks?", answer: "Saturday morning deliveries are available in the main metropolitan areas with a small surcharge to cover weekend shifts." },
+    { category: "Transport", question: "How do you handle customs paperwork for Canary Islands or non-EU destinations?", answer: "Our logistics team prepares phytosanitary certificates and customs declarations for Canary Islands, Andorra or extra-EU routes." },
+    { category: "Transport", question: "Can you drop-ship directly to my restaurant customers?", answer: "Yes, we can ship directly to your final customer with neutral packing slips while you receive the invoice and tracking." },
+    { category: "Transport", question: "Do you consolidate multiple orders to reduce transport cost?", answer: "Whenever purchase orders share the same route we consolidate them onto the same pallet to optimize freight cost per unit." },
+    { category: "Transport", question: "Is tracking available for the transport service?", answer: "Every shipment includes real-time tracking — parcel links for small boxes and GPS checkpoints for palletized loads." },
+    { category: "Transport", question: "How far in advance should refrigerated transport be booked during holidays?", answer: "During peak weeks (Christmas/Easter) we recommend booking cold-chain space 4–5 days ahead to guarantee capacity." },
+    { category: "Transport", question: "Can you handle deliveries with restricted time windows?", answer: "We frequently deliver to malls, airports and cruise terminals with strict slots — just share the window when placing the order." },
+    { category: "Transport", question: "Do you provide digital proof of delivery or signed CMR?", answer: "Yes, the driver uploads the signed POD/CMR immediately and we forward the PDF to your logistics contact." },
+    { category: "Transport", question: "Are there surcharges for Balearic Islands or remote areas?", answer: "Balearic Islands and remote mountain towns have a transparent surcharge which we quote before confirming the shipment." },
+    { category: "Transport", question: "Can I use my own carrier while you prepare the pallets?", answer: "Of course — we can palletize, label and load your appointed carrier once a pickup slot is agreed." },
+    { category: "Transport", question: "Do you insure shipments against temperature excursions?", answer: "All refrigerated and frozen shipments are insured; if a temperature excursion occurs we trigger a replacement immediately." },
+    { category: "Transport", question: "What is the maximum weight per pallet you can ship?", answer: "Standard pallets can reach roughly 900 kg; above that threshold we split the goods into multiple pallets for safety." },
+    { category: "Transport", question: "Do you offer dual-compartment trucks for mixed frozen and ambient goods?", answer: "Yes, we collaborate with carriers operating dual-compartment vehicles so frozen and ambient products travel together without risk." },
   ]
 
   for (const faq of infoFAQs) {
@@ -424,11 +661,308 @@ async function main() {
     })
   }
 
+  // 2.9. Create Enterprise support workspace for eChatbot
+  console.log("🏢 Creating Enterprise support workspace (eChatbot HQ)...")
+
+  const supportWorkspace = await prisma.workspace.create({
+    data: {
+      name: "eChatbot HQ",
+      slug: "echatbot-hq",
+      whatsappPhoneNumber: "+34654728753",
+      notificationEmail: "hello@echatbot.ai",
+      isActive: true,
+      language: "ENG",
+      currency: "EUR",
+      description: "eChatbot Enterprise Support - product education channel",
+      url: "https://echatbot.ai/support",
+      channelStatus: true,
+      welcomeMessage:
+        "Hi! I'm your eChatbot product assistant. Ask me anything about plans, integrations or onboarding.",
+      wipMessage:
+        "Our assistants are being updated. If you need immediate help please write to support@echatbot.ai.",
+      ownerId: adminUser.id,
+      planType: "ENTERPRISE",
+      creditBalance: 500,
+      trialEndsAt: null,
+      planStartedAt: new Date(),
+      sellsProductsAndServices: false,
+      hasSalesAgents: false,
+      hasHumanSupport: true,
+      humanSupportInstructions:
+        "Ciao {{nameUser}}, ti metto subito in contatto con un consulente eChatbot. Riceverai risposta entro 15 minuti da {{agentName}} (tel: {{agentPhone}} / email: {{agentEmail}}).",
+      operatorContactMethod: "EMAIL",
+      toneOfVoice: "PROFESSIONAL",
+      botIdentityResponse:
+        "I'm the eChatbot product specialist. I can explain pricing, automation features, integrations and connect you with a human consultant anytime.",
+    },
+  })
+
+  console.log(
+    `✅ Enterprise support workspace created: ${supportWorkspace.name} (${supportWorkspace.id})`
+  )
+
+  await prisma.userWorkspace.create({
+    data: {
+      userId: adminUser.id,
+      workspaceId: supportWorkspace.id,
+      role: "SUPER_ADMIN",
+    },
+  })
+
+  await prisma.whatsappSettings.create({
+    data: {
+      workspaceId: supportWorkspace.id,
+      phoneNumber: "+34654728753",
+      apiKey: process.env.WHATSAPP_API_KEY || "dummy-api-key",
+      webhookUrl:
+        process.env.WHATSAPP_WEBHOOK_URL || "https://echatbot.ai/webhook",
+      adminEmail: adminEmail,
+      smtpHost: "smtp.gmail.com",
+      smtpPort: 465,
+      smtpSecure: true,
+      smtpUser: process.env.SMTP_USER || "noreply@echatbot.ai",
+      smtpPass: process.env.SMTP_PASS || "",
+      smtpFrom: "eChatbot <noreply@echatbot.ai>",
+    },
+  })
+
+  for (const lang of [
+    { code: "ENG", name: "English", isDefault: true },
+    { code: "IT", name: "Italiano", isDefault: false },
+    { code: "ESP", name: "Español", isDefault: false },
+  ]) {
+    await prisma.languages.create({
+      data: {
+        code: lang.code,
+        name: lang.name,
+        isDefault: lang.isDefault,
+        isActive: true,
+        workspaceId: supportWorkspace.id,
+      },
+    })
+  }
+
+  const supportAgents = defaultAgents(supportWorkspace.id).filter(
+    (agent) =>
+      !["PRODUCT_SEARCH", "CART_MANAGEMENT", "ORDER_TRACKING"].includes(
+        agent.type
+      )
+  )
+  for (const config of supportAgents) {
+    await prisma.agentConfig.create({
+      data: {
+        workspaceId: config.workspaceId,
+        name: config.name,
+        type: config.type,
+        description: config.description,
+        icon: config.icon,
+        systemPrompt: "",
+        model: config.model,
+        temperature: config.temperature,
+        maxTokens: config.maxTokens,
+        order: config.order,
+        isActive: config.isActive,
+        availableFunctions: config.availableFunctions || null,
+      },
+    })
+  }
+
+  const supportFAQs = [
+    {
+      category: "Pricing",
+      question: "What plans does eChatbot offer and how is pricing calculated?",
+      answer:
+        "We offer Starter, Premium and Enterprise plans. Pricing is usage-based: a monthly platform fee plus credits for WhatsApp conversations, automations and AI tasks. Enterprise includes custom SLAs and concierge onboarding.",
+    },
+    {
+      category: "Pricing",
+      question: "Can I test eChatbot before committing to a paid plan?",
+      answer:
+        "Yes, every workspace starts with a fully-featured trial environment so you can validate flows, integrations and analytics. No card is required during the trial.",
+    },
+    {
+      category: "Platform",
+      question: "Which channels are supported besides WhatsApp?",
+      answer:
+        "WhatsApp is the primary channel, but eChatbot also integrates email, Instagram DM, web chat widgets and backoffice messaging via the same unified automation stack.",
+    },
+    {
+      category: "Platform",
+      question: "Does eChatbot support multilingual conversations?",
+      answer:
+        "Absolutely. Each workspace can configure Italian, English, Spanish, Portuguese and more. The AI router translates messages while keeping tone, brand voice and compliance consistent.",
+    },
+    {
+      category: "Integrations",
+      question: "How do I connect eChatbot with my ERP or CRM?",
+      answer:
+        "We provide REST APIs, webhooks, native connectors for HubSpot/Shopify, and middleware guides for custom ERPs. Enterprise clients receive solution architect support during integration.",
+    },
+    {
+      category: "Support",
+      question: "Can I talk with a human consultant if the bot can’t solve my issue?",
+      answer:
+        "Yes. Every plan includes human hand-off. Just request an agent and our team opens an email/WhatsApp thread with a named consultant who replies within SLA.",
+    },
+    {
+      category: "Security",
+      question: "Where is customer data hosted and how is it protected?",
+      answer:
+        "Data is hosted in the EU on AWS, encrypted at rest and in transit. We follow multi-tenant isolation, role-based access control and audit logging aligned with GDPR requirements.",
+    },
+    {
+      category: "Billing",
+      question: "Which payment methods do you accept for subscriptions?",
+      answer:
+        "We accept SEPA transfer, credit cards (Visa/Mastercard) and invoicing with 30-day terms for Enterprise customers.",
+    },
+    {
+      category: "Automation",
+      question: "Can eChatbot escalate complex workflows to my internal team?",
+      answer:
+        "Yes. The workflow engine can trigger Zendesk/Asana tasks, send Slack alerts or forward transcripts via email so your team continues the conversation seamlessly.",
+    },
+    {
+      category: "Analytics",
+      question: "What type of analytics can I expect in the dashboard?",
+      answer:
+        "You can monitor conversation volume, conversion funnels, agent performance, translation usage, CSAT trends and export raw data for BI tools.",
+    },
+    {
+      category: "Compliance",
+      question: "Is eChatbot Meta BSP compliant and do you manage WhatsApp templates?",
+      answer:
+        "Yes, we are aligned with Meta BSP guidelines. We help you register templates, manage quality scores and automate template fallback logic.",
+    },
+    {
+      category: "Deployment",
+      question: "How long does onboarding typically take?",
+      answer:
+        "Starter workspaces launch in a few hours. Enterprise rollouts include a 2-week implementation sprint covering training, automations, testing and go-live checklist.",
+    },
+    {
+      category: "Features",
+      question: "Can I use my own AI models or bring OpenAI keys?",
+      answer:
+        "Certainly. You can plug in your own OpenAI/Anthropic keys, set model policies per agent and even mix internal deterministic flows with LLMs.",
+    },
+    {
+      category: "Team",
+      question: "How many operators can collaborate in the console?",
+      answer:
+        "There’s no hard cap. Role-based permissions let you add unlimited operators, admins and analysts while tracking their actions in the audit log.",
+    },
+    {
+      category: "Roadmap",
+      question: "Do you support custom roadmaps or feature requests?",
+      answer:
+        "Enterprise contracts include roadmap alignment sessions and private betas. We prioritize features that align with your automation KPIs.",
+    },
+  ]
+
+  for (const faq of supportFAQs) {
+    await prisma.fAQ.create({
+      data: {
+        workspaceId: supportWorkspace.id,
+        question: faq.question,
+        answer: faq.answer,
+        isActive: true,
+        category: faq.category,
+      },
+    })
+  }
+
+  const supportProspect = await prisma.customers.create({
+    data: {
+      name: "Sara Product Demo",
+      email: "sara.demo@echatbot.ai",
+      phone: "+39 380 1112223",
+      language: "ENG",
+      company: "Innovative Retail Group",
+      workspaceId: supportWorkspace.id,
+      isActive: true,
+      activeChatbot: true,
+      currency: "EUR",
+      discount: 0,
+      push_notifications_consent: true,
+      push_notifications_consent_at: new Date(),
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 6),
+      updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 6),
+    },
+  })
+
+  const supportSession = await prisma.chatSession.create({
+    data: {
+      customerId: supportProspect.id,
+      workspaceId: supportWorkspace.id,
+      status: "active",
+      context: {
+        language: "eng",
+        customerName: supportProspect.name,
+      },
+    },
+  })
+
+  await prisma.message.create({
+    data: {
+      chatSessionId: supportSession.id,
+      direction: "INBOUND",
+      content: "Hi, how much does the Enterprise plan cost with 5 workspaces?",
+      type: "TEXT",
+      createdAt: new Date(Date.now() - 1000 * 60 * 4),
+    },
+  })
+
+  await prisma.message.create({
+    data: {
+      chatSessionId: supportSession.id,
+      direction: "OUTBOUND",
+      content:
+        "Hi Sara! Enterprise starts from €899/month and scales with active workspaces. I can share a tailored quote or connect you with a consultant.",
+      type: "TEXT",
+      aiGenerated: true,
+      metadata: {
+        agentSelected: "CUSTOMER_SUPPORT",
+      },
+      createdAt: new Date(Date.now() - 1000 * 60 * 3),
+    },
+  })
+
+  await prisma.conversationMessage.createMany({
+    data: [
+      {
+        conversationId: supportSession.id,
+        workspaceId: supportWorkspace.id,
+        customerId: supportProspect.id,
+        role: "user",
+        content:
+          "Great! I'd like a live walkthrough and to involve my operations team.",
+        createdAt: new Date(Date.now() - 1000 * 60 * 2),
+      },
+      {
+        conversationId: supportSession.id,
+        workspaceId: supportWorkspace.id,
+        customerId: supportProspect.id,
+        role: "assistant",
+        content:
+          "Perfect, I'm escalating this to our human operator. You'll receive a calendar invitation and WhatsApp follow-up within 15 minutes.",
+        createdAt: new Date(Date.now() - 1000 * 60 * 2 + 500),
+        debugInfo: JSON.stringify({
+          action: "HANDOFF",
+          operatorNotified: true,
+        }),
+      },
+    ],
+  })
+
   console.log(`✅ Informational workspace configured with ${infoAgents.length} agents and ${infoFAQs.length} FAQs`)
+  console.log(`✅ Support workspace configured with ${supportAgents.length} agents and ${supportFAQs.length} FAQs`)
   console.log(`\n📦 Admin user channels setup complete:`)
   console.log(`   - Email: ${adminEmail}`)
-  console.log(`   - Plan: PREMIUM`)
-  console.log(`   - Channels: 2 (E-commerce: BellItalia VIP, Informational: BellItalia)\n`)
+  console.log(`   - Plan: ENTERPRISE`)
+  console.log(
+    `   - Channels: 3 (E-commerce: BellItalia VIP, Informational: BellItalia, Support: eChatbot HQ)\n`
+  )
 
   // Use BellItalia VIP as the main workspace for demo data
   const workspace = ecommerceWorkspace
