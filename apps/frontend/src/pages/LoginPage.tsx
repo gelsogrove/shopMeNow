@@ -13,7 +13,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useFeatureFlags } from "@/hooks/usePlatformConfig"
 import { logger } from "@/lib/logger"
@@ -113,6 +112,7 @@ export function LoginPage() {
   
   // 🚀 Platform feature flags (canLogin, canRegister)
   const { canLogin, canRegister, isLoading: flagsLoading } = useFeatureFlags()
+  const isWipMode = !flagsLoading && !canLogin && !canRegister
   const [showWIPModal, setShowWIPModal] = useState(false)
   const [wipFeature, setWipFeature] = useState<'login' | 'register'>('login')
   
@@ -169,7 +169,7 @@ export function LoginPage() {
 
   const registerForm = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
-    mode: "onBlur",
+    mode: "onChange",
     defaultValues: {
       email: "",
       password: "",
@@ -248,7 +248,7 @@ export function LoginPage() {
     setIsValidatingSession(false)
   }, [navigate, logoutParam]) // Run only once on mount, or when logout param changes
 
-  // 🆕 AUTO-OPEN REGISTER MODAL if ?action=register or ?mode=register parameter is present
+  // 🆕 AUTO-OPEN REGISTER VIEW if ?action=register or ?mode=register parameter is present
   useEffect(() => {
     if (actionParam === 'register' || modeParam === 'register') {
       // 🚫 If registration is disabled, show WIP modal instead
@@ -259,8 +259,10 @@ export function LoginPage() {
         return
       }
       
-      logger.info('🎯 [AUTO-OPEN] Detected register mode - opening registration modal')
-      setShowLoginModal(true)
+      logger.info('🎯 [AUTO-OPEN] Detected register mode - switching to register form')
+      if (isWipMode) {
+        setShowLoginModal(true)
+      }
       setActiveTab('register')
       
       // Pre-fill form from invite data if available
@@ -282,7 +284,14 @@ export function LoginPage() {
         }
       }
     }
-  }, [actionParam, modeParam, inviteParam, canRegister, flagsLoading])
+  }, [actionParam, modeParam, inviteParam, canRegister, flagsLoading, isWipMode])
+
+  // If login is disabled but registration is allowed, show register form by default
+  useEffect(() => {
+    if (!canLogin && canRegister) {
+      setActiveTab("register")
+    }
+  }, [canLogin, canRegister])
 
   // 🆕 Session check is now done in the first useEffect above
   // No auto-redirect - we show avatar instead if user is logged in
@@ -560,9 +569,6 @@ export function LoginPage() {
     )
   }
 
-  // 🚧 Check if WIP mode is active
-  const isWipMode = !flagsLoading && !canLogin && !canRegister
-
   // 🚧 WIP MODE: Show simple page with hidden admin access
   if (isWipMode && !showLoginModal) {
     return (
@@ -677,7 +683,6 @@ export function LoginPage() {
               {/* Sign In Form */}
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email-admin">{t("form.email")}</Label>
                   <Input
                     id="email-admin"
                     type="email"
@@ -693,7 +698,6 @@ export function LoginPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password-admin">{t("form.password")}</Label>
                   <div className="relative">
                     <Input
                       id="password-admin"
@@ -894,50 +898,19 @@ export function LoginPage() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-              ) : (
-                /* Login/Register buttons for non-logged users */
-                <div className="flex items-center gap-3">
-                  {canLogin && (
-                    <Button
-                      onClick={() => {
-                        localStorage.clear()
-                        sessionStorage.clear()
-                        setActiveTab('signin')
-                        setShowLoginModal(true)
-                      }}
-                      className="bg-green-600 hover:bg-green-700 px-5 py-2 text-sm font-medium"
-                    >
-                      {t("login.signin")}
-                    </Button>
-                  )}
-                  {canRegister && (
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        localStorage.clear()
-                        sessionStorage.clear()
-                        setActiveTab('register')
-                        setShowLoginModal(true)
-                      }}
-                      className="border-green-600 text-green-600 hover:bg-green-50 px-5 py-2 text-sm font-medium"
-                    >
-                      {t("login.register")}
-                    </Button>
-                  )}
-                </div>
-              )}
+              ) : null}
             </div>
           </div>
           
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12 lg:py-16">
-        <div className="flex flex-col lg:flex-row gap-10 items-start">
-          <div className="flex justify-start items-center w-full lg:flex-1">
-            <div className="relative w-full max-w-3xl lg:ml-2">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12 lg:py-16 relative z-20">
+        <div className="flex flex-col lg:flex-row gap-10 items-stretch">
+          <div className="flex justify-center lg:justify-start items-center w-full lg:flex-1">
+            <div className="relative w-full max-w-3xl lg:mr-2 min-h-[32rem]">
               <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-100 rounded-[32px] transform rotate-2 scale-105" />
-              <div className="relative rounded-[32px] shadow-2xl overflow-hidden bg-white">
+              <div className="relative rounded-[32px] shadow-2xl overflow-hidden bg-white min-h-[32rem]">
                 <div className="absolute top-5 inset-x-0 flex justify-center gap-2 z-10 opacity-0" aria-hidden="true">
                   {heroSlides.map((_, index) => (
                     <span
@@ -964,155 +937,355 @@ export function LoginPage() {
             </div>
           </div>
 
-          {canLogin && (
-            <div className="w-full max-w-md lg:w-[26rem] bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
-              <div className="space-y-6">
+          {(canLogin || canRegister) && (
+            <div className="w-full max-w-sm lg:w-[24rem] bg-white rounded-2xl shadow-xl border border-slate-200 p-8 lg:order-2 min-h-[32rem] flex">
+              <div className="space-y-6 flex-1 flex flex-col">
                 <div className="text-center space-y-2">
-                  <h3 className="text-2xl font-bold text-slate-900">Sign In</h3>
-                  <p className="text-slate-600">Access your eChatbot workspace</p>
+                  <h3 className="text-2xl font-bold text-slate-900">
+                    {activeTab === "signin" ? "Sign In" : "Create your account"}
+                  </h3>
+                  {activeTab === "signin" && (
+                    <p className="text-slate-600">Access your eChatbot workspace</p>
+                  )}
                 </div>
-
-                {isLoggedIn && (
-                  <div className="rounded-xl border border-green-100 bg-green-50 p-4 text-sm text-green-800 space-y-2">
-                    <div className="font-semibold">You're already signed in</div>
-                    <div className="text-green-700">{loggedInUser?.email || 'Logged user'}</div>
-                    <button
-                      type="button"
-                      onClick={() => navigate("/workspace-selection")}
-                      className="rounded-lg bg-green-600 px-4 py-2 text-white text-sm font-medium hover:bg-green-700 transition-colors"
-                    >
-                      Go to workspace
-                    </button>
-                  </div>
-                )}
 
                 {error && (
                   <Alert variant="destructive">
                     <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>Login Error</AlertTitle>
+                    <AlertTitle>{activeTab === "signin" ? "Login Error" : "Registration Error"}</AlertTitle>
                     <AlertDescription>{error}</AlertDescription>
                   </Alert>
                 )}
 
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email-desktop">Email</Label>
-                    <Input
-                      id="email-desktop"
-                      type="email"
-                      placeholder="your@email.com"
-                      {...register("email")}
-                      disabled={isLoading}
-                      autoComplete="username"
-                      className="h-11"
-                    />
-                    {errors.email && (
-                      <p className="text-sm text-red-500">
-                        {errors.email.message}
-                      </p>
+                {activeTab === "signin" ? (
+                  <>
+                    {isLoggedIn && (
+                      <div className="rounded-xl border border-green-100 bg-green-50 p-4 text-sm text-green-800 space-y-2">
+                        <div className="font-semibold">You're already signed in</div>
+                        <div className="text-green-700">{loggedInUser?.email || "Logged user"}</div>
+                        <button
+                          type="button"
+                          onClick={() => navigate("/workspace-selection")}
+                          className="rounded-lg bg-green-600 px-4 py-2 text-white text-sm font-medium hover:bg-green-700 transition-colors"
+                        >
+                          Go to workspace
+                        </button>
+                      </div>
                     )}
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="password-desktop">Password</Label>
-                    <div className="relative">
-                      <Input
-                        id="password-desktop"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="********"
-                        {...register("password")}
-                        disabled={isLoading}
-                        autoComplete="current-password"
-                        className="h-11 pr-10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-3 flex items-center text-gray-400"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                      <div className="space-y-2">
+                        <Input
+                          id="email-desktop"
+                          type="email"
+                          placeholder="your@email.com"
+                          {...register("email")}
+                          disabled={isLoading}
+                          autoComplete="username"
+                          className="h-11"
+                        />
+                        {errors.email && (
+                          <p className="text-sm text-red-500">{errors.email.message}</p>
                         )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="relative">
+                          <Input
+                            id="password-desktop"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="********"
+                            {...register("password")}
+                            disabled={isLoading}
+                            autoComplete="current-password"
+                            className="h-11 pr-10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute inset-y-0 right-3 flex items-center text-gray-400"
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                        {errors.password && (
+                          <p className="text-sm text-red-500">{errors.password.message}</p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="remember-desktop" />
+                          <span className="text-sm text-slate-600">Remember me</span>
+                        </div>
+                        <Link
+                          to="/auth/forgot-password"
+                          className="text-sm font-medium text-green-600 hover:underline"
+                        >
+                          Forgot password?
+                        </Link>
+                      </div>
+
+                      <Button
+                        type="submit"
+                        className="w-full bg-green-600 hover:bg-green-700"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Signing in...
+                          </>
+                        ) : (
+                          "Sign In"
+                        )}
+                      </Button>
+                    </form>
+
+                    <div className="space-y-3">
+                      <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                          <div className="w-full border-t border-gray-300" />
+                        </div>
+                        <div className="relative flex justify-center text-sm">
+                          <span className="bg-white px-2 text-gray-500">Or continue with</span>
+                        </div>
+                      </div>
+
+                      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+                        <div className="flex justify-center">
+                          <GoogleLogin
+                            onSuccess={handleGoogleSuccess}
+                            onError={handleGoogleError}
+                            useOneTap={false}
+                            theme="outline"
+                            size="large"
+                            text="signin_with"
+                            shape="rectangular"
+                            logo_alignment="left"
+                          />
+                        </div>
+                      </GoogleOAuthProvider>
+                    </div>
+
+                    <div className="text-center text-sm text-gray-600">
+                      Don't have an account?{" "}
+                      <button
+                        onClick={() => {
+                          if (!canRegister) {
+                            setWipFeature('register')
+                            setShowWIPModal(true)
+                            return
+                          }
+
+                          localStorage.clear()
+                          sessionStorage.clear()
+                          setError("")
+                          setActiveTab("register")
+                        }}
+                        className="text-green-600 hover:underline font-semibold"
+                      >
+                        Create one
                       </button>
                     </div>
-                    {errors.password && (
-                      <p className="text-sm text-red-500">
-                        {errors.password.message}
-                      </p>
+                  </>
+                ) : (
+                  <>
+                    {inviteData && (
+                      <div className="rounded-xl border border-green-100 bg-green-50 p-4 text-sm text-green-800 space-y-2">
+                        <div className="font-semibold">Invitation detected</div>
+                        <div>
+                          <span className="font-medium">{inviteData.invitedByName}</span> invited you to join{" "}
+                          <span className="font-medium">{inviteData.workspaceName}</span>
+                        </div>
+                      </div>
                     )}
-                  </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="remember-desktop" />
-                      <Label htmlFor="remember-desktop">Remember me</Label>
-                    </div>
-                    <Link
-                      to="/auth/forgot-password"
-                      className="text-sm font-medium text-green-600 hover:underline"
+                    <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                        <Input
+                          id="firstName"
+                          type="text"
+                          placeholder="First name"
+                          {...registerForm.register("firstName")}
+                          disabled={isLoading}
+                          className={`h-11 ${registerForm.formState.errors.firstName ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+                        />
+                        </div>
+                        <div className="space-y-2">
+                        <Input
+                          id="lastName"
+                          type="text"
+                          placeholder="Last name"
+                          {...registerForm.register("lastName")}
+                          disabled={isLoading}
+                          className={`h-11 ${registerForm.formState.errors.lastName ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+                        />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Input
+                          id="email-register"
+                          type="email"
+                          placeholder="your@email.com"
+                          {...registerForm.register("email")}
+                          disabled={isLoading || !!inviteData?.email}
+                          readOnly={!!inviteData?.email}
+                          autoComplete="email"
+                          className={`h-11 ${inviteData?.email ? "bg-gray-100 cursor-not-allowed" : ""} ${registerForm.formState.errors.email ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+                        />
+                        {inviteData?.email && (
+                          <p className="text-xs text-gray-500">Email is pre-filled from your invitation</p>
+                        )}
+                        {/* Error text removed - border indicates validation */}
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="relative">
+                          <Input
+                            id="password-register"
+                            type={showPasswordRegister ? "text" : "password"}
+                            placeholder="********"
+                            {...registerForm.register("password")}
+                            disabled={isLoading}
+                            autoComplete="new-password"
+                            className={`h-11 pr-10 ${registerForm.formState.errors.password ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPasswordRegister(!showPasswordRegister)}
+                            tabIndex={-1}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                          >
+                            {showPasswordRegister ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                        {registerForm.formState.errors.password && (
+                          <p className="text-xs text-red-500">
+                            {registerForm.formState.errors.password.message}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="relative">
+                          <Input
+                            id="confirmPassword"
+                            type={showConfirmPassword ? "text" : "password"}
+                            placeholder="********"
+                            {...registerForm.register("confirmPassword")}
+                            disabled={isLoading}
+                            autoComplete="new-password"
+                            className={`h-11 pr-10 ${registerForm.formState.errors.confirmPassword ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            tabIndex={-1}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                          >
+                            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                        {registerForm.formState.errors.confirmPassword && (
+                          <p className="text-xs text-red-500">
+                            {registerForm.formState.errors.confirmPassword.message}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex items-start gap-2">
+                        <Checkbox
+                          id="gdpr"
+                          checked={registerForm.watch("gdprAccepted")}
+                          onCheckedChange={async (checked) => {
+                            registerForm.setValue("gdprAccepted", checked as boolean)
+                            await registerForm.trigger("gdprAccepted")
+                          }}
+                          className={registerForm.formState.errors.gdprAccepted ? "border-red-500 text-red-500" : ""}
+                        />
+                        <label
+                          htmlFor="gdpr"
+                          className="text-sm text-gray-600 leading-tight cursor-pointer"
+                          onClick={async () => {
+                            const current = registerForm.getValues("gdprAccepted")
+                            registerForm.setValue("gdprAccepted", !current)
+                            await registerForm.trigger("gdprAccepted")
+                          }}
+                        >
+                          I agree to the{" "}
+                          <Link to="/privacy" className="text-green-600 hover:underline" onClick={(e) => e.stopPropagation()}>
+                            Privacy Policy
+                          </Link>{" "}
+                          and{" "}
+                          <Link to="/terms" className="text-green-600 hover:underline" onClick={(e) => e.stopPropagation()}>
+                            Terms of Service
+                          </Link>
+                        </label>
+                      </div>
+                    <Button
+                      type="submit"
+                      className="w-full bg-green-600 hover:bg-green-700"
+                      disabled={isLoading || !registerForm.formState.isValid}
                     >
-                      Forgot password?
-                    </Link>
-                  </div>
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Creating account...
+                          </>
+                        ) : (
+                          "Create account"
+                        )}
+                      </Button>
+                    </form>
 
-                  <Button
-                    type="submit"
-                    className="w-full bg-green-600 hover:bg-green-700"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Signing in...
-                      </>
-                    ) : (
-                      "Sign In"
-                    )}
-                  </Button>
-                </form>
-
-                <div className="space-y-3">
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-gray-300" />
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-300" />
+                      </div>
+                      <div className="relative flex justify-center text-sm">
+                        <span className="bg-white px-2 text-gray-500">Or continue with</span>
+                      </div>
                     </div>
-                    <div className="relative flex justify-center text-sm">
-                      <span className="bg-white px-2 text-gray-500">Or continue with</span>
-                    </div>
-                  </div>
 
-                  <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-                    <div className="flex justify-center">
-                      <GoogleLogin
-                        onSuccess={handleGoogleSuccess}
-                        onError={handleGoogleError}
-                        useOneTap={false}
-                        theme="outline"
-                        size="large"
-                        text="signin_with"
-                        shape="rectangular"
-                        logo_alignment="left"
-                      />
-                    </div>
-                  </GoogleOAuthProvider>
-                </div>
+                    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+                      <div className="flex justify-center">
+                        <GoogleLogin
+                          onSuccess={handleGoogleSuccess}
+                          onError={handleGoogleError}
+                          useOneTap={false}
+                          theme="outline"
+                          size="large"
+                          text="signup_with"
+                          shape="rectangular"
+                          logo_alignment="left"
+                        />
+                      </div>
+                    </GoogleOAuthProvider>
 
-                <div className="text-center text-sm text-gray-600">
-                  Don't have an account?{" "}
-                  <button
-                    onClick={() => {
-                      localStorage.clear()
-                      sessionStorage.clear()
-                      setActiveTab("register")
-                      setShowLoginModal(true)
-                    }}
-                    className="text-green-600 hover:underline font-semibold"
-                  >
-                    Create one
-                  </button>
-                </div>
+                    <div className="text-center text-sm text-gray-600">
+                      Already have an account?{" "}
+                      <button
+                        onClick={() => {
+                          if (!canLogin) {
+                            setWipFeature('login')
+                            setShowWIPModal(true)
+                            return
+                          }
+                          localStorage.clear()
+                          sessionStorage.clear()
+                          setError("")
+                          setActiveTab("signin")
+                        }}
+                        className="text-green-600 hover:underline font-semibold"
+                      >
+                        Sign in
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -1131,7 +1304,6 @@ export function LoginPage() {
             return
           }
           setActiveTab('register')
-          setShowLoginModal(true)
         }} />
       </div>
 
@@ -1253,7 +1425,6 @@ export function LoginPage() {
                 <>
                   <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="email-modal">{t("form.email")}</Label>
                       <Input
                         id="email-modal"
                         type="email"
@@ -1269,7 +1440,6 @@ export function LoginPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="password-modal">{t("form.password")}</Label>
                       <div className="relative">
                         <Input
                           id="password-modal"
@@ -1338,37 +1508,28 @@ export function LoginPage() {
                   <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
-                        <Label htmlFor="firstName">{t("form.firstName")}</Label>
                         <Input
                           id="firstName"
                           type="text"
-                          placeholder="John"
+                          placeholder="First name"
                           {...registerForm.register("firstName")}
                           disabled={isLoading}
-                          className="h-11"
+                          className={`h-11 ${registerForm.formState.errors.firstName ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                         />
-                        {registerForm.formState.errors.firstName && (
-                          <p className="text-sm text-red-500">{registerForm.formState.errors.firstName.message}</p>
-                        )}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="lastName">{t("form.lastName")}</Label>
                         <Input
                           id="lastName"
                           type="text"
-                          placeholder="Doe"
+                          placeholder="Last name"
                           {...registerForm.register("lastName")}
                           disabled={isLoading}
-                          className="h-11"
+                          className={`h-11 ${registerForm.formState.errors.lastName ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                         />
-                        {registerForm.formState.errors.lastName && (
-                          <p className="text-sm text-red-500">{registerForm.formState.errors.lastName.message}</p>
-                        )}
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="email-register">{t("form.email")}</Label>
                       <Input
                         id="email-register"
                         type="email"
@@ -1377,18 +1538,14 @@ export function LoginPage() {
                         disabled={isLoading || !!inviteData?.email}
                         readOnly={!!inviteData?.email}
                         autoComplete="email"
-                        className={`h-11 ${inviteData?.email ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                        className={`h-11 ${inviteData?.email ? 'bg-gray-100 cursor-not-allowed' : ''} ${registerForm.formState.errors.email ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                       />
                       {inviteData?.email && (
                         <p className="text-xs text-gray-500">Email is pre-filled from your invitation</p>
                       )}
-                      {registerForm.formState.errors.email && (
-                        <p className="text-sm text-red-500">{registerForm.formState.errors.email.message}</p>
-                      )}
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="password-register">{t("form.password")}</Label>
                       <div className="relative">
                         <Input
                           id="password-register"
@@ -1397,7 +1554,7 @@ export function LoginPage() {
                           {...registerForm.register("password")}
                           disabled={isLoading}
                           autoComplete="new-password"
-                          className="h-11 pr-10"
+                          className={`h-11 pr-10 ${registerForm.formState.errors.password ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                         />
                         <button
                           type="button"
@@ -1408,16 +1565,12 @@ export function LoginPage() {
                           {showPasswordRegister ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                       </div>
-                      <p className="text-xs text-gray-500">
-                        {t("register.passwordHint")}
-                      </p>
                       {registerForm.formState.errors.password && (
-                        <p className="text-sm text-red-500">{registerForm.formState.errors.password.message}</p>
+                        <p className="text-xs text-red-500">{registerForm.formState.errors.password.message}</p>
                       )}
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="confirmPassword">{t("form.confirmPassword")}</Label>
                       <div className="relative">
                         <Input
                           id="confirmPassword"
@@ -1426,7 +1579,7 @@ export function LoginPage() {
                           {...registerForm.register("confirmPassword")}
                           disabled={isLoading}
                           autoComplete="new-password"
-                          className="h-11 pr-10"
+                          className={`h-11 pr-10 ${registerForm.formState.errors.confirmPassword ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                         />
                         <button
                           type="button"
@@ -1438,7 +1591,9 @@ export function LoginPage() {
                         </button>
                       </div>
                       {registerForm.formState.errors.confirmPassword && (
-                        <p className="text-sm text-red-500">{registerForm.formState.errors.confirmPassword.message}</p>
+                        <p className="text-xs text-red-500">
+                          {registerForm.formState.errors.confirmPassword.message}
+                        </p>
                       )}
                     </div>
 
@@ -1451,6 +1606,7 @@ export function LoginPage() {
                           // Force immediate validation
                           await registerForm.trigger("gdprAccepted")
                         }}
+                        className={registerForm.formState.errors.gdprAccepted ? "border-red-500 text-red-500" : ""}
                       />
                       <label 
                         htmlFor="gdpr" 
@@ -1472,14 +1628,10 @@ export function LoginPage() {
                         </Link>
                       </label>
                     </div>
-                    {registerForm.formState.errors.gdprAccepted && (
-                      <p className="text-sm text-red-500">{registerForm.formState.errors.gdprAccepted.message}</p>
-                    )}
-
                     <Button
                       type="submit"
                       className="w-full h-11 bg-green-600 hover:bg-green-700"
-                      disabled={isLoading}
+                      disabled={isLoading || !registerForm.formState.isValid}
                     >
                       {isLoading ? (
                         <>
