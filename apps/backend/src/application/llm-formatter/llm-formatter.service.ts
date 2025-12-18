@@ -492,7 +492,7 @@ export class LLMFormatterService {
 
     // Info compatte su righe con bullet
     const codeAndFormat = []
-    if (product.code) codeAndFormat.push(`Codice: ${product.code}`)
+    if (product.sku) codeAndFormat.push(`Codice: ${product.sku}`)
     if (product.formato) codeAndFormat.push(`Formato: ${product.formato}`)
     if (codeAndFormat.length > 0) {
       detailLines.push(`- ${codeAndFormat.join(" - ")}`)
@@ -564,7 +564,7 @@ export class LLMFormatterService {
     if (products.length > 0) {
       lines.push("🛒 Prodotti:")
       for (const item of products) {
-        const qty = item.quantity || 1
+        const qty = (item as any).quantity || 1
         lines.push(`- ${qty}x ${item.name} - ${formatDisplayPrice(item.price)}`)
       }
     }

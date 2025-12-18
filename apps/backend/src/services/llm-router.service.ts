@@ -1909,7 +1909,7 @@ export class LLMRouterService {
                     productId: selectedProductFromAgent.sku,
                     productName: selectedProductFromAgent.name,
                     quantity: 1,
-                    itemType: selectedProductFromAgent.itemType || "PRODUCT",
+                    itemType: (selectedProductFromAgent.itemType || "PRODUCT") as "PRODUCT" | "SERVICE",
                   },
                 })
                 logger.info("🛒 [Router] Set pendingAction ADD_TO_CART for product detail confirmation", {

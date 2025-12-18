@@ -46,6 +46,11 @@ export interface WorkspaceProps {
   // 🆕 Logo
   logoUrl?: string | null
   logoKey?: string | null // 💾 S3 key for cleanup
+  // 🆕 Translation Settings
+  translateProductNames?: boolean
+  translateCategoryNames?: boolean
+  translateServiceNames?: boolean
+  catalogBaseLanguage?: string
 }
 
 export class Workspace extends Entity<WorkspaceProps> {
@@ -216,6 +221,23 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get logoUrl(): string | null | undefined {
     return this.props.logoUrl
+  }
+
+  // 🆕 Translation Settings getters
+  get translateProductNames(): boolean {
+    return this.props.translateProductNames ?? false
+  }
+
+  get translateCategoryNames(): boolean {
+    return this.props.translateCategoryNames ?? false
+  }
+
+  get translateServiceNames(): boolean {
+    return this.props.translateServiceNames ?? true
+  }
+
+  get catalogBaseLanguage(): string {
+    return this.props.catalogBaseLanguage ?? "it"
   }
 
   // Business methods

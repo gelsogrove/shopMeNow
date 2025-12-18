@@ -1,6 +1,5 @@
 import { NewsUpdates } from "@/components/landing/NewsUpdates"
 import { PricingPlans } from "@/components/landing/PricingPlans"
-import { LanguageSelector } from "@/components/shared/LanguageSelector"
 import { WIPModal } from "@/components/shared/WIPModal"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -18,18 +17,19 @@ import { Label } from "@/components/ui/label"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useFeatureFlags } from "@/hooks/usePlatformConfig"
 import { logger } from "@/lib/logger"
+import hero1 from "@/assets/hero/home_1.png"
+import hero2 from "@/assets/hero/home_2.png"
+import hero3 from "@/assets/hero/home_3.png"
+import hero4 from "@/assets/hero/home_4.png"
+import hero5 from "@/assets/hero/home_5.png"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 import {
   AlertTriangle,
   BarChart3,
-  Bell,
-  Globe,
   Mail,
   MapPin,
   Phone,
-  ShoppingCart,
-  Zap,
   Chrome,
   Loader2,
   Eye,
@@ -137,6 +137,22 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showPasswordRegister, setShowPasswordRegister] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+
+  const heroSlides = [
+    { src: hero1, alt: "WhatsApp AI agent dashboard view 1" },
+    { src: hero2, alt: "WhatsApp AI agent dashboard view 2" },
+    { src: hero3, alt: "WhatsApp AI agent dashboard view 3" },
+    { src: hero4, alt: "WhatsApp AI agent dashboard view 4" },
+    { src: hero5, alt: "WhatsApp AI agent dashboard view 5" },
+  ]
+  const [currentSlide, setCurrentSlide] = useState(0)
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroSlides.length)
+    }, 7000)
+    return () => clearInterval(interval)
+  }, [heroSlides.length])
   
   const navigate = useNavigate()
 
@@ -751,7 +767,17 @@ export function LoginPage() {
   }
 
   return (
-    <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div
+      className="w-full min-h-screen"
+      style={{
+        backgroundImage:
+          "linear-gradient(to bottom right, rgba(248,250,252,0.95), rgba(226,232,240,0.95)), url('/background.png')",
+        backgroundRepeat: "no-repeat, no-repeat",
+        backgroundSize: "100% 100%, cover",
+        backgroundPosition: "top left, center top",
+        backgroundBlendMode: "normal, lighten",
+      }}
+    >
       {/* Header - Professional Design */}
       <header className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-8 lg:px-12">
@@ -769,11 +795,6 @@ export function LoginPage() {
 
             {/* Right: Language Selector + Auth */}
             <div className="flex items-center gap-6">
-              {/* Language Flags - Inline in header */}
-              <div className="hidden sm:block">
-                <LanguageSelector />
-              </div>
-              
               {isLoggedIn ? (
                 <div className="flex items-center gap-4">
                   {/* Plan Badge */}
@@ -908,105 +929,62 @@ export function LoginPage() {
             </div>
           </div>
           
-          {/* Mobile Language Selector - Below main row on small screens */}
-          <div className="sm:hidden pb-3 flex justify-end">
-            <LanguageSelector />
-          </div>
         </div>
       </header>
 
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12 lg:py-16">
-        {/* Hero Section - Side by Side */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-          
-          {/* Left Side - Text & Features (wider for hero text) */}
-          <div className="lg:col-span-7 space-y-8">
-            {/* Hero Title */}
-            <div className="space-y-4">
-              <h1 className="text-4xl lg:text-5xl font-bold text-slate-900 leading-snug lg:leading-[1.35] text-balance">
-                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-emerald-500">
-                  {t("hero.title")}
-                </span>
-              </h1>
-              <p className="text-lg text-slate-600 leading-relaxed">
-                {t("hero.subtitle")}
-              </p>
-            </div>
-
-            {/* Features Grid - Single Column */}
-            <div>
-              <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">
-                {t("hero.whyTitle")}
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                    <ShoppingCart className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-slate-900 text-sm">{t("features.ecommerce")}</h4>
-                    <p className="text-xs text-slate-500">{t("features.ecommerce.desc")}</p>
-                  </div>
+        <div className="flex flex-col lg:flex-row gap-10 items-start">
+          <div className="flex justify-start items-center w-full lg:flex-1">
+            <div className="relative w-full max-w-3xl lg:ml-2">
+              <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-100 rounded-[32px] transform rotate-2 scale-105" />
+              <div className="relative rounded-[32px] shadow-2xl overflow-hidden bg-white">
+                <div className="absolute top-5 inset-x-0 flex justify-center gap-2 z-10 opacity-0" aria-hidden="true">
+                  {heroSlides.map((_, index) => (
+                    <span
+                      key={`slide-dot-${index}`}
+                      className={`h-2.5 rounded-full transition-all duration-300 ${
+                        index === currentSlide ? "w-8 bg-green-600" : "w-2.5 bg-slate-300"
+                      }`}
+                    />
+                  ))}
                 </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
-                    <Globe className="w-4 h-4 text-orange-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-slate-900 text-sm">{t("features.multiLanguage")}</h4>
-                    <p className="text-xs text-slate-500">{t("features.multiLanguage.desc")}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
-                    <Bell className="w-4 h-4 text-green-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-slate-900 text-sm">{t("features.pushNotifications")}</h4>
-                    <p className="text-xs text-slate-500">{t("features.pushNotifications.desc")}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
-                    <Zap className="w-4 h-4 text-purple-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-slate-900 text-sm">{t("features.24x7")}</h4>
-                    <p className="text-xs text-slate-500">{t("features.24x7.desc")}</p>
-                  </div>
+                <div className="relative w-full pt-[70%]">
+                  {heroSlides.map((slide, index) => (
+                    <img
+                      key={slide.src}
+                      src={slide.src}
+                      alt={slide.alt}
+                      className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ease-in-out ${
+                        index === currentSlide ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
+                      }`}
+                    />
+                  ))}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Right Side - Image (7 cols) */}
-          <div className="lg:col-span-5 lg:pl-12">
-            <div className="relative overflow-visible lg:translate-x-28 lg:translate-y-8 lg:scale-[1.55] lg:origin-right">
-              <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-100 rounded-3xl transform rotate-2"></div>
-              <img 
-                src="/home.png" 
-                alt="eChatbot Dashboard" 
-                className="relative rounded-2xl shadow-2xl w-full h-auto"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Login Form Section - Mobile Only */}
-        {canLogin && !isLoggedIn && (
-          <div
-            id="login-form-mobile"
-            className="max-w-md mx-auto mt-12 lg:hidden"
-          >
-            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
+          {canLogin && (
+            <div className="w-full max-w-md lg:w-[26rem] bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
               <div className="space-y-6">
                 <div className="text-center space-y-2">
                   <h3 className="text-2xl font-bold text-slate-900">Sign In</h3>
                   <p className="text-slate-600">Access your eChatbot workspace</p>
                 </div>
+
+                {isLoggedIn && (
+                  <div className="rounded-xl border border-green-100 bg-green-50 p-4 text-sm text-green-800 space-y-2">
+                    <div className="font-semibold">You're already signed in</div>
+                    <div className="text-green-700">{loggedInUser?.email || 'Logged user'}</div>
+                    <button
+                      type="button"
+                      onClick={() => navigate("/workspace-selection")}
+                      className="rounded-lg bg-green-600 px-4 py-2 text-white text-sm font-medium hover:bg-green-700 transition-colors"
+                    >
+                      Go to workspace
+                    </button>
+                  </div>
+                )}
 
                 {error && (
                   <Alert variant="destructive">
@@ -1018,9 +996,9 @@ export function LoginPage() {
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email-mobile">Email</Label>
+                    <Label htmlFor="email-desktop">Email</Label>
                     <Input
-                      id="email-mobile"
+                      id="email-desktop"
                       type="email"
                       placeholder="your@email.com"
                       {...register("email")}
@@ -1035,101 +1013,110 @@ export function LoginPage() {
                     )}
                   </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="password-mobile">Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="password-mobile"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      {...register("password")}
-                      disabled={isLoading}
-                      autoComplete="current-password"
-                      className="h-11 pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      tabIndex={-1}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  <div className="space-y-2">
+                    <Label htmlFor="password-desktop">Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="password-desktop"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="********"
+                        {...register("password")}
+                        disabled={isLoading}
+                        autoComplete="current-password"
+                        className="h-11 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-3 flex items-center text-gray-400"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                    {errors.password && (
+                      <p className="text-sm text-red-500">
+                        {errors.password.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="remember-desktop" />
+                      <Label htmlFor="remember-desktop">Remember me</Label>
+                    </div>
+                    <Link
+                      to="/auth/forgot-password"
+                      className="text-sm font-medium text-green-600 hover:underline"
                     >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
+                      Forgot password?
+                    </Link>
                   </div>
-                  {errors.password && (
-                    <p className="text-sm text-red-500">
-                      {errors.password.message}
-                    </p>
-                  )}
-                </div>
 
-                <div className="flex justify-end">
-                  <Link
-                    to="/forgot-password"
-                    className="text-sm text-primary hover:text-primary/80 underline-offset-4 hover:underline"
+                  <Button
+                    type="submit"
+                    className="w-full bg-green-600 hover:bg-green-700"
+                    disabled={isLoading}
                   >
-                    Forgot password?
-                  </Link>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Signing in...
+                      </>
+                    ) : (
+                      "Sign In"
+                    )}
+                  </Button>
+                </form>
+
+                <div className="space-y-3">
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-300" />
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="bg-white px-2 text-gray-500">Or continue with</span>
+                    </div>
+                  </div>
+
+                  <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+                    <div className="flex justify-center">
+                      <GoogleLogin
+                        onSuccess={handleGoogleSuccess}
+                        onError={handleGoogleError}
+                        useOneTap={false}
+                        theme="outline"
+                        size="large"
+                        text="signin_with"
+                        shape="rectangular"
+                        logo_alignment="left"
+                      />
+                    </div>
+                  </GoogleOAuthProvider>
                 </div>
 
-                <Button
-                  type="submit"
-                  className="w-full h-11 bg-green-600 hover:bg-green-700"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : (
-                    "Sign In"
-                  )}
-                </Button>
-              </form>
-
-              {/* OAuth Options - Mobile */}
-              <div className="space-y-3">
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-300" />
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="bg-white px-2 text-gray-500">Or continue with</span>
-                  </div>
-                </div>
-
-                <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-                  <div className="flex justify-center">
-                    <GoogleLogin
-                      onSuccess={handleGoogleSuccess}
-                      onError={handleGoogleError}
-                      useOneTap={false}
-                      theme="outline"
-                      size="large"
-                      text="signin_with"
-                      shape="rectangular"
-                      logo_alignment="left"
-                    />
-                  </div>
-                </GoogleOAuthProvider>
-              </div>
-
-              {canRegister && (
-                <div className="text-center text-sm text-slate-600">
+                <div className="text-center text-sm text-gray-600">
                   Don't have an account?{" "}
-                  <Link
-                    to="/auth/register"
-                    className="text-green-600 hover:text-green-700 underline-offset-4 hover:underline font-medium"
+                  <button
+                    onClick={() => {
+                      localStorage.clear()
+                      sessionStorage.clear()
+                      setActiveTab("register")
+                      setShowLoginModal(true)
+                    }}
+                    className="text-green-600 hover:underline font-semibold"
                   >
-                    Sign up
-                  </Link>
+                    Create one
+                  </button>
                 </div>
-              )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
-        )}
       </div>
 
       {/* News & Updates Section */}
@@ -1171,7 +1158,7 @@ export function LoginPage() {
               </div>
               <div className="flex items-center gap-3">
                 <MapPin className="w-5 h-5 text-green-400" />
-                <span className="text-slate-300">Tech City, TC 12345</span>
+                <span className="text-slate-300">Barcelona</span>
               </div>
             </div>
           </div>

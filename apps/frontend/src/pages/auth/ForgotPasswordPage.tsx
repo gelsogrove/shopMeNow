@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/ui/use-toast"
-import { LanguageSelector } from "@/components/shared/LanguageSelector"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2 } from "lucide-react"
@@ -96,9 +95,6 @@ export default function ForgotPasswordPage() {
   return (
     <div className="auth-background">
       <AuthLogo />
-      <div className="absolute top-4 right-4">
-        <LanguageSelector />
-      </div>
       <div className="container mx-auto px-4 flex items-center justify-center min-h-screen">
         <Card className="w-full max-w-md font-system bg-white/95 backdrop-blur-sm shadow-xl">
           <CardHeader className="space-y-1">

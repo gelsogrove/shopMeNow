@@ -21,18 +21,32 @@ const translations = {
     // Hero Section
     "hero.title": "Crea il tuo agente AI per WhatsApp",
     "hero.subtitle":
-      "eChatbot porta l'e-commerce intelligente direttamente su WhatsApp. Il nostro agente AI comprende le esigenze dei clienti, consiglia prodotti e chiude vendite 24/7—tutto attraverso conversazioni naturali.",
+      "Porta un personal shopper dentro WhatsApp. eChatbot ascolta, qualifica, propone bundle, invia pagamenti e aggiorna i clienti senza mai uscire dalla chat.",
     "hero.whyTitle": "Perché eChatbot?",
+    "hero.useCasesTitle": "Flussi pensati per il tuo team",
+    "hero.useCases.sales.title": "Team commerciali",
+    "hero.useCases.sales.desc":
+      "Qualifica i lead, suggerisci assortimenti, invia link di pagamento e chiudi ordini in pochi minuti.",
+    "hero.useCases.support.title": "Customer care",
+    "hero.useCases.support.desc":
+      "Filtra le FAQ, passa la conversazione all'operatore con tutto il contesto e registra ogni interazione.",
+    "hero.useCases.ops.title": "Operazioni & logistica",
+    "hero.useCases.ops.desc":
+      "Sincronizza inventario, segui le fasi di evasione e invia aggiornamenti di trasporto in automatico.",
 
     // Features
     "features.pushNotifications": "Push Notifications",
-    "features.pushNotifications.desc": "Campagne e avvisi via WhatsApp",
+    "features.pushNotifications.desc":
+      "Campagne automatiche, follow-up e alert ordine via WhatsApp",
     "features.24x7": "24/7 Availability",
-    "features.24x7.desc": "Il tuo agente AI sempre attivo",
+    "features.24x7.desc":
+      "Un concierge che risponde, passa all'operatore e chiude ordini 24/7",
     "features.multiLanguage": "Multi-Language",
-    "features.multiLanguage.desc": "Supporto automatico multilingua",
+    "features.multiLanguage.desc":
+      "Rispondi in oltre 30 lingue con traduzioni native e tono locale",
     "features.ecommerce": "E-commerce Platform",
-    "features.ecommerce.desc": "Prodotti, ordini e clienti in un posto",
+    "features.ecommerce.desc":
+      "Gestisci catalogo, inventario, ordini e clienti da un'unica control room",
     "features.analytics": "Analytics",
     "features.analytics.desc": "Monitora vendite e performance",
 
@@ -50,10 +64,10 @@ const translations = {
     "news.2.desc":
       "Presentiamo la nuova funzionalità di Analisi Ricerca Prodotti! Ora puoi analizzare quali prodotti i tuoi clienti cercano più frequentemente. Questa potente intuizione ti aiuta a comprendere la domanda dei clienti, ottimizzare il tuo inventario e identificare i prodotti di tendenza. Il dashboard di analisi fornisce grafici e report dettagliati che mostrano i modelli di ricerca, le parole chiave popolari e i tassi di conversione.",
     "news.3.date": "28 Settembre 2025",
-    "news.3.title": "Gestione Team di Vendita",
-    "news.3.category": "Gestione",
+    "news.3.title": "Orchestrazione Sell Agents",
+    "news.3.category": "Sales Agents",
     "news.3.desc":
-      "Presentiamo la potente funzionalità di Gestione Team di Vendita! Ora puoi assegnare agenti di vendita dedicati ai tuoi clienti per un'esperienza personalizzata. Ogni cliente può avere un rappresentante di riferimento che gestisce il suo account, costruisce relazioni durature e fornisce supporto su misura. Il sistema traccia automaticamente le performance di ogni agente, monitora le conversioni e genera report dettagliati sulle vendite per team. Perfetto per organizzare il tuo team commerciale, ottimizzare la distribuzione dei clienti e massimizzare i risultati di vendita!",
+      "Abbiamo introdotto un orchestratore multi-agent per il team di Sell Agents! Configura agenti specializzati (catalogo, carrello, pagamenti, supporto umano) che collaborano nella stessa conversazione WhatsApp. eChatbot assegna automaticamente il compito all'agente giusto, condivide il contesto e registra i passaggi. Così ogni cliente parla sempre con il professionista più adatto e il tuo team chiude più velocemente.",
     "news.4.date": "20 Settembre 2025",
     "news.4.title": "Invia Notifiche Push",
     "news.4.category": "Marketing",
@@ -349,18 +363,28 @@ const translations = {
     // Hero Section
     "hero.title": "Is the way to sell changing?",
     "hero.subtitle":
-      "eChatbot brings intelligent e-commerce directly to WhatsApp. Our AI agent understands customer needs, recommends products, all through natural conversations.",
+      "Bring a personal shopper into WhatsApp. eChatbot listens, qualifies, recommends bundles, pushes payments, and keeps customers updated without leaving the chat.",
     "hero.whyTitle": "Why eChatbot?",
+    "hero.useCasesTitle": "Tailored workflows for your team",
+    "hero.useCases.sales.title": "Sales teams",
+    "hero.useCases.sales.desc":
+      "Qualify leads, recommend assortments, send payment links, and close orders in minutes.",
+    "hero.useCases.support.title": "Customer support",
+    "hero.useCases.support.desc":
+      "Triage FAQs, escalate to humans with full context, and keep every conversation logged.",
+    "hero.useCases.ops.title": "Operations & logistics",
+    "hero.useCases.ops.desc":
+      "Sync inventory, follow fulfillment steps, and trigger transport updates automatically.",
 
     // Features
     "features.pushNotifications": "Push Notifications",
-    "features.pushNotifications.desc": "Campaigns and alerts via WhatsApp",
+    "features.pushNotifications.desc": "Automated drops, re-engagement flows, and order alerts delivered on WhatsApp",
     "features.24x7": "24/7 Availability",
-    "features.24x7.desc": "Your AI agent always active",
+    "features.24x7.desc": "A concierge that never sleeps—resolves FAQs, escalates to humans, and closes orders around the clock",
     "features.multiLanguage": "Multi-Language",
-    "features.multiLanguage.desc": "Automatic multilingual support",
+    "features.multiLanguage.desc": "Respond instantly in 30+ languages with native-sounding translations and local phrasing",
     "features.ecommerce": "E-commerce Platform",
-    "features.ecommerce.desc": "Products, orders and customers in one place",
+    "features.ecommerce.desc": "Control catalog, inventory, orders, and customer timelines from a single WhatsApp-ready dashboard",
     "features.analytics": "Analytics",
     "features.analytics.desc": "Monitor sales and performance",
 
@@ -377,6 +401,11 @@ const translations = {
     "news.2.category": "Analytics",
     "news.2.desc":
       "Introducing the new Product Search Analytics feature! Now you can analyze which products your customers search for most frequently. This powerful insight helps you understand customer demand, optimize your inventory, and identify trending products. The analytics dashboard provides detailed charts and reports showing search patterns, popular keywords, and conversion rates.",
+    "news.3.date": "September 28, 2025",
+    "news.3.title": "Sell Agents Team Orchestration",
+    "news.3.category": "Sales Agents",
+    "news.3.desc":
+      "Meet our multi-agent orchestrator for Sales Teams! Configure dedicated agents for catalog discovery, cart management, checkout, and human assistance. eChatbot routes each customer request to the right specialist, shares context between agents, and logs the entire workflow. Your customers always talk to the best-suited expert while your team focuses on closing more deals.",
     "news.4.date": "September 20, 2025",
     "news.4.title": "Send Push Notifications",
     "news.4.category": "Marketing",
@@ -675,18 +704,32 @@ const translations = {
     // Hero Section
     "hero.title": "Crea tu agente AI para WhatsApp",
     "hero.subtitle":
-      "eChatbot lleva el e-commerce inteligente directamente a WhatsApp. Nuestro agente de IA comprende las necesidades del cliente, recomienda productos y cierra ventas 24/7—todo a través de conversaciones naturales.",
+      "Lleva un personal shopper a WhatsApp. eChatbot escucha, califica, sugiere combos, envía pagos y mantiene al cliente informado sin salir del chat.",
     "hero.whyTitle": "¿Por qué eChatbot?",
+    "hero.useCasesTitle": "Workflows para tu equipo",
+    "hero.useCases.sales.title": "Equipos comerciales",
+    "hero.useCases.sales.desc":
+      "Califica leads, propone surtidos, envía enlaces de pago y cierra pedidos en minutos.",
+    "hero.useCases.support.title": "Soporte al cliente",
+    "hero.useCases.support.desc":
+      "Filtra las preguntas frecuentes, escala al humano con todo el contexto y registra cada conversación.",
+    "hero.useCases.ops.title": "Operaciones y logística",
+    "hero.useCases.ops.desc":
+      "Sincroniza inventario, sigue las etapas de fulfillment y envía actualizaciones de transporte automáticamente.",
 
     // Features
     "features.pushNotifications": "Push Notifications",
-    "features.pushNotifications.desc": "Campañas y alertas vía WhatsApp",
+    "features.pushNotifications.desc":
+      "Campañas automatizadas, reactivaciones y alertas de pedido vía WhatsApp",
     "features.24x7": "24/7 Availability",
-    "features.24x7.desc": "Tu agente IA siempre activo",
+    "features.24x7.desc":
+      "Un concierge que nunca duerme: resuelve FAQs, escala a humanos y cierra pedidos todo el día",
     "features.multiLanguage": "Multi-Language",
-    "features.multiLanguage.desc": "Soporte multilingüe automático",
+    "features.multiLanguage.desc":
+      "Responde al instante en más de 30 idiomas con traducciones naturales y tono local",
     "features.ecommerce": "E-commerce Platform",
-    "features.ecommerce.desc": "Productos, pedidos y clientes en un lugar",
+    "features.ecommerce.desc":
+      "Controla catálogo, inventario, pedidos y clientes desde un panel único listo para WhatsApp",
     "features.analytics": "Analytics",
     "features.analytics.desc": "Monitorea ventas y rendimiento",
 
@@ -703,6 +746,11 @@ const translations = {
     "news.2.category": "Análisis",
     "news.2.desc":
       "¡Presentamos nuestra nueva función de Análisis de Búsqueda de Productos! Ahora puedes analizar qué productos buscan tus clientes con más frecuencia. Esta poderosa información te ayuda a comprender la demanda del cliente, optimizar tu inventario e identificar productos en tendencia. El panel de análisis proporciona gráficos e informes detallados que muestran patrones de búsqueda, palabras clave populares y tasas de conversión.",
+    "news.3.date": "28 de Septiembre de 2025",
+    "news.3.title": "Orquestación de Sell Agents",
+    "news.3.category": "Agentes de Venta",
+    "news.3.desc":
+      "Estrenamos un orquestador multiagente para tu equipo comercial. Define agentes especializados para catálogo, carrito, pagos y soporte humano, y deja que eChatbot derive cada conversación al experto correcto. Todo el contexto viaja con el cliente, las tareas quedan registradas y cada paso se asigna al profesional indicado. Resultado: procesos más rápidos y clientes mejor atendidos.",
     "news.4.date": "20 de Septiembre de 2025",
     "news.4.title": "Enviar Notificaciones Push",
     "news.4.category": "Marketing",
@@ -946,18 +994,32 @@ const translations = {
     // Hero Section
     "hero.title": "Crie seu agente AI para WhatsApp",
     "hero.subtitle":
-      "eChatbot traz e-commerce inteligente diretamente para o WhatsApp. Nosso agente de IA entende as necessidades do cliente, recomenda produtos e fecha vendas 24/7—tudo através de conversas naturais.",
+      "Leve um personal shopper para o WhatsApp. eChatbot escuta, qualifica, sugere combos, envia pagamentos e mantém o cliente atualizado sem sair da conversa.",
     "hero.whyTitle": "Por que eChatbot?",
+    "hero.useCasesTitle": "Fluxos feitos para o seu time",
+    "hero.useCases.sales.title": "Times comerciais",
+    "hero.useCases.sales.desc":
+      "Qualifique leads, sugira sortimentos, envie links de pagamento e feche pedidos em minutos.",
+    "hero.useCases.support.title": "Atendimento ao cliente",
+    "hero.useCases.support.desc":
+      "Filtre FAQs, escale para humanos com todo o contexto e registre cada interação.",
+    "hero.useCases.ops.title": "Operações e logística",
+    "hero.useCases.ops.desc":
+      "Sincronize estoque, acompanhe o fulfillment e envie atualizações de transporte automaticamente.",
 
     // Features
     "features.pushNotifications": "Push Notifications",
-    "features.pushNotifications.desc": "Campanhas e alertas via WhatsApp",
+    "features.pushNotifications.desc":
+      "Campanhas automatizadas, reengajamentos e alertas de pedido via WhatsApp",
     "features.24x7": "24/7 Availability",
-    "features.24x7.desc": "Seu agente IA sempre ativo",
+    "features.24x7.desc":
+      "Um concierge que nunca dorme: resolve dúvidas, encaminha para humanos e fecha pedidos 24/7",
     "features.multiLanguage": "Multi-Language",
-    "features.multiLanguage.desc": "Suporte multilíngue automático",
+    "features.multiLanguage.desc":
+      "Responda instantaneamente em mais de 30 idiomas com traduções naturais e tom local",
     "features.ecommerce": "E-commerce Platform",
-    "features.ecommerce.desc": "Produtos, pedidos e clientes em um lugar",
+    "features.ecommerce.desc":
+      "Controle catálogo, estoque, pedidos e clientes em um único painel pronto para WhatsApp",
     "features.analytics": "Analytics",
     "features.analytics.desc": "Monitore vendas e desempenho",
 
@@ -974,6 +1036,11 @@ const translations = {
     "news.2.category": "Análise",
     "news.2.desc":
       "Apresentando nossa nova funcionalidade de Análise de Busca de Produtos! Agora você pode analisar quais produtos seus clientes estão procurando com mais frequência. Esta poderosa percepção ajuda você a entender a demanda do cliente, otimizar seu estoque e identificar produtos em tendência. O painel de análise fornece gráficos e relatórios detalhados mostrando padrões de busca, palavras-chave populares e taxas de conversão.",
+    "news.3.date": "28 de Setembro de 2025",
+    "news.3.title": "Orquestração de Sell Agents",
+    "news.3.category": "Agentes de Venda",
+    "news.3.desc":
+      "Acabamos de lançar um orquestrador multiagente para o time comercial! Configure agentes dedicados para catálogo, carrinho, checkout e suporte humano, enquanto o eChatbot direciona cada conversa para o especialista certo. O contexto circula entre os agentes, tudo fica registrado e o cliente recebe o atendimento mais qualificado em cada etapa do funil.",
     "news.4.date": "20 de Setembro de 2025",
     "news.4.title": "Enviar Notificações Push",
     "news.4.category": "Marketing",

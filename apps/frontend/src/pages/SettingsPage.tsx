@@ -54,6 +54,11 @@ interface WorkspaceData {
   botIdentityResponse: string
   address: string // 🆕 Physical location for "where are you?" questions
   customAiRules: string // 🆕 Custom AI rules that override default behavior
+  // 🆕 Translation Settings
+  translateProductNames: boolean
+  translateCategoryNames: boolean
+  translateServiceNames: boolean
+  catalogBaseLanguage: string
 }
 
 const defaultWelcomeMessage =
@@ -104,6 +109,11 @@ export default function SettingsPage() {
     botIdentityResponse: "",
     address: "",
     customAiRules: "",
+    // 🆕 Translation Settings
+    translateProductNames: false,
+    translateCategoryNames: false,
+    translateServiceNames: true,
+    catalogBaseLanguage: "it",
   })
   const { workspace, loading, setCurrentWorkspace } = useWorkspace()
   const { isSuperAdmin } = useWorkspaceRole(workspace?.id)
@@ -135,6 +145,11 @@ export default function SettingsPage() {
         "I'm your digital assistant. I can help you find products, answer questions, and manage your orders!",
       address: workspace.address || "",
       customAiRules: workspace.customAiRules || "",
+      // 🆕 Translation Settings
+      translateProductNames: workspace.translateProductNames ?? false,
+      translateCategoryNames: workspace.translateCategoryNames ?? false,
+      translateServiceNames: workspace.translateServiceNames ?? true,
+      catalogBaseLanguage: workspace.catalogBaseLanguage || "it",
     })
   }, [workspace])
 
@@ -249,6 +264,11 @@ export default function SettingsPage() {
       botIdentityResponse: formData.botIdentityResponse,
       address: formData.address,
       customAiRules: formData.customAiRules,
+      // 🆕 Translation Settings
+      translateProductNames: formData.translateProductNames,
+      translateCategoryNames: formData.translateCategoryNames,
+      translateServiceNames: formData.translateServiceNames,
+      catalogBaseLanguage: formData.catalogBaseLanguage,
     }
 
     saveSettingsMutation.mutate(updateData)
@@ -300,12 +320,13 @@ export default function SettingsPage() {
 
         {/* Tabs Navigation */}
         <Tabs defaultValue="basic" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="basic">📱 Basic</TabsTrigger>
             <TabsTrigger value="personality">🤖 Personality</TabsTrigger>
             <TabsTrigger value="business">🏪 Business</TabsTrigger>
             <TabsTrigger value="support">👤 Support</TabsTrigger>
             <TabsTrigger value="custom-ai">⚙️ Custom AI</TabsTrigger>
+            <TabsTrigger value="translation">🌍 Translation</TabsTrigger>
             <TabsTrigger value="security">🛡️ Security</TabsTrigger>
           </TabsList>
 
@@ -756,6 +777,96 @@ export default function SettingsPage() {
               </p>
             </div>
           </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Translation Tab */}
+          <TabsContent value="translation" className="space-y-6">
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <span className="text-lg">🌍</span> Translation Settings
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <p className="text-sm text-muted-foreground">
+                  Configure how the AI translates your catalog content when responding to customers in different languages.
+                  By default, product and category names are preserved in the original language (e.g., "Pecorino Romano" stays "Pecorino Romano").
+                </p>
+
+                <div className="space-y-2">
+                  <Label htmlFor="catalogBaseLanguage">Catalog Base Language</Label>
+                  <Select 
+                    value={formData.catalogBaseLanguage} 
+                    onValueChange={(value) => handleFieldChange("catalogBaseLanguage", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="it">🇮🇹 Italian</SelectItem>
+                      <SelectItem value="en">🇬🇧 English</SelectItem>
+                      <SelectItem value="es">🇪🇸 Spanish</SelectItem>
+                      <SelectItem value="pt">🇵🇹 Portuguese</SelectItem>
+                      <SelectItem value="fr">🇫🇷 French</SelectItem>
+                      <SelectItem value="de">🇩🇪 German</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    The language your product catalog is written in. The AI will preserve names in this language when appropriate.
+                  </p>
+                </div>
+
+                <div className="border-t pt-4 space-y-4">
+                  <h4 className="font-medium text-sm">Translation Rules</h4>
+                  
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <Label className="text-sm font-medium">Translate Product Names</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        When OFF, names like "Pecorino Romano" stay as-is. When ON, they get translated.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={formData.translateProductNames}
+                      onCheckedChange={(checked) => handleFieldChange("translateProductNames", checked)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <Label className="text-sm font-medium">Translate Category Names</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        When OFF, category names remain in their original language.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={formData.translateCategoryNames}
+                      onCheckedChange={(checked) => handleFieldChange("translateCategoryNames", checked)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <Label className="text-sm font-medium">Translate Service Names</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        When ON (default), service descriptions get translated to customer's language.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={formData.translateServiceNames}
+                      onCheckedChange={(checked) => handleFieldChange("translateServiceNames", checked)}
+                    />
+                  </div>
+                </div>
+
+                <div className="border-t pt-4">
+                  <p className="text-xs text-muted-foreground">
+                    💡 <strong>Tip:</strong> For authentic Italian food products, we recommend keeping product names untranslated 
+                    to preserve their authenticity and comply with PDO/PGI regulations.
+                  </p>
+                </div>
+              </CardContent>
             </Card>
           </TabsContent>
 

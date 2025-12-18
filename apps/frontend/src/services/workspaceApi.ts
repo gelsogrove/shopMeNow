@@ -42,6 +42,11 @@ export interface Workspace {
   customAiRules?: string
   // 🆕 Channel branding
   logoUrl?: string
+  // 🆕 Translation Settings
+  translateProductNames?: boolean
+  translateCategoryNames?: boolean
+  translateServiceNames?: boolean
+  catalogBaseLanguage?: string
 }
 
 export interface CreateWorkspaceData {
@@ -80,6 +85,11 @@ export interface UpdateWorkspaceData {
   // 🆕 Prompt Builder fields
   address?: string
   customAiRules?: string
+  // 🆕 Translation Settings
+  translateProductNames?: boolean
+  translateCategoryNames?: boolean
+  translateServiceNames?: boolean
+  catalogBaseLanguage?: string
 }
 
 const workspaceApi = {
@@ -93,7 +103,7 @@ const workspaceApi = {
     const response = await api.get("/workspaces/current")
     return response.data
   },
-
+  
   async getById(id: string): Promise<Workspace> {
     const response = await api.get(`/workspaces/${id}`)
     return response.data

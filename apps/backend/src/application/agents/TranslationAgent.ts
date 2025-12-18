@@ -10,7 +10,7 @@
  * @critical ALWAYS call this AFTER Security Agent passes
  */
 
-import { PrismaClient } from "@echatbot/database"
+import { PrismaClient, prisma } from "@echatbot/database"
 import axios from "axios"
 import { AgentConfigRepository } from "../../repositories/agent-config.repository"
 import logger from "../../utils/logger"
@@ -31,6 +31,16 @@ export interface ProcessOptions {
   message: string
   targetLanguage: string
   customerName?: string
+}
+
+/**
+ * 🆕 Translation settings loaded from workspace
+ */
+export interface TranslationSettings {
+  translateProductNames: boolean
+  translateCategoryNames: boolean
+  translateServiceNames: boolean
+  catalogBaseLanguage: string
 }
 
 export class TranslationAgent {
@@ -113,6 +123,16 @@ export class TranslationAgent {
         }
       }
 
+      // 2.5 🆕 Load translation settings from workspace
+      const translationSettings = await this.loadTranslationSettings(options.workspaceId)
+      
+      logger.info("🌍 TranslationAgent settings loaded", {
+        translateProductNames: translationSettings.translateProductNames,
+        translateCategoryNames: translationSettings.translateCategoryNames,
+        translateServiceNames: translationSettings.translateServiceNames,
+        catalogBaseLanguage: translationSettings.catalogBaseLanguage,
+      })
+
       // 3. Build system prompt with dynamic customer info
       const systemPrompt = this.buildSystemPrompt(
         translationAgent.systemPrompt,
@@ -123,15 +143,24 @@ export class TranslationAgent {
         }
       )
 
-      // 4. Build user message - input may be mixed Italian/English
-      // 🆕 ALWAYS translate everything to target language
+      // 4. Build user message with translation rules based on workspace settings
       const targetLanguageName = this.getLanguageName(normalizedLanguage)
-      const userMessage = `Translate this message to ${targetLanguageName}. The input may be in Italian, English, or mixed. Output must be 100% in ${targetLanguageName}:\n\n"${options.message}"\n\nRespond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLanguage": "${normalizedLanguage}", "message": "..."}`
+      const preservationRules = this.buildPreservationRules(translationSettings)
+      
+      const userMessage = `Translate this message to ${targetLanguageName}. The input may be in Italian, English, or mixed. Output must be 100% in ${targetLanguageName}.
+
+${preservationRules}
+
+Message to translate:
+"${options.message}"
+
+Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLanguage": "${normalizedLanguage}", "message": "..."}`
       
       // 🔍 DEBUG: Log INPUT to TranslationAgent
       logger.info("🔍 TranslationAgent INPUT", {
         containsImgTag: options.message?.includes('<img'),
         messagePreview: options.message?.substring(0, 500),
+        preservationRules,
       })
 
       // 5. Call OpenRouter LLM
@@ -381,5 +410,92 @@ export class TranslationAgent {
    */
   static getSupportedLanguages(): string[] {
     return ["en", "it", "es", "pt"]
+  }
+
+  /**
+   * Load translation settings from workspace configuration
+   * 
+   * @param workspaceId - Workspace ID to load settings for
+   * @returns Translation settings with defaults if not configured
+   */
+  private async loadTranslationSettings(workspaceId: string): Promise<TranslationSettings> {
+    try {
+      // Use raw query to avoid TypeScript type issues with new schema fields
+      const result = await prisma.$queryRaw<Array<{
+        translateProductNames: boolean | null
+        translateCategoryNames: boolean | null
+        translateServiceNames: boolean | null
+        catalogBaseLanguage: string | null
+      }>>`
+        SELECT "translateProductNames", "translateCategoryNames", "translateServiceNames", "catalogBaseLanguage"
+        FROM "Workspace"
+        WHERE id = ${workspaceId}
+        LIMIT 1
+      `
+
+      if (!result || result.length === 0) {
+        logger.warn("⚠️ Workspace not found for translation settings, using defaults", { workspaceId })
+        return {
+          translateProductNames: false, // Preserve product names by default
+          translateCategoryNames: false, // Preserve category names by default
+          translateServiceNames: true,   // Translate service names by default
+          catalogBaseLanguage: "it",     // Default to Italian catalog
+        }
+      }
+
+      const workspace = result[0]
+      return {
+        translateProductNames: workspace.translateProductNames ?? false,
+        translateCategoryNames: workspace.translateCategoryNames ?? false,
+        translateServiceNames: workspace.translateServiceNames ?? true,
+        catalogBaseLanguage: workspace.catalogBaseLanguage ?? "it",
+      }
+    } catch (error) {
+      logger.error("❌ Error loading translation settings", { workspaceId, error })
+      return {
+        translateProductNames: false,
+        translateCategoryNames: false,
+        translateServiceNames: true,
+        catalogBaseLanguage: "it",
+      }
+    }
+  }
+
+  /**
+   * Build preservation rules string based on workspace settings
+   * These rules tell the LLM what to preserve vs translate
+   * 
+   * @param settings - Translation settings from workspace
+   * @returns Formatted rules string for LLM prompt
+   */
+  private buildPreservationRules(settings: TranslationSettings): string {
+    const rules: string[] = []
+    const baseLanguageName = this.getLanguageName(settings.catalogBaseLanguage)
+
+    // Product names
+    if (!settings.translateProductNames) {
+      rules.push(`- DO NOT translate product names. Keep them EXACTLY as they appear in ${baseLanguageName} (e.g., "Pecorino Romano" stays "Pecorino Romano", "Prosciutto di Parma" stays "Prosciutto di Parma")`)
+    }
+
+    // Category names
+    if (!settings.translateCategoryNames) {
+      rules.push(`- DO NOT translate category names. Keep them EXACTLY as they appear in ${baseLanguageName}`)
+    }
+
+    // Service names
+    if (!settings.translateServiceNames) {
+      rules.push(`- DO NOT translate service names. Keep them EXACTLY as they appear in ${baseLanguageName}`)
+    }
+
+    // Additional rules for data preservation
+    rules.push(`- ALWAYS preserve: prices (€X.XX), order codes (ORD-xxxxx), product codes, HTML tags (<img>, <b>, etc.)`)
+    rules.push(`- ALWAYS preserve: emojis, bullet points, numbered lists formatting`)
+
+    if (rules.length === 1) {
+      // Only generic preservation rule, all translations enabled
+      return "PRESERVATION RULES:\n" + rules.join("\n")
+    }
+
+    return "IMPORTANT PRESERVATION RULES:\n" + rules.join("\n")
   }
 }

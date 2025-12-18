@@ -22,7 +22,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { LanguageSelector } from '@/components/shared/LanguageSelector'
 import { toast } from '@/lib/toast'
 import { Loader2, Shield, AlertCircle } from 'lucide-react'
 import { api } from '@/services/api'
@@ -126,9 +125,6 @@ export default function Verify2FAPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-      <div className="absolute top-4 right-4">
-        <LanguageSelector />
-      </div>
       <div className="w-full max-w-md">
         <Card>
           <CardHeader>

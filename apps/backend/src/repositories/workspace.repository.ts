@@ -57,6 +57,11 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       customAiRules: data.customAiRules || null,
       // 🆕 Logo
       logoUrl: data.logoUrl || null,
+      // 🆕 Translation Settings
+      translateProductNames: data.translateProductNames ?? false,
+      translateCategoryNames: data.translateCategoryNames ?? false,
+      translateServiceNames: data.translateServiceNames ?? true,
+      catalogBaseLanguage: data.catalogBaseLanguage ?? "it",
     })
   }
 
@@ -100,6 +105,11 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       customAiRules: workspace.customAiRules,
       // 🆕 Logo
       logoUrl: workspace.logoUrl,
+      // 🆕 Translation Settings
+      translateProductNames: workspace.translateProductNames,
+      translateCategoryNames: workspace.translateCategoryNames,
+      translateServiceNames: workspace.translateServiceNames,
+      catalogBaseLanguage: workspace.catalogBaseLanguage,
     }
   }
 

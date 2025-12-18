@@ -2330,10 +2330,8 @@ export class ChatEngineService {
               
               if (actionId === "SHOW_CATEGORIES") {
                 // Show categories
-                const categoriesIntent: import("../intent/intent.types").Intent = {
+                const categoriesIntent: import("../intent/intent.types").ShowCategoriesIntent = {
                   type: "SHOW_CATEGORIES",
-                  confidence: "HIGH",
-                  source: "PATTERN",
                 }
                 
                 const loadedData = await this.dataLoader.loadForIntent(
@@ -2408,10 +2406,8 @@ export class ChatEngineService {
               
               if (actionId === "VIEW_CART") {
                 // Show cart
-                const cartIntent: import("../intent/intent.types").Intent = {
+                const cartIntent: import("../intent/intent.types").ViewCartIntent = {
                   type: "VIEW_CART",
-                  confidence: "HIGH",
-                  source: "PATTERN",
                 }
                 
                 const loadedData = await this.dataLoader.loadForIntent(
@@ -3750,7 +3746,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           const shouldUseCatalogResult =
             catalogResult.resultType !== "EMPTY" &&
             catalogResult.loadedData &&
-            catalogResult.loadedData.type !== "EMPTY"
+            (catalogResult.loadedData as any).type !== "EMPTY"
 
           if (shouldUseCatalogResult) {
             loadedData = catalogResult.loadedData

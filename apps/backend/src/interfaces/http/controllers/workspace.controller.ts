@@ -151,6 +151,11 @@ export class WorkspaceController {
           address: workspace.address,
           customAiRules: workspace.customAiRules,
           logoUrl: workspace.logoUrl,
+          // 🆕 Translation Settings
+          translateProductNames: workspace.translateProductNames,
+          translateCategoryNames: workspace.translateCategoryNames,
+          translateServiceNames: workspace.translateServiceNames,
+          catalogBaseLanguage: workspace.catalogBaseLanguage,
         }
 
         return res.json(serializedWorkspace)
@@ -325,6 +330,11 @@ export class WorkspaceController {
         address: workspace.address,
         customAiRules: workspace.customAiRules,
         logoUrl: workspace.logoUrl,
+        // 🆕 Translation Settings
+        translateProductNames: workspace.translateProductNames,
+        translateCategoryNames: workspace.translateCategoryNames,
+        translateServiceNames: workspace.translateServiceNames,
+        catalogBaseLanguage: workspace.catalogBaseLanguage,
       }
 
       logger.info(

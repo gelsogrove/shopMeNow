@@ -52,6 +52,15 @@ model Workspace {
   address                   String?           @db.Text         // Physical address/location for "where are you?" questions
   // ============================================================================
   
+  // ============================================================================
+  // 🆕 Translation Settings (Feature: Configurable Translation Layer)
+  // ============================================================================
+  translateProductNames     Boolean           @default(false)  // Translate product names to customer language (false = preserve original, e.g., "Pecorino Romano")
+  translateCategoryNames    Boolean           @default(false)  // Translate category names to customer language
+  translateServiceNames     Boolean           @default(true)   // Translate service names (default true as they're usually generic)
+  catalogBaseLanguage       String            @default("it")   // Base language of catalog (ISO 639-1: "it", "en", "es", "pt", "de", "fr")
+  // ============================================================================
+  
   // Team management: ownerId groups all channels belonging to same owner
   ownerId                   String?
   owner                     User?             @relation("OwnedWorkspaces", fields: [ownerId], references: [id])
