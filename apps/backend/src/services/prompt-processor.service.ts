@@ -51,7 +51,6 @@ export class PromptProcessorService {
         sellsProductsAndServices: variables.sellsProductsAndServices,
         hasHumanSupport: variables.hasHumanSupport,
         hasSalesAgents: variables.hasSalesAgents,
-        hasSuppliers: variables.hasSuppliers,
         // Computed booleans
         hasIdentity: !!variables.botIdentityResponse,
         hasFaq: !!variables.faqs,
@@ -242,7 +241,6 @@ export class PromptProcessorService {
       operatorContactMethod?: string
       operatorWhatsappNumber?: string
       hasSalesAgents?: boolean
-      hasSuppliers?: boolean // 🆕 Suppliers menu visibility
       adminEmail?: string
       allowedExternalLinks?: string[] // 🆕 Feature 199: Allowed domains for external links
       address?: string // 🆕 Physical address for "where are you?" questions
@@ -265,7 +263,6 @@ export class PromptProcessorService {
         sellsProductsAndServices: workspaceConfig?.sellsProductsAndServices ?? true,
         hasHumanSupport: workspaceConfig?.hasHumanSupport ?? true,
         hasSalesAgents: workspaceConfig?.hasSalesAgents ?? false,
-        hasSuppliers: workspaceConfig?.hasSuppliers ?? false, // 🆕 Suppliers menu visibility
         // ✅ FIX: Add hasIdentity, hasFaq, hasCustomAiRules boolean checks for {{#if}} conditionals
         hasIdentity: !!workspaceConfig?.botIdentityResponse,
         hasFaq: !!dynamicContent?.faqs,

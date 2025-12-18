@@ -49,7 +49,6 @@ interface WorkspaceSettings {
   sellsProductsAndServices: boolean
   hasHumanSupport: boolean
   hasSalesAgents: boolean
-  hasSuppliers: boolean
   address: string // 🆕 Physical address for {{#if address}} conditional
 }
 
@@ -192,7 +191,6 @@ export class TemplateLoaderService {
         sellsProductsAndServices: true,
         hasHumanSupport: true,
         hasSalesAgents: true,
-        hasSuppliers: true,
         address: true, // 🆕 For {{#if address}} conditional in templates
       },
     })
@@ -205,7 +203,6 @@ export class TemplateLoaderService {
       sellsProductsAndServices: workspace.sellsProductsAndServices ?? true,
       hasHumanSupport: workspace.hasHumanSupport ?? false,
       hasSalesAgents: workspace.hasSalesAgents ?? false,
-      hasSuppliers: workspace.hasSuppliers ?? false,
       address: workspace.address || "", // 🆕 Physical address for location questions
     }
 

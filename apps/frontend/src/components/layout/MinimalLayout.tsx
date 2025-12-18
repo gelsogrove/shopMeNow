@@ -42,7 +42,6 @@ export function MinimalLayout() {
   const workspaceName = workspace?.name || ""
   const workspacePhone = workspace?.whatsappPhoneNumber || ""
   const hasSalesAgents = workspace?.hasSalesAgents ?? false
-  const hasSuppliers = workspace?.hasSuppliers ?? false
 
   // Load user profile from localStorage
   useEffect(() => {
@@ -259,12 +258,6 @@ export function MinimalLayout() {
                           <Tag className="mr-2 h-4 w-4 text-pink-500" />
                           <span>Offers</span>
                         </DropdownMenuItem>
-                        {hasSuppliers && (
-                          <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/suppliers")}>
-                            <Truck className="mr-2 h-4 w-4 text-teal-500" />
-                            <span>Suppliers</span>
-                          </DropdownMenuItem>
-                        )}
                         {hasSalesAgents && (
                           <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/sales")}>
                             <UserCog className="mr-2 h-4 w-4 text-violet-500" />

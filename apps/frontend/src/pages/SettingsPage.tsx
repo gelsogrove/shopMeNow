@@ -28,7 +28,7 @@ import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import { deleteWorkspace, updateWorkspace } from "@/services/workspaceApi"
 import { useMutation } from "@tanstack/react-query"
-import { Loader2, Save, Settings, Trash2 } from "lucide-react"
+import { Loader2, Save, Settings, Trash2, HelpCircle } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
@@ -80,6 +80,46 @@ function extractEnglishMessage(
     return (message as Record<string, string>).en || defaultValue
   }
   return defaultValue
+}
+
+// 🆕 Help Panel Component
+interface HelpPanelProps {
+  title: string
+  description: string
+  sections: Array<{
+    title: string
+    content: string
+    icon?: string
+  }>
+}
+
+function HelpPanel({ title, description, sections }: HelpPanelProps) {
+  return (
+    <div className="sticky top-6 space-y-4 min-h-[600px]">
+      <Card className="border-blue-200 bg-blue-50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2 text-blue-900">
+            <HelpCircle className="h-5 w-5 text-blue-600" />
+            {title}
+          </CardTitle>
+          <p className="text-sm text-blue-800 mt-1">{description}</p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {sections.map((section, idx) => (
+            <div key={idx} className="pb-3 border-b border-blue-200 last:border-b-0 last:pb-0">
+              <div className="flex items-start gap-2">
+                <span className="text-lg mt-0.5">{section.icon || "•"}</span>
+                <div className="flex-1">
+                  <h4 className="font-medium text-sm text-blue-900">{section.title}</h4>
+                  <p className="text-xs text-blue-700 mt-1 leading-relaxed">{section.content}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+  )
 }
 
 export default function SettingsPage() {
@@ -332,442 +372,590 @@ export default function SettingsPage() {
 
           {/* Basic Info Tab */}
           <TabsContent value="basic" className="space-y-6">
-            <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="text-base flex items-center gap-2">
-              <span className="text-lg">📱</span> Basic Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">
-                  Channel Name <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => handleFieldChange("name", e.target.value)}
-                  placeholder="My Business"
-                  className={errors.name ? "border-red-500" : ""}
-                />
-                {errors.name && (
-                  <p className="text-sm text-red-500">{errors.name}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="adminEmail">
-                  Admin Email <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="adminEmail"
-                  type="email"
-                  value={formData.adminEmail}
-                  onChange={(e) => handleFieldChange("adminEmail", e.target.value)}
-                  placeholder="admin@example.com"
-                  className={errors.adminEmail ? "border-red-500" : ""}
-                />
-                {errors.adminEmail && (
-                  <p className="text-sm text-red-500">{errors.adminEmail}</p>
-                )}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="whatsappPhoneNumber">WhatsApp Number</Label>
-              <Input
-                id="whatsappPhoneNumber"
-                value={formData.whatsappPhoneNumber}
-                onChange={(e) =>
-                  handleFieldChange("whatsappPhoneNumber", e.target.value)
-                }
-                placeholder="+1234567890"
-                className={errors.whatsappPhoneNumber ? "border-red-500" : ""}
-              />
-              {errors.whatsappPhoneNumber && (
-                <p className="text-sm text-red-500">{errors.whatsappPhoneNumber}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="url">Website URL</Label>
-              <Input
-                id="url"
-                type="url"
-                value={formData.url}
-                onChange={(e) => handleFieldChange("url", e.target.value)}
-                placeholder="https://mybusiness.com"
-                className={errors.url ? "border-red-500" : ""}
-              />
-              {errors.url && <p className="text-sm text-red-500">{errors.url}</p>}
-              <p className="text-xs text-muted-foreground">
-                Used for short links and redirects
-              </p>
-            </div>
+            <div className="grid grid-cols-3 gap-6">
+              {/* Main Form - 2/3 */}
+              <div className="col-span-2 min-h-[600px]">
+                <Card>
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <span className="text-lg">📱</span> Basic Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">
+                          Channel Name <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="name"
+                          value={formData.name}
+                          onChange={(e) => handleFieldChange("name", e.target.value)}
+                          placeholder="My Business"
+                          className={errors.name ? "border-red-500" : ""}
+                        />
+                        {errors.name && (
+                          <p className="text-sm text-red-500">{errors.name}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="adminEmail">
+                          Admin Email <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="adminEmail"
+                          type="email"
+                          value={formData.adminEmail}
+                          onChange={(e) => handleFieldChange("adminEmail", e.target.value)}
+                          placeholder="admin@example.com"
+                          className={errors.adminEmail ? "border-red-500" : ""}
+                        />
+                        {errors.adminEmail && (
+                          <p className="text-sm text-red-500">{errors.adminEmail}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="whatsappPhoneNumber">WhatsApp Number</Label>
+                      <Input
+                        id="whatsappPhoneNumber"
+                        value={formData.whatsappPhoneNumber}
+                        onChange={(e) =>
+                          handleFieldChange("whatsappPhoneNumber", e.target.value)
+                        }
+                        placeholder="+1234567890"
+                        className={errors.whatsappPhoneNumber ? "border-red-500" : ""}
+                      />
+                      {errors.whatsappPhoneNumber && (
+                        <p className="text-sm text-red-500">{errors.whatsappPhoneNumber}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="url">Website URL</Label>
+                      <Input
+                        id="url"
+                        type="url"
+                        value={formData.url}
+                        onChange={(e) => handleFieldChange("url", e.target.value)}
+                        placeholder="https://mybusiness.com"
+                        className={errors.url ? "border-red-500" : ""}
+                      />
+                      {errors.url && <p className="text-sm text-red-500">{errors.url}</p>}
+                      <p className="text-xs text-muted-foreground">
+                        Used for short links and redirects
+                      </p>
+                    </div>
 
-            {/* 🆕 Address field */}
-            <div className="space-y-2">
-              <Label htmlFor="address">
-                Physical Address <span className="text-xs text-muted-foreground">(When asked "Where are you?")</span>
-              </Label>
-              <Textarea
-                id="address"
-                value={formData.address}
-                onChange={(e) => handleFieldChange("address", e.target.value)}
-                rows={2}
-                placeholder="Via Roma 123, 00100 Roma, Italy"
-              />
-            </div>
+                    {/* 🆕 Address field */}
+                    <div className="space-y-2">
+                      <Label htmlFor="address">
+                        Physical Address <span className="text-xs text-muted-foreground">(When asked "Where are you?")</span>
+                      </Label>
+                      <Textarea
+                        id="address"
+                        value={formData.address}
+                        onChange={(e) => handleFieldChange("address", e.target.value)}
+                        rows={2}
+                        placeholder="Via Roma 123, 00100 Roma, Italy"
+                      />
+                    </div>
 
-            {/* Chatbot Active Toggle */}
-            <div className="flex items-center justify-between p-4 border rounded-lg bg-gray-50">
-              <div className="space-y-1">
-                <Label className="text-base">Chatbot Status</Label>
-                <p className="text-xs text-muted-foreground">
-                  Enable or disable the chatbot for this channel
-                </p>
+                    {/* Chatbot Active Toggle */}
+                    <div className="flex items-center justify-between p-4 border rounded-lg bg-gray-50">
+                      <div className="space-y-1">
+                        <Label className="text-base">Chatbot Status</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Enable or disable the chatbot for this channel
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-sm font-medium ${formData.challengeStatus ? 'text-green-600' : 'text-gray-500'}`}>
+                          {formData.challengeStatus ? '🟢 Active' : '🔴 Disabled'}
+                        </span>
+                        <Switch
+                          checked={formData.challengeStatus}
+                          onCheckedChange={(checked) =>
+                            handleFieldChange("challengeStatus", checked)
+                          }
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-              <div className="flex items-center gap-2">
-                <span className={`text-sm font-medium ${formData.challengeStatus ? 'text-green-600' : 'text-gray-500'}`}>
-                  {formData.challengeStatus ? '🟢 Active' : '🔴 Disabled'}
-                </span>
-                <Switch
-                  checked={formData.challengeStatus}
-                  onCheckedChange={(checked) =>
-                    handleFieldChange("challengeStatus", checked)
-                  }
+
+              {/* Help Panel - 1/3 */}
+              <div>
+                <HelpPanel
+                  title="📚 Basic Information"
+                  description="Set up the core details of your channel"
+                  sections={[
+                    {
+                      icon: "📝",
+                      title: "Channel Name",
+                      content: "The name of your business or store. This appears in messages and settings."
+                    },
+                    {
+                      icon: "✉️",
+                      title: "Admin Email",
+                      content: "Your email address. We'll send important notifications and recovery codes here."
+                    },
+                    {
+                      icon: "📱",
+                      title: "WhatsApp Number",
+                      content: "Your WhatsApp business number. Use international format like +1234567890"
+                    },
+                    {
+                      icon: "🌐",
+                      title: "Website URL",
+                      content: "Your website address. Used for short links sent to customers."
+                    },
+                    {
+                      icon: "📍",
+                      title: "Address",
+                      content: "Your physical location. When customers ask 'Where are you?' they'll get this."
+                    },
+                    {
+                      icon: "⚡",
+                      title: "Chatbot Status",
+                      content: "Enable to let the AI assistant answer customer questions. Disable to show maintenance mode."
+                    }
+                  ]}
                 />
               </div>
             </div>
-          </CardContent>
-            </Card>
           </TabsContent>
 
           {/* Bot Personality Tab */}
           <TabsContent value="personality" className="space-y-6">
-            <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="text-base flex items-center gap-2">
-              <span className="text-lg">🤖</span> Bot Personality
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Tone of Voice</Label>
-              <div className="grid grid-cols-4 gap-2">
-                {[
-                  { value: "friendly", label: "😊 Friendly", desc: "Warm & emojis" },
-                  { value: "professional", label: "💼 Professional", desc: "Business-like" },
-                  { value: "formal", label: "🎩 Formal", desc: "Traditional" },
-                  { value: "casual", label: "✌️ Casual", desc: "Relaxed & fun" },
-                ].map((tone) => (
-                  <button
-                    key={tone.value}
-                    type="button"
-                    onClick={() => handleFieldChange("toneOfVoice", tone.value)}
-                    className={`p-3 border rounded-lg text-left transition-all ${
-                      formData.toneOfVoice === tone.value
-                        ? "border-green-500 bg-green-50 ring-1 ring-green-500"
-                        : "hover:border-gray-300 hover:bg-gray-50"
-                    }`}
-                  >
-                    <div className="font-medium text-sm">{tone.label}</div>
-                    <div className="text-xs text-muted-foreground">{tone.desc}</div>
-                  </button>
-                ))}
+            <div className="grid grid-cols-3 gap-6">
+              {/* Main Form - 2/3 */}
+              <div className="col-span-2 min-h-[600px]">
+                <Card>
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <span className="text-lg">🤖</span> Bot Personality
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Tone of Voice</Label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {[
+                          { value: "friendly", label: "😊 Friendly", desc: "Warm & emojis" },
+                          { value: "professional", label: "💼 Professional", desc: "Business-like" },
+                          { value: "formal", label: "🎩 Formal", desc: "Traditional" },
+                          { value: "casual", label: "✌️ Casual", desc: "Relaxed & fun" },
+                        ].map((tone) => (
+                          <button
+                            key={tone.value}
+                            type="button"
+                            onClick={() => handleFieldChange("toneOfVoice", tone.value)}
+                            className={`p-3 border rounded-lg text-left transition-all ${
+                              formData.toneOfVoice === tone.value
+                                ? "border-green-500 bg-green-50 ring-1 ring-green-500"
+                                : "hover:border-gray-300 hover:bg-gray-50"
+                            }`}
+                          >
+                            <div className="font-medium text-sm">{tone.label}</div>
+                            <div className="text-xs text-muted-foreground">{tone.desc}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="botIdentityResponse">
+                        Bot Identity <span className="text-xs text-muted-foreground">(When asked "Who are you?")</span>
+                      </Label>
+                      <Textarea
+                        id="botIdentityResponse"
+                        value={formData.botIdentityResponse}
+                        onChange={(e) => handleFieldChange("botIdentityResponse", e.target.value)}
+                        rows={2}
+                        placeholder="I'm your digital assistant. I can help you find products and answer questions."
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="welcomeMessage">Welcome Message</Label>
+                        <Textarea
+                          id="welcomeMessage"
+                          value={formData.welcomeMessage}
+                          onChange={(e) => handleFieldChange("welcomeMessage", e.target.value)}
+                          rows={4}
+                          placeholder="Welcome! How can I help you today?"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="wipMessage">Maintenance Message</Label>
+                        <Textarea
+                          id="wipMessage"
+                          value={formData.wipMessage}
+                          onChange={(e) => handleFieldChange("wipMessage", e.target.value)}
+                          rows={4}
+                          placeholder="We're currently unavailable. Please try again later."
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      ℹ️ Messages are automatically translated to the customer's language
+                    </p>
+                  </CardContent>
+                </Card>
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="botIdentityResponse">
-                Bot Identity <span className="text-xs text-muted-foreground">(When asked "Who are you?")</span>
-              </Label>
-              <Textarea
-                id="botIdentityResponse"
-                value={formData.botIdentityResponse}
-                onChange={(e) => handleFieldChange("botIdentityResponse", e.target.value)}
-                rows={2}
-                placeholder="I'm your digital assistant. I can help you find products and answer questions."
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="welcomeMessage">Welcome Message</Label>
-                <Textarea
-                  id="welcomeMessage"
-                  value={formData.welcomeMessage}
-                  onChange={(e) => handleFieldChange("welcomeMessage", e.target.value)}
-                  rows={4}
-                  placeholder="Welcome! How can I help you today?"
+
+              {/* Help Panel - 1/3 */}
+              <div>
+                <HelpPanel
+                  title="🤖 Bot Personality"
+                  description="Give your bot a unique character and voice"
+                  sections={[
+                    {
+                      icon: "💬",
+                      title: "Tone of Voice",
+                      content: "How should the bot communicate? Friendly is warm & helpful. Professional is business-focused. Formal is traditional. Casual is fun & relaxed."
+                    },
+                    {
+                      icon: "🆔",
+                      title: "Bot Identity",
+                      content: "What does the bot say when customers ask 'Who are you?'. Make it personal and match your brand."
+                    },
+                    {
+                      icon: "👋",
+                      title: "Welcome Message",
+                      content: "The first message when customers start a conversation. Be friendly and clear about what you can help with."
+                    },
+                    {
+                      icon: "🔧",
+                      title: "Maintenance Message",
+                      content: "Shown when the chatbot is disabled (maintenance mode). Let customers know you'll be back soon."
+                    }
+                  ]}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="wipMessage">Maintenance Message</Label>
-                <Textarea
-                  id="wipMessage"
-                  value={formData.wipMessage}
-                  onChange={(e) => handleFieldChange("wipMessage", e.target.value)}
-                  rows={4}
-                  placeholder="We're currently unavailable. Please try again later."
-                />
-              </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              ℹ️ Messages are automatically translated to the customer's language
-            </p>
-          </CardContent>
-            </Card>
           </TabsContent>
 
           {/* Business Configuration Tab */}
           <TabsContent value="business" className="space-y-6">
-            <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="text-base flex items-center gap-2">
-              <span className="text-lg">🏪</span> Business Configuration
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className={`flex items-center justify-between p-3 border rounded-lg transition-all ${formData.sellsProductsAndServices ? 'border-green-200 bg-green-50' : ''}`}>
-                <div>
-                  <Label className="text-sm">Sells Products & Services</Label>
-                  <p className="text-xs text-muted-foreground">Enables E-commerce menu</p>
-                </div>
-                <Switch
-                  checked={formData.sellsProductsAndServices}
-                  onCheckedChange={(checked) => handleFieldChange("sellsProductsAndServices", checked)}
+            <div className="grid grid-cols-3 gap-6">
+              {/* Main Form - 2/3 */}
+              <div className="col-span-2 min-h-[600px]">
+                <Card>
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <span className="text-lg">🏪</span> Business Configuration
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-3">
+                      <div className={`flex items-center justify-between p-3 border rounded-lg transition-all ${formData.sellsProductsAndServices ? 'border-green-200 bg-green-50' : ''}`}>
+                        <div>
+                          <Label className="text-sm">Sells Products & Services</Label>
+                          <p className="text-xs text-muted-foreground">Enables E-commerce menu</p>
+                        </div>
+                        <Switch
+                          checked={formData.sellsProductsAndServices}
+                          onCheckedChange={(checked) => handleFieldChange("sellsProductsAndServices", checked)}
+                        />
+                      </div>
+                      {formData.sellsProductsAndServices && (
+                        <div className={`flex items-center justify-between p-3 border rounded-lg transition-all ${formData.hasSalesAgents ? 'border-green-200 bg-green-50' : ''}`}>
+                          <div>
+                            <Label className="text-sm">Sales Team</Label>
+                            <p className="text-xs text-muted-foreground">Agent assignment</p>
+                          </div>
+                          <Switch
+                            checked={formData.hasSalesAgents}
+                            onCheckedChange={(checked) => handleFieldChange("hasSalesAgents", checked)}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Help Panel - 1/3 */}
+              <div>
+                <HelpPanel
+                  title="🏪 Business Config"
+                  description="Choose what your channel sells"
+                  sections={[
+                    {
+                      icon: "🛒",
+                      title: "Products & Services",
+                      content: "Enable if you sell products, services, or both. This shows your catalog to customers and lets them add items to their cart."
+                    },
+                    {
+                      icon: "👥",
+                      title: "Sales Team",
+                      content: "Enable if you have team members assigned to customers. Each customer gets their own dedicated agent for personalized support."
+                    }
+                  ]}
                 />
               </div>
-              {formData.sellsProductsAndServices && (
-                <div className={`flex items-center justify-between p-3 border rounded-lg transition-all ${formData.hasSalesAgents ? 'border-green-200 bg-green-50' : ''}`}>
-                  <div>
-                    <Label className="text-sm">Sales Team</Label>
-                    <p className="text-xs text-muted-foreground">Agent assignment</p>
-                  </div>
-                  <Switch
-                    checked={formData.hasSalesAgents}
-                    onCheckedChange={(checked) => handleFieldChange("hasSalesAgents", checked)}
-                  />
-                </div>
-              )}
             </div>
-          </CardContent>
-            </Card>
           </TabsContent>
 
           {/* Human Support Tab */}
           <TabsContent value="support" className="space-y-6">
-            <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="text-base flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">👤</span> Human Support
-              </div>
-              <Switch
-                checked={formData.hasHumanSupport}
-                onCheckedChange={(checked) => handleFieldChange("hasHumanSupport", checked)}
-              />
-            </CardTitle>
-          </CardHeader>
-          
-          {/* HUMAN SUPPORT = TRUE */}
-          {formData.hasHumanSupport && (
-            <CardContent className="space-y-4 pt-0">
-              {formData.hasSalesAgents ? (
-                // Con Sales Team: il cliente ha già un agente assegnato
-                <>
-                  <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
-                    <p className="text-sm font-medium text-blue-800 mb-1">👨‍💼 Sales Team Mode</p>
-                    <p className="text-xs text-blue-600">
-                      Customer will be connected with their assigned sales agent.
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="humanSupportInstructions">Message for Customer</Label>
-                    <Textarea
-                      id="humanSupportInstructions"
-                      value={formData.humanSupportInstructions}
-                      onChange={(e) => handleFieldChange("humanSupportInstructions", e.target.value)}
-                      rows={6}
-                      placeholder={`Hello {{nameUser}}, I'm sorry for the issue! 😔\nI understand your frustration.\n\nYour dedicated agent is:\n• {{agentName}}\n• 📞 {{agentPhone}}\n• ✉️ {{agentEmail}}\n\n⏸️ Chat is now paused.\nYour agent will contact you as soon as possible!`}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      💡 Variables: {"{{nameUser}}"}, {"{{agentName}}"}, {"{{agentPhone}}"}, {"{{agentEmail}}"} • AI will translate to customer's language
-                    </p>
-                  </div>
-                </>
-              ) : (
-                // Without Sales Team: need to know who to contact and how
-                <>
-                  <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg">
-                    <p className="text-sm font-medium text-amber-800 mb-1">⚙️ Generic Support Mode</p>
-                    <p className="text-xs text-amber-600">
-                      Without Sales Team, you need to configure who will receive support requests.
-                    </p>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>How do you want to be contacted?</Label>
-                    <Select
-                      value={formData.operatorContactMethod}
-                      onValueChange={(value) => handleFieldChange("operatorContactMethod", value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="email">📧 Email (uses Admin Email)</SelectItem>
-                        <SelectItem value="whatsapp">📱 WhatsApp</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {formData.operatorContactMethod === "whatsapp" && (
-                    <div className="space-y-2">
-                      <Label htmlFor="operatorWhatsappNumber">Support WhatsApp Number</Label>
-                      <Input
-                        id="operatorWhatsappNumber"
-                        value={formData.operatorWhatsappNumber}
-                        onChange={(e) => handleFieldChange("operatorWhatsappNumber", e.target.value)}
-                        placeholder="+39 333 1234567"
+            <div className="grid grid-cols-3 gap-6">
+              {/* Main Form - 2/3 */}
+              <div className="col-span-2 space-y-6 min-h-[600px]">
+                <Card>
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-base flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">👤</span> Human Support
+                      </div>
+                      <Switch
+                        checked={formData.hasHumanSupport}
+                        onCheckedChange={(checked) => handleFieldChange("hasHumanSupport", checked)}
                       />
-                      <p className="text-xs text-muted-foreground">
-                        Number that will receive support request notifications for immediate intervention
+                    </CardTitle>
+                  </CardHeader>
+                  
+                  {/* HUMAN SUPPORT = TRUE */}
+                  {formData.hasHumanSupport && (
+                    <CardContent className="space-y-4 pt-0">
+                      {formData.hasSalesAgents ? (
+                        // Con Sales Team: il cliente ha già un agente assegnato
+                        <>
+                          <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+                            <p className="text-sm font-medium text-blue-800 mb-1">👨‍💼 Sales Team Mode</p>
+                            <p className="text-xs text-blue-600">
+                              Customer will be connected with their assigned sales agent.
+                            </p>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="humanSupportInstructions">Message for Customer</Label>
+                            <Textarea
+                              id="humanSupportInstructions"
+                              value={formData.humanSupportInstructions}
+                              onChange={(e) => handleFieldChange("humanSupportInstructions", e.target.value)}
+                              rows={6}
+                              placeholder={`Hello {{nameUser}}, I'm sorry for the issue! 😔\nI understand your frustration.\n\nYour dedicated agent is:\n• {{agentName}}\n• 📞 {{agentPhone}}\n• ✉️ {{agentEmail}}\n\n⏸️ Chat is now paused.\nYour agent will contact you as soon as possible!`}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              💡 Variables: {"{{nameUser}}"}, {"{{agentName}}"}, {"{{agentPhone}}"}, {"{{agentEmail}}"} • AI will translate to customer's language
+                            </p>
+                          </div>
+                        </>
+                      ) : (
+                        // Without Sales Team: need to know who to contact and how
+                        <>
+                          <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg">
+                            <p className="text-sm font-medium text-amber-800 mb-1">⚙️ Generic Support Mode</p>
+                            <p className="text-xs text-amber-600">
+                              Without Sales Team, you need to configure who will receive support requests.
+                            </p>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label>How do you want to be contacted?</Label>
+                            <Select
+                              value={formData.operatorContactMethod}
+                              onValueChange={(value) => handleFieldChange("operatorContactMethod", value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="email">📧 Email (uses Admin Email)</SelectItem>
+                                <SelectItem value="whatsapp">📱 WhatsApp</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {formData.operatorContactMethod === "whatsapp" && (
+                            <div className="space-y-2">
+                              <Label htmlFor="operatorWhatsappNumber">Support WhatsApp Number</Label>
+                              <Input
+                                id="operatorWhatsappNumber"
+                                value={formData.operatorWhatsappNumber}
+                                onChange={(e) => handleFieldChange("operatorWhatsappNumber", e.target.value)}
+                                placeholder="+39 333 1234567"
+                              />
+                              <p className="text-xs text-muted-foreground">
+                                Number that will receive support request notifications for immediate intervention
+                              </p>
+                            </div>
+                          )}
+
+                          <div className="space-y-2">
+                            <Label htmlFor="humanSupportInstructions">Message for Customer</Label>
+                            <Textarea
+                              id="humanSupportInstructions"
+                              value={formData.humanSupportInstructions}
+                              onChange={(e) => handleFieldChange("humanSupportInstructions", e.target.value)}
+                              rows={4}
+                              placeholder="I understand you need assistance. Our team will contact you within 24 hours.\n\n⏸️ Chat is now paused."
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              AI will translate to customer's language
+                            </p>
+                          </div>
+                        </>
+                      )}
+                    </CardContent>
+                  )}
+                  
+                  {/* HUMAN SUPPORT = FALSE */}
+                  {!formData.hasHumanSupport && (
+                    <CardContent className="space-y-4 pt-0">
+                      <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
+                        <p className="text-sm font-medium text-yellow-800 mb-1">⚠️ Human Support Disabled</p>
+                        <p className="text-xs text-yellow-600">
+                          No live support available. Customers will be redirected to email contact.
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="humanSupportInstructions">Message to Show Customer</Label>
+                        <Textarea
+                          id="humanSupportInstructions"
+                          value={formData.humanSupportInstructions || `Please send an email to {{adminEmail}} and we will write you back as soon as possible.`}
+                          onChange={(e) => handleFieldChange("humanSupportInstructions", e.target.value)}
+                          rows={3}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          💡 {"{{adminEmail}}"} will be replaced with your Admin Email • AI will translate to customer's language
+                        </p>
+                      </div>
+                    </CardContent>
+                  )}
+                </Card>
+
+                {/* 🆕 Feature 203: Escalation Triggers Card - Only visible when Human Support is enabled */}
+                {formData.hasHumanSupport && (
+                <Card>
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <span className="text-lg">🚨</span> Escalation Triggers
+                      {formData.frustrationEscalationInstructions?.trim() && (
+                        <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                          Custom Active ✅
+                        </span>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4 pt-0">
+                    <div className="bg-purple-50 border border-purple-200 p-3 rounded-lg">
+                      <p className="text-sm font-medium text-purple-800 mb-1">📋 When should the chatbot call an operator?</p>
+                      <p className="text-xs text-purple-600">
+                        Define the situations where the chatbot should automatically escalate to a human operator.
+                        Leave empty to use default triggers (damaged products, missing delivery, explicit operator requests).
                       </p>
                     </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <Label htmlFor="humanSupportInstructions">Message for Customer</Label>
-                    <Textarea
-                      id="humanSupportInstructions"
-                      value={formData.humanSupportInstructions}
-                      onChange={(e) => handleFieldChange("humanSupportInstructions", e.target.value)}
-                      rows={4}
-                      placeholder="I understand you need assistance. Our team will contact you within 24 hours.\n\n⏸️ Chat is now paused."
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      AI will translate to customer's language
-                    </p>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          )}
-          
-          {/* HUMAN SUPPORT = FALSE */}
-          {!formData.hasHumanSupport && (
-            <CardContent className="space-y-4 pt-0">
-              <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
-                <p className="text-sm font-medium text-yellow-800 mb-1">⚠️ Human Support Disabled</p>
-                <p className="text-xs text-yellow-600">
-                  No live support available. Customers will be redirected to email contact.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="humanSupportInstructions">Message to Show Customer</Label>
-                <Textarea
-                  id="humanSupportInstructions"
-                  value={formData.humanSupportInstructions || `Please send an email to {{adminEmail}} and we will write you back as soon as possible.`}
-                  onChange={(e) => handleFieldChange("humanSupportInstructions", e.target.value)}
-                  rows={3}
-                />
-                <p className="text-xs text-muted-foreground">
-                  💡 {"{{adminEmail}}"} will be replaced with your Admin Email • AI will translate to customer's language
-                </p>
-              </div>
-            </CardContent>
-          )}
-            </Card>
-
-            {/* 🆕 Feature 203: Escalation Triggers Card - Only visible when Human Support is enabled */}
-            {formData.hasHumanSupport && (
-            <Card>
-              <CardHeader className="pb-4">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <span className="text-lg">🚨</span> Escalation Triggers
-                  {formData.frustrationEscalationInstructions?.trim() && (
-                    <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                      Custom Active ✅
-                    </span>
-                  )}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4 pt-0">
-                <div className="bg-purple-50 border border-purple-200 p-3 rounded-lg">
-                  <p className="text-sm font-medium text-purple-800 mb-1">📋 When should the chatbot call an operator?</p>
-                  <p className="text-xs text-purple-600">
-                    Define the situations where the chatbot should automatically escalate to a human operator.
-                    Leave empty to use default triggers (damaged products, missing delivery, explicit operator requests).
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="frustrationEscalationInstructions">Custom Escalation Rules</Label>
-                  <Textarea
-                    id="frustrationEscalationInstructions"
-                    value={formData.frustrationEscalationInstructions}
-                    onChange={(e) => {
-                      if (e.target.value.length <= 5000) {
-                        handleFieldChange("frustrationEscalationInstructions", e.target.value)
-                      }
-                    }}
-                    rows={8}
-                    placeholder={`Call operator when:
+                    <div className="space-y-2">
+                      <Label htmlFor="frustrationEscalationInstructions">Custom Escalation Rules</Label>
+                      <Textarea
+                        id="frustrationEscalationInstructions"
+                        value={formData.frustrationEscalationInstructions}
+                        onChange={(e) => {
+                          if (e.target.value.length <= 5000) {
+                            handleFieldChange("frustrationEscalationInstructions", e.target.value)
+                          }
+                        }}
+                        rows={8}
+                        placeholder={`Call operator when:
 - Customer received wrong product
 - Customer didn't receive their order
 - Customer asks for a custom quote
 - Customer mentions legal action
 - Customer explicitly asks for human help
 - Customer complains about quality issues`}
-                  />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>
-                      💡 Write in your catalog language (Italian). AI will understand and apply in any customer language.
-                    </span>
-                    <span className={formData.frustrationEscalationInstructions.length > 4500 ? "text-amber-600" : ""}>
-                      {formData.frustrationEscalationInstructions.length}/5000
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            )}
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>
+                          💡 Write in your catalog language (Italian). AI will understand and apply in any customer language.
+                        </span>
+                        <span className={formData.frustrationEscalationInstructions.length > 4500 ? "text-amber-600" : ""}>
+                          {formData.frustrationEscalationInstructions.length}/5000
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                )}
+              </div>
+
+              {/* Help Panel - 1/3 */}
+              <div>
+                <HelpPanel
+                  title="👤 Human Support"
+                  description="Let customers reach a real person"
+                  sections={[
+                    {
+                      icon: "🎯",
+                      title: "Enable Human Support",
+                      content: "Turn ON to let customers contact you for problems. When someone needs help, the chatbot pauses and calls a human operator."
+                    },
+                    {
+                      icon: "👥",
+                      title: "With Sales Team",
+                      content: "If you have a Sales Team, each customer is connected to their assigned agent. The message tells them who their agent is."
+                    },
+                    {
+                      icon: "⚙️",
+                      title: "Without Sales Team",
+                      content: "Choose how to be contacted - via Email (you get an alert at your email address) or WhatsApp (immediate notification)."
+                    },
+                    {
+                      icon: "💬",
+                      title: "Customer Message",
+                      content: "What the chatbot tells the customer when pausing the chat. Use {{nameUser}} or {{agentName}} to personalize it."
+                    },
+                    {
+                      icon: "🚨",
+                      title: "Escalation Triggers",
+                      content: "Tell the AI when to automatically call a human. Examples: wrong order received, payment issues, or customer anger. Keep default if unsure."
+                    }
+                  ]}
+                />
+              </div>
+            </div>
           </TabsContent>
 
           {/* Custom AI Tab */}
           <TabsContent value="custom-ai" className="space-y-6">
-            <Card>
-              <CardHeader className="pb-4">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <span className="text-lg">⚙️</span> Custom AI Rules
-                </CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Define custom rules that will override the default AI behavior for this channel.
-                </p>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                    <div className="flex items-start gap-3">
-                      <span className="text-xl">⚠️</span>
-                      <div>
-                        <p className="font-medium text-amber-800">Priority Override</p>
-                        <p className="text-sm text-amber-700 mt-1">
-                          These rules have <strong>ABSOLUTE PRIORITY</strong> over all default AI instructions. 
-                          The AI will follow these rules even if they contradict its standard behavior.
-                        </p>
+            <div className="grid grid-cols-3 gap-6">
+              {/* Main Form - 2/3 */}
+              <div className="col-span-2 min-h-[600px]">
+                <Card>
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <span className="text-lg">⚙️</span> Custom AI Rules
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Define custom rules that will override the default AI behavior for this channel.
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                        <div className="flex items-start gap-3">
+                          <span className="text-xl">⚠️</span>
+                          <div>
+                            <p className="font-medium text-amber-800">Priority Override</p>
+                            <p className="text-sm text-amber-700 mt-1">
+                              These rules have <strong>ABSOLUTE PRIORITY</strong> over all default AI instructions. 
+                              The AI will follow these rules even if they contradict its standard behavior.
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="customAiRules">
-                      Your Custom Rules
-                    </Label>
-                    <Textarea
-                      id="customAiRules"
-                      value={formData.customAiRules}
-                      onChange={(e) => handleFieldChange("customAiRules", e.target.value)}
-                      rows={12}
-                      placeholder={`Write your custom rules here. Examples:
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="customAiRules">
+                          Your Custom Rules
+                        </Label>
+                        <Textarea
+                          id="customAiRules"
+                          value={formData.customAiRules}
+                          onChange={(e) => handleFieldChange("customAiRules", e.target.value)}
+                          rows={12}
+                          placeholder={`Write your custom rules here. Examples:
 
 # Product Recommendations
 - When customer asks about cheese, always recommend "Parmigiano Reggiano DOP" first
@@ -784,131 +972,238 @@ export default function SettingsPage() {
 # Restrictions
 - Never share internal company information
 - Don't discuss delivery times for international orders`}
-                      className="font-mono text-sm min-h-[300px]"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      💡 Use clear, specific instructions. The AI will interpret these rules literally.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                          className="font-mono text-sm min-h-[300px]"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          💡 Use clear, specific instructions. The AI will interpret these rules literally.
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Help Panel - 1/3 */}
+              <div>
+                <HelpPanel
+                  title="⚙️ Custom AI Rules"
+                  description="Control exactly how your AI behaves"
+                  sections={[
+                    {
+                      icon: "🎯",
+                      title: "What are Custom Rules?",
+                      content: "These are instructions that tell the AI exactly what to do. They override all default behaviors."
+                    },
+                    {
+                      icon: "📝",
+                      title: "How to Write Rules",
+                      content: "Use simple, clear language. Organize by topic with # headers. Example: 'Always mention our 10% first-purchase discount'"
+                    },
+                    {
+                      icon: "⚡",
+                      title: "Rules Always Apply",
+                      content: "Your rules are more important than anything else. The AI follows them even if it normally wouldn't."
+                    },
+                    {
+                      icon: "🚫",
+                      title: "Common Use Cases",
+                      content: "Restrict what the AI can say, enforce product recommendations, set pricing policies, require specific greetings, block competitor mentions."
+                    }
+                  ]}
+                />
+              </div>
+            </div>
           </TabsContent>
 
           {/* Security Tab */}
           <TabsContent value="security" className="space-y-6">
-            <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="text-base flex items-center gap-2">
-              <span className="text-lg">🛡️</span> Security
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <Label htmlFor="allowedExternalLinks">Allowed External Links</Label>
-              <Textarea
-                id="allowedExternalLinks"
-                value={formData.allowedExternalLinks}
-                onChange={(e) => handleFieldChange("allowedExternalLinks", e.target.value)}
-                rows={2}
-                placeholder="echatbot.ai, stripe.com, paypal.com"
-              />
-              <p className="text-xs text-muted-foreground">
-                Comma-separated domains the AI can include in messages. Other links will be blocked.
-              </p>
+            <div className="grid grid-cols-3 gap-6">
+              {/* Main Form - 2/3 */}
+              <div className="col-span-2 min-h-[600px]">
+                <Card>
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <span className="text-lg">🛡️</span> Security
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <Label htmlFor="allowedExternalLinks">Allowed External Links</Label>
+                      <Textarea
+                        id="allowedExternalLinks"
+                        value={formData.allowedExternalLinks}
+                        onChange={(e) => handleFieldChange("allowedExternalLinks", e.target.value)}
+                        rows={2}
+                        placeholder="echatbot.ai, stripe.com, paypal.com"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Comma-separated domains the AI can include in messages. Other links will be blocked.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Help Panel - 1/3 */}
+              <div>
+                <HelpPanel
+                  title="🛡️ Security"
+                  description="Control what links the AI can suggest"
+                  sections={[
+                    {
+                      icon: "🔗",
+                      title: "What Are Allowed Links?",
+                      content: "These are websites the AI is allowed to mention to customers. All other links are blocked."
+                    },
+                    {
+                      icon: "✅",
+                      title: "Which Links to Add?",
+                      content: "Add your website, payment providers (Stripe, PayPal), social media, support tools, and trusted partners."
+                    },
+                    {
+                      icon: "❌",
+                      title: "What Gets Blocked?",
+                      content: "Any link not in this list is blocked. This prevents the AI from suggesting unwanted external sites."
+                    },
+                    {
+                      icon: "📝",
+                      title: "How to Format",
+                      content: "Just list domain names separated by commas: stripe.com, paypal.com, yoursite.com"
+                    }
+                  ]}
+                />
+              </div>
             </div>
-          </CardContent>
-            </Card>
           </TabsContent>
 
           {/* Translation Tab */}
           <TabsContent value="translation" className="space-y-6">
-            <Card>
-              <CardHeader className="pb-4">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <span className="text-lg">🌍</span> Translation Settings
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <p className="text-sm text-muted-foreground">
-                  Configure how the AI translates your catalog content when responding to customers in different languages.
-                  By default, product and category names are preserved in the original language (e.g., "Pecorino Romano" stays "Pecorino Romano").
-                </p>
+            <div className="grid grid-cols-3 gap-6">
+              {/* Main Form - 2/3 */}
+              <div className="col-span-2 min-h-[600px]">
+                <Card>
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <span className="text-lg">🌍</span> Translation Settings
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <p className="text-sm text-muted-foreground">
+                      Configure how the AI translates your catalog content when responding to customers in different languages.
+                      By default, product and category names are preserved in the original language (e.g., "Pecorino Romano" stays "Pecorino Romano").
+                    </p>
 
-                <div className="space-y-2">
-                  <Label htmlFor="catalogBaseLanguage">Catalog Base Language</Label>
-                  <Select 
-                    value={formData.catalogBaseLanguage} 
-                    onValueChange={(value) => handleFieldChange("catalogBaseLanguage", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select language" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="it">🇮🇹 Italian</SelectItem>
-                      <SelectItem value="en">🇬🇧 English</SelectItem>
-                      <SelectItem value="es">🇪🇸 Spanish</SelectItem>
-                      <SelectItem value="pt">🇵🇹 Portuguese</SelectItem>
-                      <SelectItem value="fr">🇫🇷 French</SelectItem>
-                      <SelectItem value="de">🇩🇪 German</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    The language your product catalog is written in. The AI will preserve names in this language when appropriate.
-                  </p>
-                </div>
-
-                <div className="border-t pt-4 space-y-4">
-                  <h4 className="font-medium text-sm">Translation Rules</h4>
-                  
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <Label className="text-sm font-medium">Translate Product Names</Label>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        When OFF, names like "Pecorino Romano" stay as-is. When ON, they get translated.
+                    <div className="space-y-2">
+                      <Label htmlFor="catalogBaseLanguage">Catalog Base Language</Label>
+                      <Select 
+                        value={formData.catalogBaseLanguage} 
+                        onValueChange={(value) => handleFieldChange("catalogBaseLanguage", value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select language" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="it">🇮🇹 Italian</SelectItem>
+                          <SelectItem value="en">🇬🇧 English</SelectItem>
+                          <SelectItem value="es">🇪🇸 Spanish</SelectItem>
+                          <SelectItem value="pt">🇵🇹 Portuguese</SelectItem>
+                          <SelectItem value="fr">🇫🇷 French</SelectItem>
+                          <SelectItem value="de">🇩🇪 German</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        The language your product catalog is written in. The AI will preserve names in this language when appropriate.
                       </p>
                     </div>
-                    <Switch
-                      checked={formData.translateProductNames}
-                      onCheckedChange={(checked) => handleFieldChange("translateProductNames", checked)}
-                    />
-                  </div>
 
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <Label className="text-sm font-medium">Translate Category Names</Label>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        When OFF, category names remain in their original language.
+                    <div className="border-t pt-4 space-y-4">
+                      <h4 className="font-medium text-sm">Translation Rules</h4>
+                      
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <Label className="text-sm font-medium">Translate Product Names</Label>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            When OFF, names like "Pecorino Romano" stay as-is. When ON, they get translated.
+                          </p>
+                        </div>
+                        <Switch
+                          checked={formData.translateProductNames}
+                          onCheckedChange={(checked) => handleFieldChange("translateProductNames", checked)}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <Label className="text-sm font-medium">Translate Category Names</Label>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            When OFF, category names remain in their original language.
+                          </p>
+                        </div>
+                        <Switch
+                          checked={formData.translateCategoryNames}
+                          onCheckedChange={(checked) => handleFieldChange("translateCategoryNames", checked)}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <Label className="text-sm font-medium">Translate Service Names</Label>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            When ON (default), service descriptions get translated to customer's language.
+                          </p>
+                        </div>
+                        <Switch
+                          checked={formData.translateServiceNames}
+                          onCheckedChange={(checked) => handleFieldChange("translateServiceNames", checked)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="border-t pt-4">
+                      <p className="text-xs text-muted-foreground">
+                        💡 <strong>Tip:</strong> For authentic Italian food products, we recommend keeping product names untranslated 
+                        to preserve their authenticity and comply with PDO/PGI regulations.
                       </p>
                     </div>
-                    <Switch
-                      checked={formData.translateCategoryNames}
-                      onCheckedChange={(checked) => handleFieldChange("translateCategoryNames", checked)}
-                    />
-                  </div>
+                  </CardContent>
+                </Card>
+              </div>
 
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <Label className="text-sm font-medium">Translate Service Names</Label>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        When ON (default), service descriptions get translated to customer's language.
-                      </p>
-                    </div>
-                    <Switch
-                      checked={formData.translateServiceNames}
-                      onCheckedChange={(checked) => handleFieldChange("translateServiceNames", checked)}
-                    />
-                  </div>
-                </div>
-
-                <div className="border-t pt-4">
-                  <p className="text-xs text-muted-foreground">
-                    💡 <strong>Tip:</strong> For authentic Italian food products, we recommend keeping product names untranslated 
-                    to preserve their authenticity and comply with PDO/PGI regulations.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+              {/* Help Panel - 1/3 */}
+              <div>
+                <HelpPanel
+                  title="🌍 Translation"
+                  description="Control what gets translated for other languages"
+                  sections={[
+                    {
+                      icon: "🌐",
+                      title: "Base Language",
+                      content: "What language are your product names and descriptions written in? This is your 'source' language. The AI will preserve it when translating for other languages."
+                    },
+                    {
+                      icon: "🏷️",
+                      title: "Product Names",
+                      content: "Keep OFF to preserve famous brand names (like 'Parmigiano Reggiano' stays Italian). Turn ON to translate."
+                    },
+                    {
+                      icon: "📂",
+                      title: "Category Names",
+                      content: "Usually best kept OFF (e.g., 'Formaggi' stays as 'Formaggi', not translated to 'Cheeses')."
+                    },
+                    {
+                      icon: "✨",
+                      title: "Service Names",
+                      content: "Usually kept ON so generic services (like 'Gift Wrapping') get translated to customer's language."
+                    },
+                    {
+                      icon: "✅",
+                      title: "Best Practice",
+                      content: "For authentic Italian food: keep product names OFF, categories OFF, services ON."
+                    }
+                  ]}
+                />
+              </div>
+            </div>
           </TabsContent>
 
         </Tabs>

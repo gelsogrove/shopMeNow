@@ -46,7 +46,6 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       // 🆕 Channel Configuration (Feature 199)
       sellsProductsAndServices: data.sellsProductsAndServices ?? true,
       hasSalesAgents: data.hasSalesAgents ?? false,
-      hasSuppliers: data.hasSuppliers ?? false,
       hasHumanSupport: data.hasHumanSupport ?? true,
       humanSupportInstructions: data.humanSupportInstructions || null,
       operatorContactMethod: data.operatorContactMethod || 'email',
@@ -94,7 +93,6 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       // 🆕 Channel Configuration (Feature 199)
       sellsProductsAndServices: workspace.sellsProductsAndServices,
       hasSalesAgents: workspace.hasSalesAgents,
-      hasSuppliers: workspace.hasSuppliers,
       hasHumanSupport: workspace.hasHumanSupport,
       humanSupportInstructions: workspace.humanSupportInstructions,
       operatorContactMethod: workspace.operatorContactMethod,
@@ -469,7 +467,6 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       logger.debug("=== FEATURE 199 AFTER TRANSFORMATION ===")
       logger.debug(`sellsProductsAndServices in dbData: ${dbData.sellsProductsAndServices}`)
       logger.debug(`hasSalesAgents in dbData: ${dbData.hasSalesAgents}`)
-      logger.debug(`hasSuppliers in dbData: ${dbData.hasSuppliers}`)
       logger.debug(`hasHumanSupport in dbData: ${dbData.hasHumanSupport}`)
 
       // Prepare the exact data object for Prisma
@@ -526,7 +523,6 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
             debugMode: updatedWorkspace.debugMode,
             sellsProductsAndServices: updatedWorkspace.sellsProductsAndServices,
             hasSalesAgents: updatedWorkspace.hasSalesAgents,
-            hasSuppliers: updatedWorkspace.hasSuppliers,
             hasHumanSupport: updatedWorkspace.hasHumanSupport,
             updatedAt: updatedWorkspace.updatedAt,
           },
@@ -539,7 +535,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       logger.debug("=== FEATURE 199 FINAL DB VALUES ===")
       logger.debug(`sellsProductsAndServices DB finale: ${updatedWorkspace.sellsProductsAndServices}`)
       logger.debug(`hasSalesAgents DB finale: ${updatedWorkspace.hasSalesAgents}`)
-      logger.debug(`hasSuppliers DB finale: ${updatedWorkspace.hasSuppliers}`)
+
       logger.debug(`hasHumanSupport DB finale: ${updatedWorkspace.hasHumanSupport}`)
 
       try {

@@ -482,6 +482,8 @@ export class ChatEngineService {
         customerLanguage: input.customerLanguage || "it",
         customerName: input.customerName,
         customerDiscount: input.customerDiscount,
+        userMessage: input.message,
+        enableCategoryRanking: workspaceConfig.sellsProductsAndServices,
       })
 
       if (structuredResponse.type !== "FAQ") {
@@ -1720,6 +1722,8 @@ export class ChatEngineService {
             customerLanguage: input.customerLanguage || "it",
             customerName: input.customerName,
             customerDiscount: input.customerDiscount,
+            userMessage: input.message,
+            enableCategoryRanking: workspaceConfig.sellsProductsAndServices,
           })
           
           const formatterResult = await this.formatWithCustomRules(
@@ -1899,6 +1903,8 @@ export class ChatEngineService {
                   customerLanguage: input.customerLanguage || "it",
                   workspaceId: input.workspaceId,
                   customerDiscount: input.customerDiscount,
+                  userMessage: input.message,
+                  enableCategoryRanking: workspaceConfig.sellsProductsAndServices,
                 }
               )
               
@@ -2025,6 +2031,8 @@ export class ChatEngineService {
                 customerName: input.customerName,
                 customerDiscount: input.customerDiscount,
                 disableGrouping: selectIntent.listType === "ORDER_OPTIMIZATION_ACTIONS",
+                userMessage: input.message,
+                enableCategoryRanking: workspaceConfig.sellsProductsAndServices,
               }
             )
             
@@ -2346,6 +2354,8 @@ export class ChatEngineService {
                     customerLanguage: input.customerLanguage,
                     customerName: input.customerName,
                     customerDiscount: input.customerDiscount,
+                    userMessage: input.message,
+                    enableCategoryRanking: workspaceConfig.sellsProductsAndServices,
                   }
                 )
                 
@@ -2422,6 +2432,8 @@ export class ChatEngineService {
                     customerLanguage: input.customerLanguage,
                     customerName: input.customerName,
                     customerDiscount: input.customerDiscount,
+                    userMessage: input.message,
+                    enableCategoryRanking: workspaceConfig.sellsProductsAndServices,
                   }
                 )
                 
@@ -3879,6 +3891,8 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           workspaceId: input.workspaceId,
           customerDiscount: input.customerDiscount,
           showOptimizeOption,
+          userMessage: input.message,
+          enableCategoryRanking: workspaceConfig.sellsProductsAndServices,
         })
 
       logger.info("🏗️ [ChatEngine] Response built", { type: structuredResponse.type })

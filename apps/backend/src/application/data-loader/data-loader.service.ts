@@ -226,6 +226,83 @@ export interface CartRemovalItemData {
 export class DataLoaderService {
   constructor(private prisma: PrismaClient) {}
 
+  private readonly categoryStopwords = new Set<string>([
+    // Italian
+    "cerco",
+    "cercando",
+    "voglio",
+    "vorrei",
+    "fammi",
+    "mostra",
+    "mostrami",
+    "avete",
+    "hai",
+    "per",
+    "con",
+    "senza",
+    "anche",
+    "all",
+    "alla",
+    "alle",
+    "degli",
+    "dei",
+    "delle",
+    "del",
+    "dell",
+    "questo",
+    "questa",
+    "questi",
+    "queste",
+    "quello",
+    "quelle",
+    "quali",
+    "qualcosa",
+    "serve",
+    "servono",
+    "sto",
+    "stiamo",
+    "potete",
+    "potrei",
+    "posso",
+    // English
+    "show",
+    "showing",
+    "need",
+    "needed",
+    "needs",
+    "want",
+    "wanted",
+    "looking",
+    "look",
+    "please",
+    "have",
+    "about",
+    "with",
+    "without",
+    "some",
+    "for",
+    "from",
+    "your",
+    "any",
+    "can",
+    "you",
+    "sell",
+    "selling",
+    "give",
+    "find",
+    "search",
+    "and",
+    "nor",
+    "but",
+    "ora",
+    "o",
+    "oppure",
+    "e",
+    "ed",
+    "either",
+    "or",
+  ])
+
   /**
    * Main entry point - load data based on intent
    */
@@ -252,8 +329,14 @@ export class DataLoaderService {
           return this.loadProductsByCategory(workspaceId, customerDiscount, (intent as ShowCategoryIntent).categoryName)
         case "SHOW_PRODUCT":
           return this.loadProductByName(workspaceId, customerDiscount, (intent as ShowProductIntent).productName)
-        case "SEARCH_PRODUCTS":
-          return this.loadProductSearch(workspaceId, customerDiscount, (intent as SearchProductsIntent).query)
+        case "SEARCH_PRODUCTS": {
+          const query = (intent as SearchProductsIntent).query
+          const categoryMatches = await this.matchCategoriesFromQuery(workspaceId, query)
+          if (categoryMatches && categoryMatches.length > 0) {
+            return { type: "CATEGORIES", categories: categoryMatches }
+          }
+          return this.loadProductSearch(workspaceId, customerDiscount, query)
+        }
         case "SHOW_OFFERS":
           return this.loadOffers(workspaceId, customerDiscount)  // 🆕 Pass discount for single-offer optimization
         default:
@@ -673,31 +756,34 @@ export class DataLoaderService {
 
   private async loadCategories(workspaceId: string): Promise<LoadedData> {
     try {
-      const categories = await this.prisma.categories.findMany({
-        where: { workspaceId, isActive: true },
-        select: {
-          id: true,
-          name: true,
-          description: true,
-          _count: {
-            select: { productCategories: true },
-          },
-        },
-        orderBy: { name: "asc" },
-      })
-
-      const categoryData: CategoryData[] = categories.map((c) => ({
-        id: c.id,
-        name: c.name,
-        description: c.description || undefined,
-        productCount: c._count.productCategories,
-      }))
-
+      const categoryData = await this.fetchCategories(workspaceId)
       return { type: "CATEGORIES", categories: categoryData }
     } catch (error) {
       logger.error("❌ [DataLoader] Error loading categories", { error })
       return { type: "ERROR", error: "Failed to load categories" }
     }
+  }
+
+  private async fetchCategories(workspaceId: string): Promise<CategoryData[]> {
+    const categories = await this.prisma.categories.findMany({
+      where: { workspaceId, isActive: true },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        _count: {
+          select: { productCategories: true },
+        },
+      },
+      orderBy: { name: "asc" },
+    })
+
+    return categories.map((c) => ({
+      id: c.id,
+      name: c.name,
+      description: c.description || undefined,
+      productCount: c._count.productCategories,
+    }))
   }
 
   private async loadServices(workspaceId: string): Promise<LoadedData> {
@@ -1072,7 +1158,7 @@ export class DataLoaderService {
     productName: string
   ): Promise<LoadedData> {
     try {
-      const product = await this.prisma.products.findFirst({
+      const products = await this.prisma.products.findMany({
         where: {
           workspaceId,
           isActive: true,
@@ -1096,18 +1182,170 @@ export class DataLoaderService {
             },
           },
         },
+        take: 10,
       })
 
-      if (!product) {
+      if (products.length === 0) {
         return { type: "PRODUCT_DETAIL", product: null }
       }
 
-      const productData = this.mapProduct(product, customerDiscount)
+      const rankedProducts = this.rankProductsByName(products, productName)
+      const bestMatch = rankedProducts[0]
+
+      const productData = this.mapProduct(bestMatch, customerDiscount)
       return { type: "PRODUCT_DETAIL", product: productData }
     } catch (error) {
       logger.error("❌ [DataLoader] Error loading product", { error })
       return { type: "ERROR", error: "Failed to load product" }
     }
+  }
+
+  private rankProductsByName<T extends { name: string | null; stock?: number | null }>(
+    products: T[],
+    query: string
+  ): T[] {
+    const normalizedQuery = this.normalizeText(query)
+    const queryTokens = normalizedQuery
+      ? normalizedQuery.split(" ").filter((token) => token.length >= 3)
+      : []
+
+    const ranked = products.map((product, index) => {
+      const normalizedName = this.normalizeText(product.name || "")
+      let score = 0
+
+      if (normalizedName && normalizedQuery) {
+        if (normalizedName === normalizedQuery) score += 50
+        if (normalizedName.startsWith(normalizedQuery)) score += 25
+        if (normalizedName.includes(normalizedQuery)) score += 10
+
+        for (const token of queryTokens) {
+          if (normalizedName.includes(token)) {
+            score += 5
+          }
+        }
+      }
+
+      if ((product.stock || 0) > 0) {
+        score += 20
+      }
+
+      return { product, score, index }
+    })
+
+    ranked.sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score
+      }
+
+      const stockDiff = (b.product.stock || 0) - (a.product.stock || 0)
+      if (stockDiff !== 0) {
+        return stockDiff
+      }
+
+      if (a.product.name && b.product.name) {
+        return a.product.name.localeCompare(b.product.name)
+      }
+
+      return a.index - b.index
+    })
+
+    return ranked.map((entry) => entry.product)
+  }
+
+  private normalizeText(value: string): string {
+    return value
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+  }
+
+  private tokenizeQuery(message: string): string[] {
+    const normalized = this.normalizeText(message)
+      .replace(/[^a-z0-9\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+
+    if (!normalized) return []
+
+    return normalized
+      .split(" ")
+      .map((token) => token.trim())
+      .filter((token) => token.length >= 3)
+  }
+
+  private async matchCategoriesFromQuery(
+    workspaceId: string,
+    query: string
+  ): Promise<CategoryData[] | null> {
+    try {
+      const tokens = this.tokenizeQuery(query)
+      if (tokens.length === 0) {
+        return null
+      }
+
+      const meaningfulTokens = tokens.filter((token) => !this.categoryStopwords.has(token))
+      if (meaningfulTokens.length === 0) {
+        return null
+      }
+
+      const categories = await this.fetchCategories(workspaceId)
+      if (categories.length === 0) {
+        return null
+      }
+
+      const scored = categories
+        .map((category, index) => ({
+          category,
+          index,
+          score: this.calculateCategoryMatchScore(category.name, meaningfulTokens),
+        }))
+        .filter((entry) => entry.score > 0)
+
+      if (scored.length === 0) {
+        return null
+      }
+
+      const tokensCovered = meaningfulTokens.every((token) =>
+        scored.some((entry) => this.normalizeText(entry.category.name).includes(token))
+      )
+
+      if (!tokensCovered) {
+        return null
+      }
+
+      scored.sort((a, b) => {
+        if (b.score === a.score) {
+          return a.index - b.index
+        }
+        return b.score - a.score
+      })
+
+      return scored.map((entry) => entry.category)
+    } catch (error) {
+      logger.error("❌ [DataLoader] Error matching categories from query", { error })
+      return null
+    }
+  }
+
+  private calculateCategoryMatchScore(name: string, tokens: string[]): number {
+    const normalizedName = this.normalizeText(name)
+    if (!normalizedName) {
+      return 0
+    }
+
+    let score = 0
+    for (const token of tokens) {
+      if (!token) continue
+      if (normalizedName === token) {
+        score += 20
+      } else if (normalizedName.startsWith(token)) {
+        score += 10
+      } else if (normalizedName.includes(token)) {
+        score += 6
+      }
+    }
+    return score
   }
 
   private async loadProductSearch(

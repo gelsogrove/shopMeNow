@@ -158,12 +158,6 @@ export interface PromptVariables {
    */
   hasSalesAgents: boolean
   
-  /** Ha fornitori
-   * Template: {{hasSuppliers}} (boolean for {{#if}})
-   * Source: workspace.hasSuppliers
-   */
-  hasSuppliers: boolean
-  
   /** Vende prodotti/servizi (ecommerce mode)
    * Template: {{sellsProductsAndServices}} (boolean for {{#if}})
    * Source: workspace.sellsProductsAndServices
@@ -299,7 +293,6 @@ export const VARIABLE_DEFAULTS: Partial<PromptVariables> = {
   toneOfVoice: 'friendly',
   hasHumanSupport: true,
   hasSalesAgents: false,
-  hasSuppliers: false,
   sellsProductsAndServices: true,
   channelName: 'Shop',
 }

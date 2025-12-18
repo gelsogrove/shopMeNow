@@ -43,7 +43,6 @@ const VARIABLE_CATEGORIES = [
       { name: "sellsProductsAndServices", desc: "Sells products/services (bool)" },
       { name: "hasHumanSupport", desc: "Has human support (bool)" },
       { name: "hasSalesAgents", desc: "Has sales agents (bool)" },
-      { name: "hasSuppliers", desc: "Has suppliers (bool)" },
       { name: "humanSupportInstructions", desc: "Human support instructions" },
       { name: "operatorContactMethod", desc: "Operator contact method" },
       { name: "operatorWhatsappNumber", desc: "Operator WhatsApp number" },

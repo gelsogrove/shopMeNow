@@ -70,7 +70,6 @@ export class WorkspaceController {
         // 🆕 Channel Configuration (Feature 199)
         sellsProductsAndServices: workspace.sellsProductsAndServices,
         hasSalesAgents: workspace.hasSalesAgents,
-        hasSuppliers: workspace.hasSuppliers,
         hasHumanSupport: workspace.hasHumanSupport,
         humanSupportInstructions: workspace.humanSupportInstructions,
         frustrationEscalationInstructions: workspace.frustrationEscalationInstructions, // 🆕 Feature 203
@@ -142,7 +141,6 @@ export class WorkspaceController {
           // 🆕 Channel Configuration (Feature 199)
           sellsProductsAndServices: workspace.sellsProductsAndServices,
           hasSalesAgents: workspace.hasSalesAgents,
-          hasSuppliers: workspace.hasSuppliers,
           hasHumanSupport: workspace.hasHumanSupport,
           humanSupportInstructions: workspace.humanSupportInstructions,
           frustrationEscalationInstructions: workspace.frustrationEscalationInstructions, // 🆕 Feature 203
@@ -322,7 +320,6 @@ export class WorkspaceController {
         // 🆕 Channel Configuration (Feature 199)
         sellsProductsAndServices: workspace.sellsProductsAndServices,
         hasSalesAgents: workspace.hasSalesAgents,
-        hasSuppliers: workspace.hasSuppliers,
         hasHumanSupport: workspace.hasHumanSupport,
         humanSupportInstructions: workspace.humanSupportInstructions,
         frustrationEscalationInstructions: workspace.frustrationEscalationInstructions, // 🆕 Feature 203

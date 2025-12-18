@@ -167,6 +167,20 @@ const validationResult = validateSubAgentResponse({
 
 ---
 
+## 🍝 Category Shortcut (Code-First Flow)
+
+Some user queries are explicitly asking for **existing catalog categories** (e.g., “pasta e formaggi”, “avete vino o olio?”).  
+To avoid triggering a full product search + LLM grouping in these situations we added a lightweight shortcut inside the code-first flow:
+
+1. **Tokenize & Normalize** – the raw text is lowercased, accents removed, punctuation stripped, and split into tokens (min 3 chars). Common verbs/conjunctions (“cerco”, “voglio”, “o”, “and”...) are ignored via a stopword list.
+2. **Category Matching** – tokens are compared against the normalized category names fetched from DB. Each match gets a score (exact match > prefix > contains) and we keep only categories with score > 0.
+3. **All Tokens Covered?** – if every meaningful token maps to at least one category, we short-circuit `SEARCH_PRODUCTS` and directly return a `CATEGORIES` data payload with just those matches.
+4. **ResponseBuilder Ranking** – the existing category ranking (based on userMessage) still runs, so order is stable across the pipeline.
+
+Result: questions like “avete pasta o formaggi?” now produce only those categories, without hitting the expensive product search grouping flow, keeping latency and token usage low.
+
+---
+
 ## 🧪 Validation Rules (Agent-Specific)
 
 ### PRODUCT_SEARCH Validation

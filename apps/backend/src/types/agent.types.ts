@@ -75,8 +75,6 @@ export interface WorkspaceConfig {
   hasHumanSupport: boolean
   /** Sales agents feature enabled */
   hasSalesAgents: boolean
-  /** Suppliers menu visible */
-  hasSuppliers: boolean
   /** Bot identity response for "chi siete?" */
   botIdentityResponse?: string
   /** Tone of voice (friendly, professional, formal, casual) */

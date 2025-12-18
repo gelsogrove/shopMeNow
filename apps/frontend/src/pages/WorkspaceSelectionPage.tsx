@@ -53,8 +53,6 @@ interface WizardFormData {
   sellsProductsAndServices: boolean
   // Step 3: Sales Agents (conditional)
   hasSalesAgents: boolean
-  // Step 3b: Suppliers (conditional)
-  hasSuppliers: boolean
   // Step 4: Human Support
   hasHumanSupport: boolean
   humanSupportInstructions: string
@@ -102,7 +100,6 @@ const initialWizardData: WizardFormData = {
   website: "",
   sellsProductsAndServices: true,
   hasSalesAgents: false,
-  hasSuppliers: false,
   hasHumanSupport: true,
   humanSupportInstructions: "",
   operatorContactMethod: 'email',
@@ -580,7 +577,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
         // 🆕 Channel Configuration (Feature 199)
         sellsProductsAndServices: wizardData.sellsProductsAndServices,
         hasSalesAgents: wizardData.hasSalesAgents,
-        hasSuppliers: wizardData.hasSuppliers,
         hasHumanSupport: wizardData.hasHumanSupport,
         humanSupportInstructions: wizardData.humanSupportInstructions || undefined,
         operatorContactMethod: wizardData.operatorContactMethod,
@@ -598,7 +594,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
       logger.info("📋 Wizard configuration:", {
         sellsProductsAndServices: wizardData.sellsProductsAndServices,
         hasSalesAgents: wizardData.hasSalesAgents,
-        hasSuppliers: wizardData.hasSuppliers,
         hasHumanSupport: wizardData.hasHumanSupport,
         toneOfVoice: wizardData.toneOfVoice,
       })
@@ -1481,40 +1476,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                           {!wizardData.hasSalesAgents && (
                             <Check className="w-5 h-5 text-green-500" />
                           )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Suppliers Toggle */}
-                    <div className="pt-4 border-t">
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">Suppliers</h3>
-                        <p className="text-sm text-gray-500 mt-1">Do you manage suppliers for your products?</p>
-                      </div>
-                      
-                      <div className="space-y-4 mt-4">
-                        <div 
-                          className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                            wizardData.hasSuppliers 
-                              ? 'border-green-500 bg-green-50' 
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                          onClick={() => updateWizardData('hasSuppliers', !wizardData.hasSuppliers)}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className={`p-2 rounded-lg ${wizardData.hasSuppliers ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                                <Store className="w-5 h-5" />
-                              </div>
-                              <div>
-                                <h4 className="font-semibold text-gray-900">Enable Suppliers Management</h4>
-                                <p className="text-sm text-gray-500">Track and manage product suppliers</p>
-                              </div>
-                            </div>
-                            {wizardData.hasSuppliers && (
-                              <Check className="w-5 h-5 text-green-500" />
-                            )}
-                          </div>
                         </div>
                       </div>
                     </div>

@@ -33,7 +33,6 @@ export interface WorkspaceProps {
   // 🆕 Channel Configuration (Feature 199)
   sellsProductsAndServices?: boolean
   hasSalesAgents?: boolean
-  hasSuppliers?: boolean
   hasHumanSupport?: boolean
   humanSupportInstructions?: string | null
   frustrationEscalationInstructions?: string | null // 🆕 Feature 203: Custom escalation triggers
@@ -182,10 +181,6 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get hasSalesAgents(): boolean {
     return this.props.hasSalesAgents ?? false
-  }
-
-  get hasSuppliers(): boolean {
-    return this.props.hasSuppliers ?? false
   }
 
   get hasHumanSupport(): boolean {

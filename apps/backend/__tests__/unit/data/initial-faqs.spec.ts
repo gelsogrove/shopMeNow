@@ -92,12 +92,11 @@ describe("initialFAQs", () => {
     it("should have FAQs from different categories", () => {
       const faqs = initialFAQs(testWorkspaceId)
       const categories = [...new Set(faqs.map((f) => f.category))]
-      
-      expect(categories).toContain("General")
-      expect(categories).toContain("Account")
-      expect(categories).toContain("Shipping")
-      expect(categories).toContain("Orders")
-      expect(categories).toContain("Payments")
+
+      expect(categories).toEqual(
+        expect.arrayContaining(["Account", "Shipping", "Orders", "Payments"])
+      )
+      expect(categories).toHaveLength(4)
     })
   })
 

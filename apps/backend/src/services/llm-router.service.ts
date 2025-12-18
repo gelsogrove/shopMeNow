@@ -717,7 +717,6 @@ export class LLMRouterService {
           operatorContactMethod: true,
           operatorWhatsappNumber: true,
           hasSalesAgents: true,
-          hasSuppliers: true, // 🆕 Suppliers toggle
           notificationEmail: true,
           allowedExternalLinks: true, // 🆕 Security: allowed domains for links
           sellsProductsAndServices: true, // 🆕 Dynamic function routing
@@ -851,7 +850,6 @@ export class LLMRouterService {
               operatorContactMethod: workspace?.operatorContactMethod || "email",
               operatorWhatsappNumber: workspace?.operatorWhatsappNumber || undefined,
               hasSalesAgents: workspace?.hasSalesAgents ?? false,
-              hasSuppliers: workspace?.hasSuppliers ?? false, // 🆕 Suppliers toggle
               adminEmail: workspace?.notificationEmail || undefined,
               allowedExternalLinks: workspace?.allowedExternalLinks || [], // 🆕 Security: allowed domains
               address: workspace?.address || undefined, // 🆕 Physical address

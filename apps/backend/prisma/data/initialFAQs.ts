@@ -77,7 +77,7 @@ export const initialFAQs = (
       "payment methods",
     ],
     category: "Payments",
-    order: 4,
+    order: 3,
     isActive: true,
   },
 ]

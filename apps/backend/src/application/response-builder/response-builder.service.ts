@@ -167,6 +167,8 @@ export interface ResponseContext {
   discountPercent: number
   showOptimizeOption?: boolean  // Show "Ottimizza spedizione" option for Premium/Enterprise
   disableGrouping?: boolean     // Force simple lists even when count > threshold
+  userMessage?: string          // Last user utterance (used for contextual ranking)
+  enableCategoryRanking?: boolean // Enable category prioritization based on user query
 }
 
 // ================================================================================
@@ -205,6 +207,8 @@ export class ResponseBuilderService {
       customerDiscount?: number  // Customer's discount percentage (0-100)
       showOptimizeOption?: boolean  // Show "Ottimizza spedizione" option for Premium/Enterprise
       disableGrouping?: boolean
+      userMessage?: string
+      enableCategoryRanking?: boolean
     }
   ): StructuredResponse {
     logger.info("🏗️ [ResponseBuilder] Building response", {
@@ -221,6 +225,8 @@ export class ResponseBuilderService {
       discountPercent,
       showOptimizeOption: options.showOptimizeOption,
       disableGrouping: options.disableGrouping,
+      userMessage: options.userMessage,
+      enableCategoryRanking: options.enableCategoryRanking,
     }
 
     // Handle errors first
@@ -344,7 +350,11 @@ export class ResponseBuilderService {
       }
     }
 
-    const items: ListItem[] = categories.map((cat, index) => ({
+    const orderedCategories = context.enableCategoryRanking
+      ? this.prioritizeCategories(categories, context.userMessage)
+      : categories
+
+    const items: ListItem[] = orderedCategories.map((cat, index) => ({
       number: index + 1,
       id: cat.id,
       name: cat.name,
@@ -366,6 +376,88 @@ export class ResponseBuilderService {
       },
       context,
     }
+  }
+
+  private prioritizeCategories(categories: CategoryData[], userMessage?: string): CategoryData[] {
+    if (!userMessage) {
+      return categories
+    }
+
+    const tokens = this.tokenizeQuery(userMessage)
+    if (tokens.length === 0) {
+      return categories
+    }
+
+    const scored = categories.map((category, index) => ({
+      category,
+      index,
+      score: this.calculateCategoryScore(category.name, tokens),
+    }))
+
+    const matches = scored.filter((entry) => entry.score > 0)
+
+    const sourceArray = matches.length > 0 ? matches : scored
+
+    sourceArray.sort((a, b) => {
+      if (b.score === a.score) {
+        return a.index - b.index
+      }
+      return b.score - a.score
+    })
+
+    const ordered = sourceArray.map((entry) => entry.category)
+
+    // If we only returned matches, ensure we don't return empty list
+    if (ordered.length > 0) {
+      return ordered
+    }
+
+    return categories
+  }
+
+  private tokenizeQuery(message: string): string[] {
+    const normalized = this.normalizeText(message)
+      .replace(/[^a-z0-9\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+
+    if (!normalized) {
+      return []
+    }
+
+    return normalized
+      .split(" ")
+      .map((token) => token.trim())
+      .filter((token) => token.length >= 3)
+  }
+
+  private calculateCategoryScore(name: string, tokens: string[]): number {
+    const normalizedName = this.normalizeText(name)
+    let score = 0
+
+    for (const token of tokens) {
+      if (!token) continue
+      if (normalizedName.includes(token)) {
+        score += 5
+        continue
+      }
+
+      if (token.length > 4) {
+        const singular = token.replace(/(i|e|o|a)$/i, "")
+        if (singular && singular.length >= 3 && normalizedName.includes(singular)) {
+          score += 3
+        }
+      }
+    }
+
+    return score
+  }
+
+  private normalizeText(text: string): string {
+    return text
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
   }
 
   // ================================================================================

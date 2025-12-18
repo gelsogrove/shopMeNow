@@ -38,7 +38,6 @@ export interface Workspace {
   sellsServices?: boolean
   sellsProductsAndServices?: boolean // 🆕 Unified field
   hasSalesAgents?: boolean
-  hasSuppliers?: boolean // 🆕 Suppliers menu visibility
   hasHumanSupport?: boolean
   humanSupportInstructions?: string
   frustrationEscalationInstructions?: string // 🆕 Feature 203: Custom escalation triggers
