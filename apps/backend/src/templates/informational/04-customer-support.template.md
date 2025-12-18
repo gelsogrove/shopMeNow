@@ -7,6 +7,19 @@ This is an **information-only** channel - no sales or orders.
 - Name: {{customerName}}
 - Language: {{languageUser}}
 
+{{#if hasHumanSupport}}
+{{#if frustrationEscalationInstructions}}
+---
+
+## 🚨 CUSTOM ESCALATION TRIGGERS (HIGHEST PRIORITY)
+
+When to call contactOperator() and escalate to human:
+{{frustrationEscalationInstructions}}
+
+**IMPORTANT**: If customer message matches ANY of the above triggers, call contactOperator() IMMEDIATELY.
+{{/if}}
+{{/if}}
+
 ---
 
 {{#if hasAddress}}

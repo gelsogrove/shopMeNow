@@ -172,7 +172,6 @@ export class PromptRenderService {
       sellsProductsAndServices: workspace.sellsProductsAndServices ?? true,
       hasHumanSupport: workspace.hasHumanSupport ?? false,
       hasSalesAgents: workspace.hasSalesAgents ?? false,
-      hasSuppliers: workspace.hasSuppliers ?? false,
       // Add any additional conditional flags here
     }
   }
@@ -213,7 +212,6 @@ export class PromptRenderService {
       operatorContactMethod: workspace.operatorContactMethod,
       operatorWhatsappNumber: workspace.operatorWhatsappNumber,
       hasSalesAgents: workspace.hasSalesAgents ?? false,
-      hasSuppliers: workspace.hasSuppliers ?? false,
       adminEmail: workspace.adminEmail,
       allowedExternalLinks: workspace.allowedExternalLinks,
       address: workspace.address,

@@ -108,9 +108,8 @@ import { feedbackRoutes } from "../interfaces/http/routes/feedback.routes"
 import { pushRoutes } from "../interfaces/http/routes/push.routes"
 import { whatsappQueueRoutes } from "../interfaces/http/routes/whatsapp-queue.routes"
 
-// Services & Suppliers
+// Services
 import { servicesRouter } from "../interfaces/http/routes/services.routes"
-import supplierRoutes from "../interfaces/http/routes/supplier.routes"
 
 // System & Config
 import { cartTokenLimiter } from "../config/rate-limiters"
@@ -732,10 +731,6 @@ logger.info("Registered transport type router with workspace routes")
 // Mount WhatsApp queue routes
 router.use(whatsappQueueRoutes)
 logger.info("Registered WhatsApp queue router with workspace routes")
-
-// Mount suppliers routes
-router.use("/workspaces/:workspaceId/suppliers", supplierRoutes)
-logger.info("Registered suppliers router with workspace routes")
 
 // Mount services routes (with authentication)
 const servicesRouterInstance = servicesRouter(servicesController)

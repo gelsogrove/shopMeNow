@@ -44,7 +44,6 @@ import { ServicesPage } from "./pages/ServicesPage"
 import { CategoriesPage as SettingsCategoriesPage } from "./pages/settings/CategoriesPage"
 import { ChannelTypesPage } from "./pages/settings/ChannelTypesPage"
 import { LanguagesPage } from "./pages/settings/LanguagesPage"
-import { SuppliersPage } from "./pages/SuppliersPage"
 
 import { ProductsPage as SettingsProductsPage } from "./pages/settings/ProductsPage"
 
@@ -144,9 +143,6 @@ export function App() {
                   </Route>
                   <Route path="/products" element={<MinimalLayout />}>
                     <Route index element={<ProductsPage />} />
-                  </Route>
-                  <Route path="/suppliers" element={<MinimalLayout />}>
-                    <Route index element={<SuppliersPage />} />
                   </Route>
                   <Route path="/categories" element={<MinimalLayout />}>
                     <Route index element={<CategoriesPage />} />

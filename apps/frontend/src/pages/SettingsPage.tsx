@@ -45,9 +45,9 @@ interface WorkspaceData {
   // 🆕 Channel Configuration (Feature 199)
   sellsProductsAndServices: boolean
   hasSalesAgents: boolean
-  hasSuppliers: boolean
   hasHumanSupport: boolean
   humanSupportInstructions: string
+  frustrationEscalationInstructions: string // 🆕 Feature 203: Custom escalation triggers
   operatorContactMethod: string
   operatorWhatsappNumber: string
   toneOfVoice: string
@@ -100,9 +100,9 @@ export default function SettingsPage() {
     // 🆕 Channel Configuration (Feature 199)
     sellsProductsAndServices: true,
     hasSalesAgents: false,
-    hasSuppliers: false,
     hasHumanSupport: true,
     humanSupportInstructions: "",
+    frustrationEscalationInstructions: "", // 🆕 Feature 203
     operatorContactMethod: "email",
     operatorWhatsappNumber: "",
     toneOfVoice: "friendly",
@@ -135,9 +135,9 @@ export default function SettingsPage() {
       // 🆕 Channel Configuration (Feature 199)
       sellsProductsAndServices: workspace.sellsProductsAndServices ?? true,
       hasSalesAgents: workspace.hasSalesAgents ?? false,
-      hasSuppliers: workspace.hasSuppliers ?? false,
       hasHumanSupport: workspace.hasHumanSupport ?? true,
       humanSupportInstructions: workspace.humanSupportInstructions || "",
+      frustrationEscalationInstructions: workspace.frustrationEscalationInstructions || "", // 🆕 Feature 203
       operatorContactMethod: workspace.operatorContactMethod || "email",
       operatorWhatsappNumber: workspace.operatorWhatsappNumber || "",
       toneOfVoice: workspace.toneOfVoice || "friendly",
@@ -255,9 +255,9 @@ export default function SettingsPage() {
       // 🆕 Channel Configuration (Feature 199)
       sellsProductsAndServices: formData.sellsProductsAndServices,
       hasSalesAgents: formData.hasSalesAgents,
-      hasSuppliers: formData.hasSuppliers,
       hasHumanSupport: formData.hasHumanSupport,
       humanSupportInstructions: formData.humanSupportInstructions,
+      frustrationEscalationInstructions: formData.frustrationEscalationInstructions, // 🆕 Feature 203
       operatorContactMethod: formData.operatorContactMethod,
       operatorWhatsappNumber: formData.operatorWhatsappNumber,
       toneOfVoice: formData.toneOfVoice,
@@ -548,18 +548,6 @@ export default function SettingsPage() {
                   />
                 </div>
               )}
-              {formData.sellsProductsAndServices && (
-                <div className={`flex items-center justify-between p-3 border rounded-lg transition-all ${formData.hasSuppliers ? 'border-green-200 bg-green-50' : ''}`}>
-                  <div>
-                    <Label className="text-sm">Suppliers</Label>
-                    <p className="text-xs text-muted-foreground">Suppliers management</p>
-                  </div>
-                  <Switch
-                    checked={formData.hasSuppliers}
-                    onCheckedChange={(checked) => handleFieldChange("hasSuppliers", checked)}
-                  />
-                </div>
-              )}
             </div>
           </CardContent>
             </Card>
@@ -689,6 +677,59 @@ export default function SettingsPage() {
             </CardContent>
           )}
             </Card>
+
+            {/* 🆕 Feature 203: Escalation Triggers Card - Only visible when Human Support is enabled */}
+            {formData.hasHumanSupport && (
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <span className="text-lg">🚨</span> Escalation Triggers
+                  {formData.frustrationEscalationInstructions?.trim() && (
+                    <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                      Custom Active ✅
+                    </span>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-0">
+                <div className="bg-purple-50 border border-purple-200 p-3 rounded-lg">
+                  <p className="text-sm font-medium text-purple-800 mb-1">📋 When should the chatbot call an operator?</p>
+                  <p className="text-xs text-purple-600">
+                    Define the situations where the chatbot should automatically escalate to a human operator.
+                    Leave empty to use default triggers (damaged products, missing delivery, explicit operator requests).
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="frustrationEscalationInstructions">Custom Escalation Rules</Label>
+                  <Textarea
+                    id="frustrationEscalationInstructions"
+                    value={formData.frustrationEscalationInstructions}
+                    onChange={(e) => {
+                      if (e.target.value.length <= 5000) {
+                        handleFieldChange("frustrationEscalationInstructions", e.target.value)
+                      }
+                    }}
+                    rows={8}
+                    placeholder={`Call operator when:
+- Customer received wrong product
+- Customer didn't receive their order
+- Customer asks for a custom quote
+- Customer mentions legal action
+- Customer explicitly asks for human help
+- Customer complains about quality issues`}
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>
+                      💡 Write in your catalog language (Italian). AI will understand and apply in any customer language.
+                    </span>
+                    <span className={formData.frustrationEscalationInstructions.length > 4500 ? "text-amber-600" : ""}>
+                      {formData.frustrationEscalationInstructions.length}/5000
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            )}
           </TabsContent>
 
           {/* Custom AI Tab */}

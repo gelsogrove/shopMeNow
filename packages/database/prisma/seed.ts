@@ -209,6 +209,19 @@ async function main() {
       hasHumanSupport: true,
       humanSupportInstructions:
         "Ciao {{nameUser}}, mi sto mettendo in contatto con l'agente {{agentName}}. Ti richiamera' al piu' presto (tel: {{agentPhone}} - email: {{agentEmail}}). Disattivo il chatbot finche' non ricevi risposta.",
+      // 🆕 Feature 203: Custom escalation triggers
+      frustrationEscalationInstructions: `Chiama IMMEDIATAMENTE l'operatore (contactOperator) quando il cliente:
+- Si lamenta che la MERCE È ARRIVATA SCADUTA (prodotto scaduto, data scadenza passata)
+- Si lamenta che la MERCE È ARRIVATA ROTTA/DANNEGGIATA (pacco danneggiato, prodotto rotto, bottiglia rotta)
+- Vuole MODIFICARE UN ORDINE già effettuato (cambiare prodotti, cambiare quantità, cambiare indirizzo)
+- Vuole CANCELLARE UN ORDINE (annullare ordine, disdire ordine)
+- Chiede ESPLICITAMENTE di parlare con un OPERATORE UMANO (operatore, assistenza umana, persona reale)
+
+⚠️ IMPORTANTE: 
+- Prima controlla SEMPRE nelle FAQ se esiste una risposta predefinita
+- Se la FAQ risponde al problema, usa quella risposta SENZA chiamare l'operatore
+- Chiama l'operatore SOLO per i casi sopra elencati quando NON c'è risposta FAQ
+- Per tutti gli altri casi, rispondi normalmente senza escalation`,
       operatorContactMethod: "EMAIL",
       toneOfVoice: "FRIENDLY",
       botIdentityResponse: "I'm the BellItalia VIP virtual assistant, here to help you discover and purchase authentic Italian gourmet products!",
@@ -289,6 +302,14 @@ async function main() {
       hasHumanSupport: true,
       humanSupportInstructions:
         "Ciao {{nameUser}}, mi sto mettendo in contatto con il nostro operatore. Ti rispondera' al piu' presto. Disattivo il chatbot finche' non ricevi assistenza.",
+      // 🆕 Feature 203: Custom escalation triggers (informational version)
+      frustrationEscalationInstructions: `Chiama l'operatore (contactOperator) quando il cliente:
+- Ha URGENZA di informazioni che non trovi nella knowledge base
+- È FRUSTRATO perché non riesce a trovare le informazioni richieste
+- Chiede ESPLICITAMENTE di parlare con un OPERATORE UMANO
+- Ha una SITUAZIONE COMPLESSA che richiede assistenza personalizzata
+
+⚠️ IMPORTANTE: Prima verifica SEMPRE se la risposta è nelle FAQ o nella knowledge base`,
       operatorContactMethod: "EMAIL",
       toneOfVoice: "PROFESSIONAL",
       botIdentityResponse: "I'm the BellItalia assistant, here to provide information about our Italian gourmet products!",
@@ -690,6 +711,15 @@ async function main() {
       hasHumanSupport: true,
       humanSupportInstructions:
         "Ciao {{nameUser}}, ti metto subito in contatto con un consulente eChatbot. Riceverai risposta entro 15 minuti da {{agentName}} (tel: {{agentPhone}} / email: {{agentEmail}}).",
+      // 🆕 Feature 203: Custom escalation triggers (enterprise support)
+      frustrationEscalationInstructions: `Contatta IMMEDIATAMENTE un consulente umano quando il cliente:
+- Ha problemi TECNICI con la piattaforma (bug, errori, malfunzionamenti)
+- Vuole UPGRADE o DOWNGRADE del piano
+- Ha domande sulla FATTURAZIONE o pagamenti
+- Richiede INTEGRAZIONI personalizzate o API custom
+- Chiede ESPLICITAMENTE di parlare con un CONSULENTE UMANO
+
+⚠️ Prima verifica SEMPRE nella documentazione/FAQ se esiste già una risposta`,
       operatorContactMethod: "EMAIL",
       toneOfVoice: "PROFESSIONAL",
       botIdentityResponse:

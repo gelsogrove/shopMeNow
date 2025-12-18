@@ -41,6 +41,7 @@ export interface Workspace {
   hasSuppliers?: boolean // 🆕 Suppliers menu visibility
   hasHumanSupport?: boolean
   humanSupportInstructions?: string
+  frustrationEscalationInstructions?: string // 🆕 Feature 203: Custom escalation triggers
   operatorContactMethod?: string
   operatorWhatsappNumber?: string
   toneOfVoice?: string
@@ -49,6 +50,11 @@ export interface Workspace {
   customAiRules?: string // 🆕 Custom AI rules that override default behavior
   allowedExternalLinks?: string[] // 🆕 Security: allowed external domains
   logoUrl?: string // 🆕 Channel logo/icon
+  // 🆕 Translation Settings
+  translateProductNames?: boolean
+  translateCategoryNames?: boolean
+  translateServiceNames?: boolean
+  catalogBaseLanguage?: string
 }
 
 interface WorkspaceContextType {

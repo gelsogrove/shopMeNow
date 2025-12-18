@@ -177,7 +177,6 @@ For privacy inquiries, please contact our support team.`
       // 🆕 Channel Configuration (Feature 199) - CRITICAL: Must include these!
       sellsProductsAndServices: w.sellsProductsAndServices,
       hasSalesAgents: w.hasSalesAgents,
-      hasSuppliers: w.hasSuppliers,
       hasHumanSupport: w.hasHumanSupport,
       humanSupportInstructions: w.humanSupportInstructions ?? undefined,
       operatorContactMethod: w.operatorContactMethod ?? undefined,

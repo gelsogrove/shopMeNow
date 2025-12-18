@@ -14,30 +14,11 @@ interface InitialFAQ {
 
 /**
  * Initial FAQs created automatically when a new workspace/channel is created.
- * Only 5 essential FAQs are included - owners can add more from the admin panel.
+ * Only 4 essential FAQs are included - owners can add more from the admin panel.
  */
 export const initialFAQs = (
   workspaceId: string
 ): Array<InitialFAQ & { workspaceId: string }> => [
-  {
-    workspaceId,
-    question: "Who are you?",
-    answer:
-      "Hello {{nameUser}}! 👋 I'm {{channelName}} virtual assistant, ready to assist you with everything! I can help you find products, check your order status, or show you today's best deals. You can also sort the catalogue, place orders, download invoices, and resolve any issues.\n\nFor example:\n\n- Do you have Mozzarella?\n\n- Where is my order?\n\n- Give the invoice of my last order please\n\n- Repeat my last order\n\n- I am looking fresh products\n\n- I want to talk with a human operator\n\nHow can I help you today?",
-    keywords: [
-      "who are you",
-      "what are you",
-      "assistant",
-      "help",
-      "what can you do",
-      "introduce",
-      "hello",
-      "hi",
-    ],
-    category: "General",
-    order: 0,
-    isActive: true,
-  },
   {
     workspaceId,
     question: "How is my privacy protected?",
@@ -52,7 +33,7 @@ export const initialFAQs = (
       "data privacy",
     ],
     category: "Account",
-    order: 1,
+    order: 0,
     isActive: true,
   },
   {
@@ -68,7 +49,7 @@ export const initialFAQs = (
       "shipping time",
     ],
     category: "Shipping",
-    order: 2,
+    order: 1,
     isActive: true,
   },
   {
@@ -78,7 +59,7 @@ export const initialFAQs = (
       'You can easily repeat a previous order! Write "repeat last order" or "repeat order #[code]". I will show you the details and you can confirm.',
     keywords: ["repeat order", "same order", "reorder", "order again"],
     category: "Orders",
-    order: 3,
+    order: 2,
     isActive: true,
   },
   {

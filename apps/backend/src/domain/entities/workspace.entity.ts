@@ -36,6 +36,7 @@ export interface WorkspaceProps {
   hasSuppliers?: boolean
   hasHumanSupport?: boolean
   humanSupportInstructions?: string | null
+  frustrationEscalationInstructions?: string | null // 🆕 Feature 203: Custom escalation triggers
   operatorContactMethod?: string | null
   operatorWhatsappNumber?: string | null
   toneOfVoice?: string | null
@@ -193,6 +194,10 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get humanSupportInstructions(): string | null | undefined {
     return this.props.humanSupportInstructions
+  }
+
+  get frustrationEscalationInstructions(): string | null | undefined {
+    return this.props.frustrationEscalationInstructions
   }
 
   get operatorContactMethod(): string | null | undefined {

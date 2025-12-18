@@ -73,6 +73,7 @@ export class WorkspaceController {
         hasSuppliers: workspace.hasSuppliers,
         hasHumanSupport: workspace.hasHumanSupport,
         humanSupportInstructions: workspace.humanSupportInstructions,
+        frustrationEscalationInstructions: workspace.frustrationEscalationInstructions, // 🆕 Feature 203
         operatorContactMethod: workspace.operatorContactMethod,
         operatorWhatsappNumber: workspace.operatorWhatsappNumber,
         toneOfVoice: workspace.toneOfVoice,
@@ -144,6 +145,7 @@ export class WorkspaceController {
           hasSuppliers: workspace.hasSuppliers,
           hasHumanSupport: workspace.hasHumanSupport,
           humanSupportInstructions: workspace.humanSupportInstructions,
+          frustrationEscalationInstructions: workspace.frustrationEscalationInstructions, // 🆕 Feature 203
           operatorContactMethod: workspace.operatorContactMethod,
           operatorWhatsappNumber: workspace.operatorWhatsappNumber,
           toneOfVoice: workspace.toneOfVoice,
@@ -323,6 +325,7 @@ export class WorkspaceController {
         hasSuppliers: workspace.hasSuppliers,
         hasHumanSupport: workspace.hasHumanSupport,
         humanSupportInstructions: workspace.humanSupportInstructions,
+        frustrationEscalationInstructions: workspace.frustrationEscalationInstructions, // 🆕 Feature 203
         operatorContactMethod: workspace.operatorContactMethod,
         operatorWhatsappNumber: workspace.operatorWhatsappNumber,
         toneOfVoice: workspace.toneOfVoice,

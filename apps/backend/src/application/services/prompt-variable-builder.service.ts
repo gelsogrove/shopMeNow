@@ -63,7 +63,6 @@ interface WorkspaceInput {
   operatorContactMethod?: string | null
   operatorWhatsappNumber?: string | null
   hasSalesAgents?: boolean | null
-  hasSuppliers?: boolean | null
   notificationEmail?: string | null
   allowedExternalLinks?: string[] | null
   sellsProductsAndServices?: boolean | null
@@ -167,7 +166,6 @@ export class PromptVariableBuilder {
       hasHumanSupport: workspace?.hasHumanSupport ?? VARIABLE_DEFAULTS.hasHumanSupport!,
       humanSupportInstructions: workspace?.humanSupportInstructions || '',
       hasSalesAgents: workspace?.hasSalesAgents ?? VARIABLE_DEFAULTS.hasSalesAgents!,
-      hasSuppliers: workspace?.hasSuppliers ?? VARIABLE_DEFAULTS.hasSuppliers!,
       sellsProductsAndServices: workspace?.sellsProductsAndServices ?? VARIABLE_DEFAULTS.sellsProductsAndServices!,
       allowedExternalLinks: workspace?.allowedExternalLinks?.join('\n') || '',
       
@@ -299,7 +297,6 @@ export class PromptVariableBuilder {
         operatorContactMethod: true,
         operatorWhatsappNumber: true,
         hasSalesAgents: true,
-        hasSuppliers: true,
         notificationEmail: true,
         allowedExternalLinks: true,
         sellsProductsAndServices: true,

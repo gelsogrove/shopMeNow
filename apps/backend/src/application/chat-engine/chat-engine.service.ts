@@ -67,7 +67,6 @@ type PipelineLoadedData = LoadedData | CatalogQueryLoadedData
 interface WorkspaceConfig {
   sellsProductsAndServices: boolean
   hasSalesAgents: boolean
-  hasSuppliers: boolean
   hasHumanSupport: boolean
   humanSupportInstructions: string | null
   operatorContactMethod: string | null
@@ -1226,7 +1225,6 @@ export class ChatEngineService {
         name: true,
         sellsProductsAndServices: true,
         hasSalesAgents: true,
-        hasSuppliers: true,
         hasHumanSupport: true,
         humanSupportInstructions: true,
         operatorContactMethod: true,
@@ -1244,7 +1242,6 @@ export class ChatEngineService {
     const config: WorkspaceConfig = {
       sellsProductsAndServices: workspace?.sellsProductsAndServices ?? true,
       hasSalesAgents: workspace?.hasSalesAgents ?? false,
-      hasSuppliers: workspace?.hasSuppliers ?? false,
        hasHumanSupport: workspace?.hasHumanSupport ?? false,
        humanSupportInstructions: workspace?.humanSupportInstructions ?? null,
        operatorContactMethod: workspace?.operatorContactMethod ?? null,

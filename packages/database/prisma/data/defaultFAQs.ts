@@ -20,25 +20,6 @@ export const initialFAQs = (
 ): Array<DefaultFAQ & { workspaceId: string }> => [
   {
     workspaceId,
-    question: "Who are you?",
-    answer:
-      "Hello {{nameUser}}! 👋 I'm {{channelName}} virtual assistant, ready to assist you with everything! I can help you find products, check your order status, or show you today's best deals. You can also sort the catalogue, place orders, download invoices, and resolve any issues.\n\nFor example:\n\n- Do you have Mozzarella?\n\n- Where is my order?\n\n- Give the invoice of my last order please\n\n- Repeat my last order\n\n- I am looking fresh products\n\n- I want to talk with a human operator\n\nHow can I help you today?",
-    keywords: [
-      "who are you",
-      "what are you",
-      "assistant",
-      "help",
-      "what can you do",
-      "introduce",
-      "hello",
-      "hi",
-    ],
-    category: "General",
-    order: 0,
-    isActive: true,
-  },
-  {
-    workspaceId,
     question: "How is my privacy protected?",
     answer:
       'Your privacy is fundamental:\n✅ Data encrypted with SSL\n✅ GDPR compliant\n✅ No data sharing with third parties\n✅ Right to access, modify, delete data\n\nWrite "privacy policy" to read the complete document.',
@@ -51,7 +32,7 @@ export const initialFAQs = (
       "data privacy",
     ],
     category: "Account",
-    order: 1,
+    order: 0,
     isActive: true,
   },
   {
@@ -67,7 +48,7 @@ export const initialFAQs = (
       "shipping time",
     ],
     category: "Shipping",
-    order: 2,
+    order: 1,
     isActive: true,
   },
   {
@@ -77,7 +58,7 @@ export const initialFAQs = (
       'You can easily repeat a previous order! Write "repeat last order" or "repeat order #[code]". I will show you the details and you can confirm.',
     keywords: ["repeat order", "same order", "reorder", "order again"],
     category: "Orders",
-    order: 3,
+    order: 2,
     isActive: true,
   },
   {
@@ -95,7 +76,7 @@ export const initialFAQs = (
       "payment methods",
     ],
     category: "Payments",
-    order: 4,
+    order: 3,
     isActive: true,
   },
 ]
@@ -107,29 +88,6 @@ export const initialFAQs = (
 export const defaultFAQs = (
   workspaceId: string
 ): Array<DefaultFAQ & { workspaceId: string }> => [
-  // ====================================================================
-  // CATEGORY: General (1 FAQ) - General assistant questions
-  // ====================================================================
-  {
-    workspaceId,
-    question: "Who are you?",
-    answer:
-      "Hello {{nameUser}}! 👋 I'm {{channelName}} virtual assistant, ready to assist you with everything! I can help you find products, check your order status, or show you today's best deals. You can also sort the catalogue, place orders, download invoices, and resolve any issues.\n\nFor example:\n\n- Do you have Mozzarella?\n\n- Where is my order?\n\n- Give the invoice of my last order please\n\n- Repeat my last order\n\n- I am looking fresh products\n\n- I want to talk with a human operator\n\nHow can I help you today?",
-    keywords: [
-      "who are you",
-      "what are you",
-      "assistant",
-      "help",
-      "what can you do",
-      "introduce",
-      "hello",
-      "hi",
-    ],
-    category: "General",
-    order: 0,
-    isActive: true,
-  },
-
   // ====================================================================
   // CATEGORY: Orders (7 FAQs) - Order-related questions
   // ====================================================================

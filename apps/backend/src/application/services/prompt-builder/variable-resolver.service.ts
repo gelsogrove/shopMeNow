@@ -24,6 +24,7 @@ export interface PromptVariables {
   hasHumanSupport: boolean
   hasSalesAgents: boolean
   humanSupportInstructions: string
+  frustrationEscalationInstructions: string // 🆕 Feature 203: Custom escalation triggers
   operatorContactMethod: string
   operatorWhatsappNumber: string
   allowedExternalLinks: string
@@ -123,6 +124,7 @@ export class VariableResolverService {
         hasHumanSupport: true,
         hasSalesAgents: true,
         humanSupportInstructions: true,
+        frustrationEscalationInstructions: true, // 🆕 Feature 203
         operatorContactMethod: true,
         operatorWhatsappNumber: true,
         allowedExternalLinks: true,
@@ -152,6 +154,7 @@ export class VariableResolverService {
     variables.hasHumanSupport = workspace.hasHumanSupport ?? true
     variables.hasSalesAgents = workspace.hasSalesAgents ?? false
     variables.humanSupportInstructions = workspace.humanSupportInstructions || ""
+    variables.frustrationEscalationInstructions = workspace.frustrationEscalationInstructions || "" // 🆕 Feature 203
     variables.operatorContactMethod = workspace.operatorContactMethod || "email"
     variables.operatorWhatsappNumber = workspace.operatorWhatsappNumber || ""
     variables.allowedExternalLinks = Array.isArray(workspace.allowedExternalLinks)

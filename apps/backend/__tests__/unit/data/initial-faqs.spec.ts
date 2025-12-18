@@ -1,6 +1,6 @@
 /**
  * Unit tests for initialFAQs
- * Verifies that the correct 5 FAQs are created for new workspaces
+ * Verifies that the correct 4 FAQs are created for new workspaces
  */
 
 import { initialFAQs } from "../../../prisma/data/initialFAQs"
@@ -9,9 +9,9 @@ describe("initialFAQs", () => {
   const testWorkspaceId = "test-workspace-123"
 
   describe("structure", () => {
-    it("should return exactly 5 FAQs", () => {
+    it("should return exactly 4 FAQs", () => {
       const faqs = initialFAQs(testWorkspaceId)
-      expect(faqs).toHaveLength(5)
+      expect(faqs).toHaveLength(4)
     })
 
     it("should include workspaceId in all FAQs", () => {
@@ -50,16 +50,6 @@ describe("initialFAQs", () => {
   })
 
   describe("required FAQs content", () => {
-    it('should include "Who are you?" FAQ', () => {
-      const faqs = initialFAQs(testWorkspaceId)
-      const whoAreYou = faqs.find((f) => f.question === "Who are you?")
-      
-      expect(whoAreYou).toBeDefined()
-      expect(whoAreYou?.category).toBe("General")
-      expect(whoAreYou?.answer).toContain("{{nameUser}}")
-      expect(whoAreYou?.answer).toContain("{{channelName}}")
-    })
-
     it('should include "How is my privacy protected?" FAQ', () => {
       const faqs = initialFAQs(testWorkspaceId)
       const privacy = faqs.find((f) => f.question === "How is my privacy protected?")
@@ -95,22 +85,6 @@ describe("initialFAQs", () => {
       expect(payment).toBeDefined()
       expect(payment?.category).toBe("Payments")
       expect(payment?.keywords).toContain("payment")
-    })
-  })
-
-  describe("variable replacement support", () => {
-    it('should have {{nameUser}} variable in "Who are you?" answer', () => {
-      const faqs = initialFAQs(testWorkspaceId)
-      const whoAreYou = faqs.find((f) => f.question === "Who are you?")
-      
-      expect(whoAreYou?.answer).toMatch(/\{\{nameUser\}\}/)
-    })
-
-    it('should have {{channelName}} variable in "Who are you?" answer', () => {
-      const faqs = initialFAQs(testWorkspaceId)
-      const whoAreYou = faqs.find((f) => f.question === "Who are you?")
-      
-      expect(whoAreYou?.answer).toMatch(/\{\{channelName\}\}/)
     })
   })
 

@@ -28,9 +28,9 @@ export interface Workspace {
   // 🆕 Feature 199: Channel Configuration
   sellsProductsAndServices?: boolean
   hasSalesAgents?: boolean
-  hasSuppliers?: boolean
   hasHumanSupport?: boolean
   humanSupportInstructions?: string
+  frustrationEscalationInstructions?: string // 🆕 Feature 203: Custom escalation triggers
   operatorContactMethod?: string
   operatorWhatsappNumber?: string
   toneOfVoice?: string
@@ -74,9 +74,9 @@ export interface UpdateWorkspaceData {
   // 🆕 Feature 199: Channel Configuration
   sellsProductsAndServices?: boolean
   hasSalesAgents?: boolean
-  hasSuppliers?: boolean
   hasHumanSupport?: boolean
   humanSupportInstructions?: string
+  frustrationEscalationInstructions?: string // 🆕 Feature 203
   operatorContactMethod?: string
   operatorWhatsappNumber?: string
   toneOfVoice?: string
@@ -103,7 +103,7 @@ const workspaceApi = {
     const response = await api.get("/workspaces/current")
     return response.data
   },
-  
+
   async getById(id: string): Promise<Workspace> {
     const response = await api.get(`/workspaces/${id}`)
     return response.data

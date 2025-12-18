@@ -41,9 +41,9 @@ model Workspace {
   // ============================================================================
   sellsProductsAndServices  Boolean           @default(true)   // Does this channel sell products/services? (enables E-commerce menu)
   hasSalesAgents            Boolean           @default(false)  // Has sales team for customer assignment?
-  hasSuppliers              Boolean           @default(false)  // Has suppliers management?
   hasHumanSupport           Boolean           @default(true)   // Can customers request human support?
   humanSupportInstructions  String?           @db.Text         // Instructions for human support requests
+  frustrationEscalationInstructions String?   @db.Text         // 🆕 Feature 203: Custom triggers for when chatbot should call operator (panic/frustration cases)
   operatorContactMethod     String?           @default("email") // 'email' | 'whatsapp'
   operatorWhatsappNumber    String?                            // WhatsApp number for human support (if method='whatsapp')
   toneOfVoice               String?           @default("friendly") // 'formal' | 'friendly' | 'professional' | 'casual'
@@ -102,7 +102,6 @@ model Workspace {
   orders                    Orders[]
   products                  Products[]
   sales                     Sales[]
-  suppliers                 Suppliers[]
   secureTokens              SecureToken[]
   services                  Services[]
   billings                  Billing[]
@@ -174,27 +173,6 @@ model Languages {
   @@map("languages")
 }
 
-model Suppliers {
-  id              String     @id @default(uuid())
-  companyName     String
-  description     String?
-  website         String?
-  phone           String?
-  email           String?
-  contactName     String?
-  region          String?
-  country         String?
-  logoUrl         String?
-  isActive        Boolean    @default(true)
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-  workspaceId     String
-  workspace       Workspace  @relation(fields: [workspaceId], references: [id])
-  products        Products[]
-
-  @@map("suppliers")
-}
-
 model Products {
   id                    String                  @id @default(uuid())
   name                  String
@@ -208,7 +186,6 @@ model Products {
   isActive              Boolean                 @default(true)
   workspaceId           String
   categoryId            String?                 // DEPRECATED: Use productCategories relation instead
-  supplierId            String?
   slug                  String                  @unique
   status                ProductStatus           @default(ACTIVE)
   imageUrl              String[]                @default([])
@@ -223,7 +200,6 @@ model Products {
   productTransportTypes ProductTransportType[]
   productCategories     ProductCategory[]
   category              Categories?             @relation(fields: [categoryId], references: [id]) // DEPRECATED
-  supplier              Suppliers?              @relation(fields: [supplierId], references: [id])
   workspace             Workspace               @relation(fields: [workspaceId], references: [id])
 
   @@index([workspaceId])

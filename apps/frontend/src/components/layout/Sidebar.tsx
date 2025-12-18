@@ -48,7 +48,7 @@ export function Sidebar() {
 
   // Controlla se siamo in una pagina che fa parte del sottomenu E-commerce
   useEffect(() => {
-    const ecommercePages = ["/products", "/services", "/offers", "/suppliers", "/sales", "/admin/orders"]
+    const ecommercePages = ["/products", "/services", "/offers", "/sales", "/admin/orders"]
     if (ecommercePages.some((page) => location.pathname.startsWith(page))) {
       setExpandedItems((prev) => ({
         ...prev,
@@ -102,12 +102,6 @@ export function Sidebar() {
           label: "Offers",
           icon: Percent,
         },
-        // Suppliers menu - only if hasSuppliers is true
-        ...(workspace?.hasSuppliers === true ? [{
-          href: "/suppliers",
-          label: "Suppliers",
-          icon: Building2,
-        }] : []),
         // Sales menu - only if hasSalesAgents is true
         ...(workspace?.hasSalesAgents === true ? [{
           href: "/sales",
