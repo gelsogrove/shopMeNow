@@ -1010,6 +1010,19 @@ export function LoginPage() {
       </header>
 
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12 lg:py-16 relative z-20">
+        <div className="text-center mb-12 space-y-4">
+          <p className="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-green-600">
+            <span className="h-[1px] w-8 bg-green-600" aria-hidden="true" />
+            From chat to order
+            <span className="h-[1px] w-8 bg-green-600" aria-hidden="true" />
+          </p>
+          <h1 className="text-4xl lg:text-5xl font-bold text-slate-900">
+            Automate every conversation on WhatsApp
+          </h1>
+          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+            Capture leads, showcase products and confirm orders without leaving the chat.
+          </p>
+        </div>
         <div className="flex flex-col lg:flex-row gap-10 items-stretch">
           <div className="flex justify-center lg:justify-start items-center w-full lg:flex-1">
             <div className="relative w-full max-w-3xl lg:mr-2 min-h-[32rem]">
@@ -1046,7 +1059,7 @@ export function LoginPage() {
               <div className="space-y-6 flex-1 flex flex-col">
                 <div className="text-center space-y-2">
                   <h3 className="text-2xl font-bold text-slate-900">
-                    {activeTab === "signin" ? "Welcome back" : "Create your account"}
+                    {activeTab === "signin" ? "Login" : "Create your account"}
                   </h3>
                   <p className="text-slate-600">
                     {activeTab === "signin"
@@ -1084,31 +1097,6 @@ export function LoginPage() {
                             <p className="font-semibold text-slate-900">{formattedCredit}</p>
                           </div>
                         </div>
-                        {userPlan?.usage && userPlan?.limits && (
-                          <div className="rounded-xl border border-green-100 bg-white/70 p-3 text-slate-700">
-                            <p className="text-xs font-semibold text-slate-500 mb-2">Usage limits</p>
-                            <div className="grid grid-cols-3 gap-2 text-xs">
-                              <div>
-                                <p className="text-slate-500">Channels</p>
-                                <p className="font-semibold text-slate-900">
-                                  {userPlan.usage.channelsCount}/{userPlan.limits.maxChannels}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-slate-500">Customers</p>
-                                <p className="font-semibold text-slate-900">
-                                  {userPlan.usage.customersCount}/{userPlan.limits.maxCustomers}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-slate-500">Products</p>
-                                <p className="font-semibold text-slate-900">
-                                  {userPlan.usage.productsCount}/{userPlan.limits.maxProducts}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
                         <button
                           type="button"
                           onClick={() => navigate("/workspace-selection")}
@@ -1256,6 +1244,7 @@ export function LoginPage() {
                           id="firstName"
                           type="text"
                           placeholder="First name"
+                          autoComplete="off"
                           {...registerForm.register("firstName")}
                           disabled={isLoading}
                           className={`h-11 ${registerForm.formState.errors.firstName ? "border-red-500 focus-visible:ring-red-500" : ""}`}
@@ -1266,6 +1255,7 @@ export function LoginPage() {
                           id="lastName"
                           type="text"
                           placeholder="Last name"
+                          autoComplete="off"
                           {...registerForm.register("lastName")}
                           disabled={isLoading}
                           className={`h-11 ${registerForm.formState.errors.lastName ? "border-red-500 focus-visible:ring-red-500" : ""}`}
@@ -1455,6 +1445,9 @@ export function LoginPage() {
               return
             }
             setActiveTab('register')
+            setTimeout(() => {
+              document.getElementById("firstName")?.focus()
+            }, 0)
           }}
         />
       </div>
@@ -1664,16 +1657,18 @@ export function LoginPage() {
                           id="firstName"
                           type="text"
                           placeholder="First name"
+                          autoComplete="off"
                           {...registerForm.register("firstName")}
                           disabled={isLoading}
                           className={`h-11 ${registerForm.formState.errors.firstName ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                         />
-                      </div>
-                      <div className="space-y-2">
+                        </div>
+                        <div className="space-y-2">
                         <Input
                           id="lastName"
                           type="text"
                           placeholder="Last name"
+                          autoComplete="off"
                           {...registerForm.register("lastName")}
                           disabled={isLoading}
                           className={`h-11 ${registerForm.formState.errors.lastName ? "border-red-500 focus-visible:ring-red-500" : ""}`}
