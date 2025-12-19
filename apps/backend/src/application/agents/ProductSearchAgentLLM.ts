@@ -844,6 +844,13 @@ export class ProductSearchAgentLLM {
     const matches = response.match(productLinePattern) || []
     const productLineCount = matches.length
 
+    logger.info(`🔍 Grouping validation check`, {
+      productLineCount,
+      responseLength: response.length,
+      responsePreview: response.substring(0, 200),
+      matchedLines: matches.slice(0, 5),
+    })
+
     if (productLineCount >= 6) {
       logger.warn(`🚨 GROUPING RULE VIOLATED: Response contains ${productLineCount} product lines (>=6 should be grouped)`, {
         sampleLines: matches.slice(0, 3).map(l => l.trim()),
