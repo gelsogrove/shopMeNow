@@ -24,7 +24,7 @@ import {
   AskFAQIntent,
 } from "../intent"
 import { DataLoaderService, getDataLoader, LoadedData } from "../data-loader"
-import { ResponseBuilderService, getResponseBuilder, StructuredResponse, ListItem } from "../response-builder"
+import { ResponseBuilderService, getResponseBuilder, StructuredResponse, ListItem, EnrichmentOptions } from "../response-builder"
 import { LLMFormatterService, getLLMFormatter, FormatterResult } from "../llm-formatter"
 import { ConversationManager } from "../../services/conversation-manager.service"
 import { LinkReplacementService, ReplaceLinkWithTokenParams } from "../services/link-replacement.service"
@@ -3940,6 +3940,15 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         }
       }
       
+      // ========================================================================
+      // STEP 4.1: Build enrichment options for contextual responses
+      // ========================================================================
+      const enrichmentOptions = await this.buildEnrichmentOptions(
+        input.workspaceId,
+        input.customerId,
+        history
+      )
+      
       const structuredResponse =
         structuredResponseOverride ??
         this.responseBuilder.build(intentResult.intent, finalLoadedData as LoadedData, {
@@ -3950,7 +3959,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           showOptimizeOption,
           userMessage: input.message,
           enableCategoryRanking: workspaceConfig.sellsProductsAndServices,
-        })
+        }, enrichmentOptions)
 
       logger.info("🏗️ [ChatEngine] Response built", { type: structuredResponse.type })
 
@@ -4747,6 +4756,103 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       logger.error("❌ [ChatEngine] Failed to save messages", { error })
       return {}
     }
+  }
+
+  // ================================================================================
+  // 🆕 CONTEXTUAL ENRICHMENT - Build enrichment options for ResponseBuilder
+  // ================================================================================
+
+  /**
+   * Build enrichment options for contextual responses
+   * 
+   * Loads customer profile data for personalization and prepares
+   * conversation history for contextual suggestions.
+   */
+  private async buildEnrichmentOptions(
+    workspaceId: string,
+    customerId: string,
+    conversationHistory: Array<{ role: "user" | "assistant"; content: string }>
+  ): Promise<EnrichmentOptions> {
+    const enrichmentOptions: EnrichmentOptions = {
+      conversationHistory,
+      enableClarifyingQuestions: true,
+      enableSuggestions: true,
+      enablePersonalization: true,
+    }
+
+    try {
+      // Load customer order statistics for personalization
+      const orderStats = await this.prisma.orders.groupBy({
+        by: ["customerId"],
+        where: {
+          customerId,
+          workspaceId,
+          deletedAt: null,
+        },
+        _count: { id: true },
+        _max: { createdAt: true },
+      })
+
+      const customerOrderCount = orderStats[0]?._count.id || 0
+      const lastOrderDate = orderStats[0]?._max.createdAt
+
+      // Load frequent products (top 5 by order count)
+      let frequentProducts: Array<{ sku: string; name: string; orderCount: number }> = []
+      if (customerOrderCount > 0) {
+        const frequentProductsRaw = await this.prisma.orderItems.groupBy({
+          by: ["productId"],
+          where: {
+            order: {
+              customerId,
+              workspaceId,
+              deletedAt: null,
+            },
+          },
+          _count: { productId: true },
+          orderBy: { _count: { productId: "desc" } },
+          take: 5,
+        })
+
+        if (frequentProductsRaw.length > 0) {
+          const productIds = frequentProductsRaw.map(p => p.productId).filter(Boolean) as string[]
+          const products = await this.prisma.products.findMany({
+            where: { id: { in: productIds }, deletedAt: null },
+            select: { id: true, sku: true, name: true },
+          })
+
+          frequentProducts = frequentProductsRaw
+            .map(fp => {
+              const product = products.find(p => p.id === fp.productId)
+              return product ? {
+                sku: product.sku,
+                name: product.name,
+                orderCount: fp._count.productId,
+              } : null
+            })
+            .filter(Boolean) as Array<{ sku: string; name: string; orderCount: number }>
+        }
+      }
+
+      // Build customer profile for personalization
+      enrichmentOptions.customerProfile = {
+        isReturningCustomer: customerOrderCount > 0,
+        totalOrders: customerOrderCount,
+        lastOrderDate: lastOrderDate || undefined,
+        frequentProducts: frequentProducts.length > 0 ? frequentProducts : undefined,
+      }
+
+      logger.debug("✨ [ChatEngine] Enrichment options built", {
+        isReturningCustomer: customerOrderCount > 0,
+        totalOrders: customerOrderCount,
+        frequentProductsCount: frequentProducts.length,
+        historyLength: conversationHistory.length,
+      })
+    } catch (error) {
+      // Don't fail if enrichment data can't be loaded
+      logger.warn("⚠️ [ChatEngine] Could not load enrichment data", { error })
+    }
+
+    return enrichmentOptions
   }
 
   // ================================================================================

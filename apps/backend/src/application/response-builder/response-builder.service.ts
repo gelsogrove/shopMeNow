@@ -80,6 +80,51 @@ export interface StructuredResponse {
   text?: string
   // For LLM formatting
   template?: string
+  
+  // 🆕 Contextual Enrichment - Makes responses more natural and helpful
+  enrichment?: ConversationEnrichment
+}
+
+// ================================================================================
+// 🆕 CONVERSATION ENRICHMENT - Contextual intelligence for natural responses
+// ================================================================================
+
+export interface ConversationEnrichment {
+  // Clarifying question when response is ambiguous
+  clarifyingQuestion?: string
+  
+  // Contextual suggestions based on conversation flow
+  suggestions?: ContextualSuggestion[]
+  
+  // Personalization based on customer history
+  personalization?: PersonalizationData
+  
+  // Conversational tone hints for LLM
+  toneHints?: ToneHint[]
+}
+
+export interface ContextualSuggestion {
+  text: string           // "Vedi offerte del giorno"
+  intent: string         // "SHOW_OFFERS" - helps with quick actions
+  priority: number       // 1 = high, 2 = medium, 3 = low
+  emoji?: string         // "🎁"
+}
+
+export interface PersonalizationData {
+  // Reference to previous orders
+  lastOrderHint?: string           // "Come l'ordine di martedì scorso?"
+  frequentProducts?: string[]      // Products they buy often
+  preferredCategories?: string[]   // Categories they browse most
+  
+  // Customer-specific context
+  isReturningCustomer: boolean
+  daysSinceLastOrder?: number
+  totalOrders?: number
+}
+
+export interface ToneHint {
+  type: "friendly" | "urgent" | "helpful" | "apologetic" | "celebratory"
+  reason: string  // "first_time_customer", "empty_cart", "large_order", etc.
 }
 
 export interface ResponseData {
@@ -188,6 +233,29 @@ export const RESPONSE_DEFAULT_FORMATTING: FormattingInstructions = {
 const DEFAULT_FORMATTING = RESPONSE_DEFAULT_FORMATTING
 
 // ================================================================================
+// 🆕 ENRICHMENT OPTIONS - Input for contextual enrichment
+// ================================================================================
+
+export interface EnrichmentOptions {
+  // Conversation history for context
+  conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>
+  
+  // Customer profile for personalization
+  customerProfile?: {
+    isReturningCustomer: boolean
+    totalOrders: number
+    lastOrderDate?: Date
+    frequentProducts?: Array<{ sku: string; name: string; orderCount: number }>
+    preferredCategories?: string[]
+  }
+  
+  // Enable specific enrichment features
+  enableClarifyingQuestions?: boolean
+  enableSuggestions?: boolean
+  enablePersonalization?: boolean
+}
+
+// ================================================================================
 // RESPONSE BUILDER SERVICE
 // ================================================================================
 
@@ -196,6 +264,8 @@ export class ResponseBuilderService {
 
   /**
    * Main entry point - build structured response from loaded data
+   * 
+   * 🆕 enrichmentOptions: Pass conversation history for contextual enrichment
    */
   build(
     intent: Intent,
@@ -209,7 +279,8 @@ export class ResponseBuilderService {
       disableGrouping?: boolean
       userMessage?: string
       enableCategoryRanking?: boolean
-    }
+    },
+    enrichmentOptions?: EnrichmentOptions
   ): StructuredResponse {
     logger.info("🏗️ [ResponseBuilder] Building response", {
       intentType: intent.type,
@@ -326,11 +397,305 @@ export class ResponseBuilderService {
         }
 
       case "EMPTY":
-        return this.buildEmptyResponse(intent.type, loadedData.reason, context)
+        return this.enrichResponse(
+          this.buildEmptyResponse(intent.type, loadedData.reason, context),
+          enrichmentOptions
+        )
 
       default:
         return this.buildErrorResponse("Unknown data type", context)
     }
+  }
+
+  // ================================================================================
+  // 🆕 CONTEXTUAL ENRICHMENT - Makes responses more natural and helpful
+  // ================================================================================
+
+  /**
+   * Enrich a structured response with contextual intelligence
+   * 
+   * Adds:
+   * - Clarifying questions when response is ambiguous
+   * - Contextual suggestions based on conversation flow
+   * - Personalization based on customer history
+   * - Tone hints for the LLM formatter
+   */
+  private enrichResponse(
+    response: StructuredResponse,
+    options?: EnrichmentOptions
+  ): StructuredResponse {
+    // Skip enrichment if no options provided
+    if (!options) {
+      return response
+    }
+
+    const enrichment: ConversationEnrichment = {}
+    let hasEnrichment = false
+
+    // 1. Add clarifying questions for ambiguous responses
+    if (options.enableClarifyingQuestions !== false) {
+      const clarifyingQuestion = this.generateClarifyingQuestion(response, options)
+      if (clarifyingQuestion) {
+        enrichment.clarifyingQuestion = clarifyingQuestion
+        hasEnrichment = true
+      }
+    }
+
+    // 2. Add contextual suggestions
+    if (options.enableSuggestions !== false) {
+      const suggestions = this.generateContextualSuggestions(response, options)
+      if (suggestions.length > 0) {
+        enrichment.suggestions = suggestions
+        hasEnrichment = true
+      }
+    }
+
+    // 3. Add personalization from customer profile
+    if (options.enablePersonalization !== false && options.customerProfile) {
+      const personalization = this.generatePersonalization(response, options)
+      if (personalization) {
+        enrichment.personalization = personalization
+        hasEnrichment = true
+      }
+    }
+
+    // 4. Add tone hints based on context
+    const toneHints = this.generateToneHints(response, options)
+    if (toneHints.length > 0) {
+      enrichment.toneHints = toneHints
+      hasEnrichment = true
+    }
+
+    // Only add enrichment if we have something
+    if (hasEnrichment) {
+      logger.info("✨ [ResponseBuilder] Response enriched", {
+        responseType: response.type,
+        hasClarifyingQuestion: !!enrichment.clarifyingQuestion,
+        suggestionsCount: enrichment.suggestions?.length || 0,
+        hasPersonalization: !!enrichment.personalization,
+        toneHintsCount: enrichment.toneHints?.length || 0,
+      })
+      return { ...response, enrichment }
+    }
+
+    return response
+  }
+
+  /**
+   * Generate clarifying question when response has multiple options
+   */
+  private generateClarifyingQuestion(
+    response: StructuredResponse,
+    options: EnrichmentOptions
+  ): string | undefined {
+    // Multiple products with similar names → ask for preference
+    if (response.type === "PRODUCT_LIST" && response.data.items) {
+      const items = response.data.items
+      if (items.length >= 3 && items.length <= 6) {
+        // Check if products are similar (same base name)
+        const baseNames = items.map(i => i.name.split(" ")[0].toLowerCase())
+        const uniqueBaseNames = new Set(baseNames)
+        if (uniqueBaseNames.size <= 2) {
+          return "Quale formato preferisci?"
+        }
+      }
+    }
+
+    // Cart is empty → suggest action
+    if (response.type === "CART_EMPTY") {
+      return "Vuoi vedere i nostri prodotti o le offerte attive?"
+    }
+
+    // Search with many results → help narrow down
+    if (response.type === "PRODUCT_LIST" && (response.data.count || 0) > 10) {
+      return "Posso aiutarti a restringere la ricerca?"
+    }
+
+    return undefined
+  }
+
+  /**
+   * Generate contextual suggestions based on conversation state
+   */
+  private generateContextualSuggestions(
+    response: StructuredResponse,
+    options: EnrichmentOptions
+  ): ContextualSuggestion[] {
+    const suggestions: ContextualSuggestion[] = []
+
+    // After viewing cart → suggest checkout or continue shopping
+    if (response.type === "CART_VIEW" && response.data.cart?.items?.length) {
+      suggestions.push({
+        text: "Procedi al checkout",
+        intent: "CHECKOUT",
+        priority: 1,
+        emoji: "✅",
+      })
+      suggestions.push({
+        text: "Continua a comprare",
+        intent: "SHOW_CATEGORIES",
+        priority: 2,
+        emoji: "🛒",
+      })
+    }
+
+    // After viewing categories → suggest offers
+    if (response.type === "CATEGORY_LIST") {
+      suggestions.push({
+        text: "Vedi offerte attive",
+        intent: "SHOW_OFFERS",
+        priority: 2,
+        emoji: "🎁",
+      })
+    }
+
+    // Product detail → suggest add to cart
+    if (response.type === "PRODUCT_DETAIL" && response.data.product) {
+      suggestions.push({
+        text: "Aggiungi al carrello",
+        intent: "ADD_TO_CART",
+        priority: 1,
+        emoji: "🛒",
+      })
+      suggestions.push({
+        text: "Vedi prodotti simili",
+        intent: "SEARCH_PRODUCTS",
+        priority: 3,
+        emoji: "🔍",
+      })
+    }
+
+    // After viewing order → suggest actions
+    if (response.type === "ORDER_DETAIL") {
+      suggestions.push({
+        text: "Riordina",
+        intent: "REPEAT_ORDER",
+        priority: 1,
+        emoji: "🔄",
+      })
+    }
+
+    // Empty results → suggest alternatives
+    if (response.type === "NO_RESULTS") {
+      suggestions.push({
+        text: "Vedi tutti i prodotti",
+        intent: "SHOW_PRODUCTS",
+        priority: 1,
+        emoji: "📦",
+      })
+      suggestions.push({
+        text: "Cerca per categoria",
+        intent: "SHOW_CATEGORIES",
+        priority: 2,
+        emoji: "📁",
+      })
+    }
+
+    return suggestions.slice(0, 3) // Max 3 suggestions
+  }
+
+  /**
+   * Generate personalization based on customer history
+   */
+  private generatePersonalization(
+    response: StructuredResponse,
+    options: EnrichmentOptions
+  ): PersonalizationData | undefined {
+    const profile = options.customerProfile
+    if (!profile) return undefined
+
+    const personalization: PersonalizationData = {
+      isReturningCustomer: profile.isReturningCustomer,
+      totalOrders: profile.totalOrders,
+    }
+
+    // Calculate days since last order
+    if (profile.lastOrderDate) {
+      const daysSince = Math.floor(
+        (Date.now() - new Date(profile.lastOrderDate).getTime()) / (1000 * 60 * 60 * 24)
+      )
+      personalization.daysSinceLastOrder = daysSince
+
+      // Suggest reorder if it's been a while
+      if (daysSince >= 7 && daysSince <= 30) {
+        personalization.lastOrderHint = "Come l'ultima volta?"
+      }
+    }
+
+    // Add frequent products if viewing categories/products
+    if (
+      (response.type === "CATEGORY_LIST" || response.type === "PRODUCT_LIST") &&
+      profile.frequentProducts?.length
+    ) {
+      personalization.frequentProducts = profile.frequentProducts
+        .slice(0, 3)
+        .map(p => p.name)
+    }
+
+    // Add preferred categories
+    if (profile.preferredCategories?.length) {
+      personalization.preferredCategories = profile.preferredCategories.slice(0, 3)
+    }
+
+    return personalization
+  }
+
+  /**
+   * Generate tone hints for the LLM formatter
+   */
+  private generateToneHints(
+    response: StructuredResponse,
+    options: EnrichmentOptions
+  ): ToneHint[] {
+    const hints: ToneHint[] = []
+
+    // First time customer → extra friendly
+    if (options.customerProfile && !options.customerProfile.isReturningCustomer) {
+      hints.push({
+        type: "friendly",
+        reason: "first_time_customer",
+      })
+    }
+
+    // Empty cart → helpful
+    if (response.type === "CART_EMPTY") {
+      hints.push({
+        type: "helpful",
+        reason: "empty_cart",
+      })
+    }
+
+    // Large order (>5 items) → celebratory
+    if (response.type === "CART_VIEW") {
+      const itemCount = response.data.cart?.items?.length || 0
+      if (itemCount >= 5) {
+        hints.push({
+          type: "celebratory",
+          reason: "large_order",
+        })
+      }
+    }
+
+    // Error or no results → apologetic
+    if (response.type === "ERROR" || response.type === "NO_RESULTS") {
+      hints.push({
+        type: "apologetic",
+        reason: "no_results_or_error",
+      })
+    }
+
+    // Returning customer with recent order → familiar
+    if (
+      options.customerProfile?.isReturningCustomer &&
+      options.customerProfile?.totalOrders > 3
+    ) {
+      hints.push({
+        type: "friendly",
+        reason: "loyal_customer",
+      })
+    }
+
+    return hints
   }
 
   // ================================================================================
