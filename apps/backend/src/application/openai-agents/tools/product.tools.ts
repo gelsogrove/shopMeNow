@@ -115,7 +115,7 @@ export const searchProductsTool = tool({
             price: p.price,
             discountedPrice,
             stock: p.stock,
-            categoryName: p.category?.name,
+            categoryName: p.productCategories?.[0]?.category?.name,
             imageUrl: p.imageUrl,
             isAvailable: p.stock > 0,
           }

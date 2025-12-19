@@ -2447,7 +2447,7 @@ export class DataLoaderService {
   }
 
   private basicTextMatch(products: any[], query: string): any[] {
-    const tokens = this.tokenizeQuery(query)
+    const tokens = this.tokenizeQueryForSearch(query)
     if (tokens.length === 0) {
       return []
     }
@@ -2485,7 +2485,7 @@ export class DataLoaderService {
     })
   }
 
-  private tokenizeQuery(query: string): string[] {
+  private tokenizeQueryForSearch(query: string): string[] {
     return this.normalizeSearchText(query)
       .split(/\s+/)
       .filter((token) => token.length > 2)
@@ -2564,7 +2564,7 @@ export class DataLoaderService {
   }
 
   private findSimilarProductsByName(products: any[], query: string): any[] {
-    const queryTokens = this.tokenizeQuery(query)
+    const queryTokens = this.tokenizeQueryForSearch(query)
     if (queryTokens.length === 0) {
       return []
     }
