@@ -72,7 +72,6 @@ export const searchProductsTool = tool({
           productCategories: {
             include: { category: true },
           },
-          supplier: true,
         },
         take: 100, // Get more for fuzzy search, then filter
       })
@@ -117,7 +116,6 @@ export const searchProductsTool = tool({
             discountedPrice,
             stock: p.stock,
             categoryName: p.productCategories[0]?.category?.name,
-            supplierName: p.supplier?.companyName,
             imageUrl: p.imageUrl,
             isAvailable: p.stock > 0,
           }
@@ -184,7 +182,6 @@ export const getProductDetailsTool = tool({
           productCategories: {
             include: { category: true },
           },
-          supplier: true,
           productCertifications: {
             include: { certification: true },
           },
@@ -218,7 +215,6 @@ export const getProductDetailsTool = tool({
           discountedPrice,
           stock: product.stock,
           categoryName: product.productCategories[0]?.category?.name,
-          supplierName: product.supplier?.companyName,
           imageUrl: product.imageUrl,
           isAvailable: product.stock > 0,
         },
@@ -384,9 +380,6 @@ export const getProductsByCategoryTool = tool({
             some: { categoryId: category.id },
           },
         },
-        include: {
-          supplier: true,
-        },
         take: maxResults,
         orderBy: { name: "asc" },
       })
@@ -404,7 +397,6 @@ export const getProductsByCategoryTool = tool({
           : undefined,
         stock: p.stock,
         categoryName: category.name,
-        supplierName: p.supplier?.companyName,
         imageUrl: p.imageUrl,
         isAvailable: p.stock > 0,
       }))

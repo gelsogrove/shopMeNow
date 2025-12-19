@@ -3091,28 +3091,54 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       })
 
       // ========================================================================
-      // STEP 2.25: Handle UNKNOWN intent - ONLY if LLM fallback also failed
+      // STEP 2.25: Handle INCOMPREHENSIBLE and UNKNOWN intents
       // ========================================================================
-      // The IntentParser already uses LLM fallback for classification.
-      // If we still get UNKNOWN, it means the LLM couldn't classify it either.
-      // In that case, for e-commerce workspaces, try semantic product search.
-      // This is a LAST RESORT, not the primary classification method!
-      if (intentResult.intent.type === "UNKNOWN" && workspaceConfig.sellsProductsAndServices) {
+      // INCOMPREHENSIBLE: Message is gibberish/random characters - respond with "non ho capito"
+      // UNKNOWN: Message is a real communication attempt but intent unclear - also ask for clarification
+      
+      if (intentResult.intent.type === "INCOMPREHENSIBLE" || intentResult.intent.type === "UNKNOWN") {
         const originalMessage = (intentResult.intent as any).originalMessage || input.message
         
-        logger.info("🔄 [ChatEngine] UNKNOWN intent after LLM fallback - trying semantic product search", {
-          originalIntent: "UNKNOWN",
+        logger.info("❓ [ChatEngine] INCOMPREHENSIBLE/UNKNOWN intent - asking for clarification", {
+          intentType: intentResult.intent.type,
           source: intentResult.source,
-          query: originalMessage
+          originalMessage: originalMessage.substring(0, 50)
         })
         
-        // Last resort: try semantic product search
-        // The LLM already tried to classify, so this is just searching products
-        intentResult.intent = {
-          type: "SEARCH_PRODUCTS",
-          query: originalMessage
-        } as SearchProductsIntent
-        intentResult.source = "LLM_FALLBACK"
+        const clarificationMessage = "Mi dispiace, non ho capito. Puoi ripetere in modo più chiaro?"
+        const processingTimeMs = Date.now() - startTime
+        
+        const savedMessages = await this.saveMessages(
+          input.workspaceId,
+          input.customerId,
+          conversationId,
+          input.message,
+          clarificationMessage
+        )
+        
+        return {
+          message: clarificationMessage,
+          agentType: AgentType.ROUTER,
+          wasHandled: true,
+          intent: intentResult.intent.type,
+          confidence: "LOW",
+          source: intentResult.source,
+          processingTimeMs,
+          debugInfo: {
+            loadedDataType: "CLARIFICATION",
+            responseType: "INCOMPREHENSIBLE",
+            llmUsed: false,
+            steps: debugSteps,
+            totalTokens,
+          },
+          response: clarificationMessage,
+          agentUsed: AgentType.ROUTER,
+          tokensUsed: totalTokens,
+          executionTimeMs: processingTimeMs,
+          wasFAQ: false,
+          isBlocked: false,
+          _assistantMessageId: savedMessages?.assistantMessageId,
+        }
       }
 
       // ========================================================================

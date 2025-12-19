@@ -145,6 +145,10 @@ export interface AskContactIntent {
   type: "ASK_CONTACT"
 }
 
+export interface GreetingIntent {
+  type: "GREETING"
+}
+
 // =============================================================================
 // AGENT INFO INTENT (B2B feature)
 // @see Feature 202 - Order Selection & Agent Variables
@@ -228,6 +232,15 @@ export interface UnknownIntent {
 }
 
 // =============================================================================
+// INCOMPREHENSIBLE INTENT (gibberish, random characters, nonsense)
+// =============================================================================
+
+export interface IncomprehensibleIntent {
+  type: "INCOMPREHENSIBLE"
+  originalMessage: string
+}
+
+// =============================================================================
 // UNION TYPE - All possible intents
 // =============================================================================
 
@@ -261,6 +274,7 @@ export type Intent =
   | RequestHumanIntent
   | AskContactIntent
   | ShowAgentInfoIntent
+  | GreetingIntent
   
   // Selection
   | SelectOptionIntent
@@ -280,8 +294,9 @@ export type Intent =
   | ViewProfileIntent
   | UpdateProfileIntent
   
-  // Unknown
+  // Unknown / Incomprehensible
   | UnknownIntent
+  | IncomprehensibleIntent
 
 // =============================================================================
 // INTENT RESULT - Wrapper with metadata
@@ -381,6 +396,7 @@ export function isSupportIntent(intent: Intent): intent is
   | RequestHumanIntent
   | AskContactIntent
   | ShowAgentInfoIntent
+  | GreetingIntent
   | ViewProfileIntent {
   return [
     "ASK_IDENTITY",
@@ -389,6 +405,7 @@ export function isSupportIntent(intent: Intent): intent is
     "REQUEST_HUMAN",
     "ASK_CONTACT",
     "SHOW_AGENT_INFO",
+    "GREETING",
     "VIEW_PROFILE"
   ].includes(intent.type)
 }
@@ -403,4 +420,8 @@ export function isConfirmationIntent(intent: Intent): intent is ConfirmIntent | 
 
 export function isUnknownIntent(intent: Intent): intent is UnknownIntent {
   return intent.type === "UNKNOWN"
+}
+
+export function isGreetingIntent(intent: Intent): intent is GreetingIntent {
+  return intent.type === "GREETING"
 }

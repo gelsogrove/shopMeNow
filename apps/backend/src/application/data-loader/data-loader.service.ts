@@ -1261,13 +1261,8 @@ export class DataLoaderService {
   }
 
   private tokenizeQuery(message: string): string[] {
-    const normalized = this.normalizeText(message)
-      .replace(/[^a-z0-9\s]/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-
+    const normalized = this.normalizeSearchText(message)
     if (!normalized) return []
-
     return normalized
       .split(" ")
       .map((token) => token.trim())
@@ -2483,12 +2478,6 @@ export class DataLoaderService {
       ).length
       return matches > 0
     })
-  }
-
-  private tokenizeQuery(query: string): string[] {
-    return this.normalizeSearchText(query)
-      .split(/\s+/)
-      .filter((token) => token.length > 2)
   }
 
   private normalizeSearchText(value: string): string {

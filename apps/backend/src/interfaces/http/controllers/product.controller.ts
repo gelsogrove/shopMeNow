@@ -154,7 +154,6 @@ export class ProductController {
       logger.info("req.body:", productData)
       logger.info("req.files:", req.files)
       logger.info("workspaceId:", workspaceId)
-      logger.info("supplierId in body:", productData.supplierId)
       logger.info("categoryId in body:", productData.categoryId)
 
       if (!workspaceId) {
@@ -270,11 +269,6 @@ export class ProductController {
       // Remove categoryIds from productData (handled separately via many-to-many)
       delete productData.categoryIds
 
-      // Handle supplierId: convert empty string to null
-      if (productData.supplierId === "" || productData.supplierId === "none") {
-        productData.supplierId = null
-      }
-
       // Handle categoryId: convert empty string to null (DEPRECATED - use categoryIds instead)
       if (productData.categoryId === "" || productData.categoryId === "none") {
         productData.categoryId = null
@@ -285,12 +279,7 @@ export class ProductController {
         productData.transportType = "Temperatura ambiente"
       }
 
-      logger.info(
-        "✅ After conversion - supplierId:",
-        productData.supplierId,
-        "categoryId:",
-        productData.categoryId
-      )
+      logger.info("✅ After conversion - categoryId:", productData.categoryId)
 
       // Map frontend 'code' field to backend 'Sku' field
       if (productData.code && !productData.sku) {
@@ -463,11 +452,6 @@ export class ProductController {
       // Remove categoryIds from productData (handled separately via many-to-many)
       delete productData.categoryIds
 
-      // Handle supplierId: convert empty string to null
-      if (productData.supplierId === "" || productData.supplierId === "none") {
-        productData.supplierId = null
-      }
-
       // Handle categoryId: convert empty string to null (DEPRECATED - use categoryIds instead)
       if (productData.categoryId === "" || productData.categoryId === "none") {
         productData.categoryId = null
@@ -478,12 +462,7 @@ export class ProductController {
         productData.transportType = "Temperatura ambiente"
       }
 
-      logger.info(
-        "✅ UPDATE - After conversion - supplierId:",
-        productData.supplierId,
-        "categoryId:",
-        productData.categoryId
-      )
+      logger.info("✅ UPDATE - After conversion - categoryId:", productData.categoryId)
 
       // Map frontend 'code' field to backend 'Sku' field
       if (productData.code && !productData.sku) {
@@ -747,13 +726,13 @@ export class ProductController {
     }
   }
 
-  /**
-   * Export products to CSV
-   * Uses supplierName and categoryName instead of IDs for readability
-   */
-  exportProductsCsv = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const workspaceId = req.params.workspaceId
+    /**
+     * Export products to CSV
+     * Uses categoryName instead of IDs for readability
+     */
+    exportProductsCsv = async (req: Request, res: Response): Promise<void> => {
+      try {
+        const workspaceId = req.params.workspaceId
 
       if (!workspaceId) {
         res.status(400).json({ message: "WorkspaceId is required" })
@@ -766,7 +745,6 @@ export class ProductController {
           workspaceId
         },
         include: {
-          supplier: { select: { companyName: true } },
           category: { select: { name: true } },
         },
         orderBy: { name: "asc" },
@@ -782,7 +760,6 @@ export class ProductController {
         "stock",
         "status",
         "isActive",
-        "supplierName",
         "categoryName",
         "transportType",
         "region",
@@ -813,7 +790,6 @@ export class ProductController {
           product.stock?.toString() || "0",
           product.status || "ACTIVE",
           product.isActive ? "true" : "false",
-          escapeCsv(product.supplier?.companyName),
           escapeCsv(product.category?.name),
           escapeCsv(product.transportType),
           escapeCsv(product.region),
@@ -881,15 +857,7 @@ export class ProductController {
         }
       }
 
-      // Build lookup maps for suppliers and categories
-      const suppliers = await prisma.suppliers.findMany({
-        where: { workspaceId },
-        select: { id: true, companyName: true },
-      })
-      const supplierMap = new Map(
-        suppliers.map(s => [s.companyName?.toLowerCase().trim(), s.id])
-      )
-
+      // Build lookup maps for categories
       const categories = await prisma.categories.findMany({
         where: { workspaceId },
         select: { id: true, name: true },
@@ -965,17 +933,12 @@ export class ProductController {
         }
 
         try {
-          // Lookup supplier and category IDs
-          const supplierName = rowData.suppliername?.toLowerCase().trim()
+          // Lookup category ID
           const categoryName = rowData.categoryname?.toLowerCase().trim()
           
-          const supplierId = supplierName ? supplierMap.get(supplierName) : null
           const categoryId = categoryName ? categoryMap.get(categoryName) : null
 
-          // Warn if supplier/category not found but continue
-          if (supplierName && !supplierId) {
-            logger.warn(`⚠️ Supplier not found: "${rowData.suppliername}" for product ${sku}`)
-          }
+          // Warn if category not found but continue
           if (categoryName && !categoryId) {
             logger.warn(`⚠️ Category not found: "${rowData.categoryname}" for product ${sku}`)
           }
@@ -1008,7 +971,6 @@ export class ProductController {
                 stock: parseInt(rowData.stock) || 0,
                 status: (rowData.status?.toUpperCase() as ProductStatus) || "ACTIVE",
                 isActive: rowData.isactive?.toLowerCase() !== "false",
-                supplierId: supplierId || existingProduct.supplierId,
                 categoryId: categoryId || existingProduct.categoryId,
                 transportType: rowData.transporttype || existingProduct.transportType,
                 region: rowData.region || existingProduct.region,
@@ -1030,7 +992,6 @@ export class ProductController {
                 stock: parseInt(rowData.stock) || 0,
                 status: (rowData.status?.toUpperCase() as ProductStatus) || "ACTIVE",
                 isActive: rowData.isactive?.toLowerCase() !== "false",
-                supplierId,
                 categoryId,
                 transportType: rowData.transporttype || "Temperatura ambiente",
                 region: rowData.region || null,

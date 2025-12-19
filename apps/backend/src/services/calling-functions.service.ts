@@ -1126,7 +1126,6 @@ export class CallingFunctionsService {
           },
           include: {
             category: { select: { name: true } },
-            supplier: { select: { companyName: true } },
             productCertifications: {
               select: {
                 certification: { select: { name: true } }
@@ -1274,7 +1273,6 @@ export class CallingFunctionsService {
             description: product.description,
             stock: product.stock,
             category: product.category?.name,
-            supplier: product.supplier?.companyName,
             region: product.region,
             transportType: product.transportType,
             certifications: certifications,

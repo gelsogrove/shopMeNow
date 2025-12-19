@@ -228,35 +228,37 @@ export class LLMFormatterService {
         }
       }
 
-      // 🔧 FIX: PREFER LLM-generated groupMapping (semantically meaningful like "Freschi/Stagionati")
-      // over CODE-generated groupMapping (which may group by formato like "200g/250g")
-      // The LLM groups are more user-friendly and match what the user sees in the text!
+      // 🔧 FIX: PREFER CODE-generated groupMapping (deterministic, consistent)
+      // Only use LLM-generated groupMapping as fallback (legacy behavior)
+      // This ensures the same query always returns the same groups!
       let groupMapping: Record<string, { nome: string; skus: string[] }> | undefined
       
-      // FIRST: Try to extract from LLM response (preferred - semantically meaningful)
-      const jsonMatch = text.match(/---JSON_MAPPING---\s*([\s\S]*?)\s*---END_JSON---/)
-      if (jsonMatch && jsonMatch[1]) {
-        try {
-          groupMapping = JSON.parse(jsonMatch[1].trim())
-          logger.info("📝 [LLMFormatter] Using LLM-generated groupMapping (semantically meaningful)", {
-            groups: Object.keys(groupMapping || {}),
-            totalSkus: Object.values(groupMapping || {}).reduce((sum, g) => sum + (g.skus?.length || 0), 0),
-          })
-        } catch (parseError) {
-          logger.warn("⚠️ [LLMFormatter] Failed to parse LLM group mapping JSON, falling back to code", { 
-            jsonContent: jsonMatch[1].substring(0, 200),
-            error: parseError 
-          })
-        }
-      }
-      
-      // FALLBACK: Use CODE-computed groupMapping if LLM didn't generate one
-      if (!groupMapping && (response.data as any)?.groupMapping) {
+      // FIRST: Use CODE-computed groupMapping if available (preferred - deterministic)
+      if ((response.data as any)?.groupMapping) {
         groupMapping = (response.data as any).groupMapping
-        logger.info("📝 [LLMFormatter] Using CODE-computed groupMapping (fallback)", {
+        logger.info("📝 [LLMFormatter] Using CODE-computed groupMapping (deterministic)", {
           groups: Object.keys(groupMapping || {}),
           totalSkus: Object.values(groupMapping || {}).reduce((sum, g) => sum + (g.skus?.length || 0), 0),
         })
+      }
+      
+      // FALLBACK: Try to extract from LLM response if code didn't provide one
+      if (!groupMapping) {
+        const jsonMatch = text.match(/---JSON_MAPPING---\s*([\s\S]*?)\s*---END_JSON---/)
+        if (jsonMatch && jsonMatch[1]) {
+          try {
+            groupMapping = JSON.parse(jsonMatch[1].trim())
+            logger.info("📝 [LLMFormatter] Using LLM-generated groupMapping (fallback)", {
+              groups: Object.keys(groupMapping || {}),
+              totalSkus: Object.values(groupMapping || {}).reduce((sum, g) => sum + (g.skus?.length || 0), 0),
+            })
+          } catch (parseError) {
+            logger.warn("⚠️ [LLMFormatter] Failed to parse LLM group mapping JSON", { 
+              jsonContent: jsonMatch[1].substring(0, 200),
+              error: parseError 
+            })
+          }
+        }
       }
       
       // Always remove JSON block from visible text (if LLM generated one)
@@ -294,7 +296,7 @@ export class LLMFormatterService {
         type: response.type,
         tokensUsed,
         hasGroupMapping: !!groupMapping,
-        groupMappingSource: jsonMatch ? "LLM" : ((response.data as any)?.groupMapping ? "CODE" : "NONE"),
+        groupMappingSource: (response.data as any)?.groupMapping ? "CODE" : "LLM_OR_NONE",
         ms: Date.now() - startTime,
       })
 
@@ -775,7 +777,11 @@ export class LLMFormatterService {
       lines.push(`**${item.number}.** ${item.name}${item.extra ? ` (${item.extra})` : ""}`)
     }
     lines.push("")
-    lines.push("IMPORTANT: After the list, ask 'Quale categoria vuoi esplorare? 🛍️' or 'Which category would you like to explore?'. DO NOT show any prices for categories. Numbers MUST be bold like **1.** **2.** etc.")
+    if (items.length === 1) {
+      lines.push("IMPORTANT: There is only ONE category. Do NOT ask which category. Present it naturally and, if products for this category are already available, list them directly (max 7) grouped by relevance. If products are not available in the payload, ask ONE short clarifying question instead of a menu. Avoid numeric menus.")
+    } else {
+      lines.push("IMPORTANT: After the list, ask 'Quale categoria vuoi esplorare? 🛍️' or 'Which category would you like to explore?'. DO NOT show any prices for categories. Numbers MUST be bold like **1.** **2.** etc.")
+    }
     return lines.join("\n")
   }
 
@@ -807,18 +813,24 @@ export class LLMFormatterService {
     // Note: groupMapping is computed and added automatically by the format() method
     // after LLM response - NOT in the visible text to the user!
 
-    return [
+    const base = [
       "GRUPPI DISPONIBILI (non elencare i singoli prodotti):",
       ...lines,
       "",
       "Regole output:",
-      "- Mostra SOLO i gruppi sopra indicati con il relativo numero di prodotti.",
       "- Mantieni i numeri in grassetto (es. **1.**, **2.**, ...).",
-      "- Non inserire l'elenco dei singoli prodotti né riepiloghi \"Prezzi finali\".",
-      "- Chiudi con la domanda tradotta nella lingua di output: \"Quale gruppo ti interessa?\" (o equivalente).",
+      "- Non inserire riepiloghi \"Prezzi finali\".",
       "- L'intera risposta deve essere nella lingua richiesta (rispetta il campo LINGUA OUTPUT).",
       "- ⚠️ NON INCLUDERE MAI JSON nella risposta visibile all'utente!",
-    ].join("\n")
+    ]
+
+    if (groups.length === 1) {
+      base.push("- C'è un solo gruppo: NON chiedere quale gruppo. Presentalo come sezione e mostra direttamente i prodotti del gruppo (se presenti nel payload) o poni UNA domanda di chiarimento breve. Evita menu numerici.")
+    } else {
+      base.push("- Chiudi con la domanda tradotta: \"Quale gruppo ti interessa?\" (o equivalente).")
+    }
+
+    return base.join("\n")
   }
 
   private formatCatalogAggregatePrompt(response: StructuredResponse): string {
@@ -850,15 +862,57 @@ export class LLMFormatterService {
   }
 
   /**
-   * Smart Grouping: LLM creates logical groups from products in the SAME category
+   * Smart Grouping: FORMAT pre-computed groups from CODE (deterministic)
    * Example: 7 "Formaggi" → "Formaggi Freschi (3)" + "Formaggi Stagionati (4)"
    * 
-   * ARCHITECTURE: LLM returns BOTH user-facing message AND JSON mapping for system
-   * The JSON contains which products (by SKU) belong to each numbered group
+   * ARCHITECTURE: CODE computes groups, LLM only FORMATS the output text
+   * The groupMapping is pre-computed in ResponseBuilder.createSmartGroups()
    */
   private formatSmartGroupingPrompt(response: StructuredResponse): string {
-    const items = response.data.items || []
     const categoryName = response.data.categoryName || "Products"
+    const productGroups = response.data.productGroups || []
+    const groupMapping = response.data.groupMapping || {}
+    
+    // If we have pre-computed groups, use them directly (DETERMINISTIC)
+    if (productGroups.length > 0) {
+      const groupsList = productGroups.map((g: any) => 
+        `**${g.number}.** ${g.name} (${g.productCount} prodotti)`
+      ).join("\n")
+      
+      logger.info("📝 [LLMFormatter] Using CODE-FIRST grouping (deterministic)", {
+        categoryName,
+        groupCount: productGroups.length,
+        groups: productGroups.map((g: any) => g.name),
+      })
+      
+      return `PRODUCT GROUPING (PRE-COMPUTED):
+
+Category: ${categoryName}
+Groups:
+${groupsList}
+
+TASK: Format this list for the user. Keep the EXACT group names and counts above.
+
+RESPONSE FORMAT (EXACT):
+
+Ecco i gruppi di ${categoryName}:
+
+${groupsList}
+
+Quale gruppo ti interessa?
+
+---JSON_MAPPING---
+${JSON.stringify(groupMapping)}
+---END_JSON---
+
+CRITICAL: 
+- Use EXACTLY the group names and counts shown above
+- DO NOT change or invent new groups
+- Numbers MUST be bold like **1.**, **2.**, ...`
+    }
+    
+    // FALLBACK: If no pre-computed groups, ask LLM to create them (legacy behavior)
+    const items = response.data.items || []
     
     // Build product list with SKUs for LLM to use in grouping
     const productList = items.map((item: any) => {

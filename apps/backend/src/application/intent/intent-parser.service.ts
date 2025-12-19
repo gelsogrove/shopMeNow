@@ -17,7 +17,8 @@ import {
   Intent, 
   IntentResult, 
   ConversationContext,
-  UnknownIntent
+  UnknownIntent,
+  IncomprehensibleIntent
 } from "./intent.types"
 import { matchAllPatterns } from "./patterns/pattern-matcher"
 import { buildContextFromHistory, parseListFromMessage } from "./patterns/history-parser"
@@ -312,7 +313,12 @@ OTHER:
 - CONFIRM - User is confirming something (yes, ok, sure)
 - REJECT - User is rejecting/canceling something (no, cancel)
 - GREETING - User is greeting (hello, hi, ciao)
-- UNKNOWN - Cannot determine intent
+- INCOMPREHENSIBLE - Message is gibberish, random characters, typos, or completely nonsensical (e.g., "asdfgh", "casdas", "xyzabc", "jjjjj", keyboard mashing). Use this when the message has NO discernible meaning in ANY language.
+- UNKNOWN - The message seems like a real attempt at communication, but you can't determine the specific intent
+
+CRITICAL DISTINCTION:
+- "INCOMPREHENSIBLE" = The message is NOT a real word or sentence in any language (random characters, keyboard mashing, typos with no meaning)
+- "UNKNOWN" = The message IS a real communication attempt, but you can't classify the intent
 
 Respond with ONLY the intent type and parameter if needed.
 Examples:
@@ -332,7 +338,8 @@ Examples:
 - "VIEW_PROFILE" (when user asks "che sconto ho?", "il mio sconto", "my discount")
 - "ASK_FAQ:shipping policy"
 - "SHOW_AGENT_INFO"
-- "UNKNOWN"
+- "INCOMPREHENSIBLE" (when message is gibberish like "asdfgh", "casdas", "xyzabc123", random keystrokes)
+- "UNKNOWN" (when message is a real communication but intent unclear)
 
 ${context.lastAssistantMessage ? `\nLast bot message: "${context.lastAssistantMessage.substring(0, 200)}..."` : ''}`
 
@@ -368,7 +375,7 @@ ${context.lastAssistantMessage ? `\nLast bot message: "${context.lastAssistantMe
       }
 
       // Parse classification into Intent
-      return this.parseClassification(classification)
+      return this.parseClassification(classification, message)
       
     } catch (error) {
       if (error instanceof Error && error.name === "TimeoutError") {
@@ -383,7 +390,7 @@ ${context.lastAssistantMessage ? `\nLast bot message: "${context.lastAssistantMe
   /**
    * Parse LLM classification string into Intent
    */
-  private parseClassification(classification: string): Intent | null {
+  private parseClassification(classification: string, originalMessage?: string): Intent | null {
     // Remove any surrounding quotes that the LLM might have added
     const cleanClassification = classification.replace(/^["'\s]+|["'\s]+$/g, "")
     const [intentType, ...rest] = cleanClassification.split(":")
@@ -486,8 +493,7 @@ ${context.lastAssistantMessage ? `\nLast bot message: "${context.lastAssistantMe
         return { type: "REJECT" }
         
       case "GREETING":
-        // Greetings are handled by Router directly
-        return null
+        return { type: "GREETING" }
         
       case "SHOW_OFFERS":
         // Return SHOW_OFFERS intent to load active offers
@@ -504,6 +510,9 @@ ${context.lastAssistantMessage ? `\nLast bot message: "${context.lastAssistantMe
 
       case "PRODUCT_CONTEXT":
         return { type: "PRODUCT_CONTEXT", query: param?.trim() || "" }
+        
+      case "INCOMPREHENSIBLE":
+        return { type: "INCOMPREHENSIBLE", originalMessage: originalMessage || "" }
         
       case "UNKNOWN":
       default:

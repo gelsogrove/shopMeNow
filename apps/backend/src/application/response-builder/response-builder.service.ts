@@ -1159,9 +1159,11 @@ export class ResponseBuilderService {
    * 🆕 CODE-FIRST Smart Grouping - Groups products by attributes WITHOUT LLM
    * 
    * Grouping strategy (in order of priority):
-   * 1. If "formato" exists (e.g., "Stagionato", "Fresco") → group by formato
+   * 1. If "formato" exists AND is NOT just a weight (e.g., "Stagionato", "Fresco") → group by formato
    * 2. If "region" exists (e.g., "Toscana", "Piemonte") → group by region
    * 3. Otherwise → group by first word of description or "Altri"
+   * 
+   * CRITICAL: Skip formato if it's just a weight like "200g", "1kg", "500ml"
    */
   private createSmartGroups(
     products: ProductData[],
@@ -1169,15 +1171,26 @@ export class ResponseBuilderService {
   ): Array<{ name: string; products: ProductData[] }> {
     const groupMap = new Map<string, ProductData[]>()
     
+    // Helper: Check if a string is just a weight/measure (not meaningful for grouping)
+    const isJustWeight = (s: string): boolean => {
+      if (!s) return true
+      const trimmed = s.trim().toLowerCase()
+      // Match patterns like: "200g", "1kg", "500ml", "1.5l", "250 g", "1 kg"
+      return /^\d+(\.\d+)?\s*(g|kg|ml|l|cl|gr|grammi|litri|litro)$/i.test(trimmed)
+    }
+    
     // Determine grouping strategy based on available data
-    const hasFormato = products.some(p => p.formato && p.formato.trim() !== "")
+    // IMPORTANT: formato must have MEANINGFUL values, not just weights
+    const formatoValues = products.map(p => p.formato?.trim()).filter(Boolean) as string[]
+    const hasUsefulFormato = formatoValues.length > 0 && formatoValues.some(f => !isJustWeight(f))
     const hasRegion = products.some(p => p.region && p.region.trim() !== "")
     
     logger.info("🧠 [ResponseBuilder] createSmartGroups analyzing", {
       categoryName,
       productCount: products.length,
-      hasFormato,
+      hasUsefulFormato,
       hasRegion,
+      formatoValues: formatoValues.slice(0, 5),
       sampleProducts: products.slice(0, 3).map(p => ({
         name: p.name,
         formato: p.formato,
@@ -1188,17 +1201,16 @@ export class ResponseBuilderService {
     for (const product of products) {
       let groupKey: string
       
-      if (hasFormato && product.formato && product.formato.trim() !== "") {
-        // Strategy 1: Group by formato (e.g., "Stagionato", "Fresco")
+      if (hasUsefulFormato && product.formato && product.formato.trim() !== "" && !isJustWeight(product.formato)) {
+        // Strategy 1: Group by formato (e.g., "Stagionato", "Fresco") - but NOT if it's just weight
         groupKey = product.formato.trim()
       } else if (hasRegion && product.region && product.region.trim() !== "") {
         // Strategy 2: Group by region (e.g., "Toscana", "Piemonte")
         groupKey = product.region.trim()
       } else {
         // Strategy 3: Group by first significant word in name/description
-        // Or use "Altri" as fallback
-        const nameWords = product.name.split(" ")
         // Skip common words like "Formaggio", use second word if available
+        const nameWords = product.name.split(" ")
         groupKey = nameWords.length > 1 ? nameWords[1] : nameWords[0] || "Altri"
       }
       
@@ -1230,6 +1242,16 @@ export class ResponseBuilderService {
       })
       
       return consolidatedGroups
+    }
+    
+    // 🆕 If we only have 1 group (all products ended up in same group), 
+    // don't bother grouping - just return empty to trigger flat list
+    if (groups.length <= 1) {
+      logger.info("🧠 [ResponseBuilder] Only 1 group found, skipping grouping", {
+        groupName: groups[0]?.name,
+        productCount: groups[0]?.products.length,
+      })
+      return []
     }
     
     logger.info("🧠 [ResponseBuilder] Smart groups created", {

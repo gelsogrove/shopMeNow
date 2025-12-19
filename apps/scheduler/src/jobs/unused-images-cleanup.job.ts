@@ -57,26 +57,7 @@ export async function unusedImagesCleanupJob(): Promise<void> {
   totalDeleted += cleanupDirectory(serviceImagesDir, usedServiceImages, 'services')
 
   // ═══════════════════════════════════════════════════════════════
-  // 3. SUPPLIER LOGOS CLEANUP
-  // ═══════════════════════════════════════════════════════════════
-  const supplierImagesDir = path.join(uploadsDir, 'suppliers')
-  const suppliers = await prisma.suppliers.findMany({
-    select: { logoUrl: true },
-  })
-
-  const usedSupplierImages = new Set<string>()
-  for (const supplier of suppliers) {
-    if (supplier.logoUrl) {
-      const filename = path.basename(supplier.logoUrl)
-      usedSupplierImages.add(filename)
-    }
-  }
-
-  logger.info(`[Suppliers] Found ${usedSupplierImages.size} logos referenced in database`)
-  totalDeleted += cleanupDirectory(supplierImagesDir, usedSupplierImages, 'suppliers')
-
-  // ═══════════════════════════════════════════════════════════════
-  // 4. USER LOGOS CLEANUP
+  // 3. USER LOGOS CLEANUP
   // ═══════════════════════════════════════════════════════════════
   const userImagesDir = path.join(uploadsDir, 'users')
   const users = await prisma.user.findMany({
