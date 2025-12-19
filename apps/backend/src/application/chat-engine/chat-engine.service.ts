@@ -1620,6 +1620,14 @@ export class ChatEngineService {
         const optionsMapping = await loadOptionsMapping()
         const pendingAction = optionsMapping?.pendingAction
         
+        logger.info("🔍 [ChatEngine] DEBUG: Checking pendingAction for confirmation", {
+          hasPendingAction: !!pendingAction,
+          pendingActionType: pendingAction?.type,
+          pendingActionProductId: pendingAction?.productId,
+          pendingActionItemType: pendingAction?.itemType,
+          fullOptionsMapping: JSON.stringify(optionsMapping),
+        })
+        
         if (pendingAction && pendingAction.type === "ADD_TO_CART" && pendingAction.productId) {
           logger.info("🛒 [ChatEngine] FAST-PATH: Confirmation detected with pending ADD_TO_CART", {
             inputType: preprocessResult.inputType,
@@ -1627,6 +1635,7 @@ export class ChatEngineService {
             productId: pendingAction.productId,
             productName: pendingAction.productName,
             itemType: pendingAction.itemType || "PRODUCT",
+            pendingActionFull: JSON.stringify(pendingAction), // 🔍 DEBUG: Log full pendingAction
           })
           
           // Extract quantity: from message if present, otherwise default to 1

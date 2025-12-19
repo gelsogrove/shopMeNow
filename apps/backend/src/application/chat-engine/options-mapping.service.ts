@@ -121,7 +121,11 @@ export class OptionsMappingService {
         hasMapping: !!mapping,
         listType: mapping?.listType,
         optionsCount: mapping?.options?.length,
-        currentOrderCode: mapping?.currentOrderCode,  // 🔍 DEBUG: Log orderCode
+        currentOrderCode: mapping?.currentOrderCode,
+        hasPendingAction: !!mapping?.pendingAction,
+        pendingActionType: mapping?.pendingAction?.type,
+        pendingActionProductId: mapping?.pendingAction?.productId,
+        pendingActionItemType: mapping?.pendingAction?.itemType,
       })
 
       return mapping

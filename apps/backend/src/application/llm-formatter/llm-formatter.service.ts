@@ -915,8 +915,8 @@ CRITICAL:
           typeof item.price === "number" && Number.isFinite(item.price)
             ? ` - ${formatDisplayPrice(item.price)}`
             : ""
-        const extraText = item.extra ? ` (${item.extra})` : ""
-        return `${item.number}. ${item.name}${priceText}${extraText}`
+        // Numbers in bold
+        return `**${item.number}.** ${item.name}${priceText}`
       })
       .join("\n")
 
@@ -928,8 +928,8 @@ CRITICAL:
     if (!s) return "Service not found"
 
     const lines = [
-      "SERVICE DETAIL:",
-      `Servizio: ${s.name}`,
+      "SERVICE DETAIL - Present in a CONVERSATIONAL, natural way:",
+      `Nome servizio: ${s.name}`,
       `Prezzo: ${formatDisplayPrice(s.price)}`,
     ]
 
@@ -938,13 +938,21 @@ CRITICAL:
     }
     // REMOVED: Duration and Availability - don't show to user
     
-    // Add cart prompt
+    // Add formatting instructions for natural presentation
     lines.push("")
-    lines.push(`IMPORTANT: 
-- Show Name, Price, and Description to the user in a professional format with line breaks
-- Do NOT show Duration or Availability 
-- After the details, ask 'Vuoi aggiungere questo servizio al tuo ordine?' 
-- DO NOT show service codes to the user.`)
+    lines.push(`FORMATTING INSTRUCTIONS:
+- Present the service in a NATURAL, conversational tone - like you're describing it to a friend
+- Put the service NAME in **bold** (e.g., **Confezione Regalo**)
+- Put the PRICE in **bold** (e.g., **€30.00**)
+- Do NOT use rigid labels like "Servizio:", "Prezzo:", "Descrizione:" 
+- Weave the information into flowing sentences
+- The FINAL QUESTION asking if they want to add it MUST be on a NEW LINE (add \\n before it)
+- Example format:
+  "**Confezione Regalo** è un servizio di lusso che include materiali premium e un messaggio personalizzato. Il costo è di **€30.00**.
+  
+  Ti piacerebbe aggiungerla al tuo ordine? 🎁"
+- Be warm and inviting, not robotic
+- DO NOT show service codes to the user`)
 
     return lines.join("\n")
   }

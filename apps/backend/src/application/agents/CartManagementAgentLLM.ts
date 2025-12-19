@@ -255,39 +255,73 @@ export class CartManagementAgentLLM {
         },
       ]
 
-      // 🔧 Feature 123: If we have selectedSku from search, inject it
+      // 🔧 Feature 123: If we have selectedSku from search, CALL DIRECTLY without LLM!
+      // The LLM is unreliable and ignores the code we inject - so we bypass it completely
       if (context.selectedSku) {
         const isService = context.selectedItemType === "SERVICE"
         const itemLabel = isService ? "Servizio" : "Prodotto"
-        const itemTypeParam = isService ? ', type: "SERVICE"' : ', type: "PRODUCT"'
         
-        messages.push({
-          role: "system" as const,
-          content: `🚨 AZIONE IMMEDIATA RICHIESTA 🚨
-
-Il cliente ha GIÀ CONFERMATO di voler aggiungere questo ${itemLabel.toLowerCase()} al carrello.
-NON chiedere ulteriori conferme. DEVI procedere IMMEDIATAMENTE.
-
-Codice ${itemLabel}: ${context.selectedSku}
-Tipo: ${isService ? "SERVICE" : "PRODUCT"}
-
-ISTRUZIONI:
-1. Chiama SUBITO la funzione addToCart() con code: "${context.selectedSku}"${itemTypeParam}
-2. NON chiedere "Sei sicuro?" - il cliente ha già detto SÌ
-3. NON chiedere la quantità - usa quella specificata nel messaggio
-4. Dopo l'aggiunta, mostra il messaggio di conferma
-
-ESEMPIO DI CHIAMATA:
-addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal messaggio>${itemTypeParam} }] })`,
-        })
-
         logger.info(
-          `📦 Injected selectedSku into CartManagementAgent`,
+          `📦 DIRECT ADD: Bypassing LLM to add item directly`,
           {
             selectedSku: context.selectedSku,
             selectedItemType: context.selectedItemType || "PRODUCT",
           }
         )
+        
+        // Extract quantity from query (e.g., "aggiungi 2 al carrello" -> 2)
+        const quantityMatch = context.query.match(/(\d+)/)?.[1]
+        const quantity = quantityMatch ? parseInt(quantityMatch, 10) : 1
+        
+        // CALL THE FUNCTION DIRECTLY - don't ask LLM
+        const agentContext = {
+          workspaceId: context.workspaceId,
+          customerId: context.customerId,
+        }
+        
+        const result = await this.cartManagementAgent.addToCart(
+          agentContext,
+          {
+            productId: context.selectedSku, // This is the code (SKU for products, code for services)
+            quantity,
+            type: isService ? "SERVICE" : "PRODUCT",
+          }
+        )
+        
+        logger.info(`📦 DIRECT ADD result`, {
+          success: result.success,
+          selectedSku: context.selectedSku,
+          quantity,
+          itemType: isService ? "SERVICE" : "PRODUCT",
+        })
+        
+        // Get updated cart
+        const cartAfterAdd = await this.cartManagementAgent.getCart(agentContext)
+        
+        // Update system context
+        await this.systemContextService.refreshCartSummary(context.workspaceId, context.customerId)
+        
+        // Format response with transport costs
+        const formatted = await this.formatCartResponseWithTransport(
+          cartAfterAdd,
+          context.workspaceId,
+          context.customerId
+        )
+        
+        // Build success message
+        const successMessage = result.success 
+          ? `✅ Aggiunto al carrello: ${result.productName || itemLabel}`
+          : `❌ Errore: ${result.error || "Impossibile aggiungere al carrello"}`
+        
+        return {
+          output: `${successMessage}\n\n${formatted.formattedCart}`,
+          functionCalls: [{
+            name: "addToCart",
+            args: { items: [{ code: context.selectedSku, quantity, type: isService ? "SERVICE" : "PRODUCT" }] },
+            result: { success: result.success }
+          }],
+          tokensUsed: 0, // No LLM call
+        }
       }
 
       // Add conversation history if provided (for context awareness)
