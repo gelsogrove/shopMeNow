@@ -99,7 +99,6 @@ export type {
   TransportType,
   CreditNote,
   Languages,
-  Suppliers,
   Sales,
   ProductCertification,
   ProductTransportType,

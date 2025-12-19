@@ -456,20 +456,13 @@ export class ProductRepository implements IProductRepository {
         const orConditions: Prisma.ProductsWhereInput[] = []
 
         filters.keywords.forEach((keyword) => {
-          // Search in: name, sku, transportType, formato, region, supplier companyName (case-insensitive)
+          // Search in: name, sku, transportType, formato, region (case-insensitive)
           orConditions.push(
             { name: { contains: keyword, mode: "insensitive" } },
             { sku: { contains: keyword, mode: "insensitive" } },
             { transportType: { contains: keyword, mode: "insensitive" } },
             { formato: { contains: keyword, mode: "insensitive" } },
-            { region: { contains: keyword, mode: "insensitive" } },
-            {
-              supplier: {
-                is: {
-                  companyName: { contains: keyword, mode: "insensitive" },
-                },
-              },
-            }
+            { region: { contains: keyword, mode: "insensitive" } }
           )
         })
 
@@ -485,13 +478,6 @@ export class ProductRepository implements IProductRepository {
       // 🎯 Primary filter when user asks "formaggi?" - matches category, not product name
       if (filters.categoryId) {
         where.categoryId = filters.categoryId
-      }
-
-      // Supplier filter (array of supplier IDs)
-      if (filters.supplierIds && filters.supplierIds.length > 0) {
-        where.supplierId = {
-          in: filters.supplierIds,
-        }
       }
 
       // Regions filter (array of Italian region names)
@@ -581,7 +567,6 @@ export class ProductRepository implements IProductRepository {
         where,
         include: {
           category: true, // Include category for name/translations
-          supplier: true, // Include supplier for companyName search
           productCertifications: {
             include: {
               certification: true,

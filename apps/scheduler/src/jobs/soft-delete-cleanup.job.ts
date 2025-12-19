@@ -228,10 +228,6 @@ export async function softDeleteCleanupJob(): Promise<void> {
         where: { workspaceId: { in: workspaceIds } }
       })).count
 
-      deletedCounts.suppliers = (await tx.suppliers.deleteMany({
-        where: { workspaceId: { in: workspaceIds } }
-      })).count
-
       deletedCounts.sales = (await tx.sales.deleteMany({
         where: { workspaceId: { in: workspaceIds } }
       })).count

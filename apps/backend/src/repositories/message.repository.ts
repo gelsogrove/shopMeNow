@@ -1312,12 +1312,6 @@ export class MessageRepository {
               name: true,
             },
           },
-          supplier: {
-            // ✅ Feature 123 - C2: Add supplier for single product details
-            select: {
-              companyName: true,
-            },
-          },
         },
         orderBy: {
           category: {
