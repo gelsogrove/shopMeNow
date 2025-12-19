@@ -3091,28 +3091,85 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       })
 
       // ========================================================================
-      // STEP 2.25: Handle UNKNOWN intent - ONLY if LLM fallback also failed
+      // STEP 2.20: Handle GREETING intent - Simple greeting response
+      // ========================================================================
+      if (intentResult.intent.type === "GREETING") {
+        const processingTimeMs = Date.now() - startTime
+        
+        // Get workspace name for personalized greeting
+        const workspaceName = workspaceConfig.name || "il nostro servizio"
+        
+        // Simple greeting response - will be translated by translation layer
+        const greetingResponse = `Ciao! 👋 Benvenuto su ${workspaceName}. Come posso aiutarti oggi?`
+        
+        // Save messages
+        const savedMessages = await this.saveMessages(
+          input.workspaceId,
+          input.customerId,
+          conversationId,
+          input.message,
+          greetingResponse
+        )
+        
+        logger.info("👋 [ChatEngine] Greeting handled", {
+          workspaceId: input.workspaceId,
+          customerId: input.customerId,
+          responseLength: greetingResponse.length,
+        })
+        
+        return {
+          message: greetingResponse,
+          customerMessageId: savedMessages.customerMessageId,
+          assistantMessageId: savedMessages.assistantMessageId,
+          conversationId,
+          debug: debugSteps,
+          agentUsed: AgentType.ROUTER,
+          tokensUsed: 0,
+          executionTimeMs: processingTimeMs,
+          wasFAQ: false,
+          isBlocked: false,
+        }
+      }
+
+      // ========================================================================
+      // STEP 2.25: Handle UNKNOWN intent - Return "didn't understand" message
       // ========================================================================
       // The IntentParser already uses LLM fallback for classification.
       // If we still get UNKNOWN, it means the LLM couldn't classify it either.
-      // In that case, for e-commerce workspaces, try semantic product search.
-      // This is a LAST RESORT, not the primary classification method!
-      if (intentResult.intent.type === "UNKNOWN" && workspaceConfig.sellsProductsAndServices) {
-        const originalMessage = (intentResult.intent as any).originalMessage || input.message
+      // Instead of trying product search, return a polite "didn't understand" message.
+      if (intentResult.intent.type === "UNKNOWN") {
+        const processingTimeMs = Date.now() - startTime
         
-        logger.info("🔄 [ChatEngine] UNKNOWN intent after LLM fallback - trying semantic product search", {
-          originalIntent: "UNKNOWN",
-          source: intentResult.source,
-          query: originalMessage
+        // Polite "didn't understand" message - will be translated by translation layer
+        const unknownResponse = "Mi dispiace, non ho capito. Potresti riformulare la domanda? 🤔"
+        
+        // Save messages
+        const savedMessages = await this.saveMessages(
+          input.workspaceId,
+          input.customerId,
+          conversationId,
+          input.message,
+          unknownResponse
+        )
+        
+        logger.info("❓ [ChatEngine] UNKNOWN intent - returning didn't understand message", {
+          workspaceId: input.workspaceId,
+          customerId: input.customerId,
+          originalMessage: input.message.substring(0, 50),
         })
         
-        // Last resort: try semantic product search
-        // The LLM already tried to classify, so this is just searching products
-        intentResult.intent = {
-          type: "SEARCH_PRODUCTS",
-          query: originalMessage
-        } as SearchProductsIntent
-        intentResult.source = "LLM_FALLBACK"
+        return {
+          message: unknownResponse,
+          customerMessageId: savedMessages.customerMessageId,
+          assistantMessageId: savedMessages.assistantMessageId,
+          conversationId,
+          debug: debugSteps,
+          agentUsed: AgentType.ROUTER,
+          tokensUsed: 0,
+          executionTimeMs: processingTimeMs,
+          wasFAQ: false,
+          isBlocked: false,
+        }
       }
 
       // ========================================================================

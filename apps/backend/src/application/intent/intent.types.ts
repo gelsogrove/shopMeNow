@@ -146,6 +146,14 @@ export interface AskContactIntent {
 }
 
 // =============================================================================
+// GREETING INTENT
+// =============================================================================
+
+export interface GreetingIntent {
+  type: "GREETING"
+}
+
+// =============================================================================
 // AGENT INFO INTENT (B2B feature)
 // @see Feature 202 - Order Selection & Agent Variables
 // =============================================================================
@@ -261,6 +269,7 @@ export type Intent =
   | RequestHumanIntent
   | AskContactIntent
   | ShowAgentInfoIntent
+  | GreetingIntent
   
   // Selection
   | SelectOptionIntent

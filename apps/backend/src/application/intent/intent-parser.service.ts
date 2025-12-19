@@ -486,8 +486,8 @@ ${context.lastAssistantMessage ? `\nLast bot message: "${context.lastAssistantMe
         return { type: "REJECT" }
         
       case "GREETING":
-        // Greetings are handled by Router directly
-        return null
+        // Return GREETING intent to be handled by chat-engine
+        return { type: "GREETING" }
         
       case "SHOW_OFFERS":
         // Return SHOW_OFFERS intent to load active offers
