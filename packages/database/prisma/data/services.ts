@@ -21,5 +21,13 @@ export const services: ServiceData[] = [
     price: 30,
     isActive: true,
     imageUrl: ["/uploads/services/GFT001_1760563067773_otbvy8.webp"],
+  },
+  {
+    name: "Spedizione Express",
+    code: "SHP001",
+    description: "Consegna garantita in 24 ore lavorative. Tracciamento in tempo reale e assicurazione inclusa.",
+    price: 15,
+    isActive: true,
+    imageUrl: [],
   }
 ]
