@@ -562,55 +562,64 @@ export class ResponseBuilderService {
       // 🔧 CODE-FIRST GROUPING: Group by common attributes (region, formato, description keywords)
       const productGroups = this.createSmartGroups(products, categoryName)
       
-      // Build items list with group info
-      const items: ListItem[] = products.map((p, index) => ({
-        number: index + 1,
-        id: p.id,
-        name: p.name,
-        sku: p.sku,
-        price: p.price,
-        priceWithDiscount: p.priceWithDiscount,
-        stock: p.stock,
-        description: p.description,
-        extra: p.region || p.formato,
-      }))
-      
-      // 🆕 Pre-compute groupMapping here, not in LLM!
-      const groupMapping: Record<string, { nome: string; skus: string[] }> = {}
-      productGroups.forEach((group, index) => {
-        groupMapping[String(index + 1)] = {
-          nome: group.name,
-          skus: group.products.map(p => p.sku).filter(Boolean) as string[],
-        }
-      })
-      
-      logger.info("🏗️ [ResponseBuilder] CODE-FIRST grouping created", {
-        categoryName,
-        groupCount: productGroups.length,
-        groups: productGroups.map(g => ({ name: g.name, count: g.products.length })),
-        totalSkus: Object.values(groupMapping).reduce((sum, g) => sum + g.skus.length, 0),
-      })
-      
-      return {
-        type: "PRODUCT_NEEDS_SMART_GROUPING",
-        data: {
-          items,
-          count: products.length,
+      // 🆕 If no meaningful groups found (empty array), fall through to flat list
+      if (productGroups.length === 0) {
+        logger.info("🏗️ [ResponseBuilder] No meaningful groups found, using flat list", {
           categoryName,
-          // 🆕 Pass pre-computed groups to formatter
-          productGroups: productGroups.map((g, i) => ({
-            number: i + 1,
-            name: g.name,
-            productCount: g.products.length,
-          })),
-          // 🆕 Pass groupMapping directly - NO LLM needed for this!
-          groupMapping,
-        },
-        formatting: {
-          ...DEFAULT_FORMATTING,
-          groupByCategory: true,
-        },
-        context,
+          productCount: products.length,
+        })
+        // Fall through to standard grouped view or flat list below
+      } else {
+        // Build items list with group info
+        const items: ListItem[] = products.map((p, index) => ({
+          number: index + 1,
+          id: p.id,
+          name: p.name,
+          sku: p.sku,
+          price: p.price,
+          priceWithDiscount: p.priceWithDiscount,
+          stock: p.stock,
+          description: p.description,
+          extra: p.region || p.formato,
+        }))
+        
+        // 🆕 Pre-compute groupMapping here, not in LLM!
+        const groupMapping: Record<string, { nome: string; skus: string[] }> = {}
+        productGroups.forEach((group, index) => {
+          groupMapping[String(index + 1)] = {
+            nome: group.name,
+            skus: group.products.map(p => p.sku).filter(Boolean) as string[],
+          }
+        })
+        
+        logger.info("🏗️ [ResponseBuilder] CODE-FIRST grouping created", {
+          categoryName,
+          groupCount: productGroups.length,
+          groups: productGroups.map(g => ({ name: g.name, count: g.products.length })),
+          totalSkus: Object.values(groupMapping).reduce((sum, g) => sum + g.skus.length, 0),
+        })
+        
+        return {
+          type: "PRODUCT_NEEDS_SMART_GROUPING",
+          data: {
+            items,
+            count: products.length,
+            categoryName,
+            // 🆕 Pass pre-computed groups to formatter
+            productGroups: productGroups.map((g, i) => ({
+              number: i + 1,
+              name: g.name,
+              productCount: g.products.length,
+            })),
+            // 🆕 Pass groupMapping directly - NO LLM needed for this!
+            groupMapping,
+          },
+          formatting: {
+            ...DEFAULT_FORMATTING,
+            groupByCategory: true,
+          },
+          context,
+        }
       }
     }
 
