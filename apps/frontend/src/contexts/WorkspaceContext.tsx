@@ -77,11 +77,16 @@ export const useWorkspace = () => {
 
 interface WorkspaceProviderProps {
   children: ReactNode
+  initialWorkspace?: Workspace | null
 }
 
-export const WorkspaceProvider = ({ children }: WorkspaceProviderProps) => {
+export const WorkspaceProvider = ({ children, initialWorkspace }: WorkspaceProviderProps) => {
   const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(
     () => {
+      // If initialWorkspace is provided (for testing), use it
+      if (initialWorkspace) {
+        return initialWorkspace
+      }
       // Initialize from localStorage (shared across tabs)
       try {
         const stored = localStorage.getItem("currentWorkspace")

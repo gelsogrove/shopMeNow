@@ -1,5 +1,6 @@
 import { NewsUpdates } from "@/components/landing/NewsUpdates"
 import { PricingPlans } from "@/components/landing/PricingPlans"
+import { HomeFAQ } from "@/components/landing/HomeFAQ"
 import { WIPModal } from "@/components/shared/WIPModal"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -1451,6 +1452,9 @@ export function LoginPage() {
           }}
         />
       </div>
+
+      {/* FAQ Section */}
+      <HomeFAQ />
 
       {/* Contact Section */}
       <div className="bg-slate-900 text-white py-12">
