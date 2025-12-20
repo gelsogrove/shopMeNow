@@ -131,6 +131,10 @@ export interface AskLocationIntent {
   type: "ASK_LOCATION"
 }
 
+export interface AskBusinessInfoIntent {
+  type: "ASK_BUSINESS_INFO"
+}
+
 export interface AskFAQIntent {
   type: "ASK_FAQ"
   query: string
@@ -270,6 +274,7 @@ export type Intent =
   // Support
   | AskIdentityIntent
   | AskLocationIntent
+  | AskBusinessInfoIntent
   | AskFAQIntent
   | RequestHumanIntent
   | AskContactIntent
@@ -392,6 +397,7 @@ export function isServiceIntent(intent: Intent): intent is
 export function isSupportIntent(intent: Intent): intent is 
   | AskIdentityIntent 
   | AskLocationIntent 
+  | AskBusinessInfoIntent
   | AskFAQIntent 
   | RequestHumanIntent
   | AskContactIntent
@@ -400,6 +406,7 @@ export function isSupportIntent(intent: Intent): intent is
   return [
     "ASK_IDENTITY",
     "ASK_LOCATION",
+    "ASK_BUSINESS_INFO",
     "ASK_FAQ",
     "REQUEST_HUMAN",
     "ASK_CONTACT",

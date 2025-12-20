@@ -4775,6 +4775,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       // Support intents
       ASK_IDENTITY: AgentType.CUSTOMER_SUPPORT,
       ASK_LOCATION: AgentType.CUSTOMER_SUPPORT,
+      ASK_BUSINESS_INFO: AgentType.CUSTOMER_SUPPORT,  // 🆕 "che settore?", "che tipo di negozio?"
       ASK_CONTACT: AgentType.CUSTOMER_SUPPORT,
       REQUEST_HUMAN: AgentType.CUSTOMER_SUPPORT,
       ASK_HOURS: AgentType.CUSTOMER_SUPPORT,

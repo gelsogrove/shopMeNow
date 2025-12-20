@@ -24,6 +24,7 @@ import {
   OrderData,
   WorkspaceIdentityData,
   WorkspaceLocationData,
+  BusinessInfoData,
   FAQData,
   CustomerProfileData,
   OfferData,
@@ -56,6 +57,7 @@ export type ResponseType =
   | "AGENT_INFO"    // Customer's sales agent information
   | "IDENTITY"
   | "LOCATION"
+  | "BUSINESS_INFO"  // 🆕 Business type/sector info ("che settore?")
   | "FAQ"  // FAQ response - LLM matches user query to FAQ answers
   | "PROFILE"  // Customer profile with discount info
   | "OFFERS"  // Active offers list
@@ -142,6 +144,7 @@ export interface ResponseData {
   // For workspace info
   identity?: WorkspaceIdentityData
   location?: WorkspaceLocationData
+  businessInfo?: BusinessInfoData  // 🆕 Business type/sector for "che settore?" questions
 
   // For customer info
   profile?: CustomerProfileData
@@ -336,6 +339,9 @@ export class ResponseBuilderService {
 
       case "LOCATION":
         return this.buildLocationResponse(loadedData.location, context)
+
+      case "BUSINESS_INFO":
+        return this.buildBusinessInfoResponse(loadedData.businessInfo, context)
 
       case "FAQ":
         return this.buildFAQResponse(loadedData.faqs, loadedData.query, context)
@@ -1318,6 +1324,26 @@ export class ResponseBuilderService {
     return {
       type: "LOCATION",
       data: { location },
+      formatting: {
+        ...DEFAULT_FORMATTING,
+        showNumbers: false,
+        showPrices: false,
+      },
+      context,
+    }
+  }
+
+  /**
+   * Build business info response - for "che settore?", "che tipo di negozio?"
+   * Provides chatbot name, business type, and basic info
+   */
+  private buildBusinessInfoResponse(
+    businessInfo: BusinessInfoData,
+    context: ResponseContext
+  ): StructuredResponse {
+    return {
+      type: "BUSINESS_INFO",
+      data: { businessInfo },
       formatting: {
         ...DEFAULT_FORMATTING,
         showNumbers: false,

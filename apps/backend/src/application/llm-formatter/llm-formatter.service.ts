@@ -857,6 +857,10 @@ export class LLMFormatterService {
         parts.push(this.formatLocationPrompt(response))
         break
 
+      case "BUSINESS_INFO":
+        parts.push(this.formatBusinessInfoPrompt(response))
+        break
+
       case "FAQ":
         parts.push(this.formatFAQPrompt(response))
         break
@@ -1380,6 +1384,37 @@ CRITICAL:
     if (location.email) {
       lines.push(`Email: ${location.email}`)
     }
+
+    return lines.join("\n")
+  }
+
+  /**
+   * Format business info response - for "che settore?" questions
+   * Uses BUSINESS_TYPE_LABELS to provide human-readable sector description
+   */
+  private formatBusinessInfoPrompt(response: StructuredResponse): string {
+    const businessInfo = response.data.businessInfo
+    if (!businessInfo) return "Business information not available"
+
+    const businessLabel = BUSINESS_TYPE_LABELS[businessInfo.businessType] || BUSINESS_TYPE_LABELS.other
+
+    const lines = [
+      "BUSINESS INFORMATION:",
+      `Business Name: ${businessInfo.workspaceName}`,
+      `Sector/Type: ${businessLabel}`,
+      `Assistant Name: ${businessInfo.chatbotName}`,
+    ]
+    
+    if (businessInfo.description) {
+      lines.push(`Description: ${businessInfo.description}`)
+    }
+    if (businessInfo.address) {
+      lines.push(`Address: ${businessInfo.address}`)
+    }
+
+    lines.push("")
+    lines.push("INSTRUCTIONS: Respond naturally to the user's question about what type of business this is.")
+    lines.push(`Present yourself as ${businessInfo.chatbotName} and explain you work for a ${businessLabel}.`)
 
     return lines.join("\n")
   }

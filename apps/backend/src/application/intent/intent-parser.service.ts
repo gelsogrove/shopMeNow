@@ -303,6 +303,7 @@ SUPPORT:
 - SHOW_AGENT_INFO - User wants to know their assigned sales agent
 - ASK_LOCATION - User asks where the store is located
 - ASK_FAQ:query - User has a question about policies, shipping, etc.
+- ASK_BUSINESS_INFO - User asks about the TYPE of business/store, the SECTOR, what kind of shop this is. Examples: "che settore?", "che tipo di negozio siete?", "in che settore operate?", "what kind of store?", "che attività è?", "di cosa vi occupate?". NOT for categories/products!
 - VIEW_PROFILE - User asks about their discount, profile, or personal info (READ ONLY)
 - UPDATE_PROFILE - User wants to MODIFY/CHANGE/UPDATE their personal data (email, address, name, shipping address). Examples: "voglio cambiare email", "modifica indirizzo", "aggiorna i miei dati", "cambio indirizzo spedizione"
 - CHANGE_LANGUAGE - User wants to change the conversation language or asks to speak in another language. Examples: "parla in inglese", "speak in english", "hablame en español", "fale português", "cambia lingua", "in english please", "voglio parlare in spagnolo"
@@ -316,6 +317,8 @@ OTHER:
 - GREETING - User is greeting (hello, hi, ciao)
 - UNKNOWN - Cannot determine intent
 
+IMPORTANT: "settore" when asking "che settore?" or "in che settore" means the BUSINESS TYPE, NOT categories! Use ASK_BUSINESS_INFO.
+
 Respond with ONLY the intent type and parameter if needed.
 Examples:
 - "SHOW_CATEGORIES"
@@ -324,6 +327,7 @@ Examples:
 - "SHOW_OFFERS" (when user asks "che offerte avete?", "offerte?", "promozioni?", "sconti?", "what offers?", "deals?", "promotions?", "ofertas?", "promociones?")
 - "VIEW_SERVICES" (when user asks "che servizi avete?", "quali servizi?", "servizi?")
 - "SHOW_SERVICE:Spedizione" (when user asks about a specific service)
+- "ASK_BUSINESS_INFO" (when user asks "che settore?", "che tipo di negozio?", "di cosa vi occupate?")
 - "ADD_TO_CART:4:Pecorino Romano"
 - "REMOVE_FROM_CART:Pecorino"
 - "CLEAR_CART"
@@ -462,6 +466,9 @@ ${context.lastAssistantMessage ? `\nLast bot message: "${context.lastAssistantMe
         
       case "ASK_IDENTITY":
         return { type: "ASK_IDENTITY" }
+
+      case "ASK_BUSINESS_INFO":
+        return { type: "ASK_BUSINESS_INFO" }
 
       case "SHOW_AGENT_INFO":
         return { type: "SHOW_AGENT_INFO" }

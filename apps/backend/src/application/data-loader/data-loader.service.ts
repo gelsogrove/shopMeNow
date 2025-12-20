@@ -139,6 +139,14 @@ export interface WorkspaceLocationData {
   email?: string
 }
 
+export interface BusinessInfoData {
+  workspaceName: string
+  description?: string
+  chatbotName: string
+  businessType: string
+  address?: string
+}
+
 export interface FAQData {
   id: string
   question: string
@@ -193,6 +201,7 @@ export type LoadedData =
   | { type: "ORDER_DETAIL"; order: OrderData | null }
   | { type: "IDENTITY"; identity: WorkspaceIdentityData }
   | { type: "LOCATION"; location: WorkspaceLocationData }
+  | { type: "BUSINESS_INFO"; businessInfo: BusinessInfoData }  // 🆕 "che settore?" / "che tipo di negozio?"
   | { type: "FAQ"; faqs: FAQData[]; query: string }
   | { type: "PROFILE"; profile: CustomerProfileData }
   | { type: "OFFERS"; offers: OfferData[] }
@@ -391,6 +400,8 @@ export class DataLoaderService {
       switch (intent.type) {
         case "ASK_IDENTITY":
           return this.loadWorkspaceIdentity(workspaceId)
+        case "ASK_BUSINESS_INFO":
+          return this.loadBusinessInfo(workspaceId)
         case "ASK_LOCATION":
         case "ASK_CONTACT":
           return this.loadWorkspaceLocation(workspaceId)
@@ -2009,6 +2020,40 @@ export class DataLoaderService {
     } catch (error) {
       logger.error("❌ [DataLoader] Error loading workspace identity", { error })
       return { type: "ERROR", error: "Failed to load workspace info" }
+    }
+  }
+
+  /**
+   * Load business info (sector/type) for ASK_BUSINESS_INFO intent
+   * Returns the business type and chatbot name for "che settore?" questions
+   */
+  private async loadBusinessInfo(workspaceId: string): Promise<LoadedData> {
+    try {
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { 
+          name: true, 
+          description: true, 
+          chatbotName: true, 
+          businessType: true,
+          address: true,
+        },
+      })
+      if (!workspace) return { type: "ERROR", error: "Workspace not found" }
+      
+      return {
+        type: "BUSINESS_INFO",
+        businessInfo: {
+          workspaceName: workspace.name,
+          description: workspace.description || undefined,
+          chatbotName: workspace.chatbotName || "Assistente",
+          businessType: workspace.businessType || "other",
+          address: workspace.address || undefined,
+        },
+      }
+    } catch (error) {
+      logger.error("❌ [DataLoader] Error loading business info", { error })
+      return { type: "ERROR", error: "Failed to load business info" }
     }
   }
 
