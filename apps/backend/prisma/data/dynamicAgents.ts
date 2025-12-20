@@ -27,7 +27,7 @@ interface DynamicAgent {
 }
 
 // Agent types that are SHARED across all workspace types
-const SHARED_AGENTS = ["SECURITY", "TRANSLATION", "SUMMARY_AGENT"]
+const SHARED_AGENTS = ["SECURITY", "TRANSLATION", "SUMMARY_AGENT", "CONVERSATION_HISTORY"]
 
 // Agent types available ONLY for e-commerce workspaces
 const ECOMMERCE_ONLY_AGENTS = ["PRODUCT_SEARCH", "ORDER_TRACKING"]
@@ -42,6 +42,7 @@ const TEMPLATE_FILES: Record<string, string> = {
   SECURITY: "06-security.template.md",
   TRANSLATION: "07-translation.template.md",
   SUMMARY_AGENT: "08-summary.template.md",
+  CONVERSATION_HISTORY: "09-conversation-history.template.md",
 }
 
 /**
@@ -183,6 +184,23 @@ export const dynamicAgents = (
       order: 7,
       isActive: true,
       availableFunctions: getAgentFunctionNames("TRANSLATION"),
+    },
+
+    // CONVERSATION HISTORY LAYER (order: 8) - Shared
+    // Umanizza le risposte tecniche, aggiunge contesto, saluti, offerte
+    {
+      workspaceId,
+      name: "Conversation History Layer",
+      type: "CONVERSATION_HISTORY" as AgentType,
+      icon: "MessageCircle",
+      description: "Umanizza risposte con contesto, saluti, offerte",
+      systemPrompt: loadTemplate("CONVERSATION_HISTORY", hasEcommerce),
+      model: "openai/gpt-4o-mini",
+      temperature: 0.7, // Più creativo per umanizzare
+      maxTokens: 500,
+      order: 8, // Dopo agent funzionali, prima di Security
+      isActive: true,
+      availableFunctions: null, // Non chiama funzioni
     },
 
     // SECURITY AGENT (order: 99) - Shared

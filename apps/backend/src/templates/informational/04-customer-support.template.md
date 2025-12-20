@@ -139,7 +139,4 @@ Handle all issues yourself:
 
 ---
 
-{{#if customAiRules}}
-## ⚠️ CUSTOM RULES (HIGH PRIORITY)
-{{customAiRules}}
-{{/if}}
+

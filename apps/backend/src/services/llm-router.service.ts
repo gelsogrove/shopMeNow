@@ -45,6 +45,8 @@ import { ProductSearchAgentLLM } from "../application/agents/ProductSearchAgentL
 import { ProfileManagementAgentLLM } from "../application/agents/ProfileManagementAgentLLM"
 import { SafetyTranslationAgent } from "../application/agents/SafetyTranslationAgent"
 import { TranslationAgent } from "../application/agents/TranslationAgent"
+import { ConversationHistoryLayer } from "../application/layers/ConversationHistoryLayer"
+import type { TechnicalResponseType, ActiveOffer, ConversationMessage } from "../application/layers/conversation-history-layer.types"
 import { LinkReplacementService } from "../application/services/link-replacement.service"
 import { PromptBuilderService } from "../application/services/prompt-builder"
 import { PromptVariableBuilder } from "../application/services/prompt-variable-builder.service"
@@ -117,6 +119,7 @@ export interface DebugStep {
     | "safety"
     | "sub_agent"
     | "token-replacement" // NEW: Token replacement step
+    | "humanization" // 🆕 Conversation History Layer
   agent?: string
   model?: string
   temperature?: number
@@ -146,6 +149,10 @@ export interface DebugStep {
     // Translation specific
     targetLanguage?: string
     systemPrompt?: string
+    // 🆕 Humanization specific
+    technicalResponse?: string
+    isFirstMessage?: boolean
+    hasOffers?: boolean
   }
   output?: {
     decision?: string
@@ -162,6 +169,10 @@ export interface DebugStep {
     responseText?: string
     language?: string
     containsTokens?: boolean
+    // 🆕 Humanization specific
+    humanizedText?: string
+    addedGreeting?: boolean
+    suggestedOffers?: boolean
   }
   // For router steps
   intent?: string
@@ -205,6 +216,7 @@ export class LLMRouterService {
   private templateLoader: TemplateLoaderService // 🆕 Load templates from files
   private safetyAgent: SafetyTranslationAgent // Used for specific flows (welcome, queue)
   private translationAgent: TranslationAgent // Main translation layer (IT → target language)
+  private conversationHistoryLayer: ConversationHistoryLayer // 🆕 Humanization layer (saluti, contesto, offerte)
   private systemContextService: SystemContextService // 🆕 System Context for hidden SKU mappings
   private optionsMappingService: OptionsMappingService // 🆕 For pendingAction ADD_TO_CART
   private openRouterApiKey: string
@@ -219,6 +231,7 @@ export class LLMRouterService {
     this.functionExecutor = new FunctionExecutor(prisma)
     this.safetyAgent = new SafetyTranslationAgent(prisma)
     this.translationAgent = new TranslationAgent(prisma) // 🆕 Feature 181: Translation layer in routing
+    this.conversationHistoryLayer = new ConversationHistoryLayer(prisma) // 🆕 Humanization layer
     this.linkReplacementService = new LinkReplacementService()
     this.searchConversationRepo = new SearchConversationRepository()
     this.promptProcessor = new PromptProcessorService() // 🆕 Feature 124: Inject for variable replacement
@@ -1155,11 +1168,142 @@ export class LLMRouterService {
         responsePreview: responseWithLinks.substring(0, 150),
       })
 
+      // STEP 4.7: Apply Conversation History Layer (🆕 Humanization)
+      // Transforms technical response into human, contextual message
+      logger.info("Step 4.7: Applying Conversation History Layer")
+      
+      // Map agentUsed to TechnicalResponseType
+      const responseTypeMap: Record<string, TechnicalResponseType> = {
+        PRODUCT_SEARCH: "PRODUCT_LIST",
+        CART_MANAGEMENT: "CART_STATUS",
+        ORDER_TRACKING: "ORDER_LIST",
+        CUSTOMER_SUPPORT: "FAQ_ANSWER",
+        PROFILE_MANAGEMENT: "PROFILE",
+        ROUTER: "GENERIC",
+      }
+      const technicalResponseType = responseTypeMap[result.agentUsed || "ROUTER"] || "GENERIC"
+      
+      // 🎯 Determine MINDSET based on response type
+      // SALES: When customer is exploring products/categories → push towards purchase
+      // SUPPORT: When customer needs help/info → empathy and clarity
+      const salesTypes: TechnicalResponseType[] = [
+        "PRODUCT_LIST", "PRODUCT_DETAIL", "CATEGORY_LIST", 
+        "CART_STATUS", "CART_UPDATED", "CART_EMPTY", 
+        "CHECKOUT", "ORDER_CONFIRMED"
+      ]
+      const supportTypes: TechnicalResponseType[] = [
+        "FAQ_ANSWER", "SUPPORT_REQUEST", "PROFILE", "ORDER_LIST"
+      ]
+      
+      let conversationMindset: "SALES" | "SUPPORT" | "NEUTRAL" = "NEUTRAL"
+      if (salesTypes.includes(technicalResponseType)) {
+        conversationMindset = "SALES"
+      } else if (supportTypes.includes(technicalResponseType)) {
+        conversationMindset = "SUPPORT"
+      }
+      
+      logger.info(`🎯 Mindset determined: ${conversationMindset} (response type: ${technicalResponseType})`)
+      
+      // 📚 Load FAQs for context
+      let workspaceFaqs: Array<{ question: string; answer: string; category?: string }> = []
+      try {
+        const faqRecords = await this.prisma.fAQ.findMany({
+          where: {
+            workspaceId: params.workspaceId,
+            isActive: true,
+          },
+          select: {
+            question: true,
+            answer: true,
+            category: true,
+          },
+          take: 10, // Limit to 10 most relevant FAQs to save tokens
+          orderBy: { order: "asc" },
+        })
+        workspaceFaqs = faqRecords.map(faq => ({
+          question: faq.question,
+          answer: faq.answer,
+          category: faq.category || undefined,
+        }))
+        logger.info(`📚 Loaded ${workspaceFaqs.length} FAQs for humanization context`)
+      } catch (faqError) {
+        logger.warn("⚠️ Failed to load FAQs for humanization, continuing without:", faqError)
+      }
+      
+      // Build conversation history for the layer
+      const historyForLayer: ConversationMessage[] = conversationHistory.map((msg: any) => ({
+        role: msg.role === "user" ? "customer" : "assistant",
+        content: msg.content,
+        timestamp: new Date(),
+      }))
+      
+      // Parse offers into ActiveOffer format (offers is a string, need to check if it's parseable)
+      const activeOffers: ActiveOffer[] = []
+      // Note: offers from DB is a formatted string, we'd need structured data
+      // For now, keep empty - can enhance later with actual offer objects
+      
+      // Determine if this is the first message
+      const isFirstMessage = conversationHistory.length === 0
+      
+      const humanizedResult = await this.conversationHistoryLayer.process({
+        workspaceId: params.workspaceId,
+        customerId: params.customerId,
+        customerName: params.customerName || "Cliente",
+        conversationHistory: historyForLayer,
+        currentQuestion: params.message,
+        technicalResponse: {
+          type: technicalResponseType,
+          rawMessage: responseWithLinks,
+          optionsMapping: explicitOptionMapping || undefined,
+        },
+        botIdentity: {
+          name: workspace?.name || "Assistente",
+          personality: workspace?.botIdentityResponse || null,
+        },
+        customAiRules: workspace?.customAiRules || null,
+        activeOffers,
+        faqs: workspaceFaqs, // 📚 Pass FAQs for context
+        mindset: conversationMindset, // 🎯 Pass mindset (SALES/SUPPORT/NEUTRAL)
+        hasSalesAgents: workspace?.hasSalesAgents ?? false,
+        isFirstMessage,
+        lastAgentUsed: result.agentUsed || "ROUTER",
+        customerLanguage: params.customerLanguage || "it",
+      })
+      
+      // Use humanized message for translation
+      const messageForTranslation = humanizedResult.message
+      const humanizationTokens = humanizedResult.metadata.tokensUsed || 0
+      totalTokens += humanizationTokens
+      
+      // Add Humanization debug step
+      debugInfo.steps.push({
+        type: "humanization",
+        agent: "Conversation History Layer",
+        model: humanizedResult.metadata.model,
+        temperature: 0.7,
+        timestamp: new Date().toISOString(),
+        input: {
+          technicalResponse: responseWithLinks.substring(0, 200),
+          isFirstMessage,
+          hasOffers: activeOffers.length > 0,
+        },
+        output: {
+          humanizedText: humanizedResult.message.substring(0, 200),
+          addedGreeting: humanizedResult.metadata.addedGreeting,
+          suggestedOffers: humanizedResult.metadata.suggestedOffers,
+        },
+        tokenUsage: {
+          promptTokens: 0,
+          completionTokens: humanizationTokens,
+          totalTokens: humanizationTokens,
+        },
+      })
+
       // STEP 5: Apply Translation Layer (🆕 Feature 181: Security moved to WhatsApp Queue only)
       logger.info("Step 5: Applying Translation Layer")
       const translationResult = await this.translationAgent.process({
         workspaceId: params.workspaceId,
-        message: responseWithLinks,
+        message: messageForTranslation,
         targetLanguage: params.customerLanguage || "it",
         customerName: params.customerName,
       })

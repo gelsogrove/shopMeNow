@@ -65,13 +65,15 @@ type PipelineLoadedData = LoadedData | CatalogQueryLoadedData
 // ================================================================================
 
 interface WorkspaceConfig {
+  name: string                    // Workspace name (e.g., "BellItalia VIP")
   sellsProductsAndServices: boolean
   hasSalesAgents: boolean
   hasHumanSupport: boolean
   humanSupportInstructions: string | null
   operatorContactMethod: string | null
   welcomeMessage: any
-  botIdentityResponse: string | null
+  botIdentityResponse: string | null  // Bot personality
+  botIdentity: string | null          // Alias for botIdentityResponse
   customAiRules: string | null  // Custom AI rules that override default behavior
   adminEmail: string | null
   workspaceName: string
@@ -493,7 +495,9 @@ export class ChatEngineService {
       const formatterResult = await this.formatWithCustomRules(
         structuredResponse,
         input.customerLanguage || "it",
-        workspaceConfig
+        workspaceConfig,
+        undefined,
+        { customerName: input.customerName }
       )
 
       let finalMessage = formatterResult.text
@@ -745,19 +749,29 @@ export class ChatEngineService {
   }
 
   /**
-   * Helper: formatta con LLM includendo customAiRules dal workspace
+   * Helper: formatta con LLM includendo customAiRules e botIdentity dal workspace
    */
   private async formatWithCustomRules(
     structuredResponse: StructuredResponse,
     language: string,
     workspaceConfig: WorkspaceConfig,
-    conversationHistory?: Array<{ role: string; content: string }>
+    conversationHistory?: Array<{ role: string; content: string }>,
+    personalizationOptions?: {
+      customerName?: string
+      isFirstMessage?: boolean
+    }
   ): Promise<FormatterResult> {
     return this.llmFormatter.format(
       structuredResponse,
       language,
       conversationHistory,
-      { customAiRules: workspaceConfig.customAiRules }
+      { 
+        customAiRules: workspaceConfig.customAiRules,
+        botIdentity: workspaceConfig.botIdentity,
+        botName: workspaceConfig.name,
+        customerName: personalizationOptions?.customerName,
+        isFirstMessage: personalizationOptions?.isFirstMessage,
+      }
     )
   }
 
@@ -1242,6 +1256,7 @@ export class ChatEngineService {
     })
 
     const config: WorkspaceConfig = {
+      name: workspace?.name || "Assistente",
       sellsProductsAndServices: workspace?.sellsProductsAndServices ?? true,
       hasSalesAgents: workspace?.hasSalesAgents ?? false,
        hasHumanSupport: workspace?.hasHumanSupport ?? false,
@@ -1249,6 +1264,7 @@ export class ChatEngineService {
        operatorContactMethod: workspace?.operatorContactMethod ?? null,
       welcomeMessage: workspace?.welcomeMessage,
       botIdentityResponse: workspace?.botIdentityResponse ?? null,
+      botIdentity: workspace?.botIdentityResponse ?? null,  // Alias for LLMFormatter
       customAiRules: workspace?.customAiRules ?? null,
       adminEmail:
         workspace?.whatsappSettings?.adminEmail ||
@@ -1738,7 +1754,9 @@ export class ChatEngineService {
           const formatterResult = await this.formatWithCustomRules(
             structuredResponse,
             input.customerLanguage || "it",
-            workspaceConfig
+            workspaceConfig,
+            undefined, // conversationHistory
+            { customerName: input.customerName, isFirstMessage: history.length === 0 }
           )
           
           const finalMessage = formatterResult.text
@@ -1921,7 +1939,9 @@ export class ChatEngineService {
               const formatterResult = await this.formatWithCustomRules(
                 structuredResponse,
                 input.customerLanguage || "it",
-                workspaceConfig
+                workspaceConfig,
+                undefined,
+                { customerName: input.customerName, isFirstMessage: history.length === 0 }
               )
               let finalMessage = formatterResult.text
               
@@ -2371,7 +2391,9 @@ export class ChatEngineService {
                 const formatterResult = await this.formatWithCustomRules(
                   structuredResp,
                   input.customerLanguage || "it",
-                  workspaceConfig
+                  workspaceConfig,
+                  undefined,
+                  { customerName: input.customerName }
                 )
                 const formattedText = formatterResult.text
 
@@ -2449,7 +2471,9 @@ export class ChatEngineService {
                 const formatterResult = await this.formatWithCustomRules(
                   structuredResp,
                   input.customerLanguage || "it",
-                  workspaceConfig
+                  workspaceConfig,
+                  undefined,
+                  { customerName: input.customerName }
                 )
                 const formattedText = formatterResult.text
 
@@ -2693,7 +2717,9 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
               const formattedResult = await this.formatWithCustomRules(
                 structuredResponse,
                 input.customerLanguage || "it",
-                workspaceConfig
+                workspaceConfig,
+                undefined,
+                { customerName: input.customerName }
               )
               finalMessage = formattedResult.text
               llmUsed = !formattedResult.cached
@@ -3986,7 +4012,9 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         const formatterResult = await this.formatWithCustomRules(
           structuredResponse,
           input.customerLanguage || "it",
-          workspaceConfig
+          workspaceConfig,
+          undefined,
+          { customerName: input.customerName, isFirstMessage: history.length === 0 }
         )
         finalMessage = formatterResult.text
         llmUsed = !formatterResult.cached
@@ -3996,7 +4024,9 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         const formatterResult = await this.formatWithCustomRules(
           structuredResponse,
           input.customerLanguage || "it",
-          workspaceConfig
+          workspaceConfig,
+          undefined,
+          { customerName: input.customerName, isFirstMessage: history.length === 0 }
         )
         finalMessage = formatterResult.text
         llmUsed = !formatterResult.cached
@@ -4825,7 +4855,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         if (frequentProductsRaw.length > 0) {
           const productIds = frequentProductsRaw.map(p => p.productId).filter(Boolean) as string[]
           const products = await this.prisma.products.findMany({
-            where: { id: { in: productIds }, deletedAt: null },
+            where: { id: { in: productIds }, isActive: true },
             select: { id: true, sku: true, name: true },
           })
 

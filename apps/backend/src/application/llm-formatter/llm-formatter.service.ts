@@ -58,46 +58,80 @@ export interface FormatterResult {
 
 export interface FormatterOptions {
   customAiRules?: string | null  // Custom AI rules from workspace that override defaults
+  botIdentity?: string | null    // Bot personality from workspace settings
+  customerName?: string          // Customer name for personalization
+  isFirstMessage?: boolean       // If true, add greeting
+  botName?: string               // Bot name (e.g., "BellItalia")
 }
 
 // ================================================================================
 // PROMPT TEMPLATES (in Italian - base language)
 // ================================================================================
 
-const BASE_SYSTEM_PROMPT = `You are an e-commerce assistant. Your ONLY task is to format the provided data into natural language.
+const BASE_SYSTEM_PROMPT = `Sei un assistente e-commerce. Il tuo UNICO compito è formattare i dati forniti in linguaggio naturale.
 
-CRITICAL RULES:
-1. DO NOT invent data - use ONLY the provided data
-2. DO NOT add or remove items from the list
-3. DO NOT change prices, quantities or names
-4. Format naturally and friendly
-5. Use the requested language for the response
-6. For CART items: use dashes (-) NOT numbers. Cart products should NOT be numbered.
-7. For MENU OPTIONS (Cosa vuoi fare?): KEEP numbered exactly as provided (1, 2, 3...)
-8. PRICES ARE FINAL - DO NOT calculate or mention any discounts on prices! The prices shown already include any applicable discounts. Never write "con sconto del X%" or "discounted price" - just show the price as-is.
+REGOLE CRITICHE:
+1. NON inventare dati - usa SOLO i dati forniti
+2. NON aggiungere o rimuovere elementi dalla lista
+3. NON cambiare prezzi, quantità o nomi
+4. Formatta in modo naturale e amichevole
+5. RISPONDI SEMPRE NELLA LINGUA RICHIESTA (vedi "LINGUA OUTPUT")
+6. Per il CARRELLO: usa trattini (-) NON numeri. I prodotti del carrello NON devono essere numerati.
+7. Per le OPZIONI MENU (Cosa vuoi fare?): MANTIENI la numerazione esattamente come fornita (1, 2, 3...)
+8. I PREZZI SONO FINALI - NON calcolare o menzionare sconti sui prezzi! I prezzi mostrati già includono eventuali sconti applicabili.
 
-OUTPUT FORMAT:
-- Cart items: use dash prefix (- Product - €XX.XX)
-- Menu options: keep numbering (1. ✅ Action)
-- Prices: €XX.XX (show exactly as provided - DO NOT modify or add discount calculations!)
-- Show total "(N items)" if requested
-- Emoji: 🛒 🍷 📦 ✅ ❌ etc.`
+FORMATO OUTPUT:
+- Carrello: prefisso trattino (- Prodotto - €XX.XX)
+- Opzioni menu: mantieni numerazione (1. ✅ Azione)
+- Prezzi: €XX.XX (mostra esattamente come fornito)
+- Mostra totale "(N elementi)" se richiesto
+- Emoji: 🛒 🍷 📦 ✅ ❌ etc.
+
+TONO: Sii caldo, amichevole e colloquiale - MAI robotico o formale!`
 
 /**
- * Build system prompt with optional custom AI rules
+ * Build system prompt with optional custom AI rules and bot personality
  * Custom rules override default behavior when set by workspace admin
  */
-function buildSystemPrompt(customAiRules?: string | null): string {
-  if (!customAiRules || customAiRules.trim() === "") {
-    return BASE_SYSTEM_PROMPT
+function buildSystemPrompt(options?: FormatterOptions): string {
+  let prompt = BASE_SYSTEM_PROMPT
+  
+  // Add bot personality if set
+  if (options?.botIdentity && options.botIdentity.trim() !== "") {
+    prompt += `
+
+## 🎭 LA TUA PERSONALITÀ (IMPORTANTISSIMO!)
+Hai una personalità e uno stile di comunicazione specifico. Applicalo a COME presenti le informazioni:
+
+${options.botIdentity}
+
+Ricorda: Mantieni la personalità nel TONO, ma non modificare i DATI. Sii sempre caloroso e umano!`
   }
   
-  return `${BASE_SYSTEM_PROMPT}
+  // Add greeting instruction if first message
+  if (options?.isFirstMessage && options?.customerName) {
+    const botName = options?.botName || "l'assistente"
+    prompt += `
 
-## 🤖 CUSTOM RULES (HIGH PRIORITY)
-The following rules have been defined by the shop owner and take priority over general rules:
+## 👋 SALUTO (Questo è il PRIMO messaggio!)
+Inizia con un saluto caloroso e personalizzato:
+- Rivolgiti al cliente per nome: "${options.customerName}"
+- Presentati brevemente (sei ${botName})
+- Poi fornisci le informazioni richieste
+- Sii naturale, mai robotico!`
+  }
+  
+  // Add custom AI rules (highest priority)
+  if (options?.customAiRules && options.customAiRules.trim() !== "") {
+    prompt += `
 
-${customAiRules}`
+## 🤖 REGOLE PERSONALIZZATE (ALTA PRIORITÀ)
+Le seguenti regole sono state definite dal proprietario del negozio e hanno priorità sulle regole generali:
+
+${options.customAiRules}`
+  }
+  
+  return prompt
 }
 
 const formatDisplayPrice = (value?: number | null, fallback: string = "€0.00") => {
@@ -169,12 +203,30 @@ export class LLMFormatterService {
     // Build the formatting prompt
     const userPrompt = this.buildFormattingPrompt(response, targetLanguage)
 
-    // Build system prompt with optional custom AI rules
-    const systemPrompt = buildSystemPrompt(options?.customAiRules)
+    // Build system prompt with all options (customAiRules, botIdentity, customerName, etc.)
+    const systemPrompt = buildSystemPrompt(options)
+    
+    // DEBUG: Log all options received
+    logger.info("📝 [LLMFormatter] Options received", {
+      hasBotIdentity: !!options?.botIdentity,
+      botIdentityLength: options?.botIdentity?.length || 0,
+      hasCustomAiRules: !!options?.customAiRules,
+      customerName: options?.customerName,
+      isFirstMessage: options?.isFirstMessage,
+      botName: options?.botName,
+    })
     
     if (options?.customAiRules) {
       logger.info("📝 [LLMFormatter] Using custom AI rules", {
         rulesLength: options.customAiRules.length,
+      })
+    }
+    
+    if (options?.botIdentity) {
+      logger.info("📝 [LLMFormatter] Using bot personality", {
+        identityLength: options.botIdentity.length,
+        isFirstMessage: options.isFirstMessage,
+        customerName: options.customerName,
       })
     }
 
@@ -452,10 +504,10 @@ export class LLMFormatterService {
 
   private getCartEmpty(lang: string): string {
     const empty: Record<string, string> = {
-      it: "Il tuo carrello è vuoto.\n\nVuoi vedere i nostri prodotti?",
-      en: "Your cart is empty.\n\nWould you like to see our products?",
-      es: "Tu carrito está vacío.\n\n¿Quieres ver nuestros productos?",
-      pt: "Seu carrinho está vazio.\n\nGostaria de ver nossos produtos?",
+      it: "Oops, il carrello è vuoto! 🛒\n\nMa niente paura, abbiamo tantissimi prodotti deliziosi che ti aspettano! Vuoi dare un'occhiata? 😊",
+      en: "Oops, your cart is empty! 🛒\n\nBut don't worry, we have lots of delicious products waiting for you! Want to take a look? 😊",
+      es: "¡Ups, tu carrito está vacío! 🛒\n\n¡Pero no te preocupes, tenemos muchos productos deliciosos esperándote! ¿Quieres echar un vistazo? 😊",
+      pt: "Ops, seu carrinho está vazio! 🛒\n\nMas não se preocupe, temos muitos produtos deliciosos esperando por você! Quer dar uma olhada? 😊",
     }
     return empty[lang] || empty["it"]
   }
@@ -626,24 +678,38 @@ export class LLMFormatterService {
 
   private getNoResults(lang: string, detail?: string): string {
     const base: Record<string, string> = {
-      it: "🔍 Nessun risultato trovato",
-      en: "🔍 No results found",
-      es: "🔍 No se encontraron resultados",
-      pt: "🔍 Nenhum resultado encontrado",
+      it: "🔍 Mmh, non ho trovato nulla",
+      en: "🔍 Hmm, I couldn't find anything",
+      es: "🔍 Mmm, no encontré nada",
+      pt: "🔍 Hmm, não encontrei nada",
+    }
+    const suffix: Record<string, string> = {
+      it: "Prova con altre parole o dai un'occhiata alle nostre categorie! 😊",
+      en: "Try different words or take a look at our categories! 😊",
+      es: "¡Prueba con otras palabras o echa un vistazo a nuestras categorías! 😊",
+      pt: "Tente outras palavras ou dê uma olhada nas nossas categorias! 😊",
     }
     const text = base[lang] || base["it"]
-    return detail ? `${text}: ${detail}` : text
+    const hint = suffix[lang] || suffix["it"]
+    return detail ? `${text}: ${detail}\n\n${hint}` : `${text}.\n\n${hint}`
   }
 
   private getError(lang: string, detail?: string): string {
     const base: Record<string, string> = {
-      it: "❌ Si è verificato un errore",
-      en: "❌ An error occurred",
-      es: "❌ Ha ocurrido un error",
-      pt: "❌ Ocorreu um erro",
+      it: "😅 Ops, qualcosa è andato storto",
+      en: "😅 Oops, something went wrong",
+      es: "😅 Ups, algo salió mal",
+      pt: "😅 Ops, algo deu errado",
+    }
+    const suffix: Record<string, string> = {
+      it: "Riprova tra un attimo, sarò pronto ad aiutarti!",
+      en: "Try again in a moment, I'll be ready to help!",
+      es: "¡Inténtalo de nuevo en un momento, estaré listo para ayudarte!",
+      pt: "Tente novamente em um instante, estarei pronto para ajudar!",
     }
     const text = base[lang] || base["it"]
-    return detail ? `${text}: ${detail}` : text
+    const hint = suffix[lang] || suffix["it"]
+    return detail ? `${text}: ${detail}\n\n${hint}` : `${text}.\n\n${hint}`
   }
 
   private getHumanSupport(lang: string): string {

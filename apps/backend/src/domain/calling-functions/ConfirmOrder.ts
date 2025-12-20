@@ -80,9 +80,9 @@ export async function confirmOrder(
     }
 
     // 1b. Get workspace to check hasSalesAgents
-    const workspace = await prisma.workspaces.findUnique({
+    const workspace = await prisma.workspace.findUnique({
       where: { id: request.workspaceId },
-      select: { hasSalesAgents: true, businessName: true }
+      select: { hasSalesAgents: true, name: true }
     })
 
     // 2. Get cart with items

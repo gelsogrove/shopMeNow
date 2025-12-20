@@ -176,6 +176,25 @@ export const defaultAgents = (
   },
 
   // ====================================================================
+  // CONVERSATION HISTORY LAYER (order: 8) - Humanization layer
+  // ====================================================================
+  {
+    workspaceId,
+    name: "Conversation History Layer",
+    type: "CONVERSATION_HISTORY" as AgentType,
+    icon: "MessageCircle",
+    description:
+      "Humanization layer: transforms technical responses into natural, contextual messages with greetings, offers suggestions, and personality",
+
+    model: "openai/gpt-4o-mini",
+    temperature: 0.7, // Higher for creativity and natural language
+    maxTokens: 500,
+    order: 8, // After Translation (7)
+    isActive: true,
+    availableFunctions: null, // No function calls - pure text transformation
+  },
+
+  // ====================================================================
   // SECURITY AGENT (order: 99) - Security validation and content moderation
   // ====================================================================
   {

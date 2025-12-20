@@ -1483,6 +1483,7 @@ enum AgentType {
   SUMMARY_AGENT         // order: 5.5 - Conversation summarization
   PROFILE_MANAGEMENT    // order: 6 - Profile modifications
   NOTIFICATIONS         // order: 7 - Push notifications
+  CONVERSATION_HISTORY  // order: 8 - Humanization layer (saluti, contesto, offerte)
   SAFETY_TRANSLATION    // order: 99 - Safety + translation (DEPRECATED - will be split)
   SECURITY              // order: 98 - Security validation (blocks unsafe content)
   TRANSLATION           // order: 99 - Translation to customer language
