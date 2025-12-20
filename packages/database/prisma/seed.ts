@@ -193,7 +193,23 @@ async function main() {
       url: "https://bellitalia.com/vip",
       channelStatus: true,
       debugMode: true,
-      welcomeMessage: "Welcome to BellItalia! How can I help you today?",
+      welcomeMessage: `Ciao, piacere di conoscerti! 👋
+Mi chiamo SofIA e sono l'assistenza virtuale di BellItalia.
+Siamo un importatore di prodotti italiani.
+
+Come posso aiutarti oggi?
+Stai cercando un prodotto in particolare oppure hai una domanda specifica da farmi?
+
+Con questo servizio puoi:
+• chiedere informazioni su un ordine
+• effettuare un ordine
+• cercare un prodotto
+• farmi una domanda
+• scaricare una fattura
+• sapere dove si trova il tuo ordine
+• verificare la disponibilità dei prodotti in tempo reale
+
+Sono qui per aiutarti 😊`,
       wipMessage: "Sorry, I'm currently being improved. Please try again later.",
       ownerId: adminUser.id,
       // ✅ PREMIUM plan

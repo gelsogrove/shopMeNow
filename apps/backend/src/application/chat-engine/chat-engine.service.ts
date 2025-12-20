@@ -1521,6 +1521,84 @@ export class ChatEngineService {
       })
 
       // ========================================================================
+      // STEP 0.1: Check if first message → Return Welcome Message
+      // ========================================================================
+      // Count previous messages from this customer in this workspace
+      const previousMessageCount = await this.prisma.message.count({
+        where: {
+          chatSession: {
+            customerId: input.customerId,
+            workspaceId: input.workspaceId,
+          },
+          deletedAt: null,
+        },
+      })
+
+      const isFirstMessage = previousMessageCount === 0
+
+      logger.info("👋 [ChatEngine] First message check", {
+        customerId: input.customerId,
+        previousMessageCount,
+        isFirstMessage,
+      })
+
+      // If first message and welcomeMessage is configured, return it directly
+      if (isFirstMessage && workspaceConfig.welcomeMessage) {
+        const welcomeText = typeof workspaceConfig.welcomeMessage === "string"
+          ? workspaceConfig.welcomeMessage
+          : typeof workspaceConfig.welcomeMessage === "object" && workspaceConfig.welcomeMessage?.text
+            ? workspaceConfig.welcomeMessage.text
+            : JSON.stringify(workspaceConfig.welcomeMessage)
+
+        logger.info("👋 [ChatEngine] Returning welcome message for first-time customer", {
+          customerId: input.customerId,
+          workspaceId: input.workspaceId,
+          welcomeMessageLength: welcomeText.length,
+        })
+
+        const conversationId = input.conversationId || `temp-${input.customerId}`
+
+        // Save messages to history
+        const savedMessages = await this.saveMessages(
+          input.workspaceId,
+          input.customerId,
+          conversationId,
+          input.message,
+          welcomeText,
+          "WELCOME",
+          0,
+          {
+            loadedDataType: "WELCOME_MESSAGE",
+            responseType: "WELCOME_MESSAGE",
+            llmUsed: false,
+            steps: [{
+              type: "welcome",
+              agent: "👋 Welcome",
+              timestamp: new Date().toISOString(),
+              input: { textContent: input.message.substring(0, 100) },
+              output: { textContent: "First message - returning configured welcome message" },
+              duration: 0,
+            }],
+            totalTokens: 0,
+            executionTimeMs: Date.now() - startTime,
+          }
+        )
+
+        return {
+          message: welcomeText,
+          agentType: AgentType.ROUTER,
+          wasHandled: true,
+          intent: "GREETING",
+          confidence: "HIGH",
+          source: "PATTERN",
+          processingTimeMs: Date.now() - startTime,
+          tokensUsed: 0,
+          agentUsed: "WELCOME",
+          _assistantMessageId: savedMessages.assistantMessageId,
+        }
+      }
+
+      // ========================================================================
       // STEP 0.5: Preprocess short inputs (numbers, yes/no)
       // ========================================================================
       const conversationId = input.conversationId || `temp-${input.customerId}`
