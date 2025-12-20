@@ -225,6 +225,11 @@ export interface UpdateProfileIntent {
   value: string
 }
 
+export interface ChangeLanguageIntent {
+  type: "CHANGE_LANGUAGE"
+  requestedLanguage?: string
+}
+
 // =============================================================================
 // UNKNOWN INTENT (fallback)
 // =============================================================================
@@ -288,6 +293,7 @@ export type Intent =
   // Profile
   | ViewProfileIntent
   | UpdateProfileIntent
+  | ChangeLanguageIntent
   
   // Unknown
   | UnknownIntent

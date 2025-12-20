@@ -3610,6 +3610,107 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         }
       }
 
+      // ========================================================================
+      // STEP: Handle CHANGE_LANGUAGE intent - Redirect to profile for language settings
+      // ========================================================================
+      if (intentResult.intent.type === "CHANGE_LANGUAGE") {
+        logger.info("🌍 [ChatEngine] CHANGE_LANGUAGE detected - generating profile link for language change", {
+          workspaceId: input.workspaceId,
+          customerId: input.customerId,
+        })
+
+        try {
+          // Import CallingFunctionsService to generate profile link
+          const { CallingFunctionsService } = await import("../../services/calling-functions.service")
+          const callingFunctions = new CallingFunctionsService()
+          
+          const profileLinkResult = await callingFunctions.getProfileLink({
+            customerId: input.customerId,
+            workspaceId: input.workspaceId,
+          })
+
+          if (!profileLinkResult.success || !profileLinkResult.linkUrl) {
+            throw new Error("Failed to generate profile link")
+          }
+
+          // Format the response with the link and supported languages
+          const customerFirstName = input.customerName?.split(" ")[0] || "!"
+          const languageMessage = `Certo ${customerFirstName}! 🌍 Per cambiare la lingua di conversazione, puoi modificarla nel tuo profilo:\n\n👉 Modifica Lingua\n${profileLinkResult.linkUrl}\n\n📌 Lingue supportate:\n• 🇮🇹 Italiano\n• 🇬🇧 English\n• 🇪🇸 Español\n• 🇵🇹 Português\n\nPer questioni di sicurezza il link sarà abilitato solo per 15 minuti.\n\nTi posso aiutare con qualcos'altro? 😊`
+
+          const processingTimeMs = Date.now() - startTime
+
+          // Save messages
+          const savedMessages = await this.saveMessages(
+            input.workspaceId,
+            input.customerId,
+            conversationId,
+            input.message,
+            languageMessage
+          )
+
+          // Clear any pending options
+          await this.optionsMappingService.clearMapping({
+            workspaceId: input.workspaceId,
+            conversationId,
+            customerId: input.customerId,
+          })
+
+          logger.info("✅ [ChatEngine] CHANGE_LANGUAGE handled successfully", {
+            workspaceId: input.workspaceId,
+            customerId: input.customerId,
+            linkGenerated: true,
+          })
+
+          return {
+            message: languageMessage,
+            agentType: AgentType.PROFILE_MANAGEMENT,
+            wasHandled: true,
+            intent: "CHANGE_LANGUAGE",
+            confidence: intentResult.confidence,
+            source: intentResult.source,
+            processingTimeMs,
+            debugInfo: {
+              loadedDataType: "PROFILE_LINK",
+              responseType: "CHANGE_LANGUAGE",
+              llmUsed: false,
+            },
+            response: languageMessage,
+            agentUsed: AgentType.PROFILE_MANAGEMENT,
+            tokensUsed: 0,
+            executionTimeMs: processingTimeMs,
+            wasFAQ: false,
+            isBlocked: false,
+            messageIds: savedMessages,
+          }
+        } catch (error) {
+          logger.error("❌ [ChatEngine] Failed to generate profile link for language change", { error })
+          
+          const errorMessage = "Mi dispiace, non sono riuscito a generare il link per modificare la lingua. Riprova tra qualche istante! 😅"
+          const processingTimeMs = Date.now() - startTime
+
+          return {
+            message: errorMessage,
+            agentType: AgentType.PROFILE_MANAGEMENT,
+            wasHandled: true,
+            intent: "CHANGE_LANGUAGE",
+            confidence: intentResult.confidence,
+            source: intentResult.source,
+            processingTimeMs,
+            debugInfo: {
+              loadedDataType: "ERROR",
+              responseType: "CHANGE_LANGUAGE_ERROR",
+              llmUsed: false,
+            },
+            response: errorMessage,
+            agentUsed: AgentType.PROFILE_MANAGEMENT,
+            tokensUsed: 0,
+            executionTimeMs: processingTimeMs,
+            wasFAQ: false,
+            isBlocked: false,
+          }
+        }
+      }
+
       if (intentResult.intent.type === "PRODUCT_CONTEXT") {
         const productContextHandled = await this.handleProductContextIntent({
           input,
@@ -4676,6 +4777,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       // Profile intents
       VIEW_PROFILE: AgentType.PROFILE_MANAGEMENT,
       UPDATE_PROFILE: AgentType.PROFILE_MANAGEMENT,
+      CHANGE_LANGUAGE: AgentType.PROFILE_MANAGEMENT,
 
       // Greeting intents
       GREETING: AgentType.ROUTER,

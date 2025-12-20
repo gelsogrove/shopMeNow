@@ -305,6 +305,7 @@ SUPPORT:
 - ASK_FAQ:query - User has a question about policies, shipping, etc.
 - VIEW_PROFILE - User asks about their discount, profile, or personal info (READ ONLY)
 - UPDATE_PROFILE - User wants to MODIFY/CHANGE/UPDATE their personal data (email, address, name, shipping address). Examples: "voglio cambiare email", "modifica indirizzo", "aggiorna i miei dati", "cambio indirizzo spedizione"
+- CHANGE_LANGUAGE - User wants to change the conversation language or asks to speak in another language. Examples: "parla in inglese", "speak in english", "hablame en español", "fale português", "cambia lingua", "in english please", "voglio parlare in spagnolo"
 - REQUEST_HUMAN - User wants to talk to a human OR is frustrated/angry.
   • If the user sounds angry, frustrated, or repeatedly complains about issues (caps lock, "sono stufo", "pessimo servizio", "non funziona mai", damaged goods, etc.) respond with "REQUEST_HUMAN:frustration".
   • If they explicitly ask for a person/operator but are calm, use "REQUEST_HUMAN".
@@ -332,6 +333,7 @@ Examples:
 - "REPEAT_ORDER"
 - "VIEW_PROFILE" (when user asks "che sconto ho?", "il mio sconto", "my discount")
 - "UPDATE_PROFILE" (when user asks "modifica email", "cambia indirizzo", "aggiorna dati", "voglio cambiare i miei dati")
+- "CHANGE_LANGUAGE" (when user asks "parla in inglese", "speak english", "hablame en español", "cambia lingua")
 - "ASK_FAQ:shipping policy"
 - "SHOW_AGENT_INFO"
 - "UNKNOWN"
@@ -475,6 +477,9 @@ ${context.lastAssistantMessage ? `\nLast bot message: "${context.lastAssistantMe
 
       case "UPDATE_PROFILE":
         return { type: "UPDATE_PROFILE", field: "all", value: "" }
+
+      case "CHANGE_LANGUAGE":
+        return { type: "CHANGE_LANGUAGE", requestedLanguage: param?.trim() }
         
       case "REQUEST_HUMAN": {
         const reason = param?.trim()
