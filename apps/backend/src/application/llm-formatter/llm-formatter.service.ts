@@ -62,6 +62,61 @@ export interface FormatterOptions {
   customerName?: string          // Customer name for personalization
   isFirstMessage?: boolean       // If true, add greeting
   botName?: string               // Bot name (e.g., "BellItalia")
+  chatbotName?: string | null    // 🆕 Custom chatbot name (e.g., "Sofia", "Marco")
+  businessType?: string | null   // 🆕 Business sector for context (e.g., "food", "fashion", "tech")
+}
+
+// 🆕 Business Type Labels for LLM context
+const BUSINESS_TYPE_LABELS: Record<string, string> = {
+  automotive: "settore automobilistico (auto, moto, componenti)",
+  aerospace: "settore aerospaziale",
+  mechanical: "industria meccanica",
+  electronics: "settore elettronica",
+  chemical: "industria chimica",
+  metalwork: "settore metalmeccanico",
+  construction: "settore edilizia e costruzioni",
+  healthcare: "settore salute e benessere",
+  pharma: "settore farmaceutico e biotecnologie",
+  medical_devices: "settore dispositivi medici",
+  veterinary: "settore veterinaria",
+  fashion: "settore moda e abbigliamento",
+  footwear: "settore calzature",
+  accessories: "settore accessori (borse, gioielli)",
+  luxury: "settore lusso",
+  food: "settore alimentare (cibo e bevande)",
+  restaurant: "settore ristorazione",
+  agrifood: "settore agroalimentare",
+  catering: "settore catering ed eventi",
+  food_delivery: "settore food delivery",
+  software: "settore software e sviluppo",
+  hardware: "settore hardware e dispositivi",
+  ai: "settore intelligenza artificiale",
+  cybersecurity: "settore cybersecurity",
+  ecommerce: "settore e-commerce",
+  gaming: "settore gaming e videogiochi",
+  banking: "settore bancario",
+  insurance: "settore assicurazioni",
+  fintech: "settore fintech",
+  investments: "settore investimenti",
+  crypto: "settore criptovalute e blockchain",
+  retail: "settore retail (negozi fisici)",
+  wholesale: "settore commercio all'ingrosso",
+  marketplace: "settore marketplace",
+  import_export: "settore import/export",
+  logistics: "settore logistica",
+  transport: "settore trasporti e spedizioni",
+  supply_chain: "settore supply chain",
+  education: "settore educazione",
+  online_courses: "settore formazione online",
+  coaching: "settore coaching e formazione",
+  entertainment: "settore intrattenimento e media",
+  music: "settore musicale",
+  events: "settore organizzazione eventi",
+  social_media: "settore social media",
+  renewable_energy: "settore energie rinnovabili",
+  recycling: "settore riciclo e gestione rifiuti",
+  green_tech: "settore green tech",
+  other: "settore generico",
 }
 
 // ================================================================================
@@ -95,6 +150,19 @@ TONO: Sii caldo, amichevole e colloquiale - MAI robotico o formale!`
  */
 function buildSystemPrompt(options?: FormatterOptions): string {
   let prompt = BASE_SYSTEM_PROMPT
+
+  // 🆕 Add chatbot name and business context
+  const chatbotName = options?.chatbotName || options?.botName || "Assistente"
+  const businessType = options?.businessType || "other"
+  const businessLabel = BUSINESS_TYPE_LABELS[businessType] || BUSINESS_TYPE_LABELS.other
+  
+  prompt += `
+
+## 🏷️ IDENTITÀ E CONTESTO
+- Il tuo nome è: ${chatbotName}
+- Operi nel: ${businessLabel}
+- Quando ti presenti o ti viene chiesto chi sei, usa il tuo nome: "${chatbotName}"
+- Adatta il linguaggio e gli esempi al contesto del settore quando appropriato`
   
   // Add bot personality if set
   if (options?.botIdentity && options.botIdentity.trim() !== "") {
@@ -110,13 +178,12 @@ Ricorda: Mantieni la personalità nel TONO, ma non modificare i DATI. Sii sempre
   
   // Add greeting instruction if first message
   if (options?.isFirstMessage && options?.customerName) {
-    const botName = options?.botName || "l'assistente"
     prompt += `
 
 ## 👋 SALUTO (Questo è il PRIMO messaggio!)
 Inizia con un saluto caloroso e personalizzato:
 - Rivolgiti al cliente per nome: "${options.customerName}"
-- Presentati brevemente (sei ${botName})
+- Presentati brevemente (sei ${chatbotName})
 - Poi fornisci le informazioni richieste
 - Sii naturale, mai robotico!`
   }

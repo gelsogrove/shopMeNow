@@ -223,6 +223,8 @@ async function main() {
       operatorContactMethod: "EMAIL",
       toneOfVoice: "FRIENDLY",
       botIdentityResponse: "I'm the BellItalia VIP virtual assistant, here to help you discover and purchase authentic Italian gourmet products!",
+      chatbotName: "Sofia",
+      businessType: "food",
     },
   })
 
@@ -311,6 +313,8 @@ async function main() {
       operatorContactMethod: "EMAIL",
       toneOfVoice: "PROFESSIONAL",
       botIdentityResponse: "I'm the BellItalia assistant, here to provide information about our Italian gourmet products!",
+      chatbotName: "Marco",
+      businessType: "food",
     },
   })
 

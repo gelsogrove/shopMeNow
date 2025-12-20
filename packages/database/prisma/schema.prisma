@@ -50,6 +50,8 @@ model Workspace {
   botIdentityResponse       String?           @db.Text         // Response when customer asks "Who are you?"
   customAiRules             String?           @db.Text         // Custom AI rules/instructions that override default behavior
   address                   String?           @db.Text         // Physical address/location for "where are you?" questions
+  chatbotName               String?           @default("Assistente") // 🆕 Custom name for the chatbot (e.g., "Sofia", "Marco", "Assistant")
+  businessType              String?           @default("other") // 🆕 Business sector for LLM context (e.g., "food", "fashion", "tech")
   // ============================================================================
   
   // ============================================================================

@@ -54,6 +54,9 @@ export interface Workspace {
   translateCategoryNames?: boolean
   translateServiceNames?: boolean
   catalogBaseLanguage?: string
+  // 🆕 Chatbot Identity & Context
+  chatbotName?: string // Custom name for the chatbot (e.g., "Sofia", "Marco")
+  businessType?: string // Business sector (e.g., "food", "fashion", "electronics")
 }
 
 interface WorkspaceContextType {

@@ -78,6 +78,8 @@ interface WorkspaceConfig {
   adminEmail: string | null
   workspaceName: string
   address: string | null
+  chatbotName: string | null      // 🆕 Custom chatbot name
+  businessType: string | null     // 🆕 Business sector
 }
 
 const workspaceConfigCache = new Map<string, { config: WorkspaceConfig; timestamp: number }>()
@@ -769,6 +771,8 @@ export class ChatEngineService {
         customAiRules: workspaceConfig.customAiRules,
         botIdentity: workspaceConfig.botIdentity,
         botName: workspaceConfig.name,
+        chatbotName: workspaceConfig.chatbotName,      // 🆕 Custom chatbot name
+        businessType: workspaceConfig.businessType,    // 🆕 Business sector
         customerName: personalizationOptions?.customerName,
         isFirstMessage: personalizationOptions?.isFirstMessage,
       }
@@ -1249,6 +1253,8 @@ export class ChatEngineService {
         customAiRules: true,  // Custom AI rules that override default behavior
         notificationEmail: true,
         address: true,
+        chatbotName: true,      // 🆕 Custom chatbot name
+        businessType: true,     // 🆕 Business sector
         whatsappSettings: {
           select: { adminEmail: true },
         },
@@ -1272,6 +1278,8 @@ export class ChatEngineService {
         null,
       workspaceName: workspace?.name || "Il nostro shop",
       address: workspace?.address || null,
+      chatbotName: workspace?.chatbotName ?? null,      // 🆕 Custom chatbot name
+      businessType: workspace?.businessType ?? null,     // 🆕 Business sector
     }
 
     workspaceConfigCache.set(workspaceId, { config, timestamp: Date.now() })
