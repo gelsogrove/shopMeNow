@@ -303,7 +303,8 @@ SUPPORT:
 - SHOW_AGENT_INFO - User wants to know their assigned sales agent
 - ASK_LOCATION - User asks where the store is located
 - ASK_FAQ:query - User has a question about policies, shipping, etc.
-- VIEW_PROFILE - User asks about their discount, profile, or personal info
+- VIEW_PROFILE - User asks about their discount, profile, or personal info (READ ONLY)
+- UPDATE_PROFILE - User wants to MODIFY/CHANGE/UPDATE their personal data (email, address, name, shipping address). Examples: "voglio cambiare email", "modifica indirizzo", "aggiorna i miei dati", "cambio indirizzo spedizione"
 - REQUEST_HUMAN - User wants to talk to a human OR is frustrated/angry.
   • If the user sounds angry, frustrated, or repeatedly complains about issues (caps lock, "sono stufo", "pessimo servizio", "non funziona mai", damaged goods, etc.) respond with "REQUEST_HUMAN:frustration".
   • If they explicitly ask for a person/operator but are calm, use "REQUEST_HUMAN".
@@ -330,6 +331,7 @@ Examples:
 - "VIEW_ORDERS"
 - "REPEAT_ORDER"
 - "VIEW_PROFILE" (when user asks "che sconto ho?", "il mio sconto", "my discount")
+- "UPDATE_PROFILE" (when user asks "modifica email", "cambia indirizzo", "aggiorna dati", "voglio cambiare i miei dati")
 - "ASK_FAQ:shipping policy"
 - "SHOW_AGENT_INFO"
 - "UNKNOWN"
@@ -470,6 +472,9 @@ ${context.lastAssistantMessage ? `\nLast bot message: "${context.lastAssistantMe
         
       case "VIEW_PROFILE":
         return { type: "VIEW_PROFILE" }
+
+      case "UPDATE_PROFILE":
+        return { type: "UPDATE_PROFILE", field: "all", value: "" }
         
       case "REQUEST_HUMAN": {
         const reason = param?.trim()

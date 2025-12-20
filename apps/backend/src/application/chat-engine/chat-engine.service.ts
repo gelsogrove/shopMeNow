@@ -3509,6 +3509,107 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         })
       }
 
+      // ========================================================================
+      // STEP: Handle UPDATE_PROFILE intent - Generate profile edit link
+      // ========================================================================
+      if (intentResult.intent.type === "UPDATE_PROFILE") {
+        logger.info("📝 [ChatEngine] UPDATE_PROFILE detected - generating profile link", {
+          workspaceId: input.workspaceId,
+          customerId: input.customerId,
+        })
+
+        try {
+          // Import CallingFunctionsService to generate profile link
+          const { CallingFunctionsService } = await import("../../services/calling-functions.service")
+          const callingFunctions = new CallingFunctionsService()
+          
+          const profileLinkResult = await callingFunctions.getProfileLink({
+            customerId: input.customerId,
+            workspaceId: input.workspaceId,
+          })
+
+          if (!profileLinkResult.success || !profileLinkResult.linkUrl) {
+            throw new Error("Failed to generate profile link")
+          }
+
+          // Format the response with the link
+          const customerFirstName = input.customerName?.split(" ")[0] || "!"
+          const profileMessage = `Certo ${customerFirstName}! 📝 Per aggiornare i tuoi dati personali clicca qui:\n\n👉 Modifica Profilo\n${profileLinkResult.linkUrl}\n\nPer questioni di sicurezza il link sarà abilitato solo per 15 minuti.\n\nTi posso aiutare con qualcos'altro? 😊`
+
+          const processingTimeMs = Date.now() - startTime
+
+          // Save messages
+          const savedMessages = await this.saveMessages(
+            input.workspaceId,
+            input.customerId,
+            conversationId,
+            input.message,
+            profileMessage
+          )
+
+          // Clear any pending options
+          await this.optionsMappingService.clearMapping({
+            workspaceId: input.workspaceId,
+            conversationId,
+            customerId: input.customerId,
+          })
+
+          logger.info("✅ [ChatEngine] UPDATE_PROFILE handled successfully", {
+            workspaceId: input.workspaceId,
+            customerId: input.customerId,
+            linkGenerated: true,
+          })
+
+          return {
+            message: profileMessage,
+            agentType: AgentType.PROFILE_MANAGEMENT,
+            wasHandled: true,
+            intent: "UPDATE_PROFILE",
+            confidence: intentResult.confidence,
+            source: intentResult.source,
+            processingTimeMs,
+            debugInfo: {
+              loadedDataType: "PROFILE_LINK",
+              responseType: "UPDATE_PROFILE",
+              llmUsed: false,
+            },
+            response: profileMessage,
+            agentUsed: AgentType.PROFILE_MANAGEMENT,
+            tokensUsed: 0,
+            executionTimeMs: processingTimeMs,
+            wasFAQ: false,
+            isBlocked: false,
+            messageIds: savedMessages,
+          }
+        } catch (error) {
+          logger.error("❌ [ChatEngine] Failed to generate profile link", { error })
+          
+          const errorMessage = "Mi dispiace, non sono riuscito a generare il link per modificare il profilo. Riprova tra qualche istante! 😅"
+          const processingTimeMs = Date.now() - startTime
+
+          return {
+            message: errorMessage,
+            agentType: AgentType.PROFILE_MANAGEMENT,
+            wasHandled: true,
+            intent: "UPDATE_PROFILE",
+            confidence: intentResult.confidence,
+            source: intentResult.source,
+            processingTimeMs,
+            debugInfo: {
+              loadedDataType: "ERROR",
+              responseType: "UPDATE_PROFILE_ERROR",
+              llmUsed: false,
+            },
+            response: errorMessage,
+            agentUsed: AgentType.PROFILE_MANAGEMENT,
+            tokensUsed: 0,
+            executionTimeMs: processingTimeMs,
+            wasFAQ: false,
+            isBlocked: false,
+          }
+        }
+      }
+
       if (intentResult.intent.type === "PRODUCT_CONTEXT") {
         const productContextHandled = await this.handleProductContextIntent({
           input,
@@ -4571,6 +4672,10 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       ASK_SHIPPING: AgentType.CUSTOMER_SUPPORT,
       ASK_PAYMENT: AgentType.CUSTOMER_SUPPORT,
       ASK_HELP: AgentType.CUSTOMER_SUPPORT,
+
+      // Profile intents
+      VIEW_PROFILE: AgentType.PROFILE_MANAGEMENT,
+      UPDATE_PROFILE: AgentType.PROFILE_MANAGEMENT,
 
       // Greeting intents
       GREETING: AgentType.ROUTER,
