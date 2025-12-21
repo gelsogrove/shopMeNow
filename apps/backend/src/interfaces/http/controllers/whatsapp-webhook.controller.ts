@@ -760,17 +760,19 @@ export class WhatsAppWebhookController {
         return
       }
 
-      // 🚦 UNREGISTERED USER LIMIT: Max 20 messages for users not yet registered
-      // Feature: Block spam from unregistered users who refuse to register
+      // 🚦 UNREGISTERED USER LIMIT: Max 20 messages in 5 minutes for spam prevention
+      // Feature: Block spam from unregistered users who send too many messages in short time
       const MAX_UNREGISTERED_MESSAGES = 20
+      const UNREGISTERED_TIME_WINDOW_MS = 5 * 60 * 1000 // 5 minutes
+      
       if (customer && !customer.isActive) {
-        // Count messages from this unregistered customer in last 24 hours
-        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+        // Count messages from this unregistered customer in last 5 minutes
+        const timeWindowStart = new Date(Date.now() - UNREGISTERED_TIME_WINDOW_MS)
         const unregisteredMessageCount = await prisma.conversationMessage.count({
           where: {
             customerId: customer.id,
             role: "user", // Only count inbound messages
-            createdAt: { gte: twentyFourHoursAgo },
+            createdAt: { gte: timeWindowStart },
           },
         })
 
@@ -779,6 +781,7 @@ export class WhatsAppWebhookController {
             customerId: customer.id,
             messageCount: unregisteredMessageCount,
             limit: MAX_UNREGISTERED_MESSAGES,
+            timeWindowMinutes: 5,
           })
 
           // Get registration link from workspace
@@ -792,8 +795,9 @@ export class WhatsAppWebhookController {
           res.status(403).json({
             status: "registration_required",
             code: "UNREGISTERED_LIMIT_EXCEEDED",
-            message: `Hai raggiunto il limite di ${MAX_UNREGISTERED_MESSAGES} messaggi. Per continuare, registrati qui: ${registrationLink}`,
+            message: `Hai raggiunto il limite di ${MAX_UNREGISTERED_MESSAGES} messaggi in 5 minuti. Registrati per continuare: ${registrationLink}`,
             registrationLink,
+            timeWindowMinutes: 5,
           })
           return
         }
