@@ -164,7 +164,7 @@ export class OpenAIChatService {
         responseText = translationResult.message
       }
 
-      // 9. Replace link tokens (e.g., [LINK_CART], [LINK_ORDER_xxx])
+      // 9. Replace link tokens (e.g., [LINK_CHECKOUT_WITH_TOKEN], [LINK_ORDER_WITH_TOKEN])
       const linkResult = await this.linkReplacementService.replaceTokens(
         { response: responseText },
         input.customerId,

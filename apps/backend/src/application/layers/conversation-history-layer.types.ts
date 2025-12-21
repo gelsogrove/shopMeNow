@@ -74,6 +74,7 @@ export interface ConversationHistoryLayerInput {
   workspaceId: string
   customerId: string
   customerName: string
+  customerPersonality: string | null // 🆕 Tono/personalità del cliente (detected or set manually)
   conversationHistory: ConversationMessage[]
   currentQuestion: string
 

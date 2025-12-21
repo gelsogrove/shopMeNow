@@ -48,7 +48,7 @@ Rimuovere il blocco sugli utenti non registrati e permettere loro di chattare li
 
 ```
 Per offrirti un supporto più mirato ti chiediamo di registrarti:
-👉 [LINK_REGISTRAZIONE]
+👉 [LINK_REGISTRATION_WITH_TOKEN]
 
 Una volta registrato, il nostro staff ti personalizzerà gli sconti e ti abiliterà a questo servizio.
 

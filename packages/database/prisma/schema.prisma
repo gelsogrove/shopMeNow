@@ -336,6 +336,7 @@ model Customers {
   push_notifications_consent_at DateTime?
   activeChatbot                 Boolean            @default(true)
   invoiceAddress                Json?
+  personality                   String?            @db.Text         // 🆕 Customer's tone/personality detected from conversations (used by ConversationHistoryLayer)
   salesId                       String?
   cart                          Carts?
   chatSessions                  ChatSession[]

@@ -42,7 +42,7 @@ The following domains are allowed for external links:
 
 ### 4. EXTERNAL LINKS VALIDATION
 - ✅ ALLOW: Internal short URLs (`/o/ABC123`, `/p/XYZ789`)
-- ✅ ALLOW: Token placeholders (`[LINK_ORDER_WITH_TOKEN]`, `[LINK_PROFILE_WITH_TOKEN]`)
+- ✅ ALLOW: Token placeholders (`[LINK_CHECKOUT_WITH_TOKEN]`, `[LINK_PROFILE_WITH_TOKEN]`, `[LINK_ORDER_WITH_TOKEN]`, `[LINK_CATALOG]`, `[LINK_REGISTRATION_WITH_TOKEN]`)
 {{#if allowedExternalLinks}}
 - ✅ ALLOW: Domains listed above
 {{/if}}

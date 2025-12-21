@@ -1,5 +1,6 @@
 import { SafetyTranslationAgent } from "../application/agents/SafetyTranslationAgent"
 import { LinkGeneratorService } from "../application/services/link-generator.service"
+import { LinkReplacementService } from "../application/services/link-replacement.service"
 import { TokenService } from "../application/services/token.service"
 import { getAllFunctions } from "../config/agent-functions.config"
 import { getLLMConfig } from "../config/llm.config"
@@ -55,6 +56,7 @@ function calculateLLMCost(
 export class LLMService {
   private callingFunctionsService: CallingFunctionsService
   private promptProcessorService: PromptProcessorService
+  private linkReplacementService: LinkReplacementService
 
   constructor() {
     const linkGeneratorService = new LinkGeneratorService()
@@ -62,6 +64,7 @@ export class LLMService {
       linkGeneratorService
     )
     this.promptProcessorService = new PromptProcessorService()
+    this.linkReplacementService = new LinkReplacementService()
   }
 
   async handleMessage(
@@ -649,8 +652,7 @@ export class LLMService {
   ): Promise<string> {
     let finalResponse = response
 
-    // 🚨 NORMALIZE WRONG TOKENS - LLM sometimes writes wrong patterns
-    // Convert all wrong variations to correct token format BEFORE checking
+    // 🚨 NORMALIZE WRONG TOKENS - legacy prompts sometimes emit Italian text
     const wrongProfilePatterns = [
       /\[link profilo\]/gi,
       /\[link profile\]/gi,
@@ -659,8 +661,13 @@ export class LLMService {
     ]
     wrongProfilePatterns.forEach(pattern => {
       if (pattern.test(finalResponse)) {
-        logger.warn(`⚠️ LLM wrote wrong token, normalizing to [LINK_PROFILE_WITH_TOKEN]`)
-        finalResponse = finalResponse.replace(pattern, "[LINK_PROFILE_WITH_TOKEN]")
+        logger.warn(
+          `⚠️ LLM wrote wrong token, normalizing to [LINK_PROFILE_WITH_TOKEN]`
+        )
+        finalResponse = finalResponse.replace(
+          pattern,
+          "[LINK_PROFILE_WITH_TOKEN]"
+        )
       }
     })
 
@@ -671,123 +678,49 @@ export class LLMService {
     ]
     wrongCartPatterns.forEach(pattern => {
       if (pattern.test(finalResponse)) {
-        logger.warn(`⚠️ LLM wrote wrong cart token, normalizing to [LINK_CHECKOUT_WITH_TOKEN]`)
-        finalResponse = finalResponse.replace(pattern, "[LINK_CHECKOUT_WITH_TOKEN]")
+        logger.warn(
+          `⚠️ LLM wrote wrong cart token, normalizing to [LINK_CHECKOUT_WITH_TOKEN]`
+        )
+        finalResponse = finalResponse.replace(
+          pattern,
+          "[LINK_CHECKOUT_WITH_TOKEN]"
+        )
       }
     })
 
-    // 🔗 Lista completa dei token supportati
-    const SUPPORTED_TOKENS = [
-      "[LINK_CHECKOUT_WITH_TOKEN]",
-      "[LINK_PROFILE_WITH_TOKEN]",
-      "[LINK_CATALOG]",
-      "[LINK_REGISTRATION_WITH_TOKEN]",
-    ] as const
-
-    // 🔍 Check e replace di tutti i token in sequenza
-    for (const token of SUPPORTED_TOKENS) {
-      if (!finalResponse.includes(token)) continue
-
+    const detectedTokens =
+      finalResponse.match(/\[LINK_[A-Z_]+\]/g) || []
+    if (detectedTokens.length > 0) {
+      const orderCode = this.detectSingleOrderCode(finalResponse)
       try {
-        switch (token) {
-          case "[LINK_CHECKOUT_WITH_TOKEN]": {
-            const checkoutLink = await this.callingFunctionsService.getCartLink(
-              {
-                customerId: customer.id,
-                workspaceId: workspace.id,
-              }
-            )
-            const linkUrl = checkoutLink?.linkUrl || ""
+        const replacementResult = await this.linkReplacementService.replaceTokens(
+          {
+            response: finalResponse,
+            orderCode,
+          },
+          customer.id,
+          workspace.id
+        )
 
-            linkReplacements.push({
-              token,
-              replacedWith: linkUrl,
-              tokenGenerated: checkoutLink?.token || "N/A",
-              shortUrlCreated: linkUrl.includes("/s/"),
-              timestamp: new Date().toISOString(),
-            })
-
-            finalResponse = finalResponse.replace(token, linkUrl)
-            break
-          }
-
-          case "[LINK_PROFILE_WITH_TOKEN]": {
-            const profileResult =
-              await this.callingFunctionsService.replaceLinkWithToken(
-                finalResponse,
-                "profile",
-                customer.id,
-                workspace.id
-              )
-            const profileUrl =
-              profileResult?.message?.match(/https?:\/\/[^\s)]+/)?.[0] || ""
-
-            linkReplacements.push({
-              token,
-              replacedWith: profileUrl,
-              tokenGenerated: (profileResult as any)?.token || "N/A",
-              shortUrlCreated: profileUrl.includes("/s/"),
-              timestamp: new Date().toISOString(),
-            })
-
-            finalResponse = finalResponse.replace(token, profileUrl)
-            break
-          }
-
-          case "[LINK_CATALOG]": {
-            const catalogResult =
-              await this.callingFunctionsService.replaceLinkWithToken(
-                finalResponse,
-                "catalog",
-                customer.id,
-                workspace.id
-              )
-            if (catalogResult?.success && catalogResult?.message) {
-              const catalogUrl =
-                catalogResult.message.match(/https?:\/\/[^\s)]+/)?.[0] || ""
-
-              linkReplacements.push({
-                token,
-                replacedWith: catalogUrl,
-                tokenGenerated: (catalogResult as any)?.token || "N/A",
-                shortUrlCreated: catalogUrl.includes("/s/"),
-                timestamp: new Date().toISOString(),
-              })
-
-              finalResponse = catalogResult.message
-            }
-            break
-          }
-
-          case "[LINK_REGISTRATION_WITH_TOKEN]": {
-            const registrationLink = await this.callingFunctionsService.getRegistrationLink(
-              {
-                customerId: customer.id,
-                workspaceId: workspace.id,
-              }
-            )
-
-            if (registrationLink.success && registrationLink.linkUrl) {
-              finalResponse = finalResponse.replace(
-                token,
-                registrationLink.linkUrl
-              )
-              logger.info(
-                `✅ [TOKEN-REPLACE] Replaced ${token} with: ${registrationLink.linkUrl}`
-              )
-            } else {
-              logger.error(
-                `❌ [TOKEN-REPLACE] Failed to generate registration link`
-              )
-            }
-            break
-          }
-
-          default:
-            logger.warn(`⚠️ [TOKEN-REPLACE] Unknown token: ${token}`)
+        if (replacementResult.success && replacementResult.response) {
+          finalResponse = replacementResult.response
+          linkReplacements.push({
+            token: "[LinkReplacementService]",
+            replacedWith: "automatic",
+            timestamp: new Date().toISOString(),
+            metadata: {
+              tokensDetected: [...new Set(detectedTokens)],
+              orderCodeUsed: orderCode || null,
+            },
+          })
+        } else {
+          logger.warn(
+            "⚠️ LinkReplacementService did not replace tokens",
+            replacementResult.error
+          )
         }
       } catch (error) {
-        logger.error(`❌ [TOKEN-REPLACE] Error replacing ${token}:`, error)
+        logger.error("❌ Error calling LinkReplacementService:", error)
       }
     }
 
@@ -863,6 +796,14 @@ export class LLMService {
     }
 
     return finalResponse
+  }
+
+  private detectSingleOrderCode(text: string): string | undefined {
+    if (!text) {
+      return undefined
+    }
+    const matches = text.match(/ORD-[0-9-]+/g) || []
+    return matches.length === 1 ? matches[0] : undefined
   }
 
   private getAvailableFunctions() {

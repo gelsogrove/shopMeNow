@@ -11,7 +11,6 @@
 
 import logger from "../../utils/logger"
 
-import { config } from "../../config"
 import { linkGeneratorService } from "./link-generator.service"
 import { SecureTokenService } from "./secure-token.service"
 
@@ -100,15 +99,16 @@ export class LinkReplacementService {
       // Active tokens only (deprecated tokens removed)
       // Support both plain [TOKEN] and Markdown (TOKEN) formats
       const hasCartToken = response.includes("LINK_CHECKOUT_WITH_TOKEN")
-      const hasCartConfirmToken = response.includes("LINK_CHECKOUT_CONFIRM")
       const hasProfileToken = response.includes("LINK_PROFILE_WITH_TOKEN")
-      const hasCatalogToken = response.includes("LINK_CATALOG")
-
+      const hasRegistrationToken = response.includes(
+        "LINK_REGISTRATION_WITH_TOKEN"
+      )
+      const hasOrderToken = response.includes("LINK_ORDER_WITH_TOKEN")
       if (
         !hasCartToken &&
-        !hasCartConfirmToken &&
-        !hasProfileToken &&
-        !hasCatalogToken
+        !hasOrderToken &&
+        !hasRegistrationToken &&
+        !hasProfileToken
       ) {
         return {
           success: false,
@@ -190,75 +190,6 @@ export class LinkReplacementService {
         }
       }
 
-      // Handle cart confirm token (checkout with step=confirm parameter)
-      if (hasCartConfirmToken) {
-        try {
-          const {
-            SecureTokenService,
-          } = require("../../application/services/secure-token.service")
-          const secureTokenService = new SecureTokenService()
-
-          const cartToken = await secureTokenService.createToken(
-            "cart",
-            workspaceId,
-            { customerId, workspaceId },
-            undefined, // Uses TOKEN_EXPIRATION from env
-            undefined,
-            undefined,
-            undefined,
-            customerId
-          )
-
-          // Generate checkout link with step=confirm parameter
-          // Note: step parameter expects number (1 or 2), not string
-          // TODO: Clarify if "confirm" should be step 3 or remove parameter
-          const finalCartConfirmLink =
-            await linkGeneratorService.generateCheckoutLink(
-              cartToken,
-              workspaceId
-              // Removed "confirm" parameter - generateCheckoutLink expects number (1 or 2)
-            )
-
-          // Smart replace: handle multiple formats (same as LINK_CHECKOUT_WITH_TOKEN)
-          // 1. Markdown with square brackets
-          replacedResponse = replacedResponse.replace(
-            /\[([^\]]+)\]\(\[LINK_CHECKOUT_CONFIRM\]\)([\.!?,;:]?)/g,
-            (match, text, punctuation) =>
-              `[${text}](${finalCartConfirmLink})${punctuation}`
-          )
-
-          // 2. Markdown WITHOUT square brackets
-          replacedResponse = replacedResponse.replace(
-            /\[([^\]]+)\]\(LINK_CHECKOUT_CONFIRM\)([\.!?,;:]?)/g,
-            (match, text, punctuation) =>
-              `[${text}](${finalCartConfirmLink})${punctuation}`
-          )
-
-          // 3. Plain token with optional punctuation
-          replacedResponse = replacedResponse.replace(
-            /\[LINK_CHECKOUT_CONFIRM\]([\)\.]?[\.!?,]?)/g,
-            (match, suffix) => {
-              const cleanSuffix = suffix.replace(/\)/g, "")
-              return cleanSuffix
-                ? `${finalCartConfirmLink}${cleanSuffix}`
-                : finalCartConfirmLink
-            }
-          )
-
-          // 4. Bare token
-          replacedResponse = replacedResponse.replace(
-            /LINK_CHECKOUT_CONFIRM/g,
-            finalCartConfirmLink
-          )
-        } catch (error) {
-          logger.error("❌ Error generating cart confirm link:", error)
-          replacedResponse = replacedResponse.replace(
-            /\[LINK_CHECKOUT_CONFIRM\]/g,
-            "Link di conferma non disponibile"
-          )
-        }
-      }
-
       // Handle profile token
       if (hasProfileToken) {
         try {
@@ -325,57 +256,128 @@ export class LinkReplacementService {
         }
       }
 
-      // Handle catalog token (static PDF link with URL shortening)
-      if (hasCatalogToken) {
+      // Handle registration token
+      if (hasRegistrationToken) {
         try {
-          const catalogUrl =
-            "https://laltrait.com/wp-content/uploads/LAltra-Italia-Catalogo-Agosto-2024-v2.pdf"
+          const {
+            SecureTokenService,
+          } = require("../../application/services/secure-token.service")
+          const secureTokenService = new SecureTokenService()
 
-          // Use centralized link generator to create short URL for catalog
-          const finalCatalogLink = await linkGeneratorService.generateShortLink(
-            catalogUrl,
-            workspaceId
+          const registrationToken = await secureTokenService.createToken(
+            "registration",
+            workspaceId,
+            { customerId, workspaceId },
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            customerId
           )
 
-          // Smart replace: handle multiple formats
-          // 1. Markdown with square brackets + trailing punctuation: [text]([LINK_CATALOG]).
+          const finalRegistrationLink =
+            await linkGeneratorService.generateRegistrationLink(
+              registrationToken,
+              workspaceId
+            )
+
           replacedResponse = replacedResponse.replace(
-            /\[([^\]]+)\]\(\[LINK_CATALOG\]\)([\.!?,;:]?)/g,
+            /\[([^\]]+)\]\(\[LINK_REGISTRATION_WITH_TOKEN\]\)([\.!?,;:]?)/g,
             (match, text, punctuation) =>
-              `[${text}](${finalCatalogLink})${punctuation}`
+              `[${text}](${finalRegistrationLink})${punctuation}`
           )
 
-          // 2. Markdown WITHOUT square brackets + trailing punctuation: [text](LINK_CATALOG).
           replacedResponse = replacedResponse.replace(
-            /\[([^\]]+)\]\(LINK_CATALOG\)([\.!?,;:]?)/g,
+            /\[([^\]]+)\]\(LINK_REGISTRATION_WITH_TOKEN\)([\.!?,;:]?)/g,
             (match, text, punctuation) =>
-              `[${text}](${finalCatalogLink})${punctuation}`
+              `[${text}](${finalRegistrationLink})${punctuation}`
           )
 
-          // 3. Plain token with optional punctuation: [LINK_CATALOG]
           replacedResponse = replacedResponse.replace(
-            /\[LINK_CATALOG\]([\)\.]?[\.!?,]?)/g,
+            /\[LINK_REGISTRATION_WITH_TOKEN\]([\)\.]?[\.!?,]?)/g,
             (match, suffix) => {
               const cleanSuffix = suffix.replace(/\)/g, "")
               return cleanSuffix
-                ? `${finalCatalogLink}${cleanSuffix}`
-                : finalCatalogLink
+                ? `${finalRegistrationLink}${cleanSuffix}`
+                : finalRegistrationLink
             }
           )
 
-          // 4. Bare token: LINK_CATALOG
           replacedResponse = replacedResponse.replace(
-            /LINK_CATALOG/g,
-            finalCatalogLink
+            /LINK_REGISTRATION_WITH_TOKEN/g,
+            finalRegistrationLink
           )
         } catch (error) {
-          logger.error("❌ Error generating catalog link:", error)
+          logger.error("❌ Error generating registration link:", error)
           replacedResponse = replacedResponse.replace(
-            /\[LINK_CATALOG\]/g,
-            "https://laltrait.com/wp-content/uploads/LAltra-Italia-Catalogo-Agosto-2024-v2.pdf"
+            /\[LINK_REGISTRATION_WITH_TOKEN\]/g,
+            "Link di registrazione non disponibile"
           )
         }
       }
+
+      // Handle order token
+      if (hasOrderToken) {
+        try {
+          const {
+            SecureTokenService,
+          } = require("../../application/services/secure-token.service")
+          const secureTokenService = new SecureTokenService()
+
+          const orderToken = await secureTokenService.createToken(
+            "orders",
+            workspaceId,
+            { customerId, workspaceId },
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            customerId
+          )
+
+          const finalOrderLink = await linkGeneratorService.generateOrdersLink(
+            orderToken,
+            workspaceId,
+            params.orderCode
+          )
+
+          replacedResponse = replacedResponse.replace(
+            /\[([^\]]+)\]\(\[LINK_ORDER_WITH_TOKEN\]\)([\.!?,;:]?)/g,
+            (match, text, punctuation) =>
+              `[${text}](${finalOrderLink})${punctuation}`
+          )
+
+          replacedResponse = replacedResponse.replace(
+            /\[([^\]]+)\]\(LINK_ORDER_WITH_TOKEN\)([\.!?,;:]?)/g,
+            (match, text, punctuation) =>
+              `[${text}](${finalOrderLink})${punctuation}`
+          )
+
+          replacedResponse = replacedResponse.replace(
+            /\[LINK_ORDER_WITH_TOKEN\]([\)\.]?[\.!?,]?)/g,
+            (match, suffix) => {
+              const cleanSuffix = suffix.replace(/\)/g, "")
+              return cleanSuffix
+                ? `${finalOrderLink}${cleanSuffix}`
+                : finalOrderLink
+            }
+          )
+
+          replacedResponse = replacedResponse.replace(
+            /LINK_ORDER_WITH_TOKEN/g,
+            finalOrderLink
+          )
+        } catch (error) {
+          logger.error("❌ Error generating order link:", error)
+          replacedResponse = replacedResponse.replace(
+            /\[LINK_ORDER_WITH_TOKEN\]/g,
+            "Link ordine non disponibile"
+          )
+        }
+      }
+
+      // Handle catalog token (static PDF link with URL shortening)
+      // Catalog token no longer supported
 
       // 🧹 CLEANUP: Remove any LLM-invented URLs (example.com, placeholder URLs)
       // The LLM sometimes generates fake URLs alongside our tokens

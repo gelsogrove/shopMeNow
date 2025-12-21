@@ -258,6 +258,7 @@ export class ConversationHistoryLayer {
       .replace(/\{\{botIdentity\}\}/g, input.botIdentity.personality || "Sii amichevole e professionale")
       .replace(/\{\{customAiRules\}\}/g, input.customAiRules || "Nessuna regola specifica")
       .replace(/\{\{customerName\}\}/g, input.customerName || "Cliente")
+      .replace(/\{\{customerPersonality\}\}/g, input.customerPersonality || "Tono neutrale e rispettoso")
   }
 
   /**

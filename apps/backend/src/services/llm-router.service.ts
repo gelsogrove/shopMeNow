@@ -709,6 +709,24 @@ export class LLMRouterService {
       const customer = await this.prisma.customers.findFirst({
         where: { id: params.customerId, workspaceId: params.workspaceId }, // 🔒 Workspace isolation
         include: { sales: true },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          discount: true,
+          language: true,
+          personality: true, // 🆕 Customer tone/personality for humanization
+          sales: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              email: true,
+            },
+          },
+        },
       })
 
       if (!customer) {
@@ -967,10 +985,10 @@ export class LLMRouterService {
       let responseWithLinks = result.response
 
       // Detect tokens in multiple formats:
-      // - [LINK_XXX] (plain)
-      // - (LINK_XXX) (Markdown without square brackets)
-      // - [text](LINK_XXX)
-      // - [text]([LINK_XXX])
+      // - [LINK_*] (plain)
+      // - (LINK_*) (Markdown without square brackets)
+      // - [text](LINK_*)
+      // - [text]([LINK_*])
       const tokensDetected = [
         ...(result.response.match(/\[LINK_[A-Z_]+\]/g) || []),
         ...(result.response.match(/\(LINK_[A-Z_]+\)/g) || []),
@@ -1249,6 +1267,7 @@ export class LLMRouterService {
         workspaceId: params.workspaceId,
         customerId: params.customerId,
         customerName: params.customerName || "Cliente",
+        customerPersonality: customer.personality || null, // 🆕 Pass customer tone/personality
         conversationHistory: historyForLayer,
         currentQuestion: params.message,
         technicalResponse: {

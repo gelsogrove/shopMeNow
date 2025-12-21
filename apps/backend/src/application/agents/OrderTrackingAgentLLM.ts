@@ -39,6 +39,7 @@ import { CallingFunctionsService } from "../../services/calling-functions.servic
 import { SystemContextService, getSystemContextService } from "../../services/system-context.service"
 import logger from "../../utils/logger"
 import { LinkGeneratorService } from "../services/link-generator.service"
+import { LinkReplacementService } from "../services/link-replacement.service"
 
 import { CustomerData } from "../../types/agent.types"
 import type { AgentOptionMapping } from "../../types/option-mapping.types"
@@ -77,12 +78,14 @@ export class OrderTrackingAgentLLM {
   private systemContextService: SystemContextService
   private openRouterApiKey: string
   private openRouterBaseUrl: string
+  private linkReplacementService: LinkReplacementService
 
   constructor(prisma: PrismaClient) {
     this.prisma = prisma
     this.orderRepo = new OrderRepository()
     this.templateLoader = TemplateLoaderService.getInstance(prisma)
     this.systemContextService = getSystemContextService(prisma)
+    this.linkReplacementService = new LinkReplacementService()
 
     // Initialize CallingFunctionsService with LinkGeneratorService
     const linkGeneratorService = new LinkGeneratorService()
@@ -238,6 +241,7 @@ export class OrderTrackingAgentLLM {
       let totalTokens = llmResponse.tokensUsed
       let finalResponse = llmResponse.content || ""
       const functionCalls: any[] = []
+      let lastFunctionResult: any = null
 
       // 🔍 DEBUG: Log LLM response to understand empty responses
       logger.info(`🔍 OrderTrackingAgentLLM: LLM Response received`, {
@@ -289,6 +293,7 @@ export class OrderTrackingAgentLLM {
           functionArgs,
           context
         )
+        lastFunctionResult = functionResult
 
         functionCalls.push({
           name: functionName,
@@ -336,29 +341,6 @@ export class OrderTrackingAgentLLM {
             logger.info(`🔄 Replaced customer variables in direct response: nameUser=${context.customerName}, agentName=${agentName}`)
           }
           
-          // Generate proper PROFILE link (not cart link!) - for repeatOrder and showCheckout
-          if ((isRepeatOrder || isShowCheckout || isConfirmOrder) && finalResponse && finalResponse.includes("[LINK_PROFILE_WITH_TOKEN]")) {
-            try {
-              const CallingFunctionsService = require("../../services/calling-functions.service").CallingFunctionsService
-              const callingFunctionsService = new CallingFunctionsService()
-              const profileLinkResult = await callingFunctionsService.getProfileLink({
-                customerId: context.customerId,
-                workspaceId: context.workspaceId,
-              })
-              
-              if (profileLinkResult?.success && profileLinkResult?.linkUrl) {
-                finalResponse = finalResponse.replace(
-                  /\[LINK_PROFILE_WITH_TOKEN\]/gi,
-                  profileLinkResult.linkUrl
-                )
-                logger.info(`🔗 Replaced [LINK_PROFILE_WITH_TOKEN] → ${profileLinkResult.linkUrl}`)
-              } else {
-                logger.warn(`⚠️ Failed to generate profile link, keeping token`)
-              }
-            } catch (error) {
-              logger.error(`❌ Error generating profile link:`, error)
-            }
-          }
         } else {
           // STEP 6: Return function result to LLM for final response (default behavior)
           messages.push({
@@ -383,63 +365,46 @@ export class OrderTrackingAgentLLM {
           totalTokens += finalLLMResponse.tokensUsed
           finalResponse = finalLLMResponse.content || ""
 
-          // 🔗 Replace [LINK_ORDER_WITH_TOKEN] with secure short link
-          logger.info(`🔍 Checking for LINK_ORDER_WITH_TOKEN replacement:`, {
-            hasSecureLink: !!functionResult?.secureLink,
-            secureLink: functionResult?.secureLink,
-            hasPlaceholder: finalResponse?.includes('[LINK_ORDER_WITH_TOKEN]'),
-          })
-          
-          if (finalResponse?.includes('[LINK_ORDER_WITH_TOKEN]')) {
-            if (functionResult?.secureLink) {
-              finalResponse = finalResponse.replace(
-                /\[LINK_ORDER_WITH_TOKEN\]/gi,
-                functionResult.secureLink
-              )
-              logger.info(`🔗 Replaced [LINK_ORDER_WITH_TOKEN] → ${functionResult.secureLink}`)
-            } else {
-              // 🔧 Fallback: Generate the link now if not available
-              logger.warn(`⚠️ secureLink not found in functionResult, generating now...`)
-              try {
-                // Try to extract orderCode from functionResult
-                const orderCode = functionResult?.orderCode || functionResult?.order?.orderCode
-                if (orderCode) {
-                  const linkResult = await this.callingFunctionsService.getOrdersListLink({
-                    customerId: context.customerId,
-                    workspaceId: context.workspaceId,
-                    orderCode: orderCode,
-                  })
-                  if (linkResult?.linkUrl) {
-                    finalResponse = finalResponse.replace(
-                      /\[LINK_ORDER_WITH_TOKEN\]/gi,
-                      linkResult.linkUrl
-                    )
-                    logger.info(`🔗 Generated and replaced [LINK_ORDER_WITH_TOKEN] → ${linkResult.linkUrl}`)
-                  } else {
-                    // Remove placeholder if we can't generate link
-                    finalResponse = finalResponse.replace(
-                      /\[LINK_ORDER_WITH_TOKEN\]/gi,
-                      '(link non disponibile)'
-                    )
-                    logger.warn(`⚠️ Could not generate order link, placeholder removed`)
-                  }
-                } else {
-                  // Remove placeholder if no orderCode
-                  finalResponse = finalResponse.replace(
-                    /\[LINK_ORDER_WITH_TOKEN\]/gi,
-                    '(link non disponibile)'
-                  )
-                  logger.warn(`⚠️ No orderCode found, placeholder removed`)
-                }
-              } catch (linkError) {
-                logger.error(`❌ Error generating fallback order link:`, linkError)
-                finalResponse = finalResponse.replace(
-                  /\[LINK_ORDER_WITH_TOKEN\]/gi,
-                  '(link non disponibile)'
-                )
+        }
+      }
+
+      const tokensDetected = finalResponse.match(/\[LINK_[A-Z_]+\]/g) || []
+      if (tokensDetected.length > 0) {
+        const inferredOrderCode = this.extractOrderCode(
+          lastFunctionResult,
+          finalResponse
+        )
+        try {
+          const replacementResult =
+            await this.linkReplacementService.replaceTokens(
+              {
+                response: finalResponse,
+                orderCode: inferredOrderCode,
+              },
+              context.customerId,
+              context.workspaceId
+            )
+
+          if (replacementResult.success && replacementResult.response) {
+            finalResponse = replacementResult.response
+            logger.info(
+              "✅ [OrderTracking] Token replacement completed via LinkReplacementService",
+              {
+                tokensDetected,
+                orderCode: inferredOrderCode,
               }
-            }
+            )
+          } else {
+            logger.warn(
+              "⚠️ [OrderTracking] Link replacement failed, keeping tokens",
+              { error: replacementResult.error, tokensDetected }
+            )
           }
+        } catch (replacementError) {
+          logger.error(
+            "❌ [OrderTracking] Error during link replacement:",
+            replacementError
+          )
         }
       }
 
@@ -777,5 +742,22 @@ export class OrderTrackingAgentLLM {
         },
       },
     ]
+  }
+
+  private extractOrderCode(functionResult: any, response: string): string | undefined {
+    return (
+      functionResult?.orderCode ||
+      functionResult?.order?.orderCode ||
+      functionResult?.orders?.[0]?.orderCode ||
+      this.detectSingleOrderCode(response)
+    )
+  }
+
+  private detectSingleOrderCode(text: string): string | undefined {
+    if (!text) {
+      return undefined
+    }
+    const matches = text.match(/ORD-[0-9-]+/g) || []
+    return matches.length === 1 ? matches[0] : undefined
   }
 }

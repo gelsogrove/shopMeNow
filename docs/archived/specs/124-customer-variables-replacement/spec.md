@@ -80,7 +80,7 @@ LLM response: "💡 Remember: You have a discount of {{discountUser}}% applied a
 1. Router delegates to specialist agent
 2. Specialist returns response (may contain `{{variables}}`)
 3. **🆕 REPLACE customer variables** ← NEW STEP
-4. Replace link tokens ([LINK_XXX])
+4. Replace link tokens (e.g., `[LINK_CHECKOUT_WITH_TOKEN]`)
 5. Safety & Translation layer
 6. Final response to customer
 

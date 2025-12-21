@@ -1161,36 +1161,22 @@ export class ChatEngineService {
 
     const usedTokens = agentResponse.tokensUsed || 0
 
-    // 🔗 TOKEN REPLACEMENT: Replace [LINK_REGISTRATION_WITH_TOKEN] with actual URL
     let finalResponse = agentResponse.output
-    logger.info("🔗 [ChatEngine] Checking for token replacement", {
-      hasToken: finalResponse.includes("[LINK_REGISTRATION_WITH_TOKEN]"),
-      responsePreview: finalResponse.substring(0, 200)
-    })
-    if (finalResponse.includes("[LINK_REGISTRATION_WITH_TOKEN]")) {
-      logger.info("🔗 [ChatEngine] Replacing [LINK_REGISTRATION_WITH_TOKEN]", {
-        customerId: input.customerId,
-        workspaceId: input.workspaceId,
+    const productContextOrderCode = this.detectSingleOrderCode(finalResponse)
+    const productContextTokens =
+      await this.linkReplacementService.replaceTokens(
+        {
+          response: finalResponse,
+          orderCode: productContextOrderCode,
+        },
+        input.customerId,
+        input.workspaceId
+      )
+    if (productContextTokens.success && productContextTokens.response) {
+      finalResponse = productContextTokens.response
+      logger.info("✅ [ChatEngine] Token replacement completed for product context", {
+        orderCode: productContextOrderCode,
       })
-      try {
-        const registrationLink = await this.callingFunctionsService.getRegistrationLink({
-          customerId: input.customerId,
-          workspaceId: input.workspaceId,
-        })
-        if (registrationLink.success && registrationLink.linkUrl) {
-          finalResponse = finalResponse.replace(
-            "[LINK_REGISTRATION_WITH_TOKEN]",
-            registrationLink.linkUrl
-          )
-          logger.info("✅ [ChatEngine] Registration link replaced", {
-            linkUrl: registrationLink.linkUrl,
-          })
-        } else {
-          logger.error("❌ [ChatEngine] Failed to generate registration link")
-        }
-      } catch (error) {
-        logger.error("❌ [ChatEngine] Error replacing registration link:", error)
-      }
     }
 
     const finalDebugInfo = {
@@ -1366,6 +1352,14 @@ export class ChatEngineService {
     return supportedIntents.has(intent.type)
   }
 
+  private detectSingleOrderCode(text: string): string | undefined {
+    if (!text) {
+      return undefined
+    }
+    const matches = text.match(/ORD-[0-9-]+/g) || []
+    return matches.length === 1 ? matches[0] : undefined
+  }
+
   /**
    * Normalize language code from DB format (ITA, ENG, PRT) to ISO format (it, en, pt)
    * This is critical to avoid translating Italian to Italian when DB has "ITA"
@@ -1437,30 +1431,22 @@ export class ChatEngineService {
     
       // STEP 1.5: Token Replacement (BEFORE translation)
       let messageToTranslate = result.message
-      
-      if (messageToTranslate.includes("[LINK_REGISTRATION_WITH_TOKEN]")) {
-        logger.info("🔗 [ChatEngine] Replacing registration token in main pipeline")
-        
-        try {
-          const tokenResponse = await this.callingFunctionsService.getRegistrationLink({
-            workspaceId: input.workspaceId,
-            customerId: input.customerId
-          })
-          
-          if (tokenResponse.success && tokenResponse.linkUrl) {
-            messageToTranslate = messageToTranslate.replace(
-              /\[LINK_REGISTRATION_WITH_TOKEN\]/g,
-              tokenResponse.linkUrl
-            )
-            logger.info("✅ [ChatEngine] Registration link replaced", {
-              url: tokenResponse.linkUrl
-            })
-          } else {
-            logger.error("❌ [ChatEngine] getRegistrationLink failed", tokenResponse.error)
-          }
-        } catch (error) {
-          logger.error("❌ [ChatEngine] Error replacing registration token:", error)
-        }
+
+      const orderCode = this.detectSingleOrderCode(messageToTranslate)
+      const pipelineReplacement =
+        await this.linkReplacementService.replaceTokens(
+          {
+            response: messageToTranslate,
+            orderCode,
+          },
+          input.customerId,
+          input.workspaceId
+        )
+      if (pipelineReplacement.success && pipelineReplacement.response) {
+        messageToTranslate = pipelineReplacement.response
+        logger.info("✅ [ChatEngine] Token replacement completed before translation", {
+          orderCodeUsed: orderCode,
+        })
       }
     
       // STEP 2: Apply Translation Layer (SINGLE translation point)
