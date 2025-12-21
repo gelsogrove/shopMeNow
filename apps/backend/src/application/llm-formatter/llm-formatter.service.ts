@@ -176,7 +176,9 @@ L'utente NON è ancora registrato nel sistema. DEVI seguire queste regole CRITIC
    - Località, orari, contatti
 
 4. 🔓 Quando menzioni prodotti o servizi, SEMPRE concludi con:
-   "🔓 Registrati per vedere i prezzi e le nostre offerte [LINK_REGISTRATION_WITH_TOKEN]"
+   "🔓 Registrati per vedere i prezzi e le nostre offerte:
+   
+   [LINK_REGISTRATION_WITH_TOKEN]"
 
 5. ✅ Mantieni tono caloroso e amichevole - l'utente PUÒ chattare, solo non può vedere prezzi!`
   }
@@ -665,7 +667,9 @@ export class LLMFormatterService {
     // 🔐 Feature 204: Differenzia tra utenti registrati e non
     if (isUnregistered) {
       // UTENTE NON REGISTRATO: No prezzo, no carrello, link registrazione
-      detailLines.push("🔓 Registrati per vedere i prezzi a te riservati e ricevere le nostre migliori offerte: [LINK_REGISTRATION_WITH_TOKEN]")
+      detailLines.push("🔓 Registrati per vedere i prezzi a te riservati e ricevere le nostre migliori offerte:")
+      detailLines.push("")
+      detailLines.push("[LINK_REGISTRATION_WITH_TOKEN]")
     } else {
       // UTENTE REGISTRATO: Mostra prezzo e prompt carrello
       detailLines.push(`💰 <b>Prezzo: ${formatDisplayPrice(displayPrice)} Euro</b>`)
