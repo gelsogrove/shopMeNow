@@ -130,8 +130,9 @@ export function MessageRenderer({
       }
 
       // Final fallback: remove first line text from the block and treat the rest as description
-      if (!description && rawTitleLine) {
-        const remaining = normalizedTitlePart.slice(rawTitleLine.length).trim()
+      if (!description) {
+        const firstLine = rawTitleLine || title
+        const remaining = normalizedTitlePart.slice(firstLine.length).trim()
         description = stripMarkdown(remaining)
       }
 

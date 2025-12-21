@@ -12,6 +12,7 @@ import {
 export interface ProductContextData {
   id: string
   name: string
+  sku?: string | null  // Product SKU/code (was: code)
   description?: string | null
   format?: string | null
   price?: number | null
@@ -82,21 +83,20 @@ export class ProductContextAgentLLM {
   }
 
   /**
-   * Get relative image path (frontend will resolve with IMG_BASE_URL)
+   * Get full absolute image URL for WhatsApp messages
    */
   private getFullImageUrl(imageUrl: string | null | undefined): string {
     if (!imageUrl) return "N/A"
-    // If already absolute URL, extract just the path
+    
+    // If already absolute URL, return as is
     if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
-      try {
-        const url = new URL(imageUrl)
-        return url.pathname // Extract /uploads/products/...
-      } catch {
-        return imageUrl
-      }
+      return imageUrl
     }
-    // Ensure path starts with /
-    return imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`
+    
+    // Build full URL with base domain
+    const baseUrl = process.env.APP_URL || "http://localhost:3001"
+    const cleanPath = imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`
+    return `${baseUrl}${cleanPath}`
   }
   async handleQuestion(input: ProductContextAgentInput): Promise<ProductContextAgentResponse> {
     const start = Date.now()
@@ -303,6 +303,7 @@ export class ProductContextAgentLLM {
 
     let result = prompt
     result = replaceAll(result, "PRODUCT_NAME", product.name || "Prodotto")
+    result = replaceAll(result, "PRODUCT_CODE", product.sku || "N/A")
     result = replaceAll(result, "PRODUCT_DESCRIPTION", product.description || "N/A")
     const priceText =
       typeof product.price === "number" && Number.isFinite(product.price)

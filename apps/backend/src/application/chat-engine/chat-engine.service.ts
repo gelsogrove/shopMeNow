@@ -26,6 +26,7 @@ import {
 import { DataLoaderService, getDataLoader, LoadedData } from "../data-loader"
 import { ResponseBuilderService, getResponseBuilder, StructuredResponse, ListItem, EnrichmentOptions } from "../response-builder"
 import { LLMFormatterService, getLLMFormatter, FormatterResult } from "../llm-formatter"
+import { ConversationHistoryLayer } from "../layers/ConversationHistoryLayer"
 import { ConversationManager } from "../../services/conversation-manager.service"
 import { LinkReplacementService, ReplaceLinkWithTokenParams } from "../services/link-replacement.service"
 import { CallingFunctionsService } from "../../services/calling-functions.service"
@@ -503,7 +504,10 @@ export class ChatEngineService {
         input.customerLanguage || "it",
         workspaceConfig,
         undefined,
-        { customerName: input.customerName, isUnregisteredUser: input.isUnregisteredUser }
+        { 
+          customerName: input.customerName, 
+          isUnregisteredUser: input.isUnregisteredUser,
+        }
       )
 
       let finalMessage = formatterResult.text
@@ -768,7 +772,8 @@ export class ChatEngineService {
       isUnregisteredUser?: boolean  // 🆕 Feature 204: Modifica prompt per utenti non registrati
     }
   ): Promise<FormatterResult> {
-    return this.llmFormatter.format(
+    // Format with LLM Formatter (business rules)
+    const formatterResult = await this.llmFormatter.format(
       structuredResponse,
       language,
       conversationHistory,
@@ -783,6 +788,89 @@ export class ChatEngineService {
         isUnregisteredUser: personalizationOptions?.isUnregisteredUser,  // 🆕 Pass to formatter
       }
     )
+
+    return {
+      text: formatterResult.text,
+      tokensUsed: formatterResult.tokensUsed,
+      cached: formatterResult.cached,
+      groupMapping: formatterResult.groupMapping,
+    }
+  }
+
+  /**
+   * Format AND humanize response (applies ConversationHistoryLayer)
+   * 🆕 WRAPPER: Ensures ALL formatted responses pass through humanization
+   * This applies customer name personalization and hides prices for unregistered users
+   */
+  private async formatAndHumanize(
+    structuredResponse: StructuredResponse,
+    language: string,
+    workspaceConfig: WorkspaceConfig,
+    input: { 
+      workspaceId: string
+      customerId: string
+      customerName?: string
+      message: string
+      isUnregisteredUser?: boolean
+    },
+    conversationHistory?: Array<{ role: string; content: string }>,
+    personalizationOptions?: {
+      customerName?: string
+      isFirstMessage?: boolean
+      isUnregisteredUser?: boolean
+    }
+  ): Promise<FormatterResult> {
+    // STEP 1: Format with business rules
+    const formatterResult = await this.formatWithCustomRules(
+      structuredResponse,
+      language,
+      workspaceConfig,
+      conversationHistory,
+      personalizationOptions
+    )
+
+    // STEP 2: Humanize with ConversationHistoryLayer
+    logger.info("🎭 [ChatEngine] Applying ConversationHistoryLayer", {
+      isUnregisteredUser: input.isUnregisteredUser,
+      customerName: input.customerName,
+      willHidePrices: input.isUnregisteredUser,
+    })
+
+    const conversationHistoryLayer = new ConversationHistoryLayer()
+    const historyResult = await conversationHistoryLayer.process({
+      workspaceId: input.workspaceId,
+      customerId: input.customerId,
+      customerName: input.customerName || "Cliente",
+      customerPersonality: null,
+      chatbotName: workspaceConfig.chatbotName || workspaceConfig.name,
+      businessType: workspaceConfig.businessType || null,
+      isUnregisteredUser: input.isUnregisteredUser || false,
+      conversationHistory: [],
+      currentQuestion: input.message,
+      technicalResponse: {
+        type: "PRODUCT_LIST" as any,
+        rawMessage: formatterResult.text,
+      },
+      botIdentity: {
+        name: workspaceConfig.chatbotName || workspaceConfig.name || "Assistente",
+        personality: workspaceConfig.botIdentityResponse || null,
+      },
+      customAiRules: workspaceConfig.customAiRules || null,
+      activeOffers: [],
+      faqs: [],
+      mindset: "SALES" as any,
+      hasSalesAgents: workspaceConfig.hasSalesAgents ?? false,
+      isFirstMessage: personalizationOptions?.isFirstMessage ?? false,
+      lastAgentUsed: "PRODUCT_SEARCH",
+      customerLanguage: language || "it",
+    })
+
+    return {
+      text: historyResult.message,
+      tokensUsed: formatterResult.tokensUsed + (historyResult.metadata.tokensUsed || 0),
+      cached: formatterResult.cached,
+      groupMapping: formatterResult.groupMapping,
+    }
   }
 
   /**
@@ -860,6 +948,119 @@ export class ChatEngineService {
         tokensUsed: 0,
         executionTimeMs: Date.now() - startTime,
         error: error instanceof Error ? error.message : "Unknown error",
+      })
+      
+      return { message, tokensUsed: 0 }
+    }
+  }
+
+  /**
+   * Apply ConversationHistoryLayer to humanize the message
+   * @param message - Message to humanize
+   * @param workspaceId - Workspace ID
+   * @param customerId - Customer ID
+   * @param customerName - Customer name for personalization
+   * @param isUnregisteredUser - Whether user is unregistered (hide prices)
+   * @param currentQuestion - Current question from customer
+   * @param debugSteps - Array to append debug step
+   * @returns Object with humanized message and tokens used
+   */
+  private async applyConversationHistory(
+    message: string,
+    workspaceId: string,
+    customerId: string,
+    customerName: string,
+    isUnregisteredUser: boolean,
+    currentQuestion: string,
+    debugSteps: DebugStep[]
+  ): Promise<{ message: string; tokensUsed: number }> {
+    const startTime = Date.now()
+    
+    try {
+      const conversationHistoryLayer = new ConversationHistoryLayer(this.prisma)
+      
+      logger.info("🎭 [ChatEngine] Applying ConversationHistoryLayer", {
+        workspaceId,
+        customerId,
+        customerName,
+        isUnregisteredUser,
+        messagePreview: message.substring(0, 100),
+      })
+      
+      const result = await conversationHistoryLayer.process({
+        workspaceId,
+        customerId,
+        customerName,
+        customerPersonality: null,
+        chatbotName: undefined, // Will be loaded from workspace
+        businessType: undefined, // Will be loaded from workspace
+        isUnregisteredUser,
+        conversationHistory: [],
+        currentQuestion,
+        technicalResponse: {
+          type: "GENERIC" as any,
+          rawMessage: message,
+        },
+        botIdentity: {
+          name: "Assistente",
+          personality: null,
+        },
+        customAiRules: null,
+        activeOffers: [],
+        faqs: [],
+        mindset: "SALES" as any,
+        hasSalesAgents: false,
+        isFirstMessage: false,
+        lastAgentUsed: "GENERIC",
+        customerLanguage: "it",
+      })
+      
+      const executionTimeMs = Date.now() - startTime
+      
+      // Add debug step for Message Flow Timeline
+      debugSteps.push({
+        agent: "ConversationHistoryLayer",
+        description: "🎭 Umanizza risposta (saluti, prezzi, personalità)",
+        input: {
+          message,
+          customerName,
+          isUnregisteredUser,
+          workspaceId,
+        },
+        output: {
+          message: result.message,
+          tokensUsed: result.metadata?.tokensUsed || 0,
+          model: result.metadata?.model || "gpt-4o-mini",
+        },
+        tokensUsed: result.metadata?.tokensUsed || 0,
+        executionTimeMs,
+      })
+      
+      logger.info("✅ [ChatEngine] ConversationHistoryLayer applied", {
+        tokensUsed: result.metadata?.tokensUsed || 0,
+        executionTimeMs,
+      })
+      
+      return { 
+        message: result.message, 
+        tokensUsed: result.metadata?.tokensUsed || 0 
+      }
+    } catch (error) {
+      // Log error but don't fail - return original message
+      logger.error("⚠️ [ChatEngine] ConversationHistoryLayer failed, using original", { 
+        error,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined,
+      })
+      
+      // Track error in timeline
+      debugSteps.push({
+        agent: "ConversationHistoryLayer",
+        description: "❌ Errore umanizzazione",
+        input: { message },
+        output: { message, error: error instanceof Error ? error.message : String(error) },
+        tokensUsed: 0,
+        executionTimeMs: Date.now() - startTime,
       })
       
       return { message, tokensUsed: 0 }
@@ -1072,6 +1273,7 @@ export class ChatEngineService {
     const productData: ProductContextData = {
       id: productRecord.id,
       name: productRecord.name,
+      sku: productRecord.sku || null,
       description: productRecord.description,
       format: productRecord.formato,
       price: productRecord.price,
@@ -1433,8 +1635,33 @@ export class ChatEngineService {
         logger.info("✅ [ChatEngine] Token replacement completed before translation")
       }
     
-      // STEP 2: Apply Translation Layer (SINGLE translation point)
+      // STEP 1.7: Apply ConversationHistoryLayer (BEFORE translation)
+      // This ensures ALL responses are humanized (greetings, hide prices, personality)
       const debugSteps = result.debugInfo?.steps || []
+      
+      logger.info("🎭 [ChatEngine] STEP 1.7 - About to call applyConversationHistory", {
+        hasDebugInfo: !!result.debugInfo,
+        debugStepsLength: debugSteps.length,
+        messagePreview: messageToTranslate.substring(0, 100),
+        workspaceId: input.workspaceId,
+        customerId: input.customerId,
+      })
+      
+      const conversationHistoryResult = await this.applyConversationHistory(
+        messageToTranslate,
+        input.workspaceId,
+        input.customerId,
+        input.customerName || "Cliente",
+        input.isUnregisteredUser || false,
+        input.message,
+        debugSteps
+      )
+      
+      // Update message with humanized version
+      messageToTranslate = conversationHistoryResult.message
+      logger.info("✅ [ChatEngine] ConversationHistory applied before translation")
+    
+      // STEP 2: Apply Translation Layer (SINGLE translation point)
       const rawTargetLanguage = input.customerLanguage || "it"
     
       // Normalize language code (handles ITA, ENG, PRT, SPA, etc.)
@@ -1810,7 +2037,11 @@ export class ChatEngineService {
             input.customerLanguage || "it",
             workspaceConfig,
             undefined, // conversationHistory
-            { customerName: input.customerName, isFirstMessage: false, isUnregisteredUser: input.isUnregisteredUser } // FAST-PATH: assume not first message
+            { 
+              customerName: input.customerName, 
+              isFirstMessage: false, 
+              isUnregisteredUser: input.isUnregisteredUser,
+            } // FAST-PATH: assume not first message
           )
           
           const finalMessage = formatterResult.text
@@ -1855,6 +2086,11 @@ export class ChatEngineService {
             wasFAQ: false,
             isBlocked: false,
             _assistantMessageId: savedMessages?.assistantMessageId,
+            debugInfo: {
+              steps: [], // Will be populated by ConversationHistory and Translation layers
+              totalTokens: formatterResult.tokensUsed || 0,
+              llmUsed: !formatterResult.cached,
+            },
           }
         }
       }
@@ -1995,7 +2231,11 @@ export class ChatEngineService {
                 input.customerLanguage || "it",
                 workspaceConfig,
                 undefined,
-                { customerName: input.customerName, isFirstMessage: false, isUnregisteredUser: input.isUnregisteredUser } // FAST-PATH: assume not first message
+                { 
+                  customerName: input.customerName, 
+                  isFirstMessage: false, 
+                  isUnregisteredUser: input.isUnregisteredUser,
+                } // FAST-PATH: assume not first message
               )
               let finalMessage = formatterResult.text
               
@@ -2055,7 +2295,7 @@ export class ChatEngineService {
                   loadedDataType: "PRODUCTS_FROM_GROUP",
                   responseType: structuredResponse.type,
                   llmUsed: !formatterResult.cached,
-                  steps: debugSteps,
+                  steps: [], // Will be populated by ConversationHistory and Translation layers
                   totalTokens: formatterResult.tokensUsed || 0,
                 },
                 response: finalMessage,
@@ -2609,7 +2849,7 @@ export class ChatEngineService {
               const mappingItems: Array<{ number: number; name: string; id: string }> = []
               
               if (products.length > 0) {
-                removalMessage += "🛒 Prodotti:\n"
+                removalMessage += "Prodotti:\n"
                 for (const p of products) {
                   const qty = p.quantity || 1
                   const price = p.price || 0

@@ -726,7 +726,7 @@ export class LLMFormatterService {
 
     // Display Products
     if (products.length > 0) {
-      lines.push("🛒 Prodotti:")
+      lines.push("Prodotti:")
       for (const item of products) {
         const qty = (item as any).quantity || 1
         lines.push(`- ${qty}x ${item.name} - ${formatDisplayPrice(item.price)}`)
@@ -1764,7 +1764,7 @@ CRITICAL:
     
     // Display Products
     if (products.length > 0) {
-      lines.push("🛒 Prodotti:")
+      lines.push("Prodotti:")
       for (const item of products) {
         lines.push(`- ${item.quantity}x ${item.productName} - ${formatDisplayPrice(item.totalPrice)}`)
       }
@@ -1773,7 +1773,7 @@ CRITICAL:
     // Display Services (without quantity)
     if (services.length > 0) {
       if (products.length > 0) lines.push("")
-      lines.push("🔧 Servizi:")
+      lines.push("Servizi:")
       for (const item of services) {
         lines.push(
           `- ${item.productName || (item as any).serviceName || "Servizio"} - ${formatDisplayPrice(

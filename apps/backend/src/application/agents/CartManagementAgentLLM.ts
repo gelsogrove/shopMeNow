@@ -1114,7 +1114,7 @@ export class CartManagementAgentLLM {
 
     // Display Products with emoji
     if (products.length > 0) {
-      lines.push("🛒 Prodotti:")
+      lines.push("Prodotti:")
       for (const item of products) {
         const name = item.name || item.product?.name || "Unknown"
         const quantity = item.quantity || 1
@@ -1270,7 +1270,7 @@ export class CartManagementAgentLLM {
     // Display Services (without quantity prefix)
     if (services.length > 0) {
       if (products.length > 0) lines.push("")
-      lines.push("🔧 Servizi:")
+      lines.push("Servizi:")
       for (const item of services) {
         const name = item.name || item.service?.name || "Unknown"
         const itemTotal = item.total || item.service?.price || 0

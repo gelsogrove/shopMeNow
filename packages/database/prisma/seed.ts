@@ -190,7 +190,7 @@ async function main() {
       language: "ENG",
       currency: "EUR",
       description: "Italian Gourmet Food E-commerce - VIP Channel",
-      url: "https://bellitalia.com/vip",
+      url: "http://localhost:3000",
       channelStatus: true,
       debugMode: true,
       welcomeMessage: `Ciao, piacere di conoscerti! 👋
