@@ -241,6 +241,33 @@ Sono qui per aiutarti 😊`,
       botIdentityResponse: "I'm the BellItalia VIP virtual assistant, here to help you discover and purchase authentic Italian gourmet products!",
       chatbotName: "Sofia",
       businessType: "food",
+      // ============================================================================
+      // 🆕 Feature 204: Unregistered User Flow Messages
+      // ============================================================================
+      registrationPromptMessage: {
+        it: "Per offrirti un supporto più mirato ti chiediamo di registrarti:\n👉 {{registrationLink}}\n\nUna volta registrato, il nostro staff ti personalizzerà gli sconti e ti abiliterà a questo servizio.\n\n🔒 Privacy: I tuoi dati sono presenti nei nostri database e non verranno inviati a terzi per nessun motivo. Neanche i modelli di AI potranno vedere i tuoi dati personali perché li trattiamo esclusivamente con dei link sicuri.",
+        en: "To offer you more personalized support, please register:\n👉 {{registrationLink}}\n\nOnce registered, our staff will customize your discounts and enable this service for you.\n\n🔒 Privacy: Your data is stored in our databases and will not be shared with third parties. Even AI models cannot see your personal data because we handle it exclusively through secure links.",
+        es: "Para ofrecerte un soporte más personalizado, te pedimos que te registres:\n👉 {{registrationLink}}\n\nUna vez registrado, nuestro equipo personalizará tus descuentos y habilitará este servicio para ti.\n\n🔒 Privacidad: Tus datos están en nuestras bases de datos y no se compartirán con terceros. Ni siquiera los modelos de IA pueden ver tus datos personales porque los tratamos exclusivamente con enlaces seguros.",
+        pt: "Para oferecer um suporte mais personalizado, pedimos que se registe:\n👉 {{registrationLink}}\n\nApós o registo, a nossa equipa personalizará os seus descontos e ativará este serviço para si.\n\n🔒 Privacidade: Os seus dados estão nas nossas bases de dados e não serão partilhados com terceiros. Nem os modelos de IA podem ver os seus dados pessoais porque os tratamos exclusivamente através de links seguros.",
+        de: "Um dir einen persönlicheren Support zu bieten, bitten wir dich, dich zu registrieren:\n👉 {{registrationLink}}\n\nNach der Registrierung wird unser Team deine Rabatte anpassen und diesen Service für dich aktivieren.\n\n🔒 Datenschutz: Deine Daten sind in unseren Datenbanken gespeichert und werden nicht an Dritte weitergegeben. Selbst KI-Modelle können deine persönlichen Daten nicht sehen, da wir sie ausschließlich über sichere Links verarbeiten.",
+        fr: "Pour t'offrir un support plus personnalisé, nous te demandons de t'inscrire:\n👉 {{registrationLink}}\n\nUne fois inscrit, notre équipe personnalisera tes réductions et activera ce service pour toi.\n\n🔒 Confidentialité: Tes données sont stockées dans nos bases de données et ne seront pas partagées avec des tiers. Même les modèles d'IA ne peuvent pas voir tes données personnelles car nous les traitons exclusivement via des liens sécurisés.",
+      },
+      postRegistrationPendingMessage: {
+        it: "Ciao {{customerName}}, abbiamo registrato i tuoi dati! 🎉\n\nTi avviseremo il prima possibile quando il nostro servizio sarà attivo per te.\nNel frattempo la chat è disattivata.\n\nGrazie per la pazienza! 🙏",
+        en: "Hi {{customerName}}, we have registered your data! 🎉\n\nWe will notify you as soon as possible when our service is active for you.\nIn the meantime, the chat is disabled.\n\nThank you for your patience! 🙏",
+        es: "Hola {{customerName}}, hemos registrado tus datos! 🎉\n\nTe avisaremos lo antes posible cuando nuestro servicio esté activo para ti.\nMientras tanto, el chat está desactivado.\n\n¡Gracias por tu paciencia! 🙏",
+        pt: "Olá {{customerName}}, registrámos os seus dados! 🎉\n\nVamos notificá-lo assim que possível quando o nosso serviço estiver ativo para si.\nEntretanto, o chat está desativado.\n\nObrigado pela paciência! 🙏",
+        de: "Hallo {{customerName}}, wir haben deine Daten registriert! 🎉\n\nWir werden dich so schnell wie möglich benachrichtigen, wenn unser Service für dich aktiv ist.\nIn der Zwischenzeit ist der Chat deaktiviert.\n\nDanke für deine Geduld! 🙏",
+        fr: "Bonjour {{customerName}}, nous avons enregistré vos données! 🎉\n\nNous vous informerons dès que possible lorsque notre service sera actif pour vous.\nEn attendant, le chat est désactivé.\n\nMerci pour votre patience! 🙏",
+      },
+      userActivatedMessage: {
+        it: "Ciao {{customerName}}, abbiamo attivato il tuo utente! 🎉\n\nOra posso aiutarti con:\n✅ Vedere prezzi e offerte personalizzate\n✅ Gestire il tuo carrello\n✅ Effettuare ordini\n✅ Vedere lo storico ordini\n\nCome ti posso aiutare oggi? Stai cercando qualche prodotto in particolare?",
+        en: "Hi {{customerName}}, we have activated your account! 🎉\n\nNow I can help you with:\n✅ View prices and personalized offers\n✅ Manage your cart\n✅ Place orders\n✅ View order history\n\nHow can I help you today? Are you looking for any particular product?",
+        es: "Hola {{customerName}}, hemos activado tu usuario! 🎉\n\nAhora puedo ayudarte con:\n✅ Ver precios y ofertas personalizadas\n✅ Gestionar tu carrito\n✅ Realizar pedidos\n✅ Ver historial de pedidos\n\n¿Cómo puedo ayudarte hoy? ¿Estás buscando algún producto en particular?",
+        pt: "Olá {{customerName}}, ativámos a sua conta! 🎉\n\nAgora posso ajudá-lo com:\n✅ Ver preços e ofertas personalizadas\n✅ Gerir o seu carrinho\n✅ Fazer encomendas\n✅ Ver histórico de encomendas\n\nComo posso ajudá-lo hoje? Está à procura de algum produto em particular?",
+        de: "Hallo {{customerName}}, wir haben dein Konto aktiviert! 🎉\n\nJetzt kann ich dir helfen mit:\n✅ Preise und personalisierte Angebote ansehen\n✅ Deinen Warenkorb verwalten\n✅ Bestellungen aufgeben\n✅ Bestellhistorie ansehen\n\nWie kann ich dir heute helfen? Suchst du nach einem bestimmten Produkt?",
+        fr: "Bonjour {{customerName}}, nous avons activé votre compte! 🎉\n\nMaintenant je peux vous aider avec:\n✅ Voir les prix et offres personnalisées\n✅ Gérer votre panier\n✅ Passer des commandes\n✅ Voir l'historique des commandes\n\nComment puis-je vous aider aujourd'hui? Cherchez-vous un produit en particulier?",
+      },
     },
   })
 

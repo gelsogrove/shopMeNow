@@ -64,6 +64,7 @@ export interface FormatterOptions {
   botName?: string               // Bot name (e.g., "BellItalia")
   chatbotName?: string | null    // 🆕 Custom chatbot name (e.g., "Sofia", "Marco")
   businessType?: string | null   // 🆕 Business sector for context (e.g., "food", "fashion", "tech")
+  isUnregisteredUser?: boolean   // 🆕 Feature 204: If true, hide prices and prompt registration
 }
 
 // 🆕 Business Type Labels for LLM context
@@ -150,6 +151,35 @@ TONO: Sii caldo, amichevole e colloquiale - MAI robotico o formale!`
  */
 function buildSystemPrompt(options?: FormatterOptions): string {
   let prompt = BASE_SYSTEM_PROMPT
+
+  // 🆕 CRITICAL: Handle unregistered users FIRST (highest priority)
+  if (options?.isUnregisteredUser === true) {
+    prompt += `
+
+## 🚨 UTENTE NON REGISTRATO (MASSIMA PRIORITÀ)
+L'utente NON è ancora registrato nel sistema. DEVI seguire queste regole CRITICHE:
+
+1. ❌ NON mostrare MAI prezzi di prodotti o servizi
+   - Sostituisci prezzi con: "🔒 Prezzo disponibile dopo registrazione"
+
+2. ❌ NON dire MAI:
+   - "Aggiungi al carrello"
+   - "Vuoi ordinare?"
+   - "Procedi all'acquisto"
+   - "Vuoi comprare?"
+   - Qualsiasi frase che suggerisca l'acquisto
+
+3. ✅ Puoi parlare liberamente di:
+   - Caratteristiche prodotti/servizi
+   - Categorie disponibili
+   - FAQ e informazioni generali
+   - Località, orari, contatti
+
+4. 🔓 Quando menzioni prodotti o servizi, SEMPRE concludi con:
+   "🔓 Registrati per vedere i prezzi e le nostre offerte [LINK_REGISTRATION_WITH_TOKEN]"
+
+5. ✅ Mantieni tono caloroso e amichevole - l'utente PUÒ chattare, solo non può vedere prezzi!`
+  }
 
   // 🆕 Add chatbot name and business context
   const chatbotName = options?.chatbotName || options?.botName || "Assistente"
@@ -253,7 +283,7 @@ export class LLMFormatterService {
     })
 
     // For simple responses, use templates (no LLM call)
-    const cached = this.tryTemplateResponse(response, targetLanguage)
+    const cached = this.tryTemplateResponse(response, targetLanguage, options)
     if (cached) {
       logger.info("📝 [LLMFormatter] Used cached template", {
         type: response.type,
@@ -444,7 +474,8 @@ export class LLMFormatterService {
 
   private tryTemplateResponse(
     response: StructuredResponse,
-    targetLanguage: string
+    targetLanguage: string,
+    options?: FormatterOptions
   ): string | null {
     switch (response.type) {
       case "GREETING":
@@ -474,7 +505,7 @@ export class LLMFormatterService {
         return this.getHumanSupport(targetLanguage)
 
       case "PRODUCT_DETAIL": {
-        const detailTemplate = this.getProductDetailTemplate(response, targetLanguage)
+        const detailTemplate = this.getProductDetailTemplate(response, targetLanguage, options)
         if (detailTemplate) {
           return detailTemplate
         }
@@ -581,18 +612,15 @@ export class LLMFormatterService {
 
   private getProductDetailTemplate(
     response: StructuredResponse,
-    targetLanguage: string
+    targetLanguage: string,
+    options?: FormatterOptions
   ): string | null {
-    const isItalian = (targetLanguage || "").toLowerCase().startsWith("it")
-    if (!isItalian) {
-      return null
-    }
-
     const product = response.data.product
     if (!product) {
       return null
     }
 
+    const isUnregistered = options?.isUnregisteredUser === true
     const displayPrice = product.priceWithDiscount || product.price
     const detailLines: string[] = []
 
@@ -610,11 +638,11 @@ export class LLMFormatterService {
     }
 
     // Info compatte su righe con bullet
-    const codeAndFormat = []
-    if (product.sku) codeAndFormat.push(`Codice: ${product.sku}`)
-    if (product.formato) codeAndFormat.push(`Formato: ${product.formato}`)
-    if (codeAndFormat.length > 0) {
-      detailLines.push(`- ${codeAndFormat.join(" - ")}`)
+    if (product.sku) {
+      detailLines.push(`- Codice: ${product.sku}`)
+    }
+    if (product.formato) {
+      detailLines.push(`- Formato: ${product.formato}`)
     }
 
     if (product.transportType) {
@@ -633,16 +661,24 @@ export class LLMFormatterService {
     const stockValue = product.stock !== undefined ? product.stock : (product.isAvailable ? "disponibile" : "esaurito")
     detailLines.push(`- Stock: ${stockValue}`)
     detailLines.push("")
-    detailLines.push(`💰 <b>Prezzo: ${formatDisplayPrice(displayPrice)} Euro</b>`)
-    detailLines.push("")
-    detailLines.push(`Vuoi aggiungerlo al carrello? Se sì puoi indicare la quantità? (es. <b>Sì, 2</b>)`)
-    detailLines.push("")
-    detailLines.push(`oppure`)
-    detailLines.push("")
-    detailLines.push(`**1.** Esplora il catalogo`)
-    detailLines.push(`**2.** Mostrami il carrello`)
-    detailLines.push("")
-    detailLines.push(`o scrivi quello che stai cercando!`)
+
+    // 🔐 Feature 204: Differenzia tra utenti registrati e non
+    if (isUnregistered) {
+      // UTENTE NON REGISTRATO: No prezzo, no carrello, link registrazione
+      detailLines.push("🔓 Registrati per vedere i prezzi a te riservati e ricevere le nostre migliori offerte: [LINK_REGISTRATION_WITH_TOKEN]")
+    } else {
+      // UTENTE REGISTRATO: Mostra prezzo e prompt carrello
+      detailLines.push(`💰 <b>Prezzo: ${formatDisplayPrice(displayPrice)} Euro</b>`)
+      detailLines.push("")
+      detailLines.push(`Vuoi aggiungerlo al carrello? Se sì puoi indicare la quantità? (es. <b>Sì, 2</b>)`)
+      detailLines.push("")
+      detailLines.push(`oppure`)
+      detailLines.push("")
+      detailLines.push(`**1.** Esplora il catalogo`)
+      detailLines.push(`**2.** Mostrami il carrello`)
+      detailLines.push("")
+      detailLines.push(`o scrivi quello che stai cercando!`)
+    }
 
     return detailLines.join("\n")
   }

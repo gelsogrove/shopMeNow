@@ -238,7 +238,6 @@ export function Header() {
                   <DropdownMenuItem onClick={() => navigate("/products")}>Products</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/services")}>Services</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/offers")}>Offers</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/suppliers")}>Suppliers</DropdownMenuItem>
                   {workspace?.hasSalesAgents === true && (
                     <DropdownMenuItem onClick={() => navigate("/sales")}>Sales</DropdownMenuItem>
                   )}

@@ -1,0 +1,159 @@
+
+> @echatbot/backend@1.0.0 dev
+> dotenv -e ../../.env -- tsnd --transpile-only --respawn src/index.ts
+
+[INFO] 23:53:41 ts-node-dev ver. 2.0.0 (using ts-node ver. 10.9.2, typescript ver. 5.9.3)
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🗂️ backup and recover secrets: https://dotenvx.com/ops
+2025-12-20T22:53:41.919Z [[32minfo[39m]: OpenAI API key status: Missing 
+2025-12-20T22:53:42.731Z [[32minfo[39m]: ✅ SecurityAgent initialized with OpenRouter API key 
+2025-12-20T22:53:42.731Z [[32minfo[39m]: ✅ ConversationManager initialized (history window: 10 minutes) 
+2025-12-20T22:53:42.731Z [[32minfo[39m]: ✅ FunctionExecutor initialized with all agents 
+2025-12-20T22:53:42.731Z [[32minfo[39m]: ✅ SafetyTranslationAgent initialized with OpenRouter API key 
+2025-12-20T22:53:42.731Z [[32minfo[39m]: ✅ TranslationAgent initialized with OpenRouter API key 
+2025-12-20T22:53:42.731Z [[32minfo[39m]: ✅ TemplateEngineService initialized 
+2025-12-20T22:53:42.731Z [[32minfo[39m]: ✅ TemplateLoaderService initialized (dir: /Users/gelso/workspace/shopME/apps/backend/src/templates) 
+2025-12-20T22:53:42.731Z [[32minfo[39m]: ✅ VariableResolverService initialized 
+2025-12-20T22:53:42.732Z [[32minfo[39m]: ✅ TemplateEngineService initialized 
+2025-12-20T22:53:42.732Z [[32minfo[39m]: ✅ PromptBuilderService initialized 
+2025-12-20T22:53:42.732Z [[32minfo[39m]: ✅ TemplateEngineService initialized 
+2025-12-20T22:53:42.732Z [[32minfo[39m]: ✅ LLMRouterService initialized with Function Calling support 
+2025-12-20T22:53:42.841Z [[32minfo[39m]: Setting up workspace routes 
+2025-12-20T22:53:42.841Z [[32minfo[39m]: Workspace routes setup complete 
+2025-12-20T22:53:42.866Z [[32minfo[39m]: Email service initialized with SMTP: smtp.gmail.com:465 
+2025-12-20T22:53:42.866Z [[32minfo[39m]: Setting up invitation routes 
+2025-12-20T22:53:42.866Z [[32minfo[39m]: Invitation routes setup complete 
+2025-12-20T22:53:42.866Z [[32minfo[39m]: Setting up public invitation routes 
+2025-12-20T22:53:42.866Z [[32minfo[39m]: Public invitation routes setup complete 
+2025-12-20T22:53:42.871Z [[32minfo[39m]: Setting up member routes 
+2025-12-20T22:53:42.871Z [[32minfo[39m]: Member routes setup complete 
+2025-12-20T22:53:42.934Z [[32minfo[39m]: Email service initialized with SMTP: smtp.gmail.com:465 
+2025-12-20T22:53:43.008Z [[32minfo[39m]: ✅ Added /orders-public/:orderCode route alias for frontend compatibility 
+2025-12-20T22:53:43.038Z [[32minfo[39m]: ✅ SecurityAgent initialized with OpenRouter API key 
+2025-12-20T22:53:43.187Z [[32minfo[39m]: ✅ TranslationSecurityService initialized with OpenRouter API key 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: Setting up API routes 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: ✅ Route middleware configured for JWT-only authentication 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: Registered WhatsApp webhook routes (public, no authentication) 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: Registered WhatsApp webhook routes (public, no authentication) 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: ✅ SecurityAgent initialized with OpenRouter API key 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: ✅ ConversationManager initialized (history window: 10 minutes) 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: ✅ FunctionExecutor initialized with all agents 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: ✅ SafetyTranslationAgent initialized with OpenRouter API key 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: ✅ TranslationAgent initialized with OpenRouter API key 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: ✅ TemplateEngineService initialized 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: ✅ TemplateLoaderService initialized (dir: /Users/gelso/workspace/shopME/apps/backend/src/templates) 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: ✅ VariableResolverService initialized 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: ✅ TemplateEngineService initialized 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: ✅ PromptBuilderService initialized 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: ✅ LLMRouterService initialized with Function Calling support 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: ✅ SecurityAgent initialized with OpenRouter API key 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: ✅ SecurityAgent initialized with OpenRouter API key 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: ✅ ConversationManager initialized (history window: 10 minutes) 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: ✅ FunctionExecutor initialized with all agents 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: ✅ SafetyTranslationAgent initialized with OpenRouter API key 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: ✅ TranslationAgent initialized with OpenRouter API key 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: ✅ TemplateEngineService initialized 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: ✅ TemplateLoaderService initialized (dir: /Users/gelso/workspace/shopME/apps/backend/src/templates) 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: ✅ VariableResolverService initialized 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: ✅ TemplateEngineService initialized 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: ✅ PromptBuilderService initialized 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: ✅ LLMRouterService initialized with Function Calling support 
+2025-12-20T22:53:43.600Z [[32minfo[39m]: ✅ SecurityAgent initialized with OpenRouter API key 
+2025-12-20T22:53:43.601Z [[32minfo[39m]: Email service initialized with SMTP: smtp.gmail.com:465 
+2025-12-20T22:53:43.601Z [[32minfo[39m]: 🎫 Setting up token routes... 
+2025-12-20T22:53:43.601Z [[32minfo[39m]: Setting up registration routes (with rate limiting) 
+2025-12-20T22:53:43.601Z [[32minfo[39m]: Registration routes setup complete 
+2025-12-20T22:53:43.601Z [[32minfo[39m]: ✅ Registered /token/registration/* routes 
+2025-12-20T22:53:43.601Z [[32minfo[39m]: ✅ Registered /token/checkout/* routes 
+2025-12-20T22:53:43.601Z [[32minfo[39m]: ✅ Registered /token/validate-secure-token route 
+2025-12-20T22:53:43.601Z [[32minfo[39m]: ✅ Registered /token/orders-public/* routes 
+2025-12-20T22:53:43.601Z [[32minfo[39m]: ✅ Registered /token/customer-profile/* routes 
+2025-12-20T22:53:43.601Z [[32minfo[39m]: ✅ Registered /token/cart/* routes (shopping cart) 
+2025-12-20T22:53:43.601Z [[32minfo[39m]: ✅ Token routes setup complete 
+2025-12-20T22:53:43.601Z [[32minfo[39m]: ✅ Registered /api/token/* routes (registration, checkout, orders-public) 
+2025-12-20T22:53:43.601Z [[32minfo[39m]: Registered short URL routes for /s/:shortCode redirection 
+2025-12-20T22:53:43.601Z [[32minfo[39m]: ⚠️ LEGACY: /checkout (use /token/checkout instead) 
+2025-12-20T22:53:43.601Z [[32minfo[39m]: ⚠️ LEGACY: /cart (use /token/cart instead) 
+2025-12-20T22:53:43.601Z [[32minfo[39m]: Setting up registration routes (with rate limiting) 
+2025-12-20T22:53:43.601Z [[32minfo[39m]: Registration routes setup complete 
+2025-12-20T22:53:43.601Z [[32minfo[39m]: ⚠️ LEGACY: /registration (use /token/registration instead) 
+2025-12-20T22:53:43.601Z [[32minfo[39m]: ✅ Registered pricing routes (/api/pricing/config) 
+2025-12-20T22:53:43.601Z [[32minfo[39m]: ✅ Registered platform config routes (/api/platform-config) 
+2025-12-20T22:53:43.601Z [[32minfo[39m]: ✅ Registered user admin routes (/api/users/admin/*) 
+2025-12-20T22:53:43.601Z [[32minfo[39m]: Email service initialized with SMTP: smtp.gmail.com:465 
+2025-12-20T22:53:43.601Z [[32minfo[39m]: ✅ Registered trash management routes (/api/admin/trash/*) 
+2025-12-20T22:53:43.607Z [[32minfo[39m]: ✅ Registered scheduler routes (/api/schedulers) 
+2025-12-20T22:53:43.607Z [[32minfo[39m]: ✅ Registered PUBLIC subscription plans route (/api/subscription/plans) 
+2025-12-20T22:53:43.607Z [[32minfo[39m]: Email service initialized with SMTP: smtp.gmail.com:465 
+2025-12-20T22:53:43.607Z [[32minfo[39m]: ✅ Registered 2FA reset routes (/api/auth/2fa-reset/*) 
+2025-12-20T22:53:43.607Z [[32minfo[39m]: ✅ Registered session routes (/api/session/validate, /api/session/stats) 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: ✅ Registered multi-agent chat routes (/api/agent-chat, /api/agent-chat/metrics, /api/agent-chat/history/:customerId) 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: ✅ Registered PUBLIC invitation routes: /api/invitations (validate, accept) 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: ✅ Registered agent config routes (/api/workspaces/:workspaceId/agent-config) 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: Email service initialized with SMTP: smtp.gmail.com:465 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: Setting up user routes 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: User routes setup complete 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: Setting up customers routes 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: Customers routes setup complete 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: Setting up workspace customers routes 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: Workspace customers routes setup complete 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: ✅ Registered PROTECTED team management routes: /api/workspaces/:workspaceId/invitations, /api/workspaces/:workspaceId/members 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: ✅ Registered campaign routes: /api/workspaces/:workspaceId/campaigns 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: ✅ Registered feedback routes: /api/feedback (public), /api/workspaces/:workspaceId/feedbacks (admin) 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: Setting up agent routes 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: Agent routes setup complete 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: Registered agent router with workspace routes only 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: Setting up product routes 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: Registered products router with workspace routes 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: Registered categories router with workspace routes 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: Registered sales router with workspace routes 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: Registered certification router with workspace routes 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: Registered transport type router with workspace routes 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: Registered WhatsApp queue router with workspace routes 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: Registered services router with workspace routes 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: Registered FAQs router with workspace routes 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: Setting up settings routes 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: Settings routes setup complete 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: Setting up languages routes 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: Languages routes setup complete 
+2025-12-20T22:53:43.608Z [[32minfo[39m]: Registered GDPR routes (/api/workspaces/:workspaceId/gdpr, /api/gdpr) 
+2025-12-20T22:53:43.609Z [[32minfo[39m]: Registered workspace subscription billing routes: /api/workspaces/:workspaceId/subscription-billing (DEPRECATED) 
+2025-12-20T22:53:43.609Z [[32minfo[39m]: Registered owner billing routes: /api/subscription-billing (Feature 198) 
+2025-12-20T22:53:43.609Z [[32minfo[39m]: Registered billing routes for usage tracking 
+2025-12-20T22:53:43.609Z [[32minfo[39m]: Registered offers router with workspace routes 
+2025-12-20T22:53:43.609Z [[32minfo[39m]: Email service initialized with SMTP: smtp.gmail.com:465 
+2025-12-20T22:53:43.609Z [[32minfo[39m]: Setting up order routes 
+2025-12-20T22:53:43.609Z [[32minfo[39m]: Order routes configured 
+2025-12-20T22:53:43.609Z [[32minfo[39m]: Registered orders router with workspace routes 
+2025-12-20T22:53:43.609Z [[32minfo[39m]: Registered credit notes routes for partial refunds 
+2025-12-20T22:53:43.609Z [[32minfo[39m]: Registered cart router with workspace routes for price calculation 
+2025-12-20T22:53:43.609Z [[32minfo[39m]: Registered public orders routes with JWT authentication 
+2025-12-20T22:53:43.609Z [[32minfo[39m]: Registered analytics routes for dashboard metrics 
+2025-12-20T22:53:43.609Z [[32minfo[39m]: Registered debug routes for testing and analysis 
+2025-12-20T22:53:43.609Z [[32minfo[39m]: Registered push notification routes for chatbot reactivation 
+2025-12-20T22:53:43.609Z [[32minfo[39m]: Registered WhatsApp routes for webhook and send message 
+2025-12-20T22:53:43.609Z [[32minfo[39m]: Registered public orders routes for secure token validation 
+2025-12-20T22:53:43.609Z [[32minfo[39m]: Registered /gdpr/default route for backward compatibility 
+2025-12-20T22:53:43.609Z [[32minfo[39m]: API routes setup complete 
+2025-12-20T22:53:43.636Z [[32minfo[39m]: ✅ [CAMPAIGN SCHEDULER] Started - runs daily at 10:00 AM 
+2025-12-20T22:53:43.636Z [[32minfo[39m]: Scheduler service started - managing offers, URLs cleanup, monthly billing, analytics cleanup (6 months), and campaign scheduler 
+2025-12-20T22:53:43.636Z [[32minfo[39m]: Serving static files from: /Users/gelso/workspace/shopME/apps/backend/uploads 
+2025-12-20T22:53:43.637Z [[32minfo[39m]: [LandingPage] Serving assets from /Users/gelso/workspace/shopME/apps/backend/public 
+2025-12-20T22:53:43.637Z [[32minfo[39m]: [LandingPage] Serving static landing page from /Users/gelso/workspace/shopME/apps/backend/public/index.html 
+2025-12-20T22:53:43.637Z [[32minfo[39m]: ✅ Registered PUBLIC services endpoint at /api/services/public 
+2025-12-20T22:53:43.681Z [[32minfo[39m]: Connected to database 
+2025-12-20T22:53:43.682Z [[32minfo[39m]: [WebSocket] Server initialized 
+2025-12-20T22:53:43.682Z [[32minfo[39m]: WebSocket service initialized 
+Error: listen EADDRINUSE: address already in use :::3001
+    at Server.setupListenHandle [as _listen2] (node:net:1937:16)
+    at listenInCluster (node:net:1994:12)
+    at Server.listen (node:net:2099:7)
+    at /Users/gelso/workspace/shopME/apps/backend/src/index.ts:30:16
+    at Generator.next (<anonymous>)
+    at fulfilled (/Users/gelso/workspace/shopME/apps/backend/src/index.ts:5:58)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+[ERROR] 23:53:43 Error: listen EADDRINUSE: address already in use :::3001
+2025-12-20T22:53:43.702Z [[32minfo[39m]: SIGTERM received, shutting down gracefully 
+2025-12-20T22:53:43.702Z [[32minfo[39m]: ⏹️ Stopping background scheduler... 
+2025-12-20T22:53:43.702Z [[32minfo[39m]: ✅ Scheduler stopped successfully 
+2025-12-20T22:53:43.702Z [[32minfo[39m]: [WebSocket] Server closed 
+2025-12-20T22:53:43.719Z [[34mdebug[39m]: 📊 Analytics cleanup: no old records to remove 

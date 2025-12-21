@@ -66,7 +66,7 @@ Quale gruppo ti interessa?
 
 ---
 
-## 📦 PRODUCT DETAIL FORMAT
+## 📦 PRODUCT DETAIL FORMAT (UTENTE REGISTRATO)
 
 **When showing a SINGLE product detail (after getProductDetails() call):**
 

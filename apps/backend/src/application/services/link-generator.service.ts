@@ -1,6 +1,7 @@
 import { config } from "../../config"
 import logger from "../../utils/logger"
 import { UrlShortenerService } from "./url-shortener.service"
+import { workspaceService } from "../../services/workspace.service"
 
 /**
  * Centralized Link Generator Service
@@ -61,7 +62,8 @@ export class LinkGeneratorService {
       throw new Error("Invalid step parameter: must be 1 or 2")
     }
 
-    let originalUrl = `${config.frontendUrl}/cart?token=${token}`
+    const baseUrl = await workspaceService.getWorkspaceURL(workspaceId)
+    let originalUrl = `${baseUrl}/cart?token=${token}`
     if (step) {
       originalUrl += `&step=${step}`
     }
@@ -76,13 +78,14 @@ export class LinkGeneratorService {
     workspaceId: string,
     orderCode?: string
   ): Promise<string> {
+    const baseUrl = await workspaceService.getWorkspaceURL(workspaceId)
     let originalUrl: string
 
     if (orderCode && orderCode.trim() !== "") {
       const safeCode = encodeURIComponent(orderCode.trim())
-      originalUrl = `${config.frontendUrl}/orders-public/${safeCode}?token=${token}`
+      originalUrl = `${baseUrl}/orders-public/${safeCode}?token=${token}`
     } else {
-      originalUrl = `${config.frontendUrl}/orders-public?token=${token}`
+      originalUrl = `${baseUrl}/orders-public?token=${token}`
     }
 
     return this.generateShortLink(originalUrl, workspaceId, "orders")
@@ -95,7 +98,8 @@ export class LinkGeneratorService {
     token: string,
     workspaceId: string
   ): Promise<string> {
-    const originalUrl = `${config.frontendUrl}/customer-profile?token=${token}`
+    const baseUrl = await workspaceService.getWorkspaceURL(workspaceId)
+    const originalUrl = `${baseUrl}/customer-profile?token=${token}`
     return this.generateShortLink(originalUrl, workspaceId, "profile")
   }
 
@@ -107,7 +111,8 @@ export class LinkGeneratorService {
     token: string,
     workspaceId: string
   ): Promise<string> {
-    const originalUrl = `${config.frontendUrl}/orders-public?token=${token}`
+    const baseUrl = await workspaceService.getWorkspaceURL(workspaceId)
+    const originalUrl = `${baseUrl}/orders-public?token=${token}`
     return this.generateShortLink(originalUrl, workspaceId, "tracking")
   }
 
@@ -118,7 +123,8 @@ export class LinkGeneratorService {
     token: string,
     workspaceId: string
   ): Promise<string> {
-    const originalUrl = `${config.frontendUrl}/invoice-public?token=${token}`
+    const baseUrl = await workspaceService.getWorkspaceURL(workspaceId)
+    const originalUrl = `${baseUrl}/invoice-public?token=${token}`
     return this.generateShortLink(originalUrl, workspaceId, "invoice")
   }
 
@@ -127,10 +133,10 @@ export class LinkGeneratorService {
    */
   async generateRegistrationLink(
     token: string,
-    workspaceUrl: string,
     workspaceId: string
   ): Promise<string> {
-    const originalUrl = `${workspaceUrl.replace(/\/$/, "")}/registration?token=${token}`
+    const baseUrl = await workspaceService.getWorkspaceURL(workspaceId)
+    const originalUrl = `${baseUrl}/registration?token=${token}`
     return this.generateShortLink(originalUrl, workspaceId, "registration")
   }
 
@@ -138,11 +144,11 @@ export class LinkGeneratorService {
    * Generate tracking link for specific order
    */
   async generateShipmentTrackingLink(
-    baseUrl: string,
     orderCode: string,
     token: string,
     workspaceId: string
   ): Promise<string> {
+    const baseUrl = await workspaceService.getWorkspaceURL(workspaceId)
     const originalUrl = `${baseUrl}/orders-public/${orderCode}?token=${token}`
     return this.generateShortLink(originalUrl, workspaceId, "shipment-tracking")
   }

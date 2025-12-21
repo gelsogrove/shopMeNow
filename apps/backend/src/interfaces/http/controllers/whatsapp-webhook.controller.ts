@@ -760,9 +760,9 @@ export class WhatsAppWebhookController {
         return
       }
 
-      // 🚦 UNREGISTERED USER LIMIT: Max 5 messages for users not yet registered
+      // 🚦 UNREGISTERED USER LIMIT: Max 20 messages for users not yet registered
       // Feature: Block spam from unregistered users who refuse to register
-      const MAX_UNREGISTERED_MESSAGES = 5
+      const MAX_UNREGISTERED_MESSAGES = 20
       if (customer && !customer.isActive) {
         // Count messages from this unregistered customer in last 24 hours
         const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
@@ -1026,6 +1026,7 @@ export class WhatsAppWebhookController {
         customerLanguage: customer.language || "it",
         customerName: customer.name,
         customerDiscount: customer.discount || 0, // 💰 Pass customer discount
+        isUnregisteredUser: !customer.isActive, // 🆕 Feature 204: Utenti non registrati (isActive=false)
       })
 
       logger.info("[WEBHOOK] ✅ ChatEngineService completed", {

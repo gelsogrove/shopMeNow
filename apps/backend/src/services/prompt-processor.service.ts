@@ -255,6 +255,7 @@ export class PromptProcessorService {
 
     // 🆕 STEP 1.5: Process {{#if}} conditionals FIRST (Handlebars syntax)
     // This handles workspace config conditionals like {{#if sellsProductsAndServices}}
+    logger.info(`[PromptProcessor] 🔍 DEBUG isUnregisteredUser in customerData: ${customerData?.isUnregisteredUser}`);
     if (processedPrompt.includes("{{#if") || processedPrompt.includes("{{#unless")) {
       // NOTE: Only pass variables needed for CONDITIONALS, not for text replacement
       // Text replacement happens in STEP 2 via replaceVariables()
@@ -275,7 +276,15 @@ export class PromptProcessorService {
         allowedExternalLinks: workspaceConfig?.allowedExternalLinks?.join("\n") || "",
         // Customer booleans (for conditionals)
         hasAgentAssigned: !!(customerData?.agentName),
+        // 🆕 Feature 204: Unregistered User Flow - conditional template rendering
+        isUnregisteredUser: customerData?.isUnregisteredUser ?? false,
       }
+      
+      console.log("\n========== PROMPT PROCESSOR CONDITIONALS DEBUG ==========");
+      console.log("[PromptProcessor] conditionalVariables.isUnregisteredUser:", conditionalVariables.isUnregisteredUser);
+      console.log("[PromptProcessor] customerData.isUnregisteredUser:", customerData?.isUnregisteredUser);
+      console.log("[PromptProcessor] Template contains {{#if isUnregisteredUser}}:", processedPrompt.includes("{{#if isUnregisteredUser}}"));
+      console.log("=======================================================\n");
 
       processedPrompt = this.templateEngine.process(processedPrompt, conditionalVariables)
       logger.debug("✅ Processed {{#if}} conditionals in prompt")

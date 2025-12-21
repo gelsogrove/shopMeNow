@@ -683,18 +683,25 @@ export function WhatsAppChatModal({
 
       // Handle existing user flow
       // ✅ OPTIMIZED: Use response directly from webhook instead of fetching again
-      if (webhookData.success && webhookData.data?.message) {
+      // 🔧 FIX: Handle both response formats:
+      //   - Old format: { success: true, data: { message: "..." } }
+      //   - New format: { status: "processed", response: "..." }
+      const botResponseMessage = 
+        webhookData.data?.message ||  // Old format
+        webhookData.response           // New format (from ChatEngine)
+      
+      if (botResponseMessage) {
         logger.info("✅ Using bot response from webhook directly")
 
         // Add bot response immediately from webhook
         const botMessage: Message = {
           id: (Date.now() + 1).toString(),
-          content: webhookData.data.message,
+          content: botResponseMessage,
           sender: "bot",
           timestamp: new Date(),
           agentName: "AI Assistant",
-          debugInfo: webhookData.debug
-            ? JSON.stringify(webhookData.debug)
+          debugInfo: webhookData.debug || webhookData.debugInfo
+            ? JSON.stringify(webhookData.debug || webhookData.debugInfo)
             : undefined,
           metadata: {
             isOperatorMessage: false,

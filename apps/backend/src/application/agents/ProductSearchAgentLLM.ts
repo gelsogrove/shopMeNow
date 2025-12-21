@@ -49,6 +49,8 @@ export interface ProductSearchLLMContext {
   query: string // Customer's search query (from Router)
   /** Pre-loaded customer data from Router (avoids duplicate DB queries) */
   customerData?: CustomerData
+  /** Feature 204: Unregistered user flag - controls price/cart visibility */
+  isUnregisteredUser?: boolean
 }
 
 export interface ProductSearchLLMResponse {
@@ -292,10 +294,15 @@ export class ProductSearchAgentLLM {
         }
       }
       // Replace ALL variables ({{PRODUCTS}}, {{CATEGORIES}}, {{nameUser}}, etc.)
+      // 🆕 Feature 204: Pass isUnregisteredUser to template for conditional rendering
+      logger.info(`[ProductSearchAgent] 🔍 DEBUG isUnregisteredUser BEFORE preProcessPrompt: ${context.isUnregisteredUser}`);
       const processedPrompt = await promptProcessor.preProcessPrompt(
         systemPrompt,
         context.workspaceId,
-        customerDataForPrompt, // Mapped customer data for variable replacement
+        {
+          ...customerDataForPrompt,
+          isUnregisteredUser: context.isUnregisteredUser === true, // 🆕 Feature 204
+        },
         {
           faqs: "", // Not used in product search
           products: productsText,

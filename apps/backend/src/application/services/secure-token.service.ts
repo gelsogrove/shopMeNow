@@ -139,6 +139,7 @@ export class SecureTokenService {
       // Pulisci token scaduti + elimina token esistenti dello stesso tipo per evitare conflitti
       if (type === "registration" && phoneNumber) {
         // For registration tokens, clean by phoneNumber
+        logger.info(`[KISS-TOKEN] 🗑️ Deleting old registration tokens by phoneNumber: ${phoneNumber}`)
         await this.prisma.secureToken.deleteMany({
           where: {
             phoneNumber,
@@ -148,6 +149,7 @@ export class SecureTokenService {
         })
       } else if (customerId) {
         // For other tokens, clean by customerId AND type (inclusi quelli non scaduti)
+        logger.info(`[KISS-TOKEN] 🗑️ Deleting old ${type} tokens by customerId: ${customerId}`)
         await this.prisma.secureToken.deleteMany({
           where: {
             customerId,
@@ -183,6 +185,15 @@ export class SecureTokenService {
       }
 
       // Crea token del tipo specificato
+      logger.info(`[KISS-TOKEN] 💾 Creating new token in database`, {
+        type,
+        workspaceId: workspaceId.substring(0, 8) + "...",
+        customerId: customerId?.substring(0, 8) + "..." || "none",
+        userId: userId?.substring(0, 8) + "..." || "none",
+        phoneNumber: phoneNumber || "none",
+        expiresAt
+      })
+      
       await this.prisma.secureToken.create({
         data: {
           token,

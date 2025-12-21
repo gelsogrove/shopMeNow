@@ -274,6 +274,44 @@ export class CallingFunctionsService {
     }
   }
 
+  public async getRegistrationLink(
+    request: GetCartLinkRequest
+  ): Promise<TokenResponse> {
+    try {
+      logger.info("🔧 Calling getRegistrationLink with:", request)
+      const token = await this.secureTokenService.createToken(
+        "registration",
+        request.workspaceId,
+        { customerId: request.customerId },
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        request.customerId
+      )
+
+      const {
+        linkGeneratorService,
+      } = require("../application/services/link-generator.service")
+
+      const linkUrl = await linkGeneratorService.generateRegistrationLink(
+        token,
+        request.workspaceId
+      )
+
+      return {
+        success: true,
+        token: token,
+        linkUrl: linkUrl,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        action: "registration",
+        timestamp: new Date().toISOString(),
+      }
+    } catch (error) {
+      return this.createErrorResponse(error, "getRegistrationLink") as TokenResponse
+    }
+  }
+
   public async contactOperator(request: {
     customerId: string
     workspaceId: string

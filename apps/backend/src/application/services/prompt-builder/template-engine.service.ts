@@ -116,6 +116,12 @@ export class TemplateEngineService {
     // Strategy: Find blocks that contain NO other {{#if}} tags inside them
     // This ensures we always process the innermost block first
 
+    console.log("\n========== TEMPLATE ENGINE IF BLOCK DEBUG ==========");
+    console.log("[TemplateEngine] Processing IF block");
+    console.log("[TemplateEngine] variables.isUnregisteredUser:", variables.isUnregisteredUser);
+    console.log("[TemplateEngine] Template preview:", template.substring(0, 200));
+    console.log("===================================================\n");
+
     // First try to find innermost if-else blocks
     // Match {{#if X}} content {{else}} elseContent {{/if}}
     // where content and elseContent have NO {{#if}} inside
@@ -128,8 +134,8 @@ export class TemplateEngineService {
       const value = variables[condition]
       const isTruthy = this.isTruthy(value)
 
-      logger.debug(
-        `Processing if-else block: condition=${condition}, value=${value}, isTruthy=${isTruthy}`
+      logger.info(
+        `[TemplateEngine] 🔍 Processing if-else block: condition=${condition}, value=${value}, isTruthy=${isTruthy}`
       )
       const replacement = isTruthy ? ifContent.trim() : elseContent.trim()
       return template.replace(fullMatch, replacement)
@@ -145,8 +151,8 @@ export class TemplateEngineService {
       const value = variables[condition]
       const isTruthy = this.isTruthy(value)
 
-      logger.debug(
-        `Processing simple if block: condition=${condition}, value=${value}, isTruthy=${isTruthy}`
+      logger.info(
+        `[TemplateEngine] 🔍 Processing simple if block: condition=${condition}, value=${value}, isTruthy=${isTruthy}`
       )
       const replacement = isTruthy ? content.trim() : ""
       return template.replace(fullMatch, replacement)

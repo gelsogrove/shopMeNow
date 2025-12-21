@@ -28,6 +28,7 @@ import { ResponseBuilderService, getResponseBuilder, StructuredResponse, ListIte
 import { LLMFormatterService, getLLMFormatter, FormatterResult } from "../llm-formatter"
 import { ConversationManager } from "../../services/conversation-manager.service"
 import { LinkReplacementService, ReplaceLinkWithTokenParams } from "../services/link-replacement.service"
+import { CallingFunctionsService } from "../../services/calling-functions.service"
 import {
   OptionsMappingService,
   getOptionsMappingService,
@@ -158,6 +159,7 @@ export interface ChatEngineInput {
   customerName?: string
   customerLanguage?: string
   customerDiscount?: number
+  isUnregisteredUser?: boolean  // 🆕 Feature 204: Flag per utenti non registrati (isActive=false)
 }
 
 export interface ChatEngineOutput {
@@ -210,6 +212,7 @@ export class ChatEngineService {
   // Support services
   private conversationManager: ConversationManager
   private linkReplacementService: LinkReplacementService
+  private callingFunctionsService: CallingFunctionsService
   private optionsMappingService: OptionsMappingService
   private systemContextService: SystemContextService
   private conversationStateService: ConversationStateService
@@ -229,6 +232,7 @@ export class ChatEngineService {
     // Initialize support services
     this.conversationManager = new ConversationManager(prisma)
     this.linkReplacementService = new LinkReplacementService()
+    this.callingFunctionsService = new CallingFunctionsService(prisma)
     this.optionsMappingService = getOptionsMappingService(prisma)
     this.systemContextService = getSystemContextService(prisma)
     this.conversationStateService = new ConversationStateService(prisma)
@@ -499,7 +503,7 @@ export class ChatEngineService {
         input.customerLanguage || "it",
         workspaceConfig,
         undefined,
-        { customerName: input.customerName }
+        { customerName: input.customerName, isUnregisteredUser: input.isUnregisteredUser }
       )
 
       let finalMessage = formatterResult.text
@@ -761,6 +765,7 @@ export class ChatEngineService {
     personalizationOptions?: {
       customerName?: string
       isFirstMessage?: boolean
+      isUnregisteredUser?: boolean  // 🆕 Feature 204: Modifica prompt per utenti non registrati
     }
   ): Promise<FormatterResult> {
     return this.llmFormatter.format(
@@ -775,6 +780,7 @@ export class ChatEngineService {
         businessType: workspaceConfig.businessType,    // 🆕 Business sector
         customerName: personalizationOptions?.customerName,
         isFirstMessage: personalizationOptions?.isFirstMessage,
+        isUnregisteredUser: personalizationOptions?.isUnregisteredUser,  // 🆕 Pass to formatter
       }
     )
   }
@@ -1089,6 +1095,14 @@ export class ChatEngineService {
         content: msg.content,
       }))
 
+    console.log("\n========== CHAT ENGINE → PRODUCT CONTEXT AGENT ==========");
+    console.log("[ChatEngine] input.isUnregisteredUser:", input.isUnregisteredUser);
+    console.log("[ChatEngine] typeof:", typeof input.isUnregisteredUser);
+    console.log("[ChatEngine] Is undefined?", input.isUnregisteredUser === undefined);
+    console.log("[ChatEngine] Is false?", input.isUnregisteredUser === false);
+    console.log("[ChatEngine] Is true?", input.isUnregisteredUser === true);
+    console.log("=========================================================\n");
+
     const agentResponse = await agent.handleQuestion({
       workspaceId: input.workspaceId,
       customerId: input.customerId,
@@ -1105,6 +1119,7 @@ export class ChatEngineService {
         address: workspaceConfig.address,
       },
       conversationHistory,
+      isUnregisteredUser: input.isUnregisteredUser,  // 🆕 Feature 204
     })
 
     // If ProductContextAgent failed, return null to trigger FAQ fallback
@@ -1146,6 +1161,38 @@ export class ChatEngineService {
 
     const usedTokens = agentResponse.tokensUsed || 0
 
+    // 🔗 TOKEN REPLACEMENT: Replace [LINK_REGISTRATION_WITH_TOKEN] with actual URL
+    let finalResponse = agentResponse.output
+    logger.info("🔗 [ChatEngine] Checking for token replacement", {
+      hasToken: finalResponse.includes("[LINK_REGISTRATION_WITH_TOKEN]"),
+      responsePreview: finalResponse.substring(0, 200)
+    })
+    if (finalResponse.includes("[LINK_REGISTRATION_WITH_TOKEN]")) {
+      logger.info("🔗 [ChatEngine] Replacing [LINK_REGISTRATION_WITH_TOKEN]", {
+        customerId: input.customerId,
+        workspaceId: input.workspaceId,
+      })
+      try {
+        const registrationLink = await this.callingFunctionsService.getRegistrationLink({
+          customerId: input.customerId,
+          workspaceId: input.workspaceId,
+        })
+        if (registrationLink.success && registrationLink.linkUrl) {
+          finalResponse = finalResponse.replace(
+            "[LINK_REGISTRATION_WITH_TOKEN]",
+            registrationLink.linkUrl
+          )
+          logger.info("✅ [ChatEngine] Registration link replaced", {
+            linkUrl: registrationLink.linkUrl,
+          })
+        } else {
+          logger.error("❌ [ChatEngine] Failed to generate registration link")
+        }
+      } catch (error) {
+        logger.error("❌ [ChatEngine] Error replacing registration link:", error)
+      }
+    }
+
     const finalDebugInfo = {
       loadedDataType: "PRODUCT_CONTEXT",
       responseType: "PRODUCT_CONTEXT",
@@ -1161,14 +1208,14 @@ export class ChatEngineService {
       input.customerId,
       conversationId,
       input.message,
-      agentResponse.output,
+      finalResponse,
       AgentType.PRODUCT_SEARCH,
       agentResponse.tokensUsed,
       finalDebugInfo,
     )
 
     return {
-      message: agentResponse.output,
+      message: finalResponse,
       agentType: AgentType.PRODUCT_SEARCH,
       wasHandled: true,
       intent: "PRODUCT_CONTEXT",
@@ -1176,7 +1223,7 @@ export class ChatEngineService {
       source: "LLM_FALLBACK",
       processingTimeMs,
       debugInfo: finalDebugInfo,
-      response: agentResponse.output,
+      response: finalResponse,
       agentUsed: AgentType.PRODUCT_SEARCH,
       tokensUsed: usedTokens,
       executionTimeMs: processingTimeMs,
@@ -1388,6 +1435,34 @@ export class ChatEngineService {
       // STEP 1: Process message through business logic pipeline
       const result = await this.processMessageInternal(input)
     
+      // STEP 1.5: Token Replacement (BEFORE translation)
+      let messageToTranslate = result.message
+      
+      if (messageToTranslate.includes("[LINK_REGISTRATION_WITH_TOKEN]")) {
+        logger.info("🔗 [ChatEngine] Replacing registration token in main pipeline")
+        
+        try {
+          const tokenResponse = await this.callingFunctionsService.getRegistrationLink({
+            workspaceId: input.workspaceId,
+            customerId: input.customerId
+          })
+          
+          if (tokenResponse.success && tokenResponse.linkUrl) {
+            messageToTranslate = messageToTranslate.replace(
+              /\[LINK_REGISTRATION_WITH_TOKEN\]/g,
+              tokenResponse.linkUrl
+            )
+            logger.info("✅ [ChatEngine] Registration link replaced", {
+              url: tokenResponse.linkUrl
+            })
+          } else {
+            logger.error("❌ [ChatEngine] getRegistrationLink failed", tokenResponse.error)
+          }
+        } catch (error) {
+          logger.error("❌ [ChatEngine] Error replacing registration token:", error)
+        }
+      }
+    
       // STEP 2: Apply Translation Layer (SINGLE translation point)
       const debugSteps = result.debugInfo?.steps || []
       const rawTargetLanguage = input.customerLanguage || "it"
@@ -1397,7 +1472,7 @@ export class ChatEngineService {
     
       // Always apply translation layer (even for Italian - ensures consistent flow)
       const translationResult = await this.applyTranslation(
-        result.message,
+        messageToTranslate,
         input.workspaceId,
         normalizedLanguage,  // Pass normalized code (pt, en, es, it) 
         debugSteps,
@@ -1507,6 +1582,7 @@ export class ChatEngineService {
       customerId: input.customerId,
       workspaceId: input.workspaceId,
       messagePreview: input.message.substring(0, 50),
+      isUnregisteredUser: input.isUnregisteredUser,  // 🆕 Feature 204: Log if user is unregistered
     })
 
     try {
@@ -1519,84 +1595,6 @@ export class ChatEngineService {
         sellsProducts: workspaceConfig.sellsProductsAndServices,
         hasSalesAgents: workspaceConfig.hasSalesAgents,
       })
-
-      // ========================================================================
-      // STEP 0.1: Check if first message → Return Welcome Message
-      // ========================================================================
-      // Count previous messages from this customer in this workspace
-      const previousMessageCount = await this.prisma.message.count({
-        where: {
-          chatSession: {
-            customerId: input.customerId,
-            workspaceId: input.workspaceId,
-          },
-          deletedAt: null,
-        },
-      })
-
-      const isFirstMessage = previousMessageCount === 0
-
-      logger.info("👋 [ChatEngine] First message check", {
-        customerId: input.customerId,
-        previousMessageCount,
-        isFirstMessage,
-      })
-
-      // If first message and welcomeMessage is configured, return it directly
-      if (isFirstMessage && workspaceConfig.welcomeMessage) {
-        const welcomeText = typeof workspaceConfig.welcomeMessage === "string"
-          ? workspaceConfig.welcomeMessage
-          : typeof workspaceConfig.welcomeMessage === "object" && workspaceConfig.welcomeMessage?.text
-            ? workspaceConfig.welcomeMessage.text
-            : JSON.stringify(workspaceConfig.welcomeMessage)
-
-        logger.info("👋 [ChatEngine] Returning welcome message for first-time customer", {
-          customerId: input.customerId,
-          workspaceId: input.workspaceId,
-          welcomeMessageLength: welcomeText.length,
-        })
-
-        const conversationId = input.conversationId || `temp-${input.customerId}`
-
-        // Save messages to history
-        const savedMessages = await this.saveMessages(
-          input.workspaceId,
-          input.customerId,
-          conversationId,
-          input.message,
-          welcomeText,
-          "WELCOME",
-          0,
-          {
-            loadedDataType: "WELCOME_MESSAGE",
-            responseType: "WELCOME_MESSAGE",
-            llmUsed: false,
-            steps: [{
-              type: "welcome",
-              agent: "👋 Welcome",
-              timestamp: new Date().toISOString(),
-              input: { textContent: input.message.substring(0, 100) },
-              output: { textContent: "First message - returning configured welcome message" },
-              duration: 0,
-            }],
-            totalTokens: 0,
-            executionTimeMs: Date.now() - startTime,
-          }
-        )
-
-        return {
-          message: welcomeText,
-          agentType: AgentType.ROUTER,
-          wasHandled: true,
-          intent: "GREETING",
-          confidence: "HIGH",
-          source: "PATTERN",
-          processingTimeMs: Date.now() - startTime,
-          tokensUsed: 0,
-          agentUsed: "WELCOME",
-          _assistantMessageId: savedMessages.assistantMessageId,
-        }
-      }
 
       // ========================================================================
       // STEP 0.5: Preprocess short inputs (numbers, yes/no)
@@ -1842,7 +1840,7 @@ export class ChatEngineService {
             input.customerLanguage || "it",
             workspaceConfig,
             undefined, // conversationHistory
-            { customerName: input.customerName, isFirstMessage: history.length === 0 }
+            { customerName: input.customerName, isFirstMessage: history.length === 0, isUnregisteredUser: input.isUnregisteredUser }
           )
           
           const finalMessage = formatterResult.text
@@ -2027,7 +2025,7 @@ export class ChatEngineService {
                 input.customerLanguage || "it",
                 workspaceConfig,
                 undefined,
-                { customerName: input.customerName, isFirstMessage: history.length === 0 }
+                { customerName: input.customerName, isFirstMessage: history.length === 0, isUnregisteredUser: input.isUnregisteredUser }
               )
               let finalMessage = formatterResult.text
               
@@ -2479,7 +2477,7 @@ export class ChatEngineService {
                   input.customerLanguage || "it",
                   workspaceConfig,
                   undefined,
-                  { customerName: input.customerName }
+                  { customerName: input.customerName, isUnregisteredUser: input.isUnregisteredUser }
                 )
                 const formattedText = formatterResult.text
 
@@ -2559,7 +2557,7 @@ export class ChatEngineService {
                   input.customerLanguage || "it",
                   workspaceConfig,
                   undefined,
-                  { customerName: input.customerName }
+                  { customerName: input.customerName, isUnregisteredUser: input.isUnregisteredUser }
                 )
                 const formattedText = formatterResult.text
 
@@ -2805,7 +2803,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
                 input.customerLanguage || "it",
                 workspaceConfig,
                 undefined,
-                { customerName: input.customerName }
+                { customerName: input.customerName, isUnregisteredUser: input.isUnregisteredUser }
               )
               finalMessage = formattedResult.text
               llmUsed = !formattedResult.cached
@@ -4302,7 +4300,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           input.customerLanguage || "it",
           workspaceConfig,
           undefined,
-          { customerName: input.customerName, isFirstMessage: history.length === 0 }
+          { customerName: input.customerName, isFirstMessage: history.length === 0, isUnregisteredUser: input.isUnregisteredUser }
         )
         finalMessage = formatterResult.text
         llmUsed = !formatterResult.cached
@@ -4314,7 +4312,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           input.customerLanguage || "it",
           workspaceConfig,
           undefined,
-          { customerName: input.customerName, isFirstMessage: history.length === 0 }
+          { customerName: input.customerName, isFirstMessage: history.length === 0, isUnregisteredUser: input.isUnregisteredUser }
         )
         finalMessage = formatterResult.text
         llmUsed = !formatterResult.cached
@@ -4452,6 +4450,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         totalTokens,
         totalCost,
         executionTimeMs: processingTimeMs,
+        isUnregisteredUser: input.isUnregisteredUser,  // 🆕 Feature 204: Track if user is unregistered
       }
 
       // ========================================================================

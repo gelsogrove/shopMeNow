@@ -490,6 +490,10 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
     // Additional rules for data preservation
     rules.push(`- ALWAYS preserve: prices (€X.XX), order codes (ORD-xxxxx), product codes, HTML tags (<img>, <b>, etc.)`)
     rules.push(`- ALWAYS preserve: emojis, bullet points, numbered lists formatting`)
+    rules.push(`- 🚨 CRITICAL: Preserve EXACT line breaks. Each bullet point MUST be on a separate line`)
+    rules.push(`- Example: "- Item A\\n- Item B\\n- Item C" must stay on three separate lines, NOT compressed to one line`)
+    rules.push(`- Keep blank lines (empty lines) between sections EXACTLY as they appear`)
+    rules.push(`- When you see multiple lines separated by newlines, keep them separated in translation`)
 
     if (rules.length === 1) {
       // Only generic preservation rule, all translations enabled

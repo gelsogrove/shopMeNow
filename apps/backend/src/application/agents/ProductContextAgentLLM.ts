@@ -44,6 +44,7 @@ export interface ProductContextAgentInput {
   product: ProductContextData
   workspaceInfo?: ProductContextWorkspaceInfo
   conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>
+  isUnregisteredUser?: boolean  // 🆕 Feature 204: Hide prices for unregistered users
 }
 
 export interface ProductContextAgentResponse {
@@ -110,7 +111,9 @@ export class ProductContextAgentLLM {
         throw new Error("Product data is required for ProductContextAgentLLM")
       }
 
-      const template = await this.templateLoader.loadAndRenderTemplate(
+      // 🔧 FIX: Use loadTemplate (no render) to preserve {{#if}} conditionals
+      // The preProcessPrompt will handle variable replacement with correct isUnregisteredUser value
+      const template = await this.templateLoader.loadTemplate(
         "PRODUCT_CONTEXT",
         input.workspaceId
       )
@@ -144,10 +147,21 @@ export class ProductContextAgentLLM {
         address: input.workspaceInfo?.address || "",
       }
 
+      console.log("\n========== PRODUCT CONTEXT AGENT DEBUG ==========");
+      console.log("[ProductContextAgent] isUnregisteredUser INPUT:", input.isUnregisteredUser);
+      console.log("[ProductContextAgent] customerData before preProcess:", {
+        isUnregisteredUser: input.isUnregisteredUser ?? false,
+        customerName: input.customerName
+      });
+      console.log("================================================\n");
+
       const processedPrompt = await this.promptProcessor.preProcessPrompt(
         template,
         input.workspaceId,
-        customerDataForPrompt,
+        {
+          ...customerDataForPrompt,
+          isUnregisteredUser: input.isUnregisteredUser ?? false,  // 🆕 Feature 204
+        },
         {
           faqs: "",
           products: "",

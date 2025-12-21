@@ -366,12 +366,20 @@ export class LLMService {
 
     // 7. Post-processing: Replace link tokens
     const linkReplacements: any[] = []
+    logger.info("🔗 [TOKEN-REPLACE] BEFORE replaceLinkTokens:", {
+      hasRegistrationToken: llmResult.response.includes("[LINK_REGISTRATION_WITH_TOKEN]"),
+      responsePreview: llmResult.response.substring(0, 500)
+    })
     let finalResponse = await this.replaceLinkTokens(
       llmResult.response,
       customer,
       workspace,
       linkReplacements // Pass array to collect replacement info
     )
+    logger.info("🔗 [TOKEN-REPLACE] AFTER replaceLinkTokens:", {
+      hasRegistrationToken: finalResponse.includes("[LINK_REGISTRATION_WITH_TOKEN]"),
+      responsePreview: finalResponse.substring(0, 500)
+    })
     debugInfo.linkReplacements = linkReplacements
 
     // 8. 🔒 TRANSLATION & SECURITY LAYER - Final filter before sending to customer
@@ -578,11 +586,19 @@ export class LLMService {
         "new_user_welcome"
       )
 
-      // 5. Generate registration link
-      const registrationLink = await this.generateRegistrationLink(
-        phone,
-        workspaceId
-      )
+      // 5. Generate registration link using unified service
+      const customerId = "" // Will be resolved by phone number
+      const registrationLinkResult = await this.callingFunctionsService.getRegistrationLink({
+        customerId,
+        workspaceId,
+      })
+
+      if (!registrationLinkResult.success || !registrationLinkResult.linkUrl) {
+        logger.error("❌ Failed to generate registration link", registrationLinkResult.error)
+        throw new Error("Failed to generate registration link")
+      }
+
+      const registrationLink = registrationLinkResult.linkUrl
 
       // 6. Build complete message with link
       const { getRegistrationText } = require("../utils/language-detector")
@@ -744,10 +760,26 @@ export class LLMService {
           }
 
           case "[LINK_REGISTRATION_WITH_TOKEN]": {
-            // TODO: Implementare la logica per il token di registrazione
-            logger.warn(
-              `⚠️ [TOKEN-REPLACE] Token ${token} found but not implemented yet`
+            const registrationLink = await this.callingFunctionsService.getRegistrationLink(
+              {
+                customerId: customer.id,
+                workspaceId: workspace.id,
+              }
             )
+
+            if (registrationLink.success && registrationLink.linkUrl) {
+              finalResponse = finalResponse.replace(
+                token,
+                registrationLink.linkUrl
+              )
+              logger.info(
+                `✅ [TOKEN-REPLACE] Replaced ${token} with: ${registrationLink.linkUrl}`
+              )
+            } else {
+              logger.error(
+                `❌ [TOKEN-REPLACE] Failed to generate registration link`
+              )
+            }
             break
           }
 
@@ -1463,63 +1495,8 @@ export class LLMService {
   }
 
   // Funzione helper per generare il messaggio di benvenuto con link di registrazione
-  private async newUserLink(
-    phone: string,
-    workspaceId: string,
-    welcomeMessage: string
-  ): Promise<string> {
-    const registrationLink = await this.generateRegistrationLink(
-      phone,
-      workspaceId
-    )
-    if (welcomeMessage.includes("[LINK_REGISTRATION_WITH_TOKEN]")) {
-      return welcomeMessage.replace(
-        "[LINK_REGISTRATION_WITH_TOKEN]",
-        registrationLink
-      )
-    } else {
-      return (
-        welcomeMessage + `\nPer registrarti clicca qui: ${registrationLink}`
-      )
-    }
-  }
-  private async generateRegistrationLink(
-    phone: string,
-    workspaceId: string
-  ): Promise<string> {
-    // Crea un token di registrazione e restituisci il link completo
-    const tokenService = new TokenService()
-    const messageRepo =
-      new (require("../repositories/message.repository").MessageRepository)()
-    const token = await tokenService.createRegistrationToken(phone, workspaceId)
-    const workspaceUrl = await messageRepo.getWorkspaceUrl(workspaceId)
-    const registrationLink = `${workspaceUrl.replace(/\/$/, "")}/registration?token=${token}`
-
-    // Create short URL for registration link
-    try {
-      const {
-        URLShortenerService,
-      } = require("../application/services/url-shortener.service")
-      const urlShortenerService = new URLShortenerService()
-
-      const shortResult = await urlShortenerService.createShortUrl(
-        registrationLink,
-        workspaceId
-      )
-      const finalRegistrationLink = `${workspaceUrl.replace(/\/$/, "")}${shortResult.shortUrl}`
-
-      logger.info(
-        `📎 Created short registration link: ${finalRegistrationLink} → ${registrationLink}`
-      )
-      return finalRegistrationLink
-    } catch (shortError) {
-      logger.warn(
-        "⚠️ Failed to create short URL for registration, using long URL:",
-        shortError
-      )
-      return registrationLink
-    }
-  }
+  // ❌ REMOVED: newUserLink - duplicated logic, now centralized in chat-engine.service.ts
+  // ❌ REMOVED: generateRegistrationLink - duplicated logic, use CallingFunctionsService.getRegistrationLink() instead
 
   /**
    * Translate system message (welcome/WIP) through Safety & Translation layer

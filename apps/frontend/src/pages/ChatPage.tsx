@@ -1144,7 +1144,7 @@ export function ChatPage() {
 
       <div className="grid grid-cols-12 gap-4 h-[calc(100vh-12rem)]">
         {/* Chat List - Vertical Sidebar */}
-        <div className="col-span-3 flex flex-col gap-3">
+        <div className="col-span-3 flex flex-col gap-3 min-h-0">
           {/* Channel Logo & Name */}
           <div className="flex items-center gap-3 pb-3 border-b border-gray-200">
             {workspace?.logoUrl ? (
@@ -1209,7 +1209,7 @@ export function ChatPage() {
                 return (
                   <Card
                     key={chat.id}
-                    className={`p-3 cursor-pointer transition-all flex-shrink-0 w-64
+                    className={`p-3 cursor-pointer transition-all flex-shrink-0 w-full
                       ${
                         isSelected
                           ? chat.activeChatbot === false

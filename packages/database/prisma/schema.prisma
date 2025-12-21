@@ -63,6 +63,15 @@ model Workspace {
   catalogBaseLanguage       String            @default("it")   // Base language of catalog (ISO 639-1: "it", "en", "es", "pt", "de", "fr")
   // ============================================================================
   
+  // ============================================================================
+  // 🆕 Feature 204: Unregistered User Flow Messages
+  // Messages shown to users who are not yet registered (isActive=false)
+  // ============================================================================
+  registrationPromptMessage       Json?       // Message when unregistered user tries blocked action (price/cart/order)
+  postRegistrationPendingMessage  Json?       // Message after user registers (waiting for admin activation)
+  userActivatedMessage            Json?       // Message sent via WhatsApp when admin activates user
+  // ============================================================================
+  
   // Team management: ownerId groups all channels belonging to same owner
   ownerId                   String?
   owner                     User?             @relation("OwnedWorkspaces", fields: [ownerId], references: [id])
