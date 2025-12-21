@@ -1810,7 +1810,7 @@ export class ChatEngineService {
             input.customerLanguage || "it",
             workspaceConfig,
             undefined, // conversationHistory
-            { customerName: input.customerName, isFirstMessage: history.length === 0, isUnregisteredUser: input.isUnregisteredUser }
+            { customerName: input.customerName, isFirstMessage: false, isUnregisteredUser: input.isUnregisteredUser } // FAST-PATH: assume not first message
           )
           
           const finalMessage = formatterResult.text
@@ -1995,7 +1995,7 @@ export class ChatEngineService {
                 input.customerLanguage || "it",
                 workspaceConfig,
                 undefined,
-                { customerName: input.customerName, isFirstMessage: history.length === 0, isUnregisteredUser: input.isUnregisteredUser }
+                { customerName: input.customerName, isFirstMessage: false, isUnregisteredUser: input.isUnregisteredUser } // FAST-PATH: assume not first message
               )
               let finalMessage = formatterResult.text
               

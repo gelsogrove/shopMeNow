@@ -253,12 +253,20 @@ export class ConversationHistoryLayer {
     template: string,
     input: ConversationHistoryLayerInput
   ): string {
+    const registrationStatus = input.isUnregisteredUser ? "❌ NON REGISTRATO" : "✅ REGISTRATO"
+    const priceVisibilityRule = input.isUnregisteredUser 
+      ? "L'utente NON è registrato. RIMUOVI TUTTI I PREZZI (€X.XX) e sostituiscili con: 🔒 Prezzo riservato"
+      : "L'utente è registrato. Mostra normalmente i prezzi."
+    
     return template
-      .replace(/\{\{botName\}\}/g, input.botIdentity.name || "Assistente")
+      .replace(/\{\{botName\}\}/g, input.chatbotName || input.botIdentity.name || "Assistente")
       .replace(/\{\{botIdentity\}\}/g, input.botIdentity.personality || "Sii amichevole e professionale")
+      .replace(/\{\{businessType\}\}/g, input.businessType || "Non specificato")
       .replace(/\{\{customAiRules\}\}/g, input.customAiRules || "Nessuna regola specifica")
       .replace(/\{\{customerName\}\}/g, input.customerName || "Cliente")
       .replace(/\{\{customerPersonality\}\}/g, input.customerPersonality || "Tono neutrale e rispettoso")
+      .replace(/\{\{registrationStatus\}\}/g, registrationStatus)
+      .replace(/\{\{priceVisibilityRule\}\}/g, priceVisibilityRule)
   }
 
   /**

@@ -211,7 +211,7 @@ continue
 - MUST filter all queries by workspaceId
 - ProductSearchAgent MUST use `{{PRODUCTS}}` variable (NO searchProducts function)
 - Response MUST be in English for Safety layer processing
-- Use `[LINK_xxx]` tokens instead of real URLs
+- Use `[LINK_PROFILE_WITH_TOKEN]` token instead of real URLs
 
 **🚨 CRITICAL: contactSupport() Chatbot Disable Behavior**:
 
@@ -247,7 +247,7 @@ When CustomerSupportAgent calls `contactSupport()`:
 **Acceptance Criteria**:
 
 - NEVER generate real URLs in agent response
-- ALWAYS use `[LINK_xxx]` token placeholders
+- ALWAYS use `[LINK_PROFILE_WITH_TOKEN]` token placeholders
 - Tokens replaced AFTER Safety layer
 
 ### FR-6: Secure Token Generation

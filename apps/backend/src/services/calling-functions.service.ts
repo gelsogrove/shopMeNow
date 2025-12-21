@@ -541,7 +541,7 @@ export class CallingFunctionsService {
   }
 
   /**
-   * Replace `[LINK_*_WITH_TOKEN]` placeholders with generated links
+   * Replace `[LINK_PROFILE_WITH_TOKEN]` placeholders with generated links
    */
   public async replaceLinkWithToken(
     response: string,

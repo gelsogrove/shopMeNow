@@ -108,11 +108,57 @@ export function MessageRenderer({
       const parts = fixedText.split(/<img[^>]+>/)
       const titlePart = parts[0]?.trim() || ''
       const detailsPart = parts[1]?.trim() || ''
-      
-      // Extract title (first line before colon or first sentence)
-      const titleMatch = titlePart.match(/^([^:]+)/)
-      const title = titleMatch ? titleMatch[1].trim() : imgAlt
-      const description = titlePart.replace(title, '').replace(/^:\s*/, '').trim()
+
+      // Extract title and description respecting explicit line breaks first
+      const normalizedTitlePart = titlePart.trim()
+      const [rawTitleLine = "", ...restDescription] = normalizedTitlePart.split(/\r?\n+/)
+
+      const stripMarkdown = (text: string) => text.replace(/\*\*/g, "").trim()
+
+      // Display title prefers original product name (img alt) but falls back to text line
+      let title = stripMarkdown(imgAlt || rawTitleLine || "")
+      if (!title) {
+        title = "Prodotto"
+      }
+
+      let description = stripMarkdown(restDescription.join("\n").trim())
+
+      // Fallback to colon-based split if translation merged everything
+      if (!description && rawTitleLine.includes(":")) {
+        const [beforeColon, ...afterColon] = rawTitleLine.split(":")
+        description = stripMarkdown(afterColon.join(":").trim())
+      }
+
+      // Final fallback: remove first line text from the block and treat the rest as description
+      if (!description && rawTitleLine) {
+        const remaining = normalizedTitlePart.slice(rawTitleLine.length).trim()
+        description = stripMarkdown(remaining)
+      }
+
+      // If translation removed line breaks from bullet list, restore them
+      let normalizedDetails = detailsPart
+      const hasExplicitBreaks = /\r?\n/.test(normalizedDetails)
+      if (!hasExplicitBreaks) {
+        const bulletSplit = normalizedDetails.split(/\s+(?=-\s)/)
+        if (bulletSplit.length > 1) {
+          normalizedDetails = bulletSplit.join("\n")
+        }
+      }
+
+      // Force CTA and link to start on new paragraphs
+      normalizedDetails = normalizedDetails.replace(/\s*(🔐)/g, "\n\n$1")
+      normalizedDetails = normalizedDetails.replace(/\s*(https?:\/\/[^\s<]+)/g, "\n\n$1")
+      normalizedDetails = normalizedDetails.replace(/\s*(\[LINK_[^\]]+\])/g, "\n\n$1")
+
+      const urlRegex = /(https?:\/\/[^\s<]+)/g
+      const detailsHtml = normalizedDetails
+        .replace(/\n/g, "<br>")
+        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+        .replace(urlRegex, (url) => {
+          const safeUrl = DOMPurify.sanitize(url, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] })
+          return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline">${safeUrl}</a>`
+        })
+        .replace(/\*(.*?)\*/g, "<em>$1</em>")
       
       return (
         <div className={`flex gap-3 p-2 ${baseClasses} ${variantClasses[variant]}`} style={{ whiteSpace: "pre-wrap" }}>
@@ -127,19 +173,18 @@ export function MessageRenderer({
           {/* Content on right */}
           <div className="flex-1 min-w-0">
             {/* Title on top */}
-            <div className="font-medium mb-1">{title}</div>
+            <div className="font-semibold">{title}</div>
+            <div className="h-2" />
             {/* Description */}
             {description && (
-              <div className="mb-2 line-clamp-2">{description}</div>
+              <div className="mb-2 whitespace-pre-line">{description}</div>
             )}
             {/* Details */}
             <div 
               dangerouslySetInnerHTML={{ 
                 __html: DOMPurify.sanitize(
-                  detailsPart
-                    .replace(/\n/g, "<br>")
-                    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>"),
-                  { ALLOWED_TAGS: ["strong", "em", "br", "b"] }
+                  detailsHtml,
+                  { ALLOWED_TAGS: ["strong", "em", "br", "b", "a"], ALLOWED_ATTR: ["href", "target", "rel", "class"] }
                 )
               }}
             />

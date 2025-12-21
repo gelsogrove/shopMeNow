@@ -75,6 +75,9 @@ export interface ConversationHistoryLayerInput {
   customerId: string
   customerName: string
   customerPersonality: string | null // 🆕 Tono/personalità del cliente (detected or set manually)
+  chatbotName?: string // 🆕 Nome personalizzato del chatbot (es. "Sofia", "Marco")
+  businessType?: string | null // 🆕 Settore business per contesto LLM
+  isUnregisteredUser?: boolean // 🆕 Feature 204: Se true, nasconde prezzi
   conversationHistory: ConversationMessage[]
   currentQuestion: string
 

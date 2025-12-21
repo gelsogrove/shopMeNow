@@ -627,10 +627,11 @@ export class LLMFormatterService {
     const detailLines: string[] = []
 
     // Descrizione discorsiva del prodotto
+    detailLines.push(product.name.toUpperCase())
+    detailLines.push("")
     if (product.description) {
-      detailLines.push(`${product.name}: ${product.description}`)
-    } else {
-      detailLines.push(`${product.name}`)
+      detailLines.push(product.description)
+      detailLines.push("")
     }
 
     // Immagine con URL completo
@@ -660,26 +661,30 @@ export class LLMFormatterService {
     }
 
     // Stock instead of availability
-    const stockValue = product.stock !== undefined ? product.stock : (product.isAvailable ? "disponibile" : "esaurito")
-    detailLines.push(`- Stock: ${stockValue}`)
+    if (!isUnregistered) {
+      const stockValue = product.stock !== undefined ? product.stock : (product.isAvailable ? "disponibile" : "esaurito")
+      detailLines.push(`- Stock: ${stockValue}`)
+    }
+    detailLines.push("")
     detailLines.push("")
 
     // 🔐 Feature 204: Differenzia tra utenti registrati e non
     if (isUnregistered) {
       // UTENTE NON REGISTRATO: No prezzo, no carrello, link registrazione
-      detailLines.push("🔓 Registrati per vedere i prezzi a te riservati e ricevere le nostre migliori offerte:")
+      detailLines.push("🔐 Devi completare il profilo per vedere i prezzi e ricevere offerte riservate.")
       detailLines.push("")
       detailLines.push("[LINK_PROFILE_WITH_TOKEN]")
+      detailLines.push("")
     } else {
       // UTENTE REGISTRATO: Mostra prezzo e prompt carrello
-      detailLines.push(`💰 <b>Prezzo: ${formatDisplayPrice(displayPrice)} Euro</b>`)
+      detailLines.push(`💰 Prezzo: ${formatDisplayPrice(displayPrice)} Euro`)
       detailLines.push("")
-      detailLines.push(`Vuoi aggiungerlo al carrello? Se sì puoi indicare la quantità? (es. <b>Sì, 2</b>)`)
+      detailLines.push(`Vuoi aggiungerlo al carrello? Se sì puoi indicare la quantità? (es. "Sì, 2")`)
       detailLines.push("")
       detailLines.push(`oppure`)
       detailLines.push("")
-      detailLines.push(`**1.** Esplora il catalogo`)
-      detailLines.push(`**2.** Mostrami il carrello`)
+      detailLines.push(`1. Esplora il catalogo`)
+      detailLines.push(`2. Mostrami il carrello`)
       detailLines.push("")
       detailLines.push(`o scrivi quello che stai cercando!`)
     }

@@ -753,6 +753,8 @@ export class LLMRouterService {
           sellsProductsAndServices: true, // 🆕 Dynamic function routing
           address: true, // 🆕 Location info for "where are you?" questions
           customAiRules: true, // 🆕 Custom AI rules that override defaults
+          chatbotName: true, // 🆕 Custom chatbot name (e.g., "Sofia", "Marco")
+          businessType: true, // 🆕 Business sector for LLM context
         },
       })
 
@@ -1268,6 +1270,9 @@ export class LLMRouterService {
         customerId: params.customerId,
         customerName: params.customerName || "Cliente",
         customerPersonality: customer.personality || null, // 🆕 Pass customer tone/personality
+        chatbotName: workspace.chatbotName || workspace.name, // 🆕 Bot name
+        businessType: workspace.businessType || null, // 🆕 Business sector
+        isUnregisteredUser: params.isUnregisteredUser || false, // 🆕 Feature 204: Hide prices for unregistered
         conversationHistory: historyForLayer,
         currentQuestion: params.message,
         technicalResponse: {
@@ -1276,7 +1281,7 @@ export class LLMRouterService {
           optionsMapping: explicitOptionMapping || undefined,
         },
         botIdentity: {
-          name: workspace?.name || "Assistente",
+          name: workspace?.chatbotName || workspace?.name || "Assistente", // 🆕 Use chatbotName first
           personality: workspace?.botIdentityResponse || null,
         },
         customAiRules: workspace?.customAiRules || null,

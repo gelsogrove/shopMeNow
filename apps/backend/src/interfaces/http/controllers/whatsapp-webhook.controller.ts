@@ -1022,6 +1022,16 @@ export class WhatsAppWebhookController {
       })
 
       const chatEngine = getChatEngine(prisma)
+      
+      // 🔍 DEBUG: Verify isUnregisteredUser flag
+      const isUnregisteredUser = !customer.isActive
+      logger.info("[WEBHOOK] 🔍 Customer registration status", {
+        customerId: customer.id,
+        customerIsActive: customer.isActive,
+        isUnregisteredUser,
+        willHidePrices: isUnregisteredUser,
+      })
+      
       const routerResult = await chatEngine.routeMessage({
         workspaceId: customer.workspaceId,
         customerId: customer.id,
@@ -1030,7 +1040,7 @@ export class WhatsAppWebhookController {
         customerLanguage: customer.language || "it",
         customerName: customer.name,
         customerDiscount: customer.discount || 0, // 💰 Pass customer discount
-        isUnregisteredUser: !customer.isActive, // 🆕 Feature 204: Utenti non registrati (isActive=false)
+        isUnregisteredUser, // 🆕 Feature 204: Utenti non registrati (isActive=false)
       })
 
       logger.info("[WEBHOOK] ✅ ChatEngineService completed", {
