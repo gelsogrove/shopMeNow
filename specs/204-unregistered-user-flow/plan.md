@@ -161,7 +161,7 @@ if (isUnregisteredUser && REGISTRATION_REQUIRED_INTENTS.has(intent.type)) {
     type: "REGISTRATION_REQUIRED",
     data: {
       attemptedIntent: intent.type,
-      registrationLink: await this.getRegistrationLink(workspaceId),
+      registrationLink: await this.getProfileLink(workspaceId),
     },
   }
 }

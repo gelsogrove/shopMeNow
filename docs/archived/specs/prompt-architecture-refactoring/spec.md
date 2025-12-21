@@ -206,7 +206,7 @@ SAFETY & TRANSLATION (1,500 tokens):  ✅ Security + i18n
 - [ ] CartAgent does NOT call ProductSearch functions
 - [ ] "cancella carrello" → immediately calls clearCart() (no "sei sicuro?")
 - [ ] Receives format: "add PROD-123 qty 2" or "add SRV-001 qty 1"
-- [ ] Returns: Cart link [LINK_CHECKOUT_WITH_TOKEN] after successful add
+- [ ] Returns: Cart link (secure URL) after successful add
 
 **Edge Cases**:
 

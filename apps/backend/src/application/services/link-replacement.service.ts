@@ -4,7 +4,7 @@
  * Application Service Layer - Clean Architecture
  *
  * Handles replacement of token placeholders with actual generated links.
- * Supports cart, profile, orders, tracking, and checkout links with URL shortening.
+ * Currently supports only profile links (registration/edit).
  *
  * This is a utility service, NOT a calling function for LLM.
  */
@@ -18,7 +18,6 @@ export interface ReplaceLinkWithTokenParams {
   response: string
   linkType?: "cart" | "profile" | "orders" | "tracking" | "checkout" | "auto"
   context?: "offers" | "services" | "auto"
-  orderCode?: string
 }
 
 export interface ReplaceLinkWithTokenResult {
@@ -81,35 +80,10 @@ export class LinkReplacementService {
         }
       })
 
-      const wrongCartPatterns = [
-        /\[link carrello\]/gi,
-        /\[link cart\]/gi,
-        /\[carrello link\]/gi,
-        /\[cart link\]/gi,
-        /link carrello/gi,
-        /link cart/gi,
-      ]
-      wrongCartPatterns.forEach(pattern => {
-        if (pattern.test(response)) {
-          logger.warn(`⚠️ Found wrong cart token pattern, normalizing to [LINK_CHECKOUT_WITH_TOKEN]`)
-          response = response.replace(pattern, "[LINK_CHECKOUT_WITH_TOKEN]")
-        }
-      })
-
       // Active tokens only (deprecated tokens removed)
       // Support both plain [TOKEN] and Markdown (TOKEN) formats
-      const hasCartToken = response.includes("LINK_CHECKOUT_WITH_TOKEN")
       const hasProfileToken = response.includes("LINK_PROFILE_WITH_TOKEN")
-      const hasRegistrationToken = response.includes(
-        "LINK_REGISTRATION_WITH_TOKEN"
-      )
-      const hasOrderToken = response.includes("LINK_ORDER_WITH_TOKEN")
-      if (
-        !hasCartToken &&
-        !hasOrderToken &&
-        !hasRegistrationToken &&
-        !hasProfileToken
-      ) {
+      if (!hasProfileToken) {
         return {
           success: false,
           error: "Response does not contain any replaceable tokens",
@@ -124,71 +98,6 @@ export class LinkReplacementService {
       }
 
       let replacedResponse = response
-
-      // Handle cart token
-      if (hasCartToken) {
-        try {
-          const {
-            SecureTokenService,
-          } = require("../../application/services/secure-token.service")
-          const secureTokenService = new SecureTokenService()
-
-          const cartToken = await secureTokenService.createToken(
-            "cart",
-            workspaceId,
-            { customerId, workspaceId },
-            undefined, // Uses TOKEN_EXPIRATION from env
-            undefined,
-            undefined,
-            undefined,
-            customerId
-          )
-
-          // Use centralized link generator for cart (which is actually checkout)
-          const finalCartLink = await linkGeneratorService.generateCheckoutLink(
-            cartToken,
-            workspaceId
-          )
-
-          // Smart replace: handle multiple formats
-          // 1. Markdown with square brackets + trailing punctuation: [text]([LINK_CHECKOUT_WITH_TOKEN]).
-          replacedResponse = replacedResponse.replace(
-            /\[([^\]]+)\]\(\[LINK_CHECKOUT_WITH_TOKEN\]\)([\.!?,;:]?)/g,
-            (match, text, punctuation) =>
-              `[${text}](${finalCartLink})${punctuation}`
-          )
-
-          // 2. Markdown WITHOUT square brackets + trailing punctuation: [text](LINK_CHECKOUT_WITH_TOKEN).
-          replacedResponse = replacedResponse.replace(
-            /\[([^\]]+)\]\(LINK_CHECKOUT_WITH_TOKEN\)([\.!?,;:]?)/g,
-            (match, text, punctuation) =>
-              `[${text}](${finalCartLink})${punctuation}`
-          )
-
-          // 3. Plain token with optional punctuation: [LINK_CHECKOUT_WITH_TOKEN]
-          replacedResponse = replacedResponse.replace(
-            /\[LINK_CHECKOUT_WITH_TOKEN\]([\)\.]?[\.!?,]?)/g,
-            (match, suffix) => {
-              const cleanSuffix = suffix.replace(/\)/g, "")
-              return cleanSuffix
-                ? `${finalCartLink}${cleanSuffix}`
-                : finalCartLink
-            }
-          )
-
-          // 4. Bare token: LINK_CHECKOUT_WITH_TOKEN
-          replacedResponse = replacedResponse.replace(
-            /LINK_CHECKOUT_WITH_TOKEN/g,
-            finalCartLink
-          )
-        } catch (error) {
-          logger.error("❌ Error generating cart link:", error)
-          replacedResponse = replacedResponse.replace(
-            /\[LINK_CHECKOUT_WITH_TOKEN\]/g,
-            "Link del carrello non disponibile"
-          )
-        }
-      }
 
       // Handle profile token
       if (hasProfileToken) {
@@ -252,126 +161,6 @@ export class LinkReplacementService {
           replacedResponse = replacedResponse.replace(
             /\[LINK_PROFILE_WITH_TOKEN\]/g,
             "Link del profilo non disponibile"
-          )
-        }
-      }
-
-      // Handle registration token
-      if (hasRegistrationToken) {
-        try {
-          const {
-            SecureTokenService,
-          } = require("../../application/services/secure-token.service")
-          const secureTokenService = new SecureTokenService()
-
-          const registrationToken = await secureTokenService.createToken(
-            "registration",
-            workspaceId,
-            { customerId, workspaceId },
-            undefined,
-            undefined,
-            undefined,
-            undefined,
-            customerId
-          )
-
-          const finalRegistrationLink =
-            await linkGeneratorService.generateRegistrationLink(
-              registrationToken,
-              workspaceId
-            )
-
-          replacedResponse = replacedResponse.replace(
-            /\[([^\]]+)\]\(\[LINK_REGISTRATION_WITH_TOKEN\]\)([\.!?,;:]?)/g,
-            (match, text, punctuation) =>
-              `[${text}](${finalRegistrationLink})${punctuation}`
-          )
-
-          replacedResponse = replacedResponse.replace(
-            /\[([^\]]+)\]\(LINK_REGISTRATION_WITH_TOKEN\)([\.!?,;:]?)/g,
-            (match, text, punctuation) =>
-              `[${text}](${finalRegistrationLink})${punctuation}`
-          )
-
-          replacedResponse = replacedResponse.replace(
-            /\[LINK_REGISTRATION_WITH_TOKEN\]([\)\.]?[\.!?,]?)/g,
-            (match, suffix) => {
-              const cleanSuffix = suffix.replace(/\)/g, "")
-              return cleanSuffix
-                ? `${finalRegistrationLink}${cleanSuffix}`
-                : finalRegistrationLink
-            }
-          )
-
-          replacedResponse = replacedResponse.replace(
-            /LINK_REGISTRATION_WITH_TOKEN/g,
-            finalRegistrationLink
-          )
-        } catch (error) {
-          logger.error("❌ Error generating registration link:", error)
-          replacedResponse = replacedResponse.replace(
-            /\[LINK_REGISTRATION_WITH_TOKEN\]/g,
-            "Link di registrazione non disponibile"
-          )
-        }
-      }
-
-      // Handle order token
-      if (hasOrderToken) {
-        try {
-          const {
-            SecureTokenService,
-          } = require("../../application/services/secure-token.service")
-          const secureTokenService = new SecureTokenService()
-
-          const orderToken = await secureTokenService.createToken(
-            "orders",
-            workspaceId,
-            { customerId, workspaceId },
-            undefined,
-            undefined,
-            undefined,
-            undefined,
-            customerId
-          )
-
-          const finalOrderLink = await linkGeneratorService.generateOrdersLink(
-            orderToken,
-            workspaceId,
-            params.orderCode
-          )
-
-          replacedResponse = replacedResponse.replace(
-            /\[([^\]]+)\]\(\[LINK_ORDER_WITH_TOKEN\]\)([\.!?,;:]?)/g,
-            (match, text, punctuation) =>
-              `[${text}](${finalOrderLink})${punctuation}`
-          )
-
-          replacedResponse = replacedResponse.replace(
-            /\[([^\]]+)\]\(LINK_ORDER_WITH_TOKEN\)([\.!?,;:]?)/g,
-            (match, text, punctuation) =>
-              `[${text}](${finalOrderLink})${punctuation}`
-          )
-
-          replacedResponse = replacedResponse.replace(
-            /\[LINK_ORDER_WITH_TOKEN\]([\)\.]?[\.!?,]?)/g,
-            (match, suffix) => {
-              const cleanSuffix = suffix.replace(/\)/g, "")
-              return cleanSuffix
-                ? `${finalOrderLink}${cleanSuffix}`
-                : finalOrderLink
-            }
-          )
-
-          replacedResponse = replacedResponse.replace(
-            /LINK_ORDER_WITH_TOKEN/g,
-            finalOrderLink
-          )
-        } catch (error) {
-          logger.error("❌ Error generating order link:", error)
-          replacedResponse = replacedResponse.replace(
-            /\[LINK_ORDER_WITH_TOKEN\]/g,
-            "Link ordine non disponibile"
           )
         }
       }

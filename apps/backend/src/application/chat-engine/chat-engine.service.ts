@@ -1162,21 +1162,17 @@ export class ChatEngineService {
     const usedTokens = agentResponse.tokensUsed || 0
 
     let finalResponse = agentResponse.output
-    const productContextOrderCode = this.detectSingleOrderCode(finalResponse)
     const productContextTokens =
       await this.linkReplacementService.replaceTokens(
         {
           response: finalResponse,
-          orderCode: productContextOrderCode,
         },
         input.customerId,
         input.workspaceId
       )
     if (productContextTokens.success && productContextTokens.response) {
       finalResponse = productContextTokens.response
-      logger.info("✅ [ChatEngine] Token replacement completed for product context", {
-        orderCode: productContextOrderCode,
-      })
+      logger.info("✅ [ChatEngine] Token replacement completed for product context")
     }
 
     const finalDebugInfo = {
@@ -1352,14 +1348,6 @@ export class ChatEngineService {
     return supportedIntents.has(intent.type)
   }
 
-  private detectSingleOrderCode(text: string): string | undefined {
-    if (!text) {
-      return undefined
-    }
-    const matches = text.match(/ORD-[0-9-]+/g) || []
-    return matches.length === 1 ? matches[0] : undefined
-  }
-
   /**
    * Normalize language code from DB format (ITA, ENG, PRT) to ISO format (it, en, pt)
    * This is critical to avoid translating Italian to Italian when DB has "ITA"
@@ -1432,21 +1420,17 @@ export class ChatEngineService {
       // STEP 1.5: Token Replacement (BEFORE translation)
       let messageToTranslate = result.message
 
-      const orderCode = this.detectSingleOrderCode(messageToTranslate)
       const pipelineReplacement =
         await this.linkReplacementService.replaceTokens(
           {
             response: messageToTranslate,
-            orderCode,
           },
           input.customerId,
           input.workspaceId
         )
       if (pipelineReplacement.success && pipelineReplacement.response) {
         messageToTranslate = pipelineReplacement.response
-        logger.info("✅ [ChatEngine] Token replacement completed before translation", {
-          orderCodeUsed: orderCode,
-        })
+        logger.info("✅ [ChatEngine] Token replacement completed before translation")
       }
     
       // STEP 2: Apply Translation Layer (SINGLE translation point)

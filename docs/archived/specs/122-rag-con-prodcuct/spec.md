@@ -191,13 +191,13 @@ continue
 #### Cart Management Agent (order: 3)
 
 - **Calling Functions**: `addToCart`, `viewCart`, `clearCart`
-- **Link Generation**: Generates `[LINK_CHECKOUT_WITH_TOKEN]` tokens
+- **Link Generation**: (legacy token removed, link gestito direttamente)
 - **Temperature**: 0.3, Max Tokens: 1024
 
 #### Order Tracking Agent (order: 4)
 
 - **Calling Functions**: `getOrderHistory`, `getLastOrders`, `getOrderDetails`, `trackOrderStatus`, `sendInvoice`, `repeatLastOrder`
-- **Link Generation**: Generates `[LINK_ORDER_WITH_TOKEN]` tokens
+- **Link Generation**: (legacy external links removed; responses stay in-chat)
 - **Temperature**: 0.3, Max Tokens: 1024
 
 #### Customer Support Agent (order: 5)
@@ -236,16 +236,12 @@ When CustomerSupportAgent calls `contactSupport()`:
 
 **Available Tokens**:
 
-- `[LINK_CHECKOUT_WITH_TOKEN]` → Secure cart checkout link
-- `[LINK_PROFILE_WITH_TOKEN]` → Customer profile edit link
-- `[LINK_ORDER_WITH_TOKEN]` → Order details link
-- `[LINK_CATALOG]` → Product catalog link
-- `[LINK_REGISTRATION_WITH_TOKEN]` → New customer registration
+- `[LINK_PROFILE_WITH_TOKEN]` → Customer profile edit / registration link
 
 **Process**:
 
-1. Agent determines link is needed (e.g., cart checkout)
-2. Agent includes `[LINK_CHECKOUT_WITH_TOKEN]` or `[LINK_ORDER_WITH_TOKEN]` in response
+1. Agent determines link is needed (e.g., profilo/registrazione)
+2. Agent includes `[LINK_PROFILE_WITH_TOKEN]` in response
 3. LinkReplacementService replaces tokens LATER (after Safety layer)
 
 **Acceptance Criteria**:
@@ -553,8 +549,8 @@ When CustomerSupportAgent calls `contactSupport()`:
 - Customer sends message "Vedi il mio carrello"
 - Router delegates to CartManagementAgent
 - Agent calls `viewCart` function
-- Agent generates `[LINK_CHECKOUT_WITH_TOKEN]` token
-- LinkReplacementService replaces with secure URL
+- Agent include il link sicuro al carrello (generato dal backend)
+- Il sistema sostituisce il placeholder con l'URL finale
 - Customer receives message with cart items and checkout link
 
 ### US-3: Customer Tracks Order

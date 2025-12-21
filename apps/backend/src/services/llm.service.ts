@@ -370,7 +370,7 @@ export class LLMService {
     // 7. Post-processing: Replace link tokens
     const linkReplacements: any[] = []
     logger.info("🔗 [TOKEN-REPLACE] BEFORE replaceLinkTokens:", {
-      hasRegistrationToken: llmResult.response.includes("[LINK_REGISTRATION_WITH_TOKEN]"),
+      hasProfileToken: llmResult.response.includes("[LINK_PROFILE_WITH_TOKEN]"),
       responsePreview: llmResult.response.substring(0, 500)
     })
     let finalResponse = await this.replaceLinkTokens(
@@ -380,7 +380,7 @@ export class LLMService {
       linkReplacements // Pass array to collect replacement info
     )
     logger.info("🔗 [TOKEN-REPLACE] AFTER replaceLinkTokens:", {
-      hasRegistrationToken: finalResponse.includes("[LINK_REGISTRATION_WITH_TOKEN]"),
+      hasProfileToken: finalResponse.includes("[LINK_PROFILE_WITH_TOKEN]"),
       responsePreview: finalResponse.substring(0, 500)
     })
     debugInfo.linkReplacements = linkReplacements
@@ -671,32 +671,13 @@ export class LLMService {
       }
     })
 
-    const wrongCartPatterns = [
-      /\[link carrello\]/gi,
-      /\[link cart\]/gi,
-      /link carrello(?!\w)/gi,
-    ]
-    wrongCartPatterns.forEach(pattern => {
-      if (pattern.test(finalResponse)) {
-        logger.warn(
-          `⚠️ LLM wrote wrong cart token, normalizing to [LINK_CHECKOUT_WITH_TOKEN]`
-        )
-        finalResponse = finalResponse.replace(
-          pattern,
-          "[LINK_CHECKOUT_WITH_TOKEN]"
-        )
-      }
-    })
-
     const detectedTokens =
       finalResponse.match(/\[LINK_[A-Z_]+\]/g) || []
     if (detectedTokens.length > 0) {
-      const orderCode = this.detectSingleOrderCode(finalResponse)
       try {
         const replacementResult = await this.linkReplacementService.replaceTokens(
           {
             response: finalResponse,
-            orderCode,
           },
           customer.id,
           workspace.id
@@ -710,7 +691,6 @@ export class LLMService {
             timestamp: new Date().toISOString(),
             metadata: {
               tokensDetected: [...new Set(detectedTokens)],
-              orderCodeUsed: orderCode || null,
             },
           })
         } else {
@@ -727,83 +707,7 @@ export class LLMService {
     // 🚨 AUTO-FIX: Replace hardcoded links with proper tokens (LAST STEP)
     const workspaceUrl = workspace.url || "http://localhost:3000"
 
-    // Pattern 1: /orders (without token) -> generate proper link with token
-    const ordersPattern = new RegExp(
-      `${workspaceUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/orders(?![\\-/])`,
-      "g"
-    )
-
-    if (ordersPattern.test(finalResponse)) {
-      logger.warn(
-        `⚠️ AUTO-FIX: LLM generated hardcoded /orders link, replacing with token-based link`
-      )
-
-      // Generate proper orders link with token
-      const ordersLink = await this.callingFunctionsService.getOrdersListLink({
-        customerId: customer.id,
-        workspaceId: workspace.id,
-      })
-
-      const properOrdersLink = ordersLink?.linkUrl || ""
-
-      // Replace the hardcoded link
-      finalResponse = finalResponse.replace(ordersPattern, properOrdersLink)
-
-      linkReplacements.push({
-        token: "[AUTO-FIX: hardcoded /orders]",
-        replacedWith: properOrdersLink,
-        tokenGenerated: ordersLink?.token || "N/A",
-        shortUrlCreated: properOrdersLink.includes("/s/"),
-        timestamp: new Date().toISOString(),
-        autoFixed: true,
-      })
-
-      logger.info(
-        `✅ AUTO-FIX: Replaced hardcoded /orders link with: ${properOrdersLink}`
-      )
-    }
-
-    // Pattern 2: /checkout (without token) -> generate proper link with token
-    const checkoutPattern = new RegExp(
-      `${workspaceUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/checkout(?![\\-/])`,
-      "g"
-    )
-    if (checkoutPattern.test(finalResponse)) {
-      logger.warn(
-        `⚠️ AUTO-FIX: LLM generated hardcoded /checkout link, replacing with token-based link`
-      )
-
-      const checkoutLink = await this.callingFunctionsService.getCartLink({
-        customerId: customer.id,
-        workspaceId: workspace.id,
-      })
-
-      const properCheckoutLink = checkoutLink?.linkUrl || ""
-      finalResponse = finalResponse.replace(checkoutPattern, properCheckoutLink)
-
-      linkReplacements.push({
-        token: "[AUTO-FIX: hardcoded /checkout]",
-        replacedWith: properCheckoutLink,
-        tokenGenerated: checkoutLink?.token || "N/A",
-        shortUrlCreated: properCheckoutLink.includes("/s/"),
-        timestamp: new Date().toISOString(),
-        autoFixed: true,
-      })
-
-      logger.info(
-        `✅ AUTO-FIX: Replaced hardcoded /checkout link with: ${properCheckoutLink}`
-      )
-    }
-
     return finalResponse
-  }
-
-  private detectSingleOrderCode(text: string): string | undefined {
-    if (!text) {
-      return undefined
-    }
-    const matches = text.match(/ORD-[0-9-]+/g) || []
-    return matches.length === 1 ? matches[0] : undefined
   }
 
   private getAvailableFunctions() {
@@ -1258,7 +1162,7 @@ export class LLMService {
           }
         )
 
-        // 🔗 Replace link tokens in CF response (e.g., [LINK_CHECKOUT_WITH_TOKEN])
+        // 🔗 Replace link tokens in CF response (e.g., [LINK_PROFILE_WITH_TOKEN])
         const linkReplacements: any[] = []
         const finalFunctionResponse = await this.replaceLinkTokens(
           processedFunctionResponse,

@@ -387,15 +387,11 @@ flows:
             - "LinkReplacementService replaces tokens LATER (Step 5)"
 
           available_tokens:
-            - "[LINK_CHECKOUT_WITH_TOKEN] → Secure cart checkout link"
-            - "[LINK_PROFILE_WITH_TOKEN] → Customer profile edit link"
-            - "[LINK_ORDER_WITH_TOKEN] → Order details link"
-            - "[LINK_CATALOG] → Product catalog link"
-            - "[LINK_REGISTRATION_WITH_TOKEN] → New customer registration"
+            - "[LINK_PROFILE_WITH_TOKEN] → Customer profile edit / registration link"
 
           rules:
             - "NEVER generate real URLs in agent response"
-            - "ALWAYS use [LINK_xxx] token placeholders"
+            - "ALWAYS use [LINK_PROFILE_WITH_TOKEN] when serve external form"
             - "Tokens replaced AFTER Safety layer"
 
         output:

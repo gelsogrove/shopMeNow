@@ -528,7 +528,7 @@ npm run build
 
 **Sub-Steps**:
 
-1. **Link Token Replacement**: Replace supported link placeholders (e.g., `[LINK_CHECKOUT_WITH_TOKEN]`) with actual URLs (JWT-secured)
+1. **Link Token Replacement**: Replace supported link placeholders (e.g., `[LINK_PROFILE_WITH_TOKEN]`) with actual URLs (JWT-secured)
 2. **Customer Variables**: Replace `{{nameUser}}`, `{{discountUser}}`, etc. with database values
 3. **Duration Tokens**: Replace `{{TOKEN_DURATION}}` with formatted expiration time
 
@@ -537,7 +537,7 @@ npm run build
 **Example**:
 ```
 
-INPUT: "Hi {{nameUser}}, you have {{discountUser}}% off! Link: [LINK_CHECKOUT_WITH_TOKEN]"
+INPUT: "Hi {{nameUser}}, you have {{discountUser}}% off! Link: [LINK_PROFILE_WITH_TOKEN]"
 OUTPUT: "Hi Mario Rossi, you have 15% off! Link: http://localhost:3000/s/abc123"
 
 ```

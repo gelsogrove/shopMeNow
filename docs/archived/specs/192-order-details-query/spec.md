@@ -161,7 +161,7 @@ As a customer, I want to download invoice, transport document (DDT), or credit n
 ```
 📄 Ecco la tua fattura per l'ordine ORD-048-2025-9:
 
-[LINK_ORDER_WITH_TOKEN]
+https://example.com/orders/ORD-048-2025-9?token=xyz123
 
 Il link è valido per 24 ore. Dalla pagina ordine potrai scaricare la fattura.
 ```

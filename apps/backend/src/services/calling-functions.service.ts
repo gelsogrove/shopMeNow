@@ -745,7 +745,7 @@ export class CallingFunctionsService {
         await prisma.$disconnect()
 
         // 🔧 IMPORTANTE: Non usare placeholder nel message - usa il cartUrl REALE
-        // L'AI deve vedere il link diretto, non [LINK_CHECKOUT_WITH_TOKEN]
+        // L'AI deve vedere il link diretto, non placeholder [LINK_*]
         return {
           success: true,
           message: `✅ Ho aggiunto ${request.quantity} x "${product.name}" al carrello!\n\n🛒 Vedi il tuo carrello: ${cartUrl}\n\n⏰ Link valido per 15 minuti`,

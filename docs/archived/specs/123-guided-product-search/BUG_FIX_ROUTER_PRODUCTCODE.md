@@ -171,7 +171,7 @@ Customer: "1"
 → Agent shows: "**Parmigiano Reggiano DOP 24 mesi 500g** - €25.20... Vuoi aggiungerlo al carrello?"
 
 Customer: "si"
-→ Expected: ✅ "Ho aggiunto Parmigiano Reggiano al carrello! Ecco il link: [LINK_CHECKOUT_WITH_TOKEN]"
+→ Expected: ✅ "Ho aggiunto Parmigiano Reggiano al carrello! Ecco il link: <URL SICURO>"
 → NOT: ❌ "Purtroppo, il Parmigiano Reggiano DOP 24 mesi non è attualmente disponibile"
 ```
 

@@ -4,17 +4,14 @@
 
 | Token | Description | Service | Usage |
 |-------|-------------|---------|-------|
-| `[LINK_CHECKOUT_WITH_TOKEN]` | Cart/checkout page | SecureTokenService | When showing cart summary |
-| `[LINK_PROFILE_WITH_TOKEN]` | Customer profile edit | SecureTokenService | When customer wants to update data |
-| `[LINK_REGISTRATION_WITH_TOKEN]` | Registration page | SecureTokenService | For new customer registration |
-| `[LINK_ORDER_WITH_TOKEN]` | Order detail page | SecureTokenService | When showing order confirmation |
+| `[LINK_PROFILE_WITH_TOKEN]` | Customer profile edit / registration | SecureTokenService | When customer must update or submit personal data |
 
-> ℹ️ **Only these four tokens are supported.** Any other `[LINK_*]` placeholders are invalid and must not reappear in prompts, docs, or agent outputs.
+> ℹ️ **This is the only supported token.** Any other `[LINK_*]` placeholders are invalid and must not reappear in prompts, docs, or agent outputs.
 
 ## Implementation Details
 
 ### Token Generation Flow
-1. Agent includes token in response (e.g., `[LINK_CHECKOUT_WITH_TOKEN]`)
+1. Agent includes token in response (e.g., `[LINK_PROFILE_WITH_TOKEN]`)
 2. `link-replacement.service.ts` detects token
 3. `secure-token.service.ts` generates JWT token
 4. `link-generator.service.ts` creates short URL

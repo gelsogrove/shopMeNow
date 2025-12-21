@@ -1798,7 +1798,7 @@ Customer Support Agent (existing)
   4. User: "SI"
   5. Router → cartManagementAgent("L'utente conferma che vuole aggiungere LATT-042 al carrello")
   6. Cart Agent calls addProduct(LATT-042)
-  7. Response: "✅ Burrata aggiunta! [LINK_CHECKOUT_WITH_TOKEN]"
+  7. Response: "✅ Burrata aggiunta! (ti ho inviato il link al carrello)"
   ```
 
 #### 7.3 Manual WhatsApp Tests (FUTURE - Not Now)

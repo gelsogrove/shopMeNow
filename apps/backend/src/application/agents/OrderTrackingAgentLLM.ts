@@ -241,7 +241,6 @@ export class OrderTrackingAgentLLM {
       let totalTokens = llmResponse.tokensUsed
       let finalResponse = llmResponse.content || ""
       const functionCalls: any[] = []
-      let lastFunctionResult: any = null
 
       // 🔍 DEBUG: Log LLM response to understand empty responses
       logger.info(`🔍 OrderTrackingAgentLLM: LLM Response received`, {
@@ -293,8 +292,6 @@ export class OrderTrackingAgentLLM {
           functionArgs,
           context
         )
-        lastFunctionResult = functionResult
-
         functionCalls.push({
           name: functionName,
           arguments: functionArgs,
@@ -370,16 +367,11 @@ export class OrderTrackingAgentLLM {
 
       const tokensDetected = finalResponse.match(/\[LINK_[A-Z_]+\]/g) || []
       if (tokensDetected.length > 0) {
-        const inferredOrderCode = this.extractOrderCode(
-          lastFunctionResult,
-          finalResponse
-        )
         try {
           const replacementResult =
             await this.linkReplacementService.replaceTokens(
               {
                 response: finalResponse,
-                orderCode: inferredOrderCode,
               },
               context.customerId,
               context.workspaceId
@@ -391,7 +383,6 @@ export class OrderTrackingAgentLLM {
               "✅ [OrderTracking] Token replacement completed via LinkReplacementService",
               {
                 tokensDetected,
-                orderCode: inferredOrderCode,
               }
             )
           } else {
@@ -744,20 +735,4 @@ export class OrderTrackingAgentLLM {
     ]
   }
 
-  private extractOrderCode(functionResult: any, response: string): string | undefined {
-    return (
-      functionResult?.orderCode ||
-      functionResult?.order?.orderCode ||
-      functionResult?.orders?.[0]?.orderCode ||
-      this.detectSingleOrderCode(response)
-    )
-  }
-
-  private detectSingleOrderCode(text: string): string | undefined {
-    if (!text) {
-      return undefined
-    }
-    const matches = text.match(/ORD-[0-9-]+/g) || []
-    return matches.length === 1 ? matches[0] : undefined
-  }
 }
