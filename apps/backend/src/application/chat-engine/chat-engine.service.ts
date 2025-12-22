@@ -4773,14 +4773,6 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
     debugInfo?: any
   ): Promise<{ assistantMessageId?: string }> {
     try {
-      // Save user message
-      await this.conversationManager.saveUserMessage({
-        workspaceId,
-        customerId,
-        conversationId,
-        content: userMessage,
-      })
-      
       // 🆕 Create minimal debugInfo if not provided (for FAST-PATH responses)
       const finalDebugInfo = debugInfo || {
         loadedDataType: "FAST_PATH",
@@ -4800,11 +4792,12 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       }
       
       // Save assistant response with debugInfo for timeline
-      const assistantMessageId = await this.conversationManager.saveAssistantMessage({
+      const { assistantMessageId } = await this.conversationManager.saveUserAndAssistantAtomic({
         workspaceId,
         customerId,
         conversationId,
-        content: assistantMessage,
+        userContent: userMessage,
+        assistantContent: assistantMessage,
         agentType,
         tokensUsed,
         debugInfo: finalDebugInfo,  // 🆕 Always have debugInfo for Message Flow Dialog

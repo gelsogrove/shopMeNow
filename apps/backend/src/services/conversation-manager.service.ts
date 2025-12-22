@@ -155,6 +155,123 @@ export class ConversationManager {
   }
 
   /**
+   * Save user + assistant in a single transaction to avoid orphaned messages.
+   * Enqueue to WhatsApp after transaction if phone is available.
+   */
+  async saveUserAndAssistantAtomic(params: {
+    workspaceId: string
+    customerId: string
+    conversationId: string
+    userContent: string
+    assistantContent: string
+    agentType?: string
+    tokensUsed?: number
+    debugInfo?: any
+  }): Promise<{ assistantMessageId?: string }> {
+    const {
+      workspaceId,
+      customerId,
+      conversationId,
+      userContent,
+      assistantContent,
+      agentType,
+      tokensUsed,
+      debugInfo,
+    } = params
+
+    if (!assistantContent?.trim()) {
+      logger.error("🚨 Empty assistant content detected - cannot save/enqueue empty message", {
+        customerId,
+        conversationId,
+        agentType,
+      })
+      return {}
+    }
+
+    try {
+      // Determine delivery status and phone (outside transaction)
+      let deliveryStatus: "not_queued" | "pending" | "sent" | "error" | "blocked" = "not_queued"
+      let customerPhone: string | null = null
+
+      if (agentType === "REGISTRATION_FLOW") {
+        deliveryStatus = "not_queued"
+      } else {
+        const customer = await this.prisma.customers.findFirst({
+          where: { id: customerId, workspaceId },
+          select: { phone: true },
+        })
+        customerPhone = customer?.phone || null
+        deliveryStatus = customerPhone ? "pending" : "not_queued"
+        if (!customerPhone) {
+          logger.warn("⚠️ Customer has no phone number, skipping WhatsApp queue", {
+            customerId,
+          })
+        }
+      }
+
+      // Save both messages atomically
+      const result = await this.prisma.$transaction(async (tx) => {
+        const userId = await tx.conversationMessage.create({
+          data: {
+            workspaceId,
+            customerId,
+            conversationId,
+            role: "user",
+            content: userContent,
+            deliveryStatus: "not_queued",
+          },
+          select: { id: true },
+        })
+
+        const assistantId = await tx.conversationMessage.create({
+          data: {
+            workspaceId,
+            customerId,
+            conversationId,
+            role: "assistant",
+            content: assistantContent,
+            agentType,
+            tokensUsed,
+            deliveryStatus,
+            debugInfo: debugInfo ? JSON.stringify(debugInfo) : undefined,
+          },
+          select: { id: true },
+        })
+
+        return { userId: userId.id, assistantId: assistantId.id }
+      })
+
+      logger.debug("💾 [ConversationManager] Saved user+assistant atomically", {
+        conversationId,
+        userId: result.userId,
+        assistantId: result.assistantId,
+        deliveryStatus,
+      })
+
+      // Enqueue after transaction if needed
+      if (deliveryStatus === "pending" && customerPhone) {
+        try {
+          await this.whatsappQueueService.enqueue({
+            workspaceId,
+            customerId,
+            phoneNumber: customerPhone,
+            messageContent: assistantContent,
+            conversationMessageId: result.assistantId,
+          })
+        } catch (queueError) {
+          logger.error("❌ Failed to add message to WhatsApp queue (atomic path):", queueError)
+          await this.conversationRepo.updateDeliveryStatus(result.assistantId, "not_queued")
+        }
+      }
+
+      return { assistantMessageId: result.assistantId }
+    } catch (error) {
+      logger.error("❌ [ConversationManager] Failed to save user+assistant atomically", error)
+      return {}
+    }
+  }
+
+  /**
    * Save assistant response
    */
   async saveAssistantMessage(
