@@ -18,6 +18,7 @@ export interface ReplaceLinkWithTokenParams {
   response: string
   linkType?: "cart" | "profile" | "orders" | "tracking" | "checkout" | "auto"
   context?: "offers" | "services" | "auto"
+  orderCode?: string
 }
 
 export interface ReplaceLinkWithTokenResult {

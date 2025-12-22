@@ -11,7 +11,7 @@
  * @architecture Clean Architecture - Uses ConversationMessageRepository
  */
 
-import { PrismaClient } from "@echatbot/database"
+import { PrismaClient, MessageDirection, MessageType } from "@echatbot/database"
 import { ConversationMessageRepository } from "../repositories/conversation-message.repository"
 import { WhatsAppQueueService } from "./whatsapp-queue.service"
 import logger from "../utils/logger"
@@ -101,6 +101,36 @@ export class ConversationManager {
         return message
       })
 
+      if (formattedMessages.length === 0) {
+        logger.warn(
+          "⚠️ Conversation history empty in time window, falling back to last 20 messages",
+          {
+            workspaceId,
+            conversationId,
+            windowMinutes: this.historyWindowMinutes,
+          }
+        )
+        const fallbackMessages = await this.conversationRepo.getHistory(
+          workspaceId,
+          conversationId,
+          20
+        )
+        const fallbackFormatted: Message[] = fallbackMessages.map((msg) => {
+          const message: Message = {
+            role: msg.role as "user" | "assistant" | "function" | "system",
+            content: msg.content,
+          }
+          if (msg.name) {
+            message.name = msg.name
+          }
+          return message
+        })
+        logger.info(
+          `✅ Loaded ${fallbackFormatted.length} messages via fallback (last 20)`
+        )
+        return fallbackFormatted
+      }
+
       logger.info(
         `✅ Loaded ${formattedMessages.length} messages from last ${this.historyWindowMinutes} minutes`
       )
@@ -118,17 +148,30 @@ export class ConversationManager {
    */
   async saveUserMessage(
     params: Omit<SaveMessageParams, "role">
-  ): Promise<void> {
+  ): Promise<string | undefined> {
     try {
-      await this.conversationRepo.saveMessage({
+      const messageId = await this.conversationRepo.saveMessage({
         ...params,
         role: "user",
       })
       logger.debug("💬 User message saved", {
         conversationId: params.conversationId,
       })
+
+      // Mirror to Message table (UI reads from messages)
+      await this.saveToMessagesTable({
+        conversationId: params.conversationId,
+        content: params.content,
+        role: "user",
+        agentType: params.agentType,
+        tokensUsed: params.tokensUsed,
+        debugInfo: params.debugInfo,
+        deliveryStatus: params.deliveryStatus,
+      })
+      return messageId
     } catch (error) {
       logger.error("❌ Failed to save user message", error)
+      return undefined
     }
   }
 
@@ -246,6 +289,17 @@ export class ConversationManager {
           await this.conversationRepo.updateDeliveryStatus(messageId, "not_queued")
         }
       }
+
+      // Mirror to Message table (UI reads from messages)
+      await this.saveToMessagesTable({
+        conversationId: params.conversationId,
+        content: params.content,
+        role: "assistant",
+        agentType: params.agentType,
+        tokensUsed: params.tokensUsed,
+        debugInfo: params.debugInfo,
+        deliveryStatus,
+      })
       
       // 🆕 Return the message ID for translation update
       return messageId
@@ -308,6 +362,48 @@ export class ConversationManager {
       })
     } catch (error) {
       logger.error("❌ Failed to save function result", error)
+    }
+  }
+
+  /**
+   * Mirror conversationMessage into Message table used by chat controller/UI
+   */
+  private async saveToMessagesTable(params: {
+    conversationId: string
+    content: string
+    role: "user" | "assistant" | "function" | "system"
+    agentType?: string
+    tokensUsed?: number
+    debugInfo?: any
+    deliveryStatus?: string
+  }): Promise<void> {
+    try {
+      const direction =
+        params.role === "user"
+          ? MessageDirection.INBOUND
+          : MessageDirection.OUTBOUND
+
+      await this.prisma.message.create({
+        data: {
+          chatSessionId: params.conversationId,
+          content: params.content,
+          direction,
+          type: MessageType.TEXT,
+          aiGenerated: params.role === "assistant",
+          metadata: {
+            agentType: params.agentType,
+            tokensUsed: params.tokensUsed,
+            debugInfo: params.debugInfo,
+            deliveryStatus: params.deliveryStatus,
+          },
+        },
+      })
+    } catch (error) {
+      logger.error("❌ Failed to mirror message to messages table", {
+        conversationId: params.conversationId,
+        role: params.role,
+        error,
+      })
     }
   }
 

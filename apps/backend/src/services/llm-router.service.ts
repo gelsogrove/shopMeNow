@@ -83,6 +83,7 @@ export interface RouteMessageParams {
   isSystemMessage?: boolean // 🆕 Feature 127: If true, skip Router/SubLLM and go direct to Safety+Translation
   conversationHistory?: Array<{ role: string; content: string }>
   customerDiscount?: number
+  isUnregisteredUser?: boolean
 }
 
 export interface RouteMessageResponse {
@@ -708,7 +709,6 @@ export class LLMRouterService {
       logger.info("Step 4.5: Loading customer data and dynamic content")
       const customer = await this.prisma.customers.findFirst({
         where: { id: params.customerId, workspaceId: params.workspaceId }, // 🔒 Workspace isolation
-        include: { sales: true },
         select: {
           id: true,
           name: true,

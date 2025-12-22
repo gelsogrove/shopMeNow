@@ -18,6 +18,7 @@ import {
   getIntentParser,
   Intent,
   SearchProductsIntent,
+  ProductContextIntent,
   AddToCartIntent,
   RepeatOrderIntent,
   RequestHumanIntent,
@@ -25,7 +26,7 @@ import {
 } from "../intent"
 import { DataLoaderService, getDataLoader, LoadedData } from "../data-loader"
 import { ResponseBuilderService, getResponseBuilder, StructuredResponse, ListItem, EnrichmentOptions } from "../response-builder"
-import { LLMFormatterService, getLLMFormatter, FormatterResult } from "../llm-formatter"
+import { LLMFormatterService, getLLMFormatter } from "../llm-formatter"
 import { ConversationHistoryLayer } from "../layers/ConversationHistoryLayer"
 import { ConversationManager } from "../../services/conversation-manager.service"
 import { LinkReplacementService, ReplaceLinkWithTokenParams } from "../services/link-replacement.service"
@@ -35,6 +36,7 @@ import {
   getOptionsMappingService,
   OptionsMapping,
   ListType,
+  OptionItem,
 } from "./options-mapping.service"
 import {
   MessagePreprocessorService,
@@ -59,30 +61,14 @@ import { CatalogQueryService, CatalogQueryLoadedData } from "../catalog-query/ca
 import { confirmOrder } from "../../domain/calling-functions/ConfirmOrder"
 import { LLMRouterService } from "../../services/llm-router.service"
 import { getUnifiedChatRouter, UnifiedChatRouter } from "../services/unified-chat-router.service"
+import { ChatEngineInput, ChatEngineOutput, DebugStep, WorkspaceConfig } from "./types"
+import { formatWithCustomRules } from "./formatters/response-formatter"
 
 type PipelineLoadedData = LoadedData | CatalogQueryLoadedData
 
 // ================================================================================
 // WORKSPACE CONFIG CACHE
 // ================================================================================
-
-interface WorkspaceConfig {
-  name: string                    // Workspace name (e.g., "BellItalia VIP")
-  sellsProductsAndServices: boolean
-  hasSalesAgents: boolean
-  hasHumanSupport: boolean
-  humanSupportInstructions: string | null
-  operatorContactMethod: string | null
-  welcomeMessage: any
-  botIdentityResponse: string | null  // Bot personality
-  botIdentity: string | null          // Alias for botIdentityResponse
-  customAiRules: string | null  // Custom AI rules that override default behavior
-  adminEmail: string | null
-  workspaceName: string
-  address: string | null
-  chatbotName: string | null      // 🆕 Custom chatbot name
-  businessType: string | null     // 🆕 Business sector
-}
 
 const workspaceConfigCache = new Map<string, { config: WorkspaceConfig; timestamp: number }>()
 const CONFIG_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
@@ -115,88 +101,9 @@ const customerProcessingLocks = new Map<string, Promise<void>>()
 // DEBUG STEP TYPES (for Message Flow Timeline)
 // ================================================================================
 
-export interface DebugStep {
-  type: "router" | "sub_agent" | "function_call" | "function_result" | "safety" | "link-replacement" | "intent-parser" | "data-loader" | "llm-formatter" | "save-history" | "whatsapp-queue"
-  agent: string
-  model?: string
-  temperature?: number
-  timestamp: string | number
-  step?: string  // 🆕 Additional step label
-  details?: Record<string, any>  // 🆕 Arbitrary details
-  tokenUsage?: {
-    promptTokens: number
-    completionTokens: number
-    totalTokens: number
-  }
-  systemPrompt?: string
-  input?: {
-    userMessage?: string
-    conversationHistory?: any[]
-    functionResult?: any
-    textContent?: string
-    targetLanguage?: string  // 🆕 For Translation Agent
-  }
-  output?: {
-    decision?: string
-    functionCall?: { name: string; arguments: any } | string
-    textResponse?: string
-    result?: any
-    executionTimeMs?: number
-    textContent?: string
-    translated?: boolean  // 🆕 For Translation Agent
-  }
-  duration?: number
-}
-
 // ================================================================================
 // INPUT/OUTPUT TYPES
 // ================================================================================
-
-export interface ChatEngineInput {
-  message: string
-  customerId: string
-  workspaceId: string
-  conversationId?: string
-  customerName?: string
-  customerLanguage?: string
-  customerDiscount?: number
-  isUnregisteredUser?: boolean  // 🆕 Feature 204: Flag per utenti non registrati (isActive=false)
-}
-
-export interface ChatEngineOutput {
-  // New fields
-  message: string
-  agentType: AgentType
-  wasHandled: boolean
-  intent: string
-  confidence: "HIGH" | "MEDIUM" | "LOW"
-  source: "PATTERN" | "KEYWORD" | "LLM_FALLBACK" | "LLM_CONTEXT"
-  processingTimeMs: number
-  debugInfo?: {
-    loadedDataType?: string
-    responseType?: string
-    llmUsed?: boolean
-    steps?: DebugStep[]  // 🆕 Timeline steps (optional for early returns)
-    totalTokens?: number
-    totalCost?: number
-    executionTimeMs?: number
-    hybridFallback?: boolean
-    originalLabel?: string
-    invalidOption?: number
-    maxOption?: number
-    listType?: ListType
-    step?: string
-    [key: string]: any
-  }
-  // Legacy fields for webhook compatibility
-  response?: string  // Same as message (optional)
-  agentUsed?: string // String version of agentType (optional)
-  tokensUsed?: number
-  executionTimeMs?: number // Same as processingTimeMs (optional)
-  wasFAQ?: boolean
-  isBlocked?: boolean
-  _assistantMessageId?: string
-}
 
 // ================================================================================
 // MAIN SERVICE
@@ -233,7 +140,7 @@ export class ChatEngineService {
     // Initialize support services
     this.conversationManager = new ConversationManager(prisma)
     this.linkReplacementService = new LinkReplacementService()
-    this.callingFunctionsService = new CallingFunctionsService(prisma)
+    this.callingFunctionsService = new CallingFunctionsService()
     this.optionsMappingService = getOptionsMappingService(prisma)
     this.systemContextService = getSystemContextService(prisma)
     this.conversationStateService = new ConversationStateService(prisma)
@@ -499,16 +406,16 @@ export class ChatEngineService {
         return null
       }
 
-      const formatterResult = await this.formatWithCustomRules(
+      const formatterResult = await formatWithCustomRules({
+        llmFormatter: this.llmFormatter,
         structuredResponse,
-        input.customerLanguage || "it",
+        language: input.customerLanguage || "it",
         workspaceConfig,
-        undefined,
-        { 
-          customerName: input.customerName, 
+        personalizationOptions: {
+          customerName: input.customerName,
           isUnregisteredUser: input.isUnregisteredUser,
-        }
-      )
+        },
+      })
 
       let finalMessage = formatterResult.text
       const formatterTokens = formatterResult.tokensUsed || 0
@@ -759,121 +666,6 @@ export class ChatEngineService {
   }
 
   /**
-   * Helper: formatta con LLM includendo customAiRules e botIdentity dal workspace
-   */
-  private async formatWithCustomRules(
-    structuredResponse: StructuredResponse,
-    language: string,
-    workspaceConfig: WorkspaceConfig,
-    conversationHistory?: Array<{ role: string; content: string }>,
-    personalizationOptions?: {
-      customerName?: string
-      isFirstMessage?: boolean
-      isUnregisteredUser?: boolean  // 🆕 Feature 204: Modifica prompt per utenti non registrati
-    }
-  ): Promise<FormatterResult> {
-    // Format with LLM Formatter (business rules)
-    const formatterResult = await this.llmFormatter.format(
-      structuredResponse,
-      language,
-      conversationHistory,
-      { 
-        customAiRules: workspaceConfig.customAiRules,
-        botIdentity: workspaceConfig.botIdentity,
-        botName: workspaceConfig.name,
-        chatbotName: workspaceConfig.chatbotName,      // 🆕 Custom chatbot name
-        businessType: workspaceConfig.businessType,    // 🆕 Business sector
-        customerName: personalizationOptions?.customerName,
-        isFirstMessage: personalizationOptions?.isFirstMessage,
-        isUnregisteredUser: personalizationOptions?.isUnregisteredUser,  // 🆕 Pass to formatter
-      }
-    )
-
-    return {
-      text: formatterResult.text,
-      tokensUsed: formatterResult.tokensUsed,
-      cached: formatterResult.cached,
-      groupMapping: formatterResult.groupMapping,
-    }
-  }
-
-  /**
-   * Format AND humanize response (applies ConversationHistoryLayer)
-   * 🆕 WRAPPER: Ensures ALL formatted responses pass through humanization
-   * This applies customer name personalization and hides prices for unregistered users
-   */
-  private async formatAndHumanize(
-    structuredResponse: StructuredResponse,
-    language: string,
-    workspaceConfig: WorkspaceConfig,
-    input: { 
-      workspaceId: string
-      customerId: string
-      customerName?: string
-      message: string
-      isUnregisteredUser?: boolean
-    },
-    conversationHistory?: Array<{ role: string; content: string }>,
-    personalizationOptions?: {
-      customerName?: string
-      isFirstMessage?: boolean
-      isUnregisteredUser?: boolean
-    }
-  ): Promise<FormatterResult> {
-    // STEP 1: Format with business rules
-    const formatterResult = await this.formatWithCustomRules(
-      structuredResponse,
-      language,
-      workspaceConfig,
-      conversationHistory,
-      personalizationOptions
-    )
-
-    // STEP 2: Humanize with ConversationHistoryLayer
-    logger.info("🎭 [ChatEngine] Applying ConversationHistoryLayer", {
-      isUnregisteredUser: input.isUnregisteredUser,
-      customerName: input.customerName,
-      willHidePrices: input.isUnregisteredUser,
-    })
-
-    const conversationHistoryLayer = new ConversationHistoryLayer()
-    const historyResult = await conversationHistoryLayer.process({
-      workspaceId: input.workspaceId,
-      customerId: input.customerId,
-      customerName: input.customerName || "Cliente",
-      customerPersonality: null,
-      chatbotName: workspaceConfig.chatbotName || workspaceConfig.name,
-      businessType: workspaceConfig.businessType || null,
-      isUnregisteredUser: input.isUnregisteredUser || false,
-      conversationHistory: [],
-      currentQuestion: input.message,
-      technicalResponse: {
-        type: "PRODUCT_LIST" as any,
-        rawMessage: formatterResult.text,
-      },
-      botIdentity: {
-        name: workspaceConfig.chatbotName || workspaceConfig.name || "Assistente",
-        personality: workspaceConfig.botIdentityResponse || null,
-      },
-      customAiRules: workspaceConfig.customAiRules || null,
-      activeOffers: [],
-      faqs: [],
-      mindset: "SALES" as any,
-      hasSalesAgents: workspaceConfig.hasSalesAgents ?? false,
-      isFirstMessage: personalizationOptions?.isFirstMessage ?? false,
-      lastAgentUsed: "PRODUCT_SEARCH",
-      customerLanguage: language || "it",
-    })
-
-    return {
-      text: historyResult.message,
-      tokensUsed: formatterResult.tokensUsed + (historyResult.metadata.tokensUsed || 0),
-      cached: formatterResult.cached,
-      groupMapping: formatterResult.groupMapping,
-    }
-  }
-
-  /**
    * ============================================================================
    * TRANSLATION LAYER (Single Responsibility: Translate final response)
    * ============================================================================
@@ -1019,8 +811,10 @@ export class ChatEngineService {
       
       // Add debug step for Message Flow Timeline
       debugSteps.push({
+        type: "sub_agent",
         agent: "ConversationHistoryLayer",
         description: "🎭 Umanizza risposta (saluti, prezzi, personalità)",
+        timestamp: new Date().toISOString(),
         input: {
           message,
           customerName,
@@ -1055,8 +849,10 @@ export class ChatEngineService {
       
       // Track error in timeline
       debugSteps.push({
+        type: "sub_agent",
         agent: "ConversationHistoryLayer",
         description: "❌ Errore umanizzazione",
+        timestamp: new Date().toISOString(),
         input: { message },
         output: { message, error: error instanceof Error ? error.message : String(error) },
         tokensUsed: 0,
@@ -1102,6 +898,7 @@ export class ChatEngineService {
         customerDiscount: input.customerDiscount || 0,
         conversationId,
         messageId: `${conversationId}-fallback-${Date.now()}`,
+        isUnregisteredUser: input.isUnregisteredUser || false,
       })
 
       debugSteps.push({
@@ -1200,8 +997,19 @@ export class ChatEngineService {
     workspaceConfig: WorkspaceConfig
     startTime: number
     debugSteps: DebugStep[]
+    optionsMapping?: OptionsMapping | null
   }): Promise<ChatEngineOutput | null> {
-    const { input, conversationId, history, chatSession, fsmState, workspaceConfig, startTime, debugSteps } = params
+    const {
+      input,
+      conversationId,
+      history,
+      chatSession,
+      fsmState,
+      workspaceConfig,
+      startTime,
+      debugSteps,
+      optionsMapping,
+    } = params
 
     if (!chatSession) {
       return null
@@ -1210,16 +1018,40 @@ export class ChatEngineService {
     const validStates = new Set<ConversationState>([
       ConversationState.VIEWING_PRODUCT,
       ConversationState.AWAITING_ADD_CONFIRM,
+      ConversationState.BROWSING_PRODUCTS,
     ])
 
-    if (!validStates.has(fsmState.state)) {
+    const hasProductContext =
+      validStates.has(fsmState.state) ||
+      (optionsMapping?.listType?.toUpperCase?.() === "PRODUCTS" && (optionsMapping.options?.length || 0) > 0)
+
+    if (!hasProductContext) {
       return null
     }
 
-    const selectedProductId = fsmState.selectedProductId
-    const selectedProductSku = fsmState.selectedProductSku
+    let selectedProductId = fsmState.selectedProductId
+    let selectedProductSku = fsmState.selectedProductSku
 
     if (!selectedProductId && !selectedProductSku) {
+      const inferredProduct = this.inferProductFromOptionsMapping(input.message, optionsMapping)
+      if (inferredProduct) {
+        selectedProductSku = inferredProduct.sku || null
+        logger.info("🧀 [ChatEngine] Inferred product from options mapping for context question", {
+          workspaceId: input.workspaceId,
+          conversationId,
+          inferredLabel: inferredProduct.label,
+          inferredSku: inferredProduct.sku,
+        })
+      }
+    }
+
+    if (!selectedProductId && !selectedProductSku) {
+      logger.warn("⚠️ [ChatEngine] PRODUCT_CONTEXT intent without selected product in state or mapping", {
+        workspaceId: input.workspaceId,
+        conversationId,
+        state: fsmState.state,
+        hasOptionsMapping: !!optionsMapping,
+      })
       return null
     }
 
@@ -1387,19 +1219,21 @@ export class ChatEngineService {
       executionTimeMs: processingTimeMs,
     }
 
+    const formattedResponse = this.postFormatAssistantMessage(finalResponse, "PRODUCT_DETAIL")
+
     const savedMessages = await this.saveMessages(
       input.workspaceId,
       input.customerId,
       conversationId,
       input.message,
-      finalResponse,
+      formattedResponse,
       AgentType.PRODUCT_SEARCH,
       agentResponse.tokensUsed,
       finalDebugInfo,
     )
 
     return {
-      message: finalResponse,
+      message: formattedResponse,
       agentType: AgentType.PRODUCT_SEARCH,
       wasHandled: true,
       intent: "PRODUCT_CONTEXT",
@@ -1407,7 +1241,7 @@ export class ChatEngineService {
       source: "LLM_FALLBACK",
       processingTimeMs,
       debugInfo: finalDebugInfo,
-      response: finalResponse,
+      response: formattedResponse,
       agentUsed: AgentType.PRODUCT_SEARCH,
       tokensUsed: usedTokens,
       executionTimeMs: processingTimeMs,
@@ -1459,6 +1293,120 @@ export class ChatEngineService {
       },
       duration: data.executionTimeMs,
     })
+  }
+
+  /**
+   * Try to infer the referenced product from the latest options mapping.
+   * This allows free-text questions like "avete la mozzarella di bufala?"
+   * immediately after a PRODUCT_LIST response to resolve the correct SKU.
+   */
+  private inferProductFromOptionsMapping(
+    message: string,
+    optionsMapping?: OptionsMapping | null
+  ): { sku?: string; label: string } | null {
+    if (!optionsMapping?.options?.length) {
+      return null
+    }
+
+    const listType = optionsMapping.listType?.toUpperCase()
+    if (listType !== "PRODUCTS") {
+      return null
+    }
+
+    const normalizedMessage = OptionsMappingService.cleanLabel(
+      (message || "").replace(/[^\p{L}\p{N}\s]/gu, " ")
+    ).toLowerCase()
+    if (!normalizedMessage) {
+      return null
+    }
+
+    // Direct SKU mention wins immediately
+    const skuMatch = message.match(/[A-Z]{2,}-[A-Z0-9-]{2,}/)
+    if (skuMatch && skuMatch[0]) {
+      const matched = optionsMapping.options.find((opt) =>
+        opt.skus?.some((sku) => sku?.toLowerCase() === skuMatch[0].toLowerCase())
+      )
+      if (matched) {
+        return { sku: matched.skus?.[0], label: matched.label }
+      }
+    }
+
+    let bestMatch: { option: OptionItem; score: number } | null = null
+
+    const stopWords = new Set(["di", "del", "della", "delle", "degli", "dei", "da", "con", "al", "alla", "allo", "alle"])
+
+    for (const option of optionsMapping.options) {
+      const normalizedLabel = OptionsMappingService.cleanLabel(option.label).toLowerCase()
+      if (!normalizedLabel) continue
+
+      let score = 0
+      if (normalizedMessage.includes(normalizedLabel)) {
+        score = normalizedLabel.length
+      } else {
+        let tokens = normalizedLabel.split(/\s+/).filter(Boolean)
+        tokens = tokens.filter((token) => !stopWords.has(token) && token.length > 1)
+        if (tokens.length === 0) {
+          tokens = normalizedLabel.split(/\s+/).filter(Boolean)
+        }
+        if (tokens.length) {
+          const matchedTokens = tokens.filter((token) => normalizedMessage.includes(token)).length
+          if (matchedTokens >= Math.ceil(tokens.length / 2)) {
+            score = matchedTokens
+          }
+        }
+      }
+
+      if (score > 0 && (!bestMatch || score > bestMatch.score)) {
+        bestMatch = { option, score }
+      }
+    }
+
+    if (bestMatch) {
+      return { sku: bestMatch.option.skus?.[0], label: bestMatch.option.label }
+    }
+
+    return null
+  }
+
+  private shouldUpgradeToProductContext(params: {
+    intent: Intent
+    optionsMapping?: OptionsMapping | null
+    fsmState: StateContext
+    message: string
+  }): boolean {
+    const { intent, optionsMapping, fsmState, message } = params
+    if (intent.type !== "SEARCH_PRODUCTS") {
+      return false
+    }
+
+    const productStates = new Set<ConversationState>([
+      ConversationState.BROWSING_PRODUCTS,
+      ConversationState.VIEWING_PRODUCT,
+      ConversationState.AWAITING_ADD_CONFIRM,
+    ])
+
+    const listType = optionsMapping?.listType?.toUpperCase()
+    if (!productStates.has(fsmState.state) && listType !== "PRODUCTS") {
+      return false
+    }
+
+    const inferred = this.inferProductFromOptionsMapping(message, optionsMapping)
+    return !!inferred
+  }
+
+  /**
+   * Post-format assistant message for UI consistency (bold numbering, examples).
+   */
+  private postFormatAssistantMessage(message: string, responseType?: string): string {
+    let formatted = message
+    // Bold numbered lists: "1." -> "**1.**"
+    formatted = formatted.replace(/(^|\n)(\d+)\.\s/g, "$1**$2.** ")
+
+    // Bold quantity example (handles quotes)
+    formatted = formatted.replace(/(es\.?\s*[“"”']?)(s[iì],?\s*2)([”"’']?)/gi, "$1<b>Sì, 2</b>")
+    formatted = formatted.replace(/(es\.?\s*\()(\s*s[iì],?\s*2\s*)(\))/gi, "$1<b>Sì, 2</b>$3")
+
+    return formatted
   }
 
   /**
@@ -1638,28 +1586,39 @@ export class ChatEngineService {
       // STEP 1.7: Apply ConversationHistoryLayer (BEFORE translation)
       // This ensures ALL responses are humanized (greetings, hide prices, personality)
       const debugSteps = result.debugInfo?.steps || []
+      const responseType = result.debugInfo?.responseType
+      const shouldHumanize = this.shouldApplyConversationHistory(responseType)
       
-      logger.info("🎭 [ChatEngine] STEP 1.7 - About to call applyConversationHistory", {
-        hasDebugInfo: !!result.debugInfo,
-        debugStepsLength: debugSteps.length,
-        messagePreview: messageToTranslate.substring(0, 100),
-        workspaceId: input.workspaceId,
-        customerId: input.customerId,
-      })
-      
-      const conversationHistoryResult = await this.applyConversationHistory(
-        messageToTranslate,
-        input.workspaceId,
-        input.customerId,
-        input.customerName || "Cliente",
-        input.isUnregisteredUser || false,
-        input.message,
-        debugSteps
-      )
-      
-      // Update message with humanized version
-      messageToTranslate = conversationHistoryResult.message
-      logger.info("✅ [ChatEngine] ConversationHistory applied before translation")
+      if (shouldHumanize) {
+        logger.info("🎭 [ChatEngine] STEP 1.7 - About to call applyConversationHistory", {
+          hasDebugInfo: !!result.debugInfo,
+          debugStepsLength: debugSteps.length,
+          messagePreview: messageToTranslate.substring(0, 100),
+          workspaceId: input.workspaceId,
+          customerId: input.customerId,
+          responseType,
+        })
+        
+        const conversationHistoryResult = await this.applyConversationHistory(
+          messageToTranslate,
+          input.workspaceId,
+          input.customerId,
+          input.customerName || "Cliente",
+          input.isUnregisteredUser || false,
+          input.message,
+          debugSteps
+        )
+        
+        // Update message with humanized version
+        messageToTranslate = conversationHistoryResult.message
+        logger.info("✅ [ChatEngine] ConversationHistory applied before translation")
+      } else {
+        logger.info("🎭 [ChatEngine] Skipping ConversationHistoryLayer for response type", {
+          responseType,
+          workspaceId: input.workspaceId,
+          customerId: input.customerId,
+        })
+      }
     
       // STEP 2: Apply Translation Layer (SINGLE translation point)
       const rawTargetLanguage = input.customerLanguage || "it"
@@ -2032,17 +1991,17 @@ export class ChatEngineService {
             enableCategoryRanking: workspaceConfig.sellsProductsAndServices,
           })
           
-          const formatterResult = await this.formatWithCustomRules(
+          const formatterResult = await formatWithCustomRules({
+            llmFormatter: this.llmFormatter,
             structuredResponse,
-            input.customerLanguage || "it",
+            language: input.customerLanguage || "it",
             workspaceConfig,
-            undefined, // conversationHistory
-            { 
-              customerName: input.customerName, 
-              isFirstMessage: false, 
+            personalizationOptions: {
+              customerName: input.customerName,
+              isFirstMessage: false,
               isUnregisteredUser: input.isUnregisteredUser,
-            } // FAST-PATH: assume not first message
-          )
+            },
+          })
           
           const finalMessage = formatterResult.text
           const processingTimeMs = Date.now() - startTime
@@ -2226,17 +2185,17 @@ export class ChatEngineService {
               )
               
               // Format with LLM
-              const formatterResult = await this.formatWithCustomRules(
+              const formatterResult = await formatWithCustomRules({
+                llmFormatter: this.llmFormatter,
                 structuredResponse,
-                input.customerLanguage || "it",
+                language: input.customerLanguage || "it",
                 workspaceConfig,
-                undefined,
-                { 
-                  customerName: input.customerName, 
-                  isFirstMessage: false, 
+                personalizationOptions: {
+                  customerName: input.customerName,
+                  isFirstMessage: false,
                   isUnregisteredUser: input.isUnregisteredUser,
-                } // FAST-PATH: assume not first message
-              )
+                },
+              })
               let finalMessage = formatterResult.text
               
               // Remove any SKU tags before showing to customer
@@ -2682,13 +2641,16 @@ export class ChatEngineService {
                   }
                 )
                 
-                const formatterResult = await this.formatWithCustomRules(
-                  structuredResp,
-                  input.customerLanguage || "it",
+                const formatterResult = await formatWithCustomRules({
+                  llmFormatter: this.llmFormatter,
+                  structuredResponse: structuredResp,
+                  language: input.customerLanguage || "it",
                   workspaceConfig,
-                  undefined,
-                  { customerName: input.customerName, isUnregisteredUser: input.isUnregisteredUser }
-                )
+                  personalizationOptions: {
+                    customerName: input.customerName,
+                    isUnregisteredUser: input.isUnregisteredUser,
+                  },
+                })
                 const formattedText = formatterResult.text
 
                 // Save mapping for category list so future selections use new options
@@ -2762,13 +2724,16 @@ export class ChatEngineService {
                   }
                 )
                 
-                const formatterResult = await this.formatWithCustomRules(
-                  structuredResp,
-                  input.customerLanguage || "it",
+                const formatterResult = await formatWithCustomRules({
+                  llmFormatter: this.llmFormatter,
+                  structuredResponse: structuredResp,
+                  language: input.customerLanguage || "it",
                   workspaceConfig,
-                  undefined,
-                  { customerName: input.customerName, isUnregisteredUser: input.isUnregisteredUser }
-                )
+                  personalizationOptions: {
+                    customerName: input.customerName,
+                    isUnregisteredUser: input.isUnregisteredUser,
+                  },
+                })
                 const formattedText = formatterResult.text
 
                 // Mirror CART_VIEW mappings/actions so numeric selections map correctly
@@ -2961,6 +2926,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
                 customerDiscount: input.customerDiscount || 0,
                 conversationId,
                 messageId: `${conversationId}-context-${Date.now()}`,
+                isUnregisteredUser: input.isUnregisteredUser || false,
               })
               
               debugSteps.push({
@@ -3008,13 +2974,16 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             let groupMappingFromFormatter: Record<string, { nome: string; skus: string[] }> | undefined
             
             if (structuredResponse.type !== "NO_RESULTS" && structuredResponse.type !== "ERROR") {
-              const formattedResult = await this.formatWithCustomRules(
+              const formattedResult = await formatWithCustomRules({
+                llmFormatter: this.llmFormatter,
                 structuredResponse,
-                input.customerLanguage || "it",
+                language: input.customerLanguage || "it",
                 workspaceConfig,
-                undefined,
-                { customerName: input.customerName, isUnregisteredUser: input.isUnregisteredUser }
-              )
+                personalizationOptions: {
+                  customerName: input.customerName,
+                  isUnregisteredUser: input.isUnregisteredUser,
+                },
+              })
               finalMessage = formattedResult.text
               llmUsed = !formattedResult.cached
               groupMappingFromFormatter = formattedResult.groupMapping  // 🔧 Capture groupMapping
@@ -3045,6 +3014,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             finalMessage = finalMessage
               .replace(/\s*\[SKU:[A-Z0-9-]+\]/gi, '')
               .replace(/\s*\[SKUS?:[A-Z0-9-,]+\]/gi, '')
+            finalMessage = this.postFormatAssistantMessage(finalMessage, structuredResponse.type)
             
             const processingTimeMs = Date.now() - startTime
             const agentType = AgentType.PRODUCT_SEARCH
@@ -3061,12 +3031,15 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             // Save options mapping for next selection
             // 🔧 FIX: Pass groupMapping from formatter result for smart grouping!
             // 🆕 FIX: Pass items with SKUs for product lists - no more text parsing!
-            const itemsWithSkus = structuredResponse.data.items?.map((item: any) => ({
-              number: item.number,
-              name: item.name,
-              sku: item.sku,
-              id: item.id,
-            }))
+            const itemsWithSkus =
+              structuredResponse.type === "PRODUCT_LIST" || structuredResponse.type === "OFFER_WITH_PRODUCTS"
+                ? structuredResponse.data.items?.map((item: any) => ({
+                    number: item.number,
+                    name: item.name,
+                    sku: item.sku,
+                    id: item.id,
+                  }))
+                : undefined
             
             // 🔍 DEBUG: Check what listType we're passing
             const computedListType = structuredResponse.type === "PRODUCT_LIST" ? "PRODUCTS" 
@@ -3075,6 +3048,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
                       : structuredResponse.type === "SERVICE_LIST" ? "SERVICES"
                       : structuredResponse.type === "OFFERS" ? "OFFER_CATEGORIES"  // 🆕
                       : structuredResponse.type === "OFFER_WITH_PRODUCTS" ? "PRODUCTS"  // 🆕 Single offer shows products
+                      : structuredResponse.type === "PRODUCT_GROUPED" ? "GROUPS"
                       : undefined
             logger.info("📋 [ChatEngine] DEBUG: About to save mapping", {
               structuredResponseType: structuredResponse.type,
@@ -3095,6 +3069,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
                       : structuredResponse.type === "SERVICE_LIST" ? "SERVICES"
                       : structuredResponse.type === "OFFERS" ? "OFFER_CATEGORIES"  // 🆕
                       : structuredResponse.type === "OFFER_WITH_PRODUCTS" ? "PRODUCTS"  // 🆕 Single offer shows products
+                      : structuredResponse.type === "PRODUCT_GROUPED" ? "GROUPS"
                       : undefined,
             })
             
@@ -3448,15 +3423,23 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         
         return {
           message: greetingResponse,
-          customerMessageId: savedMessages.customerMessageId,
-          assistantMessageId: savedMessages.assistantMessageId,
-          conversationId,
-          debug: debugSteps,
+          agentType: AgentType.ROUTER,
+          wasHandled: true,
+          intent: intentResult.intent.type,
+          confidence: intentResult.confidence,
+          source: intentResult.source,
+          processingTimeMs,
+          debugInfo: { steps: debugSteps },
+          response: greetingResponse,
           agentUsed: AgentType.ROUTER,
           tokensUsed: 0,
           executionTimeMs: processingTimeMs,
           wasFAQ: false,
           isBlocked: false,
+          customerMessageId: savedMessages.customerMessageId,
+          assistantMessageId: savedMessages.assistantMessageId,
+          conversationId,
+          debug: debugSteps,
         }
       }
 
@@ -3489,16 +3472,47 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         
         return {
           message: unknownResponse,
-          customerMessageId: savedMessages.customerMessageId,
-          assistantMessageId: savedMessages.assistantMessageId,
-          conversationId,
-          debug: debugSteps,
+          agentType: AgentType.ROUTER,
+          wasHandled: true,
+          intent: intentResult.intent.type,
+          confidence: intentResult.confidence,
+          source: intentResult.source,
+          processingTimeMs,
+          debugInfo: { steps: debugSteps },
+          response: unknownResponse,
           agentUsed: AgentType.ROUTER,
           tokensUsed: 0,
           executionTimeMs: processingTimeMs,
           wasFAQ: false,
           isBlocked: false,
+          customerMessageId: savedMessages.customerMessageId,
+          assistantMessageId: savedMessages.assistantMessageId,
+          conversationId,
+          debug: debugSteps,
         }
+      }
+
+      // ========================================================================
+      // STEP 2.3: 🧀 Upgrade SEARCH_PRODUCTS -> PRODUCT_CONTEXT when user
+      //           references an item from the latest product list
+      // ========================================================================
+      const optionsMappingForIntent = await loadOptionsMapping()
+      if (
+        this.shouldUpgradeToProductContext({
+          intent: intentResult.intent,
+          optionsMapping: optionsMappingForIntent,
+          fsmState,
+          message: input.message,
+        })
+      ) {
+        logger.info("🧀 [ChatEngine] Upgrading intent to PRODUCT_CONTEXT based on recent product list", {
+          conversationId,
+          previousIntent: intentResult.intent.type,
+        })
+        intentResult.intent = {
+          type: "PRODUCT_CONTEXT",
+          query: input.message,
+        } as ProductContextIntent
       }
 
       // ========================================================================
@@ -3842,11 +3856,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           )
 
           // Clear any pending options
-          await this.optionsMappingService.clearMapping({
-            workspaceId: input.workspaceId,
-            conversationId,
-            customerId: input.customerId,
-          })
+          await this.optionsMappingService.clearMapping(conversationId)
 
           logger.info("✅ [ChatEngine] UPDATE_PROFILE handled successfully", {
             workspaceId: input.workspaceId,
@@ -3943,11 +3953,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           )
 
           // Clear any pending options
-          await this.optionsMappingService.clearMapping({
-            workspaceId: input.workspaceId,
-            conversationId,
-            customerId: input.customerId,
-          })
+          await this.optionsMappingService.clearMapping(conversationId)
 
           logger.info("✅ [ChatEngine] CHANGE_LANGUAGE handled successfully", {
             workspaceId: input.workspaceId,
@@ -4015,6 +4021,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           workspaceConfig,
           startTime,
           debugSteps,
+          optionsMapping: await loadOptionsMapping(),
         })
 
         if (productContextHandled) {
@@ -4474,10 +4481,14 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       // ========================================================================
       // STEP 4.1: Build enrichment options for contextual responses
       // ========================================================================
+      const sanitizedHistory = history
+        .filter((entry) => entry.role === "user" || entry.role === "assistant")
+        .map((entry) => ({ role: entry.role as "user" | "assistant", content: entry.content }))
+
       const enrichmentOptions = await this.buildEnrichmentOptions(
         input.workspaceId,
         input.customerId,
-        history
+        sanitizedHistory
       )
       
       const structuredResponse =
@@ -4502,32 +4513,20 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       let llmUsed = false
       let groupMapping: Record<string, { nome: string; skus: string[] }> | undefined
 
-      // Check response type for simple text vs needs LLM
-      if (this.isSimpleResponseType(structuredResponse.type)) {
-        // Use LLM formatter but with cached template
-        const formatterResult = await this.formatWithCustomRules(
-          structuredResponse,
-          input.customerLanguage || "it",
-          workspaceConfig,
-          undefined,
-          { customerName: input.customerName, isFirstMessage: history.length === 0, isUnregisteredUser: input.isUnregisteredUser }
-        )
-        finalMessage = formatterResult.text
-        llmUsed = !formatterResult.cached
-        groupMapping = formatterResult.groupMapping
-      } else {
-        // Full LLM formatting for complex responses
-        const formatterResult = await this.formatWithCustomRules(
-          structuredResponse,
-          input.customerLanguage || "it",
-          workspaceConfig,
-          undefined,
-          { customerName: input.customerName, isFirstMessage: history.length === 0, isUnregisteredUser: input.isUnregisteredUser }
-        )
-        finalMessage = formatterResult.text
-        llmUsed = !formatterResult.cached
-        groupMapping = formatterResult.groupMapping
-      }
+      const formatterResult = await formatWithCustomRules({
+        llmFormatter: this.llmFormatter,
+        structuredResponse,
+        language: input.customerLanguage || "it",
+        workspaceConfig,
+        personalizationOptions: {
+          customerName: input.customerName,
+          isFirstMessage: history.length === 0,
+          isUnregisteredUser: input.isUnregisteredUser,
+        },
+      })
+      finalMessage = formatterResult.text
+      llmUsed = !formatterResult.cached
+      groupMapping = formatterResult.groupMapping
       const formatTime = Date.now() - formatStart
 
       // 🆕 Add LLM Formatter debug step
@@ -5245,10 +5244,10 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
     agentType?: string,
     tokensUsed?: number,
     debugInfo?: any
-  ): Promise<{ assistantMessageId?: string }> {
+  ): Promise<{ assistantMessageId?: string; customerMessageId?: string }> {
     try {
       // Save user message
-      await this.conversationManager.saveUserMessage({
+      const customerMessageId = await this.conversationManager.saveUserMessage({
         workspaceId,
         customerId,
         conversationId,
@@ -5292,7 +5291,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       })
       
       // Return the assistant message ID
-      return { assistantMessageId }
+      return { assistantMessageId, customerMessageId }
     } catch (error) {
       // Don't fail the request if saving fails
       logger.error("❌ [ChatEngine] Failed to save messages", { error })
@@ -5310,6 +5309,20 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
    * Loads customer profile data for personalization and prepares
    * conversation history for contextual suggestions.
    */
+  private shouldApplyConversationHistory(responseType?: string): boolean {
+    if (!responseType) return true
+    const allowedTypes = new Set([
+      "GENERIC",
+      "SIMPLE_TEXT",
+      "IDENTITY",
+      "WELCOME",
+      "GREETING",
+      "FAQ_RESPONSE",
+    ])
+    const normalized = responseType.toUpperCase ? responseType.toUpperCase() : responseType
+    return allowedTypes.has(normalized)
+  }
+
   private async buildEnrichmentOptions(
     workspaceId: string,
     customerId: string,

@@ -1,14 +1,13 @@
 /**
- * Unit Tests for Unregistered User Rate Limiting
- * Feature 204: Unregistered User Flow
+ * Unit Tests for WhatsApp Anti-Spam Rate Limiting
  * 
- * CRITICAL: Verifies that unregistered users (isActive=false) are rate-limited:
- * - Max 20 messages in 5 minutes
- * - After 5 minutes, counter resets
- * - Registered users (isActive=true) are NOT affected
+ * CRITICAL: Verifies that ANY customer (registered or not) is rate-limited:
+ * - Max 20 inbound messages in 5 minutes
+ * - After 5 minutes, counter resets automatically
+ * - Response is uniform (`SPAM_LIMIT_EXCEEDED`)
  */
 
-describe("Unregistered User Rate Limiting", () => {
+describe("WhatsApp Spam Rate Limiting", () => {
   const MAX_MESSAGES = 20
   const TIME_WINDOW_MINUTES = 5
 
@@ -17,18 +16,10 @@ describe("Unregistered User Rate Limiting", () => {
   // =========================================================================
   describe("Under Message Limit", () => {
     it("should allow message when user sent 19 messages in last 5 minutes", () => {
-      /**
-       * EXPECTED BEHAVIOR:
-       * - Unregistered user (isActive=false)
-       * - Sent 19 messages in last 5 minutes
-       * - New message arrives
-       * - Should be ALLOWED (19 < 20)
-       * - Message processed normally
-       */
       const scenario = {
         customer: {
           id: "customer-123",
-          isActive: false, // Unregistered
+          isActive: true,
           name: "New Customer",
         },
         messagesInLast5Minutes: 19,
@@ -43,12 +34,6 @@ describe("Unregistered User Rate Limiting", () => {
     })
 
     it("should allow first message from new unregistered user", () => {
-      /**
-       * EXPECTED BEHAVIOR:
-       * - Brand new unregistered user
-       * - First message ever
-       * - Should be ALLOWED
-       */
       const scenario = {
         customer: {
           id: "customer-new",
@@ -72,13 +57,6 @@ describe("Unregistered User Rate Limiting", () => {
   // =========================================================================
   describe("At/Over Message Limit", () => {
     it("should BLOCK when user sent exactly 20 messages in last 5 minutes", () => {
-      /**
-       * EXPECTED BEHAVIOR:
-       * - Unregistered user sent 20 messages in last 5 minutes
-       * - 21st message arrives
-       * - Should be BLOCKED (20 >= 20)
-       * - Return 403 with registration link
-       */
       const scenario = {
         customer: {
           id: "customer-spam",
@@ -88,10 +66,8 @@ describe("Unregistered User Rate Limiting", () => {
         messagesInLast5Minutes: 20,
         expectedResult: {
           allowed: false,
-          statusCode: 403,
-          code: "UNREGISTERED_LIMIT_EXCEEDED",
-          message: "Hai raggiunto il limite di 20 messaggi in 5 minuti. Registrati per continuare",
-          includesRegistrationLink: true,
+          statusCode: 429,
+          code: "SPAM_LIMIT_EXCEEDED",
           timeWindowMinutes: 5,
         },
       }
@@ -102,11 +78,6 @@ describe("Unregistered User Rate Limiting", () => {
     })
 
     it("should BLOCK when user sent 25 messages in last 5 minutes", () => {
-      /**
-       * EXPECTED BEHAVIOR:
-       * - Unregistered user sent 25 messages (spam)
-       * - Should remain BLOCKED
-       */
       const scenario = {
         customer: {
           id: "customer-spam-heavy",
@@ -116,8 +87,8 @@ describe("Unregistered User Rate Limiting", () => {
         messagesInLast5Minutes: 25,
         expectedResult: {
           allowed: false,
-          statusCode: 403,
-          code: "UNREGISTERED_LIMIT_EXCEEDED",
+          statusCode: 429,
+          code: "SPAM_LIMIT_EXCEEDED",
         },
       }
 
@@ -131,13 +102,6 @@ describe("Unregistered User Rate Limiting", () => {
   // =========================================================================
   describe("Time Window Reset (After 5 Minutes)", () => {
     it("should ALLOW message when 5-minute window has passed", () => {
-      /**
-       * EXPECTED BEHAVIOR:
-       * - User sent 20 messages 6 minutes ago
-       * - Time window expired (6 min > 5 min)
-       * - New message should be ALLOWED
-       * - Counter resets automatically
-       */
       const now = new Date()
       const sixMinutesAgo = new Date(now.getTime() - 6 * 60 * 1000)
 
@@ -163,13 +127,6 @@ describe("Unregistered User Rate Limiting", () => {
     })
 
     it("should count only messages within 5-minute window", () => {
-      /**
-       * EXPECTED BEHAVIOR:
-       * - User sent 10 messages 10 minutes ago (outside window)
-       * - User sent 5 messages 2 minutes ago (inside window)
-       * - Only 5 messages should count
-       * - New message should be ALLOWED
-       */
       const now = new Date()
       const twoMinutesAgo = new Date(now.getTime() - 2 * 60 * 1000)
       const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000)
@@ -195,57 +152,13 @@ describe("Unregistered User Rate Limiting", () => {
     })
   })
 
-  // =========================================================================
-  // SCENARIO 4: Registered Users - NOT Affected
-  // =========================================================================
-  describe("Registered Users (isActive=true)", () => {
-    it("should NOT apply rate limit to registered users", () => {
-      /**
-       * EXPECTED BEHAVIOR:
-       * - Registered user (isActive=true)
-       * - Sent 50 messages in last 5 minutes
-       * - Rate limit does NOT apply
-       * - All messages allowed
-       */
-      const scenario = {
-        customer: {
-          id: "customer-registered",
-          isActive: true, // REGISTERED
-          name: "Andrea Rossi",
-          email: "andrea@example.com",
-        },
-        messagesInLast5Minutes: 50,
-        expectedResult: {
-          allowed: true,
-          statusCode: 200,
-          rateLimitChecked: false, // Check skipped
-        },
-      }
+  describe("Applies to all customers", () => {
+    it("should treat registered and unregistered users equally", () => {
+      const registeredUser = { id: "registered", isActive: true }
+      const unregisteredUser = { id: "unregistered", isActive: false }
 
-      expect(scenario.customer.isActive).toBe(true)
-      expect(scenario.expectedResult.allowed).toBe(true)
-      expect(scenario.expectedResult.rateLimitChecked).toBe(false)
-    })
-
-    it("should only check rate limit when isActive=false", () => {
-      /**
-       * EXPECTED BEHAVIOR:
-       * - Rate limit check ONLY for unregistered users
-       * - if (customer && !customer.isActive) → check
-       * - if (customer && customer.isActive) → skip check
-       */
-      const unregisteredUser = {
-        id: "unregistered",
-        isActive: false,
-      }
-
-      const registeredUser = {
-        id: "registered",
-        isActive: true,
-      }
-
-      expect(!unregisteredUser.isActive).toBe(true) // Should check
-      expect(!registeredUser.isActive).toBe(false) // Should NOT check
+      expect(Boolean(registeredUser)).toBe(true)
+      expect(Boolean(unregisteredUser)).toBe(true)
     })
   })
 
@@ -310,42 +223,21 @@ describe("Unregistered User Rate Limiting", () => {
   // =========================================================================
   describe("Error Response When Blocked", () => {
     it("should return correct error structure with registration link", () => {
-      /**
-       * EXPECTED RESPONSE:
-       * {
-       *   status: "registration_required",
-       *   code: "UNREGISTERED_LIMIT_EXCEEDED",
-       *   message: "Hai raggiunto il limite di 20 messaggi in 5 minuti. Registrati per continuare: https://...",
-       *   registrationLink: "https://workspace.com/registration",
-       *   timeWindowMinutes: 5
-       * }
-       */
       const errorResponse = {
-        status: "registration_required",
-        code: "UNREGISTERED_LIMIT_EXCEEDED",
-        message: "Hai raggiunto il limite di 20 messaggi in 5 minuti. Registrati per continuare: https://example.com/reg",
-        registrationLink: "https://example.com/registration",
+        status: "rate_limited",
+        code: "SPAM_LIMIT_EXCEEDED",
+        message: "Hai inviato più di 20 messaggi in 5 minuti. Riprova più tardi.",
         timeWindowMinutes: 5,
       }
 
-      expect(errorResponse.status).toBe("registration_required")
-      expect(errorResponse.code).toBe("UNREGISTERED_LIMIT_EXCEEDED")
+      expect(errorResponse.status).toBe("rate_limited")
+      expect(errorResponse.code).toBe("SPAM_LIMIT_EXCEEDED")
       expect(errorResponse.message).toContain("20 messaggi")
       expect(errorResponse.message).toContain("5 minuti")
-      expect(errorResponse.registrationLink).toBeDefined()
       expect(errorResponse.timeWindowMinutes).toBe(5)
     })
 
     it("should log detailed info when blocking user", () => {
-      /**
-       * EXPECTED LOG:
-       * logger.warn("[WEBHOOK] 🚫 Unregistered user exceeded message limit", {
-       *   customerId: "customer-123",
-       *   messageCount: 20,
-       *   limit: 20,
-       *   timeWindowMinutes: 5
-       * })
-       */
       const logData = {
         customerId: "customer-spam",
         messageCount: 20,

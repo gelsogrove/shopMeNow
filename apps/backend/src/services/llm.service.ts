@@ -1340,7 +1340,43 @@ export class LLMService {
   }
 
   // Funzione helper per generare il messaggio di benvenuto con link di registrazione
-  // ❌ REMOVED: newUserLink - duplicated logic, now centralized in chat-engine.service.ts
+  /**
+   * Legacy helper to build welcome message with registration link.
+   * Uses CallingFunctionsService to generate link; falls back to plain message.
+   */
+  private async newUserLink(
+    phone: string,
+    workspaceId: string,
+    welcomeMessage: string
+  ): Promise<string> {
+    try {
+      const {
+        detectLanguageFromPhonePrefix,
+        getRegistrationText,
+      } = require("../utils/language-detector")
+
+      const detectedLanguage = detectLanguageFromPhonePrefix(phone)
+      const registrationText = getRegistrationText(detectedLanguage)
+
+      const registrationLinkResult = await this.callingFunctionsService.getRegistrationLink({
+        customerId: phone, // phone used as temporary identifier
+        workspaceId,
+      })
+
+      if (registrationLinkResult.success && registrationLinkResult.linkUrl) {
+        return `${welcomeMessage}\n\n🔗 **${registrationText.link}:**\n${registrationLinkResult.linkUrl}\n\n⏰ ${registrationText.validity}`
+      }
+
+      logger.warn("⚠️ newUserLink: registration link generation failed, returning welcome message only", {
+        workspaceId,
+        phone,
+      })
+      return welcomeMessage
+    } catch (error) {
+      logger.error("❌ newUserLink failed", { error, workspaceId, phone })
+      return welcomeMessage
+    }
+  }
   // ❌ REMOVED: generateRegistrationLink - duplicated logic, use CallingFunctionsService.getRegistrationLink() instead
 
   /**

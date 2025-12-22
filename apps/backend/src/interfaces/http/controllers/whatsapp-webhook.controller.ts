@@ -3,7 +3,6 @@ import { SecureTokenService } from "../../../application/services/secure-token.s
 import { UrlShortenerService } from "../../../application/services/url-shortener.service"
 import { BillingPrices } from "../../../domain/enums/billing-prices.enum"
 import { prisma } from "../../../lib/prisma"
-import { whatsappMessageRateLimiter, whatsappWorkspaceRateLimiter } from "../../../middlewares/rateLimiter"
 // 🆕 Chat Engine - Main conversation processor
 import { ChatEngineService, getChatEngine } from "../../../application/chat-engine"
 import {
@@ -21,7 +20,7 @@ import { whatsAppToMarkdown } from "../../../utils/whatsapp-formatter"
  * SECURITY:
  * - ✅ Verifica firma HMAC SHA256 (CRITICO!)
  * - ✅ Accetta SOLO messaggi da numeri nel database
- * - ✅ Rate limiting per workspace e customer
+ * - ✅ Controllo anti-spam (max 20 messaggi in 5 minuti)
  * - ✅ Validazione payload WhatsApp
  *
  * Flow:
@@ -76,7 +75,7 @@ export class WhatsAppWebhookController {
    * SECURITY:
    * - ✅ Verifica firma HMAC (CRITICO - previene messaggi fake!)
    * - ✅ Solo numeri registrati nel database
-   * - ✅ Rate limiting applicato
+     * - ✅ Controllo anti-spam applicato
    */
   async receiveMessage(req: Request, res: Response): Promise<void> {
     try {
@@ -726,81 +725,34 @@ export class WhatsAppWebhookController {
         customerName: customer.name,
       })
 
-      // 🚦 RATE LIMIT CHECK: Max 15 messages per minute per customer
-      const customerRateLimitKey = `customer:${customer.id}`
-      if (!whatsappMessageRateLimiter.isAllowed(customerRateLimitKey)) {
-        const timeToReset = whatsappMessageRateLimiter.getTimeToReset(customerRateLimitKey)
-        logger.warn("[WEBHOOK] 🚫 Rate limit exceeded for customer", {
+      // 🚦 SPAM CHECK: Max 20 messages in 5 minutes (per customer)
+      const MAX_MESSAGES_IN_WINDOW = 20
+      const TIME_WINDOW_MS = 5 * 60 * 1000 // 5 minutes
+      const timeWindowStart = new Date(Date.now() - TIME_WINDOW_MS)
+
+      const userMessagesInWindow = await prisma.conversationMessage.count({
+        where: {
           customerId: customer.id,
-          timeToResetMs: timeToReset,
+          role: "user", // Only inbound messages
+          createdAt: { gte: timeWindowStart },
+        },
+      })
+
+      if (userMessagesInWindow >= MAX_MESSAGES_IN_WINDOW) {
+        logger.warn("[WEBHOOK] 🚫 Spam limit exceeded", {
+          customerId: customer.id,
+          messageCount: userMessagesInWindow,
+          limit: MAX_MESSAGES_IN_WINDOW,
+          timeWindowMinutes: 5,
         })
+
         res.status(429).json({
           status: "rate_limited",
-          code: "RATE_LIMIT_EXCEEDED",
-          message: "Too many messages. Please wait before sending more.",
-          retryAfterMs: timeToReset,
+          code: "SPAM_LIMIT_EXCEEDED",
+          message: `Hai inviato più di ${MAX_MESSAGES_IN_WINDOW} messaggi in 5 minuti. Attendi qualche minuto prima di continuare.`,
+          retryAfterMinutes: 5,
         })
         return
-      }
-
-      // 🚦 RATE LIMIT CHECK: Max 100 messages per minute per workspace
-      const workspaceRateLimitKey = `workspace:${customer.workspaceId}`
-      if (!whatsappWorkspaceRateLimiter.isAllowed(workspaceRateLimitKey)) {
-        const timeToReset = whatsappWorkspaceRateLimiter.getTimeToReset(workspaceRateLimitKey)
-        logger.warn("[WEBHOOK] 🚫 Rate limit exceeded for workspace", {
-          workspaceId: customer.workspaceId,
-          timeToResetMs: timeToReset,
-        })
-        res.status(429).json({
-          status: "rate_limited",
-          code: "WORKSPACE_RATE_LIMIT_EXCEEDED",
-          message: "Too many messages in this channel. Please wait.",
-          retryAfterMs: timeToReset,
-        })
-        return
-      }
-
-      // 🚦 UNREGISTERED USER LIMIT: Max 20 messages in 5 minutes for spam prevention
-      // Feature: Block spam from unregistered users who send too many messages in short time
-      const MAX_UNREGISTERED_MESSAGES = 20
-      const UNREGISTERED_TIME_WINDOW_MS = 5 * 60 * 1000 // 5 minutes
-      
-      if (customer && !customer.isActive) {
-        // Count messages from this unregistered customer in last 5 minutes
-        const timeWindowStart = new Date(Date.now() - UNREGISTERED_TIME_WINDOW_MS)
-        const unregisteredMessageCount = await prisma.conversationMessage.count({
-          where: {
-            customerId: customer.id,
-            role: "user", // Only count inbound messages
-            createdAt: { gte: timeWindowStart },
-          },
-        })
-
-        if (unregisteredMessageCount >= MAX_UNREGISTERED_MESSAGES) {
-          logger.warn("[WEBHOOK] 🚫 Unregistered user exceeded message limit", {
-            customerId: customer.id,
-            messageCount: unregisteredMessageCount,
-            limit: MAX_UNREGISTERED_MESSAGES,
-            timeWindowMinutes: 5,
-          })
-
-          // Get registration link from workspace
-          const workspace = await prisma.workspace.findUnique({
-            where: { id: customer.workspaceId },
-            select: { welcomeMessage: true },
-          })
-          const registrationLink = (workspace?.welcomeMessage as any)?.registrationLink || 
-            `${process.env.FRONTEND_URL}/registration`
-
-          res.status(403).json({
-            status: "registration_required",
-            code: "UNREGISTERED_LIMIT_EXCEEDED",
-            message: `Hai raggiunto il limite di ${MAX_UNREGISTERED_MESSAGES} messaggi in 5 minuti. Registrati per continuare: ${registrationLink}`,
-            registrationLink,
-            timeWindowMinutes: 5,
-          })
-          return
-        }
       }
 
       // ❌ REMOVED: WhatsApp config check (not needed - we're not sending via WhatsApp yet)
@@ -1079,6 +1031,7 @@ export class WhatsAppWebhookController {
       // 📤 Return success to client WITH THE RESPONSE MESSAGE
       res.status(200).json({
         status: "processed",
+        conversationId: chatSession.id,
         agentUsed: routerResult.agentUsed,
         tokensUsed: routerResult.tokensUsed,
         response: routerResult.response, // ✅ CRITICAL: Return actual response to user!

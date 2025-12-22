@@ -41,7 +41,7 @@ export class WorkspaceController {
       const workspaces = await this.workspaceService.getByUserId(userId)
 
       // Serialize workspaces to plain objects with all properties
-      const serializedWorkspaces = workspaces.map((workspace) => ({
+      const serializedWorkspaces = workspaces.map((workspace: any) => ({
         id: workspace.id,
         name: workspace.name,
         slug: workspace.slug,
@@ -108,7 +108,7 @@ export class WorkspaceController {
       }
 
       try {
-        const workspace = await this.workspaceService.getById(id)
+        const workspace = (await this.workspaceService.getById(id)) as any
 
         if (!workspace) {
           return res.status(404).json({ message: "Workspace not found" })
@@ -290,7 +290,7 @@ export class WorkspaceController {
       logger.info(`hasHumanSupport nel body: ${workspaceData.hasHumanSupport} (tipo: ${typeof workspaceData.hasHumanSupport})`)
       logger.info("operatorContactMethod nel body:", workspaceData.operatorContactMethod)
 
-      const workspace = await this.workspaceService.update(id, workspaceData)
+      const workspace = (await this.workspaceService.update(id, workspaceData)) as any
 
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" })
@@ -456,10 +456,10 @@ export class WorkspaceController {
       })
 
       // Update workspace with new logo URL and key
-      const workspace = await this.workspaceService.update(id, { 
+      const workspace = (await this.workspaceService.update(id, { 
         logoUrl: uploadedFile.url,
         logoKey: uploadedFile.key
-      })
+      })) as any
 
       logger.info(`✅ Logo uploaded for workspace ${id}: ${uploadedFile.url}`)
       return res.json({ logoUrl: workspace.logoUrl })

@@ -310,14 +310,16 @@ export class CartManagementAgentLLM {
         
         // Build success message
         const successMessage = result.success 
-          ? `✅ Aggiunto al carrello: ${result.productName || itemLabel}`
+          ? `✅ Aggiunto al carrello: ${result.item?.name || itemLabel}`
           : `❌ Errore: ${result.error || "Impossibile aggiungere al carrello"}`
         
         return {
+          success: result.success,
+          executionTimeMs: 0,
           output: `${successMessage}\n\n${formatted.formattedCart}`,
           functionCalls: [{
             name: "addToCart",
-            args: { items: [{ code: context.selectedSku, quantity, type: isService ? "SERVICE" : "PRODUCT" }] },
+            arguments: { items: [{ code: context.selectedSku, quantity, type: isService ? "SERVICE" : "PRODUCT" }] },
             result: { success: result.success }
           }],
           tokensUsed: 0, // No LLM call

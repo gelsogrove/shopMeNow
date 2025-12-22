@@ -113,7 +113,7 @@ export class ProductContextAgentLLM {
 
       // 🔧 FIX: Use loadTemplate (no render) to preserve {{#if}} conditionals
       // The preProcessPrompt will handle variable replacement with correct isUnregisteredUser value
-      const template = await this.templateLoader.loadTemplate(
+      const template = await this.templateLoader.loadAndRenderTemplate(
         "PRODUCT_CONTEXT",
         input.workspaceId
       )
@@ -325,9 +325,111 @@ export class ProductContextAgentLLM {
       "PRODUCT_PAIRINGS",
       formatList(product.pairingSuggestions)
     )
-    result = replaceAll(result, "PRODUCT_IMAGE_URL", this.getFullImageUrl(product.imageUrl))
+    // Handle image URL separately to avoid broken "N/A" placeholders
+    const imageUrlValue = this.getFullImageUrl(product.imageUrl)
+    if (!imageUrlValue || imageUrlValue === "N/A") {
+      // Strip img tag and any remaining placeholders when no image is available
+      result = result
+        .replace(/<img src="\{\{PRODUCT_IMAGE_URL\}\}" alt="\{\{PRODUCT_NAME\}\}" \/>/g, "")
+        .replace(/\{\{PRODUCT_IMAGE_URL\}\}/g, "")
+        .replace(/- Image URL:\s*\n?/g, "")
+    } else {
+      result = replaceAll(result, "PRODUCT_IMAGE_URL", imageUrlValue)
+    }
+
     result = result.replace("{{PRODUCT_FACTS}}", formattedFacts)
 
+    // Post-process formatting to enforce requested layout
+    result = this.ensureDescriptionLine(result, product.description)
+    result = this.normalizeHeader(result, product)
+    result = this.boldQuantityExample(result)
+    result = this.removeDuplicateNote(result, product.region)
+    result = this.dedupeConsecutiveLines(result)
+
     return result
+  }
+
+  /**
+   * Ensure the "Descrizione:" line is present right after the Codice line.
+   */
+  private ensureDescriptionLine(content: string, description?: string | null): string {
+    const desc = description && description.trim() ? description.trim() : "N/A"
+    if (/Descrizione:/i.test(content)) {
+      // Remove the label if present
+      return content.replace(/Descrizione:\s*/i, "")
+    }
+    const lines = content.split("\n")
+    const codeIndex = lines.findIndex((line) => line.toLowerCase().includes("codice:"))
+    if (codeIndex >= 0) {
+      lines.splice(codeIndex + 1, 0, desc)
+      return lines.join("\n")
+    }
+    return content
+  }
+
+  /**
+   * Force the quantity example to be bold.
+   */
+  private boldQuantityExample(content: string): string {
+    // Handle with/without quotes or parentheses
+    return content
+      .replace(/(es\.?\s*[“"”']?)(s[iì],?\s*2)([”"’']?)/gi, "$1<b>Sì, 2</b>")
+      .replace(/(es\.?\s*\()(\s*s[iì],?\s*2\s*)(\))/gi, "$1<b>Sì, 2</b>$3")
+  }
+
+  /**
+   * Remove Note line if it duplicates the Region value.
+   */
+  private removeDuplicateNote(content: string, region?: string | null): string {
+    if (!region) return content
+    const normalizedRegion = region.trim().toLowerCase()
+    return content
+      .split("\n")
+      .filter((line) => {
+        const noteMatch = line.match(/^-+\s*Note:\s*(.+)$/i)
+        if (!noteMatch) return true
+        const noteValue = noteMatch[1].trim().toLowerCase()
+        return noteValue !== normalizedRegion
+      })
+      .join("\n")
+  }
+
+  /**
+   * Normalize header lines to avoid duplicates and enforce order:
+   * 1) **Name**
+   * 2) Codice: ...
+   * 3) Description (without label)
+   */
+  private normalizeHeader(content: string, product: ProductContextData): string {
+    const nameLine = `**${product.name}**`
+    const codeLine = `Codice: ${product.sku || "N/A"}`
+    const descLine = product.description?.trim() || "N/A"
+
+    const lines = content.split("\n").filter((l) => l.trim().length > 0)
+    const rest = lines.filter((line) => {
+      const lower = line.toLowerCase()
+      if (line === nameLine) return false
+      if (lower.startsWith("codice:")) return false
+      if (lower.startsWith("descrizione:")) return false
+      if (line === descLine) return false
+      return true
+    })
+
+    return [nameLine, codeLine, descLine, ...rest].join("\n")
+  }
+
+  /**
+   * Remove immediate duplicate lines (e.g., repeated product name).
+   */
+  private dedupeConsecutiveLines(content: string): string {
+    const lines = content.split("\n")
+    const deduped: string[] = []
+    for (const line of lines) {
+      if (deduped.length && deduped[deduped.length - 1].trim() === line.trim()) {
+        continue
+      }
+      deduped.push(line)
+    }
+    return deduped.join("\n")
   }
 }
