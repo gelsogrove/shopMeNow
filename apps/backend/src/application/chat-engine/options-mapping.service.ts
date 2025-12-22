@@ -119,7 +119,8 @@ export class OptionsMappingService {
         metadataKeys: searchConv?.metadata ? Object.keys(searchConv.metadata as any) : [],
       })
 
-      const mapping = (searchConv?.metadata as any)?.lastOptionsMapping || null
+      const metadata = (searchConv?.metadata as any) || {}
+      const mapping = metadata.lastOptionsMapping || metadata.lastPresentedMenu || null
 
       // TTL check: clear expired mappings
       if (mapping?.expiresAt) {
@@ -150,6 +151,17 @@ export class OptionsMappingService {
       })
       return null
     }
+  }
+
+  /**
+   * Alias for UI-level retrieval (prefer lastPresentedMenu if present)
+   */
+  async loadMenu(
+    workspaceId: string,
+    conversationId: string
+  ): Promise<OptionsMapping | null> {
+    const mapping = await this.loadMapping(workspaceId, conversationId)
+    return mapping
   }
 
   /**
@@ -322,6 +334,7 @@ export class OptionsMappingService {
       const updatedMetadata = {
         ...currentMetadata,
         lastOptionsMapping: updatedMapping,
+        lastPresentedMenu: updatedMapping, // alias for UI-level retrieval
       }
 
       await this.prisma.searchConversations.upsert({
