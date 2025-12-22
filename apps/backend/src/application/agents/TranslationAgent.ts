@@ -170,81 +170,86 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
         targetLanguage: normalizedLanguage,
       })
 
-      const response = await axios.post(
-        `${this.openRouterBaseUrl}/chat/completions`,
-        {
-          model: translationAgent.model,
-          messages: [
-            {
-              role: "system",
-              content: systemPrompt,
-            },
-            {
-              role: "user",
-              content: userMessage,
-            },
-          ],
-          temperature: translationAgent.temperature,
-          max_tokens: translationAgent.maxTokens,
-          response_format: { type: "json_object" }, // Force JSON response
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${this.openRouterApiKey}`,
-            "Content-Type": "application/json",
-            "HTTP-Referer": process.env.FRONTEND_URL || "https://echatbot.ai",
-            "X-Title": "eChatbot Translation Layer",
-          },
-          timeout: 30000, // 30 second timeout
-        }
-      )
+      const headers = {
+        Authorization: `Bearer ${this.openRouterApiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": process.env.FRONTEND_URL || "https://echatbot.ai",
+        "X-Title": "eChatbot Translation Layer",
+      }
 
-      const llmResponse = response.data.choices[0].message.content
-      const tokensUsed = response.data.usage?.total_tokens || 0
+      const buildRequest = (userContent: string) => ({
+        model: translationAgent.model,
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt,
+          },
+          {
+            role: "user",
+            content: userContent,
+          },
+        ],
+        temperature: translationAgent.temperature,
+        max_tokens: translationAgent.maxTokens,
+        response_format: { type: "json_object" },
+      })
+
+      const callTranslationLLM = async (userContent: string) => {
+        const response = await axios.post(
+          `${this.openRouterBaseUrl}/chat/completions`,
+          buildRequest(userContent),
+          {
+            headers,
+            timeout: 30000,
+          }
+        )
+        const llmResponse = response.data?.choices?.[0]?.message?.content || ""
+        const tokensUsed = response.data?.usage?.total_tokens || 0
+        return { llmResponse, tokensUsed }
+      }
+
+      const initialCall = await callTranslationLLM(userMessage)
+      let totalTokens = initialCall.tokensUsed
+      let parsedResult = this.parseTranslationResponse(initialCall.llmResponse)
+      let translatedMessage = parsedResult?.message || options.message
+      let translated = parsedResult
+        ? parsedResult.translated !== false && parsedResult.message !== undefined
+        : false
+
+      const needsForceTranslation =
+        !translated ||
+        (translatedMessage.trim() === options.message.trim() &&
+          this.detectEnglishContent(options.message))
+
+      if (needsForceTranslation) {
+        logger.info("🌍 TranslationAgent forcing re-translation", {
+          workspaceId: options.workspaceId,
+          targetLanguage: normalizedLanguage,
+        })
+        const forceInstruction = `IMPORTANT: The previous translation matched the original input. Translate the text again to ${targetLanguageName}, ensure the output is entirely in ${targetLanguageName} and not identical to the input, and still respond with the requested JSON object.`
+        const forcedCall = await callTranslationLLM(`${userMessage}\n${forceInstruction}`)
+        totalTokens += forcedCall.tokensUsed
+        const forcedParsed = this.parseTranslationResponse(forcedCall.llmResponse)
+        if (forcedParsed?.message) {
+          parsedResult = forcedParsed
+          translatedMessage = forcedParsed.message
+          translated =
+            forcedParsed.translated !== false && forcedParsed.message !== undefined
+        }
+      }
+
       const executionTimeMs = Date.now() - startTime
 
       // 🔍 DEBUG: Log OUTPUT from TranslationAgent LLM
       logger.info("🔍 TranslationAgent OUTPUT", {
-        containsImgTag: llmResponse?.includes('<img'),
-        llmResponsePreview: llmResponse?.substring(0, 500),
+        containsImgTag: translatedMessage?.includes('<img'),
+        llmResponsePreview: translatedMessage?.substring(0, 500),
       })
-
-      // 6. Parse JSON response
-      let parsed: {
-        translated?: boolean
-        originalLanguage?: string
-        targetLanguage?: string
-        message?: string
-      }
-
-      try {
-        parsed = JSON.parse(llmResponse)
-      } catch (error) {
-        logger.error("❌ Failed to parse TranslationAgent JSON response", {
-          llmResponse,
-          error,
-        })
-        // Fallback: return original message
-        return {
-          translated: false,
-          originalLanguage: "en",
-          targetLanguage: options.targetLanguage,
-          message: options.message,
-          tokensUsed,
-          executionTimeMs,
-        }
-      }
-
-      // 7. Extract result
-      const translatedMessage =
-        parsed.message || options.message
-      const translated =
-        parsed.translated !== false && parsed.message !== undefined
 
       logger.info("✅ TranslationAgent completed", {
         translated,
         targetLanguage: normalizedLanguage,
-        tokensUsed,
+        tokensUsed: totalTokens,
         executionTimeMs,
       })
 
@@ -253,10 +258,10 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
         originalLanguage: "en",
         targetLanguage: normalizedLanguage,
         message: translatedMessage,
-        tokensUsed,
+        tokensUsed: totalTokens,
         executionTimeMs,
-        systemPrompt: systemPrompt, // 🆕 Use PROCESSED prompt (with variables replaced)
-        model: translationAgent.model, // 🆕 Include model for debugging timeline
+        systemPrompt: systemPrompt,
+        model: translationAgent.model,
       }
     } catch (error) {
       logger.error("❌ TranslationAgent error", error)
@@ -390,6 +395,29 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
   }
 
   /**
+   * Parse LLM JSON response and log parsing failures
+   */
+  private parseTranslationResponse(
+    llmResponse: string
+  ): {
+    translated?: boolean
+    originalLanguage?: string
+    targetLanguage?: string
+    message?: string
+  } | null {
+    if (!llmResponse) return null
+    try {
+      return JSON.parse(llmResponse)
+    } catch (error) {
+      logger.error("❌ Failed to parse TranslationAgent JSON response", {
+        llmResponse,
+        error,
+      })
+      return null
+    }
+  }
+
+  /**
    * Health check - verify agent is configured
    */
   async healthCheck(workspaceId: string): Promise<boolean> {
@@ -486,6 +514,8 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
     if (!settings.translateServiceNames) {
       rules.push(`- DO NOT translate service names. Keep them EXACTLY as they appear in ${baseLanguageName}`)
     }
+
+    rules.push(`- ALWAYS translate supporting descriptions, ingredients, flavors or textures even when they follow product/service names; only the official name itself can stay unchanged.`)
 
     // Additional rules for data preservation
     rules.push(`- ALWAYS preserve: prices (€X.XX), order codes (ORD-xxxxx), product codes, HTML tags (<img>, <b>, etc.)`)
