@@ -1850,6 +1850,7 @@ export class ChatEngineService {
       // If user typed a number, load options mapping from DB and resolve directly
       if (preprocessResult.inputType === "number" && preprocessResult.extractedNumber) {
         const optionsMapping = await loadOptionsMapping()
+        let resolvedFastPath = false
         
         // 🔍 DEBUG: Log what we got from the database
         logger.info("🔍 [DEBUG] Loaded optionsMapping for number selection", {
@@ -1861,9 +1862,61 @@ export class ChatEngineService {
           firstOptionSkus: optionsMapping?.options?.[0]?.skus?.slice(0, 2),
         })
         
-        // 🆕 PRIORITY 1: Check groupMapping first (for smart grouping like "Formaggi Freschi")
-        // This contains the SKUs for each numbered group created by LLM
-        if (optionsMapping?.groupMapping) {
+        // Guardrails: ensure the mapping we loaded is compatible with the current FSM state.
+        // This prevents stale mappings (e.g., CART_ACTIONS) from hijacking selections when
+        // the user is browsing categories/products.
+        const isMappingCompatible = (
+          state: ConversationState | undefined,
+          listType: ListType | undefined
+        ) => {
+          if (!state || !listType) return true // if we don't know, be permissive
+          switch (listType) {
+            case "CART_ACTIONS":
+            case "CART_ITEMS":
+              return state === ConversationState.VIEWING_CART
+            case "ORDER_ACTIONS":
+            case "ORDERS":
+              return (
+                state === ConversationState.BROWSING_ORDERS ||
+                state === ConversationState.VIEWING_ORDER
+              )
+            case "PRODUCTS":
+            case "PRODUCT_DETAIL_ACTIONS":
+              return (
+                state === ConversationState.BROWSING_PRODUCTS ||
+                state === ConversationState.VIEWING_PRODUCT ||
+                state === ConversationState.BROWSING_SUBCATEGORIES
+              )
+            case "GROUPS":
+              return (
+                state === ConversationState.BROWSING_SUBCATEGORIES ||
+                state === ConversationState.BROWSING_CATEGORIES
+              )
+            case "CATEGORIES":
+            case "OFFER_CATEGORIES":
+            case "SERVICES":
+            case "ORDER_OPTIMIZATION_ACTIONS":
+            default:
+              return true
+          }
+        }
+
+        const mappingAllowed =
+          !optionsMapping ||
+          isMappingCompatible(fsmState?.state, optionsMapping.listType as ListType)
+
+        if (optionsMapping && !mappingAllowed) {
+          logger.warn("⚠️ [ChatEngine] Skipping optionsMapping (state mismatch)", {
+            mappingListType: optionsMapping.listType,
+            fsmState: fsmState?.state,
+          })
+          // Hard reset stale mapping so next inputs don't reuse it
+          await this.optionsMappingService.clearMapping(conversationId)
+        }
+
+        if (mappingAllowed && optionsMapping?.groupMapping) {
+          // 🆕 PRIORITY 1: Check groupMapping first (for smart grouping like "Formaggi Freschi")
+          // This contains the SKUs for each numbered group created by LLM
           const groupKey = String(preprocessResult.extractedNumber)
           const selectedGroup = optionsMapping.groupMapping[groupKey]
           
@@ -1988,7 +2041,7 @@ export class ChatEngineService {
         }
         
         // PRIORITY 2: Fall back to regular options (categories, products with SKUs)
-        if (optionsMapping?.options && optionsMapping.options.length > 0) {
+        if (mappingAllowed && optionsMapping?.options && optionsMapping.options.length > 0) {
           const selectedOption = optionsMapping.options.find(
             opt => opt.number === preprocessResult.extractedNumber
           )
@@ -2090,11 +2143,11 @@ export class ChatEngineService {
                 input.message,
                 processedMessage
               )
-              
-              return {
-                message: processedMessage,
-                agentType: AgentType.ORDER_TRACKING,
-                wasHandled: true,
+            
+            return {
+              message: processedMessage,
+              agentType: AgentType.ORDER_TRACKING,
+              wasHandled: true,
                 intent: "ORDER_ACTION",
                 confidence: "HIGH",
                 source: "PATTERN",
@@ -2741,6 +2794,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             
             // 🔍 DEBUG: Check what listType we're passing
             const computedListType = structuredResponse.type === "PRODUCT_LIST" ? "PRODUCTS" 
+                      : structuredResponse.type === "PRODUCT_GROUPED" ? "GROUPS"
                       : structuredResponse.type === "ORDER_LIST" ? "ORDERS"
                       : structuredResponse.type === "CATEGORY_LIST" ? "CATEGORIES"
                       : structuredResponse.type === "SERVICE_LIST" ? "SERVICES"
@@ -2753,21 +2807,20 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
               itemsCount: itemsWithSkus?.length || 0,
             })
             
-            await this.optionsMappingService.saveMapping({
-              workspaceId: input.workspaceId,
-              conversationId,
-              customerId: input.customerId,
-              responseText: responseWithSkus,
-              groupMapping: groupMappingFromFormatter,
-              items: itemsWithSkus,
-              listType: structuredResponse.type === "PRODUCT_LIST" ? "PRODUCTS" 
-                      : structuredResponse.type === "ORDER_LIST" ? "ORDERS"
-                      : structuredResponse.type === "CATEGORY_LIST" ? "CATEGORIES"
-                      : structuredResponse.type === "SERVICE_LIST" ? "SERVICES"
-                      : structuredResponse.type === "OFFERS" ? "OFFER_CATEGORIES"  // 🆕
-                      : structuredResponse.type === "OFFER_WITH_PRODUCTS" ? "PRODUCTS"  // 🆕 Single offer shows products
-                      : undefined,
-            })
+            if (computedListType) {
+              await this.optionsMappingService.saveMapping({
+                workspaceId: input.workspaceId,
+                conversationId,
+                customerId: input.customerId,
+                responseText: responseWithSkus,
+                groupMapping: groupMappingFromFormatter,
+                items: itemsWithSkus,
+                listType: computedListType,
+              })
+            } else {
+              // No list to map → clear mapping to avoid stale numeric selections
+              await this.optionsMappingService.clearMapping(conversationId)
+            }
             
             // 🆕 FSM: Update conversation state based on response type
             if (chatSession) {
@@ -3006,6 +3059,38 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
               },
               _assistantMessageId: savedMessages?.assistantMessageId,
             }
+          }
+        }
+
+        // If we reach here: we had a mapping but the selection didn't match anything
+        if (mappingAllowed && optionsMapping) {
+          logger.warn("⚠️ [ChatEngine] Numeric selection not found in mapping", {
+            selectedNumber: preprocessResult.extractedNumber,
+            listType: optionsMapping.listType,
+            optionsCount: optionsMapping.options?.length,
+            hasGroupMapping: !!optionsMapping.groupMapping,
+          })
+
+          const menuText = this.renderOptionsMapping(optionsMapping)
+          const fallbackMessage = `Non ho trovato l'opzione #${preprocessResult.extractedNumber}. Ecco il menu corrente:\n\n${menuText}`
+
+          const savedMessages = await this.saveMessages(
+            input.workspaceId,
+            input.customerId,
+            conversationId,
+            input.message,
+            fallbackMessage
+          )
+
+          return {
+            message: fallbackMessage,
+            agentType: AgentType.ROUTER,
+            wasHandled: true,
+            intent: "UNKNOWN",
+            confidence: "LOW",
+            source: "PATTERN",
+            processingTimeMs: Date.now() - startTime,
+            _assistantMessageId: savedMessages?.assistantMessageId,
           }
         }
       }
@@ -4331,9 +4416,11 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             newFsmState = ConversationState.BROWSING_CATEGORIES
             break
           case "PRODUCT_LIST":
+            newFsmState = ConversationState.BROWSING_PRODUCTS
+            break
           case "PRODUCT_GROUPED":
           case "PRODUCT_NEEDS_SMART_GROUPING":
-            newFsmState = ConversationState.BROWSING_PRODUCTS
+            newFsmState = ConversationState.BROWSING_SUBCATEGORIES
             break
           case "ORDER_LIST":
             newFsmState = ConversationState.BROWSING_ORDERS
@@ -4716,6 +4803,23 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       logger.error("❌ [ChatEngine] Failed to save messages", { error })
       return {}
     }
+  }
+
+  /**
+   * Render a minimal menu from OptionsMapping for fallback re-publish.
+   */
+  private renderOptionsMapping(mapping: OptionsMapping): string {
+    if (mapping.options && mapping.options.length > 0) {
+      return mapping.options
+        .map((opt) => `${opt.number}. ${opt.label}${opt.skus?.length ? ` [${opt.skus.join(", ")}]` : ""}`)
+        .join("\n")
+    }
+    if (mapping.groupMapping && Object.keys(mapping.groupMapping).length > 0) {
+      return Object.entries(mapping.groupMapping)
+        .map(([num, group]) => `${num}. ${group.nome} (${group.skus.length} prodotti)`)
+        .join("\n")
+    }
+    return "Menu non disponibile al momento."
   }
 
   // ================================================================================

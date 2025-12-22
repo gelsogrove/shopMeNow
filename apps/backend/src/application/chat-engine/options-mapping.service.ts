@@ -83,9 +83,14 @@ export interface OptionsMapping {
   groupMapping?: Record<string, { nome: string; skus: string[] }>
   // 🆕 Current order code for ORDER_ACTIONS (fattura, ripeti, nota credito)
   currentOrderCode?: string
+  // 🆕 Last rendered text (for menu re-publish) and expiry to avoid stale mappings
+  renderedText?: string
+  expiresAt?: string
 }
 
 export class OptionsMappingService {
+  private static readonly DEFAULT_TTL_MS = 10 * 60 * 1000 // 10 minutes
+
   constructor(private prisma: PrismaClient) {}
 
   /**
@@ -115,6 +120,19 @@ export class OptionsMappingService {
       })
 
       const mapping = (searchConv?.metadata as any)?.lastOptionsMapping || null
+
+      // TTL check: clear expired mappings
+      if (mapping?.expiresAt) {
+        const expiryMs = Date.parse(mapping.expiresAt)
+        if (!Number.isNaN(expiryMs) && expiryMs <= Date.now()) {
+          logger.info("⏰ [OptionsMapping] Mapping expired, clearing", {
+            conversationId,
+            expiresAt: mapping.expiresAt,
+          })
+          await this.clearMapping(conversationId)
+          return null
+        }
+      }
 
       logger.info("📋 [OptionsMapping] Loaded mapping", {
         conversationId,
@@ -151,8 +169,9 @@ export class OptionsMappingService {
     // 🆕 List type (PRODUCTS, ORDERS, CATEGORIES, etc.)
     listType?: ListType
     currentOrderCode?: string
+    expiresInMs?: number
   }): Promise<void> {
-    const { workspaceId, conversationId, customerId, responseText, forceClear, groupMapping, items, listType: explicitListType, currentOrderCode } = options
+    const { workspaceId, conversationId, customerId, responseText, forceClear, groupMapping, items, listType: explicitListType, currentOrderCode, expiresInMs } = options
 
     // 🔍 DEBUG: Log what we receive
     logger.info("📋 [OptionsMapping] saveMapping CALLED with params", {
@@ -296,6 +315,8 @@ export class OptionsMappingService {
         currentOrderCode: currentOrderCode ?? existingMapping.currentOrderCode,
         // 🔧 Preserve pendingAction (e.g., ADD_TO_CART) when saving new list
         pendingAction: mapping.pendingAction ?? existingPendingAction,
+        renderedText: responseText,
+        expiresAt: new Date(Date.now() + (expiresInMs ?? OptionsMappingService.DEFAULT_TTL_MS)).toISOString(),
       } : null
       
       const updatedMetadata = {

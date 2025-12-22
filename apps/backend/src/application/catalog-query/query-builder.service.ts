@@ -65,11 +65,38 @@ function detectGroupByField(message: string): GroupField | undefined {
     return "category"
   }
 
-  if (certificationKeywords.some((kw) => normalized.includes(kw)) && (hasGroupingIntent || normalized.includes("per certificazione"))) {
+  // Allow certification grouping even without explicit "raggruppa" marker
+  if (certificationKeywords.some((kw) => normalized.includes(kw))) {
     return "certification"
   }
 
   return undefined
+}
+
+function detectCertificationFilters(message: string): string[] {
+  const normalized = normalizeForMatch(message)
+  const matches: Set<string> = new Set()
+  const mapping: Array<{ kw: string; value: string }> = [
+    { kw: "dop", value: "DOP" },
+    { kw: "igp", value: "IGP" },
+    { kw: "docg", value: "DOCG" },
+    { kw: "doc", value: "DOC" },
+    { kw: "igt", value: "IGT" },
+    { kw: "bio", value: "BIO" },
+    { kw: "organic", value: "BIO" },
+  ]
+
+  for (const entry of mapping) {
+    if (normalized.includes(entry.kw)) {
+      matches.add(entry.value)
+    }
+  }
+
+  if (normalized.includes("certific")) {
+    matches.add("DOP") // default to most common when generic "certificato" is asked
+  }
+
+  return Array.from(matches)
 }
 
 function sanitizeJsonPayload(content: string): string {
@@ -141,6 +168,20 @@ export class CatalogQueryBuilder {
           if (inferredGroup) {
             enrichedQuery.groupBy = [inferredGroup]
           }
+        }
+
+        // Auto-apply certification filters when the user asks for DOP/IGP/BIO etc.
+        const detectedCerts = detectCertificationFilters(userMessage)
+        const hasCertFilter = enrichedQuery.filters?.some(
+          (f) => f.field === "certification" && Array.isArray((f as any).value) && (f as any).value.length > 0
+        )
+        if (!hasCertFilter && detectedCerts.length > 0) {
+          enrichedQuery.filters = enrichedQuery.filters || []
+          enrichedQuery.filters.push({
+            field: "certification",
+            op: "in",
+            value: detectedCerts,
+          })
         }
 
         const usage = data.usage
