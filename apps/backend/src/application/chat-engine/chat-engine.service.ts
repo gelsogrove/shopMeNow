@@ -22,6 +22,7 @@ import {
   RepeatOrderIntent,
   RequestHumanIntent,
   AskFAQIntent,
+  ShowCategoryIntent,
 } from "../intent"
 import { DataLoaderService, getDataLoader, LoadedData } from "../data-loader"
 import { ResponseBuilderService, getResponseBuilder, StructuredResponse, ListItem } from "../response-builder"
@@ -486,6 +487,10 @@ export class ChatEngineService {
         enableCategoryRanking: workspaceConfig.sellsProductsAndServices,
       })
 
+      const faqHistory = await this.conversationManager.loadHistory(
+        input.workspaceId,
+        conversationId
+      )
       if (structuredResponse.type !== "FAQ") {
         return null
       }
@@ -493,7 +498,8 @@ export class ChatEngineService {
       const formatterResult = await this.formatWithCustomRules(
         structuredResponse,
         input.customerLanguage || "it",
-        workspaceConfig
+        workspaceConfig,
+        faqHistory
       )
 
       let finalMessage = formatterResult.text
@@ -1500,6 +1506,8 @@ export class ChatEngineService {
       // STEP 0.5: Preprocess short inputs (numbers, yes/no)
       // ========================================================================
       const conversationId = input.conversationId || `temp-${input.customerId}`
+      // Load recent history early so ALL LLM calls (even fast-path) have context
+      let history = await this.conversationManager.loadHistory(input.workspaceId, conversationId)
       
       logger.debug("🔍 [ChatEngine] Processing message", {
         conversationId,
@@ -1729,7 +1737,8 @@ export class ChatEngineService {
           const formatterResult = await this.formatWithCustomRules(
             structuredResponse,
             input.customerLanguage || "it",
-            workspaceConfig
+            workspaceConfig,
+            history
           )
           
           const finalMessage = formatterResult.text
@@ -1987,6 +1996,7 @@ export class ChatEngineService {
                   customerDiscount: input.customerDiscount,
                   userMessage: input.message,
                   enableCategoryRanking: workspaceConfig.sellsProductsAndServices,
+                  disableGrouping: true, // 🔒 Do NOT regroup when coming from a group selection
                 }
               )
               
@@ -1994,7 +2004,8 @@ export class ChatEngineService {
               const formatterResult = await this.formatWithCustomRules(
                 structuredResponse,
                 input.customerLanguage || "it",
-                workspaceConfig
+                workspaceConfig,
+                history
               )
               let finalMessage = formatterResult.text
               
@@ -2015,6 +2026,14 @@ export class ChatEngineService {
                 input.message,
                 finalMessage
               )
+
+              // Keep FSM aligned with the new menu (now we're browsing a product list)
+              if (chatSession) {
+                await this.conversationStateService.setState(
+                  chatSession.id,
+                  ConversationState.BROWSING_PRODUCTS
+                )
+              }
               
               // 🔧 CRITICAL: Save new options mapping with items and listType
               // This ensures next "1" is interpreted as product selection, not group selection!
@@ -2112,7 +2131,9 @@ export class ChatEngineService {
                 customerLanguage: input.customerLanguage,
                 customerName: input.customerName,
                 customerDiscount: input.customerDiscount,
-                disableGrouping: selectIntent.listType === "ORDER_OPTIMIZATION_ACTIONS",
+                disableGrouping:
+                  selectIntent.listType === "ORDER_OPTIMIZATION_ACTIONS" ||
+                  selectIntent.listType === "GROUPS", // 🔒 Coming from a group → show products directly
                 userMessage: input.message,
                 enableCategoryRanking: workspaceConfig.sellsProductsAndServices,
               }
@@ -2444,7 +2465,8 @@ export class ChatEngineService {
                 const formatterResult = await this.formatWithCustomRules(
                   structuredResp,
                   input.customerLanguage || "it",
-                  workspaceConfig
+                  workspaceConfig,
+                  history
                 )
                 const formattedText = formatterResult.text
 
@@ -2522,7 +2544,8 @@ export class ChatEngineService {
                 const formatterResult = await this.formatWithCustomRules(
                   structuredResp,
                   input.customerLanguage || "it",
-                  workspaceConfig
+                  workspaceConfig,
+                  history
                 )
                 const formattedText = formatterResult.text
 
@@ -2689,7 +2712,10 @@ export class ChatEngineService {
               })
               
               // Load conversation history for context
-              const history = await this.conversationManager.loadHistory(input.workspaceId, conversationId)
+              const contextHistory = await this.conversationManager.loadHistory(
+                input.workspaceId,
+                conversationId
+              )
               
               // Build a contextual prompt for the LLM
               const contextPrompt = `L'utente ha selezionato l'opzione: "${contextData.label}"
@@ -2712,7 +2738,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
                 customerName: input.customerName || "Cliente",
                 customerLanguage: input.customerLanguage || "it",
                 message: contextPrompt,
-                conversationHistory: history,
+                conversationHistory: contextHistory,
                 customerDiscount: input.customerDiscount || 0,
                 conversationId,
                 messageId: `${conversationId}-context-${Date.now()}`,
@@ -2766,7 +2792,8 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
               const formattedResult = await this.formatWithCustomRules(
                 structuredResponse,
                 input.customerLanguage || "it",
-                workspaceConfig
+                workspaceConfig,
+                history
               )
               finalMessage = formattedResult.text
               llmUsed = !formattedResult.cached
@@ -3137,7 +3164,18 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       }
       // If it's NOT a short input (normal text), clear stale mapping to avoid cross-context reuse
       else {
-        await this.optionsMappingService.clearMapping(conversationId)
+        // Preserve GROUPS mapping unless a new menu is shown; avoid premature clearing
+        const existingMapping =
+          cachedOptionsMapping !== undefined
+            ? cachedOptionsMapping
+            : await this.optionsMappingService.loadMapping(input.workspaceId, conversationId)
+        if (existingMapping?.listType === "GROUPS") {
+          logger.info("📋 [ChatEngine] Keeping GROUPS mapping for context continuity", {
+            conversationId,
+          })
+        } else {
+          await this.optionsMappingService.clearMapping(conversationId)
+        }
       }
 
       // ========================================================================
@@ -3145,7 +3183,9 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       // ========================================================================
       // 🔧 CRITICAL: Use conversationId (which falls back to temp-{customerId}), NOT input.conversationId
       // Otherwise history is empty for temp conversations!
-      const history = await this.conversationManager.loadHistory(input.workspaceId, conversationId)
+      if (!history || history.length === 0) {
+        history = await this.conversationManager.loadHistory(input.workspaceId, conversationId)
+      }
 
       logger.debug("📜 [ChatEngine] History loaded", { 
         historyLength: history.length,
@@ -4012,9 +4052,45 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         })
       }
 
-      const finalLoadedData = loadedData!
+      let finalLoadedData = loadedData!
 
       logger.info("📦 [ChatEngine] Data loaded", { type: finalLoadedData.type })
+
+      // If there is only one category, skip the category list and show products directly
+      if (finalLoadedData.type === "CATEGORIES" && finalLoadedData.categories.length === 1) {
+        const onlyCategory = finalLoadedData.categories[0]
+        logger.info("🛍️ [ChatEngine] Single category detected, skipping menu", {
+          categoryName: onlyCategory.name,
+        })
+
+        const singleCategoryIntent: ShowCategoryIntent = {
+          type: "SHOW_CATEGORY",
+          categoryName: onlyCategory.name,
+        }
+
+        const singleCategoryData = await this.dataLoader.loadForIntent(
+          singleCategoryIntent,
+          input.workspaceId,
+          input.customerId,
+          input.customerDiscount || 0
+        )
+
+        finalLoadedData = singleCategoryData as PipelineLoadedData
+        structuredResponseOverride = null
+        intentResult.intent = singleCategoryIntent
+
+        debugSteps.push({
+          type: "router",
+          agent: "🧭 Router Agent",
+          timestamp: new Date().toISOString(),
+          output: {
+            decision: "single_category_autoload",
+          },
+          details: {
+            categoryName: onlyCategory.name,
+          },
+        })
+      }
 
       // ========================================================================
       // STEP 4: Build structured response
@@ -4067,7 +4143,8 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         const formatterResult = await this.formatWithCustomRules(
           structuredResponse,
           input.customerLanguage || "it",
-          workspaceConfig
+          workspaceConfig,
+          history
         )
         finalMessage = formatterResult.text
         llmUsed = !formatterResult.cached
@@ -4077,7 +4154,8 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         const formatterResult = await this.formatWithCustomRules(
           structuredResponse,
           input.customerLanguage || "it",
-          workspaceConfig
+          workspaceConfig,
+          history
         )
         finalMessage = formatterResult.text
         llmUsed = !formatterResult.cached

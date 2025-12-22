@@ -74,12 +74,14 @@ CRITICAL RULES:
 5. Use the requested language for the response
 6. For CART items: use dashes (-) NOT numbers. Cart products should NOT be numbered.
 7. For MENU OPTIONS (Cosa vuoi fare?): KEEP numbered exactly as provided (1, 2, 3...)
-8. PRICES ARE FINAL - DO NOT calculate or mention any discounts on prices! The prices shown already include any applicable discounts. Never write "con sconto del X%" or "discounted price" - just show the price as-is.
+8. PRICES: Use the provided numbers. If a discounted price is provided (priceWithDiscount) or a discount percent is available, show BOTH the list price and the discounted price like "€10.00 (€9.00 dopo il tuo sconto del 10%)". Never invent or recalculate discounts beyond the provided numbers.
+9. IMAGES: When an item has an imageUrl, include a short markdown image or link next to the item.
+10. PERSONAL TONE: When a customer name is provided, start with a warm greeting using their name and keep the tone natural (avoid robotic phrasing).
 
 OUTPUT FORMAT:
 - Cart items: use dash prefix (- Product - €XX.XX)
 - Menu options: keep numbering (1. ✅ Action)
-- Prices: €XX.XX (show exactly as provided - DO NOT modify or add discount calculations!)
+- Prices: show €XX.XX and, if a discount is provided, also show the discounted value as described above (do not invent discounts)
 - Show total "(N items)" if requested
 - Emoji: 🛒 🍷 📦 ✅ ❌ etc.`
 
@@ -183,23 +185,18 @@ export class LLMFormatterService {
       { role: "system", content: systemPrompt },
     ]
     
-    // Add conversation history if provided (includes system context with group mappings)
+    // Add conversation history if provided (keeps recent 5-10 minutes for natural tone)
     if (conversationHistory && conversationHistory.length > 0) {
-      // Filter to only include relevant context (system messages with JSON, recent assistant messages)
-      const relevantHistory = conversationHistory.filter(msg => 
-        msg.role === "system" || // System context (group mappings, cart state)
-        (msg.role === "assistant" && conversationHistory.indexOf(msg) >= conversationHistory.length - 3) // Last 3 assistant messages
-      )
-      messages.push(...relevantHistory.map(h => ({ role: h.role, content: h.content })))
-      
+      messages.push(...conversationHistory.map((h) => ({ role: h.role, content: h.content })))
       logger.info("📝 [LLMFormatter] Including conversation history", {
         totalHistory: conversationHistory.length,
-        relevantHistory: relevantHistory.length,
       })
     }
     
     // Add current formatting request
     messages.push({ role: "user", content: userPrompt })
+
+    const temperature = response.formatting.showNumbers ? 0.3 : 0.42
 
     try {
       const llmResponse = await axios.post(
@@ -207,7 +204,7 @@ export class LLMFormatterService {
         {
           model: this.model,
           messages,
-          temperature: 0.3, // Low temperature for consistent formatting
+          temperature,
           max_tokens: 1000,
         },
         {
@@ -476,8 +473,17 @@ export class LLMFormatterService {
       return null
     }
 
-    const displayPrice = product.priceWithDiscount || product.price
+    const basePrice = product.price
+    const discountedPrice =
+      typeof product.priceWithDiscount === "number" && product.priceWithDiscount > 0
+        ? product.priceWithDiscount
+        : undefined
     const detailLines: string[] = []
+
+    if (response.context.customerName) {
+      detailLines.push(`Ciao ${response.context.customerName}!`)
+      detailLines.push("")
+    }
 
     // Descrizione discorsiva del prodotto
     if (product.description) {
@@ -516,7 +522,13 @@ export class LLMFormatterService {
     const stockValue = product.stock !== undefined ? product.stock : (product.isAvailable ? "disponibile" : "esaurito")
     detailLines.push(`- Stock: ${stockValue}`)
     detailLines.push("")
-    detailLines.push(`💰 <b>Prezzo: ${formatDisplayPrice(displayPrice)} Euro</b>`)
+    if (discountedPrice !== undefined && basePrice && Math.abs(discountedPrice - basePrice) > 0.009) {
+      detailLines.push(
+        `💰 <b>Prezzo: ${formatDisplayPrice(basePrice)} (${formatDisplayPrice(discountedPrice)} con il tuo sconto del ${response.context.discountPercent}%)</b>`
+      )
+    } else {
+      detailLines.push(`💰 <b>Prezzo: ${formatDisplayPrice(basePrice)} Euro</b>`)
+    }
     detailLines.push("")
     detailLines.push(`Vuoi aggiungerlo al carrello? Se sì puoi indicare la quantità? (es. <b>Sì, 2</b>)`)
     detailLines.push("")
@@ -556,7 +568,12 @@ export class LLMFormatterService {
       return "Il tuo carrello è vuoto.\n\nVuoi vedere i nostri prodotti?"
     }
 
-    const lines: string[] = ["Ecco il tuo carrello:", ""]
+    const greeting = response.context.customerName
+      ? `Ciao ${response.context.customerName}! Ecco il tuo carrello:`
+      : "Ecco il tuo carrello:"
+    const lines: string[] = [greeting, ""]
+    const hasDiscount = response.context.hasDiscount && response.context.discountPercent > 0
+    const discountPercent = response.context.discountPercent
     
     // Separate products from services
     const products = items.filter((item: any) => item.itemType === "PRODUCT" || item.type === "PRODUCT" || !item.itemType)
@@ -567,7 +584,15 @@ export class LLMFormatterService {
       lines.push("🛒 Prodotti:")
       for (const item of products) {
         const qty = (item as any).quantity || 1
-        lines.push(`- ${qty}x ${item.name} - ${formatDisplayPrice(item.price)}`)
+        const basePrice = typeof item.price === "number" ? item.price : 0
+        const discounted =
+          hasDiscount && basePrice > 0
+            ? basePrice * (1 - discountPercent / 100)
+            : null
+        const priceText = discounted
+          ? `${formatDisplayPrice(basePrice)} (${formatDisplayPrice(discounted)} con il tuo sconto del ${discountPercent}%)`
+          : formatDisplayPrice(basePrice)
+        lines.push(`- ${qty}x ${item.name} - ${priceText}`)
       }
     }
 
@@ -576,7 +601,15 @@ export class LLMFormatterService {
       if (products.length > 0) lines.push("")
       lines.push("🔧 Servizi:")
       for (const item of services) {
-        lines.push(`- ${item.name} - ${formatDisplayPrice(item.price)}`)
+        const basePrice = typeof item.price === "number" ? item.price : 0
+        const discounted =
+          hasDiscount && basePrice > 0
+            ? basePrice * (1 - discountPercent / 100)
+            : null
+        const priceText = discounted
+          ? `${formatDisplayPrice(basePrice)} (${formatDisplayPrice(discounted)} con il tuo sconto del ${discountPercent}%)`
+          : formatDisplayPrice(basePrice)
+        lines.push(`- ${item.name} - ${priceText}`)
       }
     }
 
@@ -595,7 +628,7 @@ export class LLMFormatterService {
     if (response.context.hasDiscount && response.context.discountPercent > 0) {
       lines.push("")
       lines.push(
-        `ℹ️ Stai usufruendo del tuo sconto riservato del <b>${response.context.discountPercent}</b>%! I prezzi mostrati includono già lo sconto.`
+        `ℹ️ Stai usufruendo del tuo sconto riservato del <b>${response.context.discountPercent}</b>%! Per ogni voce trovi sia il prezzo di listino sia il valore scontato.`
       )
       lines.push(`I prezzi sono IVA esclusa.`)
     }
@@ -667,6 +700,9 @@ export class LLMFormatterService {
     targetLanguage: string
   ): string {
     const parts: string[] = []
+    const hasImages =
+      Array.isArray((response.data as any)?.items) &&
+      (response.data as any).items.some((item: any) => item.imageUrl)
 
     parts.push(`LINGUA OUTPUT: ${this.getLanguageName(targetLanguage)}`)
     parts.push(`TIPO RISPOSTA: ${response.type}`)
@@ -763,7 +799,16 @@ export class LLMFormatterService {
       parts.push(`- Show total: "(${response.data.count} items)"`)
     }
     if (response.context.hasDiscount) {
-      parts.push(`- Customer has a ${response.context.discountPercent}% discount, show both prices`)
+      parts.push(
+        `- Customer has a ${response.context.discountPercent}% discount. When priceWithDiscount is present show: "€listino (€scontato dopo il tuo sconto del ${response.context.discountPercent}%)". Do NOT invent discounts.`
+      )
+    }
+    if (response.context.customerName) {
+      parts.push(`- Start with a warm greeting for ${response.context.customerName} in the target language.`)
+    }
+    parts.push("- Keep the tone friendly and natural, avoid robotic phrasing.")
+    if (hasImages) {
+      parts.push("- If an item has imageUrl, surface it with a short markdown image or link next to the item.")
     }
 
     return parts.join("\n")
@@ -789,12 +834,21 @@ export class LLMFormatterService {
     const items = response.data.items || []
     const lines = ["PRODUCTS:"]
     for (const item of items) {
-      // Show only the final price (discounted if applicable)
-      // Customer discount is already applied in priceWithDiscount
-      const displayPrice = item.priceWithDiscount || item.price
-      const hasDisplayPrice = typeof displayPrice === "number" && Number.isFinite(displayPrice)
-      const priceText = hasDisplayPrice ? ` - ${formatDisplayPrice(displayPrice)}` : ""
-      const line = `**${item.number}.** ${item.name}${priceText}`
+      const basePrice = typeof item.price === "number" && Number.isFinite(item.price) ? item.price : undefined
+      const discounted =
+        typeof item.priceWithDiscount === "number" && Number.isFinite(item.priceWithDiscount)
+          ? item.priceWithDiscount
+          : undefined
+      let priceText = ""
+      if (discounted !== undefined && basePrice !== undefined && Math.abs(discounted - basePrice) > 0.009) {
+        priceText = ` - ${formatDisplayPrice(basePrice)} (${formatDisplayPrice(discounted)} dopo il tuo sconto)`
+      } else if (discounted !== undefined) {
+        priceText = ` - ${formatDisplayPrice(discounted)}`
+      } else if (basePrice !== undefined) {
+        priceText = ` - ${formatDisplayPrice(basePrice)}`
+      }
+      const imageText = item.imageUrl ? ` | img: ${item.imageUrl}` : ""
+      const line = `**${item.number}.** ${item.name}${priceText}${imageText}`
       lines.push(line)
     }
     // Add selection prompt - user-friendly, no technical details
@@ -1007,17 +1061,32 @@ CRITICAL:
     const p = response.data.product
     if (!p) return "Product not found"
 
-    const displayPrice = p.priceWithDiscount || p.price
+    const basePrice = p.price
+    const discountedPrice =
+      typeof p.priceWithDiscount === "number" && p.priceWithDiscount > 0
+        ? p.priceWithDiscount
+        : undefined
     const targetLang = response.context.customerLanguage?.toLowerCase() || ""
     const isItalian = targetLang.startsWith("it")
     const italianQuestion = `Vuoi aggiungerlo al carrello? Se sì puoi indicare la quantità? (es. "Sì, 2")`
     const englishQuestion = `Would you like to add it to cart? If yes, how many? (e.g., "Yes, 2")`
     const closingQuestion = isItalian ? italianQuestion : englishQuestion
 
-    const detailLines: string[] = [
-      `${p.name}`,
-      `Prezzo: ${formatDisplayPrice(displayPrice)}`,
-    ]
+    const detailLines: string[] = []
+
+    if (response.context.customerName) {
+      detailLines.push(`Ciao ${response.context.customerName}!`)
+      detailLines.push("")
+    }
+
+    detailLines.push(`${p.name}`)
+    if (discountedPrice !== undefined && basePrice && Math.abs(discountedPrice - basePrice) > 0.009) {
+      detailLines.push(
+        `Prezzo: ${formatDisplayPrice(basePrice)} (${formatDisplayPrice(discountedPrice)} con il tuo sconto del ${response.context.discountPercent}%)`
+      )
+    } else {
+      detailLines.push(`Prezzo: ${formatDisplayPrice(basePrice)}`)
+    }
 
     detailLines.push(`Foto: ${p.imageUrl ? `<img src="${p.imageUrl}" alt="${p.name}" />` : "(non disponibile)"}`)
 
@@ -1096,6 +1165,9 @@ CRITICAL:
       return 0
     }
 
+    const hasDiscount = response.context.hasDiscount && response.context.discountPercent > 0
+    const discountPercent = response.context.discountPercent
+
     const products: string[] = []
     const services: string[] = []
 
@@ -1108,7 +1180,13 @@ CRITICAL:
       const qtyText = `${quantityValue}×`
       const displayName = cleanDisplayName(item.productName || item.name)
       const totalPriceValue = resolveLineTotal(item, quantityValue)
-      const priceText = formatDisplayPrice(totalPriceValue)
+      const discountedValue =
+        hasDiscount && totalPriceValue > 0
+          ? totalPriceValue * (1 - discountPercent / 100)
+          : null
+      const priceText = discountedValue
+        ? `${formatDisplayPrice(totalPriceValue)} (${formatDisplayPrice(discountedValue)} con sconto ${discountPercent}%)`
+        : formatDisplayPrice(totalPriceValue)
       const line = `- ${qtyText} ${displayName} · ${priceText}`
       if (isServiceFlag) {
         services.push(line)
@@ -1169,7 +1247,9 @@ CRITICAL:
     // }
 
     const outputLines: string[] = [
-      "Ecco il tuo carrello:",
+      response.context.customerName
+        ? `Ciao ${response.context.customerName}! Ecco il tuo carrello:`
+        : "Ecco il tuo carrello:",
       "",
     ]
 
@@ -1184,9 +1264,8 @@ CRITICAL:
     if (response.context.hasDiscount && response.context.discountPercent && response.context.discountPercent > 0) {
       outputLines.push("")
       outputLines.push(
-        `ℹ️ Stai usufruendo del tuo sconto riservato del <b>${response.context.discountPercent}</b>%! I prezzi mostrati includono già lo sconto.`
+        `ℹ️ Stai usufruendo del tuo sconto riservato del <b>${response.context.discountPercent}</b>%! Per ogni voce trovi sia il prezzo di listino sia il valore scontato.`
       )
-      outputLines.push(`I prezzi sono IVA esclusa.`)
     }
 
     outputLines.push("")
@@ -1212,7 +1291,7 @@ CRITICAL:
     const lines = [
       "FORMAT RULES:",
       "- Start with a friendly heading like '📦 Ecco i tuoi ordini:'",
-      "- For each item render: `<number>. **<order code>** · €<amount> · stato <status>` (status already provided in the extra field).",
+      "- For each item render: `<number>. **<order code>** · €<amount> · stato <status> · <date>` (status and date are already provided in the extra field).",
       "- Keep numbering exactly as provided.",
       "- DO NOT add any total line or item count.",
       "- After the list, ask: 'Quale ordine desideri visualizzare? Digita il numero.'",
@@ -1238,7 +1317,7 @@ CRITICAL:
       `Code: #${order.code}`,
       `Status: ${order.status}`,
       `Total: ${formatDisplayPrice(order.totalAmount)}`,
-      `Date: ${order.createdAt.toLocaleDateString()}`,
+      `Date: ${order.createdAt.toLocaleDateString("it-IT")}`,
     ]
 
     if (order.items && order.items.length > 0) {

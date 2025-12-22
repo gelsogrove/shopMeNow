@@ -139,6 +139,7 @@ export interface ListItem {
   sku?: string // Product code for cart operations
   price?: number
   priceWithDiscount?: number
+  imageUrl?: string
   stock?: number
   description?: string
   extra?: string // category name, region, etc.
@@ -165,6 +166,7 @@ export interface ResponseContext {
   customerLanguage: string
   hasDiscount: boolean
   discountPercent: number
+  customerName?: string
   showOptimizeOption?: boolean  // Show "Ottimizza spedizione" option for Premium/Enterprise
   disableGrouping?: boolean     // Force simple lists even when count > threshold
   userMessage?: string          // Last user utterance (used for contextual ranking)
@@ -223,6 +225,7 @@ export class ResponseBuilderService {
       customerLanguage: options.customerLanguage || "it",
       hasDiscount: discountPercent > 0,
       discountPercent,
+      customerName: options.customerName,
       showOptimizeOption: options.showOptimizeOption,
       disableGrouping: options.disableGrouping,
       userMessage: options.userMessage,
@@ -488,6 +491,36 @@ export class ResponseBuilderService {
       }
     }
 
+    // 🚫 If grouping is disabled (e.g., selection came from an existing group), force a flat list
+    if (context.disableGrouping) {
+      const items: ListItem[] = products.map((p, index) => ({
+        number: index + 1,
+        id: p.id,
+        name: p.name,
+        sku: p.sku,
+        price: p.price,
+        priceWithDiscount: p.priceWithDiscount,
+        imageUrl: p.imageUrl,
+        stock: p.stock,
+        description: p.description,
+        extra: p.categoryName || p.region,
+      }))
+
+      return {
+        type: "PRODUCT_LIST",
+        data: {
+          items,
+          count: products.length,
+        },
+        formatting: {
+          ...DEFAULT_FORMATTING,
+          showStock: products.some((p) => !p.isAvailable),
+          showTotal: false,
+        },
+        context,
+      }
+    }
+
     // RULE: If >5 products, try to group by category
     // But only if we can create 2+ meaningful groups
     if (!context.disableGrouping && products.length > DEFAULT_FORMATTING.maxItemsBeforeGroup) {
@@ -518,6 +551,7 @@ export class ResponseBuilderService {
       sku: p.sku, // Include SKU for cart operations
       price: p.price,
       priceWithDiscount: p.priceWithDiscount,
+      imageUrl: p.imageUrl,
       stock: p.stock,
       description: p.description,
       extra: p.categoryName || p.region,
@@ -578,6 +612,7 @@ export class ResponseBuilderService {
           sku: p.sku,
           price: p.price,
           priceWithDiscount: p.priceWithDiscount,
+          imageUrl: p.imageUrl,
           stock: p.stock,
           description: p.description,
           extra: p.region || p.formato,
@@ -634,6 +669,7 @@ export class ResponseBuilderService {
         sku: p.sku, // Include SKU for cart operations
         price: p.price,
         priceWithDiscount: p.priceWithDiscount,
+        imageUrl: p.imageUrl,
         stock: p.stock,
         extra: p.region || p.formato,
       }))
@@ -828,7 +864,7 @@ export class ResponseBuilderService {
     if (orders.length === 0) {
       return {
         type: "NO_RESULTS",
-        data: { errorMessage: "Non ci sono ordini per questo cliente." },
+        data: { errorMessage: "Non ci sono ordini per questo cliente. Posso aiutarti a trovare prodotti o servizi?" },
         formatting: { ...DEFAULT_FORMATTING, showNumbers: false },
         context,
       }
@@ -839,7 +875,7 @@ export class ResponseBuilderService {
       id: o.id,
       name: `#${o.code}`,
       price: o.totalAmount,
-      extra: o.status,
+      extra: `${o.status}${o.createdAt ? ` · ${new Date(o.createdAt).toLocaleDateString("it-IT")}` : ""}`,
     }))
 
     return {

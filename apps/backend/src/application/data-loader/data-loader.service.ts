@@ -2319,17 +2319,22 @@ export class DataLoaderService {
     skus: string[],
     customerDiscount: number = 0
   ): Promise<ProductData[]> {
+    let uniqueSkus: string[] = []
     try {
+      uniqueSkus = Array.from(
+        new Set(skus.filter((sku) => typeof sku === "string" && sku.trim().length > 0))
+      )
+
       logger.info("📦 [DataLoader] Loading products by SKUs", {
-        skus,
-        count: skus.length,
+        skus: uniqueSkus,
+        count: uniqueSkus.length,
       })
 
       const products = await this.prisma.products.findMany({
         where: {
           workspaceId,
           isActive: true,
-          sku: { in: skus },
+          sku: { in: uniqueSkus },
         },
         select: {
           id: true,
@@ -2356,20 +2361,31 @@ export class DataLoaderService {
       })
 
       if (products.length === 0) {
-        logger.warn("📦 [DataLoader] No products found for SKUs", { skus })
+        logger.warn("📦 [DataLoader] No products found for SKUs", { skus: uniqueSkus })
         return []
       }
 
       const productData = products.map((p) => this.mapProduct(p, customerDiscount))
 
+      // De-duplicate by SKU (fallback to ID) to avoid duplicates in the list/mapping
+      const deduped: ProductData[] = []
+      const seen = new Set<string>()
+      for (const product of productData) {
+        const key = product.sku || product.id
+        if (!key || seen.has(key)) continue
+        seen.add(key)
+        deduped.push(product)
+      }
+
       logger.info("📦 [DataLoader] Products loaded by SKUs", {
-        requested: skus.length,
-        found: productData.length,
+        requested: uniqueSkus.length,
+        requestedSkus: uniqueSkus,
+        uniqueProducts: deduped.length,
       })
 
-      return productData
+      return deduped
     } catch (error) {
-      logger.error("❌ [DataLoader] Error loading products by SKUs", { error, skus })
+      logger.error("❌ [DataLoader] Error loading products by SKUs", { error, skus: uniqueSkus })
       return []
     }
   }
