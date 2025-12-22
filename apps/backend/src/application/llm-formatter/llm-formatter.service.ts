@@ -75,8 +75,7 @@ CRITICAL RULES:
 6. For CART items: use dashes (-) NOT numbers. Cart products should NOT be numbered.
 7. For MENU OPTIONS (Cosa vuoi fare?): KEEP numbered exactly as provided (1, 2, 3...)
 8. PRICES: Use the provided numbers. If a discounted price is provided (priceWithDiscount) or a discount percent is available, show BOTH the list price and the discounted price like "€10.00 (€9.00 dopo il tuo sconto del 10%)". Never invent or recalculate discounts beyond the provided numbers.
-9. IMAGES: When an item has an imageUrl, include a short markdown image or link next to the item.
-10. PERSONAL TONE: When a customer name is provided, start with a warm greeting using their name and keep the tone natural (avoid robotic phrasing).
+9. PERSONAL TONE: When a customer name is provided, start with a warm greeting using their name and keep the tone natural (avoid robotic phrasing).
 
 OUTPUT FORMAT:
 - Cart items: use dash prefix (- Product - €XX.XX)
@@ -491,19 +490,19 @@ export class LLMFormatterService {
     } else {
       detailLines.push(`${product.name}`)
     }
+    detailLines.push("")
 
-    // Immagine con URL completo
     if (product.imageUrl) {
-      const fullImageUrl = this.getFullImageUrl(product.imageUrl)
-      detailLines.push(`<img src="${fullImageUrl}" alt="${product.name}" />`)
+      detailLines.push(`Foto: ${product.imageUrl}`)
+      detailLines.push("")
     }
 
     // Info compatte su righe con bullet
-    const codeAndFormat = []
-    if (product.sku) codeAndFormat.push(`Codice: ${product.sku}`)
-    if (product.formato) codeAndFormat.push(`Formato: ${product.formato}`)
-    if (codeAndFormat.length > 0) {
-      detailLines.push(`- ${codeAndFormat.join(" - ")}`)
+    if (product.sku) {
+      detailLines.push(`- Codice: ${product.sku}`)
+    }
+    if (product.formato) {
+      detailLines.push(`- Formato: ${product.formato}`)
     }
 
     if (product.transportType) {
@@ -540,25 +539,6 @@ export class LLMFormatterService {
     detailLines.push(`o scrivi quello che stai cercando!`)
 
     return detailLines.join("\n")
-  }
-
-  /**
-   * Get relative image path (frontend will resolve with IMG_BASE_URL)
-   * e.g., /uploads/products/img.jpg stays as /uploads/products/img.jpg
-   */
-  private getFullImageUrl(imageUrl: string): string {
-    if (!imageUrl) return ""
-    // If already absolute URL, extract just the path
-    if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
-      try {
-        const url = new URL(imageUrl)
-        return url.pathname // Extract /uploads/products/...
-      } catch {
-        return imageUrl
-      }
-    }
-    // Ensure path starts with /
-    return imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`
   }
 
   private getCartViewTemplate(response: StructuredResponse): string {
@@ -700,9 +680,6 @@ export class LLMFormatterService {
     targetLanguage: string
   ): string {
     const parts: string[] = []
-    const hasImages =
-      Array.isArray((response.data as any)?.items) &&
-      (response.data as any).items.some((item: any) => item.imageUrl)
 
     parts.push(`LINGUA OUTPUT: ${this.getLanguageName(targetLanguage)}`)
     parts.push(`TIPO RISPOSTA: ${response.type}`)
@@ -807,9 +784,6 @@ export class LLMFormatterService {
       parts.push(`- Start with a warm greeting for ${response.context.customerName} in the target language.`)
     }
     parts.push("- Keep the tone friendly and natural, avoid robotic phrasing.")
-    if (hasImages) {
-      parts.push("- If an item has imageUrl, surface it with a short markdown image or link next to the item.")
-    }
 
     return parts.join("\n")
   }
@@ -847,8 +821,7 @@ export class LLMFormatterService {
       } else if (basePrice !== undefined) {
         priceText = ` - ${formatDisplayPrice(basePrice)}`
       }
-      const imageText = item.imageUrl ? ` | img: ${item.imageUrl}` : ""
-      const line = `**${item.number}.** ${item.name}${priceText}${imageText}`
+      const line = `**${item.number}.** ${item.name}${priceText}`
       lines.push(line)
     }
     // Add selection prompt - user-friendly, no technical details
@@ -1087,8 +1060,6 @@ CRITICAL:
     } else {
       detailLines.push(`Prezzo: ${formatDisplayPrice(basePrice)}`)
     }
-
-    detailLines.push(`Foto: ${p.imageUrl ? `<img src="${p.imageUrl}" alt="${p.name}" />` : "(non disponibile)"}`)
 
     if (p.description) {
       detailLines.push(`Descrizione: ${p.description}`)
