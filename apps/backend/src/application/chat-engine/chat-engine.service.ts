@@ -1852,6 +1852,29 @@ export class ChatEngineService {
         // Prefer last presented menu (aliases lastOptionsMapping)
         const optionsMapping = await this.optionsMappingService.loadMenu(input.workspaceId, conversationId)
         let resolvedFastPath = false
+
+        // No mapping at all → reply with gentle prompt instead of falling through to "product not found"
+        if (!optionsMapping) {
+          const noMenuMessage = `Non ho un menu attivo per la scelta #${preprocessResult.extractedNumber}.\n\nVuoi che ti mostri le categorie o il carrello?`
+          const saved = await this.saveMessages(
+            input.workspaceId,
+            input.customerId,
+            conversationId,
+            input.message,
+            noMenuMessage,
+            AgentType.ROUTER
+          )
+          return {
+            message: noMenuMessage,
+            agentType: AgentType.ROUTER,
+            wasHandled: true,
+            intent: "UNKNOWN",
+            confidence: "LOW",
+            source: "PATTERN",
+            processingTimeMs: Date.now() - startTime,
+            _assistantMessageId: saved.assistantMessageId,
+          }
+        }
         
         // 🔍 DEBUG: Log what we got from the database
         logger.info("🔍 [DEBUG] Loaded optionsMapping for number selection", {
@@ -1874,22 +1897,28 @@ export class ChatEngineService {
           switch (listType) {
             case "CART_ACTIONS":
             case "CART_ITEMS":
-              return state === ConversationState.VIEWING_CART
+              return (
+                state === ConversationState.VIEWING_CART ||
+                state === ConversationState.VIEWING_CART_ACTIONS
+              )
             case "ORDER_ACTIONS":
             case "ORDERS":
               return (
                 state === ConversationState.BROWSING_ORDERS ||
-                state === ConversationState.VIEWING_ORDER
+                state === ConversationState.VIEWING_ORDER ||
+                state === ConversationState.VIEWING_ORDER_ACTIONS
               )
             case "PRODUCTS":
             case "PRODUCT_DETAIL_ACTIONS":
               return (
                 state === ConversationState.BROWSING_PRODUCTS ||
                 state === ConversationState.VIEWING_PRODUCT ||
-                state === ConversationState.BROWSING_SUBCATEGORIES
+                state === ConversationState.BROWSING_SUBCATEGORIES ||
+                state === ConversationState.BROWSING_GROUPS
               )
             case "GROUPS":
               return (
+                state === ConversationState.BROWSING_GROUPS ||
                 state === ConversationState.BROWSING_SUBCATEGORIES ||
                 state === ConversationState.BROWSING_CATEGORIES
               )
@@ -4222,6 +4251,10 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           conversationId,
           actions: cartActions.map((action) => action.id),
         })
+
+        if (chatSession) {
+          await this.conversationStateService.setState(chatSession.id, ConversationState.VIEWING_CART_ACTIONS, {})
+        }
       } 
       // For ORDER_DETAIL: save ORDER_ACTIONS mapping  
       else if (structuredResponse.type === "ORDER_DETAIL") {
@@ -4441,7 +4474,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             break
           case "PRODUCT_GROUPED":
           case "PRODUCT_NEEDS_SMART_GROUPING":
-            newFsmState = ConversationState.BROWSING_SUBCATEGORIES
+            newFsmState = ConversationState.BROWSING_GROUPS
             break
           case "ORDER_LIST":
             newFsmState = ConversationState.BROWSING_ORDERS
@@ -4463,7 +4496,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             break
           case "CART_VIEW":
           case "CART_UPDATED":
-            newFsmState = ConversationState.VIEWING_CART
+            newFsmState = ConversationState.VIEWING_CART_ACTIONS
             break
           case "CART_EMPTY":
             // 🔧 When cart is empty, go back to IDLE - next "sì" should NOT trigger checkout!

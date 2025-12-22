@@ -37,11 +37,14 @@ export enum ConversationState {
   BROWSING_PRODUCTS = "BROWSING_PRODUCTS",       // User looking at product list
   BROWSING_ORDERS = "BROWSING_ORDERS",           // User looking at order list
   BROWSING_SERVICES = "BROWSING_SERVICES",       // User looking at services list
+  BROWSING_GROUPS = "BROWSING_GROUPS",           // User looking at grouped products (subcategories/LLM groups)
 
   // === Detail View States ===
   VIEWING_PRODUCT = "VIEWING_PRODUCT",           // User looking at single product detail
   VIEWING_SERVICE = "VIEWING_SERVICE",           // User looking at single service detail
   VIEWING_ORDER = "VIEWING_ORDER",               // User looking at single order detail
+  VIEWING_ORDER_ACTIONS = "VIEWING_ORDER_ACTIONS", // User looking at order action menu
+  VIEWING_CART_ACTIONS = "VIEWING_CART_ACTIONS",   // User looking at cart action menu
   VIEWING_CART = "VIEWING_CART",                 // User looking at cart contents
 
   // === Confirmation Waiting States ===
@@ -53,8 +56,6 @@ export enum ConversationState {
   IN_CHECKOUT = "IN_CHECKOUT",                   // User is in checkout flow
   IN_REGISTRATION = "IN_REGISTRATION",           // User is registering
 
-  // === Order Actions ===
-  VIEWING_ORDER_ACTIONS = "VIEWING_ORDER_ACTIONS", // User sees actions for an order (invoice, repeat, etc.)
 }
 
 /**
@@ -127,11 +128,16 @@ const STATE_TRANSITIONS: Map<string, ConversationState> = new Map([
   [`${ConversationState.BROWSING_CATEGORIES}:SELECT_CATEGORY`, ConversationState.BROWSING_SUBCATEGORIES],
   [`${ConversationState.BROWSING_CATEGORIES}:VIEW_CART`, ConversationState.VIEWING_CART],
   [`${ConversationState.BROWSING_CATEGORIES}:VIEW_ORDERS`, ConversationState.BROWSING_ORDERS],
+  [`${ConversationState.BROWSING_CATEGORIES}:SELECT_GROUP`, ConversationState.BROWSING_GROUPS],
   
   // From BROWSING_SUBCATEGORIES (groups/filtered products)
   [`${ConversationState.BROWSING_SUBCATEGORIES}:SELECT_CATEGORY`, ConversationState.BROWSING_PRODUCTS],
   [`${ConversationState.BROWSING_SUBCATEGORIES}:SELECT_PRODUCT`, ConversationState.VIEWING_PRODUCT],
   [`${ConversationState.BROWSING_SUBCATEGORIES}:VIEW_CART`, ConversationState.VIEWING_CART],
+
+  // From BROWSING_GROUPS (LLM/grouped products)
+  [`${ConversationState.BROWSING_GROUPS}:SELECT_PRODUCT`, ConversationState.VIEWING_PRODUCT],
+  [`${ConversationState.BROWSING_GROUPS}:VIEW_CART`, ConversationState.VIEWING_CART],
   
   // From BROWSING_PRODUCTS
   [`${ConversationState.BROWSING_PRODUCTS}:SELECT_PRODUCT`, ConversationState.VIEWING_PRODUCT],
@@ -203,6 +209,7 @@ export const CONFIRM_TRIGGERS_CHECKOUT: ConversationState[] = [
 export const NUMERIC_MEANS_PRODUCT: ConversationState[] = [
   ConversationState.BROWSING_PRODUCTS,
   ConversationState.BROWSING_SUBCATEGORIES,
+  ConversationState.BROWSING_GROUPS,
 ]
 
 /**
@@ -210,6 +217,7 @@ export const NUMERIC_MEANS_PRODUCT: ConversationState[] = [
  */
 export const NUMERIC_MEANS_ORDER: ConversationState[] = [
   ConversationState.BROWSING_ORDERS,
+  ConversationState.VIEWING_ORDER_ACTIONS,
 ]
 
 /**
@@ -232,6 +240,14 @@ export const NUMERIC_MEANS_SERVICE: ConversationState[] = [
 export const NUMERIC_MEANS_ORDER_ACTION: ConversationState[] = [
   ConversationState.VIEWING_ORDER,
   ConversationState.VIEWING_ORDER_ACTIONS,
+]
+
+/**
+ * States where numeric selection means "select cart action"
+ */
+export const NUMERIC_MEANS_CART_ACTION: ConversationState[] = [
+  ConversationState.VIEWING_CART_ACTIONS,
+  ConversationState.VIEWING_CART,
 ]
 
 export class ConversationStateService {

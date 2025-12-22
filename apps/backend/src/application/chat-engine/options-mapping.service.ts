@@ -88,10 +88,25 @@ export interface OptionsMapping {
   expiresAt?: string
 }
 
+// UI-level menu representation (kept minimal on purpose)
+export interface LastPresentedMenu {
+  type: ListType
+  options?: OptionItem[]
+  groupMapping?: Record<string, { nome: string; skus: string[] }>
+  renderedText?: string
+  expiresAt?: string
+}
+
 export class OptionsMappingService {
   private static readonly DEFAULT_TTL_MS = 10 * 60 * 1000 // 10 minutes
 
   constructor(private prisma: PrismaClient) {}
+
+  private isExpired(expiresAt?: string): boolean {
+    if (!expiresAt) return false
+    const expiryMs = Date.parse(expiresAt)
+    return !Number.isNaN(expiryMs) && expiryMs <= Date.now()
+  }
 
   /**
    * Load lastOptionsMapping from database for a conversation
@@ -120,19 +135,16 @@ export class OptionsMappingService {
       })
 
       const metadata = (searchConv?.metadata as any) || {}
-      const mapping = metadata.lastOptionsMapping || metadata.lastPresentedMenu || null
+      const mapping = metadata.lastOptionsMapping || null
 
       // TTL check: clear expired mappings
-      if (mapping?.expiresAt) {
-        const expiryMs = Date.parse(mapping.expiresAt)
-        if (!Number.isNaN(expiryMs) && expiryMs <= Date.now()) {
-          logger.info("⏰ [OptionsMapping] Mapping expired, clearing", {
-            conversationId,
-            expiresAt: mapping.expiresAt,
-          })
-          await this.clearMapping(conversationId)
-          return null
-        }
+      if (mapping?.expiresAt && this.isExpired(mapping.expiresAt)) {
+        logger.info("⏰ [OptionsMapping] Mapping expired, clearing", {
+          conversationId,
+          expiresAt: mapping.expiresAt,
+        })
+        await this.clearMapping(conversationId)
+        return null
       }
 
       logger.info("📋 [OptionsMapping] Loaded mapping", {
@@ -154,14 +166,45 @@ export class OptionsMappingService {
   }
 
   /**
-   * Alias for UI-level retrieval (prefer lastPresentedMenu if present)
+   * UI-level retrieval: prefer lastPresentedMenu (menu dedicato), fallback to lastOptionsMapping
    */
   async loadMenu(
     workspaceId: string,
     conversationId: string
   ): Promise<OptionsMapping | null> {
-    const mapping = await this.loadMapping(workspaceId, conversationId)
-    return mapping
+    try {
+      const searchConv = await this.prisma.searchConversations.findUnique({
+        where: { sessionId: conversationId },
+      })
+      const metadata = (searchConv?.metadata as any) || {}
+      const menu: LastPresentedMenu | null = metadata.lastPresentedMenu || null
+
+      if (menu && menu.expiresAt && this.isExpired(menu.expiresAt)) {
+        logger.info("⏰ [OptionsMapping] Presented menu expired, clearing", {
+          conversationId,
+          expiresAt: menu.expiresAt,
+        })
+        await this.clearMapping(conversationId)
+        return null
+      }
+
+      if (menu) {
+        return {
+          type: "numbered",
+          options: menu.options,
+          listType: menu.type,
+          groupMapping: menu.groupMapping,
+          renderedText: menu.renderedText,
+          expiresAt: menu.expiresAt,
+        }
+      }
+
+      // fallback to lastOptionsMapping
+      return await this.loadMapping(workspaceId, conversationId)
+    } catch (error) {
+      logger.error("❌ [OptionsMapping] Failed to load menu", { conversationId, error })
+      return null
+    }
   }
 
   /**
@@ -331,10 +374,20 @@ export class OptionsMappingService {
         expiresAt: new Date(Date.now() + (expiresInMs ?? OptionsMappingService.DEFAULT_TTL_MS)).toISOString(),
       } : null
       
+      const presentedMenu: LastPresentedMenu | null = updatedMapping
+        ? {
+            type: (updatedMapping.listType as ListType) || "unknown",
+            options: updatedMapping.options,
+            groupMapping: updatedMapping.groupMapping,
+            renderedText: updatedMapping.renderedText,
+            expiresAt: updatedMapping.expiresAt,
+          }
+        : null
+
       const updatedMetadata = {
         ...currentMetadata,
         lastOptionsMapping: updatedMapping,
-        lastPresentedMenu: updatedMapping, // alias for UI-level retrieval
+        lastPresentedMenu: presentedMenu,
       }
 
       await this.prisma.searchConversations.upsert({
