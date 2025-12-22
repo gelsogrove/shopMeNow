@@ -828,7 +828,7 @@ export class ResponseBuilderService {
     if (orders.length === 0) {
       return {
         type: "NO_RESULTS",
-        data: { errorMessage: "No orders found" },
+        data: { errorMessage: "Non ci sono ordini per questo cliente." },
         formatting: { ...DEFAULT_FORMATTING, showNumbers: false },
         context,
       }

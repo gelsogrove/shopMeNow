@@ -2820,20 +2820,32 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
               sku: item.sku,
               id: item.id,
             }))
+            // Derive items from groupMapping when LLM formatter returned only groups
+            const itemsFromGroupMapping =
+              !itemsWithSkus && groupMappingFromFormatter
+                ? Object.entries(groupMappingFromFormatter).map(([num, group]) => ({
+                    number: parseInt(num, 10),
+                    name: group.nome,
+                    sku: undefined,
+                    id: undefined,
+                    metadata: { skus: group.skus },
+                  }))
+                : undefined
             
             // 🔍 DEBUG: Check what listType we're passing
             const computedListType = structuredResponse.type === "PRODUCT_LIST" ? "PRODUCTS" 
                       : structuredResponse.type === "PRODUCT_GROUPED" ? "GROUPS"
+                      : structuredResponse.type === "PRODUCT_NEEDS_SMART_GROUPING" ? "GROUPS"
                       : structuredResponse.type === "ORDER_LIST" ? "ORDERS"
                       : structuredResponse.type === "CATEGORY_LIST" ? "CATEGORIES"
                       : structuredResponse.type === "SERVICE_LIST" ? "SERVICES"
                       : structuredResponse.type === "OFFERS" ? "OFFER_CATEGORIES"  // 🆕
                       : structuredResponse.type === "OFFER_WITH_PRODUCTS" ? "PRODUCTS"  // 🆕 Single offer shows products
-                      : undefined
+                      : (groupMappingFromFormatter ? "GROUPS" : undefined)
             logger.info("📋 [ChatEngine] DEBUG: About to save mapping", {
               structuredResponseType: structuredResponse.type,
               computedListType,
-              itemsCount: itemsWithSkus?.length || 0,
+              itemsCount: itemsWithSkus?.length || itemsFromGroupMapping?.length || 0,
             })
             
             if (computedListType) {
@@ -2843,7 +2855,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
                 customerId: input.customerId,
                 responseText: responseWithSkus,
                 groupMapping: groupMappingFromFormatter,
-                items: itemsWithSkus,
+                items: itemsWithSkus || itemsFromGroupMapping,
                 listType: computedListType,
               })
             } else {
@@ -4337,15 +4349,28 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       // For other types: normal saveMapping
       else {
         // Extract items with SKUs from structuredResponse for proper mapping
-        const itemsWithSkus = structuredResponse.data?.items?.map((item: any) => ({
-          number: item.number,
-          name: item.name,
-          sku: item.sku,
-          id: item.id,
-        }))
-        
-        // Determine listType from response type
-        const responseListType = structuredResponse.type === "PRODUCT_LIST" ? "PRODUCTS" 
+            const itemsWithSkus = structuredResponse.data?.items?.map((item: any) => ({
+              number: item.number,
+              name: item.name,
+              sku: item.sku,
+              id: item.id,
+            }))
+            // If grouping response has groupMapping but no items array, derive items for mapping
+            const itemsFromGroupMapping =
+              !itemsWithSkus && groupMapping
+                ? Object.entries(groupMapping).map(([num, group]) => ({
+                    number: parseInt(num, 10),
+                    name: group.nome,
+                    sku: undefined,
+                    id: undefined,
+                    metadata: { skus: group.skus },
+                  }))
+                : undefined
+            
+            // Determine listType from response type
+            const responseListType = structuredResponse.type === "PRODUCT_LIST" ? "PRODUCTS" 
+                               : structuredResponse.type === "PRODUCT_GROUPED" ? "GROUPS"
+                               : structuredResponse.type === "PRODUCT_NEEDS_SMART_GROUPING" ? "GROUPS"
                                : structuredResponse.type === "ORDER_LIST" ? "ORDERS"
                                : structuredResponse.type === "CATEGORY_LIST" ? "CATEGORIES"
                                : structuredResponse.type === "SERVICE_LIST" ? "SERVICES"
@@ -4360,6 +4385,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           responseText: responseWithSkus, // Use response WITH SKUs for mapping
           groupMapping, // 🆕 Pass LLM-generated group mapping if available
           items: itemsWithSkus, // 🔧 Pass items with SKUs for reliable selection
+          ...(itemsFromGroupMapping ? { items: itemsFromGroupMapping } : {}),
           listType: responseListType, // 🔧 Pass list type for proper intent creation
         })
 
