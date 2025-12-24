@@ -59,6 +59,21 @@ export class CatalogQueryService {
     const { workspaceId, message, customerDiscount = 0, intentType, customerLanguage = "it" } = options
 
     const builderResult = await this.builder.build(message)
+    const finalQuery: CatalogQuery = { ...builderResult.query }
+    const trimmedMessage = message.trim()
+    const hasFilters = Array.isArray(finalQuery.filters) && finalQuery.filters.length > 0
+    const hasGroupBy = Array.isArray(finalQuery.groupBy) && finalQuery.groupBy.length > 0
+
+    // For SEARCH_PRODUCTS, enforce a text filter when the builder returns a plain list.
+    if (intentType === "SEARCH_PRODUCTS" && trimmedMessage.length > 1 && !hasFilters && !hasGroupBy) {
+      finalQuery.filters = [
+        {
+          field: "text",
+          op: "contains",
+          value: trimmedMessage,
+        },
+      ]
+    }
     const products = await this.loadProducts(workspaceId, customerDiscount)
 
     if (products.length === 0) {
@@ -68,14 +83,14 @@ export class CatalogQueryService {
           resultType: "EMPTY",
         },
         structuredResponse: this.buildNoResultsResponse(customerLanguage, intentType, customerDiscount),
-        query: builderResult.query,
+        query: finalQuery,
         model: builderResult.model,
         tokenUsage: builderResult.usage,
         resultType: "EMPTY",
       }
     }
 
-    const result = executeCatalogQuery(products, builderResult.query)
+    const result = executeCatalogQuery(products, finalQuery)
 
     switch (result.type) {
       case "LIST": {
@@ -94,7 +109,7 @@ export class CatalogQueryService {
             products: result.items,
           },
           structuredResponse,
-          query: builderResult.query,
+          query: finalQuery,
           model: builderResult.model,
           tokenUsage: builderResult.usage,
           resultType: "LIST",
@@ -116,7 +131,7 @@ export class CatalogQueryService {
             groups: result.groups,
           },
           structuredResponse,
-          query: builderResult.query,
+          query: finalQuery,
           model: builderResult.model,
           tokenUsage: builderResult.usage,
           resultType: "GROUPED",
@@ -137,7 +152,7 @@ export class CatalogQueryService {
             resultType: "AGGREGATE",
           },
           structuredResponse,
-          query: builderResult.query,
+          query: finalQuery,
           model: builderResult.model,
           tokenUsage: builderResult.usage,
           resultType: "AGGREGATE",
@@ -150,7 +165,7 @@ export class CatalogQueryService {
             resultType: "EMPTY",
           },
           structuredResponse: this.buildNoResultsResponse(customerLanguage, intentType, customerDiscount),
-          query: builderResult.query,
+          query: finalQuery,
           model: builderResult.model,
           tokenUsage: builderResult.usage,
           resultType: "EMPTY",

@@ -2821,22 +2821,49 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
               groupMappingFromFormatter = formattedResult.groupMapping  // 🔧 Capture groupMapping
             } else if (structuredResponse.type === "NO_RESULTS") {
               const errorMessage = (structuredResponse.data as { errorMessage?: string })?.errorMessage || "Nessun risultato trovato"
-              logger.warn("⚠️ [ChatEngine] NO_RESULTS response, delegating to generic fallback", {
-                errorMessage,
-                listType: optionsMapping?.listType,
-              })
-              // Load conversation history for context
-              const fallbackHistory = await this.conversationManager.loadHistory(input.workspaceId, conversationId)
-              const fallback = await this.routeGenericLLMFallback({
-                input,
-                conversationId,
-                history: fallbackHistory,
-                fallbackReason: errorMessage,
-                debugSteps,
-              })
-              finalMessage = fallback.message
-              llmUsed = true
-              totalTokens += fallback.tokensUsed
+              
+              // 🔧 FIX: For specific search queries (SEARCH_PRODUCTS), don't fallback to categories
+              // Instead, provide a helpful "no results" message with suggestions
+              if (parsedIntent.type === "SEARCH_PRODUCTS") {
+                const searchQuery = (parsedIntent as SearchProductsIntent).query
+                finalMessage = `Mi dispiace, non ho trovato prodotti per "${searchQuery}". 
+
+Prova a:
+• Controllare l'ortografia
+• Usare termini più generici
+• Esplorare le nostre categorie
+
+1. Esplora il catalogo
+2. Mostrami il carrello
+
+o scrivi quello che stai cercando! 🔍`
+                
+                logger.info("🔍 [ChatEngine] SEARCH_PRODUCTS no results - direct response", {
+                  searchQuery,
+                  message: "Direct no-results response instead of fallback"
+                })
+                
+                llmUsed = false
+              } else {
+                // For other intents, use generic fallback as before
+                logger.warn("⚠️ [ChatEngine] NO_RESULTS response, delegating to generic fallback", {
+                  errorMessage,
+                  intentType: parsedIntent.type,
+                  listType: optionsMapping?.listType,
+                })
+                
+                const fallbackHistory = await this.conversationManager.loadHistory(input.workspaceId, conversationId)
+                const fallback = await this.routeGenericLLMFallback({
+                  input,
+                  conversationId,
+                  history: fallbackHistory,
+                  fallbackReason: errorMessage,
+                  debugSteps,
+                })
+                finalMessage = fallback.message
+                llmUsed = true
+                totalTokens += fallback.tokensUsed
+              }
             }
             
             // Save response WITH SKUs for next selection
@@ -3961,9 +3988,15 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       if (this.shouldUseCatalogQuery(intentResult.intent)) {
         const catalogStart = Date.now()
         try {
+          const catalogMessage =
+            intentResult.intent.type === "SEARCH_PRODUCTS" &&
+            (intentResult.intent as SearchProductsIntent).query?.trim()
+              ? (intentResult.intent as SearchProductsIntent).query.trim()
+              : input.message
+
           const catalogResult = await this.catalogQueryService.process({
             workspaceId: input.workspaceId,
-            message: input.message,
+            message: catalogMessage,
             customerDiscount: input.customerDiscount || 0,
             intentType: intentResult.intent.type,
             customerLanguage: input.customerLanguage || "it",
@@ -4008,7 +4041,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
                 }
               : undefined,
             input: {
-              userMessage: input.message,
+              userMessage: catalogMessage,
             },
             output: {
               decision: `CatalogQuery: ${queryPreview}`,

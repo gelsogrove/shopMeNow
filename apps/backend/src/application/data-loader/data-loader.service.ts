@@ -2455,30 +2455,65 @@ export class DataLoaderService {
       const sanitizedQuery = trimmedQuery.replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim()
       const fuseQuery = sanitizedQuery.length > 0 ? sanitizedQuery : trimmedQuery
 
+      // 🔍 DEBUG: Log query transformation
+      logger.info("🔍 [SearchDebug] Query transformation", {
+        originalQuery: query,
+        trimmedQuery,
+        sanitizedQuery,
+        fuseQuery
+      })
+
       const fuse = new Fuse(products, {
         keys: [
-          { name: "name", weight: 0.5 },
-          { name: "description", weight: 0.2 },
-          { name: "productCategories.category.name", weight: 0.15 },
-          { name: "region", weight: 0.05 },
-          { name: "formato", weight: 0.05 },
-          { name: "productCertifications.certification.name", weight: 0.05 },
+          { name: "name", weight: 0.7 }, // 🔧 INCREASED: Product name is most important
+          { name: "description", weight: 0.15 }, // 🔧 REDUCED: Description less important  
+          { name: "productCategories.category.name", weight: 0.1 },
+          { name: "region", weight: 0.025 },
+          { name: "formato", weight: 0.025 },
+          { name: "productCertifications.certification.name", weight: 0.0 }, // 🔧 DISABLED: Too noisy
         ],
-        threshold: 0.38,
+        threshold: 0.2, // 🔧 MORE RESTRICTIVE: Reduced from 0.25 to 0.2 for even stricter matching
         ignoreLocation: true,
         includeScore: true,
-        minMatchCharLength: 2,
+        minMatchCharLength: 3, // 🔧 INCREASED: Minimum 3 characters for match
       })
 
       const fuseResults = fuse.search(fuseQuery)
-      let candidates = fuseResults.map((result) => result.item)
+      
+      // 🔧 ADDED: Filter out results with very poor relevance scores
+      const relevantResults = fuseResults.filter(result => {
+        const score = result.score || 0
+        return score <= 0.15 // Only keep results with good relevance (lower score = better match)
+      })
+      
+      let candidates = relevantResults.map((result) => result.item)
+
+      // 🔍 DEBUG: Log top fuse results with scores
+      logger.info("🔍 [SearchDebug] Top Fuse.js results", {
+        query: fuseQuery,
+        threshold: 0.2,
+        allResults: fuseResults.length,
+        relevantResults: relevantResults.length,
+        topResults: relevantResults.slice(0, 5).map(result => ({
+          name: result.item.name,
+          score: result.score,
+          description: result.item.description?.substring(0, 100) + "...",
+          categories: result.item.productCategories?.map((pc: any) => pc.category?.name).join(", ") || "N/A"
+        }))
+      })
 
       if (candidates.length === 0) {
         candidates = this.basicTextMatch(products, trimmedQuery)
+        logger.info("🔍 [SearchDebug] Using basicTextMatch fallback", {
+          fallbackMatches: candidates.length
+        })
       }
 
       if (candidates.length === 0) {
         candidates = this.findSimilarProductsByName(products, trimmedQuery)
+        logger.info("🔍 [SearchDebug] Using findSimilarProductsByName fallback", {
+          fallbackMatches: candidates.length
+        })
       }
 
       const limitedCandidates = candidates.slice(0, 25)
@@ -2488,6 +2523,7 @@ export class DataLoaderService {
         sanitizedQuery: fuseQuery,
         totalProducts: products.length,
         fuseMatches: fuseResults.length,
+        relevantMatches: relevantResults.length,
         fallbackMatches: candidates.length,
         returned: limitedCandidates.length,
       })
