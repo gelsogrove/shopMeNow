@@ -613,7 +613,19 @@ export class LLMFormatterService {
       lines.push(`I prezzi sono IVA esclusa.`)
     }
 
-    const hasRemovableItems = items.length > 1
+    // ALIGN WITH CHAT-ENGINE LOGIC: hasRemovableItems calculation must match buildCartActionOptions
+    // Chat-engine uses: (cartItemCount ?? 2) > 1
+    // If we don't know the exact cartItemCount, assume same logic: if items exist, use items.length, else assume 2
+    const actualItemCount = items.length || 2  // Fallback to 2 if no items (matches chat-engine ?? 2)
+    const hasRemovableItems = actualItemCount > 1
+    
+    // DEBUG: Log the cart action generation to understand misalignment
+    logger.warn("🛒 [LLMFormatter] Cart action generation", {
+      itemsLength: items.length,
+      actualItemCount,
+      hasRemovableItems,
+      method: "getCartViewTemplate"
+    })
     let optionNumber = 1
     const actions: string[] = [
       `<b>${optionNumber++}.</b> Confermare l'ordine`,

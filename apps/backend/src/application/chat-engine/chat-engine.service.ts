@@ -917,6 +917,14 @@ export class ChatEngineService {
   }
 
   private async buildCartActionOptions(hasRemovableItems: boolean, workspaceId?: string, uniqueTransportModes: number = 0) {
+    // DEBUG: Log the cart action generation to understand misalignment
+    logger.warn("🛒 [ChatEngine] Cart action generation", {
+      hasRemovableItems,
+      workspaceId: workspaceId?.substring(0, 8),
+      uniqueTransportModes,
+      method: "buildCartActionOptions"
+    })
+    
     const options: Array<{ number: number; name: string; id: string }> = []
     let nextNumber = 1
     options.push({ number: nextNumber++, name: "Conferma ordine", id: "CONFIRM_ORDER" })
@@ -927,6 +935,11 @@ export class ChatEngineService {
       options.push({ number: nextNumber++, name: "Rimuovere un articolo", id: "REMOVE_FROM_CART" })
     }
     options.push({ number: nextNumber++, name: "Cancella il carrello", id: "CLEAR_CART" })
+    
+    // DEBUG: Log final options
+    logger.warn("🛒 [ChatEngine] Generated cart actions", {
+      options: options.map(opt => `${opt.number}:${opt.id}`)
+    })
     
     // TODO: "Ottimizza spedizione" feature - will be implemented later
     // Option: Order optimization (show only when 2+ different transport modes exist)
@@ -1661,6 +1674,14 @@ export class ChatEngineService {
           // 🛒 CRITICAL: Save CART_ACTIONS mapping so "1" triggers CONFIRM_ORDER, not product search!
           const cartItemCount = this.extractCartItemCountFromFunctionCalls(cartResponse.functionCalls)
           const transportModes = this.extractTransportModesFromFunctionCalls(cartResponse.functionCalls)
+          
+          // DEBUG: Log the calculation before building cart actions
+          logger.warn("🛒 [ChatEngine] Before buildCartActionOptions", {
+            cartItemCount,
+            hasRemovableItems: (cartItemCount ?? 2) > 1,
+            transportModes
+          })
+          
           const cartActions = await this.buildCartActionOptions((cartItemCount ?? 2) > 1, input.workspaceId, transportModes)
 
           await this.optionsMappingService.saveMapping({
