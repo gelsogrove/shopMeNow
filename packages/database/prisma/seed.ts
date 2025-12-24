@@ -31,7 +31,6 @@ import { platformConfigData } from "./data/platformConfig"
 import { pricingConfigData } from "./data/pricingConfig"
 import { products } from "./data/products"
 import { services } from "./data/services"
-import { suppliers } from "./data/suppliers"
 import { workspaceSettings } from "./data/workspaceSettings"
 
 // Initialize the PostgreSQL adapter for Prisma 7
@@ -83,7 +82,6 @@ async function main() {
   await prisma.productCertification.deleteMany()
   await prisma.products.deleteMany()
   await prisma.productSearch.deleteMany()
-  await prisma.suppliers.deleteMany()
   await prisma.categories.deleteMany()
   await prisma.sales.deleteMany()
   await prisma.languages.deleteMany()
@@ -1111,35 +1109,6 @@ async function main() {
 
   console.log(`✅ Created ${categories.length} categories`)
 
-  // 7.5 Create Suppliers
-  console.log("🏭 Creating suppliers...")
-
-  const supplierMap = new Map<string, string>()
-  const createdSuppliers = []
-
-  for (const sup of suppliers) {
-    const supplier = await prisma.suppliers.create({
-      data: {
-        companyName: sup.companyName,
-        description: sup.description,
-        website: sup.website,
-        phone: sup.phone,
-        email: sup.email,
-        contactName: sup.contactName,
-        region: sup.region,
-        country: sup.country,
-        logoUrl: sup.logoUrl,
-        workspace: {
-          connect: { id: workspace.id },
-        },
-      },
-    })
-    createdSuppliers.push(supplier)
-    supplierMap.set(sup.companyName, supplier.id)
-  }
-
-  console.log(`✅ Created ${suppliers.length} suppliers`)
-
   // 6.5 Create Certifications (Feature 178)
   console.log("🔖 Creating certifications...")
 
@@ -1195,19 +1164,6 @@ async function main() {
 
   console.log(`✅ Created ${transportTypesData.length} transport types with prices`)
 
-  // Mapping: category name → supplier company name
-  const categoryToSupplier: Record<string, string> = {
-    Pasta: "Pastificio Gragnano",
-    "Cured Meats": "Salumificio Toscano",
-    Cheeses: "Latticini del Sud",
-    Condiments: "Oleificio Pugliese",
-    Desserts: "Dolciaria Siciliana",
-    Beverages: "Bevande Premium Italia",
-    Specialties: "Specialità Regionali",
-    Preserves: "Conserve Calabresi",
-    "Frozen Products": "Surgelati Naturali",
-  }
-
   // 7. Create Products
   console.log("📦 Creating products...")
 
@@ -1219,12 +1175,6 @@ async function main() {
       )
       continue
     }
-
-    // Get supplier ID based on category
-    const supplierCompanyName = categoryToSupplier[prod.categoryName]
-    const supplierId = supplierCompanyName
-      ? supplierMap.get(supplierCompanyName)
-      : createdSuppliers[0].id // fallback to first supplier
 
     // Distribute boolean certifications based on product category and name
     const isOrganic =
@@ -1275,7 +1225,6 @@ async function main() {
         status: prod.status as any,
         slug: prod.slug,
         categoryId: categoryId,
-        supplierId: supplierId,
         workspaceId: workspace.id,
         imageUrl: prod.imageUrl || [],
         transportType: transportType,

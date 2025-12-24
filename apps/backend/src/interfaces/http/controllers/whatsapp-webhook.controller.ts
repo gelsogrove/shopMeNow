@@ -12,6 +12,7 @@ import {
 } from "../../../utils/language-detector"
 import logger from "../../../utils/logger"
 import { whatsAppToMarkdown } from "../../../utils/whatsapp-formatter"
+import { normalizePhoneNumber } from "../../../utils/phone"
 
 /**
  * WhatsApp Webhook Controller
@@ -244,30 +245,65 @@ export class WhatsAppWebhookController {
         }
       }
 
-      const customer = await prisma.customers.findFirst({
-        where: {
-          phone: phoneNumber,
-          workspaceId, // Ensure we search in correct workspace
-        },
-        select: {
-          id: true,
-          phone: true,
-          name: true,
-          email: true,
-          language: true,
-          workspaceId: true,
-          isActive: true,
-          activeChatbot: true, // 🔒 CRITICAL: Load chatbot status
-          discount: true, // 💰 Load customer discount for cart pricing
-          workspace: {
-            select: {
-              id: true,
-              name: true,
-              welcomeMessage: true,
-            },
+      const normalizedPhone = normalizePhoneNumber(phoneNumber)
+      const customerSelect = {
+        id: true,
+        phone: true,
+        name: true,
+        email: true,
+        language: true,
+        workspaceId: true,
+        isActive: true,
+        activeChatbot: true,
+        discount: true,
+        workspace: {
+          select: {
+            id: true,
+            name: true,
+            welcomeMessage: true,
           },
         },
-      })
+      } as const
+
+      let customer = null
+
+      if (normalizedPhone) {
+        try {
+          const normalizedMatch = await prisma.$queryRaw<
+            Array<{ id: string }>
+          >`
+            SELECT "id"
+            FROM "customers"
+            WHERE "workspaceId" = ${workspaceId}
+              AND regexp_replace(COALESCE("phone", ''), '\\D', '', 'g') = ${normalizedPhone}
+            LIMIT 1
+          `
+
+          const normalizedCustomerId = normalizedMatch?.[0]?.id
+          if (normalizedCustomerId) {
+            customer = await prisma.customers.findUnique({
+              where: { id: normalizedCustomerId },
+              select: customerSelect,
+            })
+          }
+        } catch (error) {
+          logger.error("[WEBHOOK] ❌ Error searching customer by normalized phone", {
+            workspaceId,
+            normalizedPhone,
+            error,
+          })
+        }
+      }
+
+      if (!customer) {
+        customer = await prisma.customers.findFirst({
+          where: {
+            phone: phoneNumber,
+            workspaceId,
+          },
+          select: customerSelect,
+        })
+      }
 
       if (!customer) {
         logger.info(
@@ -588,7 +624,7 @@ export class WhatsAppWebhookController {
           // This allows us to save the welcome message in chat history
           const tempCustomer = await tx.customers.create({
             data: {
-              phone: phoneNumber,
+              phone: normalizedPhone || phoneNumber,
               workspaceId: workspaceId,
               name: "New Customer", // Temporary name
               email: `temp_${phoneNumber.replace(/[^0-9]/g, "")}@pending.com`, // Temporary email (required field)

@@ -87,12 +87,22 @@ export async function repeatOrder(
 
       // Se orderCode non è specificato, prendi l'ultimo ordine
       let order
+      let anyOrder = null
+      
       if (request.orderCode) {
+        // Check if order exists regardless of customer (for security validation)
+        anyOrder = await prisma.orders.findFirst({
+          where: {
+            orderCode: request.orderCode,
+          }
+        })
+        
         order = await prisma.orders.findFirst({
           where: {
             orderCode: request.orderCode,
             customerId: request.customerId,
             workspaceId: request.workspaceId,
+            deletedAt: null, // 🔧 FIX: Add soft delete filter
           },
           include: {
             items: {
@@ -109,6 +119,7 @@ export async function repeatOrder(
           where: {
             customerId: request.customerId,
             workspaceId: request.workspaceId,
+            deletedAt: null, // 🔧 FIX: Add soft delete filter
           },
           orderBy: {
             createdAt: "desc",
@@ -124,8 +135,37 @@ export async function repeatOrder(
         })
       }
 
+      logger.debug("🔍 RepeatOrder found order:", {
+        orderFound: !!order,
+        orderCode: order?.orderCode,
+        itemsCount: order?.items?.length || 0,
+        orderStatus: order?.status,
+      })
+
       if (!order || !order.items || order.items.length === 0) {
+        // Controlla se l'ordine esiste ma appartiene a un altro customer
+        if (anyOrder && !order) {
+          logger.warn("⚠️ Order exists but belongs to different customer", {
+            orderCode: request.orderCode,
+            requestCustomerId: request.customerId,
+            actualCustomerId: anyOrder.customerId
+          })
+          
+          return {
+            success: false,
+            error: "Order not accessible",
+            message: "Ops {{nameUser}}! 😅\n\nQuest'ordine non ti appartiene o non è più disponibile.\n\n🔍 Prova con:\n• **\"ordini\"** - per vedere i tuoi ordini\n• **\"prodotti\"** - per fare un nuovo ordine\n\nCome posso aiutarti? 😊",
+            timestamp: new Date().toISOString(),
+          }
+        }
+        
         logger.error("❌ No order found to repeat")
+        logger.debug("🔍 RepeatOrder query details:", {
+          orderCode: request.orderCode,
+          customerId: request.customerId,
+          workspaceId: request.workspaceId,
+          queryUsed: request.orderCode ? "by orderCode" : "by latest",
+        })
         return {
           success: false,
           error: "Nessun ordine trovato",

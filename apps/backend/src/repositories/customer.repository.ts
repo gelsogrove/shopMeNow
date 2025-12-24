@@ -2,6 +2,7 @@ import { Customer, CustomerProps } from "../domain/entities/customer.entity"
 import { ICustomerRepository } from "../domain/repositories/customer.repository.interface"
 import { prisma } from "../lib/prisma"
 import logger from "../utils/logger"
+import { normalizePhone } from "../utils/phone-normalizer"
 
 /**
  * Implementation of Customer Repository using Prisma
@@ -135,12 +136,25 @@ export class CustomerRepository implements ICustomerRepository {
     workspaceId: string
   ): Promise<Customer | null> {
     try {
-      const customer = await prisma.customers.findFirst({
+      const normalizedPhone = normalizePhone(phone)
+      
+      // Try with normalized phone first
+      let customer = await prisma.customers.findFirst({
         where: {
-          phone,
+          phone: normalizedPhone,
           workspaceId,
         },
       })
+      
+      // If not found and original differs, try original
+      if (!customer && normalizedPhone !== phone) {
+        customer = await prisma.customers.findFirst({
+          where: {
+            phone: phone,
+            workspaceId,
+          },
+        })
+      }
 
       return customer ? this.toDomainEntity(customer) : null
     } catch (error) {
@@ -154,10 +168,11 @@ export class CustomerRepository implements ICustomerRepository {
    */
   async create(data: CustomerProps): Promise<Customer> {
     try {
+      const normalizedPhone = data.phone ? normalizePhone(data.phone) : undefined
       const customerData: any = {
         name: data.name,
         email: data.email,
-        phone: data.phone,
+        phone: normalizedPhone,
         address: data.address,
         company: data.company,
         discount: data.discount,
@@ -190,11 +205,12 @@ export class CustomerRepository implements ICustomerRepository {
           error
         )
 
-        // Fetch the existing customer
+        // Fetch the existing customer using normalized phone
+        const normalizedPhoneSearch = data.phone ? normalizePhone(data.phone) : undefined
         const existingCustomer = await prisma.customers.findFirst({
           where: {
             OR: [
-              { phone: data.phone, workspaceId: data.workspaceId },
+              { phone: normalizedPhoneSearch, workspaceId: data.workspaceId },
               { email: data.email, workspaceId: data.workspaceId },
             ],
           },
@@ -244,7 +260,7 @@ export class CustomerRepository implements ICustomerRepository {
 
       if (data.name !== undefined) updateData.name = data.name
       if (data.email !== undefined) updateData.email = data.email
-      if (data.phone !== undefined) updateData.phone = data.phone
+      if (data.phone !== undefined) updateData.phone = normalizePhone(data.phone)
       if (data.address !== undefined) updateData.address = data.address
       if (data.company !== undefined) updateData.company = data.company
       if (data.discount !== undefined) updateData.discount = data.discount

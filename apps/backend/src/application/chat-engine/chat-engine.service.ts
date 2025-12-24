@@ -4368,6 +4368,13 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           listType: "ORDER_ACTIONS",
           currentOrderCode: order?.code,
         })
+
+        // Also save order code separately for order actions (like setCurrentOrderCode above)
+        await this.optionsMappingService.setCurrentOrderCode({
+          workspaceId: input.workspaceId,
+          conversationId,
+          orderCode: order?.code || "",
+        })
         
         logger.info("📦 [ChatEngine] STEP 9: Saved ORDER_ACTIONS mapping", {
           responseType: structuredResponse.type,
@@ -4536,30 +4543,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       if (structuredResponse.type === "ORDER_DETAIL" && structuredResponse.data.order) {
         const order = structuredResponse.data.order
         
-        // Save order code
-        await this.optionsMappingService.setCurrentOrderCode({
-          workspaceId: input.workspaceId,
-          conversationId,
-          orderCode: order.code,
-        })
-        
-        // 🆕 CRITICAL: Save explicit action options so "1" = Fattura, "2" = Ripeti
-        await this.optionsMappingService.saveMapping({
-          workspaceId: input.workspaceId,
-          conversationId,
-          customerId: input.customerId,
-          responseText: "", // Empty - we're providing explicit items
-          items: [
-            { number: 1, name: "📄 Scarica fattura", id: "SEND_INVOICE", metadata: { orderCode: order.code } },
-            { number: 2, name: "🔄 Ripeti ordine", id: "REPEAT_ORDER", metadata: { orderCode: order.code } },
-          ],
-          listType: "ORDER_ACTIONS",
-        })
-        
-        logger.info("📦 [ChatEngine] Set order actions for ORDER_DETAIL", {
-          orderCode: order.code,
-          actions: ["SEND_INVOICE", "REPEAT_ORDER"],
-        })
+        // 🔧 DUPLICATE REMOVED - ORDER_DETAIL actions already saved above at line ~4360
       }
 
       // ========================================================================

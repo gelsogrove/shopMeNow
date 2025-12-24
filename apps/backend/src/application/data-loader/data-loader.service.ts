@@ -11,6 +11,7 @@
  */
 
 import { PrismaClient } from "@echatbot/database"
+import { normalizePhoneNumber } from "../../utils/phone"
 import Fuse from "fuse.js"
 import logger from "../../utils/logger"
 import {
@@ -1927,6 +1928,47 @@ export class DataLoaderService {
           },
           include: includeConfig,
         })
+      }
+
+      if (!order) {
+        const customer = await this.prisma.customers.findUnique({
+          where: { id: customerId },
+          select: { phone: true },
+        })
+
+        const normalizedPhone = normalizePhoneNumber(customer?.phone)
+        if (normalizedPhone) {
+          // 🔒 SECURITY FIX: Only look for orders by the SAME customer with normalized phone
+          // This prevents cross-customer order visibility
+          const orderByPhone = await this.prisma.$queryRaw<
+            Array<{ id: string; customerId: string }>
+          >`
+            SELECT o."id", o."customerId"
+            FROM "orders" o
+            JOIN "customers" c ON c."id" = o."customerId"
+            WHERE o."workspaceId" = ${workspaceId}
+              AND o."customerId" = ${customerId}
+              AND regexp_replace(COALESCE(c."phone", ''), '\\D', '', 'g') = ${normalizedPhone}
+            ORDER BY o."createdAt" DESC
+            LIMIT 1
+          `
+
+          const fallbackOrderId = orderByPhone?.[0]?.id
+          if (fallbackOrderId) {
+            order = await this.prisma.orders.findUnique({
+              where: { id: fallbackOrderId },
+              include: includeConfig,
+            })
+
+            if (order) {
+              logger.warn("📦 [DataLoader] Order resolved via normalized phone lookup", {
+                workspaceId,
+                originalCustomerId: customerId,
+                orderCustomerId: orderByPhone?.[0]?.customerId,
+              })
+            }
+          }
+        }
       }
 
       if (!order) {
