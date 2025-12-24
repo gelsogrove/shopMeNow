@@ -1151,7 +1151,7 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
     const discountPercent = cart.discountApplied || 0
     if (discountPercent > 0) {
       lines.push("")
-      lines.push(`ℹ️ Stai usufruendo del tuo sconto riservato del <b>${discountPercent}</b>%! I prezzi mostrati includono già lo sconto.`)
+      lines.push(`ℹ️ Abbiamo applicato il tuo sconto personale del <b>${discountPercent}</b>%. I prezzi mostrati includono già lo sconto.`)
       lines.push(`I prezzi sono IVA esclusa.`)
     }
     
@@ -1257,7 +1257,7 @@ addToCart({ items: [{ code: "${context.selectedSku}", quantity: <numero dal mess
     const discountPercent = cart.discountApplied || 0
     if (discountPercent > 0) {
       lines.push("")
-      lines.push(`ℹ️ Stai usufruendo del tuo sconto riservato del <b>${discountPercent}</b>%! I prezzi mostrati includono già lo sconto.`)
+      lines.push(`ℹ️ Abbiamo applicato il tuo sconto personale del <b>${discountPercent}</b>%. I prezzi mostrati includono già lo sconto.`)
       lines.push(`I prezzi sono IVA esclusa.`)
     }
     

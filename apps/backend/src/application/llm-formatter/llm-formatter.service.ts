@@ -522,9 +522,10 @@ export class LLMFormatterService {
     detailLines.push(`- Stock: ${stockValue}`)
     detailLines.push("")
     if (discountedPrice !== undefined && basePrice && Math.abs(discountedPrice - basePrice) > 0.009) {
-      detailLines.push(
-        `💰 <b>Prezzo: ${formatDisplayPrice(basePrice)} (${formatDisplayPrice(discountedPrice)} con il tuo sconto del ${response.context.discountPercent}%)</b>`
-      )
+      detailLines.push(`💰 <b>Prezzo: ${formatDisplayPrice(discountedPrice)}</b>`)
+      if (response.context.discountPercent > 0) {
+        detailLines.push(`Abbiamo applicato il tuo sconto personale del ${response.context.discountPercent}%.`)
+      }
     } else {
       detailLines.push(`💰 <b>Prezzo: ${formatDisplayPrice(basePrice)} Euro</b>`)
     }
@@ -569,9 +570,7 @@ export class LLMFormatterService {
           hasDiscount && basePrice > 0
             ? basePrice * (1 - discountPercent / 100)
             : null
-        const priceText = discounted
-          ? `${formatDisplayPrice(basePrice)} (${formatDisplayPrice(discounted)} con il tuo sconto del ${discountPercent}%)`
-          : formatDisplayPrice(basePrice)
+        const priceText = discounted ? formatDisplayPrice(discounted) : formatDisplayPrice(basePrice)
         lines.push(`- ${qty}x ${item.name} - ${priceText}`)
       }
     }
@@ -586,9 +585,7 @@ export class LLMFormatterService {
           hasDiscount && basePrice > 0
             ? basePrice * (1 - discountPercent / 100)
             : null
-        const priceText = discounted
-          ? `${formatDisplayPrice(basePrice)} (${formatDisplayPrice(discounted)} con il tuo sconto del ${discountPercent}%)`
-          : formatDisplayPrice(basePrice)
+        const priceText = discounted ? formatDisplayPrice(discounted) : formatDisplayPrice(basePrice)
         lines.push(`- ${item.name} - ${priceText}`)
       }
     }
@@ -608,7 +605,7 @@ export class LLMFormatterService {
     if (response.context.hasDiscount && response.context.discountPercent > 0) {
       lines.push("")
       lines.push(
-        `ℹ️ Stai usufruendo del tuo sconto riservato del <b>${response.context.discountPercent}</b>%! Per ogni voce trovi sia il prezzo di listino sia il valore scontato.`
+        `ℹ️ Abbiamo applicato il tuo sconto personale del <b>${response.context.discountPercent}</b>%. I prezzi mostrati includono già lo sconto.`
       )
       lines.push(`I prezzi sono IVA esclusa.`)
     }

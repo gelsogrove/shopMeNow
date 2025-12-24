@@ -17,6 +17,7 @@ import { OrderRepository } from "../../repositories/order.repository"
 import { ProductRepository } from "../../repositories/product.repository"
 import { ServiceRepository } from "../../repositories/service.repository"
 import logger from "../../utils/logger"
+import { DEFAULT_ROUNDING_STEP, smartRoundPrice } from "../../../../../shared/pricing"
 
 export interface CartAgentContext {
   workspaceId: string
@@ -92,10 +93,8 @@ export class CartManagementAgent {
         const originalPrice = item.product?.price || item.service?.price || 0
         // Apply customer discount
         let discountedPrice = originalPrice * discountMultiplier
-        // 🔴 CRITICAL: Round UP to nearest 10 cents (€7.02 → €7.10)
-        // Andrea's requirement: arrotondamento per eccesso ai 10 centesimi
-        // Must match PriceCalculationService logic!
-        discountedPrice = Math.ceil(discountedPrice * 10) / 10
+        // Use smart rounding for consistent display with other price formatting (e.g. 6.12 → 6.10)
+        discountedPrice = smartRoundPrice(discountedPrice, DEFAULT_ROUNDING_STEP)
         
         return {
           id: item.id,
@@ -202,9 +201,9 @@ export class CartManagementAgent {
 
         item = product
         itemName = product.name
-        // Apply customer discount and round UP to nearest 10 cents (matching getCart logic)
+        // Apply customer discount and smart rounding (matching getCart logic)
         let discountedPrice = product.price * discountMultiplier
-        itemPrice = Math.ceil(discountedPrice * 10) / 10
+        itemPrice = smartRoundPrice(discountedPrice, DEFAULT_ROUNDING_STEP)
         itemId = product.id
       } else if (type === "SERVICE") {
         const service = await this.serviceRepo.findByServiceCode(
@@ -231,9 +230,9 @@ export class CartManagementAgent {
         // Services don't have stock checks
         item = service
         itemName = service.name
-        // Apply customer discount and round UP to nearest 10 cents (matching getCart logic)
+        // Apply customer discount and smart rounding (matching getCart logic)
         let discountedPrice = service.price * discountMultiplier
-        itemPrice = Math.ceil(discountedPrice * 10) / 10
+        itemPrice = smartRoundPrice(discountedPrice, DEFAULT_ROUNDING_STEP)
         itemId = service.id
       }
 
