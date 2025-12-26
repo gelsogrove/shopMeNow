@@ -48,7 +48,7 @@ jest.mock("../../../src/application/services/link-generator.service", () => ({
 }))
 
 // Mock domain calling functions
-jest.mock("../../../src/domain/calling-functions/ContactOperator", () => ({
+jest.mock("../../../src/domain/calling-functions/contactOperator", () => ({
   contactOperator: jest.fn().mockResolvedValue({
     success: true,
     message: "Ticket created successfully",
