@@ -17,7 +17,7 @@
     "skipLibCheck": true,
     "incremental": true,
     "baseUrl": ".",
-    "outDir": "./dist",
+    "outDir": "./dist/src",
     "sourceMap": true,
     "resolveJsonModule": true,
     "noEmitOnError": false,
