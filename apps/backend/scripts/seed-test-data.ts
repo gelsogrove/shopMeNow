@@ -1,10 +1,40 @@
 import { prisma } from "@echatbot/database";
+import bcrypt from "bcryptjs";
 
 async function seed() {
   console.log("🌱 Seeding test data...");
 
   try {
-    // Find or create workspace by slug (unique constraint)
+    // ============================================
+    // 1. Create admin@echatbot.ai user (default login)
+    // ============================================
+    const adminPassword = await bcrypt.hash("venezia44", 10);
+    let adminUser = await prisma.user.findFirst({
+      where: { email: "admin@echatbot.ai" },
+    });
+
+    if (!adminUser) {
+      adminUser = await prisma.user.create({
+        data: {
+          email: "admin@echatbot.ai",
+          passwordHash: adminPassword,
+          firstName: "Admin",
+          lastName: "eChatbot",
+        },
+      });
+      console.log("✅ Created admin user: admin@echatbot.ai");
+    } else {
+      // Update password in case it changed
+      await prisma.user.update({
+        where: { id: adminUser.id },
+        data: { passwordHash: adminPassword },
+      });
+      console.log("✅ Admin user exists, password updated: admin@echatbot.ai");
+    }
+
+    // ============================================
+    // 2. Find or create test workspace
+    // ============================================
     let workspace = await prisma.workspace.findUnique({
       where: { slug: "bell-italia-vip" },
     });
@@ -67,6 +97,22 @@ async function seed() {
         });
         console.log("✅ Added owner to workspace");
       }
+    }
+
+    // Ensure admin@echatbot.ai has access to the workspace
+    const adminWorkspace = await prisma.userWorkspace.findUnique({
+      where: { userId_workspaceId: { userId: adminUser.id, workspaceId: workspace.id } },
+    });
+
+    if (!adminWorkspace) {
+      await prisma.userWorkspace.create({
+        data: {
+          userId: adminUser.id,
+          workspaceId: workspace.id,
+          role: "SUPER_ADMIN",
+        },
+      });
+      console.log("✅ Added admin@echatbot.ai to workspace");
     }
 
     // Create test customer - Mario Rossi
@@ -321,6 +367,74 @@ async function seed() {
         icon: "MessageCircle",
         systemPrompt: "You are the Customer Support Agent. Help customers with their inquiries.",
         order: 5,
+        isActive: true,
+      },
+      update: {
+        isActive: true,
+      },
+    });
+
+    // 🆕 CONVERSATION HISTORY LAYER - Humanization layer
+    const conversationHistoryConfig = await prisma.agentConfig.upsert({
+      where: { workspaceId_type: { workspaceId: workspace.id, type: "CONVERSATION_HISTORY" } },
+      create: {
+        workspaceId: workspace.id,
+        name: "Conversation History Layer",
+        type: "CONVERSATION_HISTORY",
+        description: "Humanizes responses with context, greetings, and offers",
+        icon: "MessageCircle",
+        systemPrompt: `# Conversation History Layer
+
+Sei il layer finale di umanizzazione delle risposte per {{workspaceName}}.
+
+## 🎭 IDENTITÀ
+- **Nome bot**: {{botName}}
+- **Personalità**: {{botIdentity}}
+
+## 🎯 IL TUO RUOLO
+Ricevi risposte TECNICHE dagli agent e le trasformi in risposte UMANE, naturali e contestuali.
+
+## ⚡ REGOLE CHIAVE
+1. SALUTO: Solo al primo messaggio o se cliente saluta
+2. EMOJI: Sì per conferme/spedizioni, MAI nel carrello/prodotti/prezzi
+3. VALORI: NON modificare MAI numeri, prezzi, nomi prodotti
+4. COERENZA: Verifica che risposta sia pertinente alla domanda
+5. MENU: Preserva menu numerici esattamente
+
+## ❌ NON FARE MAI
+- NON inventare prodotti o prezzi
+- NON cambiare numeri
+- NON aggiungere emoji nel carrello
+- NON tradurre (c'è Translation Agent)
+
+## 📤 OUTPUT
+Solo il messaggio finale, senza prefissi.`,
+        model: "openai/gpt-4o-mini",
+        temperature: 0.7,
+        maxTokens: 500,
+        order: 8,
+        isActive: true,
+      },
+      update: {
+        isActive: true,
+        temperature: 0.7,
+      },
+    });
+
+    // TRANSLATION AGENT
+    const translationConfig = await prisma.agentConfig.upsert({
+      where: { workspaceId_type: { workspaceId: workspace.id, type: "TRANSLATION" } },
+      create: {
+        workspaceId: workspace.id,
+        name: "Translation Agent",
+        type: "TRANSLATION",
+        description: "Translates responses to customer language",
+        icon: "Globe",
+        systemPrompt: "You are the Translation Agent. Translate the message to the target language while preserving formatting, numbers, and technical terms.",
+        model: "openai/gpt-4o-mini",
+        temperature: 0.1,
+        maxTokens: 1024,
+        order: 7,
         isActive: true,
       },
       update: {

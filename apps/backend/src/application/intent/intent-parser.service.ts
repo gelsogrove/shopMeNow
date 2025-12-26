@@ -17,9 +17,7 @@ import {
   Intent, 
   IntentResult, 
   ConversationContext,
-  UnknownIntent,
-  IncomprehensibleIntent,
-  SearchProductsIntent
+  UnknownIntent
 } from "./intent.types"
 import { matchAllPatterns } from "./patterns/pattern-matcher"
 import { buildContextFromHistory, parseListFromMessage } from "./patterns/history-parser"
@@ -109,39 +107,6 @@ export class IntentParserService {
       })
       
       return result
-    }
-
-    // STEP 2.5: 🔧 DETERMINISTIC SEARCH DETECTION (pre-LLM fix for specific product queries)
-    // Handle cases like "avete [product]?", "vete [product]?", "do you have [product]?"
-    const searchPatterns = [
-      /^(a?vete|do you have|tienes?|avez[-\s]vous|haben sie)\s+(.+?)\s*[?]?$/i,
-      /^(cerca|search|busca|cherche)\s+(.+)$/i,
-      /^(.+?)\s+(fresc[aoe]?|fresh|fresco)\s*[?]?$/i  // "pasta fresca", "cheese fresh", etc.
-    ]
-    
-    for (const pattern of searchPatterns) {
-      const match = message.trim().match(pattern)
-      if (match) {
-        const query = match[2]?.trim() || match[1]?.trim()
-        if (query && query.length > 1) {
-          const searchIntent: SearchProductsIntent = { type: "SEARCH_PRODUCTS", query }
-          const result: IntentResult = {
-            intent: searchIntent,
-            confidence: "HIGH",
-            source: "PATTERN",
-            processingTimeMs: Date.now() - startTime
-          }
-          
-          logger.info(`✅ IntentParser: Deterministic search pattern`, {
-            originalMessage: message,
-            extractedQuery: query,
-            pattern: pattern.source,
-            processingTimeMs: result.processingTimeMs
-          })
-          
-          return result
-        }
-      }
     }
 
     // STEP 2: Keyword matching against known entities
@@ -296,14 +261,7 @@ export class IntentParserService {
     
     // Simple intent classification prompt
     const systemPrompt = `You are an intent classifier for an e-commerce chatbot.
-Classify the user message into ONE of these intents.
-
-TYPO TOLERANCE: Be robust to common typos and variations across ALL languages:
-- Missing letters: common truncations and abbreviations
-- Autocorrect errors: understand intended words despite typos
-- Language mixing: handle multilingual queries
-- Focus on SEMANTIC MEANING over perfect spelling in any language
-- Understand context even with multiple typos or language variations
+Classify the user message into ONE of these intents:
 
 PRODUCT_SEARCH:
 - SHOW_CATEGORIES - User wants to see all categories
@@ -311,7 +269,7 @@ PRODUCT_SEARCH:
 - SHOW_PRODUCTS - User wants to see ALL products (lista prodotti, mostra prodotti, tutti i prodotti)
 - SEARCH_PRODUCTS:query - User is searching for SPECIFIC products (not "all products")
 - SHOW_OFFERS - User wants to see offers/discounts/promotions
-- PRODUCT_CONTEXT:question - User is asking for context/info/advice about the CURRENT product being shown (specifications, compatibility, usage, availability, features, etc.) without asking to modify cart. Only use if the last assistant message (or conversation state) indicates they are viewing a product detail.
+- PRODUCT_CONTEXT:question - User is asking for context/info/advice about the CURRENT product being shown (recipes, pairings, ingredients, availability, certifications, transport, etc.) without asking to modify cart. Only use if the last assistant message (or conversation state) indicates they are viewing a product detail.
 
 AVAILABLE CATEGORIES: ${categoryNames}
 NOTE: Use semantic understanding to map user queries to actual categories.
@@ -319,11 +277,9 @@ The user may use synonyms, related terms, or different languages.
 Map their intent to the matching category from the list above.
 
 IMPORTANT: 
-- "show all products", "lista prodotti", "mostrar productos" = SHOW_PRODUCTS
-- "red shoes", "scarpe rosse", "zapatos rojos", "blue shirt", "camicia blu" = SEARCH_PRODUCTS:query
-- Be robust to typos in ANY language: understand intent despite spelling errors
-- When user asks for SPECIFIC products/items regardless of language or typos, use SEARCH_PRODUCTS
-- When user asks for product advice/context while viewing a product, use PRODUCT_CONTEXT
+- "dammi lista prodotti", "mostra tutti i prodotti", "che prodotti avete" = SHOW_PRODUCTS
+- "prodotti BIO", "formaggi freschi", "cerca pecorino" = SEARCH_PRODUCTS:query
+- If the user asks "che ricetta posso fare?", "come si conserva?", "con cosa abbino questo?", and they are in a product detail context, return PRODUCT_CONTEXT with the question after the colon.
 
 CART:
 - VIEW_CART - User wants to see their cart, check cart contents
@@ -347,7 +303,10 @@ SUPPORT:
 - SHOW_AGENT_INFO - User wants to know their assigned sales agent
 - ASK_LOCATION - User asks where the store is located
 - ASK_FAQ:query - User has a question about policies, shipping, etc.
-- VIEW_PROFILE - User asks about their discount, profile, or personal info
+- ASK_BUSINESS_INFO - User asks about the TYPE of business/store, the SECTOR, what kind of shop this is. Examples: "che settore?", "che tipo di negozio siete?", "in che settore operate?", "what kind of store?", "che attività è?", "di cosa vi occupate?". NOT for categories/products!
+- VIEW_PROFILE - User asks about their discount, profile, or personal info (READ ONLY)
+- UPDATE_PROFILE - User wants to MODIFY/CHANGE/UPDATE their personal data (email, address, name, shipping address). Examples: "voglio cambiare email", "modifica indirizzo", "aggiorna i miei dati", "cambio indirizzo spedizione"
+- CHANGE_LANGUAGE - User wants to change the conversation language or asks to speak in another language. Examples: "parla in inglese", "speak in english", "hablame en español", "fale português", "cambia lingua", "in english please", "voglio parlare in spagnolo"
 - REQUEST_HUMAN - User wants to talk to a human OR is frustrated/angry.
   • If the user sounds angry, frustrated, or repeatedly complains about issues (caps lock, "sono stufo", "pessimo servizio", "non funziona mai", damaged goods, etc.) respond with "REQUEST_HUMAN:frustration".
   • If they explicitly ask for a person/operator but are calm, use "REQUEST_HUMAN".
@@ -356,33 +315,32 @@ OTHER:
 - CONFIRM - User is confirming something (yes, ok, sure)
 - REJECT - User is rejecting/canceling something (no, cancel)
 - GREETING - User is greeting (hello, hi, ciao)
-- INCOMPREHENSIBLE - Message is gibberish, random characters, typos, or completely nonsensical (e.g., "asdfgh", "casdas", "xyzabc", "jjjjj", keyboard mashing). Use this when the message has NO discernible meaning in ANY language.
-- UNKNOWN - The message seems like a real attempt at communication, but you can't determine the specific intent
+- UNKNOWN - Cannot determine intent
 
-CRITICAL DISTINCTION:
-- "INCOMPREHENSIBLE" = The message is NOT a real word or sentence in any language (random characters, keyboard mashing, typos with no meaning)
-- "UNKNOWN" = The message IS a real communication attempt, but you can't classify the intent
+IMPORTANT: "settore" when asking "che settore?" or "in che settore" means the BUSINESS TYPE, NOT categories! Use ASK_BUSINESS_INFO.
 
 Respond with ONLY the intent type and parameter if needed.
 Examples:
 - "SHOW_CATEGORIES"
-- "SHOW_CATEGORY:Electronics"
-- "SEARCH_PRODUCTS:wireless headphones"
-- "SHOW_OFFERS" (when user asks about offers, promotions, discounts, deals)
-- "VIEW_SERVICES" (when user asks about available services)
-- "SHOW_SERVICE:Shipping" (when user asks about a specific service)
-- "ADD_TO_CART:2:iPhone Case"
-- "REMOVE_FROM_CART:Laptop"
+- "SHOW_CATEGORY:Formaggi"
+- "SEARCH_PRODUCTS:formaggio stagionato"
+- "SHOW_OFFERS" (when user asks "che offerte avete?", "offerte?", "promozioni?", "sconti?", "what offers?", "deals?", "promotions?", "ofertas?", "promociones?")
+- "VIEW_SERVICES" (when user asks "che servizi avete?", "quali servizi?", "servizi?")
+- "SHOW_SERVICE:Spedizione" (when user asks about a specific service)
+- "ASK_BUSINESS_INFO" (when user asks "che settore?", "che tipo di negozio?", "di cosa vi occupate?")
+- "ADD_TO_CART:4:Pecorino Romano"
+- "REMOVE_FROM_CART:Pecorino"
 - "CLEAR_CART"
 - "CHECKOUT"
 - "VIEW_CART"
 - "VIEW_ORDERS"
 - "REPEAT_ORDER"
 - "VIEW_PROFILE" (when user asks "che sconto ho?", "il mio sconto", "my discount")
+- "UPDATE_PROFILE" (when user asks "modifica email", "cambia indirizzo", "aggiorna dati", "voglio cambiare i miei dati")
+- "CHANGE_LANGUAGE" (when user asks "parla in inglese", "speak english", "hablame en español", "cambia lingua")
 - "ASK_FAQ:shipping policy"
 - "SHOW_AGENT_INFO"
-- "INCOMPREHENSIBLE" (when message is gibberish like "asdfgh", "casdas", "xyzabc123", random keystrokes)
-- "UNKNOWN" (when message is a real communication but intent unclear)
+- "UNKNOWN"
 
 ${context.lastAssistantMessage ? `\nLast bot message: "${context.lastAssistantMessage.substring(0, 200)}..."` : ''}`
 
@@ -413,19 +371,12 @@ ${context.lastAssistantMessage ? `\nLast bot message: "${context.lastAssistantMe
       const data = await response.json()
       const classification = data.choices?.[0]?.message?.content?.trim()
       
-      // 🔍 DEBUG: Log LLM response for debugging
-      logger.info("🔍 [IntentDebug] LLM classification response", {
-        originalMessage: message,
-        llmClassification: classification,
-        rawResponse: data.choices?.[0]?.message?.content
-      })
-      
       if (!classification) {
         return null
       }
 
       // Parse classification into Intent
-      return this.parseClassification(classification, message)
+      return this.parseClassification(classification)
       
     } catch (error) {
       if (error instanceof Error && error.name === "TimeoutError") {
@@ -440,20 +391,11 @@ ${context.lastAssistantMessage ? `\nLast bot message: "${context.lastAssistantMe
   /**
    * Parse LLM classification string into Intent
    */
-  private parseClassification(classification: string, originalMessage?: string): Intent | null {
+  private parseClassification(classification: string): Intent | null {
     // Remove any surrounding quotes that the LLM might have added
     const cleanClassification = classification.replace(/^["'\s]+|["'\s]+$/g, "")
     const [intentType, ...rest] = cleanClassification.split(":")
     const param = rest.length ? rest.join(":") : undefined
-    
-    // 🔍 DEBUG: Log parsing details
-    logger.info("🔍 [IntentDebug] Parsing LLM classification", {
-      originalMessage: originalMessage?.substring(0, 100),
-      rawClassification: classification,
-      cleanClassification,
-      intentType: intentType.trim().toUpperCase(),
-      param
-    })
     
     switch (intentType.trim().toUpperCase()) {
       case "SHOW_CATEGORIES":
@@ -525,6 +467,9 @@ ${context.lastAssistantMessage ? `\nLast bot message: "${context.lastAssistantMe
       case "ASK_IDENTITY":
         return { type: "ASK_IDENTITY" }
 
+      case "ASK_BUSINESS_INFO":
+        return { type: "ASK_BUSINESS_INFO" }
+
       case "SHOW_AGENT_INFO":
         return { type: "SHOW_AGENT_INFO" }
         
@@ -536,6 +481,12 @@ ${context.lastAssistantMessage ? `\nLast bot message: "${context.lastAssistantMe
         
       case "VIEW_PROFILE":
         return { type: "VIEW_PROFILE" }
+
+      case "UPDATE_PROFILE":
+        return { type: "UPDATE_PROFILE", field: "all", value: "" }
+
+      case "CHANGE_LANGUAGE":
+        return { type: "CHANGE_LANGUAGE", requestedLanguage: param?.trim() }
         
       case "REQUEST_HUMAN": {
         const reason = param?.trim()
@@ -552,6 +503,7 @@ ${context.lastAssistantMessage ? `\nLast bot message: "${context.lastAssistantMe
         return { type: "REJECT" }
         
       case "GREETING":
+        // Return GREETING intent to be handled by chat-engine
         return { type: "GREETING" }
         
       case "SHOW_OFFERS":
@@ -569,9 +521,6 @@ ${context.lastAssistantMessage ? `\nLast bot message: "${context.lastAssistantMe
 
       case "PRODUCT_CONTEXT":
         return { type: "PRODUCT_CONTEXT", query: param?.trim() || "" }
-        
-      case "INCOMPREHENSIBLE":
-        return { type: "INCOMPREHENSIBLE", originalMessage: originalMessage || "" }
         
       case "UNKNOWN":
       default:

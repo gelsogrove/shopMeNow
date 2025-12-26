@@ -11,7 +11,6 @@
  */
 
 import { PrismaClient } from "@echatbot/database"
-import { normalizePhoneNumber } from "../../utils/phone"
 import Fuse from "fuse.js"
 import logger from "../../utils/logger"
 import {
@@ -140,6 +139,14 @@ export interface WorkspaceLocationData {
   email?: string
 }
 
+export interface BusinessInfoData {
+  workspaceName: string
+  description?: string
+  chatbotName: string
+  businessType: string
+  address?: string
+}
+
 export interface FAQData {
   id: string
   question: string
@@ -194,6 +201,7 @@ export type LoadedData =
   | { type: "ORDER_DETAIL"; order: OrderData | null }
   | { type: "IDENTITY"; identity: WorkspaceIdentityData }
   | { type: "LOCATION"; location: WorkspaceLocationData }
+  | { type: "BUSINESS_INFO"; businessInfo: BusinessInfoData }  // 🆕 "che settore?" / "che tipo di negozio?"
   | { type: "FAQ"; faqs: FAQData[]; query: string }
   | { type: "PROFILE"; profile: CustomerProfileData }
   | { type: "OFFERS"; offers: OfferData[] }
@@ -392,6 +400,8 @@ export class DataLoaderService {
       switch (intent.type) {
         case "ASK_IDENTITY":
           return this.loadWorkspaceIdentity(workspaceId)
+        case "ASK_BUSINESS_INFO":
+          return this.loadBusinessInfo(workspaceId)
         case "ASK_LOCATION":
         case "ASK_CONTACT":
           return this.loadWorkspaceLocation(workspaceId)
@@ -1262,8 +1272,13 @@ export class DataLoaderService {
   }
 
   private tokenizeQuery(message: string): string[] {
-    const normalized = this.normalizeSearchText(message)
+    const normalized = this.normalizeText(message)
+      .replace(/[^a-z0-9\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+
     if (!normalized) return []
+
     return normalized
       .split(" ")
       .map((token) => token.trim())
@@ -1931,47 +1946,6 @@ export class DataLoaderService {
       }
 
       if (!order) {
-        const customer = await this.prisma.customers.findUnique({
-          where: { id: customerId },
-          select: { phone: true },
-        })
-
-        const normalizedPhone = normalizePhoneNumber(customer?.phone)
-        if (normalizedPhone) {
-          // 🔒 SECURITY FIX: Only look for orders by the SAME customer with normalized phone
-          // This prevents cross-customer order visibility
-          const orderByPhone = await this.prisma.$queryRaw<
-            Array<{ id: string; customerId: string }>
-          >`
-            SELECT o."id", o."customerId"
-            FROM "orders" o
-            JOIN "customers" c ON c."id" = o."customerId"
-            WHERE o."workspaceId" = ${workspaceId}
-              AND o."customerId" = ${customerId}
-              AND regexp_replace(COALESCE(c."phone", ''), '\\D', '', 'g') = ${normalizedPhone}
-            ORDER BY o."createdAt" DESC
-            LIMIT 1
-          `
-
-          const fallbackOrderId = orderByPhone?.[0]?.id
-          if (fallbackOrderId) {
-            order = await this.prisma.orders.findUnique({
-              where: { id: fallbackOrderId },
-              include: includeConfig,
-            })
-
-            if (order) {
-              logger.warn("📦 [DataLoader] Order resolved via normalized phone lookup", {
-                workspaceId,
-                originalCustomerId: customerId,
-                orderCustomerId: orderByPhone?.[0]?.customerId,
-              })
-            }
-          }
-        }
-      }
-
-      if (!order) {
         order = await this.prisma.orders.findFirst({
           where: { customerId, workspaceId },
           orderBy: { createdAt: "desc" },
@@ -2046,6 +2020,40 @@ export class DataLoaderService {
     } catch (error) {
       logger.error("❌ [DataLoader] Error loading workspace identity", { error })
       return { type: "ERROR", error: "Failed to load workspace info" }
+    }
+  }
+
+  /**
+   * Load business info (sector/type) for ASK_BUSINESS_INFO intent
+   * Returns the business type and chatbot name for "che settore?" questions
+   */
+  private async loadBusinessInfo(workspaceId: string): Promise<LoadedData> {
+    try {
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { 
+          name: true, 
+          description: true, 
+          chatbotName: true, 
+          businessType: true,
+          address: true,
+        },
+      })
+      if (!workspace) return { type: "ERROR", error: "Workspace not found" }
+      
+      return {
+        type: "BUSINESS_INFO",
+        businessInfo: {
+          workspaceName: workspace.name,
+          description: workspace.description || undefined,
+          chatbotName: workspace.chatbotName || "Assistente",
+          businessType: workspace.businessType || "other",
+          address: workspace.address || undefined,
+        },
+      }
+    } catch (error) {
+      logger.error("❌ [DataLoader] Error loading business info", { error })
+      return { type: "ERROR", error: "Failed to load business info" }
     }
   }
 
@@ -2361,22 +2369,17 @@ export class DataLoaderService {
     skus: string[],
     customerDiscount: number = 0
   ): Promise<ProductData[]> {
-    let uniqueSkus: string[] = []
     try {
-      uniqueSkus = Array.from(
-        new Set(skus.filter((sku) => typeof sku === "string" && sku.trim().length > 0))
-      )
-
       logger.info("📦 [DataLoader] Loading products by SKUs", {
-        skus: uniqueSkus,
-        count: uniqueSkus.length,
+        skus,
+        count: skus.length,
       })
 
       const products = await this.prisma.products.findMany({
         where: {
           workspaceId,
           isActive: true,
-          sku: { in: uniqueSkus },
+          sku: { in: skus },
         },
         select: {
           id: true,
@@ -2403,31 +2406,20 @@ export class DataLoaderService {
       })
 
       if (products.length === 0) {
-        logger.warn("📦 [DataLoader] No products found for SKUs", { skus: uniqueSkus })
+        logger.warn("📦 [DataLoader] No products found for SKUs", { skus })
         return []
       }
 
       const productData = products.map((p) => this.mapProduct(p, customerDiscount))
 
-      // De-duplicate by SKU (fallback to ID) to avoid duplicates in the list/mapping
-      const deduped: ProductData[] = []
-      const seen = new Set<string>()
-      for (const product of productData) {
-        const key = product.sku || product.id
-        if (!key || seen.has(key)) continue
-        seen.add(key)
-        deduped.push(product)
-      }
-
       logger.info("📦 [DataLoader] Products loaded by SKUs", {
-        requested: uniqueSkus.length,
-        requestedSkus: uniqueSkus,
-        uniqueProducts: deduped.length,
+        requested: skus.length,
+        found: productData.length,
       })
 
-      return deduped
+      return productData
     } catch (error) {
-      logger.error("❌ [DataLoader] Error loading products by SKUs", { error, skus: uniqueSkus })
+      logger.error("❌ [DataLoader] Error loading products by SKUs", { error, skus })
       return []
     }
   }
@@ -2455,65 +2447,30 @@ export class DataLoaderService {
       const sanitizedQuery = trimmedQuery.replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim()
       const fuseQuery = sanitizedQuery.length > 0 ? sanitizedQuery : trimmedQuery
 
-      // 🔍 DEBUG: Log query transformation
-      logger.info("🔍 [SearchDebug] Query transformation", {
-        originalQuery: query,
-        trimmedQuery,
-        sanitizedQuery,
-        fuseQuery
-      })
-
       const fuse = new Fuse(products, {
         keys: [
-          { name: "name", weight: 0.7 }, // 🔧 INCREASED: Product name is most important
-          { name: "description", weight: 0.15 }, // 🔧 REDUCED: Description less important  
-          { name: "productCategories.category.name", weight: 0.1 },
-          { name: "region", weight: 0.025 },
-          { name: "formato", weight: 0.025 },
-          { name: "productCertifications.certification.name", weight: 0.0 }, // 🔧 DISABLED: Too noisy
+          { name: "name", weight: 0.5 },
+          { name: "description", weight: 0.2 },
+          { name: "productCategories.category.name", weight: 0.15 },
+          { name: "region", weight: 0.05 },
+          { name: "formato", weight: 0.05 },
+          { name: "productCertifications.certification.name", weight: 0.05 },
         ],
-        threshold: 0.2, // 🔧 MORE RESTRICTIVE: Reduced from 0.25 to 0.2 for even stricter matching
+        threshold: 0.38,
         ignoreLocation: true,
         includeScore: true,
-        minMatchCharLength: 3, // 🔧 INCREASED: Minimum 3 characters for match
+        minMatchCharLength: 2,
       })
 
       const fuseResults = fuse.search(fuseQuery)
-      
-      // 🔧 ADDED: Filter out results with very poor relevance scores
-      const relevantResults = fuseResults.filter(result => {
-        const score = result.score || 0
-        return score <= 0.15 // Only keep results with good relevance (lower score = better match)
-      })
-      
-      let candidates = relevantResults.map((result) => result.item)
-
-      // 🔍 DEBUG: Log top fuse results with scores
-      logger.info("🔍 [SearchDebug] Top Fuse.js results", {
-        query: fuseQuery,
-        threshold: 0.2,
-        allResults: fuseResults.length,
-        relevantResults: relevantResults.length,
-        topResults: relevantResults.slice(0, 5).map(result => ({
-          name: result.item.name,
-          score: result.score,
-          description: result.item.description?.substring(0, 100) + "...",
-          categories: result.item.productCategories?.map((pc: any) => pc.category?.name).join(", ") || "N/A"
-        }))
-      })
+      let candidates = fuseResults.map((result) => result.item)
 
       if (candidates.length === 0) {
         candidates = this.basicTextMatch(products, trimmedQuery)
-        logger.info("🔍 [SearchDebug] Using basicTextMatch fallback", {
-          fallbackMatches: candidates.length
-        })
       }
 
       if (candidates.length === 0) {
         candidates = this.findSimilarProductsByName(products, trimmedQuery)
-        logger.info("🔍 [SearchDebug] Using findSimilarProductsByName fallback", {
-          fallbackMatches: candidates.length
-        })
       }
 
       const limitedCandidates = candidates.slice(0, 25)
@@ -2523,7 +2480,6 @@ export class DataLoaderService {
         sanitizedQuery: fuseQuery,
         totalProducts: products.length,
         fuseMatches: fuseResults.length,
-        relevantMatches: relevantResults.length,
         fallbackMatches: candidates.length,
         returned: limitedCandidates.length,
       })
@@ -2536,7 +2492,7 @@ export class DataLoaderService {
   }
 
   private basicTextMatch(products: any[], query: string): any[] {
-    const tokens = this.tokenizeQuery(query)
+    const tokens = this.tokenizeQueryForSearch(query)
     if (tokens.length === 0) {
       return []
     }
@@ -2572,6 +2528,12 @@ export class DataLoaderService {
       ).length
       return matches > 0
     })
+  }
+
+  private tokenizeQueryForSearch(query: string): string[] {
+    return this.normalizeSearchText(query)
+      .split(/\s+/)
+      .filter((token) => token.length > 2)
   }
 
   private normalizeSearchText(value: string): string {
@@ -2647,7 +2609,7 @@ export class DataLoaderService {
   }
 
   private findSimilarProductsByName(products: any[], query: string): any[] {
-    const queryTokens = this.tokenizeQuery(query)
+    const queryTokens = this.tokenizeQueryForSearch(query)
     if (queryTokens.length === 0) {
       return []
     }

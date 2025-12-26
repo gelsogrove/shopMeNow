@@ -111,8 +111,8 @@ async function main() {
   // 2. Create Admin User
   console.log("👤 Creating admin user...")
 
-  const adminEmail = process.env.ADMIN_EMAIL || "andrea_gelsomino@hotmail.com"
-  const adminPassword = process.env.ADMIN_PASSWORD || "Venezia44"
+  const adminEmail = process.env.ADMIN_EMAIL || "admin@echatbot.ai"
+  const adminPassword = process.env.ADMIN_PASSWORD || "venezia44"
   const hashedPassword = await bcrypt.hash(adminPassword, 10)
 
   const adminUser = await prisma.user.create({
@@ -193,7 +193,23 @@ async function main() {
       url: "https://bellitalia.com/vip",
       channelStatus: true,
       debugMode: true,
-      welcomeMessage: "Welcome to BellItalia! How can I help you today?",
+      welcomeMessage: `Ciao, piacere di conoscerti! 👋
+Mi chiamo SofIA e sono l'assistenza virtuale di BellItalia.
+Siamo un importatore di prodotti italiani.
+
+Come posso aiutarti oggi?
+Stai cercando un prodotto in particolare oppure hai una domanda specifica da farmi?
+
+Con questo servizio puoi:
+• chiedere informazioni su un ordine
+• effettuare un ordine
+• cercare un prodotto
+• farmi una domanda
+• scaricare una fattura
+• sapere dove si trova il tuo ordine
+• verificare la disponibilità dei prodotti in tempo reale
+
+Sono qui per aiutarti 😊`,
       wipMessage: "Sorry, I'm currently being improved. Please try again later.",
       ownerId: adminUser.id,
       // ✅ PREMIUM plan
@@ -223,6 +239,8 @@ async function main() {
       operatorContactMethod: "EMAIL",
       toneOfVoice: "FRIENDLY",
       botIdentityResponse: "I'm the BellItalia VIP virtual assistant, here to help you discover and purchase authentic Italian gourmet products!",
+      chatbotName: "Sofia",
+      businessType: "food",
     },
   })
 
@@ -311,6 +329,8 @@ async function main() {
       operatorContactMethod: "EMAIL",
       toneOfVoice: "PROFESSIONAL",
       botIdentityResponse: "I'm the BellItalia assistant, here to provide information about our Italian gourmet products!",
+      chatbotName: "Marco",
+      businessType: "food",
     },
   })
 

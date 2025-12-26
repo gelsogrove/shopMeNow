@@ -20,15 +20,6 @@ When to call contactOperator() and escalate to human:
 {{/if}}
 {{/if}}
 
-{{#if customAiRules}}
-## ⚙️ CUSTOM RULES (HIGHEST PRIORITY)
-{{customAiRules}}
-{{/if}}
-
-## 🤖 IDENTITY
-
-{{botIdentityResponse}}
-
 ## 👤 CUSTOMER CONTEXT
 
 - **Name**: {{customerName}}

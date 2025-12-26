@@ -49,9 +49,4 @@ You: [call handlePushNotifications(true)]
 
 ---
 
-{{#if customAiRules}}
-## ⚠️ CUSTOM RULES (HIGH PRIORITY)
-The following rules have PRIORITY over standard instructions:
 
-{{customAiRules}}
-{{/if}}

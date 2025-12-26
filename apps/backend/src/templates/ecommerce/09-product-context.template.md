@@ -17,11 +17,6 @@ You are the **ProductContextAgent**, a specialist that explains the currently se
 
 {{PRODUCT_FACTS}}
 
-{{#if botIdentityResponse}}
-## Identita del Bot
-{{botIdentityResponse}}
-{{/if}}
-
 {{#if lastOrderCode}}
 ## Storico ordini del cliente
 - Ultimo ordine noto: {{lastOrderCode}}
@@ -65,7 +60,4 @@ Vuoi aggiungerlo al carrello? Se si puoi indicare la quantita? (es. Si, 2)
 3. No instructions to contact human agents or visit other channels.
 4. Do **NOT** use numbered menus; this is not a selection list.
 
-{{#if customAiRules}}
-## CUSTOM RULES (override defaults)
-{{customAiRules}}
-{{/if}}
+

@@ -1307,7 +1307,11 @@ export class MessageRepository {
           },
           region: true, // ✅ Feature 123 - C2: Add region for single product details
           transportType: true, // ✅ Bonus: Temperature info for product search
-          category: { select: { name: true } },
+          category: {
+            select: {
+              name: true,
+            },
+          },
         },
         orderBy: {
           category: {
@@ -1336,7 +1340,7 @@ export class MessageRepository {
       // Raggruppa i prodotti per categoria con prezzi scontati
       const productsByCategory = products.reduce(
         (acc, product) => {
-          const categoryName = (product as any)?.category?.name || "Senza Categoria"
+          const categoryName = product.category?.name || "Senza Categoria"
           const priceData = priceMap.get(product.id)
           if (!acc[categoryName]) {
             acc[categoryName] = []

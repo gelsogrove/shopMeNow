@@ -154,6 +154,7 @@ export class ProductController {
       logger.info("req.body:", productData)
       logger.info("req.files:", req.files)
       logger.info("workspaceId:", workspaceId)
+      logger.info("supplierId in body:", productData.supplierId)
       logger.info("categoryId in body:", productData.categoryId)
 
       if (!workspaceId) {
@@ -269,6 +270,11 @@ export class ProductController {
       // Remove categoryIds from productData (handled separately via many-to-many)
       delete productData.categoryIds
 
+      // Handle supplierId: convert empty string to null
+      if (productData.supplierId === "" || productData.supplierId === "none") {
+        productData.supplierId = null
+      }
+
       // Handle categoryId: convert empty string to null (DEPRECATED - use categoryIds instead)
       if (productData.categoryId === "" || productData.categoryId === "none") {
         productData.categoryId = null
@@ -279,7 +285,12 @@ export class ProductController {
         productData.transportType = "Temperatura ambiente"
       }
 
-      logger.info("✅ After conversion - categoryId:", productData.categoryId)
+      logger.info(
+        "✅ After conversion - supplierId:",
+        productData.supplierId,
+        "categoryId:",
+        productData.categoryId
+      )
 
       // Map frontend 'code' field to backend 'Sku' field
       if (productData.code && !productData.sku) {
@@ -452,6 +463,11 @@ export class ProductController {
       // Remove categoryIds from productData (handled separately via many-to-many)
       delete productData.categoryIds
 
+      // Handle supplierId: convert empty string to null
+      if (productData.supplierId === "" || productData.supplierId === "none") {
+        productData.supplierId = null
+      }
+
       // Handle categoryId: convert empty string to null (DEPRECATED - use categoryIds instead)
       if (productData.categoryId === "" || productData.categoryId === "none") {
         productData.categoryId = null
@@ -462,7 +478,12 @@ export class ProductController {
         productData.transportType = "Temperatura ambiente"
       }
 
-      logger.info("✅ UPDATE - After conversion - categoryId:", productData.categoryId)
+      logger.info(
+        "✅ UPDATE - After conversion - supplierId:",
+        productData.supplierId,
+        "categoryId:",
+        productData.categoryId
+      )
 
       // Map frontend 'code' field to backend 'Sku' field
       if (productData.code && !productData.sku) {
@@ -726,13 +747,13 @@ export class ProductController {
     }
   }
 
-    /**
-     * Export products to CSV
-     * Uses categoryName instead of IDs for readability
-     */
-    exportProductsCsv = async (req: Request, res: Response): Promise<void> => {
-      try {
-        const workspaceId = req.params.workspaceId
+  /**
+   * Export products to CSV
+   * Uses supplierName and categoryName instead of IDs for readability
+   */
+  exportProductsCsv = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const workspaceId = req.params.workspaceId
 
       if (!workspaceId) {
         res.status(400).json({ message: "WorkspaceId is required" })
@@ -760,6 +781,7 @@ export class ProductController {
         "stock",
         "status",
         "isActive",
+        "supplierName",
         "categoryName",
         "transportType",
         "region",
@@ -790,6 +812,7 @@ export class ProductController {
           product.stock?.toString() || "0",
           product.status || "ACTIVE",
           product.isActive ? "true" : "false",
+          "",  // supplierName - deprecated
           escapeCsv(product.category?.name),
           escapeCsv(product.transportType),
           escapeCsv(product.region),
@@ -933,7 +956,7 @@ export class ProductController {
         }
 
         try {
-          // Lookup category ID
+          // Lookup supplier and category IDs
           const categoryName = rowData.categoryname?.toLowerCase().trim()
           
           const categoryId = categoryName ? categoryMap.get(categoryName) : null

@@ -115,7 +115,7 @@ export const searchProductsTool = tool({
             price: p.price,
             discountedPrice,
             stock: p.stock,
-            categoryName: p.productCategories[0]?.category?.name,
+            categoryName: p.productCategories?.[0]?.category?.name,
             imageUrl: p.imageUrl,
             isAvailable: p.stock > 0,
           }
@@ -379,6 +379,9 @@ export const getProductsByCategoryTool = tool({
           productCategories: {
             some: { categoryId: category.id },
           },
+        },
+        include: {
+          category: true,
         },
         take: maxResults,
         orderBy: { name: "asc" },

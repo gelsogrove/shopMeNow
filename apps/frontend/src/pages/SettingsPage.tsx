@@ -59,7 +59,74 @@ interface WorkspaceData {
   translateCategoryNames: boolean
   translateServiceNames: boolean
   catalogBaseLanguage: string
+  // 🆕 Chatbot Personalization
+  chatbotName: string
+  businessType: string
 }
+
+// 🆕 Business Type Options
+const BUSINESS_TYPES = [
+  { value: "automotive", label: "🚗 Automobilistico", desc: "Auto, moto, componenti" },
+  { value: "aerospace", label: "✈️ Aerospaziale", desc: "Industria aeronautica" },
+  { value: "mechanical", label: "⚙️ Meccanico", desc: "Industria meccanica" },
+  { value: "electronics", label: "🔌 Elettronica", desc: "Componenti elettronici" },
+  { value: "chemical", label: "🧪 Chimico", desc: "Industria chimica" },
+  { value: "metalwork", label: "🔩 Metalmeccanico", desc: "Lavorazione metalli" },
+  { value: "construction", label: "🏗️ Edilizia", desc: "Costruzioni e immobiliare" },
+  // Settore Sanitario
+  { value: "healthcare", label: "🏥 Salute e Benessere", desc: "Medicina, fitness" },
+  { value: "pharma", label: "💊 Farmaceutico", desc: "Farmaci e biotecnologie" },
+  { value: "medical_devices", label: "🩺 Dispositivi Medici", desc: "Attrezzature sanitarie" },
+  { value: "veterinary", label: "🐾 Veterinaria", desc: "Cura animali" },
+  // Settore Moda
+  { value: "fashion", label: "👕 Abbigliamento", desc: "Vestiti e moda" },
+  { value: "footwear", label: "👟 Calzature", desc: "Scarpe e accessori" },
+  { value: "accessories", label: "👜 Accessori", desc: "Borse, gioielli" },
+  { value: "luxury", label: "💎 Lusso", desc: "Prodotti di lusso" },
+  // Settore Alimentare
+  { value: "food", label: "🍔 Alimentare", desc: "Cibo e bevande" },
+  { value: "restaurant", label: "🍽️ Ristorazione", desc: "Ristoranti, bar" },
+  { value: "agrifood", label: "🌾 Agroalimentare", desc: "Agricoltura e produzione" },
+  { value: "catering", label: "🥂 Catering", desc: "Eventi e catering" },
+  { value: "food_delivery", label: "🚴 Food Delivery", desc: "Consegne a domicilio" },
+  // Settore Tecnologico
+  { value: "software", label: "💻 Software", desc: "Sviluppo software" },
+  { value: "hardware", label: "🖥️ Hardware", desc: "Computer e dispositivi" },
+  { value: "ai", label: "🤖 Intelligenza Artificiale", desc: "AI e machine learning" },
+  { value: "cybersecurity", label: "🔒 Cybersecurity", desc: "Sicurezza informatica" },
+  { value: "ecommerce", label: "🛒 E-commerce", desc: "Vendita online" },
+  { value: "gaming", label: "🎮 Gaming", desc: "Videogiochi" },
+  // Settore Finanziario
+  { value: "banking", label: "🏦 Banche", desc: "Servizi bancari" },
+  { value: "insurance", label: "🛡️ Assicurazioni", desc: "Polizze e coperture" },
+  { value: "fintech", label: "📱 Fintech", desc: "Tecnologia finanziaria" },
+  { value: "investments", label: "📈 Investimenti", desc: "Trading e investimenti" },
+  { value: "crypto", label: "₿ Criptovalute", desc: "Blockchain e crypto" },
+  // Settore Commercio
+  { value: "retail", label: "🏪 Retail", desc: "Negozi fisici" },
+  { value: "wholesale", label: "📦 Ingrosso", desc: "Commercio all'ingrosso" },
+  { value: "marketplace", label: "🏬 Marketplace", desc: "Piattaforme multi-vendor" },
+  { value: "import_export", label: "🌍 Import/Export", desc: "Commercio internazionale" },
+  // Trasporti e Logistica
+  { value: "logistics", label: "🚚 Logistica", desc: "Magazzini e distribuzione" },
+  { value: "transport", label: "🚛 Trasporti", desc: "Spedizioni e corrieri" },
+  { value: "supply_chain", label: "📋 Supply Chain", desc: "Gestione catena fornitura" },
+  // Educazione
+  { value: "education", label: "🎓 Educazione", desc: "Scuole e università" },
+  { value: "online_courses", label: "📚 Corsi Online", desc: "E-learning" },
+  { value: "coaching", label: "🎯 Coaching", desc: "Formazione e coaching" },
+  // Intrattenimento
+  { value: "entertainment", label: "🎬 Intrattenimento", desc: "Cinema, TV, media" },
+  { value: "music", label: "🎵 Musica", desc: "Industria musicale" },
+  { value: "events", label: "🎉 Eventi", desc: "Organizzazione eventi" },
+  { value: "social_media", label: "📲 Social Media", desc: "Piattaforme social" },
+  // Ambiente ed Energia
+  { value: "renewable_energy", label: "🌱 Energie Rinnovabili", desc: "Solare, eolico" },
+  { value: "recycling", label: "♻️ Riciclo", desc: "Gestione rifiuti" },
+  { value: "green_tech", label: "🌿 Green Tech", desc: "Tecnologie verdi" },
+  // Altro
+  { value: "other", label: "📦 Altro", desc: "Altro settore" },
+]
 
 const defaultWelcomeMessage =
   "Welcome! I'm SofiA, your digital assistant. I can help you discover Italian gourmet products, answer questions, and manage orders. How can I help you today?"
@@ -154,6 +221,9 @@ export default function SettingsPage() {
     translateCategoryNames: false,
     translateServiceNames: true,
     catalogBaseLanguage: "it",
+    // 🆕 Chatbot Personalization
+    chatbotName: "Assistente",
+    businessType: "other",
   })
   const { workspace, loading, setCurrentWorkspace } = useWorkspace()
   const { isSuperAdmin } = useWorkspaceRole(workspace?.id)
@@ -190,6 +260,9 @@ export default function SettingsPage() {
       translateCategoryNames: workspace.translateCategoryNames ?? false,
       translateServiceNames: workspace.translateServiceNames ?? true,
       catalogBaseLanguage: workspace.catalogBaseLanguage || "it",
+      // 🆕 Chatbot Personalization
+      chatbotName: workspace.chatbotName || "Assistente",
+      businessType: workspace.businessType || "other",
     })
   }, [workspace])
 
@@ -309,6 +382,9 @@ export default function SettingsPage() {
       translateCategoryNames: formData.translateCategoryNames,
       translateServiceNames: formData.translateServiceNames,
       catalogBaseLanguage: formData.catalogBaseLanguage,
+      // 🆕 Chatbot Personalization
+      chatbotName: formData.chatbotName,
+      businessType: formData.businessType,
     }
 
     saveSettingsMutation.mutate(updateData)
@@ -538,6 +614,23 @@ export default function SettingsPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    {/* 🆕 Chatbot Name */}
+                    <div className="space-y-2">
+                      <Label htmlFor="chatbotName">
+                        Nome del Chatbot <span className="text-xs text-muted-foreground">(Come si chiama il tuo assistente)</span>
+                      </Label>
+                      <Input
+                        id="chatbotName"
+                        value={formData.chatbotName}
+                        onChange={(e) => handleFieldChange("chatbotName", e.target.value)}
+                        placeholder="es. Sofia, Marco, Assistente..."
+                        className="max-w-xs"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Il chatbot si presenterà con questo nome ai clienti
+                      </p>
+                    </div>
+
                     <div className="space-y-2">
                       <Label>Tone of Voice</Label>
                       <div className="grid grid-cols-4 gap-2">
@@ -648,6 +741,34 @@ export default function SettingsPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    {/* 🆕 Business Type Dropdown */}
+                    <div className="space-y-2">
+                      <Label htmlFor="businessType">
+                        Settore di Business <span className="text-xs text-muted-foreground">(Aiuta il chatbot a contestualizzare le risposte)</span>
+                      </Label>
+                      <Select
+                        value={formData.businessType}
+                        onValueChange={(value) => handleFieldChange("businessType", value)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Seleziona il tuo settore" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[300px]">
+                          {BUSINESS_TYPES.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              <div className="flex items-center gap-2">
+                                <span>{type.label}</span>
+                                <span className="text-xs text-muted-foreground">- {type.desc}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Il settore scelto aiuterà l'AI a fornire risposte più pertinenti
+                      </p>
+                    </div>
+
                     <div className="space-y-3">
                       <div className={`flex items-center justify-between p-3 border rounded-lg transition-all ${formData.sellsProductsAndServices ? 'border-green-200 bg-green-50' : ''}`}>
                         <div>
@@ -682,6 +803,11 @@ export default function SettingsPage() {
                   title="🏪 Business Config"
                   description="Choose what your channel sells"
                   sections={[
+                    {
+                      icon: "🏭",
+                      title: "Settore di Business",
+                      content: "Indica il settore della tua attività. L'AI utilizzerà questa informazione per fornire risposte più contestualizzate e pertinenti."
+                    },
                     {
                       icon: "🛒",
                       title: "Products & Services",

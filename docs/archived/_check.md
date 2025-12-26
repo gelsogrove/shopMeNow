@@ -2,15 +2,6 @@
 
 rispondi alla domande
 
-- se un utente non e' registrato e manda un mesaggio viene fuori il messagigo di welcome con il link?
-
-- se un utente non e' registrato e continua a mandare piu di 5 messaggi cosa succede?
-
-- se il canale e' disable manda il messaggio di wip presneteo in workspace Settings?
-
-- nella coda di whataspp (cronjob) prima di inviare si punta al LM di sicurezza? 
-
-- il viaggio del messaggio e' sempre trackeato dentro message flow timeline?
 
 - se utente ha chatbotAtive disable cosa succede se riceve messaggi?
 

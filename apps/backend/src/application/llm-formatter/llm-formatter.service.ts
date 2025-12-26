@@ -58,47 +58,147 @@ export interface FormatterResult {
 
 export interface FormatterOptions {
   customAiRules?: string | null  // Custom AI rules from workspace that override defaults
+  botIdentity?: string | null    // Bot personality from workspace settings
+  customerName?: string          // Customer name for personalization
+  isFirstMessage?: boolean       // If true, add greeting
+  botName?: string               // Bot name (e.g., "BellItalia")
+  chatbotName?: string | null    // 🆕 Custom chatbot name (e.g., "Sofia", "Marco")
+  businessType?: string | null   // 🆕 Business sector for context (e.g., "food", "fashion", "tech")
+}
+
+// 🆕 Business Type Labels for LLM context
+const BUSINESS_TYPE_LABELS: Record<string, string> = {
+  automotive: "settore automobilistico (auto, moto, componenti)",
+  aerospace: "settore aerospaziale",
+  mechanical: "industria meccanica",
+  electronics: "settore elettronica",
+  chemical: "industria chimica",
+  metalwork: "settore metalmeccanico",
+  construction: "settore edilizia e costruzioni",
+  healthcare: "settore salute e benessere",
+  pharma: "settore farmaceutico e biotecnologie",
+  medical_devices: "settore dispositivi medici",
+  veterinary: "settore veterinaria",
+  fashion: "settore moda e abbigliamento",
+  footwear: "settore calzature",
+  accessories: "settore accessori (borse, gioielli)",
+  luxury: "settore lusso",
+  food: "settore alimentare (cibo e bevande)",
+  restaurant: "settore ristorazione",
+  agrifood: "settore agroalimentare",
+  catering: "settore catering ed eventi",
+  food_delivery: "settore food delivery",
+  software: "settore software e sviluppo",
+  hardware: "settore hardware e dispositivi",
+  ai: "settore intelligenza artificiale",
+  cybersecurity: "settore cybersecurity",
+  ecommerce: "settore e-commerce",
+  gaming: "settore gaming e videogiochi",
+  banking: "settore bancario",
+  insurance: "settore assicurazioni",
+  fintech: "settore fintech",
+  investments: "settore investimenti",
+  crypto: "settore criptovalute e blockchain",
+  retail: "settore retail (negozi fisici)",
+  wholesale: "settore commercio all'ingrosso",
+  marketplace: "settore marketplace",
+  import_export: "settore import/export",
+  logistics: "settore logistica",
+  transport: "settore trasporti e spedizioni",
+  supply_chain: "settore supply chain",
+  education: "settore educazione",
+  online_courses: "settore formazione online",
+  coaching: "settore coaching e formazione",
+  entertainment: "settore intrattenimento e media",
+  music: "settore musicale",
+  events: "settore organizzazione eventi",
+  social_media: "settore social media",
+  renewable_energy: "settore energie rinnovabili",
+  recycling: "settore riciclo e gestione rifiuti",
+  green_tech: "settore green tech",
+  other: "settore generico",
 }
 
 // ================================================================================
 // PROMPT TEMPLATES (in Italian - base language)
 // ================================================================================
 
-const BASE_SYSTEM_PROMPT = `You are an e-commerce assistant. Your ONLY task is to format the provided data into natural language.
+const BASE_SYSTEM_PROMPT = `Sei un assistente e-commerce. Il tuo UNICO compito è formattare i dati forniti in linguaggio naturale.
 
-CRITICAL RULES:
-1. DO NOT invent data - use ONLY the provided data
-2. DO NOT add or remove items from the list
-3. DO NOT change prices, quantities or names
-4. Format naturally and friendly
-5. Use the requested language for the response
-6. For CART items: use dashes (-) NOT numbers. Cart products should NOT be numbered.
-7. For MENU OPTIONS (Cosa vuoi fare?): KEEP numbered exactly as provided (1, 2, 3...)
-8. PRICES: Use the provided numbers. If a discounted price is provided (priceWithDiscount) or a discount percent is available, show BOTH the list price and the discounted price like "€10.00 (€9.00 dopo il tuo sconto del 10%)". Never invent or recalculate discounts beyond the provided numbers.
-9. PERSONAL TONE: When a customer name is provided, start with a warm greeting using their name and keep the tone natural (avoid robotic phrasing).
+REGOLE CRITICHE:
+1. NON inventare dati - usa SOLO i dati forniti
+2. NON aggiungere o rimuovere elementi dalla lista
+3. NON cambiare prezzi, quantità o nomi
+4. Formatta in modo naturale e amichevole
+5. RISPONDI SEMPRE NELLA LINGUA RICHIESTA (vedi "LINGUA OUTPUT")
+6. Per il CARRELLO: usa trattini (-) NON numeri. I prodotti del carrello NON devono essere numerati.
+7. Per le OPZIONI MENU (Cosa vuoi fare?): MANTIENI la numerazione esattamente come fornita (1, 2, 3...)
+8. I PREZZI SONO FINALI - NON calcolare o menzionare sconti sui prezzi! I prezzi mostrati già includono eventuali sconti applicabili.
 
-OUTPUT FORMAT:
-- Cart items: use dash prefix (- Product - €XX.XX)
-- Menu options: keep numbering (1. ✅ Action)
-- Prices: show €XX.XX and, if a discount is provided, also show the discounted value as described above (do not invent discounts)
-- Show total "(N items)" if requested
-- Emoji: 🛒 🍷 📦 ✅ ❌ etc.`
+FORMATO OUTPUT:
+- Carrello: prefisso trattino (- Prodotto - €XX.XX)
+- Opzioni menu: mantieni numerazione (1. ✅ Azione)
+- Prezzi: €XX.XX (mostra esattamente come fornito)
+- Mostra totale "(N elementi)" se richiesto
+- Emoji: 🛒 🍷 📦 ✅ ❌ etc.
+
+TONO: Sii caldo, amichevole e colloquiale - MAI robotico o formale!`
 
 /**
- * Build system prompt with optional custom AI rules
+ * Build system prompt with optional custom AI rules and bot personality
  * Custom rules override default behavior when set by workspace admin
  */
-function buildSystemPrompt(customAiRules?: string | null): string {
-  if (!customAiRules || customAiRules.trim() === "") {
-    return BASE_SYSTEM_PROMPT
+function buildSystemPrompt(options?: FormatterOptions): string {
+  let prompt = BASE_SYSTEM_PROMPT
+
+  // 🆕 Add chatbot name and business context
+  const chatbotName = options?.chatbotName || options?.botName || "Assistente"
+  const businessType = options?.businessType || "other"
+  const businessLabel = BUSINESS_TYPE_LABELS[businessType] || BUSINESS_TYPE_LABELS.other
+  
+  prompt += `
+
+## 🏷️ IDENTITÀ E CONTESTO
+- Il tuo nome è: ${chatbotName}
+- Operi nel: ${businessLabel}
+- Quando ti presenti o ti viene chiesto chi sei, usa il tuo nome: "${chatbotName}"
+- Adatta il linguaggio e gli esempi al contesto del settore quando appropriato`
+  
+  // Add bot personality if set
+  if (options?.botIdentity && options.botIdentity.trim() !== "") {
+    prompt += `
+
+## 🎭 LA TUA PERSONALITÀ (IMPORTANTISSIMO!)
+Hai una personalità e uno stile di comunicazione specifico. Applicalo a COME presenti le informazioni:
+
+${options.botIdentity}
+
+Ricorda: Mantieni la personalità nel TONO, ma non modificare i DATI. Sii sempre caloroso e umano!`
   }
   
-  return `${BASE_SYSTEM_PROMPT}
+  // Add greeting instruction if first message
+  if (options?.isFirstMessage && options?.customerName) {
+    prompt += `
 
-## 🤖 CUSTOM RULES (HIGH PRIORITY)
-The following rules have been defined by the shop owner and take priority over general rules:
+## 👋 SALUTO (Questo è il PRIMO messaggio!)
+Inizia con un saluto caloroso e personalizzato:
+- Rivolgiti al cliente per nome: "${options.customerName}"
+- Presentati brevemente (sei ${chatbotName})
+- Poi fornisci le informazioni richieste
+- Sii naturale, mai robotico!`
+  }
+  
+  // Add custom AI rules (highest priority)
+  if (options?.customAiRules && options.customAiRules.trim() !== "") {
+    prompt += `
 
-${customAiRules}`
+## 🤖 REGOLE PERSONALIZZATE (ALTA PRIORITÀ)
+Le seguenti regole sono state definite dal proprietario del negozio e hanno priorità sulle regole generali:
+
+${options.customAiRules}`
+  }
+  
+  return prompt
 }
 
 const formatDisplayPrice = (value?: number | null, fallback: string = "€0.00") => {
@@ -170,12 +270,30 @@ export class LLMFormatterService {
     // Build the formatting prompt
     const userPrompt = this.buildFormattingPrompt(response, targetLanguage)
 
-    // Build system prompt with optional custom AI rules
-    const systemPrompt = buildSystemPrompt(options?.customAiRules)
+    // Build system prompt with all options (customAiRules, botIdentity, customerName, etc.)
+    const systemPrompt = buildSystemPrompt(options)
+    
+    // DEBUG: Log all options received
+    logger.info("📝 [LLMFormatter] Options received", {
+      hasBotIdentity: !!options?.botIdentity,
+      botIdentityLength: options?.botIdentity?.length || 0,
+      hasCustomAiRules: !!options?.customAiRules,
+      customerName: options?.customerName,
+      isFirstMessage: options?.isFirstMessage,
+      botName: options?.botName,
+    })
     
     if (options?.customAiRules) {
       logger.info("📝 [LLMFormatter] Using custom AI rules", {
         rulesLength: options.customAiRules.length,
+      })
+    }
+    
+    if (options?.botIdentity) {
+      logger.info("📝 [LLMFormatter] Using bot personality", {
+        identityLength: options.botIdentity.length,
+        isFirstMessage: options.isFirstMessage,
+        customerName: options.customerName,
       })
     }
 
@@ -184,18 +302,23 @@ export class LLMFormatterService {
       { role: "system", content: systemPrompt },
     ]
     
-    // Add conversation history if provided (keeps recent 5-10 minutes for natural tone)
+    // Add conversation history if provided (includes system context with group mappings)
     if (conversationHistory && conversationHistory.length > 0) {
-      messages.push(...conversationHistory.map((h) => ({ role: h.role, content: h.content })))
+      // Filter to only include relevant context (system messages with JSON, recent assistant messages)
+      const relevantHistory = conversationHistory.filter(msg => 
+        msg.role === "system" || // System context (group mappings, cart state)
+        (msg.role === "assistant" && conversationHistory.indexOf(msg) >= conversationHistory.length - 3) // Last 3 assistant messages
+      )
+      messages.push(...relevantHistory.map(h => ({ role: h.role, content: h.content })))
+      
       logger.info("📝 [LLMFormatter] Including conversation history", {
         totalHistory: conversationHistory.length,
+        relevantHistory: relevantHistory.length,
       })
     }
     
     // Add current formatting request
     messages.push({ role: "user", content: userPrompt })
-
-    const temperature = response.formatting.showNumbers ? 0.3 : 0.42
 
     try {
       const llmResponse = await axios.post(
@@ -203,7 +326,7 @@ export class LLMFormatterService {
         {
           model: this.model,
           messages,
-          temperature,
+          temperature: 0.3, // Low temperature for consistent formatting
           max_tokens: 1000,
         },
         {
@@ -224,37 +347,35 @@ export class LLMFormatterService {
         }
       }
 
-      // 🔧 FIX: PREFER CODE-generated groupMapping (deterministic, consistent)
-      // Only use LLM-generated groupMapping as fallback (legacy behavior)
-      // This ensures the same query always returns the same groups!
+      // 🔧 FIX: PREFER LLM-generated groupMapping (semantically meaningful like "Freschi/Stagionati")
+      // over CODE-generated groupMapping (which may group by formato like "200g/250g")
+      // The LLM groups are more user-friendly and match what the user sees in the text!
       let groupMapping: Record<string, { nome: string; skus: string[] }> | undefined
       
-      // FIRST: Use CODE-computed groupMapping if available (preferred - deterministic)
-      if ((response.data as any)?.groupMapping) {
+      // FIRST: Try to extract from LLM response (preferred - semantically meaningful)
+      const jsonMatch = text.match(/---JSON_MAPPING---\s*([\s\S]*?)\s*---END_JSON---/)
+      if (jsonMatch && jsonMatch[1]) {
+        try {
+          groupMapping = JSON.parse(jsonMatch[1].trim())
+          logger.info("📝 [LLMFormatter] Using LLM-generated groupMapping (semantically meaningful)", {
+            groups: Object.keys(groupMapping || {}),
+            totalSkus: Object.values(groupMapping || {}).reduce((sum, g) => sum + (g.skus?.length || 0), 0),
+          })
+        } catch (parseError) {
+          logger.warn("⚠️ [LLMFormatter] Failed to parse LLM group mapping JSON, falling back to code", { 
+            jsonContent: jsonMatch[1].substring(0, 200),
+            error: parseError 
+          })
+        }
+      }
+      
+      // FALLBACK: Use CODE-computed groupMapping if LLM didn't generate one
+      if (!groupMapping && (response.data as any)?.groupMapping) {
         groupMapping = (response.data as any).groupMapping
-        logger.info("📝 [LLMFormatter] Using CODE-computed groupMapping (deterministic)", {
+        logger.info("📝 [LLMFormatter] Using CODE-computed groupMapping (fallback)", {
           groups: Object.keys(groupMapping || {}),
           totalSkus: Object.values(groupMapping || {}).reduce((sum, g) => sum + (g.skus?.length || 0), 0),
         })
-      }
-      
-      // FALLBACK: Try to extract from LLM response if code didn't provide one
-      if (!groupMapping) {
-        const jsonMatch = text.match(/---JSON_MAPPING---\s*([\s\S]*?)\s*---END_JSON---/)
-        if (jsonMatch && jsonMatch[1]) {
-          try {
-            groupMapping = JSON.parse(jsonMatch[1].trim())
-            logger.info("📝 [LLMFormatter] Using LLM-generated groupMapping (fallback)", {
-              groups: Object.keys(groupMapping || {}),
-              totalSkus: Object.values(groupMapping || {}).reduce((sum, g) => sum + (g.skus?.length || 0), 0),
-            })
-          } catch (parseError) {
-            logger.warn("⚠️ [LLMFormatter] Failed to parse LLM group mapping JSON", { 
-              jsonContent: jsonMatch[1].substring(0, 200),
-              error: parseError 
-            })
-          }
-        }
       }
       
       // Always remove JSON block from visible text (if LLM generated one)
@@ -292,7 +413,7 @@ export class LLMFormatterService {
         type: response.type,
         tokensUsed,
         hasGroupMapping: !!groupMapping,
-        groupMappingSource: (response.data as any)?.groupMapping ? "CODE" : "LLM_OR_NONE",
+        groupMappingSource: jsonMatch ? "LLM" : ((response.data as any)?.groupMapping ? "CODE" : "NONE"),
         ms: Date.now() - startTime,
       })
 
@@ -450,10 +571,10 @@ export class LLMFormatterService {
 
   private getCartEmpty(lang: string): string {
     const empty: Record<string, string> = {
-      it: "Il tuo carrello è vuoto.\n\nVuoi vedere i nostri prodotti?",
-      en: "Your cart is empty.\n\nWould you like to see our products?",
-      es: "Tu carrito está vacío.\n\n¿Quieres ver nuestros productos?",
-      pt: "Seu carrinho está vazio.\n\nGostaria de ver nossos produtos?",
+      it: "Oops, il carrello è vuoto! 🛒\n\nMa niente paura, abbiamo tantissimi prodotti deliziosi che ti aspettano! Vuoi dare un'occhiata? 😊",
+      en: "Oops, your cart is empty! 🛒\n\nBut don't worry, we have lots of delicious products waiting for you! Want to take a look? 😊",
+      es: "¡Ups, tu carrito está vacío! 🛒\n\n¡Pero no te preocupes, tenemos muchos productos deliciosos esperándote! ¿Quieres echar un vistazo? 😊",
+      pt: "Ops, seu carrinho está vazio! 🛒\n\nMas não se preocupe, temos muitos produtos deliciosos esperando por você! Quer dar uma olhada? 😊",
     }
     return empty[lang] || empty["it"]
   }
@@ -472,17 +593,8 @@ export class LLMFormatterService {
       return null
     }
 
-    const basePrice = product.price
-    const discountedPrice =
-      typeof product.priceWithDiscount === "number" && product.priceWithDiscount > 0
-        ? product.priceWithDiscount
-        : undefined
+    const displayPrice = product.priceWithDiscount || product.price
     const detailLines: string[] = []
-
-    if (response.context.customerName) {
-      detailLines.push(`Ciao ${response.context.customerName}!`)
-      detailLines.push("")
-    }
 
     // Descrizione discorsiva del prodotto
     if (product.description) {
@@ -490,19 +602,19 @@ export class LLMFormatterService {
     } else {
       detailLines.push(`${product.name}`)
     }
-    detailLines.push("")
 
+    // Immagine con URL completo
     if (product.imageUrl) {
-      detailLines.push(`Foto: ${product.imageUrl}`)
-      detailLines.push("")
+      const fullImageUrl = this.getFullImageUrl(product.imageUrl)
+      detailLines.push(`<img src="${fullImageUrl}" alt="${product.name}" />`)
     }
 
     // Info compatte su righe con bullet
-    if (product.sku) {
-      detailLines.push(`- Codice: ${product.sku}`)
-    }
-    if (product.formato) {
-      detailLines.push(`- Formato: ${product.formato}`)
+    const codeAndFormat = []
+    if (product.sku) codeAndFormat.push(`Codice: ${product.sku}`)
+    if (product.formato) codeAndFormat.push(`Formato: ${product.formato}`)
+    if (codeAndFormat.length > 0) {
+      detailLines.push(`- ${codeAndFormat.join(" - ")}`)
     }
 
     if (product.transportType) {
@@ -521,14 +633,7 @@ export class LLMFormatterService {
     const stockValue = product.stock !== undefined ? product.stock : (product.isAvailable ? "disponibile" : "esaurito")
     detailLines.push(`- Stock: ${stockValue}`)
     detailLines.push("")
-    if (discountedPrice !== undefined && basePrice && Math.abs(discountedPrice - basePrice) > 0.009) {
-      detailLines.push(`💰 <b>Prezzo: ${formatDisplayPrice(discountedPrice)}</b>`)
-      if (response.context.discountPercent > 0) {
-        detailLines.push(`Abbiamo applicato il tuo sconto personale del ${response.context.discountPercent}%.`)
-      }
-    } else {
-      detailLines.push(`💰 <b>Prezzo: ${formatDisplayPrice(basePrice)} Euro</b>`)
-    }
+    detailLines.push(`💰 <b>Prezzo: ${formatDisplayPrice(displayPrice)} Euro</b>`)
     detailLines.push("")
     detailLines.push(`Vuoi aggiungerlo al carrello? Se sì puoi indicare la quantità? (es. <b>Sì, 2</b>)`)
     detailLines.push("")
@@ -542,6 +647,25 @@ export class LLMFormatterService {
     return detailLines.join("\n")
   }
 
+  /**
+   * Get relative image path (frontend will resolve with IMG_BASE_URL)
+   * e.g., /uploads/products/img.jpg stays as /uploads/products/img.jpg
+   */
+  private getFullImageUrl(imageUrl: string): string {
+    if (!imageUrl) return ""
+    // If already absolute URL, extract just the path
+    if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
+      try {
+        const url = new URL(imageUrl)
+        return url.pathname // Extract /uploads/products/...
+      } catch {
+        return imageUrl
+      }
+    }
+    // Ensure path starts with /
+    return imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`
+  }
+
   private getCartViewTemplate(response: StructuredResponse): string {
     const cart = response.data.cart
     const items = response.data.items || []
@@ -549,12 +673,7 @@ export class LLMFormatterService {
       return "Il tuo carrello è vuoto.\n\nVuoi vedere i nostri prodotti?"
     }
 
-    const greeting = response.context.customerName
-      ? `Ciao ${response.context.customerName}! Ecco il tuo carrello:`
-      : "Ecco il tuo carrello:"
-    const lines: string[] = [greeting, ""]
-    const hasDiscount = response.context.hasDiscount && response.context.discountPercent > 0
-    const discountPercent = response.context.discountPercent
+    const lines: string[] = ["Ecco il tuo carrello:", ""]
     
     // Separate products from services
     const products = items.filter((item: any) => item.itemType === "PRODUCT" || item.type === "PRODUCT" || !item.itemType)
@@ -565,13 +684,7 @@ export class LLMFormatterService {
       lines.push("🛒 Prodotti:")
       for (const item of products) {
         const qty = (item as any).quantity || 1
-        const basePrice = typeof item.price === "number" ? item.price : 0
-        const discounted =
-          hasDiscount && basePrice > 0
-            ? basePrice * (1 - discountPercent / 100)
-            : null
-        const priceText = discounted ? formatDisplayPrice(discounted) : formatDisplayPrice(basePrice)
-        lines.push(`- ${qty}x ${item.name} - ${priceText}`)
+        lines.push(`- ${qty}x ${item.name} - ${formatDisplayPrice(item.price)}`)
       }
     }
 
@@ -580,13 +693,7 @@ export class LLMFormatterService {
       if (products.length > 0) lines.push("")
       lines.push("🔧 Servizi:")
       for (const item of services) {
-        const basePrice = typeof item.price === "number" ? item.price : 0
-        const discounted =
-          hasDiscount && basePrice > 0
-            ? basePrice * (1 - discountPercent / 100)
-            : null
-        const priceText = discounted ? formatDisplayPrice(discounted) : formatDisplayPrice(basePrice)
-        lines.push(`- ${item.name} - ${priceText}`)
+        lines.push(`- ${item.name} - ${formatDisplayPrice(item.price)}`)
       }
     }
 
@@ -605,24 +712,12 @@ export class LLMFormatterService {
     if (response.context.hasDiscount && response.context.discountPercent > 0) {
       lines.push("")
       lines.push(
-        `ℹ️ Abbiamo applicato il tuo sconto personale del <b>${response.context.discountPercent}</b>%. I prezzi mostrati includono già lo sconto.`
+        `ℹ️ Stai usufruendo del tuo sconto riservato del <b>${response.context.discountPercent}</b>%! I prezzi mostrati includono già lo sconto.`
       )
       lines.push(`I prezzi sono IVA esclusa.`)
     }
 
-    // ALIGN WITH CHAT-ENGINE LOGIC: hasRemovableItems calculation must match buildCartActionOptions
-    // Chat-engine uses: (cartItemCount ?? 2) > 1
-    // If we don't know the exact cartItemCount, assume same logic: if items exist, use items.length, else assume 2
-    const actualItemCount = items.length || 2  // Fallback to 2 if no items (matches chat-engine ?? 2)
-    const hasRemovableItems = actualItemCount > 1
-    
-    // DEBUG: Log the cart action generation to understand misalignment
-    logger.warn("🛒 [LLMFormatter] Cart action generation", {
-      itemsLength: items.length,
-      actualItemCount,
-      hasRemovableItems,
-      method: "getCartViewTemplate"
-    })
+    const hasRemovableItems = items.length > 1
     let optionNumber = 1
     const actions: string[] = [
       `<b>${optionNumber++}.</b> Confermare l'ordine`,
@@ -650,24 +745,38 @@ export class LLMFormatterService {
 
   private getNoResults(lang: string, detail?: string): string {
     const base: Record<string, string> = {
-      it: "🔍 Nessun risultato trovato",
-      en: "🔍 No results found",
-      es: "🔍 No se encontraron resultados",
-      pt: "🔍 Nenhum resultado encontrado",
+      it: "🔍 Mmh, non ho trovato nulla",
+      en: "🔍 Hmm, I couldn't find anything",
+      es: "🔍 Mmm, no encontré nada",
+      pt: "🔍 Hmm, não encontrei nada",
+    }
+    const suffix: Record<string, string> = {
+      it: "Prova con altre parole o dai un'occhiata alle nostre categorie! 😊",
+      en: "Try different words or take a look at our categories! 😊",
+      es: "¡Prueba con otras palabras o echa un vistazo a nuestras categorías! 😊",
+      pt: "Tente outras palavras ou dê uma olhada nas nossas categorias! 😊",
     }
     const text = base[lang] || base["it"]
-    return detail ? `${text}: ${detail}` : text
+    const hint = suffix[lang] || suffix["it"]
+    return detail ? `${text}: ${detail}\n\n${hint}` : `${text}.\n\n${hint}`
   }
 
   private getError(lang: string, detail?: string): string {
     const base: Record<string, string> = {
-      it: "❌ Si è verificato un errore",
-      en: "❌ An error occurred",
-      es: "❌ Ha ocurrido un error",
-      pt: "❌ Ocorreu um erro",
+      it: "😅 Ops, qualcosa è andato storto",
+      en: "😅 Oops, something went wrong",
+      es: "😅 Ups, algo salió mal",
+      pt: "😅 Ops, algo deu errado",
+    }
+    const suffix: Record<string, string> = {
+      it: "Riprova tra un attimo, sarò pronto ad aiutarti!",
+      en: "Try again in a moment, I'll be ready to help!",
+      es: "¡Inténtalo de nuevo en un momento, estaré listo para ayudarte!",
+      pt: "Tente novamente em um instante, estarei pronto para ajudar!",
     }
     const text = base[lang] || base["it"]
-    return detail ? `${text}: ${detail}` : text
+    const hint = suffix[lang] || suffix["it"]
+    return detail ? `${text}: ${detail}\n\n${hint}` : `${text}.\n\n${hint}`
   }
 
   private getHumanSupport(lang: string): string {
@@ -748,6 +857,10 @@ export class LLMFormatterService {
         parts.push(this.formatLocationPrompt(response))
         break
 
+      case "BUSINESS_INFO":
+        parts.push(this.formatBusinessInfoPrompt(response))
+        break
+
       case "FAQ":
         parts.push(this.formatFAQPrompt(response))
         break
@@ -785,14 +898,8 @@ export class LLMFormatterService {
       parts.push(`- Show total: "(${response.data.count} items)"`)
     }
     if (response.context.hasDiscount) {
-      parts.push(
-        `- Customer has a ${response.context.discountPercent}% discount. When priceWithDiscount is present show: "€listino (€scontato dopo il tuo sconto del ${response.context.discountPercent}%)". Do NOT invent discounts.`
-      )
+      parts.push(`- Customer has a ${response.context.discountPercent}% discount, show both prices`)
     }
-    if (response.context.customerName) {
-      parts.push(`- Start with a warm greeting for ${response.context.customerName} in the target language.`)
-    }
-    parts.push("- Keep the tone friendly and natural, avoid robotic phrasing.")
 
     return parts.join("\n")
   }
@@ -805,11 +912,7 @@ export class LLMFormatterService {
       lines.push(`**${item.number}.** ${item.name}${item.extra ? ` (${item.extra})` : ""}`)
     }
     lines.push("")
-    if (items.length === 1) {
-      lines.push("IMPORTANT: There is only ONE category. Do NOT ask which category. Present it naturally and, if products for this category are already available, list them directly (max 7) grouped by relevance. If products are not available in the payload, ask ONE short clarifying question instead of a menu. Avoid numeric menus.")
-    } else {
-      lines.push("IMPORTANT: After the list, ask 'Quale categoria vuoi esplorare? 🛍️' or 'Which category would you like to explore?'. DO NOT show any prices for categories. Numbers MUST be bold like **1.** **2.** etc.")
-    }
+    lines.push("IMPORTANT: After the list, ask 'Quale categoria vuoi esplorare? 🛍️' or 'Which category would you like to explore?'. DO NOT show any prices for categories. Numbers MUST be bold like **1.** **2.** etc.")
     return lines.join("\n")
   }
 
@@ -817,13 +920,17 @@ export class LLMFormatterService {
     const items = response.data.items || []
     const lines = ["PRODUCTS:"]
     for (const item of items) {
-      const line = `**${item.number}.** ${item.name}`
+      // Show only the final price (discounted if applicable)
+      // Customer discount is already applied in priceWithDiscount
+      const displayPrice = item.priceWithDiscount || item.price
+      const hasDisplayPrice = typeof displayPrice === "number" && Number.isFinite(displayPrice)
+      const priceText = hasDisplayPrice ? ` - ${formatDisplayPrice(displayPrice)}` : ""
+      const line = `**${item.number}.** ${item.name}${priceText}`
       lines.push(line)
     }
     // Add selection prompt - user-friendly, no technical details
     lines.push("")
-    lines.push("IMPORTANT: Do NOT show prices in product lists. Prices appear only in product detail and cart views.")
-    lines.push("After the list, ask 'Which product are you interested in? 🛒' or similar. DO NOT show SKU codes or categories to the user. Numbers MUST be bold like **1.** **2.** etc.")
+    lines.push("IMPORTANT: After the list, ask 'Which product are you interested in? 🛒' or similar. DO NOT show SKU codes or categories to the user. Numbers MUST be bold like **1.** **2.** etc.")
     return lines.join("\n")
   }
 
@@ -837,24 +944,18 @@ export class LLMFormatterService {
     // Note: groupMapping is computed and added automatically by the format() method
     // after LLM response - NOT in the visible text to the user!
 
-    const base = [
+    return [
       "GRUPPI DISPONIBILI (non elencare i singoli prodotti):",
       ...lines,
       "",
       "Regole output:",
+      "- Mostra SOLO i gruppi sopra indicati con il relativo numero di prodotti.",
       "- Mantieni i numeri in grassetto (es. **1.**, **2.**, ...).",
-      "- Non inserire riepiloghi \"Prezzi finali\".",
+      "- Non inserire l'elenco dei singoli prodotti né riepiloghi \"Prezzi finali\".",
+      "- Chiudi con la domanda tradotta nella lingua di output: \"Quale gruppo ti interessa?\" (o equivalente).",
       "- L'intera risposta deve essere nella lingua richiesta (rispetta il campo LINGUA OUTPUT).",
       "- ⚠️ NON INCLUDERE MAI JSON nella risposta visibile all'utente!",
-    ]
-
-    if (groups.length === 1) {
-      base.push("- C'è un solo gruppo: NON chiedere quale gruppo. Presentalo come sezione e mostra direttamente i prodotti del gruppo (se presenti nel payload) o poni UNA domanda di chiarimento breve. Evita menu numerici.")
-    } else {
-      base.push("- Chiudi con la domanda tradotta: \"Quale gruppo ti interessa?\" (o equivalente).")
-    }
-
-    return base.join("\n")
+    ].join("\n")
   }
 
   private formatCatalogAggregatePrompt(response: StructuredResponse): string {
@@ -886,57 +987,15 @@ export class LLMFormatterService {
   }
 
   /**
-   * Smart Grouping: FORMAT pre-computed groups from CODE (deterministic)
+   * Smart Grouping: LLM creates logical groups from products in the SAME category
    * Example: 7 "Formaggi" → "Formaggi Freschi (3)" + "Formaggi Stagionati (4)"
    * 
-   * ARCHITECTURE: CODE computes groups, LLM only FORMATS the output text
-   * The groupMapping is pre-computed in ResponseBuilder.createSmartGroups()
+   * ARCHITECTURE: LLM returns BOTH user-facing message AND JSON mapping for system
+   * The JSON contains which products (by SKU) belong to each numbered group
    */
   private formatSmartGroupingPrompt(response: StructuredResponse): string {
-    const categoryName = response.data.categoryName || "Products"
-    const productGroups = response.data.productGroups || []
-    const groupMapping = response.data.groupMapping || {}
-    
-    // If we have pre-computed groups, use them directly (DETERMINISTIC)
-    if (productGroups.length > 0) {
-      const groupsList = productGroups.map((g: any) => 
-        `**${g.number}.** ${g.name} (${g.productCount} prodotti)`
-      ).join("\n")
-      
-      logger.info("📝 [LLMFormatter] Using CODE-FIRST grouping (deterministic)", {
-        categoryName,
-        groupCount: productGroups.length,
-        groups: productGroups.map((g: any) => g.name),
-      })
-      
-      return `PRODUCT GROUPING (PRE-COMPUTED):
-
-Category: ${categoryName}
-Groups:
-${groupsList}
-
-TASK: Format this list for the user. Keep the EXACT group names and counts above.
-
-RESPONSE FORMAT (EXACT):
-
-Ecco i gruppi di ${categoryName}:
-
-${groupsList}
-
-Quale gruppo ti interessa?
-
----JSON_MAPPING---
-${JSON.stringify(groupMapping)}
----END_JSON---
-
-CRITICAL: 
-- Use EXACTLY the group names and counts shown above
-- DO NOT change or invent new groups
-- Numbers MUST be bold like **1.**, **2.**, ...`
-    }
-    
-    // FALLBACK: If no pre-computed groups, ask LLM to create them (legacy behavior)
     const items = response.data.items || []
+    const categoryName = response.data.categoryName || "Products"
     
     // Build product list with SKUs for LLM to use in grouping
     const productList = items.map((item: any) => {
@@ -993,8 +1052,8 @@ CRITICAL:
           typeof item.price === "number" && Number.isFinite(item.price)
             ? ` - ${formatDisplayPrice(item.price)}`
             : ""
-        const extraText = item.extra ? ` (${item.extra})` : ""
-        return `${item.number}. ${item.name}${priceText}${extraText}`
+        // Numbers in bold
+        return `**${item.number}.** ${item.name}${priceText}`
       })
       .join("\n")
 
@@ -1006,8 +1065,8 @@ CRITICAL:
     if (!s) return "Service not found"
 
     const lines = [
-      "SERVICE DETAIL:",
-      `Servizio: ${s.name}`,
+      "SERVICE DETAIL - Present in a CONVERSATIONAL, natural way:",
+      `Nome servizio: ${s.name}`,
       `Prezzo: ${formatDisplayPrice(s.price)}`,
     ]
 
@@ -1016,13 +1075,21 @@ CRITICAL:
     }
     // REMOVED: Duration and Availability - don't show to user
     
-    // Add cart prompt
+    // Add formatting instructions for natural presentation
     lines.push("")
-    lines.push(`IMPORTANT: 
-- Show Name, Price, and Description to the user in a professional format with line breaks
-- Do NOT show Duration or Availability 
-- After the details, ask 'Vuoi aggiungere questo servizio al tuo ordine?' 
-- DO NOT show service codes to the user.`)
+    lines.push(`FORMATTING INSTRUCTIONS:
+- Present the service in a NATURAL, conversational tone - like you're describing it to a friend
+- Put the service NAME in **bold** (e.g., **Confezione Regalo**)
+- Put the PRICE in **bold** (e.g., **€30.00**)
+- Do NOT use rigid labels like "Servizio:", "Prezzo:", "Descrizione:" 
+- Weave the information into flowing sentences
+- The FINAL QUESTION asking if they want to add it MUST be on a NEW LINE (add \\n before it)
+- Example format:
+  "**Confezione Regalo** è un servizio di lusso che include materiali premium e un messaggio personalizzato. Il costo è di **€30.00**.
+  
+  Ti piacerebbe aggiungerla al tuo ordine? 🎁"
+- Be warm and inviting, not robotic
+- DO NOT show service codes to the user`)
 
     return lines.join("\n")
   }
@@ -1031,32 +1098,19 @@ CRITICAL:
     const p = response.data.product
     if (!p) return "Product not found"
 
-    const basePrice = p.price
-    const discountedPrice =
-      typeof p.priceWithDiscount === "number" && p.priceWithDiscount > 0
-        ? p.priceWithDiscount
-        : undefined
+    const displayPrice = p.priceWithDiscount || p.price
     const targetLang = response.context.customerLanguage?.toLowerCase() || ""
     const isItalian = targetLang.startsWith("it")
     const italianQuestion = `Vuoi aggiungerlo al carrello? Se sì puoi indicare la quantità? (es. "Sì, 2")`
     const englishQuestion = `Would you like to add it to cart? If yes, how many? (e.g., "Yes, 2")`
     const closingQuestion = isItalian ? italianQuestion : englishQuestion
 
-    const detailLines: string[] = []
+    const detailLines: string[] = [
+      `${p.name}`,
+      `Prezzo: ${formatDisplayPrice(displayPrice)}`,
+    ]
 
-    if (response.context.customerName) {
-      detailLines.push(`Ciao ${response.context.customerName}!`)
-      detailLines.push("")
-    }
-
-    detailLines.push(`${p.name}`)
-    if (discountedPrice !== undefined && basePrice && Math.abs(discountedPrice - basePrice) > 0.009) {
-      detailLines.push(
-        `Prezzo: ${formatDisplayPrice(basePrice)} (${formatDisplayPrice(discountedPrice)} con il tuo sconto del ${response.context.discountPercent}%)`
-      )
-    } else {
-      detailLines.push(`Prezzo: ${formatDisplayPrice(basePrice)}`)
-    }
+    detailLines.push(`Foto: ${p.imageUrl ? `<img src="${p.imageUrl}" alt="${p.name}" />` : "(non disponibile)"}`)
 
     if (p.description) {
       detailLines.push(`Descrizione: ${p.description}`)
@@ -1133,9 +1187,6 @@ CRITICAL:
       return 0
     }
 
-    const hasDiscount = response.context.hasDiscount && response.context.discountPercent > 0
-    const discountPercent = response.context.discountPercent
-
     const products: string[] = []
     const services: string[] = []
 
@@ -1148,13 +1199,7 @@ CRITICAL:
       const qtyText = `${quantityValue}×`
       const displayName = cleanDisplayName(item.productName || item.name)
       const totalPriceValue = resolveLineTotal(item, quantityValue)
-      const discountedValue =
-        hasDiscount && totalPriceValue > 0
-          ? totalPriceValue * (1 - discountPercent / 100)
-          : null
-      const priceText = discountedValue
-        ? `${formatDisplayPrice(totalPriceValue)} (${formatDisplayPrice(discountedValue)} con sconto ${discountPercent}%)`
-        : formatDisplayPrice(totalPriceValue)
+      const priceText = formatDisplayPrice(totalPriceValue)
       const line = `- ${qtyText} ${displayName} · ${priceText}`
       if (isServiceFlag) {
         services.push(line)
@@ -1215,9 +1260,7 @@ CRITICAL:
     // }
 
     const outputLines: string[] = [
-      response.context.customerName
-        ? `Ciao ${response.context.customerName}! Ecco il tuo carrello:`
-        : "Ecco il tuo carrello:",
+      "Ecco il tuo carrello:",
       "",
     ]
 
@@ -1232,8 +1275,9 @@ CRITICAL:
     if (response.context.hasDiscount && response.context.discountPercent && response.context.discountPercent > 0) {
       outputLines.push("")
       outputLines.push(
-        `ℹ️ Stai usufruendo del tuo sconto riservato del <b>${response.context.discountPercent}</b>%! Per ogni voce trovi sia il prezzo di listino sia il valore scontato.`
+        `ℹ️ Stai usufruendo del tuo sconto riservato del <b>${response.context.discountPercent}</b>%! I prezzi mostrati includono già lo sconto.`
       )
+      outputLines.push(`I prezzi sono IVA esclusa.`)
     }
 
     outputLines.push("")
@@ -1259,7 +1303,7 @@ CRITICAL:
     const lines = [
       "FORMAT RULES:",
       "- Start with a friendly heading like '📦 Ecco i tuoi ordini:'",
-      "- For each item render: `<number>. **<order code>** · €<amount> · stato <status> · <date>` (status and date are already provided in the extra field).",
+      "- For each item render: `<number>. **<order code>** · €<amount> · stato <status>` (status already provided in the extra field).",
       "- Keep numbering exactly as provided.",
       "- DO NOT add any total line or item count.",
       "- After the list, ask: 'Quale ordine desideri visualizzare? Digita il numero.'",
@@ -1285,7 +1329,7 @@ CRITICAL:
       `Code: #${order.code}`,
       `Status: ${order.status}`,
       `Total: ${formatDisplayPrice(order.totalAmount)}`,
-      `Date: ${order.createdAt.toLocaleDateString("it-IT")}`,
+      `Date: ${order.createdAt.toLocaleDateString()}`,
     ]
 
     if (order.items && order.items.length > 0) {
@@ -1340,6 +1384,37 @@ CRITICAL:
     if (location.email) {
       lines.push(`Email: ${location.email}`)
     }
+
+    return lines.join("\n")
+  }
+
+  /**
+   * Format business info response - for "che settore?" questions
+   * Uses BUSINESS_TYPE_LABELS to provide human-readable sector description
+   */
+  private formatBusinessInfoPrompt(response: StructuredResponse): string {
+    const businessInfo = response.data.businessInfo
+    if (!businessInfo) return "Business information not available"
+
+    const businessLabel = BUSINESS_TYPE_LABELS[businessInfo.businessType] || BUSINESS_TYPE_LABELS.other
+
+    const lines = [
+      "BUSINESS INFORMATION:",
+      `Business Name: ${businessInfo.workspaceName}`,
+      `Sector/Type: ${businessLabel}`,
+      `Assistant Name: ${businessInfo.chatbotName}`,
+    ]
+    
+    if (businessInfo.description) {
+      lines.push(`Description: ${businessInfo.description}`)
+    }
+    if (businessInfo.address) {
+      lines.push(`Address: ${businessInfo.address}`)
+    }
+
+    lines.push("")
+    lines.push("INSTRUCTIONS: Respond naturally to the user's question about what type of business this is.")
+    lines.push(`Present yourself as ${businessInfo.chatbotName} and explain you work for a ${businessLabel}.`)
 
     return lines.join("\n")
   }

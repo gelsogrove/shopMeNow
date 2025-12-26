@@ -22,10 +22,9 @@ import {
   RepeatOrderIntent,
   RequestHumanIntent,
   AskFAQIntent,
-  ShowCategoryIntent,
 } from "../intent"
 import { DataLoaderService, getDataLoader, LoadedData } from "../data-loader"
-import { ResponseBuilderService, getResponseBuilder, StructuredResponse, ListItem } from "../response-builder"
+import { ResponseBuilderService, getResponseBuilder, StructuredResponse, ListItem, EnrichmentOptions } from "../response-builder"
 import { LLMFormatterService, getLLMFormatter, FormatterResult } from "../llm-formatter"
 import { ConversationManager } from "../../services/conversation-manager.service"
 import { LinkReplacementService, ReplaceLinkWithTokenParams } from "../services/link-replacement.service"
@@ -66,17 +65,21 @@ type PipelineLoadedData = LoadedData | CatalogQueryLoadedData
 // ================================================================================
 
 interface WorkspaceConfig {
+  name: string                    // Workspace name (e.g., "BellItalia VIP")
   sellsProductsAndServices: boolean
   hasSalesAgents: boolean
   hasHumanSupport: boolean
   humanSupportInstructions: string | null
   operatorContactMethod: string | null
   welcomeMessage: any
-  botIdentityResponse: string | null
+  botIdentityResponse: string | null  // Bot personality
+  botIdentity: string | null          // Alias for botIdentityResponse
   customAiRules: string | null  // Custom AI rules that override default behavior
   adminEmail: string | null
   workspaceName: string
   address: string | null
+  chatbotName: string | null      // 🆕 Custom chatbot name
+  businessType: string | null     // 🆕 Business sector
 }
 
 const workspaceConfigCache = new Map<string, { config: WorkspaceConfig; timestamp: number }>()
@@ -487,10 +490,6 @@ export class ChatEngineService {
         enableCategoryRanking: workspaceConfig.sellsProductsAndServices,
       })
 
-      const faqHistory = await this.conversationManager.loadHistory(
-        input.workspaceId,
-        conversationId
-      )
       if (structuredResponse.type !== "FAQ") {
         return null
       }
@@ -499,7 +498,8 @@ export class ChatEngineService {
         structuredResponse,
         input.customerLanguage || "it",
         workspaceConfig,
-        faqHistory
+        undefined,
+        { customerName: input.customerName }
       )
 
       let finalMessage = formatterResult.text
@@ -751,19 +751,31 @@ export class ChatEngineService {
   }
 
   /**
-   * Helper: formatta con LLM includendo customAiRules dal workspace
+   * Helper: formatta con LLM includendo customAiRules e botIdentity dal workspace
    */
   private async formatWithCustomRules(
     structuredResponse: StructuredResponse,
     language: string,
     workspaceConfig: WorkspaceConfig,
-    conversationHistory?: Array<{ role: string; content: string }>
+    conversationHistory?: Array<{ role: string; content: string }>,
+    personalizationOptions?: {
+      customerName?: string
+      isFirstMessage?: boolean
+    }
   ): Promise<FormatterResult> {
     return this.llmFormatter.format(
       structuredResponse,
       language,
       conversationHistory,
-      { customAiRules: workspaceConfig.customAiRules }
+      { 
+        customAiRules: workspaceConfig.customAiRules,
+        botIdentity: workspaceConfig.botIdentity,
+        botName: workspaceConfig.name,
+        chatbotName: workspaceConfig.chatbotName,      // 🆕 Custom chatbot name
+        businessType: workspaceConfig.businessType,    // 🆕 Business sector
+        customerName: personalizationOptions?.customerName,
+        isFirstMessage: personalizationOptions?.isFirstMessage,
+      }
     )
   }
 
@@ -917,14 +929,6 @@ export class ChatEngineService {
   }
 
   private async buildCartActionOptions(hasRemovableItems: boolean, workspaceId?: string, uniqueTransportModes: number = 0) {
-    // DEBUG: Log the cart action generation to understand misalignment
-    logger.warn("🛒 [ChatEngine] Cart action generation", {
-      hasRemovableItems,
-      workspaceId: workspaceId?.substring(0, 8),
-      uniqueTransportModes,
-      method: "buildCartActionOptions"
-    })
-    
     const options: Array<{ number: number; name: string; id: string }> = []
     let nextNumber = 1
     options.push({ number: nextNumber++, name: "Conferma ordine", id: "CONFIRM_ORDER" })
@@ -935,11 +939,6 @@ export class ChatEngineService {
       options.push({ number: nextNumber++, name: "Rimuovere un articolo", id: "REMOVE_FROM_CART" })
     }
     options.push({ number: nextNumber++, name: "Cancella il carrello", id: "CLEAR_CART" })
-    
-    // DEBUG: Log final options
-    logger.warn("🛒 [ChatEngine] Generated cart actions", {
-      options: options.map(opt => `${opt.number}:${opt.id}`)
-    })
     
     // TODO: "Ottimizza spedizione" feature - will be implemented later
     // Option: Order optimization (show only when 2+ different transport modes exist)
@@ -1254,6 +1253,8 @@ export class ChatEngineService {
         customAiRules: true,  // Custom AI rules that override default behavior
         notificationEmail: true,
         address: true,
+        chatbotName: true,      // 🆕 Custom chatbot name
+        businessType: true,     // 🆕 Business sector
         whatsappSettings: {
           select: { adminEmail: true },
         },
@@ -1261,6 +1262,7 @@ export class ChatEngineService {
     })
 
     const config: WorkspaceConfig = {
+      name: workspace?.name || "Assistente",
       sellsProductsAndServices: workspace?.sellsProductsAndServices ?? true,
       hasSalesAgents: workspace?.hasSalesAgents ?? false,
        hasHumanSupport: workspace?.hasHumanSupport ?? false,
@@ -1268,6 +1270,7 @@ export class ChatEngineService {
        operatorContactMethod: workspace?.operatorContactMethod ?? null,
       welcomeMessage: workspace?.welcomeMessage,
       botIdentityResponse: workspace?.botIdentityResponse ?? null,
+      botIdentity: workspace?.botIdentityResponse ?? null,  // Alias for LLMFormatter
       customAiRules: workspace?.customAiRules ?? null,
       adminEmail:
         workspace?.whatsappSettings?.adminEmail ||
@@ -1275,6 +1278,8 @@ export class ChatEngineService {
         null,
       workspaceName: workspace?.name || "Il nostro shop",
       address: workspace?.address || null,
+      chatbotName: workspace?.chatbotName ?? null,      // 🆕 Custom chatbot name
+      businessType: workspace?.businessType ?? null,     // 🆕 Business sector
     }
 
     workspaceConfigCache.set(workspaceId, { config, timestamp: Date.now() })
@@ -1516,11 +1521,87 @@ export class ChatEngineService {
       })
 
       // ========================================================================
+      // STEP 0.1: Check if first message → Return Welcome Message
+      // ========================================================================
+      // Count previous messages from this customer in this workspace
+      const previousMessageCount = await this.prisma.message.count({
+        where: {
+          chatSession: {
+            customerId: input.customerId,
+            workspaceId: input.workspaceId,
+          },
+          deletedAt: null,
+        },
+      })
+
+      const isFirstMessage = previousMessageCount === 0
+
+      logger.info("👋 [ChatEngine] First message check", {
+        customerId: input.customerId,
+        previousMessageCount,
+        isFirstMessage,
+      })
+
+      // If first message and welcomeMessage is configured, return it directly
+      if (isFirstMessage && workspaceConfig.welcomeMessage) {
+        const welcomeText = typeof workspaceConfig.welcomeMessage === "string"
+          ? workspaceConfig.welcomeMessage
+          : typeof workspaceConfig.welcomeMessage === "object" && workspaceConfig.welcomeMessage?.text
+            ? workspaceConfig.welcomeMessage.text
+            : JSON.stringify(workspaceConfig.welcomeMessage)
+
+        logger.info("👋 [ChatEngine] Returning welcome message for first-time customer", {
+          customerId: input.customerId,
+          workspaceId: input.workspaceId,
+          welcomeMessageLength: welcomeText.length,
+        })
+
+        const conversationId = input.conversationId || `temp-${input.customerId}`
+
+        // Save messages to history
+        const savedMessages = await this.saveMessages(
+          input.workspaceId,
+          input.customerId,
+          conversationId,
+          input.message,
+          welcomeText,
+          "WELCOME",
+          0,
+          {
+            loadedDataType: "WELCOME_MESSAGE",
+            responseType: "WELCOME_MESSAGE",
+            llmUsed: false,
+            steps: [{
+              type: "welcome",
+              agent: "👋 Welcome",
+              timestamp: new Date().toISOString(),
+              input: { textContent: input.message.substring(0, 100) },
+              output: { textContent: "First message - returning configured welcome message" },
+              duration: 0,
+            }],
+            totalTokens: 0,
+            executionTimeMs: Date.now() - startTime,
+          }
+        )
+
+        return {
+          message: welcomeText,
+          agentType: AgentType.ROUTER,
+          wasHandled: true,
+          intent: "GREETING",
+          confidence: "HIGH",
+          source: "PATTERN",
+          processingTimeMs: Date.now() - startTime,
+          tokensUsed: 0,
+          agentUsed: "WELCOME",
+          _assistantMessageId: savedMessages.assistantMessageId,
+        }
+      }
+
+      // ========================================================================
       // STEP 0.5: Preprocess short inputs (numbers, yes/no)
       // ========================================================================
       const conversationId = input.conversationId || `temp-${input.customerId}`
-      // Load recent history early so ALL LLM calls (even fast-path) have context
-      let history = await this.conversationManager.loadHistory(input.workspaceId, conversationId)
       
       logger.debug("🔍 [ChatEngine] Processing message", {
         conversationId,
@@ -1641,6 +1722,14 @@ export class ChatEngineService {
         const optionsMapping = await loadOptionsMapping()
         const pendingAction = optionsMapping?.pendingAction
         
+        logger.info("🔍 [ChatEngine] DEBUG: Checking pendingAction for confirmation", {
+          hasPendingAction: !!pendingAction,
+          pendingActionType: pendingAction?.type,
+          pendingActionProductId: pendingAction?.productId,
+          pendingActionItemType: pendingAction?.itemType,
+          fullOptionsMapping: JSON.stringify(optionsMapping),
+        })
+        
         if (pendingAction && pendingAction.type === "ADD_TO_CART" && pendingAction.productId) {
           logger.info("🛒 [ChatEngine] FAST-PATH: Confirmation detected with pending ADD_TO_CART", {
             inputType: preprocessResult.inputType,
@@ -1648,6 +1737,7 @@ export class ChatEngineService {
             productId: pendingAction.productId,
             productName: pendingAction.productName,
             itemType: pendingAction.itemType || "PRODUCT",
+            pendingActionFull: JSON.stringify(pendingAction), // 🔍 DEBUG: Log full pendingAction
           })
           
           // Extract quantity: from message if present, otherwise default to 1
@@ -1674,14 +1764,6 @@ export class ChatEngineService {
           // 🛒 CRITICAL: Save CART_ACTIONS mapping so "1" triggers CONFIRM_ORDER, not product search!
           const cartItemCount = this.extractCartItemCountFromFunctionCalls(cartResponse.functionCalls)
           const transportModes = this.extractTransportModesFromFunctionCalls(cartResponse.functionCalls)
-          
-          // DEBUG: Log the calculation before building cart actions
-          logger.warn("🛒 [ChatEngine] Before buildCartActionOptions", {
-            cartItemCount,
-            hasRemovableItems: (cartItemCount ?? 2) > 1,
-            transportModes
-          })
-          
           const cartActions = await this.buildCartActionOptions((cartItemCount ?? 2) > 1, input.workspaceId, transportModes)
 
           await this.optionsMappingService.saveMapping({
@@ -1759,7 +1841,8 @@ export class ChatEngineService {
             structuredResponse,
             input.customerLanguage || "it",
             workspaceConfig,
-            history
+            undefined, // conversationHistory
+            { customerName: input.customerName, isFirstMessage: history.length === 0 }
           )
           
           const finalMessage = formatterResult.text
@@ -1879,32 +1962,7 @@ export class ChatEngineService {
       // ========================================================================
       // If user typed a number, load options mapping from DB and resolve directly
       if (preprocessResult.inputType === "number" && preprocessResult.extractedNumber) {
-        // Prefer last presented menu (aliases lastOptionsMapping)
-        const optionsMapping = await this.optionsMappingService.loadMenu(input.workspaceId, conversationId)
-        let resolvedFastPath = false
-
-        // No mapping at all → reply with gentle prompt instead of falling through to "product not found"
-        if (!optionsMapping) {
-          const noMenuMessage = `Non ho un menu attivo per la scelta #${preprocessResult.extractedNumber}.\n\nVuoi che ti mostri le categorie o il carrello?`
-          const saved = await this.saveMessages(
-            input.workspaceId,
-            input.customerId,
-            conversationId,
-            input.message,
-            noMenuMessage,
-            AgentType.ROUTER
-          )
-          return {
-            message: noMenuMessage,
-            agentType: AgentType.ROUTER,
-            wasHandled: true,
-            intent: "UNKNOWN",
-            confidence: "LOW",
-            source: "PATTERN",
-            processingTimeMs: Date.now() - startTime,
-            _assistantMessageId: saved.assistantMessageId,
-          }
-        }
+        const optionsMapping = await loadOptionsMapping()
         
         // 🔍 DEBUG: Log what we got from the database
         logger.info("🔍 [DEBUG] Loaded optionsMapping for number selection", {
@@ -1916,66 +1974,9 @@ export class ChatEngineService {
           firstOptionSkus: optionsMapping?.options?.[0]?.skus?.slice(0, 2),
         })
         
-        // Guardrails: ensure the mapping we loaded is compatible with the current FSM state.
-        // This prevents stale mappings (e.g., CART_ACTIONS) from hijacking selections when
-        // the user is browsing categories/products.
-        const isMappingCompatible = (
-          state: ConversationState | undefined,
-          listType: ListType | undefined
-        ) => {
-          if (!state || !listType) return true // if we don't know, be permissive
-          switch (listType) {
-            case "CART_ACTIONS":
-            case "CART_ITEMS":
-              return (
-                state === ConversationState.VIEWING_CART ||
-                state === ConversationState.VIEWING_CART_ACTIONS
-              )
-            case "ORDER_ACTIONS":
-            case "ORDERS":
-              return (
-                state === ConversationState.BROWSING_ORDERS ||
-                state === ConversationState.VIEWING_ORDER ||
-                state === ConversationState.VIEWING_ORDER_ACTIONS
-              )
-            case "PRODUCTS":
-            case "PRODUCT_DETAIL_ACTIONS":
-              return (
-                state === ConversationState.BROWSING_PRODUCTS ||
-                state === ConversationState.VIEWING_PRODUCT ||
-                state === ConversationState.BROWSING_SUBCATEGORIES ||
-                state === ConversationState.BROWSING_GROUPS
-              )
-            case "GROUPS":
-              return (
-                state === ConversationState.BROWSING_GROUPS ||
-                state === ConversationState.BROWSING_SUBCATEGORIES ||
-                state === ConversationState.BROWSING_CATEGORIES
-              )
-            case "CATEGORIES":
-            case "OFFER_CATEGORIES":
-            case "SERVICES":
-            case "ORDER_OPTIMIZATION_ACTIONS":
-            default:
-              return true
-          }
-        }
-
-        const mappingCompatible =
-          !optionsMapping ||
-          isMappingCompatible(fsmState?.state, optionsMapping.listType as ListType)
-
-        if (optionsMapping && !mappingCompatible) {
-          logger.warn("⚠️ [ChatEngine] Skipping optionsMapping (state mismatch)", {
-            mappingListType: optionsMapping.listType,
-            fsmState: fsmState?.state,
-          })
-          // Non cancelliamo: lasciamo che il mapping venga comunque usato per le short input
-        }
-
+        // 🆕 PRIORITY 1: Check groupMapping first (for smart grouping like "Formaggi Freschi")
+        // This contains the SKUs for each numbered group created by LLM
         if (optionsMapping?.groupMapping) {
-          // 🆕 PRIORITY 1: Check groupMapping first (for smart grouping like "Formaggi Freschi")
-          // This contains the SKUs for each numbered group created by LLM
           const groupKey = String(preprocessResult.extractedNumber)
           const selectedGroup = optionsMapping.groupMapping[groupKey]
           
@@ -2017,7 +2018,6 @@ export class ChatEngineService {
                   customerDiscount: input.customerDiscount,
                   userMessage: input.message,
                   enableCategoryRanking: workspaceConfig.sellsProductsAndServices,
-                  disableGrouping: true, // 🔒 Do NOT regroup when coming from a group selection
                 }
               )
               
@@ -2026,7 +2026,8 @@ export class ChatEngineService {
                 structuredResponse,
                 input.customerLanguage || "it",
                 workspaceConfig,
-                history
+                undefined,
+                { customerName: input.customerName, isFirstMessage: history.length === 0 }
               )
               let finalMessage = formatterResult.text
               
@@ -2047,14 +2048,6 @@ export class ChatEngineService {
                 input.message,
                 finalMessage
               )
-
-              // Keep FSM aligned with the new menu (now we're browsing a product list)
-              if (chatSession) {
-                await this.conversationStateService.setState(
-                  chatSession.id,
-                  ConversationState.BROWSING_PRODUCTS
-                )
-              }
               
               // 🔧 CRITICAL: Save new options mapping with items and listType
               // This ensures next "1" is interpreted as product selection, not group selection!
@@ -2152,9 +2145,7 @@ export class ChatEngineService {
                 customerLanguage: input.customerLanguage,
                 customerName: input.customerName,
                 customerDiscount: input.customerDiscount,
-                disableGrouping:
-                  selectIntent.listType === "ORDER_OPTIMIZATION_ACTIONS" ||
-                  selectIntent.listType === "GROUPS", // 🔒 Coming from a group → show products directly
+                disableGrouping: selectIntent.listType === "ORDER_OPTIMIZATION_ACTIONS",
                 userMessage: input.message,
                 enableCategoryRanking: workspaceConfig.sellsProductsAndServices,
               }
@@ -2214,11 +2205,11 @@ export class ChatEngineService {
                 input.message,
                 processedMessage
               )
-            
-            return {
-              message: processedMessage,
-              agentType: AgentType.ORDER_TRACKING,
-              wasHandled: true,
+              
+              return {
+                message: processedMessage,
+                agentType: AgentType.ORDER_TRACKING,
+                wasHandled: true,
                 intent: "ORDER_ACTION",
                 confidence: "HIGH",
                 source: "PATTERN",
@@ -2487,7 +2478,8 @@ export class ChatEngineService {
                   structuredResp,
                   input.customerLanguage || "it",
                   workspaceConfig,
-                  history
+                  undefined,
+                  { customerName: input.customerName }
                 )
                 const formattedText = formatterResult.text
 
@@ -2566,7 +2558,8 @@ export class ChatEngineService {
                   structuredResp,
                   input.customerLanguage || "it",
                   workspaceConfig,
-                  history
+                  undefined,
+                  { customerName: input.customerName }
                 )
                 const formattedText = formatterResult.text
 
@@ -2733,10 +2726,7 @@ export class ChatEngineService {
               })
               
               // Load conversation history for context
-              const contextHistory = await this.conversationManager.loadHistory(
-                input.workspaceId,
-                conversationId
-              )
+              const history = await this.conversationManager.loadHistory(input.workspaceId, conversationId)
               
               // Build a contextual prompt for the LLM
               const contextPrompt = `L'utente ha selezionato l'opzione: "${contextData.label}"
@@ -2759,7 +2749,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
                 customerName: input.customerName || "Cliente",
                 customerLanguage: input.customerLanguage || "it",
                 message: contextPrompt,
-                conversationHistory: contextHistory,
+                conversationHistory: history,
                 customerDiscount: input.customerDiscount || 0,
                 conversationId,
                 messageId: `${conversationId}-context-${Date.now()}`,
@@ -2814,57 +2804,30 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
                 structuredResponse,
                 input.customerLanguage || "it",
                 workspaceConfig,
-                history
+                undefined,
+                { customerName: input.customerName }
               )
               finalMessage = formattedResult.text
               llmUsed = !formattedResult.cached
               groupMappingFromFormatter = formattedResult.groupMapping  // 🔧 Capture groupMapping
             } else if (structuredResponse.type === "NO_RESULTS") {
               const errorMessage = (structuredResponse.data as { errorMessage?: string })?.errorMessage || "Nessun risultato trovato"
-              
-              // 🔧 FIX: For specific search queries (SEARCH_PRODUCTS), don't fallback to categories
-              // Instead, provide a helpful "no results" message with suggestions
-              const noResultsIntentType = structuredResponse.context?.intentType
-              if (noResultsIntentType === "SEARCH_PRODUCTS") {
-                const searchQuery = input.message
-                finalMessage = `Mi dispiace, non ho trovato prodotti per "${searchQuery}". 
-
-Prova a:
-• Controllare l'ortografia
-• Usare termini più generici
-• Esplorare le nostre categorie
-
-1. Esplora il catalogo
-2. Mostrami il carrello
-
-o scrivi quello che stai cercando! 🔍`
-                
-                logger.info("🔍 [ChatEngine] SEARCH_PRODUCTS no results - direct response", {
-                  searchQuery,
-                  message: "Direct no-results response instead of fallback"
-                })
-                
-                llmUsed = false
-              } else {
-                // For other intents, use generic fallback as before
-                logger.warn("⚠️ [ChatEngine] NO_RESULTS response, delegating to generic fallback", {
-                  errorMessage,
-                  intentType: noResultsIntentType,
-                  listType: optionsMapping?.listType,
-                })
-                
-                const fallbackHistory = await this.conversationManager.loadHistory(input.workspaceId, conversationId)
-                const fallback = await this.routeGenericLLMFallback({
-                  input,
-                  conversationId,
-                  history: fallbackHistory,
-                  fallbackReason: errorMessage,
-                  debugSteps,
-                })
-                finalMessage = fallback.message
-                llmUsed = true
-                totalTokens += fallback.tokensUsed
-              }
+              logger.warn("⚠️ [ChatEngine] NO_RESULTS response, delegating to generic fallback", {
+                errorMessage,
+                listType: optionsMapping?.listType,
+              })
+              // Load conversation history for context
+              const fallbackHistory = await this.conversationManager.loadHistory(input.workspaceId, conversationId)
+              const fallback = await this.routeGenericLLMFallback({
+                input,
+                conversationId,
+                history: fallbackHistory,
+                fallbackReason: errorMessage,
+                debugSteps,
+              })
+              finalMessage = fallback.message
+              llmUsed = true
+              totalTokens += fallback.tokensUsed
             }
             
             // Save response WITH SKUs for next selection
@@ -2896,48 +2859,36 @@ o scrivi quello che stai cercando! 🔍`
               sku: item.sku,
               id: item.id,
             }))
-            // Derive items from groupMapping when LLM formatter returned only groups
-            const itemsFromGroupMapping =
-              !itemsWithSkus && groupMappingFromFormatter
-                ? Object.entries(groupMappingFromFormatter).map(([num, group]) => ({
-                    number: parseInt(num, 10),
-                    name: group.nome,
-                    sku: undefined,
-                    id: undefined,
-                    metadata: { skus: group.skus },
-                  }))
-                : undefined
             
             // 🔍 DEBUG: Check what listType we're passing
             const computedListType = structuredResponse.type === "PRODUCT_LIST" ? "PRODUCTS" 
-                      : structuredResponse.type === "PRODUCT_GROUPED" ? "GROUPS"
-                      : structuredResponse.type === "PRODUCT_NEEDS_SMART_GROUPING" ? "GROUPS"
                       : structuredResponse.type === "ORDER_LIST" ? "ORDERS"
                       : structuredResponse.type === "CATEGORY_LIST" ? "CATEGORIES"
                       : structuredResponse.type === "SERVICE_LIST" ? "SERVICES"
                       : structuredResponse.type === "OFFERS" ? "OFFER_CATEGORIES"  // 🆕
                       : structuredResponse.type === "OFFER_WITH_PRODUCTS" ? "PRODUCTS"  // 🆕 Single offer shows products
-                      : (groupMappingFromFormatter ? "GROUPS" : undefined)
+                      : undefined
             logger.info("📋 [ChatEngine] DEBUG: About to save mapping", {
               structuredResponseType: structuredResponse.type,
               computedListType,
-              itemsCount: itemsWithSkus?.length || itemsFromGroupMapping?.length || 0,
+              itemsCount: itemsWithSkus?.length || 0,
             })
             
-            if (computedListType) {
-              await this.optionsMappingService.saveMapping({
-                workspaceId: input.workspaceId,
-                conversationId,
-                customerId: input.customerId,
-                responseText: responseWithSkus,
-                groupMapping: groupMappingFromFormatter,
-                items: itemsWithSkus || itemsFromGroupMapping,
-                listType: computedListType,
-              })
-            } else {
-              // No list to map → clear mapping to avoid stale numeric selections
-              await this.optionsMappingService.clearMapping(conversationId)
-            }
+            await this.optionsMappingService.saveMapping({
+              workspaceId: input.workspaceId,
+              conversationId,
+              customerId: input.customerId,
+              responseText: responseWithSkus,
+              groupMapping: groupMappingFromFormatter,
+              items: itemsWithSkus,
+              listType: structuredResponse.type === "PRODUCT_LIST" ? "PRODUCTS" 
+                      : structuredResponse.type === "ORDER_LIST" ? "ORDERS"
+                      : structuredResponse.type === "CATEGORY_LIST" ? "CATEGORIES"
+                      : structuredResponse.type === "SERVICE_LIST" ? "SERVICES"
+                      : structuredResponse.type === "OFFERS" ? "OFFER_CATEGORIES"  // 🆕
+                      : structuredResponse.type === "OFFER_WITH_PRODUCTS" ? "PRODUCTS"  // 🆕 Single offer shows products
+                      : undefined,
+            })
             
             // 🆕 FSM: Update conversation state based on response type
             if (chatSession) {
@@ -3178,53 +3129,6 @@ o scrivi quello che stai cercando! 🔍`
             }
           }
         }
-
-        // If we reach here: we had a mapping but the selection didn't match anything
-        if (optionsMapping) {
-          logger.warn("⚠️ [ChatEngine] Numeric selection not found in mapping", {
-            selectedNumber: preprocessResult.extractedNumber,
-            listType: optionsMapping.listType,
-            optionsCount: optionsMapping.options?.length,
-            hasGroupMapping: !!optionsMapping.groupMapping,
-          })
-
-          const menuText = this.renderOptionsMapping(optionsMapping)
-          const fallbackMessage = `Non ho trovato l'opzione #${preprocessResult.extractedNumber}. Ecco il menu corrente:\n\n${menuText}`
-
-          const savedMessages = await this.saveMessages(
-            input.workspaceId,
-            input.customerId,
-            conversationId,
-            input.message,
-            fallbackMessage
-          )
-
-          return {
-            message: fallbackMessage,
-            agentType: AgentType.ROUTER,
-            wasHandled: true,
-            intent: "UNKNOWN",
-            confidence: "LOW",
-            source: "PATTERN",
-            processingTimeMs: Date.now() - startTime,
-            _assistantMessageId: savedMessages?.assistantMessageId,
-          }
-        }
-      }
-      // If it's NOT a short input (normal text), clear stale mapping to avoid cross-context reuse
-      else {
-        // Preserve GROUPS mapping unless a new menu is shown; avoid premature clearing
-        const existingMapping =
-          cachedOptionsMapping !== undefined
-            ? cachedOptionsMapping
-            : await this.optionsMappingService.loadMapping(input.workspaceId, conversationId)
-        if (existingMapping?.listType === "GROUPS") {
-          logger.info("📋 [ChatEngine] Keeping GROUPS mapping for context continuity", {
-            conversationId,
-          })
-        } else {
-          await this.optionsMappingService.clearMapping(conversationId)
-        }
       }
 
       // ========================================================================
@@ -3232,9 +3136,7 @@ o scrivi quello che stai cercando! 🔍`
       // ========================================================================
       // 🔧 CRITICAL: Use conversationId (which falls back to temp-{customerId}), NOT input.conversationId
       // Otherwise history is empty for temp conversations!
-      if (!history || history.length === 0) {
-        history = await this.conversationManager.loadHistory(input.workspaceId, conversationId)
-      }
+      const history = await this.conversationManager.loadHistory(input.workspaceId, conversationId)
 
       logger.debug("📜 [ChatEngine] History loaded", { 
         historyLength: history.length,
@@ -3310,53 +3212,84 @@ o scrivi quello che stai cercando! 🔍`
       })
 
       // ========================================================================
-      // STEP 2.25: Handle INCOMPREHENSIBLE and UNKNOWN intents
+      // STEP 2.20: Handle GREETING intent - Simple greeting response
       // ========================================================================
-      // INCOMPREHENSIBLE: Message is gibberish/random characters - respond with "non ho capito"
-      // UNKNOWN: Message is a real communication attempt but intent unclear - also ask for clarification
-      
-      if (intentResult.intent.type === "INCOMPREHENSIBLE" || intentResult.intent.type === "UNKNOWN") {
-        const originalMessage = (intentResult.intent as any).originalMessage || input.message
-        
-        logger.info("❓ [ChatEngine] INCOMPREHENSIBLE/UNKNOWN intent - asking for clarification", {
-          intentType: intentResult.intent.type,
-          source: intentResult.source,
-          originalMessage: originalMessage.substring(0, 50)
-        })
-        
-        const clarificationMessage = "Mi dispiace, non ho capito. Puoi ripetere in modo più chiaro?"
+      if (intentResult.intent.type === "GREETING") {
         const processingTimeMs = Date.now() - startTime
         
+        // Get workspace name for personalized greeting
+        const workspaceName = workspaceConfig.name || "il nostro servizio"
+        
+        // Simple greeting response - will be translated by translation layer
+        const greetingResponse = `Ciao! 👋 Benvenuto su ${workspaceName}. Come posso aiutarti oggi?`
+        
+        // Save messages
         const savedMessages = await this.saveMessages(
           input.workspaceId,
           input.customerId,
           conversationId,
           input.message,
-          clarificationMessage
+          greetingResponse
         )
         
+        logger.info("👋 [ChatEngine] Greeting handled", {
+          workspaceId: input.workspaceId,
+          customerId: input.customerId,
+          responseLength: greetingResponse.length,
+        })
+        
         return {
-          message: clarificationMessage,
-          agentType: AgentType.ROUTER,
-          wasHandled: true,
-          intent: intentResult.intent.type,
-          confidence: "LOW",
-          source: intentResult.source,
-          processingTimeMs,
-          debugInfo: {
-            loadedDataType: "CLARIFICATION",
-            responseType: "INCOMPREHENSIBLE",
-            llmUsed: false,
-            steps: debugSteps,
-            totalTokens,
-          },
-          response: clarificationMessage,
+          message: greetingResponse,
+          customerMessageId: savedMessages.customerMessageId,
+          assistantMessageId: savedMessages.assistantMessageId,
+          conversationId,
+          debug: debugSteps,
           agentUsed: AgentType.ROUTER,
-          tokensUsed: totalTokens,
+          tokensUsed: 0,
           executionTimeMs: processingTimeMs,
           wasFAQ: false,
           isBlocked: false,
-          _assistantMessageId: savedMessages?.assistantMessageId,
+        }
+      }
+
+      // ========================================================================
+      // STEP 2.25: Handle UNKNOWN intent - Return "didn't understand" message
+      // ========================================================================
+      // The IntentParser already uses LLM fallback for classification.
+      // If we still get UNKNOWN, it means the LLM couldn't classify it either.
+      // Instead of trying product search, return a polite "didn't understand" message.
+      if (intentResult.intent.type === "UNKNOWN") {
+        const processingTimeMs = Date.now() - startTime
+        
+        // Polite "didn't understand" message - will be translated by translation layer
+        const unknownResponse = "Mi dispiace, non ho capito. Potresti riformulare la domanda? 🤔"
+        
+        // Save messages
+        const savedMessages = await this.saveMessages(
+          input.workspaceId,
+          input.customerId,
+          conversationId,
+          input.message,
+          unknownResponse
+        )
+        
+        logger.info("❓ [ChatEngine] UNKNOWN intent - returning didn't understand message", {
+          workspaceId: input.workspaceId,
+          customerId: input.customerId,
+          originalMessage: input.message.substring(0, 50),
+        })
+        
+        return {
+          message: unknownResponse,
+          customerMessageId: savedMessages.customerMessageId,
+          assistantMessageId: savedMessages.assistantMessageId,
+          conversationId,
+          debug: debugSteps,
+          agentUsed: AgentType.ROUTER,
+          tokensUsed: 0,
+          executionTimeMs: processingTimeMs,
+          wasFAQ: false,
+          isBlocked: false,
         }
       }
 
@@ -3660,6 +3593,208 @@ o scrivi quello che stai cercando! 🔍`
           intentConfidence: intentResult.confidence,
           intentSource: intentResult.source,
         })
+      }
+
+      // ========================================================================
+      // STEP: Handle UPDATE_PROFILE intent - Generate profile edit link
+      // ========================================================================
+      if (intentResult.intent.type === "UPDATE_PROFILE") {
+        logger.info("📝 [ChatEngine] UPDATE_PROFILE detected - generating profile link", {
+          workspaceId: input.workspaceId,
+          customerId: input.customerId,
+        })
+
+        try {
+          // Import CallingFunctionsService to generate profile link
+          const { CallingFunctionsService } = await import("../../services/calling-functions.service")
+          const callingFunctions = new CallingFunctionsService()
+          
+          const profileLinkResult = await callingFunctions.getProfileLink({
+            customerId: input.customerId,
+            workspaceId: input.workspaceId,
+          })
+
+          if (!profileLinkResult.success || !profileLinkResult.linkUrl) {
+            throw new Error("Failed to generate profile link")
+          }
+
+          // Format the response with the link
+          const customerFirstName = input.customerName?.split(" ")[0] || "!"
+          const profileMessage = `Certo ${customerFirstName}! 📝 Per aggiornare i tuoi dati personali clicca qui:\n\n👉 Modifica Profilo\n${profileLinkResult.linkUrl}\n\nPer questioni di sicurezza il link sarà abilitato solo per 15 minuti.\n\nTi posso aiutare con qualcos'altro? 😊`
+
+          const processingTimeMs = Date.now() - startTime
+
+          // Save messages
+          const savedMessages = await this.saveMessages(
+            input.workspaceId,
+            input.customerId,
+            conversationId,
+            input.message,
+            profileMessage
+          )
+
+          // Clear any pending options
+          await this.optionsMappingService.clearMapping({
+            workspaceId: input.workspaceId,
+            conversationId,
+            customerId: input.customerId,
+          })
+
+          logger.info("✅ [ChatEngine] UPDATE_PROFILE handled successfully", {
+            workspaceId: input.workspaceId,
+            customerId: input.customerId,
+            linkGenerated: true,
+          })
+
+          return {
+            message: profileMessage,
+            agentType: AgentType.PROFILE_MANAGEMENT,
+            wasHandled: true,
+            intent: "UPDATE_PROFILE",
+            confidence: intentResult.confidence,
+            source: intentResult.source,
+            processingTimeMs,
+            debugInfo: {
+              loadedDataType: "PROFILE_LINK",
+              responseType: "UPDATE_PROFILE",
+              llmUsed: false,
+            },
+            response: profileMessage,
+            agentUsed: AgentType.PROFILE_MANAGEMENT,
+            tokensUsed: 0,
+            executionTimeMs: processingTimeMs,
+            wasFAQ: false,
+            isBlocked: false,
+            messageIds: savedMessages,
+          }
+        } catch (error) {
+          logger.error("❌ [ChatEngine] Failed to generate profile link", { error })
+          
+          const errorMessage = "Mi dispiace, non sono riuscito a generare il link per modificare il profilo. Riprova tra qualche istante! 😅"
+          const processingTimeMs = Date.now() - startTime
+
+          return {
+            message: errorMessage,
+            agentType: AgentType.PROFILE_MANAGEMENT,
+            wasHandled: true,
+            intent: "UPDATE_PROFILE",
+            confidence: intentResult.confidence,
+            source: intentResult.source,
+            processingTimeMs,
+            debugInfo: {
+              loadedDataType: "ERROR",
+              responseType: "UPDATE_PROFILE_ERROR",
+              llmUsed: false,
+            },
+            response: errorMessage,
+            agentUsed: AgentType.PROFILE_MANAGEMENT,
+            tokensUsed: 0,
+            executionTimeMs: processingTimeMs,
+            wasFAQ: false,
+            isBlocked: false,
+          }
+        }
+      }
+
+      // ========================================================================
+      // STEP: Handle CHANGE_LANGUAGE intent - Redirect to profile for language settings
+      // ========================================================================
+      if (intentResult.intent.type === "CHANGE_LANGUAGE") {
+        logger.info("🌍 [ChatEngine] CHANGE_LANGUAGE detected - generating profile link for language change", {
+          workspaceId: input.workspaceId,
+          customerId: input.customerId,
+        })
+
+        try {
+          // Import CallingFunctionsService to generate profile link
+          const { CallingFunctionsService } = await import("../../services/calling-functions.service")
+          const callingFunctions = new CallingFunctionsService()
+          
+          const profileLinkResult = await callingFunctions.getProfileLink({
+            customerId: input.customerId,
+            workspaceId: input.workspaceId,
+          })
+
+          if (!profileLinkResult.success || !profileLinkResult.linkUrl) {
+            throw new Error("Failed to generate profile link")
+          }
+
+          // Format the response with the link and supported languages
+          const customerFirstName = input.customerName?.split(" ")[0] || "!"
+          const languageMessage = `Certo ${customerFirstName}! 🌍 Per cambiare la lingua di conversazione, puoi modificarla nel tuo profilo:\n\n👉 Modifica Lingua\n${profileLinkResult.linkUrl}\n\n📌 Lingue supportate:\n• 🇮🇹 Italiano\n• 🇬🇧 English\n• 🇪🇸 Español\n• 🇵🇹 Português\n\nPer questioni di sicurezza il link sarà abilitato solo per 15 minuti.\n\nTi posso aiutare con qualcos'altro? 😊`
+
+          const processingTimeMs = Date.now() - startTime
+
+          // Save messages
+          const savedMessages = await this.saveMessages(
+            input.workspaceId,
+            input.customerId,
+            conversationId,
+            input.message,
+            languageMessage
+          )
+
+          // Clear any pending options
+          await this.optionsMappingService.clearMapping({
+            workspaceId: input.workspaceId,
+            conversationId,
+            customerId: input.customerId,
+          })
+
+          logger.info("✅ [ChatEngine] CHANGE_LANGUAGE handled successfully", {
+            workspaceId: input.workspaceId,
+            customerId: input.customerId,
+            linkGenerated: true,
+          })
+
+          return {
+            message: languageMessage,
+            agentType: AgentType.PROFILE_MANAGEMENT,
+            wasHandled: true,
+            intent: "CHANGE_LANGUAGE",
+            confidence: intentResult.confidence,
+            source: intentResult.source,
+            processingTimeMs,
+            debugInfo: {
+              loadedDataType: "PROFILE_LINK",
+              responseType: "CHANGE_LANGUAGE",
+              llmUsed: false,
+            },
+            response: languageMessage,
+            agentUsed: AgentType.PROFILE_MANAGEMENT,
+            tokensUsed: 0,
+            executionTimeMs: processingTimeMs,
+            wasFAQ: false,
+            isBlocked: false,
+            messageIds: savedMessages,
+          }
+        } catch (error) {
+          logger.error("❌ [ChatEngine] Failed to generate profile link for language change", { error })
+          
+          const errorMessage = "Mi dispiace, non sono riuscito a generare il link per modificare la lingua. Riprova tra qualche istante! 😅"
+          const processingTimeMs = Date.now() - startTime
+
+          return {
+            message: errorMessage,
+            agentType: AgentType.PROFILE_MANAGEMENT,
+            wasHandled: true,
+            intent: "CHANGE_LANGUAGE",
+            confidence: intentResult.confidence,
+            source: intentResult.source,
+            processingTimeMs,
+            debugInfo: {
+              loadedDataType: "ERROR",
+              responseType: "CHANGE_LANGUAGE_ERROR",
+              llmUsed: false,
+            },
+            response: errorMessage,
+            agentUsed: AgentType.PROFILE_MANAGEMENT,
+            tokensUsed: 0,
+            executionTimeMs: processingTimeMs,
+            wasFAQ: false,
+            isBlocked: false,
+          }
+        }
       }
 
       if (intentResult.intent.type === "PRODUCT_CONTEXT") {
@@ -3989,15 +4124,9 @@ o scrivi quello che stai cercando! 🔍`
       if (this.shouldUseCatalogQuery(intentResult.intent)) {
         const catalogStart = Date.now()
         try {
-          const catalogMessage =
-            intentResult.intent.type === "SEARCH_PRODUCTS" &&
-            (intentResult.intent as SearchProductsIntent).query?.trim()
-              ? (intentResult.intent as SearchProductsIntent).query.trim()
-              : input.message
-
           const catalogResult = await this.catalogQueryService.process({
             workspaceId: input.workspaceId,
-            message: catalogMessage,
+            message: input.message,
             customerDiscount: input.customerDiscount || 0,
             intentType: intentResult.intent.type,
             customerLanguage: input.customerLanguage || "it",
@@ -4042,7 +4171,7 @@ o scrivi quello che stai cercando! 🔍`
                 }
               : undefined,
             input: {
-              userMessage: catalogMessage,
+              userMessage: input.message,
             },
             output: {
               decision: `CatalogQuery: ${queryPreview}`,
@@ -4107,45 +4236,9 @@ o scrivi quello che stai cercando! 🔍`
         })
       }
 
-      let finalLoadedData = loadedData!
+      const finalLoadedData = loadedData!
 
       logger.info("📦 [ChatEngine] Data loaded", { type: finalLoadedData.type })
-
-      // If there is only one category, skip the category list and show products directly
-      if (finalLoadedData.type === "CATEGORIES" && finalLoadedData.categories.length === 1) {
-        const onlyCategory = finalLoadedData.categories[0]
-        logger.info("🛍️ [ChatEngine] Single category detected, skipping menu", {
-          categoryName: onlyCategory.name,
-        })
-
-        const singleCategoryIntent: ShowCategoryIntent = {
-          type: "SHOW_CATEGORY",
-          categoryName: onlyCategory.name,
-        }
-
-        const singleCategoryData = await this.dataLoader.loadForIntent(
-          singleCategoryIntent,
-          input.workspaceId,
-          input.customerId,
-          input.customerDiscount || 0
-        )
-
-        finalLoadedData = singleCategoryData as PipelineLoadedData
-        structuredResponseOverride = null
-        intentResult.intent = singleCategoryIntent
-
-        debugSteps.push({
-          type: "router",
-          agent: "🧭 Router Agent",
-          timestamp: new Date().toISOString(),
-          output: {
-            decision: "single_category_autoload",
-          },
-          details: {
-            categoryName: onlyCategory.name,
-          },
-        })
-      }
 
       // ========================================================================
       // STEP 4: Build structured response
@@ -4170,6 +4263,15 @@ o scrivi quello che stai cercando! 🔍`
         }
       }
       
+      // ========================================================================
+      // STEP 4.1: Build enrichment options for contextual responses
+      // ========================================================================
+      const enrichmentOptions = await this.buildEnrichmentOptions(
+        input.workspaceId,
+        input.customerId,
+        history
+      )
+      
       const structuredResponse =
         structuredResponseOverride ??
         this.responseBuilder.build(intentResult.intent, finalLoadedData as LoadedData, {
@@ -4180,7 +4282,7 @@ o scrivi quello che stai cercando! 🔍`
           showOptimizeOption,
           userMessage: input.message,
           enableCategoryRanking: workspaceConfig.sellsProductsAndServices,
-        })
+        }, enrichmentOptions)
 
       logger.info("🏗️ [ChatEngine] Response built", { type: structuredResponse.type })
 
@@ -4199,7 +4301,8 @@ o scrivi quello che stai cercando! 🔍`
           structuredResponse,
           input.customerLanguage || "it",
           workspaceConfig,
-          history
+          undefined,
+          { customerName: input.customerName, isFirstMessage: history.length === 0 }
         )
         finalMessage = formatterResult.text
         llmUsed = !formatterResult.cached
@@ -4210,7 +4313,8 @@ o scrivi quello che stai cercando! 🔍`
           structuredResponse,
           input.customerLanguage || "it",
           workspaceConfig,
-          history
+          undefined,
+          { customerName: input.customerName, isFirstMessage: history.length === 0 }
         )
         finalMessage = formatterResult.text
         llmUsed = !formatterResult.cached
@@ -4396,10 +4500,6 @@ o scrivi quello che stai cercando! 🔍`
           conversationId,
           actions: cartActions.map((action) => action.id),
         })
-
-        if (chatSession) {
-          await this.conversationStateService.setState(chatSession.id, ConversationState.VIEWING_CART_ACTIONS, {})
-        }
       } 
       // For ORDER_DETAIL: save ORDER_ACTIONS mapping  
       else if (structuredResponse.type === "ORDER_DETAIL") {
@@ -4423,26 +4523,12 @@ o scrivi quello che stai cercando! 🔍`
           listType: "ORDER_ACTIONS",
           currentOrderCode: order?.code,
         })
-
-        // Also save order code separately for order actions (like setCurrentOrderCode above)
-        await this.optionsMappingService.setCurrentOrderCode({
-          workspaceId: input.workspaceId,
-          conversationId,
-          orderCode: order?.code || "",
-        })
         
         logger.info("📦 [ChatEngine] STEP 9: Saved ORDER_ACTIONS mapping", {
           responseType: structuredResponse.type,
           orderCode: order?.code,
           conversationId,
         })
-        // FSM: move to VIEWING_ORDER_ACTIONS for clarity
-        if (chatSession) {
-          await this.conversationStateService.setState(chatSession.id, ConversationState.VIEWING_ORDER_ACTIONS, {
-            selectedOrderId: order?.id,
-            selectedOrderCode: order?.code,
-          })
-        }
       } else if (structuredResponse.type === "PRODUCT_DETAIL") {
         const productDetailActions = [
           { number: 1, name: "Esplora il catalogo", id: "SHOW_CATEGORIES", metadata: {} },
@@ -4462,13 +4548,6 @@ o scrivi quello che stai cercando! 🔍`
           conversationId,
           responseType: structuredResponse.type,
         })
-        if (chatSession) {
-          await this.conversationStateService.setState(chatSession.id, ConversationState.VIEWING_PRODUCT, {
-            selectedProductId: structuredResponse.data.product?.id,
-            selectedProductSku: structuredResponse.data.product?.sku,
-            selectedProductName: structuredResponse.data.product?.name,
-          })
-        }
       } else if (structuredResponse.type === "CART_EMPTY") {
         await this.optionsMappingService.saveMapping({
           workspaceId: input.workspaceId,
@@ -4482,35 +4561,19 @@ o scrivi quello che stai cercando! 🔍`
           conversationId,
           pendingAction: { type: "SHOW_PRODUCTS" },
         })
-        if (chatSession) {
-          await this.conversationStateService.setState(chatSession.id, ConversationState.BROWSING_CATEGORIES, {})
-        }
       }
       // For other types: normal saveMapping
       else {
         // Extract items with SKUs from structuredResponse for proper mapping
-            const itemsWithSkus = structuredResponse.data?.items?.map((item: any) => ({
-              number: item.number,
-              name: item.name,
-              sku: item.sku,
-              id: item.id,
-            }))
-            // If grouping response has groupMapping but no items array, derive items for mapping
-            const itemsFromGroupMapping =
-              !itemsWithSkus && groupMapping
-                ? Object.entries(groupMapping).map(([num, group]) => ({
-                    number: parseInt(num, 10),
-                    name: group.nome,
-                    sku: undefined,
-                    id: undefined,
-                    metadata: { skus: group.skus },
-                  }))
-                : undefined
-            
-            // Determine listType from response type
-            const responseListType = structuredResponse.type === "PRODUCT_LIST" ? "PRODUCTS" 
-                               : structuredResponse.type === "PRODUCT_GROUPED" ? "GROUPS"
-                               : structuredResponse.type === "PRODUCT_NEEDS_SMART_GROUPING" ? "GROUPS"
+        const itemsWithSkus = structuredResponse.data?.items?.map((item: any) => ({
+          number: item.number,
+          name: item.name,
+          sku: item.sku,
+          id: item.id,
+        }))
+        
+        // Determine listType from response type
+        const responseListType = structuredResponse.type === "PRODUCT_LIST" ? "PRODUCTS" 
                                : structuredResponse.type === "ORDER_LIST" ? "ORDERS"
                                : structuredResponse.type === "CATEGORY_LIST" ? "CATEGORIES"
                                : structuredResponse.type === "SERVICE_LIST" ? "SERVICES"
@@ -4525,7 +4588,6 @@ o scrivi quello che stai cercando! 🔍`
           responseText: responseWithSkus, // Use response WITH SKUs for mapping
           groupMapping, // 🆕 Pass LLM-generated group mapping if available
           items: itemsWithSkus, // 🔧 Pass items with SKUs for reliable selection
-          ...(itemsFromGroupMapping ? { items: itemsFromGroupMapping } : {}),
           listType: responseListType, // 🔧 Pass list type for proper intent creation
         })
 
@@ -4598,7 +4660,30 @@ o scrivi quello che stai cercando! 🔍`
       if (structuredResponse.type === "ORDER_DETAIL" && structuredResponse.data.order) {
         const order = structuredResponse.data.order
         
-        // 🔧 DUPLICATE REMOVED - ORDER_DETAIL actions already saved above at line ~4360
+        // Save order code
+        await this.optionsMappingService.setCurrentOrderCode({
+          workspaceId: input.workspaceId,
+          conversationId,
+          orderCode: order.code,
+        })
+        
+        // 🆕 CRITICAL: Save explicit action options so "1" = Fattura, "2" = Ripeti
+        await this.optionsMappingService.saveMapping({
+          workspaceId: input.workspaceId,
+          conversationId,
+          customerId: input.customerId,
+          responseText: "", // Empty - we're providing explicit items
+          items: [
+            { number: 1, name: "📄 Scarica fattura", id: "SEND_INVOICE", metadata: { orderCode: order.code } },
+            { number: 2, name: "🔄 Ripeti ordine", id: "REPEAT_ORDER", metadata: { orderCode: order.code } },
+          ],
+          listType: "ORDER_ACTIONS",
+        })
+        
+        logger.info("📦 [ChatEngine] Set order actions for ORDER_DETAIL", {
+          orderCode: order.code,
+          actions: ["SEND_INVOICE", "REPEAT_ORDER"],
+        })
       }
 
       // ========================================================================
@@ -4613,11 +4698,9 @@ o scrivi quello che stai cercando! 🔍`
             newFsmState = ConversationState.BROWSING_CATEGORIES
             break
           case "PRODUCT_LIST":
-            newFsmState = ConversationState.BROWSING_PRODUCTS
-            break
           case "PRODUCT_GROUPED":
           case "PRODUCT_NEEDS_SMART_GROUPING":
-            newFsmState = ConversationState.BROWSING_GROUPS
+            newFsmState = ConversationState.BROWSING_PRODUCTS
             break
           case "ORDER_LIST":
             newFsmState = ConversationState.BROWSING_ORDERS
@@ -4639,7 +4722,7 @@ o scrivi quello che stai cercando! 🔍`
             break
           case "CART_VIEW":
           case "CART_UPDATED":
-            newFsmState = ConversationState.VIEWING_CART_ACTIONS
+            newFsmState = ConversationState.VIEWING_CART
             break
           case "CART_EMPTY":
             // 🔧 When cart is empty, go back to IDLE - next "sì" should NOT trigger checkout!
@@ -4770,12 +4853,18 @@ o scrivi quello che stai cercando! 🔍`
       // Support intents
       ASK_IDENTITY: AgentType.CUSTOMER_SUPPORT,
       ASK_LOCATION: AgentType.CUSTOMER_SUPPORT,
+      ASK_BUSINESS_INFO: AgentType.CUSTOMER_SUPPORT,  // 🆕 "che settore?", "che tipo di negozio?"
       ASK_CONTACT: AgentType.CUSTOMER_SUPPORT,
       REQUEST_HUMAN: AgentType.CUSTOMER_SUPPORT,
       ASK_HOURS: AgentType.CUSTOMER_SUPPORT,
       ASK_SHIPPING: AgentType.CUSTOMER_SUPPORT,
       ASK_PAYMENT: AgentType.CUSTOMER_SUPPORT,
       ASK_HELP: AgentType.CUSTOMER_SUPPORT,
+
+      // Profile intents
+      VIEW_PROFILE: AgentType.PROFILE_MANAGEMENT,
+      UPDATE_PROFILE: AgentType.PROFILE_MANAGEMENT,
+      CHANGE_LANGUAGE: AgentType.PROFILE_MANAGEMENT,
 
       // Greeting intents
       GREETING: AgentType.ROUTER,
@@ -4949,6 +5038,14 @@ o scrivi quello che stai cercando! 🔍`
     debugInfo?: any
   ): Promise<{ assistantMessageId?: string }> {
     try {
+      // Save user message
+      await this.conversationManager.saveUserMessage({
+        workspaceId,
+        customerId,
+        conversationId,
+        content: userMessage,
+      })
+      
       // 🆕 Create minimal debugInfo if not provided (for FAST-PATH responses)
       const finalDebugInfo = debugInfo || {
         loadedDataType: "FAST_PATH",
@@ -4968,12 +5065,11 @@ o scrivi quello che stai cercando! 🔍`
       }
       
       // Save assistant response with debugInfo for timeline
-      const { assistantMessageId } = await this.conversationManager.saveUserAndAssistantAtomic({
+      const assistantMessageId = await this.conversationManager.saveAssistantMessage({
         workspaceId,
         customerId,
         conversationId,
-        userContent: userMessage,
-        assistantContent: assistantMessage,
+        content: assistantMessage,
         agentType,
         tokensUsed,
         debugInfo: finalDebugInfo,  // 🆕 Always have debugInfo for Message Flow Dialog
@@ -4995,22 +5091,101 @@ o scrivi quello che stai cercando! 🔍`
     }
   }
 
+  // ================================================================================
+  // 🆕 CONTEXTUAL ENRICHMENT - Build enrichment options for ResponseBuilder
+  // ================================================================================
+
   /**
-   * Render a minimal menu from OptionsMapping for fallback re-publish.
+   * Build enrichment options for contextual responses
+   * 
+   * Loads customer profile data for personalization and prepares
+   * conversation history for contextual suggestions.
    */
-  private renderOptionsMapping(mapping: OptionsMapping): string {
-    if (mapping.options && mapping.options.length > 0) {
-      return mapping.options
-        .map((opt) => `${opt.number}. ${opt.label}${opt.skus?.length ? ` [${opt.skus.join(", ")}]` : ""}`)
-        .join("\n")
+  private async buildEnrichmentOptions(
+    workspaceId: string,
+    customerId: string,
+    conversationHistory: Array<{ role: "user" | "assistant"; content: string }>
+  ): Promise<EnrichmentOptions> {
+    const enrichmentOptions: EnrichmentOptions = {
+      conversationHistory,
+      enableClarifyingQuestions: true,
+      enableSuggestions: true,
+      enablePersonalization: true,
     }
-    if (mapping.groupMapping && Object.keys(mapping.groupMapping).length > 0) {
-      return Object.entries(mapping.groupMapping)
-        .map(([num, group]) => `${num}. ${group.nome} (${group.skus.length} prodotti)`)
-        .join("\n")
+
+    try {
+      // Load customer order statistics for personalization
+      const orderStats = await this.prisma.orders.groupBy({
+        by: ["customerId"],
+        where: {
+          customerId,
+          workspaceId,
+          deletedAt: null,
+        },
+        _count: { id: true },
+        _max: { createdAt: true },
+      })
+
+      const customerOrderCount = orderStats[0]?._count.id || 0
+      const lastOrderDate = orderStats[0]?._max.createdAt
+
+      // Load frequent products (top 5 by order count)
+      let frequentProducts: Array<{ sku: string; name: string; orderCount: number }> = []
+      if (customerOrderCount > 0) {
+        const frequentProductsRaw = await this.prisma.orderItems.groupBy({
+          by: ["productId"],
+          where: {
+            order: {
+              customerId,
+              workspaceId,
+              deletedAt: null,
+            },
+          },
+          _count: { productId: true },
+          orderBy: { _count: { productId: "desc" } },
+          take: 5,
+        })
+
+        if (frequentProductsRaw.length > 0) {
+          const productIds = frequentProductsRaw.map(p => p.productId).filter(Boolean) as string[]
+          const products = await this.prisma.products.findMany({
+            where: { id: { in: productIds }, isActive: true },
+            select: { id: true, sku: true, name: true },
+          })
+
+          frequentProducts = frequentProductsRaw
+            .map(fp => {
+              const product = products.find(p => p.id === fp.productId)
+              return product ? {
+                sku: product.sku,
+                name: product.name,
+                orderCount: fp._count.productId,
+              } : null
+            })
+            .filter(Boolean) as Array<{ sku: string; name: string; orderCount: number }>
+        }
+      }
+
+      // Build customer profile for personalization
+      enrichmentOptions.customerProfile = {
+        isReturningCustomer: customerOrderCount > 0,
+        totalOrders: customerOrderCount,
+        lastOrderDate: lastOrderDate || undefined,
+        frequentProducts: frequentProducts.length > 0 ? frequentProducts : undefined,
+      }
+
+      logger.debug("✨ [ChatEngine] Enrichment options built", {
+        isReturningCustomer: customerOrderCount > 0,
+        totalOrders: customerOrderCount,
+        frequentProductsCount: frequentProducts.length,
+        historyLength: conversationHistory.length,
+      })
+    } catch (error) {
+      // Don't fail if enrichment data can't be loaded
+      logger.warn("⚠️ [ChatEngine] Could not load enrichment data", { error })
     }
-    if (mapping.renderedText) return mapping.renderedText
-    return "Menu non disponibile al momento."
+
+    return enrichmentOptions
   }
 
   // ================================================================================

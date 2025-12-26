@@ -80,6 +80,8 @@ export class WorkspaceController {
         address: workspace.address,
         customAiRules: workspace.customAiRules,
         logoUrl: workspace.logoUrl,
+        chatbotName: workspace.chatbotName,
+        businessType: workspace.businessType,
       }))
 
       return res.json(serializedWorkspaces)
@@ -156,6 +158,9 @@ export class WorkspaceController {
           translateCategoryNames: workspace.translateCategoryNames,
           translateServiceNames: workspace.translateServiceNames,
           catalogBaseLanguage: workspace.catalogBaseLanguage,
+          // 🆕 Chatbot Personalization
+          chatbotName: workspace.chatbotName,
+          businessType: workspace.businessType,
         }
 
         return res.json(serializedWorkspace)
@@ -335,6 +340,9 @@ export class WorkspaceController {
         translateCategoryNames: workspace.translateCategoryNames,
         translateServiceNames: workspace.translateServiceNames,
         catalogBaseLanguage: workspace.catalogBaseLanguage,
+        // 🆕 Chatbot Personalization
+        chatbotName: workspace.chatbotName,
+        businessType: workspace.businessType,
       }
 
       logger.info(

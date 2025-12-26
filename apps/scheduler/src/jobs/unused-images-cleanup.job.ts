@@ -76,7 +76,7 @@ export async function unusedImagesCleanupJob(): Promise<void> {
   totalDeleted += cleanupDirectory(userImagesDir, usedUserLogos, 'users')
 
   // ═══════════════════════════════════════════════════════════════
-  // 5. CHANNEL LOGOS CLEANUP
+  // 4. CHANNEL LOGOS CLEANUP
   // ═══════════════════════════════════════════════════════════════
   const channelImagesDir = path.join(uploadsDir, 'channels')
   const workspaces = await prisma.workspace.findMany({

@@ -79,6 +79,12 @@ export async function confirmOrder(
       }
     }
 
+    // 1b. Get workspace to check hasSalesAgents
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: request.workspaceId },
+      select: { hasSalesAgents: true, name: true }
+    })
+
     // 2. Get cart with items
     const cart = await prisma.carts.findFirst({
       where: {
@@ -278,22 +284,27 @@ Il cliente attende conferma e dettagli di pagamento.
     await prisma.$disconnect()
 
     // 9. Return success message (English - will be translated by Translation Agent)
+    const contactMessage = workspace?.hasSalesAgents
+      ? "📲 Un nostro **agente commerciale** ti contatterà presto su questo canale per la conferma finale e i dettagli del pagamento."
+      : "📲 Un **operatore** ti contatterà presto su questo canale per la conferma finale e i dettagli del pagamento."
+
     const finalMessage = [
-      `✅ Grazie {{nameUser}}!`,
+      `🎉 **Grazie {{nameUser}}!**`,
       ``,
-      `📦 Ordine confermato`,
-      `- Codice ordine: **${order.orderCode}**`,
-      `- Totale: €${totalAmount.toFixed(2)}`,
-      `- Articoli confermati: ${order.items.length}`,
+      `Il tuo ordine è stato registrato con successo.`,
       ``,
-      `Verifica il tuo indirizzo di spedizione: [LINK_PROFILE_WITH_TOKEN]`,
-      `Il link resta attivo per {{TOKEN_DURATION}}.`,
+      `📦 **Riepilogo ordine**`,
+      `• Codice: **${order.orderCode}**`,
+      `• Articoli: **${order.items.length}**`,
+      `• Totale: **€${totalAmount.toFixed(2)}**`,
       ``,
-      `📲 Ti contatteremo su questo canale per la conferma finale e i dettagli del pagamento.`,
+      `🔗 Verifica il tuo indirizzo di spedizione: [LINK_PROFILE_WITH_TOKEN]`,
+      `_(Il link resta attivo per {{TOKEN_DURATION}})_`,
       ``,
-      `Scegli un'opzione:`,
-      `1. Aggiungere note all'ordine`,
-      `2. Vedere la lista degli ordini`,
+      contactMessage,
+      ``,
+      `📋 **Cosa vuoi fare ora?**`,
+      `1. Vedere i tuoi ordini`,
     ].join("\n")
 
     const nextActions: AgentOptionMapping = {
@@ -303,13 +314,7 @@ Il cliente attende conferma e dettagli di pagamento.
       options: [
         {
           number: 1,
-          label: "Aggiungere note all'ordine",
-          id: "ADD_ORDER_NOTE",
-          metadata: { orderCode: order.orderCode },
-        },
-        {
-          number: 2,
-          label: "Vedere la lista degli ordini",
+          label: "Vedere i tuoi ordini",
           id: "VIEW_ORDERS",
         },
       ],
