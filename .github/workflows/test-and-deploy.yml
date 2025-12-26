@@ -115,8 +115,14 @@ jobs:
           node-version: '20'
           cache: 'npm'
       
-      - name: Install dependencies
+      - name: Install dependencies (root)
         run: npm ci --force
+      
+      - name: Install workspace dependencies (backend)
+        run: npm ci --force --workspace=@echatbot/backend
+      
+      - name: Install workspace dependencies (frontend)
+        run: npm ci --force --workspace=@echatbot/frontend
       
       - name: Fix Rollup optional dependencies (npm bug)
         run: |
@@ -132,12 +138,16 @@ jobs:
       - name: Verify build artifacts
         run: |
           echo "Checking backend build..."
-          test -f apps/backend/dist/src/index.js || (echo "❌ Backend build failed" && exit 1)
+          test -f apps/backend/dist/src/index.js || (echo "❌ Backend build failed" && cat apps/backend/tsconfig.json && exit 1)
           echo "✅ Backend build OK"
           
           echo "Checking frontend build..."
           test -d apps/frontend/dist || (echo "❌ Frontend build failed" && exit 1)
           echo "✅ Frontend build OK"
+          
+          echo "Checking scheduler build..."
+          test -f apps/scheduler/dist/index.js || (echo "❌ Scheduler build failed" && exit 1)
+          echo "✅ Scheduler build OK"
   
   # ══════════════════════════════════════════════════════════════════════
   # JOB 4: Deploy to Heroku (SOLO SE TUTTI I TEST PASSANO)
