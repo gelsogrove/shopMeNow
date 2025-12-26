@@ -90,6 +90,11 @@ jobs:
       - name: Install dependencies
         run: npm ci --force
       
+      - name: Fix Rollup optional dependencies (npm bug)
+        run: |
+          rm -rf node_modules/.cache
+          npm install @rollup/rollup-linux-x64-gnu --save-optional --no-save || true
+      
       - name: Run frontend tests
         run: npm run test:fe
   
@@ -112,6 +117,11 @@ jobs:
       
       - name: Install dependencies
         run: npm ci --force
+      
+      - name: Fix Rollup optional dependencies (npm bug)
+        run: |
+          rm -rf node_modules/.cache
+          npm install @rollup/rollup-linux-x64-gnu --save-optional --no-save || true
       
       - name: Generate Prisma Client
         run: npm run prisma:generate
