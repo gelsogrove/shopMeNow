@@ -189,7 +189,7 @@ export async function whatsappChallengeQueueJob(): Promise<void> {
       // 🚀 PARALLEL PROCESSING: Send all messages simultaneously
       // Safe because WhatsApp limit is per-pair (same customer), not global
       const results = await Promise.allSettled(
-        pendingMessages.map(async (message) => {
+        pendingMessages.map(async (message: (typeof pendingMessages)[number]) => {
           try {
             // 🔒 SECURITY CHECK: Pass through Security Agent LLM before sending
             const securityStartTime = Date.now()

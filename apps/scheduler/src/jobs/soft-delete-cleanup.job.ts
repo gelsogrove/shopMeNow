@@ -1,4 +1,5 @@
 import { prisma } from '../config/database'
+import { Prisma } from '@echatbot/database'
 import logger from '../utils/logger'
 
 /**
@@ -77,8 +78,8 @@ export async function softDeleteCleanupJob(): Promise<void> {
     }),
   ])
 
-  const userIds = expiredUsers.map(u => u.id)
-  const workspaceIds = expiredWorkspaces.map(w => w.id)
+  const userIds = expiredUsers.map((u: { id: string }) => u.id)
+  const workspaceIds = expiredWorkspaces.map((w: { id: string }) => w.id)
 
   if (userIds.length === 0 && workspaceIds.length === 0) {
     logger.info(`No expired soft-deleted records to hard-delete`)
