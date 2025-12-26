@@ -11,7 +11,7 @@
 import { PrismaClient } from "@echatbot/database"
 
 // Mock the calling functions
-jest.mock("../../../src/domain/calling-functions/SendInvoice", () => ({
+jest.mock("../../../src/domain/calling-functions/sendInvoice", () => ({
   sendInvoice: jest.fn(),
 }))
 

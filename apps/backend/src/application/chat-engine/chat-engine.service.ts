@@ -4911,7 +4911,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       switch (action) {
         case "SEND_INVOICE": {
           // Import and call sendInvoice calling function
-          const { sendInvoice } = await import("../../domain/calling-functions/SendInvoice")
+          const { sendInvoice } = await import("../../domain/calling-functions/sendInvoice")
           const result = await sendInvoice({
             customerId,
             workspaceId,
@@ -4925,7 +4925,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
 
         case "REPEAT_ORDER": {
           // Import and call repeatOrder calling function
-          const { repeatOrder } = await import("../../domain/calling-functions/RepeatOrder")
+          const { repeatOrder } = await import("../../domain/calling-functions/repeatOrder")
           const result = await repeatOrder({
             customerId,
             workspaceId,

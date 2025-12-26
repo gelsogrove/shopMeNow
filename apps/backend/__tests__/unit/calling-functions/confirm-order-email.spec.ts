@@ -68,7 +68,7 @@ jest.mock("@echatbot/database", () => ({
 }))
 
 // Import after mocks
-import { confirmOrder, ConfirmOrderRequest } from "../../../src/domain/calling-functions/ConfirmOrder"
+import { confirmOrder, ConfirmOrderRequest } from "../../../src/domain/calling-functions/confirmOrder"
 import { EmailService } from "../../../src/application/services/email.service"
 import logger from "../../../src/utils/logger"
 
