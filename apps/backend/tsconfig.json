@@ -16,7 +16,6 @@
     "noFallthroughCasesInSwitch": false,
     "skipLibCheck": true,
     "incremental": true,
-    "baseUrl": ".",
     "outDir": "./dist/src",
     "sourceMap": true,
     "resolveJsonModule": true,
@@ -25,7 +24,7 @@
     "emitDecoratorMetadata": true,
     "types": ["node", "jest"]
   },
-  "include": ["src/**/*", "src/types/**/*", "../../shared/**/*.ts"],
+  "include": ["src/**/*"],
   "exclude": [
     "node_modules",
     "**/*.spec.ts",
