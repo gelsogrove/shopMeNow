@@ -28,6 +28,10 @@ out/
 # Prisma Generated Files (regenerated on prisma generate)
 packages/database/src/generated/
 
+# Prisma Seed Data (compiled TS → JS during build, should be regenerated)
+apps/backend/prisma/data/*.js
+apps/backend/prisma/data/*.js.map
+
 # Debug and temporary files
 **/debug-*.js
 **/temp-*.js
