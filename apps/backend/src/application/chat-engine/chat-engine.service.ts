@@ -4923,7 +4923,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
 
         case "REPEAT_ORDER": {
           // Import and call repeatOrder calling function
-          const { repeatOrder } = await import("../../domain/calling-functions/repeatOrder")
+          const { repeatOrder } = await import("../../domain/calling-functions/RepeatOrder")
           const result = await repeatOrder({
             customerId,
             workspaceId,
