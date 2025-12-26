@@ -142,8 +142,8 @@ export interface WorkspaceLocationData {
 export interface BusinessInfoData {
   workspaceName: string
   description?: string
-  chatbotName: string
-  businessType: string
+  chatbotName?: string
+  businessType?: string
   address?: string
 }
 
@@ -2033,9 +2033,7 @@ export class DataLoaderService {
         where: { id: workspaceId },
         select: { 
           name: true, 
-          description: true, 
-          chatbotName: true, 
-          businessType: true,
+          description: true,
           address: true,
         },
       })
@@ -2046,8 +2044,6 @@ export class DataLoaderService {
         businessInfo: {
           workspaceName: workspace.name,
           description: workspace.description || undefined,
-          chatbotName: workspace.chatbotName || "Assistente",
-          businessType: workspace.businessType || "other",
           address: workspace.address || undefined,
         },
       }

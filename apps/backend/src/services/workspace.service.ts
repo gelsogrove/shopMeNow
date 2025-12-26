@@ -88,8 +88,6 @@ export const workspaceService = {
         botIdentityResponse: true,
         address: true,
         customAiRules: true,
-        chatbotName: true,
-        businessType: true,
         // 🆕 Translation Settings
         translateProductNames: true,
         translateCategoryNames: true,
@@ -134,8 +132,6 @@ export const workspaceService = {
         botIdentityResponse: true,
         address: true,
         customAiRules: true,
-        chatbotName: true,
-        businessType: true,
         // 🆕 Translation Settings
         translateProductNames: true,
         translateCategoryNames: true,
@@ -286,8 +282,6 @@ export const workspaceService = {
         botIdentityResponse: true,
         address: true,
         customAiRules: true,
-        chatbotName: true,
-        businessType: true,
         // 🆕 Translation Settings
         translateProductNames: true,
         translateCategoryNames: true,

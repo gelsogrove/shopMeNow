@@ -137,7 +137,7 @@ export class ConversationHistoryLayer {
     try {
       const agent = await this.agentConfigRepo.findByType(
         workspaceId,
-        "CONVERSATION_HISTORY"
+        "CONVERSATION_HISTORY" as any
       )
 
       if (!agent) {

@@ -78,8 +78,8 @@ interface WorkspaceConfig {
   adminEmail: string | null
   workspaceName: string
   address: string | null
-  chatbotName: string | null      // 🆕 Custom chatbot name
-  businessType: string | null     // 🆕 Business sector
+  chatbotName?: string | null      // 🆕 Custom chatbot name
+  businessType?: string | null     // 🆕 Business sector
 }
 
 const workspaceConfigCache = new Map<string, { config: WorkspaceConfig; timestamp: number }>()
@@ -1253,11 +1253,6 @@ export class ChatEngineService {
         customAiRules: true,  // Custom AI rules that override default behavior
         notificationEmail: true,
         address: true,
-        chatbotName: true,      // 🆕 Custom chatbot name
-        businessType: true,     // 🆕 Business sector
-        whatsappSettings: {
-          select: { adminEmail: true },
-        },
       },
     })
 
@@ -1272,14 +1267,9 @@ export class ChatEngineService {
       botIdentityResponse: workspace?.botIdentityResponse ?? null,
       botIdentity: workspace?.botIdentityResponse ?? null,  // Alias for LLMFormatter
       customAiRules: workspace?.customAiRules ?? null,
-      adminEmail:
-        workspace?.whatsappSettings?.adminEmail ||
-        workspace?.notificationEmail ||
-        null,
+      adminEmail: workspace?.notificationEmail || null,
       workspaceName: workspace?.name || "Il nostro shop",
-      address: workspace?.address || null,
-      chatbotName: workspace?.chatbotName ?? null,      // 🆕 Custom chatbot name
-      businessType: workspace?.businessType ?? null,     // 🆕 Business sector
+      address: workspace?.address || null
     }
 
     workspaceConfigCache.set(workspaceId, { config, timestamp: Date.now() })
@@ -1819,6 +1809,9 @@ export class ChatEngineService {
           await this.optionsMappingService.clearPendingAction(conversationId)
           cachedOptionsMapping = null
           
+          // Load history before usage
+          const history = await this.conversationManager.loadHistory(input.workspaceId, conversationId)
+          
           // Use SHOW_CATEGORIES instead of SHOW_PRODUCTS to show ALL categories
           const showIntent: Intent = { type: "SHOW_CATEGORIES" } as Intent
           const loadedData = await this.dataLoader.loadForIntent(
@@ -2002,6 +1995,9 @@ export class ChatEngineService {
             )
             
             if (products.length > 0) {
+              // Load history before usage
+              const history = await this.conversationManager.loadHistory(input.workspaceId, conversationId)
+              
               // Build response with loaded products
               const loadedData = {
                 type: "PRODUCTS" as const,
@@ -3240,14 +3236,21 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         
         return {
           message: greetingResponse,
-          customerMessageId: savedMessages.customerMessageId,
-          assistantMessageId: savedMessages.assistantMessageId,
-          conversationId,
-          debug: debugSteps,
+          agentType: AgentType.ROUTER,
+          wasHandled: true,
+          intent: "GREETING",
+          confidence: "HIGH",
+          source: "PATTERN",
+          processingTimeMs,
+          debugInfo: {
+            steps: debugSteps,
+          },
+          response: greetingResponse,
           agentUsed: AgentType.ROUTER,
           tokensUsed: 0,
           executionTimeMs: processingTimeMs,
           wasFAQ: false,
+          _assistantMessageId: savedMessages.assistantMessageId,
           isBlocked: false,
         }
       }
@@ -3281,13 +3284,20 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         
         return {
           message: unknownResponse,
-          customerMessageId: savedMessages.customerMessageId,
-          assistantMessageId: savedMessages.assistantMessageId,
-          conversationId,
-          debug: debugSteps,
+          agentType: AgentType.ROUTER,
+          wasHandled: true,
+          intent: "UNKNOWN",
+          confidence: "LOW",
+          source: "PATTERN",
+          processingTimeMs,
+          debugInfo: {
+            steps: debugSteps,
+          },
+          response: unknownResponse,
           agentUsed: AgentType.ROUTER,
           tokensUsed: 0,
           executionTimeMs: processingTimeMs,
+          _assistantMessageId: savedMessages.assistantMessageId,
           wasFAQ: false,
           isBlocked: false,
         }
@@ -3634,11 +3644,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           )
 
           // Clear any pending options
-          await this.optionsMappingService.clearMapping({
-            workspaceId: input.workspaceId,
-            conversationId,
-            customerId: input.customerId,
-          })
+          await this.optionsMappingService.clearMapping(conversationId)
 
           logger.info("✅ [ChatEngine] UPDATE_PROFILE handled successfully", {
             workspaceId: input.workspaceId,
@@ -3665,7 +3671,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             executionTimeMs: processingTimeMs,
             wasFAQ: false,
             isBlocked: false,
-            messageIds: savedMessages,
+            _assistantMessageId: savedMessages.assistantMessageId,
           }
         } catch (error) {
           logger.error("❌ [ChatEngine] Failed to generate profile link", { error })
@@ -3735,11 +3741,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           )
 
           // Clear any pending options
-          await this.optionsMappingService.clearMapping({
-            workspaceId: input.workspaceId,
-            conversationId,
-            customerId: input.customerId,
-          })
+          await this.optionsMappingService.clearMapping(conversationId)
 
           logger.info("✅ [ChatEngine] CHANGE_LANGUAGE handled successfully", {
             workspaceId: input.workspaceId,
@@ -3766,7 +3768,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             executionTimeMs: processingTimeMs,
             wasFAQ: false,
             isBlocked: false,
-            messageIds: savedMessages,
+            _assistantMessageId: savedMessages.assistantMessageId,
           }
         } catch (error) {
           logger.error("❌ [ChatEngine] Failed to generate profile link for language change", { error })
@@ -4269,7 +4271,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       const enrichmentOptions = await this.buildEnrichmentOptions(
         input.workspaceId,
         input.customerId,
-        history
+        history.map(msg => ({ role: msg.role as "user" | "assistant", content: msg.content }))
       )
       
       const structuredResponse =

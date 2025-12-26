@@ -87,4 +87,8 @@ export interface WorkspaceConfig {
   adminEmail?: string
   /** Allowed external link domains */
   allowedExternalLinks?: string[]
+  /** Chatbot name (optional, for UI display) */
+  chatbotName?: string
+  /** Business type (optional, for categorization) */
+  businessType?: string
 }
