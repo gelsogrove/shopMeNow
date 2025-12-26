@@ -132,21 +132,46 @@ jobs:
       - name: Generate Prisma Client
         run: npm run prisma:generate
       
+      - name: Debug - List workspace structure
+        run: |
+          echo "Root node_modules:"
+          ls -la node_modules/@echatbot/ 2>/dev/null | head -10 || echo "No @echatbot packages"
+          echo ""
+          echo "Backend node_modules:"
+          ls -la apps/backend/node_modules/@echatbot/ 2>/dev/null | head -10 || echo "No @echatbot packages in backend"
+      
       - name: Build all workspaces
-        run: npm run build
+        run: npm run build 2>&1 | tee build.log
+      
+      - name: Check build output
+        if: failure()
+        run: |
+          echo "❌ Build failed. Output:"
+          tail -100 build.log
       
       - name: Verify build artifacts
         run: |
           echo "Checking backend build..."
-          test -f apps/backend/dist/src/index.js || (echo "❌ Backend build failed" && cat apps/backend/tsconfig.json && exit 1)
+          if [ ! -f apps/backend/dist/src/index.js ]; then
+            echo "❌ Backend build failed"
+            echo "Backend dist contents:"
+            ls -la apps/backend/dist/ 2>/dev/null || echo "No dist folder"
+            exit 1
+          fi
           echo "✅ Backend build OK"
           
           echo "Checking frontend build..."
-          test -d apps/frontend/dist || (echo "❌ Frontend build failed" && exit 1)
+          if [ ! -d apps/frontend/dist ]; then
+            echo "❌ Frontend build failed"
+            exit 1
+          fi
           echo "✅ Frontend build OK"
           
           echo "Checking scheduler build..."
-          test -f apps/scheduler/dist/index.js || (echo "❌ Scheduler build failed" && exit 1)
+          if [ ! -f apps/scheduler/dist/index.js ]; then
+            echo "❌ Scheduler build failed"
+            exit 1
+          fi
           echo "✅ Scheduler build OK"
   
   # ══════════════════════════════════════════════════════════════════════
