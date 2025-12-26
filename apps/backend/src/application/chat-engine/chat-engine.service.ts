@@ -54,7 +54,7 @@ import {
 } from "./conversation-state.service"
 import { TranslationAgent } from "../agents/TranslationAgent"
 import { CatalogQueryService, CatalogQueryLoadedData } from "../catalog-query/catalog-query.service"
-import { confirmOrder } from "../../domain/calling-functions/ConfirmOrder"
+import { confirmOrder } from "../../domain/calling-functions/confirmOrder"
 import { LLMRouterService } from "../../services/llm-router.service"
 import { getUnifiedChatRouter, UnifiedChatRouter } from "../services/unified-chat-router.service"
 
