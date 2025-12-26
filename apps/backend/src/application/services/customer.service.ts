@@ -249,7 +249,6 @@ export class CustomerService {
       // 🔄 RESET REGISTRATION ATTEMPTS - Clear attempts when unblocking
       try {
         const { RegistrationAttemptsService } = await import("./registration-attempts.service")
-        const { PrismaClient } = await import("@prisma/client")
         const registrationAttemptsService = new RegistrationAttemptsService(prisma)
         
         await registrationAttemptsService.clearAttempts(customer.phone, workspaceId)
