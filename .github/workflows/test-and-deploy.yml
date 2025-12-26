@@ -1,0 +1,211 @@
+name: Test & Deploy to Heroku
+
+on:
+  push:
+    branches:
+      - main  # Deploy automatico solo su push a main
+  pull_request:
+    branches:
+      - main  # Test su PR prima del merge
+
+env:
+  NODE_ENV: test
+
+jobs:
+  # ══════════════════════════════════════════════════════════════════════
+  # JOB 1: Test Backend
+  # ══════════════════════════════════════════════════════════════════════
+  test-backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: echatbot_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Generate Prisma Client
+        run: npm run prisma:generate
+      
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/echatbot_test
+        run: npm run prisma:migrate:prod
+      
+      - name: Run backend unit tests
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/echatbot_test
+          JWT_SECRET: test-secret-key-for-ci-only
+          NODE_ENV: test
+        run: npm run test:unit
+      
+      - name: Run backend security tests
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/echatbot_test
+          JWT_SECRET: test-secret-key-for-ci-only
+          NODE_ENV: test
+          INTEGRATION_TEST: true
+        run: npm run test:security
+  
+  # ══════════════════════════════════════════════════════════════════════
+  # JOB 2: Test Frontend
+  # ══════════════════════════════════════════════════════════════════════
+  test-frontend:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run frontend tests
+        run: npm run test:fe
+  
+  # ══════════════════════════════════════════════════════════════════════
+  # JOB 3: Build Check
+  # ══════════════════════════════════════════════════════════════════════
+  build:
+    name: Build Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Generate Prisma Client
+        run: npm run prisma:generate
+      
+      - name: Build all workspaces
+        run: npm run build
+      
+      - name: Verify build artifacts
+        run: |
+          echo "Checking backend build..."
+          test -f apps/backend/dist/src/index.js || (echo "❌ Backend build failed" && exit 1)
+          echo "✅ Backend build OK"
+          
+          echo "Checking frontend build..."
+          test -d apps/frontend/dist || (echo "❌ Frontend build failed" && exit 1)
+          echo "✅ Frontend build OK"
+  
+  # ══════════════════════════════════════════════════════════════════════
+  # JOB 4: Deploy to Heroku (SOLO SE TUTTI I TEST PASSANO)
+  # ══════════════════════════════════════════════════════════════════════
+  deploy:
+    name: Deploy Web to Heroku
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend, build]  # Aspetta che tutti i test passino
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'  # Solo su push a main
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history per Heroku
+      
+      - name: Deploy to Heroku (Web)
+        uses: akhileshns/heroku-deploy@v3.13.15
+        with:
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
+          heroku_email: ${{ secrets.HEROKU_EMAIL }}
+          branch: main
+      
+      - name: Verify deployment
+        run: |
+          echo "🚀 Web app deployment completed!"
+          echo "App URL: https://${{ secrets.HEROKU_APP_NAME }}.herokuapp.com"
+      
+      - name: Run post-deploy health check
+        run: |
+          sleep 30  # Wait for app to boot
+          curl -f https://${{ secrets.HEROKU_APP_NAME }}.herokuapp.com/health || exit 1
+          echo "✅ Health check passed!"
+  
+  # ══════════════════════════════════════════════════════════════════════
+  # JOB 5: Deploy Scheduler to Heroku
+  # ══════════════════════════════════════════════════════════════════════
+  deploy-scheduler:
+    name: Deploy Scheduler to Heroku
+    runs-on: ubuntu-latest
+    needs: [test-backend, build]  # Aspetta test backend
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'  # Solo su push a main
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Deploy to Heroku (Scheduler)
+        uses: akhileshns/heroku-deploy@v3.13.15
+        with:
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: echatbot-scheduler
+          heroku_email: ${{ secrets.HEROKU_EMAIL }}
+          branch: main
+      
+      - name: Verify deployment
+        run: |
+          echo "🚀 Scheduler app deployment completed!"
+          echo "App URL: https://echatbot-scheduler.herokuapp.com"
+  
+  # ══════════════════════════════════════════════════════════════════════
+  # JOB 5: Notify (opzionale - decommentare se vuoi notifiche)
+  # ══════════════════════════════════════════════════════════════════════
+  # notify:
+  #   name: Notify Deployment
+  #   runs-on: ubuntu-latest
+  #   needs: [deploy]
+  #   if: always()
+  #   
+  #   steps:
+  #     - name: Send notification
+  #       run: |
+  #         if [ "${{ needs.deploy.result }}" == "success" ]; then
+  #           echo "✅ Deploy succeeded!"
+  #           # Aggiungi qui notifica Slack/Discord/Email
+  #         else
+  #           echo "❌ Deploy failed!"
+  #         fi

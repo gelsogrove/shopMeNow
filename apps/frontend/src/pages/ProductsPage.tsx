@@ -109,38 +109,60 @@ export function ProductsPage() {
       setIsLoading(true)
       
       try {
-        // Parallel fetch for better performance
-        const [
-          productsResponse,
-          categoriesData,
-          certificationsData,
-          transportTypesData,
-          suppliersData
-        ] = await Promise.all([
+        // Parallel fetch for better performance (supplier may be optional)
+        const results = await Promise.allSettled([
           productsApi.getAllForWorkspace(workspace.id),
           categoriesApi.getAllForWorkspace(workspace.id),
           certificationsApi.getAllForWorkspace(workspace.id),
           transportTypesApi.getAllForWorkspace(workspace.id),
-          supplierApi.getAll(workspace.id)
+          supplierApi.getAll(workspace.id),
         ])
 
+        const [
+          productsResult,
+          categoriesResult,
+          certificationsResult,
+          transportTypesResult,
+          suppliersResult,
+        ] = results
+
         // Set products
-        if (productsResponse && Array.isArray(productsResponse.products)) {
-          logger.info(`✅ Products received: ${productsResponse.products.length}`)
-          setProducts(productsResponse.products)
+        let coreLoadFailed = false
+        if (productsResult.status === "fulfilled") {
+          const productsResponse = productsResult.value
+          if (productsResponse && Array.isArray(productsResponse.products)) {
+            logger.info(`✅ Products received: ${productsResponse.products.length}`)
+            setProducts(productsResponse.products)
+          } else {
+            logger.error("Invalid API response format:", productsResponse)
+            setProducts([])
+            toast.error("Error in API response format")
+            coreLoadFailed = true
+          }
         } else {
-          logger.error("Invalid API response format:", productsResponse)
+          logger.error("Failed to load products:", productsResult.reason)
           setProducts([])
-          toast.error("Error in API response format")
+          toast.error("Failed to load products")
+          coreLoadFailed = true
         }
 
-        // Set other data
-        setCategories(categoriesData)
-        setCertifications(certificationsData)
-        setTransportTypes(transportTypesData)
-        setSuppliers(suppliersData)
+        // Set other data (defaults to empty on failure)
+        setCategories(categoriesResult.status === "fulfilled" ? categoriesResult.value : [])
+        setCertifications(certificationsResult.status === "fulfilled" ? certificationsResult.value : [])
+        setTransportTypes(transportTypesResult.status === "fulfilled" ? transportTypesResult.value : [])
 
-        logger.info("✅ All data loaded successfully")
+        if (suppliersResult.status === "fulfilled") {
+          setSuppliers(suppliersResult.value)
+        } else {
+          logger.warn("Suppliers endpoint unavailable, continuing without suppliers", {
+            error: suppliersResult.reason,
+          })
+          setSuppliers([])
+        }
+
+        if (!coreLoadFailed) {
+          logger.info("✅ All data loaded successfully")
+        }
       } catch (error) {
         logger.error("Failed to load data:", error)
         setProducts([])

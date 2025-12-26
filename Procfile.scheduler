@@ -1,0 +1,6 @@
+# 🛠️ Scheduler Procfile
+# Questo file è per l'app echatbot-scheduler SOLO (non per web app)
+# La web app usa il Procfile root (senza scheduler)
+
+# ⏱️ SCHEDULER PROCESS - Background cron jobs
+scheduler: node apps/scheduler/dist/index.js

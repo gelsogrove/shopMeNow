@@ -18,7 +18,8 @@ import {
   IntentResult, 
   ConversationContext,
   UnknownIntent,
-  IncomprehensibleIntent
+  IncomprehensibleIntent,
+  SearchProductsIntent
 } from "./intent.types"
 import { matchAllPatterns } from "./patterns/pattern-matcher"
 import { buildContextFromHistory, parseListFromMessage } from "./patterns/history-parser"

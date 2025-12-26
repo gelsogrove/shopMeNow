@@ -817,25 +817,13 @@ export class LLMFormatterService {
     const items = response.data.items || []
     const lines = ["PRODUCTS:"]
     for (const item of items) {
-      const basePrice = typeof item.price === "number" && Number.isFinite(item.price) ? item.price : undefined
-      const discounted =
-        typeof item.priceWithDiscount === "number" && Number.isFinite(item.priceWithDiscount)
-          ? item.priceWithDiscount
-          : undefined
-      let priceText = ""
-      if (discounted !== undefined && basePrice !== undefined && Math.abs(discounted - basePrice) > 0.009) {
-        priceText = ` - ${formatDisplayPrice(basePrice)} (${formatDisplayPrice(discounted)} dopo il tuo sconto)`
-      } else if (discounted !== undefined) {
-        priceText = ` - ${formatDisplayPrice(discounted)}`
-      } else if (basePrice !== undefined) {
-        priceText = ` - ${formatDisplayPrice(basePrice)}`
-      }
-      const line = `**${item.number}.** ${item.name}${priceText}`
+      const line = `**${item.number}.** ${item.name}`
       lines.push(line)
     }
     // Add selection prompt - user-friendly, no technical details
     lines.push("")
-    lines.push("IMPORTANT: After the list, ask 'Which product are you interested in? 🛒' or similar. DO NOT show SKU codes or categories to the user. Numbers MUST be bold like **1.** **2.** etc.")
+    lines.push("IMPORTANT: Do NOT show prices in product lists. Prices appear only in product detail and cart views.")
+    lines.push("After the list, ask 'Which product are you interested in? 🛒' or similar. DO NOT show SKU codes or categories to the user. Numbers MUST be bold like **1.** **2.** etc.")
     return lines.join("\n")
   }
 

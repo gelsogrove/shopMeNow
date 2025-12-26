@@ -92,6 +92,35 @@ export class CatalogQueryService {
 
     const result = executeCatalogQuery(products, finalQuery)
 
+    if (
+      result.type === "EMPTY" &&
+      intentType === "SEARCH_PRODUCTS" &&
+      trimmedMessage.length > 0
+    ) {
+      const llmMatches = await this.selectProductsWithLLM(products, trimmedMessage)
+      if (llmMatches.length > 0) {
+        const structuredResponse = this.buildListResponse(
+          llmMatches,
+          intentType,
+          customerLanguage,
+          customerDiscount,
+          finalQuery.groupBy?.[0]
+        )
+
+        return {
+          loadedData: {
+            type: "CATALOG_QUERY_RESULT",
+            resultType: "LIST",
+            products: llmMatches,
+          },
+          structuredResponse,
+          query: finalQuery,
+          model: "openai/gpt-4o-mini",
+          resultType: "LIST",
+        }
+      }
+    }
+
     switch (result.type) {
       case "LIST": {
         const structuredResponse = this.buildListResponse(
@@ -244,6 +273,357 @@ export class CatalogQueryService {
     }
   }
 
+  private async selectProductsWithLLM(
+    products: ProductData[],
+    query: string
+  ): Promise<ProductData[]> {
+    try {
+      const apiKey = process.env.OPENROUTER_API_KEY || ""
+      if (!apiKey) {
+        logger.warn("⚠️ [CatalogQueryService] OPENROUTER_API_KEY not set - LLM fallback skipped")
+        return []
+      }
+
+      const trimmedQuery = query.trim()
+      if (!trimmedQuery) {
+        return []
+      }
+
+      const systemPrompt = `You are a product matcher.
+Given a user query and a list of products, return the products that match the query.
+Rules:
+- Use semantic understanding and handle typos in any language.
+- Match based on meaning from product title, description, category, region, format, transport, and certifications.
+- If the query term appears (or a simple singular/plural variant appears) in any product field, you MUST include that product.
+- For each match, provide an evidence snippet that appears verbatim in the provided product fields.
+- Do NOT invent products or IDs.
+- Return at most 20 matches ordered by relevance.
+- Use ONLY the numeric field "n" to refer to products (do not return any IDs).
+- Output ONLY valid JSON in this format:
+  {"matches":[{"n":1,"evidence":"exact snippet"},{"n":2,"evidence":"exact snippet"}]}`
+
+      const byId = new Map(products.map((p) => [p.id, p]))
+      const allIds: string[] = []
+      const batchSize = 200
+      const maxIds = 20
+
+      for (let start = 0; start < products.length; start += batchSize) {
+        const batch = products.slice(start, start + batchSize)
+        const batchCandidates = batch.map((product, index) => ({
+          n: index + 1,
+          name: product.name,
+          description: product.description || "",
+          category: product.categoryName || "",
+          region: product.region || "",
+          formato: product.formato || "",
+          transport: product.transportType || "",
+          certifications: product.certifications || [],
+        }))
+
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "openai/gpt-4o-mini",
+            temperature: 0,
+            max_tokens: 400,
+            messages: [
+              { role: "system", content: systemPrompt },
+              {
+                role: "user",
+                content: JSON.stringify({
+                  query: trimmedQuery,
+                  products: batchCandidates,
+                }),
+              },
+            ],
+          }),
+        })
+
+        if (!response.ok) {
+          logger.warn("⚠️ [CatalogQueryService] LLM fallback error", {
+            status: response.status,
+            batchStart: start,
+          })
+          continue
+        }
+
+        const data = await response.json()
+        const content = data.choices?.[0]?.message?.content
+        if (!content || typeof content !== "string") {
+          continue
+        }
+
+        const parsed = this.parseJsonObject(content, {
+          logContext: { batchStart: start },
+        })
+        if (!parsed) {
+          continue
+        }
+
+        const ids = this.extractMatchedIds(parsed, batch, byId)
+        for (const id of ids) {
+          if (!allIds.includes(id)) {
+            allIds.push(id)
+          }
+        }
+      }
+
+      if (allIds.length === 0) {
+        return []
+      }
+
+      let finalIds = allIds.slice(0, maxIds)
+
+      if (allIds.length > maxIds) {
+        const refinementCandidates = finalIds
+          .map((id) => byId.get(id))
+          .filter(Boolean)
+          .map((product, index) => ({
+            n: index + 1,
+            name: product!.name,
+            description: product!.description || "",
+            category: product!.categoryName || "",
+            region: product!.region || "",
+            formato: product!.formato || "",
+            transport: product!.transportType || "",
+            certifications: product!.certifications || [],
+          }))
+
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "openai/gpt-4o-mini",
+            temperature: 0,
+            max_tokens: 400,
+            messages: [
+              { role: "system", content: systemPrompt },
+              {
+                role: "user",
+                content: JSON.stringify({
+                  query: trimmedQuery,
+                  products: refinementCandidates,
+                }),
+              },
+            ],
+          }),
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          const content = data.choices?.[0]?.message?.content
+          if (content && typeof content === "string") {
+            const parsed = this.parseJsonObject(content, {
+              logPrefix: "LLM refinement",
+            })
+            const ids = this.extractMatchedIds(parsed, refinementCandidates.map((entry) => ({
+              id: finalIds[entry.n - 1],
+              name: entry.name,
+              description: entry.description,
+              categoryName: entry.category,
+              region: entry.region,
+              formato: entry.formato,
+              transportType: entry.transport,
+              certifications: entry.certifications,
+            })) as ProductData[], byId)
+            if (ids.length > 0) {
+              finalIds = ids.slice(0, maxIds)
+            }
+          }
+        }
+      }
+
+      const matched = finalIds.map((id) => byId.get(id)).filter(Boolean) as ProductData[]
+      const directMatches = this.findDirectMatches(products, trimmedQuery)
+      const combined = [
+        ...matched,
+        ...directMatches.filter((item) => !matched.some((m) => m.id === item.id)),
+      ]
+
+      logger.info("🧠 [CatalogQueryService] LLM fallback matches", {
+        query: trimmedQuery,
+        matched: combined.length,
+        directMatches: directMatches.length,
+      })
+
+      return combined
+    } catch (error) {
+      logger.error("❌ [CatalogQueryService] LLM fallback failed", { error })
+      return []
+    }
+  }
+
+  private parseJsonObject(
+    content: string,
+    options?: {
+      logPrefix?: string
+      logContext?: Record<string, unknown>
+    }
+  ): any | null {
+    const prefix = options?.logPrefix || "LLM fallback"
+    const context = options?.logContext || {}
+    const trimmed = content.trim()
+    const cleaned = this.stripCodeFence(trimmed)
+    const direct = this.tryParseJson(cleaned)
+    if (direct) {
+      return direct
+    }
+
+    const firstObject = this.extractFirstJsonObject(cleaned)
+    const parsed = firstObject ? this.tryParseJson(firstObject) : null
+    if (!parsed) {
+      logger.warn(`⚠️ [CatalogQueryService] ${prefix} returned invalid JSON`, {
+        ...context,
+      })
+    }
+    return parsed
+  }
+
+  private stripCodeFence(input: string): string {
+    let sanitized = input.trim()
+    if (sanitized.startsWith("```")) {
+      const lines = sanitized.split("\n")
+      lines.shift()
+      if (lines.length > 0 && lines[lines.length - 1].trim().startsWith("```")) {
+        lines.pop()
+      }
+      sanitized = lines.join("\n").trim()
+    }
+    return sanitized
+  }
+
+  private tryParseJson(input: string): any | null {
+    if (!input) return null
+    try {
+      return JSON.parse(input)
+    } catch {
+      return null
+    }
+  }
+
+  private extractFirstJsonObject(input: string): string | null {
+    const start = input.indexOf("{")
+    if (start === -1) return null
+    let depth = 0
+    let inString = false
+    let escaped = false
+
+    for (let i = start; i < input.length; i++) {
+      const char = input[i]
+      if (escaped) {
+        escaped = false
+        continue
+      }
+      if (char === "\\") {
+        escaped = true
+        continue
+      }
+      if (char === "\"") {
+        inString = !inString
+        continue
+      }
+      if (inString) continue
+
+      if (char === "{") depth += 1
+      if (char === "}") depth -= 1
+      if (depth === 0) {
+        return input.slice(start, i + 1)
+      }
+    }
+
+    return null
+  }
+
+  private extractMatchedIds(
+    parsed: any,
+    batch: ProductData[],
+    byId: Map<string, ProductData>
+  ): string[] {
+    const matches = Array.isArray(parsed?.matches) ? parsed.matches : []
+    const idsFromMatches = matches
+      .map((entry: any) => {
+        const index = typeof entry?.n === "number" ? entry.n : null
+        const evidence = typeof entry?.evidence === "string" ? entry.evidence : ""
+        if (!index || index < 1 || index > batch.length) return null
+        const product = batch[index - 1]
+        if (!product) return null
+        if (!this.hasEvidence(product, evidence)) return null
+        return product.id
+      })
+      .filter(Boolean) as string[]
+
+    if (idsFromMatches.length > 0) {
+      return idsFromMatches
+    }
+
+    const legacyIds = Array.isArray(parsed?.ids) ? parsed.ids : []
+    return legacyIds.filter((id: any) => typeof id === "string" && byId.has(id))
+  }
+
+  private hasEvidence(product: ProductData, evidence: string): boolean {
+    const needle = evidence.trim().toLowerCase()
+    if (!needle) return false
+    const haystack = [
+      product.name,
+      product.description,
+      product.categoryName,
+      product.region,
+      product.formato,
+      product.transportType,
+      ...(product.certifications || []),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+    return haystack.includes(needle)
+  }
+
+  private findDirectMatches(products: ProductData[], query: string): ProductData[] {
+    const normalizedQuery = this.normalizeText(query)
+    if (!normalizedQuery) return []
+    const tokens = normalizedQuery.split(" ").filter((token) => token.length >= 4)
+    if (tokens.length === 0) return []
+
+    const stems = tokens.map((token) => token.replace(/[aeiou]$/i, ""))
+    const searchTokens = Array.from(new Set([...tokens, ...stems].filter(Boolean)))
+
+    return products.filter((product) => {
+      const text = this.normalizeText(this.buildSearchText(product))
+      return searchTokens.some((token) => text.includes(token))
+    })
+  }
+
+  private buildSearchText(product: ProductData): string {
+    return [
+      product.name,
+      product.description,
+      product.categoryName,
+      product.region,
+      product.formato,
+      product.transportType,
+      ...(product.certifications || []),
+    ]
+      .filter(Boolean)
+      .join(" ")
+  }
+
+  private normalizeText(input: string): string {
+    return input
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+  }
+
   private buildListResponse(
     products: ProductData[],
     intentType: string,
@@ -389,6 +769,7 @@ export class CatalogQueryService {
       formatting: {
         ...RESPONSE_DEFAULT_FORMATTING,
         groupByCategory: true,
+        showTotal: false,
       },
       context,
     }

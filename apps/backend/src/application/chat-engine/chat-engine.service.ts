@@ -2824,8 +2824,9 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
               
               // 🔧 FIX: For specific search queries (SEARCH_PRODUCTS), don't fallback to categories
               // Instead, provide a helpful "no results" message with suggestions
-              if (parsedIntent.type === "SEARCH_PRODUCTS") {
-                const searchQuery = (parsedIntent as SearchProductsIntent).query
+              const noResultsIntentType = structuredResponse.context?.intentType
+              if (noResultsIntentType === "SEARCH_PRODUCTS") {
+                const searchQuery = input.message
                 finalMessage = `Mi dispiace, non ho trovato prodotti per "${searchQuery}". 
 
 Prova a:
@@ -2848,7 +2849,7 @@ o scrivi quello che stai cercando! 🔍`
                 // For other intents, use generic fallback as before
                 logger.warn("⚠️ [ChatEngine] NO_RESULTS response, delegating to generic fallback", {
                   errorMessage,
-                  intentType: parsedIntent.type,
+                  intentType: noResultsIntentType,
                   listType: optionsMapping?.listType,
                 })
                 

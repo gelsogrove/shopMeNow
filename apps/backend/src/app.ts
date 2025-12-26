@@ -131,6 +131,19 @@ if (fs.existsSync(landingAssetsPath)) {
   logger.info(`[LandingPage] Serving assets from ${landingAssetsPath}`)
 }
 
+// 🌐 PRODUCTION: Serve frontend static files (from Vite build)
+if (process.env.NODE_ENV === "production") {
+  const frontendDistPath = path.join(backendRoot, "../frontend/dist")
+  if (fs.existsSync(frontendDistPath)) {
+    app.use(express.static(frontendDistPath))
+    logger.info(`[Production] Serving frontend from: ${frontendDistPath}`)
+  } else {
+    logger.warn(
+      `[Production] Frontend dist not found at: ${frontendDistPath}`
+    )
+  }
+}
+
 // Custom JSON parser middleware to handle potentially escaped JSON
 app.use(
   express.json({
@@ -298,6 +311,24 @@ app.use("/api", apiRouter)
 // Mount workspace routes directly at root for legacy compatibility
 import { workspaceRoutes as workspaceRoutesRoot } from "./interfaces/http/routes/workspace.routes"
 app.use("/workspaces", workspaceRoutesRoot)
+
+// 🌐 PRODUCTION: SPA fallback - serve index.html for all non-API routes
+// This MUST be after all API routes to avoid conflicts
+if (process.env.NODE_ENV === "production") {
+  const frontendDistPath = path.join(backendRoot, "../frontend/dist")
+  const frontendIndexPath = path.join(frontendDistPath, "index.html")
+  
+  if (fs.existsSync(frontendIndexPath)) {
+    app.get("*", (req, res, next) => {
+      // Skip API routes
+      if (req.path.startsWith("/api")) {
+        return next()
+      }
+      res.sendFile(frontendIndexPath)
+    })
+    logger.info(`[Production] SPA fallback enabled for frontend routes`)
+  }
+}
 
 // Error handling should be last
 app.use(errorMiddleware)

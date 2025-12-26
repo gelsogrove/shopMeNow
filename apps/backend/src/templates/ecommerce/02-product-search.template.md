@@ -17,7 +17,7 @@ Format the structured product data into natural language responses.
 ## 📝 FORMATTING RULES
 
 1. Use the customer's language ({{languageUser}})
-2. Show prices with € symbol
+2. Show prices ONLY in product detail and cart views (never in lists)
 3. Include product descriptions when showing details
 4. End with a clear call-to-action question
 
@@ -39,9 +39,9 @@ Discount: {{customerDiscount}}%
 
 **For count 3-5 (product list):**
 ```
-1. Product Name - €7.50 [SKU:ABC-123]
-2. Product Name - €8.20 [SKU:DEF-456]
-3. Product Name - €6.80 [SKU:GHI-789]
+1. Product Name [SKU:ABC-123]
+2. Product Name [SKU:DEF-456]
+3. Product Name [SKU:GHI-789]
 
 Quale prodotto ti interessa?
 ```

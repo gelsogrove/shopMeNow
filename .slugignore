@@ -1,0 +1,42 @@
+# Heroku Slugignore - Files to exclude from deployment
+# Reduces slug size and speeds up deployment
+
+# Tests
+**/__tests__/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+**/jest.config.js
+**/vitest.config.ts
+
+# Development files
+*.md
+docs/
+terraform/
+scripts/
+.github/
+.vscode/
+
+# Source files (only need compiled dist/)
+apps/backend/src/
+apps/frontend/src/
+apps/scheduler/src/
+apps/backoffice/src/
+
+# TypeScript config (not needed after build)
+**/tsconfig.json
+**/tsconfig.*.json
+
+# Local development
+docker-compose.yml
+.env.example
+.env.backup.*
+
+# Logs
+**/logs/
+*.log
+
+# Git files
+.git/
+.gitignore

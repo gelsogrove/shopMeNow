@@ -682,7 +682,12 @@ export class ResponseBuilderService {
     }
 
     const groups = rawGroups
-      .sort((a, b) => b.variantCount - a.variantCount)
+      .sort((a, b) => {
+        const aIsOther = a.groupName.trim().toLowerCase() === "altri"
+        const bIsOther = b.groupName.trim().toLowerCase() === "altri"
+        if (aIsOther !== bIsOther) return aIsOther ? 1 : -1
+        return b.variantCount - a.variantCount
+      })
       .slice(0, 4)
 
     const groupMapping: Record<string, { nome: string; skus: string[] }> = {}
@@ -705,6 +710,7 @@ export class ResponseBuilderService {
       formatting: {
         ...DEFAULT_FORMATTING,
         groupByCategory: true,
+        showTotal: false,
       },
       context,
     }
@@ -1229,12 +1235,48 @@ export class ResponseBuilderService {
     const formatoValues = products.map(p => p.formato?.trim()).filter(Boolean) as string[]
     const hasUsefulFormato = formatoValues.length > 0 && formatoValues.some(f => !isJustWeight(f))
     const hasRegion = products.some(p => p.region && p.region.trim() !== "")
-    
+    const hasTransport = products.some(p => (p as any).transportType && String((p as any).transportType).trim() !== "")
+
+    const normalizedText = (product: ProductData): string =>
+      `${product.name || ""} ${product.description || ""}`.toLowerCase()
+
+    const typePatterns: Array<{ name: string; regex: RegExp }> = [
+      { name: "Freschi", regex: /\bfresc[oaie]|\bmozzarella|\bstracciatella|\bfiordilatte/ },
+      { name: "Stagionati", regex: /\bstagionat|\bvecchi[aoe]|\baffinat/ },
+      { name: "Erborinati", regex: /\berborinat|\bgorgonzola|\bblu/ },
+      { name: "Affumicati", regex: /\baffumicat/ },
+      { name: "Spalmabili", regex: /\bspalmabil|\bcremos[oaie]|\bphiladelphia/ },
+      { name: "Piccanti", regex: /\bpiccant|\bpeperoncino/ },
+      { name: "Dolci", regex: /\bdolc[ei]|\bvaniglia|\bcioccolat/ },
+      { name: "Integrali", regex: /\bintegral/ },
+      { name: "Bio", regex: /\bbio|\bbiologic/ },
+      { name: "Senza Lattosio", regex: /\bsenza lattosio|\blactose free/ },
+      { name: "Senza Glutine", regex: /\bsenza glutine|\bgluten[-\s]?free/ },
+    ]
+
+    const getTypeGroup = (product: ProductData): string | null => {
+      const text = normalizedText(product)
+      for (const pattern of typePatterns) {
+        if (pattern.regex.test(text)) {
+          return pattern.name
+        }
+      }
+      return null
+    }
+
+    const typeMatches = products
+      .map((product) => getTypeGroup(product))
+      .filter((value): value is string => Boolean(value))
+    const typeGroupsCount = new Set(typeMatches).size
+    const hasTypeGrouping = typeGroupsCount >= 2
+
     logger.info("🧠 [ResponseBuilder] createSmartGroups analyzing", {
       categoryName,
       productCount: products.length,
+      hasTypeGrouping,
       hasUsefulFormato,
       hasRegion,
+      hasTransport,
       formatoValues: formatoValues.slice(0, 5),
       sampleProducts: products.slice(0, 3).map(p => ({
         name: p.name,
@@ -1246,14 +1288,20 @@ export class ResponseBuilderService {
     for (const product of products) {
       let groupKey: string
       
-      if (hasUsefulFormato && product.formato && product.formato.trim() !== "" && !isJustWeight(product.formato)) {
-        // Strategy 1: Group by formato (e.g., "Stagionato", "Fresco") - but NOT if it's just weight
-        groupKey = product.formato.trim()
+      if (hasTypeGrouping) {
+        // Strategy 1: Group by product typology inferred from name/description
+        groupKey = getTypeGroup(product) || "Altri"
       } else if (hasRegion && product.region && product.region.trim() !== "") {
         // Strategy 2: Group by region (e.g., "Toscana", "Piemonte")
         groupKey = product.region.trim()
+      } else if (hasTransport && (product as any).transportType && String((product as any).transportType).trim() !== "") {
+        // Strategy 3: Group by transport type when available
+        groupKey = String((product as any).transportType).trim()
+      } else if (hasUsefulFormato && product.formato && product.formato.trim() !== "" && !isJustWeight(product.formato)) {
+        // Strategy 4: Group by formato (e.g., "Stagionato", "Fresco") - but NOT if it's just weight
+        groupKey = product.formato.trim()
       } else {
-        // Strategy 3: Group by first significant word in name/description
+        // Fallback: Group by first significant word in name/description
         // Skip common words like "Formaggio", use second word if available
         const nameWords = product.name.split(" ")
         groupKey = nameWords.length > 1 ? nameWords[1] : nameWords[0] || "Altri"
@@ -1270,25 +1318,15 @@ export class ResponseBuilderService {
       .map(([name, prods]) => ({ name, products: prods }))
       .sort((a, b) => b.products.length - a.products.length)
     
-    // If we ended up with too many small groups (>5 groups), consolidate
-    if (groups.length > 5) {
-      const consolidatedGroups: Array<{ name: string; products: ProductData[] }> = []
-      const mainGroups = groups.slice(0, 4)
-      const otherProducts = groups.slice(4).flatMap(g => g.products)
-      
-      consolidatedGroups.push(...mainGroups)
-      if (otherProducts.length > 0) {
-        consolidatedGroups.push({ name: "Altri", products: otherProducts })
-      }
-      
-      logger.info("🧠 [ResponseBuilder] Consolidated to 5 groups", {
-        originalGroupCount: groups.length,
-        finalGroupCount: consolidatedGroups.length,
+    // If we ended up with too many groups (>=5), skip grouping entirely
+    if (groups.length >= 5) {
+      logger.info("🧠 [ResponseBuilder] Too many groups, skipping grouping", {
+        groupCount: groups.length,
+        categoryName,
       })
-      
-      return consolidatedGroups
+      return []
     }
-    
+
     // 🆕 If we only have 1 group (all products ended up in same group), 
     // don't bother grouping - just return empty to trigger flat list
     if (groups.length <= 1) {
