@@ -20,13 +20,12 @@ coverage/
 
 # Production
 build/
-dist/
+# dist/ - COMMITTED for Heroku deployment (pre-compiled strategy)
 dist-ssr/
 .next/
 out/
 
-# NOTE: Using ts-node runtime on Heroku, no need for pre-compiled dist
-# dist folders are now excluded from git
+# NOTE: dist folders ARE committed for Heroku pre-compiled deployment
 
 # Prisma Generated Files (regenerated on prisma generate)
 packages/database/src/generated/

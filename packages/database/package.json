@@ -10,7 +10,7 @@
     "./data/defaultFAQs": "./prisma/data/defaultFAQs.ts"
   },
   "scripts": {
-    "build": "tsc && cp -r src/generated dist/src/",
+    "build": "tsc -p ./tsconfig.json && cp -r src/generated dist/src/",
     "generate": "prisma generate",
     "migrate:dev": "if [ \"$NODE_ENV\" = \"production\" ]; then echo '❌ Cannot run migrate:dev in production!' && exit 1; fi && dotenv -e ../../.env -- prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",

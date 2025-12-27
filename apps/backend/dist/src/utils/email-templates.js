@@ -1,0 +1,180 @@
+"use strict";
+/**
+ * Multilingual Email Templates
+ *
+ * Provides translations for all email types in IT, EN, ES, PT
+ * Used by EmailService to send localized emails
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.emailTranslations = void 0;
+exports.getEmailTranslation = getEmailTranslation;
+exports.detectLanguageFromHeader = detectLanguageFromHeader;
+exports.emailTranslations = {
+    it: {
+        welcome: {
+            subject: "Benvenuto su eChatbot! 🎉",
+            greeting: "Ciao",
+            intro: "Benvenuto su <strong>eChatbot</strong>! Siamo entusiasti di averti con noi. 🚀",
+            accountCreated: "Il tuo account è stato creato con successo. Ora puoi:",
+            features: [
+                "Gestire prodotti e servizi",
+                "Gestire ordini clienti via WhatsApp",
+                "Usare il chatbot AI per supporto clienti",
+                "Tracciare analisi e vendite"
+            ],
+            getStarted: "Inizia",
+            footer: "Se hai domande, contatta il nostro team di supporto.",
+            rights: "Tutti i diritti riservati",
+            disclaimer: "Ricevi questa email perché ti sei registrato su eChatbot."
+        },
+        resetPassword: {
+            subject: "Reimposta la tua Password - eChatbot",
+            greeting: "Ciao",
+            intro: "Abbiamo ricevuto una richiesta per reimpostare la password del tuo account eChatbot. Se non hai fatto questa richiesta, puoi ignorare questa email.",
+            resetButton: "Reimposta Password",
+            copyLink: "Oppure copia e incolla questo link nel tuo browser:",
+            warningTitle: "⚠️ Importante:",
+            warnings: [
+                "Questo link scadrà tra 1 ora",
+                "Se non hai richiesto questo reset, ignora questa email",
+                "Non condividere questo link con nessuno"
+            ],
+            footer: "Se hai problemi, contatta il nostro team di supporto.",
+            rights: "Tutti i diritti riservati"
+        }
+    },
+    en: {
+        welcome: {
+            subject: "Welcome to eChatbot! 🎉",
+            greeting: "Hi",
+            intro: "Welcome to <strong>eChatbot</strong>! We're excited to have you on board. 🚀",
+            accountCreated: "Your account has been successfully created. You can now:",
+            features: [
+                "Manage your products and services",
+                "Handle customer orders via WhatsApp",
+                "Use AI-powered chatbot for customer support",
+                "Track analytics and sales"
+            ],
+            getStarted: "Get Started",
+            footer: "If you have any questions, feel free to reach out to our support team.",
+            rights: "All rights reserved",
+            disclaimer: "You're receiving this email because you registered for a eChatbot account."
+        },
+        resetPassword: {
+            subject: "Reset Your Password - eChatbot",
+            greeting: "Hello",
+            intro: "We received a request to reset the password for your eChatbot account. If you didn't make this request, you can safely ignore this email.",
+            resetButton: "Reset My Password",
+            copyLink: "Or copy and paste this link into your browser:",
+            warningTitle: "⚠️ Important:",
+            warnings: [
+                "This link will expire in 1 hour",
+                "If you didn't request this reset, please ignore this email",
+                "Never share this link with anyone"
+            ],
+            footer: "If you have any issues, please contact our support team.",
+            rights: "All rights reserved"
+        }
+    },
+    es: {
+        welcome: {
+            subject: "¡Bienvenido a eChatbot! 🎉",
+            greeting: "Hola",
+            intro: "¡Bienvenido a <strong>eChatbot</strong>! Estamos emocionados de tenerte con nosotros. 🚀",
+            accountCreated: "Tu cuenta ha sido creada exitosamente. Ahora puedes:",
+            features: [
+                "Gestionar tus productos y servicios",
+                "Manejar pedidos de clientes vía WhatsApp",
+                "Usar chatbot AI para soporte al cliente",
+                "Rastrear analíticas y ventas"
+            ],
+            getStarted: "Empezar",
+            footer: "Si tienes alguna pregunta, no dudes en contactar a nuestro equipo de soporte.",
+            rights: "Todos los derechos reservados",
+            disclaimer: "Estás recibiendo este correo porque te registraste en eChatbot."
+        },
+        resetPassword: {
+            subject: "Restablece tu Contraseña - eChatbot",
+            greeting: "Hola",
+            intro: "Recibimos una solicitud para restablecer la contraseña de tu cuenta eChatbot. Si no hiciste esta solicitud, puedes ignorar este correo.",
+            resetButton: "Restablecer mi Contraseña",
+            copyLink: "O copia y pega este enlace en tu navegador:",
+            warningTitle: "⚠️ Importante:",
+            warnings: [
+                "Este enlace expirará en 1 hora",
+                "Si no solicitaste este restablecimiento, ignora este correo",
+                "Nunca compartas este enlace con nadie"
+            ],
+            footer: "Si tienes algún problema, contacta a nuestro equipo de soporte.",
+            rights: "Todos los derechos reservados"
+        }
+    },
+    pt: {
+        welcome: {
+            subject: "Bem-vindo ao eChatbot! 🎉",
+            greeting: "Olá",
+            intro: "Bem-vindo ao <strong>eChatbot</strong>! Estamos animados em tê-lo conosco. 🚀",
+            accountCreated: "Sua conta foi criada com sucesso. Agora você pode:",
+            features: [
+                "Gerenciar seus produtos e serviços",
+                "Gerenciar pedidos de clientes via WhatsApp",
+                "Usar chatbot AI para suporte ao cliente",
+                "Rastrear análises e vendas"
+            ],
+            getStarted: "Começar",
+            footer: "Se você tiver alguma dúvida, entre em contato com nossa equipe de suporte.",
+            rights: "Todos os direitos reservados",
+            disclaimer: "Você está recebendo este e-mail porque se registrou no eChatbot."
+        },
+        resetPassword: {
+            subject: "Redefina sua Senha - eChatbot",
+            greeting: "Olá",
+            intro: "Recebemos uma solicitação para redefinir a senha da sua conta eChatbot. Se você não fez esta solicitação, pode ignorar este e-mail.",
+            resetButton: "Redefinir minha Senha",
+            copyLink: "Ou copie e cole este link no seu navegador:",
+            warningTitle: "⚠️ Importante:",
+            warnings: [
+                "Este link expirará em 1 hora",
+                "Se você não solicitou esta redefinição, ignore este e-mail",
+                "Nunca compartilhe este link com ninguém"
+            ],
+            footer: "Se você tiver algum problema, entre em contato com nossa equipe de suporte.",
+            rights: "Todos os direitos reservados"
+        }
+    }
+};
+/**
+ * Get email translations for a specific language
+ * Falls back to English if language not supported
+ */
+function getEmailTranslation(language) {
+    const lang = language || 'en';
+    return exports.emailTranslations[lang] || exports.emailTranslations.en;
+}
+/**
+ * Detect language from Accept-Language header
+ */
+function detectLanguageFromHeader(acceptLanguage) {
+    if (!acceptLanguage || acceptLanguage.trim() === '')
+        return 'it'; // Default: Italian
+    // Parse Accept-Language header with quality values
+    // Format: "en-US,en;q=0.9,it;q=0.8" → [{lang: 'en', q: 1.0}, {lang: 'en', q: 0.9}, {lang: 'it', q: 0.8}]
+    const languages = acceptLanguage
+        .toLowerCase()
+        .split(',')
+        .map(lang => {
+        const [code, qValue] = lang.trim().split(';q=');
+        const langCode = code.split('-')[0].trim(); // Extract base language (en-US → en)
+        const quality = qValue ? parseFloat(qValue) : 1.0;
+        return { langCode, quality };
+    })
+        .sort((a, b) => b.quality - a.quality); // Sort by quality (highest first)
+    // Find first supported language
+    for (const { langCode } of languages) {
+        if (langCode === 'it' || langCode === 'en' || langCode === 'es' || langCode === 'pt') {
+            return langCode;
+        }
+    }
+    return 'it'; // Fallback to Italian
+}
+//# sourceMappingURL=email-templates.js.map
