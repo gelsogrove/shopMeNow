@@ -3,17 +3,14 @@
 import 'dotenv/config'
 import path from 'path'
 import dotenv from 'dotenv'
-import { fileURLToPath } from 'url'
-
-// Get __dirname equivalent in ES modules
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // Try to load .env from various locations (monorepo support)
+// Use process.cwd() which works in both CommonJS and ES modules
 const envPaths = [
   path.resolve(process.cwd(), '.env'),
   path.resolve(process.cwd(), '../../.env'),
-  path.resolve(__dirname, '../../../.env'),
-  path.resolve(__dirname, '../../../../.env'),
+  path.resolve(process.cwd(), '../../../.env'),
+  path.resolve(process.cwd(), '../../../../.env'),
 ]
 for (const envPath of envPaths) {
   const result = dotenv.config({ path: envPath })
