@@ -39,76 +39,95 @@ const prisma = new PrismaClient({ adapter })
 async function main() {
   console.log("🌱 Starting database seed...")
 
-  // 1. Clear existing data (in correct order to avoid FK constraints)
-  console.log("🧹 Cleaning existing data...")
+  const isProduction = process.env.DATABASE_URL?.includes("amazonaws.com") || 
+                       process.env.DATABASE_URL?.includes("heroku")
+  
+  if (isProduction) {
+    console.log("⚠️  PRODUCTION MODE: Skipping data cleanup, only inserting if not exists")
+  } else {
+    // 1. Clear existing data (in correct order to avoid FK constraints)
+    console.log("🧹 Cleaning existing data...")
 
-  // Delete all child tables with FK dependencies first
-  await prisma.orderItems.deleteMany()
-  await prisma.cartItems.deleteMany()
-  await prisma.message.deleteMany()
-  await prisma.chatSession.deleteMany()
-  await prisma.passwordReset.deleteMany()
-  // await prisma.otpToken.deleteMany() // ❌ REMOVED - table dropped
-  await prisma.registrationToken.deleteMany()
-  await prisma.secureToken.deleteMany()
-  await prisma.customerFeedback.deleteMany()
-  await prisma.campaignSent.deleteMany()
-  await prisma.campaign.deleteMany()
-  await prisma.billing.deleteMany()
-  await prisma.billingTransaction.deleteMany() // ✅ Feature 185: Billing transactions
-  await prisma.monthlyInvoice.deleteMany() // ✅ Feature 197: Monthly invoices
-  await prisma.usage.deleteMany()
-  await prisma.adminSession.deleteMany()
-  await prisma.shortUrls.deleteMany()
-  await prisma.registrationAttempts.deleteMany()
-  await prisma.carts.deleteMany()
-  await prisma.orders.deleteMany()
-  await prisma.customers.deleteMany()
-  // ❌ CHUNKS TABLES REMOVED
-  // await prisma.documentChunks.deleteMany()
-  // await prisma.fAQChunks.deleteMany()
-  // await prisma.serviceChunks.deleteMany()
-  // await prisma.productChunks.deleteMany()
-  await prisma.documents.deleteMany()
-  await prisma.fAQ.deleteMany()
-  await prisma.offers.deleteMany()
-  await prisma.services.deleteMany()
-  // ✅ Feature 179: Delete pivot tables before parent tables
-  await prisma.productTransportType.deleteMany()
-  await prisma.productCertification.deleteMany()
-  await prisma.products.deleteMany()
-  await prisma.productSearch.deleteMany()
-  await prisma.categories.deleteMany()
-  await prisma.sales.deleteMany()
-  await prisma.languages.deleteMany()
-  await prisma.agentConfig.deleteMany()
-  await prisma.gdprContent.deleteMany()
-  await prisma.whatsappSettings.deleteMany()
-  await prisma.paymentDetails.deleteMany()
-  await prisma.searchConversations.deleteMany() // 🆕 Delete before workspace
-  // ✅ Feature 178 & 179: Delete certification and transport type tables
-  await prisma.certification.deleteMany()
-  await prisma.transportType.deleteMany()
+    // Delete all child tables with FK dependencies first
+    await prisma.orderItems.deleteMany()
+    await prisma.cartItems.deleteMany()
+    await prisma.message.deleteMany()
+    await prisma.chatSession.deleteMany()
+    await prisma.passwordReset.deleteMany()
+    // await prisma.otpToken.deleteMany() // ❌ REMOVED - table dropped
+    await prisma.registrationToken.deleteMany()
+    await prisma.secureToken.deleteMany()
+    await prisma.customerFeedback.deleteMany()
+    await prisma.campaignSent.deleteMany()
+    await prisma.campaign.deleteMany()
+    await prisma.billing.deleteMany()
+    await prisma.billingTransaction.deleteMany() // ✅ Feature 185: Billing transactions
+    await prisma.monthlyInvoice.deleteMany() // ✅ Feature 197: Monthly invoices
+    await prisma.usage.deleteMany()
+    await prisma.adminSession.deleteMany()
+    await prisma.shortUrls.deleteMany()
+    await prisma.registrationAttempts.deleteMany()
+    await prisma.carts.deleteMany()
+    await prisma.orders.deleteMany()
+    await prisma.customers.deleteMany()
+    // ❌ CHUNKS TABLES REMOVED
+    // await prisma.documentChunks.deleteMany()
+    // await prisma.fAQChunks.deleteMany()
+    // await prisma.serviceChunks.deleteMany()
+    // await prisma.productChunks.deleteMany()
+    await prisma.documents.deleteMany()
+    await prisma.fAQ.deleteMany()
+    await prisma.offers.deleteMany()
+    await prisma.services.deleteMany()
+    // ✅ Feature 179: Delete pivot tables before parent tables
+    await prisma.productTransportType.deleteMany()
+    await prisma.productCertification.deleteMany()
+    await prisma.products.deleteMany()
+    await prisma.productSearch.deleteMany()
+    await prisma.categories.deleteMany()
+    await prisma.sales.deleteMany()
+    await prisma.languages.deleteMany()
+    await prisma.agentConfig.deleteMany()
+    await prisma.gdprContent.deleteMany()
+    await prisma.whatsappSettings.deleteMany()
+    await prisma.paymentDetails.deleteMany()
+    await prisma.searchConversations.deleteMany() // 🆕 Delete before workspace
+    // ✅ Feature 178 & 179: Delete certification and transport type tables
+    await prisma.certification.deleteMany()
+    await prisma.transportType.deleteMany()
 
-  // Delete user-related tables
-  await prisma.workspaceInvitation.deleteMany() // Must delete before users (foreign key)
-  await prisma.userWorkspace.deleteMany()
-  await prisma.twoFactorResetToken.deleteMany() // ✅ Feature 189: Delete 2FA reset tokens before users (FK constraint)
-  await prisma.user.deleteMany()
+    // Delete user-related tables
+    await prisma.workspaceInvitation.deleteMany() // Must delete before users (foreign key)
+    await prisma.userWorkspace.deleteMany()
+    await prisma.twoFactorResetToken.deleteMany() // ✅ Feature 189: Delete 2FA reset tokens before users (FK constraint)
+    await prisma.user.deleteMany()
 
-  // ✅ Feature 185: Delete plan configurations before workspace
-  await prisma.planConfiguration.deleteMany()
+    // ✅ Feature 185: Delete plan configurations before workspace
+    await prisma.planConfiguration.deleteMany()
 
-  // Finally delete workspace
-  await prisma.workspace.deleteMany()
+    // Finally delete workspace
+    await prisma.workspace.deleteMany()
 
-  console.log("✅ Database cleaned")
+    console.log("✅ Database cleaned")
+  }
 
-  // 2. Create Admin User
+  // 2. Create Admin User (skip if exists in production)
   console.log("👤 Creating admin user...")
 
   const adminEmail = process.env.ADMIN_EMAIL || "admin@echatbot.ai"
   const adminPassword = process.env.ADMIN_PASSWORD || "venezia44"
+  
+  // Check if admin exists
+  const existingAdmin = await prisma.user.findUnique({
+    where: { email: adminEmail }
+  })
+  
+  if (existingAdmin && isProduction) {
+    console.log("ℹ️  Admin user already exists, skipping creation")
+    await prisma.$disconnect()
+    return
+  }
+  
   const hashedPassword = await bcrypt.hash(adminPassword, 10)
 
   const adminUser = await prisma.user.create({
