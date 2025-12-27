@@ -14,7 +14,7 @@
 import { config } from "dotenv"
 config() // Load environment variables from .env file
 
-import { PrismaClient } from "../src/generated/prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import { PrismaPg } from "@prisma/adapter-pg"
 import * as bcrypt from "bcrypt"
 import { campaigns } from "./data/campaigns"
