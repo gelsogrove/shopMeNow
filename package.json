@@ -16,6 +16,7 @@
     "kill-ports": "./scripts/kill-ports.sh",
     "dev:all": "npm run kill-ports && npm run dev:backend & npm run dev:frontend & npm run dev:scheduler & npm run dev:backoffice",
     "build": "npm run build --workspaces --if-present",
+    "heroku-postbuild": "npm run build",
     "build:backend": "npm run build -w @echatbot/backend",
     "build:frontend": "npm run build -w @echatbot/frontend",
     "build:scheduler": "npm run build -w @echatbot/scheduler",
