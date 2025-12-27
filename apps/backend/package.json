@@ -15,8 +15,8 @@
     "seed": "dotenv -e ../../.env -- ts-node scripts/seed-test-data.ts",
     "validate:case": "node scripts/validate-case-sensitivity.js",
     "test": "npm run validate:case && npm run test:unit && npm run test:security",
-    "test:unit": "dotenv -e ../../.env -- cross-env NODE_ENV=test jest --config jest.config.unit.js --passWithNoTests",
-    "test:security": "dotenv -e ../../.env -- cross-env NODE_ENV=test INTEGRATION_TEST=true jest --config jest.config.security.js",
+    "test:unit": "dotenv -e ../../.env -- cross-env NODE_ENV=test jest --config jest.config.unit.js --passWithNoTests --forceExit",
+    "test:security": "dotenv -e ../../.env -- cross-env NODE_ENV=test INTEGRATION_TEST=true jest --config jest.config.security.js --forceExit",
     "test:coverage": "dotenv -e ../../.env -- cross-env NODE_ENV=test jest --coverage --config jest.config.unit.js"
   },
   "author": "Andrea Gelso",
