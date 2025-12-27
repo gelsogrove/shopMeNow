@@ -50,7 +50,7 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Re-export Prisma types and client
-export { PrismaClient, Prisma } from './generated/prisma'
+export { PrismaClient, Prisma } from './generated/prisma/index.js'
 
 // Re-export all enums and types from generated client
 export {
@@ -79,7 +79,7 @@ export {
   SearchConversationState,
   SubscriptionStatus, // Feature 197: Subscription status enum
   InvoiceStatus,      // Feature 197: Invoice status enum
-} from './generated/prisma'
+} from './generated/prisma/index.js'
 
 // Export common types
 export type {
@@ -134,7 +134,7 @@ export type {
   SecureToken,
   ProductSearch,
   MonthlyInvoice,     // Feature 197: Monthly invoices
-} from './generated/prisma'
+} from './generated/prisma/index.js'
 
 // Export prisma as default
 export default prisma
