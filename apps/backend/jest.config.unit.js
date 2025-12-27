@@ -4,7 +4,7 @@ module.exports = {
   coverageDirectory: "coverage",
   coverageProvider: "v8",
   moduleDirectories: ["node_modules"],
-  moduleFileExtensions: ["js", "jsx", "ts", "tsx", "json", "node"],
+  moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
   moduleNameMapper: {
     "^@shared/(.*)$": "<rootDir>/../../shared/$1",
   },
