@@ -57,6 +57,7 @@
   },
   "devDependencies": {
     "@types/pdfkit": "^0.17.4",
-    "npm-run-all2": "^8.0.4"
+    "npm-run-all2": "^8.0.4",
+    "rollup": "^4.54.0"
   }
 }
