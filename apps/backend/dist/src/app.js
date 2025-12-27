@@ -28,9 +28,9 @@ const platform_config_service_1 = require("./services/platform-config.service");
 const scheduler_service_1 = require("./services/scheduler.service");
 // Initialize Express app
 const app = (0, express_1.default)();
-// Use __dirname for reliable path resolution (works in both dev and prod/Heroku)
-const backendRoot = path_1.default.resolve(__dirname, "..");
-const landingAssetsPath = path_1.default.join(backendRoot, "public");
+// Use process.cwd() for monorepo root (on Heroku cwd = /app = monorepo root)
+const backendRoot = process.cwd();
+const landingAssetsPath = path_1.default.join(backendRoot, "apps/backend/public");
 const landingPagePath = path_1.default.join(landingAssetsPath, "index.html");
 const hasLandingPage = fs_1.default.existsSync(landingPagePath);
 const landingRoutes = ["/", "/index.html", "/landing", "/landing/index.html"];
@@ -111,7 +111,7 @@ app.use((0, helmet_1.default)({
     xssFilter: true,
 }));
 // Serve static files from uploads directory
-const uploadsPath = path_1.default.join(__dirname, "../uploads");
+const uploadsPath = path_1.default.join(backendRoot, "apps/backend/uploads");
 app.use("/uploads", express_1.default.static(uploadsPath));
 logger_1.default.info(`Serving static files from: ${uploadsPath}`);
 if (fs_1.default.existsSync(landingAssetsPath)) {

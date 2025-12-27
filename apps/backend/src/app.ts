@@ -26,9 +26,9 @@ import { SchedulerService } from "./services/scheduler.service"
 
 // Initialize Express app
 const app = express()
-// Use __dirname for reliable path resolution (works in both dev and prod/Heroku)
-const backendRoot = path.resolve(__dirname, "..")
-const landingAssetsPath = path.join(backendRoot, "public")
+// Use process.cwd() for monorepo root (on Heroku cwd = /app = monorepo root)
+const backendRoot = process.cwd()
+const landingAssetsPath = path.join(backendRoot, "apps/backend/public")
 const landingPagePath = path.join(landingAssetsPath, "index.html")
 const hasLandingPage = fs.existsSync(landingPagePath)
 const landingRoutes = ["/", "/index.html", "/landing", "/landing/index.html"]
@@ -123,7 +123,7 @@ app.use(
 )
 
 // Serve static files from uploads directory
-const uploadsPath = path.join(__dirname, "../uploads")
+const uploadsPath = path.join(backendRoot, "apps/backend/uploads")
 app.use("/uploads", express.static(uploadsPath))
 logger.info(`Serving static files from: ${uploadsPath}`)
 
