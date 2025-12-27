@@ -14,10 +14,6 @@
 import { config } from "dotenv"
 config() // Load environment variables from .env file
 
-// 🛡️ SAFETY CHECK: Block execution in production
-import { ensureNotProduction } from "../scripts/check-env-safety"
-ensureNotProduction("prisma:seed")
-
 import { PrismaClient } from "../src/generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 import * as bcrypt from "bcrypt"
