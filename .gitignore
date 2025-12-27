@@ -25,6 +25,10 @@ dist-ssr/
 .next/
 out/
 
+# BUT: Allow dist folders in apps/ for Heroku deployment (pre-compiled TypeScript)
+!/apps/*/dist/
+!/apps/*/dist/**
+
 # Prisma Generated Files (regenerated on prisma generate)
 packages/database/src/generated/
 
