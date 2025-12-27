@@ -37,9 +37,3 @@ afterAll(async () => {
     // Prisma might not be loaded, that's OK
   }
 })
-
-// Force exit after a reasonable timeout if Jest doesn't exit naturally
-// This prevents CI/CD from hanging indefinitely
-setTimeout(() => {
-  process.exit(0)
-}, 2000)
