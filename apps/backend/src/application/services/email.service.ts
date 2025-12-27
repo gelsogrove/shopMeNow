@@ -35,13 +35,19 @@ export interface OperatorNotificationEmailData {
 }
 
 export class EmailService {
-  private transporter: nodemailer.Transporter
+  private transporter: nodemailer.Transporter | null = null
+  private initialized = false
 
   constructor() {
-    this.setupTransporter()
+    // Don't initialize transporter in constructor to avoid SMTP errors in test environments
+    // Will be initialized lazily on first use
   }
 
   private setupTransporter() {
+    if (this.initialized && this.transporter) {
+      return
+    }
+
     // SMTP configuration - REQUIRES real credentials
     const config: EmailConfig = {
       host: process.env.SMTP_HOST || "smtp.gmail.com",
@@ -62,9 +68,17 @@ export class EmailService {
     }
 
     this.transporter = nodemailer.createTransport(config)
+    this.initialized = true
     logger.info(
       `Email service initialized with SMTP: ${config.host}:${config.port}`
     )
+  }
+
+  private getTransporter(): nodemailer.Transporter {
+    if (!this.transporter) {
+      this.setupTransporter()
+    }
+    return this.transporter!
   }
 
   async sendPasswordResetEmail(data: ResetPasswordEmailData): Promise<boolean> {
@@ -98,7 +112,7 @@ export class EmailService {
         ),
       }
 
-      const info = await this.transporter.sendMail(mailOptions)
+      const info = await this.getTransporter().sendMail(mailOptions)
 
       logger.info(
         `Password reset email sent successfully to: ${data.to} (language: ${data.language || "en"})`
@@ -222,7 +236,7 @@ ${t.rights}
         `📧 [EmailService] Sending email via SMTP to: ${data.to} from: ${mailOptions.from}`
       )
 
-      const info = await this.transporter.sendMail(mailOptions)
+      const info = await this.getTransporter().sendMail(mailOptions)
 
       logger.info(
         `✅ [EmailService] Operator notification email sent successfully to: ${data.to}, MessageID: ${info.messageId}`
@@ -436,7 +450,7 @@ eChatbot - La tua piattaforma e-commerce di fiducia
         }
 
         // Send email
-        const info = await this.transporter.sendMail(mailOptions)
+        const info = await this.getTransporter().sendMail(mailOptions)
 
         logger.info(
           `Email sent successfully to ${type} ${recipientName} (${recipientEmail}). MessageID: ${info.messageId}`
@@ -562,7 +576,7 @@ The eChatbot Team
         text: textContent,
       }
 
-      const info = await this.transporter.sendMail(mailOptions)
+      const info = await this.getTransporter().sendMail(mailOptions)
       logger.info(`Welcome email sent successfully to: ${data.to}`)
       return true
     } catch (error) {
@@ -707,7 +721,7 @@ The eChatbot Team
         attachments,
       }
 
-      const info = await this.transporter.sendMail(mailOptions)
+      const info = await this.getTransporter().sendMail(mailOptions)
       logger.info(`✅ [EmailService] Invoice email sent to ${data.to} for order ${data.orderCode}. MessageID: ${info.messageId}`)
       return true
     } catch (error) {
@@ -775,7 +789,7 @@ startxref
 
   async verifyConnection(): Promise<boolean> {
     try {
-      await this.transporter.verify()
+      await this.getTransporter().verify()
       logger.info("Email service connection verified successfully")
       return true
     } catch (error) {
@@ -863,7 +877,7 @@ startxref
         html: htmlContent,
       }
 
-      await this.transporter.sendMail(mailOptions)
+      await this.getTransporter().sendMail(mailOptions)
       logger.info(`Unsubscribe notification sent to: ${data.userEmail} (cc: ${data.adminEmail || process.env.ADMIN_EMAIL})`)
       return true
     } catch (error) {

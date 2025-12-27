@@ -636,4 +636,15 @@ export class WorkspaceInvitationService {
   }
 }
 
-export const workspaceInvitationService = new WorkspaceInvitationService()
+// Lazy initialization to avoid SMTP errors in test environments
+let cachedService: WorkspaceInvitationService | null = null
+
+export const getWorkspaceInvitationService = (): WorkspaceInvitationService => {
+  if (!cachedService) {
+    cachedService = new WorkspaceInvitationService()
+  }
+  return cachedService
+}
+
+// Backward compatibility
+export const workspaceInvitationService = getWorkspaceInvitationService()
