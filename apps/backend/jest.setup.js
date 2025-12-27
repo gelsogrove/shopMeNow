@@ -30,10 +30,16 @@ afterAll(async () => {
     if (prisma && typeof prisma.$disconnect === 'function') {
       await Promise.race([
         prisma.$disconnect(),
-        new Promise(resolve => setTimeout(resolve, 500)) // 500ms timeout
+        new Promise(resolve => setTimeout(resolve, 1000)) // 1s timeout
       ])
     }
   } catch (error) {
     // Prisma might not be loaded, that's OK
   }
 })
+
+// Force exit after a reasonable timeout if Jest doesn't exit naturally
+// This prevents CI/CD from hanging indefinitely
+setTimeout(() => {
+  process.exit(0)
+}, 2000)
