@@ -25,9 +25,8 @@ dist-ssr/
 .next/
 out/
 
-# BUT: Allow dist folders in apps/ for Heroku deployment (pre-compiled TypeScript)
-!/apps/*/dist/
-!/apps/*/dist/**
+# NOTE: Using ts-node runtime on Heroku, no need for pre-compiled dist
+# dist folders are now excluded from git
 
 # Prisma Generated Files (regenerated on prisma generate)
 packages/database/src/generated/

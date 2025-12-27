@@ -1,8 +1,8 @@
 # 🌐 WEB DYNO - Backend API + Frontend (NO Scheduler)
-web: node apps/backend/dist/src/index.js
+web: npx ts-node apps/backend/src/index.ts
 
 # ⏱️ SCHEDULER DYNO - Background jobs only (separate app)
-scheduler: node apps/scheduler/dist/index.js
+scheduler: npx ts-node apps/scheduler/src/index.ts
 
 # 🔄 RELEASE - Run migrations before deploy
 release: npm run prisma:migrate:prod
