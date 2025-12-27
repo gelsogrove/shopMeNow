@@ -26,7 +26,8 @@ import { SchedulerService } from "./services/scheduler.service"
 
 // Initialize Express app
 const app = express()
-const backendRoot = process.cwd()
+// Use __dirname for reliable path resolution (works in both dev and prod/Heroku)
+const backendRoot = path.resolve(__dirname, "..")
 const landingAssetsPath = path.join(backendRoot, "public")
 const landingPagePath = path.join(landingAssetsPath, "index.html")
 const hasLandingPage = fs.existsSync(landingPagePath)
@@ -132,8 +133,9 @@ if (fs.existsSync(landingAssetsPath)) {
 }
 
 // 🌐 PRODUCTION: Serve frontend static files (from Vite build)
+// Note: backendRoot = process.cwd() = monorepo root, so use apps/ path
 if (process.env.NODE_ENV === "production") {
-  const frontendDistPath = path.join(backendRoot, "../frontend/dist")
+  const frontendDistPath = path.join(backendRoot, "apps/frontend/dist")
   if (fs.existsSync(frontendDistPath)) {
     app.use(express.static(frontendDistPath))
     logger.info(`[Production] Serving frontend from: ${frontendDistPath}`)
@@ -144,7 +146,7 @@ if (process.env.NODE_ENV === "production") {
   }
 
   // 🔐 PRODUCTION: Serve backoffice static files (from Vite build)
-  const backofficeDistPath = path.join(backendRoot, "../backoffice/dist")
+  const backofficeDistPath = path.join(backendRoot, "apps/backoffice/dist")
   if (fs.existsSync(backofficeDistPath)) {
     app.use("/backoffice", express.static(backofficeDistPath))
     logger.info(`[Production] Serving backoffice from: ${backofficeDistPath}`)
@@ -326,7 +328,7 @@ app.use("/workspaces", workspaceRoutesRoot)
 // 🌐 PRODUCTION: SPA fallback - serve index.html for all non-API routes
 // This MUST be after all API routes to avoid conflicts
 if (process.env.NODE_ENV === "production") {
-  const frontendDistPath = path.join(backendRoot, "../frontend/dist")
+  const frontendDistPath = path.join(backendRoot, "apps/frontend/dist")
   const frontendIndexPath = path.join(frontendDistPath, "index.html")
   
   if (fs.existsSync(frontendIndexPath)) {

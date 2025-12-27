@@ -28,7 +28,8 @@ const platform_config_service_1 = require("./services/platform-config.service");
 const scheduler_service_1 = require("./services/scheduler.service");
 // Initialize Express app
 const app = (0, express_1.default)();
-const backendRoot = process.cwd();
+// Use __dirname for reliable path resolution (works in both dev and prod/Heroku)
+const backendRoot = path_1.default.resolve(__dirname, "..");
 const landingAssetsPath = path_1.default.join(backendRoot, "public");
 const landingPagePath = path_1.default.join(landingAssetsPath, "index.html");
 const hasLandingPage = fs_1.default.existsSync(landingPagePath);
@@ -118,8 +119,9 @@ if (fs_1.default.existsSync(landingAssetsPath)) {
     logger_1.default.info(`[LandingPage] Serving assets from ${landingAssetsPath}`);
 }
 // 🌐 PRODUCTION: Serve frontend static files (from Vite build)
+// Note: backendRoot = process.cwd() = monorepo root, so use apps/ path
 if (process.env.NODE_ENV === "production") {
-    const frontendDistPath = path_1.default.join(backendRoot, "../frontend/dist");
+    const frontendDistPath = path_1.default.join(backendRoot, "apps/frontend/dist");
     if (fs_1.default.existsSync(frontendDistPath)) {
         app.use(express_1.default.static(frontendDistPath));
         logger_1.default.info(`[Production] Serving frontend from: ${frontendDistPath}`);
@@ -128,7 +130,7 @@ if (process.env.NODE_ENV === "production") {
         logger_1.default.warn(`[Production] Frontend dist not found at: ${frontendDistPath}`);
     }
     // 🔐 PRODUCTION: Serve backoffice static files (from Vite build)
-    const backofficeDistPath = path_1.default.join(backendRoot, "../backoffice/dist");
+    const backofficeDistPath = path_1.default.join(backendRoot, "apps/backoffice/dist");
     if (fs_1.default.existsSync(backofficeDistPath)) {
         app.use("/backoffice", express_1.default.static(backofficeDistPath));
         logger_1.default.info(`[Production] Serving backoffice from: ${backofficeDistPath}`);
@@ -277,7 +279,7 @@ app.use("/workspaces", workspace_routes_1.workspaceRoutes);
 // 🌐 PRODUCTION: SPA fallback - serve index.html for all non-API routes
 // This MUST be after all API routes to avoid conflicts
 if (process.env.NODE_ENV === "production") {
-    const frontendDistPath = path_1.default.join(backendRoot, "../frontend/dist");
+    const frontendDistPath = path_1.default.join(backendRoot, "apps/frontend/dist");
     const frontendIndexPath = path_1.default.join(frontendDistPath, "index.html");
     if (fs_1.default.existsSync(frontendIndexPath)) {
         app.get("*", (req, res, next) => {
