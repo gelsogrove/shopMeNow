@@ -2,18 +2,6 @@ import react from "@vitejs/plugin-react"
 import path from "path"
 import { defineConfig } from "vite"
 
-// Lista dei moduli mancanti che devono essere trattati come esterni
-const externalModules = [
-  "@tanstack/react-query",
-  "react-hook-form",
-  "react-hot-toast",
-  "sonner",
-  "@hookform/resolvers/zod",
-  "react-day-picker",
-  "cmdk",
-  "vaul",
-]
-
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
@@ -152,10 +140,10 @@ export default defineConfig({
         }
         warn(warning)
       },
-      external: externalModules,
+      // NO external modules - everything must be bundled for production!
       output: {
         manualChunks: {
-          vendor: ["react", "react-dom"],
+          vendor: ["react", "react-dom", "@tanstack/react-query"],
           ui: [
             "@radix-ui/react-dialog",
             "@radix-ui/react-dropdown-menu",
