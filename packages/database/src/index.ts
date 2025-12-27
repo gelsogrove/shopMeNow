@@ -3,6 +3,10 @@
 import 'dotenv/config'
 import path from 'path'
 import dotenv from 'dotenv'
+import { fileURLToPath } from 'url'
+
+// Get __dirname equivalent in ES modules
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // Try to load .env from various locations (monorepo support)
 const envPaths = [
