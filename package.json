@@ -29,6 +29,7 @@
     "prisma:migrate": "npm run migrate:dev -w @echatbot/database",
     "prisma:migrate:prod": "npm run migrate:deploy -w @echatbot/database",
     "prisma:seed": "npm run seed -w @echatbot/database",
+    "prisma:seed:production": "npm run seed:production -w @echatbot/database",
     "prisma:studio": "npm run studio -w @echatbot/database",
     "update:prompts": "npm run update:prompts -w @echatbot/database",
     "prisma:reset": "npm run migrate:reset -w @echatbot/database",

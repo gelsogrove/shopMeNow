@@ -20,12 +20,10 @@ coverage/
 
 # Production
 build/
-# dist/ - COMMITTED for Heroku deployment (pre-compiled strategy)
+# dist/ - Committed for Heroku pre-compiled deployment
 dist-ssr/
 .next/
 out/
-
-# NOTE: dist folders ARE committed for Heroku pre-compiled deployment
 
 # Prisma Generated Files (regenerated on prisma generate)
 packages/database/src/generated/
