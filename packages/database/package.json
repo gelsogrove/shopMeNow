@@ -12,7 +12,7 @@
   "scripts": {
     "generate": "prisma generate",
     "migrate:dev": "if [ \"$NODE_ENV\" = \"production\" ]; then echo '❌ Cannot run migrate:dev in production!' && exit 1; fi && dotenv -e ../../.env -- prisma migrate dev",
-    "migrate:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
+    "migrate:deploy": "prisma migrate deploy",
     "migrate:reset": "if [ \"$NODE_ENV\" = \"production\" ]; then echo '❌ Cannot run migrate:reset in production!' && exit 1; fi && dotenv -e ../../.env -- ts-node scripts/safe-reset.ts",
     "migrate:reset:force": "if [ \"$NODE_ENV\" = \"production\" ]; then echo '❌ Cannot run migrate:reset:force in production!' && exit 1; fi && dotenv -e ../../.env -- prisma migrate reset --force",
     "seed": "if [ \"$NODE_ENV\" = \"production\" ]; then echo '❌ Cannot run seed in production!' && exit 1; fi && dotenv -e ../../.env -- ts-node prisma/seed.ts",
