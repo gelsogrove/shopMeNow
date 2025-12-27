@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "dotenv -e ../../.env -- tsnd --respawn src/index.ts",
-    "build": "echo 'TypeScript compilation handled locally'",
+    "build": "tsc",
     "start": "node dist/index.js",
     "start:pm2": "pm2 start ecosystem.config.js",
     "stop": "pm2 stop echatbot-scheduler",

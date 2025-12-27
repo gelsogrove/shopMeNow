@@ -5,7 +5,7 @@
   "main": "dist/src/index.js",
   "scripts": {
     "dev": "dotenv -e ../../.env -- tsnd --transpile-only --respawn src/index.ts",
-    "build": "echo 'TypeScript compilation handled locally'",
+    "build": "tsc && npm run build:fix-paths",
     "build:fix-paths": "mv dist/src/apps/backend/src/* dist/src/ 2>/dev/null || true && rm -rf dist/src/apps dist/src/shared dist/src/prisma 2>/dev/null || true",
     "start": "node dist/src/index.js",
     "start:pm2": "pm2 start ecosystem.config.js",
