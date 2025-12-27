@@ -23,7 +23,7 @@ if (!DATABASE_URL) {
   throw new Error('DATABASE_URL environment variable is required')
 }
 
-import { PrismaClient, Prisma } from './generated/prisma'
+import { PrismaClient, Prisma } from './generated/prisma/index.js'
 import { PrismaPg } from '@prisma/adapter-pg'
 
 // Initialize the PostgreSQL adapter
