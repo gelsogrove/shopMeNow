@@ -1,0 +1,196 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.BillingService = void 0;
+const database_1 = require("../config/database");
+const logger_1 = __importDefault(require("../utils/logger"));
+/**
+ * Billing Service for Scheduler
+ * Feature 198: Billing Owner Refactor
+ *
+ * CRITICAL CHANGE (Feature 198):
+ * - Credit is now deducted from OWNER (User), not Workspace
+ * - workspaceId is kept in transaction for channel tracking
+ * - userId is REQUIRED in all BillingTransaction records
+ *
+ * SECURITY: All operations are atomic (using Prisma transactions)
+ * SECURITY: Always validates workspaceId and finds owner
+ */
+class BillingService {
+    /**
+     * Deduct credit for a sent message
+     *
+     * Feature 198: Now deducts from Owner's creditBalance (shared across all workspaces)
+     *
+     * @param workspaceId - The workspace where message was sent (for tracking)
+     * @param messageId - Optional message ID for transaction reference
+     * @returns Result with success status and new balance
+     */
+    async deductMessageCredit(workspaceId, messageId) {
+        try {
+            // Get workspace with owner (Feature 198: we need ownerId for billing)
+            const workspace = await database_1.prisma.workspace.findUnique({
+                where: { id: workspaceId, deletedAt: null }, // CRITICAL: Exclude soft-deleted workspaces
+                select: {
+                    id: true,
+                    name: true,
+                    ownerId: true,
+                    planType: true,
+                    owner: {
+                        select: {
+                            id: true,
+                            firstName: true,
+                            lastName: true,
+                            creditBalance: true, // Feature 198: Credit is on User now
+                            planType: true,
+                            subscriptionStatus: true,
+                        },
+                    },
+                },
+            });
+            if (!workspace) {
+                return { success: false, error: 'Workspace not found or deleted' };
+            }
+            if (!workspace.owner) {
+                return { success: false, error: 'Workspace owner not found' };
+            }
+            const owner = workspace.owner;
+            // Check if owner's subscription is active
+            if (owner.subscriptionStatus !== 'ACTIVE') {
+                logger_1.default.warn(`[Billing] ⚠️ Owner ${owner.firstName} subscription not active: ${owner.subscriptionStatus}`);
+                return { success: false, error: `Subscription not active: ${owner.subscriptionStatus}` };
+            }
+            // Get message cost from owner's plan configuration (Feature 198: use owner's plan)
+            const planConfig = await database_1.prisma.planConfiguration.findUnique({
+                where: { planType: owner.planType },
+                select: { messageCost: true },
+            });
+            if (!planConfig) {
+                return { success: false, error: 'Plan configuration not found' };
+            }
+            const messageCost = Number(planConfig.messageCost);
+            const currentBalance = Number(owner.creditBalance);
+            // Check if sufficient balance on Owner
+            if (currentBalance < messageCost) {
+                logger_1.default.warn(`[Billing] ⚠️ Insufficient credit for owner ${owner.firstName}: €${currentBalance.toFixed(2)} < €${messageCost.toFixed(2)}`);
+                return {
+                    success: false,
+                    error: `Insufficient credit. Balance: €${currentBalance.toFixed(2)}, Required: €${messageCost.toFixed(2)}`
+                };
+            }
+            const newBalance = currentBalance - messageCost;
+            const ownerName = `${owner.firstName} ${owner.lastName || ''}`.trim();
+            // Atomic transaction: update Owner balance + create transaction record
+            await database_1.prisma.$transaction(async (tx) => {
+                // Feature 198: Update OWNER balance (shared across all workspaces)
+                await tx.user.update({
+                    where: { id: owner.id },
+                    data: { creditBalance: new database_1.Prisma.Decimal(newBalance.toFixed(2)) },
+                });
+                // Feature 198: Create transaction record with userId (required) + workspaceId (tracking)
+                await tx.billingTransaction.create({
+                    data: {
+                        userId: owner.id, // Required: Owner who paid
+                        workspaceId: workspaceId, // Optional: Which workspace used the credit (for tracking)
+                        type: 'MESSAGE',
+                        amount: new database_1.Prisma.Decimal((-messageCost).toFixed(2)), // Negative for deductions
+                        balanceAfter: new database_1.Prisma.Decimal(newBalance.toFixed(2)),
+                        description: `WhatsApp Message - ${workspace.name}`,
+                        referenceId: messageId,
+                        referenceType: 'message',
+                    },
+                });
+            });
+            logger_1.default.info(`[Billing] 💰 Deducted €${messageCost.toFixed(2)} from owner "${ownerName}" (workspace: ${workspace.name}): €${currentBalance.toFixed(2)} → €${newBalance.toFixed(2)}`);
+            return {
+                success: true,
+                newBalance,
+                amountDeducted: messageCost,
+            };
+        }
+        catch (error) {
+            logger_1.default.error('[Billing] ❌ Error deducting credit:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+    /**
+     * Check if owner has sufficient credit for a message
+     *
+     * Feature 198: Checks owner's balance, not workspace's
+     *
+     * @param workspaceId - The workspace to check
+     * @returns true if owner has enough credit
+     */
+    async hasOwnerCredit(workspaceId) {
+        try {
+            const workspace = await database_1.prisma.workspace.findUnique({
+                where: { id: workspaceId, deletedAt: null },
+                select: {
+                    owner: {
+                        select: {
+                            creditBalance: true,
+                            planType: true,
+                            subscriptionStatus: true,
+                        },
+                    },
+                },
+            });
+            if (!workspace?.owner) {
+                return false;
+            }
+            // Check subscription status
+            if (workspace.owner.subscriptionStatus !== 'ACTIVE') {
+                return false;
+            }
+            // Get message cost
+            const planConfig = await database_1.prisma.planConfiguration.findUnique({
+                where: { planType: workspace.owner.planType },
+                select: { messageCost: true },
+            });
+            if (!planConfig) {
+                return false;
+            }
+            const messageCost = Number(planConfig.messageCost);
+            const currentBalance = Number(workspace.owner.creditBalance);
+            return currentBalance >= messageCost;
+        }
+        catch (error) {
+            logger_1.default.error('[Billing] ❌ Error checking credit:', error);
+            return false;
+        }
+    }
+    /**
+     * Get owner's current credit balance for a workspace
+     *
+     * Feature 198: Returns owner's balance
+     *
+     * @param workspaceId - The workspace
+     * @returns Owner's credit balance
+     */
+    async getOwnerBalance(workspaceId) {
+        try {
+            const workspace = await database_1.prisma.workspace.findUnique({
+                where: { id: workspaceId, deletedAt: null },
+                select: {
+                    owner: {
+                        select: {
+                            creditBalance: true,
+                        },
+                    },
+                },
+            });
+            return workspace?.owner ? Number(workspace.owner.creditBalance) : null;
+        }
+        catch (error) {
+            logger_1.default.error('[Billing] ❌ Error getting balance:', error);
+            return null;
+        }
+    }
+}
+exports.BillingService = BillingService;
+//# sourceMappingURL=billing.service.js.map

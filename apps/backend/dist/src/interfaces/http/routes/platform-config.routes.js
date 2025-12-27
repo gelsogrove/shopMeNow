@@ -1,0 +1,209 @@
+"use strict";
+/**
+ * 🚀 PLATFORM CONFIGURATION ROUTES
+ *
+ * Route definitions for platform configuration API.
+ *
+ * Public Routes (no auth):
+ * - GET /api/platform-config - Get all config for frontend
+ * - GET /api/platform-config/flags/check - Quick flag check for login/register
+ *
+ * Protected Routes (require auth):
+ * - GET /api/platform-config/admin - Get detailed config for admin
+ * - PUT /api/platform-config/:key - Update a config value
+ * - POST /api/platform-config/flags/:key/toggle - Toggle a flag
+ * - POST /api/platform-config/cache/invalidate - Force cache refresh
+ *
+ * @author Andrea Gelso - eChatbot Platform
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const platform_config_controller_1 = require("../controllers/platform-config.controller");
+const auth_middleware_1 = require("../middlewares/auth.middleware");
+const platform_admin_middleware_1 = require("../middlewares/platform-admin.middleware");
+const router = (0, express_1.Router)();
+// ============================================================================
+// PUBLIC ROUTES (no authentication required)
+// ============================================================================
+/**
+ * @swagger
+ * /api/platform-config:
+ *   get:
+ *     summary: Get platform configuration
+ *     description: Returns all platform configuration for frontend consumption (prices, flags, limits)
+ *     tags: [Platform Config]
+ *     responses:
+ *       200:
+ *         description: Platform configuration
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     prices:
+ *                       type: object
+ *                       additionalProperties:
+ *                         type: object
+ *                         properties:
+ *                           current:
+ *                             type: number
+ *                           original:
+ *                             type: number
+ *                             nullable: true
+ *                     flags:
+ *                       type: object
+ *                       additionalProperties:
+ *                         type: boolean
+ *                     limits:
+ *                       type: object
+ *                       additionalProperties:
+ *                         type: number
+ */
+router.get("/", platform_config_controller_1.platformConfigController.getPublicConfig.bind(platform_config_controller_1.platformConfigController));
+/**
+ * @swagger
+ * /api/platform-config/flags/check:
+ *   get:
+ *     summary: Check feature flags
+ *     description: Quick check for key feature flags (canLogin, canRegister, etc.)
+ *     tags: [Platform Config]
+ *     responses:
+ *       200:
+ *         description: Feature flags status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     canLogin:
+ *                       type: boolean
+ *                     canRegister:
+ *                       type: boolean
+ */
+router.get("/flags/check", platform_config_controller_1.platformConfigController.checkFlags.bind(platform_config_controller_1.platformConfigController));
+// ============================================================================
+// PROTECTED ROUTES (require authentication)
+// ============================================================================
+/**
+ * @swagger
+ * /api/platform-config/admin:
+ *   get:
+ *     summary: Get admin configuration
+ *     description: Returns detailed configuration with descriptions for admin panel
+ *     tags: [Platform Config]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Admin configuration
+ *       401:
+ *         description: Unauthorized
+ */
+router.get("/admin", auth_middleware_1.authMiddleware, platform_admin_middleware_1.platformAdminMiddleware, platform_config_controller_1.platformConfigController.getAdminConfig.bind(platform_config_controller_1.platformConfigController));
+/**
+ * @swagger
+ * /api/platform-config/{key}:
+ *   put:
+ *     summary: Update configuration value
+ *     description: Update a specific configuration value by key
+ *     tags: [Platform Config]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: key
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Configuration key
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - value
+ *             properties:
+ *               value:
+ *                 type: string
+ *                 description: New value
+ *               originalValue:
+ *                 type: string
+ *                 description: Original value for strikethrough display
+ *     responses:
+ *       200:
+ *         description: Configuration updated
+ *       400:
+ *         description: Invalid request
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Configuration key not found
+ */
+router.put("/:key", auth_middleware_1.authMiddleware, platform_admin_middleware_1.platformAdminMiddleware, platform_config_controller_1.platformConfigController.updateConfig.bind(platform_config_controller_1.platformConfigController));
+/**
+ * @swagger
+ * /api/platform-config/flags/{key}/toggle:
+ *   post:
+ *     summary: Toggle feature flag
+ *     description: Toggle a feature flag on/off
+ *     tags: [Platform Config]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: key
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Flag key (e.g., canLogin, canRegister)
+ *     responses:
+ *       200:
+ *         description: Flag toggled
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     key:
+ *                       type: string
+ *                     value:
+ *                       type: boolean
+ *       401:
+ *         description: Unauthorized
+ */
+router.post("/flags/:key/toggle", auth_middleware_1.authMiddleware, platform_admin_middleware_1.platformAdminMiddleware, platform_config_controller_1.platformConfigController.toggleFlag.bind(platform_config_controller_1.platformConfigController));
+/**
+ * @swagger
+ * /api/platform-config/cache/invalidate:
+ *   post:
+ *     summary: Invalidate cache
+ *     description: Force cache refresh for platform configuration
+ *     tags: [Platform Config]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Cache invalidated
+ *       401:
+ *         description: Unauthorized
+ */
+router.post("/cache/invalidate", auth_middleware_1.authMiddleware, platform_admin_middleware_1.platformAdminMiddleware, platform_config_controller_1.platformConfigController.invalidateCache.bind(platform_config_controller_1.platformConfigController));
+exports.default = router;
+//# sourceMappingURL=platform-config.routes.js.map

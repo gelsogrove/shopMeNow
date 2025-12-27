@@ -1,0 +1,115 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.checkoutRouter = void 0;
+const express_1 = require("express");
+const rate_limiters_1 = require("../../../config/rate-limiters");
+const async_middleware_1 = require("../../../middlewares/async.middleware");
+const checkout_controller_1 = require("../controllers/checkout.controller");
+const router = (0, express_1.Router)();
+exports.checkoutRouter = router;
+const checkoutController = new checkout_controller_1.CheckoutController();
+/**
+ * @swagger
+ * /api/checkout/token:
+ *   get:
+ *     summary: Validate checkout token and get order data (TOKEN-ONLY)
+ *     tags: [Checkout]
+ *     parameters:
+ *       - in: query
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The checkout token
+ *     responses:
+ *       200:
+ *         description: Token validation result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 valid:
+ *                   type: boolean
+ *                 customer:
+ *                   type: object
+ *                 prodotti:
+ *                   type: array
+ *                 workspaceId:
+ *                   type: string
+ *       400:
+ *         description: Invalid or expired token
+ *       500:
+ *         description: Server error
+ */
+router.get("/token", (0, async_middleware_1.asyncMiddleware)(checkoutController.validateToken.bind(checkoutController)));
+/**
+ * @swagger
+ * /api/checkout/submit:
+ *   post:
+ *     summary: Submit order and send notifications
+ *     tags: [Checkout]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - prodotti
+ *               - shippingAddress
+ *               - billingAddress
+ *             properties:
+ *               token:
+ *                 type: string
+ *               prodotti:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     codice:
+ *                       type: string
+ *                     descrizione:
+ *                       type: string
+ *                     qty:
+ *                       type: number
+ *                     prezzo:
+ *                       type: number
+ *               shippingAddress:
+ *                 type: object
+ *                 properties:
+ *                   name:
+ *                     type: string
+ *                   street:
+ *                     type: string
+ *                   city:
+ *                     type: string
+ *                   postalCode:
+ *                     type: string
+ *               billingAddress:
+ *                 type: object
+ *               notes:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Order created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 orderId:
+ *                   type: string
+ *                 orderCode:
+ *                   type: string
+ *       400:
+ *         description: Invalid request data
+ *       500:
+ *         description: Server error
+ */
+// 🔒 SECURITY: Rate limited to 20 orders per hour per IP
+router.post("/submit", rate_limiters_1.checkoutLimiter, (0, async_middleware_1.asyncMiddleware)(checkoutController.submitOrder.bind(checkoutController)));
+//# sourceMappingURL=checkout.routes.js.map
