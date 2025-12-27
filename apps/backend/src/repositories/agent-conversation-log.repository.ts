@@ -281,7 +281,10 @@ export class AgentConversationLogRepository {
 
       // Combine results
       const metrics = result.map((item) => {
-        const errorCount = errorCountMap.get(item.agentType) || 0
+        const errorCount = Number(errorCountMap.get(item.agentType) || 0)
+        const totalCount = Number((item._count as any)?.id || 0)
+        const errorRate = totalCount > 0 ? Number(errorCount) / Number(totalCount) : 0
+        
         return {
           agentType: item.agentType as AgentType, // Cast from string to AgentType
           totalInteractions: item._count.id,
@@ -289,7 +292,7 @@ export class AgentConversationLogRepository {
           avgExecutionTimeMs: item._avg.executionTimeMs,
           avgTokensUsed: item._avg.tokensUsed,
           errorCount,
-          errorRate: item._count.id > 0 ? errorCount / item._count.id : 0,
+          errorRate,
         }
       })
 

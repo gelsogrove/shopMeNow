@@ -102,22 +102,23 @@ export const searchProductsTool = tool({
       const results: ProductSearchResult[] = searchResults
         .slice(0, maxResults)
         .map(({ item: p }) => {
+          const product = p as any
           const customerDiscount = ctx.customerDiscount || 0
           const discountedPrice = customerDiscount > 0 
-            ? p.price * (1 - customerDiscount / 100) 
+            ? product.price * (1 - customerDiscount / 100) 
             : undefined
           
           return {
-            id: p.id,
-            name: p.name,
-            sku: p.sku || undefined,
-            description: p.description || undefined,
-            price: p.price,
+            id: product.id,
+            name: product.name,
+            sku: product.sku || undefined,
+            description: product.description || undefined,
+            price: product.price,
             discountedPrice,
-            stock: p.stock,
-            categoryName: p.productCategories?.[0]?.category?.name,
-            imageUrl: p.imageUrl,
-            isAvailable: p.stock > 0,
+            stock: product.stock,
+            categoryName: product.productCategories?.[0]?.category?.name,
+            imageUrl: product.imageUrl,
+            isAvailable: product.stock > 0,
           }
         })
       

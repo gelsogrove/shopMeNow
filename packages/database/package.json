@@ -2,14 +2,15 @@
   "name": "@echatbot/database",
   "version": "1.0.0",
   "description": "Shared Prisma database client for eChatbot",
-  "main": "src/index.ts",
-  "types": "src/index.ts",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
+    ".": "./dist/src/index.js",
     "./data/*": "./prisma/data/*.ts",
     "./data/defaultFAQs": "./prisma/data/defaultFAQs.ts"
   },
   "scripts": {
+    "build": "tsc && cp -r src/generated dist/src/",
     "generate": "prisma generate",
     "migrate:dev": "if [ \"$NODE_ENV\" = \"production\" ]; then echo '❌ Cannot run migrate:dev in production!' && exit 1; fi && dotenv -e ../../.env -- prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",

@@ -11,7 +11,7 @@ import { PrismaClient, AgentType } from "@echatbot/database"
 import {
   DEFAULT_ROUNDING_STEP,
   formatRoundedCurrency,
-} from "../../../../../shared/pricing"
+} from "@shared/pricing"
 import logger from "../../utils/logger"
 import {
   IntentParserService,

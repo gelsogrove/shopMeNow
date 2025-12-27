@@ -34,7 +34,7 @@ import {
   DEFAULT_ROUNDING_STEP,
   formatRoundedCurrency,
   smartRoundPrice,
-} from "../../../../../shared/pricing"
+} from "@shared/pricing"
 import axios from "axios"
 import { config } from "../../config"
 import { CartRepository } from "../../repositories/cart.repository"

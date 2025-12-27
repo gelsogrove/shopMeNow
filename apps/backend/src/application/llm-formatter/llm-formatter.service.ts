@@ -37,7 +37,7 @@ import {
 import {
   DEFAULT_ROUNDING_STEP,
   formatRoundedCurrency,
-} from "../../../../../shared/pricing"
+} from "@shared/pricing"
 
 // ================================================================================
 // FORMATTER RESULT

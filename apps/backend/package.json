@@ -4,9 +4,9 @@
   "description": "Backend API for eChatbot",
   "main": "dist/src/index.js",
   "scripts": {
-    "dev": "dotenv -e ../../.env -- tsnd --transpile-only --respawn src/index.ts",
+    "dev": "dotenv -e ../../.env -- tsnd -r tsconfig-paths/register --transpile-only --respawn src/index.ts",
     "build": "tsc && npm run build:fix-paths",
-    "build:fix-paths": "mv dist/src/apps/backend/src/* dist/src/ 2>/dev/null || true && rm -rf dist/src/apps dist/src/shared dist/src/prisma 2>/dev/null || true",
+    "build:fix-paths": "mv dist/src/apps/backend/src/* dist/src/ 2>/dev/null || true && rm -rf dist/src/apps dist/src/prisma 2>/dev/null || true",
     "start": "node dist/src/index.js",
     "start:pm2": "pm2 start ecosystem.config.js",
     "stop": "pm2 stop echatbot-backend",
@@ -53,6 +53,7 @@
     "winston": "^3.11.0",
     "zod": "^3.25.76",
     "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "5.9"
   },
   "devDependencies": {

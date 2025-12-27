@@ -7,7 +7,7 @@ import logger from "../../utils/logger"
 import {
   DEFAULT_ROUNDING_STEP,
   formatRoundedCurrency,
-} from "../../../../../shared/pricing"
+} from "@shared/pricing"
 
 export interface ProductContextData {
   id: string

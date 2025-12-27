@@ -67,12 +67,14 @@ export const searchFAQsTool = tool({
       
       const searchResults = fuse.search(query)
       
-      const results: FAQResult[] = searchResults.slice(0, 5).map(({ item }) => ({
-        id: item.id,
-        question: item.question,
-        answer: item.answer,
-        category: item.category || undefined,
-      }))
+      const results: FAQResult[] = searchResults.slice(0, 5).map(({ item }) => {
+        const faq = item as any
+        return {
+        id: faq.id,
+        question: faq.question,
+        answer: faq.answer,
+        category: faq.category || undefined,
+      }})
       
       return {
         success: true,

@@ -17,7 +17,7 @@ import { OrderRepository } from "../../repositories/order.repository"
 import { ProductRepository } from "../../repositories/product.repository"
 import { ServiceRepository } from "../../repositories/service.repository"
 import logger from "../../utils/logger"
-import { DEFAULT_ROUNDING_STEP, smartRoundPrice } from "../../../../../shared/pricing"
+import { DEFAULT_ROUNDING_STEP, smartRoundPrice } from "@shared/pricing"
 
 export interface CartAgentContext {
   workspaceId: string

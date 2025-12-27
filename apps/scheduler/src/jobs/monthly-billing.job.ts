@@ -244,7 +244,7 @@ export async function monthlyBillingJob(): Promise<void> {
         continue
       }
 
-      const subscriptionFee = Number(planConfig.monthlyFee)
+      const subscriptionFee = Number((planConfig as any).monthlyFee)
       const currentBalance = Number(owner.creditBalance)
 
       // If credit is negative, add the debt to the charge
@@ -261,7 +261,7 @@ export async function monthlyBillingJob(): Promise<void> {
       const paymentResult = await processPayment(
         owner.id,
         totalCharge,
-        `Monthly billing ${monthName} - ${planConfig.displayName}`
+        `Monthly billing ${monthName} - ${(planConfig as any).displayName}`
       )
 
       if (paymentResult.success) {
@@ -289,7 +289,7 @@ export async function monthlyBillingJob(): Promise<void> {
               type: 'MONTHLY_FEE',
               amount: new Prisma.Decimal((-totalCharge).toFixed(2)),
               balanceAfter: new Prisma.Decimal(0),
-              description: `Monthly billing ${monthName} - ${planConfig.displayName} (€${subscriptionFee}) + Credit debt (€${creditDebt.toFixed(2)})`,
+              description: `Monthly billing ${monthName} - ${(planConfig as any).displayName} (€${subscriptionFee}) + Credit debt (€${creditDebt.toFixed(2)})`,
               referenceId: paymentResult.transactionId,
               referenceType: 'payment',
             },
