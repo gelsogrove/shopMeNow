@@ -28,12 +28,12 @@ afterAll(async () => {
     // Try to disconnect Prisma
     const { prisma } = require('@echatbot/database')
     if (prisma && typeof prisma.$disconnect === 'function') {
-      await prisma.$disconnect()
+      await Promise.race([
+        prisma.$disconnect(),
+        new Promise(resolve => setTimeout(resolve, 500)) // 500ms timeout
+      ])
     }
   } catch (error) {
     // Prisma might not be loaded, that's OK
   }
-  
-  // Give pending promises a chance to resolve
-  await new Promise(resolve => setTimeout(resolve, 100))
-}, 1000)
+})
