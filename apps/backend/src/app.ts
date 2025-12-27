@@ -142,6 +142,17 @@ if (process.env.NODE_ENV === "production") {
       `[Production] Frontend dist not found at: ${frontendDistPath}`
     )
   }
+
+  // 🔐 PRODUCTION: Serve backoffice static files (from Vite build)
+  const backofficeDistPath = path.join(backendRoot, "../backoffice/dist")
+  if (fs.existsSync(backofficeDistPath)) {
+    app.use("/backoffice", express.static(backofficeDistPath))
+    logger.info(`[Production] Serving backoffice from: ${backofficeDistPath}`)
+  } else {
+    logger.warn(
+      `[Production] Backoffice dist not found at: ${backofficeDistPath}`
+    )
+  }
 }
 
 // Custom JSON parser middleware to handle potentially escaped JSON

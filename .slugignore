@@ -33,6 +33,10 @@ docker-compose.yml
 .env.example
 .env.backup.*
 
+# ✅ Keep runtime prompt assets used by defaultAgents
+!docs/prompts/**
+!apps/backend/src/templates/shared/**
+
 # Logs
 **/logs/
 *.log

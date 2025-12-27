@@ -28,7 +28,7 @@
       "@shared/*": ["../../shared/*"]
     }
   },
-  "include": ["src/**/*", "../../shared/**/*"],
+  "include": ["src/**/*", "prisma/data/defaultAgents.ts", "../../shared/**/*"],
   "exclude": [
     "node_modules",
     "**/*.spec.ts",

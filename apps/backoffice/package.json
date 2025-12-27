@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 3002",
-    "build": "echo 'Frontend compilation handled locally'",
+    "build": "vite build",
     "preview": "vite preview --port 3002",
     "test": "vitest run --passWithNoTests"
   },

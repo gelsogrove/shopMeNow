@@ -1,15 +1,25 @@
 // Load environment variables BEFORE any other imports
 import "dotenv/config"
 
-import { prisma } from "@echatbot/database"
-import { createServer } from "http"
-import app from "./app"
-import { startScheduler, stopScheduler } from "./scheduler"
+if (process.env.NODE_ENV === "production") {
+  // Map tsconfig-style aliases at runtime for compiled JS (e.g. @shared/*).
+  // Use explicit paths so it works even when cwd is the monorepo root.
+  const path = require("path")
+  const moduleAlias = require("module-alias")
+  moduleAlias.addAliases({
+    "@shared": path.join(__dirname, "shared"),
+  })
+}
+
+const { prisma } = require("@echatbot/database")
+const { createServer } = require("http")
+const app = require("./app").default
+const { startScheduler, stopScheduler } = require("./scheduler")
 // WhatsApp Queue Processor REMOVED - now handled by Scheduler microservice only
 // This prevents duplicate processing of the same messages
-import { startWhatsAppQueueCleanup } from "./jobs/whatsapp-queue-processor.job"
-import { websocketService } from "./services/websocket.service"
-import logger from "./utils/logger"
+const { startWhatsAppQueueCleanup } = require("./jobs/whatsapp-queue-processor.job")
+const { websocketService } = require("./services/websocket.service")
+const logger = require("./utils/logger").default
 
 const PORT = process.env.PORT || 3001
 

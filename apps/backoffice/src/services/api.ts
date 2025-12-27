@@ -5,7 +5,10 @@
  * Since we can't use Prisma directly in browser, we use the backend API
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+// 🌐 Use relative URL in production, absolute in dev
+const API_BASE = import.meta.env.VITE_API_URL || (
+  import.meta.env.MODE === 'production' ? '/api' : 'http://localhost:3001/api'
+)
 
 interface PlatformConfig {
   id: string
