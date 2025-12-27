@@ -18,6 +18,7 @@ module.exports = {
     ],
   },
   testEnvironment: "node",
+  testTimeout: 60000, // 60s for integration tests (workspace-isolation needs real DB + Express)
   coveragePathIgnorePatterns: ["/node_modules/", "/dist/", "/src/utils/"],
   testMatch: ["**/__tests__/security/**/*.test.ts"],
   testPathIgnorePatterns: ["/node_modules/", "/dist/"],
