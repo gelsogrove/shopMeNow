@@ -1,4 +1,4 @@
-import { AgentType } from "@prisma/client"
+import { AgentType } from "../../src/generated/prisma"
 import { getAgentFunctionNames } from "../../src/config/agent-functions.config"
 
 interface DefaultAgent {

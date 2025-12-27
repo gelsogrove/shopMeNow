@@ -18,7 +18,7 @@
     "build": "npm run build --workspaces --if-present",
     "build:backend": "npm run build -w @echatbot/backend",
     "build:seed": "npm run build:seed -w @echatbot/database",
-    "heroku-postbuild": "npm run prisma:generate && npm run build:seed && echo '✅ Using pre-compiled dist - seed compiled'",
+    "heroku-postbuild": "npm run prisma:generate && echo '✅ Using pre-compiled seed from repo'",
     "start": "npm run start:all",
     "start:all": "node apps/backend/dist/src/index.js",
     "start:backend": "npm run start -w @echatbot/backend",
