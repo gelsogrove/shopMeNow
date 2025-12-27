@@ -26,7 +26,7 @@
     "prod:backend": "npm run start:pm2 -w @echatbot/backend",
     "prod:scheduler": "npm run start:pm2 -w @echatbot/scheduler",
     "prod:all": "npm run prod:backend && npm run prod:scheduler",
-    "heroku-postbuild": "npm run prisma:generate && npm run build",
+    "heroku-postbuild": "npm run prisma:generate",
     "prisma:generate": "npm run generate -w @echatbot/database",
     "prisma:migrate": "npm run migrate:dev -w @echatbot/database",
     "prisma:migrate:prod": "npm run migrate:deploy -w @echatbot/database",
