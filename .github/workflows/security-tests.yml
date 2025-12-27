@@ -216,8 +216,6 @@ jobs:
       SMTP_FROM: noreply@echatbot.ai
       # OpenRouter
       OPENROUTER_API_KEY: ${{ secrets.CI_OPENROUTER_API_KEY }}
-      # Token Encryption
-      TOKEN_ENCRYPTION_KEY: test-encryption-key-for-ci-32chars
       # Server
       PORT: 3001
 
