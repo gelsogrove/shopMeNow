@@ -10,7 +10,9 @@ const getImageUrl = (
   // If URL already starts with http, return as-is
   if (url.startsWith("http")) return url
   // Otherwise, prepend backend URL
-  return `http://localhost:3001${url}`
+  return window.location.hostname === "localhost"
+    ? `http://localhost:3001${url}`
+    : `${window.location.origin}${url}`
 }
 
 interface Product {
