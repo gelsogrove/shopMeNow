@@ -81,7 +81,14 @@ export function useWebSocket(options: UseWebSocketOptions) {
 
     logger.info("[WebSocket] Creating new socket connection")
     // Create socket connection
-    const socket = io(import.meta.env.VITE_API_URL || "http://localhost:3001", {
+    // In production, use current origin (Heroku URL), in dev use localhost
+    const socketUrl =
+      import.meta.env.VITE_API_URL ||
+      (window.location.hostname === "localhost"
+        ? "http://localhost:3001"
+        : window.location.origin)
+    logger.info("[WebSocket] Connecting to:", socketUrl)
+    const socket = io(socketUrl, {
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionDelay: 1000,
