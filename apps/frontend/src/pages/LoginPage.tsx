@@ -441,7 +441,9 @@ export function LoginPage() {
         if (response.data.user.isPlatformAdmin) {
           logger.info("🔐 Platform Admin detected - redirecting to Backoffice")
           // Use direct URL to backoffice (proxy doesn't work for full page navigation)
-          const backofficeUrl = 'http://localhost:3002'
+          const backofficeUrl = import.meta.env.MODE === 'development'
+            ? 'http://localhost:3002'
+            : `${window.location.origin}/backoffice`
           const redirectUrl = `${backofficeUrl}/auth/callback?token=${response.data.token}`
           logger.info('🔐 Redirect URL:', redirectUrl)
           window.location.replace(redirectUrl)
@@ -569,7 +571,9 @@ export function LoginPage() {
         if (user.isPlatformAdmin) {
           logger.info('🔐 [GOOGLE OAUTH] Platform Admin detected - redirecting to Backoffice')
           // Use direct URL to backoffice (proxy doesn't work well for full page navigation)
-          const backofficeUrl = 'http://localhost:3002'
+          const backofficeUrl = import.meta.env.MODE === 'development'
+            ? 'http://localhost:3002'
+            : `${window.location.origin}/backoffice`
           const redirectUrl = `${backofficeUrl}/auth/callback?token=${token}`
           logger.info('🔐 [GOOGLE OAUTH] Redirect URL:', redirectUrl)
           window.location.replace(redirectUrl)
