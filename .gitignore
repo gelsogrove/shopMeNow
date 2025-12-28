@@ -20,10 +20,10 @@ coverage/
 
 # Production
 build/
-dist/
-# apps/*/dist/  # Allow backend dist for Heroku
-apps/frontend/dist/
-apps/backoffice/dist/
+# dist/ - Committed for Heroku pre-compiled deployment
+# apps/backend/dist/  # Allowed for Heroku
+# apps/frontend/dist/  # Allowed for Heroku
+# apps/backoffice/dist/  # Allowed for Heroku
 packages/*/dist/
 dist-ssr/
 .next/
