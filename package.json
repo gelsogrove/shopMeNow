@@ -16,7 +16,7 @@
     "kill-ports": "./scripts/kill-ports.sh",
     "dev:all": "npm run kill-ports && npm run dev:backend & npm run dev:frontend & npm run dev:scheduler & npm run dev:backoffice",
     "build": "npm run build --workspaces --if-present",
-    "build:backend": "./scripts/build-backend.sh",
+    "build:backend": "node -e \"process.chdir('apps/backend'); require('child_process').execSync('npx tsc', {stdio:'inherit'})\"",
     "build:frontend": "npm run build -w @echatbot/frontend",
     "heroku-postbuild": "npm run prisma:generate && npm run build:backend && echo '✅ Build completed'",
     "start": "npm run start:all",
