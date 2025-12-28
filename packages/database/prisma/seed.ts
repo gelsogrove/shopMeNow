@@ -129,56 +129,59 @@ async function main() {
   })
   
   if (existingAdmin && isProduction) {
-    console.log("ℹ️  Admin user already exists, skipping creation")
-    await prisma.$disconnect()
-    return
+    console.log("ℹ️  Admin user already exists, skipping user creation but continuing with other data...")
+    // Don't return - continue to create pricing configs, platform configs, etc.
   }
+
+  let adminUser = existingAdmin
+  let platformAdminUser = null
   
-  const hashedPassword = await bcrypt.hash(adminPassword, 10)
+  if (!existingAdmin) {
+    const hashedPassword = await bcrypt.hash(adminPassword, 10)
 
-  const adminUser = await prisma.user.create({
-    data: {
-      email: adminEmail,
-      passwordHash: hashedPassword,
-      firstName: "Alessandro",
-      lastName: "Romano",
-      status: "ACTIVE",
-      role: "ADMIN",
-      planType: "ENTERPRISE", // ✅ Enterprise plan (full feature set)
-      creditBalance: 186.90, // ✅ Reflects final balance from billing history
-      isDeveloperUser: true, // ✅ Developer User - skip 2FA for testing
-      twoFactorEnabled: false, // ❌ 2FA disabled by default - enable via Settings UI
-      twoFactorEnabledAt: null,
-      recoveryCodes: [], // Recovery codes generated when 2FA is enabled
-      // 🧾 Billing Information (Andrea's requirement - sample data)
-      companyName: "eChatbot Italia S.r.l.",
-      vatNumber: "IT12345678901",
-      website: "https://www.echatbot.it",
-      billingPhone: "+39 06 1234567",
-      billingAddress: "Via Roma 123, 00100 Roma, Italia",
-    },
-  })
+    adminUser = await prisma.user.create({
+      data: {
+        email: adminEmail,
+        passwordHash: hashedPassword,
+        firstName: "Alessandro",
+        lastName: "Romano",
+        status: "ACTIVE",
+        role: "ADMIN",
+        planType: "ENTERPRISE", // ✅ Enterprise plan (full feature set)
+        creditBalance: 186.90, // ✅ Reflects final balance from billing history
+        isDeveloperUser: true, // ✅ Developer User - skip 2FA for testing
+        twoFactorEnabled: false, // ❌ 2FA disabled by default - enable via Settings UI
+        twoFactorEnabledAt: null,
+        recoveryCodes: [], // Recovery codes generated when 2FA is enabled
+        // 🧾 Billing Information (Andrea's requirement - sample data)
+        companyName: "eChatbot Italia S.r.l.",
+        vatNumber: "IT12345678901",
+        website: "https://www.echatbot.it",
+        billingPhone: "+39 06 1234567",
+        billingAddress: "Via Roma 123, 00100 Roma, Italia",
+      },
+    })
 
-  console.log(`✅ Admin user created: ${adminEmail}`)
-  console.log(`📧 Email: ${adminEmail}`)
-  console.log(`🔑 Password: ${adminPassword}`)
-  console.log(`🔧 isDeveloperUser: true (Skip 2FA for testing)\n`)
+    console.log(`✅ Admin user created: ${adminEmail}`)
+    console.log(`📧 Email: ${adminEmail}`)
+    console.log(`🔑 Password: ${adminPassword}`)
+    console.log(`🔧 isDeveloperUser: true (Skip 2FA for testing)\n`)
 
-  // 2.5. Create Platform Admin User (for Backoffice access)
-  console.log("👤 Creating platform admin user...")
+    // 2.5. Create Platform Admin User (for Backoffice access)
+    console.log("👤 Creating platform admin user...")
 
-  const platformAdminEmail = "gelsogrove@gmail.com"
-  const platformAdminPassword = process.env.PLATFORM_ADMIN_PASSWORD || "Venezia44"
-  const platformAdminHashedPassword = await bcrypt.hash(platformAdminPassword, 10)
+    const platformAdminEmail = "gelsogrove@gmail.com"
+    const platformAdminPassword = process.env.PLATFORM_ADMIN_PASSWORD || "Venezia44"
+    const platformAdminHashedPassword = await bcrypt.hash(platformAdminPassword, 10)
 
-  const platformAdminUser = await prisma.user.create({
-    data: {
-      email: platformAdminEmail,
-      passwordHash: platformAdminHashedPassword,
-      firstName: "Andrea",
-      lastName: "Gelsomino",
-      status: "ACTIVE",
-      role: "ADMIN",
+    platformAdminUser = await prisma.user.create({
+      data: {
+        email: platformAdminEmail,
+        passwordHash: platformAdminHashedPassword,
+        firstName: "Andrea",
+        lastName: "Gelsomino",
+        status: "ACTIVE",
+        role: "ADMIN",
       planType: "PREMIUM", // ✅ Premium plan (not free trial)
       isPlatformAdmin: true, // ✅ Platform Admin - can access backoffice + skip 2FA
       isDeveloperUser: false, // ❌ Not a developer (can't be both)
@@ -193,18 +196,26 @@ async function main() {
     },
   })
 
-  console.log(`✅ Platform admin user created: ${platformAdminEmail}`)
-  console.log(`📧 Email: ${platformAdminEmail}`)
-  console.log(`🔑 Password: ${platformAdminPassword}`)
-  console.log(`🔐 isPlatformAdmin: true (Backoffice access + Skip 2FA)\n`)
+    console.log(`✅ Platform admin user created: ${platformAdminEmail}`)
+    console.log(`📧 Email: ${platformAdminEmail}`)
+    console.log(`🔑 Password: ${platformAdminPassword}`)
+    console.log(`🔐 isPlatformAdmin: true (Backoffice access + Skip 2FA)\n`)
+  } else {
+    console.log("ℹ️  Users already exist in production, skipping user creation\n")
+  }
 
-  // 2.7. Create E-commerce Workspace for Admin User (BellItalia VIP)
-  console.log("🏢 Creating E-commerce workspace (BellItalia VIP) for admin user...")
+  // Skip workspace creation if users already exist in production
+  if (existingAdmin && isProduction) {
+    console.log("ℹ️  Skipping workspace creation (already exists)\n")
+    console.log("📦 Proceeding with pricing and platform configurations...")
+  } else {
+    // 2.7. Create E-commerce Workspace for Admin User (BellItalia VIP)
+    console.log("🏢 Creating E-commerce workspace (BellItalia VIP) for admin user...")
 
-  const ecommerceWorkspace = await prisma.workspace.create({
-    data: {
-      name: "BellItalia VIP",
-      slug: "bell-italia-vip",
+    const ecommerceWorkspace = await prisma.workspace.create({
+      data: {
+        name: "BellItalia VIP",
+        slug: "bell-italia-vip",
       whatsappPhoneNumber: "+34654728751",
       notificationEmail: "info@bellitalia.com",
       isActive: true,
@@ -1056,6 +1067,7 @@ Sono qui per aiutarti 😊`,
   }
 
   console.log(`✅ Created 2 additional languages (ESP, PRT)`)
+  } // END if (!existingAdmin || !isProduction) for workspace creation
 
   // 6. Create Pricing Configuration (Single Source of Truth)
   console.log("💰 Creating pricing configuration...")

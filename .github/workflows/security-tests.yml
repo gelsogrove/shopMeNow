@@ -114,8 +114,6 @@ jobs:
   #     NODE_ENV: test
   #     INTEGRATION_TEST: true
   #     # Admin credentials
-  #     ADMIN_EMAIL: admin@echatbot.ai
-  #     ADMIN_PASSWORD: Venezia44
   #     # Frontend
   #     FRONTEND_URL: http://localhost:3000
   #     CORS_ORIGIN: http://localhost:3000
