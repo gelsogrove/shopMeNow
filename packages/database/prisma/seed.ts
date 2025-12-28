@@ -1067,9 +1067,6 @@ Sono qui per aiutarti 😊`,
   }
 
   console.log(`✅ Created 2 additional languages (ESP, PRT)`)
-  
-  // Use BellItalia VIP as the main workspace for demo data
-  const workspace = ecommerceWorkspace
   } // END if (!existingAdmin || !isProduction) for workspace creation
 
   // 6. Create Pricing Configuration (Single Source of Truth)
@@ -1152,8 +1149,6 @@ Sono qui per aiutarti 😊`,
   }
 
   // === REST OF SEED (ONLY IF NOT PRODUCTION OR USERS DON'T EXIST) ===
-  // Use BellItalia VIP as the main workspace for demo data
-  const workspace = ecommerceWorkspace
 
   // 7. Create Categories
   console.log("📂 Creating categories...")
