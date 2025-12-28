@@ -103,17 +103,23 @@ app.use(
         ? {
             directives: {
               defaultSrc: ["'self'"],
-              scriptSrc: ["'self'", "'unsafe-inline'"],
+              scriptSrc: [
+                "'self'",
+                "'unsafe-inline'",
+                "https://accounts.google.com",
+              ],
               styleSrc: ["'self'", "'unsafe-inline'"],
               imgSrc: ["'self'", "data:", "https:"],
               connectSrc: [
                 "'self'",
                 "https://api.openrouter.ai",
+                "https://accounts.google.com",
                 "wss://echatbot-production-5db591247cec.herokuapp.com",
                 "https://echatbot-production-5db591247cec.herokuapp.com",
               ],
               fontSrc: ["'self'"],
               objectSrc: ["'none'"],
+              frameSrc: ["https://accounts.google.com"],
               upgradeInsecureRequests: [],
             },
           }
