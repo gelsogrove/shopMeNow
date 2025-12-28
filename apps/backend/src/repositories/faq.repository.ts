@@ -184,6 +184,7 @@ export class FAQRepository {
       return await this.prisma.fAQ.findMany({
         where: {
           workspaceId,
+          isActive: true, // Filter out soft-deleted FAQs
         },
         orderBy: {
           order: "asc",

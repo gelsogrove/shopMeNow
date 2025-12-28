@@ -1081,23 +1081,6 @@ export default function SettingsPage() {
                           value={formData.customAiRules}
                           onChange={(e) => handleFieldChange("customAiRules", e.target.value)}
                           rows={12}
-                          placeholder={`Write your custom rules here. Examples:
-
-# Product Recommendations
-- When customer asks about cheese, always recommend "Parmigiano Reggiano DOP" first
-- Never suggest products from competitor brands
-
-# Pricing Rules  
-- Always mention the 10% discount for first-time buyers
-- Never discuss prices lower than listed
-
-# Communication Style
-- Always greet customers with "Benvenuto da BellItalia!"
-- End every conversation asking for feedback
-
-# Restrictions
-- Never share internal company information
-- Don't discuss delivery times for international orders`}
                           className="font-mono text-sm min-h-[300px]"
                         />
                         <p className="text-xs text-muted-foreground">
