@@ -26,11 +26,17 @@ if (!DATABASE_URL) {
 
 import { PrismaClient, Prisma } from './generated/prisma/index.js'
 import { PrismaPg } from '@prisma/adapter-pg'
+import { Pool } from 'pg'
 
-// Initialize the PostgreSQL adapter
-const adapter = new PrismaPg({
+// Initialize the PostgreSQL adapter with SSL support for Heroku
+const pool = new Pool({
   connectionString: DATABASE_URL,
+  ssl: DATABASE_URL?.includes('amazonaws.com') || DATABASE_URL?.includes('heroku')
+    ? { rejectUnauthorized: false }
+    : false
 })
+
+const adapter = new PrismaPg(pool)
 
 // Singleton Prisma client instance
 const globalForPrisma = globalThis as unknown as {

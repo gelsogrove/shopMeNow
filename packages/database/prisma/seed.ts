@@ -16,6 +16,7 @@ config() // Load environment variables from .env file
 
 import { PrismaClient } from "@echatbot/database"
 import { PrismaPg } from "@prisma/adapter-pg"
+import { Pool } from "pg"
 import * as bcrypt from "bcrypt"
 import { campaigns } from "./data/campaigns"
 import { categories } from "./data/categories"
@@ -29,10 +30,15 @@ import { products } from "./data/products"
 import { services } from "./data/services"
 import { workspaceSettings } from "./data/workspaceSettings"
 
-// Initialize the PostgreSQL adapter for Prisma 7
-const adapter = new PrismaPg({
+// Initialize the PostgreSQL adapter for Prisma 7 with SSL config for Heroku
+const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL?.includes('amazonaws.com') || process.env.DATABASE_URL?.includes('heroku')
+    ? { rejectUnauthorized: false }
+    : false
 })
+
+const adapter = new PrismaPg(pool)
 
 const prisma = new PrismaClient({ adapter })
 

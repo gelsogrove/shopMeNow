@@ -30,10 +30,15 @@ if (!DATABASE_URL) {
 }
 const index_js_1 = require("./generated/prisma/index.js");
 const adapter_pg_1 = require("@prisma/adapter-pg");
-// Initialize the PostgreSQL adapter
-const adapter = new adapter_pg_1.PrismaPg({
+const pg_1 = require("pg");
+// Initialize the PostgreSQL adapter with SSL support for Heroku
+const pool = new pg_1.Pool({
     connectionString: DATABASE_URL,
+    ssl: DATABASE_URL?.includes('amazonaws.com') || DATABASE_URL?.includes('heroku')
+        ? { rejectUnauthorized: false }
+        : false
 });
+const adapter = new adapter_pg_1.PrismaPg(pool);
 // Singleton Prisma client instance
 const globalForPrisma = globalThis;
 exports.prisma = globalForPrisma.prisma ??
