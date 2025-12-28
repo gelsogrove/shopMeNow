@@ -18,7 +18,7 @@
     "build": "npm run build --workspaces --if-present",
     "build:backend": "npm run build -w @echatbot/backend",
     "build:frontend": "npm run build -w @echatbot/frontend",
-    "heroku-postbuild": "npm run prisma:generate && npm run build:frontend && npm run build:backend && echo '✅ Build completed'",
+    "heroku-postbuild": "npm run prisma:generate && npm run build:backend && echo '✅ Build completed'",
     "start": "npm run start:all",
     "start:all": "node apps/backend/dist/src/index.js",
     "start:backend": "npm run start -w @echatbot/backend",
