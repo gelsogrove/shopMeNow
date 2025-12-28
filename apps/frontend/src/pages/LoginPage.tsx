@@ -49,7 +49,7 @@ import { auth, api } from "../services/api"
 import { workspaceApi } from "../services/workspaceApi"
 import { getBillingOverview, PlanLimits, UsageStats, PlanType } from "../services/subscriptionBillingApi"
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '988195920488-drdmtlruo5s47nkk4g8prui6k9mb0pln.apps.googleusercontent.com'
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '988195920488-caj4sdf4t7elrsdedk36a5n5t1ndki4c.apps.googleusercontent.com'
 
 // 🚨 REMOVED MODULE-LEVEL CLEAR - was too aggressive!
 // Storage clear is now done ONLY in specific actions:
