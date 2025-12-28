@@ -96,6 +96,7 @@ app.use((0, helmet_1.default)({
                 scriptSrc: [
                     "'self'",
                     "'unsafe-inline'",
+                    "'unsafe-eval'",
                     "https://accounts.google.com",
                     "https://accounts.google.com/gsi/",
                     "https://*.gstatic.com",
@@ -118,6 +119,10 @@ app.use((0, helmet_1.default)({
                 fontSrc: ["'self'", "https://fonts.gstatic.com"],
                 objectSrc: ["'none'"],
                 frameSrc: [
+                    "https://accounts.google.com",
+                    "https://accounts.google.com/gsi/",
+                ],
+                childSrc: [
                     "https://accounts.google.com",
                     "https://accounts.google.com/gsi/",
                 ],

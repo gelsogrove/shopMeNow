@@ -20,7 +20,9 @@ coverage/
 
 # Production
 build/
-# dist/ - Committed for Heroku pre-compiled deployment
+dist/
+apps/*/dist/
+packages/*/dist/
 dist-ssr/
 .next/
 out/
