@@ -62,11 +62,7 @@ app.use(
   cors({
     origin:
       process.env.NODE_ENV === "production"
-        ? [
-            process.env.FRONTEND_URL || "http://localhost:3000",
-            "https://echatbot.netlify.app", // Frontend su Netlify
-            /\.netlify\.app$/, // Tutti i preview deploy di Netlify
-          ]
+        ? [process.env.FRONTEND_URL || "http://localhost:3000"]
         : [
             "http://localhost:3000",
             "http://localhost:3001",
