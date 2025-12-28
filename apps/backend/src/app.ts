@@ -108,6 +108,7 @@ app.use(
                 "'unsafe-inline'",
                 "https://accounts.google.com",
                 "https://accounts.google.com/gsi/",
+                "https://*.gstatic.com",
               ],
               styleSrc: [
                 "'self'",
@@ -120,6 +121,7 @@ app.use(
                 "https://api.openrouter.ai",
                 "https://accounts.google.com",
                 "https://*.googleapis.com",
+                "https://*.gstatic.com",
                 "wss://echatbot-production-5db591247cec.herokuapp.com",
                 "https://echatbot-production-5db591247cec.herokuapp.com",
               ],
