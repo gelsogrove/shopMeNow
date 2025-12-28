@@ -1067,6 +1067,9 @@ Sono qui per aiutarti 😊`,
   }
 
   console.log(`✅ Created 2 additional languages (ESP, PRT)`)
+  
+  // Use BellItalia VIP as the main workspace for demo data
+  const workspace = ecommerceWorkspace
   } // END if (!existingAdmin || !isProduction) for workspace creation
 
   // 6. Create Pricing Configuration (Single Source of Truth)
@@ -1140,6 +1143,17 @@ Sono qui per aiutarti 😊`,
   console.log(
     `   - Limits: ${platformConfigData.filter((p) => p.type === "LIMIT").length}`
   )
+
+  // Skip data seeding if users already exist in production (workspace already populated)
+  if (existingAdmin && isProduction) {
+    console.log("\nℹ️  Production workspace already populated, skipping data seeding (categories, products, customers, etc.)\n")
+    console.log("✅ Seed completed successfully (pricing configs updated)")
+    return
+  }
+
+  // === REST OF SEED (ONLY IF NOT PRODUCTION OR USERS DON'T EXIST) ===
+  // Use BellItalia VIP as the main workspace for demo data
+  const workspace = ecommerceWorkspace
 
   // 7. Create Categories
   console.log("📂 Creating categories...")
