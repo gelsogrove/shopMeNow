@@ -21,7 +21,9 @@ coverage/
 # Production
 build/
 dist/
-apps/*/dist/
+# apps/*/dist/  # Allow backend dist for Heroku
+apps/frontend/dist/
+apps/backoffice/dist/
 packages/*/dist/
 dist-ssr/
 .next/
