@@ -18,5 +18,8 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
+    rollupOptions: {
+      input: new URL('./index.html', import.meta.url).pathname,
+    },
   },
 })
