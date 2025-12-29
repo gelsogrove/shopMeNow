@@ -118,7 +118,7 @@ app.use(
                 "'unsafe-inline'",
                 "https://accounts.google.com",
               ],
-              imgSrc: ["'self'", "data:", "https:"],
+              imgSrc: ["'self'", "data:", "https:", "blob:"],
               connectSrc: [
                 "'self'",
                 "https://api.openrouter.ai",
