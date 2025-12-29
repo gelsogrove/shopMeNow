@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 
 export default defineConfig({
-  root: __dirname, // 🎯 Esplicita la root del progetto (per npm workspace)
   plugins: [react()],
   resolve: {
     alias: {
