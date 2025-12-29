@@ -3,4 +3,4 @@
 # Serve: Backoffice static SPA (/)
 # API calls: CORS to echatbot-app
 
-web: npx serve -s apps/backoffice/dist -l 3002
+web: npx serve -s apps/backoffice/dist -l $PORT
