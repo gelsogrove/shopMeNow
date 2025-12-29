@@ -141,7 +141,8 @@ export default defineConfig({
         warn(warning)
       },
       // ✅ EXPLICIT input specification for Heroku
-      input: path.resolve(__dirname, './index.html'),
+      // MUST use import.meta.url because __dirname points to monorepo root in Heroku build
+      input: new URL('./index.html', import.meta.url).pathname,
       // NO external modules - everything must be bundled for production!
       output: {
         manualChunks: {
