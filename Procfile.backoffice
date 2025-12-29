@@ -1,0 +1,6 @@
+# 🔐 ECHATBOT-BACKOFFICE - Admin Panel SPA
+# Deploy: git push heroku-backoffice main
+# Serve: Backoffice static SPA (/)
+# API calls: CORS to echatbot-app
+
+web: npx serve -s apps/backoffice/dist -l 3002

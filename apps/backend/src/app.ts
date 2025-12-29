@@ -62,7 +62,10 @@ app.use(
   cors({
     origin:
       process.env.NODE_ENV === "production"
-        ? [process.env.FRONTEND_URL || "http://localhost:3000"]
+        ? [
+            process.env.FRONTEND_URL || "https://echatbot.ai",
+            process.env.BACKOFFICE_URL || "https://backoffice.echatbot.ai",
+          ]
         : [
             "http://localhost:3000",
             "http://localhost:3001",
@@ -174,16 +177,8 @@ if (process.env.NODE_ENV === "production") {
     )
   }
 
-  // 🔐 PRODUCTION: Serve backoffice static files (from Vite build)
-  const backofficeDistPath = path.join(backendRoot, "apps/backoffice/dist")
-  if (fs.existsSync(backofficeDistPath)) {
-    app.use("/backoffice", express.static(backofficeDistPath))
-    logger.info(`[Production] Serving backoffice from: ${backofficeDistPath}`)
-  } else {
-    logger.warn(
-      `[Production] Backoffice dist not found at: ${backofficeDistPath}`
-    )
-  }
+  // 🔐 BACKOFFICE: Now deployed as separate app on backoffice.echatbot.ai
+  // No static serving needed - backoffice makes CORS API calls
 }
 
 // Custom JSON parser middleware to handle potentially escaped JSON
@@ -354,29 +349,6 @@ app.use("/api", apiRouter)
 import { workspaceRoutes as workspaceRoutesRoot } from "./interfaces/http/routes/workspace.routes"
 app.use("/workspaces", workspaceRoutesRoot)
 
-// 🔐 BACKOFFICE: Serve static files in production
-if (process.env.NODE_ENV === "production") {
-  const backofficeDistPath = path.join(backendRoot, "apps/backoffice/dist")
-  const backofficeIndexPath = path.join(backofficeDistPath, "index.html")
-  
-  if (fs.existsSync(backofficeIndexPath)) {
-    // Serve backoffice static assets
-    app.use("/backoffice", express.static(backofficeDistPath, { 
-      index: false,  // Don't auto-serve index.html for directories
-      maxAge: "1d",  // Cache assets for 1 day
-    }))
-    
-    // SPA fallback for backoffice routes
-    app.get("/backoffice/*", (req, res) => {
-      res.sendFile(backofficeIndexPath)
-    })
-    
-    logger.info(`[Production] Backoffice served from /backoffice`)
-  } else {
-    logger.warn(`[Production] Backoffice dist not found at ${backofficeDistPath}`)
-  }
-}
-
 // 🌐 PRODUCTION: SPA fallback - serve index.html for all non-API routes
 // This MUST be after all API routes to avoid conflicts
 if (process.env.NODE_ENV === "production") {
@@ -385,8 +357,8 @@ if (process.env.NODE_ENV === "production") {
   
   if (fs.existsSync(frontendIndexPath)) {
     app.get("*", (req, res, next) => {
-      // Skip API routes and backoffice routes
-      if (req.path.startsWith("/api") || req.path.startsWith("/backoffice")) {
+      // Skip API routes
+      if (req.path.startsWith("/api")) {
         return next()
       }
       res.sendFile(frontendIndexPath)

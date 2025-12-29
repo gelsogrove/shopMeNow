@@ -1,6 +1,6 @@
-# 🛠️ Scheduler Procfile
-# Questo file è per l'app echatbot-scheduler SOLO (non per web app)
-# La web app usa il Procfile root (senza scheduler)
+# ⏱️ ECHATBOT-SCHEDULER - Background cron jobs
+# Deploy: git push heroku-scheduler main
+# NO web dyno - only worker for cron tasks
 
-# ⏱️ SCHEDULER PROCESS - Background cron jobs
-scheduler: node apps/scheduler/dist/index.js
+worker: node apps/scheduler/dist/index.js
+release: npm run prisma:migrate:prod

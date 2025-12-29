@@ -9,8 +9,8 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  // 🌐 Production: serve from /backoffice path
-  base: process.env.NODE_ENV === 'production' ? '/backoffice/' : '/',
+  // 🌐 Standalone SPA - serve from root path (/)
+  base: '/',
   server: {
     port: 3002,
     strictPort: true,  // 🔐 MUST use port 3002, fail if busy
