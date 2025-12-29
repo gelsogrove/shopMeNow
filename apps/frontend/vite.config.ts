@@ -4,6 +4,7 @@ import { defineConfig } from "vite"
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  root: __dirname, // 🎯 Esplicita la root del progetto (per npm workspace)
   plugins: [react()],
   esbuild: {
     // Ignora errori TypeScript durante lo sviluppo
