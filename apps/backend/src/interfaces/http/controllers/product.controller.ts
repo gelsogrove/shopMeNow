@@ -5,7 +5,7 @@ import { prisma } from "../../../lib/prisma"
 import { cleanupRemovedImages } from "../../../utils/fileManager"
 import logger from "../../../utils/logger"
 import { Readable } from "stream"
-import { getStorageService } from "../../../services/storage"
+import { storageService } from "../../../services/storage.service"
 
 export class ProductController {
   private productService: ProductService
@@ -299,9 +299,8 @@ export class ProductController {
       }
 
       // Handle multiple image uploads with Storage Service
-      const storage = getStorageService()
       let allImageUrls: string[] = []
-      let allImageKeys: string[] = []
+      let imageKey: string | null = null
 
       // Add existing images first (if reordered)
       if (req.body.existingImageUrls) {
@@ -318,22 +317,18 @@ export class ProductController {
 
       // Add new uploaded images via Storage Service
       if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-        for (const file of req.files as Express.Multer.File[]) {
-          const uploadedFile = await storage.upload(file.buffer, {
-            filename: file.filename,
-            folder: `products/${workspaceId}`,
-            contentType: file.mimetype,
-            isPublic: true
-          })
-          allImageUrls.push(uploadedFile.url)
-          allImageKeys.push(uploadedFile.key)
-        }
-        logger.info(`New images uploaded via Storage Service:`, allImageUrls)
+        const uploadedUrls = await storageService.uploadImages(
+          req.files as Express.Multer.File[], 
+          'products'
+        )
+        allImageUrls.push(...uploadedUrls)
+        imageKey = uploadedUrls[0] // Store first image URL as key
+        logger.info(`New images uploaded via Storage Service:`, uploadedUrls)
       }
 
       // Always set imageUrl and imageKey
       productData.imageUrl = allImageUrls
-      productData.imageKey = allImageKeys.length > 0 ? allImageKeys[0] : null
+      productData.imageKey = imageKey
       logger.info(`Total images for product:`, allImageUrls)
 
       const product = await this.productService.createProduct(
@@ -500,8 +495,7 @@ export class ProductController {
         return res.status(404).json({ message: "Product not found" })
       }
 
-      const storage = getStorageService()
-      const oldImageKey = currentProduct.imageKey
+      const oldImageUrls = currentProduct.imageUrl || []
       let allImageUrls: string[] = []
       let newImageKey: string | null = null
 
@@ -522,23 +516,20 @@ export class ProductController {
       if (req.files && Array.isArray(req.files) && req.files.length > 0) {
         logger.info(`Received ${req.files.length} files from multer`)
         
-        // Delete old image if replacing
-        if (oldImageKey) {
-          await storage.delete(oldImageKey)
-          logger.info(`Deleted old image: ${oldImageKey}`)
+        // Delete old images that are being replaced
+        const imagesToDelete = oldImageUrls.filter(url => !allImageUrls.includes(url))
+        if (imagesToDelete.length > 0) {
+          await storageService.deleteImages(imagesToDelete)
+          logger.info(`Deleted old images:`, imagesToDelete)
         }
 
-        for (const file of req.files as Express.Multer.File[]) {
-          const uploadedFile = await storage.upload(file.buffer, {
-            filename: file.filename,
-            folder: `products/${workspaceId}`,
-            contentType: file.mimetype,
-            isPublic: true
-          })
-          allImageUrls.push(uploadedFile.url)
-          if (!newImageKey) newImageKey = uploadedFile.key
-        }
-        logger.info(`New images uploaded via Storage Service:`, allImageUrls)
+        const uploadedUrls = await storageService.uploadImages(
+          req.files as Express.Multer.File[], 
+          'products'
+        )
+        allImageUrls.push(...uploadedUrls)
+        newImageKey = uploadedUrls[0] // Store first image URL as key
+        logger.info(`New images uploaded via Storage Service:`, uploadedUrls)
       }
 
       // Always set imageUrl and update imageKey if changed
@@ -599,11 +590,10 @@ export class ProductController {
         return res.status(404).json({ message: "Product not found" })
       }
 
-      // Delete image from storage if exists
-      if (existingProduct.imageKey) {
-        const storage = getStorageService()
-        await storage.delete(existingProduct.imageKey)
-        logger.info(`Deleted image from storage: ${existingProduct.imageKey}`)
+      // Delete images from storage if exists
+      if (existingProduct.imageUrl && existingProduct.imageUrl.length > 0) {
+        await storageService.deleteImages(existingProduct.imageUrl)
+        logger.info(`Deleted images from storage:`, existingProduct.imageUrl)
       }
 
       await this.productService.deleteProduct(id, workspaceId)
