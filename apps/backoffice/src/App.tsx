@@ -10,6 +10,9 @@ import { SchedulersPage } from '@/pages/SchedulersPage'
 import { TrashPage } from '@/pages/TrashPage'
 import { ComingSoonPage } from '@/pages/ComingSoonPage'
 
+// 🌐 Base path for production deployment
+const basename = import.meta.env.MODE === 'production' ? '/backoffice' : ''
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth()
   
@@ -75,7 +78,7 @@ function AppRoutes() {
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={basename}>
       <AuthProvider>
         <AppRoutes />
       </AuthProvider>

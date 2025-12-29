@@ -354,6 +354,29 @@ app.use("/api", apiRouter)
 import { workspaceRoutes as workspaceRoutesRoot } from "./interfaces/http/routes/workspace.routes"
 app.use("/workspaces", workspaceRoutesRoot)
 
+// 🔐 BACKOFFICE: Serve static files in production
+if (process.env.NODE_ENV === "production") {
+  const backofficeDistPath = path.join(backendRoot, "apps/backoffice/dist")
+  const backofficeIndexPath = path.join(backofficeDistPath, "index.html")
+  
+  if (fs.existsSync(backofficeIndexPath)) {
+    // Serve backoffice static assets
+    app.use("/backoffice", express.static(backofficeDistPath, { 
+      index: false,  // Don't auto-serve index.html for directories
+      maxAge: "1d",  // Cache assets for 1 day
+    }))
+    
+    // SPA fallback for backoffice routes
+    app.get("/backoffice/*", (req, res) => {
+      res.sendFile(backofficeIndexPath)
+    })
+    
+    logger.info(`[Production] Backoffice served from /backoffice`)
+  } else {
+    logger.warn(`[Production] Backoffice dist not found at ${backofficeDistPath}`)
+  }
+}
+
 // 🌐 PRODUCTION: SPA fallback - serve index.html for all non-API routes
 // This MUST be after all API routes to avoid conflicts
 if (process.env.NODE_ENV === "production") {
@@ -362,8 +385,8 @@ if (process.env.NODE_ENV === "production") {
   
   if (fs.existsSync(frontendIndexPath)) {
     app.get("*", (req, res, next) => {
-      // Skip API routes
-      if (req.path.startsWith("/api")) {
+      // Skip API routes and backoffice routes
+      if (req.path.startsWith("/api") || req.path.startsWith("/backoffice")) {
         return next()
       }
       res.sendFile(frontendIndexPath)

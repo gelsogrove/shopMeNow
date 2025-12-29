@@ -9,8 +9,14 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // 🌐 Production: serve from /backoffice path
+  base: process.env.NODE_ENV === 'production' ? '/backoffice/' : '/',
   server: {
     port: 3002,
     strictPort: true,  // 🔐 MUST use port 3002, fail if busy
+  },
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
   },
 })
