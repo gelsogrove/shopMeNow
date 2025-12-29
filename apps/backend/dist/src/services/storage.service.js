@@ -112,6 +112,21 @@ class StorageService {
             yield Promise.all(deletePromises);
         });
     }
+    /**
+     * List all images in a folder
+     * @param folder Folder name (products, services, users, channels)
+     * @returns Array of image objects with url and publicId
+     */
+    listImages(folder) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this.storageType === 'cloudinary') {
+                return this.listFromCloudinary(folder);
+            }
+            else {
+                return this.listFromLocal(folder);
+            }
+        });
+    }
     // ==================== LEGACY COMPATIBILITY METHODS (for InvoiceService) ====================
     /**
      * Upload raw buffer (for PDFs, etc.)
@@ -278,6 +293,46 @@ class StorageService {
             catch (error) {
                 logger_1.default.error('❌ Local delete failed:', error);
                 // Don't throw - file might already be deleted
+            }
+        });
+    }
+    listFromCloudinary(folder) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const result = yield cloudinary_1.v2.api.resources({
+                    type: 'upload',
+                    prefix: `echatbot/${folder}`,
+                    max_results: 500,
+                });
+                return result.resources.map((resource) => ({
+                    url: resource.secure_url,
+                    publicId: resource.public_id,
+                }));
+            }
+            catch (error) {
+                logger_1.default.error(`❌ Cloudinary list failed for folder ${folder}:`, error);
+                return [];
+            }
+        });
+    }
+    listFromLocal(folder) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const folderPath = path_1.default.join(this.localUploadDir, folder);
+                if (!fs_1.default.existsSync(folderPath)) {
+                    return [];
+                }
+                const files = fs_1.default.readdirSync(folderPath);
+                return files
+                    .filter(file => !file.startsWith('.')) // Skip hidden files
+                    .map(file => ({
+                    url: `/uploads/${folder}/${file}`,
+                    publicId: file,
+                }));
+            }
+            catch (error) {
+                logger_1.default.error(`❌ Local list failed for folder ${folder}:`, error);
+                return [];
             }
         });
     }
