@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express"
 import { UserService } from "../../../application/services/user.service"
+import { storageService } from "../../../services/storage.service"
 
 import logger from "../../../utils/logger"
 
@@ -215,7 +216,8 @@ export class UserController {
       
       // Handle logo upload if present
       if (req.file) {
-        userData.logo = `/uploads/users/${req.file.filename}`
+        const logoUrl = await storageService.uploadImage(req.file, 'users')
+        userData.logo = logoUrl
         logger.info(`📸 Logo uploaded: ${userData.logo}`)
       }
       
