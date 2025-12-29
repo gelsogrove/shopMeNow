@@ -1,12 +1,22 @@
 name: Test & Deploy to Heroku
 
+# 💰 OTTIMIZZAZIONE COSTI: SOLO trigger manuale (NO automatico)
 on:
-  push:
-    branches:
-      - main  # Deploy automatico solo su push a main
-  pull_request:
-    branches:
-      - main  # Test su PR prima del merge
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip tests and deploy directly'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+# 💰 Cancel job in-progress se nuovo commit pushato
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   NODE_ENV: test

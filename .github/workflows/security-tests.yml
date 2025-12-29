@@ -1,16 +1,10 @@
 name: 🔒 Safty Checks (REQUIRED)
 
+# 💰 OTTIMIZZAZIONE COSTI: SOLO trigger manuale (NO automatico)
 on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main]
-  # Block merge if tests fail
-  merge_group:
-  # Allow manual execution from GitHub UI
   workflow_dispatch:
 
-# Cancel in-progress runs when new commit pushed
+# 💰 Cancel in-progress runs when new commit pushed (riduce costi)
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
