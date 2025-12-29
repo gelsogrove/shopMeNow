@@ -88,6 +88,8 @@ app.options("*", cors())
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
+    // 🔐 FIX GOOGLE GSI: Allow popups for OAuth flow
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
     // HSTS: Force HTTPS for 1 year (only in production)
     hsts:
       process.env.NODE_ENV === "production"
