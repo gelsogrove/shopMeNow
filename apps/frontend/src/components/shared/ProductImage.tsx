@@ -50,7 +50,11 @@ export function ProductImage({
     )
   }
 
-  const imageSrc = `${IMG_BASE_URL}${imageUrl[0]}`
+  // Build image URL: if already absolute (Cloudinary), use as-is; otherwise prepend IMG_BASE_URL
+  const firstImageUrl = imageUrl[0]
+  const imageSrc = firstImageUrl.startsWith('http://') || firstImageUrl.startsWith('https://') 
+    ? firstImageUrl 
+    : `${IMG_BASE_URL}${firstImageUrl}`
 
   return (
     <img
