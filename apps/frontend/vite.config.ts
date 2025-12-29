@@ -140,6 +140,8 @@ export default defineConfig({
         }
         warn(warning)
       },
+      // ✅ EXPLICIT input specification for Heroku
+      input: path.resolve(__dirname, './index.html'),
       // NO external modules - everything must be bundled for production!
       output: {
         manualChunks: {

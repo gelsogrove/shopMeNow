@@ -18,5 +18,9 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
+    rollupOptions: {
+      // ✅ EXPLICIT input specification for Heroku
+      input: path.resolve(__dirname, './index.html'),
+    },
   },
 })
