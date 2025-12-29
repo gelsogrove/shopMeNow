@@ -47,6 +47,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserController = void 0;
 const user_service_1 = require("../../../application/services/user.service");
+const storage_service_1 = require("../../../services/storage.service");
 const logger_1 = __importDefault(require("../../../utils/logger"));
 class UserController {
     constructor(userService) {
@@ -235,7 +236,8 @@ class UserController {
                 logger_1.default.info(`🔍 Request body received:`, JSON.stringify(userData, null, 2));
                 // Handle logo upload if present
                 if (req.file) {
-                    userData.logo = `/uploads/users/${req.file.filename}`;
+                    const logoUrl = yield storage_service_1.storageService.uploadImage(req.file, 'users');
+                    userData.logo = logoUrl;
                     logger_1.default.info(`📸 Logo uploaded: ${userData.logo}`);
                 }
                 // Handle logo removal (when removeLogo is sent)

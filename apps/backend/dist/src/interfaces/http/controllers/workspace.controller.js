@@ -18,8 +18,7 @@ const subscription_billing_service_1 = require("../../../application/services/su
 const workspace_service_1 = require("../../../application/services/workspace.service");
 const workspace_member_service_1 = require("../../../application/services/workspace-member.service");
 const logger_1 = __importDefault(require("../../../utils/logger"));
-const storage_1 = require("../../../services/storage");
-const promises_1 = __importDefault(require("fs/promises"));
+const storage_service_1 = require("../../../services/storage.service");
 // prisma imported
 class WorkspaceController {
     constructor() {
@@ -345,7 +344,7 @@ class WorkspaceController {
          * SECURITY: Only SUPER_ADMIN (owner) can upload logo
          */
         this.uploadWorkspaceLogo = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
-            var _a, _b;
+            var _a;
             try {
                 const { id } = req.params;
                 const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
@@ -364,32 +363,21 @@ class WorkspaceController {
                 // Get current workspace to check for old logo
                 const currentWorkspace = yield database_1.prisma.workspace.findUnique({
                     where: { id },
-                    select: { logoKey: true }
+                    select: { logoKey: true, logoUrl: true }
                 });
                 // Delete old logo if exists
-                if (currentWorkspace === null || currentWorkspace === void 0 ? void 0 : currentWorkspace.logoKey) {
-                    const storage = (0, storage_1.getStorageService)();
-                    yield storage.delete(currentWorkspace.logoKey);
-                    logger_1.default.info(`Deleted old logo: ${currentWorkspace.logoKey}`);
+                if (currentWorkspace === null || currentWorkspace === void 0 ? void 0 : currentWorkspace.logoUrl) {
+                    yield storage_service_1.storageService.deleteImage(currentWorkspace.logoUrl);
+                    logger_1.default.info(`Deleted old logo: ${currentWorkspace.logoUrl}`);
                 }
                 // Upload new logo via Storage Service
-                const storage = (0, storage_1.getStorageService)();
-                const fileBuffer = (_b = file.buffer) !== null && _b !== void 0 ? _b : (file.path ? yield promises_1.default.readFile(file.path) : null);
-                if (!fileBuffer) {
-                    return res.status(400).json({ error: "Invalid file payload" });
-                }
-                const uploadedFile = yield storage.upload(fileBuffer, {
-                    filename: `${id}-logo-${Date.now()}.${file.originalname.split('.').pop()}`,
-                    folder: `workspaces/${id}`,
-                    contentType: file.mimetype,
-                    isPublic: true
-                });
+                const uploadedUrl = yield storage_service_1.storageService.uploadImage(file, 'users');
                 // Update workspace with new logo URL and key
                 const workspace = yield this.workspaceService.update(id, {
-                    logoUrl: uploadedFile.url,
-                    logoKey: uploadedFile.key
+                    logoUrl: uploadedUrl,
+                    logoKey: uploadedUrl // Store URL as key for compatibility
                 });
-                logger_1.default.info(`✅ Logo uploaded for workspace ${id}: ${uploadedFile.url}`);
+                logger_1.default.info(`✅ Logo uploaded for workspace ${id}: ${uploadedUrl}`);
                 return res.json({ logoUrl: workspace.logoUrl });
             }
             catch (error) {

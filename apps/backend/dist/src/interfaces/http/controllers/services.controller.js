@@ -16,7 +16,7 @@ exports.ServicesController = void 0;
 const service_service_1 = __importDefault(require("../../../application/services/service.service"));
 const prisma_1 = require("../../../lib/prisma");
 const logger_1 = __importDefault(require("../../../utils/logger"));
-const storage_1 = require("../../../services/storage");
+const storage_service_1 = require("../../../services/storage.service");
 /**
  * ServicesController class
  * Handles HTTP requests related to services
@@ -143,9 +143,8 @@ class ServicesController {
                     workspaceId,
                 };
                 // Handle multiple image uploads with Storage Service
-                const storage = (0, storage_1.getStorageService)();
                 let allImageUrls = [];
-                let allImageKeys = [];
+                let imageKey = null;
                 // Add existing images first (if reordered)
                 if (req.body.existingImageUrls) {
                     try {
@@ -161,21 +160,14 @@ class ServicesController {
                 }
                 // Add new uploaded images via Storage Service
                 if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-                    for (const file of req.files) {
-                        const uploadedFile = yield storage.upload(file.buffer, {
-                            filename: file.filename,
-                            folder: `services/${workspaceId}`,
-                            contentType: file.mimetype,
-                            isPublic: true
-                        });
-                        allImageUrls.push(uploadedFile.url);
-                        allImageKeys.push(uploadedFile.key);
-                    }
-                    logger_1.default.info(`New images uploaded via Storage Service:`, allImageUrls);
+                    const uploadedUrls = yield storage_service_1.storageService.uploadImages(req.files, 'services');
+                    allImageUrls.push(...uploadedUrls);
+                    imageKey = uploadedUrls[0]; // Store first image URL as key
+                    logger_1.default.info(`New images uploaded via Storage Service:`, uploadedUrls);
                 }
                 // Always set imageUrl and imageKey
                 serviceData.imageUrl = allImageUrls;
-                serviceData.imageKey = allImageKeys.length > 0 ? allImageKeys[0] : null;
+                serviceData.imageKey = imageKey;
                 logger_1.default.info(`Total images for service:`, allImageUrls);
                 logger_1.default.info(`Creating service for workspace: ${workspaceId}`);
                 const service = yield this.serviceService.create(serviceData);
@@ -264,9 +256,8 @@ class ServicesController {
                             .json({ error: "Duration must be a valid integer" });
                     }
                 }
-                // Get old image key for cleanup
-                const storage = (0, storage_1.getStorageService)();
-                const oldImageKey = existingService.imageKey;
+                // Get old image URLs for cleanup
+                const oldImageUrls = existingService.imageUrl || [];
                 let newImageKey = null;
                 // Handle multiple image uploads and existing images for update
                 let allImageUrls = [];
@@ -285,23 +276,16 @@ class ServicesController {
                 }
                 // Add new uploaded images via Storage Service
                 if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-                    // Delete old image if uploading new ones
-                    if (oldImageKey) {
-                        yield storage.delete(oldImageKey);
-                        logger_1.default.info(`Deleted old image: ${oldImageKey}`);
+                    // Delete old images that are being replaced
+                    const imagesToDelete = oldImageUrls.filter(url => !allImageUrls.includes(url));
+                    if (imagesToDelete.length > 0) {
+                        yield storage_service_1.storageService.deleteImages(imagesToDelete);
+                        logger_1.default.info(`Deleted old images:`, imagesToDelete);
                     }
-                    for (const file of req.files) {
-                        const uploadedFile = yield storage.upload(file.buffer, {
-                            filename: file.filename,
-                            folder: `services/${workspaceId}`,
-                            contentType: file.mimetype,
-                            isPublic: true
-                        });
-                        allImageUrls.push(uploadedFile.url);
-                        if (!newImageKey)
-                            newImageKey = uploadedFile.key;
-                    }
-                    logger_1.default.info(`New images uploaded via Storage Service:`, allImageUrls);
+                    const uploadedUrls = yield storage_service_1.storageService.uploadImages(req.files, 'services');
+                    allImageUrls.push(...uploadedUrls);
+                    newImageKey = uploadedUrls[0]; // Store first image URL as key
+                    logger_1.default.info(`New images uploaded via Storage Service:`, uploadedUrls);
                 }
                 // Always set imageUrl and update imageKey if changed
                 updateData.imageUrl = allImageUrls;
@@ -345,11 +329,10 @@ class ServicesController {
                         .status(404)
                         .json({ error: "Service not found in specified workspace" });
                 }
-                // Clean up service image from storage before deleting
-                if (existingService.imageKey) {
-                    const storage = (0, storage_1.getStorageService)();
-                    yield storage.delete(existingService.imageKey);
-                    logger_1.default.info(`Deleted image from storage: ${existingService.imageKey}`);
+                // Clean up service images from storage before deleting
+                if (existingService.imageUrl && existingService.imageUrl.length > 0) {
+                    yield storage_service_1.storageService.deleteImages(existingService.imageUrl);
+                    logger_1.default.info(`Deleted images from storage:`, existingService.imageUrl);
                 }
                 yield this.serviceService.delete(id, workspaceId);
                 return res.status(204).send();

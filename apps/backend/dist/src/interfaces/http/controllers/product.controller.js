@@ -17,7 +17,7 @@ const database_1 = require("@echatbot/database");
 const product_service_1 = require("../../../application/services/product.service");
 const prisma_1 = require("../../../lib/prisma");
 const logger_1 = __importDefault(require("../../../utils/logger"));
-const storage_1 = require("../../../services/storage");
+const storage_service_1 = require("../../../services/storage.service");
 class ProductController {
     constructor(productService) {
         this.getAllProducts = (req, res) => __awaiter(this, void 0, void 0, function* () {
@@ -246,9 +246,8 @@ class ProductController {
                     delete productData.code;
                 }
                 // Handle multiple image uploads with Storage Service
-                const storage = (0, storage_1.getStorageService)();
                 let allImageUrls = [];
-                let allImageKeys = [];
+                let imageKey = null;
                 // Add existing images first (if reordered)
                 if (req.body.existingImageUrls) {
                     try {
@@ -264,21 +263,14 @@ class ProductController {
                 }
                 // Add new uploaded images via Storage Service
                 if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-                    for (const file of req.files) {
-                        const uploadedFile = yield storage.upload(file.buffer, {
-                            filename: file.filename,
-                            folder: `products/${workspaceId}`,
-                            contentType: file.mimetype,
-                            isPublic: true
-                        });
-                        allImageUrls.push(uploadedFile.url);
-                        allImageKeys.push(uploadedFile.key);
-                    }
-                    logger_1.default.info(`New images uploaded via Storage Service:`, allImageUrls);
+                    const uploadedUrls = yield storage_service_1.storageService.uploadImages(req.files, 'products');
+                    allImageUrls.push(...uploadedUrls);
+                    imageKey = uploadedUrls[0]; // Store first image URL as key
+                    logger_1.default.info(`New images uploaded via Storage Service:`, uploadedUrls);
                 }
                 // Always set imageUrl and imageKey
                 productData.imageUrl = allImageUrls;
-                productData.imageKey = allImageKeys.length > 0 ? allImageKeys[0] : null;
+                productData.imageKey = imageKey;
                 logger_1.default.info(`Total images for product:`, allImageUrls);
                 const product = yield this.productService.createProduct(productData, certificationIds, transportTypeIds, categoryIds);
                 // Map backend 'Sku' field to frontend 'code' field
@@ -407,8 +399,7 @@ class ProductController {
                 if (!currentProduct) {
                     return res.status(404).json({ message: "Product not found" });
                 }
-                const storage = (0, storage_1.getStorageService)();
-                const oldImageKey = currentProduct.imageKey;
+                const oldImageUrls = currentProduct.imageUrl || [];
                 let allImageUrls = [];
                 let newImageKey = null;
                 // Add existing images first (if provided)
@@ -426,24 +417,26 @@ class ProductController {
                 }
                 // Add new uploaded images via Storage Service
                 if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-                    logger_1.default.info(`Received ${req.files.length} files from multer`);
-                    // Delete old image if replacing
-                    if (oldImageKey) {
-                        yield storage.delete(oldImageKey);
-                        logger_1.default.info(`Deleted old image: ${oldImageKey}`);
+                    logger_1.default.info(`🔍 DEBUG - Received ${req.files.length} files from multer`);
+                    logger_1.default.info(`🔍 DEBUG - Files details:`, req.files.map(f => ({
+                        fieldname: f.fieldname,
+                        originalname: f.originalname,
+                        mimetype: f.mimetype,
+                        size: f.size,
+                        filename: f.filename,
+                        path: f.path,
+                        pathExists: require('fs').existsSync(f.path)
+                    })));
+                    // Delete old images that are being replaced
+                    const imagesToDelete = oldImageUrls.filter(url => !allImageUrls.includes(url));
+                    if (imagesToDelete.length > 0) {
+                        yield storage_service_1.storageService.deleteImages(imagesToDelete);
+                        logger_1.default.info(`Deleted old images:`, imagesToDelete);
                     }
-                    for (const file of req.files) {
-                        const uploadedFile = yield storage.upload(file.buffer, {
-                            filename: file.filename,
-                            folder: `products/${workspaceId}`,
-                            contentType: file.mimetype,
-                            isPublic: true
-                        });
-                        allImageUrls.push(uploadedFile.url);
-                        if (!newImageKey)
-                            newImageKey = uploadedFile.key;
-                    }
-                    logger_1.default.info(`New images uploaded via Storage Service:`, allImageUrls);
+                    const uploadedUrls = yield storage_service_1.storageService.uploadImages(req.files, 'products');
+                    allImageUrls.push(...uploadedUrls);
+                    newImageKey = uploadedUrls[0]; // Store first image URL as key
+                    logger_1.default.info(`New images uploaded via Storage Service:`, uploadedUrls);
                 }
                 // Always set imageUrl and update imageKey if changed
                 productData.imageUrl = allImageUrls;
@@ -484,11 +477,10 @@ class ProductController {
                 if (!existingProduct) {
                     return res.status(404).json({ message: "Product not found" });
                 }
-                // Delete image from storage if exists
-                if (existingProduct.imageKey) {
-                    const storage = (0, storage_1.getStorageService)();
-                    yield storage.delete(existingProduct.imageKey);
-                    logger_1.default.info(`Deleted image from storage: ${existingProduct.imageKey}`);
+                // Delete images from storage if exists
+                if (existingProduct.imageUrl && existingProduct.imageUrl.length > 0) {
+                    yield storage_service_1.storageService.deleteImages(existingProduct.imageUrl);
+                    logger_1.default.info(`Deleted images from storage:`, existingProduct.imageUrl);
                 }
                 yield this.productService.deleteProduct(id, workspaceId);
                 return res.status(200).json({ message: "Product deleted successfully" });

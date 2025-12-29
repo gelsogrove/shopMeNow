@@ -14,7 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.invoiceService = exports.InvoiceService = void 0;
 const pdfkit_1 = __importDefault(require("pdfkit"));
-const storage_1 = require("../storage");
+const storage_service_1 = require("../storage.service");
 const database_1 = require("@echatbot/database");
 class InvoiceService {
     /**
@@ -71,7 +71,7 @@ class InvoiceService {
             // 4. Genera PDF
             const pdfBuffer = yield this.createPDF(invoiceData);
             // 5. Salva con Storage Service
-            const storage = (0, storage_1.getStorageService)();
+            const storage = storage_service_1.storageService;
             const file = yield storage.upload(pdfBuffer, {
                 filename: `${order.orderCode}.pdf`,
                 folder: `invoices/${order.workspaceId}`,
@@ -119,7 +119,7 @@ class InvoiceService {
                     const logoUrl = (_a = order === null || order === void 0 ? void 0 : order.workspace) === null || _a === void 0 ? void 0 : _a.logoUrl;
                     if (logoUrl) {
                         try {
-                            const storage = (0, storage_1.getStorageService)();
+                            const storage = storage_service_1.storageService;
                             const logoKey = this.extractKeyFromUrl(logoUrl);
                             const logoBuffer = yield storage.get(logoKey);
                             // Logo a sinistra
@@ -250,12 +250,14 @@ class InvoiceService {
      */
     extractKeyFromUrl(url) {
         // http://localhost:3001/uploads/workspaces/123/logo.png → workspaces/123/logo.png
-        // https://bucket.s3.amazonaws.com/workspaces/123/logo.png → workspaces/123/logo.png
+        // https://res.cloudinary.com/root/image/upload/echatbot/products/logo.png → echatbot/products/logo.png
         if (url.includes('/uploads/')) {
             return url.split('/uploads/')[1];
         }
-        if (url.includes('.amazonaws.com/')) {
-            return url.split('.amazonaws.com/')[1].split('?')[0];
+        if (url.includes('cloudinary.com/')) {
+            // Extract public_id from Cloudinary URL
+            const matches = url.match(/\/([^/]+\/[^/]+\/[^/.]+)\.[^.]+$/);
+            return matches ? matches[1] : url;
         }
         return url;
     }
@@ -271,7 +273,7 @@ class InvoiceService {
             if (!(order === null || order === void 0 ? void 0 : order.invoiceKey)) {
                 throw new Error('Invoice not found');
             }
-            const storage = (0, storage_1.getStorageService)();
+            const storage = storage_service_1.storageService;
             return storage.getUrl(order.invoiceKey, expiresIn);
         });
     }
@@ -287,7 +289,7 @@ class InvoiceService {
             if (!(order === null || order === void 0 ? void 0 : order.invoiceKey)) {
                 return;
             }
-            const storage = (0, storage_1.getStorageService)();
+            const storage = storage_service_1.storageService;
             yield storage.delete(order.invoiceKey);
             yield database_1.prisma.orders.update({
                 where: { id: orderId },
